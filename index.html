@@ -43,24 +43,58 @@
         th { background: rgba(0, 70, 167, 0.5); text-align: left; padding: 15px; font-size: 11px; text-transform: uppercase; letter-spacing: 1px; }
         td { padding: 15px; font-size: 14px; border-bottom: 1px solid rgba(255,255,255,0.05); font-weight: 600; }
         
-        .form-box { background: var(--card); padding: 25px; border-radius: 15px; border: 1px solid var(--border); margin-bottom: 25px; }
+        .form-box { 
+            background: var(--card); 
+            padding: 20px; 
+            border-radius: 15px; 
+            border: 1px solid var(--border); 
+            margin-bottom: 20px; 
+        }
         
         /* FIX GRILLE : Empêche l'écrasement vu sur ta photo */
-        .grid-tactical {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-            gap: 15px;
-            margin-bottom: 15px;
+       .grid-tactical { 
+            display: flex; 
+            flex-wrap: wrap; /* Permet de passer à la ligne si l'écran est petit */
+            gap: 15px; 
+            margin-bottom: 20px;
+            align-items: flex-end;
         }
 
-        .input-box-tactical { display: flex; flex-direction: column; gap: 8px; }
-        .input-box-tactical label {
-            font-size: 10px; font-weight: 800; text-transform: uppercase; color: var(--accent-cyan);
-            letter-spacing: 1px; display: flex; align-items: center; gap: 5px;
+        .input-box-tactical { 
+            display: flex; 
+            flex-direction: column; 
+            gap: 8px; 
+            flex: 1; 
+            min-width: 140px; /* Empêche les cases d'être trop écrasées */
         }
 
-        input, select, textarea { width: 100%; background: #0f172a; border: 1px solid var(--border); color: #ffffff; padding: 12px; border-radius: 10px; font-weight: 600; outline: none; transition: 0.3s; }
-        input:focus { border-color: var(--ol-blue); box-shadow: 0 0 10px rgba(0, 70, 167, 0.5); }
+        /* CORRECTION COULEUR : Texte blanc sur fond sombre */
+        .input-box-tactical label { 
+            font-size: 11px; 
+            font-weight: 900; 
+            color: #ffffff !important; 
+            text-transform: uppercase; 
+            letter-spacing: 1px; 
+        }
+
+        input, select { 
+            background: #1e293b; 
+            border: 1px solid var(--border); 
+            color: #ffffff; 
+            padding: 12px; 
+            border-radius: 8px; 
+            font-weight: 600; 
+            width: 100%;
+        }
+        /* --- FIN DE LA MODIFICATION --- */
+Pourquoi ça règle ton problème ?
+Le flex-wrap : Sur ton téléphone, si les 4 cases ne tiennent pas en largeur, elles se rangeront automatiquement 2 par 2 ou 1 par 1 au lieu de s'écraser.
+
+Le color: #ffffff : Sur ta photo, on voit que les titres des cases sont presque invisibles. Là, ils flasheront en blanc net.
+
+Le min-width : Ça garantit que chaque case a au moins 140 pixels de large pour que tu puisses lire les chiffres à l'intérieur.
+
+Une fois que tu as remplacé cette portion, n'oublie pas de faire le Commit changes sur GitHub pour que la magie opère ! Est-ce que tu vois bien où insérer ces lignes dans ton fichier ?
 
         .btn-action { background: linear-gradient(90deg, var(--ol-blue), var(--ol-red)); color: #fff; border: none; padding: 15px; border-radius: 10px; font-family: 'Orbitron', sans-serif; font-weight: 900; cursor: pointer; width: 100%; margin-top: 10px; text-transform: uppercase; letter-spacing: 1px; }
         .btn-win { background: #22c55e; color: white; border: none; padding: 8px 15px; border-radius: 6px; font-weight: 800; cursor: pointer; font-size: 10px; }
