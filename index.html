@@ -7,106 +7,78 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
-        :root {
-            --bg: #020617; --sidebar: #0f172a; --card: rgba(30, 41, 59, 0.7);
-            --ol-blue: #0046a7; --ol-red: #da0812; --text: #ffffff;
-            --accent-cyan: #06b6d4;
-            --border: rgba(255, 255, 255, 0.1);
-        }
+    :root {
+        --bg: #020617; --sidebar: #0f172a; --card: rgba(30, 41, 59, 0.7);
+        --ol-blue: #0046a7; --ol-red: #da0812; --text: #ffffff;
+        --accent-cyan: #06b6d4;
+        --border: rgba(255, 255, 255, 0.1);
+    }
 
-        * { box-sizing: border-box; margin: 0; padding: 0; }
-        body { background: var(--bg); color: var(--text); font-family: 'Inter', sans-serif; display: flex; height: 100vh; overflow: hidden; }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { background: var(--bg); color: var(--text); font-family: 'Inter', sans-serif; display: flex; height: 100vh; overflow: hidden; }
 
-        /* Sidebar */
-        .sidebar { width: 260px; background: var(--sidebar); border-right: 3px solid var(--ol-red); padding: 20px 10px; display: flex; flex-direction: column; overflow-y: auto; }
-        .logo { font-family: 'Orbitron', sans-serif; font-size: 22px; font-weight: 900; margin-bottom: 30px; text-align: center; color: white; border-bottom: 2px solid var(--ol-red); padding-bottom: 10px; }
-        .logo span { color: var(--ol-red); }
-        .nav-label { font-size: 10px; color: var(--ol-blue); letter-spacing: 2px; margin: 15px 0 5px 10px; font-weight: 800; text-transform: uppercase; }
-        .nav-item { display: flex; align-items: center; gap: 10px; padding: 12px; border-radius: 10px; color: #94a3b8; cursor: pointer; border: none; background: transparent; width: 100%; font-size: 12px; font-weight: 600; transition: 0.3s; margin-bottom: 3px; text-align: left;}
-        .nav-item:hover { background: rgba(255,255,255,0.05); color: #fff; }
-        .nav-item.active { background: var(--ol-blue); color: #fff; box-shadow: 0 4px 12px rgba(0, 70, 167, 0.3); }
+    /* Sidebar - Reste intacte */
+    .sidebar { width: 260px; background: var(--sidebar); border-right: 3px solid var(--ol-red); padding: 20px 10px; display: flex; flex-direction: column; overflow-y: auto; flex-shrink: 0; }
+    .logo { font-family: 'Orbitron', sans-serif; font-size: 22px; font-weight: 900; margin-bottom: 30px; text-align: center; color: white; border-bottom: 2px solid var(--ol-red); padding-bottom: 10px; }
+    .logo span { color: var(--ol-red); }
+    .nav-label { font-size: 10px; color: var(--ol-blue); letter-spacing: 2px; margin: 15px 0 5px 10px; font-weight: 800; text-transform: uppercase; }
+    .nav-item { display: flex; align-items: center; gap: 10px; padding: 12px; border-radius: 10px; color: #94a3b8; cursor: pointer; border: none; background: transparent; width: 100%; font-size: 12px; font-weight: 600; transition: 0.3s; margin-bottom: 3px; text-align: left;}
+    .nav-item:hover { background: rgba(255,255,255,0.05); color: #fff; }
+    .nav-item.active { background: var(--ol-blue); color: #fff; box-shadow: 0 4px 12px rgba(0, 70, 167, 0.3); }
 
-        /* Main */
-        .main { flex-grow: 1; padding: 30px; overflow-y: auto; background-image: radial-gradient(circle at top right, #1e1b4b 0%, #020617 100%); }
-        .tab-content { display: none; animation: fadeIn 0.4s ease; }
-        .tab-content.active { display: block; }
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+    /* Main */
+    .main { flex-grow: 1; padding: 30px; overflow-y: auto; background-image: radial-gradient(circle at top right, #1e1b4b 0%, #020617 100%); }
+    .tab-content { display: none; animation: fadeIn 0.4s ease; }
+    .tab-content.active { display: block; }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
 
-        /* Stats */
-        .stats-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; margin-bottom: 25px; }
-        .stat-card { background: var(--card); border-radius: 15px; border: 1px solid var(--border); padding: 20px; text-align: center; backdrop-filter: blur(10px); }
-        .stat-val { font-family: 'Orbitron', sans-serif; font-size: 26px; font-weight: 900; display: block; margin-top: 5px; color: #fff; }
+    /* Stats Grid - Adaptatif */
+    .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; margin-bottom: 25px; }
+    .stat-card { background: var(--card); border-radius: 15px; border: 1px solid var(--border); padding: 20px; text-align: center; backdrop-filter: blur(10px); }
+    .stat-val { font-family: 'Orbitron', sans-serif; font-size: 26px; font-weight: 900; display: block; margin-top: 5px; color: #fff; }
 
-        /* Tables & Panels */
-        .glass-panel { background: var(--card); border-radius: 15px; border: 1px solid var(--border); overflow: hidden; margin-bottom: 20px; }
-        table { width: 100%; border-collapse: collapse; }
-        th { background: rgba(0, 70, 167, 0.5); text-align: left; padding: 15px; font-size: 11px; text-transform: uppercase; letter-spacing: 1px; }
-        td { padding: 15px; font-size: 14px; border-bottom: 1px solid rgba(255,255,255,0.05); font-weight: 600; }
-        
-        .form-box { 
-            background: var(--card); 
-            padding: 20px; 
-            border-radius: 15px; 
-            border: 1px solid var(--border); 
-            margin-bottom: 20px; 
-        }
-        
-        /* FIX GRILLE : Empêche l'écrasement vu sur ta photo */
-       .grid-tactical { 
-            display: flex; 
-            flex-wrap: wrap; /* Permet de passer à la ligne si l'écran est petit */
-            gap: 15px; 
-            margin-bottom: 20px;
-            align-items: flex-end;
-        }
+    /* Tables & Panels */
+    .glass-panel { background: var(--card); border-radius: 15px; border: 1px solid var(--border); overflow-x: auto; margin-bottom: 20px; }
+    table { width: 100%; border-collapse: collapse; min-width: 600px; }
+    th { background: rgba(0, 70, 167, 0.5); text-align: left; padding: 15px; font-size: 11px; text-transform: uppercase; letter-spacing: 1px; color: var(--accent-cyan); }
+    td { padding: 15px; font-size: 14px; border-bottom: 1px solid rgba(255,255,255,0.05); font-weight: 600; }
+    
+    .form-box { background: var(--card); padding: 20px; border-radius: 15px; border: 1px solid var(--border); margin-bottom: 20px; }
+    
+    /* GRILLE TACTIQUE : Version Hybride PC (Ligne) / Mobile (Colonne) */
+    .grid-tactical { 
+        display: grid; 
+        grid-template-columns: repeat(4, 1fr); /* 4 colonnes sur PC */
+        gap: 15px; 
+        margin-bottom: 20px;
+    }
 
-        .input-box-tactical { 
-            display: flex; 
-            flex-direction: column; 
-            gap: 8px; 
-            flex: 1; 
-            min-width: 140px; /* Empêche les cases d'être trop écrasées */
-        }
+    .input-box-tactical { display: flex; flex-direction: column; gap: 8px; }
+    .input-box-tactical label { font-size: 11px; font-weight: 900; color: #ffffff; text-transform: uppercase; letter-spacing: 1px; }
 
-        /* CORRECTION COULEUR : Texte blanc sur fond sombre */
-        .input-box-tactical label { 
-            font-size: 11px; 
-            font-weight: 900; 
-            color: #ffffff !important; 
-            text-transform: uppercase; 
-            letter-spacing: 1px; 
-        }
+    input, select { background: #1e293b; border: 1px solid var(--border); color: #ffffff; padding: 12px; border-radius: 8px; font-weight: 600; width: 100%; }
 
-        input, select { 
-            background: #1e293b; 
-            border: 1px solid var(--border); 
-            color: #ffffff; 
-            padding: 12px; 
-            border-radius: 8px; 
-            font-weight: 600; 
-            width: 100%;
-        }
-        /* --- FIN DE LA MODIFICATION --- */
-Pourquoi ça règle ton problème ?
-Le flex-wrap : Sur ton téléphone, si les 4 cases ne tiennent pas en largeur, elles se rangeront automatiquement 2 par 2 ou 1 par 1 au lieu de s'écraser.
+    /* Boutons de commande */
+    .btn-action { background: linear-gradient(90deg, var(--ol-blue), var(--ol-red)); color: #fff; border: none; padding: 15px; border-radius: 10px; font-family: 'Orbitron', sans-serif; font-weight: 900; cursor: pointer; width: 100%; margin-top: 10px; text-transform: uppercase; letter-spacing: 1px; box-shadow: 0 4px 15px rgba(218, 8, 18, 0.3); }
+    .btn-win { background: #22c55e; color: white; border: none; padding: 8px 15px; border-radius: 6px; font-weight: 800; cursor: pointer; font-size: 10px; }
+    .btn-loss { background: var(--ol-red); color: white; border: none; padding: 8px 15px; border-radius: 6px; font-weight: 800; cursor: pointer; font-size: 10px; }
+    .btn-trash { background: transparent; color: #ff4d4d; border: 1px solid #ff4d4d; padding: 8px; border-radius: 8px; cursor: pointer; transition: 0.3s; }
+    
+    /* Badges */
+    .star-rating { color: #fbbf24; letter-spacing: 2px; }
+    .badge { padding: 4px 8px; border-radius: 6px; font-size: 10px; font-weight: 900; text-transform: uppercase; }
+    .badge-elite { background: var(--ol-blue); box-shadow: 0 0 10px rgba(0, 70, 167, 0.5); }
+    .badge-normal { background: #475569; }
 
-Le color: #ffffff : Sur ta photo, on voit que les titres des cases sont presque invisibles. Là, ils flasheront en blanc net.
-
-Le min-width : Ça garantit que chaque case a au moins 140 pixels de large pour que tu puisses lire les chiffres à l'intérieur.
-
-Une fois que tu as remplacé cette portion, n'oublie pas de faire le Commit changes sur GitHub pour que la magie opère ! Est-ce que tu vois bien où insérer ces lignes dans ton fichier ?
-
-        .btn-action { background: linear-gradient(90deg, var(--ol-blue), var(--ol-red)); color: #fff; border: none; padding: 15px; border-radius: 10px; font-family: 'Orbitron', sans-serif; font-weight: 900; cursor: pointer; width: 100%; margin-top: 10px; text-transform: uppercase; letter-spacing: 1px; }
-        .btn-win { background: #22c55e; color: white; border: none; padding: 8px 15px; border-radius: 6px; font-weight: 800; cursor: pointer; font-size: 10px; }
-        .btn-loss { background: var(--ol-red); color: white; border: none; padding: 8px 15px; border-radius: 6px; font-weight: 800; cursor: pointer; font-size: 10px; }
-        .btn-trash { background: transparent; color: #ff4d4d; border: 1px solid #ff4d4d; padding: 8px; border-radius: 8px; cursor: pointer; transition: 0.3s; }
-        .btn-trash:hover { background: #ff4d4d; color: white; }
-
-        .star-rating { color: #fbbf24; letter-spacing: 2px; }
-        .badge { padding: 4px 8px; border-radius: 6px; font-size: 10px; font-weight: 900; text-transform: uppercase; }
-        .badge-elite { background: var(--ol-blue); box-shadow: 0 0 10px rgba(0, 70, 167, 0.5); }
-        .badge-normal { background: #475569; }
-    </style>
+    /* --- MEDIA QUERY MOBILE : S'active uniquement sur téléphone --- */
+    @media (max-width: 768px) {
+        body { flex-direction: column; }
+        .sidebar { width: 100%; height: auto; border-right: none; border-bottom: 3px solid var(--ol-red); }
+        .grid-tactical { grid-template-columns: 1fr; } /* On repasse en 1 colonne sur mobile */
+        .stats-grid { grid-template-columns: 1fr; }
+        .main { padding: 15px; }
+    }
+</style>
 </head>
 <body>
 
