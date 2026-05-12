@@ -70,93 +70,103 @@
         <button class="nav-item" onclick="showTab('units-mgr', this)"><i class="fa-solid fa-users-gear"></i> UNITÉS</button>
     </nav>
 
-    <main class="main">
-        <div id="dash" class="tab-content active">
-            <div class="stats-grid">
-                <div class="stat-card" style="border-bottom: 4px solid var(--ol-blue);"><label>CAPITAL</label><span id="d-cap" class="stat-val">0€</span></div>
-                <div class="stat-card" style="border-bottom: 4px solid var(--ol-red);"><label>BÉNÉFICE</label><span id="d-ben" class="stat-val">0€</span></div>
-            </div>
-            <div class="glass-panel">
-                <table style="min-width: 100%;">
-                    <thead><tr><th>UNITÉ</th><th>RANG</th><th>PALIER</th><th style="text-align:right">ÉTAT</th></tr></thead>
-                    <tbody id="dash-summary"></tbody>
-                </table>
-            </div>
+  <main class="main">
+    <!-- MUR -->
+    <div id="dash" class="tab-content active">
+        <div class="stats-grid">
+            <div class="stat-card" style="border-bottom: 4px solid var(--ol-blue);"><label>CAPITAL</label><span id="d-cap" class="stat-val">0€</span></div>
+            <div class="stat-card" style="border-bottom: 4px solid var(--ol-red);"><label>BÉNÉFICE</label><span id="d-ben" class="stat-val">0€</span></div>
         </div>
-
-        <div id="cock" class="tab-content">
-            <div class="form-box">
-                <div class="grid-tactical">
-                    <div><label>Unité</label><select id="c-unit" onchange="updMise()"></select></div>
-                    <div><label>Vecteur</label><select id="c-book"></select></div>
-                    <div><label>Cote</label><input type="number" id="c-cote" value="2.00" step="0.01"></div>
-                    <div><label>Mise (€)</label><input type="number" id="c-mise" style="border: 1px solid #22c55e;"></div>
-                </div>
-                <button class="btn-action" onclick="pari(true)">DÉPLOYER STRATÉGIE</button>
-            </div>
-            <div class="glass-panel">
-                <table><thead><tr><th>HEURE</th><th>UNITÉ</th><th>PHASE</th><th>MISE</th><th style="text-align:right">ACTION</th></tr></thead><tbody id="h-live-strat"></tbody></table>
-            </div>
+        <div class="glass-panel">
+            <table style="min-width: 100%;">
+                <thead><tr><th>UNITÉ</th><th>RANG</th><th>PALIER</th><th style="text-align:right">ÉTAT</th></tr></thead>
+                <tbody id="dash-summary"></tbody>
+            </table>
         </div>
-
-        <div id="p-norm" class="tab-content">
-            <div class="form-box">
-                <div class="grid-tactical">
-                    <div><label>Cible</label><input id="n-target" placeholder="Equipe..."></div>
-                    <div><label>Type</label><input id="n-desc" placeholder="Win/Over..."></div>
-                    <div><label>Vecteur</label><select id="n-book"></select></div>
-                    <div><label>Cote</label><input type="number" id="n-cote" value="1.50" step="0.01"></div>
-                    <div><label>Mise</label><input type="number" id="n-mise" placeholder="0"></div>
-                </div>
-                <button class="btn-action" style="background:#334155" onclick="pari(false)">ENGAGER PARI SIMPLE</button>
-            </div>
-            <div class="glass-panel">
-                <table><thead><tr><th>HEURE</th><th>CIBLE</th><th>MISE</th><th style="text-align:right">ACTION</th></tr></thead><tbody id="h-live-norm"></tbody></table>
-            </div>
-        </div>
-<!-- ARCHIVE -->
-<div id="arch" class="tab-content">
-    <div class="glass-panel">
-        <table>
-            <thead><tr><th>HEURE</th><th>UNITÉ / CIBLE</th><th>COTE</th><th>MISE</th><th>RÉSULTAT</th><th style="text-align:right">GAIN</th></tr></thead>
-            <tbody id="arch-list"></tbody>
-        </table>
     </div>
-    <button class="btn-action" style="background:var(--ol-red); width:auto; padding:10px 20px;" onclick="if(confirm('Vider l\'archive ?')){state.a=[];save();}">VIDER L'ARCHIVE</button>
-</div>
-        <div id="bank-mgr" class="tab-content">
-            <div class="form-box">
-                <label>NOUVEAU VECTEUR</label>
-                <div style="display:flex; gap:10px; margin-top:5px;">
-                    <input id="new-bk-name" placeholder="Nom du book...">
-                    <button class="btn-action" style="width:100px; margin:0;" onclick="addBook()">CRÉER</button>
-                </div>
-            </div>
-            <div id="books-grid" class="stats-grid"></div>
-            <div class="form-box">
-                <textarea id="io-data" rows="3" placeholder="Code JSON..." style="font-size:10px;"></textarea>
-                <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px; margin-top:10px;">
-                    <button class="btn-action" style="background:#334155" onclick="exportData()">SAUVEGARDER</button>
-                    <button class="btn-action" style="background:var(--ol-blue)" onclick="importData()">CHARGER</button>
-                </div>
-            </div>
-        </div>
 
-        <div id="units-mgr" class="tab-content">
-            <div class="form-box">
-                <label>NOUVELLE UNITÉ</label>
-                <div style="display:grid; grid-template-columns: 1fr 100px 100px; gap:10px; margin-top:5px;">
-                    <input id="u-n-add" placeholder="Nom...">
-                    <select id="u-s-add"><option value="1">⭐</option><option value="2">⭐⭐</option><option value="3">⭐⭐⭐</option><option value="4">⭐⭐⭐⭐</option>
-                        <option value="5">⭐⭐⭐⭐⭐</option></select>
-                    <button class="btn-action" style="margin:0" onclick="addUnit()">AJOUTER</button>
-                </div>
+    <!-- ARCHIVE -->
+    <div id="arch" class="tab-content">
+        <div class="glass-panel">
+            <table>
+                <thead><tr><th>DATE</th><th>UNITÉ / CIBLE</th><th>COTE</th><th>MISE</th><th>RÉSULTAT</th><th style="text-align:right">GAIN</th></tr></thead>
+                <tbody id="arch-list"></tbody>
+            </table>
+        </div>
+        <button class="btn-action" style="background:var(--ol-red); width:auto; padding:10px 20px;" onclick="if(confirm('Vider l\'archive ?')){state.a=[];save();}">VIDER L'ARCHIVE</button>
+    </div>
+
+    <!-- COCKPIT -->
+    <div id="cock" class="tab-content">
+        <div class="form-box">
+            <div class="grid-tactical">
+                <div><label>Unité</label><select id="c-unit" onchange="updMise()"></select></div>
+                <div><label>Vecteur</label><select id="c-book"></select></div>
+                <div><label>Cote</label><input type="number" id="c-cote" value="2.00" step="0.01"></div>
+                <div><label>Mise (€)</label><input type="number" id="c-mise" style="border: 1px solid #22c55e;"></div>
             </div>
-            <div class="glass-panel">
-                <table><thead><tr><th>NOM</th><th>RANG</th><th>PALIER</th><th style="text-align:right">ACTION</th></tr></thead><tbody id="u-mgr-list"></tbody></table>
+            <button class="btn-action" onclick="pari(true)">DÉPLOYER STRATÉGIE</button>
+        </div>
+        <div class="glass-panel">
+            <table><thead><tr><th>DATE</th><th>UNITÉ</th><th>PHASE</th><th>MISE</th><th style="text-align:right">ACTION</th></tr></thead><tbody id="h-live-strat"></tbody></table>
+        </div>
+    </div>
+
+    <!-- PARI NORMAL -->
+    <div id="p-norm" class="tab-content">
+        <div class="form-box">
+            <div class="grid-tactical">
+                <div><label>Cible</label><input id="n-target" placeholder="Equipe..."></div>
+                <div><label>Type</label><input id="n-desc" placeholder="Win/Over..."></div>
+                <div><label>Vecteur</label><select id="n-book"></select></div>
+                <div><label>Cote</label><input type="number" id="n-cote" value="1.50" step="0.01"></div>
+                <div><label>Mise</label><input type="number" id="n-mise" placeholder="0"></div>
+            </div>
+            <button class="btn-action" style="background:#334155" onclick="pari(false)">ENGAGER PARI SIMPLE</button>
+        </div>
+        <div class="glass-panel">
+            <table><thead><tr><th>DATE</th><th>CIBLE</th><th>MISE</th><th style="text-align:right">ACTION</th></tr></thead><tbody id="h-live-norm"></tbody></table>
+        </div>
+    </div>
+
+    <!-- BANKROLL -->
+    <div id="bank-mgr" class="tab-content">
+        <div class="form-box">
+            <label>NOUVEAU VECTEUR</label>
+            <div style="display:flex; gap:10px; margin-top:5px;">
+                <input id="new-bk-name" placeholder="Nom du book...">
+                <button class="btn-action" style="width:100px; margin:0;" onclick="addBook()">CRÉER</button>
             </div>
         </div>
-    </main>
+        <div id="books-grid" class="stats-grid"></div>
+        <div class="form-box">
+            <textarea id="io-data" rows="3" placeholder="Code JSON..." style="font-size:10px;"></textarea>
+            <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px; margin-top:10px;">
+                <button class="btn-action" style="background:#334155" onclick="exportData()">SAUVEGARDER</button>
+                <button class="btn-action" style="background:var(--ol-blue)" onclick="importData()">CHARGER</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- UNITÉS -->
+    <div id="units-mgr" class="tab-content">
+        <div class="form-box">
+            <label>NOUVELLE UNITÉ</label>
+            <div style="display:grid; grid-template-columns: 1fr 100px 100px; gap:10px; margin-top:5px;">
+                <input id="u-n-add" placeholder="Nom...">
+                <select id="u-s-add">
+                    <option value="1">⭐</option><option value="2">⭐⭐</option>
+                    <option value="3">⭐⭐⭐</option><option value="4">⭐⭐⭐⭐</option>
+                    <option value="5">⭐⭐⭐⭐⭐</option>
+                </select>
+                <button class="btn-action" style="margin:0" onclick="addUnit()">AJOUTER</button>
+            </div>
+        </div>
+        <div class="glass-panel">
+            <table><thead><tr><th>NOM</th><th>RANG</th><th>PALIER</th><th style="text-align:right">ACTION</th></tr></thead><tbody id="u-mgr-list"></tbody></table>
+        </div>
+    </div>
+</main>
 
     <script>
         const MISES = [10, 20, 60, 180, 540, 1620, 4860, 14580]; 
@@ -234,7 +244,8 @@
 
         function pari(isS) {
             let n, b, c, m, target = "", l = 1;
-            const time = new Date().toLocaleTimeString('fr-FR', {hour: '2-digit', minute:'2-digit'});
+           const now = new Date();
+const time = now.toLocaleDateString('fr-FR', {day: '2-digit', month: '2-digit'}) + ' ' + now.toLocaleTimeString('fr-FR', {hour: '2-digit', minute:'2-digit'});
             if (isS) {
                 const u = state.u.find(x => x.n === document.getElementById('c-unit').value);
                 if (!u) return;
