@@ -3,10 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>GONES45 - COMMAND CENTER V28.9</title>
+    <title>GONES45 - COMMAND CENTER V29.0</title>
     <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;900&family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
         :root {
             --bg: #020617; --sidebar: #0f172a; --card: rgba(30, 41, 59, 0.7);
@@ -16,20 +15,19 @@
         * { box-sizing: border-box; margin: 0; padding: 0; touch-action: manipulation; }
         body { background: var(--bg); color: var(--text); font-family: 'Inter', sans-serif; display: flex; height: 100vh; overflow: hidden; }
 
-        /* Navigation Responsive */
+        /* Navigation */
         .sidebar { width: 260px; background: var(--sidebar); border-right: 3px solid var(--ol-red); padding: 20px 10px; display: flex; flex-direction: column; overflow-y: auto; flex-shrink: 0; }
         .logo { font-family: 'Orbitron', sans-serif; font-size: 22px; font-weight: 900; margin-bottom: 25px; text-align: center; border-bottom: 2px solid var(--ol-red); padding-bottom: 10px; }
         .nav-label { font-size: 10px; color: var(--ol-blue); letter-spacing: 2px; margin: 15px 0 5px 10px; font-weight: 800; text-transform: uppercase; }
         .nav-item { display: flex; align-items: center; gap: 10px; padding: 12px; border-radius: 10px; color: #94a3b8; cursor: pointer; border: none; background: transparent; width: 100%; font-size: 12px; font-weight: 600; text-align: left; transition: 0.3s; }
         .nav-item.active { background: var(--ol-blue); color: #fff; box-shadow: 0 4px 12px rgba(0, 70, 167, 0.3); }
 
-        /* Contenu Principal */
+        /* Contenu */
         .main { flex-grow: 1; padding: 25px; overflow-y: auto; background-image: radial-gradient(circle at top right, #1e1b4b 0%, #020617 100%); }
         .tab-content { display: none; animation: fadeIn 0.3s ease; }
         .tab-content.active { display: block; }
         @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
 
-        /* Grilles & Cartes */
         .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 15px; margin-bottom: 20px; }
         .stat-card { background: var(--card); border-radius: 12px; border: 1px solid var(--border); padding: 15px; text-align: center; backdrop-filter: blur(8px); }
         .stat-val { font-family: 'Orbitron', sans-serif; font-size: 22px; font-weight: 900; display: block; color: #fff; margin-top: 5px; }
@@ -39,7 +37,6 @@
         th { background: rgba(0, 70, 167, 0.4); text-align: left; padding: 12px; font-size: 10px; text-transform: uppercase; color: var(--accent-cyan); }
         td { padding: 12px; font-size: 13px; border-bottom: 1px solid rgba(255,255,255,0.05); }
 
-        /* Formulaires Tactical */
         .form-box { background: var(--card); padding: 20px; border-radius: 12px; border: 1px solid var(--border); margin-bottom: 20px; }
         .grid-tactical { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 12px; margin-bottom: 15px; }
         label { font-size: 9px; font-weight: 800; color: var(--accent-cyan); text-transform: uppercase; display: block; margin-bottom: 5px; }
@@ -49,7 +46,6 @@
         .btn-win { background: #22c55e; color: white; border: none; padding: 6px 10px; border-radius: 4px; font-weight: 800; cursor: pointer; }
         .btn-loss { background: var(--ol-red); color: white; border: none; padding: 6px 10px; border-radius: 4px; font-weight: 800; cursor: pointer; }
 
-        /* Mobile Fix */
         @media (max-width: 768px) {
             body { flex-direction: column; }
             .sidebar { width: 100%; height: 65px; position: fixed; bottom: 0; flex-direction: row; padding: 0; border-right: none; border-top: 3px solid var(--ol-red); z-index: 100; }
@@ -65,7 +61,7 @@
 
     <nav class="sidebar">
         <div class="logo">GONES<span>45</span></div>
-        <div class="nav-label">OPÉRATIONS</div>
+        <div class="nav-label">MENU</div>
         <button class="nav-item active" onclick="showTab('dash', this)"><i class="fa-solid fa-house"></i> MUR</button>
         <button class="nav-item" onclick="showTab('cock', this)"><i class="fa-solid fa-jet-fighter-up"></i> COCKPIT</button>
         <button class="nav-item" onclick="showTab('p-norm', this)"><i class="fa-solid fa-ticket"></i> PARI</button>
@@ -80,7 +76,10 @@
                 <div class="stat-card" style="border-bottom: 4px solid var(--ol-red);"><label>BÉNÉFICE</label><span id="d-ben" class="stat-val">0€</span></div>
             </div>
             <div class="glass-panel">
-                <table><thead><tr><th>UNITÉ</th><th>PALIER</th><th style="text-align:right">ÉTAT</th></tr></thead><tbody id="dash-summary"></tbody></table>
+                <table style="min-width: 100%;">
+                    <thead><tr><th>UNITÉ</th><th>RANG</th><th>PALIER</th><th style="text-align:right">ÉTAT</th></tr></thead>
+                    <tbody id="dash-summary"></tbody>
+                </table>
             </div>
         </div>
 
@@ -90,7 +89,7 @@
                     <div><label>Unité</label><select id="c-unit" onchange="updMise()"></select></div>
                     <div><label>Vecteur</label><select id="c-book"></select></div>
                     <div><label>Cote</label><input type="number" id="c-cote" value="2.00" step="0.01"></div>
-                    <div><label>Mise (€)</label><input type="number" id="c-mise" style="border: 2px solid #22c55e;"></div>
+                    <div><label>Mise (€)</label><input type="number" id="c-mise" style="border: 1px solid #22c55e;"></div>
                 </div>
                 <button class="btn-action" onclick="pari(true)">DÉPLOYER STRATÉGIE</button>
             </div>
@@ -117,7 +116,7 @@
 
         <div id="bank-mgr" class="tab-content">
             <div class="form-box">
-                <label>NOUVEAU VECTEUR (BOOKMAKER)</label>
+                <label>NOUVEAU VECTEUR</label>
                 <div style="display:flex; gap:10px; margin-top:5px;">
                     <input id="new-bk-name" placeholder="Nom du book...">
                     <button class="btn-action" style="width:100px; margin:0;" onclick="addBook()">CRÉER</button>
@@ -125,7 +124,7 @@
             </div>
             <div id="books-grid" class="stats-grid"></div>
             <div class="form-box">
-                <textarea id="io-data" rows="3" placeholder="Code de sauvegarde..." style="font-size:10px;"></textarea>
+                <textarea id="io-data" rows="3" placeholder="Code JSON..." style="font-size:10px;"></textarea>
                 <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px; margin-top:10px;">
                     <button class="btn-action" style="background:#334155" onclick="exportData()">SAUVEGARDER</button>
                     <button class="btn-action" style="background:var(--ol-blue)" onclick="importData()">CHARGER</button>
@@ -135,9 +134,9 @@
 
         <div id="units-mgr" class="tab-content">
             <div class="form-box">
-                <label>ENRÔLER UNE NOUVELLE UNITÉ</label>
-                <div style="display:grid; grid-template-columns: 1fr 80px 100px; gap:10px; margin-top:5px;">
-                    <input id="u-n-add" placeholder="Nom de l'équipe...">
+                <label>NOUVELLE UNITÉ</label>
+                <div style="display:grid; grid-template-columns: 1fr 100px 100px; gap:10px; margin-top:5px;">
+                    <input id="u-n-add" placeholder="Nom...">
                     <select id="u-s-add"><option value="3">⭐⭐⭐</option><option value="5">⭐⭐⭐⭐⭐</option></select>
                     <button class="btn-action" style="margin:0" onclick="addUnit()">AJOUTER</button>
                 </div>
@@ -154,32 +153,30 @@
             u: [], h: [], a: [], b: { winamax: 10000 }, start_bk: 10000
         };
 
-        function save() { 
-            localStorage.setItem('gones_v28', JSON.stringify(state)); 
-            render(); 
-        }
+        function save() { localStorage.setItem('gones_v28', JSON.stringify(state)); render(); }
 
         function render() {
-            // Totaux
             const total = Object.values(state.b).reduce((a,v)=>a+parseFloat(v||0),0);
             document.getElementById('d-cap').innerText = total.toFixed(2)+"€";
             document.getElementById('d-ben').innerText = (total - state.start_bk).toFixed(2)+"€";
 
-            // Sélecteurs
             const bOpt = Object.keys(state.b).map(k=>`<option value="${k}">${k.toUpperCase()}</option>`).join('');
             document.getElementById('c-unit').innerHTML = state.u.map(u=>`<option value="${u.n}">${u.n} (P${u.l})</option>`).join('');
             document.getElementById('c-book').innerHTML = bOpt;
             document.getElementById('n-book').innerHTML = bOpt;
 
-            // Listes Live
+            // MUR DE LYON (Avec Etoiles)
+            document.getElementById('dash-summary').innerHTML = state.u.map(u=>`
+                <tr>
+                    <td><b>${u.n}</b></td>
+                    <td style="color:#fbbf24; letter-spacing:2px;">${"⭐".repeat(u.s)}</td>
+                    <td style="color:#3b82f6; font-weight:800;">PALIER ${u.l}</td>
+                    <td style="text-align:right"><span style="background:var(--ol-blue); padding:3px 8px; border-radius:4px; font-size:10px; font-weight:900;">ACTIF</span></td>
+                </tr>`).join('');
+
             document.getElementById('h-live-strat').innerHTML = state.h.filter(h=>h.isS).map(h=>`<tr><td>${h.t}</td><td><b>${h.n}</b></td><td>P${h.l}</td><td>${h.m}€</td><td style="text-align:right"><button class="btn-win" onclick="resolve('${h.id}',true)">W</button> <button class="btn-loss" onclick="resolve('${h.id}',false)">L</button></td></tr>`).join('');
             document.getElementById('h-live-norm').innerHTML = state.h.filter(h=>!h.isS).map(h=>`<tr><td>${h.t}</td><td>${h.target}</td><td>${h.m}€</td><td style="text-align:right"><button class="btn-win" onclick="resolve('${h.id}',true)">W</button> <button class="btn-loss" onclick="resolve('${h.id}',false)">L</button></td></tr>`).join('');
-            
-            // Gestion Unités
-            document.getElementById('dash-summary').innerHTML = state.u.map(u=>`<tr><td><b>${u.n}</b></td><td>PALIER ${u.l}</td><td style="text-align:right">ACTIF</td></tr>`).join('');
-            document.getElementById('u-mgr-list').innerHTML = state.u.map((u,i)=>`<tr><td><b>${u.n}</b></td><td>${"⭐".repeat(u.s)}</td><td>P${u.l}</td><td style="text-align:right"><button onclick="delUnit(${i})" style="color:red; background:none; border:none; cursor:pointer;">SUPPR</button></td></tr>`).join('');
-            
-            // Gestion Books
+            document.getElementById('u-mgr-list').innerHTML = state.u.map((u,i)=>`<tr><td><b>${u.n}</b></td><td style="color:#fbbf24;">${"⭐".repeat(u.s)}</td><td>P${u.l}</td><td style="text-align:right"><button onclick="delUnit(${i})" style="color:red; background:none; border:none; cursor:pointer;">SUPPR</button></td></tr>`).join('');
             document.getElementById('books-grid').innerHTML = Object.keys(state.b).map(k=>`<div class="stat-card"><label>${k.toUpperCase()}</label><input type="number" value="${state.b[k]}" onchange="state.b['${k}']=this.value;save()" style="background:transparent; border:none; text-align:center; font-size:18px; color:white; font-weight:900;"></div>`).join('');
             
             updMise();
@@ -188,8 +185,7 @@
         function showTab(id, btn) {
             document.querySelectorAll('.tab-content').forEach(x => x.classList.remove('active'));
             document.querySelectorAll('.nav-item').forEach(x => x.classList.remove('active'));
-            document.getElementById(id).classList.add('active'); 
-            btn.classList.add('active');
+            document.getElementById(id).classList.add('active'); btn.classList.add('active');
         }
 
         function updMise() {
@@ -205,7 +201,7 @@
             save();
         }
 
-        function delUnit(i) { if(confirm("Supprimer cette unité ?")) { state.u.splice(i,1); save(); } }
+        function delUnit(i) { if(confirm("Supprimer ?")) { state.u.splice(i,1); save(); } }
 
         function addBook() {
             const name = document.getElementById('new-bk-name').value.toLowerCase();
@@ -218,28 +214,19 @@
         function pari(isS) {
             let n, b, c, m, target = "", l = 1;
             const time = new Date().toLocaleTimeString('fr-FR', {hour: '2-digit', minute:'2-digit'});
-
             if (isS) {
                 const u = state.u.find(x => x.n === document.getElementById('c-unit').value);
-                if (!u) return; 
-                n = u.n; b = document.getElementById('c-book').value; 
-                c = parseFloat(document.getElementById('c-cote').value); 
-                m = parseFloat(document.getElementById('c-mise').value); 
-                l = u.l;
+                if (!u) return;
+                n = u.n; b = document.getElementById('c-book').value; c = parseFloat(document.getElementById('c-cote').value); m = parseFloat(document.getElementById('c-mise').value); l = u.l;
             } else {
-                target = document.getElementById('n-target').value; 
-                n = document.getElementById('n-desc').value; 
-                b = document.getElementById('n-book').value; 
-                c = parseFloat(document.getElementById('n-cote').value); 
-                m = parseFloat(document.getElementById('n-mise').value);
+                target = document.getElementById('n-target').value; n = document.getElementById('n-desc').value; b = document.getElementById('n-book').value; c = parseFloat(document.getElementById('n-cote').value); m = parseFloat(document.getElementById('n-mise').value);
             }
-
             if (state.b[b] >= m && m > 0) {
                 state.b[b] = (parseFloat(state.b[b]) - m).toFixed(2);
                 state.h.unshift({ id: Date.now().toString(), n: n, target: target, b: b, l: l, m: m, cote: c, isS: isS, t: time });
                 if (isS) { const u = state.u.find(x => x.n === n); if (u && u.l < 8) u.l++; }
                 save();
-            } else { alert("Fonds insuffisants sur " + b); }
+            } else { alert("Solde insuffisant"); }
         }
 
         function resolve(id, win) {
@@ -255,11 +242,7 @@
 
         function exportData() { document.getElementById('io-data').value = btoa(JSON.stringify(state)); }
         function importData() { 
-            try {
-                state = JSON.parse(atob(document.getElementById('io-data').value)); 
-                save(); 
-                alert("Données chargées !");
-            } catch(e) { alert("Code invalide"); }
+            try { state = JSON.parse(atob(document.getElementById('io-data').value)); save(); } catch(e) { alert("Erreur"); }
         }
 
         window.onload = render;
