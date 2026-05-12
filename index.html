@@ -65,6 +65,7 @@
         <button class="nav-item active" onclick="showTab('dash', this)"><i class="fa-solid fa-house"></i> MUR</button>
         <button class="nav-item" onclick="showTab('cock', this)"><i class="fa-solid fa-jet-fighter-up"></i> COCKPIT</button>
         <button class="nav-item" onclick="showTab('p-norm', this)"><i class="fa-solid fa-ticket"></i> PARI</button>
+        <button class="nav-item" onclick="showTab('arch', this)"><i class="fa-solid fa-box-archive"></i> ARCHIVE</button>
         <button class="nav-item" onclick="showTab('bank-mgr', this)"><i class="fa-solid fa-vault"></i> BANKROLL</button>
         <button class="nav-item" onclick="showTab('units-mgr', this)"><i class="fa-solid fa-users-gear"></i> UNITÉS</button>
     </nav>
@@ -113,7 +114,16 @@
                 <table><thead><tr><th>HEURE</th><th>CIBLE</th><th>MISE</th><th style="text-align:right">ACTION</th></tr></thead><tbody id="h-live-norm"></tbody></table>
             </div>
         </div>
-
+<!-- ARCHIVE -->
+<div id="arch" class="tab-content">
+    <div class="glass-panel">
+        <table>
+            <thead><tr><th>HEURE</th><th>UNITÉ / CIBLE</th><th>COTE</th><th>MISE</th><th>RÉSULTAT</th><th style="text-align:right">GAIN</th></tr></thead>
+            <tbody id="arch-list"></tbody>
+        </table>
+    </div>
+    <button class="btn-action" style="background:var(--ol-red); width:auto; padding:10px 20px;" onclick="if(confirm('Vider l\'archive ?')){state.a=[];save();}">VIDER L'ARCHIVE</button>
+</div>
         <div id="bank-mgr" class="tab-content">
             <div class="form-box">
                 <label>NOUVEAU VECTEUR</label>
@@ -177,6 +187,16 @@
 
             document.getElementById('h-live-strat').innerHTML = state.h.filter(h=>h.isS).map(h=>`<tr><td>${h.t}</td><td><b>${h.n}</b></td><td>P${h.l}</td><td>${h.m}€</td><td style="text-align:right"><button class="btn-win" onclick="resolve('${h.id}',true)">W</button> <button class="btn-loss" onclick="resolve('${h.id}',false)">L</button></td></tr>`).join('');
             document.getElementById('h-live-norm').innerHTML = state.h.filter(h=>!h.isS).map(h=>`<tr><td>${h.t}</td><td>${h.target}</td><td>${h.m}€</td><td style="text-align:right"><button class="btn-win" onclick="resolve('${h.id}',true)">W</button> <button class="btn-loss" onclick="resolve('${h.id}',false)">L</button></td></tr>`).join('');
+           // RENDU ARCHIVE
+            document.getElementById('arch-list').innerHTML = state.a.map(h=>`
+                <tr>
+                    <td>${h.t}</td>
+                    <td>${h.isS ? '<b>'+h.n+' (P'+h.l+')</b>' : h.target}</td>
+                    <td>${h.cote}</td>
+                    <td>${h.m}€</td>
+                    <td><span style="color:${h.win?'#22c55e':'#da0812'}; font-weight:800;">${h.win?'GAGNÉ':'PERDU'}</span></td>
+                    <td style="text-align:right; font-weight:800;">${h.win ? (h.m*h.cote).toFixed(2)+'€' : '0€'}</td>
+                </tr>`).join('');
             document.getElementById('u-mgr-list').innerHTML = state.u.map((u,i)=>`<tr><td><b>${u.n}</b></td><td style="color:#fbbf24;">${"⭐".repeat(u.s)}</td><td>P${u.l}</td><td style="text-align:right"><button onclick="delUnit(${i})" style="color:red; background:none; border:none; cursor:pointer;">SUPPR</button></td></tr>`).join('');
             document.getElementById('books-grid').innerHTML = Object.keys(state.b).map(k=>`<div class="stat-card"><label>${k.toUpperCase()}</label><input type="number" value="${state.b[k]}" onchange="state.b['${k}']=this.value;save()" style="background:transparent; border:none; text-align:center; font-size:18px; color:white; font-weight:900;"></div>`).join('');
             
@@ -231,15 +251,19 @@
         }
 
         function resolve(id, win) {
-            const h = state.h.find(x => x.id === id);
-            if(!h) return;
-            if(win) {
-                state.b[h.b] = (parseFloat(state.b[h.b]) + (h.m * h.cote)).toFixed(2);
-                if(h.isS) { const u = state.u.find(x => x.n == h.n); if(u) u.l = 1; }
-            }
-            state.h = state.h.filter(x => x.id !== id);
-            save();
-        }
+    const hIdx = state.h.findIndex(x => x.id === id);
+    if(hIdx === -1) return;
+    const h = state.h[hIdx];
+    h.win = win; 
+    if(win) {
+        state.b[h.b] = (parseFloat(state.b[h.b]) + (h.m * h.cote)).toFixed(2);
+        if(h.isS) { const u = state.u.find(x => x.n == h.n); if(u) u.l = 1; }
+    }
+    // Bascule vers le tableau archive
+    state.a.unshift(h);
+    state.h.splice(hIdx, 1);
+    save();
+}
 
         function exportData() { document.getElementById('io-data').value = btoa(JSON.stringify(state)); }
         function importData() { 
