@@ -304,7 +304,42 @@
         }
 
         function delUnit(i) { if(confirm("Supprimer ?")) { state.u.splice(i,1); save(); } }
+function addBook() {
+            const input = document.getElementById('new-bk-name');
+            const name = input.value.trim().toLowerCase();
+            
+            if (name === "") {
+                alert("Entre un nom de bookmaker !");
+                return;
+            }
 
+            // On initialise le nouveau bookmaker à 0€ s'il n'existe pas
+            if (!state.b[name]) {
+                state.b[name] = 0;
+                input.value = ""; // Vide le champ après création
+                save(); // Sauvegarde et rafraîchit l'affichage
+            } else {
+                alert("Ce vecteur existe déjà !");
+            }
+        }
+        function addBook() {
+            const input = document.getElementById('new-bk-name');
+            const name = input.value.trim().toLowerCase();
+            
+            if (name === "") {
+                alert("Entre un nom de bookmaker !");
+                return;
+            }
+
+            // On initialise le nouveau bookmaker à 0€ s'il n'existe pas
+            if (!state.b[name]) {
+                state.b[name] = 0;
+                input.value = ""; // Vide le champ après création
+                save(); // Sauvegarde et rafraîchit l'affichage
+            } else {
+                alert("Ce vecteur existe déjà !");
+            }
+        }
         function deleteBook(name) {
             if(confirm("Supprimer ce bookmaker ?")) {
                 delete state.b[name];
