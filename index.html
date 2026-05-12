@@ -85,11 +85,22 @@
         </div>
     </div>
 
-    <!-- ARCHIVE -->
+   <!-- ARCHIVE -->
     <div id="arch" class="tab-content">
         <div class="glass-panel">
             <table>
-                <thead><tr><th>DATE</th><th>UNITÉ</th><th>ADVERSAIRE</th><th>TYPE</th><th>COTE</th><th>MISE</th><th>RÉSULTAT</th><th style="text-align:right">GAIN</th></tr></thead>
+                <thead>
+                    <tr>
+                        <th>DATE</th>
+                        <th>UNITÉ</th>
+                        <th>ADVERSAIRE</th>
+                        <th>TYPE</th>
+                        <th>COTE</th>
+                        <th>MISE</th>
+                        <th>RÉSULTAT</th>
+                        <th style="text-align:right">GAIN</th>
+                    </tr>
+                </thead>
                 <tbody id="arch-list"></tbody>
             </table>
         </div>
@@ -100,17 +111,29 @@
     <div id="cock" class="tab-content">
         <div class="form-box">
             <div class="grid-tactical">
-    <div><label>Unité</label><select id="c-unit" onchange="updMise()"></select></div>
-    <div><label>Adversaire</label><input id="c-target" placeholder="Ex: Boca Juniors..."></div>
-    <div><label>Type de Pari</label><input id="c-type" placeholder="Ex: Qualif + Under 3.5..."></div>
-    <div><label>Vecteur</label><select id="c-book"></select></div>
-    <div><label>Cote</label><input type="number" id="c-cote" value="2.00" step="0.01"></div>
-    <div><label>Mise (€)</label><input type="number" id="c-mise" style="border: 1px solid #22c55e;"></div>
-</div>
+                <div><label>Unité</label><select id="c-unit" onchange="updMise()"></select></div>
+                <div><label>Adversaire</label><input id="c-target" placeholder="Ex: Boca Juniors..."></div>
+                <div><label>Type de Pari</label><input id="c-type" placeholder="Ex: Qualif + Under 3.5..."></div>
+                <div><label>Vecteur</label><select id="c-book"></select></div>
+                <div><label>Cote</label><input type="number" id="c-cote" value="2.00" step="0.01"></div>
+                <div><label>Mise (€)</label><input type="number" id="c-mise" style="border: 1px solid #22c55e;"></div>
+            </div>
             <button class="btn-action" onclick="pari(true)">DÉPLOYER STRATÉGIE</button>
         </div>
         <div class="glass-panel">
-            <table><thead><tr><th>DATE</th><th>UNITÉ</th><th>PHASE</th><th>MISE</th><th style="text-align:right">ACTION</th></tr></thead><tbody id="h-live-strat"></tbody></table>
+            <table>
+                <thead>
+                    <tr>
+                        <th>DATE</th>
+                        <th>UNITÉ</th>
+                        <th>ADVERSAIRE</th>
+                        <th>TYPE</th>
+                        <th>MISE</th>
+                        <th style="text-align:right">ACTION</th>
+                    </tr>
+                </thead>
+                <tbody id="h-live-strat"></tbody>
+            </table>
         </div>
     </div>
 
@@ -179,16 +202,18 @@
         function save() { localStorage.setItem('gones_v28', JSON.stringify(state)); render(); }
 
         function render() {
+            // 1. Calculs financiers
             const total = Object.values(state.b).reduce((a,v)=>a+parseFloat(v||0),0);
             document.getElementById('d-cap').innerText = total.toFixed(2)+"€";
             document.getElementById('d-ben').innerText = (total - state.start_bk).toFixed(2)+"€";
 
+            // 2. Mise à jour des listes déroulantes (Selects)
             const bOpt = Object.keys(state.b).map(k=>`<option value="${k}">${k.toUpperCase()}</option>`).join('');
             document.getElementById('c-unit').innerHTML = state.u.map(u=>`<option value="${u.n}">${u.n} (P${u.l})</option>`).join('');
             document.getElementById('c-book').innerHTML = bOpt;
             document.getElementById('n-book').innerHTML = bOpt;
 
-            // MUR DE LYON (Avec Etoiles)
+            // 3. MUR DE LYON (Tableau de bord)
             document.getElementById('dash-summary').innerHTML = state.u.map(u=>`
                 <tr>
                     <td><b>${u.n}</b></td>
@@ -197,9 +222,33 @@
                     <td style="text-align:right"><span style="background:var(--ol-blue); padding:3px 8px; border-radius:4px; font-size:10px; font-weight:900;">ACTIF</span></td>
                 </tr>`).join('');
 
-            document.getElementById('h-live-strat').innerHTML = state.h.filter(h=>h.isS).map(h=>`<tr><td>${h.t}</td><td><b>${h.n}</b></td><td>P${h.l}</td><td>${h.m}€</td><td style="text-align:right"><button class="btn-win" onclick="resolve('${h.id}',true)">W</button> <button class="btn-loss" onclick="resolve('${h.id}',false)">L</button></td></tr>`).join('');
-            document.getElementById('h-live-norm').innerHTML = state.h.filter(h=>!h.isS).map(h=>`<tr><td>${h.t}</td><td>${h.target}</td><td>${h.m}€</td><td style="text-align:right"><button class="btn-win" onclick="resolve('${h.id}',true)">W</button> <button class="btn-loss" onclick="resolve('${h.id}',false)">L</button></td></tr>`).join('');
-          // RENDU ARCHIVE
+            // 4. RENDU COCKPIT (Stratégie en cours)
+            document.getElementById('h-live-strat').innerHTML = state.h.filter(h=>h.isS).map(h=>`
+                <tr>
+                    <td>${h.t}</td>
+                    <td><b>${h.n}</b></td>
+                    <td>${h.target || '-'}</td>
+                    <td style="font-size:11px; color:var(--ol-blue);">${h.type || '-'}</td>
+                    <td>${h.m}€</td>
+                    <td style="text-align:right">
+                        <button class="btn-win" onclick="resolve('${h.id}',true)">W</button> 
+                        <button class="btn-loss" onclick="resolve('${h.id}',false)">L</button>
+                    </td>
+                </tr>`).join('');
+
+            // 5. RENDU PARI SIMPLE (En cours)
+            document.getElementById('h-live-norm').innerHTML = state.h.filter(h=>!h.isS).map(h=>`
+                <tr>
+                    <td>${h.t}</td>
+                    <td><b>${h.target}</b></td>
+                    <td>${h.m}€</td>
+                    <td style="text-align:right">
+                        <button class="btn-win" onclick="resolve('${h.id}',true)">W</button> 
+                        <button class="btn-loss" onclick="resolve('${h.id}',false)">L</button>
+                    </td>
+                </tr>`).join('');
+
+            // 6. RENDU ARCHIVE (Historique complet)
             document.getElementById('arch-list').innerHTML = state.a.map(h=>`
                 <tr>
                     <td>${h.t}</td>
@@ -211,6 +260,10 @@
                     <td><span style="color:${h.win?'#22c55e':'#da0812'}; font-weight:800;">${h.win?'GAGNÉ':'PERDU'}</span></td>
                     <td style="text-align:right; font-weight:800; color:${h.win?'#22c55e':''}">${h.win ? (h.m*h.cote).toFixed(2)+'€' : '0€'}</td>
                 </tr>`).join('');
+
+            // 7. Gestion des gestionnaires (Books et Unités)
+            updMgrs(); 
+        }
 
         function showTab(id, btn) {
             document.querySelectorAll('.tab-content').forEach(x => x.classList.remove('active'));
