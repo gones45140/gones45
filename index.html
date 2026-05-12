@@ -244,7 +244,7 @@
                     </td>
                 </tr>`).join('');
 
-            // 6. RENDU ARCHIVE (Historique complet)
+            // 6. RENDU ARCHIVE
             document.getElementById('arch-list').innerHTML = state.a.map(h=>`
                 <tr>
                     <td>${h.t}</td>
@@ -257,42 +257,38 @@
                     <td style="text-align:right; font-weight:800; color:${h.win?'#22c55e':''}">${h.win ? (h.m*h.cote).toFixed(2)+'€' : '0€'}</td>
                 </tr>`).join('');
 
-          // 7. RENDU DES CARTES BOOKMAKERS (BANKROLL)
+            // 7. RENDU BANKROLL
             const grid = document.getElementById('books-grid');
             if (grid) {
                 grid.innerHTML = Object.entries(state.b).map(([name, balance]) => `
                     <div class="stat-card" style="border-bottom: 4px solid var(--ol-blue); padding: 15px;">
                         <label style="display:block; margin-bottom:5px; color:var(--ol-blue); font-size:10px; font-weight:bold;">${name.toUpperCase()}</label>
-                        
-                        <!-- CHAMP DE SAISIE DU MONTANT -->
                         <div style="display:flex; align-items:center; justify-content:center;">
-                            <input type="number" 
-                                   inputmode="decimal" 
-                                   value="${balance}" 
-                                   onfocus="this.select()"
+                            <input type="number" inputmode="decimal" value="${balance}" onfocus="this.select()"
                                    onchange="updateBalance('${name}', this.value)"
                                    style="background:transparent; border:none; color:white; font-size:24px; font-family:'Orbitron', sans-serif; text-align:center; width:120px; outline:none;">
                             <span style="font-size:20px; margin-left:5px;">€</span>
                         </div>
-
                         <button onclick="deleteBook('${name}')" style="background:none; border:none; color:var(--ol-red); cursor:pointer; font-size:10px; margin-top:10px; text-transform:uppercase;">Supprimer</button>
-                    </div>
-                `).join('');
+                    </div>`).join('');
             }
 
-            // 8. RENDU DE LA LISTE DES UNITÉS (ONGLET UNITÉS)
-            const uList = document.getElementById('u-list');
+            // 8. RENDU UNITÉS
+            const uList = document.getElementById('u-mgr-list');
             if(uList) {
                 uList.innerHTML = state.u.map((u, i) => `
-                    <div class="stat-card">
-                        <b>${u.n}</b> (P${u.l}) - ${u.s}⭐
-                        <button onclick="delUnit(${i})" style="float:right; color:var(--ol-red); background:none; border:none;">X</button>
-                    </div>
-                `).join('');
+                    <tr style="border-bottom: 1px solid rgba(255,255,255,0.05);">
+                        <td style="padding:12px 5px;"><b>${u.n.toUpperCase()}</b></td>
+                        <td style="color:#fbbf24; letter-spacing:2px;">${"⭐".repeat(u.s)}</td>
+                        <td style="color:var(--ol-blue); font-weight:800;">PALIER ${u.l}</td>
+                        <td style="text-align:right;">
+                            <button onclick="delUnit(${i})" style="background:none; border:none; color:var(--ol-red); cursor:pointer; font-size:11px;">SUPPRIMER</button>
+                        </td>
+                    </tr>`).join('');
             }
         }
 
-        // --- AUTRES FONCTIONS ---
+        // --- FONCTIONS ACTIONS ---
 
         function showTab(id, btn) {
             document.querySelectorAll('.tab-content').forEach(x => x.classList.remove('active'));
@@ -301,71 +297,48 @@
             btn.classList.add('active');
         }
 
-        function updMise() {
-            const u = state.u.find(x => x.n === document.getElementById('c-unit').value);
-            if(u) document.getElementById('c-mise').value = MISES[u.l-1];
-        }
-
-        function addUnit() {
-            const name = document.getElementById('u-n-add').value;
-            if(!name) return;
-            state.u.push({n: name, s: parseInt(document.getElementById('u-s-add').value), l: 1});
-            document.getElementById('u-n-add').value = "";
-            save();
-        }
-
-        function delUnit(i) { if(confirm("Supprimer ?")) { state.u.splice(i,1); save(); } }
-function addBook() {
-            const input = document.getElementById('new-bk-name');
-            const name = input.value.trim().toLowerCase();
-            
-            if (name === "") {
-                alert("Entre un nom de bookmaker !");
-                return;
-            }
-
-            // On initialise le nouveau bookmaker à 0€ s'il n'existe pas
-            if (!state.b[name]) {
-                state.b[name] = 0;
-                input.value = ""; // Vide le champ après création
-                save(); // Sauvegarde et rafraîchit l'affichage
-            } else {
-                alert("Ce vecteur existe déjà !");
-            }
-        }
         function addBook() {
             const input = document.getElementById('new-bk-name');
             const name = input.value.trim().toLowerCase();
-            
-            if (name === "") {
-                alert("Entre un nom de bookmaker !");
-                return;
-            }
-
-            // On initialise le nouveau bookmaker à 0€ s'il n'existe pas
+            if (name === "") return;
             if (!state.b[name]) {
                 state.b[name] = 0;
-                input.value = ""; // Vide le champ après création
-                save(); // Sauvegarde et rafraîchit l'affichage
-            } else {
-                alert("Ce vecteur existe déjà !");
-            }
+                input.value = "";
+                save();
+            } else { alert("Existe déjà !"); }
         }
+
         function updateBalance(name, val) {
             state.b[name] = parseFloat(val) || 0;
-            save(); // Sauvegarde la modification et recalcule le total global
+            save();
         }
-          function deleteBook(name) {
-            if(confirm("Supprimer ce bookmaker ?")) {
-                delete state.b[name];
-                save();
-            }
+
+        function deleteBook(name) {
+            if(confirm("Supprimer " + name + " ?")) { delete state.b[name]; save(); }
+        }
+
+        function addUnit() {
+            const n = document.getElementById('u-n-add');
+            const s = document.getElementById('u-s-add');
+            if(!n.value.trim()) return;
+            state.u.push({ n: n.value.trim(), s: parseInt(s.value), l: 1 });
+            n.value = "";
+            save();
+        }
+
+        function delUnit(i) {
+            if(confirm("Supprimer cette unité ?")) { state.u.splice(i, 1); save(); }
+        }
+
+        function updMise() {
+            const u = state.u.find(x => x.n === document.getElementById('c-unit').value);
+            if(u) document.getElementById('c-mise').value = MISES[u.l-1] || 10;
         }
 
         function pari(isS) {
             let n, b, c, m, target = "", type = "", l = 1;
             const now = new Date();
-            const time = now.toLocaleDateString('fr-FR', {day: '2-digit', month: '2-digit'}) + ' ' + now.toLocaleTimeString('fr-FR', {hour: '2-digit', minute:'2-digit'});
+            const time = now.toLocaleDateString('fr-FR', {day:'2-digit', month:'2-digit'}) + ' ' + now.toLocaleTimeString('fr-FR', {hour:'2-digit', minute:'2-digit'});
             
             if (isS) {
                 const u = state.u.find(x => x.n === document.getElementById('c-unit').value);
@@ -387,7 +360,6 @@ function addBook() {
             if (state.b[b] >= m && m > 0) {
                 state.b[b] = (parseFloat(state.b[b]) - m).toFixed(2);
                 state.h.unshift({ id: Date.now().toString(), n: n, target: target, type: type, b: b, l: l, m: m, cote: c, isS: isS, t: time });
-                if (isS) { const u = state.u.find(x => x.n === n); if (u && u.l < 8) u.l++; }
                 save();
             } else { alert("Solde insuffisant !"); }
         }
@@ -400,6 +372,8 @@ function addBook() {
             if(win) {
                 state.b[h.b] = (parseFloat(state.b[h.b]) + (h.m * h.cote)).toFixed(2);
                 if(h.isS) { const u = state.u.find(x => x.n == h.n); if(u) u.l = 1; }
+            } else {
+                if(h.isS) { const u = state.u.find(x => x.n == h.n); if(u && u.l < 8) u.l++; }
             }
             state.a.unshift(h);
             state.h.splice(hIdx, 1);
@@ -411,12 +385,8 @@ function addBook() {
         function importData() { try { state = JSON.parse(atob(document.getElementById('io-data').value)); save(); } catch(e) { alert("Erreur"); } }
 
         window.onload = () => {
-            // Initialisation du state si vide
-            if(!localStorage.getItem('gones_state')) {
-                window.state = { start_bk: 0, b: {winamax: 0}, u: [], h: [], a: [] };
-            } else {
-                window.state = JSON.parse(localStorage.getItem('gones_state'));
-            }
+            const saved = localStorage.getItem('gones_state');
+            window.state = saved ? JSON.parse(saved) : { start_bk: 0, b: {winamax: 0}, u: [], h: [], a: [] };
             render();
         };
     </script>
