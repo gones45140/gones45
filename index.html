@@ -258,22 +258,25 @@
                 </tr>`).join('');
 
            // 7. RENDU DES CARTES BOOKMAKERS (BANKROLL)
-            const grid = document.getElementById('books-grid');
-            if (grid) {
-                grid.innerHTML = Object.entries(state.b).map(([name, balance]) => `
-                    <div class="stat-card" style="border-bottom: 4px solid var(--ol-blue);">
-                        <label>${name.toUpperCase()}</label>
-                        <div style="margin: 10px 0;">
-                            <input type="number" step="0.01" 
-                                value="${parseFloat(balance).toFixed(2)}" 
-                                onchange="updateBalance('${name}', this.value)"
-                                style="background: rgba(255,255,255,0.1); border: 1px solid var(--ol-blue); color: white; text-align: center; font-size: 1.2rem; width: 80%; border-radius: 4px; padding: 5px;">
-                            <span style="margin-left: 5px;">€</span>
-                        </div>
-                        <button onclick="deleteBook('${name}')" style="background:none; border:none; color:var(--ol-red); cursor:pointer; font-size:10px; margin-top:5px;">SUPPRIMER</button>
-                    </div>
-                `).join('');
-            }
+const grid = document.getElementById('books-grid');
+if (grid) {
+    grid.innerHTML = Object.entries(state.b).map(([name, balance]) => `
+        <div class="stat-card" style="border-bottom: 4px solid var(--ol-blue); padding: 15px;">
+            <label style="display: block; margin-bottom: 10px; font-weight: bold;">${name.toUpperCase()}</label>
+            
+            <!-- C'EST CETTE LIGNE QUI PERMET LA MODIFICATION -->
+            <div style="display: flex; align-items: center; justify-content: center; gap: 5px;">
+                <input type="number" step="0.01" 
+                    value="${balance}" 
+                    onchange="updateBalance('${name}', this.value)"
+                    style="background: rgba(255,255,255,0.05); border: 1px solid #3b82f6; color: white; text-align: center; font-size: 1.5rem; width: 100px; border-radius: 4px; font-family: 'Orbitron', sans-serif;">
+                <span style="font-size: 1.2rem;">€</span>
+            </div>
+
+            <button onclick="deleteBook('${name}')" style="background:none; border:none; color:#da0812; cursor:pointer; font-size:10px; margin-top:15px; opacity: 0.7;">SUPPRIMER</button>
+        </div>
+    `).join('');
+}
 
             // 8. RENDU DE LA LISTE DES UNITÉS (ONGLET UNITÉS)
             const uList = document.getElementById('u-list');
