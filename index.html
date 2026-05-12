@@ -212,11 +212,23 @@
         // Ta configuration de mises (Palier 1 à 8)
         const MISES = [10, 20, 60, 180, 540, 1620, 4860, 14580]; 
 
-        function render() {
+            function render() {
             // 1. Calculs financiers
             const total = Object.values(state.b).reduce((a,v)=>a+parseFloat(v||0),0);
+            
+            // Si start_bk est à 0 (première fois), on l'aligne sur le capital pour éviter un faux bénéfice
+            if(state.start_bk === 0 && total > 0) {
+                state.start_bk = total;
+            }
+
             document.getElementById('d-cap').innerText = total.toFixed(2)+"€";
-            document.getElementById('d-ben').innerText = (total - state.start_bk).toFixed(2)+"€";
+            
+            // Le bénéfice est la différence entre maintenant et le départ
+            const benefice = total - state.start_bk;
+            document.getElementById('d-ben').innerText = benefice.toFixed(2)+"€";
+            
+            // Couleur dynamique (Rouge si perte, Vert si gain)
+            document.getElementById('d-ben').style.color = benefice >= 0 ? "#22c55e" : "#da0812";
 
             // 2. Mise à jour des listes déroulantes (Selects)
             const bOpt = Object.keys(state.b).map(k=>`<option value="${k}">${k.toUpperCase()}</option>`).join('');
