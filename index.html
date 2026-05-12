@@ -235,6 +235,18 @@
                         <button class="btn-loss" onclick="resolve('${h.id}',false)">L</button>
                     </td>
                 </tr>`).join('');
+            // Affiche les cartes des bookmakers dans la grille
+    const grid = document.getElementById('books-grid');
+    if (grid) {
+        grid.innerHTML = Object.entries(state.b).map(([name, balance]) => `
+            <div class="stat-card" style="border-bottom: 4px solid var(--ol-blue);">
+                <label>${name.toUpperCase()}</label>
+                <span class="stat-val">${parseFloat(balance).toFixed(2)}€</span>
+                <button onclick="deleteBook('${name}')" style="background:none; border:none; color:var(--ol-red); cursor:pointer; font-size:10px; margin-top:5px;">SUPPRIMER</button>
+            </div>
+        `).join('');
+    
+            
 
             // 5. RENDU PARI SIMPLE (En cours)
             document.getElementById('h-live-norm').innerHTML = state.h.filter(h=>!h.isS).map(h=>`
