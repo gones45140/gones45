@@ -155,23 +155,38 @@
     </div>
 
     <!-- BANKROLL -->
-    <div id="bank-mgr" class="tab-content">
-        <div class="form-box">
-            <label>NOUVEAU VECTEUR</label>
-            <div style="display:flex; gap:10px; margin-top:5px;">
-                <input id="new-bk-name" placeholder="Nom du book...">
-                <button class="btn-action" style="width:100px; margin:0;" onclick="addBook()">CRÉER</button>
-            </div>
-        </div>
-        <div id="books-grid" class="stats-grid"></div>
-        <div class="form-box">
-            <textarea id="io-data" rows="3" placeholder="Code JSON..." style="font-size:10px;"></textarea>
-            <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px; margin-top:10px;">
-                <button class="btn-action" style="background:#334155" onclick="exportData()">SAUVEGARDER</button>
-                <button class="btn-action" style="background:var(--ol-blue)" onclick="importData()">CHARGER</button>
-            </div>
+<div id="bank-mgr" class="tab-content">
+    <div class="form-box">
+        <label>CONFIGURATION INITIALE</label>
+        <div style="display:flex; gap:10px; margin-top:5px;">
+            <!-- Ce bouton permet de définir ton point zéro pour le calcul du bénéfice -->
+            <button class="btn-action" 
+                    style="background:var(--ol-blue); margin:0;" 
+                    onclick="state.start_bk = parseFloat(prompt('Montant total de départ ?')); save();">
+                FIXER CAPITAL DÉPART
+            </button>
         </div>
     </div>
+
+    <div class="form-box">
+        <label>NOUVEAU VECTEUR</label>
+        <div style="display:flex; gap:10px; margin-top:5px;">
+            <input id="new-bk-name" placeholder="Nom du book...">
+            <button class="btn-action" style="width:100px; margin:0;" onclick="addBook()">CRÉER</button>
+        </div>
+    </div>
+
+    <div id="books-grid" class="stats-grid"></div>
+
+    <div class="form-box">
+        <label>SAUVEGARDE EXTERNE</label>
+        <textarea id="io-data" rows="3" placeholder="Code JSON..." style="font-size:10px; margin-top:5px;"></textarea>
+        <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px; margin-top:10px;">
+            <button class="btn-action" style="background:#334155" onclick="exportData()">EXPORTER (COPIER)</button>
+            <button class="btn-action" style="background:var(--ol-blue)" onclick="importData()">IMPORTER (COLLER)</button>
+        </div>
+    </div>
+</div>
 
     <!-- UNITÉS -->
     <div id="units-mgr" class="tab-content">
