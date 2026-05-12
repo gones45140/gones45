@@ -246,31 +246,40 @@
             const now = new Date();
             const time = now.toLocaleDateString('fr-FR', {day: '2-digit', month: '2-digit'}) + ' ' + now.toLocaleTimeString('fr-FR', {hour: '2-digit', minute:'2-digit'});
             
-            if (isS) {
-                const u = state.u.find(x => x.n === document.getElementById('c-unit').value);
-                if (!u) return;
-                n = u.n; 
-                target = document.getElementById('c-target').value; // Nouveau
-                type = document.getElementById('c-type').value;     // Nouveau
-                b = document.getElementById('c-book').value; 
-                c = parseFloat(document.getElementById('c-cote').value); 
-                m = parseFloat(document.getElementById('c-mise').value); 
-                l = u.l;
-            } else {
-                target = document.getElementById('n-target').value; 
-                type = document.getElementById('n-desc').value; 
-                n = "PARI SIMPLE"; // Pour différencier dans l'archive
-                b = document.getElementById('n-book').value; 
-                c = parseFloat(document.getElementById('n-cote').value); 
-                m = parseFloat(document.getElementById('n-mise').value);
+            try {
+                if (isS) {
+                    const unitEl = document.getElementById('c-unit');
+                    const u = state.u.find(x => x.n === unitEl.value);
+                    if (!u) return;
+                    n = u.n; 
+                    // Sécurité : on vérifie si l'élément existe avant de prendre sa .value
+                    target = document.getElementById('c-target')?.value || "Inconnu";
+                    type = document.getElementById('c-type')?.value || "Stratégie";
+                    b = document.getElementById('c-book').value; 
+                    c = parseFloat(document.getElementById('c-cote').value) || 0; 
+                    m = parseFloat(document.getElementById('c-mise').value) || 0; 
+                    l = u.l;
+                } else {
+                    target = document.getElementById('n-target').value || "Pari";
+                    type = document.getElementById('n-desc').value || "Simple";
+                    n = "PARI SIMPLE"; 
+                    b = document.getElementById('n-book').value; 
+                    c = parseFloat(document.getElementById('n-cote').value) || 0; 
+                    m = parseFloat(document.getElementById('n-mise').value) || 0;
+                }
+                
+                if (state.b[b] >= m && m > 0) {
+                    state.b[b] = (parseFloat(state.b[b]) - m).toFixed(2);
+                    state.h.unshift({ id: Date.now().toString(), n: n, target: target, type: type, b: b, l: l, m: m, cote: c, isS: isS, t: time });
+                    // Si perdant (isS), on monte de palier
+                    if (isS) { const u = state.u.find(x => x.n === n); if (u && u.l < 8) u.l++; }
+                    save();
+                } else { 
+                    alert("Vérifiez le solde ou la mise"); 
+                }
+            } catch (error) {
+                console.error("Erreur dans pari():", error);
             }
-            
-            if (state.b[b] >= m && m > 0) {
-                state.b[b] = (parseFloat(state.b[b]) - m).toFixed(2);
-                state.h.unshift({ id: Date.now().toString(), n: n, target: target, type: type, b: b, l: l, m: m, cote: c, isS: isS, t: time });
-                if (isS) { const u = state.u.find(x => x.n === n); if (u && u.l < 8) u.l++; }
-                save();
-            } else { alert("Solde insuffisant"); }
         }
 
         function resolve(id, win) {
