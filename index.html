@@ -1,15 +1,16 @@
 
+
 <!DOCTYPE html>
 <html lang="fr">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>GONES45 - COMMAND CENTER</title>
+    
     <link rel="manifest" href="manifest.json">
-    <title>GONES45 - COMMAND CENTER V28.2</title>
     
     <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;900&family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
-    
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
     <style>
@@ -20,203 +21,113 @@
         }
 
         * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { background: var(--bg); color: var(--text); font-family: 'Inter', sans-serif; display: flex; height: 100vh; overflow: hidden; }
 
-        body { 
-            background: var(--bg); 
-            color: var(--text); 
-            font-family: 'Inter', sans-serif; 
-            display: flex; 
-            height: 100vh; 
-            overflow: hidden; 
-        }
+        /* Sidebar PC */
+        .sidebar { width: 16rem; background: var(--sidebar); border-right: 3px solid var(--ol-red); padding: 1.5rem 1rem; display: flex; flex-direction: column; flex-shrink: 0; }
+        .logo { font-family: 'Orbitron', sans-serif; font-size: 1.3rem; text-align: center; margin-bottom: 2rem; border-bottom: 2px solid var(--ol-red); padding-bottom: 0.5rem; }
 
-        /* --- SIDEBAR (PC) --- */
-        .sidebar { 
-            width: 18rem; 
-            background: var(--sidebar); 
-            border-right: 3px solid var(--ol-red); 
-            padding: 1.5rem 1rem; 
-            display: flex; 
-            flex-direction: column; 
-            flex-shrink: 0; 
-            transition: all 0.3s ease;
-        }
+        /* Main Content */
+        .main { flex-grow: 1; padding: 2rem; overflow-y: auto; background: radial-gradient(circle at top right, #1e1b4b 0%, #020617 100%); }
 
-        .logo { 
-            font-family: 'Orbitron', sans-serif; 
-            font-size: 1.4rem; 
-            font-weight: 900; 
-            text-align: center; 
-            margin-bottom: 2rem; 
-            border-bottom: 2px solid var(--ol-red); 
-            padding-bottom: 0.5rem; 
-            text-transform: uppercase;
-        }
+        /* Grilles & Cards (Responsive %) */
+        .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; margin-bottom: 2rem; }
+        .stat-card { background: var(--card); border-radius: 15px; border: 1px solid var(--border); padding: 1.2rem; text-align: center; backdrop-filter: blur(10px); }
+        .stat-val { font-family: 'Orbitron', sans-serif; font-size: 1.5rem; color: var(--text); display: block; }
 
-        .nav-label { 
-            font-size: 0.65rem; 
-            color: var(--ol-blue); 
-            letter-spacing: 2px; 
-            margin: 1rem 0 0.5rem 0.5rem; 
-            font-weight: 800; 
-            text-transform: uppercase; 
-        }
+        .chart-box { background: var(--card); border-radius: 15px; border: 1px solid var(--border); padding: 1.5rem; margin-bottom: 1.5rem; min-height: 300px; }
 
-        .nav-item { 
-            display: flex; align-items: center; gap: 0.8rem; 
-            padding: 0.8rem 1rem; border-radius: 10px; 
-            color: #94a3b8; cursor: pointer; border: none; 
-            background: transparent; width: 100%; 
-            font-size: 0.85rem; font-weight: 600; transition: 0.3s; 
-        }
+        .nav-item { display: flex; align-items: center; gap: 0.8rem; padding: 0.8rem; border-radius: 10px; color: #94a3b8; cursor: pointer; border: none; background: transparent; font-weight: 600; width: 100%; text-align: left; transition: 0.3s; }
+        .nav-item.active { background: var(--ol-blue); color: #fff; }
 
-        .nav-item:hover { background: rgba(255,255,255,0.05); color: #fff; }
-        .nav-item.active { background: var(--ol-blue); color: #fff; box-shadow: 0 4px 12px rgba(0, 70, 167, 0.3); }
-
-        /* --- MAIN CONTENT --- */
-        .main { 
-            flex-grow: 1; 
-            padding: 2rem; 
-            overflow-y: auto; 
-            background-image: radial-gradient(circle at top right, #1e1b4b 0%, #020617 100%); 
-        }
-
-        /* --- CARDS & GRIDS --- */
-        .stats-grid { 
-            display: grid; 
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); 
-            gap: 1.5rem; 
-            margin-bottom: 2rem; 
-        }
-
-        .stat-card { 
-            background: var(--card); 
-            border-radius: 15px; 
-            border: 1px solid var(--border); 
-            padding: 1.5rem; 
-            text-align: center; 
-            backdrop-filter: blur(10px); 
-        }
-
-        .stat-val { 
-            font-family: 'Orbitron', sans-serif; 
-            font-size: 1.6rem; 
-            font-weight: 900; 
-            display: block; 
-            margin-top: 0.5rem; 
-        }
-
-        /* --- GRAPHIQUE --- */
-        .chart-box {
-            background: var(--card);
-            border-radius: 15px;
-            border: 1px solid var(--border);
-            padding: 1.5rem;
-            margin-bottom: 2rem;
-            height: 350px;
-        }
-
-        /* --- RESPONSIVE MOBILE (Conseils Ami + Navigation Basse) --- */
+        /* MOBILE : Nav en bas */
         @media (max-width: 768px) {
             body { flex-direction: column; }
-
-            .sidebar { 
-                position: fixed; bottom: 0; left: 0; 
-                width: 100%; height: 75px; 
-                flex-direction: row; justify-content: space-around; 
-                padding: 0.5rem; border-right: none; 
-                border-top: 3px solid var(--ol-red); z-index: 1000; 
-            }
-
-            .logo, .nav-label { display: none; }
-
-            .nav-item { 
-                flex-direction: column; gap: 0.3rem; 
-                font-size: 0.65rem; padding: 0.5rem; 
-                margin-bottom: 0; flex: 1; justify-content: center;
-            }
-
-            .nav-item i { font-size: 1.2rem; }
-
-            .main { 
-                padding: 1rem; 
-                padding-bottom: 90px; /* Espace pour la barre basse */
-            }
-
-            .stats-grid { gap: 1rem; }
-            .chart-box { height: 280px; }
+            .sidebar { position: fixed; bottom: 0; left: 0; width: 100%; height: 70px; flex-direction: row; padding: 0.2rem; border-right: none; border-top: 3px solid var(--ol-red); z-index: 1000; }
+            .logo { display: none; }
+            .nav-item { flex-direction: column; font-size: 0.6rem; gap: 0.2rem; flex: 1; justify-content: center; align-items: center; }
+            .main { padding: 1rem; padding-bottom: 80px; }
+            .chart-box { min-height: 250px; padding: 1rem; }
         }
     </style>
 </head>
 <body>
 
     <nav class="sidebar">
-        <div class="logo">GONES<span>45</span></div>
-        
-        <div class="nav-label">Command Center</div>
-        <button class="nav-item active"><i class="fas fa-home"></i> Mur de Lyon</button>
-        <button class="nav-item"><i class="fas fa-plane"></i> Cockpit Strat</button>
-        
-        <div class="nav-label">Logistique</div>
-        <button class="nav-item"><i class="fas fa-wallet"></i> Bankroll</button>
-        <button class="nav-item"><i class="fas fa-users"></i> Gestion Unités</button>
+        <div class="logo">GONES45</div>
+        <button class="nav-item active"><i class="fas fa-chart-line"></i><span>Mur de Lyon</span></button>
+        <button class="nav-item"><i class="fas fa-wallet"></i><span>Bankroll</span></button>
+        <button class="nav-item"><i class="fas fa-users"></i><span>Unités</span></button>
     </nav>
 
     <main class="main">
-        
         <div class="stats-grid">
             <div class="stat-card">
-                <span style="font-size: 0.7rem; color: var(--accent-cyan); font-weight: 800;">CAPITAL TOTAL</span>
-                <span class="stat-val">10 000.00€</span>
+                <span style="font-size: 0.7rem; color: var(--accent-cyan);">CAPITAL</span>
+                <span class="stat-val">1250€</span>
             </div>
-            <div class="stat-card" style="border-bottom: 2px solid var(--ol-red);">
-                <span style="font-size: 0.7rem; color: var(--accent-cyan); font-weight: 800;">BÉNÉFICE</span>
-                <span class="stat-val">0.00€</span>
+            <div class="stat-card">
+                <span style="font-size: 0.7rem; color: var(--ol-red);">ROI %</span>
+                <span class="stat-val">+12.5%</span>
             </div>
         </div>
 
         <div class="chart-box">
-            <h3 style="font-family: 'Orbitron'; font-size: 0.9rem; margin-bottom: 1rem; color: var(--accent-cyan);">
-                <i class="fas fa-chart-line"></i> ÉVOLUTION STRATÉGIQUE
-            </h3>
+            <h4 style="font-family: 'Orbitron'; font-size: 0.8rem; margin-bottom: 1rem; color: var(--ol-blue);">ÉVOLUTION GLOBALE</h4>
             <canvas id="mainChart"></canvas>
         </div>
 
+        <div class="chart-box">
+            <h4 style="font-family: 'Orbitron'; font-size: 0.8rem; margin-bottom: 1rem; color: var(--ol-red);">PERF PAR ÉQUIPE</h4>
+            <canvas id="teamChart"></canvas>
+        </div>
     </main>
 
     <script>
-        const ctx = document.getElementById('mainChart').getContext('2d');
-        
-        // Dégradé style OL
-        const gradient = ctx.createLinearGradient(0, 0, 0, 300);
-        gradient.addColorStop(0, 'rgba(0, 70, 167, 0.5)');
-        gradient.addColorStop(1, 'rgba(2, 6, 23, 0)');
-
-        const mainChart = new Chart(ctx, {
+        // Graphique 1 : Courbe
+        const ctx1 = document.getElementById('mainChart').getContext('2d');
+        new Chart(ctx1, {
             type: 'line',
             data: {
-                labels: ['Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi', 'Dimanche'],
+                labels: ['1 Mai', '3 Mai', '5 Mai', '8 Mai', '10 Mai', '12 Mai'],
                 datasets: [{
-                    label: 'Capital (€)',
-                    data: [1000, 1020, 1010, 1050, 1040, 1100, 1150],
+                    label: 'Capital',
+                    data: [1000, 1050, 1030, 1150, 1120, 1250],
                     borderColor: '#0046a7',
-                    borderWidth: 3,
                     fill: true,
-                    backgroundColor: gradient,
-                    tension: 0.4,
-                    pointBackgroundColor: '#da0812',
-                    pointRadius: 4
+                    backgroundColor: 'rgba(0, 70, 167, 0.2)',
+                    tension: 0.4
                 }]
             },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: { legend: { display: false } },
-                scales: {
-                    y: { grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#94a3b8' } },
-                    x: { grid: { display: false }, ticks: { color: '#94a3b8' } }
-                }
+            options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } }
+        });
+
+        // Graphique 2 : Barres (Equipes)
+        const ctx2 = document.getElementById('teamChart').getContext('2d');
+        new Chart(ctx2, {
+            type: 'bar',
+            data: {
+                labels: ['Boca', 'PSV', 'Palmeiras', 'LAFC'],
+                datasets: [{
+                    data: [45, 80, 120, -20],
+                    backgroundColor: ['#0046a7', '#da0812', '#0046a7', '#334155'],
+                    borderRadius: 5
+                }]
+            },
+            options: { 
+                indexAxis: 'y',
+                responsive: true, 
+                maintainAspectRatio: false, 
+                plugins: { legend: { display: false } } 
             }
+        });
+
+        // Activation des boutons
+        document.querySelectorAll('.nav-item').forEach(btn => {
+            btn.onclick = () => {
+                document.querySelectorAll('.nav-item').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+            };
         });
     </script>
 </body>
