@@ -104,23 +104,31 @@
 
   <!-- ARCHIVE -->
 <div id="arch" class="tab-content">
-    <!-- SECTION 1 : EN COURS (Optionnel ici si déjà dans PARI, mais utile pour la vue d'ensemble) -->
-    <h3 style="color:var(--accent-cyan); margin: 15px 0 10px 0; font-size: 14px; font-family: 'Orbitron';">🕒 PARIS EN ATTENTE</h3>
+    <h3 style="color:var(--accent-cyan); margin:15px 0; font-size:14px;">🕒 PARIS EN ATTENTE</h3>
     <div class="glass-panel">
         <table>
             <thead>
-                <tr>
-                    <th>MATCH / DATE</th>
-                    <th>SPORT</th>
-                    <th>CIBLE</th>
-                    <th>COTE</th>
-                    <th>MISE</th>
-                    <th style="text-align:right">BOOK</th>
-                </tr>
+                <tr><th>MATCH / DATE</th><th>SPORT</th><th>CIBLE</th><th>COTE</th><th>MISE</th><th style="text-align:right">BOOK</th></tr>
             </thead>
             <tbody id="arch-pending-list"></tbody>
         </table>
     </div>
+
+    <h3 style="color:var(--ol-red); margin:25px 0 15px 0; font-size:14px;">✅ HISTORIQUE TERMINÉ</h3>
+    <div class="glass-panel">
+        <table>
+            <thead>
+                <tr><th>DATE</th><th>SPORT</th><th>CIBLE</th><th>COTE</th><th>MISE</th><th>RÉSULTAT</th><th style="text-align:right">GAIN</th></tr>
+            </thead>
+            <tbody id="arch-finished-list"></tbody>
+        </table>
+    </div>
+
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-top:20px;">
+        <small id="bet-count" style="opacity:0.6;"></small>
+        <button class="btn-action" style="background:var(--ol-red); width:auto; padding:8px 15px; font-size:11px;" onclick="if(confirm('Vider l\'archive ?')){state.a=[];save();render();}">VIDER L'ARCHIVE</button>
+    </div>
+</div>
 
     <!-- SECTION 2 : TERMINÉS -->
     <h3 style="color:var(--ol-red); margin: 25px 0 10px 0; font-size: 14px; font-family: 'Orbitron';">✅ HISTORIQUE TERMINÉ</h3>
@@ -364,25 +372,24 @@ document.getElementById('h-live-norm').innerHTML = state.h.filter(h=>!h.isS).map
         </td>
     </tr>`).join('');
                 
-    // 6. RENDU ARCHIVE (SÉPARÉ)
+   // Rendu Archive
 const pending = state.a.filter(h => h.win === undefined);
 const finished = state.a.filter(h => h.win !== undefined);
 
-// Affichage du compteur de paris pour surveiller la limite
 document.getElementById('bet-count').innerText = state.a.length + " paris enregistrés";
 
-// Rendu des paris en attente
-document.getElementById('arch-pending-list').innerHTML = pending.map(h => `
+// Tableau PARIS EN ATTENTE
+document.getElementById('arch-pending-list').innerHTML = pending.length ? pending.map(h => `
     <tr>
         <td><b>${h.md || '--/--'}</b><br><small>${h.t}</small></td>
         <td style="font-size:18px;">${h.sport || '❓'}</td>
-        <td><b>${h.target}</b><br><small style="color:var(--accent-cyan)">${h.type}</small></td>
+        <td><b>${h.target}</b></td>
         <td>${h.cote}</td>
         <td>${h.m}€</td>
-        <td style="text-align:right"><small>${h.b}</small></td>
-    </tr>`).join('');
+        <td style="text-align:right"><small>${h.b || 'VECTEUR'}</small></td>
+    </tr>`).join('') : '<tr><td colspan="6" style="text-align:center; padding:20px; opacity:0.5;">Aucun pari en attente</td></tr>';
 
-// Rendu des paris terminés
+// Tableau HISTORIQUE TERMINÉ
 document.getElementById('arch-finished-list').innerHTML = finished.map(h => `
     <tr>
         <td><b>${h.md || '--/--'}</b></td>
@@ -531,30 +538,37 @@ const formattedMatchDate = matchDate ? matchDate.split('-').reverse().slice(0,2)
             render();
         };
         function handleFund(isAdd) {
-    const bName = document.getElementById('trans-book').value;
-    const amount = parseFloat(document.getElementById('trans-amount').value);
+    // On récupère le bookmaker choisi dans la liste (Winamax/Betclic)
+    const bName = document.getElementById('move-book-select').value;
+    // On récupère le montant tapé
+    const amount = parseFloat(document.getElementById('move-amount').value);
     
     if(!bName || isNaN(amount) || amount <= 0) {
-        alert("Sélectionne un book et un montant valide.");
+        alert("Sélectionne un bookmaker et un montant valide.");
         return;
     }
 
+    // Conversion en nombre pour éviter les erreurs de texte
+    let currentBalance = parseFloat(state.b[bName]) || 0;
+
     if(isAdd) {
-        // DÉPÔT : On augmente le solde ET le capital de base pour ne pas fausser le bénéfice
-        state.b[bName] = (parseFloat(state.b[bName]) + amount).toFixed(2);
+        // DÉPÔT : On augmente le solde et le capital de départ
+        state.b[bName] = (currentBalance + amount).toFixed(2);
         state.start_bk += amount;
     } else {
-        // RETRAIT : On baisse le solde ET le capital de base
-        if(parseFloat(state.b[bName]) < amount) {
-            alert("Solde insuffisant sur ce bookmaker.");
+        // RETRAIT : On vérifie si on a assez d'argent
+        if(currentBalance < amount) {
+            alert("Solde insuffisant sur " + bName);
             return;
         }
-        state.b[bName] = (parseFloat(state.b[bName]) - amount).toFixed(2);
+        state.b[bName] = (currentBalance - amount).toFixed(2);
         state.start_bk -= amount;
     }
 
-    document.getElementById('trans-amount').value = ""; // Vide le champ
-    save(); // Sauvegarde et rafraîchit l'affichage
+    // Nettoyage et mise à jour
+    document.getElementById('move-amount').value = ""; 
+    save(); 
+    render(); // Très important pour voir le chiffre changer sur l'écran !
 }
     </script>
 </body>
