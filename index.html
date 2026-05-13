@@ -471,9 +471,13 @@ document.getElementById('arch-finished-list').innerHTML = finished.map(h => `
         }
 
         function updMise() {
-            const u = state.u.find(x => x.n === document.getElementById('c-unit').value);
-            if(u) document.getElementById('c-mise').value = MISES[u.l-1] || 10;
-        }
+    const uVal = document.getElementById('c-unit').value;
+    const u = state.u.find(x => x.n === uVal);
+    if (u) {
+        const idx = Math.min(u.l - 1, MISES.length - 1);
+        document.getElementById('c-mise').value = MISES[idx];
+    }
+}
 
         function pari(isS) {
     let n, b, c, m, target = "", type = "", l = 1;
@@ -591,6 +595,42 @@ document.getElementById('arch-finished-list').innerHTML = finished.map(h => `
     document.getElementById('move-amount').value = ""; 
     save(); 
     render(); // Très important pour voir le chiffre changer sur l'écran !
+}
+        function result(id, isWin) {
+    // 1. On cherche le pari dans la liste des paris en cours
+    const betIndex = state.h.findIndex(x => x.id === id);
+    if (betIndex === -1) return;
+    const bet = state.h[betIndex];
+
+    // 2. Si c'est gagné, on rend l'argent (Mise * Cote)
+    if (isWin) {
+        const gain = (bet.m * bet.cote).toFixed(2);
+        state.b[bet.b] = (parseFloat(state.b[bet.b]) + parseFloat(gain)).toFixed(2);
+    }
+
+    // 3. GESTION DES PALIERS (Le secret du retour en P1)
+    if (bet.isS) { // Si c'est un pari du Cockpit
+        const unitName = bet.n.split(' (')[0]; // On récupère "LYON" sans le "(P6)"
+        const u = state.u.find(x => x.n === unitName);
+        
+        if (u) {
+            if (isWin) {
+                u.l = 1; // VICTOIRE : On reset au Palier 1
+            } else {
+                u.l++;   // DÉFAITE : On grimpe (P1 -> P2...)
+            }
+        }
+    }
+
+    // 4. On déplace le pari vers l'archive (Historique terminé)
+    state.a.unshift({ ...bet, win: isWin, finished: true });
+    
+    // 5. On le retire de la liste "En cours"
+    state.h.splice(betIndex, 1);
+
+    save();   // On enregistre dans la mémoire du téléphone
+    render(); // On met à jour l'affichage
+    if(typeof updMise === 'function') updMise(); // On actualise la mise auto
 }
     </script>
 </body>
