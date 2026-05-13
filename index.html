@@ -55,6 +55,23 @@
             .main { padding: 15px; padding-bottom: 80px; }
             .stats-grid { grid-template-columns: 1fr 1fr; }
         }
+        /* AJOUT POUR RENDRE LE SPORT ET LA DATE BIEN VISIBLES */
+#p-sport, #p-match-date {
+    background: #0f172a;
+    color: white;
+    border: 1px solid var(--border);
+}
+
+#p-sport option {
+    background: #0f172a;
+    color: white;
+}
+
+/* Force l'affichage de l'icône dans le tableau */
+.sport-icon {
+    margin-right: 8px;
+    font-size: 1.2em;
+}
     </style>
 </head>
 <body>
@@ -140,29 +157,55 @@
     <!-- PARI NORMAL -->
     <div id="p-norm" class="tab-content">
         <div class="form-box">
-            <div class="grid-tactical">
-                <div><label>Cible</label><input id="n-target" placeholder="Equipe..."></div>
-                <div><label>Type</label><input id="n-desc" placeholder="Win/Over..."></div>
-                <label>NOUVEAU PARI</label>
-        <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px; margin-top:5px;">
-            <!-- Ajout du Sport -->
-            <select id="p-sport">
-                <option value="⚽">FOOTBALL</option>
-                <option value="🏀">BASKET</option>
-                <option value="🎾">TENNIS</option>
-                <option value="🥊">MMA/BOXE</option>
-                <option value="Other">AUTRE</option>
+           <!-- REMPLACE TON BLOC DE SAISIE PAR CELUI-CI -->
+<div class="form-box">
+    <div class="grid-tactical">
+        <!-- LIGNE 1 : SPORT + DATE + MATCH -->
+        <div style="display:grid; grid-template-columns: 80px 140px 1fr; gap:10px; grid-column: span 3;">
+            <div>
+                <label>Sport</label>
+                <select id="p-sport" style="font-size: 18px;">
+                    <option value="⚽">⚽</option>
+                    <option value="🏀">🏀</option>
+                    <option value="🎾">🎾</option>
+                    <option value="🥊">🥊</option>
+                </select>
+            </div>
+            <div>
+                <label>Date Match</label>
+                <input type="date" id="p-match-date">
+            </div>
+            <div>
+                <label>Affiche (Cible)</label>
+                <input type="text" id="n-target" placeholder="ex: OL/PSG">
+            </div>
+        </div>
+
+        <!-- LIGNE 2 : TYPE + VECTEUR + COTE + MISE -->
+        <div>
+            <label>Type</label>
+            <input type="text" id="n-desc" placeholder="ex: Gagne">
+        </div>
+        <div>
+            <label>Vecteur</label>
+            <select id="n-book">
+                <!-- Tes options Winamax/Betclic s'injectent ici via JS -->
             </select>
-            <!-- Ajout de la Date du Match -->
-            <input type="date" id="p-match-date">
         </div>
-        
-        <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px; margin-top:10px;">
-            <input id="p-opp" placeholder="Match / Adversaire">
-            <select id="p-book"></select>
+        <div>
+            <label>Cote</label>
+            <input type="number" id="n-cote" value="1.50" step="0.01">
         </div>
-                <div><label>Vecteur</label><select id="n-book"></select></div>
-                <div><label>Cote</label><input type="number" id="n-cote" value="1.50" step="0.01"></div>
+        <div>
+            <label>Mise</label>
+            <input type="number" id="n-mise" value="10">
+        </div>
+    </div>
+
+    <button class="btn-action" onclick="pari(false)" style="margin-top:15px;">
+        Engager Pari Simple
+    </button>
+</div>
                 <div><label>Mise</label><input type="number" id="n-mise" placeholder="0"></div>
             </div>
             <button class="btn-action" style="background:#334155" onclick="pari(false)">ENGAGER PARI SIMPLE</button>
