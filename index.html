@@ -143,6 +143,24 @@
             <div class="grid-tactical">
                 <div><label>Cible</label><input id="n-target" placeholder="Equipe..."></div>
                 <div><label>Type</label><input id="n-desc" placeholder="Win/Over..."></div>
+                <label>NOUVEAU PARI</label>
+        <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px; margin-top:5px;">
+            <!-- Ajout du Sport -->
+            <select id="p-sport">
+                <option value="⚽">FOOTBALL</option>
+                <option value="🏀">BASKET</option>
+                <option value="🎾">TENNIS</option>
+                <option value="🥊">MMA/BOXE</option>
+                <option value="Other">AUTRE</option>
+            </select>
+            <!-- Ajout de la Date du Match -->
+            <input type="date" id="p-match-date">
+        </div>
+        
+        <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px; margin-top:10px;">
+            <input id="p-opp" placeholder="Match / Adversaire">
+            <select id="p-book"></select>
+        </div>
                 <div><label>Vecteur</label><select id="n-book"></select></div>
                 <div><label>Cote</label><input type="number" id="n-cote" value="1.50" step="0.01"></div>
                 <div><label>Mise</label><input type="number" id="n-mise" placeholder="0"></div>
@@ -280,17 +298,17 @@
                 </tr>`).join('');
 
             // 6. RENDU ARCHIVE
-            document.getElementById('arch-list').innerHTML = state.a.map(h=>`
-                <tr>
-                    <td>${h.t}</td>
-                    <td>${h.isS ? '<b>'+h.n+' (P'+h.l+')</b>' : 'SIMPLE'}</td>
-                    <td>${h.target}</td>
-                    <td style="font-size:11px; color:var(--accent-cyan);">${h.type}</td>
-                    <td>${h.cote}</td>
-                    <td>${h.m}€</td>
-                    <td><span style="color:${h.win?'#22c55e':'#da0812'}; font-weight:800;">${h.win?'GAGNÉ':'PERDU'}</span></td>
-                    <td style="text-align:right; font-weight:800; color:${h.win?'#22c55e':''}">${h.win ? (h.m*h.cote).toFixed(2)+'€' : '0€'}</td>
-                </tr>`).join('');
+document.getElementById('arch-list').innerHTML = state.a.map(h=>`
+    <tr>
+        <td>${h.md ? '<b>'+h.md+'</b><br>' : ''}<small>${h.t}</small></td>
+        <td>${h.isS ? '<b>'+h.n+' (P'+h.l+')</b>' : 'SIMPLE'}</td>
+        <td>${h.sport || ''} ${h.target}</td>
+        <td style="font-size:11px; color:var(--accent-cyan);">${h.type}</td>
+        <td>${h.cote}</td>
+        <td>${h.m}€</td>
+        <td><span style="color:${h.win?'#22c55e':'#da0812'}; font-weight:800;">${h.win?'GAGNÉ':'PERDU'}</span></td>
+        <td style="text-align:right; font-weight:800; color:${h.win?'#22c55e':''}">${h.win ? (h.m*h.cote).toFixed(2)+'€' : '0€'}</td>
+    </tr>`).join('');
 
             // 7. RENDU BANKROLL
             const grid = document.getElementById('books-grid');
@@ -374,7 +392,11 @@
             let n, b, c, m, target = "", type = "", l = 1;
             const now = new Date();
             const time = now.toLocaleDateString('fr-FR', {day:'2-digit', month:'2-digit'}) + ' ' + now.toLocaleTimeString('fr-FR', {hour:'2-digit', minute:'2-digit'});
-            
+
+            const sport = document.getElementById('p-sport').value;
+const matchDate = document.getElementById('p-match-date').value;
+// On formate la date pour qu'elle soit plus jolie (JJ/MM)
+const formattedMatchDate = matchDate ? matchDate.split('-').reverse().slice(0,2).join('/') : "";
             if (isS) {
                 const u = state.u.find(x => x.n === document.getElementById('c-unit').value);
                 if (!u) return;
