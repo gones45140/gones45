@@ -476,37 +476,63 @@ document.getElementById('arch-finished-list').innerHTML = finished.map(h => `
         }
 
         function pari(isS) {
-            let n, b, c, m, target = "", type = "", l = 1;
-            const now = new Date();
-            const time = now.toLocaleDateString('fr-FR', {day:'2-digit', month:'2-digit'}) + ' ' + now.toLocaleTimeString('fr-FR', {hour:'2-digit', minute:'2-digit'});
+    let n, b, c, m, target = "", type = "", l = 1;
+    const now = new Date();
+    const time = now.toLocaleDateString('fr-FR', {day:'2-digit', month:'2-digit'}) + ' ' + now.toLocaleTimeString('fr-FR', {hour:'2-digit', minute:'2-digit'});
 
-            const sport = document.getElementById('p-sport').value;
-const matchDate = document.getElementById('p-match-date').value;
-// On formate la date pour qu'elle soit plus jolie (JJ/MM)
-const formattedMatchDate = matchDate ? matchDate.split('-').reverse().slice(0,2).join('/') : "";
-            if (isS) {
-                const u = state.u.find(x => x.n === document.getElementById('c-unit').value);
-                if (!u) return;
-                n = u.n; target = document.getElementById('c-target').value || "-";
-                type = document.getElementById('c-type').value || "-";
-                b = document.getElementById('c-book').value;
-                c = parseFloat(document.getElementById('c-cote').value) || 0;
-                m = parseFloat(document.getElementById('c-mise').value) || 0;
-                l = u.l;
-            } else {
-                target = document.getElementById('n-target').value || "Pari";
-                type = document.getElementById('n-desc').value || "Simple";
-                n = "PARI SIMPLE"; b = document.getElementById('n-book').value;
-                c = parseFloat(document.getElementById('n-cote').value) || 0;
-                m = parseFloat(document.getElementById('n-mise').value) || 0;
-            }
-            
-            if (state.b[b] >= m && m > 0) {
-                state.b[b] = (parseFloat(state.b[b]) - m).toFixed(2);
-                state.h.unshift({ id: Date.now().toString(), n: n, target: target, type: type, b: b, l: l, m: m, cote: c, isS: isS, t: time });
-                save();
-            } else { alert("Solde insuffisant !"); }
-        }
+    // Récupération des infos communes
+    const sport = document.getElementById('p-sport').value;
+    const matchDate = document.getElementById('p-match-date').value;
+    const formattedMatchDate = matchDate ? matchDate.split('-').reverse().slice(0,2).join('/') : "";
+
+    if (isS) {
+        // --- LOGIQUE COCKPIT (STRATÉGIE) ---
+        const u = state.u.find(x => x.n === document.getElementById('c-unit').value);
+        if (!u) return;
+        
+        // On combine le nom et le palier pour l'affichage : LYON (P1)
+        n = u.n + " (P" + u.l + ")"; 
+        target = document.getElementById('c-target').value || "-";
+        type = document.getElementById('c-type').value || "-";
+        b = document.getElementById('c-book').value;
+        c = parseFloat(document.getElementById('c-cote').value) || 0;
+        m = parseFloat(document.getElementById('c-mise').value) || 0;
+        l = u.l;
+    } else {
+        // --- LOGIQUE PARI NORMAL ---
+        target = document.getElementById('n-target').value || "Pari";
+        type = document.getElementById('n-desc').value || "Simple";
+        n = "PARI SIMPLE"; 
+        b = document.getElementById('n-book').value;
+        c = parseFloat(document.getElementById('n-cote').value) || 0;
+        m = parseFloat(document.getElementById('n-mise').value) || 0;
+    }
+    
+    if (state.b[b] >= m && m > 0) {
+        state.b[b] = (parseFloat(state.b[b]) - m).toFixed(2);
+        
+        // ON AJOUTE 'sport' ET 'mDate' DANS L'OBJET ICI :
+        state.h.unshift({ 
+            id: Date.now().toString(), 
+            n: n, 
+            target: target, 
+            type: type, 
+            b: b, 
+            l: l, 
+            m: m, 
+            cote: c, 
+            isS: isS, 
+            t: time,
+            sport: sport, // Ajouté
+            mDate: formattedMatchDate // Ajouté
+        });
+        
+        save();
+        render(); // N'oublie pas d'appeler render pour mettre à jour l'écran !
+    } else { 
+        alert("Solde insuffisant !"); 
+    }
+}
 
         function resolve(id, win) {
             const hIdx = state.h.findIndex(x => x.id === id);
