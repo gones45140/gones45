@@ -404,29 +404,41 @@ document.getElementById('arch-finished-list').innerHTML = finished.map(h => `
                     </div>`).join('');
             }
 
-            // 8. RENDU UNITÉS
-            const uList = document.getElementById('u-mgr-list');
-            if(uList) {
-                uList.innerHTML = state.u.map((u, i) => `
-                    <tr style="border-bottom: 1px solid rgba(255,255,255,0.05);">
-                        <td style="padding:12px 5px;"><b>${u.n.toUpperCase()}</b></td>
-                        <td style="color:#fbbf24; letter-spacing:2px;">${"⭐".repeat(u.s)}</td>
-                        <td style="color:var(--ol-blue); font-weight:800;">PALIER ${u.l}</td>
-                        <td style="text-align:right;">
-                            <button onclick="delUnit(${i})" style="background:none; border:none; color:var(--ol-red); cursor:pointer; font-size:11px;">SUPPRIMER</button>
-                        </td>
-                    </tr>`).join('');
-            }
-        }
-        // 9. RENDU SÉLECTEUR COCKPIT
+         // 8. RENDU UNITÉS (LISTE GESTION)
+const uList = document.getElementById('u-mgr-list');
+if (uList) {
+    uList.innerHTML = state.u.map((u, i) => {
+        const starsCount = parseInt(u.s) || 1; // Sécurité
+        return `
+            <tr style="border-bottom: 1px solid rgba(255,255,255,0.05);">
+                <td style="padding:12px 5px;"><b>${u.n.toUpperCase()}</b></td>
+                <td style="color:#fbbf24; letter-spacing:2px;">${"⭐".repeat(starsCount)}</td>
+                <td style="color:var(--ol-blue); font-weight:800;">PALIER ${u.l}</td>
+                <td style="text-align:right;">
+                    <button onclick="delUnit(${i})" style="background:none; border:none; color:var(--ol-red); cursor:pointer; font-size:11px;">SUPPRIMER</button>
+                </td>
+            </tr>`;
+    }).join('');
+}
+
+// 9. RENDU SÉLECTEUR COCKPIT (MENU DÉROULANT)
 const cUnitSelect = document.getElementById('c-unit');
-if(cUnitSelect) {
+if (cUnitSelect) {
     cUnitSelect.innerHTML = state.u.map(u => {
-        const stars = "⭐".repeat(u.s || 1); 
+        const starsCount = parseInt(u.s) || 1; // Sécurité
+        const stars = "⭐".repeat(starsCount);
         return `<option value="${u.n}">${u.n.toUpperCase()} ${stars} (P${u.l})</option>`;
     }).join('');
 }
 
+// 10. RENDU LISTE MOUVEMENT DE FONDS (BANKROLL)
+const moveSelect = document.getElementById('move-book-select');
+if (moveSelect) {
+    moveSelect.innerHTML = Object.keys(state.b).map(name => 
+        `<option value="${name}">${name.toUpperCase()}</option>`
+    ).join('');
+}
+ 
         // --- FONCTIONS ACTIONS ---
 
         function showTab(tabId, btn) {
