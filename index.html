@@ -478,20 +478,26 @@ document.getElementById('arch-finished-list').innerHTML = finished.map(h => `
             if(confirm("Supprimer cette unité ?")) { state.u.splice(i, 1); save(); }
         }
 
-      function updMise() {
-    const uVal = document.getElementById('c-unit').value;
+  function updMise() {
+    const uSelect = document.getElementById('c-unit');
+    const mMise = document.getElementById('c-mise');
+    
+    if (!uSelect || !mMise) return; // Sécurité si les éléments n'existent pas
+
+    const uVal = uSelect.value;
     const u = state.u.find(x => x.n === uVal);
     
     if (u) {
-        // 1. On récupère la suite de mises selon les étoiles (u.s)
-        // On utilise STRATS[u.s] pour piocher dans ton nouveau bloc
-        const maSuite = STRATS[u.s] || STRATS["5"]; // Sécurité : 5 étoiles par défaut
+        // On récupère la suite selon les étoiles (u.s)
+        // Si u.s n'existe pas, on prend la strat "5" par défaut
+        const maSuite = STRATS[u.s] || STRATS["5"]; 
         
-        // 2. On prend la mise selon le palier actuel (u.l)
+        // On récupère la mise selon le palier (u.l)
+        // Le "-1" est important car un tableau commence à 0
         const idx = Math.min(u.l - 1, maSuite.length - 1);
         
-        // 3. On met à jour le champ "MISE" du Cockpit
-        document.getElementById('c-mise').value = maSuite[idx];
+        // ON REMPLIT LA CASE VIDE DE L'IMAGE
+        mMise.value = maSuite[idx];
     }
 }
 
