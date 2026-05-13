@@ -285,19 +285,19 @@
                     </td>
                 </tr>`).join('');
 
-            // 5. RENDU PARI SIMPLE (En cours)
-            document.getElementById('h-live-norm').innerHTML = state.h.filter(h=>!h.isS).map(h=>`
-                <tr>
-                    <td>${h.t}</td>
-                    <td><b>${h.target}</b></td>
-                    <td>${h.m}€</td>
-                    <td style="text-align:right">
-                        <button class="btn-win" onclick="resolve('${h.id}',true)">W</button> 
-                        <button class="btn-loss" onclick="resolve('${h.id}',false)">L</button>
-                    </td>
-                </tr>`).join('');
-
-            // 6. RENDU ARCHIVE
+           // 5. RENDU PARI SIMPLE (En cours)
+document.getElementById('h-live-norm').innerHTML = state.h.filter(h=>!h.isS).map(h=>`
+    <tr>
+        <td>${h.md ? '<b>'+h.md+'</b><br>' : ''}<small>${h.t}</small></td>
+        <td>${h.sport || ''} <b>${h.target}</b></td>
+        <td>${h.m}€</td>
+        <td style="text-align:right">
+            <button class="btn-win" onclick="resolve('${h.id}',true)">W</button> 
+            <button class="btn-loss" onclick="resolve('${h.id}',false)">L</button>
+        </td>
+    </tr>`).join('');
+                
+        // 6. RENDU ARCHIVE
 document.getElementById('arch-list').innerHTML = state.a.map(h=>`
     <tr>
         <td>${h.md ? '<b>'+h.md+'</b><br>' : ''}<small>${h.t}</small></td>
