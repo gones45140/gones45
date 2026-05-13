@@ -300,111 +300,208 @@ const STRATS = {
 };
 
             function render() {
-            // 1. Calculs financiers
-            const total = Object.values(state.b).reduce((a,v)=>a+parseFloat(v||0),0);
-            
-            // Si start_bk est à 0 (première fois), on l'aligne sur le capital pour éviter un faux bénéfice
-            if(state.start_bk === 0 && total > 0) {
-                state.start_bk = total;
-            }
+           // 1. Calculs financiers
+const total = Object.values(state.b).reduce((a, v) => a + parseFloat(v || 0), 0);
 
-            document.getElementById('d-cap').innerText = total.toFixed(2)+"€";
-            
-            // Le bénéfice est la différence entre maintenant et le départ
-            const benefice = total - state.start_bk;
-            document.getElementById('d-ben').innerText = benefice.toFixed(2)+"€";
-            
-            // Couleur dynamique (Rouge si perte, Vert si gain)
-            document.getElementById('d-ben').style.color = benefice >= 0 ? "#22c55e" : "#da0812";
+// SÉCURITÉ : Aligne le capital de départ sur le premier dépôt pour éviter un faux bénéfice
+if ((state.start_bk === 0 || !state.start_bk) && total > 0) {
+    state.start_bk = total;
+}
+
+// Affichage du Capital Total
+const capElt = document.getElementById('d-cap');
+if (capElt) capElt.innerText = total.toFixed(2) + "€";
+
+// Calcul et affichage du Bénéfice
+const benefice = total - (state.start_bk || 0);
+const benElt = document.getElementById('d-ben');
+
+if (benElt) {
+    benElt.innerText = (benefice >= 0 ? "+" : "") + benefice.toFixed(2) + "€";
+    // Couleur : Vert (#22c55e) si gain, Rouge (#da0812) si perte
+    benElt.style.color = benefice >= 0 ? "#22c55e" : "#da0812";
+}
 
             // 2. Mise à jour des listes déroulantes (Selects)
-            const bOpt = Object.keys(state.b).map(k=>`<option value="${k}">${k.toUpperCase()}</option>`).join('');
-            document.getElementById('c-unit').innerHTML = state.u.map(u=>`<option value="${u.n}">${u.n} (P${u.l})</option>`).join('');
-            document.getElementById('c-book').innerHTML = bOpt;
-            document.getElementById('n-book').innerHTML = bOpt;
+// On prépare d'abord la liste des bookmakers (Winamax, Betclic...)
+const bOpt = Object.keys(state.b).map(k => `<option value="${k}">${k.toUpperCase()}</option>`).join('');
 
-            // 3. MUR DE LYON (Tableau de bord)
-            document.getElementById('dash-summary').innerHTML = state.u.map(u=>`
-                <tr>
-                    <td><b>${u.n}</b></td>
-                    <td style="color:#fbbf24; letter-spacing:2px;">${"⭐".repeat(u.s)}</td>
-                    <td style="color:#3b82f6; font-weight:800;">PALIER ${u.l}</td>
-                    <td style="text-align:right"><span style="background:var(--ol-blue); padding:3px 8px; border-radius:4px; font-size:10px; font-weight:900;">ACTIF</span></td>
-                </tr>`).join('');
+// Rendu du Cockpit avec les Étoiles et Paliers
+const cUnitSelect = document.getElementById('c-unit');
+if (cUnitSelect) {
+    cUnitSelect.innerHTML = state.u.map(u => {
+        const stars = "⭐".repeat(parseInt(u.s) || 1); // Sécurité étoiles
+        return `<option value="${u.n}">${u.n.toUpperCase()} ${stars} (P${u.l})</option>`;
+    }).join('');
+}
 
-            // 4. RENDU COCKPIT (Stratégie en cours)
-            document.getElementById('h-live-strat').innerHTML = state.h.filter(h=>h.isS).map(h=>`
-                <tr>
-                    <td>${h.t}</td>
-                    <td><b>${h.n}</b></td>
-                    <td>${h.target || '-'}</td>
-                    <td style="font-size:11px; color:var(--ol-blue);">${h.type || '-'}</td>
-                    <td>${h.m}€</td>
-                    <td style="text-align:right">
-                        <button class="btn-win" onclick="resolve('${h.id}',true)">W</button> 
-                        <button class="btn-loss" onclick="resolve('${h.id}',false)">L</button>
-                    </td>
-                </tr>`).join('');
+// Rendu des sélecteurs de Bookmakers
+const cBook = document.getElementById('c-book');
+const nBook = document.getElementById('n-book');
+if (cBook) cBook.innerHTML = bOpt;
+if (nBook) nBook.innerHTML = bOpt;
 
-    // Rendu des paris en cours (onglet PARI)
-document.getElementById('h-live-norm').innerHTML = state.h.filter(h=>!h.isS).map(h=>`
-    <tr>
-        <td>${h.md ? '<b>'+h.md+'</b><br>' : ''}<small>${h.t}</small></td>
-        <td>${h.sport || ''} <b>${h.target}</b></td>
-        <td>${h.cote} <small>(${h.b})</small></td>
-        <td>${h.m}€</td>
-        <td style="text-align:right">
-            <button class="btn-win" onclick="resolve('${h.id}',true)">W</button> 
-            <button class="btn-loss" onclick="resolve('${h.id}',false)">L</button>
-        </td>
-    </tr>`).join('');
-                
-   // Rendu Archive
-const pending = state.a.filter(h => h.win === undefined);
-const finished = state.a.filter(h => h.win !== undefined);
+          
+// 3. MUR DE LYON (Tableau de bord)
+const dashSummary = document.getElementById('dash-summary');
+if (dashSummary) {
+    dashSummary.innerHTML = state.u.map(u => {
+        const starsCount = parseInt(u.s) || 1; // Sécurité si u.s est vide
+        return `
+            <tr style="border-bottom: 1px solid rgba(255,255,255,0.05);">
+                <td style="padding:10px 5px;"><b>${u.n.toUpperCase()}</b></td>
+                <td style="color:#fbbf24; letter-spacing:2px;">${"⭐".repeat(starsCount)}</td>
+                <td style="color:var(--ol-blue); font-weight:800;">PALIER ${u.l}</td>
+                <td style="text-align:right">
+                    <span style="background:var(--ol-blue); padding:3px 8px; border-radius:4px; font-size:10px; font-weight:900; color:#fff;">ACTIF</span>
+                </td>
+            </tr>`;
+    }).join('');
+}
+        // 4. RENDU COCKPIT (Stratégie en cours)
+const cockpitTable = document.getElementById('h-live-strat');
+if (cockpitTable) {
+    cockpitTable.innerHTML = state.h.filter(h => h.isS).map(h => `
+        <tr style="border-bottom: 1px solid rgba(255,255,255,0.05);">
+            <td style="padding:8px 0; font-size:11px; color:#94a3b8;">${h.t}</td>
+            <td><b style="color:var(--ol-blue);">${h.n.toUpperCase()}</b></td>
+            <td>${h.target || '-'}</td>
+            <td style="font-size:11px; color:#94a3b8;">${h.type || '-'}</td>
+            <td style="font-weight:bold;">${h.m}€</td>
+            <td style="text-align:right">
+                <!-- ICI ON CHANGE RESOLVE PAR RESULT -->
+                <button class="btn-win" onclick="result('${h.id}',true)" style="padding:4px 8px; cursor:pointer;">W</button> 
+                <button class="btn-loss" onclick="result('${h.id}',false)" style="padding:4px 8px; cursor:pointer;">L</button>
+            </td>
+        </tr>`).join('');
+}
 
-document.getElementById('bet-count').innerText = state.a.length + " paris enregistrés";
+ // 5. Rendu des paris en cours (onglet PARI)
+const pariTable = document.getElementById('h-live-norm');
+if (pariTable) {
+    pariTable.innerHTML = state.h.filter(h => !h.isS).map(h => `
+        <tr style="border-bottom: 1px solid rgba(255,255,255,0.05);">
+            <td style="padding:8px 0;">
+                ${h.mDate ? '<b>' + h.mDate + '</b><br>' : ''}
+                <small style="color:#94a3b8;">${h.t}</small>
+            </td>
+            <td>
+                <span style="font-size:10px; color:var(--ol-blue); text-transform:uppercase;">${h.sport || ''}</span><br>
+                <b>${h.target.toUpperCase()}</b>
+            </td>
+            <td>${h.cote} <small style="color:#94a3b8;">(${h.b})</small></td>
+            <td style="font-weight:bold;">${h.m}€</td>
+            <td style="text-align:right">
+                <!-- MODIFICATION ICI : On utilise result -->
+                <button class="btn-win" onclick="result('${h.id}',true)" style="padding:4px 8px; cursor:pointer;">W</button> 
+                <button class="btn-loss" onclick="result('${h.id}',false)" style="padding:4px 8px; cursor:pointer;">L</button>
+            </td>
+        </tr>`).join('');
+}
+   // 6. Rendu Archive
+const aList = document.getElementById('a-list');
+if (aList) {
+    // On sépare les paris finis (ceux qui ont un résultat)
+    const finished = state.a.filter(h => h.win !== undefined);
+    
+    // Affichage du compteur
+    const countElt = document.getElementById('bet-count');
+    if (countElt) countElt.innerText = finished.length + " paris terminés";
 
-// Tableau PARIS EN ATTENTE
-document.getElementById('arch-pending-list').innerHTML = pending.length ? pending.map(h => `
-    <tr>
-        <td><b>${h.md || '--/--'}</b><br><small>${h.t}</small></td>
-        <td style="font-size:18px;">${h.sport || '❓'}</td>
-        <td><b>${h.target}</b></td>
-        <td>${h.cote}</td>
-        <td>${h.m}€</td>
-        <td style="text-align:right"><small>${h.b || 'VECTEUR'}</small></td>
-    </tr>`).join('') : '<tr><td colspan="6" style="text-align:center; padding:20px; opacity:0.5;">Aucun pari en attente</td></tr>';
+    // Rendu de la liste (du plus récent au plus ancien)
+    aList.innerHTML = finished.reverse().map(h => {
+        const isWin = h.win === true;
+        const color = isWin ? "var(--ol-green)" : "var(--ol-red)";
+        const sign = isWin ? "+" : "-";
+        const profit = isWin ? (h.m * h.cote - h.m) : h.m;
 
-// Tableau HISTORIQUE TERMINÉ
-document.getElementById('arch-finished-list').innerHTML = finished.map(h => `
-    <tr>
-        <td><b>${h.md || '--/--'}</b></td>
-        <td style="font-size:18px;">${h.sport || '❓'}</td>
-        <td><b>${h.target}</b></td>
-        <td>${h.cote}</td>
-        <td>${h.m}€</td>
-        <td><span style="color:${h.win?'#22c55e':'#da0812'}; font-weight:800;">${h.win?'WIN':'LOSS'}</span></td>
-        <td style="text-align:right; font-weight:800; color:${h.win?'#22c55e':''}">${h.win ? (h.m*h.cote).toFixed(2)+'€' : '0€'}</td>
-    </tr>`).join('');
-
-            // 7. RENDU BANKROLL
-            const grid = document.getElementById('books-grid');
-            if (grid) {
-                grid.innerHTML = Object.entries(state.b).map(([name, balance]) => `
-                    <div class="stat-card" style="border-bottom: 4px solid var(--ol-blue); padding: 15px;">
-                        <label style="display:block; margin-bottom:5px; color:var(--ol-blue); font-size:10px; font-weight:bold;">${name.toUpperCase()}</label>
-                        <div style="display:flex; align-items:center; justify-content:center;">
-                            <input type="number" inputmode="decimal" value="${balance}" onfocus="this.select()"
-                                   onchange="updateBalance('${name}', this.value)"
-                                   style="background:transparent; border:none; color:white; font-size:24px; font-family:'Orbitron', sans-serif; text-align:center; width:120px; outline:none;">
-                            <span style="font-size:20px; margin-left:5px;">€</span>
+        return `
+            <div style="background:rgba(255,255,255,0.02); margin-bottom:8px; padding:10px; border-radius:6px; border-left:3px solid ${color};">
+                <div style="display:flex; justify-content:space-between; align-items:center;">
+                    <div>
+                        <small style="color:#94a3b8; font-size:10px;">${h.t} • ${h.b.toUpperCase()}</small>
+                        <div style="font-weight:bold; font-size:13px;">${h.target.toUpperCase()}</div>
+                        <div style="font-size:11px; color:${isWin ? 'var(--ol-green)' : '#94a3b8'}">
+                            ${h.isS ? 'STK: ' + h.n.toUpperCase() : (h.sport || 'PARI')}
                         </div>
-                        <button onclick="deleteBook('${name}')" style="background:none; border:none; color:var(--ol-red); cursor:pointer; font-size:10px; margin-top:10px; text-transform:uppercase;">Supprimer</button>
-                    </div>`).join('');
-            }
+                    </div>
+                    <div style="text-align:right;">
+                        <div style="font-weight:900; color:${color};">${sign}${profit.toFixed(2)}€</div>
+                        <div style="font-size:10px; color:#94a3b8;">cote @${h.cote}</div>
+                    </div>
+                </div>
+            </div>`;
+    }).join('');
+}
+// 7. Tableau PARIS EN ATTENTE
+const pendingList = document.getElementById('arch-pending-list');
+if (pendingList) {
+    pendingList.innerHTML = pending.length ? pending.map(h => `
+        <tr style="border-bottom: 1px solid rgba(255,255,255,0.05);">
+            <td style="padding:10px 0;">
+                <b>${h.mDate || '--/--'}</b><br>
+                <small style="color:#94a3b8;">${h.t}</small>
+            </td>
+            <td style="font-size:18px;">${h.sport || '❓'}</td>
+            <td>
+                <b style="text-transform:uppercase;">${h.target}</b><br>
+                <small style="color:var(--ol-blue);">${h.isS ? h.n.toUpperCase() : ''}</small>
+            </td>
+            <td style="font-weight:bold;">${h.cote}</td>
+            <td style="color:#fbbf24; font-weight:bold;">${h.m}€</td>
+            <td style="text-align:right;">
+                <small style="background:rgba(255,255,255,0.1); padding:2px 5px; border-radius:3px;">
+                    ${(h.b || 'VECTEUR').toUpperCase()}
+                </small>
+            </td>
+        </tr>`).join('') : '<tr><td colspan="6" style="text-align:center; padding:30px; opacity:0.3;">Aucun pari en attente</td></tr>';
+}
 
-         // 8. RENDU UNITÉS (LISTE GESTION)
+// 8. Tableau HISTORIQUE TERMINÉ
+const finishedList = document.getElementById('arch-finished-list');
+if (finishedList) {
+    // On affiche les plus récents en premier avec .reverse()
+    finishedList.innerHTML = finished.slice().reverse().map(h => {
+        const isWin = h.win === true;
+        const color = isWin ? "#22c55e" : "#da0812";
+        const totalReturn = isWin ? (h.m * h.cote).toFixed(2) : "0.00";
+
+        return `
+            <tr style="border-bottom: 1px solid rgba(255,255,255,0.05); opacity: 0.9;">
+                <td style="padding:10px 0;"><b>${h.mDate || '--/--'}</b><br><small style="color:#94a3b8;">${h.t}</small></td>
+                <td style="font-size:18px;">${h.sport || '❓'}</td>
+                <td>
+                    <b style="text-transform:uppercase;">${h.target}</b><br>
+                    <small style="color:var(--ol-blue);">${h.isS ? h.n.toUpperCase() : ''}</small>
+                </td>
+                <td style="color:#94a3b8;">@${h.cote}</td>
+                <td>${h.m}€</td>
+                <td><span style="color:${color}; font-weight:800;">${isWin ? 'WIN' : 'LOSS'}</span></td>
+                <td style="text-align:right; font-weight:800; color:${color};">
+                    ${isWin ? '+' : ''}${totalReturn}€
+                </td>
+            </tr>`;
+    }).join('');
+}
+
+} 
+
+            // 9. RENDU BANKROLL
+const grid = document.getElementById('books-grid');
+if (grid) {
+    grid.innerHTML = Object.entries(state.b).map(([name, balance]) => `
+        <div class="stat-card" style="border-bottom: 4px solid var(--ol-blue); padding: 15px; background: rgba(255,255,255,0.02); border-radius: 8px;">
+            <label style="display:block; margin-bottom:5px; color:var(--ol-blue); font-size:10px; font-weight:bold;">${name.toUpperCase()}</label>
+            <div style="display:flex; align-items:center; justify-content:center;">
+                <input type="number" inputmode="decimal" value="${balance}" onfocus="this.select()"
+                       onchange="updateBalance('${name}', this.value)"
+                       style="background:transparent; border:none; color:white; font-size:24px; font-family:'Orbitron', sans-serif; text-align:center; width:120px; outline:none;">
+                <span style="font-size:20px; margin-left:5px; font-weight:bold;">€</span>
+            </div>
+            <button onclick="deleteBook('${name}')" style="background:none; border:none; color:var(--ol-red); cursor:pointer; font-size:10px; margin-top:10px; text-transform:uppercase; font-weight:bold; opacity:0.7;">Supprimer</button>
+        </div>`).join('');
+}
+         // 10. RENDU UNITÉS (LISTE GESTION)
 const uList = document.getElementById('u-mgr-list');
 if (uList) {
     uList.innerHTML = state.u.map((u, i) => {
@@ -421,7 +518,7 @@ if (uList) {
     }).join('');
 }
 
-// 9. RENDU SÉLECTEUR COCKPIT (MENU DÉROULANT)
+// 11. RENDU SÉLECTEUR COCKPIT (MENU DÉROULANT)
 const cUnitSelect = document.getElementById('c-unit');
 if (cUnitSelect) {
     cUnitSelect.innerHTML = state.u.map(u => {
@@ -431,7 +528,7 @@ if (cUnitSelect) {
     }).join('');
 }
 
-// 10. RENDU LISTE MOUVEMENT DE FONDS (BANKROLL)
+// 12. RENDU LISTE MOUVEMENT DE FONDS (BANKROLL)
 const moveSelect = document.getElementById('move-book-select');
 if (moveSelect) {
     moveSelect.innerHTML = Object.keys(state.b).map(name => 
@@ -590,31 +687,7 @@ if (moveSelect) {
         }
     }
 }
-        function resolve(id, win) {
-            const hIdx = state.h.findIndex(x => x.id === id);
-            if(hIdx === -1) return;
-            const h = state.h[hIdx];
-            h.win = win; 
-            if(win) {
-                state.b[h.b] = (parseFloat(state.b[h.b]) + (h.m * h.cote)).toFixed(2);
-                if(h.isS) { const u = state.u.find(x => x.n == h.n); if(u) u.l = 1; }
-            } else {
-                if(h.isS) { const u = state.u.find(x => x.n == h.n); if(u && u.l < 8) u.l++; }
-            }
-            state.a.unshift(h);
-            state.h.splice(hIdx, 1);
-            save();
-        }
-
-        function save() { localStorage.setItem('gones_state', JSON.stringify(state)); render(); }
-        function exportData() { document.getElementById('io-data').value = btoa(JSON.stringify(state)); }
-        function importData() { try { state = JSON.parse(atob(document.getElementById('io-data').value)); save(); } catch(e) { alert("Erreur"); } }
-
-        window.onload = () => {
-            const saved = localStorage.getItem('gones_state');
-            window.state = saved ? JSON.parse(saved) : { start_bk: 0, b: {winamax: 0}, u: [], h: [], a: [] };
-            render();
-        };
+       
         function handleFund(isAdd) {
     // On récupère le bookmaker choisi dans la liste (Winamax/Betclic)
     const bName = document.getElementById('move-book-select').value;
