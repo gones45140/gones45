@@ -228,15 +228,16 @@
 <div id="bank-mgr" class="tab-content">
     
     <!-- 1. MOUVEMENTS DE FONDS (DÉPÔT / RETRAIT) -->
-    <div class="form-box">
-        <label>MOUVEMENT DE FONDS (HORS PARIS)</label>
-       <div style="display:grid; grid-template-columns: 1fr 1fr 100px; gap:10px; margin-top:5px;">
-    <!-- On utilise trans-book et trans-amount comme dans ta fonction JS -->
-    <select id="trans-book"></select> 
-    <input type="number" id="trans-amount" placeholder="Montant €" inputmode="decimal">
-    <div style="display:flex; gap:5px;">
-        <button class="btn-win" style="flex:1; height:44px;" onclick="handleFund(true)">+</button>
-        <button class="btn-loss" style="flex:1; height:44px;" onclick="handleFund(false)">-</button>
+<div class="form-box">
+    <label>MOUVEMENT DE FONDS (HORS PARIS)</label>
+    <div style="display:grid; grid-template-columns: 1fr 1fr 100px; gap:10px; margin-top:5px;">
+        <!-- Changement des IDs pour correspondre au JS -->
+        <select id="move-book-select"></select> 
+        <input type="number" id="move-amount" placeholder="Montant €" inputmode="decimal">
+        <div style="display:flex; gap:5px;">
+            <button class="btn-win" style="flex:1; height:44px;" onclick="handleFund(true)">+</button>
+            <button class="btn-loss" style="flex:1; height:44px;" onclick="handleFund(false)">-</button>
+        </div>
     </div>
 </div>
         <p style="font-size:9px; color:#94a3b8; margin-top:8px;">
@@ -689,23 +690,24 @@ if (moveSelect) {
 }
        
         function handleFund(isAdd) {
-    // On récupère le bookmaker choisi dans la liste (Winamax/Betclic)
-    const bName = document.getElementById('move-book-select').value;
-    // On récupère le montant tapé
-    const amount = parseFloat(document.getElementById('move-amount').value);
+    // On utilise les IDs correspondants à ton HTML actuel
+    const bName = document.getElementById('trans-book').value;
+    const amountField = document.getElementById('trans-amount');
+    const amount = parseFloat(amountField.value);
     
+    // Vérification de sécurité
     if(!bName || isNaN(amount) || amount <= 0) {
         alert("Sélectionne un bookmaker et un montant valide.");
         return;
     }
 
-    // Conversion en nombre pour éviter les erreurs de texte
+    // Récupération du solde actuel du bookmaker choisi
     let currentBalance = parseFloat(state.b[bName]) || 0;
 
     if(isAdd) {
-        // DÉPÔT : On augmente le solde et le capital de départ
+        // DÉPÔT : On augmente le solde et le capital de départ (start_bk)
         state.b[bName] = (currentBalance + amount).toFixed(2);
-        state.start_bk += amount;
+        state.start_bk = (parseFloat(state.start_bk) + amount);
     } else {
         // RETRAIT : On vérifie si on a assez d'argent
         if(currentBalance < amount) {
@@ -713,13 +715,14 @@ if (moveSelect) {
             return;
         }
         state.b[bName] = (currentBalance - amount).toFixed(2);
-        state.start_bk -= amount;
+        state.start_bk = (parseFloat(state.start_bk) - amount);
     }
 
-    // Nettoyage et mise à jour
-    document.getElementById('move-amount').value = ""; 
+    // Nettoyage du champ après validation
+    amountField.value = ""; 
+    
+    // Sauvegarde et mise à jour visuelle
     save(); 
-    render(); // Très important pour voir le chiffre changer sur l'écran !
 }
         function result(id, isWin) {
     // 1. On cherche le pari dans la liste des paris en cours
