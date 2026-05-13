@@ -413,12 +413,29 @@ document.getElementById('arch-finished-list').innerHTML = finished.map(h => `
 
         // --- FONCTIONS ACTIONS ---
 
-        function showTab(id, btn) {
-            document.querySelectorAll('.tab-content').forEach(x => x.classList.remove('active'));
-            document.querySelectorAll('.nav-item').forEach(x => x.classList.remove('active'));
-            document.getElementById(id).classList.add('active'); 
-            btn.classList.add('active');
-        }
+        function showTab(tabId, btn) {
+    // 1. Masquer TOUS les onglets de force
+    const tabs = document.querySelectorAll('.tab-content');
+    tabs.forEach(tab => {
+        tab.classList.remove('active');
+        tab.style.display = 'none'; 
+    });
+
+    // 2. Afficher l'onglet demandé
+    const targetTab = document.getElementById(tabId);
+    if (targetTab) {
+        targetTab.classList.add('active');
+        targetTab.style.display = 'block'; // Force l'apparition
+        console.log("Affichage de : " + tabId); // Pour vérifier dans ta console F12
+    } else {
+        console.error("L'onglet avec l'ID '" + tabId + "' n'existe pas dans le HTML.");
+    }
+
+    // 3. Gérer l'apparence des boutons du menu
+    const buttons = document.querySelectorAll('.nav-item');
+    buttons.forEach(b => b.classList.remove('active'));
+    if (btn) btn.classList.add('active');
+}
 
         function addBook() {
             const input = document.getElementById('new-bk-name');
