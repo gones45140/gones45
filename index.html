@@ -154,20 +154,26 @@
         </div>
     </div>
 
-    <!-- BANKROLL -->
+<!-- BANKROLL -->
 <div id="bank-mgr" class="tab-content">
+    
+    <!-- 1. GESTION DES FLUX (DÉPÔT / RETRAIT / TRANSFERT) -->
     <div class="form-box">
-        <label>CONFIGURATION INITIALE</label>
-        <div style="display:flex; gap:10px; margin-top:5px;">
-            <!-- Ce bouton permet de définir ton point zéro pour le calcul du bénéfice -->
-            <button class="btn-action" 
-                    style="background:var(--ol-blue); margin:0;" 
-                    onclick="state.start_bk = parseFloat(prompt('Montant total de départ ?')); save();">
-                FIXER CAPITAL DÉPART
-            </button>
+        <label>MOUVEMENT DE FONDS (HORS PARIS)</label>
+        <div style="display:grid; grid-template-columns: 1fr 1fr 100px; gap:10px; margin-top:5px;">
+            <select id="trans-book"></select>
+            <input type="number" id="trans-amount" placeholder="Montant €" inputmode="decimal">
+            <div style="display:flex; gap:5px;">
+                <button class="btn-win" style="flex:1; height:44px;" onclick="handleFund(true)">+</button>
+                <button class="btn-loss" style="flex:1; height:44px;" onclick="handleFund(false)">-</button>
+            </div>
         </div>
+        <p style="font-size:9px; color:#94a3b8; margin-top:8px;">
+            <i class="fa-solid fa-circle-info"></i> Utilisez <b>+</b> pour un dépôt et <b>-</b> pour un retrait (le bénéfice restera intact).
+        </p>
     </div>
 
+    <!-- 2. NOUVEAU BOOKMAKER -->
     <div class="form-box">
         <label>NOUVEAU VECTEUR</label>
         <div style="display:flex; gap:10px; margin-top:5px;">
@@ -176,9 +182,25 @@
         </div>
     </div>
 
+    <!-- 3. LA GRILLE DES BOOKMAKERS (S'affiche ici) -->
     <div id="books-grid" class="stats-grid"></div>
 
+    <!-- 4. CONFIGURATION ET SAUVEGARDE -->
     <div class="form-box">
+        <label>CONFIGURATION ET BACKUP</label>
+        <button class="btn-action" 
+                style="background:#334155; margin-bottom:15px;" 
+                onclick="state.start_bk = parseFloat(prompt('Montant total de départ ?')); save();">
+            RE-FIXER CAPITAL DÉPART
+        </button>
+        
+        <textarea id="io-data" rows="3" placeholder="Code JSON..." style="font-size:10px;"></textarea>
+        <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px; margin-top:10px;">
+            <button class="btn-action" style="background:#334155; font-size:10px;" onclick="exportData()">EXPORTER (COPIER)</button>
+            <button class="btn-action" style="background:var(--ol-blue); font-size:10px;" onclick="importData()">IMPORTER (COLLER)</button>
+        </div>
+    </div>
+</div>
         <label>SAUVEGARDE EXTERNE</label>
         <textarea id="io-data" rows="3" placeholder="Code JSON..." style="font-size:10px; margin-top:5px;"></textarea>
         <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px; margin-top:10px;">
@@ -416,6 +438,32 @@
             window.state = saved ? JSON.parse(saved) : { start_bk: 0, b: {winamax: 0}, u: [], h: [], a: [] };
             render();
         };
+        function handleFund(isAdd) {
+    const bName = document.getElementById('trans-book').value;
+    const amount = parseFloat(document.getElementById('trans-amount').value);
+    
+    if(!bName || isNaN(amount) || amount <= 0) {
+        alert("Sélectionne un book et un montant valide.");
+        return;
+    }
+
+    if(isAdd) {
+        // DÉPÔT : On augmente le solde ET le capital de base pour ne pas fausser le bénéfice
+        state.b[bName] = (parseFloat(state.b[bName]) + amount).toFixed(2);
+        state.start_bk += amount;
+    } else {
+        // RETRAIT : On baisse le solde ET le capital de base
+        if(parseFloat(state.b[bName]) < amount) {
+            alert("Solde insuffisant sur ce bookmaker.");
+            return;
+        }
+        state.b[bName] = (parseFloat(state.b[bName]) - amount).toFixed(2);
+        state.start_bk -= amount;
+    }
+
+    document.getElementById('trans-amount').value = ""; // Vide le champ
+    save(); // Sauvegarde et rafraîchit l'affichage
+}
     </script>
 </body>
 </html>
