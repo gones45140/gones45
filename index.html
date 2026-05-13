@@ -130,32 +130,7 @@
     </div>
 </div>
 
-    <!-- SECTION 2 : TERMINÉS -->
-    <h3 style="color:var(--ol-red); margin: 25px 0 10px 0; font-size: 14px; font-family: 'Orbitron';">✅ HISTORIQUE TERMINÉ</h3>
-    <div class="glass-panel">
-        <table>
-            <thead>
-                <tr>
-                    <th>DATE</th>
-                    <th>SPORT</th>
-                    <th>CIBLE</th>
-                    <th>COTE</th>
-                    <th>MISE</th>
-                    <th>RÉSULTAT</th>
-                    <th style="text-align:right">GAIN</th>
-                </tr>
-            </thead>
-            <tbody id="arch-finished-list"></tbody>
-        </table>
-    </div>
-    
-    <div style="margin-top: 20px; display: flex; justify-content: space-between; align-items: center;">
-        <small id="bet-count" style="color: #94a3b8;"></small>
-        <button class="btn-action" style="background:var(--ol-red); width:auto; padding:10px 20px; font-size: 10px;" onclick="if(confirm('Vider l\'archive ?')){state.a=[];save();}">VIDER L'ARCHIVE</button>
-    </div>
-</div>
-
-    <!-- COCKPIT -->
+      <!-- COCKPIT -->
     <div id="cock" class="tab-content">
         <div class="form-box">
             <div class="grid-tactical">
@@ -252,14 +227,15 @@
     <!-- 1. MOUVEMENTS DE FONDS (DÉPÔT / RETRAIT) -->
     <div class="form-box">
         <label>MOUVEMENT DE FONDS (HORS PARIS)</label>
-        <div style="display:grid; grid-template-columns: 1fr 1fr 100px; gap:10px; margin-top:5px;">
-            <select id="trans-book"></select>
-            <input type="number" id="trans-amount" placeholder="Montant €" inputmode="decimal">
-            <div style="display:flex; gap:5px;">
-                <button class="btn-win" style="flex:1; height:44px;" onclick="handleFund(true)">+</button>
-                <button class="btn-loss" style="flex:1; height:44px;" onclick="handleFund(false)">-</button>
-            </div>
-        </div>
+       <div style="display:grid; grid-template-columns: 1fr 1fr 100px; gap:10px; margin-top:5px;">
+    <!-- On utilise trans-book et trans-amount comme dans ta fonction JS -->
+    <select id="trans-book"></select> 
+    <input type="number" id="trans-amount" placeholder="Montant €" inputmode="decimal">
+    <div style="display:flex; gap:5px;">
+        <button class="btn-win" style="flex:1; height:44px;" onclick="handleFund(true)">+</button>
+        <button class="btn-loss" style="flex:1; height:44px;" onclick="handleFund(false)">-</button>
+    </div>
+</div>
         <p style="font-size:9px; color:#94a3b8; margin-top:8px;">
             <i class="fa-solid fa-circle-info"></i> Utilisez <b>+</b> pour un dépôt et <b>-</b> pour un retrait (le bénéfice restera intact).
         </p>
