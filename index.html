@@ -423,34 +423,50 @@ function updMise() {
 // --- FONCTIONS DE CRÉATION ---
 
 function addBook() {
-    const name = document.getElementById('new-book-name').value.trim().toLowerCase();
-    const solde = parseFloat(document.getElementById('new-book-solde').value) || 0;
+    // On récupère l'ID exact de ton HTML : "new-bk-name"
+    const nameInput = document.getElementById('new-bk-name');
+    const name = nameInput.value.trim().toLowerCase();
 
-    if (name && !state.b[name]) {
-        state.b[name] = solde.toFixed(2);
-        state.start_bk += solde; // Ajoute au capital de départ pour le calcul du bénéfice
-        document.getElementById('new-book-name').value = "";
-        document.getElementById('new-book-solde').value = "";
+    if (name) {
+        if (state.b[name] !== undefined) {
+            alert("Ce bookmaker existe déjà.");
+            return;
+        }
+        // On crée le book avec 0€ par défaut, tu pourras ajouter avec le bouton "+"
+        state.b[name] = "0.00";
+        nameInput.value = ""; 
         save();
+        alert("Bookmaker " + name.toUpperCase() + " créé !");
     } else {
-        alert("Nom invalide ou bookmaker déjà existant");
+        alert("Entre un nom de bookmaker.");
     }
 }
 
 function addUnit() {
-    const name = document.getElementById('u-name').value.trim().toUpperCase();
-    const stars = parseInt(document.getElementById('u-stars').value);
+    // On récupère les IDs exacts de ton HTML : "u-n-add" et "u-s-add"
+    const nameInput = document.getElementById('u-n-add');
+    const starsSelect = document.getElementById('u-s-add');
+    
+    const name = nameInput.value.trim().toUpperCase();
+    const stars = parseInt(starsSelect.value);
 
-    if (name && !state.u.find(x => x.n === name)) {
+    if (name) {
+        if (state.u.find(x => x.n === name)) {
+            alert("Cette unité existe déjà.");
+            return;
+        }
+        
         state.u.push({
             n: name,
             s: stars,
-            l: 1 // Commence toujours au Palier 1
+            l: 1
         });
-        document.getElementById('u-name').value = "";
+        
+        nameInput.value = ""; 
         save();
+        alert("Unité " + name + " ajoutée !");
     } else {
-        alert("Nom d'unité invalide ou déjà utilisé");
+        alert("Entre un nom pour l'unité.");
     }
 }
 function render() {
