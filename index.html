@@ -420,7 +420,39 @@ function updMise() {
 }
 
 // --- RENDU VISUEL ---
+// --- FONCTIONS DE CRÉATION ---
 
+function addBook() {
+    const name = document.getElementById('new-book-name').value.trim().toLowerCase();
+    const solde = parseFloat(document.getElementById('new-book-solde').value) || 0;
+
+    if (name && !state.b[name]) {
+        state.b[name] = solde.toFixed(2);
+        state.start_bk += solde; // Ajoute au capital de départ pour le calcul du bénéfice
+        document.getElementById('new-book-name').value = "";
+        document.getElementById('new-book-solde').value = "";
+        save();
+    } else {
+        alert("Nom invalide ou bookmaker déjà existant");
+    }
+}
+
+function addUnit() {
+    const name = document.getElementById('u-name').value.trim().toUpperCase();
+    const stars = parseInt(document.getElementById('u-stars').value);
+
+    if (name && !state.u.find(x => x.n === name)) {
+        state.u.push({
+            n: name,
+            s: stars,
+            l: 1 // Commence toujours au Palier 1
+        });
+        document.getElementById('u-name').value = "";
+        save();
+    } else {
+        alert("Nom d'unité invalide ou déjà utilisé");
+    }
+}
 function render() {
     // 1. Stats Entête
     const total = Object.values(state.b).reduce((a, v) => a + parseFloat(v || 0), 0);
