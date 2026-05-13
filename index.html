@@ -157,7 +157,7 @@
 <!-- BANKROLL -->
 <div id="bank-mgr" class="tab-content">
     
-    <!-- 1. GESTION DES FLUX (DÉPÔT / RETRAIT / TRANSFERT) -->
+    <!-- 1. MOUVEMENTS DE FONDS (DÉPÔT / RETRAIT) -->
     <div class="form-box">
         <label>MOUVEMENT DE FONDS (HORS PARIS)</label>
         <div style="display:grid; grid-template-columns: 1fr 1fr 100px; gap:10px; margin-top:5px;">
@@ -182,31 +182,17 @@
         </div>
     </div>
 
-    <!-- 3. LA GRILLE DES BOOKMAKERS (S'affiche ici) -->
+    <!-- 3. LA GRILLE DES BOOKS (Winamax, Betclic...) -->
     <div id="books-grid" class="stats-grid"></div>
 
-    <!-- 4. CONFIGURATION ET SAUVEGARDE -->
+    <!-- 4. CONFIGURATION FINALE -->
     <div class="form-box">
-        <label>CONFIGURATION ET BACKUP</label>
+        <label>RÉGLAGE SYSTÈME</label>
         <button class="btn-action" 
-                style="background:#334155; margin-bottom:15px;" 
+                style="background:#334155; margin-top:5px;" 
                 onclick="state.start_bk = parseFloat(prompt('Montant total de départ ?')); save();">
             RE-FIXER CAPITAL DÉPART
         </button>
-        
-        <textarea id="io-data" rows="3" placeholder="Code JSON..." style="font-size:10px;"></textarea>
-        <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px; margin-top:10px;">
-            <button class="btn-action" style="background:#334155; font-size:10px;" onclick="exportData()">EXPORTER (COPIER)</button>
-            <button class="btn-action" style="background:var(--ol-blue); font-size:10px;" onclick="importData()">IMPORTER (COLLER)</button>
-        </div>
-    </div>
-</div>
-        <label>SAUVEGARDE EXTERNE</label>
-        <textarea id="io-data" rows="3" placeholder="Code JSON..." style="font-size:10px; margin-top:5px;"></textarea>
-        <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px; margin-top:10px;">
-            <button class="btn-action" style="background:#334155" onclick="exportData()">EXPORTER (COPIER)</button>
-            <button class="btn-action" style="background:var(--ol-blue)" onclick="importData()">IMPORTER (COLLER)</button>
-        </div>
     </div>
 </div>
 
