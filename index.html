@@ -102,27 +102,50 @@
         </div>
     </div>
 
-   <!-- ARCHIVE -->
-    <div id="arch" class="tab-content">
-        <div class="glass-panel">
-            <table>
-                <thead>
-                    <tr>
-                        <th>DATE</th>
-                        <th>UNITÉ</th>
-                        <th>ADVERSAIRE</th>
-                        <th>TYPE</th>
-                        <th>COTE</th>
-                        <th>MISE</th>
-                        <th>RÉSULTAT</th>
-                        <th style="text-align:right">GAIN</th>
-                    </tr>
-                </thead>
-                <tbody id="arch-list"></tbody>
-            </table>
-        </div>
-        <button class="btn-action" style="background:var(--ol-red); width:auto; padding:10px 20px;" onclick="if(confirm('Vider l\'archive ?')){state.a=[];save();}">VIDER L'ARCHIVE</button>
+  <!-- ARCHIVE -->
+<div id="arch" class="tab-content">
+    <!-- SECTION 1 : EN COURS (Optionnel ici si déjà dans PARI, mais utile pour la vue d'ensemble) -->
+    <h3 style="color:var(--accent-cyan); margin: 15px 0 10px 0; font-size: 14px; font-family: 'Orbitron';">🕒 PARIS EN ATTENTE</h3>
+    <div class="glass-panel">
+        <table>
+            <thead>
+                <tr>
+                    <th>MATCH / DATE</th>
+                    <th>SPORT</th>
+                    <th>CIBLE</th>
+                    <th>COTE</th>
+                    <th>MISE</th>
+                    <th style="text-align:right">BOOK</th>
+                </tr>
+            </thead>
+            <tbody id="arch-pending-list"></tbody>
+        </table>
     </div>
+
+    <!-- SECTION 2 : TERMINÉS -->
+    <h3 style="color:var(--ol-red); margin: 25px 0 10px 0; font-size: 14px; font-family: 'Orbitron';">✅ HISTORIQUE TERMINÉ</h3>
+    <div class="glass-panel">
+        <table>
+            <thead>
+                <tr>
+                    <th>DATE</th>
+                    <th>SPORT</th>
+                    <th>CIBLE</th>
+                    <th>COTE</th>
+                    <th>MISE</th>
+                    <th>RÉSULTAT</th>
+                    <th style="text-align:right">GAIN</th>
+                </tr>
+            </thead>
+            <tbody id="arch-finished-list"></tbody>
+        </table>
+    </div>
+    
+    <div style="margin-top: 20px; display: flex; justify-content: space-between; align-items: center;">
+        <small id="bet-count" style="color: #94a3b8;"></small>
+        <button class="btn-action" style="background:var(--ol-red); width:auto; padding:10px 20px; font-size: 10px;" onclick="if(confirm('Vider l\'archive ?')){state.a=[];save();}">VIDER L'ARCHIVE</button>
+    </div>
+</div>
 
     <!-- COCKPIT -->
     <div id="cock" class="tab-content">
@@ -328,11 +351,12 @@
                     </td>
                 </tr>`).join('');
 
-           // 5. RENDU PARI SIMPLE (En cours)
+    // Rendu des paris en cours (onglet PARI)
 document.getElementById('h-live-norm').innerHTML = state.h.filter(h=>!h.isS).map(h=>`
     <tr>
         <td>${h.md ? '<b>'+h.md+'</b><br>' : ''}<small>${h.t}</small></td>
         <td>${h.sport || ''} <b>${h.target}</b></td>
+        <td>${h.cote} <small>(${h.b})</small></td>
         <td>${h.m}€</td>
         <td style="text-align:right">
             <button class="btn-win" onclick="resolve('${h.id}',true)">W</button> 
@@ -340,16 +364,33 @@ document.getElementById('h-live-norm').innerHTML = state.h.filter(h=>!h.isS).map
         </td>
     </tr>`).join('');
                 
-        // 6. RENDU ARCHIVE
-document.getElementById('arch-list').innerHTML = state.a.map(h=>`
+    // 6. RENDU ARCHIVE (SÉPARÉ)
+const pending = state.a.filter(h => h.win === undefined);
+const finished = state.a.filter(h => h.win !== undefined);
+
+// Affichage du compteur de paris pour surveiller la limite
+document.getElementById('bet-count').innerText = state.a.length + " paris enregistrés";
+
+// Rendu des paris en attente
+document.getElementById('arch-pending-list').innerHTML = pending.map(h => `
     <tr>
-        <td>${h.md ? '<b>'+h.md+'</b><br>' : ''}<small>${h.t}</small></td>
-        <td>${h.isS ? '<b>'+h.n+' (P'+h.l+')</b>' : 'SIMPLE'}</td>
-        <td>${h.sport || ''} ${h.target}</td>
-        <td style="font-size:11px; color:var(--accent-cyan);">${h.type}</td>
+        <td><b>${h.md || '--/--'}</b><br><small>${h.t}</small></td>
+        <td style="font-size:18px;">${h.sport || '❓'}</td>
+        <td><b>${h.target}</b><br><small style="color:var(--accent-cyan)">${h.type}</small></td>
         <td>${h.cote}</td>
         <td>${h.m}€</td>
-        <td><span style="color:${h.win?'#22c55e':'#da0812'}; font-weight:800;">${h.win?'GAGNÉ':'PERDU'}</span></td>
+        <td style="text-align:right"><small>${h.b}</small></td>
+    </tr>`).join('');
+
+// Rendu des paris terminés
+document.getElementById('arch-finished-list').innerHTML = finished.map(h => `
+    <tr>
+        <td><b>${h.md || '--/--'}</b></td>
+        <td style="font-size:18px;">${h.sport || '❓'}</td>
+        <td><b>${h.target}</b></td>
+        <td>${h.cote}</td>
+        <td>${h.m}€</td>
+        <td><span style="color:${h.win?'#22c55e':'#da0812'}; font-weight:800;">${h.win?'WIN':'LOSS'}</span></td>
         <td style="text-align:right; font-weight:800; color:${h.win?'#22c55e':''}">${h.win ? (h.m*h.cote).toFixed(2)+'€' : '0€'}</td>
     </tr>`).join('');
 
