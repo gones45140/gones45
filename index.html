@@ -289,358 +289,47 @@
     </div>
 </main>
 
-    <script>
-        // Ta configuration de mises (Palier 1 à 8)
-       // On définit une suite de mises pour chaque niveau d'étoiles
-const STRATS = {
-    "1": [1, 2, 6, 18, 54, 162, 486, 1458],       // Confiance ⭐
-    "2": [2, 4, 12, 36, 108, 324, 972, 2916],       // Confiance ⭐⭐
-    "3": [2, 4, 12, 36, 108, 324, 972, 2916],       // Confiance ⭐⭐⭐
-    "4": [5, 10, 30, 90, 270, 810, 2430, 7290],    // Confiance ⭐⭐⭐⭐
-    "5": [10, 20, 60, 180, 540, 1620, 4860, 14580], // Confiance ⭐⭐⭐⭐⭐
-    // 
+   <script>
+// --- INITIALISATION DU SYSTÈME ---
+let state = JSON.parse(localStorage.getItem('gones_state')) || {
+    b: { "winamax": 0, "betclic": 0 }, 
+    u: [], 
+    h: [], // Paris en cours
+    a: [], // Archives (Paris terminés)
+    start_bk: 0
 };
 
-            function render() {
-           // 1. Calculs financiers
-const total = Object.values(state.b).reduce((a, v) => a + parseFloat(v || 0), 0);
+// Tes suites de mises par rang d'étoiles
+const STRATS = {
+    "1": [1, 2, 6, 18, 54, 162, 486, 1458],
+    "2": [2, 4, 12, 36, 108, 324, 972, 2916],
+    "3": [2, 4, 12, 36, 108, 324, 972, 2916],
+    "4": [5, 10, 30, 90, 270, 810, 2430, 7290],
+    "5": [10, 20, 60, 180, 540, 1620, 4860, 14580]
+};
 
-// SÉCURITÉ : Aligne le capital de départ sur le premier dépôt pour éviter un faux bénéfice
-if ((state.start_bk === 0 || !state.start_bk) && total > 0) {
-    state.start_bk = total;
+function save() {
+    localStorage.setItem('gones_state', JSON.stringify(state));
+    render();
 }
 
-// Affichage du Capital Total
-const capElt = document.getElementById('d-cap');
-if (capElt) capElt.innerText = total.toFixed(2) + "€";
+// --- LOGIQUE DES PARIS ---
 
-// Calcul et affichage du Bénéfice
-const benefice = total - (state.start_bk || 0);
-const benElt = document.getElementById('d-ben');
-
-if (benElt) {
-    benElt.innerText = (benefice >= 0 ? "+" : "") + benefice.toFixed(2) + "€";
-    // Couleur : Vert (#22c55e) si gain, Rouge (#da0812) si perte
-    benElt.style.color = benefice >= 0 ? "#22c55e" : "#da0812";
-}
-
-            // 2. Mise à jour des listes déroulantes (Selects)
-// On prépare d'abord la liste des bookmakers (Winamax, Betclic...)
-const bOpt = Object.keys(state.b).map(k => `<option value="${k}">${k.toUpperCase()}</option>`).join('');
-
-// Rendu du Cockpit avec les Étoiles et Paliers
-const cUnitSelect = document.getElementById('c-unit');
-if (cUnitSelect) {
-    cUnitSelect.innerHTML = state.u.map(u => {
-        const stars = "⭐".repeat(parseInt(u.s) || 1); // Sécurité étoiles
-        return `<option value="${u.n}">${u.n.toUpperCase()} ${stars} (P${u.l})</option>`;
-    }).join('');
-}
-
-// Rendu des sélecteurs de Bookmakers
-const cBook = document.getElementById('c-book');
-const nBook = document.getElementById('n-book');
-if (cBook) cBook.innerHTML = bOpt;
-if (nBook) nBook.innerHTML = bOpt;
-
-          
-// 3. MUR DE LYON (Tableau de bord)
-const dashSummary = document.getElementById('dash-summary');
-if (dashSummary) {
-    dashSummary.innerHTML = state.u.map(u => {
-        const starsCount = parseInt(u.s) || 1; // Sécurité si u.s est vide
-        return `
-            <tr style="border-bottom: 1px solid rgba(255,255,255,0.05);">
-                <td style="padding:10px 5px;"><b>${u.n.toUpperCase()}</b></td>
-                <td style="color:#fbbf24; letter-spacing:2px;">${"⭐".repeat(starsCount)}</td>
-                <td style="color:var(--ol-blue); font-weight:800;">PALIER ${u.l}</td>
-                <td style="text-align:right">
-                    <span style="background:var(--ol-blue); padding:3px 8px; border-radius:4px; font-size:10px; font-weight:900; color:#fff;">ACTIF</span>
-                </td>
-            </tr>`;
-    }).join('');
-}
-        // 4. RENDU COCKPIT (Stratégie en cours)
-const cockpitTable = document.getElementById('h-live-strat');
-if (cockpitTable) {
-    cockpitTable.innerHTML = state.h.filter(h => h.isS).map(h => `
-        <tr style="border-bottom: 1px solid rgba(255,255,255,0.05);">
-            <td style="padding:8px 0; font-size:11px; color:#94a3b8;">${h.t}</td>
-            <td><b style="color:var(--ol-blue);">${h.n.toUpperCase()}</b></td>
-            <td>${h.target || '-'}</td>
-            <td style="font-size:11px; color:#94a3b8;">${h.type || '-'}</td>
-            <td style="font-weight:bold;">${h.m}€</td>
-            <td style="text-align:right">
-                <!-- ICI ON CHANGE RESOLVE PAR RESULT -->
-                <button class="btn-win" onclick="result('${h.id}',true)" style="padding:4px 8px; cursor:pointer;">W</button> 
-                <button class="btn-loss" onclick="result('${h.id}',false)" style="padding:4px 8px; cursor:pointer;">L</button>
-            </td>
-        </tr>`).join('');
-}
-
- // 5. Rendu des paris en cours (onglet PARI)
-const pariTable = document.getElementById('h-live-norm');
-if (pariTable) {
-    pariTable.innerHTML = state.h.filter(h => !h.isS).map(h => `
-        <tr style="border-bottom: 1px solid rgba(255,255,255,0.05);">
-            <td style="padding:8px 0;">
-                ${h.mDate ? '<b>' + h.mDate + '</b><br>' : ''}
-                <small style="color:#94a3b8;">${h.t}</small>
-            </td>
-            <td>
-                <span style="font-size:10px; color:var(--ol-blue); text-transform:uppercase;">${h.sport || ''}</span><br>
-                <b>${h.target.toUpperCase()}</b>
-            </td>
-            <td>${h.cote} <small style="color:#94a3b8;">(${h.b})</small></td>
-            <td style="font-weight:bold;">${h.m}€</td>
-            <td style="text-align:right">
-                <!-- MODIFICATION ICI : On utilise result -->
-                <button class="btn-win" onclick="result('${h.id}',true)" style="padding:4px 8px; cursor:pointer;">W</button> 
-                <button class="btn-loss" onclick="result('${h.id}',false)" style="padding:4px 8px; cursor:pointer;">L</button>
-            </td>
-        </tr>`).join('');
-}
-   // 6. Rendu Archive
-const aList = document.getElementById('a-list');
-if (aList) {
-    // On sépare les paris finis (ceux qui ont un résultat)
-    const finished = state.a.filter(h => h.win !== undefined);
-    
-    // Affichage du compteur
-    const countElt = document.getElementById('bet-count');
-    if (countElt) countElt.innerText = finished.length + " paris terminés";
-
-    // Rendu de la liste (du plus récent au plus ancien)
-    aList.innerHTML = finished.reverse().map(h => {
-        const isWin = h.win === true;
-        const color = isWin ? "var(--ol-green)" : "var(--ol-red)";
-        const sign = isWin ? "+" : "-";
-        const profit = isWin ? (h.m * h.cote - h.m) : h.m;
-
-        return `
-            <div style="background:rgba(255,255,255,0.02); margin-bottom:8px; padding:10px; border-radius:6px; border-left:3px solid ${color};">
-                <div style="display:flex; justify-content:space-between; align-items:center;">
-                    <div>
-                        <small style="color:#94a3b8; font-size:10px;">${h.t} • ${h.b.toUpperCase()}</small>
-                        <div style="font-weight:bold; font-size:13px;">${h.target.toUpperCase()}</div>
-                        <div style="font-size:11px; color:${isWin ? 'var(--ol-green)' : '#94a3b8'}">
-                            ${h.isS ? 'STK: ' + h.n.toUpperCase() : (h.sport || 'PARI')}
-                        </div>
-                    </div>
-                    <div style="text-align:right;">
-                        <div style="font-weight:900; color:${color};">${sign}${profit.toFixed(2)}€</div>
-                        <div style="font-size:10px; color:#94a3b8;">cote @${h.cote}</div>
-                    </div>
-                </div>
-            </div>`;
-    }).join('');
-}
-// 7. Tableau PARIS EN ATTENTE
-const pendingList = document.getElementById('arch-pending-list');
-if (pendingList) {
-    pendingList.innerHTML = pending.length ? pending.map(h => `
-        <tr style="border-bottom: 1px solid rgba(255,255,255,0.05);">
-            <td style="padding:10px 0;">
-                <b>${h.mDate || '--/--'}</b><br>
-                <small style="color:#94a3b8;">${h.t}</small>
-            </td>
-            <td style="font-size:18px;">${h.sport || '❓'}</td>
-            <td>
-                <b style="text-transform:uppercase;">${h.target}</b><br>
-                <small style="color:var(--ol-blue);">${h.isS ? h.n.toUpperCase() : ''}</small>
-            </td>
-            <td style="font-weight:bold;">${h.cote}</td>
-            <td style="color:#fbbf24; font-weight:bold;">${h.m}€</td>
-            <td style="text-align:right;">
-                <small style="background:rgba(255,255,255,0.1); padding:2px 5px; border-radius:3px;">
-                    ${(h.b || 'VECTEUR').toUpperCase()}
-                </small>
-            </td>
-        </tr>`).join('') : '<tr><td colspan="6" style="text-align:center; padding:30px; opacity:0.3;">Aucun pari en attente</td></tr>';
-}
-
-// 8. Tableau HISTORIQUE TERMINÉ
-const finishedList = document.getElementById('arch-finished-list');
-if (finishedList) {
-    // On affiche les plus récents en premier avec .reverse()
-    finishedList.innerHTML = finished.slice().reverse().map(h => {
-        const isWin = h.win === true;
-        const color = isWin ? "#22c55e" : "#da0812";
-        const totalReturn = isWin ? (h.m * h.cote).toFixed(2) : "0.00";
-
-        return `
-            <tr style="border-bottom: 1px solid rgba(255,255,255,0.05); opacity: 0.9;">
-                <td style="padding:10px 0;"><b>${h.mDate || '--/--'}</b><br><small style="color:#94a3b8;">${h.t}</small></td>
-                <td style="font-size:18px;">${h.sport || '❓'}</td>
-                <td>
-                    <b style="text-transform:uppercase;">${h.target}</b><br>
-                    <small style="color:var(--ol-blue);">${h.isS ? h.n.toUpperCase() : ''}</small>
-                </td>
-                <td style="color:#94a3b8;">@${h.cote}</td>
-                <td>${h.m}€</td>
-                <td><span style="color:${color}; font-weight:800;">${isWin ? 'WIN' : 'LOSS'}</span></td>
-                <td style="text-align:right; font-weight:800; color:${color};">
-                    ${isWin ? '+' : ''}${totalReturn}€
-                </td>
-            </tr>`;
-    }).join('');
-}
-
-} 
-
-            // 9. RENDU BANKROLL
-const grid = document.getElementById('books-grid');
-if (grid) {
-    grid.innerHTML = Object.entries(state.b).map(([name, balance]) => `
-        <div class="stat-card" style="border-bottom: 4px solid var(--ol-blue); padding: 15px; background: rgba(255,255,255,0.02); border-radius: 8px;">
-            <label style="display:block; margin-bottom:5px; color:var(--ol-blue); font-size:10px; font-weight:bold;">${name.toUpperCase()}</label>
-            <div style="display:flex; align-items:center; justify-content:center;">
-                <input type="number" inputmode="decimal" value="${balance}" onfocus="this.select()"
-                       onchange="updateBalance('${name}', this.value)"
-                       style="background:transparent; border:none; color:white; font-size:24px; font-family:'Orbitron', sans-serif; text-align:center; width:120px; outline:none;">
-                <span style="font-size:20px; margin-left:5px; font-weight:bold;">€</span>
-            </div>
-            <button onclick="deleteBook('${name}')" style="background:none; border:none; color:var(--ol-red); cursor:pointer; font-size:10px; margin-top:10px; text-transform:uppercase; font-weight:bold; opacity:0.7;">Supprimer</button>
-        </div>`).join('');
-}
-         // 10. RENDU UNITÉS (LISTE GESTION)
-const uList = document.getElementById('u-mgr-list');
-if (uList) {
-    uList.innerHTML = state.u.map((u, i) => {
-        const starsCount = parseInt(u.s) || 1; // Sécurité
-        return `
-            <tr style="border-bottom: 1px solid rgba(255,255,255,0.05);">
-                <td style="padding:12px 5px;"><b>${u.n.toUpperCase()}</b></td>
-                <td style="color:#fbbf24; letter-spacing:2px;">${"⭐".repeat(starsCount)}</td>
-                <td style="color:var(--ol-blue); font-weight:800;">PALIER ${u.l}</td>
-                <td style="text-align:right;">
-                    <button onclick="delUnit(${i})" style="background:none; border:none; color:var(--ol-red); cursor:pointer; font-size:11px;">SUPPRIMER</button>
-                </td>
-            </tr>`;
-    }).join('');
-}
-
-// 11. RENDU SÉLECTEUR COCKPIT (MENU DÉROULANT)
-const cUnitSelect = document.getElementById('c-unit');
-if (cUnitSelect) {
-    cUnitSelect.innerHTML = state.u.map(u => {
-        const starsCount = parseInt(u.s) || 1; // Sécurité
-        const stars = "⭐".repeat(starsCount);
-        return `<option value="${u.n}">${u.n.toUpperCase()} ${stars} (P${u.l})</option>`;
-    }).join('');
-}
-
-// 12. RENDU LISTE MOUVEMENT DE FONDS (BANKROLL)
-const moveSelect = document.getElementById('move-book-select');
-if (moveSelect) {
-    moveSelect.innerHTML = Object.keys(state.b).map(name => 
-        `<option value="${name}">${name.toUpperCase()}</option>`
-    ).join('');
-}
- 
-        // --- FONCTIONS ACTIONS ---
-
-        function showTab(tabId, btn) {
-    // 1. Masquer TOUS les onglets de force
-    const tabs = document.querySelectorAll('.tab-content');
-    tabs.forEach(tab => {
-        tab.classList.remove('active');
-        tab.style.display = 'none'; 
-    });
-
-    // 2. Afficher l'onglet demandé
-    const targetTab = document.getElementById(tabId);
-    if (targetTab) {
-        targetTab.classList.add('active');
-        targetTab.style.display = 'block'; // Force l'apparition
-        console.log("Affichage de : " + tabId); // Pour vérifier dans ta console F12
-    } else {
-        console.error("L'onglet avec l'ID '" + tabId + "' n'existe pas dans le HTML.");
-    }
-
-    // 3. Gérer l'apparence des boutons du menu
-    const buttons = document.querySelectorAll('.nav-item');
-    buttons.forEach(b => b.classList.remove('active'));
-    if (btn) btn.classList.add('active');
-}
-
-        function addBook() {
-            const input = document.getElementById('new-bk-name');
-            const name = input.value.trim().toLowerCase();
-            if (name === "") return;
-            if (!state.b[name]) {
-                state.b[name] = 0;
-                input.value = "";
-                save();
-            } else { alert("Existe déjà !"); }
-        }
-
-        function updateBalance(name, val) {
-            state.b[name] = parseFloat(val) || 0;
-            save();
-        }
-
-        function deleteBook(name) {
-            if(confirm("Supprimer " + name + " ?")) { delete state.b[name]; save(); }
-        }
-
-        function addUnit() {
-            const n = document.getElementById('u-n-add');
-            const s = document.getElementById('u-s-add');
-            if(!n.value.trim()) return;
-            state.u.push({ n: n.value.trim(), s: parseInt(s.value), l: 1 });
-            n.value = "";
-            save();
-        }
-
-        function delUnit(i) {
-            if(confirm("Supprimer cette unité ?")) { state.u.splice(i, 1); save(); }
-        }
-
-  function updMise() {
-    const uSelect = document.getElementById('c-unit');
-    const mMise = document.getElementById('c-mise');
-    
-    if (!uSelect || !mMise) return; // Sécurité si les éléments n'existent pas
-
-    const uVal = uSelect.value;
-    const u = state.u.find(x => x.n === uVal);
-    
-    if (u) {
-        // On récupère la suite selon les étoiles (u.s)
-        // Si u.s n'existe pas, on prend la strat "5" par défaut
-        const maSuite = STRATS[u.s] || STRATS["5"]; 
-        
-        // On récupère la mise selon le palier (u.l)
-        // Le "-1" est important car un tableau commence à 0
-        const idx = Math.min(u.l - 1, maSuite.length - 1);
-        
-        // ON REMPLIT LA CASE VIDE DE L'IMAGE
-        mMise.value = maSuite[idx];
-    }
-}
-
-       function pari(isS) {
+function pari(isS) {
     let n, b, c, m, target = "", type = "", l = 1;
     const now = new Date();
     const time = now.toLocaleDateString('fr-FR', {day:'2-digit', month:'2-digit'}) + ' ' + now.toLocaleTimeString('fr-FR', {hour:'2-digit', minute:'2-digit'});
 
-    // Récupération des infos communes
     const sport = document.getElementById('p-sport').value;
     const matchDate = document.getElementById('p-match-date').value;
     const formattedMatchDate = matchDate ? matchDate.split('-').reverse().slice(0,2).join('/') : "";
 
     if (isS) {
-        // --- LOGIQUE COCKPIT ---
+        // Mode COCKPIT (Stratégie)
         const u = state.u.find(x => x.n === document.getElementById('c-unit').value);
-        if (!u) return;
+        if (!u) return alert("Crée une unité d'abord !");
         
-        // On force la mise à jour si le champ est vide au moment du clic
-        if (document.getElementById('c-mise').value === "") {
-            updMise();
-        }
-
-        n = u.n + " (P" + u.l + ")"; 
+        n = u.n; 
         target = document.getElementById('c-target').value || "-";
         type = document.getElementById('c-type').value || "-";
         b = document.getElementById('c-book').value;
@@ -648,7 +337,7 @@ if (moveSelect) {
         m = parseFloat(document.getElementById('c-mise').value) || 0;
         l = u.l;
     } else {
-        // --- LOGIQUE PARI NORMAL ---
+        // Mode PARI NORMAL
         target = document.getElementById('n-target').value || "Pari";
         type = document.getElementById('n-desc').value || "Simple";
         n = "PARI SIMPLE"; 
@@ -656,111 +345,169 @@ if (moveSelect) {
         c = parseFloat(document.getElementById('n-cote').value) || 0;
         m = parseFloat(document.getElementById('n-mise').value) || 0;
     }
-    
-    // VERIFICATION DU SOLDE ET DE LA MISE
+
     const soldeDisponible = parseFloat(state.b[b]) || 0;
 
     if (m > 0 && soldeDisponible >= m) {
         state.b[b] = (soldeDisponible - m).toFixed(2);
-        
         state.h.unshift({ 
-            id: Date.now().toString(), 
-            n: n, 
-            target: target, 
-            type: type, 
-            b: b, 
-            l: l, 
-            m: m, 
-            cote: c, 
-            isS: isS, 
-            t: time,
-            sport: sport,
-            mDate: formattedMatchDate 
+            id: Date.now().toString(), n: n, target: target, type: type, 
+            b: b, l: l, m: m, cote: c, isS: isS, t: time, sport: sport, mDate: formattedMatchDate 
         });
-        
         save();
-        render(); 
-    } else { 
-        // Message plus précis pour comprendre pourquoi ça bloque
-        if (m <= 0) {
-            alert("Erreur : La mise est vide ou égale à 0. Vérifiez vos étoiles.");
-        } else {
-            alert("Solde insuffisant sur " + b + " ! (Dispo: " + soldeDisponible + "€)"); 
-        }
-    }
-}
-       
-        function handleFund(isAdd) {
-    // On utilise les IDs correspondants à ton HTML actuel
-    const bName = document.getElementById('trans-book').value;
-    const amountField = document.getElementById('trans-amount');
-    const amount = parseFloat(amountField.value);
-    
-    // Vérification de sécurité
-    if(!bName || isNaN(amount) || amount <= 0) {
-        alert("Sélectionne un bookmaker et un montant valide.");
-        return;
-    }
-
-    // Récupération du solde actuel du bookmaker choisi
-    let currentBalance = parseFloat(state.b[bName]) || 0;
-
-    if(isAdd) {
-        // DÉPÔT : On augmente le solde et le capital de départ (start_bk)
-        state.b[bName] = (currentBalance + amount).toFixed(2);
-        state.start_bk = (parseFloat(state.start_bk) + amount);
+        if(isS) document.getElementById('c-target').value = ""; else document.getElementById('n-target').value = "";
     } else {
-        // RETRAIT : On vérifie si on a assez d'argent
-        if(currentBalance < amount) {
-            alert("Solde insuffisant sur " + bName);
-            return;
-        }
-        state.b[bName] = (currentBalance - amount).toFixed(2);
-        state.start_bk = (parseFloat(state.start_bk) - amount);
+        alert(m <= 0 ? "Mise invalide" : "Solde insuffisant sur " + b.toUpperCase());
     }
-
-    // Nettoyage du champ après validation
-    amountField.value = ""; 
-    
-    // Sauvegarde et mise à jour visuelle
-    save(); 
 }
-        function result(id, isWin) {
-    // 1. On cherche le pari dans la liste des paris en cours
-    const betIndex = state.h.findIndex(x => x.id === id);
-    if (betIndex === -1) return;
-    const bet = state.h[betIndex];
 
-    // 2. Si c'est gagné, on rend l'argent (Mise * Cote)
+function result(id, isWin) {
+    const idx = state.h.findIndex(x => x.id === id);
+    if (idx === -1) return;
+    const bet = state.h[idx];
+
     if (isWin) {
         const gain = (bet.m * bet.cote).toFixed(2);
         state.b[bet.b] = (parseFloat(state.b[bet.b]) + parseFloat(gain)).toFixed(2);
-    }
-
-    // 3. GESTION DES PALIERS (Le secret du retour en P1)
-    if (bet.isS) { // Si c'est un pari du Cockpit
-        const unitName = bet.n.split(' (')[0]; // On récupère "LYON" sans le "(P6)"
-        const u = state.u.find(x => x.n === unitName);
-        
-        if (u) {
-            if (isWin) {
-                u.l = 1; // VICTOIRE : On reset au Palier 1
-            } else {
-                u.l++;   // DÉFAITE : On grimpe (P1 -> P2...)
-            }
+        if (bet.isS) {
+            const u = state.u.find(x => x.n === bet.n);
+            if (u) u.l = 1; // Retour P1
+        }
+    } else {
+        if (bet.isS) {
+            const u = state.u.find(x => x.n === bet.n);
+            if (u && u.l < 8) u.l++; // Montée Palier
         }
     }
 
-    // 4. On déplace le pari vers l'archive (Historique terminé)
     state.a.unshift({ ...bet, win: isWin, finished: true });
-    
-    // 5. On le retire de la liste "En cours"
-    state.h.splice(betIndex, 1);
-
-    save();   // On enregistre dans la mémoire du téléphone
-    render(); // On met à jour l'affichage
-    if(typeof updMise === 'function') updMise(); // On actualise la mise auto
+    state.h.splice(idx, 1);
+    save();
+    updMise();
 }
-    </script>
+
+// --- FONCTIONS BANKROLL & UNITÉS ---
+
+function handleFund(isAdd) {
+    const bName = document.getElementById('move-book-select').value;
+    const amountField = document.getElementById('move-amount');
+    const amount = parseFloat(amountField.value);
+    
+    if(!bName || isNaN(amount) || amount <= 0) return;
+
+    let current = parseFloat(state.b[bName]) || 0;
+    if(isAdd) {
+        state.b[bName] = (current + amount).toFixed(2);
+        state.start_bk += amount;
+    } else {
+        if(current < amount) return alert("Solde insuffisant");
+        state.b[bName] = (current - amount).toFixed(2);
+        state.start_bk -= amount;
+    }
+    amountField.value = "";
+    save();
+}
+
+function updMise() {
+    const uSelect = document.getElementById('c-unit');
+    const mMise = document.getElementById('c-mise');
+    if (!uSelect || !mMise) return;
+    const u = state.u.find(x => x.n === uSelect.value);
+    if (u) {
+        const suite = STRATS[u.s] || STRATS["5"];
+        mMise.value = suite[Math.min(u.l - 1, suite.length - 1)];
+    }
+}
+
+// --- RENDU VISUEL ---
+
+function render() {
+    // 1. Stats Entête
+    const total = Object.values(state.b).reduce((a, v) => a + parseFloat(v || 0), 0);
+    document.getElementById('d-cap').innerText = total.toFixed(2) + "€";
+    const benefice = total - (state.start_bk || 0);
+    const benElt = document.getElementById('d-ben');
+    benElt.innerText = (benefice >= 0 ? "+" : "") + benefice.toFixed(2) + "€";
+    benElt.style.color = benefice >= 0 ? "#22c55e" : "#da0812";
+
+    // 2. Sélecteurs
+    const bOpt = Object.keys(state.b).map(k => `<option value="${k}">${k.toUpperCase()}</option>`).join('');
+    document.getElementById('c-book').innerHTML = bOpt;
+    document.getElementById('n-book').innerHTML = bOpt;
+    document.getElementById('move-book-select').innerHTML = bOpt;
+    
+    document.getElementById('c-unit').innerHTML = state.u.map(u => 
+        `<option value="${u.n}">${u.n.toUpperCase()} ${"⭐".repeat(u.s)} (P${u.l})</option>`
+    ).join('');
+
+    // 3. Tableaux Live
+    document.getElementById('h-live-strat').innerHTML = state.h.filter(x => x.isS).map(h => `
+        <tr>
+            <td style="font-size:10px">${h.t}</td>
+            <td><b>${h.n} (P${h.l})</b></td>
+            <td>${h.target}</td>
+            <td style="font-size:10px">${h.type}</td>
+            <td><b>${h.m}€</b></td>
+            <td style="text-align:right">
+                <button class="btn-win" onclick="result('${h.id}',true)">W</button>
+                <button class="btn-loss" onclick="result('${h.id}',false)">L</button>
+            </td>
+        </tr>`).join('');
+
+    document.getElementById('h-live-norm').innerHTML = state.h.filter(x => !x.isS).map(h => `
+        <tr>
+            <td>${h.mDate}<br><small>${h.t}</small></td>
+            <td>${h.sport} <b>${h.target}</b></td>
+            <td>${h.m}€ (@${h.cote})</td>
+            <td style="text-align:right">
+                <button class="btn-win" onclick="result('${h.id}',true)">W</button>
+                <button class="btn-loss" onclick="result('${h.id}',false)">L</button>
+            </td>
+        </tr>`).join('');
+
+    // 4. Archive (Terminés)
+    document.getElementById('arch-finished-list').innerHTML = state.a.slice(0,20).map(h => {
+        const color = h.win ? "#22c55e" : "#da0812";
+        return `<tr>
+            <td>${h.mDate || h.t}</td>
+            <td>${h.sport || '⚽'}</td>
+            <td><b>${h.target}</b><br><small>${h.isS ? h.n : 'SIMPLE'}</small></td>
+            <td>@${h.cote}</td>
+            <td>${h.m}€</td>
+            <td style="color:${color}; font-weight:800">${h.win ? 'WIN' : 'LOSS'}</td>
+            <td style="text-align:right; color:${color}"><b>${h.win ? '+' + (h.m*h.cote).toFixed(2) : '0.00'}€</b></td>
+        </tr>`;
+    }).join('');
+
+    // 5. Gestion Bankroll (Grille)
+    document.getElementById('books-grid').innerHTML = Object.entries(state.b).map(([n, v]) => `
+        <div class="stat-card" style="border-bottom: 4px solid var(--ol-blue);">
+            <label>${n.toUpperCase()}</label>
+            <div style="font-size:20px; font-weight:900">${parseFloat(v).toFixed(2)}€</div>
+            <button onclick="deleteBook('${n}')" style="font-size:9px; color:var(--ol-red); background:none; border:none; margin-top:5px;">SUPPRIMER</button>
+        </div>`).join('');
+
+    // 6. Gestion Unités
+    document.getElementById('u-mgr-list').innerHTML = state.u.map((u, i) => `
+        <tr>
+            <td><b>${u.n}</b></td>
+            <td>${"⭐".repeat(u.s)}</td>
+            <td>Palier ${u.l}</td>
+            <td style="text-align:right"><button onclick="state.u.splice(${i},1);save();" style="color:var(--ol-red);background:none;border:none;">DEL</button></td>
+        </tr>`).join('');
+}
+
+// Utilitaires
+function showTab(id, btn) {
+    document.querySelectorAll('.tab-content').forEach(t => t.style.display = 'none');
+    document.getElementById(id).style.display = 'block';
+    document.querySelectorAll('.nav-item').forEach(b => b.classList.remove('active'));
+    if(btn) btn.classList.add('active');
+}
+
+function deleteBook(n) { if(confirm("Supprimer " + n + " ?")) { delete state.b[n]; save(); } }
+
+window.onload = () => { render(); updMise(); };
+</script>
 </body>
 </html>
