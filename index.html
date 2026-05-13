@@ -418,6 +418,14 @@ document.getElementById('arch-finished-list').innerHTML = finished.map(h => `
                     </tr>`).join('');
             }
         }
+        // 9. RENDU SÉLECTEUR COCKPIT
+const cUnitSelect = document.getElementById('c-unit');
+if(cUnitSelect) {
+    cUnitSelect.innerHTML = state.u.map(u => {
+        const stars = "⭐".repeat(u.s || 1); 
+        return `<option value="${u.n}">${u.n.toUpperCase()} ${stars} (P${u.l})</option>`;
+    }).join('');
+}
 
         // --- FONCTIONS ACTIONS ---
 
@@ -501,7 +509,7 @@ document.getElementById('arch-finished-list').innerHTML = finished.map(h => `
     }
 }
 
-        function pari(isS) {
+       function pari(isS) {
     let n, b, c, m, target = "", type = "", l = 1;
     const now = new Date();
     const time = now.toLocaleDateString('fr-FR', {day:'2-digit', month:'2-digit'}) + ' ' + now.toLocaleTimeString('fr-FR', {hour:'2-digit', minute:'2-digit'});
@@ -512,11 +520,15 @@ document.getElementById('arch-finished-list').innerHTML = finished.map(h => `
     const formattedMatchDate = matchDate ? matchDate.split('-').reverse().slice(0,2).join('/') : "";
 
     if (isS) {
-        // --- LOGIQUE COCKPIT (STRATÉGIE) ---
+        // --- LOGIQUE COCKPIT ---
         const u = state.u.find(x => x.n === document.getElementById('c-unit').value);
         if (!u) return;
         
-        // On combine le nom et le palier pour l'affichage : LYON (P1)
+        // On force la mise à jour si le champ est vide au moment du clic
+        if (document.getElementById('c-mise').value === "") {
+            updMise();
+        }
+
         n = u.n + " (P" + u.l + ")"; 
         target = document.getElementById('c-target').value || "-";
         type = document.getElementById('c-type').value || "-";
@@ -534,10 +546,12 @@ document.getElementById('arch-finished-list').innerHTML = finished.map(h => `
         m = parseFloat(document.getElementById('n-mise').value) || 0;
     }
     
-    if (state.b[b] >= m && m > 0) {
-        state.b[b] = (parseFloat(state.b[b]) - m).toFixed(2);
+    // VERIFICATION DU SOLDE ET DE LA MISE
+    const soldeDisponible = parseFloat(state.b[b]) || 0;
+
+    if (m > 0 && soldeDisponible >= m) {
+        state.b[b] = (soldeDisponible - m).toFixed(2);
         
-        // ON AJOUTE 'sport' ET 'mDate' DANS L'OBJET ICI :
         state.h.unshift({ 
             id: Date.now().toString(), 
             n: n, 
@@ -549,17 +563,21 @@ document.getElementById('arch-finished-list').innerHTML = finished.map(h => `
             cote: c, 
             isS: isS, 
             t: time,
-            sport: sport, // Ajouté
-            mDate: formattedMatchDate // Ajouté
+            sport: sport,
+            mDate: formattedMatchDate 
         });
         
         save();
-        render(); // N'oublie pas d'appeler render pour mettre à jour l'écran !
+        render(); 
     } else { 
-        alert("Solde insuffisant !"); 
+        // Message plus précis pour comprendre pourquoi ça bloque
+        if (m <= 0) {
+            alert("Erreur : La mise est vide ou égale à 0. Vérifiez vos étoiles.");
+        } else {
+            alert("Solde insuffisant sur " + b + " ! (Dispo: " + soldeDisponible + "€)"); 
+        }
     }
 }
-
         function resolve(id, win) {
             const hIdx = state.h.findIndex(x => x.id === id);
             if(hIdx === -1) return;
