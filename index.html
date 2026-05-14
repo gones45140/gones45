@@ -304,346 +304,181 @@
     ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 
 -->
 <script>
-    // --- 1. INITIALISATION DU SYSTÈME ---
-    let state = JSON.parse(localStorage.getItem('gones_state')) || {
-        b: { "winamax": 0 }, 
-        u: [], 
-        h: [], 
-        a: [], 
-        start_bk: 0
+// --- CONFIGURATION DES STRATÉGIES ---
+const STRATS = {
+    1: [10, 15, 25, 40, 65], // Défensive
+    2: [20, 35, 60, 100, 170], // Standard
+    3: [50, 90, 160, 280, 480], // Agressive
+    4: [100, 180, 320, 560, 950], // High Stake
+    5: [200, 360, 640, 1100, 1900] // Whale
+};
+
+// --- ÉTAT INITIAL ---
+let state = JSON.parse(localStorage.getItem('gones_data')) || {
+    b: [{ n: 'Winamax', v: 15000 }], // Capital initial exemple
+    u: [], // Tes unités (OL, PSG, etc.)
+    h: [], // Historique des paris finis
+    l: []  // Paris en cours
+};
+
+const start_bk = 15000; // Ton dépôt total pour le calcul du profit
+
+// --- FONCTIONS DE SAUVEGARDE ET D'AFFICHAGE ---
+function save() {
+    localStorage.setItem('gones_data', JSON.stringify(state));
+    render();
+}
+
+function render() {
+    renderDashboard();
+    renderEquipes();
+    renderArchives();
+    renderSettings();
+}
+
+function renderDashboard() {
+    // Calcul du capital total
+    const total = state.b.reduce((acc, curr) => acc + curr.v, 0);
+    const profit = total - start_bk;
+    
+    document.getElementById('d-cap').innerText = total.toFixed(2) + "€";
+    const benEl = document.getElementById('d-ben');
+    benEl.innerText = (profit >= 0 ? "+" : "") + profit.toFixed(2) + "€";
+    benEl.style.color = profit >= 0 ? "var(--win-green)" : "var(--ol-red)";
+
+    // Liste des unités dans le menu déroulant
+    const sel = document.getElementById('c-unit');
+    sel.innerHTML = state.u.map(unit => `<option value="${unit.n}">${unit.n} (P${unit.p})</option>`).join('');
+    
+    // Liste des bookmakers
+    const bSel = document.getElementById('c-book');
+    const nBSel = document.getElementById('n-book');
+    const booksHtml = state.b.map(b => `<option value="${b.n}">${b.n} (${b.v.toFixed(2)}€)</option>`).join('');
+    bSel.innerHTML = booksHtml;
+    nBSel.innerHTML = booksHtml;
+
+    renderLiveBets();
+    updMise();
+}
+
+function renderEquipes() {
+    const container = document.getElementById('page-bilan-equipes');
+    if (!container) return;
+    container.innerHTML = state.u.map(unit => `
+        <div class="glass-panel">
+            <div style="display:flex; justify-content:space-between;">
+                <h3 style="margin:0; color:var(--accent-cyan);">${unit.n}</h3>
+                <span class="btn-mini">Strat ${unit.s}</span>
+            </div>
+            <div style="margin-top:10px; display:grid; grid-template-columns:1fr 1fr; gap:10px;">
+                <div class="mini-stat">Palier actuel: <b>P${unit.p}</b></div>
+                <div class="mini-stat">Profit: <b style="color:${unit.pr >= 0 ? 'var(--win-green)' : 'var(--ol-red)'}">${unit.pr.toFixed(2)}€</b></div>
+            </div>
+        </div>
+    `).join('');
+}
+
+// --- LOGIQUE DES PARIS ---
+function updMise() {
+    const name = document.getElementById('c-unit').value;
+    const unit = state.u.find(u => u.n === name);
+    if (unit) {
+        document.getElementById('c-mise').value = STRATS[unit.s][unit.p - 1];
+    }
+}
+
+function pari(isStrat) {
+    const bookName = isStrat ? document.getElementById('c-book').value : document.getElementById('n-book').value;
+    const mise = parseFloat(isStrat ? document.getElementById('c-mise').value : document.getElementById('n-mise').value);
+    const book = state.b.find(b => b.n === bookName);
+
+    if (book.v < mise) return alert("Fonds insuffisants sur " + bookName);
+
+    const newBet = {
+        id: Date.now(),
+        isStrat: isStrat,
+        unit: isStrat ? document.getElementById('c-unit').value : "Simple",
+        target: isStrat ? document.getElementById('c-target').value : document.getElementById('p-sport').value,
+        type: isStrat ? document.getElementById('c-type').value : document.getElementById('n-type').value,
+        cote: parseFloat(isStrat ? document.getElementById('c-cote').value : document.getElementById('n-cote').value),
+        mise: mise,
+        book: bookName
     };
 
-    const STRATS = {
-        "1": [1, 2, 6, 18, 54, 162, 486, 1458],
-        "2": [2, 4, 12, 36, 108, 324, 972, 2916],
-        "3": [2, 4, 12, 36, 108, 324, 972, 2916],
-        "4": [5, 10, 30, 90, 270, 810, 2430, 7290],
-        "5": [10, 20, 60, 180, 540, 1620, 4860, 14580]
-    };
+    book.v -= mise;
+    state.l.push(newBet);
+    save();
+}
 
-    function save() {
-        localStorage.setItem('gones_state', JSON.stringify(state));
-        render();
-    }
+function resolveBet(id, win) {
+    const idx = state.l.findIndex(b => b.id === id);
+    const bet = state.l[idx];
+    const book = state.b.find(b => b.n === bet.book);
 
-    // --- 2. CRÉATION D'UN PARI ---
-    function pari(isS) {
-        let n, b, c, m, target, type, l = 1, sport = "";
-        const now = new Date();
-        const time = now.toLocaleDateString('fr-FR', {day:'2-digit', month:'2-digit'}) + ' ' + now.toLocaleTimeString('fr-FR', {hour:'2-digit', minute:'2-digit'});
-
-        if (isS) {
-            const uObj = state.u.find(x => x.n === document.getElementById('c-unit').value);
-            if (!uObj) return alert("Crée une unité !");
-            n = uObj.n; 
-            target = document.getElementById('c-target').value || "-";
-            type = document.getElementById('c-type')?.value || "-";
-            b = document.getElementById('c-book').value;
-            c = parseFloat(document.getElementById('c-cote').value) || 0;
-            m = parseFloat(document.getElementById('c-mise').value) || 0;
-            l = uObj.l;
-        } else {
-            n = "SIMPLE"; 
-            sport = document.getElementById('p-sport').value;
-            const analysis = document.getElementById('n-analysis').value;
-            const comp = document.getElementById('n-comp').value;
-            target = analysis || comp || "Pari Simple"; 
-            type = document.getElementById('n-type').value || "-";
-            b = document.getElementById('n-book').value;
-            c = parseFloat(document.getElementById('n-cote').value.replace(',', '.')) || 0;
-            m = parseFloat(document.getElementById('n-mise').value) || 0;
+    if (win) {
+        const gain = bet.mise * bet.cote;
+        book.v += gain;
+        if (bet.isStrat) {
+            const unit = state.u.find(u => u.n === bet.unit);
+            unit.pr += (gain - bet.mise);
+            unit.p = 1; // Reset au P1 après une gagne
         }
-
-        if (m > 0 && (parseFloat(state.b[b]) || 0) >= m) {
-            state.b[b] = (parseFloat(state.b[b]) - m).toFixed(2);
-            
-            const newPari = { 
-                id: Date.now().toString(), 
-                n, target, b, l, m, cote: c, isS, t: time,
-                sport: sport,
-                type: type,
-                comp: isS ? "STRATÉGIE" : (document.getElementById('n-comp')?.value || "SANS COMPÉ"),
-                analysis: isS ? "" : (document.getElementById('n-analysis')?.value || "")
-            };
-
-            state.h.unshift(newPari);
-            
-            // Nettoyage des champs
-            document.querySelectorAll('input[type="text"], input[type="number"], textarea').forEach(i => i.value = "");
-            save();
-            updMise();
-        } else {
-            alert("Solde insuffisant sur " + b + " !");
+    } else {
+        if (bet.isStrat) {
+            const unit = state.u.find(u => u.n === bet.unit);
+            unit.pr -= bet.mise;
+            unit.p = unit.p < 5 ? unit.p + 1 : 1; // Monte au palier suivant ou reset si P5 perdu
         }
     }
 
-    // --- 3. VALIDATION DU RÉSULTAT ---
-    function result(id, win) {
-        const idx = state.h.findIndex(x => x.id === id);
-        if (idx === -1) return;
-        const bet = state.h[idx];
+    state.h.push({...bet, win: win, date: new Date().toLocaleDateString()});
+    state.l.splice(idx, 1);
+    save();
+}
 
-        const debrief = prompt(`Note de débrief (${win ? 'WIN ✅' : 'LOSS ❌'}) :`, "");
+function renderLiveBets() {
+    const stratTbody = document.getElementById('h-live-strat');
+    stratTbody.innerHTML = state.l.map(b => `
+        <tr>
+            <td>${b.unit} - ${b.target}<br><small>${b.type} @${b.cote}</small></td>
+            <td>${b.mise}€</td>
+            <td style="text-align:right">
+                <button class="btn-win" onclick="resolveBet(${b.id}, true)">G</button>
+                <button class="btn-loss" onclick="resolveBet(${b.id}, false)">P</button>
+            </td>
+        </tr>
+    `).join('');
+}
 
-        if (win) {
-            state.b[bet.b] = (parseFloat(state.b[bet.b]) + (bet.m * bet.cote)).toFixed(2);
-            if (bet.isS) { 
-                const u = state.u.find(x => x.n === bet.n); 
-                if(u) u.l = 1; 
-            }
-        } else if (bet.isS) {
-            const u = state.u.find(x => x.n === bet.n);
-            if(u && u.l < 8) u.l++;
-        }
+// --- GESTION ADMIN ---
+function addUnit() {
+    const name = document.getElementById('u-n-add').value;
+    if (!name) return;
+    state.u.push({ n: name, s: parseInt(document.getElementById('u-s-add').value), p: 1, pr: 0 });
+    save();
+}
 
-        state.a.unshift({ 
-            ...bet, 
-            win, 
-            debrief: debrief || "Aucun débrief",
-            analysis: bet.analysis || "Aucune analyse" 
-        });
+function showTab(tabId, btn) {
+    document.querySelectorAll('.tab-content').forEach(t => t.style.display = 'none');
+    document.getElementById(tabId).style.display = 'block';
+    document.querySelectorAll('.nav-item').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+}
 
-        state.h.splice(idx, 1);
-        save();
-        updMise();
-    }
+function renderSettings() {
+    const list = document.getElementById('u-mgr-list');
+    list.innerHTML = state.u.map((u, i) => `
+        <tr>
+            <td><b>${u.n}</b></td>
+            <td>Strat ${u.s}</td>
+            <td>P${u.p}</td>
+            <td><button class="btn-mini-red" onclick="state.u.splice(${i},1); save()">X</button></td>
+        </tr>
+    `).join('');
+}
 
-    // --- 4. GESTION DE LA BANKROLL ---
-    function handleFund(add) {
-        const b = document.getElementById('move-book-select').value;
-        const amt = parseFloat(document.getElementById('move-amount').value);
-        if(!b || isNaN(amt)) return;
-        state.b[b] = (parseFloat(state.b[b] || 0) + (add ? amt : -amt)).toFixed(2);
-        if(add) state.start_bk += amt;
-        save();
-    }
-
-    function addBook() {
-        const name = document.getElementById('new-bk-name').value.trim().toLowerCase();
-        if(name) {
-            if (state.b[name] !== undefined) return alert("Existe déjà !");
-            const initialAmount = parseFloat(prompt(`Solde de départ pour ${name.toUpperCase()} ?`, "0")) || 0;
-            state.b[name] = initialAmount.toFixed(2);
-            state.start_bk += initialAmount; 
-            document.getElementById('new-bk-name').value = "";
-            save();
-        }
-    }
-
-    function editBook(n) {
-        const current = parseFloat(state.b[n]);
-        const promptValue = prompt(`Nouveau solde pour ${n.toUpperCase()} ?`, current);
-        if (promptValue !== null) {
-            const next = parseFloat(promptValue);
-            if (!isNaN(next)) {
-                state.start_bk += (next - current); 
-                state.b[n] = next.toFixed(2);
-                save();
-            }
-        }
-    }
-
-    // --- 5. UNITÉS ET MISES ---
-    function addUnit() {
-        const n = document.getElementById('u-n-add').value.trim().toUpperCase();
-        if(n) { 
-            state.u.push({ n, s: document.getElementById('u-s-add').value, l: 1 }); 
-            save(); 
-        }
-    }
-
-    function updMise() {
-        const select = document.getElementById('c-unit');
-        if (!select) return;
-        const u = state.u.find(x => x.n === select.value);
-        if (u) document.getElementById('c-mise').value = STRATS[u.s][u.l-1];
-    }
-
-    // --- 6. RENDU GLOBAL (RENDER) ---
-    function render() {
-        const total = Object.values(state.b).reduce((a, v) => a + parseFloat(v), 0);
-        document.getElementById('d-cap').innerText = total.toFixed(2) + "€";
-        const ben = total - state.start_bk;
-        const benEl = document.getElementById('d-ben');
-        benEl.innerText = (ben >= 0 ? "+" : "") + ben.toFixed(2) + "€";
-        benEl.style.color = ben >= 0 ? "#22c55e" : "#da0812";
-
-        // Selects
-        const bOpt = Object.keys(state.b).map(k => `<option value="${k}">${k.toUpperCase()}</option>`).join('');
-        ['c-book', 'n-book', 'move-book-select'].forEach(id => {
-            if(document.getElementById(id)) document.getElementById(id).innerHTML = bOpt;
-        });
-        
-        const uSelect = document.getElementById('c-unit');
-        if (uSelect) uSelect.innerHTML = state.u.map(u => `<option value="${u.n}">${u.n} (P${u.l})</option>`).join('');
-
-        // Paris Live Stratégie
-        document.getElementById('h-live-strat').innerHTML = state.h.filter(x => x.isS).map(h => `
-            <tr><td>${h.n}</td><td>${h.target}</td><td>${h.m}€</td>
-            <td style="text-align:right"><button class="btn-win" onclick="result('${h.id}',true)">W</button> 
-            <button class="btn-loss" onclick="result('${h.id}',false)">L</button></td></tr>`).join('');
-
-        // Paris Live Simples
-        document.getElementById('h-live-norm').innerHTML = state.h.filter(x => !x.isS).map(h => `
-            <tr>
-                <td style="padding: 10px 5px;">
-                    <div style="font-size: 10px; color: var(--accent-cyan); text-transform: uppercase;">${h.comp}</div>
-                    <div style="font-weight: bold;">${h.target}</div>
-                    <div style="font-size: 11px; color: #94a3b8;">${h.type} @${h.cote}</div>
-                </td>
-                <td><div style="font-weight: bold; color: var(--accent-cyan);">${h.m}€</div></td>
-                <td style="text-align: right;">
-                    <button class="btn-win" onclick="result('${h.id}',true)">W</button> 
-                    <button class="btn-loss" onclick="result('${h.id}',false)">L</button>
-                </td>
-            </tr>`).join('');
-
-        // Archive (Top 10)
-        document.getElementById('arch-finished-list').innerHTML = state.a.slice(0,10).map(h => `
-            <tr>
-                <td title="ANALYSE: ${h.analysis}\nDEBRIEF: ${h.debrief}">${h.t}<br><small style="color:var(--accent-cyan);">ℹ️ Notes</small></td>
-                <td><b>${h.target}</b><br><small>${h.type}</small></td>
-                <td>${h.m}€<br><small>@${h.cote}</small></td>
-                <td style="color:${h.win ? '#22c55e' : '#da0812'}">${h.win ? 'WIN' : 'LOSS'}</td>
-                <td style="text-align:right"><b>${h.win ? (h.m*h.cote).toFixed(2) : '0'}€</b></td>
-            </tr>`).join('');
-
-        // Books Grid
-        document.getElementById('books-grid').innerHTML = Object.entries(state.b).map(([n, v]) => `
-            <div class="stat-card" style="border-bottom: 4px solid var(--ol-blue);">
-                <label>${n.toUpperCase()}</label>
-                <div class="stat-val">${parseFloat(v).toFixed(2)}€</div>
-                <div style="display:flex; justify-content:center; gap:10px; margin-top:10px;">
-                    <button onclick="editBook('${n}')" class="btn-mini">MODIFIER</button>
-                    <button onclick="if(confirm('Supprimer ${n} ?')){delete state.b['${n}'];save();}" class="btn-mini-red">SUPPRIMER</button>
-                </div>
-            </div>`).join('');
-
-        // Unités Manager
-        document.getElementById('u-mgr-list').innerHTML = state.u.map((u, i) => `
-            <tr><td><b>${u.n}</b></td><td>${"⭐".repeat(u.s)}</td><td>P${u.l}</td>
-            <td><button onclick="state.u.splice(${i},1);save()" style="color:red;background:none;border:none;">X</button></td></tr>`).join('');
-
-        // Dashboard Unités
-        document.getElementById('dash-summary').innerHTML = state.u.map(u => `
-            <tr><td>${u.n}</td><td>${"⭐".repeat(u.s)}</td><td>P${u.l}</td><td style="text-align:right; color:var(--accent-cyan)">ACTIF</td></tr>`).join('');
-
-        // Stats Boosts
-        const boosts = state.a.filter(h => h.type.toLowerCase().includes('boost'));
-        const bProfit = boosts.reduce((acc, h) => acc + (h.win ? (h.m * h.cote) - h.m : -h.m), 0);
-        document.getElementById('stat-boost-profit').innerText = (bProfit >= 0 ? "+" : "") + bProfit.toFixed(2) + "€";
-        document.getElementById('stat-boost-rate').innerText = boosts.length > 0 ? (boosts.filter(h => h.win).length / boosts.length * 100).toFixed(0) + "%" : "0%";
-
-        renderPageEquipes();
-    }
-
-    // --- 7. LOGIQUE PAGE ÉQUIPES ---
-    function renderPageEquipes() {
-        const page = document.getElementById('page-bilan-equipes');
-        if (!page) return;
-
-        if (state.u.length === 0) {
-            page.innerHTML = `<div style="text-align:center; padding:50px; opacity:0.5;">Aucune équipe configurée.</div>`;
-            return;
-        }
-
-        page.innerHTML = `<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 15px;">
-            ${state.u.map(unite => {
-                const paris = state.a.filter(h => h.n === unite.n);
-                const profit = paris.reduce((acc, h) => acc + (h.win ? (h.m * h.cote) - h.m : -h.m), 0);
-                const wr = paris.length > 0 ? (paris.filter(h => h.win).length / paris.length * 100).toFixed(0) : 0;
-                
-                return `
-                    <div class="glass-panel" onclick="openDetails('${unite.n}')" style="cursor:pointer; border-left: 4px solid var(--ol-blue);">
-                        <div style="display:flex; justify-content:space-between;">
-                            <div>
-                                <h3 style="margin:0;">${unite.n}</h3>
-                                <span style="font-size:10px; opacity:0.6;">${paris.length} PARIS</span>
-                            </div>
-                            <div style="font-weight:bold; color:${profit >= 0 ? 'var(--win-green)' : 'var(--ol-red)'};">
-                                ${profit >= 0 ? '+' : ''}${profit.toFixed(2)}€
-                            </div>
-                        </div>
-                        <div style="display:grid; grid-template-columns: repeat(3, 1fr); gap:8px; margin-top:15px;">
-                            <div class="mini-stat">WR: ${wr}%</div>
-                            <div class="mini-stat">P${unite.l}</div>
-                            <div class="mini-stat" style="color:var(--accent-cyan)">DÉTAILS</div>
-                        </div>
-                    </div>`;
-            }).join('')}
-        </div>`;
-    }
-
-    // --- 8. MODALE ET GRAPHIQUES ---
-    function openDetails(nom) {
-        const modal = document.getElementById('modal-details');
-        const content = document.getElementById('modal-content');
-        const paris = state.a.filter(h => h.n === nom);
-        
-        modal.style.display = 'block';
-        content.innerHTML = `
-            <div style="display:flex; justify-content:space-between; align-items:center;">
-                <h2>${nom}</h2>
-                <button onclick="closeDetails()" style="background:none; border:none; color:white; font-size:30px;">&times;</button>
-            </div>
-            <div style="height:250px; margin-top:20px;">
-                <canvas id="chart-mobile"></canvas>
-            </div>
-        `;
-        
-        if (paris.length > 0) renderMiniChart('chart-mobile', paris);
-    }
-
-    function renderMiniChart(canvasId, paris) {
-        const ctx = document.getElementById(canvasId).getContext('2d');
-        let chartStatus = Chart.getChart(canvasId); 
-        if (chartStatus != undefined) chartStatus.destroy();
-
-        let current = 0;
-        const pts = [0, ...paris.reverse().map(h => {
-            current += (h.win ? (h.m * h.cote) - h.m : -h.m);
-            return current.toFixed(2);
-        })];
-
-        new Chart(ctx, {
-            type: 'line',
-            data: {
-                labels: pts.map((_, i) => i),
-                datasets: [{
-                    data: pts,
-                    borderColor: '#22d3ee',
-                    backgroundColor: 'rgba(34, 211, 238, 0.1)',
-                    fill: true,
-                    tension: 0.3
-                }]
-            },
-            options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } }
-        });
-    }
-
-    function closeDetails() { document.getElementById('modal-details').style.display = 'none'; }
-
-    // --- 9. NAVIGATION ET UTILITAIRES ---
-    function showTab(id, btn) {
-        document.querySelectorAll('.tab-content').forEach(p => p.style.display = 'none');
-        document.getElementById(id).style.display = 'block';
-        document.querySelectorAll('.nav-item').forEach(b => b.classList.remove('active'));
-        if (btn) btn.classList.add('active');
-        render();
-    }
-
-    function switchBetMode(mode) {
-        const isStrat = mode === 'strat';
-        document.getElementById('sub-strat').style.display = isStrat ? 'block' : 'none';
-        document.getElementById('sub-simple').style.display = isStrat ? 'none' : 'block';
-    }
-
-    function exportData() {
-        const data = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(state));
-        const a = document.createElement('a'); a.href = data; a.download = "bankroll_gones.json"; a.click();
-    }
-
-    window.onload = () => { render(); updMise(); };
+// Lancement au démarrage
+window.onload = render;
 </script>
         </body>
 </html>
