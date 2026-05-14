@@ -624,57 +624,101 @@ document.getElementById('stats-books-list').innerHTML = Object.entries(booksStat
     if (dashFavoris) { 
         dashFavoris.innerHTML = ""; 
     }
+// 13. --- LOGIQUE DE LA PAGE DÉDIÉE "ÉQUIPES" ---
+const pageEquipes = document.getElementById('page-bilan-equipes');
+if (pageEquipes) {
+    if (state.u && state.u.length > 0) {
+        // Conteneur en GRILLE : 1 colonne sur mobile, 2 ou 3 sur PC
+        pageEquipes.innerHTML = `
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 15px;">
+                ${state.u.map(unite => {
+                    const parisDuFavori = state.a.filter(h => h.n === unite.n);
+                    const profit = parisDuFavori.reduce((acc, h) => acc + (h.win ? (h.m * h.cote) - h.m : -h.m), 0);
+                    const winrate = parisDuFavori.length > 0 ? (parisDuFavori.filter(h => h.win).length / parisDuFavori.length * 100).toFixed(0) : 0;
+                    const coteMoy = parisDuFavori.length > 0 ? (parisDuFavori.reduce((acc, h) => acc + h.cote, 0) / parisDuFavori.length).toFixed(2) : "0.00";
 
-    // 13. --- LOGIQUE DE LA PAGE DÉDIÉE "ÉQUIPES" ---
-    const pageEquipes = document.getElementById('page-bilan-equipes');
-    if (pageEquipes) {
-        if (state.u && state.u.length > 0) {
-            pageEquipes.innerHTML = state.u.map(unite => {
-                const parisDuFavori = state.a.filter(h => h.n === unite.n);
-                const profit = parisDuFavori.reduce((acc, h) => acc + (h.win ? (h.m * h.cote) - h.m : -h.m), 0);
-                const winrate = parisDuFavori.length > 0 ? (parisDuFavori.filter(h => h.win).length / parisDuFavori.length * 100).toFixed(0) : 0;
-                const coteMoy = parisDuFavori.length > 0 ? (parisDuFavori.reduce((acc, h) => acc + h.cote, 0) / parisDuFavori.length).toFixed(2) : "0.00";
-
-                return `
-                    <div class="glass-panel" style="margin-bottom:20px; border-left: 4px solid var(--ol-blue); background: rgba(255,255,255,0.03); padding: 15px; border-radius: 12px;">
-                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
-                            <div>
-                                <h3 style="margin:0; color:white; font-size:20px;">${unite.n.toUpperCase()}</h3>
-                                <span style="font-size:11px; opacity:0.6;">${parisDuFavori.length} PARIS ANALYSÉS</span>
-                            </div>
-                            <div style="text-align:right;">
-                                <div style="font-weight:bold; font-size:22px; color:${profit >= 0 ? 'var(--win-green)' : 'var(--ol-red)'};">
+                    return `
+                        <div class="glass-panel" style="border-left: 4px solid var(--ol-blue); background: rgba(255,255,255,0.03); padding: 15px; border-radius: 12px; display: flex; flex-direction: column; justify-content: space-between;">
+                            <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:15px;">
+                                <div>
+                                    <h3 style="margin:0; color:white; font-size:18px;">${unite.n.toUpperCase()}</h3>
+                                    <span style="font-size:10px; opacity:0.6;">${parisDuFavori.length} PARIS ANALYSÉS</span>
+                                </div>
+                                <div style="font-weight:bold; font-size:18px; color:${profit >= 0 ? 'var(--win-green)' : 'var(--ol-red)'};">
                                     ${profit >= 0 ? '+' : ''}${profit.toFixed(2)}€
                                 </div>
                             </div>
-                        </div>
 
-                        <div style="height:150px; background:rgba(0,0,0,0.4); border-radius:10px; margin-bottom:20px; display:flex; align-items:center; justify-content:center; border:1px solid rgba(255,255,255,0.1);">
-                            <span style="font-size:11px; color:var(--accent-cyan);">📉 COURBE DE PERFORMANCE À VENIR</span>
-                        </div>
+                            <div style="height:100px; background:rgba(0,0,0,0.4); border-radius:10px; margin-bottom:15px; display:flex; align-items:center; justify-content:center; border:1px solid rgba(255,255,255,0.1);">
+                                <span style="font-size:9px; color:var(--accent-cyan); text-align:center; padding:5px;">📉 COURBE DE PERFORMANCE</span>
+                            </div>
 
-                        <div style="display:grid; grid-template-columns: repeat(3, 1fr); gap:10px;">
-                            <div style="background:rgba(255,255,255,0.05); padding:10px; border-radius:8px; text-align:center;">
-                                <div style="font-size:9px; opacity:0.6;">WINRATE</div>
-                                <div style="font-weight:bold;">${winrate}%</div>
+                            <div style="display:grid; grid-template-columns: repeat(3, 1fr); gap:8px;">
+                                <div style="background:rgba(255,255,255,0.05); padding:8px; border-radius:8px; text-align:center;">
+                                    <div style="font-size:8px; opacity:0.6; margin-bottom:2px;">WINRATE</div>
+                                    <div style="font-size:12px; font-weight:bold;">${winrate}%</div>
+                                </div>
+                                <div style="background:rgba(255,255,255,0.05); padding:8px; border-radius:8px; text-align:center;">
+                                    <div style="font-size:8px; opacity:0.6; margin-bottom:2px;">COTE MOY.</div>
+                                    <div style="font-size:12px; font-weight:bold;">${coteMoy}</div>
+                                </div>
+                                <div style="background:rgba(255,255,255,0.05); padding:8px; border-radius:8px; text-align:center;">
+                                    <div style="font-size:8px; opacity:0.6; margin-bottom:2px;">UNITÉ</div>
+                                    <div style="font-size:12px; font-weight:bold; color:var(--accent-cyan);">P${unite.l}</div>
+                                </div>
                             </div>
-                            <div style="background:rgba(255,255,255,0.05); padding:10px; border-radius:8px; text-align:center;">
-                                <div style="font-size:9px; opacity:0.6;">COTE MOY.</div>
-                                <div style="font-weight:bold;">${coteMoy}</div>
-                            </div>
-                            <div style="background:rgba(255,255,255,0.05); padding:10px; border-radius:8px; text-align:center;">
-                                <div style="font-size:9px; opacity:0.6;">UNITÉ</div>
-                                <div style="font-weight:bold; color:var(--accent-cyan);">P${unite.l}</div>
-                            </div>
-                        </div>
-                    </div>`;
-            }).join('');
-        } else {
-            pageEquipes.innerHTML = `<div style="text-align:center; padding:50px; opacity:0.5;">Aucune équipe favorite.</div>`;
-        }
-    } // Fin du if(pageEquipes)
+                        </div>`;
+                }).join('')}
+            </div>`;
+    } else {
+        pageEquipes.innerHTML = `<div style="text-align:center; padding:50px; opacity:0.5;">Aucune équipe favorite.</div>`;
+    }
+}
+     // Fin du if(pageEquipes)
 
 } // <--- C'EST CETTE ACCOLADE QUI FERME LA FONCTION RENDER()
+
+        // ... tes autres fonctions (save, render, pari, etc.)
+
+// --- GESTION DES DÉTAILS ÉQUIPES (PC & MOBILE) ---
+function openDetails(nom) {
+    const modal = document.getElementById('modal-details');
+    const content = document.getElementById('modal-content');
+    
+    // On récupère les données de l'équipe (ex: OL ou Boca)
+    const unite = state.u.find(u => u.n === nom);
+    const paris = state.a.filter(h => h.n === nom);
+    
+    // Calculs de performance pour l'affichage
+    const profit = paris.reduce((acc, h) => acc + (h.win ? (h.m * h.cote) - h.m : -h.m), 0);
+    const winrate = paris.length > 0 ? (paris.filter(h => h.win).length / paris.length * 100).toFixed(0) : 0;
+
+    // Remplissage de la fenêtre modale
+    content.innerHTML = `
+        <h2 style="font-size:24px; color:white;">${nom.toUpperCase()}</h2>
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin:20px 0;">
+            <div class="stat-card" style="text-align:center; background:rgba(255,255,255,0.05); padding:15px; border-radius:10px;">
+                <label style="font-size:10px; opacity:0.7;">PROFIT</label>
+                <div style="font-size:20px; font-weight:bold; color:${profit >= 0 ? 'var(--win-green)' : 'var(--ol-red)'}">${profit.toFixed(2)}€</div>
+            </div>
+            <div class="stat-card" style="text-align:center; background:rgba(255,255,255,0.05); padding:15px; border-radius:10px;">
+                <label style="font-size:10px; opacity:0.7;">WINRATE</label>
+                <div style="font-size:20px; font-weight:bold; color:white;">${winrate}%</div>
+            </div>
+        </div>
+        <div style="height:200px; background:rgba(0,0,0,0.4); border-radius:12px; margin-top:20px; border:1px solid rgba(255,255,255,0.1); display:flex; align-items:center; justify-content:center;">
+             <canvas id="chart-mobile" style="width:100%; height:100%;"></canvas>
+        </div>
+    `;
+    
+    modal.style.display = 'block'; // Affiche la fenêtre
+    document.body.style.overflow = 'hidden'; // Bloque le scroll du fond pour le téléphone
+}
+
+function closeDetails() {
+    document.getElementById('modal-details').style.display = 'none'; // Cache la fenêtre
+    document.body.style.overflow = 'auto'; // Réactive le scroll
+}
             
         function showTab(id, btn) {
     // On cache TOUTES les pages d'un coup
