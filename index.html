@@ -208,6 +208,65 @@
         </div>
     </div>
 </div>
+        <div id="p-bilan" class="tab-content">
+    <h2 style="color:white; margin-bottom:15px;">📊 Tableau de Bord</h2>
+
+    <!-- SECTION : BILAN GÉNÉRAL -->
+    <div class="glass-panel" style="margin-bottom:20px;">
+        <h3 style="color:var(--accent-cyan); font-size:14px; margin-bottom:10px;">BILAN GÉNÉRAL</h3>
+        <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px;">
+            <div style="background:rgba(255,255,255,0.05); padding:10px; border-radius:8px; text-align:center;">
+                <div style="font-size:10px; opacity:0.7;">BÉNÉFICE TOTAL</div>
+                <div id="stat-profit" style="font-weight:bold; color:var(--win-green); font-size:18px;">0.00€</div>
+            </div>
+            <div style="background:rgba(255,255,255,0.05); padding:10px; border-radius:8px; text-align:center;">
+                <div style="font-size:10px; opacity:0.7;">TAUX DE RÉUSSITE</div>
+                <div id="stat-winrate" style="font-weight:bold; color:white; font-size:18px;">0%</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- SECTION : BILAN PAR ÉQUIPE -->
+    <h3 style="color:white; font-size:16px; margin-bottom:10px;">⭐ Performances par Équipes</h3>
+    <div id="stats-teams-list">
+        <!-- On va générer ici une carte par équipe préférée (Boca, Palmeiras, etc.) -->
+        <div class="glass-panel" style="margin-bottom:10px; border-left: 4px solid #f59e0b;">
+            <div style="display:flex; justify-content:space-between; align-items:center;">
+                <span style="font-weight:bold;">BOCA JUNIORS</span>
+                <span style="color:var(--win-green);">+45.20€</span>
+            </div>
+            <div style="font-size:11px; opacity:0.6; margin-top:5px;">8 Paris | 75% Win</div>
+        </div>
+        
+        <div class="glass-panel" style="margin-bottom:10px; border-left: 4px solid #3b82f6;">
+            <div style="display:flex; justify-content:space-between; align-items:center;">
+                <span style="font-weight:bold;">PALMEIRAS</span>
+                <span style="color:var(--loss-red);">-12.00€</span>
+            </div>
+            <div style="font-size:11px; opacity:0.6; margin-top:5px;">5 Paris | 40% Win</div>
+        </div>
+    </div>
+            <!-- SECTION : BILAN PAR BOOKMAKER -->
+    <h3 style="color:white; font-size:16px; margin: 20px 0 10px;">🏦 Par Bookmaker</h3>
+    <div id="stats-books-list" class="glass-panel" style="display: flex; flex-direction: column; gap: 10px;">
+        <!-- Rempli automatiquement (Winamax, Betclic...) -->
+    </div>
+
+    <!-- SECTION : FOCUS COTES BOOSTÉES -->
+    <div class="glass-panel" style="margin-top:20px; border: 1px solid #f59e0b; background: rgba(245, 158, 11, 0.05);">
+        <h3 style="color:#f59e0b; font-size:14px; margin-bottom:10px;">🚀 PERFORMANCE BOOSTS</h3>
+        <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px;">
+            <div style="text-align:center;">
+                <div style="font-size:10px; opacity:0.7;">NET BOOSTS</div>
+                <div id="stat-boost-profit" style="font-weight:bold; color:var(--win-green);">0.00€</div>
+            </div>
+            <div style="text-align:center;">
+                <div style="font-size:10px; opacity:0.7;">RÉUSSITE</div>
+                <div id="stat-boost-rate" style="font-weight:bold; color:white;">0%</div>
+            </div>
+        </div>
+    </div>
+</div>
 
         <!-- 5. BANKROLL & SETUP -->
         <div id="bank-mgr" class="tab-content">
@@ -262,6 +321,7 @@
         <div class="nav-item active" onclick="showTab('dash', this)"><i class="fa-solid fa-chart-pie"></i>MUR</div>
         <div class="nav-item active" onclick="showTab('p-betting-hub', this)">PARI SPORTIF</div>
         <div class="nav-item" onclick="showTab('arch', this)"><i class="fa-solid fa-clock-rotate-left"></i>ARCHIVE</div>
+        <div class="nav-item" onclick="showTab('p-bilan', this)">BILAN</div>
         <div class="nav-item" onclick="showTab('bank-mgr', this)"><i class="fa-solid fa-wallet"></i>BANK</div>
     </nav>
 
