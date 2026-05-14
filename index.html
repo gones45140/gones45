@@ -612,7 +612,7 @@ document.getElementById('stats-books-list').innerHTML = Object.entries(booksStat
     </div>
 `).join('');
             
-      // 12. --- NETTOYAGE SÉCURISÉ DU DASHBOARD ---
+     // 12. --- NETTOYAGE DU DASHBOARD ---
     const dashFavoris = document.getElementById('stats-favoris-list');
     if (dashFavoris) { 
         dashFavoris.innerHTML = ""; 
@@ -621,7 +621,6 @@ document.getElementById('stats-books-list').innerHTML = Object.entries(booksStat
     // 13. --- LOGIQUE DE LA PAGE DÉDIÉE "ÉQUIPES" ---
     const pageEquipes = document.getElementById('page-bilan-equipes');
     if (pageEquipes) {
-        // On génère le HTML seulement si on a des unités créées
         if (state.u && state.u.length > 0) {
             pageEquipes.innerHTML = state.u.map(unite => {
                 const parisDuFavori = state.a.filter(h => h.n === unite.n);
@@ -666,7 +665,9 @@ document.getElementById('stats-books-list').innerHTML = Object.entries(booksStat
         } else {
             pageEquipes.innerHTML = `<div style="text-align:center; padding:50px; opacity:0.5;">Aucune équipe favorite.</div>`;
         }
-    }
+    } // Fin du if(pageEquipes)
+
+} // <--- C'EST CETTE ACCOLADE QUI FERME LA FONCTION RENDER()
             
         function showTab(id, btn) {
             document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
