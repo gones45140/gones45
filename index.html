@@ -594,59 +594,60 @@ document.getElementById('stats-books-list').innerHTML = Object.entries(booksStat
     </div>
 `).join('');
             
-       // 12. On récupère la liste de tes favoris officiels (ex: OL)
-const mesFavoris = state.u.map(unite => unite.n);
-
-// 1. On calcule les stats UNIQUEMENT pour ces favoris
-const favorisStatsHTML = state.u.map(unite => {
-    //2 On ne prend que les paris qui utilisent exactement le nom de ton unité (ex: "OL")
-    const parisDuFavori = state.a.filter(h => h.n === unite.n);
-    
-    const profit = parisDuFavori.reduce((acc, h) => acc + (h.win ? (h.m * h.cote) - h.m : -h.m), 0);
-    const winrate = parisDuFavori.length > 0 
-        ? (parisDuFavori.filter(h => h.win).length / parisDuFavori.length * 100).toFixed(0) 
-        : 0;
-
-    return `
-        <div class="stat-card" style="margin-bottom:10px; display:flex; justify-content:space-between; align-items:center; border-left: 4px solid var(--ol-blue);">
-            <div>
-                <div style="font-weight:bold; color:white;">${unite.n.toUpperCase()}</div>
-                <div style="font-size:10px; opacity:0.6;">${parisDuFavori.length} Paris | ${winrate}% Win</div>
-            </div>
-            <div style="font-weight:bold; color:${profit >= 0 ? 'var(--win-green)' : 'var(--ol-red)'};">
-                ${profit >= 0 ? '+' : ''}${profit.toFixed(2)}€
-            </div>
-        </div>`;
-}).join('');
-
-// 3. On injecte le résultat dans la zone (en supprimant l'ancien calcul automatique)
-document.getElementById('stats-favoris-list').innerHTML = favorisStatsHTML || `<div style="text-align:center; opacity:0.5; padding:20px;">Crée une unité (ex: OL) pour voir tes perfs</div>`;
-// ... (garde le début de ton render tel quel)
-
-// 12. --- BILAN DYNAMIQUE SÉCURISÉ ---
+      // 12. --- BILAN DYNAMIQUE AVEC ONGLETS OUVRANTS (OL & AUTRES) ---
 const favorisList = document.getElementById('stats-favoris-list');
-if (favorisList) { // On vérifie si l'élément existe pour ne pas bloquer l'appli
-    const favorisStatsHTML = state.u.map(unite => {
+if (favorisList) { 
+    const favorisHTML = state.u.map(unite => {
+        // On filtre l'archive pour cette équipe spécifique
         const parisDuFavori = state.a.filter(h => h.n === unite.n);
+        
+        // Calculs de performance
         const profit = parisDuFavori.reduce((acc, h) => acc + (h.win ? (h.m * h.cote) - h.m : -h.m), 0);
         const winrate = parisDuFavori.length > 0 
             ? (parisDuFavori.filter(h => h.win).length / parisDuFavori.length * 100).toFixed(0) 
             : 0;
+        const coteMoy = parisDuFavori.length > 0
+            ? (parisDuFavori.reduce((acc, h) => acc + h.cote, 0) / parisDuFavori.length).toFixed(2)
+            : "0.00";
+
+        // Identifiant unique pour le futur graphique (ex: chart-OL)
+        const chartId = `chart-${unite.n.replace(/\s+/g, '')}`;
 
         return `
-            <div class="stat-card" style="margin-bottom:10px; display:flex; justify-content:space-between; align-items:center; border-left: 4px solid var(--ol-blue);">
-                <div>
-                    <div style="font-weight:bold; color:white;">${unite.n.toUpperCase()}</div>
-                    <div style="font-size:10px; opacity:0.6;">${parisDuFavori.length} Paris | ${winrate}% Win</div>
+            <details class="stat-card-details" style="margin-bottom:15px; border-left: 4px solid var(--ol-blue); background: rgba(255,255,255,0.03); border-radius: 8px; overflow: hidden;">
+                <summary style="display:flex; justify-content:space-between; align-items:center; padding:15px; cursor:pointer; list-style:none;">
+                    <div>
+                        <span style="font-weight:bold; color:white; font-size:16px;">${unite.n.toUpperCase()}</span>
+                        <span style="font-size:10px; opacity:0.6; display:block;">${parisDuFavori.length} MATCHS • VOIR LES DÉTAILS</span>
+                    </div>
+                    <div style="font-weight:bold; font-size:16px; color:${profit >= 0 ? 'var(--win-green)' : 'var(--ol-red)'};">
+                        ${profit >= 0 ? '+' : ''}${profit.toFixed(2)}€
+                    </div>
+                </summary>
+                
+                <div style="padding:15px; border-top: 1px solid rgba(255,255,255,0.1); background: rgba(0,0,0,0.2);">
+                    <!-- EMPLACEMENT FUTUR GRAPHIQUE -->
+                    <div id="${chartId}" style="height:120px; background: rgba(255,255,255,0.05); border-radius:5px; display:flex; align-items:center; justify-content:center; margin-bottom:15px; border: 1px dashed rgba(255,255,255,0.2);">
+                        <span style="font-size:11px; color:var(--accent-cyan);">📉 COURBE DE PROFIT ${unite.n.toUpperCase()}</span>
+                    </div>
+
+                    <!-- STATS DÉTAILLÉES -->
+                    <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px;">
+                        <div style="text-align:center; padding:10px; background:rgba(255,255,255,0.05); border-radius:5px;">
+                            <div style="font-size:10px; opacity:0.6;">RÉUSSITE</div>
+                            <div style="font-weight:bold; color:white;">${winrate}%</div>
+                        </div>
+                        <div style="text-align:center; padding:10px; background:rgba(255,255,255,0.05); border-radius:5px;">
+                            <div style="font-size:10px; opacity:0.6;">COTE MOY.</div>
+                            <div style="font-weight:bold; color:white;">${coteMoy}</div>
+                        </div>
+                    </div>
                 </div>
-                <div style="font-weight:bold; color:${profit >= 0 ? 'var(--win-green)' : 'var(--ol-red)'};">
-                    ${profit >= 0 ? '+' : ''}${profit.toFixed(2)}€
-                </div>
-            </div>`;
+            </details>`;
     }).join('');
     
-    favorisList.innerHTML = favorisStatsHTML || `<div style="text-align:center; opacity:0.5; padding:20px;">Crée une unité (ex: OL) pour voir tes perfs</div>`;
-}
+    favorisList.innerHTML = favorisHTML || `<div style="text-align:center; opacity:0.5; padding:20px;">Crée une équipe (ex: OL) pour voir tes perfs</div>`;
+} 
 } // Fermeture finale de render
             
         function showTab(id, btn) {
