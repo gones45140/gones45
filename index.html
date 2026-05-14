@@ -266,6 +266,17 @@
                 onclick="state.start_bk = parseFloat(prompt('Montant total de départ ?')); save();">
             RE-FIXER CAPITAL DÉPART
         </button>
+        <div class="form-box" style="margin-top:20px; border-top: 1px solid rgba(255,255,255,0.1); padding-top:15px;">
+    <label>SÉCURITÉ DES DONNÉES (JSON)</label>
+    <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px; margin-top:10px;">
+        <button class="btn-action" onclick="exportData()" style="background:#0ea5e9;">
+            <i class="fa-solid fa-download"></i> EXPORTER (BACKUP)
+        </button>
+        <button class="btn-action" onclick="importData()" style="background:#64748b;">
+            <i class="fa-solid fa-upload"></i> IMPORTER
+        </button>
+    </div>
+</div>
     </div>
 </div>
 
@@ -556,6 +567,47 @@ function showTab(id, btn) {
 function deleteBook(n) { if(confirm("Supprimer " + n + " ?")) { delete state.b[n]; save(); } }
 
 window.onload = () => { render(); updMise(); };
+       // --- FONCTIONS JSON (SAUVEGARDE EXTERNE) ---
+
+function exportData() {
+    const dataStr = JSON.stringify(state, null, 2);
+    const blob = new Blob([dataStr], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `gones45_backup_${new Date().toISOString().slice(0,10)}.json`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+}
+
+function importData() {
+    const input = document.createElement("input");
+    input.type = "file";
+    input.accept = "application/json";
+    
+    input.onchange = e => {
+        const file = e.target.files[0];
+        const reader = new FileReader();
+        reader.onload = readerEvent => {
+            try {
+                const content = JSON.parse(readerEvent.target.result);
+                if (confirm("Attention : Cela va écraser tes données actuelles. Continuer ?")) {
+                    state = content;
+                    save();
+                    location.reload(); // Recharge pour tout mettre à jour proprement
+                }
+            } catch (err) {
+                alert("Erreur : Le fichier JSON n'est pas valide.");
+            }
+        };
+        reader.readAsText(file);
+    };
+    
+    input.click();
+}
 </script>
 </body>
 </html>
