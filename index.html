@@ -604,39 +604,34 @@ document.getElementById('stats-books-list').innerHTML = Object.entries(booksStat
         </span>
     </div>
 `).join('');
-       // 12. --- BILAN DYNAMIQUE PAR FAVORIS (UNITÉS) ---
-const favorisStats = state.u.map(unite => {
-    // On filtre l'archive pour ne garder que les paris faits avec cette unité (ex: "OL")
-    const matchsFavori = state.a.filter(h => h.n === unite.n);
+            
+       // 12. On récupère la liste de tes favoris officiels (ex: OL)
+const mesFavoris = state.u.map(unite => unite.n);
+
+// 1. On calcule les stats UNIQUEMENT pour ces favoris
+const favorisStatsHTML = state.u.map(unite => {
+    //2 On ne prend que les paris qui utilisent exactement le nom de ton unité (ex: "OL")
+    const parisDuFavori = state.a.filter(h => h.n === unite.n);
     
-    const profit = matchsFavori.reduce((acc, h) => acc + (h.win ? (h.m * h.cote) - h.m : -h.m), 0);
-    const winrate = matchsFavori.length > 0 
-        ? (matchsFavori.filter(h => h.win).length / matchsFavori.length * 100).toFixed(0) 
+    const profit = parisDuFavori.reduce((acc, h) => acc + (h.win ? (h.m * h.cote) - h.m : -h.m), 0);
+    const winrate = parisDuFavori.length > 0 
+        ? (parisDuFavori.filter(h => h.win).length / parisDuFavori.length * 100).toFixed(0) 
         : 0;
 
-    return {
-        nom: unite.n,
-        profit: profit,
-        count: matchsFavori.length,
-        rate: winrate
-    };
-});
+    return `
+        <div class="stat-card" style="margin-bottom:10px; display:flex; justify-content:space-between; align-items:center; border-left: 4px solid var(--ol-blue);">
+            <div>
+                <div style="font-weight:bold; color:white;">${unite.n.toUpperCase()}</div>
+                <div style="font-size:10px; opacity:0.6;">${parisDuFavori.length} Paris | ${winrate}% Win</div>
+            </div>
+            <div style="font-weight:bold; color:${profit >= 0 ? 'var(--win-green)' : 'var(--ol-red)'};">
+                ${profit >= 0 ? '+' : ''}${profit.toFixed(2)}€
+            </div>
+        </div>`;
+}).join('');
 
-// On affiche uniquement tes favoris créés (OL, etc.)
-const favorisHTML = favorisStats.map(f => `
-    <div style="background:rgba(255,255,255,0.05); padding:12px; border-radius:10px; margin-bottom:10px; display:flex; justify-content:space-between; align-items:center; border-left:4px solid var(--ol-blue);">
-        <div>
-            <div style="font-weight:bold; color:white; font-size:14px;">${f.nom.toUpperCase()}</div>
-            <div style="font-size:10px; opacity:0.6;">${f.count} Paris | ${f.rate}% Win</div>
-        </div>
-        <div style="font-weight:bold; font-size:16px; color:${f.profit >= 0 ? 'var(--win-green)' : 'var(--ol-red)'};">
-            ${f.profit >= 0 ? '+' : ''}${f.profit.toFixed(2)}€
-        </div>
-    </div>
-`).join('');
-
-document.getElementById('stats-favoris-list').innerHTML = favorisHTML || `<div style="text-align:center; opacity:0.5; font-size:12px;">Aucun pari sur vos favoris</div>`;
-        }
+// 3. On injecte le résultat dans la zone (en supprimant l'ancien calcul automatique)
+document.getElementById('stats-favoris-list').innerHTML = favorisStatsHTML || `<div style="text-align:center; opacity:0.5; padding:20px;">Crée une unité (ex: OL) pour voir tes perfs</div>`;
        
         function showTab(id, btn) {
             document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
