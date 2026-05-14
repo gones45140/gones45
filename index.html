@@ -173,7 +173,11 @@
                 <div class="grid-tactical">
                     <div><label>Sport</label><select id="p-sport"><option value="⚽">⚽ Football</option><option value="🏀">🏀 Basket</option><option value="🎾">🎾 Tennis</option></select></div>
                     <div><label>Date</label><input type="date" id="p-match-date"></div>
-                    <div style="grid-column: span 2;"><label>Affiche</label><input id="n-target" placeholder="Ex: Lyon vs Paris"></div>
+                  <div style="grid-column: span 2;">
+    <label>Intitulé / Analyse Avant-Match</label>
+    <textarea id="n-analysis" placeholder="Ex: Boca qualif + Under 3.5 car défense solide et match aller 0-0..." 
+              style="width:100%; height:60px; background:var(--bg-card); border:1px solid #1e293b; color:white; border-radius:8px; padding:10px; font-family:inherit;"></textarea>
+</div>
                     <div><label>Cote</label><input type="number" id="n-cote" value="1.50"></div>
                     <div><label>Mise</label><input type="number" id="n-mise" value="10"></div>
                     <div style="grid-column: span 2;"><label>Bookmaker</label><select id="n-book"></select></div>
@@ -298,20 +302,41 @@
         }
 
         function result(id, win) {
-            const idx = state.h.findIndex(x => x.id === id);
-            const bet = state.h[idx];
-            if (win) {
-                state.b[bet.b] = (parseFloat(state.b[bet.b]) + (bet.m * bet.cote)).toFixed(2);
-                if (bet.isS) { const u = state.u.find(x => x.n === bet.n); if(u) u.l = 1; }
-            } else if (bet.isS) {
-                const u = state.u.find(x => x.n === bet.n);
-                if(u && u.l < 8) u.l++;
-            }
-            state.a.unshift({ ...bet, win });
-            state.h.splice(idx, 1);
-            save();
-            updMise();
+    const idx = state.h.findIndex(x => x.id === id);
+    if (idx === -1) return;
+    const bet = state.h[idx];
+
+    // 1. Demande de débrief à la validation (Optionnel : clic sur Annuler = Pas de note)
+    const debrief = prompt(`Note de débrief (${win ? 'WIN ✅' : 'LOSS ❌'}) :`, "");
+
+    // 2. Logique de paiement et de paliers (Ta logique actuelle)
+    if (win) {
+        state.b[bet.b] = (parseFloat(state.b[bet.b]) + (bet.m * bet.cote)).toFixed(2);
+        // Si c'est un pari stratégique, on reset l'unité au palier 1
+        if (bet.isS) { 
+            const u = state.u.find(x => x.n === bet.n); 
+            if(u) u.l = 1; 
         }
+    } else if (bet.isS) {
+        // Si c'est une perte en stratégie, on monte de palier (max P8)
+        const u = state.u.find(x => x.n === bet.n);
+        if(u && u.l < 8) u.l++;
+    }
+
+    // 3. Archivage avec tes nouvelles données (Analyse + Débrief)
+    state.a.unshift({ 
+        ...bet, 
+        win, 
+        debrief: debrief || "Aucun débrief",
+        // L'analyse doit avoir été saisie lors de la création du pari
+        analysis: bet.analysis || "Aucune analyse" 
+    });
+
+    // 4. Nettoyage et sauvegarde
+    state.h.splice(idx, 1);
+    save();
+    updMise();
+}
 
         function handleFund(add) {
             const b = document.getElementById('move-book-select').value;
@@ -397,10 +422,17 @@ function editBook(n) {
         <button class="btn-loss" onclick="result('${h.id}',false)">L</button></td></tr>`).join('');
 
     // 5. Historique (Archive)
-    document.getElementById('arch-finished-list').innerHTML = state.a.slice(0,10).map(h => `
-        <tr><td>${h.t}</td><td>${h.target}</td><td>${h.m}€</td>
+   document.getElementById('arch-finished-list').innerHTML = state.a.slice(0,10).map(h => `
+    <tr>
+        <td title="ANALYSE: ${h.analysis}\nDEBRIEF: ${h.debrief}">
+            ${h.t}<br>
+            <small style="color:var(--accent-cyan); cursor:help;">ℹ️ Détails notes</small>
+        </td>
+        <td><b>${h.target}</b><br><small>${h.type || ''}</small></td>
+        <td>${h.m}€<br><small>@${h.cote}</small></td>
         <td style="color:${h.win ? '#22c55e' : '#da0812'}">${h.win ? 'WIN' : 'LOSS'}</td>
-        <td style="text-align:right"><b>${h.win ? (h.m*h.cote).toFixed(2) : '0'}€</b></td></tr>`).join('');
+        <td style="text-align:right"><b>${h.win ? (h.m*h.cote).toFixed(2) : '0'}€</b></td>
+    </tr>`).join('');
 
     // 6. GRILLE DES BOOKS (Avec le nouveau bouton MODIFIER)
     document.getElementById('books-grid').innerHTML = Object.entries(state.b).map(([n, v]) => `
