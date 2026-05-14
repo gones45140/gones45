@@ -328,9 +328,36 @@
         }
 
         function addBook() {
-            const n = document.getElementById('new-bk-name').value.trim().toLowerCase();
-            if(n) { state.b[n] = 0; save(); document.getElementById('new-bk-name').value = ""; }
-        }
+    const nameInput = document.getElementById('new-bk-name');
+    const name = nameInput.value.trim().toLowerCase();
+    
+    if(name) {
+        if (state.b[name] !== undefined) return alert("Existe déjà !");
+        
+        // Demande le solde initial à la création
+        const initialAmount = parseFloat(prompt(`Solde de départ pour ${name.toUpperCase()} ?`, "0")) || 0;
+        
+        state.b[name] = initialAmount.toFixed(2);
+        // On ajuste le capital de départ pour que le bénéfice reste à 0 au début
+        state.start_bk += initialAmount; 
+        
+        nameInput.value = "";
+        save();
+    }
+}
+
+function editBook(n) {
+    const current = parseFloat(state.b[n]);
+    const next = parseFloat(prompt(`Nouveau solde pour ${n.toUpperCase()} ?`, current));
+    
+    if (!isNaN(next)) {
+        const diff = next - current;
+        state.b[n] = next.toFixed(2);
+        // Important : on ajuste aussi le capital de départ pour refléter ce changement "manuel"
+        state.start_bk += diff; 
+        save();
+    }
+}
 
         function addUnit() {
             const n = document.getElementById('u-n-add').value.trim().toUpperCase();
@@ -338,43 +365,64 @@
         }
 
         function render() {
-            const total = Object.values(state.b).reduce((a, v) => a + parseFloat(v), 0);
-            document.getElementById('d-cap').innerText = total.toFixed(2) + "€";
-            const ben = total - state.start_bk;
-            document.getElementById('d-ben').innerText = (ben >= 0 ? "+" : "") + ben.toFixed(2) + "€";
-            document.getElementById('d-ben').style.color = ben >= 0 ? "#22c55e" : "#da0812";
+    // 1. Calculs des totaux (Capital et Bénéfice)
+    const total = Object.values(state.b).reduce((a, v) => a + parseFloat(v), 0);
+    document.getElementById('d-cap').innerText = total.toFixed(2) + "€";
+    const ben = total - state.start_bk;
+    document.getElementById('d-ben').innerText = (ben >= 0 ? "+" : "") + ben.toFixed(2) + "€";
+    document.getElementById('d-ben').style.color = ben >= 0 ? "#22c55e" : "#da0812";
 
-            const bOpt = Object.keys(state.b).map(k => `<option value="${k}">${k.toUpperCase()}</option>`).join('');
-            ['c-book', 'n-book', 'move-book-select'].forEach(id => document.getElementById(id).innerHTML = bOpt);
-            document.getElementById('c-unit').innerHTML = state.u.map(u => `<option value="${u.n}">${u.n} (P${u.l})</option>`).join('');
+    // 2. Mise à jour des listes déroulantes (Books et Unités)
+    const bOpt = Object.keys(state.b).map(k => `<option value="${k}">${k.toUpperCase()}</option>`).join('');
+    ['c-book', 'n-book', 'move-book-select'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.innerHTML = bOpt;
+    });
+    
+    const uSelect = document.getElementById('c-unit');
+    if (uSelect) {
+        uSelect.innerHTML = state.u.map(u => `<option value="${u.n}">${u.n} (P${u.l})</option>`).join('');
+    }
 
-            document.getElementById('h-live-strat').innerHTML = state.h.filter(x => x.isS).map(h => `
-                <tr><td>${h.n}</td><td>${h.target}</td><td>${h.m}€</td>
-                <td style="text-align:right"><button class="btn-win" onclick="result('${h.id}',true)">W</button> 
-                <button class="btn-loss" onclick="result('${h.id}',false)">L</button></td></tr>`).join('');
+    // 3. Affichage des paris en cours (Stratégie)
+    document.getElementById('h-live-strat').innerHTML = state.h.filter(x => x.isS).map(h => `
+        <tr><td>${h.n}</td><td>${h.target}</td><td>${h.m}€</td>
+        <td style="text-align:right"><button class="btn-win" onclick="result('${h.id}',true)">W</button> 
+        <button class="btn-loss" onclick="result('${h.id}',false)">L</button></td></tr>`).join('');
 
-            document.getElementById('h-live-norm').innerHTML = state.h.filter(x => !x.isS).map(h => `
-                <tr><td>${h.target}</td><td>${h.m}€</td>
-                <td style="text-align:right"><button class="btn-win" onclick="result('${h.id}',true)">W</button> 
-                <button class="btn-loss" onclick="result('${h.id}',false)">L</button></td></tr>`).join('');
+    // 4. Affichage des paris en cours (Simples)
+    document.getElementById('h-live-norm').innerHTML = state.h.filter(x => !x.isS).map(h => `
+        <tr><td>${h.target}</td><td>${h.m}€</td>
+        <td style="text-align:right"><button class="btn-win" onclick="result('${h.id}',true)">W</button> 
+        <button class="btn-loss" onclick="result('${h.id}',false)">L</button></td></tr>`).join('');
 
-            document.getElementById('arch-finished-list').innerHTML = state.a.slice(0,10).map(h => `
-                <tr><td>${h.t}</td><td>${h.target}</td><td>${h.m}€</td>
-                <td style="color:${h.win ? '#22c55e' : '#da0812'}">${h.win ? 'WIN' : 'LOSS'}</td>
-                <td style="text-align:right"><b>${h.win ? (h.m*h.cote).toFixed(2) : '0'}€</b></td></tr>`).join('');
+    // 5. Historique (Archive)
+    document.getElementById('arch-finished-list').innerHTML = state.a.slice(0,10).map(h => `
+        <tr><td>${h.t}</td><td>${h.target}</td><td>${h.m}€</td>
+        <td style="color:${h.win ? '#22c55e' : '#da0812'}">${h.win ? 'WIN' : 'LOSS'}</td>
+        <td style="text-align:right"><b>${h.win ? (h.m*h.cote).toFixed(2) : '0'}€</b></td></tr>`).join('');
 
-            document.getElementById('books-grid').innerHTML = Object.entries(state.b).map(([n, v]) => `
-                <div class="stat-card"><label>${n.toUpperCase()}</label><div class="stat-val">${parseFloat(v).toFixed(2)}€</div>
-                <button onclick="if(confirm('Supprimer ?')){delete state.b['${n}'];save();}" style="background:none; border:none; color:red; font-size:9px;">SUPPRIMER</button></div>`).join('');
+    // 6. GRILLE DES BOOKS (Avec le nouveau bouton MODIFIER)
+    document.getElementById('books-grid').innerHTML = Object.entries(state.b).map(([n, v]) => `
+        <div class="stat-card" style="border-bottom: 4px solid var(--ol-blue);">
+            <label>${n.toUpperCase()}</label>
+            <div class="stat-val">${parseFloat(v).toFixed(2)}€</div>
+            <div style="display:flex; justify-content:center; gap:10px; margin-top:10px;">
+                <button onclick="editBook('${n}')" style="background:none; border:1px solid var(--accent-cyan); color:var(--accent-cyan); font-size:9px; padding:2px 5px; border-radius:4px; cursor:pointer;">MODIFIER</button>
+                <button onclick="if(confirm('Supprimer ${n} ?')){delete state.b['${n}'];save();}" style="background:none; border:none; color:var(--ol-red); font-size:9px; cursor:pointer;">SUPPRIMER</button>
+            </div>
+        </div>`).join('');
 
-            document.getElementById('u-mgr-list').innerHTML = state.u.map((u, i) => `
-                <tr><td><b>${u.n}</b></td><td>${"⭐".repeat(u.s)}</td><td>P${u.l}</td>
-                <td><button onclick="state.u.splice(${i},1);save()" style="background:none;border:none;color:red;">X</button></td></tr>`).join('');
-            
-            document.getElementById('dash-summary').innerHTML = state.u.map(u => `
-                <tr><td>${u.n}</td><td>${"⭐".repeat(u.s)}</td><td>P${u.l}</td><td style="text-align:right; color:var(--accent-cyan)">ACTIF</td></tr>`).join('');
-        }
-
+    // 7. Gestion des Unités
+    document.getElementById('u-mgr-list').innerHTML = state.u.map((u, i) => `
+        <tr><td><b>${u.n}</b></td><td>${"⭐".repeat(u.s)}</td><td>P${u.l}</td>
+        <td><button onclick="state.u.splice(${i},1);save()" style="background:none;border:none;color:red;">X</button></td></tr>`).join('');
+    
+    // 8. Résumé Dashboard
+    document.getElementById('dash-summary').innerHTML = state.u.map(u => `
+        <tr><td>${u.n}</td><td>${"⭐".repeat(u.s)}</td><td>P${u.l}</td><td style="text-align:right; color:var(--accent-cyan)">ACTIF</td></tr>`).join('');
+}
+       
         function showTab(id, btn) {
             document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
             document.getElementById(id).classList.add('active');
