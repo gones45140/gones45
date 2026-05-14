@@ -3,611 +3,399 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>GONES45 - COMMAND CENTER V29.0</title>
-    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;900&family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <title>GONES45 - Stratégie & Bankroll</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+         STAGE 1 : DESIGN (CSS)
+         ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ -->
     <style>
         :root {
-            --bg: #020617; --sidebar: #0f172a; --card: rgba(30, 41, 59, 0.7);
-            --ol-blue: #0046a7; --ol-red: #da0812; --text: #ffffff;
-            --accent-cyan: #06b6d4; --border: rgba(255, 255, 255, 0.1);
+            --bg-dark: #0f172a;
+            --panel-bg: rgba(30, 41, 59, 0.7);
+            --accent-cyan: #22d3ee;
+            --ol-blue: #1e40af;
+            --ol-red: #da0812;
+            --text-main: #f8fafc;
+            --win-green: #22c55e;
         }
-        * { box-sizing: border-box; margin: 0; padding: 0; touch-action: manipulation; }
-        body { background: var(--bg); color: var(--text); font-family: 'Inter', sans-serif; display: flex; height: 100vh; overflow: hidden; }
 
-        /* Navigation */
-        .sidebar { width: 260px; background: var(--sidebar); border-right: 3px solid var(--ol-red); padding: 20px 10px; display: flex; flex-direction: column; overflow-y: auto; flex-shrink: 0; }
-        .logo { font-family: 'Orbitron', sans-serif; font-size: 22px; font-weight: 900; margin-bottom: 25px; text-align: center; border-bottom: 2px solid var(--ol-red); padding-bottom: 10px; }
-        .nav-label { font-size: 10px; color: var(--ol-blue); letter-spacing: 2px; margin: 15px 0 5px 10px; font-weight: 800; text-transform: uppercase; }
-        .nav-item { display: flex; align-items: center; gap: 10px; padding: 12px; border-radius: 10px; color: #94a3b8; cursor: pointer; border: none; background: transparent; width: 100%; font-size: 12px; font-weight: 600; text-align: left; transition: 0.3s; }
-        .nav-item.active { background: var(--ol-blue); color: #fff; box-shadow: 0 4px 12px rgba(0, 70, 167, 0.3); }
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Roboto, sans-serif; }
+        
+        body { 
+            background: var(--bg-dark); 
+            color: var(--text-main); 
+            padding-bottom: 80px; 
+            background-attachment: fixed;
+        }
 
-        /* Contenu */
-        .main { flex-grow: 1; padding: 25px; overflow-y: auto; background-image: radial-gradient(circle at top right, #1e1b4b 0%, #020617 100%); }
+        /* --- HEADER & NAVIGATION --- */
+        .header {
+            background: linear-gradient(135deg, var(--ol-blue), #000);
+            padding: 15px;
+            text-align: center;
+            border-bottom: 2px solid var(--ol-red);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .nav-bar {
+            position: fixed;
+            bottom: 0;
+            width: 100%;
+            background: #1e293b;
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            border-top: 1px solid rgba(255,255,255,0.1);
+            z-index: 100;
+        }
+
+        .nav-item {
+            padding: 12px 5px;
+            text-align: center;
+            font-size: 10px;
+            color: #94a3b8;
+            cursor: pointer;
+            transition: 0.3s;
+        }
+
+        .nav-item.active { color: var(--accent-cyan); background: rgba(34, 211, 238, 0.1); }
+        .nav-item i { display: block; font-size: 18px; margin-bottom: 4px; }
+
+        /* --- CONTAINERS --- */
+        .main { padding: 15px; max-width: 600px; margin: 0 auto; }
         .tab-content { display: none; animation: fadeIn 0.3s ease; }
         .tab-content.active { display: block; }
-        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
 
-        .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 15px; margin-bottom: 20px; }
-        .stat-card { background: var(--card); border-radius: 12px; border: 1px solid var(--border); padding: 15px; text-align: center; backdrop-filter: blur(8px); }
-        .stat-val { font-family: 'Orbitron', sans-serif; font-size: 22px; font-weight: 900; display: block; color: #fff; margin-top: 5px; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
 
-        .glass-panel { background: var(--card); border-radius: 12px; border: 1px solid var(--border); overflow-x: auto; margin-bottom: 20px; }
-        table { width: 100%; border-collapse: collapse; min-width: 500px; }
-        th { background: rgba(0, 70, 167, 0.4); text-align: left; padding: 12px; font-size: 10px; text-transform: uppercase; color: var(--accent-cyan); }
-        td { padding: 12px; font-size: 13px; border-bottom: 1px solid rgba(255,255,255,0.05); }
-
-        .form-box { background: var(--card); padding: 20px; border-radius: 12px; border: 1px solid var(--border); margin-bottom: 20px; }
-        .grid-tactical { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 12px; margin-bottom: 15px; }
-        label { font-size: 9px; font-weight: 800; color: var(--accent-cyan); text-transform: uppercase; display: block; margin-bottom: 5px; }
-        input, select, textarea { width: 100%; background: #0f172a; border: 1px solid var(--border); color: #fff; padding: 10px; border-radius: 8px; font-weight: 600; font-size: 14px; }
-        
-        .btn-action { background: linear-gradient(90deg, var(--ol-blue), var(--ol-red)); color: #fff; border: none; padding: 14px; border-radius: 8px; font-family: 'Orbitron'; font-weight: 900; cursor: pointer; width: 100%; text-transform: uppercase; }
-        .btn-win { background: #22c55e; color: white; border: none; padding: 6px 10px; border-radius: 4px; font-weight: 800; cursor: pointer; }
-        .btn-loss { background: var(--ol-red); color: white; border: none; padding: 6px 10px; border-radius: 4px; font-weight: 800; cursor: pointer; }
-
-        @media (max-width: 768px) {
-            body { flex-direction: column; }
-            .sidebar { width: 100%; height: 65px; position: fixed; bottom: 0; flex-direction: row; padding: 0; border-right: none; border-top: 3px solid var(--ol-red); z-index: 100; }
-            .logo, .nav-label { display: none; }
-            .nav-item { flex-direction: column; font-size: 8px; gap: 4px; justify-content: center; align-items: center; flex: 1; border-radius: 0; }
-            .nav-item i { font-size: 16px; }
-            .main { padding: 15px; padding-bottom: 80px; }
-            .stats-grid { grid-template-columns: 1fr 1fr; }
+        .glass-panel {
+            background: var(--panel-bg);
+            backdrop-filter: blur(10px);
+            border-radius: 12px;
+            padding: 15px;
+            margin-bottom: 15px;
+            border: 1px solid rgba(255,255,255,0.05);
+            overflow-x: auto;
         }
-        /* AJOUT POUR RENDRE LE SPORT ET LA DATE BIEN VISIBLES */
-#p-sport, #p-match-date {
-    background: #0f172a;
-    color: white;
-    border: 1px solid var(--border);
-}
 
-#p-sport option {
-    background: #0f172a;
-    color: white;
-}
+        .stats-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 15px; }
+        .stat-card { background: rgba(0,0,0,0.3); padding: 12px; border-radius: 10px; text-align: center; }
+        .stat-card label { display: block; font-size: 10px; color: #94a3b8; margin-bottom: 5px; }
+        .stat-val { font-size: 18px; font-weight: 800; }
 
-/* Force l'affichage de l'icône dans le tableau */
-.sport-icon {
-    margin-right: 8px;
-    font-size: 1.2em;
-}
+        /* --- FORMULAIRES --- */
+        .form-box { background: rgba(0,0,0,0.2); padding: 12px; border-radius: 8px; margin-bottom: 15px; }
+        label { font-size: 11px; color: var(--accent-cyan); font-weight: bold; }
+        input, select {
+            width: 100%; padding: 10px; margin-top: 5px; background: #0f172a;
+            border: 1px solid #334155; color: white; border-radius: 6px; font-size: 14px;
+        }
+        .grid-tactical { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+
+        /* --- BOUTONS --- */
+        .btn-action {
+            width: 100%; padding: 12px; border: none; border-radius: 6px;
+            background: var(--ol-blue); color: white; font-weight: 800;
+            margin-top: 10px; cursor: pointer;
+        }
+        .btn-win { background: var(--win-green); color: white; border: none; padding: 5px 10px; border-radius: 4px; font-weight: bold; }
+        .btn-loss { background: var(--ol-red); color: white; border: none; padding: 5px 10px; border-radius: 4px; font-weight: bold; }
+
+        /* --- TABLES --- */
+        table { width: 100%; border-collapse: collapse; margin-top: 5px; font-size: 12px; }
+        th { text-align: left; color: #64748b; padding: 8px; border-bottom: 1px solid #334155; font-size: 10px; }
+        td { padding: 10px 8px; border-bottom: 1px solid rgba(255,255,255,0.02); }
     </style>
 </head>
 <body>
 
-    <nav class="sidebar">
-        <div class="logo">GONES<span>45</span></div>
-        <div class="nav-label">MENU</div>
-        <button class="nav-item active" onclick="showTab('dash', this)"><i class="fa-solid fa-house"></i> MUR</button>
-        <button class="nav-item" onclick="showTab('cock', this)"><i class="fa-solid fa-jet-fighter-up"></i> COCKPIT</button>
-        <button class="nav-item" onclick="showTab('p-norm', this)"><i class="fa-solid fa-ticket"></i> PARI</button>
-        <button class="nav-item" onclick="showTab('arch', this)"><i class="fa-solid fa-box-archive"></i> ARCHIVE</button>
-        <button class="nav-item" onclick="showTab('bank-mgr', this)"><i class="fa-solid fa-vault"></i> BANKROLL</button>
-        <button class="nav-item" onclick="showTab('units-mgr', this)"><i class="fa-solid fa-users-gear"></i> UNITÉS</button>
+    <header class="header">
+        <h1 style="font-size: 18px; letter-spacing: 2px;">GONES<span style="color:var(--ol-red)">45</span></h1>
+    </header>
+
+    <!-- ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+         STAGE 2 : STRUCTURE (HTML)
+         ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ -->
+    <main class="main">
+
+        <!-- 1. DASHBOARD -->
+        <div id="dash" class="tab-content active">
+            <div class="stats-grid">
+                <div class="stat-card" style="border-bottom: 4px solid var(--ol-blue);"><label>CAPITAL TOTAL</label><span id="d-cap" class="stat-val">0€</span></div>
+                <div class="stat-card" style="border-bottom: 4px solid var(--ol-red);"><label>BÉNÉFICE</label><span id="d-ben" class="stat-val">0€</span></div>
+            </div>
+            <div class="glass-panel">
+                <table style="min-width: 100%;">
+                    <thead><tr><th>UNITÉ</th><th>RANG</th><th>PALIER</th><th style="text-align:right">ÉTAT</th></tr></thead>
+                    <tbody id="dash-summary"></tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- 2. ARCHIVE -->
+        <div id="arch" class="tab-content">
+            <h3 style="color:var(--accent-cyan); margin-bottom:10px; font-size:14px;">HISTORIQUE RÉCENT</h3>
+            <div class="glass-panel">
+                <table>
+                    <thead><tr><th>DATE</th><th>CIBLE</th><th>MISE</th><th>RÉSULTAT</th><th style="text-align:right">GAIN</th></tr></thead>
+                    <tbody id="arch-finished-list"></tbody>
+                </table>
+            </div>
+            <button class="btn-action" style="background:var(--ol-red); font-size:11px;" onclick="if(confirm('Vider l\'archive ?')){state.a=[];save();}">EFFACER L'HISTORIQUE</button>
+        </div>
+
+        <!-- 3. COCKPIT (Stratégie) -->
+        <div id="cock" class="tab-content">
+            <div class="form-box">
+                <div class="grid-tactical">
+                    <div><label>Unité</label><select id="c-unit" onchange="updMise()"></select></div>
+                    <div><label>Adversaire</label><input id="c-target" placeholder="Ex: Boca Juniors..."></div>
+                    <div style="grid-column: span 2;"><label>Type de Pari</label><input id="c-type" placeholder="Ex: Victoire ou Qualif..."></div>
+                    <div><label>Bookmaker</label><select id="c-book"></select></div>
+                    <div><label>Cote</label><input type="number" id="c-cote" value="1.50" step="0.01"></div>
+                    <div style="grid-column: span 2;"><label>Mise (€)</label><input type="number" id="c-mise" style="border: 1px solid var(--win-green);"></div>
+                </div>
+                <button class="btn-action" onclick="pari(true)">ENGAGER LA MONTANTE</button>
+            </div>
+            <div class="glass-panel">
+                <table id="table-strat">
+                    <thead><tr><th>UNITÉ</th><th>CIBLE</th><th>MISE</th><th style="text-align:right">ACTION</th></tr></thead>
+                    <tbody id="h-live-strat"></tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- 4. PARI SIMPLE -->
+        <div id="p-norm" class="tab-content">
+            <div class="form-box">
+                <div class="grid-tactical">
+                    <div><label>Sport</label><select id="p-sport"><option value="⚽">⚽ Football</option><option value="🏀">🏀 Basket</option><option value="🎾">🎾 Tennis</option></select></div>
+                    <div><label>Date</label><input type="date" id="p-match-date"></div>
+                    <div style="grid-column: span 2;"><label>Affiche</label><input id="n-target" placeholder="Ex: Lyon vs Paris"></div>
+                    <div><label>Cote</label><input type="number" id="n-cote" value="1.50"></div>
+                    <div><label>Mise</label><input type="number" id="n-mise" value="10"></div>
+                    <div style="grid-column: span 2;"><label>Bookmaker</label><select id="n-book"></select></div>
+                </div>
+                <button class="btn-action" onclick="pari(false)">PLACER LE PARI SIMPLE</button>
+            </div>
+            <div class="glass-panel">
+                <table>
+                    <thead><tr><th>CIBLE</th><th>MISE</th><th style="text-align:right">ACTION</th></tr></thead>
+                    <tbody id="h-live-norm"></tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- 5. BANKROLL & SETUP -->
+        <div id="bank-mgr" class="tab-content">
+            <div class="form-box">
+                <label>DÉPÔT / RETRAIT</label>
+                <div style="display:grid; grid-template-columns: 1fr 1fr 100px; gap:10px; margin-top:5px;">
+                    <select id="move-book-select"></select> 
+                    <input type="number" id="move-amount" placeholder="Montant €">
+                    <div style="display:flex; gap:5px;">
+                        <button class="btn-win" onclick="handleFund(true)">+</button>
+                        <button class="btn-loss" onclick="handleFund(false)">-</button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="form-box">
+                <label>CRÉER UN BOOKMAKER</label>
+                <div style="display:flex; gap:10px; margin-top:5px;">
+                    <input id="new-bk-name" placeholder="Nom...">
+                    <button class="btn-action" style="width:100px; margin:0;" onclick="addBook()">OK</button>
+                </div>
+            </div>
+
+            <div id="books-grid" class="stats-grid"></div>
+
+            <div class="form-box" style="margin-top:20px;">
+                <label>UNITÉS DE MISE (STRATÉGIE)</label>
+                <div style="display:grid; grid-template-columns: 1fr 80px 80px; gap:10px; margin:10px 0;">
+                    <input id="u-n-add" placeholder="Nom (Ex: FOOT)">
+                    <select id="u-s-add">
+                        <option value="1">1⭐</option><option value="2">2⭐</option><option value="3">3⭐</option><option value="4">4⭐</option><option value="5">5⭐</option>
+                    </select>
+                    <button class="btn-action" style="margin:0" onclick="addUnit()">ADD</button>
+                </div>
+                <div class="glass-panel" style="background:rgba(0,0,0,0.4)">
+                    <table><tbody id="u-mgr-list"></tbody></table>
+                </div>
+            </div>
+
+            <div class="form-box" style="border: 1px dashed #334155;">
+                <label>DONNÉES & BACKUP</label>
+                <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px; margin-top:10px;">
+                    <button class="btn-action" onclick="exportData()" style="background:#0ea5e9;">EXPORTER</button>
+                    <button class="btn-action" onclick="importData()" style="background:#64748b;">IMPORTER</button>
+                </div>
+                <button class="btn-action" style="background:#334155; margin-top:10px;" onclick="state.start_bk = parseFloat(prompt('Nouveau capital de départ ?')); save();">RESET CAPITAL DÉPART</button>
+            </div>
+        </div>
+    </main>
+
+    <nav class="nav-bar">
+        <div class="nav-item active" onclick="showTab('dash', this)"><i class="fa-solid fa-chart-pie"></i>MUR</div>
+        <div class="nav-item" onclick="showTab('cock', this)"><i class="fa-solid fa-rocket"></i>STRAT</div>
+        <div class="nav-item" onclick="showTab('p-norm', this)"><i class="fa-solid fa-circle-plus"></i>PARI</div>
+        <div class="nav-item" onclick="showTab('arch', this)"><i class="fa-solid fa-clock-rotate-left"></i>ARCHIVE</div>
+        <div class="nav-item" onclick="showTab('bank-mgr', this)"><i class="fa-solid fa-wallet"></i>BANK</div>
     </nav>
 
-  <main class="main">
-    <!-- MUR -->
-    <div id="dash" class="tab-content active">
-        <div class="stats-grid">
-            <div class="stat-card" style="border-bottom: 4px solid var(--ol-blue);"><label>CAPITAL</label><span id="d-cap" class="stat-val">0€</span></div>
-            <div class="stat-card" style="border-bottom: 4px solid var(--ol-red);"><label>BÉNÉFICE</label><span id="d-ben" class="stat-val">0€</span></div>
-        </div>
-        <div class="glass-panel">
-            <table style="min-width: 100%;">
-                <thead><tr><th>UNITÉ</th><th>RANG</th><th>PALIER</th><th style="text-align:right">ÉTAT</th></tr></thead>
-                <tbody id="dash-summary"></tbody>
-            </table>
-        </div>
-    </div>
-
-  <!-- ARCHIVE -->
-<div id="arch" class="tab-content">
-    <h3 style="color:var(--accent-cyan); margin:15px 0; font-size:14px;">🕒 PARIS EN ATTENTE</h3>
-    <div class="glass-panel">
-        <table>
-            <thead>
-                <tr><th>MATCH / DATE</th><th>SPORT</th><th>CIBLE</th><th>COTE</th><th>MISE</th><th style="text-align:right">BOOK</th></tr>
-            </thead>
-            <tbody id="arch-pending-list"></tbody>
-        </table>
-    </div>
-
-    <h3 style="color:var(--ol-red); margin:25px 0 15px 0; font-size:14px;">✅ HISTORIQUE TERMINÉ</h3>
-    <div class="glass-panel">
-        <table>
-            <thead>
-                <tr><th>DATE</th><th>SPORT</th><th>CIBLE</th><th>COTE</th><th>MISE</th><th>RÉSULTAT</th><th style="text-align:right">GAIN</th></tr>
-            </thead>
-            <tbody id="arch-finished-list"></tbody>
-        </table>
-    </div>
-
-    <div style="display:flex; justify-content:space-between; align-items:center; margin-top:20px;">
-        <small id="bet-count" style="opacity:0.6;"></small>
-        <button class="btn-action" style="background:var(--ol-red); width:auto; padding:8px 15px; font-size:11px;" onclick="if(confirm('Vider l\'archive ?')){state.a=[];save();render();}">VIDER L'ARCHIVE</button>
-    </div>
-</div>
-
-      <!-- COCKPIT -->
-    <div id="cock" class="tab-content">
-        <div class="form-box">
-            <div class="grid-tactical">
-                <div><label>Unité</label><select id="c-unit" onchange="updMise()"></select></div>
-                <div><label>Adversaire</label><input id="c-target" placeholder="Ex: Boca Juniors..."></div>
-                <div><label>Type de Pari</label><input id="c-type" placeholder="Ex: Qualif + Under 3.5..."></div>
-                <div><label>Vecteur</label><select id="c-book"></select></div>
-                <div><label>Cote</label><input type="number" id="c-cote" value="2.00" step="0.01"></div>
-                <div><label>Mise (€)</label><input type="number" id="c-mise" style="border: 1px solid #22c55e;"></div>
-            </div>
-            <button class="btn-action" onclick="pari(true)">DÉPLOYER STRATÉGIE</button>
-        </div>
-        <div class="glass-panel">
-            <table>
-                <thead>
-                    <tr>
-                        <th>DATE</th>
-                        <th>UNITÉ</th>
-                        <th>ADVERSAIRE</th>
-                        <th>TYPE</th>
-                        <th>MISE</th>
-                        <th style="text-align:right">ACTION</th>
-                    </tr>
-                </thead>
-                <tbody id="h-live-strat"></tbody>
-            </table>
-        </div>
-    </div>
-
-    <!-- PARI NORMAL -->
-    <div id="p-norm" class="tab-content">
-        <div class="form-box">
-            <div class="grid-tactical">
-                <!-- LIGNE 1 : SPORT + DATE + MATCH -->
-                <div style="display:grid; grid-template-columns: 80px 140px 1fr; gap:10px; grid-column: span 3;">
-                    <div>
-                        <label>Sport</label>
-                        <select id="p-sport" style="font-size: 18px;">
-                            <option value="⚽">⚽</option>
-                            <option value="🏀">🏀</option>
-                            <option value="🎾">🎾</option>
-                            <option value="🥊">🥊</option>
-                        </select>
-                    </div>
-                    <div>
-                        <label>Date Match</label>
-                        <input type="date" id="p-match-date">
-                    </div>
-                    <div>
-                        <label>Affiche (Cible)</label>
-                        <input type="text" id="n-target" placeholder="ex: OL/PSG">
-                    </div>
-                </div>
-
-                <!-- LIGNE 2 : TYPE + VECTEUR + COTE + MISE -->
-                <div>
-                    <label>Type</label>
-                    <input type="text" id="n-desc" placeholder="ex: Gagne">
-                </div>
-                <div>
-                    <label>Vecteur</label>
-                    <select id="n-book"></select>
-                </div>
-                <div>
-                    <label>Cote</label>
-                    <input type="number" id="n-cote" value="1.50" step="0.01">
-                </div>
-                <div>
-                    <label>Mise</label>
-                    <input type="number" id="n-mise" value="10">
-                </div>
-            </div>
-
-            <button class="btn-action" onclick="pari(false)" style="margin-top:15px;">
-               Engager Pari Simple
-            </button>
-        </div> <!-- FIN DU FORM-BOX -->
-
-        <div class="glass-panel">
-            <table>
-                <thead>
-                    <tr>
-                        <th>DATE</th>
-                        <th>CIBLE</th>
-                        <th>MISE</th>
-                        <th style="text-align:right">ACTION</th>
-                    </tr>
-                </thead>
-                <tbody id="h-live-norm"></tbody>
-            </table>
-        </div>
-    </div> <!-- FIN DE L'ONGLET P-NORM (Une seule fois !) -->
-
-<!-- BANKROLL -->
-<div id="bank-mgr" class="tab-content">
-    
-    <!-- 1. MOUVEMENTS DE FONDS (DÉPÔT / RETRAIT) -->
-<div class="form-box">
-    <label>MOUVEMENT DE FONDS (HORS PARIS)</label>
-    <div style="display:grid; grid-template-columns: 1fr 1fr 100px; gap:10px; margin-top:5px;">
-        <!-- Changement des IDs pour correspondre au JS -->
-        <select id="move-book-select"></select> 
-        <input type="number" id="move-amount" placeholder="Montant €" inputmode="decimal">
-        <div style="display:flex; gap:5px;">
-            <button class="btn-win" style="flex:1; height:44px;" onclick="handleFund(true)">+</button>
-            <button class="btn-loss" style="flex:1; height:44px;" onclick="handleFund(false)">-</button>
-        </div>
-    </div>
-
-        <p style="font-size:9px; color:#94a3b8; margin-top:8px;">
-            <i class="fa-solid fa-circle-info"></i> Utilisez <b>+</b> pour un dépôt et <b>-</b> pour un retrait (le bénéfice restera intact).
-        </p>
-    </div>
-
-    <!-- 2. NOUVEAU BOOKMAKER -->
-    <div class="form-box">
-        <label>NOUVEAU VECTEUR</label>
-        <div style="display:flex; gap:10px; margin-top:5px;">
-            <input id="new-bk-name" placeholder="Nom du book...">
-            <button class="btn-action" style="width:100px; margin:0;" onclick="addBook()">CRÉER</button>
-        </div>
-    </div>
-
-    <!-- 3. LA GRILLE DES BOOKS (Winamax, Betclic...) -->
-    <div id="books-grid" class="stats-grid"></div>
-    </div>
-
-    <!-- 4. CONFIGURATION FINALE -->
-    <div class="form-box">
-        <label>RÉGLAGE SYSTÈME</label>
-        <button class="btn-action" 
-                style="background:#334155; margin-top:5px;" 
-                onclick="state.start_bk = parseFloat(prompt('Montant total de départ ?')); save();">
-            RE-FIXER CAPITAL DÉPART
-        </button>
-        <div class="form-box" style="margin-top:20px; border-top: 1px solid rgba(255,255,255,0.1); padding-top:15px;">
-    <label>SÉCURITÉ DES DONNÉES (JSON)</label>
-    <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px; margin-top:10px;">
-        <button class="btn-action" onclick="exportData()" style="background:#0ea5e9;">
-            <i class="fa-solid fa-download"></i> EXPORTER (BACKUP)
-        </button>
-        <button class="btn-action" onclick="importData()" style="background:#64748b;">
-            <i class="fa-solid fa-upload"></i> IMPORTER
-        </button>
-    </div>
-</div>
-    </div>
-</div>
-
-    <!-- UNITÉS -->
-    <div id="units-mgr" class="tab-content">
-        <div class="form-box">
-            <label>NOUVELLE UNITÉ</label>
-            <div style="display:grid; grid-template-columns: 1fr 100px 100px; gap:10px; margin-top:5px;">
-                <input id="u-n-add" placeholder="Nom...">
-                <select id="u-s-add">
-                    <option value="1">⭐</option><option value="2">⭐⭐</option>
-                    <option value="3">⭐⭐⭐</option><option value="4">⭐⭐⭐⭐</option>
-                    <option value="5">⭐⭐⭐⭐⭐</option>
-                </select>
-                <button class="btn-action" style="margin:0" onclick="addUnit()">AJOUTER</button>
-            </div>
-        </div>
-        <div class="glass-panel">
-            <table><thead><tr><th>NOM</th><th>RANG</th><th>PALIER</th><th style="text-align:right">ACTION</th></tr></thead><tbody id="u-mgr-list"></tbody></table>
-        </div>
-    </div>
-</main>
-
-   <script>
-// --- INITIALISATION DU SYSTÈME ---
-let state = JSON.parse(localStorage.getItem('gones_state')) || {
-    b: { "winamax": 0, "betclic": 0 }, 
-    u: [], 
-    h: [], // Paris en cours
-    a: [], // Archives (Paris terminés)
-    start_bk: 0
-};
-
-// Tes suites de mises par rang d'étoiles
-const STRATS = {
-    "1": [1, 2, 6, 18, 54, 162, 486, 1458],
-    "2": [2, 4, 12, 36, 108, 324, 972, 2916],
-    "3": [2, 4, 12, 36, 108, 324, 972, 2916],
-    "4": [5, 10, 30, 90, 270, 810, 2430, 7290],
-    "5": [10, 20, 60, 180, 540, 1620, 4860, 14580]
-};
-
-function save() {
-    localStorage.setItem('gones_state', JSON.stringify(state));
-    render();
-}
-
-// --- LOGIQUE DES PARIS ---
-
-function pari(isS) {
-    let n, b, c, m, target = "", type = "", l = 1;
-    const now = new Date();
-    const time = now.toLocaleDateString('fr-FR', {day:'2-digit', month:'2-digit'}) + ' ' + now.toLocaleTimeString('fr-FR', {hour:'2-digit', minute:'2-digit'});
-
-    const sport = document.getElementById('p-sport').value;
-    const matchDate = document.getElementById('p-match-date').value;
-    const formattedMatchDate = matchDate ? matchDate.split('-').reverse().slice(0,2).join('/') : "";
-
-    if (isS) {
-        // Mode COCKPIT (Stratégie)
-        const u = state.u.find(x => x.n === document.getElementById('c-unit').value);
-        if (!u) return alert("Crée une unité d'abord !");
-        
-        n = u.n; 
-        target = document.getElementById('c-target').value || "-";
-        type = document.getElementById('c-type').value || "-";
-        b = document.getElementById('c-book').value;
-        c = parseFloat(document.getElementById('c-cote').value) || 0;
-        m = parseFloat(document.getElementById('c-mise').value) || 0;
-        l = u.l;
-    } else {
-        // Mode PARI NORMAL
-        target = document.getElementById('n-target').value || "Pari";
-        type = document.getElementById('n-desc').value || "Simple";
-        n = "PARI SIMPLE"; 
-        b = document.getElementById('n-book').value;
-        c = parseFloat(document.getElementById('n-cote').value) || 0;
-        m = parseFloat(document.getElementById('n-mise').value) || 0;
-    }
-
-    const soldeDisponible = parseFloat(state.b[b]) || 0;
-
-    if (m > 0 && soldeDisponible >= m) {
-        state.b[b] = (soldeDisponible - m).toFixed(2);
-        state.h.unshift({ 
-            id: Date.now().toString(), n: n, target: target, type: type, 
-            b: b, l: l, m: m, cote: c, isS: isS, t: time, sport: sport, mDate: formattedMatchDate 
-        });
-        save();
-        if(isS) document.getElementById('c-target').value = ""; else document.getElementById('n-target').value = "";
-    } else {
-        alert(m <= 0 ? "Mise invalide" : "Solde insuffisant sur " + b.toUpperCase());
-    }
-}
-
-function result(id, isWin) {
-    const idx = state.h.findIndex(x => x.id === id);
-    if (idx === -1) return;
-    const bet = state.h[idx];
-
-    if (isWin) {
-        const gain = (bet.m * bet.cote).toFixed(2);
-        state.b[bet.b] = (parseFloat(state.b[bet.b]) + parseFloat(gain)).toFixed(2);
-        if (bet.isS) {
-            const u = state.u.find(x => x.n === bet.n);
-            if (u) u.l = 1; // Retour P1
-        }
-    } else {
-        if (bet.isS) {
-            const u = state.u.find(x => x.n === bet.n);
-            if (u && u.l < 8) u.l++; // Montée Palier
-        }
-    }
-
-    state.a.unshift({ ...bet, win: isWin, finished: true });
-    state.h.splice(idx, 1);
-    save();
-    updMise();
-}
-
-// --- FONCTIONS BANKROLL & UNITÉS ---
-
-function handleFund(isAdd) {
-    const bName = document.getElementById('move-book-select').value;
-    const amountField = document.getElementById('move-amount');
-    const amount = parseFloat(amountField.value);
-    
-    if(!bName || isNaN(amount) || amount <= 0) return;
-
-    let current = parseFloat(state.b[bName]) || 0;
-    if(isAdd) {
-        state.b[bName] = (current + amount).toFixed(2);
-        state.start_bk += amount;
-    } else {
-        if(current < amount) return alert("Solde insuffisant");
-        state.b[bName] = (current - amount).toFixed(2);
-        state.start_bk -= amount;
-    }
-    amountField.value = "";
-    save();
-}
-
-function updMise() {
-    const uSelect = document.getElementById('c-unit');
-    const mMise = document.getElementById('c-mise');
-    if (!uSelect || !mMise) return;
-    const u = state.u.find(x => x.n === uSelect.value);
-    if (u) {
-        const suite = STRATS[u.s] || STRATS["5"];
-        mMise.value = suite[Math.min(u.l - 1, suite.length - 1)];
-    }
-}
-
-// --- RENDU VISUEL ---
-// --- FONCTIONS DE CRÉATION ---
-
-function addBook() {
-    // On récupère l'ID exact de ton HTML : "new-bk-name"
-    const nameInput = document.getElementById('new-bk-name');
-    const name = nameInput.value.trim().toLowerCase();
-
-    if (name) {
-        if (state.b[name] !== undefined) {
-            alert("Ce bookmaker existe déjà.");
-            return;
-        }
-        // On crée le book avec 0€ par défaut, tu pourras ajouter avec le bouton "+"
-        state.b[name] = "0.00";
-        nameInput.value = ""; 
-        save();
-        alert("Bookmaker " + name.toUpperCase() + " créé !");
-    } else {
-        alert("Entre un nom de bookmaker.");
-    }
-}
-
-function addUnit() {
-    // On récupère les IDs exacts de ton HTML : "u-n-add" et "u-s-add"
-    const nameInput = document.getElementById('u-n-add');
-    const starsSelect = document.getElementById('u-s-add');
-    
-    const name = nameInput.value.trim().toUpperCase();
-    const stars = parseInt(starsSelect.value);
-
-    if (name) {
-        if (state.u.find(x => x.n === name)) {
-            alert("Cette unité existe déjà.");
-            return;
-        }
-        
-        state.u.push({
-            n: name,
-            s: stars,
-            l: 1
-        });
-        
-        nameInput.value = ""; 
-        save();
-        alert("Unité " + name + " ajoutée !");
-    } else {
-        alert("Entre un nom pour l'unité.");
-    }
-}
-function render() {
-    // 1. Stats Entête
-    const total = Object.values(state.b).reduce((a, v) => a + parseFloat(v || 0), 0);
-    document.getElementById('d-cap').innerText = total.toFixed(2) + "€";
-    const benefice = total - (state.start_bk || 0);
-    const benElt = document.getElementById('d-ben');
-    benElt.innerText = (benefice >= 0 ? "+" : "") + benefice.toFixed(2) + "€";
-    benElt.style.color = benefice >= 0 ? "#22c55e" : "#da0812";
-
-    // 2. Sélecteurs
-    const bOpt = Object.keys(state.b).map(k => `<option value="${k}">${k.toUpperCase()}</option>`).join('');
-    document.getElementById('c-book').innerHTML = bOpt;
-    document.getElementById('n-book').innerHTML = bOpt;
-    document.getElementById('move-book-select').innerHTML = bOpt;
-    
-    document.getElementById('c-unit').innerHTML = state.u.map(u => 
-        `<option value="${u.n}">${u.n.toUpperCase()} ${"⭐".repeat(u.s)} (P${u.l})</option>`
-    ).join('');
-
-    // 3. Tableaux Live
-    document.getElementById('h-live-strat').innerHTML = state.h.filter(x => x.isS).map(h => `
-        <tr>
-            <td style="font-size:10px">${h.t}</td>
-            <td><b>${h.n} (P${h.l})</b></td>
-            <td>${h.target}</td>
-            <td style="font-size:10px">${h.type}</td>
-            <td><b>${h.m}€</b></td>
-            <td style="text-align:right">
-                <button class="btn-win" onclick="result('${h.id}',true)">W</button>
-                <button class="btn-loss" onclick="result('${h.id}',false)">L</button>
-            </td>
-        </tr>`).join('');
-
-    document.getElementById('h-live-norm').innerHTML = state.h.filter(x => !x.isS).map(h => `
-        <tr>
-            <td>${h.mDate}<br><small>${h.t}</small></td>
-            <td>${h.sport} <b>${h.target}</b></td>
-            <td>${h.m}€ (@${h.cote})</td>
-            <td style="text-align:right">
-                <button class="btn-win" onclick="result('${h.id}',true)">W</button>
-                <button class="btn-loss" onclick="result('${h.id}',false)">L</button>
-            </td>
-        </tr>`).join('');
-
-    // 4. Archive (Terminés)
-    document.getElementById('arch-finished-list').innerHTML = state.a.slice(0,20).map(h => {
-        const color = h.win ? "#22c55e" : "#da0812";
-        return `<tr>
-            <td>${h.mDate || h.t}</td>
-            <td>${h.sport || '⚽'}</td>
-            <td><b>${h.target}</b><br><small>${h.isS ? h.n : 'SIMPLE'}</small></td>
-            <td>@${h.cote}</td>
-            <td>${h.m}€</td>
-            <td style="color:${color}; font-weight:800">${h.win ? 'WIN' : 'LOSS'}</td>
-            <td style="text-align:right; color:${color}"><b>${h.win ? '+' + (h.m*h.cote).toFixed(2) : '0.00'}€</b></td>
-        </tr>`;
-    }).join('');
-
-    // 5. Gestion Bankroll (Grille)
-    document.getElementById('books-grid').innerHTML = Object.entries(state.b).map(([n, v]) => `
-        <div class="stat-card" style="border-bottom: 4px solid var(--ol-blue);">
-            <label>${n.toUpperCase()}</label>
-            <div style="font-size:20px; font-weight:900">${parseFloat(v).toFixed(2)}€</div>
-            <button onclick="deleteBook('${n}')" style="font-size:9px; color:var(--ol-red); background:none; border:none; margin-top:5px;">SUPPRIMER</button>
-        </div>`).join('');
-
-    // 6. Gestion Unités
-    document.getElementById('u-mgr-list').innerHTML = state.u.map((u, i) => `
-        <tr>
-            <td><b>${u.n}</b></td>
-            <td>${"⭐".repeat(u.s)}</td>
-            <td>Palier ${u.l}</td>
-            <td style="text-align:right"><button onclick="state.u.splice(${i},1);save();" style="color:var(--ol-red);background:none;border:none;">DEL</button></td>
-        </tr>`).join('');
-}
-
-// Utilitaires
-function showTab(id, btn) {
-    document.querySelectorAll('.tab-content').forEach(t => t.style.display = 'none');
-    document.getElementById(id).style.display = 'block';
-    document.querySelectorAll('.nav-item').forEach(b => b.classList.remove('active'));
-    if(btn) btn.classList.add('active');
-}
-
-function deleteBook(n) { if(confirm("Supprimer " + n + " ?")) { delete state.b[n]; save(); } }
-
-window.onload = () => { render(); updMise(); };
-       // --- FONCTIONS JSON (SAUVEGARDE EXTERNE) ---
-
-function exportData() {
-    const dataStr = JSON.stringify(state, null, 2);
-    const blob = new Blob([dataStr], { type: "application/json" });
-    const url = URL.createObjectURL(blob);
-    
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = `gones45_backup_${new Date().toISOString().slice(0,10)}.json`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(url);
-}
-
-function importData() {
-    const input = document.createElement("input");
-    input.type = "file";
-    input.accept = "application/json";
-    
-    input.onchange = e => {
-        const file = e.target.files[0];
-        const reader = new FileReader();
-        reader.onload = readerEvent => {
-            try {
-                const content = JSON.parse(readerEvent.target.result);
-                if (confirm("Attention : Cela va écraser tes données actuelles. Continuer ?")) {
-                    state = content;
-                    save();
-                    location.reload(); // Recharge pour tout mettre à jour proprement
-                }
-            } catch (err) {
-                alert("Erreur : Le fichier JSON n'est pas valide.");
-            }
+    <!-- ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+         STAGE 3 : LOGIQUE (JAVASCRIPT)
+         ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ -->
+    <script>
+        let state = JSON.parse(localStorage.getItem('gones_state')) || {
+            b: { "winamax": 0 }, u: [], h: [], a: [], start_bk: 0
         };
-        reader.readAsText(file);
-    };
-    
-    input.click();
-}
-</script>
+
+        const STRATS = {
+            "1": [1, 2, 6, 18, 54, 162, 486, 1458],
+            "2": [2, 4, 12, 36, 108, 324, 972, 2916],
+            "3": [2, 4, 12, 36, 108, 324, 972, 2916], // Basé sur tes préférences
+            "4": [5, 10, 30, 90, 270, 810, 2430, 7290],
+            "5": [10, 20, 60, 180, 540, 1620, 4860, 14580]
+        };
+
+        function save() {
+            localStorage.setItem('gones_state', JSON.stringify(state));
+            render();
+        }
+
+        function pari(isS) {
+            let n, b, c, m, target, type, l = 1;
+            const now = new Date();
+            const time = now.toLocaleDateString('fr-FR', {day:'2-digit', month:'2-digit'}) + ' ' + now.toLocaleTimeString('fr-FR', {hour:'2-digit', minute:'2-digit'});
+
+            if (isS) {
+                const uObj = state.u.find(x => x.n === document.getElementById('c-unit').value);
+                if (!uObj) return alert("Crée une unité !");
+                n = uObj.n; target = document.getElementById('c-target').value || "-";
+                type = document.getElementById('c-type').value || "-";
+                b = document.getElementById('c-book').value;
+                c = parseFloat(document.getElementById('c-cote').value) || 0;
+                m = parseFloat(document.getElementById('c-mise').value) || 0;
+                l = uObj.l;
+            } else {
+                n = "SIMPLE"; target = document.getElementById('n-target').value || "Pari";
+                b = document.getElementById('n-book').value;
+                c = parseFloat(document.getElementById('n-cote').value) || 0;
+                m = parseFloat(document.getElementById('n-mise').value) || 0;
+            }
+
+            if (m > 0 && (state.b[b] || 0) >= m) {
+                state.b[b] = (parseFloat(state.b[b]) - m).toFixed(2);
+                state.h.unshift({ id: Date.now().toString(), n, target, b, l, m, cote: c, isS, t: time });
+                save();
+                document.getElementById(isS ? 'c-target' : 'n-target').value = "";
+            } else {
+                alert("Solde insuffisant !");
+            }
+        }
+
+        function result(id, win) {
+            const idx = state.h.findIndex(x => x.id === id);
+            const bet = state.h[idx];
+            if (win) {
+                state.b[bet.b] = (parseFloat(state.b[bet.b]) + (bet.m * bet.cote)).toFixed(2);
+                if (bet.isS) { const u = state.u.find(x => x.n === bet.n); if(u) u.l = 1; }
+            } else if (bet.isS) {
+                const u = state.u.find(x => x.n === bet.n);
+                if(u && u.l < 8) u.l++;
+            }
+            state.a.unshift({ ...bet, win });
+            state.h.splice(idx, 1);
+            save();
+            updMise();
+        }
+
+        function handleFund(add) {
+            const b = document.getElementById('move-book-select').value;
+            const amt = parseFloat(document.getElementById('move-amount').value);
+            if(!b || isNaN(amt)) return;
+            state.b[b] = (parseFloat(state.b[b] || 0) + (add ? amt : -amt)).toFixed(2);
+            if(add) state.start_bk += amt;
+            save();
+        }
+
+        function updMise() {
+            const u = state.u.find(x => x.n === document.getElementById('c-unit').value);
+            if (u) document.getElementById('c-mise').value = STRATS[u.s][u.l-1];
+        }
+
+        function addBook() {
+            const n = document.getElementById('new-bk-name').value.trim().toLowerCase();
+            if(n) { state.b[n] = 0; save(); document.getElementById('new-bk-name').value = ""; }
+        }
+
+        function addUnit() {
+            const n = document.getElementById('u-n-add').value.trim().toUpperCase();
+            if(n) { state.u.push({ n, s: document.getElementById('u-s-add').value, l: 1 }); save(); }
+        }
+
+        function render() {
+            const total = Object.values(state.b).reduce((a, v) => a + parseFloat(v), 0);
+            document.getElementById('d-cap').innerText = total.toFixed(2) + "€";
+            const ben = total - state.start_bk;
+            document.getElementById('d-ben').innerText = (ben >= 0 ? "+" : "") + ben.toFixed(2) + "€";
+            document.getElementById('d-ben').style.color = ben >= 0 ? "#22c55e" : "#da0812";
+
+            const bOpt = Object.keys(state.b).map(k => `<option value="${k}">${k.toUpperCase()}</option>`).join('');
+            ['c-book', 'n-book', 'move-book-select'].forEach(id => document.getElementById(id).innerHTML = bOpt);
+            document.getElementById('c-unit').innerHTML = state.u.map(u => `<option value="${u.n}">${u.n} (P${u.l})</option>`).join('');
+
+            document.getElementById('h-live-strat').innerHTML = state.h.filter(x => x.isS).map(h => `
+                <tr><td>${h.n}</td><td>${h.target}</td><td>${h.m}€</td>
+                <td style="text-align:right"><button class="btn-win" onclick="result('${h.id}',true)">W</button> 
+                <button class="btn-loss" onclick="result('${h.id}',false)">L</button></td></tr>`).join('');
+
+            document.getElementById('h-live-norm').innerHTML = state.h.filter(x => !x.isS).map(h => `
+                <tr><td>${h.target}</td><td>${h.m}€</td>
+                <td style="text-align:right"><button class="btn-win" onclick="result('${h.id}',true)">W</button> 
+                <button class="btn-loss" onclick="result('${h.id}',false)">L</button></td></tr>`).join('');
+
+            document.getElementById('arch-finished-list').innerHTML = state.a.slice(0,10).map(h => `
+                <tr><td>${h.t}</td><td>${h.target}</td><td>${h.m}€</td>
+                <td style="color:${h.win ? '#22c55e' : '#da0812'}">${h.win ? 'WIN' : 'LOSS'}</td>
+                <td style="text-align:right"><b>${h.win ? (h.m*h.cote).toFixed(2) : '0'}€</b></td></tr>`).join('');
+
+            document.getElementById('books-grid').innerHTML = Object.entries(state.b).map(([n, v]) => `
+                <div class="stat-card"><label>${n.toUpperCase()}</label><div class="stat-val">${parseFloat(v).toFixed(2)}€</div>
+                <button onclick="if(confirm('Supprimer ?')){delete state.b['${n}'];save();}" style="background:none; border:none; color:red; font-size:9px;">SUPPRIMER</button></div>`).join('');
+
+            document.getElementById('u-mgr-list').innerHTML = state.u.map((u, i) => `
+                <tr><td><b>${u.n}</b></td><td>${"⭐".repeat(u.s)}</td><td>P${u.l}</td>
+                <td><button onclick="state.u.splice(${i},1);save()" style="background:none;border:none;color:red;">X</button></td></tr>`).join('');
+            
+            document.getElementById('dash-summary').innerHTML = state.u.map(u => `
+                <tr><td>${u.n}</td><td>${"⭐".repeat(u.s)}</td><td>P${u.l}</td><td style="text-align:right; color:var(--accent-cyan)">ACTIF</td></tr>`).join('');
+        }
+
+        function showTab(id, btn) {
+            document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+            document.getElementById(id).classList.add('active');
+            document.querySelectorAll('.nav-item').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+        }
+
+        function exportData() {
+            const data = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(state));
+            const a = document.createElement('a'); a.href = data; a.download = "gones45_backup.json"; a.click();
+        }
+
+        function importData() {
+            const i = document.createElement('input'); i.type = 'file';
+            i.onchange = e => {
+                const r = new FileReader(); r.onload = ev => { state = JSON.parse(ev.target.result); save(); location.reload(); };
+                r.readAsText(e.target.files[0]);
+            }; i.click();
+        }
+
+        window.onload = () => { render(); updMise(); };
+    </script>
 </body>
 </html>
