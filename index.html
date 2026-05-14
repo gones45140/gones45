@@ -146,55 +146,68 @@
             <button class="btn-action" style="background:var(--ol-red); font-size:11px;" onclick="if(confirm('Vider l\'archive ?')){state.a=[];save();}">EFFACER L'HISTORIQUE</button>
         </div>
 
-        <!-- 3. COCKPIT (Stratégie) -->
-        <div id="cock" class="tab-content">
-            <div class="form-box">
-                <div class="grid-tactical">
-                    <div><label>Unité</label><select id="c-unit" onchange="updMise()"></select></div>
-                    <div><label>Adversaire</label><input id="c-target" placeholder="Ex: Boca Juniors..."></div>
-                    <div style="grid-column: span 2;"><label>Type de Pari</label><input id="c-type" placeholder="Ex: Victoire ou Qualif..."></div>
-                    <div><label>Bookmaker</label><select id="c-book"></select></div>
-                    <div><label>Cote</label><input type="number" id="c-cote" value="1.50" step="0.01"></div>
-                    <div style="grid-column: span 2;"><label>Mise (€)</label><input type="number" id="c-mise" style="border: 1px solid var(--win-green);"></div>
-                </div>
-                <button class="btn-action" onclick="pari(true)">ENGAGER LA MONTANTE</button>
-            </div>
-            <div class="glass-panel">
-                <table id="table-strat">
-                    <thead><tr><th>UNITÉ</th><th>CIBLE</th><th>MISE</th><th style="text-align:right">ACTION</th></tr></thead>
-                    <tbody id="h-live-strat"></tbody>
-                </table>
-            </div>
-        </div>
+        <!-- NOUVEL ONGLET UNIQUE : PARI SPORTIF (Cockpit + Simple) -->
+<div id="p-betting-hub" class="tab-content active">
+    
+    <!-- Boutons de bascule interne -->
+    <div style="display: flex; gap: 10px; margin-bottom: 20px;">
+        <button id="btn-switch-strat" onclick="switchBetMode('strat')" style="flex:1; padding:12px; border-radius:8px; border:1px solid var(--ol-blue); background:var(--ol-blue); color:white; font-weight:bold; cursor:pointer;">
+            🚀 COCKPIT
+        </button>
+        <button id="btn-switch-simple" onclick="switchBetMode('simple')" style="flex:1; padding:12px; border-radius:8px; border:1px solid #1e293b; background:none; color:#94a3b8; font-weight:bold; cursor:pointer;">
+            🎯 PARI SIMPLE
+        </button>
+    </div>
 
-        <!-- 4. PARI SIMPLE -->
-        <div id="p-norm" class="tab-content">
-            <div class="form-box">
-                <div class="grid-tactical">
-                    <div><label>Sport</label><select id="p-sport"><option value="⚽">⚽ Football</option><option value="🏀">🏀 Basket</option><option value="🎾">🎾 Tennis</option></select></div>
-                    <div><label>Date</label><input type="date" id="p-match-date"></div>
-                <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px;">
-    <div><label>Compétition</label><input id="n-comp" placeholder="Ex: Ligue 1, Copa Lib..."></div>
-    <div><label>Type de pari</label><input id="n-type" placeholder="Ex: Over 1.5, Qualif..."></div>
-</div>
-                    <div style="grid-column: span 2;">
-    <label>Intitulé / Analyse Avant-Match</label>
-    <textarea id="n-analysis" placeholder="Ex: Boca qualif + Under 3.5 car défense solide et match aller 0-0..." 
-              style="width:100%; height:60px; background:var(--bg-card); border:1px solid #1e293b; color:white; border-radius:8px; padding:10px; font-family:inherit;"></textarea>
-</div>
-                    <div><label>Cote</label><input type="number" id="n-cote" value="1.50"></div>
-                    <div><label>Mise</label><input type="number" id="n-mise" value="10"></div>
-                    <div style="grid-column: span 2;"><label>Bookmaker</label><select id="n-book"></select></div>
-                </div>
-                <button class="btn-action" onclick="pari(false)">PLACER LE PARI SIMPLE</button>
+    <!-- SOUS-ONGLET 1 : COCKPIT (Stratégie) -->
+    <div id="sub-strat">
+        <div class="form-box">
+            <div class="grid-tactical">
+                <div><label>Unité</label><select id="c-unit" onchange="updMise()"></select></div>
+                <div><label>Adversaire</label><input id="c-target" placeholder="Ex: Boca Juniors..."></div>
+                <div style="grid-column: span 2;"><label>Type de Pari</label><input id="c-type" placeholder="Ex: Victoire ou Qualif..."></div>
+                <div><label>Bookmaker</label><select id="c-book"></select></div>
+                <div><label>Cote</label><input type="number" id="c-cote" value="1.50" step="0.01"></div>
+                <div style="grid-column: span 2;"><label>Mise (€)</label><input type="number" id="c-mise" style="border: 1px solid var(--win-green);"></div>
             </div>
-            <div class="glass-panel">
-                <table>
-                    <thead><tr><th>CIBLE</th><th>MISE</th><th style="text-align:right">ACTION</th></tr></thead>
-                    <tbody id="h-live-norm"></tbody>
-                </table>
-            </div>
+            <button class="btn-action" onclick="pari(true)">ENGAGER LA MONTANTE</button>
         </div>
+        <div class="glass-panel">
+            <table id="table-strat">
+                <thead><tr><th>UNITÉ</th><th>CIBLE</th><th>MISE</th><th style="text-align:right">ACTION</th></tr></thead>
+                <tbody id="h-live-strat"></tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- SOUS-ONGLET 2 : PARI SIMPLE -->
+    <div id="sub-simple" style="display:none;">
+        <div class="form-box">
+            <div class="grid-tactical">
+                <div><label>Sport</label><select id="p-sport"><option value="⚽">⚽ Football</option><option value="🏀">🏀 Basket</option><option value="🎾">🎾 Tennis</option></select></div>
+                <div><label>Date</label><input type="date" id="p-match-date"></div>
+                <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px; grid-column: span 2;">
+                    <div><label>Compétition</label><input id="n-comp" placeholder="Ex: Ligue 1, Copa Lib..."></div>
+                    <div><label>Type de pari</label><input id="n-type" placeholder="Ex: Over 1.5, Qualif..."></div>
+                </div>
+                <div style="grid-column: span 2;">
+                    <label>Intitulé / Analyse Avant-Match</label>
+                    <textarea id="n-analysis" placeholder="Ex: Boca qualif + Under 3.5..." style="width:100%; height:60px; background:var(--bg-card); border:1px solid #1e293b; color:white; border-radius:8px; padding:10px; font-family:inherit;"></textarea>
+                </div>
+                <div><label>Cote</label><input type="number" id="n-cote" value="1.50"></div>
+                <div><label>Mise</label><input type="number" id="n-mise" value="10"></div>
+                <div style="grid-column: span 2;"><label>Bookmaker</label><select id="n-book"></select></div>
+            </div>
+            <button class="btn-action" onclick="pari(false)">PLACER LE PARI SIMPLE</button>
+        </div>
+        <div class="glass-panel">
+            <table>
+                <thead><tr><th>CIBLE</th><th>MISE</th><th style="text-align:right">ACTION</th></tr></thead>
+                <tbody id="h-live-norm"></tbody>
+            </table>
+        </div>
+    </div>
+</div>
 
         <!-- 5. BANKROLL & SETUP -->
         <div id="bank-mgr" class="tab-content">
@@ -247,8 +260,7 @@
 
     <nav class="nav-bar">
         <div class="nav-item active" onclick="showTab('dash', this)"><i class="fa-solid fa-chart-pie"></i>MUR</div>
-        <div class="nav-item" onclick="showTab('cock', this)"><i class="fa-solid fa-rocket"></i>STRAT</div>
-        <div class="nav-item" onclick="showTab('p-norm', this)"><i class="fa-solid fa-circle-plus"></i>PARI</div>
+        <div class="nav-item active" onclick="showTab('p-betting-hub', this)">PARI SPORTIF</div>
         <div class="nav-item" onclick="showTab('arch', this)"><i class="fa-solid fa-clock-rotate-left"></i>ARCHIVE</div>
         <div class="nav-item" onclick="showTab('bank-mgr', this)"><i class="fa-solid fa-wallet"></i>BANK</div>
     </nav>
@@ -521,6 +533,22 @@ document.getElementById('h-live-norm').innerHTML = state.h.filter(x => !x.isS).m
         }
 
         window.onload = () => { render(); updMise(); };
+       function switchBetMode(mode) {
+    const isStrat = mode === 'strat';
+    document.getElementById('sub-strat').style.display = isStrat ? 'block' : 'none';
+    document.getElementById('sub-simple').style.display = isStrat ? 'none' : 'block';
+    
+    const btnStrat = document.getElementById('btn-switch-strat');
+    const btnSimple = document.getElementById('btn-switch-simple');
+    
+    if(isStrat) {
+        btnStrat.style.background = 'var(--ol-blue)'; btnStrat.style.color = 'white';
+        btnSimple.style.background = 'none'; btnSimple.style.color = '#94a3b8';
+    } else {
+        btnSimple.style.background = 'var(--ol-blue)'; btnSimple.style.color = 'white';
+        btnStrat.style.background = 'none'; btnStrat.style.color = '#94a3b8';
+    }
+} 
     </script>
 </body>
 </html>
