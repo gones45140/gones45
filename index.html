@@ -208,56 +208,46 @@
         </div>
     </div>
 </div>
+       <!-- 4. BILAN GÉNÉRAL -->
         <div id="p-bilan" class="tab-content">
-    <h2 style="color:white; margin-bottom:15px;">📊 Tableau de Bord</h2>
+            <h2 style="color:white; margin-bottom:15px;">📊 Tableau de Bord</h2>
 
-    <!-- SECTION : BILAN GÉNÉRAL -->
-    <div class="glass-panel" style="margin-bottom:20px;">
-        <h3 style="color:var(--accent-cyan); font-size:14px; margin-bottom:10px;">BILAN GÉNÉRAL</h3>
-        <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px;">
-            <div style="background:rgba(255,255,255,0.05); padding:10px; border-radius:8px; text-align:center;">
-                <div style="font-size:10px; opacity:0.7;">BÉNÉFICE TOTAL</div>
-                <div id="stat-profit" style="font-weight:bold; color:var(--win-green); font-size:18px;">0.00€</div>
+            <div class="glass-panel" style="margin-bottom:20px;">
+                <h3 style="color:var(--accent-cyan); font-size:14px; margin-bottom:10px;">BILAN GÉNÉRAL</h3>
+                <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px;">
+                    <div style="background:rgba(255,255,255,0.05); padding:10px; border-radius:8px; text-align:center;">
+                        <div style="font-size:10px; opacity:0.7;">BÉNÉFICE TOTAL</div>
+                        <div id="stat-profit" style="font-weight:bold; color:var(--win-green); font-size:18px;">0.00€</div>
+                    </div>
+                    <div style="background:rgba(255,255,255,0.05); padding:10px; border-radius:8px; text-align:center;">
+                        <div style="font-size:10px; opacity:0.7;">TAUX DE RÉUSSITE</div>
+                        <div id="stat-winrate" style="font-weight:bold; color:white; font-size:18px;">0%</div>
+                    </div>
+                </div>
             </div>
-            <div style="background:rgba(255,255,255,0.05); padding:10px; border-radius:8px; text-align:center;">
-                <div style="font-size:10px; opacity:0.7;">TAUX DE RÉUSSITE</div>
-                <div id="stat-winrate" style="font-weight:bold; color:white; font-size:18px;">0%</div>
-            </div>
-        </div>
-    </div>
 
-    <!-- SECTION : BILAN PAR ÉQUIPE -->
-    <h3 style="color:white; font-size:16px; margin-bottom:10px;">⭐ Performances par Équipes</h3>
-    <div id="stats-teams-list">
-        par équipe préférée 
-        <!-- Cette zone sera maintenant gérée par ton JavaScript pour équipe préférée-->
-<div id="stats-favoris-list">
-    <!-- Le JavaScript injectera l'OL ici automatiquement -->
-</div> 
-        
-            <!-- SECTION : BILAN PAR BOOKMAKER -->
-    <h3 style="color:white; font-size:16px; margin: 20px 0 10px;">🏦 Par Bookmaker</h3>
-    <div id="stats-books-list" class="glass-panel" style="display: flex; flex-direction: column; gap: 10px;">
-        <!-- Rempli automatiquement (Winamax, Betclic...) -->
-    </div>
+            <h3 style="color:white; font-size:16px; margin-bottom:10px;">⭐ Performances par Équipes</h3>
+            <div id="stats-favoris-list"></div> 
 
-    <!-- SECTION : FOCUS COTES BOOSTÉES -->
-<div class="glass-panel" style="margin-top:20px; border: 1px solid #f59e0b; background: rgba(245, 158, 11, 0.05);">
-    <h3 style="color:#f59e0b; font-size:14px; margin-bottom:10px;">🚀 PERFORMANCE BOOSTS</h3>
-    <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px;">
-        <div style="text-align:center;">
-            <div style="font-size:10px; opacity:0.7;">NET BOOSTS</div>
-            <div id="stat-boost-profit" style="font-weight:bold; color:var(--win-green);">0.00€</div>
-        </div>
-        <div style="text-align:center;">
-            <div style="font-size:10px; opacity:0.7;">RÉUSSITE</div>
-            <div id="stat-boost-rate" style="font-weight:bold; color:white;">0%</div>
-        </div>
-    </div> 
-</div> 
-            </div>
-   
-             <!-- 5. BANKROLL & SETUP -->
+            <h3 style="color:white; font-size:16px; margin: 20px 0 10px;">🏦 Par Bookmaker</h3>
+            <div id="stats-books-list" class="glass-panel" style="display: flex; flex-direction: column; gap: 10px;"></div>
+
+            <div class="glass-panel" style="margin-top:20px; border: 1px solid #f59e0b; background: rgba(245, 158, 11, 0.05);">
+                <h3 style="color:#f59e0b; font-size:14px; margin-bottom:10px;">🚀 PERFORMANCE BOOSTS</h3>
+                <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px;">
+                    <div style="text-align:center;">
+                        <div style="font-size:10px; opacity:0.7;">NET</div>
+                        <div id="stat-boost-profit" style="font-weight:bold; color:var(--win-green);">0.00€</div>
+                    </div>
+                    <div style="text-align:center;">
+                        <div style="font-size:10px; opacity:0.7;">RÉUSSITE</div>
+                        <div id="stat-boost-rate" style="font-weight:bold; color:white;">0%</div>
+                    </div>
+                </div> 
+            </div> 
+        </div> <!-- FIN DE P-BILAN -->
+
+        <!-- 5. BANKROLL & SETUP -->
         <div id="bank-mgr" class="tab-content">
             <div class="form-box">
                 <label>DÉPÔT / RETRAIT</label>
@@ -284,7 +274,7 @@
             <div class="form-box" style="margin-top:20px;">
                 <label>UNITÉS DE MISE (STRATÉGIE)</label>
                 <div style="display:grid; grid-template-columns: 1fr 80px 80px; gap:10px; margin:10px 0;">
-                    <input id="u-n-add" placeholder="Nom (Ex: FOOT)">
+                    <input id="u-n-add" placeholder="Nom (Ex: OL)">
                     <select id="u-s-add">
                         <option value="1">1⭐</option><option value="2">2⭐</option><option value="3">3⭐</option><option value="4">4⭐</option><option value="5">5⭐</option>
                     </select>
@@ -301,9 +291,8 @@
                     <button class="btn-action" onclick="exportData()" style="background:#0ea5e9;">EXPORTER</button>
                     <button class="btn-action" onclick="importData()" style="background:#64748b;">IMPORTER</button>
                 </div>
-                <button class="btn-action" style="background:#334155; margin-top:10px;" onclick="state.start_bk = parseFloat(prompt('Nouveau capital de départ ?')); save();">RESET CAPITAL DÉPART</button>
             </div>
-        </div>
+        </div> <!-- FIN DE BANK-MGR -->
     </main>
 
   <nav class="nav-bar">
@@ -688,27 +677,27 @@ document.getElementById('stats-books-list').innerHTML = Object.entries(booksStat
 } // <--- C'EST CETTE ACCOLADE QUI FERME LA FONCTION RENDER()
             
         function showTab(id, btn) {
-    // 1. On cache TOUTES les sections proprement
-    document.querySelectorAll('.tab-content').forEach(t => {
-        t.style.display = 'none';          // Sécurité : on force la disparition
-        t.classList.remove('active');
-    });
-
-    // 2. On affiche la section demandée
-    const targetTab = document.getElementById(id);
-    if (targetTab) {
-        targetTab.style.display = 'block'; // On force l'apparition
-        targetTab.classList.add('active');
+    // On cache TOUTES les pages d'un coup
+    const pages = document.getElementsByClassName('tab-content');
+    for (let i = 0; i < pages.length; i++) {
+        pages[i].style.display = 'none';
     }
 
-    // 3. Gestion visuelle des boutons du menu
-    document.querySelectorAll('.nav-item').forEach(b => b.classList.remove('active'));
+    // On affiche la page sur laquelle on a cliqué
+    const pageAffichee = document.getElementById(id);
+    if (pageAffichee) {
+        pageAffichee.style.display = 'block';
+    }
+
+    // On change la couleur du bouton dans le menu
+    const boutons = document.getElementsByClassName('nav-item');
+    for (let i = 0; i < boutons.length; i++) {
+        boutons[i].classList.remove('active');
+    }
     if (btn) btn.classList.add('active');
 
-    // 4. TRÈS IMPORTANT : On relance le rendu pour mettre à jour les chiffres
-    if (typeof render === "function") {
-        render();
-    }
+    // On recalcule les stats (OL, Winamax, etc.)
+    render();
 }
 
         function exportData() {
