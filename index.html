@@ -310,9 +310,27 @@
         <div class="nav-item active" onclick="showTab('dash', this)"><i class="fa-solid fa-chart-pie"></i>MUR</div>
         <div class="nav-item active" onclick="showTab('p-betting-hub', this)">PARI SPORTIF</div>
         <div class="nav-item" onclick="showTab('arch', this)"><i class="fa-solid fa-clock-rotate-left"></i>ARCHIVE</div>
+        <div class="nav-item" onclick="showTab('equipes')">
+        <div class="nav-icon">⭐</div>
+        <span>ÉQUIPES</span>
+    </div>
+    <!-- ... -->
+</nav>
         <div class="nav-item" onclick="showTab('p-bilan', this)">BILAN</div>
         <div class="nav-item" onclick="showTab('bank-mgr', this)"><i class="fa-solid fa-wallet"></i>BANK</div>
     </nav>
+    
+    <section id="tab-equipes" class="tab-content" style="display:none;">
+    <div class="header-main">
+        <h2>⭐ Bilan par Équipe</h2>
+        <p style="font-size:12px; opacity:0.6;">Analyses détaillées de tes favoris</p>
+    </div>
+
+    <!-- C'est ici que le JavaScript va injecter TOUS tes onglets ouvrants -->
+    <div id="page-bilan-equipes" style="padding:15px;">
+        <!-- L'OL, le PSV, etc. apparaîtront ici en grand -->
+    </div>
+</section>
 
     <!-- ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
          STAGE 3 : LOGIQUE (JAVASCRIPT)
@@ -594,61 +612,70 @@ document.getElementById('stats-books-list').innerHTML = Object.entries(booksStat
     </div>
 `).join('');
             
-      // 12. --- BILAN DYNAMIQUE AVEC ONGLETS OUVRANTS (OL & AUTRES) ---
-const favorisList = document.getElementById('stats-favoris-list');
-if (favorisList) { 
-    const favorisHTML = state.u.map(unite => {
-        // On filtre l'archive pour cette équipe spécifique
-        const parisDuFavori = state.a.filter(h => h.n === unite.n);
-        
-        // Calculs de performance
-        const profit = parisDuFavori.reduce((acc, h) => acc + (h.win ? (h.m * h.cote) - h.m : -h.m), 0);
-        const winrate = parisDuFavori.length > 0 
-            ? (parisDuFavori.filter(h => h.win).length / parisDuFavori.length * 100).toFixed(0) 
-            : 0;
-        const coteMoy = parisDuFavori.length > 0
-            ? (parisDuFavori.reduce((acc, h) => acc + h.cote, 0) / parisDuFavori.length).toFixed(2)
-            : "0.00";
+      // 12. --- NETTOYAGE DU DASHBOARD (On enlève le petit bloc pour la page dédiée) ---
+    const dashFavoris = document.getElementById('stats-favoris-list');
+    if (dashFavoris) dashFavoris.innerHTML = ""; // On vide pour ne pas faire doublon
 
-        // Identifiant unique pour le futur graphique (ex: chart-OL)
-        const chartId = `chart-${unite.n.replace(/\s+/g, '')}`;
+    // 13. --- LOGIQUE DE LA PAGE DÉDIÉE "ÉQUIPES" (PLEIN ÉCRAN) ---
+    const pageEquipes = document.getElementById('page-bilan-equipes');
+    if (pageEquipes) {
+        const favorisHTML = state.u.map(unite => {
+            // Filtrage des données par équipe (ex: OL)
+            const parisDuFavori = state.a.filter(h => h.n === unite.n);
+            
+            // Calculs financiers
+            const profit = parisDuFavori.reduce((acc, h) => acc + (h.win ? (h.m * h.cote) - h.m : -h.m), 0);
+            const winrate = parisDuFavori.length > 0 ? (parisDuFavori.filter(h => h.win).length / parisDuFavori.length * 100).toFixed(0) : 0;
+            const coteMoy = parisDuFavori.length > 0 ? (parisDuFavori.reduce((acc, h) => acc + h.cote, 0) / parisDuFavori.length).toFixed(2) : "0.00";
 
-        return `
-            <details class="stat-card-details" style="margin-bottom:15px; border-left: 4px solid var(--ol-blue); background: rgba(255,255,255,0.03); border-radius: 8px; overflow: hidden;">
-                <summary style="display:flex; justify-content:space-between; align-items:center; padding:15px; cursor:pointer; list-style:none;">
-                    <div>
-                        <span style="font-weight:bold; color:white; font-size:16px;">${unite.n.toUpperCase()}</span>
-                        <span style="font-size:10px; opacity:0.6; display:block;">${parisDuFavori.length} MATCHS • VOIR LES DÉTAILS</span>
-                    </div>
-                    <div style="font-weight:bold; font-size:16px; color:${profit >= 0 ? 'var(--win-green)' : 'var(--ol-red)'};">
-                        ${profit >= 0 ? '+' : ''}${profit.toFixed(2)}€
-                    </div>
-                </summary>
-                
-                <div style="padding:15px; border-top: 1px solid rgba(255,255,255,0.1); background: rgba(0,0,0,0.2);">
-                    <!-- EMPLACEMENT FUTUR GRAPHIQUE -->
-                    <div id="${chartId}" style="height:120px; background: rgba(255,255,255,0.05); border-radius:5px; display:flex; align-items:center; justify-content:center; margin-bottom:15px; border: 1px dashed rgba(255,255,255,0.2);">
-                        <span style="font-size:11px; color:var(--accent-cyan);">📉 COURBE DE PROFIT ${unite.n.toUpperCase()}</span>
-                    </div>
-
-                    <!-- STATS DÉTAILLÉES -->
-                    <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px;">
-                        <div style="text-align:center; padding:10px; background:rgba(255,255,255,0.05); border-radius:5px;">
-                            <div style="font-size:10px; opacity:0.6;">RÉUSSITE</div>
-                            <div style="font-weight:bold; color:white;">${winrate}%</div>
+            return `
+                <div class="glass-panel" style="margin-bottom:20px; border-left: 4px solid var(--ol-blue); background: rgba(255,255,255,0.03);">
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
+                        <div>
+                            <h3 style="margin:0; color:white; font-size:20px;">${unite.n.toUpperCase()}</h3>
+                            <span style="font-size:11px; opacity:0.6;">${parisDuFavori.length} PARIS ANALYSÉS</span>
                         </div>
-                        <div style="text-align:center; padding:10px; background:rgba(255,255,255,0.05); border-radius:5px;">
-                            <div style="font-size:10px; opacity:0.6;">COTE MOY.</div>
-                            <div style="font-weight:bold; color:white;">${coteMoy}</div>
+                        <div style="text-align:right;">
+                            <div style="font-weight:bold; font-size:22px; color:${profit >= 0 ? 'var(--win-green)' : 'var(--ol-red)'};">
+                                ${profit >= 0 ? '+' : ''}${profit.toFixed(2)}€
+                            </div>
+                            <small style="opacity:0.5;">Bénéfice Net</small>
                         </div>
                     </div>
-                </div>
-            </details>`;
-    }).join('');
-    
-    favorisList.innerHTML = favorisHTML || `<div style="text-align:center; opacity:0.5; padding:20px;">Crée une équipe (ex: OL) pour voir tes perfs</div>`;
-} 
-} // Fermeture finale de render
+
+                    <!-- ZONE GRAPHIQUE LARGE -->
+                    <div id="chart-full-${unite.n.replace(/\s+/g, '')}" style="height:180px; background:rgba(0,0,0,0.4); border-radius:12px; margin-bottom:20px; display:flex; align-items:center; justify-content:center; border:1px solid rgba(255,255,255,0.1);">
+                        <div style="text-align:center;">
+                            <div style="font-size:24px;">📉</div>
+                            <div style="font-size:11px; color:var(--accent-cyan); margin-top:5px;">COURBE DE PERFORMANCE ${unite.n}</div>
+                        </div>
+                    </div>
+
+                    <!-- GRILLE DE STATS DÉTAILLÉES -->
+                    <div style="display:grid; grid-template-columns: repeat(3, 1fr); gap:10px;">
+                        <div style="background:rgba(255,255,255,0.05); padding:12px; border-radius:8px; text-align:center;">
+                            <div style="font-size:10px; opacity:0.6; margin-bottom:5px;">RÉUSSITE</div>
+                            <div style="font-weight:bold; font-size:16px;">${winrate}%</div>
+                        </div>
+                        <div style="background:rgba(255,255,255,0.05); padding:12px; border-radius:8px; text-align:center;">
+                            <div style="font-size:10px; opacity:0.6; margin-bottom:5px;">COTE MOY.</div>
+                            <div style="font-weight:bold; font-size:16px;">${coteMoy}</div>
+                        </div>
+                        <div style="background:rgba(255,255,255,0.05); padding:12px; border-radius:8px; text-align:center;">
+                            <div style="font-size:10px; opacity:0.6; margin-bottom:5px;">ROI</div>
+                            <div style="font-weight:bold; font-size:16px; color:var(--accent-cyan);">-- %</div>
+                        </div>
+                    </div>
+                </div>`;
+        }).join('');
+
+        pageEquipes.innerHTML = favorisHTML || `
+            <div style="text-align:center; margin-top:100px;">
+                <div style="font-size:40px; opacity:0.2;">⭐</div>
+                <p style="opacity:0.5;">Aucune équipe dans tes favoris.<br>Ajoute une unité pour commencer.</p>
+            </div>`;
+    }
+} // Fin réelle de la fonction render
             
         function showTab(id, btn) {
             document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
