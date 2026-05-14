@@ -265,10 +265,8 @@
                 <div id="stat-boost-rate" style="font-weight:bold; color:white;">0%</div>
             </div>
         </div>
-    </div>
-
-
-        <!-- 5. BANKROLL & SETUP -->
+   
+             <!-- 5. BANKROLL & SETUP -->
         <div id="bank-mgr" class="tab-content">
             <div class="form-box">
                 <label>DÉPÔT / RETRAIT</label>
@@ -368,39 +366,44 @@
     } else {
         n = "SIMPLE"; 
         sport = document.getElementById('p-sport').value;
-        target = document.getElementById('n-target').value || "Pari";
-        type = document.getElementById('n-type') ? document.getElementById('n-type').value : "-";
+        // On utilise l'Analyse ou la Compétition comme nom principal
+        const comp = document.getElementById('n-comp').value;
+        const analysis = document.getElementById('n-analysis').value;
+        target = analysis || comp || "Pari Simple"; 
+        
+        type = document.getElementById('n-type').value || "-";
         b = document.getElementById('n-book').value;
-        c = parseFloat(document.getElementById('n-cote').value) || 0;
+        c = parseFloat(document.getElementById('n-cote').value.replace(',', '.')) || 0;
         m = parseFloat(document.getElementById('n-mise').value) || 0;
     }
 
+    // Vérification du solde
     if (m > 0 && (state.b[b] || 0) >= m) {
         state.b[b] = (parseFloat(state.b[b]) - m).toFixed(2);
         
-        // On enregistre toutes les infos dans l'objet
-        state.h.unshift({ 
+        const newPari = { 
             id: Date.now().toString(), 
             n, target, b, l, m, cote: c, isS, t: time,
-            comp: competition,
-            type: type,
-            analysis: analysis,
-            sport: sport
-        });
-        
+            sport: sport,
+            type: type
+        };
+
+        state.h.unshift(newPari);
         save();
+        
+        // --- FORCE L'AFFICHAGE DANS LE TABLEAU ---
+        render(); // Cette fonction doit exister chez toi pour rafraîchir les listes
         
         // Nettoyage des champs
         if (isS) {
             document.getElementById('c-target').value = "";
         } else {
-            document.getElementById('n-target').value = "";
-            if(document.getElementById('n-comp')) document.getElementById('n-comp').value = "";
-            if(document.getElementById('n-type')) document.getElementById('n-type').value = "";
-            if(document.getElementById('n-analysis')) document.getElementById('n-analysis').value = "";
+            document.getElementById('n-comp').value = "";
+            document.getElementById('n-type').value = "";
+            document.getElementById('n-analysis').value = "";
         }
     } else {
-        alert("Solde insuffisant !");
+        alert("Solde insuffisant sur " + b + " !");
     }
 }
 
