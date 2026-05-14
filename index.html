@@ -498,17 +498,26 @@
 
 function editBook(n) {
     const current = parseFloat(state.b[n]);
-    const next = parseFloat(prompt(`Nouveau solde pour ${n.toUpperCase()} ?`, current));
+    const promptValue = prompt(`Nouveau solde pour ${n.toUpperCase()} ?`, current);
     
-    if (!isNaN(next)) {
-        const diff = next - current;
-        state.b[n] = next.toFixed(2);
-        // Important : on ajuste aussi le capital de départ pour refléter ce changement "manuel"
-        state.start_bk += diff; 
-        save();
+    // On vérifie si l'utilisateur n'a pas cliqué sur "Annuler"
+    if (promptValue !== null) {
+        const next = parseFloat(promptValue);
+        
+        if (!isNaN(next)) {
+            const diff = next - current;
+            
+            // On stocke un nombre (float) et non une string
+            state.b[n] = next; 
+            
+            // Ajustement du capital de départ pour garder un ROI cohérent
+            state.start_bk += diff; 
+            
+            save();   // Sauvegarde locale
+            render(); // Mise à jour visuelle immédiate
+        }
     }
 }
-
         function addUnit() {
             const n = document.getElementById('u-n-add').value.trim().toUpperCase();
             if(n) { state.u.push({ n, s: document.getElementById('u-s-add').value, l: 1 }); save(); }
