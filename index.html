@@ -575,7 +575,36 @@ document.getElementById('h-live-norm').innerHTML = state.h.filter(x => !x.isS).m
     // 8. Résumé Dashboard
     document.getElementById('dash-summary').innerHTML = state.u.map(u => `
         <tr><td>${u.n}</td><td>${"⭐".repeat(u.s)}</td><td>P${u.l}</td><td style="text-align:right; color:var(--accent-cyan)">ACTIF</td></tr>`).join('');
-}
+
+        //9 --- CALCUL DU BILAN BOOSTS ---
+const boosts = state.a.filter(h => h.type && h.type.toLowerCase().includes('boost'));
+const boostProfit = boosts.reduce((acc, h) => acc + (h.win ? (h.m * h.cote) - h.m : -h.m), 0);
+const boostWinrate = boosts.length > 0 ? (boosts.filter(h => h.win).length / boosts.length * 100).toFixed(0) : 0;
+
+document.getElementById('stat-boost-profit').innerText = (boostProfit >= 0 ? "+" : "") + boostProfit.toFixed(2) + "€";
+document.getElementById('stat-boost-profit').style.color = boostProfit >= 0 ? "var(--win-green)" : "var(--ol-red)";
+document.getElementById('stat-boost-rate').innerText = boostWinrate + "%";
+
+// 10--- CALCUL DU BILAN PAR BOOKMAKER ---
+const booksStats = {};
+// On initialise avec tes books actuels
+Object.keys(state.b).forEach(b => booksStats[b] = 0);
+
+// 11   On calcule le profit par book dans les archives
+state.a.forEach(h => {
+    const p = h.win ? (h.m * h.cote) - h.m : -h.m;
+    booksStats[h.b] = (booksStats[h.b] || 0) + p;
+});
+
+document.getElementById('stats-books-list').innerHTML = Object.entries(booksStats).map(([name, profit]) => `
+    <div style="display:flex; justify-content:space-between; padding:5px 10px; background:rgba(255,255,255,0.03); border-radius:5px;">
+        <span style="text-transform:uppercase; font-size:12px;">${name}</span>
+        <span style="font-weight:bold; color:${profit >= 0 ? 'var(--win-green)' : 'var(--ol-red)'};">
+            ${profit >= 0 ? '+' : ''}${profit.toFixed(2)}€
+        </span>
+    </div>
+`).join('');
+        }
        
         function showTab(id, btn) {
             document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
