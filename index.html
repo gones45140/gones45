@@ -209,22 +209,24 @@
     </div>
 </div>
        <!-- 4. BILAN GÉNÉRAL -->
-        <div id="p-bilan" class="tab-content">
-            <h2 style="color:white; margin-bottom:15px;">📊 Tableau de Bord</h2>
+<div id="p-bilan" class="tab-content">
+    <!-- NIVEAU 1 : LE MENU (S'affiche par défaut) -->
+    <div id="bilan-menu-principal">
+        <h2 style="color:white; margin-bottom:15px;">📊 Tableau de Bord</h2>
 
-            <div class="glass-panel" style="margin-bottom:20px;">
-                <h3 style="color:var(--accent-cyan); font-size:14px; margin-bottom:10px;">BILAN GÉNÉRAL</h3>
-                <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px;">
-                    <div style="background:rgba(255,255,255,0.05); padding:10px; border-radius:8px; text-align:center;">
-                        <div style="font-size:10px; opacity:0.7;">BÉNÉFICE TOTAL</div>
-                        <div id="stat-profit" style="font-weight:bold; color:var(--win-green); font-size:18px;">0.00€</div>
-                    </div>
-                    <div style="background:rgba(255,255,255,0.05); padding:10px; border-radius:8px; text-align:center;">
-                        <div style="font-size:10px; opacity:0.7;">TAUX DE RÉUSSITE</div>
-                        <div id="stat-winrate" style="font-weight:bold; color:white; font-size:18px;">0%</div>
-                    </div>
+        <div class="glass-panel" style="margin-bottom:20px;">
+            <h3 style="color:var(--accent-cyan); font-size:14px; margin-bottom:10px;">BILAN GÉNÉRAL</h3>
+            <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px;">
+                <div style="background:rgba(255,255,255,0.05); padding:10px; border-radius:8px; text-align:center;">
+                    <div style="font-size:10px; opacity:0.7;">BÉNÉFICE TOTAL</div>
+                    <div id="stat-profit" style="font-weight:bold; color:var(--win-green); font-size:18px;">0.00€</div>
+                </div>
+                <div style="background:rgba(255,255,255,0.05); padding:10px; border-radius:8px; text-align:center;">
+                    <div style="font-size:10px; opacity:0.7;">TAUX DE RÉUSSITE</div>
+                    <div id="stat-winrate" style="font-weight:bold; color:white; font-size:18px;">0%</div>
                 </div>
             </div>
+        </div>
 
             <h3 style="color:white; font-size:16px; margin-bottom:10px;">⭐ Performances par Équipes</h3>
             <div id="stats-favoris-list"></div> 
@@ -232,20 +234,11 @@
             <h3 style="color:white; font-size:16px; margin: 20px 0 10px;">🏦 Par Bookmaker</h3>
             <div id="stats-books-list" class="glass-panel" style="display: flex; flex-direction: column; gap: 10px;"></div>
 
-            <div class="glass-panel" style="margin-top:20px; border: 1px solid #f59e0b; background: rgba(245, 158, 11, 0.05);">
-                <h3 style="color:#f59e0b; font-size:14px; margin-bottom:10px;">🚀 PERFORMANCE BOOSTS</h3>
-                <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px;">
-                    <div style="text-align:center;">
-                        <div style="font-size:10px; opacity:0.7;">NET</div>
-                        <div id="stat-boost-profit" style="font-weight:bold; color:var(--win-green);">0.00€</div>
-                    </div>
-                    <div style="text-align:center;">
-                        <div style="font-size:10px; opacity:0.7;">RÉUSSITE</div>
-                        <div id="stat-boost-rate" style="font-weight:bold; color:white;">0%</div>
-                    </div>
-                </div> 
-            </div> 
-        </div> <!-- FIN DE P-BILAN -->
+           <!-- NIVEAU 2 : LA PAGE DÉDIÉE (Cachée par défaut) -->
+    <div id="bilan-page-equipe" style="display:none;">
+        <!-- Le contenu sera injecté ici par JavaScript quand tu cliqueras sur Lyon -->
+    </div>
+</div>
 
         <!-- 5. BANKROLL & SETUP -->
         <div id="bank-mgr" class="tab-content">
@@ -628,7 +621,6 @@ document.getElementById('stats-books-list').innerHTML = Object.entries(booksStat
 const pageEquipes = document.getElementById('page-bilan-equipes');
 if (pageEquipes) {
     if (state.u && state.u.length > 0) {
-        // Conteneur en GRILLE : 1 colonne sur mobile, 2 ou 3 sur PC
         pageEquipes.innerHTML = `
             <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 15px;">
                 ${state.u.map(unite => {
@@ -637,8 +629,12 @@ if (pageEquipes) {
                     const winrate = parisDuFavori.length > 0 ? (parisDuFavori.filter(h => h.win).length / parisDuFavori.length * 100).toFixed(0) : 0;
                     const coteMoy = parisDuFavori.length > 0 ? (parisDuFavori.reduce((acc, h) => acc + h.cote, 0) / parisDuFavori.length).toFixed(2) : "0.00";
 
+                    // --- C'EST ICI QU'ON AJOUTE LE CLIC (onclick) ---
                     return `
-                        <div class="glass-panel" style="border-left: 4px solid var(--ol-blue); background: rgba(255,255,255,0.03); padding: 15px; border-radius: 12px; display: flex; flex-direction: column; justify-content: space-between;">
+                        <div class="glass-panel" 
+                             onclick="openDetails('${unite.n}')" 
+                             style="cursor:pointer; border-left: 4px solid var(--ol-blue); background: rgba(255,255,255,0.03); padding: 15px; border-radius: 12px; display: flex; flex-direction: column; justify-content: space-between; transition: 0.2s;">
+                            
                             <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:15px;">
                                 <div>
                                     <h3 style="margin:0; color:white; font-size:18px;">${unite.n.toUpperCase()}</h3>
@@ -650,7 +646,7 @@ if (pageEquipes) {
                             </div>
 
                             <div style="height:100px; background:rgba(0,0,0,0.4); border-radius:10px; margin-bottom:15px; display:flex; align-items:center; justify-content:center; border:1px solid rgba(255,255,255,0.1);">
-                                <span style="font-size:9px; color:var(--accent-cyan); text-align:center; padding:5px;">📉 COURBE DE PERFORMANCE</span>
+                                <span style="font-size:9px; color:var(--accent-cyan); text-align:center; padding:5px;">📊 VOIR LES STATS DÉTAILLÉES</span>
                             </div>
 
                             <div style="display:grid; grid-template-columns: repeat(3, 1fr); gap:8px;">
@@ -685,41 +681,57 @@ function openDetails(nom) {
     const modal = document.getElementById('modal-details');
     const content = document.getElementById('modal-content');
     
-    // On récupère les données de l'équipe (ex: OL ou Boca)
     const unite = state.u.find(u => u.n === nom);
     const paris = state.a.filter(h => h.n === nom);
     
-    // Calculs de performance pour l'affichage
     const profit = paris.reduce((acc, h) => acc + (h.win ? (h.m * h.cote) - h.m : -h.m), 0);
     const winrate = paris.length > 0 ? (paris.filter(h => h.win).length / paris.length * 100).toFixed(0) : 0;
 
-    // Remplissage de la fenêtre modale
+    // CORRECTION : Ajout d'un bouton de fermeture et d'un conteneur propre
     content.innerHTML = `
-        <h2 style="font-size:24px; color:white;">${nom.toUpperCase()}</h2>
-        <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin:20px 0;">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
+            <h2 style="font-size:24px; color:white; margin:0;">${nom.toUpperCase()}</h2>
+            <button onclick="closeDetails()" style="background:none; border:none; color:white; font-size:24px; cursor:pointer;">&times;</button>
+        </div>
+        
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:20px;">
             <div class="stat-card" style="text-align:center; background:rgba(255,255,255,0.05); padding:15px; border-radius:10px;">
-                <label style="font-size:10px; opacity:0.7;">PROFIT</label>
+                <label style="font-size:10px; opacity:0.7;">PROFIT TOTAL</label>
                 <div style="font-size:20px; font-weight:bold; color:${profit >= 0 ? 'var(--win-green)' : 'var(--ol-red)'}">${profit.toFixed(2)}€</div>
             </div>
             <div class="stat-card" style="text-align:center; background:rgba(255,255,255,0.05); padding:15px; border-radius:10px;">
-                <label style="font-size:10px; opacity:0.7;">WINRATE</label>
+                <label style="font-size:10px; opacity:0.7;">RÉUSSITE</label>
                 <div style="font-size:20px; font-weight:bold; color:white;">${winrate}%</div>
             </div>
         </div>
-        <div style="height:200px; background:rgba(0,0,0,0.4); border-radius:12px; margin-top:20px; border:1px solid rgba(255,255,255,0.1); display:flex; align-items:center; justify-content:center;">
-             <canvas id="chart-mobile" style="width:100%; height:100%;"></canvas>
+
+        <div style="height:250px; position:relative; background:rgba(0,0,0,0.4); border-radius:12px; padding:10px; border:1px solid rgba(255,255,255,0.1);">
+             <canvas id="chart-mobile"></canvas>
         </div>
     `;
     
-    modal.style.display = 'block'; // Affiche la fenêtre
-    document.body.style.overflow = 'hidden'; // Bloque le scroll du fond pour le téléphone
+    modal.style.display = 'block';
+    document.body.style.overflow = 'hidden';
+
+    // CORRECTION : Appeler la création du graphique ici
+    if (paris.length > 0) {
+        renderMiniChart('chart-mobile', paris);
+    }
 }
 
+// Fonction indispensable pour refermer la modale
 function closeDetails() {
-    document.getElementById('modal-details').style.display = 'none'; // Cache la fenêtre
+    document.getElementById('modal-details').style.display = 'none';
     document.body.style.overflow = 'auto'; // Réactive le scroll
 }
-            
+// Fermer la fenêtre si on clique en dehors de la boîte blanche
+window.onclick = function(event) {
+    const modal = document.getElementById('modal-details');
+    if (event.target == modal) {
+        closeDetails();
+    }
+}
+        
         function showTab(id, btn) {
     // On cache TOUTES les pages d'un coup
     const pages = document.getElementsByClassName('tab-content');
@@ -775,5 +787,16 @@ function closeDetails() {
     }
 } 
     </script>
+    <!-- FENÊTRE MODALE DES DÉTAILS ÉQUIPE -->
+<div id="modal-details" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.9); z-index:1000; overflow-y:auto;">
+    <div class="glass-panel" style="max-width:500px; margin:20px auto; position:relative; border:1px solid var(--accent-cyan);">
+        <!-- Le contenu sera injecté ici par la fonction openDetails -->
+        <div id="modal-content"></div>
+        
+        <button onclick="closeDetails()" class="btn-action" style="background:var(--ol-red); margin-top:20px;">
+            FERMER LA FICHE
+        </button>
+    </div>
+</div>
 </body>
 </html>
