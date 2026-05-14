@@ -306,19 +306,29 @@
         </div>
     </main>
 
-    <nav class="nav-bar">
-        <div class="nav-item active" onclick="showTab('dash', this)"><i class="fa-solid fa-chart-pie"></i>MUR</div>
-        <div class="nav-item active" onclick="showTab('p-betting-hub', this)">PARI SPORTIF</div>
-        <div class="nav-item" onclick="showTab('arch', this)"><i class="fa-solid fa-clock-rotate-left"></i>ARCHIVE</div>
-        <div class="nav-item" onclick="showTab('equipes')">
-        <div class="nav-icon">⭐</div>
-        <span>ÉQUIPES</span>
+  <nav class="nav-bar">
+    <div class="nav-item active" onclick="showTab('dash', this)">
+        <i class="fa-solid fa-chart-pie"></i>MUR
     </div>
-    <!-- ... -->
+    <div class="nav-item" onclick="showTab('p-betting-hub', this)">
+        <i class="fa-solid fa- football"></i>PARI SPORTIF
+    </div>
+    <div class="nav-item" onclick="showTab('arch', this)">
+        <i class="fa-solid fa-clock-rotate-left"></i>ARCHIVE
+    </div>
+    
+    <!-- Nouvel onglet ÉQUIPES bien intégré -->
+    <div class="nav-item" onclick="showTab('tab-equipes', this)">
+        <i class="fa-solid fa-star"></i>ÉQUIPES
+    </div>
+
+    <div class="nav-item" onclick="showTab('p-bilan', this)">
+        <i class="fa-solid fa-chart-line"></i>BILAN
+    </div>
+    <div class="nav-item" onclick="showTab('bank-mgr', this)">
+        <i class="fa-solid fa-wallet"></i>BANK
+    </div>
 </nav>
-        <div class="nav-item" onclick="showTab('p-bilan', this)">BILAN</div>
-        <div class="nav-item" onclick="showTab('bank-mgr', this)"><i class="fa-solid fa-wallet"></i>BANK</div>
-    </nav>
     
     <!-- La page qui s'affiche quand tu cliques sur l'étoile -->
 <section id="tab-equipes" class="tab-content" style="display:none; padding:15px;">
