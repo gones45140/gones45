@@ -173,7 +173,11 @@
                 <div class="grid-tactical">
                     <div><label>Sport</label><select id="p-sport"><option value="⚽">⚽ Football</option><option value="🏀">🏀 Basket</option><option value="🎾">🎾 Tennis</option></select></div>
                     <div><label>Date</label><input type="date" id="p-match-date"></div>
-                  <div style="grid-column: span 2;">
+                <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px;">
+    <div><label>Compétition</label><input id="n-comp" placeholder="Ex: Ligue 1, Copa Lib..."></div>
+    <div><label>Type de pari</label><input id="n-type" placeholder="Ex: Over 1.5, Qualif..."></div>
+</div>
+                    <div style="grid-column: span 2;">
     <label>Intitulé / Analyse Avant-Match</label>
     <textarea id="n-analysis" placeholder="Ex: Boca qualif + Under 3.5 car défense solide et match aller 0-0..." 
               style="width:100%; height:60px; background:var(--bg-card); border:1px solid #1e293b; color:white; border-radius:8px; padding:10px; font-family:inherit;"></textarea>
@@ -270,36 +274,63 @@
             render();
         }
 
-        function pari(isS) {
-            let n, b, c, m, target, type, l = 1;
-            const now = new Date();
-            const time = now.toLocaleDateString('fr-FR', {day:'2-digit', month:'2-digit'}) + ' ' + now.toLocaleTimeString('fr-FR', {hour:'2-digit', minute:'2-digit'});
+       function pari(isS) {
+    let n, b, c, m, target, type, l = 1, sport = "";
+    const now = new Date();
+    const time = now.toLocaleDateString('fr-FR', {day:'2-digit', month:'2-digit'}) + ' ' + now.toLocaleTimeString('fr-FR', {hour:'2-digit', minute:'2-digit'});
 
-            if (isS) {
-                const uObj = state.u.find(x => x.n === document.getElementById('c-unit').value);
-                if (!uObj) return alert("Crée une unité !");
-                n = uObj.n; target = document.getElementById('c-target').value || "-";
-                type = document.getElementById('c-type').value || "-";
-                b = document.getElementById('c-book').value;
-                c = parseFloat(document.getElementById('c-cote').value) || 0;
-                m = parseFloat(document.getElementById('c-mise').value) || 0;
-                l = uObj.l;
-            } else {
-                n = "SIMPLE"; target = document.getElementById('n-target').value || "Pari";
-                b = document.getElementById('n-book').value;
-                c = parseFloat(document.getElementById('n-cote').value) || 0;
-                m = parseFloat(document.getElementById('n-mise').value) || 0;
-            }
+    // Récupération des nouveaux champs (pour les deux modes)
+    const competition = document.getElementById('n-comp') ? document.getElementById('n-comp').value : "-";
+    const analysis = document.getElementById('n-analysis') ? document.getElementById('n-analysis').value : "";
 
-            if (m > 0 && (state.b[b] || 0) >= m) {
-                state.b[b] = (parseFloat(state.b[b]) - m).toFixed(2);
-                state.h.unshift({ id: Date.now().toString(), n, target, b, l, m, cote: c, isS, t: time });
-                save();
-                document.getElementById(isS ? 'c-target' : 'n-target').value = "";
-            } else {
-                alert("Solde insuffisant !");
-            }
+    if (isS) {
+        const uObj = state.u.find(x => x.n === document.getElementById('c-unit').value);
+        if (!uObj) return alert("Crée une unité !");
+        n = uObj.n; 
+        target = document.getElementById('c-target').value || "-";
+        type = document.getElementById('c-type') ? document.getElementById('c-type').value : "-";
+        b = document.getElementById('c-book').value;
+        c = parseFloat(document.getElementById('c-cote').value) || 0;
+        m = parseFloat(document.getElementById('c-mise').value) || 0;
+        l = uObj.l;
+    } else {
+        n = "SIMPLE"; 
+        sport = document.getElementById('p-sport').value;
+        target = document.getElementById('n-target').value || "Pari";
+        type = document.getElementById('n-type') ? document.getElementById('n-type').value : "-";
+        b = document.getElementById('n-book').value;
+        c = parseFloat(document.getElementById('n-cote').value) || 0;
+        m = parseFloat(document.getElementById('n-mise').value) || 0;
+    }
+
+    if (m > 0 && (state.b[b] || 0) >= m) {
+        state.b[b] = (parseFloat(state.b[b]) - m).toFixed(2);
+        
+        // On enregistre toutes les infos dans l'objet
+        state.h.unshift({ 
+            id: Date.now().toString(), 
+            n, target, b, l, m, cote: c, isS, t: time,
+            comp: competition,
+            type: type,
+            analysis: analysis,
+            sport: sport
+        });
+        
+        save();
+        
+        // Nettoyage des champs
+        if (isS) {
+            document.getElementById('c-target').value = "";
+        } else {
+            document.getElementById('n-target').value = "";
+            if(document.getElementById('n-comp')) document.getElementById('n-comp').value = "";
+            if(document.getElementById('n-type')) document.getElementById('n-type').value = "";
+            if(document.getElementById('n-analysis')) document.getElementById('n-analysis').value = "";
         }
+    } else {
+        alert("Solde insuffisant !");
+    }
+}
 
         function result(id, win) {
     const idx = state.h.findIndex(x => x.id === id);
@@ -333,9 +364,10 @@
     });
 
     // 4. Nettoyage et sauvegarde
-    state.h.splice(idx, 1);
+   state.h.splice(idx, 1);
     save();
     updMise();
+    render(); // Pour rafraîchir l'affichage direct
 }
 
         function handleFund(add) {
@@ -415,11 +447,24 @@ function editBook(n) {
         <td style="text-align:right"><button class="btn-win" onclick="result('${h.id}',true)">W</button> 
         <button class="btn-loss" onclick="result('${h.id}',false)">L</button></td></tr>`).join('');
 
-    // 4. Affichage des paris en cours (Simples)
-    document.getElementById('h-live-norm').innerHTML = state.h.filter(x => !x.isS).map(h => `
-        <tr><td>${h.target}</td><td>${h.m}€</td>
-        <td style="text-align:right"><button class="btn-win" onclick="result('${h.id}',true)">W</button> 
-        <button class="btn-loss" onclick="result('${h.id}',false)">L</button></td></tr>`).join('');
+    
+ //4. Affichage des paris en cours (Simples) avec Compétition et Type
+document.getElementById('h-live-norm').innerHTML = state.h.filter(x => !x.isS).map(h => `
+    <tr>
+        <td style="padding: 10px 5px;">
+            <div style="font-size: 10px; color: var(--accent-cyan); text-transform: uppercase;">${h.comp || 'SANS COMPÉ'}</div>
+            <div style="font-weight: bold;">${h.target}</div>
+            <div style="font-size: 11px; color: #94a3b8;">${h.type || '-'} @${h.cote}</div>
+        </td>
+        <td style="vertical-align: middle;">
+            <div style="font-weight: bold; color: var(--accent-cyan);">${h.m}€</div>
+            <div style="font-size: 9px; opacity: 0.7;">${h.b.toUpperCase()}</div>
+        </td>
+        <td style="text-align: right; vertical-align: middle;">
+            <button class="btn-win" onclick="result('${h.id}',true)" style="padding: 5px 10px; margin-right: 5px;">W</button> 
+            <button class="btn-loss" onclick="result('${h.id}',false)" style="padding: 5px 10px;">L</button>
+        </td>
+    </tr>`).join('');
 
     // 5. Historique (Archive)
    document.getElementById('arch-finished-list').innerHTML = state.a.slice(0,10).map(h => `
