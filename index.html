@@ -786,8 +786,7 @@ window.onclick = function(event) {
         btnStrat.style.background = 'none'; btnStrat.style.color = '#94a3b8';
     }
 } 
-    </script>
-    <!-- FENÊTRE MODALE DES DÉTAILS ÉQUIPE -->
+       <!-- FENÊTRE MODALE DES DÉTAILS ÉQUIPE -->
 <div id="modal-details" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.9); z-index:1000; overflow-y:auto;">
     <div class="glass-panel" style="max-width:500px; margin:20px auto; position:relative; border:1px solid var(--accent-cyan);">
         <!-- Le contenu sera injecté ici par la fonction openDetails -->
@@ -798,5 +797,53 @@ window.onclick = function(event) {
         </button>
     </div>
 </div>
+           function renderMiniChart(canvasId, paris) {
+    const ctx = document.getElementById(canvasId).getContext('2d');
+    
+    // On calcule l'évolution du capital point par point
+    let currentProfit = 0;
+    const dataPoints = paris.map(h => {
+        currentProfit += (h.win ? (h.m * h.cote) - h.m : -h.m);
+        return currentProfit.toFixed(2);
+    });
+
+    // On ajoute un point 0 au début pour la courbe
+    dataPoints.unshift(0);
+    const labels = dataPoints.map((_, i) => i);
+
+    // Si un graphique existe déjà sur ce canvas, on le détruit pour éviter les bugs
+    if (window.myMiniChart) { window.myMiniChart.destroy(); }
+
+    window.myMiniChart = new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: labels,
+            datasets: [{
+                label: 'Profit Evolution',
+                data: dataPoints,
+                borderColor: '#22d3ee', // Cyan accent
+                backgroundColor: 'rgba(34, 211, 238, 0.1)',
+                borderWidth: 2,
+                fill: true,
+                tension: 0.3,
+                pointRadius: 0
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: { legend: { display: false } },
+            scales: {
+                x: { display: false },
+                y: { 
+                    grid: { color: 'rgba(255,255,255,0.05)' },
+                    ticks: { color: '#94a3b8', font: { size: 10 } }
+                }
+            }
+        }
+    });
+}
+    </script>
+    
 </body>
 </html>
