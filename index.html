@@ -320,16 +320,15 @@
         <div class="nav-item" onclick="showTab('bank-mgr', this)"><i class="fa-solid fa-wallet"></i>BANK</div>
     </nav>
     
-    <section id="tab-equipes" class="tab-content" style="display:none;">
+    <!-- La page qui s'affiche quand tu cliques sur l'étoile -->
+<section id="tab-equipes" class="tab-content" style="display:none; padding:15px;">
     <div class="header-main">
-        <h2>⭐ Bilan par Équipe</h2>
-        <p style="font-size:12px; opacity:0.6;">Analyses détaillées de tes favoris</p>
+        <h2 style="color:white; margin:0;">⭐ Mes Équipes</h2>
+        <p style="font-size:12px; opacity:0.6;">Analyses et performances détaillées</p>
     </div>
 
-    <!-- C'est ici que le JavaScript va injecter TOUS tes onglets ouvrants -->
-    <div id="page-bilan-equipes" style="padding:15px;">
-        <!-- L'OL, le PSV, etc. apparaîtront ici en grand -->
-    </div>
+    <!-- Le JavaScript injectera l'OL, Boca, etc. ici -->
+    <div id="page-bilan-equipes" style="margin-top:20px;"></div>
 </section>
 
     <!-- ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -670,11 +669,28 @@ document.getElementById('stats-books-list').innerHTML = Object.entries(booksStat
 } // <--- C'EST CETTE ACCOLADE QUI FERME LA FONCTION RENDER()
             
         function showTab(id, btn) {
-            document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
-            document.getElementById(id).classList.add('active');
-            document.querySelectorAll('.nav-item').forEach(b => b.classList.remove('active'));
-            btn.classList.add('active');
-        }
+    // 1. On cache TOUTES les sections proprement
+    document.querySelectorAll('.tab-content').forEach(t => {
+        t.style.display = 'none';          // Sécurité : on force la disparition
+        t.classList.remove('active');
+    });
+
+    // 2. On affiche la section demandée
+    const targetTab = document.getElementById(id);
+    if (targetTab) {
+        targetTab.style.display = 'block'; // On force l'apparition
+        targetTab.classList.add('active');
+    }
+
+    // 3. Gestion visuelle des boutons du menu
+    document.querySelectorAll('.nav-item').forEach(b => b.classList.remove('active'));
+    if (btn) btn.classList.add('active');
+
+    // 4. TRÈS IMPORTANT : On relance le rendu pour mettre à jour les chiffres
+    if (typeof render === "function") {
+        render();
+    }
+}
 
         function exportData() {
             const data = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(state));
