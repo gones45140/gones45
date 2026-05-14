@@ -612,70 +612,61 @@ document.getElementById('stats-books-list').innerHTML = Object.entries(booksStat
     </div>
 `).join('');
             
-      // 12. --- NETTOYAGE DU DASHBOARD (On enlève le petit bloc pour la page dédiée) ---
+      // 12. --- NETTOYAGE SÉCURISÉ DU DASHBOARD ---
     const dashFavoris = document.getElementById('stats-favoris-list');
-    if (dashFavoris) dashFavoris.innerHTML = ""; // On vide pour ne pas faire doublon
+    if (dashFavoris) { 
+        dashFavoris.innerHTML = ""; 
+    }
 
-    // 13. --- LOGIQUE DE LA PAGE DÉDIÉE "ÉQUIPES" (PLEIN ÉCRAN) ---
+    // 13. --- LOGIQUE DE LA PAGE DÉDIÉE "ÉQUIPES" ---
     const pageEquipes = document.getElementById('page-bilan-equipes');
     if (pageEquipes) {
-        const favorisHTML = state.u.map(unite => {
-            // Filtrage des données par équipe (ex: OL)
-            const parisDuFavori = state.a.filter(h => h.n === unite.n);
-            
-            // Calculs financiers
-            const profit = parisDuFavori.reduce((acc, h) => acc + (h.win ? (h.m * h.cote) - h.m : -h.m), 0);
-            const winrate = parisDuFavori.length > 0 ? (parisDuFavori.filter(h => h.win).length / parisDuFavori.length * 100).toFixed(0) : 0;
-            const coteMoy = parisDuFavori.length > 0 ? (parisDuFavori.reduce((acc, h) => acc + h.cote, 0) / parisDuFavori.length).toFixed(2) : "0.00";
+        // On génère le HTML seulement si on a des unités créées
+        if (state.u && state.u.length > 0) {
+            pageEquipes.innerHTML = state.u.map(unite => {
+                const parisDuFavori = state.a.filter(h => h.n === unite.n);
+                const profit = parisDuFavori.reduce((acc, h) => acc + (h.win ? (h.m * h.cote) - h.m : -h.m), 0);
+                const winrate = parisDuFavori.length > 0 ? (parisDuFavori.filter(h => h.win).length / parisDuFavori.length * 100).toFixed(0) : 0;
+                const coteMoy = parisDuFavori.length > 0 ? (parisDuFavori.reduce((acc, h) => acc + h.cote, 0) / parisDuFavori.length).toFixed(2) : "0.00";
 
-            return `
-                <div class="glass-panel" style="margin-bottom:20px; border-left: 4px solid var(--ol-blue); background: rgba(255,255,255,0.03);">
-                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
-                        <div>
-                            <h3 style="margin:0; color:white; font-size:20px;">${unite.n.toUpperCase()}</h3>
-                            <span style="font-size:11px; opacity:0.6;">${parisDuFavori.length} PARIS ANALYSÉS</span>
-                        </div>
-                        <div style="text-align:right;">
-                            <div style="font-weight:bold; font-size:22px; color:${profit >= 0 ? 'var(--win-green)' : 'var(--ol-red)'};">
-                                ${profit >= 0 ? '+' : ''}${profit.toFixed(2)}€
+                return `
+                    <div class="glass-panel" style="margin-bottom:20px; border-left: 4px solid var(--ol-blue); background: rgba(255,255,255,0.03); padding: 15px; border-radius: 12px;">
+                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
+                            <div>
+                                <h3 style="margin:0; color:white; font-size:20px;">${unite.n.toUpperCase()}</h3>
+                                <span style="font-size:11px; opacity:0.6;">${parisDuFavori.length} PARIS ANALYSÉS</span>
                             </div>
-                            <small style="opacity:0.5;">Bénéfice Net</small>
+                            <div style="text-align:right;">
+                                <div style="font-weight:bold; font-size:22px; color:${profit >= 0 ? 'var(--win-green)' : 'var(--ol-red)'};">
+                                    ${profit >= 0 ? '+' : ''}${profit.toFixed(2)}€
+                                </div>
+                            </div>
                         </div>
-                    </div>
 
-                    <!-- ZONE GRAPHIQUE LARGE -->
-                    <div id="chart-full-${unite.n.replace(/\s+/g, '')}" style="height:180px; background:rgba(0,0,0,0.4); border-radius:12px; margin-bottom:20px; display:flex; align-items:center; justify-content:center; border:1px solid rgba(255,255,255,0.1);">
-                        <div style="text-align:center;">
-                            <div style="font-size:24px;">📉</div>
-                            <div style="font-size:11px; color:var(--accent-cyan); margin-top:5px;">COURBE DE PERFORMANCE ${unite.n}</div>
+                        <div style="height:150px; background:rgba(0,0,0,0.4); border-radius:10px; margin-bottom:20px; display:flex; align-items:center; justify-content:center; border:1px solid rgba(255,255,255,0.1);">
+                            <span style="font-size:11px; color:var(--accent-cyan);">📉 COURBE DE PERFORMANCE À VENIR</span>
                         </div>
-                    </div>
 
-                    <!-- GRILLE DE STATS DÉTAILLÉES -->
-                    <div style="display:grid; grid-template-columns: repeat(3, 1fr); gap:10px;">
-                        <div style="background:rgba(255,255,255,0.05); padding:12px; border-radius:8px; text-align:center;">
-                            <div style="font-size:10px; opacity:0.6; margin-bottom:5px;">RÉUSSITE</div>
-                            <div style="font-weight:bold; font-size:16px;">${winrate}%</div>
+                        <div style="display:grid; grid-template-columns: repeat(3, 1fr); gap:10px;">
+                            <div style="background:rgba(255,255,255,0.05); padding:10px; border-radius:8px; text-align:center;">
+                                <div style="font-size:9px; opacity:0.6;">WINRATE</div>
+                                <div style="font-weight:bold;">${winrate}%</div>
+                            </div>
+                            <div style="background:rgba(255,255,255,0.05); padding:10px; border-radius:8px; text-align:center;">
+                                <div style="font-size:9px; opacity:0.6;">COTE MOY.</div>
+                                <div style="font-weight:bold;">${coteMoy}</div>
+                            </div>
+                            <div style="background:rgba(255,255,255,0.05); padding:10px; border-radius:8px; text-align:center;">
+                                <div style="font-size:9px; opacity:0.6;">UNITÉ</div>
+                                <div style="font-weight:bold; color:var(--accent-cyan);">P${unite.l}</div>
+                            </div>
                         </div>
-                        <div style="background:rgba(255,255,255,0.05); padding:12px; border-radius:8px; text-align:center;">
-                            <div style="font-size:10px; opacity:0.6; margin-bottom:5px;">COTE MOY.</div>
-                            <div style="font-weight:bold; font-size:16px;">${coteMoy}</div>
-                        </div>
-                        <div style="background:rgba(255,255,255,0.05); padding:12px; border-radius:8px; text-align:center;">
-                            <div style="font-size:10px; opacity:0.6; margin-bottom:5px;">ROI</div>
-                            <div style="font-weight:bold; font-size:16px; color:var(--accent-cyan);">-- %</div>
-                        </div>
-                    </div>
-                </div>`;
-        }).join('');
-
-        pageEquipes.innerHTML = favorisHTML || `
-            <div style="text-align:center; margin-top:100px;">
-                <div style="font-size:40px; opacity:0.2;">⭐</div>
-                <p style="opacity:0.5;">Aucune équipe dans tes favoris.<br>Ajoute une unité pour commencer.</p>
-            </div>`;
+                    </div>`;
+            }).join('');
+        } else {
+            pageEquipes.innerHTML = `<div style="text-align:center; padding:50px; opacity:0.5;">Aucune équipe favorite.</div>`;
+        }
     }
-} // Fin réelle de la fonction render
             
         function showTab(id, btn) {
             document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
