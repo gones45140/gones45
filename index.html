@@ -2,484 +2,848 @@
 <html lang="fr">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Gones Bankroll</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>GONES45 - Stratégie & Bankroll</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+         STAGE 1 : DESIGN (CSS)
+         ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ -->
+    <style>
+        :root {
+            --bg-dark: #0f172a;
+            --panel-bg: rgba(30, 41, 59, 0.7);
+            --accent-cyan: #22d3ee;
+            --ol-blue: #1e40af;
+            --ol-red: #da0812;
+            --text-main: #f8fafc;
+            --win-green: #22c55e;
+        }
 
-    <!-- Scripts externes pour les graphiques -->
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Roboto, sans-serif; }
+        
+        body { 
+            background: var(--bg-dark); 
+            color: var(--text-main); 
+            padding-bottom: 80px; 
+            background-attachment: fixed;
+        }
 
-    <!-- 
-    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-    STAGE 2 : DESIGN (CSS) - OPTIMISATION MOBILE & DARK MODE
-    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 
--->
-<style>
-    :root {
-        --bg-dark: #0f172a;
-        --panel-bg: rgba(30, 41, 59, 0.7);
-        --accent-cyan: #22d3ee;
-        --ol-blue: #1e40af;
-        --ol-red: #da0812;
-        --win-green: #22c55e;
-        --text-main: #f8fafc;
-    }
+        /* --- HEADER & NAVIGATION --- */
+        .header {
+            background: linear-gradient(135deg, var(--ol-blue), #000);
+            padding: 15px;
+            text-align: center;
+            border-bottom: 2px solid var(--ol-red);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
 
-    * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+        .nav-bar {
+            position: fixed;
+            bottom: 0;
+            width: 100%;
+            background: #1e293b;
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            border-top: 1px solid rgba(255,255,255,0.1);
+            z-index: 100;
+        }
 
-    body {
-        margin: 0;
-        font-family: 'Segoe UI', Roboto, sans-serif;
-        background: var(--bg-dark);
-        color: var(--text-main);
-        padding-bottom: 80px; /* Espace pour la nav mobile */
-    }
+        .nav-item {
+            padding: 12px 5px;
+            text-align: center;
+            font-size: 10px;
+            color: #94a3b8;
+            cursor: pointer;
+            transition: 0.3s;
+        }
 
-    /* --- CONTENEURS ET GRILLES --- */
-    .container { padding: 15px; max-width: 800px; margin: auto; }
+        .nav-item.active { color: var(--accent-cyan); background: rgba(34, 211, 238, 0.1); }
+        .nav-item i { display: block; font-size: 18px; margin-bottom: 4px; }
 
-    .glass-panel {
-        background: var(--panel-bg);
-        backdrop-filter: blur(10px);
-        border: 1px solid rgba(255,255,255,0.1);
-        border-radius: 12px;
-        padding: 15px;
-        margin-bottom: 15px;
-    }
+        /* --- CONTAINERS --- */
+        .main { padding: 15px; max-width: 600px; margin: 0 auto; }
+        .tab-content { display: none; animation: fadeIn 0.3s ease; }
+        .tab-content.active { display: block; }
 
-    .stat-grid {
-        display: grid;
-        grid-template-columns: 1fr 1fr;
-        gap: 10px;
-        margin-bottom: 15px;
-    }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
 
-    /* --- ÉLÉMENTS DE FORMULAIRE --- */
-    input, select, textarea {
-        width: 100%;
-        padding: 12px;
-        margin: 8px 0;
-        border-radius: 8px;
-        border: 1px solid #334155;
-        background: #0f172a;
-        color: white;
-        font-size: 16px; /* Évite le zoom auto sur iPhone */
-    }
+        .glass-panel {
+            background: var(--panel-bg);
+            backdrop-filter: blur(10px);
+            border-radius: 12px;
+            padding: 15px;
+            margin-bottom: 15px;
+            border: 1px solid rgba(255,255,255,0.05);
+            overflow-x: auto;
+        }
 
-    .btn-main {
-        width: 100%;
-        padding: 14px;
-        border-radius: 8px;
-        border: none;
-        font-weight: bold;
-        background: var(--ol-blue);
-        color: white;
-        cursor: pointer;
-        text-transform: uppercase;
-    }
+        .stats-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 15px; }
+        .stat-card { background: rgba(0,0,0,0.3); padding: 12px; border-radius: 10px; text-align: center; }
+        .stat-card label { display: block; font-size: 10px; color: #94a3b8; margin-bottom: 5px; }
+        .stat-val { font-size: 18px; font-weight: 800; }
 
-    .btn-win { background: #166534; color: white; border: none; padding: 8px 12px; border-radius: 4px; font-weight: bold; }
-    .btn-loss { background: #991b1b; color: white; border: none; padding: 8px 12px; border-radius: 4px; font-weight: bold; }
-    .btn-mini { background: #334155; color: #cbd5e1; border: none; padding: 5px 10px; border-radius: 4px; font-size: 10px; }
-    .btn-mini-red { background: #7f1d1d; color: white; border: none; padding: 5px 10px; border-radius: 4px; font-size: 10px; }
+        /* --- FORMULAIRES --- */
+        .form-box { background: rgba(0,0,0,0.2); padding: 12px; border-radius: 8px; margin-bottom: 15px; }
+        label { font-size: 11px; color: var(--accent-cyan); font-weight: bold; }
+        input, select {
+            width: 100%; padding: 10px; margin-top: 5px; background: #0f172a;
+            border: 1px solid #334155; color: white; border-radius: 6px; font-size: 14px;
+        }
+        .grid-tactical { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
 
-    /* --- TABLES ET LISTES --- */
-    table { width: 100%; border-collapse: collapse; margin-top: 10px; }
-    th { text-align: left; font-size: 12px; color: #94a3b8; padding: 8px 5px; text-transform: uppercase; }
-    td { padding: 12px 5px; border-bottom: 1px solid rgba(255,255,255,0.05); font-size: 14px; }
+        /* --- BOUTONS --- */
+        .btn-action {
+            width: 100%; padding: 12px; border: none; border-radius: 6px;
+            background: var(--ol-blue); color: white; font-weight: 800;
+            margin-top: 10px; cursor: pointer;
+        }
+        .btn-win { background: var(--win-green); color: white; border: none; padding: 5px 10px; border-radius: 4px; font-weight: bold; }
+        .btn-loss { background: var(--ol-red); color: white; border: none; padding: 5px 10px; border-radius: 4px; font-weight: bold; }
 
-    /* --- NAVIGATION BASSE --- */
-    .bottom-nav {
-        position: fixed;
-        bottom: 0;
-        left: 0;
-        right: 0;
-        background: #1e293b;
-        display: flex;
-        justify-content: space-around;
-        padding: 10px 0;
-        border-top: 1px solid #334155;
-        z-index: 100;
-    }
-
-    .nav-item {
-        color: #94a3b8;
-        text-decoration: none;
-        font-size: 10px;
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        background: none;
-        border: none;
-    }
-
-    .nav-item.active { color: var(--accent-cyan); }
-    .nav-item i { font-size: 20px; margin-bottom: 4px; }
-
-    /* --- MODALE --- */
-    .modal {
-        display: none;
-        position: fixed;
-        top: 0; left: 0; width: 100%; height: 100%;
-        background: rgba(0,0,0,0.9);
-        z-index: 200;
-        padding: 20px;
-    }
-
-    /* --- COMPOSANTS SPÉCIFIQUES --- */
-    .mini-stat {
-        background: rgba(0,0,0,0.3);
-        padding: 5px;
-        border-radius: 4px;
-        font-size: 11px;
-        text-align: center;
-    }
-
-    .header-bar {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        margin-bottom: 20px;
-    }
-
-    .bet-mode-switch {
-        display: flex;
-        gap: 5px;
-        margin-bottom: 15px;
-    }
-
-    .bet-mode-btn {
-        flex: 1;
-        padding: 10px;
-        background: #334155;
-        border: none;
-        color: white;
-        border-radius: 6px;
-        font-size: 12px;
-    }
-
-    .bet-mode-btn.active { background: var(--accent-cyan); color: var(--bg-dark); font-weight: bold; }
-</style>
+        /* --- TABLES --- */
+        table { width: 100%; border-collapse: collapse; margin-top: 5px; font-size: 12px; }
+        th { text-align: left; color: #64748b; padding: 8px; border-bottom: 1px solid #334155; font-size: 10px; }
+        td { padding: 10px 8px; border-bottom: 1px solid rgba(255,255,255,0.02); }
+    </style>
 </head>
-    <body>
-        <!-- 
-    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-    STAGE 1 : STRUCTURE (HTML)
-    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 
--->
-<div class="container">
-    <!-- HEADER & CAPITAL -->
-    <div class="header-bar">
-        <div>
-            <h1 style="margin:0; font-size: 24px; color: var(--accent-cyan);">GONES BANKROLL</h1>
-            <small id="d-ben" style="font-weight: bold;"></small>
+<body>
+
+    <header class="header">
+        <h1 style="font-size: 18px; letter-spacing: 2px;">GONES<span style="color:var(--ol-red)">45</span></h1>
+    </header>
+
+    <!-- ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+         STAGE 2 : STRUCTURE (HTML)
+         ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ -->
+    <main class="main">
+
+        <!-- 1. DASHBOARD -->
+        <div id="dash" class="tab-content active">
+            <div class="stats-grid">
+                <div class="stat-card" style="border-bottom: 4px solid var(--ol-blue);"><label>CAPITAL TOTAL</label><span id="d-cap" class="stat-val">0€</span></div>
+                <div class="stat-card" style="border-bottom: 4px solid var(--ol-red);"><label>BÉNÉFICE</label><span id="d-ben" class="stat-val">0€</span></div>
+            </div>
+            <div class="glass-panel">
+                <table style="min-width: 100%;">
+                    <thead><tr><th>UNITÉ</th><th>RANG</th><th>PALIER</th><th style="text-align:right">ÉTAT</th></tr></thead>
+                    <tbody id="dash-summary"></tbody>
+                </table>
+            </div>
         </div>
-        <div style="text-align: right;">
-            <div id="d-cap" style="font-size: 22px; font-weight: bold;">0.00€</div>
-            <small style="opacity: 0.6;">CAPITAL TOTAL</small>
+
+        <!-- 2. ARCHIVE -->
+        <div id="arch" class="tab-content">
+            <h3 style="color:var(--accent-cyan); margin-bottom:10px; font-size:14px;">HISTORIQUE RÉCENT</h3>
+            <div class="glass-panel">
+                <table>
+                    <thead><tr><th>DATE</th><th>CIBLE</th><th>MISE</th><th>RÉSULTAT</th><th style="text-align:right">GAIN</th></tr></thead>
+                    <tbody id="arch-finished-list"></tbody>
+                </table>
+            </div>
+            <button class="btn-action" style="background:var(--ol-red); font-size:11px;" onclick="if(confirm('Vider l\'archive ?')){state.a=[];save();}">EFFACER L'HISTORIQUE</button>
+        </div>
+
+        <!-- NOUVEL ONGLET UNIQUE : PARI SPORTIF (Cockpit + Simple) -->
+<div id="p-betting-hub" class="tab-content active">
+    
+    <!-- Boutons de bascule interne -->
+    <div style="display: flex; gap: 10px; margin-bottom: 20px;">
+        <button id="btn-switch-strat" onclick="switchBetMode('strat')" style="flex:1; padding:12px; border-radius:8px; border:1px solid var(--ol-blue); background:var(--ol-blue); color:white; font-weight:bold; cursor:pointer;">
+            🚀 COCKPIT
+        </button>
+        <button id="btn-switch-simple" onclick="switchBetMode('simple')" style="flex:1; padding:12px; border-radius:8px; border:1px solid #1e293b; background:none; color:#94a3b8; font-weight:bold; cursor:pointer;">
+            🎯 PARI SIMPLE
+        </button>
+    </div>
+
+    <!-- SOUS-ONGLET 1 : COCKPIT (Stratégie) -->
+    <div id="sub-strat">
+        <div class="form-box">
+            <div class="grid-tactical">
+                <div><label>Unité</label><select id="c-unit" onchange="updMise()"></select></div>
+                <div><label>Adversaire</label><input id="c-target" placeholder="Ex: Boca Juniors..."></div>
+                <div style="grid-column: span 2;"><label>Type de Pari</label><input id="c-type" placeholder="Ex: Victoire ou Qualif..."></div>
+                <div><label>Bookmaker</label><select id="c-book"></select></div>
+                <div><label>Cote</label><input type="number" id="c-cote" value="1.50" step="0.01"></div>
+                <div style="grid-column: span 2;"><label>Mise (€)</label><input type="number" id="c-mise" style="border: 1px solid var(--win-green);"></div>
+            </div>
+            <button class="btn-action" onclick="pari(true)">ENGAGER LA MONTANTE</button>
+        </div>
+        <div class="glass-panel">
+            <table id="table-strat">
+                <thead><tr><th>UNITÉ</th><th>CIBLE</th><th>MISE</th><th style="text-align:right">ACTION</th></tr></thead>
+                <tbody id="h-live-strat"></tbody>
+            </table>
         </div>
     </div>
 
-    <!-- ONGLETS PRINCIPAUX -->
-    <div id="tab-dashboard" class="tab-content">
-        <!-- STATS RAPIDES -->
-        <div class="stat-grid">
-            <div class="glass-panel">
-                <label style="font-size: 10px; opacity: 0.7;">PROFIT BOOSTS</label>
-                <div id="stat-boost-profit" style="color: var(--accent-cyan); font-weight: bold;">0.00€</div>
+    <!-- SOUS-ONGLET 2 : PARI SIMPLE -->
+    <div id="sub-simple" style="display:none;">
+        <div class="form-box">
+            <div class="grid-tactical">
+                <div><label>Sport</label><select id="p-sport"><option value="⚽">⚽ Football</option><option value="🏀">🏀 Basket</option><option value="🎾">🎾 Tennis</option></select></div>
+                <div><label>Date</label><input type="date" id="p-match-date"></div>
+                <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px; grid-column: span 2;">
+                    <div><label>Compétition</label><input id="n-comp" placeholder="Ex: Ligue 1, Copa Lib..."></div>
+                    <div><label>Type de pari</label><input id="n-type" placeholder="Ex: Over 1.5, Qualif..."></div>
+                </div>
+                <div style="grid-column: span 2;">
+                    <label>Intitulé / Analyse Avant-Match</label>
+                    <textarea id="n-analysis" placeholder="Ex: Boca qualif + Under 3.5..." style="width:100%; height:60px; background:var(--bg-card); border:1px solid #1e293b; color:white; border-radius:8px; padding:10px; font-family:inherit;"></textarea>
+                </div>
+                <div><label>Cote</label><input type="number" id="n-cote" value="1.50"></div>
+                <div><label>Mise</label><input type="number" id="n-mise" value="10"></div>
+                <div style="grid-column: span 2;"><label>Bookmaker</label><select id="n-book"></select></div>
             </div>
-            <div class="glass-panel">
-                <label style="font-size: 10px; opacity: 0.7;">WINRATE BOOSTS</label>
-                <div id="stat-boost-rate" style="font-weight: bold;">0%</div>
-            </div>
+            <button class="btn-action" onclick="pari(false)">PLACER LE PARI SIMPLE</button>
         </div>
-
-        <!-- FORMULAIRE DE PARI -->
         <div class="glass-panel">
-            <div class="bet-mode-switch">
-                <button class="bet-mode-btn active" id="btn-mode-strat" onclick="switchBetMode('strat'); this.classList.add('active'); document.getElementById('btn-mode-simple').classList.remove('active')">STRATÉGIE</button>
-                <button class="bet-mode-btn" id="btn-mode-simple" onclick="switchBetMode('simple'); this.classList.add('active'); document.getElementById('btn-mode-strat').classList.remove('active')">SIMPLE / BOOST</button>
-            </div>
-
-            <!-- MODE STRATÉGIE -->
-            <div id="sub-strat">
-                <select id="c-unit" onchange="updMise()"></select>
-                <input type="text" id="c-target" placeholder="Match (ex: Boca vs Palmeiras)">
-                <input type="text" id="c-type" placeholder="Type (ex: Qualification)">
-                <div style="display: flex; gap: 10px;">
-                    <input type="number" id="c-cote" step="0.01" placeholder="Cote (ex: 1.55)">
-                    <input type="number" id="c-mise" placeholder="Mise (€)">
-                </div>
-                <select id="c-book"></select>
-                <button class="btn-main" onclick="pari(true)" style="margin-top: 10px;">VALIDER STRAT</button>
-            </div>
-
-            <!-- MODE SIMPLE -->
-            <div id="sub-simple" style="display:none;">
-                <div style="display: flex; gap: 5px;">
-                    <input type="text" id="p-sport" placeholder="Sport" style="flex:1">
-                    <input type="text" id="n-comp" placeholder="Compétition" style="flex:2">
-                </div>
-                <input type="text" id="n-type" placeholder="Type (ex: Score Exact ou Boost)">
-                <textarea id="n-analysis" placeholder="Notes ou Analyse rapide..." rows="2"></textarea>
-                <div style="display: flex; gap: 10px;">
-                    <input type="number" id="n-cote" step="0.01" placeholder="Cote">
-                    <input type="number" id="n-mise" placeholder="Mise (€)">
-                </div>
-                <select id="n-book"></select>
-                <button class="btn-main" onclick="pari(false)" style="margin-top: 10px; background: var(--accent-cyan); color: var(--bg-dark);">VALIDER SIMPLE</button>
-            </div>
-        </div>
-
-        <!-- PARIS EN COURS -->
-        <h3 style="font-size: 14px; color: var(--accent-cyan); text-transform: uppercase;">🔥 Paris en cours</h3>
-        <div class="glass-panel" style="padding: 0;">
             <table>
-                <thead><tr><th>Détails</th><th>Mise</th><th style="text-align:right">Action</th></tr></thead>
-                <tbody id="h-live-strat"></tbody>
+                <thead><tr><th>CIBLE</th><th>MISE</th><th style="text-align:right">ACTION</th></tr></thead>
                 <tbody id="h-live-norm"></tbody>
             </table>
         </div>
     </div>
+</div>
+       <!-- 4. BILAN GÉNÉRAL -->
+<div id="p-bilan" class="tab-content">
+    <!-- NIVEAU 1 : LE MENU (S'affiche par défaut) -->
+    <div id="bilan-menu-principal">
+        <h2 style="color:white; margin-bottom:15px;">📊 Tableau de Bord</h2>
 
-    <!-- PAGE ÉQUIPES (GÉRÉ PAR JS) -->
-    <div id="tab-equipes" class="tab-content" style="display:none;">
-        <div id="page-bilan-equipes"></div>
-    </div>
-
-    <!-- PAGE ARCHIVES -->
-    <div id="tab-archives" class="tab-content" style="display:none;">
-        <div class="glass-panel" style="padding:0;">
-            <table style="font-size: 12px;">
-                <thead><tr><th>Date</th><th>Pari</th><th>Mise</th><th>Rés.</th><th style="text-align:right">Gain</th></tr></thead>
-                <tbody id="arch-finished-list"></tbody>
-            </table>
-        </div>
-        <button class="btn-main" onclick="exportData()" style="background:#334155; margin-top:15px;">EXPORTER LES DONNÉES (JSON)</button>
-    </div>
-
-    <!-- PAGE PARAMÈTRES (BANQUES & UNITÉS) -->
-    <div id="tab-settings" class="tab-content" style="display:none;">
-        <div class="glass-panel">
-            <h3>🏦 Gestion des Bookmakers</h3>
-            <div id="books-grid"></div>
-            <div style="display:flex; gap:5px; margin-top:15px;">
-                <input type="text" id="new-bk-name" placeholder="Nom du bookmaker">
-                <button onclick="addBook()" class="btn-main" style="width:auto;">+</button>
+        <div class="glass-panel" style="margin-bottom:20px;">
+            <h3 style="color:var(--accent-cyan); font-size:14px; margin-bottom:10px;">BILAN GÉNÉRAL</h3>
+            <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px;">
+                <div style="background:rgba(255,255,255,0.05); padding:10px; border-radius:8px; text-align:center;">
+                    <div style="font-size:10px; opacity:0.7;">BÉNÉFICE TOTAL</div>
+                    <div id="stat-profit" style="font-weight:bold; color:var(--win-green); font-size:18px;">0.00€</div>
+                </div>
+                <div style="background:rgba(255,255,255,0.05); padding:10px; border-radius:8px; text-align:center;">
+                    <div style="font-size:10px; opacity:0.7;">TAUX DE RÉUSSITE</div>
+                    <div id="stat-winrate" style="font-weight:bold; color:white; font-size:18px;">0%</div>
+                </div>
             </div>
         </div>
 
-        <div class="glass-panel">
-            <h3>📏 Mes Unités (Teams)</h3>
-            <table id="u-mgr-list"></table>
-            <div style="background: rgba(0,0,0,0.2); padding: 10px; border-radius: 8px; margin-top: 10px;">
-                <input type="text" id="u-n-add" placeholder="Nom de l'unité (ex: OL)">
-                <select id="u-s-add">
-                    <option value="1">Strat 1 (Défensive)</option>
-                    <option value="2">Strat 2 (Standard)</option>
-                    <option value="3">Strat 3 (Agressive)</option>
-                    <option value="4">Strat 4 (High Stake)</option>
-                    <option value="5">Strat 5 (Whale)</option>
-                </select>
-                <button class="btn-main" onclick="addUnit()">AJOUTER L'ÉQUIPE</button>
-            </div>
-        </div>
+            <h3 style="color:white; font-size:16px; margin-bottom:10px;">⭐ Performances par Équipes</h3>
+            <div id="stats-favoris-list"></div> 
+
+            <h3 style="color:white; font-size:16px; margin: 20px 0 10px;">🏦 Par Bookmaker</h3>
+            <div id="stats-books-list" class="glass-panel" style="display: flex; flex-direction: column; gap: 10px;"></div>
+
+           <!-- NIVEAU 2 : LA PAGE DÉDIÉE (Cachée par défaut) -->
+    <div id="bilan-page-equipe" style="display:none;">
+        <!-- Le contenu sera injecté ici par JavaScript quand tu cliqueras sur Lyon -->
     </div>
 </div>
 
-<!-- NAVIGATION BASSE -->
-<div class="bottom-nav">
-    <button class="nav-item active" onclick="showTab('tab-dashboard', this)"><i>🏠</i>Dashboard</button>
-    <button class="nav-item" onclick="showTab('tab-equipes', this)"><i>📊</i>Équipes</button>
-    <button class="nav-item" onclick="showTab('tab-archives', this)"><i>📜</i>Archives</button>
-    <button class="nav-item" onclick="showTab('tab-settings', this)"><i>⚙️</i>Admin</button>
-</div>
+        <!-- 5. BANKROLL & SETUP -->
+        <div id="bank-mgr" class="tab-content">
+            <div class="form-box">
+                <label>DÉPÔT / RETRAIT</label>
+                <div style="display:grid; grid-template-columns: 1fr 1fr 100px; gap:10px; margin-top:5px;">
+                    <select id="move-book-select"></select> 
+                    <input type="number" id="move-amount" placeholder="Montant €">
+                    <div style="display:flex; gap:5px;">
+                        <button class="btn-win" onclick="handleFund(true)">+</button>
+                        <button class="btn-loss" onclick="handleFund(false)">-</button>
+                    </div>
+                </div>
+            </div>
 
-<!-- MODALE DÉTAILS ÉQUIPE -->
-<div id="modal-details" class="modal">
-    <div class="glass-panel" id="modal-content" style="max-width: 500px; margin: 20% auto;"></div>
-</div>
-        <!-- 
-    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-    STAGE 3 : LOGIQUE (JAVASCRIPT) - VERSION OPTIMISÉE
-    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 
--->
-<script>
-// --- CONFIGURATION DES STRATÉGIES ---
-const STRATS = {
-    1: [10, 15, 25, 40, 65], // Défensive
-    2: [20, 35, 60, 100, 170], // Standard
-    3: [50, 90, 160, 280, 480], // Agressive
-    4: [100, 180, 320, 560, 950], // High Stake
-    5: [200, 360, 640, 1100, 1900] // Whale
-};
+            <div class="form-box">
+                <label>CRÉER UN BOOKMAKER</label>
+                <div style="display:flex; gap:10px; margin-top:5px;">
+                    <input id="new-bk-name" placeholder="Nom...">
+                    <button class="btn-action" style="width:100px; margin:0;" onclick="addBook()">OK</button>
+                </div>
+            </div>
 
-// --- ÉTAT INITIAL ---
-let state = JSON.parse(localStorage.getItem('gones_data')) || {
-    b: [{ n: 'Winamax', v: 15000 }], // Capital initial exemple
-    u: [], // Tes unités (OL, PSG, etc.)
-    h: [], // Historique des paris finis
-    l: []  // Paris en cours
-};
+            <div id="books-grid" class="stats-grid"></div>
 
-const start_bk = 15000; // Ton dépôt total pour le calcul du profit
+            <div class="form-box" style="margin-top:20px;">
+                <label>UNITÉS DE MISE (STRATÉGIE)</label>
+                <div style="display:grid; grid-template-columns: 1fr 80px 80px; gap:10px; margin:10px 0;">
+                    <input id="u-n-add" placeholder="Nom (Ex: OL)">
+                    <select id="u-s-add">
+                        <option value="1">1⭐</option><option value="2">2⭐</option><option value="3">3⭐</option><option value="4">4⭐</option><option value="5">5⭐</option>
+                    </select>
+                    <button class="btn-action" style="margin:0" onclick="addUnit()">ADD</button>
+                </div>
+                <div class="glass-panel" style="background:rgba(0,0,0,0.4)">
+                    <table><tbody id="u-mgr-list"></tbody></table>
+                </div>
+            </div>
 
-// --- FONCTIONS DE SAUVEGARDE ET D'AFFICHAGE ---
-function save() {
-    localStorage.setItem('gones_data', JSON.stringify(state));
+            <div class="form-box" style="border: 1px dashed #334155;">
+                <label>DONNÉES & BACKUP</label>
+                <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px; margin-top:10px;">
+                    <button class="btn-action" onclick="exportData()" style="background:#0ea5e9;">EXPORTER</button>
+                    <button class="btn-action" onclick="importData()" style="background:#64748b;">IMPORTER</button>
+                </div>
+            </div>
+        </div> <!-- FIN DE BANK-MGR -->
+    </main>
+
+  <nav class="nav-bar">
+    <div class="nav-item active" onclick="showTab('dash', this)">
+        <i class="fa-solid fa-chart-pie"></i>MUR
+    </div>
+    <div class="nav-item" onclick="showTab('p-betting-hub', this)">
+        <i class="fa-solid fa- football"></i>PARI SPORTIF
+    </div>
+    <div class="nav-item" onclick="showTab('arch', this)">
+        <i class="fa-solid fa-clock-rotate-left"></i>ARCHIVE
+    </div>
+    
+    <!-- Nouvel onglet ÉQUIPES bien intégré -->
+    <div class="nav-item" onclick="showTab('tab-equipes', this)">
+        <i class="fa-solid fa-star"></i>ÉQUIPES
+    </div>
+
+    <div class="nav-item" onclick="showTab('p-bilan', this)">
+        <i class="fa-solid fa-chart-line"></i>BILAN
+    </div>
+    <div class="nav-item" onclick="showTab('bank-mgr', this)">
+        <i class="fa-solid fa-wallet"></i>BANK
+    </div>
+</nav>
+    
+    <!-- La page qui s'affiche quand tu cliques sur l'étoile -->
+<section id="tab-equipes" class="tab-content" style="display:none; padding:15px;">
+    <div class="header-main">
+        <h2 style="color:white; margin:0;">⭐ Mes Équipes</h2>
+        <p style="font-size:12px; opacity:0.6;">Analyses et performances détaillées</p>
+    </div>
+
+    <!-- Le JavaScript injectera l'OL, Boca, etc. ici -->
+    <div id="page-bilan-equipes" style="margin-top:20px;"></div>
+</section>
+
+    <!-- ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+         STAGE 3 : LOGIQUE (JAVASCRIPT)
+         ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ -->
+    <script>
+        let state = JSON.parse(localStorage.getItem('gones_state')) || {
+            b: { "winamax": 0 }, u: [], h: [], a: [], start_bk: 0
+        };
+
+        const STRATS = {
+            "1": [1, 2, 6, 18, 54, 162, 486, 1458],
+            "2": [2, 4, 12, 36, 108, 324, 972, 2916],
+            "3": [2, 4, 12, 36, 108, 324, 972, 2916], // Basé sur tes préférences
+            "4": [5, 10, 30, 90, 270, 810, 2430, 7290],
+            "5": [10, 20, 60, 180, 540, 1620, 4860, 14580]
+        };
+
+        function save() {
+            localStorage.setItem('gones_state', JSON.stringify(state));
+            render();
+        }
+
+       function pari(isS) {
+    let n, b, c, m, target, type, l = 1, sport = "";
+    const now = new Date();
+    const time = now.toLocaleDateString('fr-FR', {day:'2-digit', month:'2-digit'}) + ' ' + now.toLocaleTimeString('fr-FR', {hour:'2-digit', minute:'2-digit'});
+
+    // Récupération des nouveaux champs (pour les deux modes)
+    const competition = document.getElementById('n-comp') ? document.getElementById('n-comp').value : "-";
+    const analysis = document.getElementById('n-analysis') ? document.getElementById('n-analysis').value : "";
+
+    if (isS) {
+        const uObj = state.u.find(x => x.n === document.getElementById('c-unit').value);
+        if (!uObj) return alert("Crée une unité !");
+        n = uObj.n; 
+        target = document.getElementById('c-target').value || "-";
+        type = document.getElementById('c-type') ? document.getElementById('c-type').value : "-";
+        b = document.getElementById('c-book').value;
+        c = parseFloat(document.getElementById('c-cote').value) || 0;
+        m = parseFloat(document.getElementById('c-mise').value) || 0;
+        l = uObj.l;
+    } else {
+        n = "SIMPLE"; 
+        sport = document.getElementById('p-sport').value;
+        // On utilise l'Analyse ou la Compétition comme nom principal
+        const comp = document.getElementById('n-comp').value;
+        const analysis = document.getElementById('n-analysis').value;
+        target = analysis || comp || "Pari Simple"; 
+        
+        type = document.getElementById('n-type').value || "-";
+        b = document.getElementById('n-book').value;
+        c = parseFloat(document.getElementById('n-cote').value.replace(',', '.')) || 0;
+        m = parseFloat(document.getElementById('n-mise').value) || 0;
+    }
+
+    // Vérification du solde
+    if (m > 0 && (state.b[b] || 0) >= m) {
+        state.b[b] = (parseFloat(state.b[b]) - m).toFixed(2);
+        
+        const newPari = { 
+            id: Date.now().toString(), 
+            n, target, b, l, m, cote: c, isS, t: time,
+            sport: sport,
+            type: type
+        };
+
+        state.h.unshift(newPari);
+        save();
+        
+        // --- FORCE L'AFFICHAGE DANS LE TABLEAU ---
+        render(); // Cette fonction doit exister chez toi pour rafraîchir les listes
+        
+        // Nettoyage des champs
+        if (isS) {
+            document.getElementById('c-target').value = "";
+        } else {
+            document.getElementById('n-comp').value = "";
+            document.getElementById('n-type').value = "";
+            document.getElementById('n-analysis').value = "";
+        }
+    } else {
+        alert("Solde insuffisant sur " + b + " !");
+    }
+}
+
+        function result(id, win) {
+    const idx = state.h.findIndex(x => x.id === id);
+    if (idx === -1) return;
+    const bet = state.h[idx];
+
+    // 1. Demande de débrief à la validation (Optionnel : clic sur Annuler = Pas de note)
+    const debrief = prompt(`Note de débrief (${win ? 'WIN ✅' : 'LOSS ❌'}) :`, "");
+
+    // 2. Logique de paiement et de paliers (Ta logique actuelle)
+    if (win) {
+        state.b[bet.b] = (parseFloat(state.b[bet.b]) + (bet.m * bet.cote)).toFixed(2);
+        // Si c'est un pari stratégique, on reset l'unité au palier 1
+        if (bet.isS) { 
+            const u = state.u.find(x => x.n === bet.n); 
+            if(u) u.l = 1; 
+        }
+    } else if (bet.isS) {
+        // Si c'est une perte en stratégie, on monte de palier (max P8)
+        const u = state.u.find(x => x.n === bet.n);
+        if(u && u.l < 8) u.l++;
+    }
+
+    // 3. Archivage avec tes nouvelles données (Analyse + Débrief)
+    state.a.unshift({ 
+        ...bet, 
+        win, 
+        debrief: debrief || "Aucun débrief",
+        // L'analyse doit avoir été saisie lors de la création du pari
+        analysis: bet.analysis || "Aucune analyse" 
+    });
+
+    // 4. Nettoyage et sauvegarde
+   state.h.splice(idx, 1);
+    save();
+    updMise();
+    render(); // Pour rafraîchir l'affichage direct
+}
+
+        function handleFund(add) {
+            const b = document.getElementById('move-book-select').value;
+            const amt = parseFloat(document.getElementById('move-amount').value);
+            if(!b || isNaN(amt)) return;
+            state.b[b] = (parseFloat(state.b[b] || 0) + (add ? amt : -amt)).toFixed(2);
+            if(add) state.start_bk += amt;
+            save();
+        }
+
+        function updMise() {
+            const u = state.u.find(x => x.n === document.getElementById('c-unit').value);
+            if (u) document.getElementById('c-mise').value = STRATS[u.s][u.l-1];
+        }
+
+        function addBook() {
+    const nameInput = document.getElementById('new-bk-name');
+    const name = nameInput.value.trim().toLowerCase();
+    
+    if(name) {
+        if (state.b[name] !== undefined) return alert("Existe déjà !");
+        
+        // Demande le solde initial à la création
+        const initialAmount = parseFloat(prompt(`Solde de départ pour ${name.toUpperCase()} ?`, "0")) || 0;
+        
+        state.b[name] = initialAmount.toFixed(2);
+        // On ajuste le capital de départ pour que le bénéfice reste à 0 au début
+        state.start_bk += initialAmount; 
+        
+        nameInput.value = "";
+        save();
+    }
+}
+
+function editBook(n) {
+    const current = parseFloat(state.b[n]);
+    const promptValue = prompt(`Nouveau solde pour ${n.toUpperCase()} ?`, current);
+    
+    // On vérifie si l'utilisateur n'a pas cliqué sur "Annuler"
+    if (promptValue !== null) {
+        const next = parseFloat(promptValue);
+        
+        if (!isNaN(next)) {
+            const diff = next - current;
+            
+            // On stocke un nombre (float) et non une string
+            state.b[n] = next; 
+            
+            // Ajustement du capital de départ pour garder un ROI cohérent
+            state.start_bk += diff; 
+            
+            save();   // Sauvegarde locale
+            render(); // Mise à jour visuelle immédiate
+        }
+    }
+}
+        function addUnit() {
+            const n = document.getElementById('u-n-add').value.trim().toUpperCase();
+            if(n) { state.u.push({ n, s: document.getElementById('u-s-add').value, l: 1 }); save(); }
+        }
+
+        function render() {
+    // 1. Calculs des totaux (Capital et Bénéfice)
+    const total = Object.values(state.b).reduce((a, v) => a + parseFloat(v), 0);
+    document.getElementById('d-cap').innerText = total.toFixed(2) + "€";
+    const ben = total - state.start_bk;
+    document.getElementById('d-ben').innerText = (ben >= 0 ? "+" : "") + ben.toFixed(2) + "€";
+    document.getElementById('d-ben').style.color = ben >= 0 ? "#22c55e" : "#da0812";
+
+    // 2. Mise à jour des listes déroulantes (Books et Unités)
+    const bOpt = Object.keys(state.b).map(k => `<option value="${k}">${k.toUpperCase()}</option>`).join('');
+    ['c-book', 'n-book', 'move-book-select'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.innerHTML = bOpt;
+    });
+    
+    const uSelect = document.getElementById('c-unit');
+    if (uSelect) {
+        uSelect.innerHTML = state.u.map(u => `<option value="${u.n}">${u.n} (P${u.l})</option>`).join('');
+    }
+
+    // 3. Affichage des paris en cours (Stratégie)
+    document.getElementById('h-live-strat').innerHTML = state.h.filter(x => x.isS).map(h => `
+        <tr><td>${h.n}</td><td>${h.target}</td><td>${h.m}€</td>
+        <td style="text-align:right"><button class="btn-win" onclick="result('${h.id}',true)">W</button> 
+        <button class="btn-loss" onclick="result('${h.id}',false)">L</button></td></tr>`).join('');
+
+    
+ //4. Affichage des paris en cours (Simples) avec Compétition et Type
+document.getElementById('h-live-norm').innerHTML = state.h.filter(x => !x.isS).map(h => `
+    <tr>
+        <td style="padding: 10px 5px;">
+            <div style="font-size: 10px; color: var(--accent-cyan); text-transform: uppercase;">${h.comp || 'SANS COMPÉ'}</div>
+            <div style="font-weight: bold;">${h.target}</div>
+            <div style="font-size: 11px; color: #94a3b8;">${h.type || '-'} @${h.cote}</div>
+        </td>
+        <td style="vertical-align: middle;">
+            <div style="font-weight: bold; color: var(--accent-cyan);">${h.m}€</div>
+            <div style="font-size: 9px; opacity: 0.7;">${h.b.toUpperCase()}</div>
+        </td>
+        <td style="text-align: right; vertical-align: middle;">
+            <button class="btn-win" onclick="result('${h.id}',true)" style="padding: 5px 10px; margin-right: 5px;">W</button> 
+            <button class="btn-loss" onclick="result('${h.id}',false)" style="padding: 5px 10px;">L</button>
+        </td>
+    </tr>`).join('');
+
+    // 5. Historique (Archive)
+   document.getElementById('arch-finished-list').innerHTML = state.a.slice(0,10).map(h => `
+    <tr>
+        <td title="ANALYSE: ${h.analysis}\nDEBRIEF: ${h.debrief}">
+            ${h.t}<br>
+            <small style="color:var(--accent-cyan); cursor:help;">ℹ️ Détails notes</small>
+        </td>
+        <td><b>${h.target}</b><br><small>${h.type || ''}</small></td>
+        <td>${h.m}€<br><small>@${h.cote}</small></td>
+        <td style="color:${h.win ? '#22c55e' : '#da0812'}">${h.win ? 'WIN' : 'LOSS'}</td>
+        <td style="text-align:right"><b>${h.win ? (h.m*h.cote).toFixed(2) : '0'}€</b></td>
+    </tr>`).join('');
+
+    // 6. GRILLE DES BOOKS (Avec le nouveau bouton MODIFIER)
+    document.getElementById('books-grid').innerHTML = Object.entries(state.b).map(([n, v]) => `
+        <div class="stat-card" style="border-bottom: 4px solid var(--ol-blue);">
+            <label>${n.toUpperCase()}</label>
+            <div class="stat-val">${parseFloat(v).toFixed(2)}€</div>
+            <div style="display:flex; justify-content:center; gap:10px; margin-top:10px;">
+                <button onclick="editBook('${n}')" style="background:none; border:1px solid var(--accent-cyan); color:var(--accent-cyan); font-size:9px; padding:2px 5px; border-radius:4px; cursor:pointer;">MODIFIER</button>
+                <button onclick="if(confirm('Supprimer ${n} ?')){delete state.b['${n}'];save();}" style="background:none; border:none; color:var(--ol-red); font-size:9px; cursor:pointer;">SUPPRIMER</button>
+            </div>
+        </div>`).join('');
+
+    // 7. Gestion des Unités
+    document.getElementById('u-mgr-list').innerHTML = state.u.map((u, i) => `
+        <tr><td><b>${u.n}</b></td><td>${"⭐".repeat(u.s)}</td><td>P${u.l}</td>
+        <td><button onclick="state.u.splice(${i},1);save()" style="background:none;border:none;color:red;">X</button></td></tr>`).join('');
+    
+    // 8. Résumé Dashboard
+    document.getElementById('dash-summary').innerHTML = state.u.map(u => `
+        <tr><td>${u.n}</td><td>${"⭐".repeat(u.s)}</td><td>P${u.l}</td><td style="text-align:right; color:var(--accent-cyan)">ACTIF</td></tr>`).join('');
+
+        //9 --- CALCUL DU BILAN BOOSTS ---
+const boosts = state.a.filter(h => h.type && h.type.toLowerCase().includes('boost'));
+const boostProfit = boosts.reduce((acc, h) => acc + (h.win ? (h.m * h.cote) - h.m : -h.m), 0);
+const boostWinrate = boosts.length > 0 ? (boosts.filter(h => h.win).length / boosts.length * 100).toFixed(0) : 0;
+
+document.getElementById('stat-boost-profit').innerText = (boostProfit >= 0 ? "+" : "") + boostProfit.toFixed(2) + "€";
+document.getElementById('stat-boost-profit').style.color = boostProfit >= 0 ? "var(--win-green)" : "var(--ol-red)";
+document.getElementById('stat-boost-rate').innerText = boostWinrate + "%";
+
+// 10--- CALCUL DU BILAN PAR BOOKMAKER ---
+const booksStats = {};
+// On initialise avec tes books actuels
+Object.keys(state.b).forEach(b => booksStats[b] = 0);
+
+// 11   On calcule le profit par book dans les archives
+state.a.forEach(h => {
+    const p = h.win ? (h.m * h.cote) - h.m : -h.m;
+    booksStats[h.b] = (booksStats[h.b] || 0) + p;
+});
+
+document.getElementById('stats-books-list').innerHTML = Object.entries(booksStats).map(([name, profit]) => `
+    <div style="display:flex; justify-content:space-between; padding:5px 10px; background:rgba(255,255,255,0.03); border-radius:5px;">
+        <span style="text-transform:uppercase; font-size:12px;">${name}</span>
+        <span style="font-weight:bold; color:${profit >= 0 ? 'var(--win-green)' : 'var(--ol-red)'};">
+            ${profit >= 0 ? '+' : ''}${profit.toFixed(2)}€
+        </span>
+    </div>
+`).join('');
+            
+     // 12. --- NETTOYAGE DU DASHBOARD ---
+    const dashFavoris = document.getElementById('stats-favoris-list');
+    if (dashFavoris) { 
+        dashFavoris.innerHTML = ""; 
+    }
+// 13. --- LOGIQUE DE LA PAGE DÉDIÉE "ÉQUIPES" ---
+const pageEquipes = document.getElementById('page-bilan-equipes');
+if (pageEquipes) {
+    if (state.u && state.u.length > 0) {
+        pageEquipes.innerHTML = `
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 15px;">
+                ${state.u.map(unite => {
+                    const parisDuFavori = state.a.filter(h => h.n === unite.n);
+                    const profit = parisDuFavori.reduce((acc, h) => acc + (h.win ? (h.m * h.cote) - h.m : -h.m), 0);
+                    const winrate = parisDuFavori.length > 0 ? (parisDuFavori.filter(h => h.win).length / parisDuFavori.length * 100).toFixed(0) : 0;
+                    const coteMoy = parisDuFavori.length > 0 ? (parisDuFavori.reduce((acc, h) => acc + h.cote, 0) / parisDuFavori.length).toFixed(2) : "0.00";
+
+                    // --- C'EST ICI QU'ON AJOUTE LE CLIC (onclick) ---
+                    return `
+                        <div class="glass-panel" 
+                             onclick="openDetails('${unite.n}')" 
+                             style="cursor:pointer; border-left: 4px solid var(--ol-blue); background: rgba(255,255,255,0.03); padding: 15px; border-radius: 12px; display: flex; flex-direction: column; justify-content: space-between; transition: 0.2s;">
+                            
+                            <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:15px;">
+                                <div>
+                                    <h3 style="margin:0; color:white; font-size:18px;">${unite.n.toUpperCase()}</h3>
+                                    <span style="font-size:10px; opacity:0.6;">${parisDuFavori.length} PARIS ANALYSÉS</span>
+                                </div>
+                                <div style="font-weight:bold; font-size:18px; color:${profit >= 0 ? 'var(--win-green)' : 'var(--ol-red)'};">
+                                    ${profit >= 0 ? '+' : ''}${profit.toFixed(2)}€
+                                </div>
+                            </div>
+
+                            <div style="height:100px; background:rgba(0,0,0,0.4); border-radius:10px; margin-bottom:15px; display:flex; align-items:center; justify-content:center; border:1px solid rgba(255,255,255,0.1);">
+                                <span style="font-size:9px; color:var(--accent-cyan); text-align:center; padding:5px;">📊 VOIR LES STATS DÉTAILLÉES</span>
+                            </div>
+
+                            <div style="display:grid; grid-template-columns: repeat(3, 1fr); gap:8px;">
+                                <div style="background:rgba(255,255,255,0.05); padding:8px; border-radius:8px; text-align:center;">
+                                    <div style="font-size:8px; opacity:0.6; margin-bottom:2px;">WINRATE</div>
+                                    <div style="font-size:12px; font-weight:bold;">${winrate}%</div>
+                                </div>
+                                <div style="background:rgba(255,255,255,0.05); padding:8px; border-radius:8px; text-align:center;">
+                                    <div style="font-size:8px; opacity:0.6; margin-bottom:2px;">COTE MOY.</div>
+                                    <div style="font-size:12px; font-weight:bold;">${coteMoy}</div>
+                                </div>
+                                <div style="background:rgba(255,255,255,0.05); padding:8px; border-radius:8px; text-align:center;">
+                                    <div style="font-size:8px; opacity:0.6; margin-bottom:2px;">UNITÉ</div>
+                                    <div style="font-size:12px; font-weight:bold; color:var(--accent-cyan);">P${unite.l}</div>
+                                </div>
+                            </div>
+                        </div>`;
+                }).join('')}
+            </div>`;
+    } else {
+        pageEquipes.innerHTML = `<div style="text-align:center; padding:50px; opacity:0.5;">Aucune équipe favorite.</div>`;
+    }
+}
+     // Fin du if(pageEquipes)
+
+} // <--- C'EST CETTE ACCOLADE QUI FERME LA FONCTION RENDER()
+
+        // ... tes autres fonctions (save, render, pari, etc.)
+
+// --- GESTION DES DÉTAILS ÉQUIPES (PC & MOBILE) ---
+function openDetails(nom) {
+    const modal = document.getElementById('modal-details');
+    const content = document.getElementById('modal-content');
+    
+    const unite = state.u.find(u => u.n === nom);
+    const paris = state.a.filter(h => h.n === nom);
+    
+    const profit = paris.reduce((acc, h) => acc + (h.win ? (h.m * h.cote) - h.m : -h.m), 0);
+    const winrate = paris.length > 0 ? (paris.filter(h => h.win).length / paris.length * 100).toFixed(0) : 0;
+
+    // CORRECTION : Ajout d'un bouton de fermeture et d'un conteneur propre
+    content.innerHTML = `
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
+            <h2 style="font-size:24px; color:white; margin:0;">${nom.toUpperCase()}</h2>
+            <button onclick="closeDetails()" style="background:none; border:none; color:white; font-size:24px; cursor:pointer;">&times;</button>
+        </div>
+        
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:20px;">
+            <div class="stat-card" style="text-align:center; background:rgba(255,255,255,0.05); padding:15px; border-radius:10px;">
+                <label style="font-size:10px; opacity:0.7;">PROFIT TOTAL</label>
+                <div style="font-size:20px; font-weight:bold; color:${profit >= 0 ? 'var(--win-green)' : 'var(--ol-red)'}">${profit.toFixed(2)}€</div>
+            </div>
+            <div class="stat-card" style="text-align:center; background:rgba(255,255,255,0.05); padding:15px; border-radius:10px;">
+                <label style="font-size:10px; opacity:0.7;">RÉUSSITE</label>
+                <div style="font-size:20px; font-weight:bold; color:white;">${winrate}%</div>
+            </div>
+        </div>
+
+        <div style="height:250px; position:relative; background:rgba(0,0,0,0.4); border-radius:12px; padding:10px; border:1px solid rgba(255,255,255,0.1);">
+             <canvas id="chart-mobile"></canvas>
+        </div>
+    `;
+    
+    modal.style.display = 'block';
+    document.body.style.overflow = 'hidden';
+
+    // CORRECTION : Appeler la création du graphique ici
+    if (paris.length > 0) {
+        renderMiniChart('chart-mobile', paris);
+    }
+}
+
+// Fonction indispensable pour refermer la modale
+function closeDetails() {
+    document.getElementById('modal-details').style.display = 'none';
+    document.body.style.overflow = 'auto'; // Réactive le scroll
+}
+// Fermer la fenêtre si on clique en dehors de la boîte blanche
+window.onclick = function(event) {
+    const modal = document.getElementById('modal-details');
+    if (event.target == modal) {
+        closeDetails();
+    }
+}
+        
+        function showTab(id, btn) {
+    // On cache TOUTES les pages d'un coup
+    const pages = document.getElementsByClassName('tab-content');
+    for (let i = 0; i < pages.length; i++) {
+        pages[i].style.display = 'none';
+    }
+
+    // On affiche la page sur laquelle on a cliqué
+    const pageAffichee = document.getElementById(id);
+    if (pageAffichee) {
+        pageAffichee.style.display = 'block';
+    }
+
+    // On change la couleur du bouton dans le menu
+    const boutons = document.getElementsByClassName('nav-item');
+    for (let i = 0; i < boutons.length; i++) {
+        boutons[i].classList.remove('active');
+    }
+    if (btn) btn.classList.add('active');
+
+    // On recalcule les stats (OL, Winamax, etc.)
     render();
 }
 
-function render() {
-    renderDashboard();
-    renderEquipes();
-    renderArchives();
-    renderSettings();
-}
-
-function renderDashboard() {
-    // Calcul du capital total
-    const total = state.b.reduce((acc, curr) => acc + curr.v, 0);
-    const profit = total - start_bk;
-    
-    document.getElementById('d-cap').innerText = total.toFixed(2) + "€";
-    const benEl = document.getElementById('d-ben');
-    benEl.innerText = (profit >= 0 ? "+" : "") + profit.toFixed(2) + "€";
-    benEl.style.color = profit >= 0 ? "var(--win-green)" : "var(--ol-red)";
-
-    // Liste des unités dans le menu déroulant
-    const sel = document.getElementById('c-unit');
-    sel.innerHTML = state.u.map(unit => `<option value="${unit.n}">${unit.n} (P${unit.p})</option>`).join('');
-    
-    // Liste des bookmakers
-    const bSel = document.getElementById('c-book');
-    const nBSel = document.getElementById('n-book');
-    const booksHtml = state.b.map(b => `<option value="${b.n}">${b.n} (${b.v.toFixed(2)}€)</option>`).join('');
-    bSel.innerHTML = booksHtml;
-    nBSel.innerHTML = booksHtml;
-
-    renderLiveBets();
-    updMise();
-}
-
-function renderEquipes() {
-    const container = document.getElementById('page-bilan-equipes');
-    if (!container) return;
-    container.innerHTML = state.u.map(unit => `
-        <div class="glass-panel">
-            <div style="display:flex; justify-content:space-between;">
-                <h3 style="margin:0; color:var(--accent-cyan);">${unit.n}</h3>
-                <span class="btn-mini">Strat ${unit.s}</span>
-            </div>
-            <div style="margin-top:10px; display:grid; grid-template-columns:1fr 1fr; gap:10px;">
-                <div class="mini-stat">Palier actuel: <b>P${unit.p}</b></div>
-                <div class="mini-stat">Profit: <b style="color:${unit.pr >= 0 ? 'var(--win-green)' : 'var(--ol-red)'}">${unit.pr.toFixed(2)}€</b></div>
-            </div>
-        </div>
-    `).join('');
-}
-
-// --- LOGIQUE DES PARIS ---
-function updMise() {
-    const name = document.getElementById('c-unit').value;
-    const unit = state.u.find(u => u.n === name);
-    if (unit) {
-        document.getElementById('c-mise').value = STRATS[unit.s][unit.p - 1];
-    }
-}
-
-function pari(isStrat) {
-    const bookName = isStrat ? document.getElementById('c-book').value : document.getElementById('n-book').value;
-    const mise = parseFloat(isStrat ? document.getElementById('c-mise').value : document.getElementById('n-mise').value);
-    const book = state.b.find(b => b.n === bookName);
-
-    if (book.v < mise) return alert("Fonds insuffisants sur " + bookName);
-
-    const newBet = {
-        id: Date.now(),
-        isStrat: isStrat,
-        unit: isStrat ? document.getElementById('c-unit').value : "Simple",
-        target: isStrat ? document.getElementById('c-target').value : document.getElementById('p-sport').value,
-        type: isStrat ? document.getElementById('c-type').value : document.getElementById('n-type').value,
-        cote: parseFloat(isStrat ? document.getElementById('c-cote').value : document.getElementById('n-cote').value),
-        mise: mise,
-        book: bookName
-    };
-
-    book.v -= mise;
-    state.l.push(newBet);
-    save();
-}
-
-function resolveBet(id, win) {
-    const idx = state.l.findIndex(b => b.id === id);
-    const bet = state.l[idx];
-    const book = state.b.find(b => b.n === bet.book);
-
-    if (win) {
-        const gain = bet.mise * bet.cote;
-        book.v += gain;
-        if (bet.isStrat) {
-            const unit = state.u.find(u => u.n === bet.unit);
-            unit.pr += (gain - bet.mise);
-            unit.p = 1; // Reset au P1 après une gagne
+        function exportData() {
+            const data = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(state));
+            const a = document.createElement('a'); a.href = data; a.download = "gones45_backup.json"; a.click();
         }
+
+        function importData() {
+            const i = document.createElement('input'); i.type = 'file';
+            i.onchange = e => {
+                const r = new FileReader(); r.onload = ev => { state = JSON.parse(ev.target.result); save(); location.reload(); };
+                r.readAsText(e.target.files[0]);
+            }; i.click();
+        }
+
+        window.onload = () => { render(); updMise(); };
+       function switchBetMode(mode) {
+    const isStrat = mode === 'strat';
+    document.getElementById('sub-strat').style.display = isStrat ? 'block' : 'none';
+    document.getElementById('sub-simple').style.display = isStrat ? 'none' : 'block';
+    
+    const btnStrat = document.getElementById('btn-switch-strat');
+    const btnSimple = document.getElementById('btn-switch-simple');
+    
+    if(isStrat) {
+        btnStrat.style.background = 'var(--ol-blue)'; btnStrat.style.color = 'white';
+        btnSimple.style.background = 'none'; btnSimple.style.color = '#94a3b8';
     } else {
-        if (bet.isStrat) {
-            const unit = state.u.find(u => u.n === bet.unit);
-            unit.pr -= bet.mise;
-            unit.p = unit.p < 5 ? unit.p + 1 : 1; // Monte au palier suivant ou reset si P5 perdu
-        }
+        btnSimple.style.background = 'var(--ol-blue)'; btnSimple.style.color = 'white';
+        btnStrat.style.background = 'none'; btnStrat.style.color = '#94a3b8';
     }
-
-    state.h.push({...bet, win: win, date: new Date().toLocaleDateString()});
-    state.l.splice(idx, 1);
-    save();
-}
-
-function renderLiveBets() {
-    const stratTbody = document.getElementById('h-live-strat');
-    stratTbody.innerHTML = state.l.map(b => `
-        <tr>
-            <td>${b.unit} - ${b.target}<br><small>${b.type} @${b.cote}</small></td>
-            <td>${b.mise}€</td>
-            <td style="text-align:right">
-                <button class="btn-win" onclick="resolveBet(${b.id}, true)">G</button>
-                <button class="btn-loss" onclick="resolveBet(${b.id}, false)">P</button>
-            </td>
-        </tr>
-    `).join('');
-}
-
-// --- GESTION ADMIN ---
-function addUnit() {
-    const name = document.getElementById('u-n-add').value;
-    if (!name) return;
-    state.u.push({ n: name, s: parseInt(document.getElementById('u-s-add').value), p: 1, pr: 0 });
-    save();
-}
-
-function showTab(tabId, btn) {
-    document.querySelectorAll('.tab-content').forEach(t => t.style.display = 'none');
-    document.getElementById(tabId).style.display = 'block';
-    document.querySelectorAll('.nav-item').forEach(b => b.classList.remove('active'));
-    btn.classList.add('active');
-}
-
-function renderSettings() {
-    const list = document.getElementById('u-mgr-list');
-    list.innerHTML = state.u.map((u, i) => `
-        <tr>
-            <td><b>${u.n}</b></td>
-            <td>Strat ${u.s}</td>
-            <td>P${u.p}</td>
-            <td><button class="btn-mini-red" onclick="state.u.splice(${i},1); save()">X</button></td>
-        </tr>
-    `).join('');
-}
-
-// Lancement au démarrage
-window.onload = render;
-</script>
-        </body>
-</html>
+} 
+       <!-- FENÊTRE MODALE DES DÉTAILS ÉQUIPE -->
+<div id="modal-details" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.9); z-index:1000; overflow-y:auto;">
+    <div class="glass-panel" style="max-width:500px; margin:20px auto; position:relative; border:1px solid var(--accent-cyan);">
+        <!-- Le contenu sera injecté ici par la fonction openDetails -->
+        <div id="modal-content"></div>
+        
+        <button onclick="closeDetails()" class="btn-action" style="background:var(--ol-red); margin-top:20px;">
+            FERMER LA FICHE
+        </button>
+    </div>
+</div>
+           function renderMiniChart(canvasId, paris) {
+    const ctx = document.getElementById(canvasId).getContext('2d');
     
+    // On calcule l'évolution du capital point par point
+    let currentProfit = 0;
+    const dataPoints = paris.map(h => {
+        currentProfit += (h.win ? (h.m * h.cote) - h.m : -h.m);
+        return currentProfit.toFixed(2);
+    });
+
+    // On ajoute un point 0 au début pour la courbe
+    dataPoints.unshift(0);
+    const labels = dataPoints.map((_, i) => i);
+
+    // Si un graphique existe déjà sur ce canvas, on le détruit pour éviter les bugs
+    if (window.myMiniChart) { window.myMiniChart.destroy(); }
+
+    window.myMiniChart = new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: labels,
+            datasets: [{
+                label: 'Profit Evolution',
+                data: dataPoints,
+                borderColor: '#22d3ee', // Cyan accent
+                backgroundColor: 'rgba(34, 211, 238, 0.1)',
+                borderWidth: 2,
+                fill: true,
+                tension: 0.3,
+                pointRadius: 0
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: { legend: { display: false } },
+            scales: {
+                x: { display: false },
+                y: { 
+                    grid: { color: 'rgba(255,255,255,0.05)' },
+                    ticks: { color: '#94a3b8', font: { size: 10 } }
+                }
+            }
+        }
+    });
+}
+    </script>
+    
+</body>
+</html>
