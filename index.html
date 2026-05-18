@@ -337,13 +337,13 @@ input[type="date"],input[type="time"]{color-scheme:dark;}
     <div class="fc">
       <div class="g2" style="gap:9px;">
         <div class="fg"><label class="fl">Équipe</label><select id="c-unit" class="fi" onchange="updMise();renderCrash()"></select></div>
-        <div class="fg"><label class="fl">Sport</label><select id="c-sport" class="fi" onchange="updateCompList()">
+        <div class="fg"><label class="fl">Sport</label><select id="c-sport" class="fi">
           <option value="⚽">⚽ Football</option><option value="🏀">🏀 Basket</option>
           <option value="🎾">🎾 Tennis</option><option value="🏈">🏈 NFL</option>
           <option value="⚾">⚾ Baseball</option><option value="🏒">🏒 Hockey</option>
         </select></div>
-        <div class="fg"><label class="fl">Compétition</label><input id="c-comp" class="fi" placeholder="Ligue 1, CL…" list="comp-list" autocomplete="off"><datalist id="comp-list"></datalist></div>
-        <div class="fg"><label class="fl">Adversaire</label><input id="c-target" class="fi" placeholder="Ex : Real Madrid" list="adversaires-list" autocomplete="off" oninput="updateAdvList(this.value)"><datalist id="adversaires-list"></datalist></div>
+        <div class="fg"><label class="fl">Compétition</label><input id="c-comp" class="fi" placeholder="Ligue 1, CL…"></div>
+        <div class="fg"><label class="fl">Adversaire</label><input id="c-target" class="fi" placeholder="Ex : Real Madrid"></div>
         <div class="fg"><label class="fl">Bookmaker</label><select id="c-book" class="fi"></select></div>
         <div class="fg"><label class="fl" style="color:var(--g);">Mise (€)</label><input type="number" id="c-mise" class="fi" style="border-color:rgba(30,215,96,.25);"></div>
         <div class="fg"><label class="fl">Date</label><input type="date" id="c-date" class="fi"></div>
@@ -364,7 +364,7 @@ input[type="date"],input[type="time"]{color-scheme:dark;}
         </select></div>
         <div class="fg"><label class="fl">Date</label><input type="date" id="n-date" class="fi"></div>
         <div class="fg"><label class="fl">Heure</label><input type="time" id="n-heure" class="fi"></div>
-        <div class="fg"><label class="fl">Compétition</label><input id="n-comp" class="fi" placeholder="Ligue 1…" list="comp-list-simple" autocomplete="off"><datalist id="comp-list-simple"></datalist></div>
+        <div class="fg"><label class="fl">Compétition</label><input id="n-comp" class="fi" placeholder="Ligue 1…"></div>
         <div class="fg"><label class="fl">Type de pari</label><input id="n-type" class="fi" placeholder="Over 1.5…"></div>
         <div class="fg" style="grid-column:span 2"><label class="fl">Analyse</label><textarea id="n-analysis" class="fi" style="height:50px;resize:none;" placeholder="Raisons du pari…"></textarea></div>
         <div class="fg"><label class="fl">Cote</label><input type="number" id="n-cote" class="fi" value="1.50"></div>
@@ -418,7 +418,7 @@ input[type="date"],input[type="time"]{color-scheme:dark;}
       <button class="itab" onclick="swInner('graphiques',this)">Graphs</button>
       <button class="itab" onclick="swInner('archive',this)">Archive</button>
       <button class="itab" onclick="swInner('types',this)">Types</button>
-      <button class="itab" onclick="swInner('live',this);setTimeout(loadTeamLive,50)">🔴 Live</button>
+      <button class="itab" onclick="swInner('live',this);setTimeout(loadTeamLive,30)">🔴 Live</button>
     </div>
     <div id="ip-bilan" class="ipanel on"></div>
     <div id="ip-graphiques" class="ipanel"></div>
@@ -446,8 +446,8 @@ input[type="date"],input[type="time"]{color-scheme:dark;}
     <div class="calc-tabs">
       <button class="ctbtn on" id="ct-sb" onclick="swCalc('sb')">Surebet</button>
       <button class="ctbtn" id="ct-dt" onclick="swCalc('dt')">Dutching</button>
-      <button class="ctbtn" id="ct-vb" onclick="swCalc('vb')">Value</button>
       <button class="ctbtn" id="ct-lay" onclick="swCalc('lay')">⚖ Lay</button>
+      <button class="ctbtn" id="ct-vb" onclick="swCalc('vb')">Value</button>
     </div>
     <div id="calc-sb">
       <div class="g2" style="gap:8px;margin-bottom:8px;">
@@ -474,27 +474,13 @@ input[type="date"],input[type="time"]{color-scheme:dark;}
         <div class="cres-row"><span class="cres-l">Profit</span><span class="cres-v" id="dt-profit">—</span></div>
       </div>
     </div>
-    <!-- VALUE BET -->
-    <div id="calc-vb" style="display:none">
-      <div class="g2" style="gap:8px;margin-bottom:8px">
-        <div class="fg"><label class="fl">Proba estimée (%)</label><input type="number" id="vb-prob" class="fi" value="55" oninput="calcVb()"></div>
-        <div class="fg"><label class="fl">Cote proposée</label><input type="number" id="vb-cote" class="fi" value="2.10" step="0.01" oninput="calcVb()"></div>
-        <div class="fg" style="grid-column:span 2"><label class="fl">Mise (€)</label><input type="number" id="vb-mise" class="fi" value="10" oninput="calcVb()"></div>
-      </div>
-      <div class="calc-res">
-        <div class="cres-row"><span class="cres-l">Cote juste</span><span class="cres-v" id="vb-fair">—</span></div>
-        <div class="cres-row"><span class="cres-l">Edge</span><span class="cres-v" id="vb-edge">—</span></div>
-        <div class="cres-row"><span class="cres-l">EV</span><span class="cres-v" id="vb-ev">—</span></div>
-        <div class="cres-row"><span class="cres-l">Kelly %</span><span class="cres-v" id="vb-kelly">—</span></div>
-      </div>
-      <div id="vb-verdict" style="display:none;margin-top:9px;padding:10px;border-radius:var(--r6);text-align:center;font-size:13px;font-weight:700"></div>
-    </div>
+
     <!-- LAY -->
     <div id="calc-lay" style="display:none">
       <div style="display:flex;flex-direction:column;gap:6px;margin-bottom:12px">
         <label style="display:flex;align-items:center;gap:8px;padding:9px;background:rgba(240,176,32,.08);border:1px solid rgba(240,176,32,.2);border-radius:var(--r6);cursor:pointer">
           <input type="checkbox" id="lay-gorr" onchange="calcLay()" style="accent-color:var(--gold)">
-          <span style="font-size:11px;font-weight:700;color:var(--gold)">🎁 Gagner ou Remboursé (si pas gagnant)</span>
+          <span style="font-size:11px;font-weight:700;color:var(--gold)">🎁 Remboursé si pas gagnant</span>
         </label>
         <label style="display:flex;align-items:center;gap:8px;padding:9px;background:rgba(77,132,255,.08);border:1px solid rgba(77,132,255,.2);border-radius:var(--r6);cursor:pointer">
           <input type="checkbox" id="lay-usecomm" onchange="calcLay()" checked style="accent-color:var(--a)">
@@ -505,7 +491,7 @@ input[type="date"],input[type="time"]{color-scheme:dark;}
         <div class="fg"><label class="fl">Cote Back</label><input type="number" id="lay-back-cote" class="fi" value="2.50" step="0.01" style="color:var(--g);font-weight:700" oninput="calcLay()"></div>
         <div class="fg"><label class="fl">Mise Back (€)</label><input type="number" id="lay-back-mise" class="fi" value="10" oninput="calcLay()"></div>
         <div class="fg"><label class="fl">Cote Lay (Piwi)</label><input type="number" id="lay-lay-cote" class="fi" value="2.60" step="0.01" style="color:var(--r);font-weight:700" oninput="calcLay()"></div>
-        <div class="fg"><label class="fl">Commission % (gains)</label><input type="number" id="lay-commission" class="fi" value="3" oninput="calcLay()"></div>
+        <div class="fg"><label class="fl">Commission %</label><input type="number" id="lay-commission" class="fi" value="3" oninput="calcLay()"></div>
       </div>
       <div style="background:var(--bg3);border-radius:var(--r6);padding:9px 12px;margin-bottom:9px;display:flex;justify-content:space-between">
         <div><div style="font-size:8px;color:var(--t3);text-transform:uppercase;letter-spacing:.7px">Cote réelle</div><div id="lay-real-cote" style="font-size:20px;font-weight:800;color:var(--r)">—</div></div>
@@ -529,11 +515,25 @@ input[type="date"],input[type="time"]{color-scheme:dark;}
         </div>
         <div class="calc-res">
           <div class="cres-row"><span class="cres-l">Mise Lay</span><span class="cres-v" id="fb-lay-mise">—</span></div>
-          <div class="cres-row"><span class="cres-l">Responsabilité</span><span class="cres-v" id="fb-liability">—</span></div>
-          <div class="cres-row"><span class="cres-l">Cash garanti</span><span class="cres-v" id="fb-cash" style="font-size:15px;font-weight:800;color:var(--g)">—</span></div>
+          <div class="cres-row"><span class="cres-v" id="fb-cash" style="font-size:15px;font-weight:800;color:var(--g)">—</span></div>
         </div>
-        <div id="fb-verdict" style="display:none;margin-top:8px;padding:9px;border-radius:var(--r6);font-size:12px;font-weight:700;text-align:center"></div>
       </div>
+    </div>
+
+    <!-- VALUE BET -->
+    <div id="calc-vb" style="display:none">
+      <div class="g2" style="gap:8px;margin-bottom:8px">
+        <div class="fg"><label class="fl">Proba estimée (%)</label><input type="number" id="vb-prob" class="fi" value="55" oninput="calcVb()"></div>
+        <div class="fg"><label class="fl">Cote proposée</label><input type="number" id="vb-cote" class="fi" value="2.10" step="0.01" oninput="calcVb()"></div>
+        <div class="fg" style="grid-column:span 2"><label class="fl">Mise (€)</label><input type="number" id="vb-mise" class="fi" value="10" oninput="calcVb()"></div>
+      </div>
+      <div class="calc-res">
+        <div class="cres-row"><span class="cres-l">Cote juste</span><span class="cres-v" id="vb-fair">—</span></div>
+        <div class="cres-row"><span class="cres-l">Edge</span><span class="cres-v" id="vb-edge">—</span></div>
+        <div class="cres-row"><span class="cres-l">EV</span><span class="cres-v" id="vb-ev">—</span></div>
+        <div class="cres-row"><span class="cres-l">Kelly %</span><span class="cres-v" id="vb-kelly">—</span></div>
+      </div>
+      <div id="vb-verd" style="display:none;margin-top:9px;padding:10px;border-radius:var(--r6);text-align:center;font-size:13px;font-weight:700"></div>
     </div>
   </div>
 </div>
@@ -572,9 +572,6 @@ input[type="date"],input[type="time"]{color-scheme:dark;}
         <div class="fg"><label class="fl">Étoiles</label>
           <select id="u-stars" class="fi"><option value="1">1⭐</option><option value="2">2⭐</option><option value="3">3⭐</option><option value="4">4⭐</option><option value="5">5⭐</option></select>
         </div>
-        <div class="fg" style="grid-column:span 2"><label class="fl">Sport</label>
-          <select id="u-sport" class="fi"><option value="⚽">⚽ Football</option><option value="🏀">🏀 Basket</option><option value="🎾">🎾 Tennis</option><option value="🏒">🏒 Hockey</option><option value="⚾">⚾ Baseball</option><option value="🏈">🏈 NFL</option><option value="🏎">🏎 F1</option></select>
-        </div>
       </div>
       <label class="fl">Couleur</label>
       <div class="cprow" id="cprow"></div>
@@ -601,7 +598,9 @@ input[type="date"],input[type="time"]{color-scheme:dark;}
   <button class="ni" onclick="showTab('t-equipes',this)"><i class="fa-solid fa-shield-halved"></i>Équipes</button>
   <button class="ni" onclick="showTab('t-bilan',this)"><i class="fa-solid fa-chart-line"></i>Bilan</button>
   <button class="ni" onclick="showTab('t-bank',this)"><i class="fa-solid fa-wallet"></i>Bank</button>
-</n
+</nav>
+
+<script>
 /* ── BOOKMAKERS ── */
 var BK={
   "winamax":    {n:"Winamax",    c:"#ff2040", d:"winamax.fr"},
@@ -715,7 +714,7 @@ PRESETS.forEach(function(pt){
 var STRATS={"1":[1,2,6,18,54,162,486,1458],"2":[2,4,12,36,108,324,972,2916],"3":[2,4,12,36,108,324,972,2916],"4":[5,10,30,90,270,810,2430,7290],"5":[10,20,60,180,540,1620,4860,14580]};
 var PCOLS=["#4d84ff","#1ed760","#f59e0b","#a855f7","#22d3ee","#f97316","#ef4444","#ec4899","#14b8a6","#6366f1","#84cc16","#e879f9"];
 var selColor=PCOLS[0];
-var AC={},GC=null,MC={};
+var AC={},GC=null,MC={},_currentTeam="";
 var bilanSport='ALL';
 var dtRows=[{c:2.0},{c:3.0}];
 
@@ -824,34 +823,34 @@ function buildDtRows(){
 function calcDt(){buildDtRows();}
 function addDtRow(){dtRows.push({c:2.0});buildDtRows();}
 function swCalc(m){
-  ['sb','dt','vb','lay'].forEach(function(p){
+  ['sb','dt','lay','vb'].forEach(function(p){
     var el=$i('calc-'+p);if(el)el.style.display=m===p?'block':'none';
     var btn=$i('ct-'+p);if(btn)btn.classList.toggle('on',m===p);
   });
   if(m==='dt')buildDtRows();
+  else if(m==='lay')calcLay();
   else if(m==='vb')calcVb();
-  else if(m==='lay'){calcLay();calcFreebet();}
   else calcSb();
 }
 function calcVb(){
-  var p=(parseFloat(($i('vb-prob')&&$i('vb-prob').value)||55))/100;
-  var c=parseFloat(($i('vb-cote')&&$i('vb-cote').value)||2.10);
-  var m=parseFloat(($i('vb-mise')&&$i('vb-mise').value)||10);
-  if(!p||!c||p<=0||p>=1||c<=1)return;
+  var prob=parseFloat(($i('vb-prob')&&$i('vb-prob').value)||55);
+  var cote=parseFloat(($i('vb-cote')&&$i('vb-cote').value)||2.10);
+  var mise=parseFloat(($i('vb-mise')&&$i('vb-mise').value)||10);
+  if(!prob||!cote||prob<=0||prob>=100||cote<=1)return;
+  var p=prob/100;
   var fair=(1/p).toFixed(3);
-  var edge=((p*c-1)*100).toFixed(2);
-  var ev=(p*(c-1)*m-(1-p)*m).toFixed(2);
-  var kelly=Math.max(0,(p-(1-p)/(c-1))*100).toFixed(1);
+  var edge=((p*cote-1)*100).toFixed(2);
+  var ev=(p*(cote-1)*mise-(1-p)*mise).toFixed(2);
+  var kelly=Math.max(0,(p-(1-p)/(cote-1))*100).toFixed(1);
   txt('vb-fair',fair);
   var ee=$i('vb-edge');if(ee){ee.innerText=edge+'%';ee.style.color=parseFloat(edge)>0?'var(--g)':'var(--r)';}
   var ev2=$i('vb-ev');if(ev2){ev2.innerText=(parseFloat(ev)>=0?'+':'')+ev+'€';ev2.style.color=parseFloat(ev)>=0?'var(--g)':'var(--r)';}
   txt('vb-kelly',kelly+'%');
-  var verd=$i('vb-verdict');
+  var verd=$i('vb-verd');
   if(verd){
-    verd.style.display='block';
     var isV=parseFloat(edge)>0;var isS=parseFloat(edge)>5;
-    verd.style.cssText='display:block;padding:10px;border-radius:var(--r6);text-align:center;font-size:13px;font-weight:700;background:'+(isS?'rgba(30,215,96,.1)':isV?'rgba(77,132,255,.1)':'rgba(255,69,69,.1)')+';border:1px solid '+(isS?'rgba(30,215,96,.25)':isV?'rgba(77,132,255,.25)':'rgba(255,69,69,.25)')+';color:'+(isS?'var(--g)':isV?'var(--a)':'var(--r)');
-    verd.innerText=isS?'🔥 Value ! Edge +'+edge+'%':isV?'✅ Value bet +'+edge+'%':'❌ Pas de value';
+    verd.style.cssText='display:block;padding:10px;border-radius:8px;text-align:center;font-size:13px;font-weight:700;background:'+(isS?'rgba(30,215,96,.1)':isV?'rgba(77,132,255,.1)':'rgba(255,69,69,.1)')+';border:1px solid '+(isS?'rgba(30,215,96,.25)':isV?'rgba(77,132,255,.25)':'rgba(255,69,69,.25)')+';color:'+(isS?'var(--g)':isV?'var(--a)':'var(--r)');
+    verd.innerText=isS?'🔥 Value ! +'+edge+'%':isV?'✅ Value +'+edge+'%':'❌ Pas de value';
   }
 }
 function calcLay(){
@@ -862,7 +861,6 @@ function calcLay(){
   var gorr=$i('lay-gorr')&&$i('lay-gorr').checked;
   var useComm=$i('lay-usecomm')&&$i('lay-usecomm').checked;
   if(!bc||!bm||!lc||bc<=1||lc<=1)return;
-  /* Cote réelle = back equivalent après commission (si activée) */
   var lr=useComm?(1+(1-comm/100)/(lc-1)):(1+1/(lc-1));
   var ml,pbw,plw;
   if(!gorr){ml=bm*bc/lr;pbw=bm*(bc-1)-ml*(lc-1);plw=ml*(lr-1)-bm;}
@@ -877,10 +875,9 @@ function calcLay(){
   var lpg=$i('lay-profit-garanti');if(lpg){lpg.innerText=(pg>=0?'+':'')+pg.toFixed(2)+'€';lpg.style.color=pg>=0?'var(--g)':'var(--r)';}
   var lr2=$i('lay-roi');if(lr2){lr2.innerText=roi+'%';lr2.style.color=parseFloat(roi)>0?'var(--g)':'var(--r)';}
   var verd=$i('lay-verdict');
-  if(verd){
-    verd.style.display='block';var isSb=pg>0;
-    verd.style.cssText='display:block;padding:10px;border-radius:var(--r6);text-align:center;font-size:13px;font-weight:700;background:'+(isSb?'rgba(30,215,96,.1)':'rgba(255,69,69,.1)')+';border:1px solid '+(isSb?'rgba(30,215,96,.25)':'rgba(255,69,69,.25)')+';color:'+(isSb?'var(--g)':'var(--r)');
-    verd.innerText=isSb?'✅ Surebet ! +'+pg.toFixed(2)+'€ · ROI '+roi+'%':'❌ Pas de surebet (lay réelle '+lr.toFixed(3)+' ≥ back '+bc+')';
+  if(verd){verd.style.display='block';var ok=pg>0;
+    verd.style.cssText='display:block;padding:10px;border-radius:8px;text-align:center;font-size:13px;font-weight:700;background:'+(ok?'rgba(30,215,96,.1)':'rgba(255,69,69,.1)')+';border:1px solid '+(ok?'rgba(30,215,96,.25)':'rgba(255,69,69,.25)')+';color:'+(ok?'var(--g)':'var(--r)');
+    verd.innerText=ok?'✅ Surebet ! +'+pg.toFixed(2)+'€':'❌ Pas de surebet';
   }
 }
 function calcFreebet(){
@@ -889,20 +886,14 @@ function calcFreebet(){
   var lc=parseFloat(($i('fb-lay-cote')&&$i('fb-lay-cote').value)||0);
   var comm=parseFloat(($i('fb-comm')&&$i('fb-comm').value)||3);
   if(!fb||!bc||!lc||bc<=1||lc<=1)return;
-  var lr=1+(lc-1)*(1-comm/100);
-  var ml=(bc-1)*fb/(lc-1+lr-1);
+  var lr=useComm?(1+(1-comm/100)/(lc-1)):(1+1/(lc-1));
+  var ml=(bc-1)*fb/(lc-1);
   var liab=ml*(lc-1);
   var cg=Math.min((bc-1)*fb-liab,ml*(lr-1));
   var taux=fb>0?(cg/fb*100).toFixed(1):0;
   var flm=$i('fb-lay-mise');if(flm){flm.innerText=ml.toFixed(2)+'€';flm.style.color='var(--a)';}
   var fli=$i('fb-liability');if(fli){fli.innerText=liab.toFixed(2)+'€';fli.style.color='var(--gold)';}
   var fc=$i('fb-cash');if(fc){fc.innerText=(cg>=0?'+':'')+cg.toFixed(2)+'€';fc.style.color=cg>=0?'var(--g)':'var(--r)';}
-  var verd=$i('fb-verdict');
-  if(verd){
-    verd.style.display='block';var great=parseFloat(taux)>70;var good=cg>0;
-    verd.style.cssText='display:block;padding:9px;border-radius:var(--r6);font-size:12px;font-weight:700;text-align:center;background:'+(great?'rgba(30,215,96,.1)':good?'rgba(77,132,255,.1)':'rgba(255,69,69,.1)')+';border:1px solid '+(great?'rgba(30,215,96,.25)':good?'rgba(77,132,255,.25)':'rgba(255,69,69,.25)')+';color:'+(great?'var(--g)':good?'var(--a)':'var(--r)');
-    verd.innerText=great?'🔥 '+taux+'% = +'+cg.toFixed(2)+'€':good?'✅ '+taux+'% = +'+cg.toFixed(2)+'€':'❌ Conversion négative';
-  }
 }
 
 /* ── FILTRE BILAN ── */
@@ -1084,8 +1075,10 @@ function renderArchive(){
         +'<div class="brow-meta">'+h.t+' '+dd+hh+'· '+(h.type||'—')+' · @'+h.cote+' · <b>'+h.n+'</b> · <span style="color:'+b2.c+';">'+b2.n+'</span>'+(h.debrief?'<br><i>'+h.debrief+'</i>':'')+'</div></div>'
         +'<div class="brow-right"><div class="brow-amt" style="color:'+(h.win?'var(--g)':'var(--r)')+';">'+(h.win?'+'+(h.m*h.cote).toFixed(2):'-'+h.m)+'€</div>'
         +'<div class="brow-tag" style="color:'+(h.win?'var(--g)':'var(--r)')+';">'+(h.win?'WIN':'LOSS')+'</div>'
-        +'<button data-aid="'+h.id+'" onclick="deleteArchived(this.dataset.aid)" style="margin-top:4px;background:none;border:1px solid rgba(255,69,69,.2);color:var(--r);font-size:11px;padding:2px 7px;border-radius:3px;cursor:pointer;font-weight:700">🗑</button>'
-        +'</div></div>';
+        +'<div style="display:flex;gap:4px;margin-top:4px">'
+        +'<button data-aid="'+h.id+'" onclick="editArchived(this.dataset.aid)" style="background:none;border:1px solid rgba(77,132,255,.25);color:var(--a);font-size:10px;padding:2px 6px;border-radius:3px;cursor:pointer;font-weight:700">&#9999;</button>'
+        +'<button data-aid="'+h.id+'" onclick="deleteArchived(this.dataset.aid)" style="background:none;border:1px solid rgba(255,69,69,.2);color:var(--r);font-size:10px;padding:2px 6px;border-radius:3px;cursor:pointer;font-weight:700">&#128465;</button>'
+        +'</div></div></div>';
     }).join('');
     return '<div class="card" style="padding:12px 14px;margin-bottom:8px;">'
       +'<div class="mh"><div><div class="mh-lbl">'+key+' · '+d.paris.length+' paris · '+wr+'% réussite</div></div><div class="mh-val" style="color:'+pC+';">'+fmt(d.profit)+'</div></div>'
@@ -1334,8 +1327,7 @@ function pari(isS){
     n=u.n;target=$i('c-target').value||'-';type=getMmLabel()||'-';
     sport=$i('c-sport').value||'';comp=$i('c-comp').value||'';
     heure=$i('c-heure').value||'';date=$i('c-date').value||'';
-    var cbk=$i('c-book');b=(cbk&&cbk.value)||Object.keys(state.b)[0]||'';
-    c=getMmCote();
+    b=$i('c-book').value;c=getMmCote();
     m=parseFloat($i('c-mise').value)||0;l=u.l;
   }else{
     n='SIMPLE';sport=$i('p-sport').value;heure=$i('n-heure').value||'';date=$i('n-date').value||'';
@@ -1343,7 +1335,6 @@ function pari(isS){
     type=$i('n-type').value||'-';b=$i('n-book').value;
     c=parseFloat($i('n-cote').value.replace(',','.'))||0;m=parseFloat($i('n-mise').value)||0;
   }
-  if(!b)return alert('Sélectionne un bookmaker !');
   if(m>0&&(parseFloat(state.b[b])||0)>=m){
     state.b[b]=(parseFloat(state.b[b])-m).toFixed(2);
     state.h.unshift({id:Date.now().toString(),n:n,target:target,b:b,l:l,m:m,cote:c,isS:isS,t:t,sport:sport,type:type,comp:comp,heure:heure,date:date});
@@ -1358,11 +1349,11 @@ function result(id,win){
   var debrief=prompt('Débrief ('+(win?'WIN ✅':'LOSS ❌')+') :','')||'';
   if(win){state.b[bet.b]=(parseFloat(state.b[bet.b])+(bet.m*bet.cote)).toFixed(2);if(bet.isS){var u=state.u.find(function(x){return x.n===bet.n;});if(u)u.l=1;}}
   else if(bet.isS){var u2=state.u.find(function(x){return x.n===bet.n;});if(u2&&u2.l<8)u2.l++;}
-  state.a.unshift(Object.assign({},bet,{win:win,debrief:debrief}));
-  state.h.splice(idx,1);save();updMise();
+  var archived=Object.assign({},bet,{win:win,debrief:debrief});
+  state.a.unshift(archived);state.h.splice(idx,1);save();updMise();
 }
 function cancelBet(id){
-  if(!confirm('Annuler et rembourser ?'))return;
+  if(!confirm('Annuler ce pari et rembourser la mise ?'))return;
   var idx=state.h.findIndex(function(x){return x.id===id;});if(idx===-1)return;
   var bet=state.h[idx];
   state.b[bet.b]=(parseFloat(state.b[bet.b]||0)+parseFloat(bet.m)).toFixed(2);
@@ -1370,12 +1361,20 @@ function cancelBet(id){
   state.h.splice(idx,1);save();
 }
 function deleteArchived(id){
-  if(!confirm('Supprimer ce pari de l\'historique ?'))return;
+  if(!confirm('Supprimer ce pari ?'))return;
   var idx=state.a.findIndex(function(x){return x.id===id;});if(idx===-1)return;
   var bet=state.a[idx];
   if(bet.win)state.b[bet.b]=(parseFloat(state.b[bet.b]||0)-(bet.m*bet.cote)).toFixed(2);
   else state.b[bet.b]=(parseFloat(state.b[bet.b]||0)+parseFloat(bet.m)).toFixed(2);
   state.a.splice(idx,1);save();
+}
+function editArchived(id){
+  var idx=state.a.findIndex(function(x){return x.id===id;});if(idx===-1)return;
+  var bet=state.a[idx];
+  if(!confirm('Inverser le résultat ? (actuellement '+(bet.win?'WIN':'LOSS')+')'))return;
+  if(bet.win){state.b[bet.b]=(parseFloat(state.b[bet.b]||0)-(bet.m*bet.cote)+parseFloat(bet.m)).toFixed(2);}
+  else{state.b[bet.b]=(parseFloat(state.b[bet.b]||0)-parseFloat(bet.m)+(bet.m*bet.cote)).toFixed(2);}
+  bet.win=!bet.win;save();
 }
 function updMise(){
   var u=state.u.find(function(x){return x.n===$i('c-unit').value;});
@@ -1408,7 +1407,7 @@ function addUnit(){
   var logoUrl=pending?pending.url:(LOGOS[name]||null);
   if(pending&&pending.color)color=pending.color;
   if(state.u.find(function(u){return u.n===name;}))return alert('Existe déjà !');
-  state.u.push({n:name,abbr:abbr,color:color,s:$i('u-stars').value,l:1,sport:($i('u-sport')&&$i('u-sport').value)||'⚽',logoUrl:logoUrl||''});
+  state.u.push({n:name,abbr:abbr,color:color,s:$i('u-stars').value,l:1,logoUrl:logoUrl||''});
   if(logoUrl)LOGOS[name]=logoUrl;
   $i('u-name').value='';
   $i('search-results').innerHTML='';
@@ -1704,28 +1703,7 @@ function fuzzyClubSearch(q){
 }
 
 
-/* ── LISTES AUTO ── */
-var COMPS_FOOT=['Ligue 1','Champions League','Europa League','Premier League','La Liga','Bundesliga','Serie A','Eredivisie','Liga Portugal','Série A brésilienne'];
-var COMPS_BASKET=['NBA','Euroleague','Pro A'];
-var COMPS_TENNIS=['Roland Garros','Wimbledon','US Open','Australian Open','Masters 1000'];
-var ADV_TOP=['Real Madrid','Barcelona','PSG','Manchester City','Bayern Munich','Liverpool','Arsenal','Chelsea','Juventus','Inter Milan','AC Milan','Atletico Madrid','Borussia Dortmund','Ajax','Benfica','Porto','Marseille','Lyon','Monaco','Napoli','AS Roma','Boca Juniors','Flamengo','Palmeiras','River Plate'];
-function updateCompList(){
-  var sport=($i('c-sport')&&$i('c-sport').value)||'⚽';
-  var comps=sport==='⚽'?COMPS_FOOT:sport==='🏀'?COMPS_BASKET:sport==='🎾'?COMPS_TENNIS:COMPS_FOOT;
-  var dl=$i('comp-list');if(dl)dl.innerHTML=comps.map(function(c){return '<option value="'+c+'">';}).join('');
-  var dl2=$i('comp-list-simple');if(dl2)dl2.innerHTML=comps.map(function(c){return '<option value="'+c+'">';}).join('');
-}
-function updateAdvList(q){
-  var dl=$i('adversaires-list');if(!dl)return;
-  var used=state.a.map(function(h){return h.target||'';}).filter(Boolean);
-  var all=ADV_TOP.concat(used);
-  var seen={};var uniq=[];
-  all.forEach(function(v){if(!seen[v]){seen[v]=1;uniq.push(v);}});
-  var filtered=q?uniq.filter(function(v){return v.toLowerCase().includes(q.toLowerCase());}):uniq.slice(0,20);
-  dl.innerHTML=filtered.slice(0,15).map(function(v){return '<option value="'+v+'">';}).join('');
-}
-
-/* ── SOFASCORE LINKS ── */
+/* ── SOFASCORE ── */
 var SOFASCORE_LINKS={
   "Bayern Munich":"https://www.sofascore.com/team/football/bayern-munich/2672",
   "Boca Juniors":"https://www.sofascore.com/team/football/boca-juniors/1028",
@@ -1748,9 +1726,6 @@ var SOFASCORE_LINKS={
   "Napoli":"https://www.sofascore.com/team/football/napoli/2714",
   "Atletico Madrid":"https://www.sofascore.com/team/football/atletico-madrid/2836",
   "FC Barcelone":"https://www.sofascore.com/team/football/barcelona/2817",
-  "Ajax":"https://www.sofascore.com/team/football/ajax/2690",
-  "Benfica":"https://www.sofascore.com/team/football/benfica/7020",
-  "Porto":"https://www.sofascore.com/team/football/porto/5781",
   "Flamengo":"https://www.sofascore.com/team/football/flamengo/1971",
   "River Plate":"https://www.sofascore.com/team/football/river-plate/1042",
   "Carolina Hurricanes":"https://www.sofascore.com/team/ice-hockey/carolina-hurricanes/14",
@@ -1758,127 +1733,61 @@ var SOFASCORE_LINKS={
   "LA Dodgers":"https://www.sofascore.com/team/baseball/los-angeles-dodgers/3952"
 };
 function loadTeamLive(){
-  var el=$i('ip-live');
-  if(!el){console.warn('ip-live not found');return;}
-  el.style.display='block';
+  var el=$i('ip-live');if(!el)return;
   el.style.display='block';
   var nom=_currentTeam||'';
-  var url=SOFASCORE_LINKS[nom];
-  if(!url){
-    // Try to build a generic URL from team name
-    var slug=nom.toLowerCase().replace(/\s+/g,'-').replace(/[^a-z0-9-]/g,'');
-    url='https://www.sofascore.com/search#q='+encodeURIComponent(nom);
-  }
-  var p=state.u.find(function(u){return u.n===nom;})||{color:'#4d84ff'};
-  var col=p.color||'#4d84ff';
-  el.innerHTML='<div style="text-align:center;padding:30px 14px;">'
-    +'<div style="font-size:40px;margin-bottom:14px">📡</div>'
-    +'<div style="font-size:14px;font-weight:700;margin-bottom:6px">'+nom+'</div>'
-    +'<div style="font-size:11px;color:var(--t3);margin-bottom:20px">Résultats, classement et stats en direct</div>'
-    +'<a href="'+url+'" target="_blank" style="display:inline-flex;align-items:center;gap:8px;background:'+col+';color:#fff;padding:12px 22px;border-radius:var(--r8);font-size:13px;font-weight:700;text-decoration:none;">'
-    +'📊 Voir sur Sofascore</a>'
-    +'<div style="margin-top:16px;font-size:10px;color:var(--t3)">S\'ouvre dans un nouvel onglet</div>'
+  var u=state.u.find(function(x){return x.n===nom;})||{color:'#4d84ff'};
+  var col=u.color||'#4d84ff';
+  var url=SOFASCORE_LINKS[nom]||('https://www.sofascore.com/search#q='+encodeURIComponent(nom));
+  el.innerHTML='<div style="text-align:center;padding:40px 20px;">'
+    +'<div style="font-size:48px;margin-bottom:16px">📡</div>'
+    +'<div style="font-size:15px;font-weight:800;margin-bottom:6px;color:'+col+'">'+nom+'</div>'
+    +'<div style="font-size:11px;color:var(--t3);margin-bottom:24px">Résultats · Classement · Stats en direct</div>'
+    +'<a href="'+url+'" target="_blank" style="display:inline-flex;align-items:center;gap:8px;background:'+col+';color:#fff;padding:13px 26px;border-radius:var(--r8);font-size:13px;font-weight:700;text-decoration:none;box-shadow:0 4px 15px rgba(0,0,0,.3)">📊 Voir sur Sofascore</a>'
+    +'<div style="margin-top:14px;font-size:10px;color:var(--t3)">Ouvre dans un nouvel onglet</div>'
     +'</div>';
 }
 
-/* ── LISTES AUTO ── */
-var COMPS_FOOT=['Ligue 1','Champions League','Europa League','Premier League','La Liga','Bundesliga','Serie A','Eredivisie','Liga Portugal','Série A brésilienne'];
-var COMPS_BASKET=['NBA','Euroleague','Pro A'];
-var COMPS_TENNIS=['Roland Garros','Wimbledon','US Open','Australian Open','Masters 1000'];
-var ADV_TOP=['Real Madrid','Barcelona','PSG','Manchester City','Bayern Munich','Liverpool','Arsenal','Chelsea','Juventus','Inter Milan','AC Milan','Atletico Madrid','Borussia Dortmund','Ajax','Benfica','Porto','Marseille','Lyon','Monaco','Napoli','AS Roma','Boca Juniors','Flamengo','Palmeiras','River Plate'];
-function updateCompList(){
-  var sport=($i('c-sport')&&$i('c-sport').value)||'⚽';
-  var comps=sport==='⚽'?COMPS_FOOT:sport==='🏀'?COMPS_BASKET:sport==='🎾'?COMPS_TENNIS:COMPS_FOOT;
-  var dl=$i('comp-list');if(dl)dl.innerHTML=comps.map(function(c){return '<option value="'+c+'">';}).join('');
-  var dl2=$i('comp-list-simple');if(dl2)dl2.innerHTML=comps.map(function(c){return '<option value="'+c+'">';}).join('');
+/* ── DROPBOX AUTO-SAVE ── */
+var _dbxKey='sl.u.AGcRS1StFtXKsuqlkjBQ332e-GFePptbaqkssS4Qxej_E7oMnJTcO2piUJGDOU_SQCkzisSwS_vdlL_Rfr6IQXUhC3uszTIZsyPgr1YOIjhTXyA9SygCCZNovnzTBp7iuV-KarwBy1Z8b-WERlgwi3u776_6ekAL_cPs0aj2TzRtjc5ElfCTsb9LM68CEwrwFoD7Ou2otk60NcmYMxq1A7frHU5llvLqD6PTfEr_YTVL2Q-gA2GNug45TAqmtiwFlbEDuoPMjzI3yhTOi1XO80GyzUprWd7A5raNaCtxWXZzxQW2-PC04XRYDyYt3I81ibb3TG9fSY-VLUvdms5Jv37O8azZu1eVt7KqIx9Xbib-oKOO3bCRwyKwZG3odaA1q6bktc0_h4uTkqqr6yf29CMITDTSD2nlHm0iGbmOtQVuU1oRqvezsQf_2jPQhNsQXit0nmM9uX6ntQcFJbuwx7XyvHkXxSjOOyw8WNYPSevIa0Z7dn7JruRGG0LTBMkgkYYEB6945gieR3TPBv5OzdIAxSq6U9cj-xwigdxMWzS5zGXifHXtfdwq6elX9IkIr8XYgb09GVy72Wk7eMtZtfNs1siEni7goFUFp326NPX-gf7KK7TcSm7BbX3dJkteovOGz35KQYxoN4ES-Fna2u-H-30uYm_Tia8sk11x-XZVcXrX6vaTGZhpjHYlpjOPYNZahtqzgbcqL26Mfy_LCqUyk84AOoTU_lxPr393rXvzCFxvdvKqa_XkK2nyUJ4CmpPQ12_Du5Cm0x5-6AKP3AGTKum4ndK6NKknjcAamHXC3FCwOMkxyDGa2CeBwYIgMn1SEOjGGKqJFt0qOe1pqXG2_yeQjkjXlNf76bMq_AOpRTZQ_K2SBnX-db1TGPle6prlEixkWEYhly5Qqd7nRs3A80p8Wv908bBazGj1pakJHWJI_UQRTdjbOYb650rX2P7btpcen_2_Fnmc35u-QCc7ADqsEHVciiD33FzQC_LpQWOC4vbJOg8tPIjPZI2KASN3DU2Ql6FR7RJwan7wayJ_s12F0hzcQsJSltmnvrDCp0vlo83lXGUrqQqb43vi4xEqD-OMtx4-3hihi_1Tj30C4mBvzO2ui0q6dVHEOXV0c-nKT051nl3RCMKyFGR3bu9cUbDl6ptSbIsbKwpGQWjcMg0HYBYjNRXLljYMJY_Slfqz7U_d_6emQJyRenwwUQsWxt1cIkVrdC_d1kKR9EJjKRDc5nXmS1KryE3vZyvOlQvOCsl7BT8xpMWS-QXcHhVkcsrTH5FX63tawwawpNIF7qr5f7hPmYDh6wnF-2ImlQw1_9_HJgYmHrOm0_rK5wanKNpy-lf752nEU8GrdfRb0cBQKmAHLV_N2XvOW0eJk1H12LMemIZnUrYMXcu9NS3jD6voCTZVSDIS3D0-1qX54JDhGXlC-ZBYK0cAxATpStfD1vUGXtMlz9rzWyzDS0M';
+var _dbxSaving=false;
+function saveToDropbox(){
+  if(!_dbxKey||_dbxSaving)return;
+  _dbxSaving=true;
+  var data=JSON.stringify(state);
+  fetch('https://content.dropboxapi.com/2/files/upload',{
+    method:'POST',
+    headers:{
+      'Authorization':'Bearer '+_dbxKey,
+      'Dropbox-API-Arg':JSON.stringify({path:'/GONES45/backup.json',mode:'overwrite',autorename:false}),
+      'Content-Type':'application/octet-stream'
+    },
+    body:data
+  }).then(function(r){
+    _dbxSaving=false;
+    if(r.ok){showDbxStatus('✅ Sauvegardé sur Dropbox');}
+    else{showDbxStatus('⚠️ Erreur Dropbox '+r.status);}
+  }).catch(function(){_dbxSaving=false;showDbxStatus('❌ Dropbox hors ligne');});
 }
-function updateAdvList(q){
-  var dl=$i('adversaires-list');if(!dl)return;
-  var used=state.a.map(function(h){return h.target||'';}).filter(Boolean);
-  var all=ADV_TOP.concat(used);
-  var seen={};var uniq=[];
-  all.forEach(function(v){if(!seen[v]){seen[v]=1;uniq.push(v);}});
-  var filtered=q?uniq.filter(function(v){return v.toLowerCase().includes(q.toLowerCase());}):uniq.slice(0,20);
-  dl.innerHTML=filtered.slice(0,15).map(function(v){return '<option value="'+v+'">';}).join('');
+function showDbxStatus(msg){
+  var el=document.getElementById('dbx-status');
+  if(!el){el=document.createElement('div');el.id='dbx-status';
+    el.style.cssText='position:fixed;bottom:80px;left:50%;transform:translateX(-50%);background:rgba(14,18,32,.97);border:1px solid rgba(255,255,255,.1);border-radius:20px;padding:7px 16px;font-size:11px;font-weight:700;z-index:9999;color:var(--t1);white-space:nowrap;';
+    document.body.appendChild(el);}
+  el.innerText=msg;el.style.opacity='1';
+  setTimeout(function(){el.style.opacity='0';},3000);
 }
-
-/* ── API FOOTBALL ── */
-var _currentTeam='';
-
-function getMainLeague(nom){var m={"PSG":61,"Lyon":61,"Marseille":61,"Monaco":61,"Lille":61,"Nice":61,"Rennes":61,"Lens":61,"Bayern Munich":78,"Borussia Dortmund":78,"Real Madrid":140,"FC Barcelone":140,"Atletico Madrid":140,"Manchester City":39,"Arsenal":39,"Liverpool":39,"Chelsea":39,"Manchester United":39,"Tottenham":39,"Newcastle":39,"Aston Villa":39,"Inter Milan":135,"AC Milan":135,"Juventus":135,"Napoli":135,"AS Roma":135,"Atalanta":135,"Ajax":88,"PSV":88,"Feyenoord":88,"Benfica":94,"Sporting CP":94,"Porto":94,"Palmeiras":71,"Flamengo":71,"Boca Juniors":128,"River Plate":128,"France":4,"Brésil":71,"Argentine":128,"Espagne":140,"Angleterre":39,"Allemagne":78,"Portugal":94};return m[nom]||39;}
-function getSeasonForTeam(nom){var calY=[71,72,73,128,129,130,131,132];var lg=getMainLeague(nom);return calY.indexOf(lg)>-1?2026:2025;}
-function updateAdvListApi(){
-  var unit=$i('c-unit');if(!unit||!unit.value)return;
-  var u=state.u.find(function(x){return x.n===unit.value;});if(!u)return;
-  var tid=TEAM_IDS[u.n];if(!tid){updateAdvList('');return;}
-  apiFootball('/fixtures',{team:tid,next:10},function(d,e){
-    if(e||!d||!d.response)return;
-    var opps=d.response.map(function(f){return f.teams.home.id===tid?f.teams.away.name:f.teams.home.name;});
-    var comps=d.response.map(function(f){return f.league.name;});
-    var dl=$i('adversaires-list');
-    if(dl){var seen={};dl.innerHTML=opps.concat(ADV_TOP).filter(function(v){return !seen[v]&&(seen[v]=1);}).slice(0,15).map(function(v){return '<option value="'+v+'">';}).join('');}
-    var dlc=$i('comp-list');
-    if(dlc&&comps.length){var seen2={};dlc.innerHTML=comps.filter(function(c){return c&&!seen2[c]&&(seen2[c]=1);}).map(function(c){return '<option value="'+c+'">';}).join('');}
-    if(d.response.length){var next=d.response[0];var cd=$i('c-date');if(cd&&!cd.value)cd.value=next.fixture.date.substring(0,10);var cc=$i('c-comp');if(cc&&!cc.value)cc.value=next.league.name;}
-  });
+/* Override save to also trigger Dropbox */
+var _origSave=save;
+function save(){
+  localStorage.setItem('g45v5',JSON.stringify(state));
+  render();
+  saveToDropbox();
 }
-function loadTeamLive(){
-  var el=$i('ip-live');
-  if(!el){console.warn('ip-live not found');return;}
-  el.style.display='block';
-  el.style.display='block';
-  var nom=_currentTeam||'';var tid=TEAM_IDS[nom];
-  var keyHtml='<div style="display:flex;align-items:center;gap:7px;padding:9px 12px;background:var(--bg3);border-radius:var(--r6);margin-bottom:12px;font-size:11px;"><span style="color:var(--t3)">🔑 API Key</span><input id="rapid-key-inp" type="password" value="'+_rapidKey+'" style="flex:1;padding:5px 8px;background:var(--bg);border:1px solid var(--b2);border-radius:4px;color:var(--t1);font-size:11px;outline:none" oninput="_rapidKey=this.value;localStorage.setItem(\'g45_rapid\',this.value)"></div>';
-  if(!tid){el.innerHTML=keyHtml+'<div class="empty">ID inconnu pour "'+nom+'"</div>';return;}
-  el.innerHTML=keyHtml+'<div class="empty">⏳ Chargement…</div>';
-  var done=0;var res={};
-  function check(k,d,e){res[k]={d:d,e:e};done++;if(done===3)renderLiveTab(el,nom,tid,res);}
-  apiFootball('/fixtures',{team:tid,next:5},function(d,e){check('next',d,e);});
-  apiFootball('/fixtures',{team:tid,last:5},function(d,e){check('last',d,e);});
-  apiFootball('/standings',{league:getMainLeague(nom),season:getSeasonForTeam(nom)},function(d,e){check('stand',d,e);});
-}
-function renderLiveTab(el,nom,tid,res){
-  var pc=(state.u.find(function(u){return u.n===nom;})||{color:'#4d84ff'}).color||'#4d84ff';
-  var html='<div style="font-size:9px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;color:var(--t3);margin-bottom:8px">Prochains matchs</div>';
-  var next=((res.next&&res.next.d&&res.next.d.response)||[]);
-  html+=next.length?next.map(function(f){
-    var d=new Date(f.fixture.date);var ds=d.getDate()+'/'+(d.getMonth()+1);var ts=d.getHours()+'h'+(d.getMinutes()<10?'0':'')+d.getMinutes();
-    var isHome=f.teams.home.id===tid;var opp=isHome?f.teams.away.name:f.teams.home.name;
-    return '<div style="display:flex;align-items:center;gap:8px;padding:9px 12px;background:var(--s1);border-radius:var(--r6);margin-bottom:6px;border-left:3px solid '+pc+'"><div style="font-size:9px;color:var(--t3);width:34px;text-align:center">'+ds+'<br>'+ts+'</div><div style="flex:1"><div style="font-size:12px;font-weight:700">'+(isHome?'🏠':'✈')+' vs '+opp+'</div><div style="font-size:10px;color:var(--t3)">'+f.league.name+'</div></div><div style="font-size:10px;color:'+pc+';font-weight:700">À venir</div></div>';
-  }).join(''):'<div class="empty">Aucun match à venir</div>';
-  html+='<div style="font-size:9px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;color:var(--t3);margin:14px 0 8px">Derniers résultats</div>';
-  var last=((res.last&&res.last.d&&res.last.d.response)||[]).slice().reverse();
-  html+=last.length?last.map(function(f){
-    var isHome=f.teams.home.id===tid;var gf=isHome?f.goals.home:f.goals.away;var ga=isHome?f.goals.away:f.goals.home;
-    var win=gf>ga;var draw=gf===ga;var rc=win?'var(--g)':draw?'var(--gold)':'var(--r)';
-    var opp=isHome?f.teams.away.name:f.teams.home.name;var d=new Date(f.fixture.date);var ds=d.getDate()+'/'+(d.getMonth()+1);
-    return '<div style="display:flex;align-items:center;gap:8px;padding:9px 12px;background:var(--s1);border-radius:var(--r6);margin-bottom:6px;border-left:3px solid '+rc+'"><div style="font-size:9px;color:var(--t3);width:34px;text-align:center">'+ds+'<br><b style="color:'+rc+'">'+(win?'V':draw?'N':'D')+'</b></div><div style="flex:1"><div style="font-size:12px;font-weight:700">'+(isHome?'🏠':'✈')+' vs '+opp+'</div><div style="font-size:10px;color:var(--t3)">'+f.league.name+'</div></div><div style="font-size:16px;font-weight:800;color:'+rc+'">'+gf+' - '+ga+'</div></div>';
-  }).join(''):'<div class="empty">Aucun résultat</div>';
-  html+='<div style="font-size:9px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;color:var(--t3);margin:14px 0 8px">Classement</div>';
-  var stand=((res.stand&&res.stand.d&&res.stand.d.response)||[]);
-  if(stand.length){
-    var rows=(stand[0].league&&stand[0].league.standings&&stand[0].league.standings[0])||[];
-    var tidx=rows.findIndex(function(r){return r.team&&r.team.id===tid;});
-    var show=new Set();for(var i=0;i<Math.min(5,rows.length);i++)show.add(i);
-    if(tidx>-1){show.add(Math.max(0,tidx-1));show.add(tidx);show.add(Math.min(rows.length-1,tidx+1));}
-    var sorted=[...show].sort(function(a,b){return a-b;});
-    html+='<div style="background:var(--s1);border-radius:var(--r6);overflow:hidden">';
-    var prev=-1;
-    sorted.forEach(function(i){
-      if(prev>-1&&i>prev+1)html+='<div style="padding:4px 12px;font-size:10px;color:var(--t3)">···</div>';
-      var r=rows[i];var isT=r.team&&r.team.id===tid;
-      html+='<div style="display:flex;align-items:center;gap:8px;padding:8px 12px;border-bottom:1px solid var(--b1)'+(isT?';background:rgba(77,132,255,.08)':'')+'">'+'<div style="font-size:12px;font-weight:800;color:var(--t3);width:22px;text-align:center">'+r.rank+'</div>'+'<div style="flex:1;font-size:12px;font-weight:'+(isT?'800':'500')+';color:'+(isT?pc:'var(--t1)')+'">'+r.team.name+'</div>'+'<div style="font-size:12px;font-weight:800;color:'+pc+';width:34px;text-align:right">'+r.points+'pts</div>'+'</div>';
-      prev=i;
-    });
-    html+='</div>';
-  }else html+='<div class="empty">Classement indisponible</div>';
-  el.innerHTML=html;
-}
-
 /* ── INIT ── */
 document.querySelectorAll('.tab').forEach(function(t){t.style.display='none';});
 $i('t-dash').style.display='block';
-window.onload=function(){render();updMise();calcSb();buildDtRows();renderMmRows();updateCompList();calcVb();calcLay();calcFreebet();};
+window.onload=function(){render();updMise();calcSb();buildDtRows();renderCrash();renderMmRows();};
 </script>
 </body>
 </html>
