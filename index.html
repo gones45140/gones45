@@ -600,6 +600,16 @@ input[type="date"],input[type="time"]{color-scheme:dark;}
       <button class="btn" style="background:var(--s1);color:var(--t2);border:1px solid var(--b2);" onclick="importData()">Importer</button>
     </div>
   </div>
+  <div class="fc" style="border-style:dashed;">
+    <label class="fl" style="color:var(--gold);">☁️ Dropbox — Sauvegarde auto</label>
+    <div style="font-size:10px;color:var(--t3);margin-bottom:8px;margin-top:4px;">Colle ton token Dropbox ici. Il sera sauvegardé sur cet appareil.</div>
+    <input id="dbx-key-input" class="fi" type="password" placeholder="sl.u.XXXXXXX…" style="margin-bottom:8px;font-size:11px;">
+    <div style="display:flex;gap:7px;">
+      <button class="btn btn-p" style="font-size:11px;" onclick="saveDbxKey()">💾 Enregistrer</button>
+      <button class="btn" style="background:rgba(255,69,69,.12);color:var(--r);border:1px solid rgba(255,69,69,.2);font-size:11px;" onclick="testDbxKey()">🧪 Tester</button>
+    </div>
+    <div id="dbx-key-status" style="margin-top:7px;font-size:11px;font-weight:700;"></div>
+  </div>
 </div>
 
 </main>
@@ -1832,10 +1842,43 @@ function syncSimpleCote(){
   var v=parseFloat(nc.value)||1;
   if(mmRowsSimple.length===1){mmRowsSimple[0].cote=v;renderMmCoteSimple();}
 }
+
+function saveDbxKey(){
+  var inp=$i('dbx-key-input');if(!inp)return;
+  var key=inp.value.trim();
+  if(!key)return;
+  _dbxKey=key;
+  localStorage.setItem('g45_dbx',key);
+  var st=$i('dbx-key-status');
+  if(st){st.innerText='✅ Clé enregistrée !';st.style.color='var(--g)';}
+  setTimeout(function(){if(st)st.innerText='';},3000);
+}
+function testDbxKey(){
+  var inp=$i('dbx-key-input');
+  var key=(inp&&inp.value.trim())||_dbxKey;
+  if(!key){var st=$i('dbx-key-status');if(st){st.innerText='❌ Aucune clé';st.style.color='var(--r)';}return;}
+  var st=$i('dbx-key-status');
+  if(st){st.innerText='⏳ Test en cours…';st.style.color='var(--t3)';}
+  fetch('https://api.dropboxapi.com/2/users/get_current_account',{
+    method:'POST',headers:{'Authorization':'Bearer '+key,'Content-Type':'application/json'},body:'null'
+  }).then(function(r){return r.json();})
+  .then(function(d){
+    if(d.email){
+      if(st){st.innerText='✅ Connecté : '+d.email;st.style.color='var(--g)';}
+      _dbxKey=key;localStorage.setItem('g45_dbx',key);
+    }else{
+      if(st){st.innerText='❌ Token invalide';st.style.color='var(--r)';}
+    }
+  }).catch(function(){if(st){st.innerText='❌ Erreur réseau';st.style.color='var(--r)';}});
+}
 /* ── INIT ── */
 document.querySelectorAll('.tab').forEach(function(t){t.style.display='none';});
 $i('t-dash').style.display='block';
-window.onload=function(){render();updMise();calcSb();buildDtRows();renderCrash();renderMmRows();};
+window.onload=function(){
+  var saved=localStorage.getItem('g45_dbx');
+  if(saved){_dbxKey=saved;}
+  var inp=$i('dbx-key-input');if(inp&&_dbxKey)inp.value=_dbxKey;
+  render();updMise();calcSb();buildDtRows();renderCrash();renderMmRows();};
 </script>
 </body>
 </html>
