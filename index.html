@@ -6,6 +6,7 @@
 <title>GONES45</title>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;}
 :root{
@@ -278,6 +279,16 @@ input[type="date"],input[type="time"]{color-scheme:dark;}
 </head>
 <body>
 
+<input type="file" id="photo-input" accept="image/*" capture="environment" style="display:none" onchange="processPhoto(this)">
+<div id="scan-overlay" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(8,11,18,.95);z-index:9999;align-items:center;justify-content:center;flex-direction:column;gap:14px;">
+  <div style="font-size:32px">📷</div>
+  <div style="font-size:14px;font-weight:700;color:var(--t1)">Analyse en cours…</div>
+  <div style="font-size:11px;color:var(--t3)" id="scan-status">Lecture de l'image</div>
+  <div style="width:200px;height:4px;background:var(--bg3);border-radius:2px;overflow:hidden;margin-top:8px">
+    <div id="scan-progress" style="height:100%;background:var(--a);border-radius:2px;width:0%;transition:width .3s"></div>
+  </div>
+  <button onclick="closeScan()" style="margin-top:10px;background:none;border:1px solid var(--b2);color:var(--t2);padding:8px 20px;border-radius:var(--r6);cursor:pointer;font-size:12px">Annuler</button>
+</div>
 <header class="topbar">
   <div class="logo">GONES<em>45</em></div>
   <div class="top-cap"><div class="lbl">Capital</div><div class="val" id="top-val">0 €</div></div>
@@ -323,7 +334,10 @@ input[type="date"],input[type="time"]{color-scheme:dark;}
     <div class="mm-wrap">
       <div class="mm-title">
         <span>⚡ MyMatch — Sélections combinées</span>
-        <button class="ba" onclick="addMmRow()">+ Ajouter</button>
+        <div style="display:flex;gap:5px;">
+          <button class="ba" onclick="scanPhoto()" style="color:var(--gold);border-color:rgba(240,176,32,.3);">📷 Scan</button>
+          <button class="ba" onclick="addMmRow()">+ Ajouter</button>
+        </div>
       </div>
       <div class="mm-sel" id="mm-sel">
         <!-- rows filled by JS -->
@@ -1922,6 +1936,77 @@ function testDbxKey(){
       if(st){st.innerText='❌ Token invalide';st.style.color='var(--r)';}
     }
   }).catch(function(){if(st){st.innerText='❌ Erreur réseau';st.style.color='var(--r)';}});
+}
+
+/* ── SCAN PHOTO OCR ── */
+function scanPhoto(){
+  var inp=$i('photo-input');if(inp)inp.click();
+}
+function closeScan(){
+  var ov=$i('scan-overlay');if(ov)ov.style.display='none';
+}
+function setScanStatus(msg,pct){
+  var st=$i('scan-status');if(st)st.innerText=msg;
+  var pr=$i('scan-progress');if(pr)pr.style.width=(pct||0)+'%';
+}
+function processPhoto(input){
+  if(!input.files||!input.files[0])return;
+  var file=input.files[0];
+  var ov=$i('scan-overlay');if(ov)ov.style.display='flex';
+  setScanStatus('Chargement image…',10);
+  var reader=new FileReader();
+  reader.onload=function(e){
+    setScanStatus('Analyse OCR en cours…',30);
+    Tesseract.recognize(e.target.result,'fra+eng',{
+      logger:function(m){
+        if(m.status==='recognizing text'){
+          setScanStatus('Lecture… '+Math.round(m.progress*100)+'%',30+m.progress*50);
+        }
+      }
+    }).then(function(result){
+      setScanStatus('Extraction des données…',85);
+      var text=result.data.text;
+      extractBetData(text);
+      setScanStatus('Terminé !',100);
+      setTimeout(closeScan,800);
+      input.value='';
+    }).catch(function(e){
+      setScanStatus('Erreur : '+e.message,0);
+      setTimeout(closeScan,2000);
+    });
+  };
+  reader.readAsDataURL(file);
+}
+function extractBetData(text){
+  var lines=text.split('\n').map(function(l){return l.trim();}).filter(Boolean);
+  /* Extract cote - look for numbers like 1.85 2.10 etc */
+  var coteMatch=text.match(/\b([1-9]\d*[,\.]\d{2})\b/g);
+  var cotes=coteMatch?coteMatch.map(function(c){return parseFloat(c.replace(',','.'));}).filter(function(c){return c>1&&c<50;}):[];
+  /* Extract competition keywords */
+  var compWords=['Ligue 1','Champions League','Premier League','Bundesliga','Serie A','La Liga','Europa League','Ligue des champions'];
+  var foundComp='';
+  compWords.forEach(function(cw){if(text.toLowerCase().includes(cw.toLowerCase()))foundComp=cw;});
+  /* Extract bet type */
+  var typeWords=['Victoire','1X2','Over','Under','BTS','Handicap','Mi-temps','1','N','2'];
+  var foundType='';
+  typeWords.forEach(function(tw){
+    var re=new RegExp('\\b'+tw+'\\b','i');
+    if(re.test(text)&&!foundType)foundType=tw;
+  });
+  /* Apply to form */
+  var applied=[];
+  if(cotes.length>0){
+    /* Update first mmRow cote */
+    if(mmRows.length>0){mmRows[0].cote=cotes[0];if(cotes.length>1)mmRows[1]={type:mmRows[1]&&mmRows[1].type||'',cote:cotes[1]};}
+    renderMmRows();
+    applied.push('Cote: @'+cotes[0]);
+  }
+  if(foundComp&&$i('c-comp')){$i('c-comp').value=foundComp;applied.push('Compét: '+foundComp);}
+  if(applied.length){
+    showDbxStatus('📷 Scanné: '+applied.join(' · '));
+  } else {
+    showDbxStatus('📷 Aucune cote détectée — réessaie');
+  }
 }
 /* ── INIT ── */
 document.querySelectorAll('.tab').forEach(function(t){t.style.display='none';});
