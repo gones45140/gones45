@@ -349,6 +349,7 @@ input[type="date"],input[type="time"]{color-scheme:dark;}
         <div class="fg"><label class="fl">Date</label><input type="date" id="c-date" class="fi"></div>
         <div class="fg"><label class="fl">Heure</label><input type="time" id="c-heure" class="fi"></div>
       </div>
+      <div class="fg" style="margin-top:9px"><label class="fl">📝 Notes</label><textarea id="c-notes" class="fi" style="height:44px;resize:none;" placeholder="Analyse, contexte…"></textarea></div>
       <button class="btn btn-p" style="margin-top:11px;" onclick="pari(true)">Engager la montante</button>
     </div>
     <div class="sec">En cours</div>
@@ -384,6 +385,7 @@ input[type="date"],input[type="time"]{color-scheme:dark;}
         <div class="fg"><label class="fl">Mise (€)</label><input type="number" id="n-mise" class="fi" value="10"></div>
         <div class="fg" style="grid-column:span 2"><label class="fl">Bookmaker</label><select id="n-book" class="fi"></select></div>
       </div>
+      <div class="fg" style="margin-top:9px"><label class="fl">📝 Notes</label><textarea id="n-notes" class="fi" style="height:44px;resize:none;" placeholder="Analyse, contexte…"></textarea></div>
       <button class="btn btn-p" style="margin-top:11px;" onclick="pari(false)">Placer le pari simple</button>
     </div>
     <div class="sec">En cours</div>
@@ -589,6 +591,8 @@ input[type="date"],input[type="time"]{color-scheme:dark;}
       <label class="fl">Couleur</label>
       <div class="cprow" id="cprow"></div>
       <input type="color" id="u-color" class="fi" style="height:34px;padding:2px 4px;cursor:pointer;margin-bottom:10px;">
+      <div class="fg" style="margin-bottom:7px"><label class="fl" style="color:var(--t3)">🔴 Lien Sofascore (optionnel)</label><input id="u-link" class="fi" placeholder="https://www.sofascore.com/…"></div>
+      <div class="fg" style="margin-bottom:10px"><label class="fl" style="color:var(--t3)">📡 Lien Flashscore (optionnel)</label><input id="u-link2" class="fi" placeholder="https://www.flashscore.fr/equipe/…"></div>
       <button class="btn btn-p" onclick="addUnit()">Ajouter l'équipe</button>
     </div>
     <div id="ulist" style="margin-top:10px;"></div>
@@ -1012,6 +1016,8 @@ function render(){
         +'<div style="font-size:12px;font-weight:700;">'+(u.sport||'')+' '+u.n+'</div>'
         +'<div style="font-size:9px;color:var(--t3);">'+'⭐'.repeat(u.s)+' · P'+u.l+' · '+pc+'% réussite</div>'
         +forme
+        +(streak(paris).n>1?'<div style="display:inline-flex;align-items:center;gap:3px;padding:1px 7px;border-radius:10px;font-size:9px;font-weight:700;margin-top:3px;background:'+(streak(paris).t?'rgba(30,215,96,.1)':'rgba(255,69,69,.1)')+';color:'+(streak(paris).t?'var(--g)':'var(--r)')+'">'
+        +(streak(paris).t?'🔥':'❄️')+' '+streak(paris).n+'</div>':'')
         +'</div>'
         +'<div style="font-size:14px;font-weight:800;color:'+pColor+';">'+fmt(profit)+'</div>'
         +'</div>';
@@ -1221,7 +1227,7 @@ function openClub(nom,idx){
   var lb=['Départ'].concat(paris.slice().reverse().map(function(h){return h.t||'';}));
   var pm2={};paris.forEach(function(h){var pts=h.t?h.t.split(' ')[0].split('/'):['??','??'];var k=pts.length>=2?pts[1]+'/'+pts[0]:'?';if(!pm2[k])pm2[k]=0;pm2[k]+=(h.win?(h.m*h.cote)-h.m:-h.m);});
   var mK=Object.keys(pm2),mV=mK.map(function(k){return parseFloat(pm2[k].toFixed(2));});
-  var link=FAV_LINKS[nom]?'<a href="'+FAV_LINKS[nom]+'" target="_blank" style="font-size:10px;color:var(--a);text-decoration:none;display:inline-flex;align-items:center;gap:4px;margin-top:5px;">📡 Flashscore ↗</a>':'';
+  var uObjL=state.u.find(function(x){return x.n===nom;});var link=(uObjL&&uObjL.link2)||(uObjL&&uObjL.link)||FAV_LINKS[nom]?'<a href="'+FAV_LINKS[nom]+'" target="_blank" style="font-size:10px;color:var(--a);text-decoration:none;display:inline-flex;align-items:center;gap:4px;margin-top:5px;">📡 Flashscore ↗</a>':'';
   var logo=logoHtml(nom,u?u.color:PCOLS[0],u?u.abbr:nom.substring(0,3),58);
   var forme=formeHtml(paris,7);
 
@@ -1352,6 +1358,7 @@ function pari(isS){
     heure=$i('c-heure').value||'';date=$i('c-date').value||'';
     b=$i('c-book').value;c=getMmCote();
     m=parseFloat($i('c-mise').value)||0;l=u.l;
+    var notes=($i('c-notes')&&$i('c-notes').value)||'';
   }else{
     n='SIMPLE';sport=$i('p-sport').value;heure=$i('n-heure').value||'';date=$i('n-date').value||'';
     comp=$i('n-comp').value;target=$i('n-analysis').value||comp||'Pari simple';
@@ -1360,10 +1367,10 @@ function pari(isS){
   }
   if(m>0&&(parseFloat(state.b[b])||0)>=m){
     state.b[b]=(parseFloat(state.b[b])-m).toFixed(2);
-    state.h.unshift({id:Date.now().toString(),n:n,target:target,b:b,l:l,m:m,cote:c,isS:isS,t:t,sport:sport,type:type,comp:comp,heure:heure,date:date});
+    state.h.unshift({id:Date.now().toString(),n:n,target:target,b:b,l:l,m:m,cote:c,isS:isS,t:t,sport:sport,type:type,comp:comp,heure:heure,date:date,notes:notes||''});
     save();
-    if(isS){$i('c-target').value='';$i('c-comp').value='';}
-    else{$i('n-comp').value='';$i('n-type').value='';$i('n-analysis').value='';mmRowsSimple=[{type:'',cote:1.50}];renderMmRowsSimple();}
+    if(isS){$i('c-target').value='';$i('c-comp').value='';if($i('c-notes'))$i('c-notes').value='';}
+    else{$i('n-comp').value='';$i('n-type').value='';$i('n-analysis').value='';if($i('n-notes'))$i('n-notes').value='';mmRowsSimple=[{type:'',cote:1.50}];renderMmRowsSimple();}
   }else alert('Solde insuffisant sur '+bki(b).n+' !');
 }
 function result(id,win){
@@ -1433,6 +1440,8 @@ function addUnit(){
   state.u.push({n:name,abbr:abbr,color:color,s:$i('u-stars').value,l:1,logoUrl:logoUrl||''});
   if(logoUrl)LOGOS[name]=logoUrl;
   $i('u-name').value='';
+  if($i('u-link'))$i('u-link').value='';
+  if($i('u-link2'))$i('u-link2').value='';
   $i('search-results').innerHTML='';
   window._pendingLogo=null;
   save();
@@ -1761,7 +1770,7 @@ function loadTeamLive(){
   var nom=_currentTeam||'';
   var u=state.u.find(function(x){return x.n===nom;})||{color:'#4d84ff'};
   var col=u.color||'#4d84ff';
-  var url=SOFASCORE_LINKS[nom]||('https://www.sofascore.com/search#q='+encodeURIComponent(nom));
+  var url=customLink||SOFASCORE_LINKS[nom]||('https://www.sofascore.com/search#q='+encodeURIComponent(nom));
   el.innerHTML='<div style="text-align:center;padding:40px 20px;">'
     +'<div style="font-size:48px;margin-bottom:16px">📡</div>'
     +'<div style="font-size:15px;font-weight:800;margin-bottom:6px;color:'+col+'">'+nom+'</div>'
