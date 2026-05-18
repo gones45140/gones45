@@ -465,17 +465,21 @@ input[type="date"],input[type="time"]{color-scheme:dark;}
       <button class="ctbtn" id="ct-vb" onclick="swCalc('vb')">Value</button>
     </div>
     <div id="calc-sb">
-      <div class="g2" style="gap:8px;margin-bottom:8px;">
-        <div class="fg"><label class="fl">Cote A</label><input type="number" id="sb-c1" class="fi" value="2.10" step="0.01" oninput="calcSb()"></div>
-        <div class="fg"><label class="fl">Cote B</label><input type="number" id="sb-c2" class="fi" value="2.05" step="0.01" oninput="calcSb()"></div>
-        <div class="fg" style="grid-column:span 2"><label class="fl">Mise totale (€)</label><input type="number" id="sb-tot" class="fi" value="100" oninput="calcSb()"></div>
+      <label style="display:flex;align-items:center;gap:8px;padding:9px;background:rgba(240,176,32,.08);border:1px solid rgba(240,176,32,.2);border-radius:var(--r6);cursor:pointer;margin-bottom:10px">
+        <input type="checkbox" id="sb-gorr" onchange="calcSb()" style="accent-color:var(--gold)">
+        <span style="font-size:11px;font-weight:700;color:var(--gold)">🎁 Remboursé si pas gagnant (une sélection)</span>
+      </label>
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+        <label class="fl" style="margin:0;">Mise totale (€)</label>
+        <input type="number" id="sb-tot" class="fi" style="width:100px;" value="100" oninput="calcSb()">
       </div>
-      <div class="calc-res">
+      <div id="sb-rows"></div>
+      <button class="ba" style="width:100%;margin-top:6px;" onclick="addSbRow()">+ Ajouter une cote</button>
+      <div class="calc-res" style="margin-top:10px;">
         <div class="cres-row"><span class="cres-l">Marge</span><span class="cres-v" id="sb-marge">—</span></div>
-        <div class="cres-row"><span class="cres-l">Mise A</span><span class="cres-v" id="sb-m1">—</span></div>
-        <div class="cres-row"><span class="cres-l">Mise B</span><span class="cres-v" id="sb-m2">—</span></div>
         <div class="cres-row"><span class="cres-l">Profit garanti</span><span class="cres-v" id="sb-profit">—</span></div>
       </div>
+      <div id="sb-mises" style="margin-top:8px;"></div>
     </div>
     <div id="calc-dt" style="display:none;">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
@@ -530,7 +534,9 @@ input[type="date"],input[type="time"]{color-scheme:dark;}
         </div>
         <div class="calc-res">
           <div class="cres-row"><span class="cres-l">Mise Lay</span><span class="cres-v" id="fb-lay-mise">—</span></div>
-          <div class="cres-row"><span class="cres-v" id="fb-cash" style="font-size:15px;font-weight:800;color:var(--g)">—</span></div>
+          <div class="cres-row"><span class="cres-l">Responsabilité</span><span class="cres-v" id="fb-liability">—</span></div>
+          <div class="cres-row"><span class="cres-l">Cash garanti</span><span class="cres-v" id="fb-cash" style="font-size:15px;font-weight:800;color:var(--g)">—</span></div>
+          <div class="cres-row"><span class="cres-l">Taux conversion</span><span class="cres-v" id="fb-taux">—</span></div>
         </div>
       </div>
     </div>
@@ -807,23 +813,40 @@ function renderCrash(){
 }
 
 /* ── SUREBET ── */
-function calcSb(){
-  var c1=parseFloat(($i('sb-c1')&&$i('sb-c1').value)||0);
-  var c2=parseFloat(($i('sb-c2')&&$i('sb-c2').value)||0);
+var sbRows=[{c:2.10},{c:2.05}];
+function buildSbRows(){
   var tot=parseFloat(($i('sb-tot')&&$i('sb-tot').value)||100);
-  if(!c1||!c2||c1<=1||c2<=1)return;
-  var impl=1/c1+1/c2;
-  var marge=((1-impl)*100).toFixed(2);
-  var m1=(tot/c1/impl).toFixed(2);
-  var m2=(tot/c2/impl).toFixed(2);
-  var ret=(parseFloat(m1)*c1).toFixed(2);
-  var profit=(ret-tot).toFixed(2);
+  var gorr=$i('sb-gorr')&&$i('sb-gorr').checked;
+  var impl=sbRows.reduce(function(a,r){return a+1/(r.c||1);},0);
+  var dr=$i('sb-rows');if(!dr)return;
+  dr.innerHTML=sbRows.map(function(r,i){
+    return '<div class="dutch-row">'
+      +'<input type="number" class="fi" value="'+r.c+'" step="0.01" placeholder="Cote '+(i+1)+'" data-idx="'+i+'" oninput="sbRows[this.dataset.idx].c=parseFloat(this.value)||1;buildSbRows();">'
+      +(sbRows.length>2?'<button class="udel" data-idx="'+i+'" onclick="sbRows.splice(this.dataset.idx,1);buildSbRows();">✕</button>':'')
+      +'</div>';
+  }).join('');
   var isSure=impl<1;
-  txt('sb-marge',(isSure?'✅ ':'')+marge+'%'+(isSure?' (arb!)':''));
-  txt('sb-m1',m1+'€');txt('sb-m2',m2+'€');
-  var pe=$i('sb-profit');
-  if(pe){pe.innerText=(isSure?'+':'')+profit+'€';pe.style.color=isSure?'var(--g)':'var(--r)';}
+  var marge=((1-impl)*100).toFixed(2);
+  var pe=$i('sb-marge');
+  if(pe){pe.innerText=(isSure?'✅ ':'')+Math.abs(marge)+'%'+(isSure?' (arb!)':'');pe.style.color=isSure?'var(--g)':'var(--t1)';}
+  var misesHtml='';
+  var profit=0;
+  if(impl>0){
+    var totEff=gorr?tot*(impl):tot;
+    sbRows.forEach(function(r,i){
+      var mise=gorr?(tot/impl*(1/(r.c||1))).toFixed(2):(tot/impl*(1/(r.c||1))).toFixed(2);
+      var ret=(parseFloat(mise)*(r.c||1)).toFixed(2);
+      misesHtml+='<div class="cres-row"><span class="cres-l">Mise '+(i+1)+' (@'+(r.c||1)+')</span><span class="cres-v" style="color:var(--a)">'+mise+'€</span></div>';
+    });
+    var retour=gorr?(tot/impl+tot).toFixed(2):(tot/impl).toFixed(2);
+    profit=gorr?(parseFloat(retour)-tot-tot).toFixed(2):(parseFloat(retour)-tot).toFixed(2);
+  }
+  var pm=$i('sb-mises');if(pm)pm.innerHTML=misesHtml;
+  var pp=$i('sb-profit');
+  if(pp){pp.innerText=profit?(isSure||gorr?fmt(parseFloat(profit)):'—'):'—';if(pp.innerText!=='—')pp.style.color=parseFloat(profit)>=0?'var(--g)':'var(--r)';}
 }
+function calcSb(){buildSbRows();}
+function addSbRow(){sbRows.push({c:2.0});buildSbRows();}
 
 /* ── DUTCHING (sans boucle) ── */
 function buildDtRows(){
@@ -1887,7 +1910,7 @@ window.onload=function(){
   var saved=localStorage.getItem('g45_dbx');
   if(saved){_dbxKey=saved;}
   var inp=$i('dbx-key-input');if(inp&&_dbxKey)inp.value=_dbxKey;
-  render();updMise();calcSb();buildDtRows();renderCrash();renderMmRows();};
+  render();updMise();buildSbRows();buildDtRows();renderCrash();renderMmRows();};
 </script>
 </body>
 </html>
