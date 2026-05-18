@@ -355,6 +355,19 @@ input[type="date"],input[type="time"]{color-scheme:dark;}
     <div class="card"><table class="ltbl"><thead><tr><th>Équipe</th><th>Match</th><th>Cote</th><th>Mise</th><th style="text-align:right">Résultat</th></tr></thead><tbody id="live-strat"></tbody></table></div>
   </div>
   <div id="sub-simple" style="display:none;">
+    <!-- MYMATCH SIMPLE -->
+    <div class="mm-wrap">
+      <div class="mm-title">
+        <span>⚡ Sélections combinées</span>
+        <button class="ba" onclick="addMmRowSimple()">+ Ajouter</button>
+      </div>
+      <div class="mm-sel" id="mm-sel-simple"></div>
+      <div class="mm-types" id="mm-types-simple"></div>
+      <div class="mm-cote-total">
+        <span class="mm-ct-l">Cote combinée</span>
+        <span class="mm-ct-v" id="mm-cote-total-simple">—</span>
+      </div>
+    </div>
     <div class="fc">
       <div class="g2" style="gap:9px;">
         <div class="fg"><label class="fl">Sport</label><select id="p-sport" class="fi">
@@ -367,7 +380,7 @@ input[type="date"],input[type="time"]{color-scheme:dark;}
         <div class="fg"><label class="fl">Compétition</label><input id="n-comp" class="fi" placeholder="Ligue 1…"></div>
         <div class="fg"><label class="fl">Type de pari</label><input id="n-type" class="fi" placeholder="Over 1.5…"></div>
         <div class="fg" style="grid-column:span 2"><label class="fl">Analyse</label><textarea id="n-analysis" class="fi" style="height:50px;resize:none;" placeholder="Raisons du pari…"></textarea></div>
-        <div class="fg"><label class="fl">Cote</label><input type="number" id="n-cote" class="fi" value="1.50"></div>
+        <div class="fg"><label class="fl">Cote</label><input type="number" id="n-cote" class="fi" value="1.50" oninput="syncSimpleCote()"></div>
         <div class="fg"><label class="fl">Mise (€)</label><input type="number" id="n-mise" class="fi" value="10"></div>
         <div class="fg" style="grid-column:span 2"><label class="fl">Bookmaker</label><select id="n-book" class="fi"></select></div>
       </div>
@@ -1332,7 +1345,7 @@ function pari(isS){
   }else{
     n='SIMPLE';sport=$i('p-sport').value;heure=$i('n-heure').value||'';date=$i('n-date').value||'';
     comp=$i('n-comp').value;target=$i('n-analysis').value||comp||'Pari simple';
-    type=$i('n-type').value||'-';b=$i('n-book').value;
+    type=getMmLabelSimple()||$i('n-type').value||'-';b=$i('n-book').value;
     c=parseFloat($i('n-cote').value.replace(',','.'))||0;m=parseFloat($i('n-mise').value)||0;
   }
   if(m>0&&(parseFloat(state.b[b])||0)>=m){
@@ -1340,7 +1353,7 @@ function pari(isS){
     state.h.unshift({id:Date.now().toString(),n:n,target:target,b:b,l:l,m:m,cote:c,isS:isS,t:t,sport:sport,type:type,comp:comp,heure:heure,date:date});
     save();
     if(isS){$i('c-target').value='';$i('c-comp').value='';}
-    else{$i('n-comp').value='';$i('n-type').value='';$i('n-analysis').value='';}
+    else{$i('n-comp').value='';$i('n-type').value='';$i('n-analysis').value='';mmRowsSimple=[{type:'',cote:1.50}];renderMmRowsSimple();}
   }else alert('Solde insuffisant sur '+bki(b).n+' !');
 }
 function result(id,win){
@@ -1783,6 +1796,41 @@ function save(){
   localStorage.setItem('g45v5',JSON.stringify(state));
   render();
   saveToDropbox();
+}
+
+/* ── MYMATCH SIMPLE ── */
+var mmRowsSimple=[{type:'',cote:1.50}];
+function renderMmRowsSimple(){
+  var sel=$i('mm-sel-simple');if(!sel)return;
+  sel.innerHTML=mmRowsSimple.map(function(r,i){
+    return '<div class="mm-row">'
+      +'<input class="fi" value="'+r.type+'" placeholder="Type (Victoire…)" data-idx="'+i+'" oninput="mmRowsSimple[this.dataset.idx].type=this.value;renderMmCoteSimple();" style="flex:1;padding:6px 8px;font-size:12px;">'
+      +'<input type="number" class="fi mm-cote" value="'+r.cote+'" step="0.01" data-idx="'+i+'" oninput="mmRowsSimple[this.dataset.idx].cote=parseFloat(this.value)||1;renderMmCoteSimple();" style="width:72px;color:var(--a);font-weight:700;">'
+      +(mmRowsSimple.length>1?'<button class="mm-del" data-idx="'+i+'" onclick="mmRowsSimple.splice(parseInt(this.dataset.idx),1);renderMmRowsSimple();">✕</button>':'')
+      +'</div>';
+  }).join('');
+  var types=$i('mm-types-simple');
+  if(types)types.innerHTML=MM_TYPES.map(function(t){return '<button class="mm-type" data-t="'+t+'" onclick="addMmTypeSimple(this.dataset.t)">'+t+'</button>';}).join('');
+
+  renderMmCoteSimple();
+}
+function renderMmCoteSimple(){
+  var cote=mmRowsSimple.reduce(function(a,r){return a*(parseFloat(r.cote)||1);},1);
+  var el=$i('mm-cote-total-simple');if(el)el.innerText='@'+cote.toFixed(2);
+  var nc=$i('n-cote');if(nc)nc.value=cote.toFixed(2);
+}
+function addMmRowSimple(){mmRowsSimple.push({type:'',cote:1.50});renderMmRowsSimple();}
+function addMmTypeSimple(t){
+  if(mmRowsSimple.find(function(r){return r.type===t;}))return;
+  mmRowsSimple.push({type:t,cote:1.50});renderMmRowsSimple();
+}
+function getMmLabelSimple(){
+  return mmRowsSimple.filter(function(r){return r.type;}).map(function(r){return r.type+' @'+r.cote;}).join(' + ');
+}
+function syncSimpleCote(){
+  var nc=$i('n-cote');if(!nc)return;
+  var v=parseFloat(nc.value)||1;
+  if(mmRowsSimple.length===1){mmRowsSimple[0].cote=v;renderMmCoteSimple();}
 }
 /* ── INIT ── */
 document.querySelectorAll('.tab').forEach(function(t){t.style.display='none';});
