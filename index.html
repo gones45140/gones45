@@ -1336,6 +1336,8 @@ function pari(isS){
     n=u.n;target=$i('c-target').value||'-';type=getMmLabel()||'-';
     sport=$i('c-sport').value||'';comp=$i('c-comp').value||'';
     heure=$i('c-heure').value||'';date=$i('c-date').value||'';
+    var cbk=$i('c-book');b=(cbk&&cbk.value)||Object.keys(state.b)[0]||'';
+    c=getMmCote();
     m=parseFloat($i('c-mise').value)||0;l=u.l;
   }else{
     n='SIMPLE';sport=$i('p-sport').value;heure=$i('n-heure').value||'';date=$i('n-date').value||'';
@@ -1343,7 +1345,7 @@ function pari(isS){
     type=$i('n-type').value||'-';b=$i('n-book').value;
     c=parseFloat($i('n-cote').value.replace(',','.'))||0;m=parseFloat($i('n-mise').value)||0;
   }
-  if(!c||c<=1)return alert('Cote invalide — configure les sélections MyMatch !');
+  if(!b)return alert('Sélectionne un bookmaker !');
   if(m>0&&(parseFloat(state.b[b])||0)>=m){
     state.b[b]=(parseFloat(state.b[b])-m).toFixed(2);
     state.h.unshift({id:Date.now().toString(),n:n,target:target,b:b,l:l,m:m,cote:c,isS:isS,t:t,sport:sport,type:type,comp:comp,heure:heure,date:date});
@@ -1588,8 +1590,6 @@ function getMmLabel(){
   return mmRows.filter(function(r){return r.type;}).map(function(r){return r.type+' @'+r.cote;}).join(' + ');
 }
 function getMmCote(){
-  var mc=$i('mm-manual-cote');
-  if(mc&&parseFloat(mc.value)>1)return parseFloat(mc.value);
   return mmRows.reduce(function(a,r){return a*(parseFloat(r.cote)||1);},1);
 }
 
@@ -1760,7 +1760,8 @@ var SOFASCORE_LINKS={
   "LA Dodgers":"https://www.sofascore.com/team/baseball/los-angeles-dodgers/3952"
 };
 function loadTeamLive(){
-  var el=$i('ip-live');if(!el)return;
+  var el=$i('ip-live');
+  if(!el){console.warn('ip-live not found');return;}
   var nom=_currentTeam||'';
   var url=SOFASCORE_LINKS[nom];
   if(!url){
@@ -1822,7 +1823,8 @@ function updateAdvListApi(){
   });
 }
 function loadTeamLive(){
-  var el=$i('ip-live');if(!el)return;
+  var el=$i('ip-live');
+  if(!el){console.warn('ip-live not found');return;}
   var nom=_currentTeam||'';var tid=TEAM_IDS[nom];
   var keyHtml='<div style="display:flex;align-items:center;gap:7px;padding:9px 12px;background:var(--bg3);border-radius:var(--r6);margin-bottom:12px;font-size:11px;"><span style="color:var(--t3)">🔑 API Key</span><input id="rapid-key-inp" type="password" value="'+_rapidKey+'" style="flex:1;padding:5px 8px;background:var(--bg);border:1px solid var(--b2);border-radius:4px;color:var(--t1);font-size:11px;outline:none" oninput="_rapidKey=this.value;localStorage.setItem(\'g45_rapid\',this.value)"></div>';
   if(!tid){el.innerHTML=keyHtml+'<div class="empty">ID inconnu pour "'+nom+'"</div>';return;}
