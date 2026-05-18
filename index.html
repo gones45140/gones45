@@ -418,7 +418,7 @@ input[type="date"],input[type="time"]{color-scheme:dark;}
       <button class="itab" onclick="swInner('graphiques',this)">Graphs</button>
       <button class="itab" onclick="swInner('archive',this)">Archive</button>
       <button class="itab" onclick="swInner('types',this)">Types</button>
-      <button class="itab" onclick="swInner('live',this);loadTeamLive()">🔴 Live</button>
+      <button class="itab" onclick="swInner('live',this);setTimeout(loadTeamLive,50)">🔴 Live</button>
     </div>
     <div id="ip-bilan" class="ipanel on"></div>
     <div id="ip-graphiques" class="ipanel"></div>
@@ -601,9 +601,7 @@ input[type="date"],input[type="time"]{color-scheme:dark;}
   <button class="ni" onclick="showTab('t-equipes',this)"><i class="fa-solid fa-shield-halved"></i>Équipes</button>
   <button class="ni" onclick="showTab('t-bilan',this)"><i class="fa-solid fa-chart-line"></i>Bilan</button>
   <button class="ni" onclick="showTab('t-bank',this)"><i class="fa-solid fa-wallet"></i>Bank</button>
-</nav>
-
-<script>
+</n
 /* ── BOOKMAKERS ── */
 var BK={
   "winamax":    {n:"Winamax",    c:"#ff2040", d:"winamax.fr"},
@@ -1762,6 +1760,8 @@ var SOFASCORE_LINKS={
 function loadTeamLive(){
   var el=$i('ip-live');
   if(!el){console.warn('ip-live not found');return;}
+  el.style.display='block';
+  el.style.display='block';
   var nom=_currentTeam||'';
   var url=SOFASCORE_LINKS[nom];
   if(!url){
@@ -1825,6 +1825,8 @@ function updateAdvListApi(){
 function loadTeamLive(){
   var el=$i('ip-live');
   if(!el){console.warn('ip-live not found');return;}
+  el.style.display='block';
+  el.style.display='block';
   var nom=_currentTeam||'';var tid=TEAM_IDS[nom];
   var keyHtml='<div style="display:flex;align-items:center;gap:7px;padding:9px 12px;background:var(--bg3);border-radius:var(--r6);margin-bottom:12px;font-size:11px;"><span style="color:var(--t3)">🔑 API Key</span><input id="rapid-key-inp" type="password" value="'+_rapidKey+'" style="flex:1;padding:5px 8px;background:var(--bg);border:1px solid var(--b2);border-radius:4px;color:var(--t1);font-size:11px;outline:none" oninput="_rapidKey=this.value;localStorage.setItem(\'g45_rapid\',this.value)"></div>';
   if(!tid){el.innerHTML=keyHtml+'<div class="empty">ID inconnu pour "'+nom+'"</div>';return;}
