@@ -878,7 +878,7 @@ function swCalc(m){
     var btn=$i('ct-'+p);if(btn)btn.classList.toggle('on',m===p);
   });
   if(m==='dt')buildDtRows();
-  else if(m==='lay')calcLay();
+  else if(m==='lay'){calcLay();calcFreebet();}
   else if(m==='vb')calcVb();
   else calcSb();
 }
@@ -1461,7 +1461,9 @@ function addUnit(){
   var logoUrl=pending?pending.url:(LOGOS[name]||null);
   if(pending&&pending.color)color=pending.color;
   if(state.u.find(function(u){return u.n===name;}))return alert('Existe déjà !');
-  state.u.push({n:name,abbr:abbr,color:color,s:$i('u-stars').value,l:1,logoUrl:logoUrl||''});
+  var ulink=($i('u-link')&&$i('u-link').value.trim())||'';
+  var ulink2=($i('u-link2')&&$i('u-link2').value.trim())||'';
+  state.u.push({n:name,abbr:abbr,color:color,s:$i('u-stars').value,l:1,sport:($i('u-sport')&&$i('u-sport').value)||'⚽',logoUrl:logoUrl||'',link:ulink,link2:ulink2});
   if(logoUrl)LOGOS[name]=logoUrl;
   $i('u-name').value='';
   if($i('u-link'))$i('u-link').value='';
@@ -1794,8 +1796,9 @@ function loadTeamLive(){
   var el=$i('ip-live');if(!el)return;
   el.style.display='block';
   var nom=_currentTeam||'';
-  var u=state.u.find(function(x){return x.n===nom;})||{color:'#4d84ff'};
-  var col=u.color||'#4d84ff';
+  var uObj=state.u.find(function(x){return x.n===nom;})||{};
+  var col=uObj.color||'#4d84ff';
+  var customLink=(uObj&&uObj.link)||null;
   var url=customLink||SOFASCORE_LINKS[nom]||('https://www.sofascore.com/search#q='+encodeURIComponent(nom));
   el.innerHTML='<div style="text-align:center;padding:40px 20px;">'
     +'<div style="font-size:48px;margin-bottom:16px">📡</div>'
@@ -1913,7 +1916,7 @@ window.onload=function(){
   var saved=localStorage.getItem('g45_dbx');
   if(saved){_dbxKey=saved;}
   var inp=$i('dbx-key-input');if(inp&&_dbxKey)inp.value=_dbxKey;
-  render();updMise();buildSbRows();buildDtRows();renderCrash();renderMmRows();};
+  render();updMise();buildSbRows();buildDtRows();renderCrash();renderMmRows();renderMmRowsSimple();updateCompList();calcVb();calcLay();calcFreebet();};
 </script>
 </body>
 </html>
