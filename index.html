@@ -936,7 +936,6 @@ function calcFreebet(){
   var lc=parseFloat(($i('fb-lay-cote')&&$i('fb-lay-cote').value)||0);
   var comm=parseFloat(($i('fb-comm')&&$i('fb-comm').value)||3);
   if(!fb||!bc||!lc||bc<=1||lc<=1)return;
-  var lr=useComm?(1+(1-comm/100)/(lc-1)):(1+1/(lc-1));
   var ml=(bc-1)*fb/lc;
   var liab=ml*(lc-1);
   var gainIfBack=(bc-1)*fb-liab;
@@ -1678,45 +1677,47 @@ function selectClub(idx){
   if($i('u-stars'))$i('u-stars').value=String(r.stars||3);
   if(r.color){if($i('u-color'))$i('u-color').value=r.color;selColor=r.color;renderColorPicker();}
   window._pendingLogo={name:r.name,url:r.logo,abbr:r.abbr||r.name.substring(0,3).toUpperCase(),color:r.color||PCOLS[0]};
+  if($i('u-link2')&&r.flashscore)$i('u-link2').value=r.flashscore;
+  if($i('u-link')&&r.sofascore)$i('u-link').value=r.sofascore;
   var res=$i('search-results');
   if(res)res.innerHTML='<div style="color:var(--g);font-size:11px;font-weight:700;padding:8px 0;">✅ '+r.name+' sélectionné — clique sur Ajouter</div>';
 }
 /* ── EMBEDDED CLUB DATABASE (top 200+ clubs) ── */
 var CLUB_DB=[
-  {name:"Bayern Munich",league:"Bundesliga",logo:"https://media.api-sports.io/football/teams/157.png",abbr:"FCB",stars:4,color:"#dc2626"},
+  {name:"Bayern Munich",league:"Bundesliga",logo:"https://media.api-sports.io/football/teams/157.png",abbr:"FCB",stars:4,color:"#dc2626",flashscore:"https://www.flashscore.fr/equipe/bayern/nVp0wiqd/",sofascore:"https://www.sofascore.com/team/football/bayern-munich/2672"},
   {name:"Borussia Dortmund",league:"Bundesliga",logo:"https://media.api-sports.io/football/teams/165.png",abbr:"BVB",stars:4,color:"#f0b020"},
   {name:"RB Leipzig",league:"Bundesliga",logo:"https://media.api-sports.io/football/teams/173.png",abbr:"RBL",stars:3,color:"#cc0000"},
   {name:"Bayer Leverkusen",league:"Bundesliga",logo:"https://media.api-sports.io/football/teams/168.png",abbr:"B04",stars:3,color:"#cc0000"},
-  {name:"Real Madrid",league:"La Liga",logo:"https://media.api-sports.io/football/teams/541.png",abbr:"RMA",stars:5,color:"#94a3b8"},
-  {name:"FC Barcelone",league:"La Liga",logo:"https://media.api-sports.io/football/teams/529.png",abbr:"BAR",stars:5,color:"#3b82f6"},
+  {name:"Real Madrid",league:"La Liga",logo:"https://media.api-sports.io/football/teams/541.png",abbr:"RMA",stars:5,color:"#94a3b8",flashscore:"https://www.flashscore.fr/equipe/real-madrid/W8mj7MDD/",sofascore:"https://www.sofascore.com/team/football/real-madrid/2829"},
+  {name:"FC Barcelone",league:"La Liga",logo:"https://media.api-sports.io/football/teams/529.png",abbr:"BAR",stars:5,color:"#3b82f6",flashscore:"https://www.flashscore.fr/equipe/barcelone/GOLd4Ilf/",sofascore:"https://www.sofascore.com/team/football/barcelona/2817"},
   {name:"Atletico Madrid",league:"La Liga",logo:"https://media.api-sports.io/football/teams/530.png",abbr:"ATM",stars:4,color:"#cc0000"},
   {name:"Villarreal",league:"La Liga",logo:"https://media.api-sports.io/football/teams/533.png",abbr:"VIL",stars:3,color:"#f0b020"},
   {name:"Athletic Bilbao",league:"La Liga",logo:"https://media.api-sports.io/football/teams/531.png",abbr:"ATH",stars:3,color:"#cc0000"},
-  {name:"PSG",league:"Ligue 1",logo:"https://media.api-sports.io/football/teams/85.png",abbr:"PSG",stars:4,color:"#c8a050"},
-  {name:"Lyon",league:"Ligue 1",logo:"https://media.api-sports.io/football/teams/80.png",abbr:"OL",stars:3,color:"#c8a050"},
-  {name:"Marseille",league:"Ligue 1",logo:"https://media.api-sports.io/football/teams/81.png",abbr:"OM",stars:3,color:"#3b82f6"},
-  {name:"Monaco",league:"Ligue 1",logo:"https://media.api-sports.io/football/teams/91.png",abbr:"ASM",stars:3,color:"#cc0000"},
+  {name:"PSG",league:"Ligue 1",logo:"https://media.api-sports.io/football/teams/85.png",abbr:"PSG",stars:4,color:"#c8a050",flashscore:"https://www.flashscore.fr/equipe/psg/CjhkPw0k/",sofascore:"https://www.sofascore.com/team/football/paris-saint-germain/1644"},
+  {name:"Lyon",league:"Ligue 1",logo:"https://media.api-sports.io/football/teams/80.png",abbr:"OL",stars:3,color:"#c8a050",flashscore:"https://www.flashscore.fr/equipe/lyon/2akflumR/",sofascore:"https://www.sofascore.com/team/football/lyon/1649"},
+  {name:"Marseille",league:"Ligue 1",logo:"https://media.api-sports.io/football/teams/81.png",abbr:"OM",stars:3,color:"#3b82f6",flashscore:"https://www.flashscore.fr/equipe/marseille/GRk7WQET/",sofascore:"https://www.sofascore.com/team/football/marseille/1641"},
+  {name:"Monaco",league:"Ligue 1",logo:"https://media.api-sports.io/football/teams/91.png",abbr:"ASM",stars:3,color:"#cc0000",flashscore:"https://www.flashscore.fr/equipe/monaco/dOUzNP1B/",sofascore:"https://www.sofascore.com/team/football/monaco/1638"},
   {name:"Lille",league:"Ligue 1",logo:"https://media.api-sports.io/football/teams/79.png",abbr:"LOSC",stars:3,color:"#cc0000"},
   {name:"Nice",league:"Ligue 1",logo:"https://media.api-sports.io/football/teams/84.png",abbr:"OGC",stars:2,color:"#cc0000"},
   {name:"Rennes",league:"Ligue 1",logo:"https://media.api-sports.io/football/teams/93.png",abbr:"SRFC",stars:2,color:"#cc0000"},
   {name:"Lens",league:"Ligue 1",logo:"https://media.api-sports.io/football/teams/116.png",abbr:"RCL",stars:2,color:"#f0b020"},
-  {name:"Manchester City",league:"Premier League",logo:"https://media.api-sports.io/football/teams/50.png",abbr:"MCI",stars:5,color:"#3b82f6"},
-  {name:"Arsenal",league:"Premier League",logo:"https://media.api-sports.io/football/teams/42.png",abbr:"ARS",stars:4,color:"#cc0000"},
-  {name:"Liverpool",league:"Premier League",logo:"https://media.api-sports.io/football/teams/40.png",abbr:"LIV",stars:5,color:"#cc0000"},
+  {name:"Manchester City",league:"Premier League",logo:"https://media.api-sports.io/football/teams/50.png",abbr:"MCI",stars:5,color:"#3b82f6",flashscore:"https://www.flashscore.fr/equipe/manchester-city/E8Ysm0MO/",sofascore:"https://www.sofascore.com/team/football/manchester-city/17"},
+  {name:"Arsenal",league:"Premier League",logo:"https://media.api-sports.io/football/teams/42.png",abbr:"ARS",stars:4,color:"#cc0000",flashscore:"https://www.flashscore.fr/equipe/arsenal/G0g5WGBD/",sofascore:"https://www.sofascore.com/team/football/arsenal/42"},
+  {name:"Liverpool",league:"Premier League",logo:"https://media.api-sports.io/football/teams/40.png",abbr:"LIV",stars:5,color:"#cc0000",flashscore:"https://www.flashscore.fr/equipe/liverpool/Ij4aLvSF/",sofascore:"https://www.sofascore.com/team/football/liverpool/44"},
   {name:"Chelsea",league:"Premier League",logo:"https://media.api-sports.io/football/teams/49.png",abbr:"CHE",stars:4,color:"#3b82f6"},
   {name:"Manchester United",league:"Premier League",logo:"https://media.api-sports.io/football/teams/33.png",abbr:"MAN",stars:4,color:"#cc0000"},
   {name:"Tottenham",league:"Premier League",logo:"https://media.api-sports.io/football/teams/47.png",abbr:"TOT",stars:3,color:"#94a3b8"},
   {name:"Newcastle",league:"Premier League",logo:"https://media.api-sports.io/football/teams/34.png",abbr:"NEW",stars:3,color:"#94a3b8"},
   {name:"Aston Villa",league:"Premier League",logo:"https://media.api-sports.io/football/teams/66.png",abbr:"AVL",stars:3,color:"#7c3aed"},
-  {name:"Inter Milan",league:"Serie A",logo:"https://media.api-sports.io/football/teams/505.png",abbr:"INT",stars:4,color:"#0ea5e9"},
+  {name:"Inter Milan",league:"Serie A",logo:"https://media.api-sports.io/football/teams/505.png",abbr:"INT",stars:4,color:"#0ea5e9",flashscore:"https://www.flashscore.fr/equipe/inter/Iw7eKK25/",sofascore:"https://www.sofascore.com/team/football/inter/2697"},
   {name:"AC Milan",league:"Serie A",logo:"https://media.api-sports.io/football/teams/489.png",abbr:"ACM",stars:4,color:"#cc0000"},
-  {name:"Juventus",league:"Serie A",logo:"https://media.api-sports.io/football/teams/496.png",abbr:"JUV",stars:4,color:"#94a3b8"},
+  {name:"Juventus",league:"Serie A",logo:"https://media.api-sports.io/football/teams/496.png",abbr:"JUV",stars:4,color:"#94a3b8",flashscore:"https://www.flashscore.fr/equipe/juventus/lB7mkbhH/",sofascore:"https://www.sofascore.com/team/football/juventus/2710"},
   {name:"Napoli",league:"Serie A",logo:"https://media.api-sports.io/football/teams/492.png",abbr:"NAP",stars:3,color:"#3b82f6"},
   {name:"AS Roma",league:"Serie A",logo:"https://media.api-sports.io/football/teams/497.png",abbr:"ROM",stars:3,color:"#f0b020"},
   {name:"Lazio",league:"Serie A",logo:"https://media.api-sports.io/football/teams/487.png",abbr:"LAZ",stars:3,color:"#3b82f6"},
   {name:"Fiorentina",league:"Serie A",logo:"https://media.api-sports.io/football/teams/502.png",abbr:"FIO",stars:2,color:"#7c3aed"},
   {name:"Atalanta",league:"Serie A",logo:"https://media.api-sports.io/football/teams/499.png",abbr:"ATA",stars:3,color:"#0ea5e9"},
-  {name:"PSV",league:"Eredivisie",logo:"https://media.api-sports.io/football/teams/674.png",abbr:"PSV",stars:3,color:"#cc0000"},
+  {name:"PSV",league:"Eredivisie",logo:"https://media.api-sports.io/football/teams/674.png",abbr:"PSV",stars:3,color:"#cc0000",flashscore:"https://www.flashscore.fr/equipe/psv/M9UEHJWi/",sofascore:"https://www.sofascore.com/team/football/psv/2295"},
   {name:"Ajax",league:"Eredivisie",logo:"https://media.api-sports.io/football/teams/194.png",abbr:"AJX",stars:3,color:"#cc0000"},
   {name:"Feyenoord",league:"Eredivisie",logo:"https://media.api-sports.io/football/teams/197.png",abbr:"FEY",stars:3,color:"#cc0000"},
   {name:"Portugal",league:"Nations",logo:"https://media.api-sports.io/football/teams/27.png",abbr:"POR",stars:4,color:"#cc0000"},
@@ -1726,10 +1727,10 @@ var CLUB_DB=[
   {name:"Allemagne",league:"Nations",logo:"https://media.api-sports.io/football/teams/25.png",abbr:"GER",stars:4,color:"#f0b020"},
   {name:"Brésil",league:"International",logo:"https://media.api-sports.io/football/teams/6.png",abbr:"BRA",stars:5,color:"#f0b020"},
   {name:"Argentine",league:"International",logo:"https://media.api-sports.io/football/teams/26.png",abbr:"ARG",stars:5,color:"#3b82f6"},
-  {name:"Boca Juniors",league:"Argentine",logo:"https://media.api-sports.io/football/teams/405.png",abbr:"BJR",stars:3,color:"#f0b020"},
+  {name:"Boca Juniors",league:"Argentine",logo:"https://media.api-sports.io/football/teams/405.png",abbr:"BJR",stars:3,color:"#f0b020",flashscore:"https://www.flashscore.fr/equipe/boca-juniors/hMrWAFH0/",sofascore:"https://www.sofascore.com/team/football/boca-juniors/1028"},
   {name:"River Plate",league:"Argentine",logo:"https://media.api-sports.io/football/teams/406.png",abbr:"RIV",stars:3,color:"#cc0000"},
   {name:"Flamengo",league:"Brésil",logo:"https://media.api-sports.io/football/teams/127.png",abbr:"FLA",stars:3,color:"#cc0000"},
-  {name:"Palmeiras",league:"Brésil",logo:"https://media.api-sports.io/football/teams/121.png",abbr:"PAL",stars:3,color:"#22c55e"},
+  {name:"Palmeiras",league:"Brésil",logo:"https://media.api-sports.io/football/teams/121.png",abbr:"PAL",stars:3,color:"#22c55e",flashscore:"https://www.flashscore.fr/equipe/palmeiras/hMn9FTbH/",sofascore:"https://www.sofascore.com/team/football/palmeiras/1945"},
   {name:"Benfica",league:"Liga Portugal",logo:"https://media.api-sports.io/football/teams/211.png",abbr:"SLB",stars:3,color:"#cc0000"},
   {name:"Sporting CP",league:"Liga Portugal",logo:"https://media.api-sports.io/football/teams/228.png",abbr:"SCP",stars:3,color:"#22c55e"},
   {name:"Porto",league:"Liga Portugal",logo:"https://media.api-sports.io/football/teams/212.png",abbr:"FCP",stars:3,color:"#3b82f6"},
