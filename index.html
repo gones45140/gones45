@@ -566,6 +566,23 @@ input[type="date"],input[type="time"]{color-scheme:dark;}
       <div id="vb-verd" style="display:none;margin-top:9px;padding:10px;border-radius:var(--r6);text-align:center;font-size:13px;font-weight:700"></div>
     </div>
 
+    <!-- FREEBET ARJEL -->
+    <div id="calc-arjel" style="display:none">
+      <div style="font-size:10px;color:var(--t3);margin-bottom:10px;">🎟 Freebet sur la plus grosse cote · 💵 Argent réel sur les autres issues pour garantir un retour.</div>
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+        <label class="fl" style="margin:0;">Freebet (€)</label>
+        <input type="number" id="arjel-fb" class="fi" style="width:100px;color:var(--gold);font-weight:700;" value="10" oninput="calcArjel()">
+      </div>
+      <div id="arjel-rows"></div>
+      <button class="ba" style="width:100%;margin-top:6px;" onclick="addArjelRow()">+ Ajouter une cote</button>
+      <div class="calc-res" style="margin-top:10px;">
+        <div class="cres-row"><span class="cres-l">Répartition</span><span class="cres-v" id="arjel-mise">—</span></div>
+        <div class="cres-row"><span class="cres-l">Cash garanti</span><span class="cres-v" id="arjel-cash" style="font-size:15px;font-weight:800;color:var(--g)">—</span></div>
+        <div class="cres-row"><span class="cres-l">Taux conversion</span><span class="cres-v" id="arjel-taux">—</span></div>
+      </div>
+      <div id="arjel-detail" style="margin-top:8px;"></div>
+      <div id="arjel-verdict" style="display:none;margin-top:9px;padding:10px;border-radius:var(--r6);text-align:center;font-size:13px;font-weight:700"></div>
+    </div>
   </div>
 </div>
 
