@@ -438,24 +438,44 @@ input[type="date"],input[type="time"]{color-scheme:dark;}
       </div>
     </div>
     <div class="fc">
-      <div class="g2" style="gap:9px;">
+      <!-- Ligne 1 : Date + Heure -->
+      <div class="g2" style="gap:9px;margin-bottom:9px;">
+        <div class="fg"><label class="fl">Date</label><input type="date" id="n-date" class="fi"></div>
+        <div class="fg"><label class="fl">Heure</label><input type="time" id="n-heure" class="fi"></div>
+      </div>
+      <!-- Ligne 2 : Sport + Compétition -->
+      <div class="g2" style="gap:9px;margin-bottom:9px;">
         <div class="fg"><label class="fl">Sport</label><select id="p-sport" class="fi">
           <option value="⚽">⚽ Football</option><option value="🏀">🏀 Basket</option>
           <option value="🎾">🎾 Tennis</option><option value="🏈">🏈 NFL</option>
           <option value="🏒">🏒 Hockey</option><option value="⚾">⚾ Baseball</option>
           <option value="🏉">🏉 Rugby</option><option value="🏉🇦🇺">🏉🇦🇺 NRL</option><option value="🏎">🏎 F1</option>
         </select></div>
-        <div class="fg"><label class="fl">Date</label><input type="date" id="n-date" class="fi"></div>
-        <div class="fg"><label class="fl">Heure</label><input type="time" id="n-heure" class="fi"></div>
         <div class="fg"><label class="fl">Compétition</label><input id="n-comp" class="fi" placeholder="Ligue 1…"></div>
-        <div class="fg"><label class="fl">Type de pari</label><input id="n-type" class="fi" placeholder="Over 1.5…"></div>
-        <div class="fg" style="grid-column:span 2"><label class="fl">Analyse</label><textarea id="n-analysis" class="fi" style="height:50px;resize:none;" placeholder="Raisons du pari…"></textarea></div>
+      </div>
+      <!-- Ligne 3 : Type de pari -->
+      <div class="fg" style="margin-bottom:9px;"><label class="fl">Type de pari</label><input id="n-type" class="fi" placeholder="Over 1.5, Victoire…"></div>
+      <!-- Ligne 4 : Équipe/Joueur + Adversaire -->
+      <div class="g2" style="gap:9px;margin-bottom:9px;">
+        <div class="fg" style="position:relative"><label class="fl">Équipe / Joueur</label>
+          <input id="n-team" class="fi" placeholder="Ex : Lyon, Djokovic…" autocomplete="off" oninput="searchAdv(this.value,'n-team','adv-res-simple-team')">
+          <div id="adv-res-simple-team" style="display:none;position:absolute;left:0;right:0;background:var(--bg3);border:1px solid var(--b1);border-radius:var(--r6);z-index:200;max-height:160px;overflow-y:auto;"></div>
+        </div>
+        <div class="fg" style="position:relative"><label class="fl">Adversaire</label>
+          <input id="n-analysis" class="fi" placeholder="Ex : Real Madrid…" autocomplete="off" oninput="searchAdv(this.value,'n-analysis','adv-res-simple-adv')">
+          <div id="adv-res-simple-adv" style="display:none;position:absolute;left:0;right:0;background:var(--bg3);border:1px solid var(--b1);border-radius:var(--r6);z-index:200;max-height:160px;overflow-y:auto;"></div>
+        </div>
+      </div>
+      <!-- Ligne 5 : Cote + Mise -->
+      <div class="g2" style="gap:9px;margin-bottom:9px;">
         <div class="fg"><label class="fl">Cote</label><input type="number" id="n-cote" class="fi" value="1.50" oninput="syncSimpleCote()"></div>
         <div class="fg"><label class="fl">Mise (€)</label><input type="number" id="n-mise" class="fi" value="10"></div>
-        <div class="fg" style="grid-column:span 2"><label class="fl">Bookmaker</label><select id="n-book" class="fi"></select></div>
       </div>
-      <div class="fg" style="margin-top:9px"><label class="fl">📝 Notes</label><textarea id="n-notes" class="fi" style="height:44px;resize:none;" placeholder="Analyse, contexte…"></textarea></div>
-      <button class="btn btn-p" style="margin-top:11px;" onclick="pari(false)">Placer le pari simple</button>
+      <!-- Ligne 6 : Bookmaker -->
+      <div class="fg" style="margin-bottom:9px;"><label class="fl">Bookmaker</label><select id="n-book" class="fi"></select></div>
+      <!-- Ligne 7 : Notes -->
+      <div class="fg" style="margin-bottom:9px;"><label class="fl">📝 Notes</label><textarea id="n-notes" class="fi" style="height:44px;resize:none;" placeholder="Analyse, contexte…"></textarea></div>
+      <button class="btn btn-p" style="margin-top:2px;" onclick="pari(false)">Placer le pari simple</button>
     </div>
     <div class="sec">En cours</div>
     <div class="card"><table class="ltbl"><thead><tr><th>Cible</th><th>Mise</th><th style="text-align:right">Résultat</th></tr></thead><tbody id="live-norm"></tbody></table></div>
@@ -1511,7 +1531,7 @@ function pari(isS){
     var notes=($i('c-notes')&&$i('c-notes').value)||'';
   }else{
     n='SIMPLE';sport=$i('p-sport').value;heure=$i('n-heure').value||'';date=$i('n-date').value||'';
-    comp=$i('n-comp').value;target=$i('n-analysis').value||comp||'Pari simple';
+    comp=$i('n-comp').value;var nteam=($i('n-team')&&$i('n-team').value)||'';var nadv=($i('n-analysis')&&$i('n-analysis').value)||'';target=(nteam&&nadv?nteam+' vs '+nadv:nteam||nadv||comp||'Pari simple');
     type=getMmLabelSimple()||$i('n-type').value||'-';b=$i('n-book').value;
     c=parseFloat($i('n-cote').value.replace(',','.'))||0;m=parseFloat($i('n-mise').value)||0;
   }
@@ -1520,7 +1540,7 @@ function pari(isS){
     state.h.unshift({id:Date.now().toString(),n:n,target:target,b:b,l:l,m:m,cote:c,isS:isS,t:t,sport:sport,type:type,comp:comp,heure:heure,date:date,notes:notes||''});
     save();
     if(isS){$i('c-target').value='';$i('c-comp').value='';if($i('c-notes'))$i('c-notes').value='';}
-    else{$i('n-comp').value='';$i('n-type').value='';$i('n-analysis').value='';if($i('n-notes'))$i('n-notes').value='';mmRowsSimple=[{type:'',cote:1.50}];renderMmRowsSimple();}
+    else{$i('n-comp').value='';$i('n-type').value='';$i('n-analysis').value='';if($i('n-notes'))$i('n-notes').value='';if($i('n-team'))$i('n-team').value='';mmRowsSimple=[{type:'',cote:1.50}];renderMmRowsSimple();}
   }else alert('Solde insuffisant sur '+bki(b).n+' !');
 }
 function result(id,win){
@@ -1954,6 +1974,77 @@ var SOFASCORE_LINKS={
   "Colorado Avalanche":"https://www.sofascore.com/team/ice-hockey/colorado-avalanche/20",
   "LA Dodgers":"https://www.sofascore.com/team/baseball/los-angeles-dodgers/3952"
 };
+var ADV_DB={
+  "⚽":["PSG","Lyon","Marseille","Monaco","Lille","Nice","Rennes","Lens","Strasbourg","Nantes","Montpellier","Reims","Toulouse","Brest","Lorient","Saint-Etienne","Arsenal","Chelsea","Liverpool","Manchester City","Manchester United","Tottenham","Newcastle","Aston Villa","Brighton","West Ham","Crystal Palace","Fulham","Real Madrid","FC Barcelone","Atletico Madrid","Villarreal","Athletic Bilbao","Bayern Munich","Borussia Dortmund","RB Leipzig","Bayer Leverkusen","Inter Milan","AC Milan","Juventus","Napoli","AS Roma","Lazio","Atalanta","Porto","Benfica","Ajax","PSV","Boca Juniors","River Plate","Flamengo","Palmeiras","France","Espagne","Angleterre","Allemagne","Italie","Portugal","Brésil","Argentine"],
+  "🏀":["Lakers","Celtics","Warriors","Heat","Bulls","Knicks","Bucks","Suns","Clippers","76ers","Raptors","Nuggets","Mavericks","Nets"],
+  "🎾":["Novak Djokovic","Carlos Alcaraz","Jannik Sinner","Daniil Medvedev","Alexander Zverev","Andrey Rublev","Iga Swiatek","Aryna Sabalenka","Coco Gauff","Elena Rybakina"],
+  "🏒":["Carolina Hurricanes","Colorado Avalanche","Tampa Bay Lightning","Vegas Golden Knights","Florida Panthers","Boston Bruins","Toronto Maple Leafs","Edmonton Oilers","New York Rangers","Dallas Stars"],
+  "⚾":["LA Dodgers","New York Yankees","Houston Astros","Atlanta Braves","Philadelphia Phillies","Boston Red Sox"],
+  "🏈":["Kansas City Chiefs","San Francisco 49ers","Dallas Cowboys","Philadelphia Eagles","Buffalo Bills","Cincinnati Bengals","Baltimore Ravens","Miami Dolphins"],
+  "🏎":["Max Verstappen","Lando Norris","Charles Leclerc","Carlos Sainz","Lewis Hamilton","George Russell","Fernando Alonso","Oscar Piastri"],
+  "🏉":["Toulouse","Leinster","La Rochelle","Bordeaux-Bègles","Racing 92","Clermont","Lyon","Montpellier","Toulon","France","Nouvelle-Zélande","Afrique du Sud","Irlande","Angleterre","Australie"],
+  "🏉🇦🇺":["Melbourne Storm","Sydney Roosters","Penrith Panthers","Brisbane Broncos","South Sydney Rabbitohs","Parramatta Eels","Cronulla Sharks","Manly Sea Eagles","Canterbury Bulldogs","New Zealand Warriors","Gold Coast Titans","Canberra Raiders"]
+};
+function searchAdv(q,targetId,resId){
+  var el=$i(targetId);var res=$i(resId);if(!res)return;
+  if(!q||q.length<2){res.style.display='none';return;}
+  var sport=$i('c-sport')&&$i('c-sport').value||'⚽';
+  var db=(ADV_DB[sport]||ADV_DB['⚽']).concat(state.a.map(function(h){return h.target||'';}).filter(Boolean));
+  var seen={};var uniq=db.filter(function(v){return v&&!seen[v]&&(seen[v]=1);});
+  var ql=q.toLowerCase();
+  var filtered=uniq.filter(function(v){return v.toLowerCase().includes(ql);}).slice(0,8);
+  if(!filtered.length){res.style.display='none';return;}
+  res.style.display='block';
+  res.innerHTML=filtered.map(function(v){
+    return '<div style="padding:8px 12px;cursor:pointer;font-size:12px;border-bottom:1px solid var(--b1);" data-val="'+v+'" data-tid="'+targetId+'" data-rid="'+resId+'" onclick="pickAdv(this.dataset.val,this.dataset.tid,this.dataset.rid)">'+v+'</div>';
+  }).join('');
+}
+function pickAdv(val,targetId,resId){
+  var el=$i(targetId);if(el)el.value=val;
+  var res=$i(resId);if(res)res.style.display='none';
+}
+var TSDB_IDS={"Melbourne Storm":"134029","Sydney Roosters":"134031","Penrith Panthers":"134030","Brisbane Broncos":"134021","South Sydney Rabbitohs":"134026","Parramatta Eels":"134024","Cronulla Sharks":"134022","Manly Sea Eagles":"134028","Canterbury Bulldogs":"134023","New Zealand Warriors":"134025","Gold Coast Titans":"134032","Canberra Raiders":"134027","Newcastle Knights":"134033","North Queensland Cowboys":"134034","Wests Tigers":"134035","St George Illawarra Dragons":"134036","Dolphins":"134037"};
+function loadTeamLiveTSDB(el,nom,sport){
+  var tid=TSDB_IDS[nom];
+  var p=(state.u.find(function(u){return u.n===nom;})||{color:'#4d84ff'}).color||'#4d84ff';
+  if(!tid){el.innerHTML='<div style="text-align:center;padding:40px 20px;"><div style="font-size:48px;margin-bottom:16px">🏉</div><div style="font-size:15px;font-weight:800;color:'+p+'">'+nom+'</div><a href="https://www.thesportsdb.com/search_all_teams.php?t='+encodeURIComponent(nom)+'" target="_blank" style="display:inline-flex;align-items:center;gap:8px;background:'+p+';color:#fff;padding:12px 24px;border-radius:var(--r8);font-size:13px;font-weight:700;text-decoration:none">🔍 TheSportsDB</a></div>';return;}
+  el.innerHTML='<div class="empty">⏳ Chargement…</div>';
+  fetch('https://www.thesportsdb.com/api/v1/json/3/eventsnext.php?id='+tid).then(function(r){return r.json();}).then(function(d){
+    var events=(d.events||[]).slice(0,5);
+    var html2='<div style="font-size:9px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;color:var(--t3);margin-bottom:8px">Prochains matchs</div>';
+    if(events.length){html2+=events.map(function(e){var date=e.dateEvent?e.dateEvent.split('-').reverse().join('/'):'?';var isHome=e.strHomeTeam===nom;var opp=isHome?e.strAwayTeam:e.strHomeTeam;return '<div style="display:flex;align-items:center;gap:8px;padding:9px 12px;background:var(--s1);border-radius:var(--r6);margin-bottom:6px;border-left:3px solid '+p+'"><div style="font-size:9px;color:var(--t3);width:34px;text-align:center">'+date+'</div><div style="flex:1"><div style="font-size:12px;font-weight:700">'+(isHome?'🏠':'✈')+' vs '+opp+'</div><div style="font-size:10px;color:var(--t3)">'+e.strLeague+'</div></div></div>';}).join('');}
+    else html2+='<div class="empty">Aucun match</div>';
+    el.innerHTML=html2;
+  }).catch(function(){el.innerHTML='<div class="empty">❌ Erreur API</div>';});
+}
+function updateAdvList(){}
+function updateCompList(){
+  var sport=($i('c-sport')&&$i('c-sport').value)||'⚽';
+  var comps=sport==='⚽'?['Ligue 1','Champions League','Europa League','Conference League','Premier League','La Liga','Bundesliga','Serie A','Eredivisie','Liga Portugal','Série A brésilienne','MLS']:sport==='🏀'?['NBA','Euroleague','Pro A']:sport==='🎾'?['Roland Garros','Wimbledon','US Open','Australian Open','Masters 1000']:sport==='🏒'?['NHL']:sport==='⚾'?['MLB']:sport==='🏈'?['NFL']:['Ligue 1'];
+  var dl=$i('comp-list');if(dl)dl.innerHTML=comps.map(function(c){return '<option value="'+c+'">';}).join('');
+  var dl2=$i('comp-list-simple');if(dl2)dl2.innerHTML=comps.map(function(c){return '<option value="'+c+'">';}).join('');
+}
+function saveDbxKey(){
+  var inp=$i('dbx-key-input');if(!inp)return;
+  var key=inp.value.trim();if(!key)return;
+  _dbxKey=key;localStorage.setItem('g45_dbx',key);
+  var st=$i('dbx-key-status');
+  if(st){st.innerText='✅ Clé enregistrée !';st.style.color='var(--g)';}
+  setTimeout(function(){if(st)st.innerText='';},3000);
+}
+function testDbxKey(){
+  var inp=$i('dbx-key-input');
+  var key=(inp&&inp.value.trim())||_dbxKey;
+  if(!key){var st=$i('dbx-key-status');if(st){st.innerText='❌ Aucune clé';st.style.color='var(--r)';}return;}
+  var st=$i('dbx-key-status');
+  if(st){st.innerText='⏳ Test…';st.style.color='var(--t3)';}
+  fetch('https://api.dropboxapi.com/2/users/get_current_account',{method:'POST',headers:{'Authorization':'Bearer '+key,'Content-Type':'application/json'},body:'null'})
+  .then(function(r){return r.json();}).then(function(d){
+    if(d.email){if(st){st.innerText='✅ Connecté : '+d.email;st.style.color='var(--g)';}_dbxKey=key;localStorage.setItem('g45_dbx',key);}
+    else{if(st){st.innerText='❌ Token invalide';st.style.color='var(--r)';}}
+  }).catch(function(){if(st){st.innerText='❌ Erreur réseau';st.style.color='var(--r)';}});
+}
+
 function loadTeamLive(){
   var el=$i('ip-live');if(!el)return;
   el.style.display='block';
@@ -2076,6 +2167,40 @@ function calcArjel(){
 }
 
 
+
+/* ── MYMATCH SIMPLE ── */
+var mmRowsSimple=[{type:'',cote:1.50}];
+function renderMmRowsSimple(){
+  var sel=$i('mm-sel-simple');if(!sel)return;
+  sel.innerHTML=mmRowsSimple.map(function(r,i){
+    return '<div class="mm-row">'
+      +'<input class="fi" value="'+r.type+'" placeholder="Type (Victoire…)" data-idx="'+i+'" oninput="mmRowsSimple[this.dataset.idx].type=this.value;renderMmCoteSimple();" style="flex:1;padding:6px 8px;font-size:12px;">'
+      +'<input type="number" class="fi mm-cote" value="'+r.cote+'" step="0.01" data-idx="'+i+'" oninput="mmRowsSimple[this.dataset.idx].cote=parseFloat(this.value)||1;renderMmCoteSimple();" style="width:72px;color:var(--a);font-weight:700;">'
+      +(mmRowsSimple.length>1?'<button class="mm-del" data-idx="'+i+'" onclick="mmRowsSimple.splice(parseInt(this.dataset.idx),1);renderMmRowsSimple();">✕</button>':'')
+      +'</div>';
+  }).join('');
+  var types=$i('mm-types-simple');
+  if(types)types.innerHTML=MM_TYPES.map(function(t){return '<button class="mm-type" data-t="'+t+'" onclick="addMmTypeSimple(this.dataset.t)">'+t+'</button>';}).join('');
+  renderMmCoteSimple();
+}
+function renderMmCoteSimple(){
+  var cote=mmRowsSimple.reduce(function(a,r){return a*(parseFloat(r.cote)||1);},1);
+  var el=$i('mm-cote-total-simple');if(el)el.innerText='@'+cote.toFixed(2);
+  var nc=$i('n-cote');if(nc)nc.value=cote.toFixed(2);
+}
+function addMmRowSimple(){mmRowsSimple.push({type:'',cote:1.50});renderMmRowsSimple();}
+function addMmTypeSimple(t){
+  if(mmRowsSimple.find(function(r){return r.type===t;}))return;
+  mmRowsSimple.push({type:t,cote:1.50});renderMmRowsSimple();
+}
+function getMmLabelSimple(){
+  return mmRowsSimple.filter(function(r){return r.type;}).map(function(r){return r.type+' @'+r.cote;}).join(' + ');
+}
+function syncSimpleCote(){
+  var nc=$i('n-cote');if(!nc)return;
+  var v=parseFloat(nc.value)||1;
+  if(mmRowsSimple.length===1){mmRowsSimple[0].cote=v;renderMmCoteSimple();}
+}
 /* ── INIT ── */
 document.querySelectorAll('.tab').forEach(function(t){t.style.display='none';});
 $i('t-dash').style.display='block';
