@@ -6,7 +6,6 @@
 <title>GONES45</title>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;}
 :root{
@@ -279,16 +278,7 @@ input[type="date"],input[type="time"]{color-scheme:dark;}
 </head>
 <body>
 
-<input type="file" id="photo-input" accept="image/*" capture="environment" style="display:none" onchange="processPhoto(this)">
-<div id="scan-overlay" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(8,11,18,.95);z-index:9999;align-items:center;justify-content:center;flex-direction:column;gap:14px;">
-  <div style="font-size:32px">📷</div>
-  <div style="font-size:14px;font-weight:700;color:var(--t1)">Analyse en cours…</div>
-  <div style="font-size:11px;color:var(--t3)" id="scan-status">Lecture de l'image</div>
-  <div style="width:200px;height:4px;background:var(--bg3);border-radius:2px;overflow:hidden;margin-top:8px">
-    <div id="scan-progress" style="height:100%;background:var(--a);border-radius:2px;width:0%;transition:width .3s"></div>
-  </div>
-  <button onclick="closeScan()" style="margin-top:10px;background:none;border:1px solid var(--b2);color:var(--t2);padding:8px 20px;border-radius:var(--r6);cursor:pointer;font-size:12px">Annuler</button>
-</div>
+
 <header class="topbar">
   <div class="logo">GONES<em>45</em></div>
   <div class="top-cap"><div class="lbl">Capital</div><div class="val" id="top-val">0 €</div></div>
@@ -334,10 +324,7 @@ input[type="date"],input[type="time"]{color-scheme:dark;}
     <div class="mm-wrap">
       <div class="mm-title">
         <span>⚡ MyMatch — Sélections combinées</span>
-        <div style="display:flex;gap:5px;">
-          <button class="ba" onclick="scanPhoto()" style="color:var(--gold);border-color:rgba(240,176,32,.3);">📷 Scan</button>
-          <button class="ba" onclick="addMmRow()">+ Ajouter</button>
-        </div>
+        <button class="ba" onclick="addMmRow()">+ Ajouter</button>
       </div>
       <div class="mm-sel" id="mm-sel">
         <!-- rows filled by JS -->
@@ -355,9 +342,10 @@ input[type="date"],input[type="time"]{color-scheme:dark;}
           <option value="⚽">⚽ Football</option><option value="🏀">🏀 Basket</option>
           <option value="🎾">🎾 Tennis</option><option value="🏈">🏈 NFL</option>
           <option value="⚾">⚾ Baseball</option><option value="🏒">🏒 Hockey</option>
+          <option value="🏉">🏉 Rugby</option><option value="🏉🇦🇺">🏉🇦🇺 NRL</option><option value="🏎">🏎 F1</option>
         </select></div>
         <div class="fg"><label class="fl">Compétition</label><input id="c-comp" class="fi" placeholder="Ligue 1, CL…"></div>
-        <div class="fg"><label class="fl">Adversaire</label><input id="c-target" class="fi" placeholder="Ex : Real Madrid"></div>
+        <div class="fg" style="position:relative"><label class="fl">Adversaire</label><input id="c-target" class="fi" placeholder="Ex : Real Madrid" autocomplete="off" oninput="searchAdv(this.value,'c-target','adv-res-cock')"><div id="adv-res-cock" style="display:none;position:absolute;left:0;right:0;background:var(--bg3);border:1px solid var(--b1);border-radius:var(--r6);z-index:200;max-height:180px;overflow-y:auto;"></div></div>
         <div class="fg"><label class="fl">Bookmaker</label><select id="c-book" class="fi"></select></div>
         <div class="fg"><label class="fl" style="color:var(--g);">Mise (€)</label><input type="number" id="c-mise" class="fi" style="border-color:rgba(30,215,96,.25);"></div>
         <div class="fg"><label class="fl">Date</label><input type="date" id="c-date" class="fi"></div>
@@ -389,6 +377,7 @@ input[type="date"],input[type="time"]{color-scheme:dark;}
           <option value="⚽">⚽ Football</option><option value="🏀">🏀 Basket</option>
           <option value="🎾">🎾 Tennis</option><option value="🏈">🏈 NFL</option>
           <option value="🏒">🏒 Hockey</option><option value="⚾">⚾ Baseball</option>
+          <option value="🏉">🏉 Rugby</option><option value="🏉🇦🇺">🏉🇦🇺 NRL</option><option value="🏎">🏎 F1</option>
         </select></div>
         <div class="fg"><label class="fl">Date</label><input type="date" id="n-date" class="fi"></div>
         <div class="fg"><label class="fl">Heure</label><input type="time" id="n-heure" class="fi"></div>
@@ -607,6 +596,9 @@ input[type="date"],input[type="time"]{color-scheme:dark;}
         <div class="fg"><label class="fl">Étoiles</label>
           <select id="u-stars" class="fi"><option value="1">1⭐</option><option value="2">2⭐</option><option value="3">3⭐</option><option value="4">4⭐</option><option value="5">5⭐</option></select>
         </div>
+        <div class="fg" style="grid-column:span 2"><label class="fl">Sport</label>
+          <select id="u-sport" class="fi"><option value="⚽">⚽ Football</option><option value="🏀">🏀 Basket</option><option value="🎾">🎾 Tennis</option><option value="🏒">🏒 Hockey</option><option value="⚾">⚾ Baseball</option><option value="🏈">🏈 NFL</option><option value="🏉">🏉 Rugby</option><option value="🏉🇦🇺">🏉🇦🇺 NRL</option><option value="🏎">🏎 F1</option></select>
+        </div>
       </div>
       <label class="fl">Couleur</label>
       <div class="cprow" id="cprow"></div>
@@ -642,13 +634,11 @@ input[type="date"],input[type="time"]{color-scheme:dark;}
   <button class="ni on" onclick="showTab('t-dash',this)"><i class="fa-solid fa-chart-pie"></i>Mur</button>
   <button class="ni" onclick="showTab('t-paris',this)"><i class="fa-solid fa-futbol"></i>Pari</button>
   <button class="ni" onclick="showTab('t-arch',this)"><i class="fa-solid fa-clock-rotate-left"></i>Archive</button>
-  <button class="ni" onclick="showTab('t-equipes',this)"><i class="fa-solid fa-shield-halved"></i>Équipes</button>
   <button class="ni" onclick="showTab('t-bilan',this)"><i class="fa-solid fa-chart-line"></i>Bilan</button>
   <button class="ni" onclick="showTab('t-bank',this)"><i class="fa-solid fa-wallet"></i>Bank</button>
 </nav>
 
 <script>
-/* ── BOOKMAKERS ── */
 var BK={
   "winamax":    {n:"Winamax",    c:"#ff2040", d:"winamax.fr"},
   "betclic":    {n:"Betclic",    c:"#00c87a", d:"betclic.fr"},
@@ -1826,6 +1816,9 @@ function loadTeamLive(){
   var nom=_currentTeam||'';
   var uObj=state.u.find(function(x){return x.n===nom;})||{};
   var col=uObj.color||'#4d84ff';
+  var sport=uObj.sport||'⚽';
+  /* Use TheSportsDB for NRL/Rugby */
+  if(sport==='🏉🇦🇺'||sport==='🏉'){loadTeamLiveTSDB(el,nom,sport);return;}
   var customLink=(uObj&&uObj.link)||null;
   var url=customLink||SOFASCORE_LINKS[nom]||('https://www.sofascore.com/search#q='+encodeURIComponent(nom));
   el.innerHTML='<div style="text-align:center;padding:40px 20px;">'
@@ -1938,75 +1931,151 @@ function testDbxKey(){
   }).catch(function(){if(st){st.innerText='❌ Erreur réseau';st.style.color='var(--r)';}});
 }
 
-/* ── SCAN PHOTO OCR ── */
-function scanPhoto(){
-  var inp=$i('photo-input');if(inp)inp.click();
+
+var ADV_DB={
+  "⚽":[
+    /* Ligue 1 */ "PSG","Lyon","Marseille","Monaco","Lille","Nice","Rennes","Lens","Strasbourg","Nantes","Montpellier","Reims","Toulouse","Brest","Lorient","Metz","Clermont","Le Havre","Saint-Etienne","Bordeaux",
+    /* Premier League */ "Arsenal","Chelsea","Liverpool","Manchester City","Manchester United","Tottenham","Newcastle","Aston Villa","Brighton","West Ham","Crystal Palace","Fulham","Brentford","Wolves","Everton","Leicester","Leeds","Southampton","Nottingham Forest","Burnley",
+    /* La Liga */ "Real Madrid","FC Barcelone","Atletico Madrid","Villarreal","Athletic Bilbao","Real Sociedad","Betis","Valencia","Celta Vigo","Osasuna","Getafe","Sevilla","Rayo Vallecano","Almeria","Cadiz","Mallorca","Girona","Las Palmas",
+    /* Bundesliga */ "Bayern Munich","Borussia Dortmund","RB Leipzig","Bayer Leverkusen","Frankfurt","Freiburg","Union Berlin","Wolfsburg","Hoffenheim","Stuttgart","Mainz","Augsburg","Cologne","Werder Bremen","Borussia Monchengladbach",
+    /* Serie A */ "Inter Milan","AC Milan","Juventus","Napoli","AS Roma","Lazio","Atalanta","Fiorentina","Torino","Bologna","Udinese","Sassuolo","Monza","Lecce","Salernitana","Empoli","Hellas Verona","Cagliari",
+    /* Champions League extras */ "Porto","Benfica","Sporting CP","Ajax","PSV","Feyenoord","Brugge","Galatasaray","Fenerbahce","Celtic","Rangers","Shakhtar","Dynamo Kyiv","Red Bull Salzburg","Midtjylland",
+    /* Amérique */ "Boca Juniors","River Plate","Flamengo","Palmeiras","Corinthians","Sao Paulo","Atletico Mineiro","Fluminense","Santos","Gremio","Internacional","Estudiantes","Independiente","Racing Club","San Lorenzo",
+    /* Équipes nationales */ "France","Espagne","Angleterre","Allemagne","Italie","Portugal","Brésil","Argentine","Belgique","Pays-Bas","Croatie","Maroc","Sénégal","Uruguay","Colombie","Mexique","USA","Japon","Australie","Corée du Sud"
+  ],
+  "🏀":[
+    /* NBA */ "Lakers","Celtics","Warriors","Heat","Bulls","Knicks","Nets","Bucks","Suns","Clippers","76ers","Raptors","Nuggets","Mavericks","Hawks","Pelicans","Jazz","Thunder","Blazers","Grizzlies","Hornets","Pacers","Pistons","Cavaliers","Rockets","Spurs","Kings","Wizards","Magic","Timberwolves",
+    /* Euroleague */ "Real Madrid Basket","FC Barcelone Basket","CSKA Moscou","Fenerbahce Basket","Anadolu Efes","Olympiakos","Panathinaikos","Maccabi Tel Aviv","Bayern Munich Basket","Zalgiris","Monaco Basket","Virtus Bologne","Baskonia","Asvel","Partizan"
+  ],
+  "🎾":[
+    /* ATP Top */ "Novak Djokovic","Carlos Alcaraz","Jannik Sinner","Daniil Medvedev","Alexander Zverev","Andrey Rublev","Holger Rune","Casper Ruud","Stefanos Tsitsipas","Taylor Fritz","Tommy Paul","Ben Shelton","Grigor Dimitrov","Ugo Humbert","Arthur Fils","Giovanni Mpetshi Perricard",
+    /* WTA Top */ "Iga Swiatek","Aryna Sabalenka","Coco Gauff","Elena Rybakina","Jessica Pegula","Marketa Vondrousova","Ons Jabeur","Caroline Garcia","Barbora Krejcikova","Madison Keys","Emma Navarro","Mirra Andreeva","Qinwen Zheng","Jasmine Paolini","Danielle Collins"
+  ],
+  "🏒":[
+    /* NHL */ "Carolina Hurricanes","Colorado Avalanche","Tampa Bay Lightning","Vegas Golden Knights","Florida Panthers","Boston Bruins","Toronto Maple Leafs","Edmonton Oilers","New York Rangers","Dallas Stars","Los Angeles Kings","Seattle Kraken","New Jersey Devils","Pittsburgh Penguins","Minnesota Wild","Nashville Predators","Detroit Red Wings","Calgary Flames","Vancouver Canucks","Ottawa Senators","Buffalo Sabres","Columbus Blue Jackets","Arizona Coyotes","Anaheim Ducks","Chicago Blackhawks","New York Islanders","Philadelphia Flyers","Montreal Canadiens","Washington Capitals","Winnipeg Jets","St Louis Blues","San Jose Sharks"
+  ],
+  "⚾":[
+    /* MLB */ "LA Dodgers","New York Yankees","Houston Astros","Atlanta Braves","Philadelphia Phillies","San Diego Padres","Texas Rangers","Boston Red Sox","New York Mets","Chicago Cubs","San Francisco Giants","St Louis Cardinals","Toronto Blue Jays","Milwaukee Brewers","Cleveland Guardians","Minnesota Twins","Seattle Mariners","Baltimore Orioles","Tampa Bay Rays","Miami Marlins"
+  ],
+  "🏈":[
+    /* NFL */ "Kansas City Chiefs","San Francisco 49ers","Dallas Cowboys","Philadelphia Eagles","Buffalo Bills","Cincinnati Bengals","Baltimore Ravens","Miami Dolphins","Detroit Lions","Green Bay Packers","Minnesota Vikings","Seattle Seahawks","Los Angeles Rams","Las Vegas Raiders","Denver Broncos","New England Patriots","Pittsburgh Steelers","Cleveland Browns","Jacksonville Jaguars","Tennessee Titans","Indianapolis Colts","Houston Texans","Los Angeles Chargers","Arizona Cardinals","New Orleans Saints","Atlanta Falcons","Tampa Bay Buccaneers","Carolina Panthers","Washington Commanders","New York Giants","New York Jets","Chicago Bears"
+  ],
+  "🏎":[
+    /* F1 Pilotes */ "Max Verstappen","Lando Norris","Charles Leclerc","Carlos Sainz","Lewis Hamilton","George Russell","Fernando Alonso","Lance Stroll","Oscar Piastri","Sergio Perez","Pierre Gasly","Esteban Ocon","Valtteri Bottas","Zhou Guanyu","Yuki Tsunoda","Daniel Ricciardo","Kevin Magnussen","Nico Hulkenberg","Alexander Albon","Logan Sargeant",
+    /* F1 Écuries */ "Red Bull","Ferrari","Mercedes","McLaren","Aston Martin","Alpine","Williams","AlphaTauri","Alfa Romeo","Haas"
+  ],
+  "🏉":[
+    /* Top 14 */ "Toulouse","Leinster","La Rochelle","Bordeaux-Bègles","Stade Français","Racing 92","Clermont","Lyon","Montpellier","Toulon","Perpignan","Bayonne","Pau","Castres","Brive","Oyonnax",
+    /* Pro D2 */ "Grenoble","Mont-de-Marsan","Vannes","Nevers","Aurillac","Rouen","Colomiers","Valence Romans","Dax","Massy","Biarritz","Albi",
+    /* URC */ "Leinster","Munster","Ulster","Connacht","Glasgow Warriors","Edinburgh","Cardiff Blues","Ospreys","Scarlets","Dragons","Stormers","Bulls","Lions","Sharks","Zebre","Benetton",
+    /* Champions Cup extras */ "Saracens","Exeter Chiefs","Bath","Harlequins","Northampton","Leicester Tigers","Sale Sharks","Wasps",
+    /* Équipes nationales */ "France","Nouvelle-Zélande","Afrique du Sud","Irlande","Angleterre","Australie","Écosse","Pays de Galles","Argentine","Fidji","Samoa","Tonga","Japon","Italie","Uruguay","Géorgie","Roumanie","Namibie","Portugal","Espagne"
+  ],
+  "🏉🇦🇺":[
+    /* NRL */ "Melbourne Storm","Sydney Roosters","Penrith Panthers","Brisbane Broncos","South Sydney Rabbitohs","Parramatta Eels","Cronulla Sharks","Manly Sea Eagles","Canterbury Bulldogs","New Zealand Warriors","Gold Coast Titans","Canberra Raiders","Newcastle Knights","North Queensland Cowboys","Wests Tigers","St George Illawarra Dragons","Dolphins","Samoa","Tonga","Australie","Nouvelle-Zélande","Angleterre","Papua New Guinée","Fidji","France XIII","Liban",
+    /* Super League */ "Leeds Rhinos","St Helens","Wigan Warriors","Catalans Dragons","Warrington Wolves","Hull FC","Salford Red Devils","Huddersfield Giants","Castleford Tigers","Wakefield Trinity","Hull Kingston Rovers","Toulouse Olympique"
+  ]
+};
+function searchAdv(q,targetId,resId){
+  var el=$i(targetId);var res=$i(resId);if(!res)return;
+  if(!q||q.length<2){res.style.display='none';return;}
+  var sport=$i('c-sport')&&$i('c-sport').value||'⚽';
+  var db=(ADV_DB[sport]||ADV_DB['⚽']).concat(
+    state.a.map(function(h){return h.target||'';}).filter(Boolean)
+  );
+  var seen={};var uniq=db.filter(function(v){return v&&!seen[v]&&(seen[v]=1);});
+  var ql=q.toLowerCase();
+  var filtered=uniq.filter(function(v){return v.toLowerCase().includes(ql);}).slice(0,8);
+  if(!filtered.length){res.style.display='none';return;}
+  res.style.display='block';
+  res.innerHTML=filtered.map(function(v){
+    return '<div style="padding:8px 12px;cursor:pointer;font-size:12px;border-bottom:1px solid var(--b1);" data-val="'+v+'" data-tid="'+targetId+'" data-rid="'+resId+'" onclick="pickAdv(this.dataset.val,this.dataset.tid,this.dataset.rid)">'+v+'</div>';
+  }).join('');
 }
-function closeScan(){
-  var ov=$i('scan-overlay');if(ov)ov.style.display='none';
+function pickAdv(val,targetId,resId){
+  var el=$i(targetId);if(el)el.value=val;
+  var res=$i(resId);if(res)res.style.display='none';
 }
-function setScanStatus(msg,pct){
-  var st=$i('scan-status');if(st)st.innerText=msg;
-  var pr=$i('scan-progress');if(pr)pr.style.width=(pct||0)+'%';
-}
-function processPhoto(input){
-  if(!input.files||!input.files[0])return;
-  var file=input.files[0];
-  var ov=$i('scan-overlay');if(ov)ov.style.display='flex';
-  setScanStatus('Chargement image…',10);
-  var reader=new FileReader();
-  reader.onload=function(e){
-    setScanStatus('Analyse OCR en cours…',30);
-    Tesseract.recognize(e.target.result,'fra+eng',{
-      logger:function(m){
-        if(m.status==='recognizing text'){
-          setScanStatus('Lecture… '+Math.round(m.progress*100)+'%',30+m.progress*50);
-        }
-      }
-    }).then(function(result){
-      setScanStatus('Extraction des données…',85);
-      var text=result.data.text;
-      extractBetData(text);
-      setScanStatus('Terminé !',100);
-      setTimeout(closeScan,800);
-      input.value='';
-    }).catch(function(e){
-      setScanStatus('Erreur : '+e.message,0);
-      setTimeout(closeScan,2000);
-    });
-  };
-  reader.readAsDataURL(file);
-}
-function extractBetData(text){
-  var lines=text.split('\n').map(function(l){return l.trim();}).filter(Boolean);
-  /* Extract cote - look for numbers like 1.85 2.10 etc */
-  var coteMatch=text.match(/\b([1-9]\d*[,\.]\d{2})\b/g);
-  var cotes=coteMatch?coteMatch.map(function(c){return parseFloat(c.replace(',','.'));}).filter(function(c){return c>1&&c<50;}):[];
-  /* Extract competition keywords */
-  var compWords=['Ligue 1','Champions League','Premier League','Bundesliga','Serie A','La Liga','Europa League','Ligue des champions'];
-  var foundComp='';
-  compWords.forEach(function(cw){if(text.toLowerCase().includes(cw.toLowerCase()))foundComp=cw;});
-  /* Extract bet type */
-  var typeWords=['Victoire','1X2','Over','Under','BTS','Handicap','Mi-temps','1','N','2'];
-  var foundType='';
-  typeWords.forEach(function(tw){
-    var re=new RegExp('\\b'+tw+'\\b','i');
-    if(re.test(text)&&!foundType)foundType=tw;
-  });
-  /* Apply to form */
-  var applied=[];
-  if(cotes.length>0){
-    /* Update first mmRow cote */
-    if(mmRows.length>0){mmRows[0].cote=cotes[0];if(cotes.length>1)mmRows[1]={type:mmRows[1]&&mmRows[1].type||'',cote:cotes[1]};}
-    renderMmRows();
-    applied.push('Cote: @'+cotes[0]);
+
+/* ── THESPORTSDB API ── */
+var TSDB_IDS={
+  /* NRL */ "Melbourne Storm":"134029","Sydney Roosters":"134031","Penrith Panthers":"134030","Brisbane Broncos":"134021","South Sydney Rabbitohs":"134026","Parramatta Eels":"134024","Cronulla Sharks":"134022","Manly Sea Eagles":"134028","Canterbury Bulldogs":"134023","New Zealand Warriors":"134025","Gold Coast Titans":"134032","Canberra Raiders":"134027","Newcastle Knights":"134033","North Queensland Cowboys":"134034","Wests Tigers":"134035","St George Illawarra Dragons":"134036","Dolphins":"134037",
+  /* Super League */ "Leeds Rhinos":"133956","St Helens":"133958","Wigan Warriors":"133957","Catalans Dragons":"133959","Warrington Wolves":"133960"
+};
+var TSDB_SPORTS={
+  "🏉🇦🇺":"NRL",
+  "🏉":"Rugby Union"
+};
+function loadTeamLiveTSDB(el, nom, sport){
+  var tid=TSDB_IDS[nom];
+  var p=(state.u.find(function(u){return u.n===nom;})||{color:'#4d84ff'}).color||'#4d84ff';
+  if(!tid){
+    el.innerHTML='<div style="text-align:center;padding:40px 20px;">'
+      +'<div style="font-size:48px;margin-bottom:16px">🏉</div>'
+      +'<div style="font-size:15px;font-weight:800;color:'+p+'">'+nom+'</div>'
+      +'<div style="font-size:11px;color:var(--t3);margin-bottom:20px">ID TheSportsDB non trouvé</div>'
+      +'<a href="https://www.thesportsdb.com/search_all_teams.php?t='+encodeURIComponent(nom)+'&s=Rugby+League" target="_blank" style="display:inline-flex;align-items:center;gap:8px;background:'+p+';color:#fff;padding:12px 24px;border-radius:var(--r8);font-size:13px;font-weight:700;text-decoration:none">🔍 Chercher sur TheSportsDB</a>'
+      +'</div>';
+    return;
   }
-  if(foundComp&&$i('c-comp')){$i('c-comp').value=foundComp;applied.push('Compét: '+foundComp);}
-  if(applied.length){
-    showDbxStatus('📷 Scanné: '+applied.join(' · '));
-  } else {
-    showDbxStatus('📷 Aucune cote détectée — réessaie');
-  }
+  el.innerHTML='<div class="empty">⏳ Chargement…</div>';
+  fetch('https://www.thesportsdb.com/api/v1/json/3/eventsnext.php?id='+tid)
+    .then(function(r){return r.json();})
+    .then(function(d){
+      var events=(d.events||[]).slice(0,5);
+      var html2='<div style="font-size:9px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;color:var(--t3);margin-bottom:8px">Prochains matchs</div>';
+      if(events.length){
+        html2+=events.map(function(e){
+          var date=e.dateEvent?e.dateEvent.split('-').reverse().join('/'):'?';
+          var home=e.strHomeTeam||'?';var away=e.strAwayTeam||'?';
+          var isHome=home===nom;var opp=isHome?away:home;
+          return '<div style="display:flex;align-items:center;gap:8px;padding:9px 12px;background:var(--s1);border-radius:var(--r6);margin-bottom:6px;border-left:3px solid '+p+'">'
+            +'<div style="font-size:9px;color:var(--t3);width:34px;text-align:center">'+date+'</div>'
+            +'<div style="flex:1"><div style="font-size:12px;font-weight:700">'+(isHome?'🏠':'✈')+' vs '+opp+'</div>'
+            +'<div style="font-size:10px;color:var(--t3)">'+e.strLeague+'</div></div>'
+            +'<div style="font-size:10px;color:'+p+';font-weight:700">À venir</div></div>';
+        }).join('');
+      } else html2+='<div class="empty">Aucun match à venir</div>';
+      return fetch('https://www.thesportsdb.com/api/v1/json/3/eventslast.php?id='+tid)
+        .then(function(r2){return r2.json();})
+        .then(function(d2){
+          var last=((d2.results||[])).slice(-5).reverse();
+          html2+='<div style="font-size:9px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;color:var(--t3);margin:14px 0 8px">Derniers résultats</div>';
+          if(last.length){
+            html2+=last.map(function(e){
+              var isHome=e.strHomeTeam===nom;
+              var gf=isHome?parseInt(e.intHomeScore||0):parseInt(e.intAwayScore||0);
+              var ga=isHome?parseInt(e.intAwayScore||0):parseInt(e.intHomeScore||0);
+              var opp=isHome?e.strAwayTeam:e.strHomeTeam;
+              var win=gf>ga;var draw=gf===ga;
+              var rc=win?'var(--g)':draw?'var(--gold)':'var(--r)';
+              var date=e.dateEvent?e.dateEvent.split('-').reverse().join('/'):'?';
+              return '<div style="display:flex;align-items:center;gap:8px;padding:9px 12px;background:var(--s1);border-radius:var(--r6);margin-bottom:6px;border-left:3px solid '+rc+'">'
+                +'<div style="font-size:9px;color:var(--t3);width:34px;text-align:center">'+date+'<br><b style="color:'+rc+'">'+(win?'V':draw?'N':'D')+'</b></div>'
+                +'<div style="flex:1"><div style="font-size:12px;font-weight:700">'+(isHome?'🏠':'✈')+' vs '+opp+'</div>'
+                +'<div style="font-size:10px;color:var(--t3)">'+e.strLeague+'</div></div>'
+                +'<div style="font-size:16px;font-weight:800;color:'+rc+'">'+gf+' - '+ga+'</div></div>';
+            }).join('');
+          } else html2+='<div class="empty">Aucun résultat</div>';
+          el.innerHTML=html2;
+        });
+    }).catch(function(){el.innerHTML='<div class="empty">❌ Erreur API</div>';});
+}
+function updateAdvList(q){
+  var dl=$i('adversaires-list');if(!dl)return;
+  var fromDb=CLUB_DB.map(function(c){return c.name;});
+  var used=state.a.map(function(h){return h.target||'';}).filter(Boolean);
+  var all=fromDb.concat(ADV_TOP).concat(used);
+  var seen={};var uniq=[];
+  all.forEach(function(v){if(v&&!seen[v]){seen[v]=1;uniq.push(v);}});
+  var filtered=q&&q.length>0?uniq.filter(function(v){return v.toLowerCase().includes(q.toLowerCase());}):uniq.slice(0,25);
+  dl.innerHTML=filtered.slice(0,20).map(function(v){return '<option value="'+v+'">';}).join('');
+}
+function updateCompList(){
+  var sport=($i('c-sport')&&$i('c-sport').value)||'⚽';
+  var comps=sport==='⚽'?['Ligue 1','Champions League','Europa League','Conference League','Premier League','La Liga','Bundesliga','Serie A','Eredivisie','Liga Portugal','Série A brésilienne','Argentine','MLS','Ligue 2','Championship']:sport==='🏀'?['NBA','Euroleague','Pro A']:sport==='🎾'?['Roland Garros','Wimbledon','US Open','Australian Open','Masters 1000']:['Ligue 1'];
+  var dl=$i('comp-list');if(dl)dl.innerHTML=comps.map(function(c){return '<option value="'+c+'">';}).join('');
+  var dl2=$i('comp-list-simple');if(dl2)dl2.innerHTML=comps.map(function(c){return '<option value="'+c+'">';}).join('');
 }
 /* ── INIT ── */
 document.querySelectorAll('.tab').forEach(function(t){t.style.display='none';});
