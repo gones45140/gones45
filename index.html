@@ -1457,9 +1457,7 @@ function updMise(){
   if(u.sport&&$i('c-sport'))$i('c-sport').value=u.sport;
   /* Auto-fill competition from CLUB_DB */
   var db=CLUB_DB.find(function(c){return c.name===u.n;});
-  if(db&&db.league&&$i('c-comp')&&!$i('c-comp').value){
-    $i('c-comp').value=db.league;
-  }
+  if(db&&db.league&&$i('c-comp'))$i('c-comp').value=db.league;
   /* Auto-fill adversaires via API */
   autoFillAdv(u);
   renderCrash();
@@ -1475,14 +1473,10 @@ function autoFillAdv(u){
       return f.teams.home.id===tid?f.teams.away.name:f.teams.home.name;
     });
     /* Also fill competition if not set */
-    if($i('c-comp')&&!$i('c-comp').value){
-      $i('c-comp').value=d.response[0].league.name;
-    }
+    if($i('c-comp'))$i('c-comp').value=d.response[0].league.name;
     /* Fill date of next match */
     var next=d.response[0];
-    if(next&&$i('c-date')&&!$i('c-date').value){
-      $i('c-date').value=next.fixture.date.substring(0,10);
-    }
+    if(next&&$i('c-date'))$i('c-date').value=next.fixture.date.substring(0,10);
     /* Update adversaire dropdown */
     var adv=$i('adv-res-cock');
     if(adv&&opps.length){
