@@ -831,7 +831,7 @@ function renderCrash(){
   if(!u){$i('crash-grid').innerHTML='<div style="color:var(--t3);font-size:11px;grid-column:span 4;text-align:center;padding:8px;">Paliers N/A</div>';return;}
   var s=String(u.s||1);
   var strat=STRATS[s]||STRATS["1"];
-  var cote=parseFloat(($i('c-cote')&&$i('c-cote').value)||1.5)||1.5;
+  var cote=getMmCote?getMmCote():1.5;
   var total=Object.values(state.b).reduce(function(a,v){return a+parseFloat(v||0);},0);
   var html='';
   var alertMsg='';
