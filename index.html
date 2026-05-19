@@ -2027,22 +2027,22 @@ function updateCompList(){
 function saveDbxKey(){
   var inp=$i('dbx-key-input');if(!inp)return;
   var key=inp.value.trim();if(!key)return;
-  _dbxKey=key;localStorage.setItem('g45_dbx',key);
+  _dbxConfig.refreshToken=key;localStorage.setItem('g45_dbx',key);
   var st=$i('dbx-key-status');
   if(st){st.innerText='✅ Clé enregistrée !';st.style.color='var(--g)';}
   setTimeout(function(){if(st)st.innerText='';},3000);
 }
-function testDbxKey(){
-  var inp=$i('dbx-key-input');
-  var key=(inp&&inp.value.trim())||_dbxKey;
-  if(!key){var st=$i('dbx-key-status');if(st){st.innerText='❌ Aucune clé';st.style.color='var(--r)';}return;}
+async function testDbxKey(){
   var st=$i('dbx-key-status');
-  if(st){st.innerText='⏳ Test…';st.style.color='var(--t3)';}
-  fetch('https://api.dropboxapi.com/2/users/get_current_account',{method:'POST',headers:{'Authorization':'Bearer '+key,'Content-Type':'application/json'},body:'null'})
-  .then(function(r){return r.json();}).then(function(d){
-    if(d.email){if(st){st.innerText='✅ Connecté : '+d.email;st.style.color='var(--g)';}_dbxKey=key;localStorage.setItem('g45_dbx',key);}
-    else{if(st){st.innerText='❌ Token invalide';st.style.color='var(--r)';}}
-  }).catch(function(){if(st){st.innerText='❌ Erreur réseau';st.style.color='var(--r)';}});
+  if(st){st.innerText='⏳ Test connexion…';st.style.color='var(--t3)';}
+  try{
+    var token=await getValidToken();
+    if(!token){if(st){st.innerText='❌ Impossible de rafraîchir le token';st.style.color='var(--r)';}return;}
+    var res=await fetch('https://api.dropboxapi.com/2/users/get_current_account',{method:'POST',headers:{'Authorization':'Bearer '+token,'Content-Type':'application/json'},body:'null'});
+    var d=await res.json();
+    if(d.email){if(st){st.innerText='✅ Connecté : '+d.email+' (token auto)';st.style.color='var(--g)';}}
+    else{if(st){st.innerText='❌ Erreur compte';st.style.color='var(--r)';}}
+  }catch(e){if(st){st.innerText='❌ Erreur réseau';st.style.color='var(--r)';}}
 }
 
 function loadTeamLive(){
@@ -2065,26 +2065,45 @@ function loadTeamLive(){
     +'</div>';
 }
 
-/* ── DROPBOX AUTO-SAVE ── */
-var _dbxKey='sl.u.AGftPxa5PLhJuU4fugT92ALZl2Jsm5003qYgiqrU5G3x8oe-J39lQkHxfWDo4aOSL8BK4FF6BNStc1jVNu0ltfYisESLX7vn1nVM6PVwAdrXwBQPHGrQc-zHO35hKFUzKGe6r_zoWMz2GCgo6A173r7NzPj-ZVwb83STCQojF3uB3CEuhLZYN1wlsSYODE4AVHSGTR_ESvbYLLSMu3fW2GJW8Yoe-QvAMMZl0RMFll7LEjHO2NABZo0vZmnEsMZbv5O5LY3pjAodxxIXKlnPSUGpmh1D771ptBZz1EfbZWQr2uUOPzYzSL8KVeZ2f1x_z3pmIy9oTxHx78YejE-crrnyIgM6w37N8mgNOeyXmYkyhARCf8axN67uda3WjMzmHjbSMtrp1deczF81klhSE6VHFF_61SIvt-iPNUntNJ1lXEdwWAyrnfVFl8ZQGIXjLOBVXs6w-EbZ6Nc3wv-umNzpp3_kkfr0KY2blOqEu2eBZKMxi6O_wloqgXEPR56Fczdki5iYZCpYoC74ThMw33sWz-1EnCVjARA4fatrz4JOJ2_qRcuGZKdN-5-PJx-C7_5F5WsnapmJeHebWLi1w5_fsDemb76khEKakjxoJ63j4GREU0TEnUSDFG1_ItjtD3WeLt_r_hmEMEE57p1lTPA4Eaj8x-7mJkn4lWLU_OZeShOJHRJcQmpQt9vhuBnSawptOhP29vKXGiHreFuDlhKT4XXmaUUDxUQZj4PMcl8aoaEbHZL8tums-j9oG-FXLV3yaFbH7aNZwR0dGQq5GgTdMfzIbhndMHTi1Ugt_LODReVoj90E9uXwMwF1F3AgILyEGmEvEx4de2BasHk-5c-OBykRWk-ZXldLGDYBYOTq0NFM3nXFWNCEAEn5Xk2AEpYB4C8LZSb8qh7PaD35gIlXRMNLr9EvtA_ZRgKgfFiNin4krpuJRi65YN6W6J-TGXyThxgxXP7wjqfnjLqecbaJojobFpCpAG3HG7foqnCfEdw09P2Et8-cyNQ_MBIOZkk1VXg0siotTC0k8yoKJ9XElVN00Zk20wJkohljfKP_cXfbtZfRRovp_-QTlBtE-HfBvOJ8Ac_0Xm6n1khD69Y9cmCB8JqvsMoD5i99R8MeYoVAg0RBkaI3iFZETa_b4yKwaSQnKDK8HSacUlL4J_l2xpOscH6f1MKlqHh4yOeIO1_bK9Y5zSb2Sk5dWQH-Gi7quGYv2SuYXc1jn-Ijxk729i0CGMJ7jOzjQCmYGOSusYbe-Re7AR5aYTw2nexhk_guVRoPtzB3QZXR8Sdy0eqwAGwyinSi11dZtGwCVpXEQhAmqlQUeB7Uh3l8QPctL0zgYmQ7CzPx8m7OHaWoNHtZa-ZBi55yO7eiuoxsLdqv8QAADH3Vu2V88y3kU4TtLI0eyNwpWeKhddoE7kBvHiKHci-JN5PBe9hLSgOGeca17dHdnSOTu6mgMY6AH7dQJdA';
+/* ── DROPBOX AUTO-SAVE (refresh token permanent) ── */
+var _dbxConfig={
+  appKey:'x9j8qikpa21j1pv',
+  appSecret:'vk2o926kopta87b',
+  refreshToken:'sl.u.AGfGM9ID1NQIOOhe-dYMd7gmeSp9FohnSYC0m1T-t1TDF6kE4hAVz3rKY1_RvQkUgo5Pw3pLvoHBY_k7JzrPFCupxLVsjkSem9gBJNbiGs0d_J8-yyT7vVOa3z4GyxMfz64w8JS0pdmlwD3L4fi0O_-nJ950zOQMHmiavTK87JRGrmDNGghcJHnfnrKLRK2goDVvHmqyseMiPfYnd136Cnuk1cdaR_ZbuXm2FNEqPZ72ULAEWCruSkFJB_r2YPuxRUofsxgP8BAzDG9p0HXiDn4lcOofSnhdZxpmrOFRwi_4dXdsy4xS2wEXw6NQb7ZIK5LERZL6W3guwtBaqiuTCdG1NZt41s9yjUxT4dFu_vGLd-G-g-LKKwVo9DVIGuuWDPXdbK-s0UCoN5Rk0SZBlZ-Mj4JZWzHnFkabGkspSLeR-jeWWVlAGtJHwRRXgKeUf0dEtsrffH6cd9lmiWDYkquXylNu-ZDvfiTmjCh23IXdW3aKyK9zfDsv6P3nIqQP0dp89tTFWKriT_Xd3aaGbVrskP6kfeSzwu7ic8iW3hoiwYPipJMB1cqGxMI5Pmgp3-INckJx7F4U5pGIKhy-3VPWyz2XvWIGJEMsDHJlFdYmezGeMr-5n1-_KlMUCrL0RP7T7axdJL_YBk2iHiuxx5MrGXIVcV6IfXIUcbP4poNpoRsSzHu784Fml1L4c45LTKHiFMjFA7SbmG9oIp5unyThykCWLmWxSpigua0ZjIUt6n68t_kXbaHg8y5fdhbqtVLdczMGd4nNeNqHqgTeAQOB41rpSAkBDutViGWFWNWWEge8hRpG7AmVkciP7G4t1ocLqRo9TvLhJvs9VMAEF6ydwfgrQPzw9cIvSVPJob7KRgPK2pPTTm_qgEuvd7ObrXeLGXC4vgDwLmKr8U6ydwmRU4CsHsegp1HCxzxSsYu82uXzatTKwLjp6ulB32DGxL-Xw74TXwFkVYlF7XjMgOj4rBOSyrTEor_HHWMKlgz6Y9rjUVZ-pO8zVALXntzmcJ6zleeTaDWNjquHkbIuC7fAW23fMTMLxZStrcGNweqRj9QBXlNYVcaJDajz1MOb_ygc1RFJBzO_guEsenA07B6rw1BG9_uTRlCFt49SRclLPxGt4YuMZ7WOq9T47mwfd_sxgHduBaGYwugZ4mIKZDtPGBo7Ntse5ZBF7Qu5rNMwytgaq0wDKylpam8jK8GX2054_oN8OjFseXWaHxVwI0Fln8MwA9iMD3K0cf7zbgvxE3rPCj7OuSMHt-1zAWvwCAM1YhrOUAL6Ny4RVBdag_YqL-BznfG7XoNBGYiBSmIhrIdrDp8v3cjG_OwWdvXfr4_MTrDSUe0EZr0qfxFhd16zLCWj0cKLdI_yybKxzFZp1YXDK8ezOYCZusqmtCw52FZtELOIG2DjgtfTw6YUHEr4pgU5FtIpPF691bFZmKrc7MDiosDFr7iehD8yr_6lrmk'
+};
 var _dbxSaving=false;
-function saveToDropbox(){
-  if(!_dbxKey||_dbxSaving)return;
+var _dbxAccessToken=null;
+async function getValidToken(){
+  try{
+    var res=await fetch('https://api.dropbox.com/oauth2/token',{
+      method:'POST',
+      headers:{'Content-Type':'application/x-www-form-urlencoded'},
+      body:new URLSearchParams({grant_type:'refresh_token',refresh_token:_dbxConfig.refreshToken,client_id:_dbxConfig.appKey,client_secret:_dbxConfig.appSecret})
+    });
+    var d=await res.json();
+    _dbxAccessToken=d.access_token;
+    return _dbxAccessToken;
+  }catch(e){return null;}
+}
+async function saveToDropbox(){
+  if(_dbxSaving)return;
   _dbxSaving=true;
-  var data=JSON.stringify(state);
-  fetch('https://content.dropboxapi.com/2/files/upload',{
-    method:'POST',
-    headers:{
-      'Authorization':'Bearer '+_dbxKey,
-      'Dropbox-API-Arg':JSON.stringify({path:'/GONES45/backup.json',mode:'overwrite',autorename:false}),
-      'Content-Type':'application/octet-stream'
-    },
-    body:data
-  }).then(function(r){
+  try{
+    var token=await getValidToken();
+    if(!token){_dbxSaving=false;showDbxStatus('❌ Token Dropbox invalide');return;}
+    var res=await fetch('https://content.dropboxapi.com/2/files/upload',{
+      method:'POST',
+      headers:{
+        'Authorization':'Bearer '+token,
+        'Dropbox-API-Arg':JSON.stringify({path:'/GONES45/backup.json',mode:'overwrite',autorename:false}),
+        'Content-Type':'application/octet-stream'
+      },
+      body:JSON.stringify(state)
+    });
     _dbxSaving=false;
-    if(r.ok){showDbxStatus('✅ Sauvegardé sur Dropbox');}
-    else{showDbxStatus('⚠️ Erreur Dropbox '+r.status);}
-  }).catch(function(){_dbxSaving=false;showDbxStatus('❌ Dropbox hors ligne');});
+    if(res.ok){showDbxStatus('✅ Sauvegardé sur Dropbox');}
+    else{showDbxStatus('⚠️ Erreur Dropbox '+res.status);}
+  }catch(e){_dbxSaving=false;showDbxStatus('❌ Dropbox hors ligne');}
 }
 function showDbxStatus(msg){
   var el=document.getElementById('dbx-status');
@@ -2206,8 +2225,8 @@ document.querySelectorAll('.tab').forEach(function(t){t.style.display='none';});
 $i('t-dash').style.display='block';
 window.onload=function(){
   var saved=localStorage.getItem('g45_dbx');
-  if(saved){_dbxKey=saved;}
-  var inp=$i('dbx-key-input');if(inp&&_dbxKey)inp.value=_dbxKey;
+  if(saved){_dbxConfig.refreshToken=saved;}
+  var inp=$i('dbx-key-input');if(inp)inp.value='(token auto — permanent)';
   render();updMise();buildSbRows();buildDtRows();buildArjelRows();renderCrash();renderMmRows();renderMmRowsSimple();updateCompList();calcVb();calcLay();calcFreebet();};
 </script>
 </body>
