@@ -475,6 +475,10 @@ input[type="date"],input[type="time"]{color-scheme:dark;}
       <div class="fg" style="margin-bottom:9px;"><label class="fl">Bookmaker</label><select id="n-book" class="fi"></select></div>
       <!-- Ligne 7 : Notes -->
       <div class="fg" style="margin-bottom:9px;"><label class="fl">📝 Notes</label><textarea id="n-notes" class="fi" style="height:44px;resize:none;" placeholder="Analyse, contexte…"></textarea></div>
+      <label style="display:flex;align-items:center;gap:8px;padding:9px;background:rgba(240,176,32,.08);border:1px solid rgba(240,176,32,.2);border-radius:var(--r6);cursor:pointer;margin-bottom:9px;">
+        <input type="checkbox" id="n-flashboost" style="accent-color:var(--gold)">
+        <span style="font-size:11px;font-weight:700;color:var(--gold)">⚡ FlashBoost</span>
+      </label>
       <button class="btn btn-p" style="margin-top:2px;" onclick="pari(false)">Placer le pari simple</button>
     </div>
     <div class="sec">En cours</div>
@@ -490,7 +494,7 @@ input[type="date"],input[type="time"]{color-scheme:dark;}
 </div>
 
 <!-- ÉQUIPES -->
-<section id="t-equipes" class="tab" style="padding:0;">
+<section id="t-bilan" class="tab" style="padding:0;">
   <div class="gtabs">
     <button class="gtab on" onclick="showGTab('g-global',this)">🌍 Global</button>
     <button class="gtab" onclick="showGTab('g-equipes',this)">🛡 Équipes</button>
@@ -533,16 +537,27 @@ input[type="date"],input[type="time"]{color-scheme:dark;}
 </section>
 
 <!-- BILAN -->
-<div id="t-bilan" class="tab">
-  <div class="sec">Filtre sport</div>
+<div id="t-outils" class="tab">
+  <!-- 4 onglets bilan -->
+  <div class="gtabs" style="margin-bottom:14px;">
+    <button class="gtab on" id="btab-global" onclick="showBilanTab('global',this)">🌍 Global</button>
+    <button class="gtab" id="btab-cockpit" onclick="showBilanTab('cockpit',this)">🚀 Cockpit</button>
+    <button class="gtab" id="btab-simple" onclick="showBilanTab('simple',this)">🎯 Simple</button>
+    <button class="gtab" id="btab-flash" onclick="showBilanTab('flash',this)">⚡ Flash</button>
+  </div>
+  <!-- Contenu commun filtré -->
+  <div class="sec" style="margin-top:0;">Filtre sport</div>
   <div class="sfrow" id="sport-filter"></div>
   <div class="sec">Performance</div>
   <div class="bili2">
     <div class="bilibox"><div class="bilibox-l">Bénéfice</div><div class="bilibox-v" id="stat-ben" style="color:var(--g);">0€</div></div>
     <div class="bilibox"><div class="bilibox-l">Réussite</div><div class="bilibox-v" id="stat-wr">0%</div></div>
-    <div class="bilibox"><div class="bilibox-l">Boosts profit</div><div class="bilibox-v" id="stat-bp">0€</div></div>
-    <div class="bilibox"><div class="bilibox-l">Boosts WR</div><div class="bilibox-v" id="stat-bwr">0%</div></div>
+    <div class="bilibox"><div class="bilibox-l">ROI</div><div class="bilibox-v" id="stat-roi">0%</div></div>
+    <div class="bilibox"><div class="bilibox-l">Paris</div><div class="bilibox-v" id="stat-nb">0</div></div>
   </div>
+  <!-- Courbe de capital -->
+  <div class="sec">Courbe</div>
+  <div class="cwrap"><div style="height:160px;position:relative;"><canvas id="bilan-chart"></canvas></div></div>
   <div class="sec">Par bookmaker</div>
   <div id="bk-stats"></div>
   <div class="sec">Calculateur</div>
@@ -674,27 +689,7 @@ input[type="date"],input[type="time"]{color-scheme:dark;}
       <div id="arjel-verdict" style="display:none;margin-top:9px;padding:10px;border-radius:var(--r6);text-align:center;font-size:13px;font-weight:700"></div>
     </div>
   </div>
-</div>
-
-<!-- BANK -->
-<div id="t-bank" class="tab">
-  <div class="sec">Mouvement de fonds</div>
-  <div class="fc">
-    <div class="fundrow">
-      <select id="mv-book" class="fi"></select>
-      <input type="number" id="mv-amt" class="fi" placeholder="Montant €">
-      <div class="fbtns"><button class="fb plus" onclick="fund(true)">+</button><button class="fb minus" onclick="fund(false)">−</button></div>
-    </div>
-  </div>
-  <div class="sec">Bookmakers</div>
-  <div id="books-grid" class="bgrid"></div>
-  <div class="fc">
-    <label class="fl">Ajouter un bookmaker</label>
-    <div style="display:flex;gap:7px;margin-top:5px;">
-      <input id="new-bk" class="fi" placeholder="Nom…">
-      <button class="btn btn-p" style="width:64px;margin:0;padding:9px;" onclick="addBook()">OK</button>
-    </div>
-  </div>
+  <!-- Équipes / création -->
   <div class="sec">Équipes / Unités</div>
   <div class="fc">
     <label class="fl">Rechercher un club</label>
@@ -741,6 +736,28 @@ input[type="date"],input[type="time"]{color-scheme:dark;}
     <div id="dbx-key-status" style="margin-top:7px;font-size:11px;font-weight:700;"></div>
   </div>
 </div>
+</div>
+
+<!-- BANK -->
+<div id="t-bank" class="tab">
+  <div class="sec">Mouvement de fonds</div>
+  <div class="fc">
+    <div class="fundrow">
+      <select id="mv-book" class="fi"></select>
+      <input type="number" id="mv-amt" class="fi" placeholder="Montant €">
+      <div class="fbtns"><button class="fb plus" onclick="fund(true)">+</button><button class="fb minus" onclick="fund(false)">−</button></div>
+    </div>
+  </div>
+  <div class="sec">Bookmakers</div>
+  <div id="books-grid" class="bgrid"></div>
+  <div class="fc">
+    <label class="fl">Ajouter un bookmaker</label>
+    <div style="display:flex;gap:7px;margin-top:5px;">
+      <input id="new-bk" class="fi" placeholder="Nom…">
+      <button class="btn btn-p" style="width:64px;margin:0;padding:9px;" onclick="addBook()">OK</button>
+    </div>
+  </div>
+</div>
 
 </main>
 
@@ -748,8 +765,8 @@ input[type="date"],input[type="time"]{color-scheme:dark;}
   <button class="ni on" onclick="showTab('t-dash',this)"><i class="fa-solid fa-chart-pie"></i>Mur</button>
   <button class="ni" onclick="showTab('t-paris',this)"><i class="fa-solid fa-futbol"></i>Pari</button>
   <button class="ni" onclick="showTab('t-arch',this)"><i class="fa-solid fa-clock-rotate-left"></i>Archive</button>
-  <button class="ni" onclick="showTab('t-equipes',this)"><i class="fa-solid fa-shield-halved"></i>Équipes</button>
-  <button class="ni" onclick="showTab('t-bilan',this)"><i class="fa-solid fa-chart-line"></i>Bilan</button>
+  <button class="ni" onclick="showTab('t-outils',this)"><i class="fa-solid fa-chart-line"></i>Bilan</button>
+  <button class="ni" onclick="showTab('t-outils',this)"><i class="fa-solid fa-wrench"></i>Outils</button>
   <button class="ni" onclick="showTab('t-bank',this)"><i class="fa-solid fa-wallet"></i>Bank</button>
 </nav>
 
@@ -882,6 +899,14 @@ var PCOLS=["#4d84ff","#1ed760","#f59e0b","#a855f7","#22d3ee","#f97316","#ef4444"
 var selColor=PCOLS[0];
 var AC={},GC=null,MC={},_currentTeam="";
 var bilanSport='ALL';
+var bilanMode='global';
+function showBilanTab(mode,btn){
+  bilanMode=mode;
+  var outils=$i('t-outils');
+  if(outils)outils.querySelectorAll('.gtab').forEach(function(b){if(b.id&&b.id.startsWith('btab-'))b.classList.remove('on');});
+  if(btn)btn.classList.add('on');
+  renderBilanTab();
+}
 var dtRows=[{c:2.0},{c:3.0}];
 
 /* ── PALETTE ── */
@@ -1104,23 +1129,42 @@ function renderSportFilter(){
   }).join('');
 }
 function filteredA(){
-  return bilanSport==='ALL'?state.a:state.a.filter(function(h){return h.sport===bilanSport;});
+  var base=state.a;
+  if(bilanMode==='cockpit')base=base.filter(function(h){return h.isS;});
+  else if(bilanMode==='simple')base=base.filter(function(h){return !h.isS&&!h.isFlash;});
+  else if(bilanMode==='flash')base=base.filter(function(h){return h.isFlash;});
+  return bilanSport==='ALL'?base:base.filter(function(h){return h.sport===bilanSport;});
 }
 
 /* ── BILAN TAB (autonome) ── */
+var _bilanChart=null;
 function renderBilanTab(){
   renderSportFilter();
   var paris=filteredA();
-  var total=Object.values(state.b).reduce(function(a,v){return a+parseFloat(v||0);},0);
-  var ben=total-(state.start_bk||0);
-  var benC=ben>=0?'var(--g)':'var(--r)';
-  var benEl=$i('stat-ben');if(benEl){benEl.innerText=fmt(ben);benEl.style.color=benC;}
+  /* Stats */
+  var ben=paris.reduce(function(a,h){return a+(h.win?(h.m*h.cote)-h.m:-h.m);},0);
+  var benEl=$i('stat-ben');if(benEl){benEl.innerText=fmt(ben);benEl.style.color=ben>=0?'var(--g)':'var(--r)';}
   var wr=paris.length?(paris.filter(function(h){return h.win;}).length/paris.length*100).toFixed(0):0;
   txt('stat-wr',wr+'%');
-  var boosts=paris.filter(function(h){return h.type&&h.type.toLowerCase().includes('boost');});
-  var bp=boosts.reduce(function(a,h){return a+(h.win?(h.m*h.cote)-h.m:-h.m);},0);
-  var bpEl=$i('stat-bp');if(bpEl){bpEl.innerText=fmt(bp);bpEl.style.color=bp>=0?'var(--g)':'var(--r)';}
-  txt('stat-bwr',boosts.length?(boosts.filter(function(h){return h.win;}).length/boosts.length*100).toFixed(0)+'%':'0%');
+  var mise=paris.reduce(function(a,h){return a+parseFloat(h.m||0);},0);
+  var roi=mise?(ben/mise*100).toFixed(1):0;
+  var roiEl=$i('stat-roi');if(roiEl){roiEl.innerText=roi+'%';roiEl.style.color=parseFloat(roi)>=0?'var(--g)':'var(--r)';}
+  txt('stat-nb',paris.length);
+  /* Courbe */
+  var ctx=$i('bilan-chart');
+  if(ctx){
+    if(_bilanChart){try{_bilanChart.destroy();}catch(e){}}
+    if(paris.length){
+      var cum=0;
+      var curve=paris.slice().reverse().map(function(h){cum+=(h.win?(h.m*h.cote)-h.m:-h.m);return parseFloat(cum.toFixed(2));});
+      var color=bilanMode==='flash'?'#f0b020':bilanMode==='cockpit'?'#4d84ff':bilanMode==='simple'?'#22d3ee':'#1ed760';
+      var ct=ctx.getContext('2d');
+      var g=ct.createLinearGradient(0,0,0,150);
+      g.addColorStop(0,color+'44');g.addColorStop(1,color+'00');
+      _bilanChart=new Chart(ct,{type:'line',data:{labels:curve.map(function(_,i){return i;}),datasets:[{data:curve,borderColor:color,backgroundColor:g,borderWidth:2,fill:true,tension:.4,pointRadius:0}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{display:false},y:{grid:{color:'rgba(255,255,255,.03)'},ticks:{color:'#4f5d88',font:{size:9},callback:function(v){return v+'€';}}}}}});
+    }
+  }
+  /* Par bookmaker */
   var bks={};Object.keys(state.b).forEach(function(k){bks[k]=0;});
   paris.forEach(function(h){bks[h.b]=(bks[h.b]||0)+(h.win?(h.m*h.cote)-h.m:-h.m);});
   var bke=$i('bk-stats');
@@ -1180,7 +1224,7 @@ function render(){
       var logo=logoHtml(u.n,u.color,u.abbr,32);
       var forme=formeHtml(paris,5);
       var pColor=profit>=0?'var(--g)':'var(--r)';
-      return '<div style="display:flex;align-items:center;gap:10px;padding:10px 12px;border-bottom:1px solid var(--b1);">'
+      return '<div style="display:flex;align-items:center;gap:10px;padding:10px 12px;border-bottom:1px solid var(--b1);cursor:pointer;" data-nom="'+u.n+'" onclick="openClubFromDash(this.dataset.nom)">'
         +logo
         +'<div style="flex:1;min-width:0;">'
         +'<div style="font-size:12px;font-weight:700;">'+(u.sport||'')+' '+u.n+'</div>'
@@ -1474,7 +1518,7 @@ function openClub(nom,idx){
   document.querySelectorAll('.ipanel').forEach(function(c){c.classList.remove('on');});
   document.querySelector('.itab').classList.add('on');
   $i('ip-bilan').classList.add('on');
-  $i('t-equipes').style.display='none';
+  $i('t-bilan').style.display='none';
   $i('detail').style.display='block';
 
   setTimeout(function(){
@@ -1513,7 +1557,7 @@ function openClub(nom,idx){
 }
 
 function setUG(nom){var v=prompt('Objectif profit pour '+nom+' (€) :',state.ugoals[nom]||0);if(v!=null&&!isNaN(+v)){state.ugoals[nom]=+v;save();}}
-function closeClub(){Object.values(AC).forEach(function(c){try{c.destroy();}catch(e){}});AC={};$i('detail').style.display='none';$i('t-equipes').style.display='block';}
+function closeClub(){Object.values(AC).forEach(function(c){try{c.destroy();}catch(e){}});AC={};$i('detail').style.display='none';$i('t-bilan').style.display='block';}
 function swInner(id,btn){document.querySelectorAll('.itab').forEach(function(t){t.classList.remove('on');});document.querySelectorAll('.ipanel').forEach(function(c){c.classList.remove('on');});if(btn)btn.classList.add('on');$i('ip-'+id).classList.add('on');}
 
 /* ── PARIS ── */
@@ -1537,10 +1581,11 @@ function pari(isS){
   }
   if(m>0&&(parseFloat(state.b[b])||0)>=m){
     state.b[b]=(parseFloat(state.b[b])-m).toFixed(2);
-    state.h.unshift({id:Date.now().toString(),n:n,target:target,b:b,l:l,m:m,cote:c,isS:isS,t:t,sport:sport,type:type,comp:comp,heure:heure,date:date,notes:notes||''});
+    var isFlash=!isS&&$i('n-flashboost')&&$i('n-flashboost').checked;
+    state.h.unshift({id:Date.now().toString(),n:n,target:target,b:b,l:l,m:m,cote:c,isS:isS,isFlash:isFlash,t:t,sport:sport,type:type,comp:comp,heure:heure,date:date,notes:notes||''});
     save();
     if(isS){$i('c-target').value='';$i('c-comp').value='';if($i('c-notes'))$i('c-notes').value='';}
-    else{$i('n-comp').value='';$i('n-type').value='';$i('n-analysis').value='';if($i('n-notes'))$i('n-notes').value='';if($i('n-team'))$i('n-team').value='';mmRowsSimple=[{type:'',cote:1.50}];renderMmRowsSimple();}
+    else{$i('n-comp').value='';$i('n-type').value='';$i('n-analysis').value='';if($i('n-notes'))$i('n-notes').value='';if($i('n-team'))$i('n-team').value='';if($i('n-flashboost'))$i('n-flashboost').checked=false;mmRowsSimple=[{type:'',cote:1.50}];renderMmRowsSimple();}
   }else alert('Solde insuffisant sur '+bki(b).n+' !');
 }
 function result(id,win){
@@ -1672,7 +1717,7 @@ function showTab(id,btn){
   if(btn)btn.classList.add('on');
   render();
   /* Lazy-render tab-specific content */
-  if(id==='t-equipes')setTimeout(function(){showGTab('g-global',document.querySelector('.gtab'));},50);
+  if(id==='t-bilan')setTimeout(function(){var gb=$i('t-bilan')&&$i('t-bilan').querySelector('.gtab');showGTab('g-global',gb);},50);
 }
 function swBet(mode){
   var isS=mode==='strat';
@@ -1688,8 +1733,9 @@ function importData(){var i=document.createElement('input');i.type='file';i.onch
 /* ── GLOBAL TAB ── */
 var GC2={};
 function showGTab(id, btn){
-  document.querySelectorAll('.gtab').forEach(function(b){b.classList.remove('on');});
-  document.querySelectorAll('.gpanel').forEach(function(p){p.classList.remove('on');});
+  var container=$i('t-bilan')||document;
+  container.querySelectorAll('.gtab').forEach(function(b){b.classList.remove('on');});
+  container.querySelectorAll('.gpanel').forEach(function(p){p.classList.remove('on');});
   if(btn)btn.classList.add('on');
   var p=$i(id);if(p)p.classList.add('on');
   if(id==='g-global')renderGlobalCharts();
@@ -2219,6 +2265,16 @@ function syncSimpleCote(){
   var nc=$i('n-cote');if(!nc)return;
   var v=parseFloat(nc.value)||1;
   if(mmRowsSimple.length===1){mmRowsSimple[0].cote=v;renderMmCoteSimple();}
+}
+
+function openClubFromDash(nom){
+  /* Switch to bilan tab first, then open club detail */
+  var bilanBtn=document.querySelector('.ni[onclick*="t-bilan"]');
+  showTab('t-bilan', bilanBtn);
+  setTimeout(function(){
+    var idx=state.u.findIndex(function(u){return u.n===nom;});
+    openClub(nom, idx>=0?idx:0);
+  }, 60);
 }
 /* ── INIT ── */
 document.querySelectorAll('.tab').forEach(function(t){t.style.display='none';});
