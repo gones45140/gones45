@@ -563,11 +563,7 @@ input[type="date"],input[type="time"]{color-scheme:dark;}
 
     <!-- FREEBET ARJEL -->
     <div id="calc-arjel" style="display:none">
-      <div style="display:flex;gap:6px;margin-bottom:10px;">
-        <button id="arjel-mode-full" onclick="setArjelMode('full')" style="flex:1;padding:7px;border-radius:var(--r6);border:1px solid var(--gold);background:rgba(240,176,32,.15);color:var(--gold);font-size:11px;font-weight:700;cursor:pointer;">🎟 Entier</button>
-        <button id="arjel-mode-split" onclick="setArjelMode('split')" style="flex:1;padding:7px;border-radius:var(--r6);border:1px solid var(--b2);background:none;color:var(--t3);font-size:11px;font-weight:700;cursor:pointer;">✂️ Divisé</button>
-      </div>
-      <div style="font-size:10px;color:var(--t3);margin-bottom:10px;" id="arjel-desc">🎟 Freebet sur la cote choisie · 💵 Argent réel sur les autres.</div>
+      <div style="font-size:10px;color:var(--t3);margin-bottom:10px;">🎟 Freebet sur la plus grosse cote · 💵 Argent réel sur les autres issues pour garantir un retour.</div>
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
         <label class="fl" style="margin:0;">Freebet (€)</label>
         <input type="number" id="arjel-fb" class="fi" style="width:100px;color:var(--gold);font-weight:700;" value="10" oninput="calcArjel()">
@@ -654,7 +650,16 @@ input[type="date"],input[type="time"]{color-scheme:dark;}
 </main>
 
 <nav class="nav">
-  <button class="ni on" onclick="showTab('t-dash',this)"><i class="fa-solid fa-chart-pie"></i>Mur</buttovar BK={
+  <button class="ni on" onclick="showTab('t-dash',this)"><i class="fa-solid fa-chart-pie"></i>Mur</button>
+  <button class="ni" onclick="showTab('t-paris',this)"><i class="fa-solid fa-futbol"></i>Pari</button>
+  <button class="ni" onclick="showTab('t-arch',this)"><i class="fa-solid fa-clock-rotate-left"></i>Archive</button>
+  <button class="ni" onclick="showTab('t-equipes',this)"><i class="fa-solid fa-shield-halved"></i>Équipes</button>
+  <button class="ni" onclick="showTab('t-bilan',this)"><i class="fa-solid fa-chart-line"></i>Bilan</button>
+  <button class="ni" onclick="showTab('t-bank',this)"><i class="fa-solid fa-wallet"></i>Bank</button>
+</nav>
+
+<script>
+var BK={
   "winamax":    {n:"Winamax",    c:"#ff2040", d:"winamax.fr"},
   "betclic":    {n:"Betclic",    c:"#00c87a", d:"betclic.fr"},
   "unibet":     {n:"Unibet",     c:"#4ebe48", d:"unibet.fr"},
@@ -2130,55 +2135,26 @@ function updateCompList(){
 }
 
 /* ── FREEBET ARJEL (3 bookmakers, sans exchange) ── */
-var arjelRows=[{c:3.00,book:'Bookie 1',isFb:false},{c:3.50,book:'Bookie 2',isFb:true},{c:3.20,book:'Bookie 3',isFb:false}];
+var arjelRows=[{c:3.00,book:'Bookie 1'},{c:3.50,book:'Bookie 2'},{c:3.20,book:'Bookie 3'}];
 function buildArjelRows(){
   var dr=$i('arjel-rows');if(!dr)return;
   dr.innerHTML=arjelRows.map(function(r,i){
-    return '<div class="dutch-row" style="align-items:center;">'
-      +'<button data-idx="'+i+'" onclick="toggleFb(this.dataset.idx)" style="flex-shrink:0;padding:4px 7px;border-radius:4px;border:1px solid '+(r.isFb?'var(--gold)':'var(--b2)')+';background:'+(r.isFb?'rgba(240,176,32,.15)':'none')+';color:'+(r.isFb?'var(--gold)':'var(--t3)')+';font-size:10px;font-weight:700;cursor:pointer;white-space:nowrap;">'+(r.isFb?'🎟 FB':'💵 €')+'</button>'
+    return '<div class="dutch-row">'
       +'<input class="fi" value="'+r.book+'" placeholder="Bookmaker '+(i+1)+'" data-idx="'+i+'" oninput="arjelRows[this.dataset.idx].book=this.value;" style="flex:1;font-size:12px;">'
-      +'<input type="number" class="fi" value="'+r.c+'" step="0.01" placeholder="Cote" data-idx="'+i+'" oninput="arjelRows[this.dataset.idx].c=parseFloat(this.value)||1;calcArjel();" style="width:72px;color:'+(r.isFb?'var(--gold)':'var(--a)')+';font-weight:700;">'
-      +(arjelRows.length>2?'<button class="udel" data-idx="'+i+'" onclick="arjelRows.splice(parseInt(this.dataset.idx),1);buildArjelRows();">✕</button>':'')
+      +'<input type="number" class="fi" value="'+r.c+'" step="0.01" placeholder="Cote" data-idx="'+i+'" oninput="arjelRows[this.dataset.idx].c=parseFloat(this.value)||1;calcArjel();" style="width:80px;color:var(--a);font-weight:700;">'
+      +(arjelRows.length>2?'<button class="udel" data-idx="'+i+'" onclick="arjelRows.splice(this.dataset.idx,1);buildArjelRows();calcArjel();">✕</button>':'')
       +'</div>';
   }).join('');
   calcArjel();
 }
-var arjelMode='full'; /* full or split */
-function setArjelMode(m){
-  arjelMode=m;
-  var bf=$i('arjel-mode-full');var bs=$i('arjel-mode-split');
-  if(bf){bf.style.background=m==='full'?'rgba(240,176,32,.15)':'none';bf.style.borderColor=m==='full'?'var(--gold)':'var(--b2)';bf.style.color=m==='full'?'var(--gold)':'var(--t3)';}
-  if(bs){bs.style.background=m==='split'?'rgba(77,132,255,.15)':'none';bs.style.borderColor=m==='split'?'var(--a)':'var(--b2)';bs.style.color=m==='split'?'var(--a)':'var(--t3)';}
-  var desc=$i('arjel-desc');
-  if(desc)desc.innerText=m==='full'?'🎟 Freebet entier sur la cote choisie · 💵 Argent réel sur les autres.':'✂️ Divise le freebet sur plusieurs cotes · 💵 Argent réel sur les autres.';
-  if(m==='full'){arjelRows.forEach(function(r,i){if(!r.isFb)return;});} 
-  buildArjelRows();
-}
-function toggleFb(idx){
-  idx=parseInt(idx);
-  if(arjelMode==='full'){
-    arjelRows.forEach(function(r,i){r.isFb=(i===idx);});
-  } else {
-    /* split mode: toggle individual rows */
-    arjelRows[idx].isFb=!arjelRows[idx].isFb;
-  }
-  buildArjelRows();
-}
-function addArjelRow(){arjelRows.push({c:3.0,book:'Bookie '+(arjelRows.length+1),isFb:false});buildArjelRows();}
+function addArjelRow(){arjelRows.push({c:3.0,book:'Bookie '+(arjelRows.length+1)});buildArjelRows();}
 function calcArjel(){
   var fb=parseFloat(($i('arjel-fb')&&$i('arjel-fb').value)||10);
   if(!fb||arjelRows.length<2)return;
-  /* Freebet sur la/les cotes choisies, argent réel sur les autres */
-  var fbRows=arjelRows.filter(function(r){return r.isFb;});
-  var realRows=arjelRows.filter(function(r){return !r.isFb;});
-  if(!fbRows.length){fbRows=[arjelRows[0]];realRows=arjelRows.slice(1);}
-  /* En mode split: diviser le freebet également entre les cotes FB */
-  var fbPerRow=fb/fbRows.length;
-  /* Gain brut total si une cote FB gagne = (cote-1)*fbPerRow */
-  /* On cherche le gain minimum garanti */
-  var sorted=[fbRows[0]].concat(realRows);
-  var cA=fbRows.reduce(function(best,r){return r.c>best?r.c:best;},0);
-  var gainFb=fbRows.reduce(function(sum,r){return sum+(r.c-1)*fbPerRow;},0)/fbRows.length;
+  /* Freebet sur la PLUS GROSSE cote, argent réel sur les autres */
+  /* Tri par cote décroissante pour trouver la plus haute */
+  var sorted=arjelRows.slice().sort(function(a,b){return b.c-a.c;});
+  var cA=sorted[0].c; /* plus grosse cote = freebet */
   /* Formule: mb = (cA-1)*fb / cB, mc = mb*cB/cC ... généralisé */
   /* Toutes les mises réelles calculées pour égaliser le gain garanti */
   /* mb = (cA-1)*fb / cB, puis mc = mb*cB/cC, etc. */
