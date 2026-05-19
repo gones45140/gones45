@@ -530,6 +530,10 @@ input[type="date"],input[type="time"]{color-scheme:dark;}
       <div id="lay-verdict" style="display:none;margin-top:9px;padding:10px;border-radius:var(--r6);text-align:center;font-size:13px;font-weight:700"></div>
       <div style="border-top:1px solid var(--b1);margin-top:14px;padding-top:12px">
         <div style="font-size:10px;font-weight:700;color:var(--gold);margin-bottom:9px">🎟 Freebet → Cash</div>
+        <label style="display:flex;align-items:center;gap:8px;padding:9px;background:rgba(30,215,96,.08);border:1px solid rgba(30,215,96,.2);border-radius:var(--r6);cursor:pointer;margin-bottom:10px">
+          <input type="checkbox" id="fb-gorr" onchange="calcFreebet()" style="accent-color:var(--g)">
+          <span style="font-size:11px;font-weight:700;color:var(--g)">🎁 Mise remboursée si freebet perd (argent réel)</span>
+        </label>
         <div class="g2" style="gap:8px;margin-bottom:8px">
           <div class="fg"><label class="fl">Freebet (€)</label><input type="number" id="fb-amount" class="fi" value="10" style="color:var(--gold);font-weight:700" oninput="calcFreebet()"></div>
           <div class="fg"><label class="fl">Cote Back</label><input type="number" id="fb-back-cote" class="fi" value="5.00" step="0.01" style="color:var(--g);font-weight:700" oninput="calcFreebet()"></div>
@@ -541,6 +545,7 @@ input[type="date"],input[type="time"]{color-scheme:dark;}
           <div class="cres-row"><span class="cres-l">Responsabilité</span><span class="cres-v" id="fb-liability">—</span></div>
           <div class="cres-row"><span class="cres-l">Cash garanti</span><span class="cres-v" id="fb-cash" style="font-size:15px;font-weight:800;color:var(--g)">—</span></div>
           <div class="cres-row"><span class="cres-l">Taux conversion</span><span class="cres-v" id="fb-taux">—</span></div>
+          <div class="cres-row"><span class="cres-l">Cash si remboursé</span><span class="cres-v" id="fb-cash-gorr" style="color:var(--gold)">—</span></div>
         </div>
       </div>
     </div>
@@ -561,23 +566,6 @@ input[type="date"],input[type="time"]{color-scheme:dark;}
       <div id="vb-verd" style="display:none;margin-top:9px;padding:10px;border-radius:var(--r6);text-align:center;font-size:13px;font-weight:700"></div>
     </div>
 
-    <!-- FREEBET ARJEL -->
-    <div id="calc-arjel" style="display:none">
-      <div style="font-size:10px;color:var(--t3);margin-bottom:10px;">🎟 Freebet sur la plus grosse cote · 💵 Argent réel sur les autres issues pour garantir un retour.</div>
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
-        <label class="fl" style="margin:0;">Freebet (€)</label>
-        <input type="number" id="arjel-fb" class="fi" style="width:100px;color:var(--gold);font-weight:700;" value="10" oninput="calcArjel()">
-      </div>
-      <div id="arjel-rows"></div>
-      <button class="ba" style="width:100%;margin-top:6px;" onclick="addArjelRow()">+ Ajouter une cote</button>
-      <div class="calc-res" style="margin-top:10px;">
-        <div class="cres-row"><span class="cres-l">Répartition</span><span class="cres-v" id="arjel-mise">—</span></div>
-        <div class="cres-row"><span class="cres-l">Cash garanti</span><span class="cres-v" id="arjel-cash" style="font-size:15px;font-weight:800;color:var(--g)">—</span></div>
-        <div class="cres-row"><span class="cres-l">Taux conversion</span><span class="cres-v" id="arjel-taux">—</span></div>
-      </div>
-      <div id="arjel-detail" style="margin-top:8px;"></div>
-      <div id="arjel-verdict" style="display:none;margin-top:9px;padding:10px;border-radius:var(--r6);text-align:center;font-size:13px;font-weight:700"></div>
-    </div>
   </div>
 </div>
 
@@ -650,16 +638,7 @@ input[type="date"],input[type="time"]{color-scheme:dark;}
 </main>
 
 <nav class="nav">
-  <button class="ni on" onclick="showTab('t-dash',this)"><i class="fa-solid fa-chart-pie"></i>Mur</button>
-  <button class="ni" onclick="showTab('t-paris',this)"><i class="fa-solid fa-futbol"></i>Pari</button>
-  <button class="ni" onclick="showTab('t-arch',this)"><i class="fa-solid fa-clock-rotate-left"></i>Archive</button>
-  <button class="ni" onclick="showTab('t-equipes',this)"><i class="fa-solid fa-shield-halved"></i>Équipes</button>
-  <button class="ni" onclick="showTab('t-bilan',this)"><i class="fa-solid fa-chart-line"></i>Bilan</button>
-  <button class="ni" onclick="showTab('t-bank',this)"><i class="fa-solid fa-wallet"></i>Bank</button>
-</nav>
-
-<script>
-var BK={
+  <button class="ni on" onclick="showTab('t-dash',this)"><i class=var BK={
   "winamax":    {n:"Winamax",    c:"#ff2040", d:"winamax.fr"},
   "betclic":    {n:"Betclic",    c:"#00c87a", d:"betclic.fr"},
   "unibet":     {n:"Unibet",     c:"#4ebe48", d:"unibet.fr"},
@@ -918,7 +897,7 @@ function swCalc(m){
   if(m==='dt')buildDtRows();
   else if(m==='lay'){calcLay();calcFreebet();}
   else if(m==='vb')calcVb();
-  else if(m==='arjel')calcArjel();
+  else if(m==='arjel'){buildArjelRows();}
   else calcSb();
 }
 function calcVb(){
@@ -974,16 +953,28 @@ function calcFreebet(){
   var bc=parseFloat(($i('fb-back-cote')&&$i('fb-back-cote').value)||0);
   var lc=parseFloat(($i('fb-lay-cote')&&$i('fb-lay-cote').value)||0);
   var comm=parseFloat(($i('fb-comm')&&$i('fb-comm').value)||3);
+  var gorr=$i('fb-gorr')&&$i('fb-gorr').checked;
   if(!fb||!bc||!lc||bc<=1||lc<=1)return;
-  var ml=(bc-1)*fb/lc;
+  /* Formule standard freebet (mise non remboursée) */
+  var ml=(bc-1)*fb/((lc-1)+(1-comm/100));
   var liab=ml*(lc-1);
   var gainIfBack=(bc-1)*fb-liab;
   var gainIfLay=ml*(1-comm/100);
   var cg=Math.min(gainIfBack,gainIfLay);
   var taux=fb>0?(cg/fb*100).toFixed(1):0;
-  var flm=$i('fb-lay-mise');if(flm){flm.innerText=ml.toFixed(2)+'€';flm.style.color='var(--a)';}
-  var fli=$i('fb-liability');if(fli){fli.innerText=liab.toFixed(2)+'€';fli.style.color='var(--gold)';}
-  var fc=$i('fb-cash');if(fc){fc.innerText=(cg>=0?'+':'')+cg.toFixed(2)+'€';fc.style.color=cg>=0?'var(--g)':'var(--r)';}
+  /* Formule si remboursé (argent réel) : la mise revient si on perd */
+  var ml2=gorr?fb*bc/lc:ml;
+  var liab2=ml2*(lc-1);
+  var gainBack2=gorr?(bc-1)*fb-liab2:(bc-1)*fb-liab;
+  var gainLay2=gorr?ml2*(1-comm/100):gainIfLay;
+  var cg2=Math.min(gainBack2,gainLay2);
+  var taux2=fb>0?(cg2/fb*100).toFixed(1):0;
+  var flm=$i('fb-lay-mise');if(flm){flm.innerText=(gorr?ml2:ml).toFixed(2)+'€';flm.style.color='var(--a)';}
+  var fli=$i('fb-liability');if(fli){fli.innerText=(gorr?liab2:liab).toFixed(2)+'€';fli.style.color='var(--gold)';}
+  var fc=$i('fb-cash');if(fc){fc.innerText=(cg>=0?'+':'')+cg.toFixed(2)+'€ (FB)';fc.style.color=cg>=0?'var(--g)':'var(--r)';}
+  var ft=$i('fb-taux');if(ft)ft.innerText=taux+'%';
+  var fcg=$i('fb-cash-gorr');
+  if(fcg){fcg.innerText=gorr?(cg2>=0?'+':'')+cg2.toFixed(2)+'€ ('+taux2+'%)':'—';fcg.style.color=cg2>=0?'var(--gold)':'var(--r)';}
 }
 
 /* ── FILTRE BILAN ── */
@@ -2134,7 +2125,9 @@ function updateCompList(){
   var dl2=$i('comp-list-simple');if(dl2)dl2.innerHTML=comps.map(function(c){return '<option value="'+c+'">';}).join('');
 }
 
-/* ── FREEBET ARJEL (3 bookmakers, sans exchange) ── */
+
+
+/* ── FREEBET ARJEL (sans exchange) ── */
 var arjelRows=[{c:3.00,book:'Bookie 1'},{c:3.50,book:'Bookie 2'},{c:3.20,book:'Bookie 3'}];
 function buildArjelRows(){
   var dr=$i('arjel-rows');if(!dr)return;
@@ -2142,7 +2135,7 @@ function buildArjelRows(){
     return '<div class="dutch-row">'
       +'<input class="fi" value="'+r.book+'" placeholder="Bookmaker '+(i+1)+'" data-idx="'+i+'" oninput="arjelRows[this.dataset.idx].book=this.value;" style="flex:1;font-size:12px;">'
       +'<input type="number" class="fi" value="'+r.c+'" step="0.01" placeholder="Cote" data-idx="'+i+'" oninput="arjelRows[this.dataset.idx].c=parseFloat(this.value)||1;calcArjel();" style="width:80px;color:var(--a);font-weight:700;">'
-      +(arjelRows.length>2?'<button class="udel" data-idx="'+i+'" onclick="arjelRows.splice(this.dataset.idx,1);buildArjelRows();calcArjel();">✕</button>':'')
+      +(arjelRows.length>2?'<button class="udel" data-idx="'+i+'" onclick="arjelRows.splice(parseInt(this.dataset.idx),1);buildArjelRows();">✕</button>':'')
       +'</div>';
   }).join('');
   calcArjel();
@@ -2151,44 +2144,27 @@ function addArjelRow(){arjelRows.push({c:3.0,book:'Bookie '+(arjelRows.length+1)
 function calcArjel(){
   var fb=parseFloat(($i('arjel-fb')&&$i('arjel-fb').value)||10);
   if(!fb||arjelRows.length<2)return;
-  /* Freebet sur la PLUS GROSSE cote, argent réel sur les autres */
-  /* Tri par cote décroissante pour trouver la plus haute */
   var sorted=arjelRows.slice().sort(function(a,b){return b.c-a.c;});
-  var cA=sorted[0].c; /* plus grosse cote = freebet */
-  /* Formule: mb = (cA-1)*fb / cB, mc = mb*cB/cC ... généralisé */
-  /* Toutes les mises réelles calculées pour égaliser le gain garanti */
-  /* mb = (cA-1)*fb / cB, puis mc = mb*cB/cC, etc. */
-  var mises=[0]; /* index 0 = freebet, pas de mise cash */
-  var refs=sorted[0].c; /* cote de référence du freebet */
-  var gainFb=(sorted[0].c-1)*fb; /* gain brut si freebet gagne */
-  /* Pour chaque autre issue: mise = gainFb / cote_i */
+  var gainFb=(sorted[0].c-1)*fb;
+  var mises=[0];
   var totalCash=0;
   for(var i=1;i<sorted.length;i++){
     var m=gainFb/sorted[i].c;
-    mises.push(m);
-    totalCash+=m;
+    mises.push(m);totalCash+=m;
   }
   var cash=gainFb-totalCash;
   var taux=fb>0?(cash/fb*100).toFixed(1):0;
-
-  /* Display */
   var tm=$i('arjel-mise');
-  if(tm)tm.innerText='FB sur @'+sorted[0].c+' · Réel: '+mises.slice(1).map(function(m){return m.toFixed(2)+'€';}).join(' + ');
+  if(tm)tm.innerText='FB @'+sorted[0].c+' · Réel: '+mises.slice(1).map(function(m){return m.toFixed(2)+'€';}).join(' + ');
   var tc=$i('arjel-cash');if(tc){tc.innerText=(cash>=0?'+':'')+cash.toFixed(2)+'€';tc.style.color=cash>=0?'var(--g)':'var(--r)';}
   var tt=$i('arjel-taux');if(tt){tt.innerText=taux+'%';tt.style.color=parseFloat(taux)>80?'var(--g)':parseFloat(taux)>60?'var(--a)':'var(--r)';}
-
-  /* Detail */
   var det=$i('arjel-detail');
   if(det){det.innerHTML='<div class="calc-res">'
     +'<div class="cres-row"><span class="cres-l">🎟 Freebet sur '+sorted[0].book+' (@'+sorted[0].c+')</span><span class="cres-v" style="color:var(--gold)">'+fb+'€ FB</span></div>'
-    +sorted.slice(1).map(function(r,i){
-      return '<div class="cres-row"><span class="cres-l">💵 Mise réelle sur '+r.book+' (@'+r.c+')</span><span class="cres-v" style="color:var(--a)">'+mises[i+1].toFixed(2)+'€</span></div>';
-    }).join('')
+    +sorted.slice(1).map(function(r,i){return '<div class="cres-row"><span class="cres-l">💵 Mise réelle sur '+r.book+' (@'+r.c+')</span><span class="cres-v" style="color:var(--a)">'+mises[i+1].toFixed(2)+'€</span></div>';}).join('')
     +'</div>';}
-
   var verd=$i('arjel-verdict');
   if(verd){
-    verd.style.display='block';
     var ok=cash>0;var great=parseFloat(taux)>80;
     verd.style.cssText='display:block;padding:10px;border-radius:var(--r6);text-align:center;font-size:13px;font-weight:700;background:'+(great?'rgba(30,215,96,.1)':ok?'rgba(77,132,255,.1)':'rgba(255,69,69,.1)')+';border:1px solid '+(great?'rgba(30,215,96,.25)':ok?'rgba(77,132,255,.25)':'rgba(255,69,69,.25)')+';color:'+(great?'var(--g)':ok?'var(--a)':'var(--r)');
     verd.innerText=great?'🔥 '+taux+'% = +'+cash.toFixed(2)+'€':ok?'✅ '+taux+'% = +'+cash.toFixed(2)+'€':'❌ Cotes insuffisantes';
