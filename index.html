@@ -5,7 +5,72 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
 <title>GONES45</title>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js">
+var arjelMode='full';
+function setArjelMode(m){
+  arjelMode=m;
+  var bf=$i('arjel-mode-full');var bs=$i('arjel-mode-split');
+  if(bf){bf.style.background=m==='full'?'rgba(240,176,32,.15)':'none';bf.style.borderColor=m==='full'?'var(--gold)':'var(--b2)';bf.style.color=m==='full'?'var(--gold)':'var(--t3)';}
+  if(bs){bs.style.background=m==='split'?'rgba(77,132,255,.15)':'none';bs.style.borderColor=m==='split'?'var(--a)':'var(--b2)';bs.style.color=m==='split'?'var(--a)':'var(--t3)';}
+  var desc=$i('arjel-desc');
+  if(desc)desc.innerText=m==='full'?'🎟 FB automatique sur la plus grosse cote.':'✂️ Clique sur 🎟/💵 pour choisir qui reçoit le freebet.';
+  buildArjelRows();
+}
+function toggleArjelFb(idx){
+  idx=parseInt(idx);
+  if(arjelMode==='full'){arjelRows.forEach(function(r,i){r.isFb=(i===idx);});}
+  else{arjelRows[idx].isFb=!arjelRows[idx].isFb;}
+  buildArjelRows();
+}
+function buildArjelRows(){
+  var dr=$i('arjel-rows');if(!dr)return;
+  if(arjelMode==='full'){
+    var maxC=Math.max.apply(null,arjelRows.map(function(r){return r.c||0;}));
+    arjelRows.forEach(function(r){r.isFb=(r.c===maxC);});
+  }
+  dr.innerHTML=arjelRows.map(function(r,i){
+    var isFb=!!r.isFb;
+    return '<div class="dutch-row" style="align-items:center;">'
+      +'<button data-idx="'+i+'" onclick="toggleArjelFb(this.dataset.idx)" style="flex-shrink:0;padding:4px 8px;border-radius:4px;border:1px solid '+(isFb?'var(--gold)':'var(--b2)')+';background:'+(isFb?'rgba(240,176,32,.15)':'none')+';color:'+(isFb?'var(--gold)':'var(--t3)')+';font-size:10px;font-weight:700;cursor:pointer;">'+(isFb?'🎟':'💵')+'</button>'
+      +'<input class="fi" value="'+r.book+'" placeholder="Bookmaker '+(i+1)+'" data-idx="'+i+'" oninput="arjelRows[this.dataset.idx].book=this.value;" style="flex:1;font-size:12px;">'
+      +'<input type="number" class="fi" value="'+r.c+'" step="0.01" data-idx="'+i+'" oninput="arjelRows[this.dataset.idx].c=parseFloat(this.value)||1;buildArjelRows();" style="width:72px;color:'+(isFb?'var(--gold)':'var(--a)')+';font-weight:700;">'
+      +(arjelRows.length>2?'<button class="udel" data-idx="'+i+'" onclick="arjelRows.splice(parseInt(this.dataset.idx),1);buildArjelRows();">✕</button>':'')
+      +'</div>';
+  }).join('');
+  calcArjel();
+}
+function addArjelRow(){arjelRows.push({c:3.0,book:'Bookie '+(arjelRows.length+1),isFb:false});buildArjelRows();}
+function calcArjel(){
+  var fb=parseFloat(($i('arjel-fb')&&$i('arjel-fb').value)||10);
+  if(!fb||arjelRows.length<2)return;
+  var fbRows=arjelRows.filter(function(r){return r.isFb;});
+  var realRows=arjelRows.filter(function(r){return !r.isFb;});
+  if(!fbRows.length){fbRows=[arjelRows[0]];realRows=arjelRows.slice(1);}
+  var fbPerRow=fb/fbRows.length;
+  var gainFb=fbRows.reduce(function(s,r){return s+(r.c-1)*fbPerRow;},0)/fbRows.length;
+  var mises=[];var totalCash=0;
+  realRows.forEach(function(r){var m=gainFb/r.c;mises.push(m);totalCash+=m;});
+  var cash=gainFb-totalCash;
+  var taux=fb>0?(cash/fb*100).toFixed(1):0;
+  var tm=$i('arjel-mise');
+  if(tm)tm.innerText='FB: '+fbRows.map(function(r){return '@'+r.c;}).join('+')+' · Réel: '+mises.map(function(m){return m.toFixed(2)+'€';}).join('+');
+  var tc=$i('arjel-cash');if(tc){tc.innerText=(cash>=0?'+':'')+cash.toFixed(2)+'€';tc.style.color=cash>=0?'var(--g)':'var(--r)';}
+  var tt=$i('arjel-taux');if(tt){tt.innerText=taux+'%';tt.style.color=parseFloat(taux)>80?'var(--g)':parseFloat(taux)>60?'var(--a)':'var(--r)';}
+  var det=$i('arjel-detail');
+  if(det){det.innerHTML='<div class="calc-res">'
+    +fbRows.map(function(r){return '<div class="cres-row"><span class="cres-l">🎟 FB sur '+r.book+' (@'+r.c+')</span><span class="cres-v" style="color:var(--gold)">'+fbPerRow.toFixed(2)+'€</span></div>';}).join('')
+    +realRows.map(function(r,i){return '<div class="cres-row"><span class="cres-l">💵 Réel sur '+r.book+' (@'+r.c+')</span><span class="cres-v" style="color:var(--a)">'+mises[i].toFixed(2)+'€</span></div>';}).join('')
+    +'</div>';}
+  var verd=$i('arjel-verdict');
+  if(verd){var ok=cash>0;var great=parseFloat(taux)>80;
+    verd.style.cssText='display:block;padding:10px;border-radius:var(--r6);text-align:center;font-size:13px;font-weight:700;background:'+(great?'rgba(30,215,96,.1)':ok?'rgba(77,132,255,.1)':'rgba(255,69,69,.1)')+';border:1px solid '+(great?'rgba(30,215,96,.25)':ok?'rgba(77,132,255,.25)':'rgba(255,69,69,.25)')+';color:'+(great?'var(--g)':ok?'var(--a)':'var(--r)');
+    verd.innerText=great?'🔥 '+taux+'% = +'+cash.toFixed(2)+'€':ok?'✅ '+taux+'% = +'+cash.toFixed(2)+'€':'❌ Cotes insuffisantes';}
+}
+/* ── INIT ── */
+document.querySelectorAll('.tab').forEach(function(t){t.style.display='none';});
+$i('t-dash').style.display='block';
+
+</script>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;}
 :root{
@@ -568,7 +633,11 @@ input[type="date"],input[type="time"]{color-scheme:dark;}
 
     <!-- FREEBET ARJEL -->
     <div id="calc-arjel" style="display:none">
-      <div style="font-size:10px;color:var(--t3);margin-bottom:10px;">🎟 Freebet sur la plus grosse cote · 💵 Argent réel sur les autres issues pour garantir un retour.</div>
+      <div style="display:flex;gap:6px;margin-bottom:10px;">
+        <button id="arjel-mode-full" onclick="setArjelMode('full')" style="flex:1;padding:7px;border-radius:var(--r6);border:1px solid var(--gold);background:rgba(240,176,32,.15);color:var(--gold);font-size:11px;font-weight:700;cursor:pointer;">🎟 Entier</button>
+        <button id="arjel-mode-split" onclick="setArjelMode('split')" style="flex:1;padding:7px;border-radius:var(--r6);border:1px solid var(--b2);background:none;color:var(--t3);font-size:11px;font-weight:700;cursor:pointer;">✂️ Divisé</button>
+      </div>
+      <div style="font-size:10px;color:var(--t3);margin-bottom:10px;" id="arjel-desc">🎟 FB sur la plus grosse cote automatiquement · 💵 Argent réel sur les autres.</div>
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
         <label class="fl" style="margin:0;">Freebet (€)</label>
         <input type="number" id="arjel-fb" class="fi" style="width:100px;color:var(--gold);font-weight:700;" value="10" oninput="calcArjel()">
@@ -1500,6 +1569,7 @@ function updMise(){
   renderCrash();
 }
 function autoFillAdv(u){
+  var TEAM_IDS={};  /* placeholder - API not used */
   var tid=TEAM_IDS[u.n];
   var advEl=$i('c-target');
   if(!tid||!advEl)return;
@@ -1934,260 +2004,66 @@ function showDbxStatus(msg){
 }
 /* Override save to also trigger Dropbox */
 var _origSave=save;
-function save(){
-  localStorage.setItem('g45v5',JSON.stringify(state));
-  render();
-  saveToDropbox();
+var arjelMode='full';
+function setArjelMode(m){
+  arjelMode=m;
+  var bf=$i('arjel-mode-full');var bs=$i('arjel-mode-split');
+  if(bf){bf.style.background=m==='full'?'rgba(240,176,32,.15)':'none';bf.style.borderColor=m==='full'?'var(--gold)':'var(--b2)';bf.style.color=m==='full'?'var(--gold)':'var(--t3)';}
+  if(bs){bs.style.background=m==='split'?'rgba(77,132,255,.15)':'none';bs.style.borderColor=m==='split'?'var(--a)':'var(--b2)';bs.style.color=m==='split'?'var(--a)':'var(--t3)';}
+  var desc=$i('arjel-desc');
+  if(desc)desc.innerText=m==='full'?'🎟 FB automatique sur la plus grosse cote.':'✂️ Clique sur 🎟/💵 pour choisir qui reçoit le freebet.';
+  buildArjelRows();
 }
-
-/* ── MYMATCH SIMPLE ── */
-var mmRowsSimple=[{type:'',cote:1.50}];
-function renderMmRowsSimple(){
-  var sel=$i('mm-sel-simple');if(!sel)return;
-  sel.innerHTML=mmRowsSimple.map(function(r,i){
-    return '<div class="mm-row">'
-      +'<input class="fi" value="'+r.type+'" placeholder="Type (Victoire…)" data-idx="'+i+'" oninput="mmRowsSimple[this.dataset.idx].type=this.value;renderMmCoteSimple();" style="flex:1;padding:6px 8px;font-size:12px;">'
-      +'<input type="number" class="fi mm-cote" value="'+r.cote+'" step="0.01" data-idx="'+i+'" oninput="mmRowsSimple[this.dataset.idx].cote=parseFloat(this.value)||1;renderMmCoteSimple();" style="width:72px;color:var(--a);font-weight:700;">'
-      +(mmRowsSimple.length>1?'<button class="mm-del" data-idx="'+i+'" onclick="mmRowsSimple.splice(parseInt(this.dataset.idx),1);renderMmRowsSimple();">✕</button>':'')
-      +'</div>';
-  }).join('');
-  var types=$i('mm-types-simple');
-  if(types)types.innerHTML=MM_TYPES.map(function(t){return '<button class="mm-type" data-t="'+t+'" onclick="addMmTypeSimple(this.dataset.t)">'+t+'</button>';}).join('');
-
-  renderMmCoteSimple();
+function toggleArjelFb(idx){
+  idx=parseInt(idx);
+  if(arjelMode==='full'){arjelRows.forEach(function(r,i){r.isFb=(i===idx);});}
+  else{arjelRows[idx].isFb=!arjelRows[idx].isFb;}
+  buildArjelRows();
 }
-function renderMmCoteSimple(){
-  var cote=mmRowsSimple.reduce(function(a,r){return a*(parseFloat(r.cote)||1);},1);
-  var el=$i('mm-cote-total-simple');if(el)el.innerText='@'+cote.toFixed(2);
-  var nc=$i('n-cote');if(nc)nc.value=cote.toFixed(2);
-}
-function addMmRowSimple(){mmRowsSimple.push({type:'',cote:1.50});renderMmRowsSimple();}
-function addMmTypeSimple(t){
-  if(mmRowsSimple.find(function(r){return r.type===t;}))return;
-  mmRowsSimple.push({type:t,cote:1.50});renderMmRowsSimple();
-}
-function getMmLabelSimple(){
-  return mmRowsSimple.filter(function(r){return r.type;}).map(function(r){return r.type+' @'+r.cote;}).join(' + ');
-}
-function syncSimpleCote(){
-  var nc=$i('n-cote');if(!nc)return;
-  var v=parseFloat(nc.value)||1;
-  if(mmRowsSimple.length===1){mmRowsSimple[0].cote=v;renderMmCoteSimple();}
-}
-
-function saveDbxKey(){
-  var inp=$i('dbx-key-input');if(!inp)return;
-  var key=inp.value.trim();
-  if(!key)return;
-  _dbxKey=key;
-  localStorage.setItem('g45_dbx',key);
-  var st=$i('dbx-key-status');
-  if(st){st.innerText='✅ Clé enregistrée !';st.style.color='var(--g)';}
-  setTimeout(function(){if(st)st.innerText='';},3000);
-}
-function testDbxKey(){
-  var inp=$i('dbx-key-input');
-  var key=(inp&&inp.value.trim())||_dbxKey;
-  if(!key){var st=$i('dbx-key-status');if(st){st.innerText='❌ Aucune clé';st.style.color='var(--r)';}return;}
-  var st=$i('dbx-key-status');
-  if(st){st.innerText='⏳ Test en cours…';st.style.color='var(--t3)';}
-  fetch('https://api.dropboxapi.com/2/users/get_current_account',{
-    method:'POST',headers:{'Authorization':'Bearer '+key,'Content-Type':'application/json'},body:'null'
-  }).then(function(r){return r.json();})
-  .then(function(d){
-    if(d.email){
-      if(st){st.innerText='✅ Connecté : '+d.email;st.style.color='var(--g)';}
-      _dbxKey=key;localStorage.setItem('g45_dbx',key);
-    }else{
-      if(st){st.innerText='❌ Token invalide';st.style.color='var(--r)';}
-    }
-  }).catch(function(){if(st){st.innerText='❌ Erreur réseau';st.style.color='var(--r)';}});
-}
-
-
-var ADV_DB={
-  "⚽":[
-    /* Ligue 1 */ "PSG","Lyon","Marseille","Monaco","Lille","Nice","Rennes","Lens","Strasbourg","Nantes","Montpellier","Reims","Toulouse","Brest","Lorient","Metz","Clermont","Le Havre","Saint-Etienne","Bordeaux",
-    /* Premier League */ "Arsenal","Chelsea","Liverpool","Manchester City","Manchester United","Tottenham","Newcastle","Aston Villa","Brighton","West Ham","Crystal Palace","Fulham","Brentford","Wolves","Everton","Leicester","Leeds","Southampton","Nottingham Forest","Burnley",
-    /* La Liga */ "Real Madrid","FC Barcelone","Atletico Madrid","Villarreal","Athletic Bilbao","Real Sociedad","Betis","Valencia","Celta Vigo","Osasuna","Getafe","Sevilla","Rayo Vallecano","Almeria","Cadiz","Mallorca","Girona","Las Palmas",
-    /* Bundesliga */ "Bayern Munich","Borussia Dortmund","RB Leipzig","Bayer Leverkusen","Frankfurt","Freiburg","Union Berlin","Wolfsburg","Hoffenheim","Stuttgart","Mainz","Augsburg","Cologne","Werder Bremen","Borussia Monchengladbach",
-    /* Serie A */ "Inter Milan","AC Milan","Juventus","Napoli","AS Roma","Lazio","Atalanta","Fiorentina","Torino","Bologna","Udinese","Sassuolo","Monza","Lecce","Salernitana","Empoli","Hellas Verona","Cagliari",
-    /* Champions League extras */ "Porto","Benfica","Sporting CP","Ajax","PSV","Feyenoord","Brugge","Galatasaray","Fenerbahce","Celtic","Rangers","Shakhtar","Dynamo Kyiv","Red Bull Salzburg","Midtjylland",
-    /* Amérique */ "Boca Juniors","River Plate","Flamengo","Palmeiras","Corinthians","Sao Paulo","Atletico Mineiro","Fluminense","Santos","Gremio","Internacional","Estudiantes","Independiente","Racing Club","San Lorenzo",
-    /* Équipes nationales */ "France","Espagne","Angleterre","Allemagne","Italie","Portugal","Brésil","Argentine","Belgique","Pays-Bas","Croatie","Maroc","Sénégal","Uruguay","Colombie","Mexique","USA","Japon","Australie","Corée du Sud"
-  ],
-  "🏀":[
-    /* NBA */ "Lakers","Celtics","Warriors","Heat","Bulls","Knicks","Nets","Bucks","Suns","Clippers","76ers","Raptors","Nuggets","Mavericks","Hawks","Pelicans","Jazz","Thunder","Blazers","Grizzlies","Hornets","Pacers","Pistons","Cavaliers","Rockets","Spurs","Kings","Wizards","Magic","Timberwolves",
-    /* Euroleague */ "Real Madrid Basket","FC Barcelone Basket","CSKA Moscou","Fenerbahce Basket","Anadolu Efes","Olympiakos","Panathinaikos","Maccabi Tel Aviv","Bayern Munich Basket","Zalgiris","Monaco Basket","Virtus Bologne","Baskonia","Asvel","Partizan"
-  ],
-  "🎾":[
-    /* ATP Top */ "Novak Djokovic","Carlos Alcaraz","Jannik Sinner","Daniil Medvedev","Alexander Zverev","Andrey Rublev","Holger Rune","Casper Ruud","Stefanos Tsitsipas","Taylor Fritz","Tommy Paul","Ben Shelton","Grigor Dimitrov","Ugo Humbert","Arthur Fils","Giovanni Mpetshi Perricard",
-    /* WTA Top */ "Iga Swiatek","Aryna Sabalenka","Coco Gauff","Elena Rybakina","Jessica Pegula","Marketa Vondrousova","Ons Jabeur","Caroline Garcia","Barbora Krejcikova","Madison Keys","Emma Navarro","Mirra Andreeva","Qinwen Zheng","Jasmine Paolini","Danielle Collins"
-  ],
-  "🏒":[
-    /* NHL */ "Carolina Hurricanes","Colorado Avalanche","Tampa Bay Lightning","Vegas Golden Knights","Florida Panthers","Boston Bruins","Toronto Maple Leafs","Edmonton Oilers","New York Rangers","Dallas Stars","Los Angeles Kings","Seattle Kraken","New Jersey Devils","Pittsburgh Penguins","Minnesota Wild","Nashville Predators","Detroit Red Wings","Calgary Flames","Vancouver Canucks","Ottawa Senators","Buffalo Sabres","Columbus Blue Jackets","Arizona Coyotes","Anaheim Ducks","Chicago Blackhawks","New York Islanders","Philadelphia Flyers","Montreal Canadiens","Washington Capitals","Winnipeg Jets","St Louis Blues","San Jose Sharks"
-  ],
-  "⚾":[
-    /* MLB */ "LA Dodgers","New York Yankees","Houston Astros","Atlanta Braves","Philadelphia Phillies","San Diego Padres","Texas Rangers","Boston Red Sox","New York Mets","Chicago Cubs","San Francisco Giants","St Louis Cardinals","Toronto Blue Jays","Milwaukee Brewers","Cleveland Guardians","Minnesota Twins","Seattle Mariners","Baltimore Orioles","Tampa Bay Rays","Miami Marlins"
-  ],
-  "🏈":[
-    /* NFL */ "Kansas City Chiefs","San Francisco 49ers","Dallas Cowboys","Philadelphia Eagles","Buffalo Bills","Cincinnati Bengals","Baltimore Ravens","Miami Dolphins","Detroit Lions","Green Bay Packers","Minnesota Vikings","Seattle Seahawks","Los Angeles Rams","Las Vegas Raiders","Denver Broncos","New England Patriots","Pittsburgh Steelers","Cleveland Browns","Jacksonville Jaguars","Tennessee Titans","Indianapolis Colts","Houston Texans","Los Angeles Chargers","Arizona Cardinals","New Orleans Saints","Atlanta Falcons","Tampa Bay Buccaneers","Carolina Panthers","Washington Commanders","New York Giants","New York Jets","Chicago Bears"
-  ],
-  "🏎":[
-    /* F1 Pilotes */ "Max Verstappen","Lando Norris","Charles Leclerc","Carlos Sainz","Lewis Hamilton","George Russell","Fernando Alonso","Lance Stroll","Oscar Piastri","Sergio Perez","Pierre Gasly","Esteban Ocon","Valtteri Bottas","Zhou Guanyu","Yuki Tsunoda","Daniel Ricciardo","Kevin Magnussen","Nico Hulkenberg","Alexander Albon","Logan Sargeant",
-    /* F1 Écuries */ "Red Bull","Ferrari","Mercedes","McLaren","Aston Martin","Alpine","Williams","AlphaTauri","Alfa Romeo","Haas"
-  ],
-  "🏉":[
-    /* Top 14 */ "Toulouse","Leinster","La Rochelle","Bordeaux-Bègles","Stade Français","Racing 92","Clermont","Lyon","Montpellier","Toulon","Perpignan","Bayonne","Pau","Castres","Brive","Oyonnax",
-    /* Pro D2 */ "Grenoble","Mont-de-Marsan","Vannes","Nevers","Aurillac","Rouen","Colomiers","Valence Romans","Dax","Massy","Biarritz","Albi",
-    /* URC */ "Leinster","Munster","Ulster","Connacht","Glasgow Warriors","Edinburgh","Cardiff Blues","Ospreys","Scarlets","Dragons","Stormers","Bulls","Lions","Sharks","Zebre","Benetton",
-    /* Champions Cup extras */ "Saracens","Exeter Chiefs","Bath","Harlequins","Northampton","Leicester Tigers","Sale Sharks","Wasps",
-    /* Équipes nationales */ "France","Nouvelle-Zélande","Afrique du Sud","Irlande","Angleterre","Australie","Écosse","Pays de Galles","Argentine","Fidji","Samoa","Tonga","Japon","Italie","Uruguay","Géorgie","Roumanie","Namibie","Portugal","Espagne"
-  ],
-  "🏉🇦🇺":[
-    /* NRL */ "Melbourne Storm","Sydney Roosters","Penrith Panthers","Brisbane Broncos","South Sydney Rabbitohs","Parramatta Eels","Cronulla Sharks","Manly Sea Eagles","Canterbury Bulldogs","New Zealand Warriors","Gold Coast Titans","Canberra Raiders","Newcastle Knights","North Queensland Cowboys","Wests Tigers","St George Illawarra Dragons","Dolphins","Samoa","Tonga","Australie","Nouvelle-Zélande","Angleterre","Papua New Guinée","Fidji","France XIII","Liban",
-    /* Super League */ "Leeds Rhinos","St Helens","Wigan Warriors","Catalans Dragons","Warrington Wolves","Hull FC","Salford Red Devils","Huddersfield Giants","Castleford Tigers","Wakefield Trinity","Hull Kingston Rovers","Toulouse Olympique"
-  ]
-};
-function searchAdv(q,targetId,resId){
-  var el=$i(targetId);var res=$i(resId);if(!res)return;
-  if(!q||q.length<2){res.style.display='none';return;}
-  var sport=$i('c-sport')&&$i('c-sport').value||'⚽';
-  var db=(ADV_DB[sport]||ADV_DB['⚽']).concat(
-    state.a.map(function(h){return h.target||'';}).filter(Boolean)
-  );
-  var seen={};var uniq=db.filter(function(v){return v&&!seen[v]&&(seen[v]=1);});
-  var ql=q.toLowerCase();
-  var filtered=uniq.filter(function(v){return v.toLowerCase().includes(ql);}).slice(0,8);
-  if(!filtered.length){res.style.display='none';return;}
-  res.style.display='block';
-  res.innerHTML=filtered.map(function(v){
-    return '<div style="padding:8px 12px;cursor:pointer;font-size:12px;border-bottom:1px solid var(--b1);" data-val="'+v+'" data-tid="'+targetId+'" data-rid="'+resId+'" onclick="pickAdv(this.dataset.val,this.dataset.tid,this.dataset.rid)">'+v+'</div>';
-  }).join('');
-}
-function pickAdv(val,targetId,resId){
-  var el=$i(targetId);if(el)el.value=val;
-  var res=$i(resId);if(res)res.style.display='none';
-}
-
-/* ── THESPORTSDB API ── */
-var TSDB_IDS={
-  /* NRL */ "Melbourne Storm":"134029","Sydney Roosters":"134031","Penrith Panthers":"134030","Brisbane Broncos":"134021","South Sydney Rabbitohs":"134026","Parramatta Eels":"134024","Cronulla Sharks":"134022","Manly Sea Eagles":"134028","Canterbury Bulldogs":"134023","New Zealand Warriors":"134025","Gold Coast Titans":"134032","Canberra Raiders":"134027","Newcastle Knights":"134033","North Queensland Cowboys":"134034","Wests Tigers":"134035","St George Illawarra Dragons":"134036","Dolphins":"134037",
-  /* Super League */ "Leeds Rhinos":"133956","St Helens":"133958","Wigan Warriors":"133957","Catalans Dragons":"133959","Warrington Wolves":"133960"
-};
-var TSDB_SPORTS={
-  "🏉🇦🇺":"NRL",
-  "🏉":"Rugby Union"
-};
-function loadTeamLiveTSDB(el, nom, sport){
-  var tid=TSDB_IDS[nom];
-  var p=(state.u.find(function(u){return u.n===nom;})||{color:'#4d84ff'}).color||'#4d84ff';
-  if(!tid){
-    el.innerHTML='<div style="text-align:center;padding:40px 20px;">'
-      +'<div style="font-size:48px;margin-bottom:16px">🏉</div>'
-      +'<div style="font-size:15px;font-weight:800;color:'+p+'">'+nom+'</div>'
-      +'<div style="font-size:11px;color:var(--t3);margin-bottom:20px">ID TheSportsDB non trouvé</div>'
-      +'<a href="https://www.thesportsdb.com/search_all_teams.php?t='+encodeURIComponent(nom)+'&s=Rugby+League" target="_blank" style="display:inline-flex;align-items:center;gap:8px;background:'+p+';color:#fff;padding:12px 24px;border-radius:var(--r8);font-size:13px;font-weight:700;text-decoration:none">🔍 Chercher sur TheSportsDB</a>'
-      +'</div>';
-    return;
-  }
-  el.innerHTML='<div class="empty">⏳ Chargement…</div>';
-  fetch('https://www.thesportsdb.com/api/v1/json/3/eventsnext.php?id='+tid)
-    .then(function(r){return r.json();})
-    .then(function(d){
-      var events=(d.events||[]).slice(0,5);
-      var html2='<div style="font-size:9px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;color:var(--t3);margin-bottom:8px">Prochains matchs</div>';
-      if(events.length){
-        html2+=events.map(function(e){
-          var date=e.dateEvent?e.dateEvent.split('-').reverse().join('/'):'?';
-          var home=e.strHomeTeam||'?';var away=e.strAwayTeam||'?';
-          var isHome=home===nom;var opp=isHome?away:home;
-          return '<div style="display:flex;align-items:center;gap:8px;padding:9px 12px;background:var(--s1);border-radius:var(--r6);margin-bottom:6px;border-left:3px solid '+p+'">'
-            +'<div style="font-size:9px;color:var(--t3);width:34px;text-align:center">'+date+'</div>'
-            +'<div style="flex:1"><div style="font-size:12px;font-weight:700">'+(isHome?'🏠':'✈')+' vs '+opp+'</div>'
-            +'<div style="font-size:10px;color:var(--t3)">'+e.strLeague+'</div></div>'
-            +'<div style="font-size:10px;color:'+p+';font-weight:700">À venir</div></div>';
-        }).join('');
-      } else html2+='<div class="empty">Aucun match à venir</div>';
-      return fetch('https://www.thesportsdb.com/api/v1/json/3/eventslast.php?id='+tid)
-        .then(function(r2){return r2.json();})
-        .then(function(d2){
-          var last=((d2.results||[])).slice(-5).reverse();
-          html2+='<div style="font-size:9px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;color:var(--t3);margin:14px 0 8px">Derniers résultats</div>';
-          if(last.length){
-            html2+=last.map(function(e){
-              var isHome=e.strHomeTeam===nom;
-              var gf=isHome?parseInt(e.intHomeScore||0):parseInt(e.intAwayScore||0);
-              var ga=isHome?parseInt(e.intAwayScore||0):parseInt(e.intHomeScore||0);
-              var opp=isHome?e.strAwayTeam:e.strHomeTeam;
-              var win=gf>ga;var draw=gf===ga;
-              var rc=win?'var(--g)':draw?'var(--gold)':'var(--r)';
-              var date=e.dateEvent?e.dateEvent.split('-').reverse().join('/'):'?';
-              return '<div style="display:flex;align-items:center;gap:8px;padding:9px 12px;background:var(--s1);border-radius:var(--r6);margin-bottom:6px;border-left:3px solid '+rc+'">'
-                +'<div style="font-size:9px;color:var(--t3);width:34px;text-align:center">'+date+'<br><b style="color:'+rc+'">'+(win?'V':draw?'N':'D')+'</b></div>'
-                +'<div style="flex:1"><div style="font-size:12px;font-weight:700">'+(isHome?'🏠':'✈')+' vs '+opp+'</div>'
-                +'<div style="font-size:10px;color:var(--t3)">'+e.strLeague+'</div></div>'
-                +'<div style="font-size:16px;font-weight:800;color:'+rc+'">'+gf+' - '+ga+'</div></div>';
-            }).join('');
-          } else html2+='<div class="empty">Aucun résultat</div>';
-          el.innerHTML=html2;
-        });
-    }).catch(function(){el.innerHTML='<div class="empty">❌ Erreur API</div>';});
-}
-function updateAdvList(q){
-  var dl=$i('adversaires-list');if(!dl)return;
-  var fromDb=CLUB_DB.map(function(c){return c.name;});
-  var used=state.a.map(function(h){return h.target||'';}).filter(Boolean);
-  var all=fromDb.concat(ADV_TOP).concat(used);
-  var seen={};var uniq=[];
-  all.forEach(function(v){if(v&&!seen[v]){seen[v]=1;uniq.push(v);}});
-  var filtered=q&&q.length>0?uniq.filter(function(v){return v.toLowerCase().includes(q.toLowerCase());}):uniq.slice(0,25);
-  dl.innerHTML=filtered.slice(0,20).map(function(v){return '<option value="'+v+'">';}).join('');
-}
-function updateCompList(){
-  var sport=($i('c-sport')&&$i('c-sport').value)||'⚽';
-  var comps=sport==='⚽'?['Ligue 1','Champions League','Europa League','Conference League','Premier League','La Liga','Bundesliga','Serie A','Eredivisie','Liga Portugal','Série A brésilienne','Argentine','MLS','Ligue 2','Championship']:sport==='🏀'?['NBA','Euroleague','Pro A']:sport==='🎾'?['Roland Garros','Wimbledon','US Open','Australian Open','Masters 1000']:['Ligue 1'];
-  var dl=$i('comp-list');if(dl)dl.innerHTML=comps.map(function(c){return '<option value="'+c+'">';}).join('');
-  var dl2=$i('comp-list-simple');if(dl2)dl2.innerHTML=comps.map(function(c){return '<option value="'+c+'">';}).join('');
-}
-
-
-
-/* ── FREEBET ARJEL (sans exchange) ── */
-var arjelRows=[{c:3.00,book:'Bookie 1'},{c:3.50,book:'Bookie 2'},{c:3.20,book:'Bookie 3'}];
 function buildArjelRows(){
   var dr=$i('arjel-rows');if(!dr)return;
+  if(arjelMode==='full'){
+    var maxC=Math.max.apply(null,arjelRows.map(function(r){return r.c||0;}));
+    arjelRows.forEach(function(r){r.isFb=(r.c===maxC);});
+  }
   dr.innerHTML=arjelRows.map(function(r,i){
-    return '<div class="dutch-row">'
+    var isFb=!!r.isFb;
+    return '<div class="dutch-row" style="align-items:center;">'
+      +'<button data-idx="'+i+'" onclick="toggleArjelFb(this.dataset.idx)" style="flex-shrink:0;padding:4px 8px;border-radius:4px;border:1px solid '+(isFb?'var(--gold)':'var(--b2)')+';background:'+(isFb?'rgba(240,176,32,.15)':'none')+';color:'+(isFb?'var(--gold)':'var(--t3)')+';font-size:10px;font-weight:700;cursor:pointer;">'+(isFb?'🎟':'💵')+'</button>'
       +'<input class="fi" value="'+r.book+'" placeholder="Bookmaker '+(i+1)+'" data-idx="'+i+'" oninput="arjelRows[this.dataset.idx].book=this.value;" style="flex:1;font-size:12px;">'
-      +'<input type="number" class="fi" value="'+r.c+'" step="0.01" placeholder="Cote" data-idx="'+i+'" oninput="arjelRows[this.dataset.idx].c=parseFloat(this.value)||1;calcArjel();" style="width:80px;color:var(--a);font-weight:700;">'
+      +'<input type="number" class="fi" value="'+r.c+'" step="0.01" data-idx="'+i+'" oninput="arjelRows[this.dataset.idx].c=parseFloat(this.value)||1;buildArjelRows();" style="width:72px;color:'+(isFb?'var(--gold)':'var(--a)')+';font-weight:700;">'
       +(arjelRows.length>2?'<button class="udel" data-idx="'+i+'" onclick="arjelRows.splice(parseInt(this.dataset.idx),1);buildArjelRows();">✕</button>':'')
       +'</div>';
   }).join('');
   calcArjel();
 }
-function addArjelRow(){arjelRows.push({c:3.0,book:'Bookie '+(arjelRows.length+1)});buildArjelRows();}
+function addArjelRow(){arjelRows.push({c:3.0,book:'Bookie '+(arjelRows.length+1),isFb:false});buildArjelRows();}
+
 function calcArjel(){
   var fb=parseFloat(($i('arjel-fb')&&$i('arjel-fb').value)||10);
   if(!fb||arjelRows.length<2)return;
-  var sorted=arjelRows.slice().sort(function(a,b){return b.c-a.c;});
-  var gainFb=(sorted[0].c-1)*fb;
-  var mises=[0];
-  var totalCash=0;
-  for(var i=1;i<sorted.length;i++){
-    var m=gainFb/sorted[i].c;
+  var fbRows=arjelRows.filter(function(r){return r.isFb;});
+  var realRows=arjelRows.filter(function(r){return !r.isFb;});
+  if(!fbRows.length){fbRows=[arjelRows[0]];realRows=arjelRows.slice(1);}
+  var fbPerRow=fb/fbRows.length;
+  /* Gain brut moyen si freebet gagne */
+  var gainFb=fbRows.reduce(function(s,r){return s+(r.c-1)*fbPerRow;},0)/fbRows.length;
+  /* Mises réelles pour égaliser */
+  var mises=[];var totalCash=0;
+  realRows.forEach(function(r){
+    var m=gainFb/r.c;
     mises.push(m);totalCash+=m;
-  }
+  });
   var cash=gainFb-totalCash;
   var taux=fb>0?(cash/fb*100).toFixed(1):0;
   var tm=$i('arjel-mise');
-  if(tm)tm.innerText='FB @'+sorted[0].c+' · Réel: '+mises.slice(1).map(function(m){return m.toFixed(2)+'€';}).join(' + ');
+  if(tm)tm.innerText='FB: '+fbRows.map(function(r){return '@'+r.c;}).join('+')+' · Réel: '+mises.map(function(m){return m.toFixed(2)+'€';}).join('+');
   var tc=$i('arjel-cash');if(tc){tc.innerText=(cash>=0?'+':'')+cash.toFixed(2)+'€';tc.style.color=cash>=0?'var(--g)':'var(--r)';}
   var tt=$i('arjel-taux');if(tt){tt.innerText=taux+'%';tt.style.color=parseFloat(taux)>80?'var(--g)':parseFloat(taux)>60?'var(--a)':'var(--r)';}
   var det=$i('arjel-detail');
   if(det){det.innerHTML='<div class="calc-res">'
-    +'<div class="cres-row"><span class="cres-l">🎟 Freebet sur '+sorted[0].book+' (@'+sorted[0].c+')</span><span class="cres-v" style="color:var(--gold)">'+fb+'€ FB</span></div>'
-    +sorted.slice(1).map(function(r,i){return '<div class="cres-row"><span class="cres-l">💵 Mise réelle sur '+r.book+' (@'+r.c+')</span><span class="cres-v" style="color:var(--a)">'+mises[i+1].toFixed(2)+'€</span></div>';}).join('')
+    +fbRows.map(function(r){return '<div class="cres-row"><span class="cres-l">🎟 FB sur '+r.book+' (@'+r.c+')</span><span class="cres-v" style="color:var(--gold)">'+fbPerRow.toFixed(2)+'€</span></div>';}).join('')
+    +realRows.map(function(r,i){return '<div class="cres-row"><span class="cres-l">💵 Réel sur '+r.book+' (@'+r.c+')</span><span class="cres-v" style="color:var(--a)">'+mises[i].toFixed(2)+'€</span></div>';}).join('')
     +'</div>';}
   var verd=$i('arjel-verdict');
   if(verd){
@@ -2196,6 +2072,8 @@ function calcArjel(){
     verd.innerText=great?'🔥 '+taux+'% = +'+cash.toFixed(2)+'€':ok?'✅ '+taux+'% = +'+cash.toFixed(2)+'€':'❌ Cotes insuffisantes';
   }
 }
+
+
 /* ── INIT ── */
 document.querySelectorAll('.tab').forEach(function(t){t.style.display='none';});
 $i('t-dash').style.display='block';
