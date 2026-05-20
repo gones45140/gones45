@@ -2362,12 +2362,10 @@ async function verifierUnPari(bet,key){
   var equipe=bet.n||'';
   var adversaire=bet.target||'';
   var date=bet.date||'';
-  var prompt='Tu es un expert en résultats sportifs. '+
-    'Quel est le résultat du match : '+equipe+' vs '+adversaire+' ('+sport+')'+(date?' du '+date:'')+' ? '+
-    'Réponds UNIQUEMENT avec un JSON valide (sans markdown, sans backticks) : '+
-    '{"score":"X-X","gagnant":"NOM_EXACT_DU_GAGNANT_OU_Nul","confiance":"haute|moyenne|faible","info":"description courte"}. '+
-    'Le champ "gagnant" doit être EXACTEMENT "'+equipe+'" ou "'+adversaire+'" ou "Nul". '+
-    'Si résultat inconnu : {"score":"?","gagnant":"inconnu","confiance":"faible","info":"Match non trouvé ou pas encore joué"}';
+  var prompt='Donne-moi le résultat du match : '+equipe+' vs '+adversaire+(date?' du '+date:'')+'. '+
+    'Réponds uniquement avec ce JSON (pas de markdown) : '+
+    '{"score":"ex: 3-1","gagnant":"'+equipe+' ou '+adversaire+' ou Nul","confiance":"haute ou moyenne ou faible","info":"une phrase"}. '+
+    'Si match non joué ou inconnu : {"score":"?","gagnant":"inconnu","confiance":"faible","info":"non disponible"}';
   try{
     showDbxStatus('🔍 Recherche : '+equipe+' vs '+adversaire+'…');
     var res=await fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key='+key,{
@@ -2375,11 +2373,19 @@ async function verifierUnPari(bet,key){
       body:JSON.stringify({contents:[{parts:[{text:prompt}]}]})
     });
     var d=await res.json();
-    if(!d.candidates||!d.candidates[0]){showDbxStatus('❌ Gemini : réponse vide');return;}
-    var text=d.candidates[0].content.parts[0].text.trim();
-    console.log('[GONES45 Gemini brut]',text);
+    console.log('[GONES45 API]', JSON.stringify(d));
+    if(!d.candidates||!d.candidates[0]){
+      var raison=(d.promptFeedback&&d.promptFeedback.blockReason)||(d.error&&d.error.message)||'inconnue';
+      showDbxStatus('❌ Gemini bloqué : '+raison);return;
+    }
+    var cand=d.candidates[0];
+    if(!cand.content||!cand.content.parts||!cand.content.parts[0]){
+      showDbxStatus('❌ Gemini vide (finishReason='+( cand.finishReason||'?')+')');return;
+    }
+    var text=cand.content.parts[0].text.trim();
+    console.log('[GONES45 texte brut]', text);
     var data=parseGeminiJSON(text);
-    if(!data){showDbxStatus('❌ Réponse illisible — voir console F12');return;}
+    if(!data){showDbxStatus('❌ JSON illisible — F12 pour détail');return;}
     if(!data.gagnant||data.gagnant==='inconnu'||data.confiance==='faible'){
       showDbxStatus('⚠️ '+equipe+' vs '+adversaire+' : résultat non trouvé');
       return;
@@ -2418,10 +2424,16 @@ async function _geminiAutoFill(equipe, btnId, fields){
       body:JSON.stringify({contents:[{parts:[{text:prompt}]}]})
     });
     var d=await res.json();
-    var text=(d.candidates&&d.candidates[0]&&d.candidates[0].content.parts[0].text)||'';
-    text=text.replace(/```json|```/g,'').trim();
+    console.log('[GONES45 AutoFill API]', JSON.stringify(d));
+    if(!d.candidates||!d.candidates[0]||!d.candidates[0].content){
+      var raison2=(d.promptFeedback&&d.promptFeedback.blockReason)||(d.error&&d.error.message)||'inconnue';
+      if(btn){btn.innerText='❌';btn.disabled=false;setTimeout(function(){if(btn)btn.innerText=origLabel;},2000);}
+      showDbxStatus('❌ Gemini bloqué : '+raison2);return;
+    }
+    var text=(d.candidates[0].content.parts[0].text)||'';
+    console.log('[GONES45 AutoFill texte]', text);
     var info=parseGeminiJSON(text);
-    if(!info){if(btn){btn.innerText='❌';btn.disabled=false;setTimeout(function(){if(btn)btn.innerText=origLabel;},2000);}showDbxStatus('❌ Réponse Gemini illisible');return;}
+    if(!info){if(btn){btn.innerText='❌';btn.disabled=false;setTimeout(function(){if(btn)btn.innerText=origLabel;},2000);}showDbxStatus('❌ JSON illisible — F12 pour détail');return;}
     var filled=[];
     Object.entries(fields).forEach(function(e){
       var key=e[0],elId=e[1];
