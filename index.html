@@ -2393,7 +2393,7 @@ async function verifierUnPari(bet,key){
 
 /* ── AUTO-FILL PROCHAIN MATCH VIA GROQ ── */
 async function _geminiAutoFill(equipe, btnId, fields){
-  if(!equipe){showDbxStatus('⚠️ Saisis un nom d'équipe !');return;}
+  if(!equipe){showDbxStatus('⚠️ Saisis un nom d\'équipe !');return;}
   var key=getGeminiKey();
   if(!key){showDbxStatus('⚠️ Clé Groq manquante dans Outils !');return;}
   var btn=$i(btnId);
@@ -2428,7 +2428,7 @@ async function _geminiAutoFill(equipe, btnId, fields){
 function fetchNextMatchWithGemini(){
   var uSel=$i('c-unit');
   var raw=(uSel&&uSel.options[uSel.selectedIndex]&&uSel.options[uSel.selectedIndex].text)||'';
-  var equipe=raw.replace(/^.{1,3}\s/,'').replace(/\s*\(P\d+\)\s*$/,'').trim();
+  var equipe=raw.replace(/^[^\s]+\s/,'').replace(/\s*\(P\d+\)\s*$/,'').trim();
   _geminiAutoFill(equipe,'btn-auto-load',{adversaire:'c-target',date:'c-date',heure:'c-heure',competition:'c-comp'});
 }
 /* Mode Simple */
