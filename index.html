@@ -2277,55 +2277,120 @@ async function testGeminiKey(){
     }
   }catch(e){if(st){st.innerText='❌ Erreur réseau';st.style.color='var(--r)';}}
 }
-async function verifierResultats(){
-  var key=getGeminiKey();
-  if(!key){alert('Configure ta clé Gemini dans Outils !');return;}
-  var paris=state.h;
-  if(!paris.length){alert('Aucun pari en cours.');return;}
-  showDbxStatus('🤖 Gemini analyse les résultats…');
-  for(var i=0;i<paris.length;i++){
-    var bet=paris[i];
-    await verifierUnPari(bet,key);
-    await new Promise(function(r){setTimeout(r,800);});
+
+/* ── HELPER JSON PARSING ROBUSTE POUR GEMINI ── */
+function parseGeminiJSON(text){
+  try{
+    // Nettoyage backticks markdown
+    text=text.replace(/```json|```/gi,'').trim();
+    // Tentative directe
+    try{return JSON.parse(text);}catch(e){}
+    // Extraction du premier bloc JSON
+    var m=text.match(/\{[\s\S]*\}/);
+    if(m){return JSON.parse(m[0]);}
+    return null;
+  }catch(e){
+    console.error('[parseGeminiJSON]',e,text);
+    return null;
   }
 }
+
+/* ── MODALE RÉSULTAT GEMINI ── */
+function showResultModal(bet, data, win){
+  /* Supprime une éventuelle modale existante */
+  var old=$i('gemini-modal');if(old)old.remove();
+  var sport=bet.sport||'';
+  var equipe=bet.n||'';
+  var adversaire=bet.target||'';
+  var scoreColor=win?'var(--g)':'var(--r)';
+  var confColor=data.confiance==='haute'?'var(--g)':data.confiance==='moyenne'?'var(--gold)':'var(--r)';
+  var overlay=document.createElement('div');
+  overlay.id='gemini-modal';
+  overlay.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:9999;display:flex;align-items:flex-end;justify-content:center;padding:0 0 70px;';
+  overlay.innerHTML=
+    '<div style="background:var(--s1);border:1px solid var(--b2);border-radius:16px 16px 12px 12px;width:100%;max-width:540px;overflow:hidden;animation:up .2s ease;">'
+    +'<div style="background:'+(win?'rgba(30,215,96,.1)':'rgba(255,69,69,.1)')+';padding:16px 18px;border-bottom:1px solid var(--b1);">'
+    +'<div style="font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--t3);margin-bottom:4px;">🤖 Résultat Gemini</div>'
+    +'<div style="font-size:15px;font-weight:800;color:var(--t1);">'+sport+' '+equipe+(adversaire?' vs '+adversaire:'')+'</div>'
+    +'</div>'
+    +'<div style="padding:16px 18px;">'
+    +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px;">'
+    +'<div style="background:var(--bg3);border-radius:8px;padding:12px;text-align:center;">'
+    +'<div style="font-size:9px;color:var(--t3);font-weight:700;text-transform:uppercase;letter-spacing:.8px;margin-bottom:6px;">Score</div>'
+    +'<div style="font-size:22px;font-weight:800;color:'+scoreColor+';">'+data.score+'</div>'
+    +'</div>'
+    +'<div style="background:var(--bg3);border-radius:8px;padding:12px;text-align:center;">'
+    +'<div style="font-size:9px;color:var(--t3);font-weight:700;text-transform:uppercase;letter-spacing:.8px;margin-bottom:6px;">Confiance</div>'
+    +'<div style="font-size:16px;font-weight:800;color:'+confColor+';">'+data.confiance.toUpperCase()+'</div>'
+    +'</div>'
+    +'</div>'
+    +'<div style="background:var(--bg3);border-radius:8px;padding:10px 12px;margin-bottom:14px;font-size:12px;color:var(--t2);">💬 '+data.info+'</div>'
+    +'<div style="font-size:14px;font-weight:700;text-align:center;margin-bottom:14px;color:'+scoreColor+';">'
+    +(win?'✅ TON PARI EST GAGNANT':'❌ TON PARI EST PERDANT')
+    +'</div>'
+    +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">'
+    +'<button onclick="document.getElementById(\'gemini-modal\').remove();" style="padding:12px;border-radius:8px;border:1px solid var(--b2);background:var(--bg2);color:var(--t2);font-size:13px;font-weight:700;cursor:pointer;">Annuler</button>'
+    +'<button id="gm-confirm-btn" style="padding:12px;border-radius:8px;border:none;background:'+(win?'var(--g)':'var(--r)')+';color:#fff;font-size:13px;font-weight:700;cursor:pointer;">'
+    +(win?'✅ Valider WIN':'❌ Confirmer LOSS')+'</button>'
+    +'</div>'
+    +'</div>'
+    +'</div>';
+  document.body.appendChild(overlay);
+  /* Ferme en cliquant l'overlay */
+  overlay.addEventListener('click',function(e){if(e.target===overlay)overlay.remove();});
+  /* Bouton confirmation */
+  $i('gm-confirm-btn').onclick=function(){
+    result(bet.id,win);
+    overlay.remove();
+  };
+}
+
+async function verifierResultats(){
+  var key=getGeminiKey();
+  if(!key){showDbxStatus('⚠️ Configure ta clé Gemini dans Outils !');return;}
+  var paris=state.h;
+  if(!paris.length){showDbxStatus('⚠️ Aucun pari en cours.');return;}
+  showDbxStatus('🤖 Gemini analyse '+paris.length+' pari(s)…');
+  for(var i=0;i<paris.length;i++){
+    await verifierUnPari(paris[i],key);
+    if(i<paris.length-1)await new Promise(function(r){setTimeout(r,900);});
+  }
+}
+
 async function verifierUnPari(bet,key){
-  var sport=bet.sport||'⚽';
+  var sport=bet.sport||'sport';
   var equipe=bet.n||'';
   var adversaire=bet.target||'';
   var date=bet.date||'';
-  var prompt='Tu es un assistant spécialisé en résultats sportifs. '+
-    'Quel est le résultat du match de '+sport+' entre '+equipe+' et '+adversaire+
-    (date?' le '+date:'')+' ? '+
-    'Réponds UNIQUEMENT avec ce format JSON exact (sans markdown, sans backticks) : '+
-    '{"score":"X-X","gagnant":"'+equipe+' ou '+adversaire+' ou Nul","confiance":"haute ou moyenne ou faible","info":"courte description"}. '+
-    'Si tu ne trouves pas le résultat, réponds : {"score":"?","gagnant":"inconnu","confiance":"faible","info":"Match non trouvé"}';
+  var prompt='Tu es un expert en résultats sportifs. '+
+    'Quel est le résultat du match : '+equipe+' vs '+adversaire+' ('+sport+')'+(date?' du '+date:'')+' ? '+
+    'Réponds UNIQUEMENT avec un JSON valide (sans markdown, sans backticks) : '+
+    '{"score":"X-X","gagnant":"NOM_EXACT_DU_GAGNANT_OU_Nul","confiance":"haute|moyenne|faible","info":"description courte"}. '+
+    'Le champ "gagnant" doit être EXACTEMENT "'+equipe+'" ou "'+adversaire+'" ou "Nul". '+
+    'Si résultat inconnu : {"score":"?","gagnant":"inconnu","confiance":"faible","info":"Match non trouvé ou pas encore joué"}';
   try{
+    showDbxStatus('🔍 Recherche : '+equipe+' vs '+adversaire+'…');
     var res=await fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key='+key,{
-      method:'POST',
-      headers:{'Content-Type':'application/json'},
+      method:'POST',headers:{'Content-Type':'application/json'},
       body:JSON.stringify({contents:[{parts:[{text:prompt}]}]})
     });
     var d=await res.json();
-    if(!d.candidates||!d.candidates[0])return;
+    if(!d.candidates||!d.candidates[0]){showDbxStatus('❌ Gemini : réponse vide');return;}
     var text=d.candidates[0].content.parts[0].text.trim();
-    var data=JSON.parse(text);
-    if(data.gagnant==='inconnu'||data.confiance==='faible'){
+    console.log('[GONES45 Gemini brut]',text);
+    var data=parseGeminiJSON(text);
+    if(!data){showDbxStatus('❌ Réponse illisible — voir console F12');return;}
+    if(!data.gagnant||data.gagnant==='inconnu'||data.confiance==='faible'){
       showDbxStatus('⚠️ '+equipe+' vs '+adversaire+' : résultat non trouvé');
       return;
     }
-    /* Determine win/loss */
-    var win=(data.gagnant===equipe||data.gagnant===bet.n);
-    var msg='🤖 '+equipe+(adversaire?' vs '+adversaire:'')+
-      '\n📊 Score : '+data.score+
-      '\n🏆 Gagnant : '+data.gagnant+
-      '\n💬 '+data.info+
-      '\n\n'+(win?'✅ TON PARI EST GAGNANT — Valider ?':'❌ TON PARI EST PERDANT — Confirmer ?');
-    if(confirm(msg)){
-      result(bet.id, win);
-    }
+    /* Comparaison flexible gagnant */
+    var gNorm=data.gagnant.toLowerCase().trim();
+    var eNorm=equipe.toLowerCase().trim();
+    var win=(gNorm===eNorm||gNorm.includes(eNorm)||eNorm.includes(gNorm));
+    showResultModal(bet,data,win);
   }catch(e){
-    showDbxStatus('❌ Erreur Gemini pour '+equipe);
+    showDbxStatus('❌ Erreur : '+(e.message||'réseau'));
   }
 }
 /* ── INIT ── */
@@ -2355,7 +2420,8 @@ async function _geminiAutoFill(equipe, btnId, fields){
     var d=await res.json();
     var text=(d.candidates&&d.candidates[0]&&d.candidates[0].content.parts[0].text)||'';
     text=text.replace(/```json|```/g,'').trim();
-    var info=JSON.parse(text);
+    var info=parseGeminiJSON(text);
+    if(!info){if(btn){btn.innerText='❌';btn.disabled=false;setTimeout(function(){if(btn)btn.innerText=origLabel;},2000);}showDbxStatus('❌ Réponse Gemini illisible');return;}
     var filled=[];
     Object.entries(fields).forEach(function(e){
       var key=e[0],elId=e[1];
