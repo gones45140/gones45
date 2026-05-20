@@ -842,7 +842,7 @@ PRESETS.forEach(function(pt){
 var STRATS={"1":[1,2,6,18,54,162,486,1458],"2":[2,4,12,36,108,324,972,2916],"3":[2,4,12,36,108,324,972,2916],"4":[5,10,30,90,270,810,2430,7290],"5":[10,20,60,180,540,1620,4860,14580]};
 var PCOLS=["#4d84ff","#1ed760","#f59e0b","#a855f7","#22d3ee","#f97316","#ef4444","#ec4899","#14b8a6","#6366f1","#84cc16","#e879f9"];
 var selColor=PCOLS[0];
-var AC={},GC=null,MC={},_currentTeam="";
+var AC={},GC=null,MC={},_currentTeam="",_prevTab="t-bilan";
 var bilanSport='ALL';
 var bilanMode='global';
 function showBilanTab(mode,btn){
@@ -1465,8 +1465,11 @@ function openClub(nom,idx){
   document.querySelectorAll('.ipanel').forEach(function(c){c.classList.remove('on');});
   document.querySelector('.itab').classList.add('on');
   $i('ip-bilan').classList.add('on');
-  $i('t-bilan').style.display='none';
-  $i('detail').style.display='block';
+  /* Mémoriser et cacher l'onglet actif */
+  var _activeTab=document.querySelector('.tab.on')||document.querySelector('.tab[style*="block"]');
+  if(_activeTab)_prevTab=_activeTab.id;
+  document.querySelectorAll('.tab').forEach(function(t){t.style.display='none';});
+  var det=$i('detail');if(det)det.style.display='block';
 
   setTimeout(function(){
     if(cv.length>1){
@@ -1504,7 +1507,7 @@ function openClub(nom,idx){
 }
 
 function setUG(nom){var v=prompt('Objectif profit pour '+nom+' (€) :',state.ugoals[nom]||0);if(v!=null&&!isNaN(+v)){state.ugoals[nom]=+v;save();}}
-function closeClub(){Object.values(AC).forEach(function(c){try{c.destroy();}catch(e){}});AC={};$i('detail').style.display='none';$i('t-bilan').style.display='block';}
+function closeClub(){Object.values(AC).forEach(function(c){try{c.destroy();}catch(e){}});AC={};var det=$i('detail');if(det)det.style.display='none';var prev=$i(_prevTab||'t-bilan');if(prev)prev.style.display='block';}
 function swInner(id,btn){document.querySelectorAll('.itab').forEach(function(t){t.classList.remove('on');});document.querySelectorAll('.ipanel').forEach(function(c){c.classList.remove('on');});if(btn)btn.classList.add('on');$i('ip-'+id).classList.add('on');}
 
 /* ── PARIS ── */
@@ -1798,7 +1801,7 @@ function renderGlobalCharts(){
     setTimeout(function(){
       renderBooksChart();
       renderPaliersChart();
-      renderRadarChart();
+      setTimeout(function(){renderRadarChart();},200);
     },150);
   },100);
 }
@@ -1853,8 +1856,11 @@ function renderPaliersChart(){
 
 function renderRadarChart(){
   var ctx=$i('chart-radar');if(!ctx)return;
-  if(GC2.radar){try{GC2.radar.destroy();}catch(e){}}
+  /* Destroy proprement */
+  if(GC2.radar){try{GC2.radar.destroy();}catch(e){}}GC2.radar=null;
   if(!state.a.length){ctx.parentElement.innerHTML='<div class="empty">Aucun historique</div>';return;}
+  /* Si canvas pas encore visible (height=0), retry dans 300ms */
+  if(ctx.offsetHeight===0){setTimeout(renderRadarChart,300);return;}
   var typeMap={};
   state.a.forEach(function(h){
     var t=(h.type||'Autre').trim()||'Autre';
@@ -1865,6 +1871,7 @@ function renderRadarChart(){
     typeMap[t].mise+=parseFloat(h.m||0);
   });
   var entries=Object.entries(typeMap).sort(function(a,b){return b[1].n-a[1].n;}).slice(0,8);
+  if(!entries.length){ctx.parentElement.innerHTML='<div class="empty">Aucun type de pari</div>';return;}
   var labels=entries.map(function(e){return e[0];});
   var wrData=entries.map(function(e){return parseFloat((e[1].wins/e[1].n*100).toFixed(1));});
   var roiData=entries.map(function(e){return e[1].mise>0?parseFloat((e[1].profit/e[1].mise*100).toFixed(1)):0;});
@@ -1878,6 +1885,7 @@ function renderRadarChart(){
       ]
     },
     options:{
+      animation:false,
       responsive:true,maintainAspectRatio:false,
       plugins:{legend:{display:true,labels:{color:'#8b97c4',font:{size:10},boxWidth:10}}},
       scales:{r:{ticks:{color:'#4f5d88',font:{size:9},backdropColor:'transparent'},grid:{color:'rgba(255,255,255,.07)'},pointLabels:{color:'#8b97c4',font:{size:9}}}}
