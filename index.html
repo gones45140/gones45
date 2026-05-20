@@ -420,7 +420,10 @@ input[type="date"],input[type="time"]{color-scheme:dark;}
       <div class="fg" style="margin-top:9px"><label class="fl">📝 Notes</label><textarea id="c-notes" class="fi" style="height:44px;resize:none;" placeholder="Analyse, contexte…"></textarea></div>
       <button class="btn btn-p" style="margin-top:11px;" onclick="pari(true)">Engager la montante</button>
     </div>
-    <div class="sec">En cours</div>
+    <div class="sec" style="display:flex;justify-content:space-between;align-items:center;">
+      <span>En cours</span>
+      <button class="ba" onclick="verifierResultats()" style="color:var(--a);border-color:rgba(77,132,255,.3);font-size:10px;">🤖 Vérifier résultats</button>
+    </div>
     <div class="card"><table class="ltbl"><thead><tr><th>Équipe</th><th>Match</th><th>Cote</th><th>Mise</th><th style="text-align:right">Résultat</th></tr></thead><tbody id="live-strat"></tbody></table></div>
   </div>
   <div id="sub-simple" style="display:none;">
@@ -499,6 +502,30 @@ input[type="date"],input[type="time"]{color-scheme:dark;}
     <button class="gtab on" onclick="showGTab('g-global',this)">🌍 Global</button>
     <button class="gtab" onclick="showGTab('g-equipes',this)">🛡 Équipes</button>
   </div>
+  <!-- STATS BILAN -->
+  <!-- 4 onglets bilan -->
+  <div class="gtabs" style="margin-bottom:14px;">
+    <button class="gtab on" id="btab-global" onclick="showBilanTab('global',this)">🌍 Global</button>
+    <button class="gtab" id="btab-cockpit" onclick="showBilanTab('cockpit',this)">🚀 Cockpit</button>
+    <button class="gtab" id="btab-simple" onclick="showBilanTab('simple',this)">🎯 Simple</button>
+    <button class="gtab" id="btab-flash" onclick="showBilanTab('flash',this)">⚡ Flash</button>
+  </div>
+  <!-- Contenu commun filtré -->
+  <div class="sec" style="margin-top:0;">Filtre sport</div>
+  <div class="sfrow" id="sport-filter"></div>
+  <div class="sec">Performance</div>
+  <div class="bili2">
+    <div class="bilibox"><div class="bilibox-l">Bénéfice</div><div class="bilibox-v" id="stat-ben" style="color:var(--g);">0€</div></div>
+    <div class="bilibox"><div class="bilibox-l">Réussite</div><div class="bilibox-v" id="stat-wr">0%</div></div>
+    <div class="bilibox"><div class="bilibox-l">ROI</div><div class="bilibox-v" id="stat-roi">0%</div></div>
+    <div class="bilibox"><div class="bilibox-l">Paris</div><div class="bilibox-v" id="stat-nb">0</div></div>
+  </div>
+  <!-- Courbe de capital -->
+  <div class="sec">Courbe</div>
+  <div class="cwrap"><div style="height:160px;position:relative;"><canvas id="bilan-chart"></canvas></div></div>
+  <div class="sec">Par bookmaker</div>
+  <div id="bk-stats"></div>
+  
   <!-- GLOBAL PANEL -->
   <div id="g-global" class="gpanel on">
     <div class="sec" style="margin-top:0;">Courbe capital</div>
@@ -538,28 +565,6 @@ input[type="date"],input[type="time"]{color-scheme:dark;}
 
 <!-- BILAN -->
 <div id="t-outils" class="tab">
-  <!-- 4 onglets bilan -->
-  <div class="gtabs" style="margin-bottom:14px;">
-    <button class="gtab on" id="btab-global" onclick="showBilanTab('global',this)">🌍 Global</button>
-    <button class="gtab" id="btab-cockpit" onclick="showBilanTab('cockpit',this)">🚀 Cockpit</button>
-    <button class="gtab" id="btab-simple" onclick="showBilanTab('simple',this)">🎯 Simple</button>
-    <button class="gtab" id="btab-flash" onclick="showBilanTab('flash',this)">⚡ Flash</button>
-  </div>
-  <!-- Contenu commun filtré -->
-  <div class="sec" style="margin-top:0;">Filtre sport</div>
-  <div class="sfrow" id="sport-filter"></div>
-  <div class="sec">Performance</div>
-  <div class="bili2">
-    <div class="bilibox"><div class="bilibox-l">Bénéfice</div><div class="bilibox-v" id="stat-ben" style="color:var(--g);">0€</div></div>
-    <div class="bilibox"><div class="bilibox-l">Réussite</div><div class="bilibox-v" id="stat-wr">0%</div></div>
-    <div class="bilibox"><div class="bilibox-l">ROI</div><div class="bilibox-v" id="stat-roi">0%</div></div>
-    <div class="bilibox"><div class="bilibox-l">Paris</div><div class="bilibox-v" id="stat-nb">0</div></div>
-  </div>
-  <!-- Courbe de capital -->
-  <div class="sec">Courbe</div>
-  <div class="cwrap"><div style="height:160px;position:relative;"><canvas id="bilan-chart"></canvas></div></div>
-  <div class="sec">Par bookmaker</div>
-  <div id="bk-stats"></div>
   <div class="sec">Calculateur</div>
   <div class="fc">
     <div class="calc-tabs">
@@ -2276,6 +2281,89 @@ function openClubFromDash(nom){
     openClub(nom, idx>=0?idx:0);
   }, 60);
 }
+
+/* ── GEMINI API ── */
+function saveGeminiKey(){
+  var inp=$i('gemini-key-input');if(!inp)return;
+  var key=inp.value.trim();if(!key)return;
+  localStorage.setItem('gones45_gemini_key',key);
+  var st=$i('gemini-key-status');
+  if(st){st.innerText='✅ Clé enregistrée !';st.style.color='var(--g)';}
+  setTimeout(function(){if(st)st.innerText='';},3000);
+}
+function getGeminiKey(){
+  return localStorage.getItem('gones45_gemini_key')||null;
+}
+async function testGeminiKey(){
+  var key=getGeminiKey();
+  var st=$i('gemini-key-status');
+  if(!key){if(st){st.innerText='❌ Aucune clé';st.style.color='var(--r)';}return;}
+  if(st){st.innerText='⏳ Test…';st.style.color='var(--t3)';}
+  try{
+    var res=await fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key='+key,{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({contents:[{parts:[{text:'Réponds juste OK'}]}]})
+    });
+    var d=await res.json();
+    if(d.candidates&&d.candidates[0]){
+      if(st){st.innerText='✅ Clé valide !';st.style.color='var(--g)';}
+    }else{
+      if(st){st.innerText='❌ Clé invalide';st.style.color='var(--r)';}
+    }
+  }catch(e){if(st){st.innerText='❌ Erreur réseau';st.style.color='var(--r)';}}
+}
+async function verifierResultats(){
+  var key=getGeminiKey();
+  if(!key){alert('Configure ta clé Gemini dans Outils !');return;}
+  var paris=state.h;
+  if(!paris.length){alert('Aucun pari en cours.');return;}
+  showDbxStatus('🤖 Gemini analyse les résultats…');
+  for(var i=0;i<paris.length;i++){
+    var bet=paris[i];
+    await verifierUnPari(bet,key);
+    await new Promise(function(r){setTimeout(r,800);});
+  }
+}
+async function verifierUnPari(bet,key){
+  var sport=bet.sport||'⚽';
+  var equipe=bet.n||'';
+  var adversaire=bet.target||'';
+  var date=bet.date||'';
+  var prompt='Tu es un assistant spécialisé en résultats sportifs. '+
+    'Quel est le résultat du match de '+sport+' entre '+equipe+' et '+adversaire+
+    (date?' le '+date:'')+' ? '+
+    'Réponds UNIQUEMENT avec ce format JSON exact (sans markdown, sans backticks) : '+
+    '{"score":"X-X","gagnant":"'+equipe+' ou '+adversaire+' ou Nul","confiance":"haute ou moyenne ou faible","info":"courte description"}. '+
+    'Si tu ne trouves pas le résultat, réponds : {"score":"?","gagnant":"inconnu","confiance":"faible","info":"Match non trouvé"}';
+  try{
+    var res=await fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key='+key,{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({contents:[{parts:[{text:prompt}]}]})
+    });
+    var d=await res.json();
+    if(!d.candidates||!d.candidates[0])return;
+    var text=d.candidates[0].content.parts[0].text.trim();
+    var data=JSON.parse(text);
+    if(data.gagnant==='inconnu'||data.confiance==='faible'){
+      showDbxStatus('⚠️ '+equipe+' vs '+adversaire+' : résultat non trouvé');
+      return;
+    }
+    /* Determine win/loss */
+    var win=(data.gagnant===equipe||data.gagnant===bet.n);
+    var msg='🤖 '+equipe+(adversaire?' vs '+adversaire:'')+
+      '\n📊 Score : '+data.score+
+      '\n🏆 Gagnant : '+data.gagnant+
+      '\n💬 '+data.info+
+      '\n\n'+(win?'✅ TON PARI EST GAGNANT — Valider ?':'❌ TON PARI EST PERDANT — Confirmer ?');
+    if(confirm(msg)){
+      result(bet.id, win);
+    }
+  }catch(e){
+    showDbxStatus('❌ Erreur Gemini pour '+equipe);
+  }
+}
 /* ── INIT ── */
 document.querySelectorAll('.tab').forEach(function(t){t.style.display='none';});
 $i('t-dash').style.display='block';
@@ -2283,6 +2371,7 @@ window.onload=function(){
   var saved=localStorage.getItem('g45_dbx');
   if(saved){_dbxConfig.refreshToken=saved;}
   var inp=$i('dbx-key-input');if(inp)inp.value='(token auto — permanent)';
+  var gk=localStorage.getItem('gones45_gemini_key');var gki=$i('gemini-key-input');if(gki&&gk)gki.value=gk;
   render();updMise();buildSbRows();buildDtRows();buildArjelRows();renderCrash();renderMmRows();renderMmRowsSimple();updateCompList();calcVb();calcLay();calcFreebet();};
 </script>
 </body>
