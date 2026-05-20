@@ -341,7 +341,7 @@ input[type="date"],input[type="time"]{color-scheme:dark;}
           <option value="🏉">🏉 Rugby</option><option value="🏉🇦🇺">🏉🇦🇺 NRL</option><option value="🏎">🏎 F1</option>
         </select></div>
         <div class="fg"><label class="fl">Compétition</label><input id="c-comp" class="fi" placeholder="Ligue 1, CL…"></div>
-        <div class="fg" style="position:relative"><label class="fl">Adversaire</label><div style="display:flex;gap:6px;"><input id="c-target" class="fi" placeholder="Ex : Real Madrid" autocomplete="off" oninput="searchAdv(this.value,'c-target','adv-res-cock')" style="flex:1;"><button id="btn-auto-load" onclick="fetchNextMatchWithGemini()" style="flex-shrink:0;padding:0 10px;background:rgba(77,132,255,.15);border:1px solid rgba(77,132,255,.35);border-radius:var(--r6);color:var(--a);font-size:10px;font-weight:700;cursor:pointer;white-space:nowrap;transition:all .15s;" title="Charger le prochain match via Gemini AI">🔍 Auto</button></div><div id="adv-res-cock" style="display:none;position:absolute;left:0;right:0;background:var(--bg3);border:1px solid var(--b1);border-radius:var(--r6);z-index:200;max-height:180px;overflow-y:auto;"></div></div>
+        <div class="fg" style="position:relative"><label class="fl">Adversaire</label><input id="c-target" class="fi" placeholder="Ex : Real Madrid" autocomplete="off" oninput="searchAdv(this.value,'c-target','adv-res-cock')"><div id="adv-res-cock" style="display:none;position:absolute;left:0;right:0;background:var(--bg3);border:1px solid var(--b1);border-radius:var(--r6);z-index:200;max-height:180px;overflow-y:auto;"></div></div>
         <div class="fg"><label class="fl">Bookmaker</label><select id="c-book" class="fi"></select></div>
         <div class="fg"><label class="fl" style="color:var(--g);">Mise (€)</label><input type="number" id="c-mise" class="fi" style="border-color:rgba(30,215,96,.25);"></div>
         <div class="fg"><label class="fl">Date</label><input type="date" id="c-date" class="fi"></div>
@@ -352,7 +352,7 @@ input[type="date"],input[type="time"]{color-scheme:dark;}
     </div>
     <div class="sec" style="display:flex;justify-content:space-between;align-items:center;">
       <span>En cours</span>
-      <button class="ba" onclick="verifierResultats(true)" style="color:var(--a);border-color:rgba(77,132,255,.3);font-size:10px;">🤖 Vérifier résultats</button>
+      
     </div>
     <div class="card"><table class="ltbl"><thead><tr><th>Équipe</th><th>Match</th><th>Cote</th><th>Mise</th><th style="text-align:right">Résultat</th></tr></thead><tbody id="live-strat"></tbody></table></div>
   </div>
@@ -388,7 +388,7 @@ input[type="date"],input[type="time"]{color-scheme:dark;}
         <div class="fg" style="position:relative"><label class="fl">Équipe / Joueur</label>
           <div style="display:flex;gap:6px;">
             <input id="n-team" class="fi" placeholder="Ex : Lyon, Djokovic…" autocomplete="off" oninput="searchAdv(this.value,'n-team','adv-res-simple-team')" style="flex:1;">
-            <button id="btn-auto-simple" onclick="fetchNextMatchSimple()" style="flex-shrink:0;padding:0 10px;background:rgba(77,132,255,.15);border:1px solid rgba(77,132,255,.35);border-radius:var(--r6);color:var(--a);font-size:14px;cursor:pointer;transition:all .15s;" title="Trouver le prochain match via Gemini AI">🔍</button>
+            
           </div>
           <div id="adv-res-simple-team" style="display:none;position:absolute;left:0;right:0;background:var(--bg3);border:1px solid var(--b1);border-radius:var(--r6);z-index:200;max-height:160px;overflow-y:auto;"></div>
         </div>
@@ -411,7 +411,7 @@ input[type="date"],input[type="time"]{color-scheme:dark;}
     </div>
     <div class="sec" style="display:flex;justify-content:space-between;align-items:center;">
       <span>En cours</span>
-      <button class="ba" onclick="verifierResultats(false)" style="color:var(--a);border-color:rgba(77,132,255,.3);">🤖 Vérifier</button>
+      
     </div>
     <div class="card"><table class="ltbl"><thead><tr><th>Cible</th><th>Mise</th><th style="text-align:right">Résultat</th></tr></thead><tbody id="live-norm"></tbody></table></div>
   </div>
@@ -427,7 +427,7 @@ input[type="date"],input[type="time"]{color-scheme:dark;}
 <!-- ══════════════════════════════════════════
      BILAN — Stats + Équipes + Sofascore
      ══════════════════════════════════════════ -->
-<section id="t-bilan" class="tab" style="padding:0;">
+<div id="t-bilan" class="tab" style="padding:0;">
   <!-- 4 onglets stats -->
   <div class="gtabs">
     <button class="gtab on" id="btab-global" onclick="showBilanTab('global',this)">🌍 Global</button>
@@ -460,6 +460,8 @@ input[type="date"],input[type="time"]{color-scheme:dark;}
   <!-- GRAPHIQUES PANEL -->
   <div id="g-global" class="gpanel on">
     <div id="global-zone"></div>
+    <div class="sec">Courbes par équipe</div>
+    <div class="cwrap" id="multi-curve-wrap"><div style="height:220px;position:relative;"><canvas id="chart-multi"></canvas></div><div id="chart-multi-legend" style="display:flex;flex-wrap:wrap;gap:6px 12px;padding:10px 4px 2px;"></div></div>
     <div class="sec">Répartition bookmakers</div>
     <div class="cwrap"><div style="height:180px;position:relative;"><canvas id="chart-books"></canvas></div></div>
     <div class="sec">Paliers par équipe</div>
@@ -475,7 +477,7 @@ input[type="date"],input[type="time"]{color-scheme:dark;}
 </section>
 
 <!-- DÉTAIL CLUB (overlay) -->
-<section id="detail" style="padding:0;display:none;">
+<div id="detail" style="padding:0;display:none;">
   <div id="d-hero"></div>
   <div>
     <div class="itabs">
@@ -677,19 +679,7 @@ input[type="date"],input[type="time"]{color-scheme:dark;}
     <div id="dbx-key-status" style="margin-top:7px;font-size:11px;font-weight:700;"></div>
   </div>
   <!-- GEMINI — uniquement ici dans Outils -->
-  <div class="fc" style="border-style:dashed;">
-    <label class="fl" style="color:var(--a);">⚡ Groq AI — Vérification &amp; Auto-fill</label>
-    <div style="font-size:10px;color:var(--t3);margin-bottom:8px;margin-top:4px;">Clé gratuite sur console.groq.com — stockée localement.</div>
-    <div style="display:flex;gap:6px;margin-bottom:8px;">
-      <input id="gemini-key-input" class="fi" type="password" placeholder="gsk_…" style="font-size:11px;flex:1;">
-      <button onclick="var i=$i('gemini-key-input');i.type=i.type==='password'?'text':'password';" style="flex-shrink:0;padding:0 10px;height:38px;background:var(--bg3);border:1px solid var(--b2);border-radius:var(--r6);color:var(--t3);font-size:14px;cursor:pointer;">👁</button>
-    </div>
-    <div style="display:flex;gap:7px;">
-      <button class="btn btn-p" style="font-size:11px;" onclick="saveGeminiKey()">💾 Enregistrer</button>
-      <button class="btn" style="background:rgba(30,215,96,.12);color:var(--g);border:1px solid rgba(30,215,96,.2);font-size:11px;" onclick="testGeminiKey()">🧪 Tester</button>
-    </div>
-    <div id="gemini-key-status" style="margin-top:7px;font-size:11px;font-weight:700;"></div>
-  </div>
+
 </div>
 
 <!-- BANK -->
@@ -1113,10 +1103,12 @@ function renderBilanTab(){
       var cum=0;
       var curve=paris.slice().reverse().map(function(h){cum+=(h.win?(h.m*h.cote)-h.m:-h.m);return parseFloat(cum.toFixed(2));});
       var color=bilanMode==='flash'?'#f0b020':bilanMode==='cockpit'?'#4d84ff':bilanMode==='simple'?'#22d3ee':'#1ed760';
-      var ct=ctx.getContext('2d');
-      var g=ct.createLinearGradient(0,0,0,150);
-      g.addColorStop(0,color+'44');g.addColorStop(1,color+'00');
-      _bilanChart=new Chart(ct,{type:'line',data:{labels:curve.map(function(_,i){return i;}),datasets:[{data:curve,borderColor:color,backgroundColor:g,borderWidth:2,fill:true,tension:.4,pointRadius:0}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{display:false},y:{grid:{color:'rgba(255,255,255,.03)'},ticks:{color:'#4f5d88',font:{size:9},callback:function(v){return v+'€';}}}}}});
+      setTimeout(function(){
+        var ct=ctx.getContext('2d');
+        var g=ct.createLinearGradient(0,0,0,Math.max(ctx.offsetHeight||150,50));
+        g.addColorStop(0,color+'44');g.addColorStop(1,color+'00');
+        _bilanChart=new Chart(ct,{type:'line',data:{labels:curve.map(function(_,i){return i;}),datasets:[{data:curve,borderColor:color,backgroundColor:g,borderWidth:2,fill:true,tension:.4,pointRadius:0}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{display:false},y:{grid:{color:'rgba(255,255,255,.03)'},ticks:{color:'#4f5d88',font:{size:9},callback:function(v){return v+'€';}}}}}})
+      },80);
     }
   }
   /* Par bookmaker */
@@ -1672,7 +1664,7 @@ function showTab(id,btn){
   if(btn)btn.classList.add('on');
   render();
   /* Lazy-render tab-specific content */
-  if(id==='t-bilan')setTimeout(function(){renderBilanTab();renderGlobalCharts();},50);
+  if(id==='t-bilan')setTimeout(function(){renderBilanTab();renderGlobalCharts();},120);
 }
 function swBet(mode){
   var isS=mode==='strat';
@@ -1711,13 +1703,104 @@ function showBilanView(id, btn){
 }
 
 
-function renderGlobalCharts(){
-  renderGlobalChart();
+var GC_multi=null;
+var _multiSelected=null;
+
+function renderMultiCurveChart(){
+  var ctx=$i('chart-multi');if(!ctx)return;
+  if(GC_multi){try{GC_multi.destroy();}catch(e){}}GC_multi=null;
+  var leg=$i('chart-multi-legend');if(leg)leg.innerHTML='';
+
+  var allDatasets=[];
+  state.u.forEach(function(u){
+    var paris=state.a.filter(function(h){return h.n===u.n;});
+    if(!paris.length)return;
+    var cum=0;
+    var data=[0].concat(paris.slice().reverse().map(function(h){
+      cum+=(h.win?(parseFloat(h.m)*parseFloat(h.cote))-parseFloat(h.m):-parseFloat(h.m));
+      return parseFloat(cum.toFixed(2));
+    }));
+    var color=u.color||'#4d84ff';
+    allDatasets.push({label:u.n,data:data,borderColor:color,backgroundColor:'transparent',
+      borderWidth:1.5,tension:.4,pointRadius:0,
+      pointHoverRadius:4,pointHoverBackgroundColor:color,
+      pointHoverBorderColor:'#fff',pointHoverBorderWidth:2,_color:color});
+  });
+
+  if(!allDatasets.length){
+    var wrap=$i('multi-curve-wrap');
+    if(wrap)wrap.innerHTML='<div class="empty">Pas encore de paris archivés</div>';
+    return;
+  }
+
+  /* Init sélection */
+  if(!_multiSelected)_multiSelected={};
+  allDatasets.forEach(function(d){if(_multiSelected[d.label]===undefined)_multiSelected[d.label]=true;});
+
+  /* Légende interactive */
+  if(leg){
+    leg.style.cssText='display:flex;flex-wrap:wrap;gap:6px;padding:10px 2px 4px;';
+    var allOn=allDatasets.every(function(d){return _multiSelected[d.label];});
+    var btnAll=document.createElement('button');
+    btnAll.textContent='TOUTES';
+    btnAll.style.cssText='padding:4px 10px;border-radius:12px;border:1px solid var(--b2);background:'+(allOn?'rgba(255,255,255,.12)':'none')+';color:'+(allOn?'var(--t1)':'var(--t3)')+';font-size:9px;font-weight:800;cursor:pointer;letter-spacing:.5px;';
+    btnAll.onclick=function(){
+      var anyOff=allDatasets.some(function(d){return !_multiSelected[d.label];});
+      allDatasets.forEach(function(d){_multiSelected[d.label]=!!anyOff;});
+      renderMultiCurveChart();
+    };
+    leg.appendChild(btnAll);
+
+    allDatasets.forEach(function(d){
+      var on=_multiSelected[d.label];
+      var btn=document.createElement('button');
+      btn.innerHTML='<span style="display:inline-block;width:10px;height:3px;border-radius:2px;background:'+d._color+';margin-right:5px;vertical-align:middle;"></span>'+d.label;
+      btn.style.cssText='padding:4px 10px;border-radius:12px;border:1px solid '+(on?d._color+'66':'var(--b1)')+';background:'+(on?d._color+'22':'none')+';color:'+(on?'var(--t1)':'var(--t3)')+';font-size:10px;font-weight:700;cursor:pointer;transition:all .15s;';
+      btn.onclick=function(){_multiSelected[d.label]=!_multiSelected[d.label];renderMultiCurveChart();};
+      leg.appendChild(btn);
+    });
+  }
+
+  var datasets=allDatasets.filter(function(d){return _multiSelected[d.label];});
+  if(!datasets.length)return;
+
+  var maxLen=datasets.reduce(function(m,d){return Math.max(m,d.data.length);},0);
+  var labels=Array.from({length:maxLen},function(_,i){return i;});
+  datasets.forEach(function(d){while(d.data.length<maxLen)d.data.push(null);});
+
   setTimeout(function(){
-    renderBooksChart();
-    renderPaliersChart();
-    renderRadarChart();
+    var ct=ctx.getContext('2d');
+    GC_multi=new Chart(ct,{
+      type:'line',
+      data:{labels:labels,datasets:datasets},
+      options:{
+        responsive:true,maintainAspectRatio:false,
+        interaction:{mode:'index',intersect:false},
+        plugins:{
+          legend:{display:false},
+          tooltip:{backgroundColor:'rgba(8,11,18,.96)',borderColor:'rgba(255,255,255,.1)',borderWidth:1,
+            titleColor:'#4f5d88',bodyFont:{weight:'bold'},
+            callbacks:{label:function(i){return ' '+i.dataset.label+' : '+(i.raw!==null?i.raw.toFixed(2)+'€':'—');}}}
+        },
+        scales:{
+          x:{display:false},
+          y:{grid:{color:'rgba(255,255,255,.03)'},border:{display:false},
+             ticks:{color:'#4f5d88',font:{size:9},maxTicksLimit:4,callback:function(v){return v+'€';}}}
+        }
+      }
+    });
   },80);
+}
+function renderGlobalCharts(){
+  setTimeout(function(){
+    renderGlobalChart();
+    renderMultiCurveChart();
+    setTimeout(function(){
+      renderBooksChart();
+      renderPaliersChart();
+      renderRadarChart();
+    },150);
+  },100);
 }
 
 function renderBooksChart(){
@@ -2003,11 +2086,13 @@ var ADV_DB={
 function searchAdv(q,targetId,resId){
   var el=$i(targetId);var res=$i(resId);if(!res)return;
   if(!q||q.length<2){res.style.display='none';return;}
-  var sport=$i('c-sport')&&$i('c-sport').value||'⚽';
-  var db=(ADV_DB[sport]||ADV_DB['⚽']).concat(state.a.map(function(h){return h.target||'';}).filter(Boolean));
-  var seen={};var uniq=db.filter(function(v){return v&&!seen[v]&&(seen[v]=1);});
+  /* Cherche dans TOUS les sports + historique + équipes perso */
+  var seen={};var db=[];
+  Object.keys(ADV_DB).forEach(function(s){ADV_DB[s].forEach(function(v){if(!seen[v]){seen[v]=1;db.push(v);}});});
+  state.u.forEach(function(u){if(!seen[u.n]){seen[u.n]=1;db.push(u.n);}});
+  state.a.forEach(function(h){var t=h.target||'';if(t&&!seen[t]){seen[t]=1;db.push(t);}});
   var ql=q.toLowerCase();
-  var filtered=uniq.filter(function(v){return v.toLowerCase().includes(ql);}).slice(0,8);
+  var filtered=db.filter(function(v){return v.toLowerCase().includes(ql);}).slice(0,10);
   if(!filtered.length){res.style.display='none';return;}
   res.style.display='block';
   res.innerHTML=filtered.map(function(v){
@@ -2044,7 +2129,7 @@ function saveDbxKey(){
   var key=inp.value.trim();if(!key)return;
   _dbxConfig.refreshToken=key;localStorage.setItem('g45_dbx',key);
   var st=$i('dbx-key-status');
-  if(st){st.innerText='✅ Clé Groq enregistrée !';st.style.color='var(--g)';}
+  if(st){st.innerText='✅ Clé enregistrée !';st.style.color='var(--g)';}
   setTimeout(function(){if(st)st.innerText='';},3000);
 }
 async function testDbxKey(){
@@ -2250,229 +2335,10 @@ function openClubFromDash(nom){
 }
 
 /* ── GEMINI API ── */
-function saveGeminiKey(){
-  var inp=$i('gemini-key-input');if(!inp)return;
-  var key=inp.value.trim();if(!key)return;
-  localStorage.setItem('gones45_gemini_key',key);
-  var st=$i('gemini-key-status');
-  if(st){st.innerText='✅ Clé Groq enregistrée !';st.style.color='var(--g)';}
-  setTimeout(function(){if(st)st.innerText='';},3000);
-}
-function getGeminiKey(){
-  return localStorage.getItem('gones45_gemini_key')||null;
-}
-async function testGeminiKey(){
-  var key=getGeminiKey();
-  var st=$i('gemini-key-status');
-  if(!key){if(st){st.innerText='❌ Aucune clé';st.style.color='var(--r)';}return;}
-  if(st){st.innerText='⏳ Test Groq…';st.style.color='var(--t3)';}
-  try{
-    var res=await fetch('https://api.groq.com/openai/v1/chat/completions',{
-      method:'POST',
-      headers:{'Content-Type':'application/json','Authorization':'Bearer '+key},
-      body:JSON.stringify({model:'llama-3.1-8b-instant',messages:[{role:'user',content:'Say OK'}],max_tokens:5})
-    });
-    var d=await res.json();
-    if(d.choices&&d.choices[0]){
-      if(st){st.innerText='✅ Clé Groq valide !';st.style.color='var(--g)';}
-    }else{
-      var err=(d.error&&d.error.message)||JSON.stringify(d);
-      if(err.length>100)err=err.substring(0,100)+'…';
-      if(st){st.innerText='❌ '+err;st.style.color='var(--r)';}
-    }
-  }catch(e){if(st){st.innerText='❌ Réseau : '+e.message;st.style.color='var(--r)';}}
-}
-
-/* ── HELPER JSON PARSING ROBUSTE POUR GEMINI ── */
-function parseGeminiJSON(text){
-  try{
-    // Nettoyage backticks markdown
-    text=text.replace(/```json|```/gi,'').trim();
-    // Tentative directe
-    try{return JSON.parse(text);}catch(e){}
-    // Extraction du premier bloc JSON
-    var m=text.match(/\{[\s\S]*\}/);
-    if(m){return JSON.parse(m[0]);}
-    return null;
-  }catch(e){
-    console.error('[parseGeminiJSON]',e,text);
-    return null;
-  }
-}
-
-/* ── MODALE RÉSULTAT GEMINI ── */
-function showResultModal(bet, data, win){
-  /* Supprime une éventuelle modale existante */
-  var old=$i('gemini-modal');if(old)old.remove();
-  var sport=bet.sport||'';
-  var equipe=bet.n||'';
-  var adversaire=bet.target||'';
-  var scoreColor=win?'var(--g)':'var(--r)';
-  var confColor=data.confiance==='haute'?'var(--g)':data.confiance==='moyenne'?'var(--gold)':'var(--r)';
-  var overlay=document.createElement('div');
-  overlay.id='gemini-modal';
-  overlay.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:9999;display:flex;align-items:flex-end;justify-content:center;padding:0 0 70px;';
-  overlay.innerHTML=
-    '<div style="background:var(--s1);border:1px solid var(--b2);border-radius:16px 16px 12px 12px;width:100%;max-width:540px;overflow:hidden;animation:up .2s ease;">'
-    +'<div style="background:'+(win?'rgba(30,215,96,.1)':'rgba(255,69,69,.1)')+';padding:16px 18px;border-bottom:1px solid var(--b1);">'
-    +'<div style="font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--t3);margin-bottom:4px;">🤖 Résultat Gemini</div>'
-    +'<div style="font-size:15px;font-weight:800;color:var(--t1);">'+sport+' '+equipe+(adversaire?' vs '+adversaire:'')+'</div>'
-    +'</div>'
-    +'<div style="padding:16px 18px;">'
-    +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px;">'
-    +'<div style="background:var(--bg3);border-radius:8px;padding:12px;text-align:center;">'
-    +'<div style="font-size:9px;color:var(--t3);font-weight:700;text-transform:uppercase;letter-spacing:.8px;margin-bottom:6px;">Score</div>'
-    +'<div style="font-size:22px;font-weight:800;color:'+scoreColor+';">'+data.score+'</div>'
-    +'</div>'
-    +'<div style="background:var(--bg3);border-radius:8px;padding:12px;text-align:center;">'
-    +'<div style="font-size:9px;color:var(--t3);font-weight:700;text-transform:uppercase;letter-spacing:.8px;margin-bottom:6px;">Confiance</div>'
-    +'<div style="font-size:16px;font-weight:800;color:'+confColor+';">'+data.confiance.toUpperCase()+'</div>'
-    +'</div>'
-    +'</div>'
-    +'<div style="background:var(--bg3);border-radius:8px;padding:10px 12px;margin-bottom:14px;font-size:12px;color:var(--t2);">💬 '+data.info+'</div>'
-    +'<div style="font-size:14px;font-weight:700;text-align:center;margin-bottom:14px;color:'+scoreColor+';">'
-    +(win?'✅ TON PARI EST GAGNANT':'❌ TON PARI EST PERDANT')
-    +'</div>'
-    +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">'
-    +'<button onclick="document.getElementById(\'gemini-modal\').remove();" style="padding:12px;border-radius:8px;border:1px solid var(--b2);background:var(--bg2);color:var(--t2);font-size:13px;font-weight:700;cursor:pointer;">Annuler</button>'
-    +'<button id="gm-confirm-btn" style="padding:12px;border-radius:8px;border:none;background:'+(win?'var(--g)':'var(--r)')+';color:#fff;font-size:13px;font-weight:700;cursor:pointer;">'
-    +(win?'✅ Valider WIN':'❌ Confirmer LOSS')+'</button>'
-    +'</div>'
-    +'</div>'
-    +'</div>';
-  document.body.appendChild(overlay);
-  /* Ferme en cliquant l'overlay */
-  overlay.addEventListener('click',function(e){if(e.target===overlay)overlay.remove();});
-  /* Bouton confirmation */
-  $i('gm-confirm-btn').onclick=function(){
-    result(bet.id,win);
-    overlay.remove();
-  };
-}
-
-async function verifierResultats(){
-  var key=getGeminiKey();
-  if(!key){showDbxStatus('⚠️ Configure ta clé Groq dans Outils !');return;}
-  var paris=state.h;
-  if(!paris.length){showDbxStatus('⚠️ Aucun pari en cours.');return;}
-  showDbxStatus('⚡ Groq analyse '+paris.length+' pari(s)…');
-  for(var i=0;i<paris.length;i++){
-    await verifierUnPari(paris[i],key);
-    if(i<paris.length-1)await new Promise(function(r){setTimeout(r,900);});
-  }
-}
-
-async function verifierUnPari(bet,key){
-  var sport=bet.sport||'sport';
-  var equipe=bet.n||'';
-  var adversaire=bet.target||'';
-  var date=bet.date||'';
-  var prompt='Donne-moi le résultat du match : '+equipe+' vs '+adversaire+(date?' du '+date:'')+'. '+
-    'Réponds uniquement avec ce JSON (pas de markdown) : '+
-    '{"score":"ex: 3-1","gagnant":"'+equipe+' ou '+adversaire+' ou Nul","confiance":"haute ou moyenne ou faible","info":"une phrase"}. '+
-    'Si match non joué ou inconnu : {"score":"?","gagnant":"inconnu","confiance":"faible","info":"non disponible"}';
-  try{
-    showDbxStatus('🔍 Recherche : '+equipe+' vs '+adversaire+'…');
-    var res=await fetch('https://api.groq.com/openai/v1/chat/completions',{
-      method:'POST',
-      headers:{'Content-Type':'application/json','Authorization':'Bearer '+key},
-      body:JSON.stringify({model:'llama-3.1-8b-instant',messages:[{role:'user',content:prompt}],temperature:0.1,max_tokens:200})
-    });
-    var d=await res.json();
-    if(d.error)throw new Error(d.error.message);
-    if(!d.choices||!d.choices[0])throw new Error('Reponse vide');
-    var text=d.choices[0].message.content.trim();
-    console.log('[GONES45 Groq brut]', text);
-    var data=parseGeminiJSON(text);
-    if(!data){showDbxStatus('❌ JSON illisible — F12 pour détail');return;}
-    if(!data.gagnant||data.gagnant==='inconnu'||data.confiance==='faible'){
-      showDbxStatus('⚠️ '+equipe+' vs '+adversaire+' : résultat non trouvé');
-      return;
-    }
-    /* Comparaison flexible gagnant */
-    var gNorm=data.gagnant.toLowerCase().trim();
-    var eNorm=equipe.toLowerCase().trim();
-    var win=(gNorm===eNorm||gNorm.includes(eNorm)||eNorm.includes(gNorm));
-    showResultModal(bet,data,win);
-  }catch(e){
-    showDbxStatus('❌ Erreur : '+(e.message||'réseau'));
-  }
-}
-/* ── INIT ── */
-document.querySelectorAll('.tab').forEach(function(t){t.style.display='none';});
-$i('t-dash').style.display='block';
-/* ── GEMINI — AUTO-FILL PROCHAIN MATCH ── */
-/* ── GEMINI AUTO-FILL PROCHAIN MATCH (Cockpit + Simple) ── */
-async function _geminiAutoFill(equipe, btnId, fields){
-  var apiKey=localStorage.getItem('gones45_gemini_key');
-  if(!apiKey){showDbxStatus('⚠️ Ajoute ta clé Groq dans Outils !');return;}
-  if(!equipe){showDbxStatus('⚠️ Saisis d\'abord un nom d\'équipe !');return;}
-  var btn=$i(btnId);
-  var origLabel=btn?btn.innerText:'';
-  if(btn){btn.innerText='⏳';btn.disabled=true;}
-  var prompt='Trouve le prochain match officiel de l\'équipe ou du joueur : "'+equipe+'". '+
-    'Réponds UNIQUEMENT avec un objet JSON valide (sans markdown, sans backticks) avec ces clés : '+
-    '"adversaire" (nom de l\'équipe ou joueur adverse), '+
-    '"date" (format YYYY-MM-DD), '+
-    '"heure" (format HH:MM, heure locale France), '+
-    '"competition" (nom de la compétition). '+
-    'Si introuvable : {"adversaire":"","date":"","heure":"","competition":""}';
-  try{
-    var res=await fetch('https://api.groq.com/openai/v1/chat/completions',{
-      method:'POST',
-      headers:{'Content-Type':'application/json','Authorization':'Bearer '+apiKey},
-      body:JSON.stringify({model:'llama-3.1-8b-instant',messages:[{role:'user',content:prompt}],temperature:0.1,max_tokens:200})
-    });
-    var d=await res.json();
-    if(d.error){if(btn){btn.innerText='❌';btn.disabled=false;setTimeout(function(){if(btn)btn.innerText=origLabel;},2000);}showDbxStatus('❌ Groq : '+d.error.message);return;}
-    if(!d.choices||!d.choices[0]){if(btn){btn.innerText='❌';btn.disabled=false;setTimeout(function(){if(btn)btn.innerText=origLabel;},2000);}showDbxStatus('❌ Groq : reponse vide');return;}
-    var text=d.choices[0].message.content.trim();
-    console.log('[GONES45 Groq AutoFill]', text);
-    var info=parseGeminiJSON(text);
-    if(!info){if(btn){btn.innerText='❌';btn.disabled=false;setTimeout(function(){if(btn)btn.innerText=origLabel;},2000);}showDbxStatus('❌ JSON illisible — F12 pour détail');return;}
-    var filled=[];
-    Object.entries(fields).forEach(function(e){
-      var key=e[0],elId=e[1];
-      if(info[key]&&$i(elId)){$i(elId).value=info[key];filled.push(info[key]);}
-    });
-    if(btn){btn.innerText='✅';btn.disabled=false;setTimeout(function(){if(btn)btn.innerText=origLabel;},2500);}
-    if(filled.length){showDbxStatus('🤖 '+filled.join(' · '));}
-    else{showDbxStatus('⚠️ Match non trouvé pour : '+equipe);}
-  }catch(e){
-    if(btn){btn.innerText='❌';btn.disabled=false;setTimeout(function(){if(btn)btn.innerText=origLabel;},2000);}
-    showDbxStatus('❌ Groq : '+(e.message||'erreur réseau'));
-  }
-}
-
-/* Mode Cockpit — lit l'équipe depuis le select */
-function fetchNextMatchWithGemini(){
-  var uSel=$i('c-unit');
-  var raw=(uSel&&uSel.options[uSel.selectedIndex]&&uSel.options[uSel.selectedIndex].text)||'';
-  var equipe=raw.replace(/^.{1,3}\s/,'').replace(/\s*\(P\d+\)\s*$/,'').trim();
-  _geminiAutoFill(equipe,'btn-auto-load',{
-    adversaire:'c-target',
-    date:'c-date',
-    heure:'c-heure',
-    competition:'c-comp'
-  });
-}
-
-/* Mode Simple — lit l'équipe depuis le champ n-team */
-function fetchNextMatchSimple(){
-  var equipe=($i('n-team')&&$i('n-team').value.trim())||'';
-  _geminiAutoFill(equipe,'btn-auto-simple',{
-    adversaire:'n-analysis',
-    date:'n-date',
-    heure:'n-heure',
-    competition:'n-comp'
-  });
-}
-
 window.onload=function(){
   var saved=localStorage.getItem('g45_dbx');
   if(saved){_dbxConfig.refreshToken=saved;}
   var inp=$i('dbx-key-input');if(inp)inp.value='(token auto — permanent)';
-  var gk=localStorage.getItem('gones45_gemini_key');var gki=$i('gemini-key-input');if(gki&&gk)gki.value=gk;
   render();updMise();buildSbRows();buildDtRows();buildArjelRows();renderCrash();renderMmRows();renderMmRowsSimple();updateCompList();calcVb();calcLay();calcFreebet();};
 
 </script>
