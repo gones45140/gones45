@@ -461,7 +461,19 @@ input[type="date"],input[type="time"]{color-scheme:dark;}
   <div id="g-global" class="gpanel on">
     <div id="global-zone"></div>
     <div class="sec">Courbes par équipe</div>
-    <div class="cwrap" id="multi-curve-wrap"><div style="height:220px;position:relative;"><canvas id="chart-multi"></canvas></div><div id="chart-multi-legend" style="display:flex;flex-wrap:wrap;gap:6px 12px;padding:10px 4px 2px;"></div></div>
+    <div class="cwrap" id="multi-curve-wrap">
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
+    <div id="chart-multi-legend" style="display:flex;flex-wrap:nowrap;gap:5px;overflow-x:auto;scrollbar-width:none;flex:1;padding-right:8px;"></div>
+    <div style="position:relative;flex-shrink:0;">
+      <button id="curve-picker-btn" onclick="toggleCurvePicker()" style="padding:5px 10px;border-radius:8px;border:1px solid var(--b2);background:var(--bg3);color:var(--t2);font-size:10px;font-weight:700;cursor:pointer;white-space:nowrap;">⚙️ Équipes</button>
+      <div id="curve-picker" style="display:none;position:absolute;right:0;top:34px;background:var(--s1);border:1px solid var(--b2);border-radius:10px;z-index:500;min-width:180px;max-height:280px;overflow-y:auto;box-shadow:0 8px 32px rgba(0,0,0,.5);">
+        <div style="padding:8px 12px;font-size:9px;font-weight:700;letter-spacing:.8px;color:var(--t3);border-bottom:1px solid var(--b1);text-transform:uppercase;">Max 5 équipes</div>
+        <div id="curve-picker-list"></div>
+      </div>
+    </div>
+  </div>
+  <div style="height:220px;position:relative;"><canvas id="chart-multi"></canvas></div>
+</div>
     <div class="sec">Répartition bookmakers</div>
     <div class="cwrap"><div style="height:180px;position:relative;"><canvas id="chart-books"></canvas></div></div>
     <div class="sec">Paliers par équipe</div>
@@ -1463,11 +1475,11 @@ function openClub(nom,idx){
 
   document.querySelectorAll('.itab').forEach(function(t){t.classList.remove('on');});
   document.querySelectorAll('.ipanel').forEach(function(c){c.classList.remove('on');});
-  document.querySelector('.itab').classList.add('on');
-  $i('ip-bilan').classList.add('on');
-  /* Mémoriser et cacher l'onglet actif */
-  var _activeTab=document.querySelector('.tab.on')||document.querySelector('.tab[style*="block"]');
-  if(_activeTab)_prevTab=_activeTab.id;
+  var firstItab=document.querySelector('.itab');if(firstItab)firstItab.classList.add('on');
+  var ipb=$i('ip-bilan');if(ipb)ipb.classList.add('on');
+  /* Mémoriser l'onglet actif si pas déjà fait */
+  var _activeTab=document.querySelector('.tab[style*="block"]');
+  if(_activeTab&&_activeTab.id!=='detail')_prevTab=_activeTab.id;
   document.querySelectorAll('.tab').forEach(function(t){t.style.display='none';});
   var det=$i('detail');if(det)det.style.display='block';
 
@@ -1709,11 +1721,63 @@ function showBilanView(id, btn){
 var GC_multi=null;
 var _multiSelected=null;
 
+function toggleCurvePicker(){
+  var p=$i('curve-picker');if(!p)return;
+  var isOpen=p.style.display==='block';
+  p.style.display=isOpen?'none':'block';
+  if(!isOpen)renderCurvePicker();
+  if(!isOpen){
+    setTimeout(function(){
+      document.addEventListener('click',function h(e){
+        var btn=$i('curve-picker-btn'),pk=$i('curve-picker');
+        if(pk&&btn&&!pk.contains(e.target)&&e.target!==btn&&!btn.contains(e.target)){
+          pk.style.display='none';document.removeEventListener('click',h);
+        }
+      });
+    },50);
+  }
+}
+
+function renderCurvePicker(){
+  var list=$i('curve-picker-list');if(!list)return;
+  var teams=state.u.filter(function(u){return state.a.some(function(h){return h.n===u.n;});});
+  if(!teams.length){list.innerHTML='<div style="padding:12px;font-size:11px;color:var(--t3);">Aucun historique</div>';return;}
+  var activeCount=Object.values(_multiSelected||{}).filter(Boolean).length;
+  list.innerHTML=teams.map(function(u){
+    var on=_multiSelected&&_multiSelected[u.n];
+    var disabled=!on&&activeCount>=5;
+    var safeName=u.n.replace(/'/g,"\'");
+    return '<label style="display:flex;align-items:center;gap:10px;padding:9px 12px;border-bottom:1px solid var(--b1);cursor:'+(disabled?'not-allowed':'pointer')+';opacity:'+(disabled?.45:1)+';">'
+      +'<input type="checkbox" '+(on?'checked':'')+' '+(disabled&&!on?'disabled':'')+' onchange="toggleCurveTeam(this)" data-nom="'+safeName+'" style="accent-color:'+u.color+';width:15px;height:15px;cursor:pointer;">'
+      +'<div style="width:10px;height:10px;border-radius:50%;background:'+u.color+';flex-shrink:0;"></div>'
+      +'<span style="font-size:12px;font-weight:600;flex:1;">'+u.n+'</span>'
+      +(on?'<span style="font-size:9px;color:'+u.color+';font-weight:700;">✓</span>':'')
+      +'</label>';
+  }).join('');
+  var cnt=$i('curve-picker-btn');
+  if(cnt)cnt.textContent='⚙️ '+activeCount+'/5';
+}
+
+function toggleCurveTeam(el){
+  var nom=el.dataset.nom;
+  var checked=el.checked;
+  if(!_multiSelected)_multiSelected={};
+  var activeCount=Object.values(_multiSelected).filter(Boolean).length;
+  if(checked&&activeCount>=5){
+    el.checked=false;
+    renderCurvePicker();return;
+  }
+  _multiSelected[nom]=checked;
+  renderCurvePicker();
+  renderMultiCurveChart();
+}
+
 function renderMultiCurveChart(){
   var ctx=$i('chart-multi');if(!ctx)return;
   if(GC_multi){try{GC_multi.destroy();}catch(e){}}GC_multi=null;
   var leg=$i('chart-multi-legend');if(leg)leg.innerHTML='';
 
+  /* Construire tous les datasets */
   var allDatasets=[];
   state.u.forEach(function(u){
     var paris=state.a.filter(function(h){return h.n===u.n;});
@@ -1723,61 +1787,59 @@ function renderMultiCurveChart(){
       cum+=(h.win?(parseFloat(h.m)*parseFloat(h.cote))-parseFloat(h.m):-parseFloat(h.m));
       return parseFloat(cum.toFixed(2));
     }));
-    var color=u.color||'#4d84ff';
-    allDatasets.push({label:u.n,data:data,borderColor:color,backgroundColor:'transparent',
-      borderWidth:1.5,tension:.4,pointRadius:0,
-      pointHoverRadius:4,pointHoverBackgroundColor:color,
-      pointHoverBorderColor:'#fff',pointHoverBorderWidth:2,_color:color});
+    allDatasets.push({label:u.n,data:data,borderColor:u.color||'#4d84ff',
+      backgroundColor:'transparent',borderWidth:1.5,tension:.4,pointRadius:0,
+      pointHoverRadius:4,pointHoverBackgroundColor:u.color||'#4d84ff',
+      pointHoverBorderColor:'#fff',pointHoverBorderWidth:2,_color:u.color||'#4d84ff'});
   });
 
   if(!allDatasets.length){
     var wrap=$i('multi-curve-wrap');
-    if(wrap)wrap.innerHTML='<div class="empty">Pas encore de paris archivés</div>';
+    if(wrap){var canvas=wrap.querySelector('canvas');if(canvas)canvas.parentElement.innerHTML='<div class="empty" style="height:220px;display:flex;align-items:center;justify-content:center;">Pas encore de paris archivés</div>';}
     return;
   }
 
-  /* Init sélection */
+  /* Init sélection : top 5 par profit si premier chargement */
   if(!_multiSelected)_multiSelected={};
-  allDatasets.forEach(function(d){if(_multiSelected[d.label]===undefined)_multiSelected[d.label]=true;});
-
-  /* Légende interactive */
-  if(leg){
-    leg.style.cssText='display:flex;flex-wrap:wrap;gap:6px;padding:10px 2px 4px;';
-    var allOn=allDatasets.every(function(d){return _multiSelected[d.label];});
-    var btnAll=document.createElement('button');
-    btnAll.textContent='TOUTES';
-    btnAll.style.cssText='padding:4px 10px;border-radius:12px;border:1px solid var(--b2);background:'+(allOn?'rgba(255,255,255,.12)':'none')+';color:'+(allOn?'var(--t1)':'var(--t3)')+';font-size:9px;font-weight:800;cursor:pointer;letter-spacing:.5px;';
-    btnAll.onclick=function(){
-      var anyOff=allDatasets.some(function(d){return !_multiSelected[d.label];});
-      allDatasets.forEach(function(d){_multiSelected[d.label]=!!anyOff;});
-      renderMultiCurveChart();
-    };
-    leg.appendChild(btnAll);
-
-    allDatasets.forEach(function(d){
-      var on=_multiSelected[d.label];
-      var btn=document.createElement('button');
-      btn.innerHTML='<span style="display:inline-block;width:10px;height:3px;border-radius:2px;background:'+d._color+';margin-right:5px;vertical-align:middle;"></span>'+d.label;
-      btn.style.cssText='padding:4px 10px;border-radius:12px;border:1px solid '+(on?d._color+'66':'var(--b1)')+';background:'+(on?d._color+'22':'none')+';color:'+(on?'var(--t1)':'var(--t3)')+';font-size:10px;font-weight:700;cursor:pointer;transition:all .15s;';
-      btn.onclick=function(){_multiSelected[d.label]=!_multiSelected[d.label];renderMultiCurveChart();};
-      leg.appendChild(btn);
+  var hasAny=Object.keys(_multiSelected).length>0;
+  if(!hasAny){
+    var sorted=allDatasets.slice().sort(function(a,b){
+      return (b.data[b.data.length-1]||0)-(a.data[a.data.length-1]||0);
     });
+    sorted.forEach(function(d,i){_multiSelected[d.label]=i<5;});
+  } else {
+    allDatasets.forEach(function(d){if(_multiSelected[d.label]===undefined)_multiSelected[d.label]=false;});
   }
 
-  var datasets=allDatasets.filter(function(d){return _multiSelected[d.label];});
-  if(!datasets.length)return;
+  /* Légende : puces colorées des équipes actives */
+  var activeDs=allDatasets.filter(function(d){return _multiSelected[d.label];});
+  if(leg){
+    leg.innerHTML=activeDs.map(function(d){
+      return '<span style="display:inline-flex;align-items:center;gap:4px;font-size:10px;font-weight:700;color:var(--t2);white-space:nowrap;">'+
+        '<span style="display:inline-block;width:10px;height:3px;border-radius:2px;background:'+d._color+';"></span>'+d.label+'</span>';
+    }).join('');
+  }
 
-  var maxLen=datasets.reduce(function(m,d){return Math.max(m,d.data.length);},0);
+  /* Bouton counter */
+  var cnt=$i('curve-picker-btn');
+  var activeCount=activeDs.length;
+  if(cnt)cnt.textContent='⚙️ '+activeCount+'/5';
+
+  if(!activeDs.length){
+    if(ctx.parentElement)ctx.parentElement.innerHTML='<div style="height:220px;display:flex;align-items:center;justify-content:center;color:var(--t3);font-size:12px;">Sélectionne des équipes →</div>';
+    return;
+  }
+
+  var maxLen=activeDs.reduce(function(m,d){return Math.max(m,d.data.length);},0);
   var labels=Array.from({length:maxLen},function(_,i){return i;});
-  datasets.forEach(function(d){while(d.data.length<maxLen)d.data.push(null);});
+  activeDs.forEach(function(d){while(d.data.length<maxLen)d.data.push(null);});
 
   setTimeout(function(){
     var ct=ctx.getContext('2d');
     GC_multi=new Chart(ct,{
-      type:'line',
-      data:{labels:labels,datasets:datasets},
+      type:'line',data:{labels:labels,datasets:activeDs},
       options:{
-        responsive:true,maintainAspectRatio:false,
+        animation:false,responsive:true,maintainAspectRatio:false,
         interaction:{mode:'index',intersect:false},
         plugins:{
           legend:{display:false},
@@ -2333,13 +2395,11 @@ function syncSimpleCote(){
 }
 
 function openClubFromDash(nom){
-  /* Switch to bilan tab first, then open club detail */
-  var bilanBtn=document.querySelector('.ni[onclick*="t-bilan"]');
-  showTab('t-bilan', bilanBtn);
-  setTimeout(function(){
-    var idx=state.u.findIndex(function(u){return u.n===nom;});
-    openClub(nom, idx>=0?idx:0);
-  }, 60);
+  /* Mémoriser l'onglet courant et ouvrir le détail directement */
+  var activeTab=document.querySelector('.tab[style*="block"]');
+  _prevTab=activeTab?activeTab.id:'t-dash';
+  var idx=state.u.findIndex(function(u){return u.n===nom;});
+  openClub(nom,idx>=0?idx:0);
 }
 
 /* ── GEMINI API ── */
