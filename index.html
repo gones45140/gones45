@@ -1292,16 +1292,17 @@ function toggleLayMode(){
   var bm=$i('lay-back-mise');if(bm)bm.readOnly=mode;if(bm)bm.style.opacity=mode?'.5':'1';
   calcLay();
 }
+
 function calcLay() {
     // 1. Récupération des valeurs de l'interface
-    var bm = parseFloat(document.getElementById('lay-back-stake').value) || 0;
-    var bc = parseFloat(document.getElementById('lay-back-odds').value) || 0;
-    var lc = parseFloat(document.getElementById('lay-odds').value) || 0;
-    var commInput = parseFloat(document.getElementById('lay-comm').value) || 0;
+    var bm = parseFloat(document.getElementById('lay-back-stake').value) || parseFloat(($i('lay-back-mise') && $i('lay-back-mise').value)) || 0;
+    var bc = parseFloat(document.getElementById('lay-back-odds').value) || parseFloat(($i('lay-back-cote') && $i('lay-back-cote').value)) || 0;
+    var lc = parseFloat(document.getElementById('lay-odds').value) || parseFloat(($i('lay-lay-cote') && $i('lay-lay-cote').value)) || 0;
+    var commInput = parseFloat(document.getElementById('lay-comm').value) || parseFloat(($i('lay-comm') && $i('lay-comm').value)) || 0;
     var commR = commInput / 100; // Convertit les 3% en 0.03
 
     // Vérification du bouton Gagner ou Rembourser (gorr)
-    var gorr = document.getElementById('btn-gorr') ? document.getElementById('btn-gorr').classList.contains('active') : false;
+    var gorr = document.getElementById('btn-gorr') ? document.getElementById('btn-gorr').classList.contains('active') : ($i('lay-gorr') && $i('lay-gorr').checked);
 
     var ml = 0; // Mise Lay qui va être calculée
     var liabML = 0; // Obligation (Responsabilité)
@@ -1333,19 +1334,25 @@ function calcLay() {
     }
 
     // 3. AFFICHAGE DANS TON INTERFACE
-    // Remplace les IDs ci-dessous par les vrais IDs de tes balises HTML si nécessaire
-    if (document.getElementById('lay-stake-res')) {
-        document.getElementById('lay-stake-res').innerText = ml.toFixed(2) + " €";
+    var flm = document.getElementById('lay-stake-res') || $i('lay-lay-mise');
+    if (flm) { flm.innerText = ml.toFixed(2) + " €"; if(flm.style) flm.style.color='var(--a)'; }
+
+    var fli = document.getElementById('lay-liability') || $i('lay-liability');
+    if (fli) { fli.innerText = liabML.toFixed(2) + " €"; if(fli.style) fli.style.color='var(--gold)'; }
+
+    var fpb = document.getElementById('lay-profit-back') || $i('lay-profit-back');
+    if (fpb) { 
+        fpb.innerText = (pbw >= 0 ? "+" : "") + pbw.toFixed(2) + " €"; 
+        if(fpb.style) fpb.style.color = pbw >= 0 ? 'var(--g)' : 'var(--r)';
     }
-    if (document.getElementById('lay-liability')) {
-        document.getElementById('lay-liability').innerText = liabML.toFixed(2) + " €";
+
+    var fpl = document.getElementById('lay-profit-lay') || $i('lay-profit-lay');
+    if (fpl) { 
+        fpl.innerText = (plw >= 0 ? "+" : "") + plw.toFixed(2) + " €"; 
+        if(fpl.style) fpl.style.color = plw >= 0 ? 'var(--g)' : 'var(--r)';
     }
-    if (document.getElementById('lay-profit-back')) {
-        document.getElementById('lay-profit-back').innerText = pbw.toFixed(2) + " €";
-    }
-    if (document.getElementById('lay-profit-lay')) {
-        document.getElementById('lay-profit-lay').innerText = plw.toFixed(2) + " €";
-    }
+} // <--- TOUT ETAIT LA ! La fonction calcLay() est maintenant correctement fermée ici.
+
 function calcFreebet(){
   var fb=parseFloat(($i('fb-amount')&&$i('fb-amount').value)||0);
   var bc=parseFloat(($i('fb-back-cote')&&$i('fb-back-cote').value)||0);
@@ -1357,7 +1364,6 @@ function calcFreebet(){
   var commR2=comm/100;
 
   /* 1. FORMULE STANDARD FREEBET (Surebet classique) */
-  // Mise Lay optimale pour équilibrer le gain sur les deux issues
   var ml=(bc-1)*fb/((lc-1)+(1-commR2));
   var liab=ml*(lc-1);
   var gainIfBack=(bc-1)*fb-liab;
@@ -1372,18 +1378,12 @@ function calcFreebet(){
   var gainLay2=gainIfLay;
 
   if(gorr){
-    // Pour que le gain net du Lay couvre la valeur faciale du Freebet perdu à 100%
     ml2 = fb / (1 - commR2); 
     liab2 = ml2 * (lc - 1);
-    
-    // Si le Back gagne : Profit net ARJEL (bc-1)*fb moins l'obligation de l'Exchange perdue
     gainBack2 = ((bc - 1) * fb) - liab2;
-    
-    // Si le Lay gagne : Opération blanche (0€), le Freebet ne t'a rien coûté en cash
     gainLay2 = 0.00;
   }
 
-  // En mode GoRR, le gain affiché est celui du scénario Back (puisqu'on accepte 0 si le Lay passe)
   var cg2=gorr ? gainBack2 : cg;
   var taux2=fb>0?(cg2/fb*100).toFixed(1):0;
 
@@ -1391,15 +1391,12 @@ function calcFreebet(){
   var flm=$i('fb-lay-mise');if(flm){flm.innerText=(gorr?ml2:ml).toFixed(2)+'€';flm.style.color='var(--a)';}
   var fli=$i('fb-liability');if(fli){fli.innerText=(gorr?liab2:liab).toFixed(2)+'€';fli.style.color='var(--gold)';}
   
-  // Affichage du gain standard
   var fc=$i('fb-cash');if(fc){fc.innerText=(cg>=0?'+':'')+cg.toFixed(2)+'€ (FB)';fc.style.color=cg>=0?'var(--g)':'var(--r)';}
   var ft=$i('fb-taux');if(ft)ft.innerText=taux+'%';
   
-  // Affichage du gain GoRR
   var fcg=$i('fb-cash-gorr');
   if(fcg){fcg.innerText=gorr?(cg2>=0?'+':'')+cg2.toFixed(2)+'€ ('+taux2+'%)':'—';fcg.style.color=cg2>=0?'var(--gold)':'var(--r)';}
 }
-  }
 /* ── FILTRE BILAN ── */
 function renderSportFilter(){
   var sports=['ALL','⚽','🏀','🎾','🏈','⚾','🏒'];
