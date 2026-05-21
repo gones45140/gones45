@@ -616,8 +616,14 @@ input[type="date"],input[type="time"]{color-scheme:dark;}
     <div class="cwrap"><div style="height:200px;position:relative;"><canvas id="chart-sport-ben"></canvas></div></div>
     <div class="sec">Réussite par sport</div>
     <div class="cwrap"><div style="height:180px;position:relative;"><canvas id="chart-sport-wr"></canvas></div></div>
+    <div class="sec">Répartition par type de pari</div>
+    <div class="cwrap"><div style="height:220px;position:relative;"><canvas id="chart-type-donut"></canvas></div></div>
+    <div id="type-donut-picker" style="display:flex;flex-wrap:wrap;gap:6px;padding:8px 0;margin-bottom:8px;"></div>
     <div class="sec">Bénéfice par type de pari</div>
     <div class="cwrap"><div style="height:200px;position:relative;"><canvas id="chart-type-ben"></canvas></div></div>
+    <!-- Streak -->
+    <div class="sec">Séries & Streaks</div>
+    <div id="streak-panel" style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px;"></div>
   </div>
   <!-- ÉQUIPES PANEL -->
   <div id="g-equipes" class="gpanel">
@@ -1919,6 +1925,100 @@ function renderChartTypeBen(){
   });
 }
 
+/* ── DONUT RÉPARTITION PAR TYPE ── */
+var _typeColors={};
+var DONUT_DEFAULTS=['#4d84ff','#1ed760','#f0b020','#a855f7','#22d3ee','#f97316','#ec4899','#14b8a6','#84cc16','#e879f9'];
+
+function getTypeColor(type,i){
+  if(!_typeColors[type])_typeColors[type]=DONUT_DEFAULTS[i%DONUT_DEFAULTS.length];
+  return _typeColors[type];
+}
+
+function renderChartTypeDonut(){
+  var ctx=$i('chart-type-donut');if(!ctx)return;
+  if(window._gcTypeDonut){try{window._gcTypeDonut.destroy();}catch(e){}}
+  var types={};var i=0;
+  state.a.forEach(function(h){
+    var t=(h.type||'Autre').trim()||'Autre';
+    if(!types[t]){types[t]={n:0,idx:i++};}
+    types[t].n++;
+  });
+  var entries=Object.entries(types).sort(function(a,b){return b[1].n-a[1].n;});
+  if(!entries.length)return;
+  var labels=entries.map(function(e){return e[0];});
+  var data=entries.map(function(e){return e[1].n;});
+  var colors=entries.map(function(e){return getTypeColor(e[0],e[1].idx);});
+  window._gcTypeDonut=new Chart(ctx.getContext('2d'),{
+    type:'doughnut',
+    data:{labels:labels,datasets:[{data:data,backgroundColor:colors,borderWidth:2,borderColor:'var(--bg)'}]},
+    options:{animation:false,responsive:true,maintainAspectRatio:false,cutout:'65%',
+      plugins:{legend:{position:'bottom',labels:{color:'#4f5d88',font:{size:9},boxWidth:12,padding:8}},
+        tooltip:{callbacks:{label:function(i){var total=data.reduce(function(a,b){return a+b;},0);return i.label+': '+i.raw+' ('+((i.raw/total)*100).toFixed(1)+'%)';}}}}}
+  });
+  /* Color pickers */
+  var picker=$i('type-donut-picker');
+  if(picker){
+    picker.innerHTML=entries.map(function(e,i){
+      return '<div style="display:flex;align-items:center;gap:4px;padding:3px 8px;background:var(--s1);border-radius:20px;cursor:pointer;" data-type="'+e[0]+'" onclick="openTypePicker(this)">'
+        +'<div style="width:10px;height:10px;border-radius:50%;background:'+getTypeColor(e[0],i)+';flex-shrink:0;"></div>'
+        +'<span style="font-size:10px;color:var(--t2);">'+e[0]+'</span>'
+        +'<input type="color" id="tp-'+e[0].replace(/[^a-z0-9]/gi,'_')+'" value="'+getTypeColor(e[0],i)+'" data-type="'+e[0]+'" onchange="changeTypeColor(this.dataset.type,this.value)" style="opacity:0;position:absolute;width:0;height:0;">'
+        +'</div>';
+    }).join('');
+  }
+}
+
+function openTypePicker(el){
+  var type=el.dataset.type;
+  var id='tp-'+type.replace(/[^a-z0-9]/gi,'_');
+  var inp=$i(id);if(inp)inp.click();
+}
+
+function changeTypeColor(type,color){
+  _typeColors[type]=color;
+  localStorage.setItem('g45_typecolors',JSON.stringify(_typeColors));
+  renderChartTypeDonut();
+  renderChartTypeBen();
+}
+
+/* ── STREAKS ── */
+function renderStreakPanel(){
+  var el=$i('streak-panel');if(!el)return;
+  var paris=state.a.slice().sort(function(a,b){return (a.date+a.heure)<(b.date+b.heure)?-1:1;});
+  if(!paris.length){el.innerHTML='<div class="empty" style="grid-column:1/-1;">Aucun pari archivé</div>';return;}
+  /* Streak actuel */
+  var cur=1,curW=paris[paris.length-1].win;
+  for(var i=paris.length-2;i>=0;i--){
+    if(paris[i].win===curW)cur++;else break;
+  }
+  /* Meilleure série W */
+  var bestW=0,tmpW=0;
+  paris.forEach(function(h){h.win?tmpW++:(tmpW=0);if(tmpW>bestW)bestW=tmpW;});
+  /* Pire série L */
+  var worstL=0,tmpL=0;
+  paris.forEach(function(h){!h.win?tmpL++:(tmpL=0);if(tmpL>worstL)worstL=tmpL;});
+  /* Streak actuel ce mois */
+  var thisMonth=new Date().toISOString().substring(0,7);
+  var monthParis=paris.filter(function(h){return (h.date||'').substring(0,7)===thisMonth;});
+  var mWins=monthParis.filter(function(h){return h.win;}).length;
+  var mLoss=monthParis.length-mWins;
+
+  var streakLabel=cur+'× '+(curW?'✅ Victoire':'❌ Défaite');
+  var streakC=curW?'var(--g)':'var(--r)';
+
+  el.innerHTML=[
+    {label:'🔥 Série en cours',val:streakLabel,c:streakC},
+    {label:'📈 Meilleure série W',val:bestW+'× ✅',c:'var(--g)'},
+    {label:'📉 Pire série L',val:worstL+'× ❌',c:'var(--r)'},
+    {label:'📅 Ce mois',val:mWins+'W / '+mLoss+'L',c:'var(--t2)'},
+  ].map(function(s){
+    return '<div style="padding:12px;background:var(--s1);border-radius:var(--r6);text-align:center;">'
+      +'<div style="font-size:10px;color:var(--t3);margin-bottom:4px;">'+s.label+'</div>'
+      +'<div style="font-size:16px;font-weight:800;color:'+s.c+';">'+s.val+'</div>'
+      +'</div>';
+  }).join('');
+}
+
 function renderGlobalChart(){
   var gz=$i('global-zone');if(!gz)return;
   var ap=state.a.slice().reverse();
@@ -2286,13 +2386,13 @@ function addBook(){
   var col=($i('new-bk-color')&&$i('new-bk-color').value)||'#4d84ff';
   var init=parseFloat(prompt('Solde de départ pour '+name+' ?','0'))||0;
   /* Stocker la couleur perso dans state.bkColors */
-  if(!state.bkColors)state.bkColors={};loadCustomLinks();var _n=localStorage.getItem('gones45_note');var _ni=$i('pc-note');if(_ni&&_n)_ni.innerHTML=_n;var tk=localStorage.getItem('gones45_tavily_key');var tki=$i('tavily-key-input');if(tki&&tk)tki.value=tk;
+  if(!state.bkColors)state.bkColors={};loadCustomLinks();_typeColors=JSON.parse(localStorage.getItem('g45_typecolors')||'{}');var _n=localStorage.getItem('gones45_note');var _ni=$i('pc-note');if(_ni&&_n)_ni.innerHTML=_n;var tk=localStorage.getItem('gones45_tavily_key');var tki=$i('tavily-key-input');if(tki&&tk)tki.value=tk;
   state.bkColors[name]=col;
   state.b[name]=init.toFixed(2);state.start_bk+=init;inp.value='';save();
 }
 function changeBookColor(el){
   var k=el.dataset.bk;var col=el.value;
-  if(!state.bkColors)state.bkColors={};loadCustomLinks();var _n=localStorage.getItem('gones45_note');var _ni=$i('pc-note');if(_ni&&_n)_ni.innerHTML=_n;var tk=localStorage.getItem('gones45_tavily_key');var tki=$i('tavily-key-input');if(tki&&tk)tki.value=tk;
+  if(!state.bkColors)state.bkColors={};loadCustomLinks();_typeColors=JSON.parse(localStorage.getItem('g45_typecolors')||'{}');var _n=localStorage.getItem('gones45_note');var _ni=$i('pc-note');if(_ni&&_n)_ni.innerHTML=_n;var tk=localStorage.getItem('gones45_tavily_key');var tki=$i('tavily-key-input');if(tki&&tk)tki.value=tk;
   state.bkColors[k]=col;
   save();
 }
@@ -2462,7 +2562,7 @@ function renderGlobalCharts(){
     renderMultiCurveChart();
     renderBooksChart();
     renderPaliersChart();
-    setTimeout(function(){renderRadarChart();renderChartMoisBar();renderChartSport();renderChartTypeBen();},200);
+    setTimeout(function(){renderRadarChart();renderChartMoisBar();renderChartSport();renderChartTypeBen();renderChartTypeDonut();renderStreakPanel();},200);
   },100);
 }
 
@@ -3244,7 +3344,7 @@ async function sendChatPC(){
     chatBubblePC('assistant','Erreur : '+e.message);
   }
 }
-window.onload=function(){if(!state.bkColors)state.bkColors={};loadCustomLinks();var _n=localStorage.getItem('gones45_note');var _ni=$i('pc-note');if(_ni&&_n)_ni.innerHTML=_n;var tk=localStorage.getItem('gones45_tavily_key');var tki=$i('tavily-key-input');if(tki&&tk)tki.value=tk;
+window.onload=function(){if(!state.bkColors)state.bkColors={};loadCustomLinks();_typeColors=JSON.parse(localStorage.getItem('g45_typecolors')||'{}');var _n=localStorage.getItem('gones45_note');var _ni=$i('pc-note');if(_ni&&_n)_ni.innerHTML=_n;var tk=localStorage.getItem('gones45_tavily_key');var tki=$i('tavily-key-input');if(tki&&tk)tki.value=tk;
   /* Listener unique pour évolution bankroll — survivant aux re-renders */
   document.addEventListener('touchend',function(e){
     var cv=e.target;
