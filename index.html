@@ -656,7 +656,7 @@ input[type="date"],input[type="time"]{color-scheme:dark;}
     <div id="calc-sb">
       <label style="display:flex;align-items:center;gap:8px;padding:9px;background:rgba(240,176,32,.08);border:1px solid rgba(240,176,32,.2);border-radius:var(--r6);cursor:pointer;margin-bottom:10px">
         <input type="checkbox" id="sb-gorr" onchange="calcSb()" style="accent-color:var(--gold)">
-        <span style="font-size:11px;font-weight:700;color:var(--gold)">🎁 Remboursé si pas gagnant (une sélection)</span>
+        <span style="font-size:11px;font-weight:700;color:var(--gold)">🎁 Gagner ou Rembourser (une sélection)</span>
       </label>
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
         <label class="fl" style="margin:0;">Mise totale (€)</label>
@@ -688,7 +688,7 @@ input[type="date"],input[type="time"]{color-scheme:dark;}
       <div style="display:flex;flex-direction:column;gap:6px;margin-bottom:12px">
         <label style="display:flex;align-items:center;gap:8px;padding:9px;background:rgba(240,176,32,.08);border:1px solid rgba(240,176,32,.2);border-radius:var(--r6);cursor:pointer">
           <input type="checkbox" id="lay-gorr" onchange="calcLay()" style="accent-color:var(--gold)">
-          <span style="font-size:11px;font-weight:700;color:var(--gold)">🎁 Remboursé si pas gagnant</span>
+          <span style="font-size:11px;font-weight:700;color:var(--gold)">🎁 Gagner ou Rembourser</span>
         </label>
         <label style="display:flex;align-items:center;gap:8px;padding:9px;background:rgba(77,132,255,.08);border:1px solid rgba(77,132,255,.2);border-radius:var(--r6);cursor:pointer">
           <input type="checkbox" id="lay-usecomm" onchange="calcLay()" checked style="accent-color:var(--a)">
@@ -706,7 +706,7 @@ input[type="date"],input[type="time"]{color-scheme:dark;}
         <span style="font-size:11px;font-weight:700;color:var(--a)">🎯 Mode Mise Lay cible — je saisis la mise Lay souhaitée</span>
       </label>
       <div style="display:none" id="lay-cible-wrap">
-        <div class="fg" style="margin-bottom:8px;"><label class="fl" style="color:var(--a);">Mise Lay cible (€)</label><input type="number" id="lay-lay-mise" class="fi" value="15" oninput="calcLay()"></div>
+        <div class="fg" style="margin-bottom:8px;"><label class="fl" style="color:var(--a);">Responsabilité cible / Obligations (€)</label><input type="number" id="lay-lay-mise" class="fi" value="15" oninput="calcLay()"></div>
       </div>
       <div class="g2" style="display:none">
       </div>
@@ -1258,19 +1258,56 @@ function calcVb(){
     verd.innerText=isS?'🔥 Value ! +'+edge+'%':isV?'✅ Value +'+edge+'%':'❌ Pas de value';
   }
 }
+function toggleLayMode(){
+  var mode=$i('lay-mode-cible')&&$i('lay-mode-cible').checked;
+  var wrap=$i('lay-cible-wrap');if(wrap)wrap.style.display=mode?'block':'none';
+  var lbl=$i('lay-mise-label');if(lbl)lbl.textContent=mode?'Mise Back calculée':'Mise Back (€)';
+  var bm=$i('lay-back-mise');if(bm)bm.readOnly=mode;if(bm)bm.style.opacity=mode?'.5':'1';
+  calcLay();
+}
 function calcLay(){
   var bc=parseFloat(($i('lay-back-cote')&&$i('lay-back-cote').value)||0);
-  var bm=parseFloat(($i('lay-back-mise')&&$i('lay-back-mise').value)||0);
   var lc=parseFloat(($i('lay-lay-cote')&&$i('lay-lay-cote').value)||0);
   var comm=parseFloat(($i('lay-commission')&&$i('lay-commission').value)||3);
   var gorr=$i('lay-gorr')&&$i('lay-gorr').checked;
   var useComm=$i('lay-usecomm')&&$i('lay-usecomm').checked;
-  if(!bc||!bm||!lc||bc<=1||lc<=1)return;
-  var lr=useComm?(1+(1-comm/100)/(lc-1)):(1+1/(lc-1));
-  var ml,pbw,plw;
-  if(!gorr){ml=bm*bc/lr;pbw=bm*(bc-1)-ml*(lc-1);plw=ml*(lr-1)-bm;}
-  else{ml=bm*(bc-1)/lr;pbw=bm*(bc-1)-ml*(lc-1);plw=ml*(lr-1);}
-  var liab=ml*(lc-1);var pg=Math.min(pbw,plw);
+  var modeCible=$i('lay-mode-cible')&&$i('lay-mode-cible').checked;
+  if(!bc||!lc||bc<=1||lc<=1)return;
+  var commR=useComm?comm/100:0;
+  var lr=1+(1-commR)/(lc-1); /* cote réelle lay */
+  var bm,ml,pbw,plw;
+  if(modeCible){
+    ml=parseFloat(($i('lay-lay-mise')&&$i('lay-lay-mise').value)||0);
+    if(!ml)return;
+    if(gorr){
+      /* Gagner ou Rembourser : miseCouverture = fb / ((lc-1)*(1-comm)) */
+      bm=ml/((lc-1)*(1-commR));
+    } else {
+      /* Surebet classique : calculerBackLay inversé */
+      bm=ml*(lc-commR)/bc;
+    }
+    var bmEl=$i('lay-back-mise');if(bmEl)bmEl.value=bm.toFixed(2);
+  } else {
+    bm=parseFloat(($i('lay-back-mise')&&$i('lay-back-mise').value)||0);
+    if(!bm)return;
+    if(gorr){
+      /* Gagner ou Rembourser : ml = bm * (lc-1)*(1-comm) */
+      ml=bm*(lc-1)*(1-commR);
+    } else {
+      /* calculerBackLay : ml = bm*bc / (lc-comm) */
+      ml=bm*bc/(lc-commR);
+    }
+  }
+  var liabML=ml*(lc-1);
+  if(!gorr){
+    pbw=bm*(bc-1)-liabML;
+    plw=ml*(1-commR)-bm;
+  } else {
+    /* Gagner ou Rembourser */
+    pbw=bm*(bc-1)-liabML;
+    plw=ml*(1-commR); /* gain lay sans soustraire bm car remboursé */
+  }
+  var liab=liabML;var pg=Math.min(pbw,plw);
   var roi=(bm+liab)>0?(pg/(bm+liab)*100).toFixed(2):0;
   var lrc=$i('lay-real-cote');if(lrc)lrc.innerText='@'+lr.toFixed(3);
   var ll=$i('lay-liability');if(ll)ll.innerText=liab.toFixed(2)+'€';
@@ -1299,12 +1336,14 @@ function calcFreebet(){
   var gainIfLay=ml*(1-comm/100);
   var cg=Math.min(gainIfBack,gainIfLay);
   var taux=fb>0?(cg/fb*100).toFixed(1):0;
-  /* Formule si remboursé (argent réel) : la mise revient si on perd */
-  var ml2=gorr?fb*bc/lc:ml;
+  /* Formule Freebet Gagner ou Rembourser */
+  /* miseCouverture = fb / ((lc-1)*(1-comm)) */
+  var commR2=comm/100;
+  var ml2=gorr?fb/((lc-1)*(1-commR2)):ml;
   var liab2=ml2*(lc-1);
   var gainBack2=gorr?(bc-1)*fb-liab2:(bc-1)*fb-liab;
-  var gainLay2=gorr?ml2*(1-comm/100):gainIfLay;
-  var cg2=Math.min(gainBack2,gainLay2);
+  var gainLay2=gorr?ml2*(lc-1)*(1-commR2)-fb:gainIfLay;
+  var cg2=gorr?Math.min(gainBack2,gainLay2):cg;
   var taux2=fb>0?(cg2/fb*100).toFixed(1):0;
   var flm=$i('fb-lay-mise');if(flm){flm.innerText=(gorr?ml2:ml).toFixed(2)+'€';flm.style.color='var(--a)';}
   var fli=$i('fb-liability');if(fli){fli.innerText=(gorr?liab2:liab).toFixed(2)+'€';fli.style.color='var(--gold)';}
