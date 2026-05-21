@@ -697,9 +697,18 @@ input[type="date"],input[type="time"]{color-scheme:dark;}
       </div>
       <div class="g2" style="gap:8px;margin-bottom:8px">
         <div class="fg"><label class="fl">Cote Back</label><input type="number" id="lay-back-cote" class="fi" value="2.50" step="0.01" style="color:var(--g);font-weight:700" oninput="calcLay()"></div>
-        <div class="fg"><label class="fl">Mise Back (€)</label><input type="number" id="lay-back-mise" class="fi" value="10" oninput="calcLay()"></div>
+        <div class="fg"><label class="fl" id="lay-mise-label">Mise Back (€)</label><input type="number" id="lay-back-mise" class="fi" value="10" oninput="calcLay()"></div>
         <div class="fg"><label class="fl">Cote Lay (Piwi)</label><input type="number" id="lay-lay-cote" class="fi" value="2.60" step="0.01" style="color:var(--r);font-weight:700" oninput="calcLay()"></div>
         <div class="fg"><label class="fl">Commission %</label><input type="number" id="lay-commission" class="fi" value="3" oninput="calcLay()"></div>
+      </div>
+      <label style="display:flex;align-items:center;gap:8px;padding:7px 10px;background:rgba(77,132,255,.08);border:1px solid rgba(77,132,255,.2);border-radius:var(--r6);cursor:pointer;margin-bottom:8px;">
+        <input type="checkbox" id="lay-mode-cible" onchange="toggleLayMode()" style="accent-color:var(--a)">
+        <span style="font-size:11px;font-weight:700;color:var(--a)">🎯 Mode Mise Lay cible — je saisis la mise Lay souhaitée</span>
+      </label>
+      <div style="display:none" id="lay-cible-wrap">
+        <div class="fg" style="margin-bottom:8px;"><label class="fl" style="color:var(--a);">Mise Lay cible (€)</label><input type="number" id="lay-lay-mise" class="fi" value="15" oninput="calcLay()"></div>
+      </div>
+      <div class="g2" style="display:none">
       </div>
       <div style="background:var(--bg3);border-radius:var(--r6);padding:9px 12px;margin-bottom:9px;display:flex;justify-content:space-between">
         <div><div style="font-size:8px;color:var(--t3);text-transform:uppercase;letter-spacing:.7px">Cote réelle</div><div id="lay-real-cote" style="font-size:20px;font-weight:800;color:var(--r)">—</div></div>
