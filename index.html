@@ -1317,13 +1317,14 @@ function calcLay(){
   } else {
     bm=parseFloat(($i('lay-back-mise')&&$i('lay-back-mise').value)||0);
     if(!bm)return;
-    if(gorr){
-      /* Gagner ou Rembourser : ml = bm * (lc-1)*(1-comm) */
-      ml=bm*(lc-1)*(1-commR);
-    } else {
-      /* calculerBackLay : ml = bm*bc / (lc-comm) */
-      ml=bm*bc/(lc-commR);
-    }
+   if(gorr){
+    /* VRAI CALCUL REEL GAGNER OU REMBOURSER : 
+       Pour que le Lay rembourse la mise Back après commission : ml = bm / (1 - comm) */
+    ml = bm / (1 - commR);
+} else {
+    /* Surebet classique : ml = bm*bc / (lc-comm) */
+    ml = bm * bc / (lc - commR);
+}
   }
   var liabML=ml*(lc-1);
   if(!gorr){
