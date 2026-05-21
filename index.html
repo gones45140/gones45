@@ -294,6 +294,39 @@ input[type="date"],input[type="time"]{color-scheme:dark;}
 }
 .chart-info-bar .cib-main{font-weight:600;flex:1;font-size:11px;}
 .chart-info-bar .cib-val{font-weight:800;font-size:14px;flex-shrink:0;}
+
+/* ── LAYOUT 3 COLONNES PC ── */
+@media(min-width:1100px){
+  body{padding-left:260px;padding-right:300px;padding-bottom:68px;}
+  /* BLOC-NOTE — gauche */
+  .note-sidebar{
+    width:260px;position:fixed;left:0;top:52px;bottom:68px;
+    background:var(--bg2);border-right:1px solid var(--b1);
+    display:flex !important;flex-direction:column;padding:12px;z-index:100;box-sizing:border-box;
+    overflow:hidden;
+  }
+  /* CHAT — droite */
+  .chat-sidebar{
+    width:300px;position:fixed;right:0;top:52px;bottom:68px;
+    background:var(--bg2);border-left:1px solid var(--b1);
+    display:flex !important;flex-direction:column;padding:12px;z-index:100;box-sizing:border-box;
+    overflow:hidden;
+  }
+  .chat-sidebar>div:nth-child(2){flex:1;min-height:0;}
+  #t-chat{display:none !important;}
+  .main{max-width:100%;padding:14px 20px;}
+}
+@media(min-width:1400px){
+  body{padding-left:280px;padding-right:320px;}
+  .note-sidebar{width:280px;}
+  .chat-sidebar{width:320px;}
+}
+/* Mobile/tablette : cacher les sidebars */
+@media(max-width:1099px){
+  .chat-sidebar{display:none !important;width:0 !important;}
+  .note-sidebar{display:none !important;width:0 !important;}
+  body{padding-left:0 !important;padding-right:0 !important;}
+}
 </style>
 </head>
 <body>
@@ -1800,13 +1833,13 @@ function addBook(){
   var col=($i('new-bk-color')&&$i('new-bk-color').value)||'#4d84ff';
   var init=parseFloat(prompt('Solde de départ pour '+name+' ?','0'))||0;
   /* Stocker la couleur perso dans state.bkColors */
-  if(!state.bkColors)state.bkColors={};var tk=localStorage.getItem('gones45_tavily_key');var tki=$i('tavily-key-input');if(tki&&tk)tki.value=tk;
+  if(!state.bkColors)state.bkColors={};var _n=localStorage.getItem('gones45_note');var _ni=$i('pc-note');if(_ni&&_n)_ni.value=_n;var tk=localStorage.getItem('gones45_tavily_key');var tki=$i('tavily-key-input');if(tki&&tk)tki.value=tk;
   state.bkColors[name]=col;
   state.b[name]=init.toFixed(2);state.start_bk+=init;inp.value='';save();
 }
 function changeBookColor(el){
   var k=el.dataset.bk;var col=el.value;
-  if(!state.bkColors)state.bkColors={};var tk=localStorage.getItem('gones45_tavily_key');var tki=$i('tavily-key-input');if(tki&&tk)tki.value=tk;
+  if(!state.bkColors)state.bkColors={};var _n=localStorage.getItem('gones45_note');var _ni=$i('pc-note');if(_ni&&_n)_ni.value=_n;var tk=localStorage.getItem('gones45_tavily_key');var tki=$i('tavily-key-input');if(tki&&tk)tki.value=tk;
   state.bkColors[k]=col;
   save();
 }
@@ -2652,7 +2685,61 @@ async function sendChat(){
   }
 }
 
-window.onload=function(){if(!state.bkColors)state.bkColors={};var tk=localStorage.getItem('gones45_tavily_key');var tki=$i('tavily-key-input');if(tki&&tk)tki.value=tk;
+function saveNote(){
+  var n=$i('pc-note');if(!n)return;
+  localStorage.setItem('gones45_note',n.value);
+}
+function clearNote(){
+  var n=$i('pc-note');if(!n)return;
+  if(confirm('Effacer le pense-bête ?')){n.value='';localStorage.removeItem('gones45_note');}
+}
+function chatBubblePC(role,text){
+  var box=$i('chat-messages-pc');if(!box)return;
+  var isUser=role==='user';
+  var div=document.createElement('div');
+  div.style.cssText='display:flex;'+(isUser?'justify-content:flex-end':'justify-content:flex-start')+';margin-bottom:4px;';
+  div.innerHTML='<div style="max-width:85%;padding:7px 11px;border-radius:'+(isUser?'12px 12px 4px 12px':'12px 12px 12px 4px')+
+    ';background:'+(isUser?'var(--a)':'var(--s2)')+
+    ';color:var(--t1);font-size:12px;line-height:1.4;white-space:pre-wrap;">'+
+    text.replace(/</g,'&lt;')+'</div>';
+  box.appendChild(div);
+  box.scrollTop=box.scrollHeight;
+}
+async function sendChatPC(){
+  var inp=$i('chat-input-pc');
+  var msg=inp?inp.value.trim():'';
+  if(!msg)return;
+  var key=getGeminiKey();
+  if(!key){chatBubblePC('assistant','Configure ta clé Groq dans Outils.');return;}
+  inp.value='';
+  chatBubblePC('user',msg);
+  _chatHistory.push({role:'user',content:msg});
+  var typing=document.createElement('div');
+  typing.id='chat-typing-pc';
+  typing.style.cssText='display:flex;justify-content:flex-start;';
+  typing.innerHTML='<div style="padding:7px 11px;border-radius:12px 12px 12px 4px;background:var(--s2);color:var(--t3);font-size:11px;">…</div>';
+  var box=$i('chat-messages-pc');if(box){box.appendChild(typing);box.scrollTop=box.scrollHeight;}
+  try{
+    var needsWeb=/match|résultat|score|classement|ligue|champion|derby|finale|vainqueur|transfert|blessé|compo|prochain|dernier|hier|aujourd|2025|2026/i.test(msg);
+    var webCtx='';
+    if(needsWeb&&getTavilyKey()){var sr=await searchTavily(msg);if(sr)webCtx='\nInfos récentes: '+sr;}
+    var messages=[{role:'system',content:buildContext()+webCtx}].concat(_chatHistory.slice(-4));
+    var r=await fetch('https://api.groq.com/openai/v1/chat/completions',{
+      method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+key},
+      body:JSON.stringify({model:'llama-3.3-70b-versatile',messages:messages,temperature:0.3,max_tokens:150})
+    });
+    var d=await r.json();
+    var t=document.getElementById('chat-typing-pc');if(t)t.remove();
+    if(d.error)throw new Error(d.error.message);
+    var reply=d.choices[0].message.content.trim();
+    _chatHistory.push({role:'assistant',content:reply});
+    chatBubblePC('assistant',reply);
+  }catch(e){
+    var t=document.getElementById('chat-typing-pc');if(t)t.remove();
+    chatBubblePC('assistant','Erreur : '+e.message);
+  }
+}
+window.onload=function(){if(!state.bkColors)state.bkColors={};var _n=localStorage.getItem('gones45_note');var _ni=$i('pc-note');if(_ni&&_n)_ni.value=_n;var tk=localStorage.getItem('gones45_tavily_key');var tki=$i('tavily-key-input');if(tki&&tk)tki.value=tk;
   /* Listener unique pour évolution bankroll — survivant aux re-renders */
   document.addEventListener('touchend',function(e){
     var cv=e.target;
@@ -2687,5 +2774,27 @@ window.onload=function(){if(!state.bkColors)state.bkColors={};var tk=localStorag
 </script>
 
 
+
+<!-- BLOC-NOTE PC — gauche -->
+<div class="note-sidebar" id="pc-note-sidebar">
+  <div class="sec" style="margin-top:0;font-size:10px;display:flex;align-items:center;justify-content:space-between;">
+    <span>📝 Pense-bête</span>
+    <button onclick="clearNote()" style="background:none;border:none;color:var(--t3);font-size:9px;cursor:pointer;font-weight:700;">EFFACER</button>
+  </div>
+  <textarea id="pc-note" style="flex:1;background:var(--bg3);border:1px solid var(--b1);border-radius:var(--r6);color:var(--t1);font-size:12px;line-height:1.6;padding:10px;resize:none;outline:none;font-family:inherit;" placeholder="Notes, cotes à surveiller, stratégie…" oninput="saveNote()"></textarea>
+</div>
+
+<!-- SIDEBAR CHAT PC -->
+<div class="chat-sidebar" id="pc-chat-sidebar">
+  <div class="sec" style="margin-top:0;font-size:10px;">💬 Assistant Paris</div>
+  <div id="chat-messages-pc" style="flex:1;overflow-y:auto;display:flex;flex-direction:column;gap:8px;padding:4px 0 8px;scrollbar-width:thin;"></div>
+  <div style="border-top:1px solid var(--b1);padding-top:8px;">
+    <div style="display:flex;gap:6px;">
+      <input id="chat-input-pc" class="fi" placeholder="Question…" style="flex:1;font-size:12px;padding:8px 10px;" onkeydown="if(event.key==='Enter'){event.preventDefault();sendChatPC();}">
+      <button onclick="sendChatPC()" style="padding:0 12px;background:var(--a);border:none;border-radius:var(--r6);color:#fff;font-size:16px;cursor:pointer;flex-shrink:0;">↑</button>
+    </div>
+    <div style="font-size:9px;color:var(--t3);text-align:center;margin-top:5px;">Groq AI · Clé dans Outils</div>
+  </div>
+</div>
 </body>
 </html>
