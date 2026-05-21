@@ -2618,13 +2618,16 @@ async function searchTavily(query){
     var r=await fetch('https://api.tavily.com/search',{
       method:'POST',
       headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({api_key:key,query:query,max_results:3,search_depth:'basic'})
+      body:JSON.stringify({api_key:key,query:query,max_results:5,search_depth:'advanced',include_answer:true})
     });
     var d=await r.json();
+    console.log('[Tavily]',d);
     if(!d.results||!d.results.length)return null;
-    /* Extraire le contenu utile */
-    return d.results.map(function(r){return r.content||r.snippet||'';}).join(' ').substring(0,800);
-  }catch(e){return null;}
+    /* Priorité à la réponse directe de Tavily */
+    var answer=d.answer||'';
+    var snippets=d.results.map(function(r){return r.content||r.snippet||'';}).join(' ').substring(0,600);
+    return answer?answer+' '+snippets:snippets;
+  }catch(e){console.log('[Tavily erreur]',e);return null;}
 }
 function saveGeminiKey(){
   var inp=$i('gemini-key-input');if(!inp)return;
@@ -2704,7 +2707,7 @@ async function sendChat(){
     var webCtx='';var webFound=false;
     if(needsWeb&&getTavilyKey()){var searchResult=await searchTavily(msg);if(searchResult){webCtx=searchResult;webFound=true;}}
     var sysPrompt=webFound
-      ?'Réponds UNIQUEMENT avec ces infos web, ne devine pas, 1-2 phrases en français: '+webCtx
+      ?'Tu as ces infos web. Cite uniquement ce qui est confirmé. Si le score exact n est pas dans les infos, dis juste qui a gagné. 1-2 phrases en français, pas de supposition: '+webCtx
       :buildContext();
     var messages=[{role:'system',content:sysPrompt},{role:'user',content:msg}];
     var r=await fetch('https://api.groq.com/openai/v1/chat/completions',{
@@ -2764,7 +2767,7 @@ async function sendChatPC(){
     var needsWeb=/match|résultat|score|classement|ligue|champion|derby|finale|vainqueur|transfert|blessé|compo|prochain|dernier|hier|aujourd|semaine|récent|actuell|2025|2026|nba|nfl|mlb|nhl|dodgers|lakers|yankees|chelsea|arsenal|psg|real|barça|liga|premier|bundesliga/i.test(msg);
     var webCtx='';var webFound2=false;
     if(needsWeb&&getTavilyKey()){var sr=await searchTavily(msg);if(sr){webCtx=sr;webFound2=true;}}
-    var sysPC=webFound2?'Réponds UNIQUEMENT avec ces infos web, ne devine pas, 1-2 phrases en français: '+webCtx:buildContext();
+    var sysPC=webFound2?'Tu as ces infos web. Cite uniquement ce qui est confirmé. Si le score exact n est pas dedans, dis juste qui a gagné. 1-2 phrases en français: '+webCtx:buildContext();
     var messages=[{role:'system',content:sysPC},{role:'user',content:msg}];
     var r=await fetch('https://api.groq.com/openai/v1/chat/completions',{
       method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+key},
