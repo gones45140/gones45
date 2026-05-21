@@ -708,6 +708,19 @@ input[type="date"],input[type="time"]{color-scheme:dark;}
     </div>
     <div id="gemini-key-status" style="margin-top:7px;font-size:11px;font-weight:700;"></div>
   </div>
+  <div class="fc" style="border-style:dashed;">
+    <label class="fl" style="color:var(--a);">🔍 Tavily — Recherche web</label>
+    <div style="font-size:10px;color:var(--t3);margin-bottom:8px;margin-top:4px;">Gratuit sur tavily.com · 1000 recherches/mois · Stockée localement</div>
+    <div style="display:flex;gap:6px;margin-bottom:8px;">
+      <input id="tavily-key-input" class="fi" type="password" placeholder="tvly-…" style="font-size:11px;flex:1;">
+      <button onclick="var i=$i('tavily-key-input');i.type=i.type==='password'?'text':'password';" style="flex-shrink:0;padding:0 10px;height:38px;background:var(--bg3);border:1px solid var(--b2);border-radius:var(--r6);color:var(--t3);font-size:14px;cursor:pointer;">👁</button>
+    </div>
+    <div style="display:flex;gap:7px;">
+      <button class="btn btn-p" style="font-size:11px;" onclick="saveTavilyKey()">💾 Enregistrer</button>
+      <button class="btn" style="background:rgba(30,215,96,.12);color:var(--g);border:1px solid rgba(30,215,96,.2);font-size:11px;" onclick="testTavilyKey()">🧪 Tester</button>
+    </div>
+    <div id="tavily-key-status" style="margin-top:7px;font-size:11px;font-weight:700;"></div>
+  </div>
   <div class="sec">Backup &amp; Config</div>
   <div class="fc" style="border-style:dashed;">
     <label class="fl">Export / Import</label>
@@ -1787,13 +1800,13 @@ function addBook(){
   var col=($i('new-bk-color')&&$i('new-bk-color').value)||'#4d84ff';
   var init=parseFloat(prompt('Solde de départ pour '+name+' ?','0'))||0;
   /* Stocker la couleur perso dans state.bkColors */
-  if(!state.bkColors)state.bkColors={};
+  if(!state.bkColors)state.bkColors={};var tk=localStorage.getItem('gones45_tavily_key');var tki=$i('tavily-key-input');if(tki&&tk)tki.value=tk;
   state.bkColors[name]=col;
   state.b[name]=init.toFixed(2);state.start_bk+=init;inp.value='';save();
 }
 function changeBookColor(el){
   var k=el.dataset.bk;var col=el.value;
-  if(!state.bkColors)state.bkColors={};
+  if(!state.bkColors)state.bkColors={};var tk=localStorage.getItem('gones45_tavily_key');var tki=$i('tavily-key-input');if(tki&&tk)tki.value=tk;
   state.bkColors[k]=col;
   save();
 }
@@ -2497,6 +2510,45 @@ function openClubFromDash(nom){
 }
 
 /* ── GEMINI API ── */
+function saveTavilyKey(){
+  var inp=$i('tavily-key-input');if(!inp)return;
+  var key=inp.value.trim();if(!key)return;
+  localStorage.setItem('gones45_tavily_key',key);
+  var st=$i('tavily-key-status');
+  if(st){st.innerText='✅ Clé Tavily enregistrée';st.style.color='var(--g)';}
+  setTimeout(function(){if(st)st.innerText='';},3000);
+}
+function getTavilyKey(){return localStorage.getItem('gones45_tavily_key')||null;}
+async function testTavilyKey(){
+  var key=getTavilyKey();
+  var st=$i('tavily-key-status');
+  if(!key){if(st){st.innerText='❌ Aucune clé';st.style.color='var(--r)';}return;}
+  if(st){st.innerText='⏳ Test…';st.style.color='var(--t3)';}
+  try{
+    var r=await fetch('https://api.tavily.com/search',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({api_key:key,query:'test',max_results:1})
+    });
+    var d=await r.json();
+    if(d.results){if(st){st.innerText='✅ Clé Tavily valide !';st.style.color='var(--g)';}}
+    else{var e=(d.detail||d.error||'Erreur');if(st){st.innerText='❌ '+e.substring(0,80);st.style.color='var(--r)';}}
+  }catch(e){if(st){st.innerText='❌ '+e.message;st.style.color='var(--r)';}}
+}
+async function searchTavily(query){
+  var key=getTavilyKey();if(!key)return null;
+  try{
+    var r=await fetch('https://api.tavily.com/search',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({api_key:key,query:query,max_results:3,search_depth:'basic'})
+    });
+    var d=await r.json();
+    if(!d.results||!d.results.length)return null;
+    /* Extraire le contenu utile */
+    return d.results.map(function(r){return r.content||r.snippet||'';}).join(' ').substring(0,800);
+  }catch(e){return null;}
+}
 function saveGeminiKey(){
   var inp=$i('gemini-key-input');if(!inp)return;
   var key=inp.value.trim();if(!key)return;
@@ -2572,15 +2624,19 @@ async function sendChat(){
   if(box){box.appendChild(typing);box.scrollTop=box.scrollHeight;}
 
   try{
-    var needsWeb=/match|résultat|score|classement|ligue|champion|derby|finale|vainqueur|transfert|blessé|suspendu|compo|odds|prochain|dernier|hier|aujourd|2024|2025|2026/i.test(msg);
-    var model=needsWeb?'compound-beta-mini':'llama-3.3-70b-versatile';
-    var messages=needsWeb
-      ?[{role:'user',content:'Court et direct en français (1-2 phrases). '+msg}]
-      :[{role:'system',content:buildContext()}].concat(_chatHistory.slice(-4));
+    /* Recherche Tavily si question d'actu */
+    var needsWeb=/match|résultat|score|classement|ligue|champion|derby|finale|vainqueur|transfert|blessé|compo|prochain|dernier|hier|aujourd|2025|2026/i.test(msg);
+    var webCtx='';
+    if(needsWeb&&getTavilyKey()){
+      var searchResult=await searchTavily(msg);
+      if(searchResult)webCtx='\nInfos web récentes : '+searchResult;
+    }
+    var sysPrompt=buildContext()+webCtx;
+    var messages=[{role:'system',content:sysPrompt}].concat(_chatHistory.slice(-4));
     var r=await fetch('https://api.groq.com/openai/v1/chat/completions',{
       method:'POST',
       headers:{'Content-Type':'application/json','Authorization':'Bearer '+key},
-      body:JSON.stringify({model:model,messages:messages,temperature:0.3,max_tokens:150})
+      body:JSON.stringify({model:'llama-3.3-70b-versatile',messages:messages,temperature:0.3,max_tokens:150})
     });
     var d=await r.json();
     var t=document.getElementById('chat-typing');if(t)t.remove();
@@ -2589,14 +2645,14 @@ async function sendChat(){
     /* Retirer les citations [1][2] de compound-beta */
     reply=reply.replace(/\[\d+\]/g,'').trim();
     _chatHistory.push({role:'assistant',content:reply});
-    chatBubble('assistant',reply+(needsWeb?' 🌐':''));
+    chatBubble('assistant',reply);
   }catch(e){
     var t=document.getElementById('chat-typing');if(t)t.remove();
     chatBubble('assistant','Erreur : '+e.message);
   }
 }
 
-window.onload=function(){if(!state.bkColors)state.bkColors={};
+window.onload=function(){if(!state.bkColors)state.bkColors={};var tk=localStorage.getItem('gones45_tavily_key');var tki=$i('tavily-key-input');if(tki&&tk)tki.value=tk;
   /* Listener unique pour évolution bankroll — survivant aux re-renders */
   document.addEventListener('touchend',function(e){
     var cv=e.target;
