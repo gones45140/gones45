@@ -358,23 +358,25 @@ input[type="date"],input[type="time"]{color-scheme:dark;}
     padding-top:0;
   }
 }
-/* Mobile/tablette : cacher les sidebars */
+/* Mobile : cacher éléments PC */
 @media(max-width:1099px){
   .chat-sidebar{display:none !important;width:0 !important;}
   #pc-chat-sidebar{display:none !important;}
   .pc-only{display:none !important;}
-  .note-sidebar{display:none !important;width:0 !important;}
-  .pc-note-area{display:flex !important;flex-direction:column;flex:1;min-height:0;}
-  #plus-menu{display:none !important;}
-  /* Chat sidebar visible sur PC */
-  #pc-chat-sidebar{display:flex !important;}
-  .pc-only{display:flex !important;}
+  .note-sidebar{display:none !important;}
+  .pc-note-area{display:none !important;}
+  .pc-hide-chat{display:flex !important;}
+  body{padding-left:0 !important;padding-right:0 !important;padding-bottom:68px;}
+}
+/* PC : cacher éléments mobile */
+@media(min-width:1100px){
   .pc-hide-chat{display:none !important;}
   #plus-menu{display:none !important;}
+  .pc-only{display:flex !important;}
+  #pc-chat-sidebar{display:flex !important;}
   #pc-chat-sidebar>div:first-child{flex-shrink:0;}
   #pc-chat-sidebar #chat-messages-pc{flex:1;min-height:0;overflow-y:auto;}
-  body{padding-left:0 !important;padding-right:0 !important;}
-  .pc-note-area{display:none !important;}
+  .pc-note-area{display:flex !important;flex-direction:column;flex:1;min-height:0;}
 }
 
 #pc-note:empty:before{content:attr(data-placeholder);color:var(--t3);pointer-events:none;}
