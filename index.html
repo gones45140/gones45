@@ -2433,10 +2433,23 @@ function addUnit(){
 }
 function editUnit(i){
   var u=state.u[parseInt(i)];if(!u)return;
-  var newName=prompt('Nom :',u.n);if(newName&&newName.trim())u.n=newName.trim().toUpperCase();
-  var newStars=prompt('Étoiles (1-5) :',u.s);if(newStars&&!isNaN(+newStars)&&+newStars>=1&&+newStars<=5)u.s=String(+newStars);
-  var newColor=prompt('Couleur hex (#rrggbb) :',u.color);if(newColor&&/^#[0-9a-fA-F]{6}$/.test(newColor))u.color=newColor;
-  save();
+  var m=$i('edit-unit-modal');if(!m)return;
+  $i('edit-unit-idx').value=i;
+  $i('edit-unit-name').value=u.n||'';
+  $i('edit-unit-stars').value=u.s||'3';
+  $i('edit-unit-note').value=u.note||'';
+  $i('edit-unit-color').value=u.color||'#4d84ff';
+  m.style.display='flex';
+}
+function closeEditUnit(){var m=$i('edit-unit-modal');if(m)m.style.display='none';}
+function saveEditUnit(){
+  var i=parseInt($i('edit-unit-idx').value);
+  var u=state.u[i];if(!u)return;
+  u.n=($i('edit-unit-name').value||u.n).trim().toUpperCase();
+  u.s=$i('edit-unit-stars').value||u.s;
+  u.note=$i('edit-unit-note').value.trim();
+  u.color=$i('edit-unit-color').value||u.color;
+  save();render();closeEditUnit();
 }
 function rmUnit(i){var u=state.u[parseInt(i)];if(u&&confirm('Supprimer '+u.n+' ?')){state.u.splice(parseInt(i),1);save();}}
 
@@ -3508,6 +3521,28 @@ window.onload=function(){if(!state.bkColors)state.bkColors={};loadCustomLinks();
     </div>
     <div class="fg" style="margin-bottom:14px;"><label class="fl">Notes</label><input id="edit-notes" class="fi" placeholder="Notes…"></div>
     <button class="btn btn-p" style="width:100%;" onclick="saveEditBet()">💾 Enregistrer</button>
+  </div>
+</div>
+
+<!-- MODAL EDIT EQUIPE -->
+<div id="edit-unit-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:1000;align-items:center;justify-content:center;">
+  <div style="background:var(--bg2);border-radius:12px;padding:20px;width:90%;max-width:400px;">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
+      <div style="font-size:14px;font-weight:800;">✏️ Modifier l'équipe</div>
+      <button onclick="closeEditUnit()" style="background:none;border:none;color:var(--t3);font-size:20px;cursor:pointer;">✕</button>
+    </div>
+    <input type="hidden" id="edit-unit-idx">
+    <div class="fg" style="margin-bottom:10px;"><label class="fl">Nom</label><input id="edit-unit-name" class="fi"></div>
+    <div class="g2" style="margin-bottom:10px;">
+      <div class="fg"><label class="fl">Étoiles</label>
+        <select id="edit-unit-stars" class="fi">
+          <option value="1">1⭐</option><option value="2">2⭐</option><option value="3">3⭐</option><option value="4">4⭐</option><option value="5">5⭐</option>
+        </select>
+      </div>
+      <div class="fg"><label class="fl">Couleur</label><input id="edit-unit-color" type="color" class="fi" style="height:42px;padding:2px 4px;cursor:pointer;"></div>
+    </div>
+    <div class="fg" style="margin-bottom:14px;"><label class="fl">📌 Note rapide</label><input id="edit-unit-note" class="fi" placeholder="Ex: Under 3.5 buts, forme à domicile…"></div>
+    <button class="btn btn-p" style="width:100%;" onclick="saveEditUnit()">💾 Enregistrer</button>
   </div>
 </div>
 </body>
