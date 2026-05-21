@@ -361,6 +361,7 @@ input[type="date"],input[type="time"]{color-scheme:dark;}
 /* Mobile/tablette : cacher les sidebars */
 @media(max-width:1099px){
   .chat-sidebar{display:none !important;width:0 !important;}
+  #pc-chat-sidebar{display:none !important;}
   .note-sidebar{display:none !important;width:0 !important;}
   .pc-note-area{display:flex !important;flex-direction:column;flex:1;min-height:0;}
   .pc-hide-chat{display:none !important;}
@@ -641,7 +642,7 @@ input[type="date"],input[type="time"]{color-scheme:dark;}
 <!-- ══════════════════════════════════════════
      OUTILS — Calculatrices + Équipes + Config
      ══════════════════════════════════════════ -->
-<div id="t-outils" class="tab">
+<div id="t-calc" class="tab">
   <!-- CALCULATRICES -->
   <div class="sec" style="margin-top:0;">Calculateur</div>
   <div class="fc">
@@ -781,6 +782,10 @@ input[type="date"],input[type="time"]{color-scheme:dark;}
     </div>
   </div>
 
+</div>
+
+<div id="t-outils" class="tab">
+
   <!-- ÉQUIPES / CRÉATION -->
   <div class="sec">Équipes / Unités</div>
   <div class="fc">
@@ -904,12 +909,27 @@ input[type="date"],input[type="time"]{color-scheme:dark;}
   <button class="ni" onclick="showTab('t-paris',this)"><i class="fa-solid fa-futbol"></i>Pari</button>
   <button class="ni" onclick="showTab('t-arch',this)"><i class="fa-solid fa-clock-rotate-left"></i>Archive</button>
   <button class="ni" onclick="showTab('t-bilan',this)"><i class="fa-solid fa-chart-line"></i>Bilan</button>
+  <button class="ni" onclick="showTab('t-calc',this)"><i class="fa-solid fa-calculator"></i>Calc</button>
   <button class="ni" onclick="showTab('t-outils',this)"><i class="fa-solid fa-wrench"></i>Outils</button>
-  <button class="ni" onclick="showTab('t-bank',this)"><i class="fa-solid fa-wallet"></i>Bank</button>
-  <button class="ni pc-hide-chat" onclick="showTab('t-chat',this)"><i class="fa-solid fa-comment"></i>Chat</button>
+  <button class="ni pc-hide-chat" id="btn-plus-menu" onclick="togglePlusMenu()" style="position:relative;"><i class="fa-solid fa-plus"></i>Plus</button>
   <div style="flex:1;display:flex;flex-direction:column;padding:0 8px 8px;min-height:0;" class="pc-note-area">
     <div id="pc-note" contenteditable="true" style="flex:1;min-height:100px;background:var(--bg3);border:1px solid var(--b1);border-radius:var(--r6);color:var(--t1);font-size:11px;line-height:1.6;padding:10px;outline:none;font-family:inherit;overflow-y:auto;word-break:break-word;" data-placeholder="Notes, cotes, screenshots…" oninput="saveNote()"></div>
     <button onclick="clearNote()" style="margin-top:6px;background:none;border:1px solid var(--b1);border-radius:var(--r4);color:var(--t3);font-size:9px;font-weight:700;cursor:pointer;padding:4px;letter-spacing:.5px;">EFFACER</button>
+  </div>
+
+  <!-- MENU PLUS MOBILE -->
+  <div id="plus-menu" style="display:none;position:fixed;bottom:68px;right:0;left:0;background:var(--s1);border-top:1px solid var(--b2);z-index:300;padding:8px 0;">
+    <div style="display:flex;flex-direction:column;gap:2px;padding:0 12px;">
+      <button onclick="showTab('t-bank',$i('btn-plus-menu'));togglePlusMenu();" style="display:flex;align-items:center;gap:12px;padding:14px 12px;background:var(--bg3);border:none;border-radius:8px;color:var(--t1);font-size:13px;font-weight:700;cursor:pointer;text-align:left;">
+        <i class="fa-solid fa-wallet" style="color:var(--a);width:20px;"></i> Bank
+      </button>
+      <button onclick="showTab('t-chat',$i('btn-plus-menu'));togglePlusMenu();" style="display:flex;align-items:center;gap:12px;padding:14px 12px;background:var(--bg3);border:none;border-radius:8px;color:var(--t1);font-size:13px;font-weight:700;cursor:pointer;text-align:left;margin-top:4px;">
+        <i class="fa-solid fa-comment" style="color:var(--a);width:20px;"></i> Chat IA
+      </button>
+      <button onclick="togglePlusMenu();" style="display:flex;align-items:center;gap:12px;padding:14px 12px;background:none;border:none;border-radius:8px;color:var(--t3);font-size:12px;font-weight:700;cursor:pointer;text-align:left;margin-top:4px;">
+        <i class="fa-solid fa-xmark" style="width:20px;"></i> Fermer
+      </button>
+    </div>
   </div>
 </nav>
 
@@ -3079,6 +3099,21 @@ async function sendChat(){
   }
 }
 
+function togglePlusMenu(){
+  var m=$i('plus-menu');if(!m)return;
+  var open=m.style.display==='block';
+  m.style.display=open?'none':'block';
+  if(!open){
+    setTimeout(function(){
+      document.addEventListener('click',function h(e){
+        var pm=$i('plus-menu');var btn=$i('btn-plus-menu');
+        if(pm&&btn&&!pm.contains(e.target)&&!btn.contains(e.target)){
+          pm.style.display='none';document.removeEventListener('click',h);
+        }
+      });
+    },50);
+  }
+}
 function resetChat(){
   _chatHistory=[];
   var b1=$i('chat-messages');if(b1)b1.innerHTML='';
