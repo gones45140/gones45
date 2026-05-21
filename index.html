@@ -2,6 +2,7 @@
 <html lang="fr">
 <head>
 <meta charset="UTF-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self' 'unsafe-inline' 'unsafe-eval' https: data: blob:;">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
 <title>GONES45</title>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -275,6 +276,24 @@ input[type="date"],input[type="time"]{color-scheme:dark;}
 
 /* RADAR */
 .radar-wrap{background:var(--bg2);border:1px solid var(--b1);border-radius:var(--r8);padding:13px;margin-bottom:10px;}
+
+.chart-info-bar{
+  display:none;
+  background:var(--s1);
+  border:1px solid var(--b2);
+  border-radius:var(--r6);
+  padding:8px 12px;
+  margin-top:6px;
+  font-size:11px;
+  color:var(--t2);
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:8px;
+  min-height:34px;
+}
+.chart-info-bar .cib-main{font-weight:600;flex:1;font-size:11px;}
+.chart-info-bar .cib-val{font-weight:800;font-size:14px;flex-shrink:0;}
 </style>
 </head>
 <body>
@@ -341,7 +360,7 @@ input[type="date"],input[type="time"]{color-scheme:dark;}
           <option value="🏉">🏉 Rugby</option><option value="🏉🇦🇺">🏉🇦🇺 NRL</option><option value="🏎">🏎 F1</option>
         </select></div>
         <div class="fg"><label class="fl">Compétition</label><input id="c-comp" class="fi" placeholder="Ligue 1, CL…"></div>
-        <div class="fg" style="position:relative"><label class="fl">Adversaire</label><div style="display:flex;gap:6px;"><input id="c-target" class="fi" placeholder="Ex : Real Madrid" autocomplete="off" oninput="searchAdv(this.value,'c-target','adv-res-cock')" style="flex:1;"><button id="btn-auto-load" onclick="fetchNextMatchWithGemini()" style="flex-shrink:0;padding:0 10px;background:rgba(77,132,255,.15);border:1px solid rgba(77,132,255,.35);border-radius:var(--r6);color:var(--a);font-size:10px;font-weight:700;cursor:pointer;white-space:nowrap;transition:all .15s;" title="Charger le prochain match via Gemini AI">🔍 Auto</button></div><div id="adv-res-cock" style="display:none;position:absolute;left:0;right:0;background:var(--bg3);border:1px solid var(--b1);border-radius:var(--r6);z-index:200;max-height:180px;overflow-y:auto;"></div></div>
+        <div class="fg" style="position:relative"><label class="fl">Adversaire</label><input id="c-target" class="fi" placeholder="Ex : Real Madrid, OM…" autocomplete="off" oninput="searchAdv(this.value,'c-target','adv-res-cock')"><div id="adv-res-cock" style="display:none;position:absolute;left:0;right:0;background:var(--bg3);border:1px solid var(--b1);border-radius:var(--r6);z-index:200;max-height:180px;overflow-y:auto;"></div></div>
         <div class="fg"><label class="fl">Bookmaker</label><select id="c-book" class="fi"></select></div>
         <div class="fg"><label class="fl" style="color:var(--g);">Mise (€)</label><input type="number" id="c-mise" class="fi" style="border-color:rgba(30,215,96,.25);"></div>
         <div class="fg"><label class="fl">Date</label><input type="date" id="c-date" class="fi"></div>
@@ -352,7 +371,7 @@ input[type="date"],input[type="time"]{color-scheme:dark;}
     </div>
     <div class="sec" style="display:flex;justify-content:space-between;align-items:center;">
       <span>En cours</span>
-      <button class="ba" onclick="verifierResultats(true)" style="color:var(--a);border-color:rgba(77,132,255,.3);font-size:10px;">🤖 Vérifier résultats</button>
+      
     </div>
     <div class="card"><table class="ltbl"><thead><tr><th>Équipe</th><th>Match</th><th>Cote</th><th>Mise</th><th style="text-align:right">Résultat</th></tr></thead><tbody id="live-strat"></tbody></table></div>
   </div>
@@ -400,6 +419,11 @@ input[type="date"],input[type="time"]{color-scheme:dark;}
       </div>
       <div class="fg" style="margin-bottom:9px;"><label class="fl">Bookmaker</label><select id="n-book" class="fi"></select></div>
       <div class="fg" style="margin-bottom:9px;"><label class="fl">📝 Notes</label><textarea id="n-notes" class="fi" style="height:44px;resize:none;" placeholder="Analyse, contexte…"></textarea></div>
+      <label style="display:flex;align-items:center;gap:8px;padding:9px;background:rgba(30,215,96,.07);border:1px solid rgba(30,215,96,.2);border-radius:var(--r6);cursor:pointer;margin-bottom:6px;">
+        <input type="checkbox" id="n-freebet" style="accent-color:var(--g)">
+        <span style="font-size:11px;font-weight:700;color:var(--g)">🎟 Freebet</span>
+        <span style="font-size:10px;color:var(--t3);margin-left:auto;">Mise non engagée</span>
+      </label>
       <label style="display:flex;align-items:center;gap:8px;padding:9px;background:rgba(240,176,32,.08);border:1px solid rgba(240,176,32,.2);border-radius:var(--r6);cursor:pointer;margin-bottom:9px;">
         <input type="checkbox" id="n-flashboost" style="accent-color:var(--gold)">
         <span style="font-size:11px;font-weight:700;color:var(--gold)">⚡ FlashBoost</span>
@@ -408,7 +432,7 @@ input[type="date"],input[type="time"]{color-scheme:dark;}
     </div>
     <div class="sec" style="display:flex;justify-content:space-between;align-items:center;">
       <span>En cours</span>
-      <button class="ba" onclick="verifierResultats(false)" style="color:var(--a);border-color:rgba(77,132,255,.3);">🤖 Vérifier</button>
+      
     </div>
     <div class="card"><table class="ltbl"><thead><tr><th>Cible</th><th>Mise</th><th style="text-align:right">Résultat</th></tr></thead><tbody id="live-norm"></tbody></table></div>
   </div>
@@ -444,7 +468,6 @@ input[type="date"],input[type="time"]{color-scheme:dark;}
     <div class="bilibox"><div class="bilibox-l">Paris</div><div class="bilibox-v" id="stat-nb">0</div></div>
   </div>
   <!-- Courbe capital -->
-  <div class="sec">Courbe capital</div>
   <div class="cwrap"><div style="height:160px;position:relative;"><canvas id="bilan-chart"></canvas></div></div>
   <!-- Par bookmaker -->
   <div class="sec">Par bookmaker</div>
@@ -457,6 +480,22 @@ input[type="date"],input[type="time"]{color-scheme:dark;}
   <!-- GRAPHIQUES PANEL -->
   <div id="g-global" class="gpanel on">
     <div id="global-zone"></div>
+    <div class="sec" style="display:flex;align-items:center;justify-content:space-between;">
+      <span>Courbes par équipe</span>
+      <div style="position:relative;">
+        <button id="curve-picker-btn" onclick="toggleCurvePicker()" style="padding:4px 10px;border-radius:8px;border:1px solid var(--b2);background:var(--bg3);color:var(--t2);font-size:10px;font-weight:700;cursor:pointer;">⚙️ 0/5</button>
+        <div id="curve-picker" style="display:none;position:absolute;right:0;top:32px;background:var(--s1);border:1px solid var(--b2);border-radius:10px;z-index:500;min-width:190px;max-height:260px;overflow-y:auto;box-shadow:0 8px 32px rgba(0,0,0,.6);">
+          <div style="padding:8px 12px;font-size:9px;font-weight:700;letter-spacing:.8px;color:var(--t3);border-bottom:1px solid var(--b1);text-transform:uppercase;">Max 5 équipes</div>
+          <div id="curve-picker-list"></div>
+        </div>
+      </div>
+    </div>
+    <div class="sec">Profit par équipe</div>
+    <div class="cwrap" id="multi-curve-wrap">
+      <div id="chart-multi-legend" style="display:flex;flex-wrap:nowrap;gap:5px;overflow-x:auto;scrollbar-width:none;padding-bottom:8px;"></div>
+      <div style="height:200px;position:relative;"><canvas id="chart-multi"></canvas></div>
+      <div class="chart-info-bar" id="cib-multi"><span class="cib-main" id="cib-multi-txt">Touche un point</span><span class="cib-val" id="cib-multi-val"></span></div>
+    </div>
     <div class="sec">Répartition bookmakers</div>
     <div class="cwrap"><div style="height:180px;position:relative;"><canvas id="chart-books"></canvas></div></div>
     <div class="sec">Paliers par équipe</div>
@@ -655,6 +694,19 @@ input[type="date"],input[type="time"]{color-scheme:dark;}
   </div>
 
   <!-- BACKUP -->
+  <div class="fc" style="border-style:dashed;">
+    <label class="fl" style="color:var(--a);">⚡ Groq AI — Clé API</label>
+    <div style="font-size:10px;color:var(--t3);margin-bottom:8px;margin-top:4px;">Gratuit sur console.groq.com · Stockée localement</div>
+    <div style="display:flex;gap:6px;margin-bottom:8px;">
+      <input id="gemini-key-input" class="fi" type="password" placeholder="gsk_…" style="font-size:11px;flex:1;">
+      <button onclick="var i=$i('gemini-key-input');i.type=i.type==='password'?'text':'password';" style="flex-shrink:0;padding:0 10px;height:38px;background:var(--bg3);border:1px solid var(--b2);border-radius:var(--r6);color:var(--t3);font-size:14px;cursor:pointer;">👁</button>
+    </div>
+    <div style="display:flex;gap:7px;">
+      <button class="btn btn-p" style="font-size:11px;" onclick="saveGeminiKey()">💾 Enregistrer</button>
+      <button class="btn" style="background:rgba(30,215,96,.12);color:var(--g);border:1px solid rgba(30,215,96,.2);font-size:11px;" onclick="testGroqKey()">🧪 Tester</button>
+    </div>
+    <div id="gemini-key-status" style="margin-top:7px;font-size:11px;font-weight:700;"></div>
+  </div>
   <div class="sec">Backup &amp; Config</div>
   <div class="fc" style="border-style:dashed;">
     <label class="fl">Export / Import</label>
@@ -674,16 +726,6 @@ input[type="date"],input[type="time"]{color-scheme:dark;}
     <div id="dbx-key-status" style="margin-top:7px;font-size:11px;font-weight:700;"></div>
   </div>
   <!-- GEMINI — uniquement ici dans Outils -->
-  <div class="fc" style="border-style:dashed;">
-    <label class="fl" style="color:var(--a);">🤖 Gemini API — Vérification résultats</label>
-    <div style="font-size:10px;color:var(--t3);margin-bottom:8px;margin-top:4px;">Ta clé est stockée localement, jamais partagée.</div>
-    <input id="gemini-key-input" class="fi" type="text" placeholder="AIzaSy…" style="margin-bottom:8px;font-size:11px;filter:blur(4px);transition:filter .2s;" onfocus="this.style.filter='none'" onblur="this.style.filter='blur(4px)'">
-    <div style="display:flex;gap:7px;">
-      <button class="btn btn-p" style="font-size:11px;" onclick="saveGeminiKey()">💾 Enregistrer</button>
-      <button class="btn" style="background:rgba(30,215,96,.12);color:var(--g);border:1px solid rgba(30,215,96,.2);font-size:11px;" onclick="testGeminiKey()">🧪 Tester</button>
-    </div>
-    <div id="gemini-key-status" style="margin-top:7px;font-size:11px;font-weight:700;"></div>
-  </div>
 </div>
 
 <!-- BANK -->
@@ -701,9 +743,26 @@ input[type="date"],input[type="time"]{color-scheme:dark;}
   <div class="fc">
     <label class="fl">Ajouter un bookmaker</label>
     <div style="display:flex;gap:7px;margin-top:5px;">
-      <input id="new-bk" class="fi" placeholder="Nom…">
-      <button class="btn btn-p" style="width:64px;margin:0;padding:9px;" onclick="addBook()">OK</button>
+      <input id="new-bk" class="fi" placeholder="Nom…" style="margin-bottom:8px;">
+      <label class="fl" style="margin-top:4px;">Couleur</label>
+      <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px;" id="bk-color-row"></div>
+      <input type="color" id="new-bk-color" style="height:32px;width:100%;padding:2px 4px;border-radius:var(--r4);border:1px solid var(--b2);background:var(--bg);cursor:pointer;margin-bottom:8px;">
+      <button class="btn btn-p" onclick="addBook()">Ajouter le bookmaker</button>
     </div>
+  </div>
+</div>
+
+
+<!-- CHAT GROQ -->
+<div id="t-chat" class="tab">
+  <div style="display:flex;flex-direction:column;height:calc(100vh - 130px);max-height:700px;">
+    <div class="sec" style="margin-top:0;">💬 Assistant Paris</div>
+    <div id="chat-messages" style="flex:1;overflow-y:auto;display:flex;flex-direction:column;gap:8px;padding:4px 0 12px;scrollbar-width:none;"></div>
+    <div style="display:flex;gap:8px;padding-top:10px;border-top:1px solid var(--b1);">
+      <input id="chat-input" class="fi" placeholder="Pose ta question…" style="flex:1;" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendChat();}">
+      <button onclick="sendChat()" style="padding:0 16px;background:var(--a);border:none;border-radius:var(--r6);color:#fff;font-size:18px;cursor:pointer;flex-shrink:0;">↑</button>
+    </div>
+    <div style="font-size:9px;color:var(--t3);text-align:center;margin-top:6px;">Clé Groq dans Outils · Tes données restent locales</div>
   </div>
 </div>
 
@@ -716,6 +775,7 @@ input[type="date"],input[type="time"]{color-scheme:dark;}
   <button class="ni" onclick="showTab('t-bilan',this)"><i class="fa-solid fa-chart-line"></i>Bilan</button>
   <button class="ni" onclick="showTab('t-outils',this)"><i class="fa-solid fa-wrench"></i>Outils</button>
   <button class="ni" onclick="showTab('t-bank',this)"><i class="fa-solid fa-wallet"></i>Bank</button>
+  <button class="ni" onclick="showTab('t-chat',this)"><i class="fa-solid fa-comment"></i>Chat</button>
 </nav>
 
 <script>
@@ -742,7 +802,7 @@ function bkFavicon(k,sz){
   return '<span style="width:'+sz+'px;height:'+sz+'px;border-radius:4px;background:'+b.c+'22;display:inline-flex;align-items:center;justify-content:center;font-size:8px;font-weight:800;color:'+b.c+';">'+b.n.substring(0,2)+'</span>';
 }
 var DEF_BK=Object.keys(BK);
-function bki(k){var lk=(k||'').toLowerCase();return BK[lk]||{n:(k||'').toUpperCase()||'—',c:'#4f5d88'};}
+function bki(k){var lk=(k||'').toLowerCase();var cc=state.bkColors&&state.bkColors[lk];var base=BK[lk]||{n:(k||'').toUpperCase()||'—',c:'#4f5d88'};if(cc)base=Object.assign({},base,{c:cc});return base;}
 function bbadge(k){
   var b=bki(k);
   var ico=b.d?'<img src="https://www.google.com/s2/favicons?domain='+b.d+'&sz=32" style="width:12px;height:12px;border-radius:2px;object-fit:contain;vertical-align:middle;margin-right:3px;" onerror="logoErr(this)" loading="lazy">':'';
@@ -834,7 +894,7 @@ var PRESETS=[
 ];
 
 /* ── STATE ── */
-var state=JSON.parse(localStorage.getItem('g45v5'))||{b:{},u:[],h:[],a:[],start_bk:0,goal:0,ugoals:{},notes:{}};
+var state=JSON.parse(localStorage.getItem('g45v5'))||{b:{},u:[],h:[],a:[],start_bk:0,goal:0,ugoals:{},notes:{},bkColors:{}};
 if(!state.ugoals)state.ugoals={};
 if(!state.notes)state.notes={};
 DEF_BK.forEach(function(k){if(state.b[k]===undefined)state.b[k]=0;});
@@ -845,9 +905,56 @@ PRESETS.forEach(function(pt){
 
 var STRATS={"1":[1,2,6,18,54,162,486,1458],"2":[2,4,12,36,108,324,972,2916],"3":[2,4,12,36,108,324,972,2916],"4":[5,10,30,90,270,810,2430,7290],"5":[10,20,60,180,540,1620,4860,14580]};
 var PCOLS=["#4d84ff","#1ed760","#f59e0b","#a855f7","#22d3ee","#f97316","#ef4444","#ec4899","#14b8a6","#6366f1","#84cc16","#e879f9"];
+/* Palette étendue pour courbes - couleurs vraiment distinctes */
+var CURVE_COLS=["#4d84ff","#1ed760","#f59e0b","#a855f7","#ef4444","#22d3ee","#f97316","#ec4899","#14b8a6","#84cc16","#e879f9","#6366f1","#fbbf24","#34d399","#fb7185","#60a5fa"];
 var selColor=PCOLS[0];
 var AC={},GC=null,MC={},_currentTeam="";
 var bilanSport='ALL';
+
+/* ── INFO BAR MOBILE ── */
+function updateInfoBar(barId, txtId, valId, label, val, color){
+  var bar=$i(barId);var txt=$i(txtId);var v=$i(valId);
+  if(!bar||!txt||!v)return;
+  bar.style.display='flex';
+  txt.textContent=label||'';
+  v.textContent=val||'';
+  v.style.color=color||'var(--t1)';
+}
+
+function attachTouchTooltip(canvas, chartRef, barId, txtId, valId){
+  if(typeof canvas==='string')canvas=$i(canvas);
+  if(!canvas)return;
+  canvas.addEventListener('touchend',function(e){
+    var chart=typeof chartRef==='function'?chartRef():chartRef;
+    if(!chart)return;
+    var t=e.changedTouches[0];
+    var r=canvas.getBoundingClientRect();
+    var x=t.clientX-r.left;
+    var y=t.clientY-r.top;
+    try{
+      var pts=chart.getElementsAtEventForMode({offsetX:x,offsetY:y},'nearest',{intersect:false},false);
+      if(pts.length&&barId){
+        var idx=pts[0].index;
+        var ds=chart.data.datasets[pts[0].datasetIndex];
+        var lbl=chart.data.labels?chart.data.labels[idx]:'';
+        var val=ds.data[idx];
+        var parts=(lbl||'').split('||');
+        var mainTxt=parts[0]||lbl||'Pari '+(idx+1);
+        var gainTxt=parts[1]||(val!==null?(val>=0?'+':'')+parseFloat(val).toFixed(2)+'€':'');
+        /* Pour multi-courbe : plusieurs datasets */
+        if(chart.data.datasets.length>1){
+          var lines=chart.data.datasets.map(function(d){
+            var v=d.data[idx];
+            return v!==null?d.label+' '+(v>=0?'+':'')+parseFloat(v).toFixed(2)+'€':'';
+          }).filter(Boolean).join(' · ');
+          gainTxt=lines;
+        }
+        var color=val>=0?'var(--g)':'var(--r)';
+        updateInfoBar(barId,txtId,valId,mainTxt,gainTxt,color);
+      }
+    }catch(err){}
+  },{passive:true});
+}
 var bilanMode='global';
 function showBilanTab(mode,btn){
   bilanMode=mode;
@@ -1110,7 +1217,16 @@ function renderBilanTab(){
       var ct=ctx.getContext('2d');
       var g=ct.createLinearGradient(0,0,0,150);
       g.addColorStop(0,color+'44');g.addColorStop(1,color+'00');
-      _bilanChart=new Chart(ct,{type:'line',data:{labels:curve.map(function(_,i){return i;}),datasets:[{data:curve,borderColor:color,backgroundColor:g,borderWidth:2,fill:true,tension:.4,pointRadius:0}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{display:false},y:{grid:{color:'rgba(255,255,255,.03)'},ticks:{color:'#4f5d88',font:{size:9},callback:function(v){return v+'€';}}}}}});
+      _bilanChart=new Chart(ct,{type:'line',data:{labels:curve.map(function(_,i){return i;}),datasets:[{data:curve,borderColor:color,backgroundColor:g,borderWidth:2,fill:true,tension:.4,pointRadius:3,pointBackgroundColor:color,pointHoverRadius:6,pointHoverBorderColor:'#fff',pointHoverBorderWidth:2}]},options:{responsive:true,maintainAspectRatio:false,events:['mousemove','mouseout','click','touchstart','touchmove'],
+            interaction:{mode:'nearest',intersect:false},
+            plugins:{legend:{display:false},
+              tooltip:{backgroundColor:'rgba(8,11,18,.96)',borderColor:color,borderWidth:1,padding:10,
+                callbacks:{
+                  title:function(ii){return clabels[ii[0].dataIndex]||('Pari '+(ii[0].dataIndex+1));},
+                  label:function(ii){return (ii.raw>=0?'+':'')+ii.raw.toFixed(2)+'€';}
+                }}},
+            scales:{x:{display:false},y:{grid:{color:'rgba(255,255,255,.03)'},ticks:{color:'#4f5d88',font:{size:9},callback:function(v){return v+'€';}}}}}});
+        attachTouchTooltip(ctx,function(){return _bilanChart;});
     }
   }
   /* Par bookmaker */
@@ -1158,7 +1274,7 @@ function render(){
     return '<tr>'
       +'<td><div style="font-size:10px;color:var(--t3);">'+(h.sport||'')+' '+(h.comp||'')+' '+(h.date?'📅 '+h.date:'')+' '+(h.heure?'⏰ '+h.heure:'')+'</div>'
       +'<div style="font-weight:600;">'+h.target+'</div>'
-      +'<div style="font-size:10px;color:var(--t2);">'+(h.type||'—')+' · @'+h.cote+' · '+bbadge(h.b)+'</div></td>'
+      +'<div style="font-size:10px;color:var(--t2);">'+(h.type||'—')+' · @'+h.cote+' · '+bbadge(h.b)+(h.isFreebet?' 🎟':'')+'</div></td>'
       +'<td style="color:var(--gold);font-weight:700;">'+h.m+'€</td>'
       +'<td style="text-align:right;white-space:nowrap"><button class="sbtn sw" data-id="'+h.id+'" onclick="result(this.dataset.id,true)" style="margin-right:3px">✅</button><button class="sbtn sl" data-id="'+h.id+'" onclick="result(this.dataset.id,false)" style="margin-right:3px">❌</button><button data-id="'+h.id+'" onclick="cancelBet(this.dataset.id)" style="background:none;border:1px solid rgba(255,69,69,.25);color:var(--r);font-size:11px;font-weight:700;padding:5px 8px;border-radius:4px;cursor:pointer">✕</button></td>'
       +'</tr>';
@@ -1191,7 +1307,8 @@ function render(){
     return '<div class="btile" style="--bc:'+b.c+';">'
       +'<div class="btile-n" style="color:'+b.c+';display:flex;align-items:center;gap:5px;">'+bkFavicon(e[0],14)+b.n+'</div>'
       +'<div class="btile-v">'+parseFloat(e[1]).toFixed(2)+'€</div>'
-      +'<div class="btile-acts">'
+      +'<div class="btile-acts" style="align-items:center;">'
+      +'<input type="color" value="'+b.c+'" title="Couleur" data-bk="'+e[0]+'" onchange="changeBookColor(this)" style="width:20px;height:20px;border-radius:50%;border:none;padding:0;cursor:pointer;background:none;flex-shrink:0;">'
       +'<button class="ba" data-bk="'+e[0]+'" onclick="editBook(this.dataset.bk)">Modifier</button> '
       +'<button class="ba del" data-bk="'+e[0]+'" onclick="delBook(this.dataset.bk)">✕</button>'
       +'</div></div>';
@@ -1210,7 +1327,7 @@ function render(){
         +'</div></div>';
     }).join('')+'</div>':'';
 
-  renderColorPicker();
+  renderColorPicker();renderBkColorPicker();
   renderArchive();
   renderGlobalChart();
   setDates();
@@ -1227,6 +1344,21 @@ function renderGoal(total){
 }
 function setGoal(){var v=prompt('Objectif bankroll (€) :',state.goal||'');if(v!=null&&!isNaN(+v)){state.goal=+v;save();}}
 
+function renderBkColorPicker(){
+  var row=$i('bk-color-row');if(!row)return;
+  var cols=['#4d84ff','#ff2040','#00c87a','#f59e0b','#a855f7','#22d3ee','#f97316','#ec4899','#14b8a6','#6366f1','#84cc16','#e879f9'];
+  row.innerHTML=cols.map(function(col){
+    return '<div data-col="'+col+'" style="width:22px;height:22px;border-radius:50%;background:'+col+';cursor:pointer;transition:all .15s;border:2px solid transparent;"></div>';
+  }).join('');
+  row.querySelectorAll('div').forEach(function(d){
+    d.addEventListener('click',function(){
+      row.querySelectorAll('div').forEach(function(x){x.style.borderColor='transparent';});
+      d.style.borderColor='#fff';
+      var ci=$i('new-bk-color');if(ci)ci.value=d.dataset.col;
+    });
+  });
+  var ci=$i('new-bk-color');if(ci&&!ci.dataset.init){ci.value='#4d84ff';ci.dataset.init='1';}
+}
 function renderColorPicker(){
   var r=$i('cprow');if(!r)return;
   r.innerHTML=PCOLS.map(function(c){return '<div class="cp '+(c===selColor?'on':'')+'" style="background:'+c+';" onclick="pickColor(\''+c+'\',this)"></div>';}).join('');
@@ -1283,16 +1415,24 @@ function renderArchive(){
 function renderGlobalChart(){
   var gz=$i('global-zone');if(!gz)return;
   var ap=state.a.slice().reverse();
-  var cum=state.start_bk||0;
-  var curve=ap.map(function(h){cum+=(h.win?(h.m*h.cote)-h.m:-h.m);return parseFloat(cum.toFixed(2));});
-  if(!curve.length)curve.push(state.start_bk||0);
-  var tot=state.a.reduce(function(a,h){return a+(h.win?(h.m*h.cote)-h.m:-h.m);},0);
+  var startBk=state.start_bk||0;
+  var cum=startBk;
+  var glabels=['Départ'];
+  var curve=[startBk];
+  ap.forEach(function(h){
+    cum+=(h.win?(h.m*h.cote)-h.m:-h.m);
+    curve.push(parseFloat(cum.toFixed(2)));
+    var gain=(h.win?(h.m*h.cote)-h.m:-h.m);
+    var lbl=(h.date||'')+(h.n?' '+h.n:'')+(h.target?' vs '+h.target:'')+(h.l?' P'+h.l:'');
+    glabels.push(lbl+'||'+(gain>=0?'+':'')+gain.toFixed(2)+'€');
+  });
+  var tot=cum-startBk;
   var wins=state.a.filter(function(h){return h.win;}).length,n=state.a.length;
   var wr=n?(wins/n*100).toFixed(1):0;
   var mise=state.a.reduce(function(a,h){return a+parseFloat(h.m);},0);
   var roi=mise?(tot/mise*100).toFixed(2):0;
   var bC=tot>=0?'#1ed760':'#ff4545',rC=+roi>=0?'#1ed760':'#ff4545';
-  gz.innerHTML='<div class="gchart"><div class="gchart-area"><canvas id="cg"></canvas></div>'
+  gz.innerHTML='<div class="sec" style="margin-top:0;">Évolution bankroll</div><div class="gchart"><div class="gchart-area"><canvas id="cg"></canvas></div><div class="chart-info-bar" id="cib-global"><span class="cib-main" id="cib-global-txt">Touche un point</span><span class="cib-val" id="cib-global-val"></span></div>'
     +'<div class="gkpis">'
     +'<div class="gk"><div class="gk-l">Paris</div><div class="gk-v" style="color:var(--a);">'+n+'</div></div>'
     +'<div class="gk"><div class="gk-l">Bénéfice</div><div class="gk-v" style="color:'+bC+';">'+fmt(tot)+'</div></div>'
@@ -1302,20 +1442,36 @@ function renderGlobalChart(){
   setTimeout(function(){
     var ctx=$i('cg');if(!ctx)return;
     if(GC){try{GC.destroy();}catch(e){}}
-    var ct=ctx.getContext('2d'),g=ct.createLinearGradient(0,0,0,170);
-    g.addColorStop(0,'rgba(30,215,96,.2)');g.addColorStop(1,'rgba(30,215,96,0)');
+    var ct=ctx.getContext('2d');
+    var lineColor=cum>=startBk?'#1ed760':'#ff4545';
+    var g=ct.createLinearGradient(0,0,0,170);
+    g.addColorStop(0,lineColor+'33');g.addColorStop(1,lineColor+'00');
+    var ptColors=curve.map(function(v,i){
+      if(i===0)return 'rgba(255,255,255,.3)';
+      return curve[i]>=curve[i-1]?'rgba(30,215,96,.8)':'rgba(255,69,69,.8)';
+    });
     GC=new Chart(ct,{
       type:'line',
-      data:{labels:curve.map(function(_,i){return i;}),datasets:[{data:curve,borderColor:'#1ed760',backgroundColor:g,borderWidth:2,fill:true,tension:.4,pointRadius:0,pointHoverRadius:4,pointHoverBackgroundColor:'#1ed760',pointHoverBorderColor:'#fff',pointHoverBorderWidth:2}]},
+      data:{labels:glabels,datasets:[{data:curve,borderColor:lineColor,backgroundColor:g,borderWidth:2,fill:true,tension:.4,
+        pointRadius:4,pointBackgroundColor:ptColors,pointHoverRadius:10,pointHoverBorderColor:'#fff',pointHoverBorderWidth:2,pointHitRadius:30}]},
       options:{
-        responsive:true,maintainAspectRatio:false,interaction:{mode:'index',intersect:false},
-        plugins:{legend:{display:false},tooltip:{backgroundColor:'rgba(8,11,18,.96)',borderColor:'rgba(30,215,96,.25)',borderWidth:1,titleColor:'#4f5d88',bodyColor:'#1ed760',bodyFont:{weight:'bold'},callbacks:{label:function(i){return 'Capital : '+i.raw.toFixed(2)+'€';}}}},
-        scales:{x:{display:false},y:{grid:{color:'rgba(255,255,255,.03)'},border:{display:false},ticks:{color:'#4f5d88',font:{size:10},maxTicksLimit:4,callback:function(v){return v+'€';}}}}
+        responsive:true,maintainAspectRatio:false,events:['mousemove','mouseout','click','touchstart','touchmove'],interaction:{mode:'nearest',intersect:false},
+        plugins:{legend:{display:false},
+          tooltip:{backgroundColor:'rgba(8,11,18,.96)',borderColor:lineColor+'66',borderWidth:1,padding:10,
+            callbacks:{
+              title:function(ii){var l=glabels[ii[0].dataIndex]||'';return l.split('||')[0]||'Départ';},
+              label:function(ii){
+                var l=glabels[ii[0].dataIndex]||'';var parts=l.split('||');
+                return parts[1]?['Capital : '+ii.raw.toFixed(2)+'€','Gain/Perte : '+parts[1]]:['Capital : '+ii.raw.toFixed(2)+'€'];
+              }
+            }}},
+        scales:{x:{display:false},y:{grid:{color:'rgba(255,255,255,.03)'},border:{display:false},
+          ticks:{color:'#4f5d88',font:{size:10},maxTicksLimit:4,callback:function(v){return v+'€';}}}}
       }
     });
+    attachTouchTooltip(ctx,function(){return GC;},'cib-global','cib-global-txt','cib-global-val');
   },60);
 }
-
 /* ── ÉQUIPES ── */
 function renderEquipes(){
   var c=$i('equipes-list');if(!c)return;
@@ -1426,7 +1582,7 @@ function openClub(nom,idx){
     +'</div></div>';
 
   $i('ip-graphiques').innerHTML=
-    '<div class="cwrap"><div class="ctitle">Courbe de profit</div><div style="height:190px;position:relative;"><canvas id="dc-courbe"></canvas></div></div>'
+    '<div class="cwrap"><div class="ctitle">Évolution du profit</div><div style="height:190px;position:relative;"><canvas id="dc-courbe"></canvas></div><div class="chart-info-bar" id="cib-club"><span class="cib-main" id="cib-club-txt">Touche un point</span><span class="cib-val" id="cib-club-val"></span></div></div>'
     +(mK.length?'<div class="cwrap"><div class="ctitle">Profit par mois</div><div style="height:150px;position:relative;"><canvas id="dc-mois"></canvas></div></div>':'');
 
   /* archive */
@@ -1487,6 +1643,7 @@ function openClub(nom,idx){
           }
         });
       }
+      attachTouchTooltip('dc-courbe',function(){return window._gcClub;},'cib-club','cib-club-txt','cib-club-val');
     }
     if(mK.length){
       var ctx2=$i('dc-mois');
@@ -1531,17 +1688,18 @@ function pari(isS){
   if(m>0&&(parseFloat(state.b[b])||0)>=m){
     state.b[b]=(parseFloat(state.b[b])-m).toFixed(2);
     var isFlash=!isS&&$i('n-flashboost')&&$i('n-flashboost').checked;
-    state.h.unshift({id:Date.now().toString(),n:n,target:target,b:b,l:l,m:m,cote:c,isS:isS,isFlash:isFlash,t:t,sport:sport,type:type,comp:comp,heure:heure,date:date,notes:notes||''});
+    var isFreebet=!isS&&$i('n-freebet')&&$i('n-freebet').checked;
+    state.h.unshift({id:Date.now().toString(),n:n,target:target,b:b,l:l,m:m,cote:c,isS:isS,isFlash:isFlash,isFreebet:isFreebet,t:t,sport:sport,type:type,comp:comp,heure:heure,date:date,notes:notes||''});
     save();
     if(isS){$i('c-target').value='';$i('c-comp').value='';if($i('c-notes'))$i('c-notes').value='';}
-    else{$i('n-comp').value='';$i('n-type').value='';$i('n-analysis').value='';if($i('n-notes'))$i('n-notes').value='';if($i('n-team'))$i('n-team').value='';if($i('n-flashboost'))$i('n-flashboost').checked=false;mmRowsSimple=[{type:'',cote:1.50}];renderMmRowsSimple();}
+    else{$i('n-comp').value='';$i('n-type').value='';$i('n-analysis').value='';if($i('n-notes'))$i('n-notes').value='';if($i('n-team'))$i('n-team').value='';if($i('n-flashboost'))$i('n-flashboost').checked=false;if($i('n-freebet'))$i('n-freebet').checked=false;mmRowsSimple=[{type:'',cote:1.50}];renderMmRowsSimple();}
   }else alert('Solde insuffisant sur '+bki(b).n+' !');
 }
 function result(id,win){
   var idx=state.h.findIndex(function(x){return x.id===id;});if(idx===-1)return;
   var bet=state.h[idx];
   var debrief=prompt('Débrief ('+(win?'WIN ✅':'LOSS ❌')+') :','')||'';
-  if(win){state.b[bet.b]=(parseFloat(state.b[bet.b])+(bet.m*bet.cote)).toFixed(2);if(bet.isS){var u=state.u.find(function(x){return x.n===bet.n;});if(u)u.l=1;}}
+  if(win){var _g=bet.isFreebet?(bet.m*(bet.cote-1)):(bet.m*bet.cote);state.b[bet.b]=(parseFloat(state.b[bet.b])+_g).toFixed(2);if(bet.isS){var u=state.u.find(function(x){return x.n===bet.n;});if(u)u.l=1;}}
   else if(bet.isS){var u2=state.u.find(function(x){return x.n===bet.n;});if(u2&&u2.l<8)u2.l++;}
   var archived=Object.assign({},bet,{win:win,debrief:debrief});
   state.a.unshift(archived);state.h.splice(idx,1);save();updMise();
@@ -1621,8 +1779,18 @@ function fund(add){
 function addBook(){
   var inp=$i('new-bk');var name=inp.value.trim().toLowerCase();if(!name)return;
   if(state.b[name]!==undefined)return alert('Existe déjà !');
-  var init=parseFloat(prompt('Solde de départ pour '+bki(name).n+' ?','0'))||0;
+  var col=($i('new-bk-color')&&$i('new-bk-color').value)||'#4d84ff';
+  var init=parseFloat(prompt('Solde de départ pour '+name+' ?','0'))||0;
+  /* Stocker la couleur perso dans state.bkColors */
+  if(!state.bkColors)state.bkColors={};
+  state.bkColors[name]=col;
   state.b[name]=init.toFixed(2);state.start_bk+=init;inp.value='';save();
+}
+function changeBookColor(el){
+  var k=el.dataset.bk;var col=el.value;
+  if(!state.bkColors)state.bkColors={};
+  state.bkColors[k]=col;
+  save();
 }
 function delBook(k){if(confirm('Supprimer '+bki(k).n+' ?')){delete state.b[k];save();}}
 function editBook(k){
@@ -1705,13 +1873,87 @@ function showBilanView(id, btn){
 }
 
 
+var _multiSelected=null;
+function toggleCurvePicker(){
+  var p=$i('curve-picker');if(!p)return;
+  var open=p.style.display==='block';
+  p.style.display=open?'none':'block';
+  if(!open){renderCurvePicker();setTimeout(function(){document.addEventListener('click',function h(e){var btn=$i('curve-picker-btn'),pk=$i('curve-picker');if(pk&&btn&&!pk.contains(e.target)&&!btn.contains(e.target)){pk.style.display='none';document.removeEventListener('click',h);}});},50);}
+}
+function renderCurvePicker(){
+  var list=$i('curve-picker-list');if(!list)return;
+  if(!_multiSelected)_multiSelected={};
+  var teams=state.u.filter(function(u){return state.a.some(function(h){return h.n===u.n;});});
+  var cnt=Object.values(_multiSelected).filter(Boolean).length;
+  list.innerHTML=teams.map(function(u){
+    var on=!!_multiSelected[u.n];var dis=!on&&cnt>=5;
+    var sn=u.n.replace(/"/g,'&quot;');
+    var esc=sn.replace(/"/g,'&quot;');
+    return '<label style="display:flex;align-items:center;gap:8px;padding:8px 12px;border-bottom:1px solid var(--b1);cursor:'+(dis?'not-allowed':'pointer')+';opacity:'+(dis?'.45':'1')+';">'
+      +'<input type="checkbox" '+(on?'checked':'')+' '+(dis&&!on?'disabled':'')+' data-nom="'+sn+'" onchange="toggleCurveTeam(this)" style="accent-color:'+(u.color||'#4d84ff')+';width:15px;height:15px;flex-shrink:0;">'
+      +'<input type="color" value="'+(u.color||'#4d84ff')+'" title="Changer couleur" data-nom="'+sn+'" onchange="changeCurveColor(this)" onclick="event.stopPropagation();" style="width:18px;height:18px;border-radius:50%;border:none;padding:0;cursor:pointer;flex-shrink:0;background:none;">'
+      +'<span style="font-size:12px;font-weight:600;flex:1;">'+u.n+'</span>'
+      +(on?'<span style="font-size:9px;color:'+(u.color||'#4d84ff')+';font-weight:700;">✓</span>':'')+'</label>';
+  }).join('');
+  var btn=$i('curve-picker-btn');if(btn)btn.textContent='⚙️ '+cnt+'/5';
+}
+function changeCurveColor(el){
+  var nom=el.dataset.nom;var col=el.value;
+  var u=state.u.find(function(x){return x.n===nom;});
+  if(u){u.color=col;save();}
+  if(_multiSelected&&_multiSelected[nom])renderMultiCurveChart();
+  renderCurvePicker();
+}
+function toggleCurveTeam(el){
+  var nom=el.dataset.nom;var checked=el.checked;
+  if(!_multiSelected)_multiSelected={};
+  var cnt=Object.values(_multiSelected).filter(Boolean).length;
+  if(checked&&cnt>=5){el.checked=false;renderCurvePicker();return;}
+  _multiSelected[nom]=checked;renderCurvePicker();renderMultiCurveChart();
+}
+function renderMultiCurveChart(){
+  var ctx=$i('chart-multi');if(!ctx)return;
+  if(window._gcM){try{window._gcM.destroy();}catch(e){}}window._gcM=null;
+  var leg=$i('chart-multi-legend');if(leg)leg.innerHTML='';
+  var all=[];
+  state.u.forEach(function(u){
+    var paris=state.a.filter(function(h){return h.n===u.n;});if(!paris.length)return;
+    var cum=0;
+    var dlabels=['Depart'].concat(paris.slice().reverse().map(function(h){return (h.date||'')+(h.target?' vs '+h.target:'')+(h.l?' P'+h.l:'');}));
+    var data=[0].concat(paris.slice().reverse().map(function(h){cum+=(h.win?(parseFloat(h.m)*parseFloat(h.cote))-parseFloat(h.m):-parseFloat(h.m));return parseFloat(cum.toFixed(2));}));
+    var _c=u.color&&all.every(function(x){return x._color!==u.color;})?u.color:CURVE_COLS[all.length%CURVE_COLS.length];
+    all.push({label:u.n,data:data,_labels:dlabels,borderColor:_c,backgroundColor:'transparent',borderWidth:1.5,tension:.4,pointRadius:3,pointHoverRadius:10,pointHoverBorderColor:'#fff',pointHoverBorderWidth:2,pointHitRadius:30,_color:_c});
+  });
+  if(!all.length){if(leg)leg.innerHTML='<span style="font-size:11px;color:var(--t3);">Aucun historique</span>';return;}
+  if(!_multiSelected)_multiSelected={};
+  if(!Object.keys(_multiSelected).length){var sorted=all.slice().sort(function(a,b){return (b.data[b.data.length-1]||0)-(a.data[a.data.length-1]||0);});sorted.forEach(function(d,i){_multiSelected[d.label]=i<5;});}
+  else{all.forEach(function(d){if(_multiSelected[d.label]===undefined)_multiSelected[d.label]=false;});}
+  var active=all.filter(function(d){return _multiSelected[d.label];});
+  if(leg)leg.innerHTML=active.map(function(d){return '<span style="display:inline-flex;align-items:center;gap:4px;font-size:10px;font-weight:700;color:var(--t2);white-space:nowrap;flex-shrink:0;"><span style="display:inline-block;width:10px;height:3px;border-radius:2px;background:'+d._color+';"></span>'+d.label+'</span>';}).join('');
+  var btn=$i('curve-picker-btn');if(btn)btn.textContent='⚙️ '+active.length+'/5';
+  if(!active.length)return;
+  var maxLen=active.reduce(function(m,d){return Math.max(m,d.data.length);},0);
+  active.forEach(function(d){while(d.data.length<maxLen)d.data.push(null);});
+  setTimeout(function(){
+    if(!$i('chart-multi'))return;
+    var ct=$i('chart-multi').getContext('2d');
+    window._gcM=new Chart(ct,{type:'line',data:{labels:Array.from({length:maxLen},function(_,i){return i;}),datasets:active},options:{
+      animation:false,responsive:true,maintainAspectRatio:false,interaction:{mode:'nearest',intersect:false},
+      plugins:{legend:{display:false},tooltip:{backgroundColor:'rgba(8,11,18,.96)',borderColor:'rgba(255,255,255,.1)',borderWidth:1,
+        callbacks:{title:function(ii){var d=active[0];return d&&d._labels?d._labels[ii[0].dataIndex]||'':'';},label:function(i){return ' '+i.dataset.label+' : '+(i.raw!==null?(i.raw>=0?'+':'')+i.raw.toFixed(2)+'€':'—');}}}},
+      scales:{x:{display:false},y:{grid:{color:'rgba(255,255,255,.03)'},border:{display:false},ticks:{color:'#4f5d88',font:{size:9},maxTicksLimit:4,callback:function(v){return v+'€';}}}}
+    }});
+    attachTouchTooltip('chart-multi',function(){return window._gcM;},'cib-multi','cib-multi-txt','cib-multi-val');
+  },80);
+}
 function renderGlobalCharts(){
   renderGlobalChart();
   setTimeout(function(){
+    renderMultiCurveChart();
     renderBooksChart();
     renderPaliersChart();
-    renderRadarChart();
-  },80);
+    setTimeout(function(){renderRadarChart();},200);
+  },100);
 }
 
 function renderBooksChart(){
@@ -2249,125 +2491,99 @@ function saveGeminiKey(){
   var key=inp.value.trim();if(!key)return;
   localStorage.setItem('gones45_gemini_key',key);
   var st=$i('gemini-key-status');
-  if(st){st.innerText='✅ Clé enregistrée !';st.style.color='var(--g)';}
+  if(st){st.innerText='✅ Clé Groq enregistrée';st.style.color='var(--g)';}
   setTimeout(function(){if(st)st.innerText='';},3000);
 }
-function getGeminiKey(){
-  return localStorage.getItem('gones45_gemini_key')||null;
-}
-async function testGeminiKey(){
+function getGeminiKey(){return localStorage.getItem('gones45_gemini_key')||null;}
+async function testGroqKey(){
   var key=getGeminiKey();
   var st=$i('gemini-key-status');
   if(!key){if(st){st.innerText='❌ Aucune clé';st.style.color='var(--r)';}return;}
   if(st){st.innerText='⏳ Test…';st.style.color='var(--t3)';}
   try{
-    var res=await fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key='+key,{
-      method:'POST',
-      headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({contents:[{parts:[{text:'Réponds juste OK'}]}]})
+    var r=await fetch('https://api.groq.com/openai/v1/chat/completions',{
+      method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+key},
+      body:JSON.stringify({model:'llama-3.1-8b-instant',messages:[{role:'user',content:'OK'}],max_tokens:3})
     });
-    var d=await res.json();
-    if(d.candidates&&d.candidates[0]){
-      if(st){st.innerText='✅ Clé valide !';st.style.color='var(--g)';}
-    }else{
-      if(st){st.innerText='❌ Clé invalide';st.style.color='var(--r)';}
-    }
-  }catch(e){if(st){st.innerText='❌ Erreur réseau';st.style.color='var(--r)';}}
+    var d=await r.json();
+    if(d.choices&&d.choices[0]){if(st){st.innerText='✅ Clé valide !';st.style.color='var(--g)';}}
+    else{var e=(d.error&&d.error.message)||JSON.stringify(d);if(st){st.innerText='❌ '+e.substring(0,80);st.style.color='var(--r)';}}
+  }catch(e){if(st){st.innerText='❌ '+e.message;st.style.color='var(--r)';}}
 }
-async function verifierResultats(){
+
+/* ── CHAT GROQ ── */
+var _chatHistory=[];
+
+function chatBubble(role,text){
+  var box=$i('chat-messages');if(!box)return;
+  var isUser=role==='user';
+  var div=document.createElement('div');
+  div.style.cssText='display:flex;'+(isUser?'justify-content:flex-end':'justify-content:flex-start')+';';
+  div.innerHTML='<div style="max-width:80%;padding:9px 13px;border-radius:'+(isUser?'14px 14px 4px 14px':'14px 14px 14px 4px')+
+    ';background:'+(isUser?'var(--a)':'var(--s2)')+
+    ';color:var(--t1);font-size:13px;line-height:1.5;white-space:pre-wrap;">'+
+    text.replace(/</g,'&lt;')+'</div>';
+  box.appendChild(div);
+  box.scrollTop=box.scrollHeight;
+}
+
+function buildContext(){
+  var s=state;
+  var equipes=s.u.map(function(u){
+    var paris=s.a.filter(function(h){return h.n===u.n;});
+    var profit=paris.reduce(function(a,h){return a+(h.win?(h.m*h.cote)-h.m:-h.m);},0);
+    var wr=paris.length?(paris.filter(function(h){return h.win;}).length/paris.length*100).toFixed(0)+'%':'—';
+    return u.n+' ('+paris.length+' paris, '+wr+' réussite, '+(profit>=0?'+':'')+profit.toFixed(2)+'€)';
+  }).join(', ');
+  var totalParis=s.a.length;
+  var totalProfit=s.a.reduce(function(a,h){return a+(h.win?(h.m*h.cote)-h.m:-h.m);},0);
+  var cap=Object.values(s.b).reduce(function(a,v){return a+parseFloat(v||0);},0);
+  return 'Tu es un assistant de paris sportifs expert. Tu parles comme un ami qui connait le foot et les stats. '+
+    'Tu donnes des infos directes, concrètes, sans te dérober. Si tu ne sais pas le score exact, tu donnes quand meme ce que tu sais. '+
+    'Jamais de "je vous recommande de consulter", jamais de disclaimer, jamais de redirection vers des sites. '+
+    'Réponds en 1-3 phrases max, en français, sans markdown, sans bullet points. '+
+    'Contexte du joueur : Bankroll '+cap.toFixed(2)+'€, '+totalParis+' paris archivés, profit total '+(totalProfit>=0?'+':'')+totalProfit.toFixed(2)+'€. '+
+    'Équipes suivies : '+equipes+'.';
+}
+
+async function sendChat(){
+  var inp=$i('chat-input');
+  var msg=inp?inp.value.trim():'';
+  if(!msg)return;
   var key=getGeminiKey();
-  if(!key){alert('Configure ta clé Gemini dans Outils !');return;}
-  var paris=state.h;
-  if(!paris.length){alert('Aucun pari en cours.');return;}
-  showDbxStatus('🤖 Gemini analyse les résultats…');
-  for(var i=0;i<paris.length;i++){
-    var bet=paris[i];
-    await verifierUnPari(bet,key);
-    await new Promise(function(r){setTimeout(r,800);});
-  }
-}
-async function verifierUnPari(bet,key){
-  var sport=bet.sport||'⚽';
-  var equipe=bet.n||'';
-  var adversaire=bet.target||'';
-  var date=bet.date||'';
-  var prompt='Tu es un assistant spécialisé en résultats sportifs. '+
-    'Quel est le résultat du match de '+sport+' entre '+equipe+' et '+adversaire+
-    (date?' le '+date:'')+' ? '+
-    'Réponds UNIQUEMENT avec ce format JSON exact (sans markdown, sans backticks) : '+
-    '{"score":"X-X","gagnant":"'+equipe+' ou '+adversaire+' ou Nul","confiance":"haute ou moyenne ou faible","info":"courte description"}. '+
-    'Si tu ne trouves pas le résultat, réponds : {"score":"?","gagnant":"inconnu","confiance":"faible","info":"Match non trouvé"}';
+  if(!key){chatBubble('assistant','Configure ta cle Groq dans Outils.');return;}
+  inp.value='';
+  chatBubble('user',msg);
+  _chatHistory.push({role:'user',content:msg});
+
+  /* Indicateur de frappe */
+  var box=$i('chat-messages');
+  var typing=document.createElement('div');
+  typing.id='chat-typing';
+  typing.style.cssText='display:flex;justify-content:flex-start;';
+  typing.innerHTML='<div style="padding:9px 13px;border-radius:14px 14px 14px 4px;background:var(--s2);color:var(--t3);font-size:12px;">…</div>';
+  if(box){box.appendChild(typing);box.scrollTop=box.scrollHeight;}
+
   try{
-    var res=await fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key='+key,{
+    var messages=[{role:'system',content:buildContext()}].concat(_chatHistory.slice(-8));
+    var r=await fetch('https://api.groq.com/openai/v1/chat/completions',{
       method:'POST',
-      headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({contents:[{parts:[{text:prompt}]}]})
+      headers:{'Content-Type':'application/json','Authorization':'Bearer '+key},
+      body:JSON.stringify({model:'llama-3.1-8b-instant',messages:messages,temperature:0.5,max_tokens:200})
     });
-    var d=await res.json();
-    if(!d.candidates||!d.candidates[0])return;
-    var text=d.candidates[0].content.parts[0].text.trim();
-    var data=JSON.parse(text);
-    if(data.gagnant==='inconnu'||data.confiance==='faible'){
-      showDbxStatus('⚠️ '+equipe+' vs '+adversaire+' : résultat non trouvé');
-      return;
-    }
-    /* Determine win/loss */
-    var win=(data.gagnant===equipe||data.gagnant===bet.n);
-    var msg='🤖 '+equipe+(adversaire?' vs '+adversaire:'')+
-      '\n📊 Score : '+data.score+
-      '\n🏆 Gagnant : '+data.gagnant+
-      '\n💬 '+data.info+
-      '\n\n'+(win?'✅ TON PARI EST GAGNANT — Valider ?':'❌ TON PARI EST PERDANT — Confirmer ?');
-    if(confirm(msg)){
-      result(bet.id, win);
-    }
+    var d=await r.json();
+    var t=document.getElementById('chat-typing');if(t)t.remove();
+    if(d.error)throw new Error(d.error.message);
+    var reply=d.choices[0].message.content.trim();
+    _chatHistory.push({role:'assistant',content:reply});
+    chatBubble('assistant',reply);
   }catch(e){
-    showDbxStatus('❌ Erreur Gemini pour '+equipe);
-  }
-}
-/* ── INIT ── */
-document.querySelectorAll('.tab').forEach(function(t){t.style.display='none';});
-$i('t-dash').style.display='block';
-/* ── GEMINI — AUTO-FILL PROCHAIN MATCH ── */
-async function fetchNextMatchWithGemini(){
-  var apiKey=localStorage.getItem('gones45_gemini_key');
-  if(!apiKey){alert('Configure ta clé Gemini dans Outils d\'abord !');return;}
-  var uSel=$i('c-unit');
-  var equipe=(uSel&&uSel.options[uSel.selectedIndex]&&uSel.options[uSel.selectedIndex].text)||'';
-  /* Extrait juste le nom (format : "⚽ Inter Milan (P1)") */
-  equipe=equipe.replace(/^[\S\s]{1,3}\s/,'').replace(/\s*\(P\d+\)\s*$/,'').trim();
-  if(!equipe){alert('Sélectionne une équipe d\'abord !');return;}
-  var btn=$i('btn-auto-load');
-  if(btn){btn.innerText='⏳';btn.disabled=true;}
-  var prompt='Trouve le prochain match officiel de l\'équipe : '+equipe+'. '+
-    'Réponds UNIQUEMENT avec un objet JSON valide (sans markdown, sans backticks) contenant ces clés : '+
-    '"adversaire" (nom de l\'équipe adverse), "date" (format YYYY-MM-DD), "heure" (format HH:MM), "competition" (nom de la compétition). '+
-    'Si tu ne trouves pas, réponds : {"adversaire":"","date":"","heure":"","competition":""}';
-  try{
-    var res=await fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key='+apiKey,{
-      method:'POST',
-      headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({contents:[{parts:[{text:prompt}]}]})
-    });
-    var d=await res.json();
-    var text=(d.candidates&&d.candidates[0]&&d.candidates[0].content.parts[0].text)||'';
-    text=text.replace(/```json|```/g,'').trim();
-    var info=JSON.parse(text);
-    var filled=[];
-    if(info.adversaire&&$i('c-target')){$i('c-target').value=info.adversaire;filled.push('Adversaire : '+info.adversaire);}
-    if(info.date&&$i('c-date')){$i('c-date').value=info.date;filled.push('Date : '+info.date);}
-    if(info.heure&&$i('c-heure')){$i('c-heure').value=info.heure;filled.push('Heure : '+info.heure);}
-    if(info.competition&&$i('c-comp')){$i('c-comp').value=info.competition;filled.push('Compét. : '+info.competition);}
-    if(btn){btn.innerText='✅';btn.disabled=false;setTimeout(function(){if(btn)btn.innerText='🔍 Auto';},2500);}
-    if(!filled.length){showDbxStatus('⚠️ Gemini : match non trouvé pour '+equipe);}
-    else{showDbxStatus('🤖 '+filled.join(' · '));}
-  }catch(e){
-    if(btn){btn.innerText='❌';btn.disabled=false;setTimeout(function(){if(btn)btn.innerText='🔍 Auto';},2000);}
-    showDbxStatus('❌ Erreur Gemini : '+(e.message||'réseau'));
+    var t=document.getElementById('chat-typing');if(t)t.remove();
+    chatBubble('assistant','Erreur : '+e.message);
   }
 }
 
-window.onload=function(){
+window.onload=function(){if(!state.bkColors)state.bkColors={};
   var saved=localStorage.getItem('g45_dbx');
   if(saved){_dbxConfig.refreshToken=saved;}
   var inp=$i('dbx-key-input');if(inp)inp.value='(token auto — permanent)';
@@ -2375,5 +2591,7 @@ window.onload=function(){
   render();updMise();buildSbRows();buildDtRows();buildArjelRows();renderCrash();renderMmRows();renderMmRowsSimple();updateCompList();calcVb();calcLay();calcFreebet();};
 
 </script>
+
+
 </body>
 </html>
