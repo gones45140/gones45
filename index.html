@@ -362,8 +362,12 @@ input[type="date"],input[type="time"]{color-scheme:dark;}
 @media(max-width:1099px){
   .chat-sidebar{display:none !important;width:0 !important;}
   .note-sidebar{display:none !important;width:0 !important;}
-  .pc-note-area{display:flex !important;}
+  .pc-note-area{display:flex !important;flex-direction:column;flex:1;min-height:0;}
   .pc-hide-chat{display:none !important;}
+  /* Chat sidebar visible sur PC */
+  #pc-chat-sidebar{display:flex !important;}
+  #pc-chat-sidebar>div:first-child{flex-shrink:0;}
+  #pc-chat-sidebar #chat-messages-pc{flex:1;min-height:0;overflow-y:auto;}
   body{padding-left:0 !important;padding-right:0 !important;}
   .pc-note-area{display:none !important;}
 }
@@ -843,7 +847,7 @@ input[type="date"],input[type="time"]{color-scheme:dark;}
 <!-- CHAT GROQ -->
 <div id="t-chat" class="tab">
   <div style="display:flex;flex-direction:column;height:calc(100vh - 130px);max-height:700px;">
-    <div class="sec" style="margin-top:0;">💬 Assistant Paris</div>
+    <div class="sec" style="margin-top:0;display:flex;align-items:center;justify-content:space-between;">💬 Assistant Paris<button onclick="resetChat()" style="background:none;border:none;color:var(--t3);font-size:9px;font-weight:700;cursor:pointer;letter-spacing:.5px;padding:2px 6px;border-radius:4px;border:1px solid var(--b1);">↺ RESET</button></div>
     <div id="chat-messages" style="flex:1;overflow-y:auto;display:flex;flex-direction:column;gap:8px;padding:4px 0 12px;scrollbar-width:none;"></div>
     <div style="display:flex;gap:8px;padding-top:10px;border-top:1px solid var(--b1);">
       <input id="chat-input" class="fi" placeholder="Pose ta question…" style="flex:1;" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendChat();}">
@@ -864,7 +868,7 @@ input[type="date"],input[type="time"]{color-scheme:dark;}
   <button class="ni" onclick="showTab('t-bank',this)"><i class="fa-solid fa-wallet"></i>Bank</button>
   <button class="ni pc-hide-chat" onclick="showTab('t-chat',this)"><i class="fa-solid fa-comment"></i>Chat</button>
   <div style="flex:1;display:flex;flex-direction:column;padding:0 8px 8px;min-height:0;" class="pc-note-area">
-    <textarea id="pc-note" style="flex:1;background:var(--bg3);border:1px solid var(--b1);border-radius:var(--r6);color:var(--t1);font-size:11px;line-height:1.6;padding:10px;resize:none;outline:none;font-family:inherit;" placeholder="Notes, cotes…" oninput="saveNote()"></textarea>
+    <textarea id="pc-note" style="flex:1;min-height:100px;background:var(--bg3);border:1px solid var(--b1);border-radius:var(--r6);color:var(--t1);font-size:11px;line-height:1.6;padding:10px;resize:none;outline:none;font-family:inherit;" placeholder="Notes, cotes…" oninput="saveNote()"></textarea>
     <button onclick="clearNote()" style="margin-top:6px;background:none;border:1px solid var(--b1);border-radius:var(--r4);color:var(--t3);font-size:9px;font-weight:700;cursor:pointer;padding:4px;letter-spacing:.5px;">EFFACER</button>
   </div>
 </nav>
@@ -1877,13 +1881,13 @@ function addBook(){
   var col=($i('new-bk-color')&&$i('new-bk-color').value)||'#4d84ff';
   var init=parseFloat(prompt('Solde de départ pour '+name+' ?','0'))||0;
   /* Stocker la couleur perso dans state.bkColors */
-  if(!state.bkColors)state.bkColors={};var _n=localStorage.getItem('gones45_note');var _ni=$i('pc-note');if(_ni&&_n)_ni.value=_n;var tk=localStorage.getItem('gones45_tavily_key');var tki=$i('tavily-key-input');if(tki&&tk)tki.value=tk;
+  if(!state.bkColors)state.bkColors={};var _n=localStorage.getItem('gones45_note');var _ni=$i('pc-note');if(_ni&&_n)_ni.value=_n;var _ni2=$i('pc-note2');if(_ni2&&_n)_ni2.value=_n;var tk=localStorage.getItem('gones45_tavily_key');var tki=$i('tavily-key-input');if(tki&&tk)tki.value=tk;
   state.bkColors[name]=col;
   state.b[name]=init.toFixed(2);state.start_bk+=init;inp.value='';save();
 }
 function changeBookColor(el){
   var k=el.dataset.bk;var col=el.value;
-  if(!state.bkColors)state.bkColors={};var _n=localStorage.getItem('gones45_note');var _ni=$i('pc-note');if(_ni&&_n)_ni.value=_n;var tk=localStorage.getItem('gones45_tavily_key');var tki=$i('tavily-key-input');if(tki&&tk)tki.value=tk;
+  if(!state.bkColors)state.bkColors={};var _n=localStorage.getItem('gones45_note');var _ni=$i('pc-note');if(_ni&&_n)_ni.value=_n;var _ni2=$i('pc-note2');if(_ni2&&_n)_ni2.value=_n;var tk=localStorage.getItem('gones45_tavily_key');var tki=$i('tavily-key-input');if(tki&&tk)tki.value=tk;
   state.bkColors[k]=col;
   save();
 }
@@ -2729,13 +2733,21 @@ async function sendChat(){
   }
 }
 
+function resetChat(){
+  _chatHistory=[];
+  var b1=$i('chat-messages');if(b1)b1.innerHTML='';
+  var b2=$i('chat-messages-pc');if(b2)b2.innerHTML='';
+}
 function saveNote(){
-  var n=$i('pc-note');if(!n)return;
+  var n=$i('pc-note')||$i('pc-note2');if(!n)return;
   localStorage.setItem('gones45_note',n.value);
 }
 function clearNote(){
-  var n=$i('pc-note');if(!n)return;
-  if(confirm('Effacer le pense-bête ?')){n.value='';localStorage.removeItem('gones45_note');}
+  if(confirm('Effacer le pense-bête ?')){
+    var n1=$i('pc-note');if(n1)n1.value='';
+    var n2=$i('pc-note2');if(n2)n2.value='';
+    localStorage.removeItem('gones45_note');
+  }
 }
 function chatBubblePC(role,text){
   var box=$i('chat-messages-pc');if(!box)return;
@@ -2784,7 +2796,7 @@ async function sendChatPC(){
     chatBubblePC('assistant','Erreur : '+e.message);
   }
 }
-window.onload=function(){if(!state.bkColors)state.bkColors={};var _n=localStorage.getItem('gones45_note');var _ni=$i('pc-note');if(_ni&&_n)_ni.value=_n;var tk=localStorage.getItem('gones45_tavily_key');var tki=$i('tavily-key-input');if(tki&&tk)tki.value=tk;
+window.onload=function(){if(!state.bkColors)state.bkColors={};var _n=localStorage.getItem('gones45_note');var _ni=$i('pc-note');if(_ni&&_n)_ni.value=_n;var _ni2=$i('pc-note2');if(_ni2&&_n)_ni2.value=_n;var tk=localStorage.getItem('gones45_tavily_key');var tki=$i('tavily-key-input');if(tki&&tk)tki.value=tk;
   /* Listener unique pour évolution bankroll — survivant aux re-renders */
   document.addEventListener('touchend',function(e){
     var cv=e.target;
@@ -2826,12 +2838,12 @@ window.onload=function(){if(!state.bkColors)state.bkColors={};var _n=localStorag
     <span>📝 Pense-bête</span>
     <button onclick="clearNote()" style="background:none;border:none;color:var(--t3);font-size:9px;cursor:pointer;font-weight:700;">EFFACER</button>
   </div>
-  <textarea id="pc-note" style="flex:1;background:var(--bg3);border:1px solid var(--b1);border-radius:var(--r6);color:var(--t1);font-size:12px;line-height:1.6;padding:10px;resize:none;outline:none;font-family:inherit;" placeholder="Notes, cotes à surveiller, stratégie…" oninput="saveNote()"></textarea>
+  <textarea id="pc-note2" style="flex:1;background:var(--bg3);border:1px solid var(--b1);border-radius:var(--r6);color:var(--t1);font-size:12px;line-height:1.6;padding:10px;resize:none;outline:none;font-family:inherit;" placeholder="Notes, cotes à surveiller, stratégie…" oninput="saveNote()"></textarea>
 </div>
 
 <!-- SIDEBAR CHAT PC -->
 <div class="chat-sidebar" id="pc-chat-sidebar">
-  <div class="sec" style="margin-top:0;font-size:10px;">💬 Assistant Paris</div>
+  <div class="sec" style="margin-top:0;font-size:10px;display:flex;align-items:center;justify-content:space-between;">💬 Assistant Paris<button onclick="resetChat()" style="background:none;border:none;color:var(--t3);font-size:9px;font-weight:700;cursor:pointer;letter-spacing:.5px;padding:2px 6px;border-radius:4px;border:1px solid var(--b1);">↺ RESET</button></div>
   <div id="chat-messages-pc" style="flex:1;overflow-y:auto;display:flex;flex-direction:column;gap:8px;padding:4px 0 8px;scrollbar-width:thin;"></div>
   <div style="border-top:1px solid var(--b1);padding-top:8px;">
     <div style="display:flex;gap:6px;">
