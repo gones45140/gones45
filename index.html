@@ -521,6 +521,16 @@ input[type="date"],input[type="time"]{color-scheme:dark;}
 <!-- ARCHIVE -->
 <div id="t-arch" class="tab">
   <div id="arch-chart" class="cwrap"></div>
+  <div class="sec" style="display:flex;align-items:center;justify-content:space-between;margin-top:0;">
+    <span>Par mois</span>
+    <span style="display:flex;gap:6px;align-items:center;">
+      <button onclick="changeArchYear(-1)" style="background:none;border:none;color:var(--t3);cursor:pointer;font-size:16px;padding:0 4px;">‹</button>
+      <span id="arch-year-label" style="font-size:11px;font-weight:700;color:var(--t2);min-width:40px;text-align:center;"></span>
+      <button onclick="changeArchYear(1)" style="background:none;border:none;color:var(--t3);cursor:pointer;font-size:16px;padding:0 4px;">›</button>
+    </span>
+  </div>
+  <div id="arch-mois-list" style="margin-bottom:12px;"></div>
+  <div class="sec">Détail</div>
   <div id="arch-list"></div>
   <button class="btn btn-d" style="margin-top:4px;font-size:11px;" onclick="if(confirm('Effacer tout ?')){state.a=[];save();}">Effacer l'historique</button>
 </div>
@@ -553,6 +563,16 @@ input[type="date"],input[type="time"]{color-scheme:dark;}
   <!-- Par bookmaker -->
   <div class="sec">Par bookmaker</div>
   <div id="bk-stats"></div>
+  <!-- Par mois -->
+  <div class="sec" style="display:flex;align-items:center;justify-content:space-between;">
+    <span>Par mois</span>
+    <span id="mois-year-nav" style="display:flex;gap:6px;align-items:center;">
+      <button onclick="changeMoisYear(-1)" style="background:none;border:none;color:var(--t3);cursor:pointer;font-size:16px;padding:0 4px;">‹</button>
+      <span id="mois-year-label" style="font-size:11px;font-weight:700;color:var(--t2);min-width:40px;text-align:center;"></span>
+      <button onclick="changeMoisYear(1)" style="background:none;border:none;color:var(--t3);cursor:pointer;font-size:16px;padding:0 4px;">›</button>
+    </span>
+  </div>
+  <div id="bilan-mois-list" style="margin-bottom:12px;"></div>
   <!-- Sous-onglets Graphiques / Équipes -->
   <div class="gtabs" style="margin-top:4px;">
     <button class="gtab on" onclick="showBilanView('g-global',this)">📊 Graphiques</button>
@@ -583,6 +603,14 @@ input[type="date"],input[type="time"]{color-scheme:dark;}
     <div class="cwrap"><div style="height:200px;position:relative;"><canvas id="chart-paliers"></canvas></div></div>
     <div class="sec">Radar types de paris</div>
     <div class="radar-wrap"><div style="height:220px;position:relative;"><canvas id="chart-radar"></canvas></div></div>
+    <div class="sec">Bénéfice par mois</div>
+    <div class="cwrap"><div style="height:200px;position:relative;"><canvas id="chart-mois-bar"></canvas></div></div>
+    <div class="sec">Bénéfice par sport</div>
+    <div class="cwrap"><div style="height:200px;position:relative;"><canvas id="chart-sport-ben"></canvas></div></div>
+    <div class="sec">Réussite par sport</div>
+    <div class="cwrap"><div style="height:180px;position:relative;"><canvas id="chart-sport-wr"></canvas></div></div>
+    <div class="sec">Bénéfice par type de pari</div>
+    <div class="cwrap"><div style="height:200px;position:relative;"><canvas id="chart-type-ben"></canvas></div></div>
   </div>
   <!-- ÉQUIPES PANEL -->
   <div id="g-equipes" class="gpanel">
@@ -1309,6 +1337,7 @@ function renderBilanTab(){
   var roi=mise?(ben/mise*100).toFixed(1):0;
   var roiEl=$i('stat-roi');if(roiEl){roiEl.innerText=roi+'%';roiEl.style.color=parseFloat(roi)>=0?'var(--g)':'var(--r)';}
   txt('stat-nb',paris.length);
+  renderBilanMois();
   /* Courbe */
   var ctx=$i('bilan-chart');
   if(ctx){
@@ -1356,7 +1385,8 @@ function render(){
   txt('d-cap',total.toFixed(2)+' €');
   var be=$i('d-ben');if(be){be.innerText=fmt(ben);be.style.color=benC;}
   renderGoal(total);
-  renderBilanTab();  /* pas de boucle, c'est une fonction indépendante */
+  renderBilanTab();
+  renderBilanMois();  /* pas de boucle, c'est une fonction indépendante */
 
   /* selects */
   var bOpt=Object.keys(state.b).map(function(k){return '<option value="'+k+'">'+bki(k).n+'</option>';}).join('');
@@ -1472,6 +1502,83 @@ function renderColorPicker(){
 function pickColor(c,el){selColor=c;document.querySelectorAll('.cp').forEach(function(e){e.classList.remove('on');});el.classList.add('on');$i('u-color').value=c;}
 
 /* ── ARCHIVE ── */
+/* ── PAR MOIS ── */
+var _bilanMoisYear=new Date().getFullYear();
+var _archYear=new Date().getFullYear();
+
+function getMoisData(paris, year){
+  var mois={};
+  paris.forEach(function(h){
+    var d=h.date||h.t||'';
+    var y=d.substring(0,4);
+    var m=d.substring(5,7)||d.substring(3,5);
+    if(!y||!m)return;
+    if(parseInt(y)!==year)return;
+    var key=y+'-'+m;
+    if(!mois[key])mois[key]={profit:0,n:0,wins:0};
+    var p=(h.win?(h.m*h.cote)-h.m:-h.m);
+    mois[key].profit+=p;
+    mois[key].n++;
+    if(h.win)mois[key].wins++;
+  });
+  return mois;
+}
+
+function renderMoisRow(key, data){
+  var parts=key.split('-');
+  var moisNames=['','Jan','Fév','Mar','Avr','Mai','Jun','Jul','Aoû','Sep','Oct','Nov','Déc'];
+  var moisNum=parseInt(parts[1]);
+  var label=moisNames[moisNum]||parts[1]+'/'+parts[0];
+  var p=data.profit;
+  var wr=data.n?(data.wins/data.n*100).toFixed(0):'0';
+  var col=p>=0?'var(--g)':'var(--r)';
+  return '<div style="display:flex;align-items:center;padding:11px 14px;background:var(--s1);border-radius:var(--r6);margin-bottom:6px;border-left:3px solid '+(p>=0?'var(--g)':'var(--r)')+';">'
+    +'<div style="flex:1;">'
+    +'<div style="font-size:13px;font-weight:700;">'+label+' '+parts[0]+'</div>'
+    +'<div style="font-size:10px;color:var(--t3);margin-top:2px;">'+data.n+' paris · '+wr+'% réussite</div>'
+    +'</div>'
+    +'<div style="font-size:16px;font-weight:800;color:'+col+';">'+(p>=0?'+':'')+p.toFixed(2)+'€</div>'
+    +'</div>';
+}
+
+function renderBilanMois(){
+  var el=$i('bilan-mois-list');var lbl=$i('mois-year-label');
+  if(!el)return;
+  if(lbl)lbl.textContent=_bilanMoisYear;
+  var paris=state.a.filter(function(h){
+    var mode=typeof bilanMode!=='undefined'?bilanMode:'global';
+    if(mode==='cockpit')return h.isS;
+    if(mode==='simple')return !h.isS&&!h.isFlash;
+    if(mode==='flash')return h.isFlash;
+    return true;
+  });
+  if(bilanSport&&bilanSport!=='ALL')paris=paris.filter(function(h){return h.sport===bilanSport;});
+  var mois=getMoisData(paris,_bilanMoisYear);
+  var keys=Object.keys(mois).sort().reverse();
+  if(!keys.length){el.innerHTML='<div class="empty">Aucun pari en '+_bilanMoisYear+'</div>';return;}
+  el.innerHTML=keys.map(function(k){return renderMoisRow(k,mois[k]);}).join('');
+}
+
+function changeMoisYear(dir){
+  _bilanMoisYear+=dir;
+  renderBilanMois();
+}
+
+function renderArchMois(){
+  var el=$i('arch-mois-list');var lbl=$i('arch-year-label');
+  if(!el)return;
+  if(lbl)lbl.textContent=_archYear;
+  var mois=getMoisData(state.a,_archYear);
+  var keys=Object.keys(mois).sort().reverse();
+  if(!keys.length){el.innerHTML='<div class="empty">Aucun pari en '+_archYear+'</div>';return;}
+  el.innerHTML=keys.map(function(k){return renderMoisRow(k,mois[k]);}).join('');
+}
+
+function changeArchYear(dir){
+  _archYear+=dir;
+  renderArchMois();
+}
+
 function renderArchive(){
   var pm={};
   state.a.forEach(function(h){
@@ -1517,6 +1624,90 @@ function renderArchive(){
 }
 
 /* ── GLOBAL CHART ── */
+function renderChartMoisBar(){
+  var ctx=$i('chart-mois-bar');if(!ctx)return;
+  if(window._gcMoisBar){try{window._gcMoisBar.destroy();}catch(e){}}
+  var moisNames=['','Jan','Fév','Mar','Avr','Mai','Jun','Jul','Aoû','Sep','Oct','Nov','Déc'];
+  var year=new Date().getFullYear();
+  var mois={};
+  state.a.forEach(function(h){
+    var d=h.date||h.t||'';
+    var y=parseInt(d.substring(0,4));
+    if(y!==year)return;
+    var m=parseInt(d.substring(5,7));if(!m)return;
+    if(!mois[m])mois[m]=0;
+    mois[m]+=(h.win?(h.m*h.cote)-h.m:-h.m);
+  });
+  var keys=Object.keys(mois).map(Number).sort(function(a,b){return a-b;});
+  if(!keys.length){ctx.parentElement.innerHTML='<div class="empty">Aucune donnée</div>';return;}
+  var labels=keys.map(function(m){return moisNames[m]||m;});
+  var data=keys.map(function(m){return parseFloat(mois[m].toFixed(2));});
+  var colors=data.map(function(v){return v>=0?'rgba(30,215,96,.7)':'rgba(255,69,69,.7)';});
+  window._gcMoisBar=new Chart(ctx.getContext('2d'),{
+    type:'bar',data:{labels:labels,datasets:[{data:data,backgroundColor:colors,borderRadius:5,borderSkipped:false}]},
+    options:{animation:false,responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{display:false},tooltip:{callbacks:{label:function(i){return (i.raw>=0?'+':'')+i.raw.toFixed(2)+'€';}}}},
+      scales:{x:{ticks:{color:'#4f5d88',font:{size:9}},grid:{display:false}},
+        y:{grid:{color:'rgba(255,255,255,.03)'},ticks:{color:'#4f5d88',font:{size:9},callback:function(v){return v+'€';}}}}}
+  });
+  attachTouchTooltip('chart-mois-bar',function(){return window._gcMoisBar;},'','','');
+}
+
+function renderChartSport(){
+  var ctxBen=$i('chart-sport-ben');var ctxWr=$i('chart-sport-wr');
+  if(window._gcSportBen){try{window._gcSportBen.destroy();}catch(e){}}
+  if(window._gcSportWr){try{window._gcSportWr.destroy();}catch(e){}}
+  var sports={};
+  state.a.forEach(function(h){
+    var s=h.sport||'Autre';
+    if(!sports[s])sports[s]={profit:0,n:0,wins:0};
+    sports[s].profit+=(h.win?(h.m*h.cote)-h.m:-h.m);
+    sports[s].n++;if(h.win)sports[s].wins++;
+  });
+  var entries=Object.entries(sports).sort(function(a,b){return b[1].profit-a[1].profit;});
+  if(!entries.length)return;
+  var labels=entries.map(function(e){return e[0];});
+  var profits=entries.map(function(e){return parseFloat(e[1].profit.toFixed(2));});
+  var wrs=entries.map(function(e){return parseFloat((e[1].wins/e[1].n*100).toFixed(1));});
+  var pColors=profits.map(function(v){return v>=0?'rgba(30,215,96,.7)':'rgba(255,69,69,.7)';});
+  var wrColors=['rgba(30,215,96,.7)','rgba(240,176,32,.7)','rgba(255,69,69,.7)','rgba(77,132,255,.7)','rgba(168,85,247,.7)'];
+  if(ctxBen)window._gcSportBen=new Chart(ctxBen.getContext('2d'),{
+    type:'bar',data:{labels:labels,datasets:[{data:profits,backgroundColor:pColors,borderRadius:5,borderSkipped:false}]},
+    options:{animation:false,responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{display:false},tooltip:{callbacks:{label:function(i){return (i.raw>=0?'+':'')+i.raw.toFixed(2)+'€';}}}},
+      scales:{x:{ticks:{color:'#4f5d88',font:{size:9}},grid:{display:false}},y:{grid:{color:'rgba(255,255,255,.03)'},ticks:{color:'#4f5d88',font:{size:9},callback:function(v){return v+'€';}}}}}
+  });
+  if(ctxWr)window._gcSportWr=new Chart(ctxWr.getContext('2d'),{
+    type:'bar',data:{labels:labels,datasets:[{data:wrs,backgroundColor:wrColors,borderRadius:5,borderSkipped:false}]},
+    options:{animation:false,responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{display:false},tooltip:{callbacks:{label:function(i){return i.raw+'%';}}}},
+      scales:{x:{ticks:{color:'#4f5d88',font:{size:9}},grid:{display:false}},y:{min:0,max:100,grid:{color:'rgba(255,255,255,.03)'},ticks:{color:'#4f5d88',font:{size:9},callback:function(v){return v+'%';}}}}}
+  });
+}
+
+function renderChartTypeBen(){
+  var ctx=$i('chart-type-ben');if(!ctx)return;
+  if(window._gcTypeBen){try{window._gcTypeBen.destroy();}catch(e){}}
+  var types={};
+  state.a.forEach(function(h){
+    var t=(h.type||'Autre').trim()||'Autre';
+    if(!types[t])types[t]=0;
+    types[t]+=(h.win?(h.m*h.cote)-h.m:-h.m);
+  });
+  var entries=Object.entries(types).sort(function(a,b){return b[1]-a[1];});
+  if(!entries.length)return;
+  var labels=entries.map(function(e){return e[0];});
+  var data=entries.map(function(e){return parseFloat(e[1].toFixed(2));});
+  var TCOLS=['rgba(77,132,255,.8)','rgba(30,215,96,.8)','rgba(240,176,32,.8)','rgba(168,85,247,.8)','rgba(34,211,238,.8)','rgba(249,115,22,.8)','rgba(236,72,153,.8)','rgba(20,184,166,.8)','rgba(132,204,22,.8)','rgba(232,121,249,.8)'];
+  var colors=entries.map(function(e,i){return TCOLS[i%TCOLS.length];});
+  window._gcTypeBen=new Chart(ctx.getContext('2d'),{
+    type:'bar',data:{labels:labels,datasets:[{data:data,backgroundColor:colors,borderRadius:5,borderSkipped:false}]},
+    options:{animation:false,responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{display:false},tooltip:{callbacks:{label:function(i){return (i.raw>=0?'+':'')+i.raw.toFixed(2)+'€';}}}},
+      scales:{x:{ticks:{color:'#4f5d88',font:{size:9},maxRotation:30},grid:{display:false}},y:{grid:{color:'rgba(255,255,255,.03)'},ticks:{color:'#4f5d88',font:{size:9},callback:function(v){return v+'€';}}}}}
+  });
+}
+
 function renderGlobalChart(){
   var gz=$i('global-zone');if(!gz)return;
   var ap=state.a.slice().reverse();
@@ -2060,7 +2251,7 @@ function renderGlobalCharts(){
     renderMultiCurveChart();
     renderBooksChart();
     renderPaliersChart();
-    setTimeout(function(){renderRadarChart();},200);
+    setTimeout(function(){renderRadarChart();renderChartMoisBar();renderChartSport();renderChartTypeBen();},200);
   },100);
 }
 
