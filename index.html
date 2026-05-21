@@ -2572,17 +2572,15 @@ async function sendChat(){
   if(box){box.appendChild(typing);box.scrollTop=box.scrollHeight;}
 
   try{
-    /* Détecter si la question nécessite une recherche web */
-    var needsWeb=/match|résultat|score|classement|ligue|champion|derby|finale|vainqueur|gagne|perdu|victoire|défaite|transfert|blessé|suspendu|lineup|compo|cote|odds|prochain|dernier|hier|aujourd|semaine|2024|2025|2026/i.test(msg);
+    var needsWeb=/match|résultat|score|classement|ligue|champion|derby|finale|vainqueur|transfert|blessé|suspendu|compo|odds|prochain|dernier|hier|aujourd|2024|2025|2026/i.test(msg);
     var model=needsWeb?'compound-beta-mini':'llama-3.3-70b-versatile';
-    /* Pour compound-beta : pas de system prompt restrictif qui le bloque */
     var messages=needsWeb
-      ?[{role:'user',content:'Réponds en français, sois direct et court (2 phrases max). '+msg}].concat(_chatHistory.slice(-2))
+      ?[{role:'user',content:'Court et direct en français (1-2 phrases). '+msg}]
       :[{role:'system',content:buildContext()}].concat(_chatHistory.slice(-4));
     var r=await fetch('https://api.groq.com/openai/v1/chat/completions',{
       method:'POST',
       headers:{'Content-Type':'application/json','Authorization':'Bearer '+key},
-      body:JSON.stringify({model:model,messages:messages,temperature:0.3,max_tokens:200})
+      body:JSON.stringify({model:model,messages:messages,temperature:0.3,max_tokens:150})
     });
     var d=await r.json();
     var t=document.getElementById('chat-typing');if(t)t.remove();
