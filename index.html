@@ -2514,7 +2514,7 @@ async function testGroqKey(){
   try{
     var r=await fetch('https://api.groq.com/openai/v1/chat/completions',{
       method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+key},
-      body:JSON.stringify({model:'llama-3.1-8b-instant',messages:[{role:'user',content:'OK'}],max_tokens:3})
+      body:JSON.stringify({model:'llama-3.3-70b-versatile',messages:[{role:'user',content:'OK'}],max_tokens:3})
     });
     var d=await r.json();
     if(d.choices&&d.choices[0]){if(st){st.innerText='✅ Clé valide !';st.style.color='var(--g)';}}
@@ -2540,21 +2540,17 @@ function chatBubble(role,text){
 
 function buildContext(){
   var s=state;
-  var equipes=s.u.map(function(u){
+  var top5=s.u.slice(0,5).map(function(u){
     var paris=s.a.filter(function(h){return h.n===u.n;});
     var profit=paris.reduce(function(a,h){return a+(h.win?(h.m*h.cote)-h.m:-h.m);},0);
-    var wr=paris.length?(paris.filter(function(h){return h.win;}).length/paris.length*100).toFixed(0)+'%':'—';
-    return u.n+' ('+paris.length+' paris, '+wr+' réussite, '+(profit>=0?'+':'')+profit.toFixed(2)+'€)';
-  }).join(', ');
-  var totalParis=s.a.length;
+    return u.n+'('+(profit>=0?'+':'')+profit.toFixed(0)+'€)';
+  }).join(',');
   var totalProfit=s.a.reduce(function(a,h){return a+(h.win?(h.m*h.cote)-h.m:-h.m);},0);
   var cap=Object.values(s.b).reduce(function(a,v){return a+parseFloat(v||0);},0);
-  return 'Tu es un assistant de paris sportifs expert. Tu parles comme un ami qui connait le foot et les stats. '+
-    'Tu donnes des infos directes, concrètes, sans te dérober. Si tu ne sais pas le score exact, tu donnes quand meme ce que tu sais. '+
-    'Jamais de "je vous recommande de consulter", jamais de disclaimer, jamais de redirection vers des sites. '+
-    'Réponds en 1-3 phrases max, en français, sans markdown, sans bullet points. '+
-    'Contexte du joueur : Bankroll '+cap.toFixed(2)+'€, '+totalParis+' paris archivés, profit total '+(totalProfit>=0?'+':'')+totalProfit.toFixed(2)+'€. '+
-    'Équipes suivies : '+equipes+'.';
+  var today=new Date();var dateStr=today.toLocaleDateString('fr-FR');
+  return 'Assistant paris sportifs expert. Date: '+dateStr+'. '+
+    'Direct, sans disclaimer, max 2 phrases, pas de markdown. '+
+    'Bankroll:'+cap.toFixed(0)+'€, profit:'+totalProfit.toFixed(0)+'€, equipes:'+top5+'.';
 }
 
 async function sendChat(){
@@ -2576,18 +2572,23 @@ async function sendChat(){
   if(box){box.appendChild(typing);box.scrollTop=box.scrollHeight;}
 
   try{
-    var messages=[{role:'system',content:buildContext()}].concat(_chatHistory.slice(-8));
+    var messages=[{role:'system',content:buildContext()}].concat(_chatHistory.slice(-4));
+    /* Détecter si la question nécessite une recherche web */
+    var needsWeb=/match|résultat|score|classement|ligue|champion|derby|finale|vainqueur|gagne|perdu|victoire|défaite|transfert|blessé|suspendu|lineup|compo|cote|odds|prochain|dernier|hier|aujourd|semaine|2024|2025|2026/i.test(msg);
+    var model=needsWeb?'compound-beta-mini':'llama-3.3-70b-versatile';
     var r=await fetch('https://api.groq.com/openai/v1/chat/completions',{
       method:'POST',
       headers:{'Content-Type':'application/json','Authorization':'Bearer '+key},
-      body:JSON.stringify({model:'llama-3.1-8b-instant',messages:messages,temperature:0.5,max_tokens:200})
+      body:JSON.stringify({model:model,messages:messages,temperature:0.3,max_tokens:150})
     });
     var d=await r.json();
     var t=document.getElementById('chat-typing');if(t)t.remove();
     if(d.error)throw new Error(d.error.message);
     var reply=d.choices[0].message.content.trim();
+    /* Retirer les citations [1][2] de compound-beta */
+    reply=reply.replace(/\[\d+\]/g,'').trim();
     _chatHistory.push({role:'assistant',content:reply});
-    chatBubble('assistant',reply);
+    chatBubble('assistant',reply+(needsWeb?' 🌐':''));
   }catch(e){
     var t=document.getElementById('chat-typing');if(t)t.remove();
     chatBubble('assistant','Erreur : '+e.message);
