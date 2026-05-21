@@ -321,11 +321,51 @@ input[type="date"],input[type="time"]{color-scheme:dark;}
   .note-sidebar{width:280px;}
   .chat-sidebar{width:320px;}
 }
+/* NAV VERTICALE dans sidebar gauche sur PC */
+@media(min-width:1100px){
+  .nav{
+    position:fixed;left:0;top:52px;width:260px;
+    bottom:0;height:auto;
+    border-top:none;border-right:none;border-bottom:none;
+    background:var(--bg2);
+    display:flex;flex-direction:column;align-items:stretch;
+    padding:8px 0;gap:2px;z-index:101;
+  }
+  .ni{
+    flex-direction:row;align-items:center;gap:10px;
+    padding:10px 16px;border-radius:8px;margin:0 8px;
+    font-size:11px;font-weight:700;letter-spacing:.3px;
+    text-align:left;width:auto;height:auto;
+    justify-content:flex-start;
+  }
+  .ni i{font-size:16px;width:20px;text-align:center;}
+  .ni.on{background:rgba(77,132,255,.15);color:var(--a);}
+  /* Séparateur avant le pense-bête */
+  .nav::after{
+    content:'PENSE-BÊTE';
+    display:block;
+    font-size:9px;font-weight:700;letter-spacing:1px;
+    color:var(--t3);padding:12px 16px 6px;
+    text-transform:uppercase;
+    border-top:1px solid var(--b1);
+    margin-top:8px;
+  }
+  /* Cacher la nav-bar du bas et décaler body */
+  body{padding-bottom:0 !important;}
+  /* Note textarea prend l'espace restant */
+  .note-sidebar{
+    top:auto;
+    padding-top:0;
+  }
+}
 /* Mobile/tablette : cacher les sidebars */
 @media(max-width:1099px){
   .chat-sidebar{display:none !important;width:0 !important;}
   .note-sidebar{display:none !important;width:0 !important;}
+  .pc-note-area{display:flex !important;}
+  .pc-hide-chat{display:none !important;}
   body{padding-left:0 !important;padding-right:0 !important;}
+  .pc-note-area{display:none !important;}
 }
 </style>
 </head>
@@ -822,7 +862,11 @@ input[type="date"],input[type="time"]{color-scheme:dark;}
   <button class="ni" onclick="showTab('t-bilan',this)"><i class="fa-solid fa-chart-line"></i>Bilan</button>
   <button class="ni" onclick="showTab('t-outils',this)"><i class="fa-solid fa-wrench"></i>Outils</button>
   <button class="ni" onclick="showTab('t-bank',this)"><i class="fa-solid fa-wallet"></i>Bank</button>
-  <button class="ni" onclick="showTab('t-chat',this)"><i class="fa-solid fa-comment"></i>Chat</button>
+  <button class="ni pc-hide-chat" onclick="showTab('t-chat',this)"><i class="fa-solid fa-comment"></i>Chat</button>
+  <div style="flex:1;display:flex;flex-direction:column;padding:0 8px 8px;min-height:0;" class="pc-note-area">
+    <textarea id="pc-note" style="flex:1;background:var(--bg3);border:1px solid var(--b1);border-radius:var(--r6);color:var(--t1);font-size:11px;line-height:1.6;padding:10px;resize:none;outline:none;font-family:inherit;" placeholder="Notes, cotes…" oninput="saveNote()"></textarea>
+    <button onclick="clearNote()" style="margin-top:6px;background:none;border:1px solid var(--b1);border-radius:var(--r4);color:var(--t3);font-size:9px;font-weight:700;cursor:pointer;padding:4px;letter-spacing:.5px;">EFFACER</button>
+  </div>
 </nav>
 
 <script>
@@ -2633,9 +2677,7 @@ function buildContext(){
   var totalProfit=s.a.reduce(function(a,h){return a+(h.win?(h.m*h.cote)-h.m:-h.m);},0);
   var cap=Object.values(s.b).reduce(function(a,v){return a+parseFloat(v||0);},0);
   var today=new Date();var dateStr=today.toLocaleDateString('fr-FR');
-  return 'Assistant paris sportifs expert. Date: '+dateStr+'. '+
-    'Direct, sans disclaimer, max 2 phrases, pas de markdown. '+
-    'Bankroll:'+cap.toFixed(0)+'€, profit:'+totalProfit.toFixed(0)+'€, equipes:'+top5+'.';
+  return 'Tu es un assistant paris sportifs. Date: '+dateStr+'. RÈGLES ABSOLUES: 1) Jamais de "je vous recommande de consulter", jamais de "je n ai pas accès", jamais de redirection. 2) Max 2 phrases. 3) Si tu as l info via web, dis-la directement. 4) Pas de markdown. Bankroll:'+cap.toFixed(0)+'€ profit:'+totalProfit.toFixed(0)+'€ equipes:'+top5+'.';
 }
 
 async function sendChat(){
@@ -2658,7 +2700,7 @@ async function sendChat(){
 
   try{
     /* Recherche Tavily si question d'actu */
-    var needsWeb=/match|résultat|score|classement|ligue|champion|derby|finale|vainqueur|transfert|blessé|compo|prochain|dernier|hier|aujourd|2025|2026/i.test(msg);
+    var needsWeb=/match|résultat|score|classement|ligue|champion|derby|finale|vainqueur|transfert|blessé|compo|prochain|dernier|hier|aujourd|semaine|récent|actuell|2025|2026|nba|nfl|mlb|nhl|dodgers|lakers|yankees|chelsea|arsenal|psg|real|barça|liga|premier|bundesliga/i.test(msg);
     var webCtx='';
     if(needsWeb&&getTavilyKey()){
       var searchResult=await searchTavily(msg);
@@ -2720,7 +2762,7 @@ async function sendChatPC(){
   typing.innerHTML='<div style="padding:7px 11px;border-radius:12px 12px 12px 4px;background:var(--s2);color:var(--t3);font-size:11px;">…</div>';
   var box=$i('chat-messages-pc');if(box){box.appendChild(typing);box.scrollTop=box.scrollHeight;}
   try{
-    var needsWeb=/match|résultat|score|classement|ligue|champion|derby|finale|vainqueur|transfert|blessé|compo|prochain|dernier|hier|aujourd|2025|2026/i.test(msg);
+    var needsWeb=/match|résultat|score|classement|ligue|champion|derby|finale|vainqueur|transfert|blessé|compo|prochain|dernier|hier|aujourd|semaine|récent|actuell|2025|2026|nba|nfl|mlb|nhl|dodgers|lakers|yankees|chelsea|arsenal|psg|real|barça|liga|premier|bundesliga/i.test(msg);
     var webCtx='';
     if(needsWeb&&getTavilyKey()){var sr=await searchTavily(msg);if(sr)webCtx='\nInfos récentes: '+sr;}
     var messages=[{role:'system',content:buildContext()+webCtx}].concat(_chatHistory.slice(-4));
@@ -2775,8 +2817,8 @@ window.onload=function(){if(!state.bkColors)state.bkColors={};var _n=localStorag
 
 
 
-<!-- BLOC-NOTE PC — gauche -->
-<div class="note-sidebar" id="pc-note-sidebar">
+<!-- BLOC-NOTE PC — intégré dans nav -->
+<div class="note-sidebar" id="pc-note-sidebar" style="display:none;">
   <div class="sec" style="margin-top:0;font-size:10px;display:flex;align-items:center;justify-content:space-between;">
     <span>📝 Pense-bête</span>
     <button onclick="clearNote()" style="background:none;border:none;color:var(--t3);font-size:9px;cursor:pointer;font-weight:700;">EFFACER</button>
