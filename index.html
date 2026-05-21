@@ -1467,41 +1467,14 @@ function renderGlobalChart(){
         plugins:{legend:{display:false},
           tooltip:{backgroundColor:'rgba(8,11,18,.96)',borderColor:lineColor+'66',borderWidth:1,padding:10,
             callbacks:{
-              title:function(ii){var l=glabels[ii[0].dataIndex]||'';return l.split('||')[0]||'Départ';},
-              label:function(ii){
-                var l=glabels[ii[0].dataIndex]||'';var parts=l.split('||');
-                return parts[1]?['Capital : '+ii.raw.toFixed(2)+'€','Gain/Perte : '+parts[1]]:['Capital : '+ii.raw.toFixed(2)+'€'];
-              }
+              title:function(ii){if(!ii||!ii.length)return '';var l=glabels[ii[0].dataIndex]||'';return l.split('||')[0]||'Départ';},
+              label:function(ii){if(!ii||ii.dataIndex===undefined)return '';var l=glabels[ii.dataIndex]||'';var parts=l.split('||');return parts[1]?'Capital : '+ii.raw.toFixed(2)+'€  '+parts[1]:'Capital : '+ii.raw.toFixed(2)+'€';}
             }}},
         scales:{x:{display:false},y:{grid:{color:'rgba(255,255,255,.03)'},border:{display:false},
           ticks:{color:'#4f5d88',font:{size:10},maxTicksLimit:4,callback:function(v){return v+'€';}}}}
       }
     });
-    /* Délégation sur gz car canvas recréé à chaque render */
-    var gz2=$i('global-zone');
-    if(gz2&&!gz2._touchBound){
-      gz2._touchBound=true;
-      gz2.addEventListener('touchend',function(e){
-        if(!GC)return;
-        var t=e.changedTouches[0];
-        var cv=$i('cg');if(!cv)return;
-        var r=cv.getBoundingClientRect();
-        var x=t.clientX-r.left;var y=t.clientY-r.top;
-        try{
-          var pts=GC.getElementsAtEventForMode({offsetX:x,offsetY:y},'nearest',{intersect:false},false);
-          if(pts.length){
-            var idx=pts[0].index;
-            var lbl=GC.data.labels?GC.data.labels[idx]:'';
-            var val=GC.data.datasets[0].data[idx];
-            var parts=(lbl||'').split('||');
-            var mainTxt=parts[0]||'Départ';
-            var gainTxt=parts[1]||(val!==null?(val>=0?'+':'')+parseFloat(val).toFixed(2)+'€':'');
-            var bar=$i('cib-global');var txt=$i('cib-global-txt');var v=$i('cib-global-val');
-            if(bar&&txt&&v){bar.style.display='flex';txt.textContent=mainTxt;v.textContent=gainTxt;v.style.color=val>=0?'var(--g)':'var(--r)';}
-          }
-        }catch(err){}
-      },{passive:true});
-    }
+
   },60);
 }
 /* ── ÉQUIPES ── */
@@ -2622,6 +2595,31 @@ async function sendChat(){
 }
 
 window.onload=function(){if(!state.bkColors)state.bkColors={};
+  /* Listener unique pour évolution bankroll — survivant aux re-renders */
+  document.addEventListener('touchend',function(e){
+    var cv=e.target;
+    if(!cv||cv.id!=='cg')return;
+    if(!GC)return;
+    var t=e.changedTouches[0];
+    var r=cv.getBoundingClientRect();
+    var x=t.clientX-r.left;var y=t.clientY-r.top;
+    try{
+      var pts=GC.getElementsAtEventForMode({offsetX:x,offsetY:y},'nearest',{intersect:false},false);
+      if(pts.length){
+        var idx=pts[0].index;
+        var lbl=GC.data.labels?GC.data.labels[idx]:'';
+        var val=GC.data.datasets[0].data[idx];
+        var parts=(lbl||'').split('||');
+        var bar=$i('cib-global');var txt=$i('cib-global-txt');var v=$i('cib-global-val');
+        if(bar&&txt&&v){
+          bar.style.display='flex';
+          txt.textContent=parts[0]||'Départ';
+          v.textContent=parts[1]||(val!==null?(val>=0?'+':'')+parseFloat(val).toFixed(2)+'€':'');
+          v.style.color=val>=0?'var(--g)':'var(--r)';
+        }
+      }
+    }catch(err){}
+  },{passive:true});
   var saved=localStorage.getItem('g45_dbx');
   if(saved){_dbxConfig.refreshToken=saved;}
   var inp=$i('dbx-key-input');if(inp)inp.value='(token auto — permanent)';
