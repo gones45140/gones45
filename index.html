@@ -2701,13 +2701,12 @@ async function sendChat(){
   try{
     /* Recherche Tavily si question d'actu */
     var needsWeb=/match|résultat|score|classement|ligue|champion|derby|finale|vainqueur|transfert|blessé|compo|prochain|dernier|hier|aujourd|semaine|récent|actuell|2025|2026|nba|nfl|mlb|nhl|dodgers|lakers|yankees|chelsea|arsenal|psg|real|barça|liga|premier|bundesliga/i.test(msg);
-    var webCtx='';
-    if(needsWeb&&getTavilyKey()){
-      var searchResult=await searchTavily(msg);
-      if(searchResult)webCtx='\nInfos web récentes : '+searchResult;
-    }
-    var sysPrompt=buildContext()+webCtx;
-    var messages=[{role:'system',content:sysPrompt}].concat(_chatHistory.slice(-4));
+    var webCtx='';var webFound=false;
+    if(needsWeb&&getTavilyKey()){var searchResult=await searchTavily(msg);if(searchResult){webCtx=searchResult;webFound=true;}}
+    var sysPrompt=webFound
+      ?'Réponds UNIQUEMENT avec ces infos web, ne devine pas, 1-2 phrases en français: '+webCtx
+      :buildContext();
+    var messages=[{role:'system',content:sysPrompt},{role:'user',content:msg}];
     var r=await fetch('https://api.groq.com/openai/v1/chat/completions',{
       method:'POST',
       headers:{'Content-Type':'application/json','Authorization':'Bearer '+key},
@@ -2763,9 +2762,10 @@ async function sendChatPC(){
   var box=$i('chat-messages-pc');if(box){box.appendChild(typing);box.scrollTop=box.scrollHeight;}
   try{
     var needsWeb=/match|résultat|score|classement|ligue|champion|derby|finale|vainqueur|transfert|blessé|compo|prochain|dernier|hier|aujourd|semaine|récent|actuell|2025|2026|nba|nfl|mlb|nhl|dodgers|lakers|yankees|chelsea|arsenal|psg|real|barça|liga|premier|bundesliga/i.test(msg);
-    var webCtx='';
-    if(needsWeb&&getTavilyKey()){var sr=await searchTavily(msg);if(sr)webCtx='\nInfos récentes: '+sr;}
-    var messages=[{role:'system',content:buildContext()+webCtx}].concat(_chatHistory.slice(-4));
+    var webCtx='';var webFound2=false;
+    if(needsWeb&&getTavilyKey()){var sr=await searchTavily(msg);if(sr){webCtx=sr;webFound2=true;}}
+    var sysPC=webFound2?'Réponds UNIQUEMENT avec ces infos web, ne devine pas, 1-2 phrases en français: '+webCtx:buildContext();
+    var messages=[{role:'system',content:sysPC},{role:'user',content:msg}];
     var r=await fetch('https://api.groq.com/openai/v1/chat/completions',{
       method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+key},
       body:JSON.stringify({model:'llama-3.3-70b-versatile',messages:messages,temperature:0.3,max_tokens:150})
