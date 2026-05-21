@@ -1280,11 +1280,11 @@ function calcLay(){
     ml=parseFloat(($i('lay-lay-mise')&&$i('lay-lay-mise').value)||0);
     if(!ml)return;
     if(gorr){
-      /* Gagner ou Rembourser : miseCouverture = fb / ((lc-1)*(1-comm)) */
-      bm=ml/((lc-1)*(1-commR));
+      /* Gagner ou Rembourser : mb = ml*(1-comm) */
+      bm=ml*(1-commR);
     } else {
-      /* Surebet classique : calculerBackLay inversé */
-      bm=ml*(lc-commR)/bc;
+      /* Surebet classique : mb = ml*lr/bc */
+      bm=ml*lr/bc;
     }
     var bmEl=$i('lay-back-mise');if(bmEl)bmEl.value=bm.toFixed(2);
   } else {
@@ -1627,6 +1627,10 @@ function changeArchYear(dir){
   renderArchMois();
 }
 
+function toggleArchMonth(el){
+  var next=el.nextElementSibling;if(!next)return;
+  next.style.display=next.style.display==='none'?'block':'none';
+}
 function renderArchive(){
   var pm={};
   state.a.forEach(function(h){
@@ -1648,26 +1652,126 @@ function renderArchive(){
       window._ac=new Chart(ctx.getContext('2d'),{type:'bar',data:{labels:keys,datasets:[{data:profits,backgroundColor:profits.map(function(v){return v>=0?'rgba(30,215,96,.55)':'rgba(255,69,69,.55)';}),borderColor:profits.map(function(v){return v>=0?'#1ed760':'#ff4545';}),borderWidth:1,borderRadius:4}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{ticks:{color:'#4f5d88',font:{size:9}},grid:{display:false}},y:{ticks:{color:'#4f5d88',font:{size:9},callback:function(v){return v+'€';}},grid:{color:'rgba(255,255,255,.03)'}}}}});
     },60);
   }
-  $i('arch-list').innerHTML=keys.map(function(key){
-    var d=pm[key];var pC=d.profit>=0?'var(--g)':'var(--r)';
-    var wr=d.paris.length?(d.wins/d.paris.length*100).toFixed(0):0;
-    var bw=(Math.abs(d.profit)/maxA*100).toFixed(1);
-    var bets=d.paris.map(function(h){
-      var b2=bki(h.b);var dd=h.date?'📅 '+h.date+' ':'';var hh=h.heure?'⏰ '+h.heure+' ':'';
-      return '<div class="brow '+(h.win?'w':'l')+'">'
-        +'<div class="brow-main"><div class="brow-title">'+(h.sport||'')+' '+h.target+'</div>'
-        +'<div class="brow-meta">'+h.t+' '+dd+hh+'· '+(h.type||'—')+' · @'+h.cote+' · <b>'+h.n+'</b> · <span style="color:'+b2.c+';">'+b2.n+'</span>'+(h.debrief?'<br><i>'+h.debrief+'</i>':'')+'</div></div>'
-        +'<div class="brow-right"><div class="brow-amt" style="color:'+(h.win?'var(--g)':'var(--r)')+';">'+(h.win?'+'+(h.m*h.cote).toFixed(2):'-'+h.m)+'€</div>'
-        +'<div class="brow-tag" style="color:'+(h.win?'var(--g)':'var(--r)')+';">'+(h.win?'WIN':'LOSS')+'</div>'
-        +'<div style="display:flex;gap:4px;margin-top:4px">'
-        +'<button data-aid="'+h.id+'" onclick="editArchived(this.dataset.aid)" style="background:none;border:1px solid rgba(77,132,255,.25);color:var(--a);font-size:10px;padding:2px 6px;border-radius:3px;cursor:pointer;font-weight:700">&#9999;</button>'
-        +'<button data-aid="'+h.id+'" onclick="deleteArchived(this.dataset.aid)" style="background:none;border:1px solid rgba(255,69,69,.2);color:var(--r);font-size:10px;padding:2px 6px;border-radius:3px;cursor:pointer;font-weight:700">&#128465;</button>'
-        +'</div></div></div>';
+  /* Grouper par semaine puis par jour */
+  var dayNames=['Dim','Lun','Mar','Mer','Jeu','Ven','Sam'];
+  var fullDayNames=['Dimanche','Lundi','Mardi','Mercredi','Jeudi','Vendredi','Samedi'];
+  
+  /* Grouper tous les paris par mois/semaine/jour */
+  var allByDate={};
+  state.a.forEach(function(h){
+    var dateStr=h.date||'';
+    if(!dateStr)dateStr=(h.t||'').substring(0,10);
+    var key=dateStr||'Inconnu';
+    if(!allByDate[key])allByDate[key]=[];
+    allByDate[key].push(h);
+  });
+  
+  /* Trier les dates décroissantes */
+  var dateKeys=Object.keys(allByDate).sort().reverse();
+  
+  /* Grouper par mois */
+  var byMonth={};
+  dateKeys.forEach(function(dk){
+    var mKey=dk.substring(0,7)||'Inconnu';
+    if(!byMonth[mKey])byMonth[mKey]={days:{},profit:0,n:0,wins:0};
+    allByDate[dk].forEach(function(h){
+      var p=(h.win?(h.m*h.cote)-h.m:-h.m);
+      byMonth[mKey].profit+=p;byMonth[mKey].n++;if(h.win)byMonth[mKey].wins++;
+      if(!byMonth[mKey].days[dk])byMonth[mKey].days[dk]=[];
+      byMonth[mKey].days[dk].push(h);
+    });
+  });
+  
+  var monthKeys=Object.keys(byMonth).sort().reverse();
+  
+  $i('arch-list').innerHTML=monthKeys.map(function(mk){
+    var md=byMonth[mk];
+    var pC=md.profit>=0?'var(--g)':'var(--r)';
+    var wr=md.n?(md.wins/md.n*100).toFixed(0):0;
+    var moisNames={'01':'Janvier','02':'Février','03':'Mars','04':'Avril','05':'Mai','06':'Juin','07':'Juillet','08':'Août','09':'Septembre','10':'Octobre','11':'Novembre','12':'Décembre'};
+    var parts=mk.split('-');
+    var mLabel=(moisNames[parts[1]]||parts[1])+' '+(parts[0]||'');
+    
+    var daysHtml=Object.keys(md.days).sort().reverse().map(function(dk){
+      var dayParis=md.days[dk];
+      var dayProfit=dayParis.reduce(function(a,h){return a+(h.win?(h.m*h.cote)-h.m:-h.m);},0);
+      var dpC=dayProfit>=0?'var(--g)':'var(--r)';
+      /* Nom du jour */
+      var dayLabel=dk;
+      try{
+        var dp=dk.split('-');
+        if(dp.length===3){
+          var dt=new Date(parseInt(dp[0]),parseInt(dp[1])-1,parseInt(dp[2]));
+          dayLabel=fullDayNames[dt.getDay()]+' '+parseInt(dp[2]);
+        }
+      }catch(e){}
+      
+      var betsHtml=dayParis.map(function(h){
+        var b2=bki(h.b);
+        var gain=h.win?(h.m*h.cote-h.m):-h.m;
+        var gainC=gain>=0?'var(--g)':'var(--r)';
+        var winLabel=h.win?'Gagné':'Perdu';
+        var winC=h.win?'var(--g)':'var(--r)';
+        /* Logo bookmaker inline */
+        var bkLogo='<span style="display:inline-block;width:18px;height:18px;border-radius:4px;background:'+b2.c+';color:#fff;font-size:8px;font-weight:800;text-align:center;line-height:18px;margin-right:4px;flex-shrink:0;">'+b2.n.charAt(0).toUpperCase()+'</span>';
+        return '<div style="display:flex;align-items:center;padding:10px 0;border-bottom:1px solid var(--b1);gap:8px;">'
+          /* Heure */
+          +'<div style="font-size:11px;color:var(--t3);min-width:38px;flex-shrink:0;">'+(h.heure||'—')+'</div>'
+          /* Type + BK */
+          +'<div style="flex-shrink:0;display:flex;align-items:center;">'+bkLogo+'</div>'
+          /* Infos centrales */
+          +'<div style="flex:1;min-width:0;">'
+          +'<div style="font-size:12px;font-weight:700;color:var(--t1);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">'+(h.target||h.n||'—')+'</div>'
+          +'<div style="font-size:10px;color:var(--t3);margin-top:2px;">'
+          +(h.n?'<b style="color:var(--t2);">'+h.n+'</b> · ':'')
+          +(h.type||'—')+' · @'+parseFloat(h.cote).toFixed(2)
+          +(h.comp?' · '+h.comp:'')
+          +'</div>'
+          +'</div>'
+          /* Cote / Mise / Gain */
+          +'<div style="text-align:right;flex-shrink:0;min-width:110px;">'
+          +'<div style="display:flex;gap:12px;justify-content:flex-end;font-size:10px;color:var(--t3);margin-bottom:2px;">'
+          +'<span>Mise</span><span>Gain</span><span>Bénéfice</span>'
+          +'</div>'
+          +'<div style="display:flex;gap:12px;justify-content:flex-end;font-size:11px;font-weight:700;">'
+          +'<span style="color:var(--t2);">'+parseFloat(h.m).toFixed(2)+'€</span>'
+          +'<span style="color:var(--t2);">'+(h.win?(h.m*h.cote).toFixed(2):'0.00')+'€</span>'
+          +'<span style="color:'+gainC+';">'+(gain>=0?'+':'')+gain.toFixed(2)+'€</span>'
+          +'</div>'
+          +'</div>'
+          /* Résultat */
+          +'<div style="flex-shrink:0;font-size:11px;font-weight:800;color:'+winC+';min-width:42px;text-align:right;">'+winLabel+'</div>'
+          /* Actions */
+          +'<div style="display:flex;gap:3px;flex-shrink:0;">'
+          +'<button data-aid="'+h.id+'" onclick="editArchived(this.dataset.aid)" style="background:none;border:1px solid rgba(77,132,255,.25);color:var(--a);font-size:10px;padding:2px 5px;border-radius:3px;cursor:pointer;">✏️</button>'
+          +'<button data-aid="'+h.id+'" onclick="deleteArchived(this.dataset.aid)" style="background:none;border:1px solid rgba(255,69,69,.2);color:var(--r);font-size:10px;padding:2px 5px;border-radius:3px;cursor:pointer;">🗑</button>'
+          +'</div>'
+          +'</div>';
+      }).join('');
+      
+      return '<div style="margin-bottom:4px;">'
+        +'<div style="display:flex;align-items:center;justify-content:space-between;padding:6px 0;border-bottom:2px solid var(--b2);">'
+        +'<span style="font-size:12px;font-weight:700;color:var(--t2);">'+dayLabel+'</span>'
+        +'<span style="font-size:12px;font-weight:800;color:'+dpC+';">'+(dayProfit>=0?'+':'')+dayProfit.toFixed(2)+'€</span>'
+        +'</div>'
+        +betsHtml
+        +'</div>';
     }).join('');
-    return '<div class="card" style="padding:12px 14px;margin-bottom:8px;">'
-      +'<div class="mh"><div><div class="mh-lbl">'+key+' · '+d.paris.length+' paris · '+wr+'% réussite</div></div><div class="mh-val" style="color:'+pC+';">'+fmt(d.profit)+'</div></div>'
-      +'<div class="mbar"><div class="mbar-f" style="width:'+bw+'%;background:'+(d.profit>=0?'var(--g)':'var(--r)')+'"></div></div>'
-      +bets+'</div>';
+    
+    return '<div style="margin-bottom:16px;">'
+      /* Header mois */
+      +'<div style="display:flex;align-items:center;justify-content:space-between;padding:10px 14px;background:var(--s1);border-radius:var(--r6);border-left:3px solid '+(md.profit>=0?'var(--g)':'var(--r)')+';margin-bottom:8px;cursor:pointer;" onclick="toggleArchMonth(this)">'
+      +'<div>'
+      +'<div style="font-size:14px;font-weight:800;color:var(--t1);">'+mLabel+'</div>'
+      +'<div style="font-size:10px;color:var(--t3);margin-top:2px;">'+md.n+' paris · '+wr+'% réussite</div>'
+      +'</div>'
+      +'<div style="font-size:18px;font-weight:800;color:'+pC+';">'+(md.profit>=0?'+':'')+md.profit.toFixed(2)+'€</div>'
+      +'</div>'
+      /* Contenu dépliable */
+      +'<div style="padding:0 4px;">'
+      +daysHtml
+      +'</div>'
+      +'</div>';
   }).join('');
 }
 
