@@ -1292,62 +1292,60 @@ function toggleLayMode(){
   var bm=$i('lay-back-mise');if(bm)bm.readOnly=mode;if(bm)bm.style.opacity=mode?'.5':'1';
   calcLay();
 }
-function calcLay(){
-  var bc=parseFloat(($i('lay-back-cote')&&$i('lay-back-cote').value)||0);
-  var lc=parseFloat(($i('lay-lay-cote')&&$i('lay-lay-cote').value)||0);
-  var comm=parseFloat(($i('lay-commission')&&$i('lay-commission').value)||3);
-  var gorr=$i('lay-gorr')&&$i('lay-gorr').checked;
-  var useComm=$i('lay-usecomm')&&$i('lay-usecomm').checked;
-  var modeCible=$i('lay-mode-cible')&&$i('lay-mode-cible').checked;
-  if(!bc||!lc||bc<=1||lc<=1)return;
-  var commR=useComm?comm/100:0;
-  var lr=1+(1-commR)/(lc-1); /* cote réelle lay */
-  var bm,ml,pbw,plw;
-  if(modeCible){
-    ml=parseFloat(($i('lay-lay-mise')&&$i('lay-lay-mise').value)||0);
-    if(!ml)return;
-    if(gorr){
-      /* Gagner ou Rembourser : mb = ml*(1-comm) */
-      bm=ml*(1-commR);
-    } else {
-      /* Surebet classique : mb = ml*lr/bc */
-      bm=ml*lr/bc;
+  function calcLay() {
+    // 1. Récupération des valeurs de l'interface
+    var bm = parseFloat(document.getElementById('lay-back-stake').value) || 0;
+    var bc = parseFloat(document.getElementById('lay-back-odds').value) || 0;
+    var lc = parseFloat(document.getElementById('lay-odds').value) || 0;
+    var commInput = parseFloat(document.getElementById('lay-comm').value) || 0;
+    var commR = commInput / 100; // Convertit les 3% en 0.03
+
+    // Vérification du bouton Gagner ou Rembourser (gorr)
+    var gorr = document.getElementById('btn-gorr') ? document.getElementById('btn-gorr').classList.contains('active') : false;
+
+    var ml = 0; // Mise Lay qui va être calculée
+    var liabML = 0; // Obligation (Responsabilité)
+    var pbw = 0; // Profit si le Back gagne
+    var plw = 0; // Profit si le Lay gagne
+
+    if (bm <= 0 || bc <= 0 || lc <= 0) {
+        return; // Évite les divisions par zéro si les champs sont vides
     }
-    var bmEl=$i('lay-back-mise');if(bmEl)bmEl.value=bm.toFixed(2);
-  } else {
-    bm=parseFloat(($i('lay-back-mise')&&$i('lay-back-mise').value)||0);
-    if(!bm)return;
-    if(gorr){
-      /* Gagner ou Rembourser : ml = bm * (lc-1)*(1-comm) */
-      ml=bm*(lc-1)*(1-commR);
+
+    // 2. LE CALCUL CRUCIAL
+    if (gorr) {
+        /* VRAI CALCUL REEL GAGNER OU REMBOURSER (DNB Exchange) */
+        // La mise Lay doit couvrir la mise Back après déduction de la commission
+        ml = bm / (1 - commR);
+        
+        // L'obligation réelle sur l'exchange à poser (ex: 927.90€)
+        liabML = ml * (lc - 1);
+        
+        // Profits associés
+        pbw = (bm * bc) - bm - liabML; // Gain brut du Back - Mise de départ - Perte de l'obligation
+        plw = 0.00; // Remboursé à 0 pile poil
     } else {
-      /* calculerBackLay : ml = bm*bc / (lc-comm) */
-      ml=bm*bc/(lc-commR);
+        /* MODE SUREBET CLASSIQUE (BACK/LAY STANDARD) */
+        ml = (bm * bc) / (lc - commR);
+        liabML = ml * (lc - 1);
+        pbw = (bm * (bc - 1)) - liabML;
+        plw = (ml * (1 - commR)) - bm;
     }
-  }
-  var liabML=ml*(lc-1);
-  if(!gorr){
-    pbw=bm*(bc-1)-liabML;
-    plw=ml*(1-commR)-bm;
-  } else {
-    /* Gagner ou Rembourser */
-    pbw=bm*(bc-1)-liabML;
-    plw=ml*(1-commR); /* gain lay sans soustraire bm car remboursé */
-  }
-  var liab=liabML;var pg=Math.min(pbw,plw);
-  var roi=(bm+liab)>0?(pg/(bm+liab)*100).toFixed(2):0;
-  var lrc=$i('lay-real-cote');if(lrc)lrc.innerText='@'+lr.toFixed(3);
-  var ll=$i('lay-liability');if(ll)ll.innerText=liab.toFixed(2)+'€';
-  var lmo=$i('lay-mise-opt');if(lmo){lmo.innerText=ml.toFixed(2)+'€';lmo.style.color='var(--a)';}
-  var lpb=$i('lay-profit-back');if(lpb){lpb.innerText=(pbw>=0?'+':'')+pbw.toFixed(2)+'€';lpb.style.color=pbw>=0?'var(--g)':'var(--r)';}
-  var lpl=$i('lay-profit-lay');if(lpl){lpl.innerText=(plw>=0?'+':'')+plw.toFixed(2)+'€'+(gorr?' ✅':'');lpl.style.color=plw>=0?'var(--g)':'var(--r)';}
-  var lpg=$i('lay-profit-garanti');if(lpg){lpg.innerText=(pg>=0?'+':'')+pg.toFixed(2)+'€';lpg.style.color=pg>=0?'var(--g)':'var(--r)';}
-  var lr2=$i('lay-roi');if(lr2){lr2.innerText=roi+'%';lr2.style.color=parseFloat(roi)>0?'var(--g)':'var(--r)';}
-  var verd=$i('lay-verdict');
-  if(verd){verd.style.display='block';var ok=pg>0;
-    verd.style.cssText='display:block;padding:10px;border-radius:8px;text-align:center;font-size:13px;font-weight:700;background:'+(ok?'rgba(30,215,96,.1)':'rgba(255,69,69,.1)')+';border:1px solid '+(ok?'rgba(30,215,96,.25)':'rgba(255,69,69,.25)')+';color:'+(ok?'var(--g)':'var(--r)');
-    verd.innerText=ok?'✅ Surebet ! +'+pg.toFixed(2)+'€':'❌ Pas de surebet';
-  }
+
+    // 3. AFFICHAGE DANS TON INTERFACE
+    // Remplace les IDs ci-dessous par les vrais IDs de tes balises HTML si nécessaire
+    if (document.getElementById('lay-stake-res')) {
+        document.getElementById('lay-stake-res').innerText = ml.toFixed(2) + " €";
+    }
+    if (document.getElementById('lay-liability')) {
+        document.getElementById('lay-liability').innerText = liabML.toFixed(2) + " €";
+    }
+    if (document.getElementById('lay-profit-back')) {
+        document.getElementById('lay-profit-back').innerText = pbw.toFixed(2) + " €";
+    }
+    if (document.getElementById('lay-profit-lay')) {
+        document.getElementById('lay-profit-lay').innerText = plw.toFixed(2) + " €";
+    }
 }
 function calcFreebet(){
   var fb=parseFloat(($i('fb-amount')&&$i('fb-amount').value)||0);
