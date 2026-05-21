@@ -362,11 +362,14 @@ input[type="date"],input[type="time"]{color-scheme:dark;}
 @media(max-width:1099px){
   .chat-sidebar{display:none !important;width:0 !important;}
   #pc-chat-sidebar{display:none !important;}
+  .pc-only{display:none !important;}
   .note-sidebar{display:none !important;width:0 !important;}
   .pc-note-area{display:flex !important;flex-direction:column;flex:1;min-height:0;}
   .pc-hide-chat{display:none !important;}
+  #plus-menu{display:none !important;}
   /* Chat sidebar visible sur PC */
   #pc-chat-sidebar{display:flex !important;}
+  .pc-only{display:flex !important;}
   #pc-chat-sidebar>div:first-child{flex-shrink:0;}
   #pc-chat-sidebar #chat-messages-pc{flex:1;min-height:0;overflow-y:auto;}
   body{padding-left:0 !important;padding-right:0 !important;}
@@ -911,6 +914,7 @@ input[type="date"],input[type="time"]{color-scheme:dark;}
   <button class="ni" onclick="showTab('t-bilan',this)"><i class="fa-solid fa-chart-line"></i>Bilan</button>
   <button class="ni" onclick="showTab('t-calc',this)"><i class="fa-solid fa-calculator"></i>Calc</button>
   <button class="ni" onclick="showTab('t-outils',this)"><i class="fa-solid fa-wrench"></i>Outils</button>
+  <button class="ni pc-only" onclick="showTab('t-bank',this)"><i class="fa-solid fa-wallet"></i>Bank</button>
   <button class="ni pc-hide-chat" id="btn-plus-menu" onclick="togglePlusMenu()" style="position:relative;"><i class="fa-solid fa-plus"></i>Plus</button>
   <div style="flex:1;display:flex;flex-direction:column;padding:0 8px 8px;min-height:0;" class="pc-note-area">
     <div id="pc-note" contenteditable="true" style="flex:1;min-height:100px;background:var(--bg3);border:1px solid var(--b1);border-radius:var(--r6);color:var(--t1);font-size:11px;line-height:1.6;padding:10px;outline:none;font-family:inherit;overflow-y:auto;word-break:break-word;" data-placeholder="Notes, cotes, screenshots…" oninput="saveNote()"></div>
