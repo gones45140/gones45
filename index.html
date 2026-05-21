@@ -506,6 +506,15 @@ input[type="date"],input[type="time"]{color-scheme:dark;}
       </div>
       <div class="fg" style="margin-bottom:9px;"><label class="fl">Bookmaker</label><select id="n-book" class="fi"></select></div>
       <div class="fg" style="margin-bottom:9px;"><label class="fl">📝 Notes</label><textarea id="n-notes" class="fi" style="height:44px;resize:none;" placeholder="Analyse, contexte…"></textarea></div>
+      <div class="fg" style="margin-bottom:8px;">
+        <label class="fl">🏠 Lieu</label>
+        <div style="display:flex;gap:8px;margin-top:6px;">
+          <button id="pari-dom-btn" type="button" onclick="togglePariDom(true)" style="flex:1;padding:9px;border-radius:var(--r6);border:2px solid var(--b2);background:var(--bg3);color:var(--t2);font-size:12px;font-weight:700;cursor:pointer;">🏠 Dom</button>
+          <button id="pari-ext-btn" type="button" onclick="togglePariDom(false)" style="flex:1;padding:9px;border-radius:var(--r6);border:2px solid var(--b2);background:var(--bg3);color:var(--t2);font-size:12px;font-weight:700;cursor:pointer;">🚌 Ext</button>
+          <button id="pari-neu-btn" type="button" onclick="togglePariDom(null)" style="flex:1;padding:9px;border-radius:var(--r6);border:2px solid var(--b2);background:var(--bg3);color:var(--t2);font-size:12px;font-weight:700;cursor:pointer;">➖ N/A</button>
+        </div>
+        <input type="hidden" id="p-domicile" value="">
+      </div>
       <label style="display:flex;align-items:center;gap:8px;padding:9px;background:rgba(30,215,96,.07);border:1px solid rgba(30,215,96,.2);border-radius:var(--r6);cursor:pointer;margin-bottom:6px;">
         <input type="checkbox" id="n-freebet" style="accent-color:var(--g)">
         <span style="font-size:11px;font-weight:700;color:var(--g)">🎟 Freebet</span>
@@ -823,6 +832,7 @@ input[type="date"],input[type="time"]{color-scheme:dark;}
       <input type="color" id="u-color" class="fi" style="height:34px;padding:2px 4px;cursor:pointer;margin-bottom:10px;">
       <div class="fg" style="margin-bottom:7px"><label class="fl" style="color:var(--t3)">🔴 Lien Sofascore (optionnel)</label><input id="u-link" class="fi" placeholder="https://www.sofascore.com/…"></div>
       <div class="fg" style="margin-bottom:10px"><label class="fl" style="color:var(--t3)">📡 Lien Flashscore (optionnel)</label><input id="u-link2" class="fi" placeholder="https://www.flashscore.fr/equipe/…"></div>
+      <div class="fg" style="margin-bottom:8px;"><label class="fl">📌 Note rapide</label><input id="u-note" class="fi" placeholder="Ex: Under 3.5 buts, forme à domicile…"></div>
       <button class="btn btn-p" onclick="addUnit()">Ajouter l'équipe</button>
     </div>
     <div id="ulist" style="margin-top:10px;"></div>
@@ -1514,17 +1524,17 @@ function render(){
       +'<td><div>'+h.target+'</div>'+(h.date||h.heure?'<div style="font-size:9px;color:var(--t2);">'+(h.date?'📅 '+h.date:'')+' '+(h.heure?'⏰ '+h.heure:'')+'</div>':'')+'</td>'
       +'<td style="color:var(--a);font-weight:700;">@'+h.cote+'</td>'
       +'<td style="color:var(--gold);font-weight:700;">'+h.m+'€</td>'
-      +'<td style="text-align:right;white-space:nowrap"><button class="sbtn sw" data-id="'+h.id+'" onclick="result(this.dataset.id,true)" style="margin-right:3px">✅</button><button class="sbtn sl" data-id="'+h.id+'" onclick="result(this.dataset.id,false)" style="margin-right:3px">❌</button><button data-id="'+h.id+'" onclick="cancelBet(this.dataset.id)" style="background:none;border:1px solid rgba(255,69,69,.25);color:var(--r);font-size:11px;font-weight:700;padding:5px 8px;border-radius:4px;cursor:pointer">✕</button></td>'
+      +'<td style="text-align:right;white-space:nowrap"><button class="sbtn sw" data-id="'+h.id+'" onclick="result(this.dataset.id,true)" style="margin-right:3px">✅</button><button class="sbtn sl" data-id="'+h.id+'" onclick="result(this.dataset.id,false)" style="margin-right:3px">❌</button><button data-id="'+h.id+'" onclick="editBet(this.dataset.id)" style="background:none;border:1px solid rgba(77,132,255,.25);color:var(--a);font-size:11px;font-weight:700;padding:5px 8px;border-radius:4px;cursor:pointer;margin-right:3px">✏️</button><button data-id="'+h.id+'" onclick="cancelBet(this.dataset.id)" style="background:none;border:1px solid rgba(255,69,69,.25);color:var(--r);font-size:11px;font-weight:700;padding:5px 8px;border-radius:4px;cursor:pointer">✕</button></td>'
       +'</tr>';
   }).join('')||'<tr><td colspan="5" class="empty">Aucun pari en cours</td></tr>';
 
   $i('live-norm').innerHTML=state.h.filter(function(x){return !x.isS;}).map(function(h){
     return '<tr>'
       +'<td><div style="font-size:10px;color:var(--t3);">'+(h.sport||'')+' '+(h.comp||'')+' '+(h.date?'📅 '+h.date:'')+' '+(h.heure?'⏰ '+h.heure:'')+'</div>'
-      +'<div style="font-weight:600;">'+h.target+'</div>'
+      +'<div style="font-weight:600;">'+(h.domicile==='dom'?'🏠 ':h.domicile==='ext'?'🚌 ':'')+h.target+'</div>'
       +'<div style="font-size:10px;color:var(--t2);">'+(h.type||'—')+' · @'+h.cote+' · '+bbadge(h.b)+(h.isFreebet?' 🎟':'')+'</div></td>'
       +'<td style="color:var(--gold);font-weight:700;">'+h.m+'€</td>'
-      +'<td style="text-align:right;white-space:nowrap"><button class="sbtn sw" data-id="'+h.id+'" onclick="result(this.dataset.id,true)" style="margin-right:3px">✅</button><button class="sbtn sl" data-id="'+h.id+'" onclick="result(this.dataset.id,false)" style="margin-right:3px">❌</button><button data-id="'+h.id+'" onclick="cancelBet(this.dataset.id)" style="background:none;border:1px solid rgba(255,69,69,.25);color:var(--r);font-size:11px;font-weight:700;padding:5px 8px;border-radius:4px;cursor:pointer">✕</button></td>'
+      +'<td style="text-align:right;white-space:nowrap"><button class="sbtn sw" data-id="'+h.id+'" onclick="result(this.dataset.id,true)" style="margin-right:3px">✅</button><button class="sbtn sl" data-id="'+h.id+'" onclick="result(this.dataset.id,false)" style="margin-right:3px">❌</button><button data-id="'+h.id+'" onclick="editBet(this.dataset.id)" style="background:none;border:1px solid rgba(77,132,255,.25);color:var(--a);font-size:11px;font-weight:700;padding:5px 8px;border-radius:4px;cursor:pointer;margin-right:3px">✏️</button><button data-id="'+h.id+'" onclick="cancelBet(this.dataset.id)" style="background:none;border:1px solid rgba(255,69,69,.25);color:var(--r);font-size:11px;font-weight:700;padding:5px 8px;border-radius:4px;cursor:pointer">✕</button></td>'
       +'</tr>';
   }).join('')||'<tr><td colspan="3" class="empty">Aucun pari en cours</td></tr>';
 
@@ -1542,6 +1552,7 @@ function render(){
         +'<div style="flex:1;min-width:0;">'
         +'<div style="font-size:12px;font-weight:700;">'+(u.sport||'')+' '+u.n+'</div>'
         +'<div style="font-size:9px;color:var(--t3);">'+'⭐'.repeat(u.s)+' · P'+u.l+' · '+pc+'% réussite</div>'
+        +(u.note?'<div style="font-size:10px;color:var(--a);margin-top:2px;font-style:italic;">📌 '+u.note+'</div>':'')
         +forme
         +(streak(paris).n>1?'<div style="display:inline-flex;align-items:center;gap:3px;padding:1px 7px;border-radius:10px;font-size:9px;font-weight:700;margin-top:3px;background:'+(streak(paris).t?'rgba(30,215,96,.1)':'rgba(255,69,69,.1)')+';color:'+(streak(paris).t?'var(--g)':'var(--r)')+'">'
         +(streak(paris).t?'🔥':'❄️')+' '+streak(paris).n+'</div>':'')
@@ -1568,7 +1579,7 @@ function render(){
       return '<div class="urow">'
         +'<div class="udot" style="background:'+u.color+';"></div>'
         +'<div style="flex:1;min-width:0;"><div class="uname">'+(u.sport||'')+' '+u.n+'</div>'
-        +'<div style="font-size:10px;color:var(--t3);">'+'⭐'.repeat(u.s)+' · Palier '+u.l+'</div></div>'
+        +'<div style="font-size:10px;color:var(--t3);">'+'⭐'.repeat(u.s)+' · Palier '+u.l+'</div>'+(u.note?'<div style="font-size:10px;color:var(--a);font-style:italic;">📌 '+u.note+'</div>':'')+'</div>'
         +'<div style="display:flex;gap:5px;">'
         +'<button class="ba" data-idx="'+i+'" onclick="editUnit(this.dataset.idx)" style="color:var(--a);border-color:rgba(77,132,255,.3);">✏ Modifier</button>'
         +'<button class="udel" data-idx="'+i+'" onclick="rmUnit(this.dataset.idx)">✕</button>'
@@ -2293,7 +2304,7 @@ function pari(isS){
     state.b[b]=(parseFloat(state.b[b])-m).toFixed(2);
     var isFlash=!isS&&$i('n-flashboost')&&$i('n-flashboost').checked;
     var isFreebet=!isS&&$i('n-freebet')&&$i('n-freebet').checked;
-    state.h.unshift({id:Date.now().toString(),n:n,target:target,b:b,l:l,m:m,cote:c,isS:isS,isFlash:isFlash,isFreebet:isFreebet,t:t,sport:sport,type:type,comp:comp,heure:heure,date:date,notes:notes||''});
+    var domicile=$i('p-domicile')?$i('p-domicile').value:'';state.h.unshift({id:Date.now().toString(),n:n,target:target,b:b,l:l,m:m,cote:c,isS:isS,isFlash:isFlash,isFreebet:isFreebet,t:t,sport:sport,type:type,comp:comp,heure:heure,date:date,notes:notes||'',domicile:domicile});
     save();
     if(isS){$i('c-target').value='';$i('c-comp').value='';if($i('c-notes'))$i('c-notes').value='';}
     else{$i('n-comp').value='';$i('n-type').value='';$i('n-analysis').value='';if($i('n-notes'))$i('n-notes').value='';if($i('n-team'))$i('n-team').value='';if($i('n-flashboost'))$i('n-flashboost').checked=false;if($i('n-freebet'))$i('n-freebet').checked=false;mmRowsSimple=[{type:'',cote:1.50}];renderMmRowsSimple();}
@@ -2411,7 +2422,7 @@ function addUnit(){
   if(state.u.find(function(u){return u.n===name;}))return alert('Existe déjà !');
   var ulink=($i('u-link')&&$i('u-link').value.trim())||'';
   var ulink2=($i('u-link2')&&$i('u-link2').value.trim())||'';
-  state.u.push({n:name,abbr:abbr,color:color,s:$i('u-stars').value,l:1,sport:($i('u-sport')&&$i('u-sport').value)||'⚽',logoUrl:logoUrl||'',link:ulink,link2:ulink2});
+  var unote=($i('u-note')&&$i('u-note').value.trim())||'';state.u.push({n:name,abbr:abbr,color:color,s:$i('u-stars').value,l:1,sport:($i('u-sport')&&$i('u-sport').value)||'⚽',logoUrl:logoUrl||'',link:ulink,link2:ulink2,note:unote});
   if(logoUrl)LOGOS[name]=logoUrl;
   $i('u-name').value='';
   if($i('u-link'))$i('u-link').value='';
@@ -2719,6 +2730,7 @@ function searchClub(){
 function selectClub(idx){
   var r=(window._srCache||[])[idx];if(!r)return;
   if($i('u-name'))$i('u-name').value=r.name;
+  if($i('u-note'))$i('u-note').value=r.note||'';
   if($i('u-stars'))$i('u-stars').value=String(r.stars||3);
   if(r.color){if($i('u-color'))$i('u-color').value=r.color;selColor=r.color;renderColorPicker();}
   window._pendingLogo={name:r.name,url:r.logo,abbr:r.abbr||r.name.substring(0,3).toUpperCase(),color:r.color||PCOLS[0]};
@@ -3267,6 +3279,62 @@ function deleteLink(i){
   localStorage.setItem('g45_links',JSON.stringify(links));
   loadCustomLinks();
 }
+function togglePariDom(val){
+  var inp=$i('p-domicile');if(inp)inp.value=val===null?'':val?'dom':'ext';
+  var d=$i('pari-dom-btn');var e=$i('pari-ext-btn');var n=$i('pari-neu-btn');
+  var active='border-color:var(--a);background:rgba(77,132,255,.15);color:var(--a);';
+  var def='border:2px solid var(--b2);background:var(--bg3);color:var(--t2);';
+  if(d)d.style.cssText=val===true?active:def;
+  if(e)e.style.cssText=val===false?active:def;
+  if(n)n.style.cssText=val===null?active:def;
+}
+function toggleEditDom(val){
+  var inp=$i('edit-domicile');if(inp)inp.value=val?'dom':'ext';
+  var d=$i('edit-dom-btn');var e=$i('edit-ext-btn');
+  var active='flex:1;padding:10px;border-radius:var(--r6);border:2px solid var(--a);background:rgba(77,132,255,.15);color:var(--a);font-size:13px;font-weight:700;cursor:pointer;';
+  var def='flex:1;padding:10px;border-radius:var(--r6);border:2px solid var(--b2);background:var(--bg3);color:var(--t2);font-size:13px;font-weight:700;cursor:pointer;';
+  if(d)d.style.cssText=val?active:def;
+  if(e)e.style.cssText=!val?active:def;
+}
+function editBet(id){
+  var h=state.h.find(function(x){return x.id===id;});if(!h)return;
+  $i('edit-bet-id').value=id;
+  $i('edit-target').value=h.target||'';
+  $i('edit-equipe').value=h.n||'';
+  $i('edit-cote').value=h.cote||'';
+  $i('edit-mise').value=h.m||'';
+  $i('edit-sport').value=h.sport||'';
+  $i('edit-comp').value=h.comp||'';
+  $i('edit-type').value=h.type||'';
+  $i('edit-bk').value=h.b||'';
+  $i('edit-date').value=h.date||'';
+  $i('edit-heure').value=h.heure||'';
+  $i('edit-notes').value=h.notes||'';
+  $i('edit-domicile').value=h.domicile||'';
+  toggleEditDom(h.domicile==='dom'?true:false);
+  var m=$i('edit-bet-modal');if(m)m.style.display='flex';
+}
+function closeEditBet(){
+  var m=$i('edit-bet-modal');if(m)m.style.display='none';
+}
+function saveEditBet(){
+  var id=$i('edit-bet-id').value;
+  var idx=state.h.findIndex(function(x){return x.id===id;});if(idx===-1)return;
+  var h=state.h[idx];
+  h.target=$i('edit-target').value.trim();
+  h.n=$i('edit-equipe').value.trim();
+  h.cote=parseFloat($i('edit-cote').value)||h.cote;
+  h.m=parseFloat($i('edit-mise').value)||h.m;
+  h.sport=$i('edit-sport').value.trim();
+  h.comp=$i('edit-comp').value.trim();
+  h.type=$i('edit-type').value.trim();
+  h.b=$i('edit-bk').value.trim();
+  h.date=$i('edit-date').value;
+  h.heure=$i('edit-heure').value;
+  h.notes=$i('edit-notes').value.trim();
+  h.domicile=$i('edit-domicile').value;
+  save();render();closeEditBet();
+}
 function togglePlusMenu(){
   var m=$i('plus-menu');if(!m)return;
   var open=m.style.display==='block';
@@ -3399,6 +3467,47 @@ window.onload=function(){if(!state.bkColors)state.bkColors={};loadCustomLinks();
       <button onclick="sendChatPC()" style="padding:0 12px;background:var(--a);border:none;border-radius:var(--r6);color:#fff;font-size:16px;cursor:pointer;flex-shrink:0;">↑</button>
     </div>
     <div style="font-size:9px;color:var(--t3);text-align:center;margin-top:5px;">Groq AI · Clé dans Outils</div>
+  </div>
+</div>
+
+<!-- MODAL EDIT PARI EN COURS -->
+<div id="edit-bet-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:1000;align-items:center;justify-content:center;">
+  <div style="background:var(--bg2);border-radius:12px;padding:20px;width:90%;max-width:500px;max-height:90vh;overflow-y:auto;">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
+      <div style="font-size:14px;font-weight:800;color:var(--t1);">✏️ Modifier le pari</div>
+      <button onclick="closeEditBet()" style="background:none;border:none;color:var(--t3);font-size:20px;cursor:pointer;">✕</button>
+    </div>
+    <input type="hidden" id="edit-bet-id">
+    <div class="g2" style="margin-bottom:10px;">
+      <div class="fg"><label class="fl">Adversaire</label><input id="edit-target" class="fi" placeholder="Ex: Real Madrid"></div>
+      <div class="fg"><label class="fl">Équipe</label><input id="edit-equipe" class="fi" placeholder="Bayern Munich"></div>
+    </div>
+    <div class="g2" style="margin-bottom:10px;">
+      <div class="fg"><label class="fl">Cote</label><input id="edit-cote" class="fi" type="number" step="0.01"></div>
+      <div class="fg"><label class="fl">Mise (€)</label><input id="edit-mise" class="fi" type="number" step="0.01"></div>
+    </div>
+    <div class="g2" style="margin-bottom:10px;">
+      <div class="fg"><label class="fl">Sport</label><input id="edit-sport" class="fi"></div>
+      <div class="fg"><label class="fl">Compétition</label><input id="edit-comp" class="fi"></div>
+    </div>
+    <div class="g2" style="margin-bottom:10px;">
+      <div class="fg"><label class="fl">Type de pari</label><input id="edit-type" class="fi"></div>
+      <div class="fg"><label class="fl">Bookmaker</label><input id="edit-bk" class="fi"></div>
+    </div>
+    <div class="g2" style="margin-bottom:10px;">
+      <div class="fg"><label class="fl">Date</label><input id="edit-date" class="fi" type="date"></div>
+      <div class="fg"><label class="fl">Heure</label><input id="edit-heure" class="fi" type="time"></div>
+    </div>
+    <div class="fg" style="margin-bottom:10px;">
+      <label class="fl">Lieu</label>
+      <div style="display:flex;gap:8px;margin-top:6px;">
+        <button id="edit-dom-btn" onclick="toggleEditDom(true)" style="flex:1;padding:10px;border-radius:var(--r6);border:2px solid var(--b2);background:var(--bg3);color:var(--t2);font-size:13px;font-weight:700;cursor:pointer;">🏠 Domicile</button>
+        <button id="edit-ext-btn" onclick="toggleEditDom(false)" style="flex:1;padding:10px;border-radius:var(--r6);border:2px solid var(--b2);background:var(--bg3);color:var(--t2);font-size:13px;font-weight:700;cursor:pointer;">🚌 Extérieur</button>
+      </div>
+      <input type="hidden" id="edit-domicile" value="">
+    </div>
+    <div class="fg" style="margin-bottom:14px;"><label class="fl">Notes</label><input id="edit-notes" class="fi" placeholder="Notes…"></div>
+    <button class="btn btn-p" style="width:100%;" onclick="saveEditBet()">💾 Enregistrer</button>
   </div>
 </div>
 </body>
