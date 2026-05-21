@@ -1354,30 +1354,52 @@ function calcFreebet(){
   var comm=parseFloat(($i('fb-comm')&&$i('fb-comm').value)||3);
   var gorr=$i('fb-gorr')&&$i('fb-gorr').checked;
   if(!fb||!bc||!lc||bc<=1||lc<=1)return;
-  /* Formule standard freebet (mise non remboursée) */
-  var ml=(bc-1)*fb/((lc-1)+(1-comm/100));
+
+  var commR2=comm/100;
+
+  /* 1. FORMULE STANDARD FREEBET (Surebet classique) */
+  // Mise Lay optimale pour équilibrer le gain sur les deux issues
+  var ml=(bc-1)*fb/((lc-1)+(1-commR2));
   var liab=ml*(lc-1);
   var gainIfBack=(bc-1)*fb-liab;
-  var gainIfLay=ml*(1-comm/100);
+  var gainIfLay=ml*(1-commR2);
   var cg=Math.min(gainIfBack,gainIfLay);
   var taux=fb>0?(cg/fb*100).toFixed(1):0;
-  /* Formule Freebet Gagner ou Rembourser */
-  /* miseCouverture = fb / ((lc-1)*(1-comm)) */
-  var commR2=comm/100;
-  var ml2=gorr?fb/((lc-1)*(1-commR2)):ml;
-  var liab2=ml2*(lc-1);
-  var gainBack2=gorr?(bc-1)*fb-liab2:(bc-1)*fb-liab;
-  var gainLay2=gorr?ml2*(lc-1)*(1-commR2)-fb:gainIfLay;
-  var cg2=gorr?Math.min(gainBack2,gainLay2):cg;
+
+  /* 2. FORMULE FREEBET GAGNER OU REMBOURSER (DNB) */
+  var ml2=ml;
+  var liab2=liab;
+  var gainBack2=gainIfBack;
+  var gainLay2=gainIfLay;
+
+  if(gorr){
+    // Pour que le gain net du Lay couvre la valeur faciale du Freebet perdu à 100%
+    ml2 = fb / (1 - commR2); 
+    liab2 = ml2 * (lc - 1);
+    
+    // Si le Back gagne : Profit net ARJEL (bc-1)*fb moins l'obligation de l'Exchange perdue
+    gainBack2 = ((bc - 1) * fb) - liab2;
+    
+    // Si le Lay gagne : Opération blanche (0€), le Freebet ne t'a rien coûté en cash
+    gainLay2 = 0.00;
+  }
+
+  // En mode GoRR, le gain affiché est celui du scénario Back (puisqu'on accepte 0 si le Lay passe)
+  var cg2=gorr ? gainBack2 : cg;
   var taux2=fb>0?(cg2/fb*100).toFixed(1):0;
+
+  // 3. AFFICHAGE DANS L'INTERFACE GONES45
   var flm=$i('fb-lay-mise');if(flm){flm.innerText=(gorr?ml2:ml).toFixed(2)+'€';flm.style.color='var(--a)';}
   var fli=$i('fb-liability');if(fli){fli.innerText=(gorr?liab2:liab).toFixed(2)+'€';fli.style.color='var(--gold)';}
+  
+  // Affichage du gain standard
   var fc=$i('fb-cash');if(fc){fc.innerText=(cg>=0?'+':'')+cg.toFixed(2)+'€ (FB)';fc.style.color=cg>=0?'var(--g)':'var(--r)';}
   var ft=$i('fb-taux');if(ft)ft.innerText=taux+'%';
+  
+  // Affichage du gain GoRR
   var fcg=$i('fb-cash-gorr');
   if(fcg){fcg.innerText=gorr?(cg2>=0?'+':'')+cg2.toFixed(2)+'€ ('+taux2+'%)':'—';fcg.style.color=cg2>=0?'var(--gold)':'var(--r)';}
 }
-
 /* ── FILTRE BILAN ── */
 function renderSportFilter(){
   var sports=['ALL','⚽','🏀','🎾','🏈','⚾','🏒'];
