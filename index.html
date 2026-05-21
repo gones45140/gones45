@@ -1346,7 +1346,6 @@ function calcLay() {
     if (document.getElementById('lay-profit-lay')) {
         document.getElementById('lay-profit-lay').innerText = plw.toFixed(2) + " €";
     }
-}
 function calcFreebet(){
   var fb=parseFloat(($i('fb-amount')&&$i('fb-amount').value)||0);
   var bc=parseFloat(($i('fb-back-cote')&&$i('fb-back-cote').value)||0);
@@ -1400,6 +1399,7 @@ function calcFreebet(){
   var fcg=$i('fb-cash-gorr');
   if(fcg){fcg.innerText=gorr?(cg2>=0?'+':'')+cg2.toFixed(2)+'€ ('+taux2+'%)':'—';fcg.style.color=cg2>=0?'var(--gold)':'var(--r)';}
 }
+  }
 /* ── FILTRE BILAN ── */
 function renderSportFilter(){
   var sports=['ALL','⚽','🏀','🎾','🏈','⚾','🏒'];
