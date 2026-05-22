@@ -1786,41 +1786,25 @@ function renderArchive(){
         var b2=bki(h.b);
         var gain=h.win?(h.m*h.cote-h.m):-h.m;
         var gainC=gain>=0?'var(--g)':'var(--r)';
-        var winLabel=h.win?'Gagné':'Perdu';
         var winC=h.win?'var(--g)':'var(--r)';
-        /* Logo bookmaker inline */
-        var bkLogo='<span style="display:inline-block;width:18px;height:18px;border-radius:4px;background:'+b2.c+';color:#fff;font-size:8px;font-weight:800;text-align:center;line-height:18px;margin-right:4px;flex-shrink:0;">'+b2.n.charAt(0).toUpperCase()+'</span>';
-        return '<div style="display:flex;align-items:center;padding:10px 0;border-bottom:1px solid var(--b1);gap:8px;">'
-          /* Heure */
-          +'<div style="font-size:11px;color:var(--t3);min-width:38px;flex-shrink:0;">'+(h.heure||'—')+'</div>'
-          /* Type + BK */
-          +'<div style="flex-shrink:0;display:flex;align-items:center;">'+bkLogo+'</div>'
-          /* Infos centrales */
-          +'<div style="flex:1;min-width:0;">'
-          +'<div style="font-size:12px;font-weight:700;color:var(--t1);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">'+(h.target||h.n||'—')+'</div>'
-          +'<div style="font-size:10px;color:var(--t3);margin-top:2px;">'
-          +(h.n?'<b style="color:var(--t2);">'+h.n+'</b> · ':'')
-          +(h.type||'—')+' · @'+parseFloat(h.cote).toFixed(2)
-          +(h.comp?' · '+h.comp:'')
+        var bkBadge='<div style="width:22px;height:22px;border-radius:5px;background:'+b2.c+';color:#fff;font-size:9px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0;">'+b2.n.charAt(0).toUpperCase()+'</div>';
+        var titre=(h.target&&h.target!=='-'?h.target:(h.n||'—'));
+        var sous=(h.n&&h.target&&h.target!=='-'?h.n+' · ':'')+('@'+parseFloat(h.cote).toFixed(2))+(h.comp?' · '+h.comp:'');
+        return '<div style="display:flex;align-items:center;padding:8px 10px;background:var(--s1);border-radius:8px;margin-bottom:5px;border-left:3px solid '+(h.win?'var(--g)':'var(--r)')+';gap:8px;">'
+          +'<div style="font-size:10px;color:var(--t3);min-width:32px;flex-shrink:0;text-align:center;">'+(h.heure||'—')+'</div>'
+          +bkBadge
+          +'<div style="flex:1;min-width:0;overflow:hidden;">'
+          +'<div style="font-size:12px;font-weight:700;color:var(--t1);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">'+titre+'</div>'
+          +'<div style="font-size:10px;color:var(--t3);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">'+sous+'</div>'
           +'</div>'
+          +'<div style="text-align:right;flex-shrink:0;">'
+          +'<div style="font-size:11px;font-weight:800;color:'+winC+';">'+(h.win?'✅':'❌')+'</div>'
+          +'<div style="font-size:11px;font-weight:700;color:'+gainC+';">'+(gain>=0?'+':'')+gain.toFixed(2)+'€</div>'
+          +'<div style="font-size:10px;color:var(--t3);">'+parseFloat(h.m).toFixed(2)+'€</div>'
           +'</div>'
-          /* Cote / Mise / Gain */
-          +'<div style="text-align:right;flex-shrink:0;min-width:110px;">'
-          +'<div style="display:flex;gap:12px;justify-content:flex-end;font-size:10px;color:var(--t3);margin-bottom:2px;">'
-          +'<span>Mise</span><span>Gain</span><span>Bénéfice</span>'
-          +'</div>'
-          +'<div style="display:flex;gap:12px;justify-content:flex-end;font-size:11px;font-weight:700;">'
-          +'<span style="color:var(--t2);">'+parseFloat(h.m).toFixed(2)+'€</span>'
-          +'<span style="color:var(--t2);">'+(h.win?(h.m*h.cote).toFixed(2):'0.00')+'€</span>'
-          +'<span style="color:'+gainC+';">'+(gain>=0?'+':'')+gain.toFixed(2)+'€</span>'
-          +'</div>'
-          +'</div>'
-          /* Résultat */
-          +'<div style="flex-shrink:0;font-size:11px;font-weight:800;color:'+winC+';min-width:42px;text-align:right;">'+winLabel+'</div>'
-          /* Actions */
-          +'<div style="display:flex;gap:3px;flex-shrink:0;">'
-          +'<button data-aid="'+h.id+'" onclick="editArchived(this.dataset.aid)" style="background:none;border:1px solid rgba(77,132,255,.25);color:var(--a);font-size:10px;padding:2px 5px;border-radius:3px;cursor:pointer;">✏️</button>'
-          +'<button data-aid="'+h.id+'" onclick="deleteArchived(this.dataset.aid)" style="background:none;border:1px solid rgba(255,69,69,.2);color:var(--r);font-size:10px;padding:2px 5px;border-radius:3px;cursor:pointer;">🗑</button>'
+          +'<div style="display:flex;flex-direction:column;gap:3px;flex-shrink:0;">'
+          +'<button data-aid="'+h.id+'" onclick="editArchived(this.dataset.aid)" style="background:none;border:none;color:var(--t3);font-size:14px;cursor:pointer;padding:0;">✏️</button>'
+          +'<button data-aid="'+h.id+'" onclick="deleteArchived(this.dataset.aid)" style="background:none;border:none;color:var(--r);font-size:14px;cursor:pointer;padding:0;">🗑</button>'
           +'</div>'
           +'</div>';
       }).join('');
