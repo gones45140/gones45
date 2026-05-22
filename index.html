@@ -3614,26 +3614,17 @@ async function getTeamStatsViaGroq(teamName, cpTypes) {
 
   var typesStr = cpTypes && cpTypes.length ? cpTypes.join(', ') : 'Victoire, Over 2.5, BTS Oui';
 
-  var prompt = fdKey
-    ? 'Tu as accès à football-data.org avec la clé API "'+fdKey+'". '
-      + 'Fais une requête GET sur https://api.football-data.org/v4/teams?name='+encodeURIComponent(teamName)+' avec le header X-Auth-Token: '+fdKey+'. '
-      + 'Ensuite récupère les 10 derniers matchs de cette équipe. '
-      + 'Calcule : % victoires domicile, % victoires extérieur, % Over 2.5 buts, % BTS Oui, % Over 3.5 buts. '
-      + 'Donne les résultats sous forme de stats précises puis une analyse de 2-3 phrases en français sur ces types de paris : '+typesStr+'.'
-    : 'Recherche sur le web les statistiques récentes de '+teamName+' : '
-      + '10 derniers matchs, % Over 2.5, % Over 3.5, % BTS Oui, victoires dom/ext. '
-      + 'Donne les stats trouvées puis 2-3 phrases d\'analyse pour ces types de paris : '+typesStr+'. En français.';
+  var prompt = 'Recherche les statistiques recentes de '+teamName+' en football : '
+    + '10 derniers matchs (resultats), % Over 2.5 buts, % Over 3.5 buts, % BTS Oui, % victoires domicile, % victoires exterieur. '
+    + 'Donne les stats chiffrees precises puis une analyse de 3 phrases en francais sur ces types de paris : '+typesStr+'.';
 
   try {
-    var tools = fdKey ? [] : [{type:'web_search_20250305', name:'web_search'}];
     var body = {
-      model: 'llama-3.3-70b-versatile',
+      model: 'compound-beta',
       messages: [{role:'user', content: prompt}],
-      max_tokens: 400,
+      max_tokens: 500,
       temperature: 0.2
     };
-    // Pas de tools sur llama — on utilise compound-beta qui supporte la recherche web
-    if(!fdKey) body.model = 'compound-beta';
 
     var r = await fetch('https://api.groq.com/openai/v1/chat/completions', {
       method: 'POST',
