@@ -44,7 +44,7 @@ input,select,textarea,button{font-family:inherit;color:var(--t1);}
 .sec::after{content:'';flex:1;height:1px;background:var(--b1);}
 .sec:first-child{margin-top:0;}
 
-.card{background:var(--s1);border:1px solid var(--b1);border-radius:var(--r8);margin-bottom:10px;overflow:hidden;}
+.card{background:var(--s1);border:1px solid var(--card-border,var(--b1));border-radius:var(--r8);margin-bottom:10px;overflow:hidden;box-shadow:var(--card-glow,none);}
 .cp{padding:14px 16px;}
 
 .kpi2{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px;}
@@ -58,7 +58,7 @@ input,select,textarea,button{font-family:inherit;color:var(--t1);}
 .prog-fill{height:100%;border-radius:2px;background:var(--a);transition:width .7s ease;}
 .prog-meta{display:flex;justify-content:space-between;font-size:10px;color:var(--t3);margin-top:5px;}
 
-.fc{background:var(--bg2);border:1px solid var(--b1);border-radius:var(--r8);padding:14px;margin-bottom:10px;}
+.fc{background:var(--bg2);border:1px solid var(--card-border,var(--b1));border-radius:var(--r8);padding:14px;margin-bottom:10px;box-shadow:var(--card-glow,none);}
 .fl{font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--a);display:block;margin-bottom:4px;}
 .fi{width:100%;padding:9px 11px;background:var(--bg);border:1px solid var(--b2);color:var(--t1);border-radius:var(--r6);font-size:13px;outline:none;-webkit-appearance:none;appearance:none;transition:border-color .15s;}
 .fi:focus{border-color:var(--a);}
@@ -864,6 +864,27 @@ input[type="date"],input[type="time"]{color-scheme:dark;}
       <button class="btn" style="background:rgba(30,215,96,.12);color:var(--g);border:1px solid rgba(30,215,96,.2);font-size:11px;" onclick="testTavilyKey()">🧪 Tester</button>
     </div>
     <div id="tavily-key-status" style="margin-top:7px;font-size:11px;font-weight:700;"></div>
+  </div>
+  <div class="sec">APPARENCE</div>
+  <div class="fc">
+    <label class="fl">Cadre des sections</label>
+    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-top:8px;margin-bottom:14px;">
+      <button id="ap-off" onclick="setCardStyle('off')" style="padding:10px 4px;border-radius:var(--r6);border:1px solid var(--b2);background:var(--bg3);color:var(--t3);font-size:10px;font-weight:700;cursor:pointer;transition:all .2s;">Aucun</button>
+      <button id="ap-fin" onclick="setCardStyle('fin')" style="padding:10px 4px;border-radius:var(--r6);border:1px solid var(--b2);background:var(--bg3);color:var(--t3);font-size:10px;font-weight:700;cursor:pointer;transition:all .2s;">Fin</button>
+      <button id="ap-halo" onclick="setCardStyle('halo')" style="padding:10px 4px;border-radius:var(--r6);border:1px solid rgba(77,132,255,.5);background:rgba(77,132,255,.12);color:var(--a);font-size:10px;font-weight:700;cursor:pointer;transition:all .2s;">Halo</button>
+      <button id="ap-intense" onclick="setCardStyle('intense')" style="padding:10px 4px;border-radius:var(--r6);border:1px solid var(--b2);background:var(--bg3);color:var(--t3);font-size:10px;font-weight:700;cursor:pointer;transition:all .2s;">Intense</button>
+    </div>
+    <label class="fl">Intensite du halo</label>
+    <div style="display:flex;align-items:center;gap:10px;margin-top:8px;margin-bottom:14px;">
+      <span style="font-size:10px;color:var(--t3);">0%</span>
+      <input type="range" id="ap-intensity" min="0" max="100" value="40" oninput="updateCardIntensity(this.value)" style="flex:1;accent-color:var(--a);">
+      <span id="ap-intensity-val" style="font-size:11px;font-weight:700;color:var(--a);min-width:32px;text-align:right;">40%</span>
+    </div>
+    <label class="fl">Apercu</label>
+    <div id="ap-preview" style="margin-top:8px;padding:12px 14px;background:var(--bg);border-radius:var(--r8);border:1px solid var(--card-border,var(--b1));box-shadow:var(--card-glow,none);transition:all .3s;">
+      <div style="font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--t3);margin-bottom:4px;">Section exemple</div>
+      <div style="font-size:14px;font-weight:700;color:var(--t1);">Apercu du cadre lumineux</div>
+    </div>
   </div>
   <div class="sec">Backup &amp; Config</div>
   <div class="fc" style="border-style:dashed;">
@@ -3439,7 +3460,62 @@ window.onload=function(){if(!state.bkColors)state.bkColors={};loadCustomLinks();
   if(saved){_dbxConfig.refreshToken=saved;}
   var inp=$i('dbx-key-input');if(inp)inp.value='(token auto — permanent)';
   var gk=localStorage.getItem('gones45_gemini_key');var gki=$i('gemini-key-input');if(gki&&gk)gki.value=gk;
-  render();updMise();buildSbRows();buildDtRows();buildArjelRows();renderCrash();renderMmRows();renderMmRowsSimple();updateCompList();calcVb();calcLay();calcFreebet();};
+
+// ── APPARENCE — halo cartes ──
+var _apStyle = localStorage.getItem('g45_ap_style') || 'halo';
+var _apIntensity = parseInt(localStorage.getItem('g45_ap_intensity') || '40');
+
+function _applyCardStyle() {
+  var root = document.documentElement;
+  var p = _apIntensity / 100;
+  if (_apStyle === 'off') {
+    root.style.setProperty('--card-border', 'rgba(255,255,255,.06)');
+    root.style.setProperty('--card-glow', 'none');
+  } else if (_apStyle === 'fin') {
+    root.style.setProperty('--card-border', 'rgba(77,132,255,' + Math.min(0.9,(0.3 + 0.6*p)).toFixed(2) + ')');
+    root.style.setProperty('--card-glow', 'none');
+  } else if (_apStyle === 'halo') {
+    root.style.setProperty('--card-border', 'rgba(77,132,255,' + Math.min(0.9,(0.2 + 0.7*p)).toFixed(2) + ')');
+    root.style.setProperty('--card-glow', '0 0 ' + Math.round(8+20*p) + 'px rgba(77,132,255,' + Math.min(0.7,(0.1+0.6*p)).toFixed(2) + '), 0 0 ' + Math.round(2+6*p) + 'px rgba(77,132,255,' + Math.min(0.9,(0.2+0.7*p)).toFixed(2) + ')');
+  } else if (_apStyle === 'intense') {
+    root.style.setProperty('--card-border', 'rgba(77,132,255,' + Math.min(0.95,(0.3+0.65*p)).toFixed(2) + ')');
+    root.style.setProperty('--card-glow', '0 0 ' + Math.round(12+30*p) + 'px rgba(77,132,255,' + Math.min(0.7,(0.15+0.55*p)).toFixed(2) + '), 0 0 ' + Math.round(4+12*p) + 'px rgba(77,132,255,' + Math.min(0.9,(0.3+0.6*p)).toFixed(2) + '), inset 0 0 ' + Math.round(6+14*p) + 'px rgba(77,132,255,' + Math.min(0.2,(0.02+0.18*p)).toFixed(2) + ')');
+  }
+  var prev = document.getElementById('ap-preview');
+  if (prev) {
+    prev.style.borderColor = 'var(--card-border)';
+    prev.style.boxShadow = root.style.getPropertyValue('--card-glow') || 'none';
+    prev.style.borderColor = getComputedStyle(root).getPropertyValue('--card-border').trim() || 'rgba(255,255,255,.06)';
+    prev.style.boxShadow = getComputedStyle(root).getPropertyValue('--card-glow').trim() || 'none';
+  }
+}
+
+function setCardStyle(s) {
+  _apStyle = s;
+  localStorage.setItem('g45_ap_style', s);
+  ['off','fin','halo','intense'].forEach(function(k) {
+    var b = document.getElementById('ap-' + k);
+    if (!b) return;
+    var labels = {off:'Aucun',fin:'Fin',halo:'Halo',intense:'Intense'};
+    if (k === s) {
+      b.style.cssText += ';border-color:rgba(77,132,255,.6);background:rgba(77,132,255,.15);color:#7aaaff;';
+      b.textContent = labels[k] + ' ✓';
+    } else {
+      b.style.cssText += ';border-color:rgba(255,255,255,.10);background:var(--bg3);color:var(--t3);';
+      b.textContent = labels[k];
+    }
+  });
+  _applyCardStyle();
+}
+
+function updateCardIntensity(v) {
+  _apIntensity = parseInt(v);
+  localStorage.setItem('g45_ap_intensity', v);
+  var el = document.getElementById('ap-intensity-val');
+  if (el) el.textContent = v + '%';
+  _applyCardStyle();
+}
+  render();updMise();buildSbRows();buildDtRows();buildArjelRows();renderCrash();renderMmRows();renderMmRowsSimple();updateCompList();calcVb();calcLay();calcFreebet();_apStyle=localStorage.getItem('g45_ap_style')||'halo';_apIntensity=parseInt(localStorage.getItem('g45_ap_intensity')||'40');_applyCardStyle();var _apInp=document.getElementById('ap-intensity');if(_apInp)_apInp.value=_apIntensity;setCardStyle(_apStyle);};
 
 </script>
 
