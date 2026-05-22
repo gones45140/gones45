@@ -1032,14 +1032,14 @@ input[type="date"],input[type="time"]{color-scheme:dark;}
 </div>
 
 <div id="t-chat" class="tab">
-  <div style="display:flex;flex-direction:column;height:calc(100vh - 130px);max-height:700px;">
+  <div style="display:flex;flex-direction:column;height:calc(100vh - 130px);max-height:700px;overflow:hidden;">
     <div class="sec" style="margin-top:0;display:flex;align-items:center;justify-content:space-between;">💬 Assistant Paris
   <div style="display:flex;gap:5px;">
     <button onclick="toggleChatParams()" style="background:none;border:1px solid var(--b1);color:var(--t3);font-size:9px;font-weight:700;cursor:pointer;padding:2px 6px;border-radius:4px;">⚙️</button>
     <button onclick="resetChat()" style="background:none;border:none;color:var(--t3);font-size:9px;font-weight:700;cursor:pointer;letter-spacing:.5px;padding:2px 6px;border-radius:4px;border:1px solid var(--b1);">↺</button>
   </div>
 </div>
-<div id="chat-params-panel" style="display:none;background:var(--bg3);border:1px solid var(--card-border,rgba(77,132,255,.32));border-radius:var(--r8);padding:10px;margin-bottom:8px;box-shadow:var(--card-glow,none);">
+<div id="chat-params-panel" style="display:none;background:var(--bg3);border:1px solid var(--card-border,rgba(77,132,255,.32));border-radius:var(--r8);padding:10px;margin-bottom:8px;box-shadow:var(--card-glow,none);max-height:55vh;overflow-y:auto;-webkit-overflow-scrolling:touch;flex-shrink:0;">
   <div style="font-size:9px;font-weight:700;letter-spacing:1px;color:var(--t3);text-transform:uppercase;margin-bottom:8px;">Paramètres IA</div>
   <div style="margin-bottom:8px;">
     <div style="font-size:10px;color:var(--t2);font-weight:600;margin-bottom:5px;">Équipe focus</div>
@@ -3336,6 +3336,16 @@ function buildContext(){
   var today=new Date();var dateStr=today.toLocaleDateString('fr-FR');
   return 'Tu es un assistant paris sportifs. Date: '+dateStr+'. RÈGLES ABSOLUES: 1) Jamais de "je vous recommande de consulter", jamais de "je n ai pas accès", jamais de redirection. 2) Max 2 phrases. 3) Si tu as l info via web, dis-la directement. 4) Pas de markdown. Bankroll:'+cap.toFixed(0)+'€ profit:'+totalProfit.toFixed(0)+'€ equipes:'+top5+'.';
 }
+function buildContextWithParams() {
+  var base = buildContext();
+  var extras = [];
+  if (_chatParams.equipe) extras.push('Équipe focus: '+_chatParams.equipe);
+  if (_chatParams.lieu !== 'both') extras.push('Mode favori: '+(_chatParams.lieu==='domicile'?'Domicile':'Extérieur'));
+  if (_chatParams.types.length) extras.push('Types de paris à privilégier: '+_chatParams.types.join(', '));
+  if (_chatParams.champOnly) extras.push('Analyse uniquement les matchs de championnat, exclure Coupes et amicaux');
+  if (extras.length) base += ' PRÉFÉRENCES UTILISATEUR: '+extras.join('. ')+'.';
+  return base;
+}
 
 async function sendChat(){
   var inp=$i('chat-input');
@@ -3817,16 +3827,7 @@ function toggleCpType(btn) {
 }
 
 // ── BUILDCONTEXT AMÉLIORÉ ──
-function buildContextWithParams() {
-  var base = buildContext();
-  var extras = [];
-  if (_chatParams.equipe) extras.push('Équipe focus: '+_chatParams.equipe);
-  if (_chatParams.lieu !== 'both') extras.push('Mode favori: '+(_chatParams.lieu==='domicile'?'Domicile':'Extérieur'));
-  if (_chatParams.types.length) extras.push('Types de paris à privilégier: '+_chatParams.types.join(', '));
-  if (_chatParams.champOnly) extras.push('Analyse uniquement les matchs de championnat, exclure Coupes et amicaux');
-  if (extras.length) base += ' PRÉFÉRENCES UTILISATEUR: '+extras.join('. ')+'.';
-  return base;
-}
+
 
 // ── ARCHIVE — filtres ──
 var _archFilter = 'all';
