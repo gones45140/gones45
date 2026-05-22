@@ -3796,6 +3796,17 @@ async function sendChatPC(){
 
 // ── FOOTBALL-DATA.ORG ──
 function getFdorgKey(){ return localStorage.getItem('gones45_fdorg_key')||null; }
+var FD_PROXY = 'https://fd-proxy.touraine-antoine.workers.dev';
+
+async function fdFetch(path) {
+  var key = getFdorgKey();
+  if(!key) return null;
+  try {
+    var r = await fetch(FD_PROXY+'?key='+encodeURIComponent(key)+'&path='+encodeURIComponent(path));
+    if(!r.ok) return null;
+    return await r.json();
+  } catch(e) { return null; }
+}
 
 function saveFdorgKey(){
   var v = ($i('fdorg-key-input')||{}).value||'';
@@ -3827,15 +3838,54 @@ async function getTeamStatsViaGroq(teamName, cpTypes) {
     + '10 derniers matchs (resultats), % Over 2.5 buts, % Over 3.5 buts, % BTS Oui, % victoires domicile, % victoires exterieur. '
     + 'Donne les stats chiffrees precises puis une analyse de 3 phrases en francais sur ces types de paris : '+typesStr+'.';
 
-  var tavilyKey = getTavilyKey();
-  if(!tavilyKey || !groqKey) return null;
   try {
-    // Tavily cherche les stats réelles (pas de CORS)
-    var query = teamName + ' statistiques football Over 2.5 Over 3.5 BTS forme 10 derniers matchs 2025 2026';
-    var webData = await searchTavily(query);
-    if(!webData) return null;
-    // Groq llama analyse (pas de CORS)
-    var analysisPrompt = 'Tu es expert paris sportifs. Donnees web sur '+teamName+' : '+webData.substring(0,1000)+'. Extrais : % Over 2.5, % Over 3.5, % BTS Oui, % victoires dom, % victoires ext. Analyse en 3 phrases pour ces paris : '+typesStr+'. Sois precis. En francais.';
+    // 1. Chercher l'équipe via proxy football-data
+    var teamsData = await fdFetch('/v4/teams?name='+encodeURIComponent(teamName)+'&limit=5');
+    var teamId = null;
+    if(teamsData && teamsData.teams && teamsData.teams.length) {
+      teamId = teamsData.teams[0].id;
+    }
+
+    var matchStats = '';
+    if(teamId) {
+      // 2. Récupérer les 10 derniers matchs
+      var matches = await fdFetch('/v4/teams/'+teamId+'/matches?status=FINISHED&limit=10');
+      if(matches && matches.matches && matches.matches.length) {
+        var ms = matches.matches;
+        var over25=0, over35=0, bts=0, domW=0, domTotal=0, extW=0, extTotal=0;
+        ms.forEach(function(m){
+          var hg=m.score.fullTime.home||0, ag=m.score.fullTime.away||0, total=hg+ag;
+          if(total>2.5) over25++;
+          if(total>3.5) over35++;
+          if(hg>0&&ag>0) bts++;
+          var isDom = m.homeTeam.id===teamId;
+          var won = isDom?(hg>ag):(ag>hg);
+          if(isDom){domTotal++;if(won)domW++;}
+          else{extTotal++;if(won)extW++;}
+        });
+        var n=ms.length;
+        matchStats = teamName+' sur '+n+' derniers matchs : '
+          +'Over 2.5='+over25+'/'+n+' ('+Math.round(over25/n*100)+'%), '
+          +'Over 3.5='+over35+'/'+n+' ('+Math.round(over35/n*100)+'%), '
+          +'BTS='+bts+'/'+n+' ('+Math.round(bts/n*100)+'%), '
+          +'Dom='+domW+'/'+domTotal+' victoires, '
+          +'Ext='+extW+'/'+extTotal+' victoires.';
+      }
+    }
+
+    // 3. Fallback Tavily si pas de données
+    if(!matchStats) {
+      var tavilyKey = getTavilyKey();
+      if(tavilyKey) {
+        var webData = await searchTavily(teamName+' statistiques Over 2.5 forme 2025 2026');
+        if(webData) matchStats = webData.substring(0,800);
+      }
+    }
+
+    if(!matchStats || !groqKey) return null;
+
+    // 4. Groq analyse
+    var analysisPrompt = 'Tu es expert paris sportifs. Stats reelles de '+teamName+' : '+matchStats+'. Analyse en 3 phrases pour ces types de paris : '+typesStr+'. En francais, sois direct et precis avec les chiffres.';
     var r = await fetch('https://api.groq.com/openai/v1/chat/completions', {
       method:'POST',
       headers:{'Content-Type':'application/json','Authorization':'Bearer '+groqKey},
