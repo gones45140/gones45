@@ -16,6 +16,7 @@
   --t1:#e8eeff;--t2:#8b97c4;--t3:#4f5d88;
   --a:#4d84ff;--g:#1ed760;--r:#ff4545;--gold:#f0b020;
   --r8:10px;--r6:8px;--r4:6px;
+  --card-border:rgba(77,132,255,.32);--card-glow:0 0 14px rgba(77,132,255,.18),0 0 4px rgba(77,132,255,.28);
 }
 html,body{background:var(--bg);color:var(--t1);font-family:-apple-system,'SF Pro Text','Segoe UI',system-ui,sans-serif;-webkit-font-smoothing:antialiased;min-height:100vh;}
 body{padding-bottom:68px;}
@@ -23,7 +24,7 @@ input,select,textarea,button{font-family:inherit;color:var(--t1);}
 ::-webkit-scrollbar{width:2px;}
 ::-webkit-scrollbar-thumb{background:var(--b2);border-radius:1px;}
 
-.topbar{position:sticky;top:0;z-index:200;background:rgba(8,11,18,.95);backdrop-filter:blur(20px);border-bottom:1px solid var(--b1);display:flex;align-items:center;justify-content:space-between;padding:12px 16px;}
+.topbar{position:sticky;top:0;z-index:200;background:rgba(8,11,18,.95);backdrop-filter:blur(20px);border-bottom:1px solid rgba(77,132,255,.3);box-shadow:0 2px 16px rgba(77,132,255,.1);display:flex;align-items:center;justify-content:space-between;padding:12px 16px;}
 .logo{font-size:15px;font-weight:800;letter-spacing:4px;}
 .logo em{color:var(--r);font-style:normal;}
 .top-cap{text-align:right;}
@@ -49,7 +50,7 @@ input,select,textarea,button{font-family:inherit;color:var(--t1);}
 .cp{padding:14px 16px;}
 
 .kpi2{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px;}
-.kpibox{background:var(--s1);border:1px solid var(--b1);border-radius:var(--r8);padding:13px 14px;position:relative;overflow:hidden;}
+.kpibox{background:var(--s1);border:1px solid var(--card-border,rgba(77,132,255,.3));border-radius:var(--r8);padding:13px 14px;position:relative;overflow:hidden;box-shadow:var(--card-glow,0 0 12px rgba(77,132,255,.15),0 0 3px rgba(77,132,255,.25));}
 .kpibox::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:var(--ac,var(--a));}
 .kpi-l{font-size:9px;font-weight:600;letter-spacing:.8px;text-transform:uppercase;color:var(--t3);margin-bottom:5px;}
 .kpi-v{font-size:21px;font-weight:700;line-height:1;}
@@ -105,7 +106,7 @@ input[type="date"],input[type="time"]{color-scheme:dark;}
 .mbar-f{height:100%;border-radius:2px;}
 
 /* TEAM CARD */
-.tcard{border-radius:var(--r8);overflow:hidden;border:1px solid var(--b1);margin-bottom:10px;cursor:pointer;transition:border-color .15s,transform .12s;background:var(--s1);}
+.tcard{border-radius:var(--r8);overflow:hidden;border:1px solid var(--card-border,rgba(77,132,255,.3));margin-bottom:10px;cursor:pointer;transition:border-color .15s,transform .12s,box-shadow .15s;background:var(--s1);box-shadow:var(--card-glow,0 0 12px rgba(77,132,255,.15),0 0 3px rgba(77,132,255,.25));}
 .tcard:hover{border-color:var(--b2);}
 .tcard:active{transform:scale(.99);}
 .tcard-top{display:flex;align-items:center;gap:13px;padding:14px;}
@@ -164,10 +165,10 @@ input[type="date"],input[type="time"]{color-scheme:dark;}
 .tyn2{font-size:10px;color:var(--t3);width:20px;text-align:right;flex-shrink:0;}
 .typ{font-size:11px;font-weight:700;width:50px;text-align:right;flex-shrink:0;}
 
-.cwrap{background:var(--bg2);border:1px solid var(--b1);border-radius:var(--r8);padding:13px;margin-bottom:10px;}
+.cwrap{background:var(--bg2);border:1px solid var(--card-border,rgba(77,132,255,.3));border-radius:var(--r8);padding:13px;margin-bottom:10px;box-shadow:var(--card-glow,0 0 12px rgba(77,132,255,.15),0 0 3px rgba(77,132,255,.25));}
 .ctitle{font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--t3);margin-bottom:10px;}
 
-.gchart{background:var(--bg2);border:1px solid var(--b1);border-radius:var(--r8);overflow:hidden;margin-bottom:12px;}
+.gchart{background:var(--bg2);border:1px solid var(--card-border,rgba(77,132,255,.3));border-radius:var(--r8);overflow:hidden;margin-bottom:12px;box-shadow:var(--card-glow,0 0 12px rgba(77,132,255,.15),0 0 3px rgba(77,132,255,.25));}
 .gchart-area{height:180px;padding:12px 12px 0;position:relative;}
 .gkpis{display:grid;grid-template-columns:repeat(4,1fr);border-top:1px solid var(--b1);}
 .gk{padding:11px 6px;text-align:center;border-right:1px solid var(--b1);}
@@ -177,7 +178,7 @@ input[type="date"],input[type="time"]{color-scheme:dark;}
 
 /* BOOKS */
 .bgrid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px;}
-.btile{background:var(--s1);border:1px solid var(--b1);border-radius:var(--r8);padding:11px 13px;border-left:2px solid var(--bc,var(--a));}
+.btile{background:var(--s1);border:1px solid var(--card-border,rgba(77,132,255,.25));border-radius:var(--r8);padding:11px 13px;border-left:3px solid var(--bc,var(--a));box-shadow:var(--card-glow,0 0 10px rgba(77,132,255,.12));}
 .btile-n{font-size:9px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;color:var(--t2);margin-bottom:3px;}
 .btile-v{font-size:17px;font-weight:800;}
 .btile-acts{display:flex;gap:5px;margin-top:7px;}
@@ -203,11 +204,11 @@ input[type="date"],input[type="time"]{color-scheme:dark;}
 .cp.on{border-color:#fff;transform:scale(1.15);}
 
 .bili2{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px;}
-.bilibox{background:var(--s1);border:1px solid var(--b1);border-radius:var(--r8);padding:12px;text-align:center;}
+.bilibox{background:var(--s1);border:1px solid var(--card-border,rgba(77,132,255,.3));border-radius:var(--r8);padding:12px;text-align:center;box-shadow:var(--card-glow,0 0 12px rgba(77,132,255,.15),0 0 3px rgba(77,132,255,.25));}
 .bilibox-l{font-size:9px;font-weight:700;letter-spacing:.7px;text-transform:uppercase;color:var(--t3);margin-bottom:4px;}
 .bilibox-v{font-size:17px;font-weight:800;}
 
-.bkrow{display:flex;align-items:center;justify-content:space-between;padding:10px 12px;background:var(--s1);border-radius:var(--r6);border-left:2px solid var(--bc,var(--a));margin-bottom:6px;}
+.bkrow{display:flex;align-items:center;justify-content:space-between;padding:10px 12px;background:var(--s1);border-radius:var(--r6);border-left:3px solid var(--bc,var(--a));margin-bottom:5px;}
 
 /* FILTRE SPORT */
 .sfrow{display:flex;gap:5px;flex-wrap:wrap;margin-bottom:14px;}
@@ -215,7 +216,7 @@ input[type="date"],input[type="time"]{color-scheme:dark;}
 .sfbtn.on{background:var(--a);border-color:var(--a);color:#fff;}
 
 /* CRASH */
-.crash-wrap{background:var(--bg2);border:1px solid var(--b1);border-radius:var(--r8);padding:13px;margin-bottom:12px;}
+.crash-wrap{background:var(--bg2);border:1px solid var(--card-border,rgba(77,132,255,.3));border-radius:var(--r8);padding:13px;margin-bottom:12px;box-shadow:var(--card-glow,0 0 12px rgba(77,132,255,.15),0 0 3px rgba(77,132,255,.25));}
 .crash-hdr{font-size:10px;font-weight:700;letter-spacing:.8px;color:var(--t3);margin-bottom:10px;display:flex;align-items:center;gap:6px;}
 .crash-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:5px;margin-bottom:8px;}
 .cc{background:var(--bg3);border:1px solid var(--b1);border-radius:var(--r4);padding:8px 4px;text-align:center;}
@@ -255,7 +256,7 @@ input[type="date"],input[type="time"]{color-scheme:dark;}
 .gpanel.on{display:block;animation:up .18s ease;}
 
 /* MYMATCH */
-.mm-wrap{background:var(--bg2);border:1px solid var(--b1);border-radius:var(--r8);padding:13px;margin-bottom:10px;}
+.mm-wrap{background:var(--bg2);border:1px solid var(--card-border,rgba(77,132,255,.3));border-radius:var(--r8);padding:13px;margin-bottom:10px;box-shadow:var(--card-glow,0 0 12px rgba(77,132,255,.15),0 0 3px rgba(77,132,255,.25));}
 .mm-title{font-size:9px;font-weight:700;letter-spacing:1px;color:var(--t3);text-transform:uppercase;margin-bottom:10px;display:flex;align-items:center;justify-content:space-between;}
 .mm-sel{display:flex;flex-direction:column;gap:6px;margin-bottom:10px;}
 .mm-row{display:flex;align-items:center;gap:7px;background:var(--bg3);border-radius:var(--r4);padding:8px 10px;}
@@ -281,7 +282,7 @@ input[type="date"],input[type="time"]{color-scheme:dark;}
 .search-loading{text-align:center;padding:14px;color:var(--t3);font-size:11px;}
 
 /* RADAR */
-.radar-wrap{background:var(--bg2);border:1px solid var(--b1);border-radius:var(--r8);padding:13px;margin-bottom:10px;}
+.radar-wrap{background:var(--bg2);border:1px solid var(--card-border,rgba(77,132,255,.3));border-radius:var(--r8);padding:13px;margin-bottom:10px;box-shadow:var(--card-glow,0 0 12px rgba(77,132,255,.15),0 0 3px rgba(77,132,255,.25));}
 
 .chart-info-bar{
   display:none;
@@ -307,14 +308,16 @@ input[type="date"],input[type="time"]{color-scheme:dark;}
   /* BLOC-NOTE — gauche */
   .note-sidebar{
     width:260px;position:fixed;left:0;top:52px;bottom:68px;
-    background:var(--bg2);border-right:1px solid var(--b1);
+    background:var(--bg2);border-right:1px solid rgba(77,132,255,.35);
+    box-shadow:2px 0 16px rgba(77,132,255,.12);
     display:flex !important;flex-direction:column;padding:12px;z-index:100;box-sizing:border-box;
     overflow:hidden;
   }
   /* CHAT — droite */
   .chat-sidebar{
     width:300px;position:fixed;right:0;top:52px;bottom:68px;
-    background:var(--bg2);border-left:1px solid var(--b1);
+    background:var(--bg2);border-left:1px solid rgba(77,132,255,.35);
+    box-shadow:-2px 0 16px rgba(77,132,255,.12);
     display:flex !important;flex-direction:column;padding:12px;z-index:100;box-sizing:border-box;
     overflow:hidden;
   }
@@ -332,7 +335,9 @@ input[type="date"],input[type="time"]{color-scheme:dark;}
   .nav{
     position:fixed;left:0;top:52px;width:260px;
     bottom:0;height:auto;
-    border-top:none;border-right:none;border-bottom:none;
+    border-top:none;border-bottom:none;
+    border-right:1px solid rgba(77,132,255,.35);
+    box-shadow:2px 0 16px rgba(77,132,255,.12);
     background:var(--bg2);
     display:flex;flex-direction:column;align-items:stretch;
     padding:8px 0;gap:2px;z-index:101;
@@ -564,7 +569,9 @@ input[type="date"],input[type="time"]{color-scheme:dark;}
       <button onclick="changeArchYear(1)" style="background:none;border:none;color:var(--t3);cursor:pointer;font-size:16px;padding:0 4px;">›</button>
     </span>
   </div>
-  <div id="arch-mois-list" style="margin-bottom:12px;"></div>
+  <div style="background:var(--bg2);border:1px solid var(--card-border,rgba(77,132,255,.32));border-radius:var(--r8);padding:10px;margin-bottom:10px;box-shadow:var(--card-glow,0 0 14px rgba(77,132,255,.18),0 0 4px rgba(77,132,255,.28));">
+    <div id="arch-mois-list"></div>
+  </div>
   <div class="sec">Détail</div>
   <div id="arch-list"></div>
   <button class="btn btn-d" style="margin-top:4px;font-size:11px;" onclick="if(confirm('Effacer tout ?')){state.a=[];save();renderArchive();}">Effacer l'historique</button>
@@ -597,7 +604,9 @@ input[type="date"],input[type="time"]{color-scheme:dark;}
   <div class="cwrap"><div style="height:160px;position:relative;"><canvas id="bilan-chart"></canvas></div><div class="chart-info-bar" id="cib-bilan" style="display:none;"><span class="cib-main" id="cib-bilan-txt"></span><span class="cib-val" id="cib-bilan-val"></span></div></div>
   <!-- Par bookmaker -->
   <div class="sec">Par bookmaker</div>
-  <div id="bk-stats"></div>
+  <div style="background:var(--bg2);border:1px solid var(--card-border,rgba(77,132,255,.32));border-radius:var(--r8);padding:10px;margin-bottom:10px;box-shadow:var(--card-glow,0 0 14px rgba(77,132,255,.18),0 0 4px rgba(77,132,255,.28));">
+    <div id="bk-stats"></div>
+  </div>
   <!-- Par mois -->
   <div class="sec" style="display:flex;align-items:center;justify-content:space-between;">
     <span>Par mois</span>
@@ -607,12 +616,14 @@ input[type="date"],input[type="time"]{color-scheme:dark;}
       <button onclick="changeMoisYear(1)" style="background:none;border:none;color:var(--t3);cursor:pointer;font-size:16px;padding:0 4px;">›</button>
     </span>
   </div>
-  <div id="bilan-mois-list" style="margin-bottom:12px;"></div>
-  <!-- Sous-onglets Graphiques / Équipes -->
-  <div class="gtabs" style="margin-top:4px;">
-    <button class="gtab on" onclick="showBilanView('g-global',this)">📊 Graphiques</button>
-    <button class="gtab" onclick="showBilanView('g-equipes',this)">🛡 Équipes</button>
+  <div style="background:var(--bg2);border:1px solid var(--card-border,rgba(77,132,255,.32));border-radius:var(--r8);padding:10px;margin-bottom:10px;box-shadow:var(--card-glow,0 0 14px rgba(77,132,255,.18),0 0 4px rgba(77,132,255,.28));">
+    <div id="bilan-mois-list"></div>
+    <div class="gtabs" style="margin-top:8px;">
+      <button class="gtab on" onclick="showBilanView('g-global',this)">📊 Graphiques</button>
+      <button class="gtab" onclick="showBilanView('g-equipes',this)">🛡 Équipes</button>
+    </div>
   </div>
+
   <!-- GRAPHIQUES PANEL -->
   <div id="g-global" class="gpanel on">
     <div id="global-zone"></div>
@@ -968,37 +979,37 @@ input[type="date"],input[type="time"]{color-scheme:dark;}
 <div id="t-links" class="tab">
   <div class="sec" style="margin-top:0;">Stats &amp; Scores</div>
   <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px;">
-    <a href="https://www.sofascore.com" target="_blank" style="display:flex;align-items:center;gap:10px;padding:13px 12px;background:var(--s1);border-radius:var(--r8);text-decoration:none;color:var(--t1);font-size:12px;font-weight:700;border:1px solid var(--b1);border-left:3px solid #ff2040;">
+    <a href="https://www.sofascore.com" target="_blank" style="display:flex;align-items:center;gap:10px;padding:13px 12px;background:var(--s1);border-radius:var(--r8);text-decoration:none;color:var(--t1);font-size:12px;font-weight:700;border:1px solid rgba(77,132,255,.3);box-shadow:0 0 10px rgba(77,132,255,.12);border-left:3px solid #ff2040;">
       <span style="font-size:16px;">🔴</span>Sofascore
     </a>
-    <a href="https://www.flashscore.fr" target="_blank" style="display:flex;align-items:center;gap:10px;padding:13px 12px;background:var(--s1);border-radius:var(--r8);text-decoration:none;color:var(--t1);font-size:12px;font-weight:700;border:1px solid var(--b1);border-left:3px solid #f0b020;">
+    <a href="https://www.flashscore.fr" target="_blank" style="display:flex;align-items:center;gap:10px;padding:13px 12px;background:var(--s1);border-radius:var(--r8);text-decoration:none;color:var(--t1);font-size:12px;font-weight:700;border:1px solid rgba(77,132,255,.3);box-shadow:0 0 10px rgba(77,132,255,.12);border-left:3px solid #f0b020;">
       <span style="font-size:16px;">⚡</span>Flashscore
     </a>
-    <a href="https://www.oddschecker.com" target="_blank" style="display:flex;align-items:center;gap:10px;padding:13px 12px;background:var(--s1);border-radius:var(--r8);text-decoration:none;color:var(--t1);font-size:12px;font-weight:700;border:1px solid var(--b1);border-left:3px solid #4d84ff;">
+    <a href="https://www.oddschecker.com" target="_blank" style="display:flex;align-items:center;gap:10px;padding:13px 12px;background:var(--s1);border-radius:var(--r8);text-decoration:none;color:var(--t1);font-size:12px;font-weight:700;border:1px solid rgba(77,132,255,.3);box-shadow:0 0 10px rgba(77,132,255,.12);border-left:3px solid #4d84ff;">
       <span style="font-size:16px;">📊</span>Oddschecker
     </a>
-    <a href="https://www.betexplorer.com" target="_blank" style="display:flex;align-items:center;gap:10px;padding:13px 12px;background:var(--s1);border-radius:var(--r8);text-decoration:none;color:var(--t1);font-size:12px;font-weight:700;border:1px solid var(--b1);border-left:3px solid #1ed760;">
+    <a href="https://www.betexplorer.com" target="_blank" style="display:flex;align-items:center;gap:10px;padding:13px 12px;background:var(--s1);border-radius:var(--r8);text-decoration:none;color:var(--t1);font-size:12px;font-weight:700;border:1px solid rgba(77,132,255,.3);box-shadow:0 0 10px rgba(77,132,255,.12);border-left:3px solid #1ed760;">
       <span style="font-size:16px;">🔎</span>BetExplorer
     </a>
-    <a href="https://www.forebet.com/fr" target="_blank" style="display:flex;align-items:center;gap:10px;padding:13px 12px;background:var(--s1);border-radius:var(--r8);text-decoration:none;color:var(--t1);font-size:12px;font-weight:700;border:1px solid var(--b1);border-left:3px solid #a855f7;">
+    <a href="https://www.forebet.com/fr" target="_blank" style="display:flex;align-items:center;gap:10px;padding:13px 12px;background:var(--s1);border-radius:var(--r8);text-decoration:none;color:var(--t1);font-size:12px;font-weight:700;border:1px solid rgba(77,132,255,.3);box-shadow:0 0 10px rgba(77,132,255,.12);border-left:3px solid #a855f7;">
       <span style="font-size:16px;">🧠</span>Forebet
     </a>
-    <a href="https://www.whoscored.com" target="_blank" style="display:flex;align-items:center;gap:10px;padding:13px 12px;background:var(--s1);border-radius:var(--r8);text-decoration:none;color:var(--t1);font-size:12px;font-weight:700;border:1px solid var(--b1);border-left:3px solid #22d3ee;">
+    <a href="https://www.whoscored.com" target="_blank" style="display:flex;align-items:center;gap:10px;padding:13px 12px;background:var(--s1);border-radius:var(--r8);text-decoration:none;color:var(--t1);font-size:12px;font-weight:700;border:1px solid rgba(77,132,255,.3);box-shadow:0 0 10px rgba(77,132,255,.12);border-left:3px solid #22d3ee;">
       <span style="font-size:16px;">📈</span>WhoScored
     </a>
   </div>
   <div class="sec">Outils &amp; IA</div>
   <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px;">
-    <a href="https://console.groq.com" target="_blank" style="display:flex;align-items:center;gap:10px;padding:13px 12px;background:var(--s1);border-radius:var(--r8);text-decoration:none;color:var(--t1);font-size:12px;font-weight:700;border:1px solid var(--b1);border-left:3px solid #f0b020;">
+    <a href="https://console.groq.com" target="_blank" style="display:flex;align-items:center;gap:10px;padding:13px 12px;background:var(--s1);border-radius:var(--r8);text-decoration:none;color:var(--t1);font-size:12px;font-weight:700;border:1px solid rgba(77,132,255,.3);box-shadow:0 0 10px rgba(77,132,255,.12);border-left:3px solid #f0b020;">
       <span style="font-size:16px;">⚡</span>Groq Console
     </a>
-    <a href="https://app.tavily.com" target="_blank" style="display:flex;align-items:center;gap:10px;padding:13px 12px;background:var(--s1);border-radius:var(--r8);text-decoration:none;color:var(--t1);font-size:12px;font-weight:700;border:1px solid var(--b1);border-left:3px solid #4d84ff;">
+    <a href="https://app.tavily.com" target="_blank" style="display:flex;align-items:center;gap:10px;padding:13px 12px;background:var(--s1);border-radius:var(--r8);text-decoration:none;color:var(--t1);font-size:12px;font-weight:700;border:1px solid rgba(77,132,255,.3);box-shadow:0 0 10px rgba(77,132,255,.12);border-left:3px solid #4d84ff;">
       <span style="font-size:16px;">🔍</span>Tavily
     </a>
-    <a href="https://www.dropbox.com" target="_blank" style="display:flex;align-items:center;gap:10px;padding:13px 12px;background:var(--s1);border-radius:var(--r8);text-decoration:none;color:var(--t1);font-size:12px;font-weight:700;border:1px solid var(--b1);border-left:3px solid #0061ff;">
+    <a href="https://www.dropbox.com" target="_blank" style="display:flex;align-items:center;gap:10px;padding:13px 12px;background:var(--s1);border-radius:var(--r8);text-decoration:none;color:var(--t1);font-size:12px;font-weight:700;border:1px solid rgba(77,132,255,.3);box-shadow:0 0 10px rgba(77,132,255,.12);border-left:3px solid #0061ff;">
       <span style="font-size:16px;">📦</span>Dropbox
     </a>
-    <a href="https://surebetfinder.com" target="_blank" style="display:flex;align-items:center;gap:10px;padding:13px 12px;background:var(--s1);border-radius:var(--r8);text-decoration:none;color:var(--t1);font-size:12px;font-weight:700;border:1px solid var(--b1);border-left:3px solid #1ed760;">
+    <a href="https://surebetfinder.com" target="_blank" style="display:flex;align-items:center;gap:10px;padding:13px 12px;background:var(--s1);border-radius:var(--r8);text-decoration:none;color:var(--t1);font-size:12px;font-weight:700;border:1px solid rgba(77,132,255,.3);box-shadow:0 0 10px rgba(77,132,255,.12);border-left:3px solid #1ed760;">
       <span style="font-size:16px;">🔁</span>Surebet Finder
     </a>
   </div>
@@ -1865,7 +1876,7 @@ function renderArchive(){
         var bkBadge='<div style="width:22px;height:22px;border-radius:5px;background:'+b2.c+';color:#fff;font-size:9px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0;">'+b2.n.charAt(0).toUpperCase()+'</div>';
         var titre=(h.target&&h.target!=='-'?h.target:(h.n||'—'));
         var sous=(h.n&&h.target&&h.target!=='-'?h.n+' · ':'')+('@'+parseFloat(h.cote).toFixed(2))+(h.comp?' · '+h.comp:'');
-        return '<div style="display:flex;align-items:center;padding:8px 10px;background:var(--s1);border-radius:8px;margin-bottom:5px;border-left:3px solid '+(h.win?'var(--g)':'var(--r)')+';gap:8px;">'
+        return '<div style="display:flex;align-items:center;padding:8px 10px;background:var(--s1);border-radius:var(--r6);margin-bottom:4px;border-left:3px solid '+(h.win?'var(--g)':'var(--r)')+';gap:8px;">'
           +'<div style="font-size:10px;color:var(--t3);min-width:32px;flex-shrink:0;text-align:center;">'+(h.heure||'—')+'</div>'
           +bkBadge
           +'<div style="flex:1;min-width:0;overflow:hidden;">'
@@ -1884,12 +1895,14 @@ function renderArchive(){
           +'</div>';
       }).join('');
       
-      return '<div style="margin-bottom:4px;">'
-        +'<div style="display:flex;align-items:center;justify-content:space-between;padding:6px 0;border-bottom:2px solid var(--b2);">'
-        +'<span style="font-size:12px;font-weight:700;color:var(--t2);">'+dayLabel+'</span>'
-        +'<span style="font-size:12px;font-weight:800;color:'+dpC+';">'+(dayProfit>=0?'+':'')+dayProfit.toFixed(2)+'€</span>'
+      return '<div style="margin-bottom:10px;background:var(--bg2);border:1px solid var(--card-border,rgba(77,132,255,.32));border-radius:var(--r8);overflow:hidden;box-shadow:var(--card-glow,0 0 14px rgba(77,132,255,.18),0 0 4px rgba(77,132,255,.28));">'
+        +'<div style="display:flex;align-items:center;justify-content:space-between;padding:9px 12px;border-bottom:1px solid rgba(77,132,255,.15);background:rgba(77,132,255,.05);">'
+        +'<span style="font-size:12px;font-weight:800;color:var(--t1);">'+dayLabel+'</span>'
+        +'<span style="font-size:13px;font-weight:800;color:'+dpC+';">'+(dayProfit>=0?'+':'')+dayProfit.toFixed(2)+'€</span>'
         +'</div>'
+        +'<div style="padding:8px;">'
         +betsHtml
+        +'</div>'
         +'</div>';
     }).join('');
     
