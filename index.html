@@ -3590,20 +3590,10 @@ function showFdorgStatus(msg, color){
   if(el){ el.textContent=msg; el.style.color=color; }
 }
 
-async function testFdorgKey(){
+function testFdorgKey(){
   var key = getFdorgKey();
   if(!key){ showFdorgStatus('Aucune clé','#ff4545'); return; }
-  showFdorgStatus('Test en cours…','#f0b020');
-  try {
-    var r = await fetch('https://api.football-data.org/v4/competitions', {
-      headers: { 'X-Auth-Token': key }
-    });
-    if(r.ok){ showFdorgStatus('✓ Clé valide !','#1ed760'); }
-    else { showFdorgStatus('✗ Clé invalide ('+r.status+')','#ff4545'); }
-  } catch(e) {
-    // CORS attendu — on passe via Groq
-    showFdorgStatus('✓ Clé enregistrée (stats via IA)','#1ed760');
-  }
+  showFdorgStatus('✓ Clé enregistrée','#1ed760');
 }
 
 // Récupérer les stats d'une équipe via Groq qui appelle football-data
@@ -3618,18 +3608,19 @@ async function getTeamStatsViaGroq(teamName, cpTypes) {
     + '10 derniers matchs (resultats), % Over 2.5 buts, % Over 3.5 buts, % BTS Oui, % victoires domicile, % victoires exterieur. '
     + 'Donne les stats chiffrees precises puis une analyse de 3 phrases en francais sur ces types de paris : '+typesStr+'.';
 
+  var tavilyKey = getTavilyKey();
+  if(!tavilyKey || !groqKey) return null;
   try {
-    var body = {
-      model: 'compound-beta',
-      messages: [{role:'user', content: prompt}],
-      max_tokens: 500,
-      temperature: 0.2
-    };
-
+    // Tavily cherche les stats réelles (pas de CORS)
+    var query = teamName + ' statistiques football Over 2.5 Over 3.5 BTS forme 10 derniers matchs 2025 2026';
+    var webData = await searchTavily(query);
+    if(!webData) return null;
+    // Groq llama analyse (pas de CORS)
+    var analysisPrompt = 'Tu es expert paris sportifs. Donnees web sur '+teamName+' : '+webData.substring(0,1000)+'. Extrais : % Over 2.5, % Over 3.5, % BTS Oui, % victoires dom, % victoires ext. Analyse en 3 phrases pour ces paris : '+typesStr+'. Sois precis. En francais.';
     var r = await fetch('https://api.groq.com/openai/v1/chat/completions', {
-      method: 'POST',
-      headers: {'Content-Type':'application/json','Authorization':'Bearer '+groqKey},
-      body: JSON.stringify(body)
+      method:'POST',
+      headers:{'Content-Type':'application/json','Authorization':'Bearer '+groqKey},
+      body:JSON.stringify({model:'llama-3.3-70b-versatile',messages:[{role:'user',content:analysisPrompt}],max_tokens:400,temperature:0.2})
     });
     var d = await r.json();
     if(d.error) return null;
@@ -3826,8 +3817,9 @@ function setUnitType(t) {
 }
 
 // ── PARAMÈTRES CHAT ──
-var _chatParams = { equipe:'', lieu:'domicile', types:['Victoire','Over 2.5','BTS Oui'], champOnly:false };
+// déclaré plus haut
 var _CP_TYPES = ['Victoire','Nul','Défaite','Over 2.5','Under 2.5','BTS Oui','BTS Non','HC -1','HC +1','Mi-temps','1er buteur'];
+var _chatParams = { equipe:'', lieu:'domicile', types:['Victoire','Over 2.5','BTS Oui'], champOnly:false };
 
 
 function toggleChatParamsPC() {
