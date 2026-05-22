@@ -1035,7 +1035,7 @@ input[type="date"],input[type="time"]{color-scheme:dark;}
   <div style="display:flex;flex-direction:column;height:calc(100vh - 130px);max-height:700px;overflow:hidden;">
     <div class="sec" style="margin-top:0;display:flex;align-items:center;justify-content:space-between;">💬 Assistant Paris
   <div style="display:flex;gap:5px;">
-    <button onclick="toggleChatParams()" style="background:none;border:1px solid var(--b1);color:var(--t3);font-size:9px;font-weight:700;cursor:pointer;padding:2px 6px;border-radius:4px;">⚙️</button>
+    <button id="btn-chat-params-mobile" style="background:none;border:1px solid var(--b1);color:var(--t3);font-size:9px;font-weight:700;cursor:pointer;padding:2px 6px;border-radius:4px;">⚙️</button>
     <button onclick="resetChat()" style="background:none;border:none;color:var(--t3);font-size:9px;font-weight:700;cursor:pointer;letter-spacing:.5px;padding:2px 6px;border-radius:4px;border:1px solid var(--b1);">↺</button>
   </div>
 </div>
@@ -1055,7 +1055,11 @@ input[type="date"],input[type="time"]{color-scheme:dark;}
   </div>
   <div style="margin-bottom:8px;">
     <div style="font-size:10px;color:var(--t2);font-weight:600;margin-bottom:5px;">Types de paris favoris</div>
-    <div id="cp-types" style="display:flex;gap:5px;flex-wrap:wrap;"></div>
+    <div id="cp-types" style="display:flex;gap:5px;flex-wrap:wrap;margin-bottom:8px;"></div>
+    <div style="display:flex;gap:5px;">
+      <input id="cp-new-type" class="fi" placeholder="Ajouter un type…" style="flex:1;font-size:11px;padding:6px 8px;">
+      <button onclick="addCpType('mobile')" style="padding:6px 10px;border-radius:var(--r4);border:1px solid rgba(77,132,255,.4);background:rgba(77,132,255,.12);color:#7aaaff;font-size:11px;font-weight:700;cursor:pointer;">+</button>
+    </div>
   </div>
   <div>
     <div style="font-size:10px;color:var(--t2);font-weight:600;margin-bottom:5px;">Championnat uniquement</div>
@@ -3759,7 +3763,9 @@ function initChatParamsPC() {
     ct.innerHTML = _CP_TYPES.map(function(t){
       var on = _chatParams.types.indexOf(t) >= 0;
       var s = on ? 'border:1px solid rgba(77,132,255,.5);background:rgba(77,132,255,.12);color:#7aaaff;' : 'border:1px solid rgba(255,255,255,.1);background:none;color:var(--t3);';
-      return '<button data-cptype="'+t+'" onclick="toggleCpType(this)" style="padding:3px 7px;border-radius:12px;'+s+'font-size:9px;font-weight:700;cursor:pointer;">'+t+'</button>';
+      var isDefault = ['Victoire','Nul','Défaite','Over 2.5','Under 2.5','BTS Oui','BTS Non','HC -1','HC +1','Mi-temps','1er buteur'].indexOf(t) >= 0;
+      var delBtn = isDefault ? '' : '<span data-deltype="'+t+'" onclick="delCpType(this)" style="margin-left:4px;opacity:.6;cursor:pointer;">✕</span>';
+      return '<button data-cptype="'+t+'" onclick="toggleCpType(this)" style="display:inline-flex;align-items:center;padding:3px 7px;border-radius:12px;'+s+'font-size:9px;font-weight:700;cursor:pointer;">'+t+delBtn+'</button>';
     }).join('');
   }
   var chk = document.getElementById('cp-champ-only-pc');
@@ -3771,6 +3777,30 @@ function setCpLieuPC(btn) {
   });
   btn.style.borderColor='rgba(30,215,96,.4)';btn.style.background='rgba(30,215,96,.1)';btn.style.color='#1ed760';
   _chatParams.lieu = btn.dataset.val;
+}
+
+
+function addCpType(src) {
+  var inp = document.getElementById(src === 'pc' ? 'cp-new-type-pc' : 'cp-new-type');
+  if (!inp) return;
+  var val = inp.value.trim();
+  if (!val || _CP_TYPES.indexOf(val) >= 0) return;
+  _CP_TYPES.push(val);
+  _chatParams.types.push(val);
+  inp.value = '';
+  // Rafraîchir les deux panneaux
+  initChatParams();
+  initChatParamsPC();
+}
+
+function delCpType(span) {
+  var t = span.dataset.deltype;
+  var idx = _CP_TYPES.indexOf(t);
+  if (idx >= 0) _CP_TYPES.splice(idx, 1);
+  var idx2 = _chatParams.types.indexOf(t);
+  if (idx2 >= 0) _chatParams.types.splice(idx2, 1);
+  initChatParams();
+  initChatParamsPC();
 }
 
 function toggleChatParams() {
@@ -3798,7 +3828,9 @@ function initChatParams() {
     ct.innerHTML = _CP_TYPES.map(function(t){
       var on = _chatParams.types.indexOf(t) >= 0;
       var s = on ? 'border:1px solid rgba(77,132,255,.5);background:rgba(77,132,255,.12);color:#7aaaff;' : 'border:1px solid rgba(255,255,255,.1);background:none;color:var(--t3);';
-      return '<button data-cptype="'+t+'" onclick="toggleCpType(this)" style="padding:4px 8px;border-radius:12px;'+s+'font-size:9px;font-weight:700;cursor:pointer;">'+t+'</button>';
+      var isDefault = ['Victoire','Nul','Défaite','Over 2.5','Under 2.5','BTS Oui','BTS Non','HC -1','HC +1','Mi-temps','1er buteur'].indexOf(t) >= 0;
+      var delBtn = isDefault ? '' : '<span data-deltype="'+t+'" onclick="delCpType(this)" style="margin-left:4px;opacity:.6;cursor:pointer;">✕</span>';
+      return '<button data-cptype="'+t+'" onclick="toggleCpType(this)" style="display:inline-flex;align-items:center;padding:4px 8px;border-radius:12px;'+s+'font-size:9px;font-weight:700;cursor:pointer;">'+t+delBtn+'</button>';
     }).join('');
   }
   // Checkbox championnat
@@ -3856,7 +3888,7 @@ function updateBankTotal() {
   if(el) el.textContent = total.toFixed(2) + ' €';
 }
 
-var _bcp=document.getElementById('btn-chat-params-pc');if(_bcp)_bcp.onclick=function(){toggleChatParamsPC();};
+var _bcp=document.getElementById('btn-chat-params-pc');if(_bcp)_bcp.onclick=function(){toggleChatParamsPC();};var _bcm=document.getElementById('btn-chat-params-mobile');if(_bcm)_bcm.onclick=function(){toggleChatParams();};
   render();updMise();buildSbRows();buildDtRows();buildArjelRows();renderCrash();renderMmRows();renderMmRowsSimple();updateCompList();calcVb();calcLay();calcFreebet();renderArchive();updateBankTotal();_apStyle=localStorage.getItem('g45_ap_style')||'halo';_apIntensity=parseInt(localStorage.getItem('g45_ap_intensity')||'40');var _apInp=document.getElementById('ap-intensity');if(_apInp)_apInp.value=_apIntensity;setCardStyle(_apStyle);};
 
 </script>
@@ -3896,7 +3928,11 @@ var _bcp=document.getElementById('btn-chat-params-pc');if(_bcp)_bcp.onclick=func
     </div>
     <div style="margin-bottom:8px;">
       <div style="font-size:10px;color:var(--t2);font-weight:600;margin-bottom:4px;">Types de paris</div>
-      <div id="cp-types-pc" style="display:flex;gap:4px;flex-wrap:wrap;"></div>
+      <div id="cp-types-pc" style="display:flex;gap:4px;flex-wrap:wrap;margin-bottom:6px;"></div>
+      <div style="display:flex;gap:5px;">
+        <input id="cp-new-type-pc" class="fi" placeholder="Ajouter…" style="flex:1;font-size:11px;padding:5px 8px;">
+        <button onclick="addCpType('pc')" style="padding:5px 10px;border-radius:var(--r4);border:1px solid rgba(77,132,255,.4);background:rgba(77,132,255,.12);color:#7aaaff;font-size:11px;font-weight:700;cursor:pointer;">+</button>
+      </div>
     </div>
     <label style="display:flex;align-items:center;gap:7px;cursor:pointer;">
       <input type="checkbox" id="cp-champ-only-pc" style="accent-color:var(--a);">
