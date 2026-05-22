@@ -41,6 +41,7 @@ input,select,textarea,button{font-family:inherit;color:var(--t1);}
 .tab{display:none;}
 .tab.on{display:block;animation:up .2s ease;}
 @keyframes up{from{opacity:0;transform:translateY(5px)}to{opacity:1;transform:translateY(0)}}
+@keyframes aidot{0%,100%{opacity:1}50%{opacity:.3}}
 
 .sec{font-size:9px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--t3);margin:18px 0 10px;display:flex;align-items:center;gap:8px;}
 .sec::after{content:'';flex:1;height:1px;background:var(--b1);}
@@ -863,7 +864,12 @@ input[type="date"],input[type="time"]{color-scheme:dark;}
       <div class="fg" style="margin-bottom:7px"><label class="fl" style="color:var(--t3)">🔴 Lien Sofascore (optionnel)</label><input id="u-link" class="fi" placeholder="https://www.sofascore.com/…"></div>
       <div class="fg" style="margin-bottom:10px"><label class="fl" style="color:var(--t3)">📡 Lien Flashscore (optionnel)</label><input id="u-link2" class="fi" placeholder="https://www.flashscore.fr/equipe/…"></div>
       <div class="fg" style="margin-bottom:8px;"><label class="fl">📌 Note rapide</label><input id="u-note" class="fi" placeholder="Ex: Under 3.5 buts, forme à domicile…"></div>
-      <button class="btn btn-p" onclick="addUnit()">Ajouter l'équipe</button>
+      <div style="display:flex;gap:6px;margin-bottom:10px;">
+        <button id="u-type-club" onclick="setUnitType('club')" style="flex:1;padding:9px;border-radius:var(--r6);border:2px solid rgba(77,132,255,.5);background:rgba(77,132,255,.12);color:#7aaaff;font-size:11px;font-weight:700;cursor:pointer;">⚽ Club / Équipe</button>
+        <button id="u-type-joueur" onclick="setUnitType('joueur')" style="flex:1;padding:9px;border-radius:var(--r6);border:2px solid var(--b2);background:var(--bg3);color:var(--t3);font-size:11px;font-weight:700;cursor:pointer;">👤 Joueur / Buteur</button>
+      </div>
+      <input type="hidden" id="u-type" value="club">
+      <button class="btn btn-p" onclick="addUnit()">Ajouter</button>
     </div>
     <div id="ulist" style="margin-top:10px;"></div>
   </div>
@@ -1027,7 +1033,38 @@ input[type="date"],input[type="time"]{color-scheme:dark;}
 
 <div id="t-chat" class="tab">
   <div style="display:flex;flex-direction:column;height:calc(100vh - 130px);max-height:700px;">
-    <div class="sec" style="margin-top:0;display:flex;align-items:center;justify-content:space-between;">💬 Assistant Paris<button onclick="resetChat()" style="background:none;border:none;color:var(--t3);font-size:9px;font-weight:700;cursor:pointer;letter-spacing:.5px;padding:2px 6px;border-radius:4px;border:1px solid var(--b1);">↺ RESET</button></div>
+    <div class="sec" style="margin-top:0;display:flex;align-items:center;justify-content:space-between;">💬 Assistant Paris
+  <div style="display:flex;gap:5px;">
+    <button onclick="toggleChatParams()" style="background:none;border:1px solid var(--b1);color:var(--t3);font-size:9px;font-weight:700;cursor:pointer;padding:2px 6px;border-radius:4px;">⚙️</button>
+    <button onclick="resetChat()" style="background:none;border:none;color:var(--t3);font-size:9px;font-weight:700;cursor:pointer;letter-spacing:.5px;padding:2px 6px;border-radius:4px;border:1px solid var(--b1);">↺</button>
+  </div>
+</div>
+<div id="chat-params-panel" style="display:none;background:var(--bg3);border:1px solid var(--card-border,rgba(77,132,255,.32));border-radius:var(--r8);padding:10px;margin-bottom:8px;box-shadow:var(--card-glow,none);">
+  <div style="font-size:9px;font-weight:700;letter-spacing:1px;color:var(--t3);text-transform:uppercase;margin-bottom:8px;">Paramètres IA</div>
+  <div style="margin-bottom:8px;">
+    <div style="font-size:10px;color:var(--t2);font-weight:600;margin-bottom:5px;">Équipe focus</div>
+    <select id="cp-equipe" class="fi" style="font-size:11px;padding:6px 8px;"></select>
+  </div>
+  <div style="margin-bottom:8px;">
+    <div style="font-size:10px;color:var(--t2);font-weight:600;margin-bottom:5px;">Lieu favori</div>
+    <div style="display:flex;gap:5px;">
+      <button class="cp-lieu-btn on-param" data-val="domicile" onclick="setCpLieu(this)" style="flex:1;padding:6px;border-radius:var(--r4);border:1px solid rgba(30,215,96,.4);background:rgba(30,215,96,.1);color:#1ed760;font-size:10px;font-weight:700;cursor:pointer;">🏠 Dom</button>
+      <button class="cp-lieu-btn" data-val="exterieur" onclick="setCpLieu(this)" style="flex:1;padding:6px;border-radius:var(--r4);border:1px solid var(--b2);background:none;color:var(--t3);font-size:10px;font-weight:700;cursor:pointer;">🚌 Ext</button>
+      <button class="cp-lieu-btn" data-val="both" onclick="setCpLieu(this)" style="flex:1;padding:6px;border-radius:var(--r4);border:1px solid var(--b2);background:none;color:var(--t3);font-size:10px;font-weight:700;cursor:pointer;">➖ Les 2</button>
+    </div>
+  </div>
+  <div style="margin-bottom:8px;">
+    <div style="font-size:10px;color:var(--t2);font-weight:600;margin-bottom:5px;">Types de paris favoris</div>
+    <div id="cp-types" style="display:flex;gap:5px;flex-wrap:wrap;"></div>
+  </div>
+  <div>
+    <div style="font-size:10px;color:var(--t2);font-weight:600;margin-bottom:5px;">Championnat uniquement</div>
+    <label style="display:flex;align-items:center;gap:8px;cursor:pointer;">
+      <input type="checkbox" id="cp-champ-only" style="accent-color:var(--a);width:15px;height:15px;">
+      <span style="font-size:11px;color:var(--t2);">Exclure Coupes et amicaux</span>
+    </label>
+  </div>
+</div>
     <div id="chat-messages" style="flex:1;overflow-y:auto;display:flex;flex-direction:column;gap:8px;padding:4px 0 12px;scrollbar-width:none;"></div>
     <div style="display:flex;gap:8px;padding-top:10px;border-top:1px solid var(--b1);">
       <input id="chat-input" class="fi" placeholder="Pose ta question…" style="flex:1;" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendChat();}">
@@ -2246,6 +2283,9 @@ function openClub(nom,idx){
     +(sk.n>1?'<div class="spill" style="background:'+(sk.t?'rgba(30,215,96,.14)':'rgba(255,69,69,.12)')+';color:'+(sk.t?'var(--g)':'var(--r)')+';">'+(sk.t?'🔥':'❄️')+' '+sk.n+' consécutifs</div>':'')
     +'</div></div></div>';
 
+  /* Lancer l'analyse IA en arrière-plan */
+  setTimeout(function(){ loadTeamAI(nom); }, 300);
+
   $i('ip-bilan').innerHTML=
     '<div class="kpi2" style="margin-bottom:10px;">'
     +'<div class="kpibox" style="--ac:'+p.c+';"><div class="kpi-l">Bénéfice</div><div class="kpi-v" style="color:'+(profit>=0?'var(--g)':'var(--r)')+';">'+fmt(profit)+'</div></div>'
@@ -2266,7 +2306,15 @@ function openClub(nom,idx){
        +'<div class="prog-track"><div class="prog-fill" style="width:'+gp2.toFixed(1)+'%;background:'+(gp2>=100?'var(--g)':p.c)+';"></div></div>'
        +'<div class="prog-meta"><span style="color:'+p.c+';">'+gp2.toFixed(1)+'%</span><span>'+(gp2>=100?'🎉 Atteint !':'Reste '+(gu-profit).toFixed(2)+'€')+'</span></div>'
       :'<div style="font-size:12px;color:var(--t3);">Appuie sur Modifier pour définir un objectif.</div>')
-    +'</div></div>';
+    +'</div></div>'
+    /* Bloc IA */
+    +'<div class="fc" id="team-ai-box" style="margin-top:4px;">'
+    +'<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">'
+    +'<div style="display:flex;align-items:center;gap:7px;"><div id="team-ai-dot" style="width:7px;height:7px;border-radius:50%;background:#4d84ff;animation:aidot 1.5s infinite;"></div><span style="font-size:10px;font-weight:700;color:#7aaaff;letter-spacing:.5px;text-transform:uppercase;">Analyse IA — Tavily + Groq</span></div>'
+    +'<button onclick="loadTeamAI(this.dataset.nom)" style="background:none;border:1px solid rgba(77,132,255,.3);border-radius:6px;color:#7aaaff;font-size:10px;font-weight:700;padding:3px 8px;cursor:pointer;">↻</button>'
+    +'</div>'
+    +'<div id="team-ai-content" style="font-size:12px;color:#8b97c4;line-height:1.7;"><div style="display:flex;align-items:center;gap:8px;color:#4f5d88;"><div style="width:12px;height:12px;border:2px solid rgba(77,132,255,.2);border-top-color:#4d84ff;border-radius:50%;animation:spin .8s linear infinite;flex-shrink:0;"></div>Recherche en cours…</div></div>'
+    +'</div>';
 
   $i('ip-graphiques').innerHTML=
     '<div class="cwrap"><div class="ctitle">Évolution du profit</div><div style="height:190px;position:relative;"><canvas id="dc-courbe"></canvas></div><div class="chart-info-bar" id="cib-club"><span class="cib-main" id="cib-club-txt">Touche un point</span><span class="cib-val" id="cib-club-val"></span></div></div>'
@@ -2494,7 +2542,7 @@ function addUnit(){
   if(state.u.find(function(u){return u.n===name;}))return alert('Existe déjà !');
   var ulink=($i('u-link')&&$i('u-link').value.trim())||'';
   var ulink2=($i('u-link2')&&$i('u-link2').value.trim())||'';
-  var unote=($i('u-note')&&$i('u-note').value.trim())||'';state.u.push({n:name,abbr:abbr,color:color,s:$i('u-stars').value,l:1,sport:($i('u-sport')&&$i('u-sport').value)||'⚽',logoUrl:logoUrl||'',link:ulink,link2:ulink2,note:unote});
+  var unote=($i('u-note')&&$i('u-note').value.trim())||'';var utype=($i('u-type')&&$i('u-type').value)||'club';state.u.push({n:name,abbr:abbr,color:color,s:$i('u-stars').value,l:1,sport:($i('u-sport')&&$i('u-sport').value)||'⚽',logoUrl:logoUrl||'',link:ulink,link2:ulink2,note:unote,type:utype});
   if(logoUrl)LOGOS[name]=logoUrl;
   $i('u-name').value='';
   if($i('u-link'))$i('u-link').value='';
@@ -3314,7 +3362,7 @@ async function sendChat(){
     if(needsWeb&&getTavilyKey()){var searchResult=await searchTavily(msg);if(searchResult){webCtx=searchResult;webFound=true;}}
     var sysPrompt=webFound
       ?'Tu as ces infos web. Cite uniquement ce qui est confirmé. Si le score exact n est pas dans les infos, dis juste qui a gagné. 1-2 phrases en français, pas de supposition: '+webCtx
-      :buildContext();
+      :buildContextWithParams();
     var messages=[{role:'system',content:sysPrompt},{role:'user',content:msg}];
     var r=await fetch('https://api.groq.com/openai/v1/chat/completions',{
       method:'POST',
@@ -3480,7 +3528,7 @@ async function sendChatPC(){
     var needsWeb=/match|résultat|score|classement|ligue|champion|derby|finale|vainqueur|transfert|blessé|compo|prochain|dernier|hier|aujourd|semaine|récent|actuell|2025|2026|nba|nfl|mlb|nhl|dodgers|lakers|yankees|chelsea|arsenal|psg|real|barça|liga|premier|bundesliga/i.test(msg);
     var webCtx='';var webFound2=false;
     if(needsWeb&&getTavilyKey()){var sr=await searchTavily(msg);if(sr){webCtx=sr;webFound2=true;}}
-    var sysPC=webFound2?'Tu as ces infos web. Cite uniquement ce qui est confirmé. Si le score exact n est pas dedans, dis juste qui a gagné. 1-2 phrases en français: '+webCtx:buildContext();
+    var sysPC=webFound2?'Tu as ces infos web. Cite uniquement ce qui est confirmé. Si le score exact n est pas dedans, dis juste qui a gagné. 1-2 phrases en français: '+webCtx:buildContextWithParams();
     var messages=[{role:'system',content:sysPC},{role:'user',content:msg}];
     var r=await fetch('https://api.groq.com/openai/v1/chat/completions',{
       method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+key},
@@ -3497,6 +3545,76 @@ async function sendChatPC(){
     chatBubblePC('assistant','Erreur : '+e.message);
   }
 }
+
+// ── ANALYSE IA ÉQUIPE ──
+async function loadTeamAI(nom) {
+  var box = document.getElementById('team-ai-content');
+  if (!box) return;
+  // Brancher le bouton refresh
+  var btn = document.getElementById('team-ai-refresh');
+  if (btn) { btn.onclick = function(){ loadTeamAI(nom); }; }
+  box.innerHTML = '<div style="display:flex;align-items:center;gap:8px;color:#4f5d88;"><div style="width:12px;height:12px;border:2px solid rgba(77,132,255,.2);border-top-color:#4d84ff;border-radius:50%;animation:spin .8s linear infinite;flex-shrink:0;"></div>Recherche en cours…</div>';
+
+  var groqKey = getGeminiKey();
+  var tavilyKey = getTavilyKey();
+
+  // Stats perso
+  var paris = state.a.filter(function(h){ return h.n === nom; });
+  var wins = paris.filter(function(h){ return h.win; }).length;
+  var wr = paris.length ? (wins/paris.length*100).toFixed(0) : 0;
+  var profit = paris.reduce(function(a,h){ return a+(h.win?(h.m*h.cote)-h.m:-h.m); }, 0);
+  var cote = paris.length ? (paris.reduce(function(a,h){ return a+h.cote; },0)/paris.length).toFixed(2) : '—';
+  var last5 = paris.slice(0,5).map(function(h){ return h.win?'V':'D'; }).join(' ');
+  var statsPerso = nom+' : '+paris.length+' paris, '+wr+'% réussite, profit '+profit.toFixed(2)+'€, cote moy '+cote+', derniers résultats : '+last5;
+
+  // Tavily
+  var webCtx = '';
+  if (tavilyKey) {
+    var query = isJoueur
+    ? nom + ' statistiques buts buteur 2025 2026 derniers matchs'
+    : nom + ' football résultats récents forme prochains matchs 2025 2026';
+    var tvResult = await searchTavily(query);
+    if (tvResult) webCtx = tvResult.substring(0, 800);
+  }
+
+  if (!groqKey) {
+    box.innerHTML = '<span style="color:#ff4545;">Configure ta clé Groq dans Outils.</span>';
+    return;
+  }
+
+  var u = state.u.find(function(x){ return x.n===nom; });
+  var isJoueur = u && u.type === 'joueur';
+  var prompt = 'Tu es un expert paris sportifs. Voici mes stats personnelles sur '+nom+' : '+statsPerso+'.';
+  if (isJoueur) prompt = 'Tu es un expert paris sportifs spécialisé dans les stats de joueurs. Voici mes stats de paris sur le joueur '+nom+' : '+statsPerso+'.';
+  if (webCtx) prompt += ' Infos récentes sur cette équipe : '+webCtx+'.';
+  if (isJoueur) {
+    prompt += ' En 3-4 phrases max : stats récentes du joueur (buts, passes), forme actuelle, et 1-2 types de paris pertinents (1er buteur, marque à tout moment, nombre de buts). Sois direct. Réponds en français.';
+  } else {
+    prompt += ' En 3-4 phrases max, donne une analyse concise : forme actuelle, tendances, et 1-2 types de paris pertinents à considérer. Sois direct et précis. Réponds en français.';
+  }
+
+  try {
+    var r = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json','Authorization':'Bearer '+groqKey},
+      body: JSON.stringify({
+        model: 'llama-3.3-70b-versatile',
+        messages: [{role:'user', content: prompt}],
+        max_tokens: 200,
+        temperature: 0.4
+      })
+    });
+    var d = await r.json();
+    if (d.error) throw new Error(d.error.message);
+    var reply = d.choices[0].message.content.trim();
+    // Mettre en gras les chiffres et % 
+    reply = reply.replace(/(\d+[%€]|\d+\.\d+)/g, '<strong style="color:#e8eeff;">$1</strong>');
+    box.innerHTML = reply;
+  } catch(e) {
+    box.innerHTML = '<span style="color:#ff4545;">Erreur : '+e.message+'</span>';
+  }
+}
+
 window.onload=function(){if(!state.bkColors)state.bkColors={};loadCustomLinks();_typeColors=JSON.parse(localStorage.getItem('g45_typecolors')||'{}');var _n=localStorage.getItem('gones45_note');var _ni=$i('pc-note');if(_ni&&_n)_ni.innerHTML=_n;var tk=localStorage.getItem('gones45_tavily_key');var tki=$i('tavily-key-input');if(tki&&tk)tki.value=tk;
   /* Listener unique pour évolution bankroll — survivant aux re-renders */
   document.addEventListener('touchend',function(e){
@@ -3588,6 +3706,128 @@ function updateCardIntensity(v) {
   _applyCardStyle();
 }
   
+
+// ── TYPE UNITÉ ──
+var _unitType = 'club';
+function setUnitType(t) {
+  _unitType = t;
+  var cb = document.getElementById('u-type-club');
+  var jb = document.getElementById('u-type-joueur');
+  var inp = document.getElementById('u-type');
+  if (inp) inp.value = t;
+  if (cb && jb) {
+    if (t === 'club') {
+      cb.style.borderColor='rgba(77,132,255,.5)';cb.style.background='rgba(77,132,255,.12)';cb.style.color='#7aaaff';
+      jb.style.borderColor='var(--b2)';jb.style.background='var(--bg3)';jb.style.color='var(--t3)';
+    } else {
+      jb.style.borderColor='rgba(240,176,32,.5)';jb.style.background='rgba(240,176,32,.1)';jb.style.color='#f0b020';
+      cb.style.borderColor='var(--b2)';cb.style.background='var(--bg3)';cb.style.color='var(--t3)';
+    }
+  }
+}
+
+// ── PARAMÈTRES CHAT ──
+var _chatParams = { equipe:'', lieu:'domicile', types:['Victoire','Over 2.5','BTS Oui'], champOnly:false };
+var _CP_TYPES = ['Victoire','Nul','Défaite','Over 2.5','Under 2.5','BTS Oui','BTS Non','HC -1','HC +1','Mi-temps','1er buteur'];
+
+
+function toggleChatParamsPC() {
+  var p = document.getElementById('chat-params-panel-pc');
+  if (!p) return;
+  if (p.style.display === 'none') { p.style.display = 'block'; initChatParamsPC(); }
+  else p.style.display = 'none';
+}
+function initChatParamsPC() {
+  var sel = document.getElementById('cp-equipe-pc');
+  if (sel) {
+    sel.innerHTML = '<option value="">Toutes les équipes</option>' +
+      state.u.map(function(u){ return '<option value="'+u.n+'"'+(u.n===_chatParams.equipe?' selected':'')+'>'+u.n+'</option>'; }).join('');
+    sel.onchange = function(){ _chatParams.equipe = this.value; };
+  }
+  var ct = document.getElementById('cp-types-pc');
+  if (ct) {
+    ct.innerHTML = _CP_TYPES.map(function(t){
+      var on = _chatParams.types.indexOf(t) >= 0;
+      var s = on ? 'border:1px solid rgba(77,132,255,.5);background:rgba(77,132,255,.12);color:#7aaaff;' : 'border:1px solid rgba(255,255,255,.1);background:none;color:var(--t3);';
+      return '<button data-cptype="'+t+'" onclick="toggleCpType(this)" style="padding:3px 7px;border-radius:12px;'+s+'font-size:9px;font-weight:700;cursor:pointer;">'+t+'</button>';
+    }).join('');
+  }
+  var chk = document.getElementById('cp-champ-only-pc');
+  if (chk) { chk.checked = _chatParams.champOnly; chk.onchange = function(){ _chatParams.champOnly = this.checked; }; }
+}
+function setCpLieuPC(btn) {
+  document.querySelectorAll('.cp-lieu-btn-pc').forEach(function(b){
+    b.style.borderColor='var(--b2)';b.style.background='none';b.style.color='var(--t3)';
+  });
+  btn.style.borderColor='rgba(30,215,96,.4)';btn.style.background='rgba(30,215,96,.1)';btn.style.color='#1ed760';
+  _chatParams.lieu = btn.dataset.val;
+}
+
+function toggleChatParams() {
+  var p = document.getElementById('chat-params-panel');
+  if (!p) return;
+  if (p.style.display === 'none') {
+    p.style.display = 'block';
+    initChatParams();
+  } else {
+    p.style.display = 'none';
+  }
+}
+
+function initChatParams() {
+  // Select équipes
+  var sel = document.getElementById('cp-equipe');
+  if (sel) {
+    sel.innerHTML = '<option value="">Toutes les équipes</option>' +
+      state.u.map(function(u){ return '<option value="'+u.n+'"'+(u.n===_chatParams.equipe?' selected':'')+'>'+u.n+'</option>'; }).join('');
+    sel.onchange = function(){ _chatParams.equipe = this.value; };
+  }
+  // Types de paris
+  var ct = document.getElementById('cp-types');
+  if (ct) {
+    ct.innerHTML = _CP_TYPES.map(function(t){
+      var on = _chatParams.types.indexOf(t) >= 0;
+      var s = on ? 'border:1px solid rgba(77,132,255,.5);background:rgba(77,132,255,.12);color:#7aaaff;' : 'border:1px solid rgba(255,255,255,.1);background:none;color:var(--t3);';
+      return '<button data-cptype="'+t+'" onclick="toggleCpType(this)" style="padding:4px 8px;border-radius:12px;'+s+'font-size:9px;font-weight:700;cursor:pointer;">'+t+'</button>';
+    }).join('');
+  }
+  // Checkbox championnat
+  var chk = document.getElementById('cp-champ-only');
+  if (chk) { chk.checked = _chatParams.champOnly; chk.onchange = function(){ _chatParams.champOnly = this.checked; }; }
+}
+
+function setCpLieu(btn) {
+  document.querySelectorAll('.cp-lieu-btn').forEach(function(b){
+    b.style.borderColor='var(--b2)';b.style.background='none';b.style.color='var(--t3)';
+  });
+  btn.style.borderColor='rgba(30,215,96,.4)';btn.style.background='rgba(30,215,96,.1)';btn.style.color='#1ed760';
+  _chatParams.lieu = btn.dataset.val;
+}
+
+function toggleCpType(btn) {
+  var t = btn.dataset.cptype;
+  var idx = _chatParams.types.indexOf(t);
+  if (idx >= 0) {
+    _chatParams.types.splice(idx,1);
+    btn.style.border='1px solid rgba(255,255,255,.1)';btn.style.background='none';btn.style.color='var(--t3)';
+  } else {
+    _chatParams.types.push(t);
+    btn.style.border='1px solid rgba(77,132,255,.5)';btn.style.background='rgba(77,132,255,.12)';btn.style.color='#7aaaff';
+  }
+}
+
+// ── BUILDCONTEXT AMÉLIORÉ ──
+function buildContextWithParams() {
+  var base = buildContext();
+  var extras = [];
+  if (_chatParams.equipe) extras.push('Équipe focus: '+_chatParams.equipe);
+  if (_chatParams.lieu !== 'both') extras.push('Mode favori: '+(_chatParams.lieu==='domicile'?'Domicile':'Extérieur'));
+  if (_chatParams.types.length) extras.push('Types de paris à privilégier: '+_chatParams.types.join(', '));
+  if (_chatParams.champOnly) extras.push('Analyse uniquement les matchs de championnat, exclure Coupes et amicaux');
+  if (extras.length) base += ' PRÉFÉRENCES UTILISATEUR: '+extras.join('. ')+'.';
+  return base;
+}
+
 // ── ARCHIVE — filtres ──
 var _archFilter = 'all';
 function setArchFilter(f, el) {
@@ -3632,7 +3872,35 @@ render();updMise();buildSbRows();buildDtRows();buildArjelRows();renderCrash();re
 
 <!-- SIDEBAR CHAT PC -->
 <div class="chat-sidebar" id="pc-chat-sidebar">
-  <div class="sec" style="margin-top:0;font-size:10px;display:flex;align-items:center;justify-content:space-between;">💬 Assistant Paris<button onclick="resetChat()" style="background:none;border:none;color:var(--t3);font-size:9px;font-weight:700;cursor:pointer;letter-spacing:.5px;padding:2px 6px;border-radius:4px;border:1px solid var(--b1);">↺ RESET</button></div>
+  <div class="sec" style="margin-top:0;font-size:10px;display:flex;align-items:center;justify-content:space-between;">💬 Assistant Paris
+    <div style="display:flex;gap:5px;">
+      <button onclick="toggleChatParamsPC()" style="background:none;border:1px solid var(--b1);color:var(--t3);font-size:9px;font-weight:700;cursor:pointer;padding:2px 6px;border-radius:4px;" title="Paramètres IA">⚙️</button>
+      <button onclick="resetChat()" style="background:none;border:1px solid var(--b1);color:var(--t3);font-size:9px;font-weight:700;cursor:pointer;letter-spacing:.5px;padding:2px 6px;border-radius:4px;">↺</button>
+    </div>
+  </div>
+  <div id="chat-params-panel-pc" style="display:none;background:var(--bg3);border:1px solid var(--card-border,rgba(77,132,255,.32));border-radius:var(--r8);padding:10px;margin-bottom:8px;box-shadow:var(--card-glow,none);flex-shrink:0;">
+    <div style="font-size:9px;font-weight:700;letter-spacing:1px;color:var(--t3);text-transform:uppercase;margin-bottom:8px;">Paramètres IA</div>
+    <div style="margin-bottom:8px;">
+      <div style="font-size:10px;color:var(--t2);font-weight:600;margin-bottom:4px;">Équipe focus</div>
+      <select id="cp-equipe-pc" class="fi" style="font-size:11px;padding:6px 8px;"></select>
+    </div>
+    <div style="margin-bottom:8px;">
+      <div style="font-size:10px;color:var(--t2);font-weight:600;margin-bottom:4px;">Lieu favori</div>
+      <div style="display:flex;gap:5px;">
+        <button class="cp-lieu-btn-pc" data-val="domicile" onclick="setCpLieuPC(this)" style="flex:1;padding:6px;border-radius:var(--r4);border:1px solid rgba(30,215,96,.4);background:rgba(30,215,96,.1);color:#1ed760;font-size:10px;font-weight:700;cursor:pointer;">🏠 Dom</button>
+        <button class="cp-lieu-btn-pc" data-val="exterieur" onclick="setCpLieuPC(this)" style="flex:1;padding:6px;border-radius:var(--r4);border:1px solid var(--b2);background:none;color:var(--t3);font-size:10px;font-weight:700;cursor:pointer;">🚌 Ext</button>
+        <button class="cp-lieu-btn-pc" data-val="both" onclick="setCpLieuPC(this)" style="flex:1;padding:6px;border-radius:var(--r4);border:1px solid var(--b2);background:none;color:var(--t3);font-size:10px;font-weight:700;cursor:pointer;">➖ Les 2</button>
+      </div>
+    </div>
+    <div style="margin-bottom:8px;">
+      <div style="font-size:10px;color:var(--t2);font-weight:600;margin-bottom:4px;">Types de paris</div>
+      <div id="cp-types-pc" style="display:flex;gap:4px;flex-wrap:wrap;"></div>
+    </div>
+    <label style="display:flex;align-items:center;gap:7px;cursor:pointer;">
+      <input type="checkbox" id="cp-champ-only-pc" style="accent-color:var(--a);">
+      <span style="font-size:10px;color:var(--t2);">Championnat uniquement</span>
+    </label>
+  </div>
   <div id="chat-messages-pc" style="flex:1;overflow-y:auto;display:flex;flex-direction:column;gap:8px;padding:4px 0 8px;scrollbar-width:thin;"></div>
   <div style="border-top:1px solid var(--b1);padding-top:8px;">
     <div style="display:flex;gap:6px;">
