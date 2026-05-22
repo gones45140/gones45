@@ -34,8 +34,8 @@ input,select,textarea,button{font-family:inherit;color:var(--t1);}
 .nav{position:fixed;bottom:0;width:100%;background:rgba(8,11,18,.97);backdrop-filter:blur(20px);border-top:1px solid var(--b1);display:grid;grid-template-columns:repeat(6,1fr);z-index:200;}
 .ni{display:flex;flex-direction:column;align-items:center;gap:3px;padding:9px 2px 7px;font-size:7.5px;font-weight:600;letter-spacing:.3px;color:var(--t3);background:none;border:1px solid transparent;border-radius:10px;cursor:pointer;transition:color .35s ease,border-color .35s ease,background .35s ease,box-shadow .35s ease;text-transform:uppercase;}
 .ni i{font-size:17px;transition:all .35s ease;}
-.ni.on{color:#a8c8ff;border:1px solid rgba(77,132,255,.8);background:radial-gradient(ellipse at 50% 70%,rgba(77,132,255,.41) 0%,rgba(77,132,255,.16) 50%,transparent 100%);box-shadow:0 0 25px rgba(77,132,255,.72),0 0 9px rgba(77,132,255,.9),0 0 45px rgba(77,132,255,.36),inset 0 0 14px rgba(77,132,255,.23);}
-.ni.on i{color:#fff;filter:drop-shadow(0 0 7px rgba(100,160,255,.9)) drop-shadow(0 0 3px #fff);}
+.ni.on{color:#a8c8ff;border:1px solid rgba(77,132,255,.72);background:radial-gradient(ellipse at 50% 70%,rgba(77,132,255,.12) 0%,rgba(77,132,255,.04) 50%,transparent 100%);box-shadow:0 0 25px rgba(77,132,255,.65),0 0 9px rgba(77,132,255,.82),0 0 45px rgba(77,132,255,.3),inset 0 0 10px rgba(77,132,255,.08);}
+.ni.on i{color:#c8deff;filter:drop-shadow(0 0 6px rgba(100,160,255,.75)) drop-shadow(0 0 2px #fff);}
 
 .main{padding:14px;max-width:580px;margin:0 auto;}
 .tab{display:none;}
@@ -3529,46 +3529,51 @@ window.onload=function(){if(!state.bkColors)state.bkColors={};loadCustomLinks();
   var gk=localStorage.getItem('gones45_gemini_key');var gki=$i('gemini-key-input');if(gki&&gk)gki.value=gk;
 
 // ── APPARENCE — halo cartes ──
-var _apStyle = localStorage.getItem('g45_ap_style') || 'halo';
-var _apIntensity = parseInt(localStorage.getItem('g45_ap_intensity') || '40');
+var _apStyle = 'halo';
+var _apIntensity = 40;
 
 function _applyCardStyle() {
   var root = document.documentElement;
   var p = _apIntensity / 100;
+  var border, glow;
   if (_apStyle === 'off') {
-    root.style.setProperty('--card-border', 'rgba(255,255,255,.06)');
-    root.style.setProperty('--card-glow', 'none');
+    border = 'rgba(255,255,255,.06)';
+    glow = 'none';
   } else if (_apStyle === 'fin') {
-    root.style.setProperty('--card-border', 'rgba(77,132,255,' + Math.min(0.9,(0.3 + 0.6*p)).toFixed(2) + ')');
-    root.style.setProperty('--card-glow', 'none');
+    border = 'rgba(77,132,255,' + Math.min(0.9,(0.1 + 0.8*p)).toFixed(2) + ')';
+    glow = 'none';
   } else if (_apStyle === 'halo') {
-    root.style.setProperty('--card-border', 'rgba(77,132,255,' + Math.min(0.9,(0.2 + 0.7*p)).toFixed(2) + ')');
-    root.style.setProperty('--card-glow', '0 0 ' + Math.round(8+20*p) + 'px rgba(77,132,255,' + Math.min(0.7,(0.1+0.6*p)).toFixed(2) + '), 0 0 ' + Math.round(2+6*p) + 'px rgba(77,132,255,' + Math.min(0.9,(0.2+0.7*p)).toFixed(2) + ')');
-  } else if (_apStyle === 'intense') {
-    root.style.setProperty('--card-border', 'rgba(77,132,255,' + Math.min(0.95,(0.3+0.65*p)).toFixed(2) + ')');
-    root.style.setProperty('--card-glow', '0 0 ' + Math.round(12+30*p) + 'px rgba(77,132,255,' + Math.min(0.7,(0.15+0.55*p)).toFixed(2) + '), 0 0 ' + Math.round(4+12*p) + 'px rgba(77,132,255,' + Math.min(0.9,(0.3+0.6*p)).toFixed(2) + '), inset 0 0 ' + Math.round(6+14*p) + 'px rgba(77,132,255,' + Math.min(0.2,(0.02+0.18*p)).toFixed(2) + ')');
+    border = 'rgba(77,132,255,' + Math.min(0.9,(0.1 + 0.8*p)).toFixed(2) + ')';
+    glow = '0 0 ' + Math.round(4+26*p) + 'px rgba(77,132,255,' + Math.min(0.7,(0.04+0.66*p)).toFixed(2) + '), 0 0 ' + Math.round(1+9*p) + 'px rgba(77,132,255,' + Math.min(0.9,(0.08+0.82*p)).toFixed(2) + ')';
+  } else {
+    border = 'rgba(77,132,255,' + Math.min(0.95,(0.15+0.8*p)).toFixed(2) + ')';
+    glow = '0 0 ' + Math.round(8+34*p) + 'px rgba(77,132,255,' + Math.min(0.7,(0.06+0.64*p)).toFixed(2) + '), 0 0 ' + Math.round(3+15*p) + 'px rgba(77,132,255,' + Math.min(0.9,(0.1+0.8*p)).toFixed(2) + '), inset 0 0 ' + Math.round(3+17*p) + 'px rgba(77,132,255,' + Math.min(0.15,(0.008+0.142*p)).toFixed(2) + ')';
   }
+  root.style.setProperty('--card-border', border);
+  root.style.setProperty('--card-glow', glow);
   var prev = document.getElementById('ap-preview');
   if (prev) {
-    prev.style.borderColor = 'var(--card-border)';
-    prev.style.boxShadow = root.style.getPropertyValue('--card-glow') || 'none';
-    prev.style.borderColor = getComputedStyle(root).getPropertyValue('--card-border').trim() || 'rgba(255,255,255,.06)';
-    prev.style.boxShadow = getComputedStyle(root).getPropertyValue('--card-glow').trim() || 'none';
+    prev.style.border = '1px solid ' + border;
+    prev.style.boxShadow = glow;
   }
 }
 
 function setCardStyle(s) {
   _apStyle = s;
   localStorage.setItem('g45_ap_style', s);
+  var labels = {off:'Aucun', fin:'Fin', halo:'Halo', intense:'Intense'};
   ['off','fin','halo','intense'].forEach(function(k) {
     var b = document.getElementById('ap-' + k);
     if (!b) return;
-    var labels = {off:'Aucun',fin:'Fin',halo:'Halo',intense:'Intense'};
     if (k === s) {
-      b.style.cssText += ';border-color:rgba(77,132,255,.6);background:rgba(77,132,255,.15);color:#7aaaff;';
+      b.style.borderColor = 'rgba(77,132,255,.7)';
+      b.style.background = 'rgba(77,132,255,.18)';
+      b.style.color = '#7aaaff';
       b.textContent = labels[k] + ' ✓';
     } else {
-      b.style.cssText += ';border-color:rgba(255,255,255,.10);background:var(--bg3);color:var(--t3);';
+      b.style.borderColor = 'rgba(255,255,255,.08)';
+      b.style.background = 'var(--bg3)';
+      b.style.color = 'var(--t3)';
       b.textContent = labels[k];
     }
   });
@@ -3610,7 +3615,7 @@ function updateBankTotal() {
   if(el) el.textContent = total.toFixed(2) + ' €';
 }
 
-render();updMise();buildSbRows();buildDtRows();buildArjelRows();renderCrash();renderMmRows();renderMmRowsSimple();updateCompList();calcVb();calcLay();calcFreebet();renderArchive();updateBankTotal();_apStyle=localStorage.getItem('g45_ap_style')||'halo';_apIntensity=parseInt(localStorage.getItem('g45_ap_intensity')||'40');_applyCardStyle();var _apInp=document.getElementById('ap-intensity');if(_apInp)_apInp.value=_apIntensity;setCardStyle(_apStyle);};
+render();updMise();buildSbRows();buildDtRows();buildArjelRows();renderCrash();renderMmRows();renderMmRowsSimple();updateCompList();calcVb();calcLay();calcFreebet();renderArchive();updateBankTotal();_apStyle=localStorage.getItem('g45_ap_style')||'halo';_apIntensity=parseInt(localStorage.getItem('g45_ap_intensity')||'40');var _apInp=document.getElementById('ap-intensity');if(_apInp)_apInp.value=_apIntensity;setCardStyle(_apStyle);};
 
 </script>
 
