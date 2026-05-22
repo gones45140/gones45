@@ -3855,7 +3855,8 @@ function updateBankTotal() {
   if(el) el.textContent = total.toFixed(2) + ' €';
 }
 
-render();updMise();buildSbRows();buildDtRows();buildArjelRows();renderCrash();renderMmRows();renderMmRowsSimple();updateCompList();calcVb();calcLay();calcFreebet();renderArchive();updateBankTotal();_apStyle=localStorage.getItem('g45_ap_style')||'halo';_apIntensity=parseInt(localStorage.getItem('g45_ap_intensity')||'40');var _apInp=document.getElementById('ap-intensity');if(_apInp)_apInp.value=_apIntensity;setCardStyle(_apStyle);};
+var _bcp=document.getElementById('btn-chat-params-pc');if(_bcp)_bcp.onclick=function(){toggleChatParamsPC();};
+  render();updMise();buildSbRows();buildDtRows();buildArjelRows();renderCrash();renderMmRows();renderMmRowsSimple();updateCompList();calcVb();calcLay();calcFreebet();renderArchive();updateBankTotal();_apStyle=localStorage.getItem('g45_ap_style')||'halo';_apIntensity=parseInt(localStorage.getItem('g45_ap_intensity')||'40');var _apInp=document.getElementById('ap-intensity');if(_apInp)_apInp.value=_apIntensity;setCardStyle(_apStyle);};
 
 </script>
 
@@ -3874,7 +3875,7 @@ render();updMise();buildSbRows();buildDtRows();buildArjelRows();renderCrash();re
 <div class="chat-sidebar" id="pc-chat-sidebar">
   <div class="sec" style="margin-top:0;font-size:10px;display:flex;align-items:center;justify-content:space-between;">💬 Assistant Paris
     <div style="display:flex;gap:5px;">
-      <button onclick="toggleChatParamsPC()" style="background:none;border:1px solid var(--b1);color:var(--t3);font-size:9px;font-weight:700;cursor:pointer;padding:2px 6px;border-radius:4px;" title="Paramètres IA">⚙️</button>
+      <button id="btn-chat-params-pc" style="background:none;border:1px solid var(--b1);color:var(--t3);font-size:9px;font-weight:700;cursor:pointer;padding:2px 6px;border-radius:4px;" title="Paramètres IA">⚙️</button>
       <button onclick="resetChat()" style="background:none;border:1px solid var(--b1);color:var(--t3);font-size:9px;font-weight:700;cursor:pointer;letter-spacing:.5px;padding:2px 6px;border-radius:4px;">↺</button>
     </div>
   </div>
