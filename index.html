@@ -260,8 +260,8 @@ input[type="date"],input[type="time"]{color-scheme:dark;}
 .mm-wrap{background:var(--bg2);border:1px solid var(--card-border,rgba(77,132,255,.3));border-radius:var(--r8);padding:13px;margin-bottom:10px;box-shadow:var(--card-glow,0 0 12px rgba(77,132,255,.15),0 0 3px rgba(77,132,255,.25));}
 .mm-title{font-size:9px;font-weight:700;letter-spacing:1px;color:var(--t3);text-transform:uppercase;margin-bottom:10px;display:flex;align-items:center;justify-content:space-between;}
 .mm-sel{display:flex;flex-direction:column;gap:6px;margin-bottom:10px;}
-.mm-row{display:flex;align-items:center;gap:7px;background:var(--bg3);border-radius:var(--r4);padding:8px 10px;}
-.mm-lbl{flex:1;font-size:12px;font-weight:600;}
+.mm-row{display:flex;align-items:center;gap:7px;background:var(--bg3);border-radius:var(--r6);padding:8px 10px;border:1px solid rgba(77,132,255,.2);}
+.mm-lbl{flex:1;font-size:12px;font-weight:600;color:var(--t1);background:var(--bg2);border:1px solid var(--b2);border-radius:var(--r4);padding:5px 8px;}
 .mm-cote{width:65px;padding:5px 8px;background:var(--bg);border:1px solid var(--b2);border-radius:var(--r4);color:var(--a);font-weight:700;font-size:12px;text-align:center;}
 .mm-del{background:none;border:none;color:var(--t3);cursor:pointer;font-size:14px;padding:0 3px;}
 .mm-del:hover{color:var(--r);}
@@ -393,6 +393,9 @@ input[type="date"],input[type="time"]{color-scheme:dark;}
 
 #pc-note:empty:before{content:attr(data-placeholder);color:var(--t3);pointer-events:none;}
 #pc-note img{max-width:100%;border-radius:6px;margin:4px 0;display:block;}
+
+.mm-row input.fi{color:var(--t1) !important;background:var(--bg2) !important;}
+.mm-del{background:rgba(255,69,69,.15);border:1px solid rgba(255,69,69,.3);color:#ff6b6b;border-radius:50%;width:22px;height:22px;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:11px;flex-shrink:0;padding:0;}
 </style>
 </head>
 <body>
@@ -444,9 +447,12 @@ input[type="date"],input[type="time"]{color-scheme:dark;}
       </div>
       <div class="mm-sel" id="mm-sel"></div>
       <div class="mm-types" id="mm-types"></div>
-      <div class="mm-cote-total">
-        <span class="mm-ct-l">Cote combinée</span>
-        <span class="mm-ct-v" id="mm-cote-total">—</span>
+      <div class="mm-cote-total" style="display:flex;align-items:center;justify-content:space-between;">
+        <div>
+          <span class="mm-ct-l">Cote combinée</span>
+          <span class="mm-ct-v" id="mm-cote-total">—</span>
+        </div>
+        <button onclick="saveMmAsPari('cockpit')" style="padding:7px 14px;border-radius:var(--r6);border:1px solid rgba(30,215,96,.4);background:rgba(30,215,96,.1);color:#1ed760;font-size:11px;font-weight:700;cursor:pointer;">💾 Enregistrer pari</button>
       </div>
     </div>
     <div class="fc">
@@ -482,9 +488,12 @@ input[type="date"],input[type="time"]{color-scheme:dark;}
       </div>
       <div class="mm-sel" id="mm-sel-simple"></div>
       <div class="mm-types" id="mm-types-simple"></div>
-      <div class="mm-cote-total">
-        <span class="mm-ct-l">Cote combinée</span>
-        <span class="mm-ct-v" id="mm-cote-total-simple">—</span>
+      <div class="mm-cote-total" style="display:flex;align-items:center;justify-content:space-between;">
+        <div>
+          <span class="mm-ct-l">Cote combinée</span>
+          <span class="mm-ct-v" id="mm-cote-total-simple">—</span>
+        </div>
+        <button onclick="saveMmAsPari('simple')" style="padding:7px 14px;border-radius:var(--r6);border:1px solid rgba(30,215,96,.4);background:rgba(30,215,96,.1);color:#1ed760;font-size:11px;font-weight:700;cursor:pointer;">💾 Enregistrer pari</button>
       </div>
     </div>
     <div class="fc">
@@ -501,6 +510,12 @@ input[type="date"],input[type="time"]{color-scheme:dark;}
         </select></div>
         <div class="fg"><label class="fl">Compétition</label><input id="n-comp" class="fi" placeholder="Ligue 1…"></div>
       </div>
+      <div style="display:flex;gap:6px;margin-bottom:9px;">
+        <button id="btn-dom" onclick="setLieu('dom')" style="flex:1;padding:7px;border-radius:var(--r6);border:1px solid rgba(30,215,96,.4);background:rgba(30,215,96,.1);color:#1ed760;font-size:11px;font-weight:700;cursor:pointer;">🏠 Dom</button>
+        <button id="btn-ext" onclick="setLieu('ext')" style="flex:1;padding:7px;border-radius:var(--r6);border:1px solid var(--b2);background:none;color:var(--t3);font-size:11px;font-weight:700;cursor:pointer;">🚌 Ext</button>
+        <button id="btn-neut" onclick="setLieu('')" style="flex:1;padding:7px;border-radius:var(--r6);border:1px solid var(--b2);background:none;color:var(--t3);font-size:11px;font-weight:700;cursor:pointer;">➖ Neut</button>
+      </div>
+      <input type="hidden" id="n-lieu" value="dom">
       <div class="fg" style="margin-bottom:9px;"><label class="fl">Type de pari</label><input id="n-type" class="fi" placeholder="Over 1.5, Victoire…"></div>
       <div class="g2" style="gap:9px;margin-bottom:9px;">
         <div class="fg" style="position:relative"><label class="fl">Équipe / Joueur</label>
@@ -1132,6 +1147,8 @@ input[type="date"],input[type="time"]{color-scheme:dark;}
 </nav>
 
 <script>
+var _CP_TYPES = ['Victoire','Nul','Défaite','Over 2.5','Under 2.5','BTS Oui','BTS Non','HC -1','HC +1','Mi-temps','1er buteur'];
+var _chatParams = { equipe:'', lieu:'domicile', types:['Victoire','Over 2.5','BTS Oui'], champOnly:false };
 
 var BK={
   "winamax":    {n:"Winamax",    c:"#ff2040", d:"winamax.fr"},
@@ -1788,18 +1805,28 @@ function getMoisData(paris, year){
   return mois;
 }
 
-function renderMoisRow(key, data){
+function renderMoisRow(key, data, prevData){
   var parts=key.split('-');
-  var moisNames=['','Jan','Fév','Mar','Avr','Mai','Jun','Jul','Aoû','Sep','Oct','Nov','Déc'];
+  var moisNames=['','Janvier','Février','Mars','Avril','Mai','Juin','Juillet','Août','Septembre','Octobre','Novembre','Décembre'];
   var moisNum=parseInt(parts[1]);
   var label=moisNames[moisNum]||parts[1]+'/'+parts[0];
   var p=data.profit;
   var wr=data.n?(data.wins/data.n*100).toFixed(0):'0';
   var col=p>=0?'var(--g)':'var(--r)';
+  // Comparaison mois précédent
+  var compHtml='';
+  if(prevData){
+    var diff=p-prevData.profit;
+    var diffCol=diff>=0?'var(--g)':'var(--r)';
+    var diffIcon=diff>=0?'▲':'▼';
+    var diffPct=prevData.profit!==0?((diff/Math.abs(prevData.profit))*100).toFixed(0):null;
+    compHtml='<div style="font-size:10px;color:'+diffCol+';font-weight:700;margin-top:3px;">'+diffIcon+' '+(diff>=0?'+':'')+diff.toFixed(2)+'€ vs mois préc.'+(diffPct?' ('+diffPct+'%)':'')+'</div>';
+  }
   return '<div style="display:flex;align-items:center;padding:11px 14px;background:var(--s1);border-radius:var(--r6);margin-bottom:6px;border-left:3px solid '+(p>=0?'var(--g)':'var(--r)')+';">'
     +'<div style="flex:1;">'
     +'<div style="font-size:13px;font-weight:700;">'+label+' '+parts[0]+'</div>'
     +'<div style="font-size:10px;color:var(--t3);margin-top:2px;">'+data.n+' paris · '+wr+'% réussite</div>'
+    +compHtml
     +'</div>'
     +'<div style="font-size:16px;font-weight:800;color:'+col+';">'+(p>=0?'+':'')+p.toFixed(2)+'€</div>'
     +'</div>';
@@ -1817,10 +1844,38 @@ function renderBilanMois(){
     return true;
   });
   if(bilanSport&&bilanSport!=='ALL')paris=paris.filter(function(h){return h.sport===bilanSport;});
+  // Récupérer aussi l'année précédente pour les comparaisons
   var mois=getMoisData(paris,_bilanMoisYear);
+  var moisPrev=getMoisData(paris,_bilanMoisYear-1);
+  // Fusionner les deux années pour avoir les mois précédents de la même année
+  var allMois = getMoisDataAll(paris);
   var keys=Object.keys(mois).sort().reverse();
   if(!keys.length){el.innerHTML='<div class="empty">Aucun pari en '+_bilanMoisYear+'</div>';return;}
-  el.innerHTML=keys.map(function(k){return renderMoisRow(k,mois[k]);}).join('');
+  el.innerHTML=keys.map(function(k){
+    // Mois précédent dans la même année
+    var parts=k.split('-');
+    var mNum=parseInt(parts[1]);
+    var prevKey = mNum>1 ? parts[0]+'-'+(mNum<11?'0':'')+(mNum-1) : (parseInt(parts[0])-1)+'-12';
+    var prevData = allMois[prevKey]||null;
+    return renderMoisRow(k,mois[k],prevData);
+  }).join('');
+}
+
+function getMoisDataAll(paris){
+  var mois={};
+  paris.forEach(function(h){
+    var d=h.date||h.t||'';
+    var y=d.substring(0,4);
+    var m=d.substring(5,7)||d.substring(3,5);
+    if(!y||!m)return;
+    var key=y+'-'+m;
+    if(!mois[key])mois[key]={profit:0,n:0,wins:0};
+    var p=(h.win?(h.m*h.cote)-h.m:-h.m);
+    mois[key].profit+=p;
+    mois[key].n++;
+    if(h.win)mois[key].wins++;
+  });
+  return mois;
 }
 
 function changeMoisYear(dir){
@@ -2333,9 +2388,95 @@ function openClub(nom,idx){
     +'<div id="team-ai-content" style="font-size:12px;color:#8b97c4;line-height:1.7;"><div style="display:flex;align-items:center;gap:8px;color:#4f5d88;"><div style="width:12px;height:12px;border:2px solid rgba(77,132,255,.2);border-top-color:#4d84ff;border-radius:50%;animation:spin .8s linear infinite;flex-shrink:0;"></div>Recherche en cours…</div></div>'
     +'</div>';
 
+
+  // ── Données pour les graphiques ──
+  // Forme récente (5 derniers paris perso)
+  var forme5 = paris.slice(0,5).reverse();
+
+  // Dom vs Ext
+  var domParis = paris.filter(function(h){ return h.lieu==='dom' || h.dom===true || h.domicile==='dom'; });
+  var extParis = paris.filter(function(h){ return h.lieu==='ext' || h.dom===false || h.domicile==='ext'; });
+  var neutreParis = paris.filter(function(h){ return !h.lieu && h.dom===undefined && !h.domicile; });
+  var domProfit = domParis.reduce(function(a,h){ return a+(h.win?(h.m*h.cote)-h.m:-h.m); },0);
+  var extProfit = extParis.reduce(function(a,h){ return a+(h.win?(h.m*h.cote)-h.m:-h.m); },0);
+  var domWr = domParis.length ? (domParis.filter(function(h){return h.win;}).length/domParis.length*100).toFixed(0) : 0;
+  var extWr = extParis.length ? (extParis.filter(function(h){return h.win;}).length/extParis.length*100).toFixed(0) : 0;
+
+  // Types de paris (top 4)
+  var tmG={};
+  paris.forEach(function(h){
+    var t=(h.type||'Autre').trim().split(' ')[0];
+    if(!tmG[t])tmG[t]={n:0,wins:0,profit:0};
+    tmG[t].n++;if(h.win)tmG[t].wins++;
+    tmG[t].profit+=(h.win?(h.m*h.cote)-h.m:-h.m);
+  });
+  var topTypes=Object.entries(tmG).sort(function(a,b){return b[1].n-a[1].n;}).slice(0,4);
+
   $i('ip-graphiques').innerHTML=
-    '<div class="cwrap"><div class="ctitle">Évolution du profit</div><div style="height:190px;position:relative;"><canvas id="dc-courbe"></canvas></div><div class="chart-info-bar" id="cib-club"><span class="cib-main" id="cib-club-txt">Touche un point</span><span class="cib-val" id="cib-club-val"></span></div></div>'
-    +(mK.length?'<div class="cwrap"><div class="ctitle">Profit par mois</div><div style="height:150px;position:relative;"><canvas id="dc-mois"></canvas></div></div>':'');
+    // ── 1. Courbe de profit ──
+    '<div class="cwrap"><div class="ctitle">📈 Évolution du profit</div>'
+    +'<div style="height:180px;position:relative;"><canvas id="dc-courbe"></canvas></div>'
+    +'<div class="chart-info-bar" id="cib-club"><span class="cib-main" id="cib-club-txt">Touche un point</span><span class="cib-val" id="cib-club-val"></span></div></div>'
+
+    // ── 2. Forme récente (5 derniers paris perso) ──
+    +'<div class="cwrap"><div class="ctitle">🔥 Mes 5 derniers paris sur cette équipe</div>'
+    +'<div style="display:flex;gap:8px;align-items:center;padding:10px 0;">'
+    +(forme5.length ? forme5.map(function(h){
+      var col = h.win ? '#1ed760' : '#ff4545';
+      var bg = h.win ? 'rgba(30,215,96,.15)' : 'rgba(255,69,69,.15)';
+      var border = h.win ? 'rgba(30,215,96,.4)' : 'rgba(255,69,69,.4)';
+      var gain = h.win ? '+'+(h.m*h.cote-h.m).toFixed(1)+'€' : '-'+h.m+'€';
+      return '<div style="flex:1;text-align:center;background:'+bg+';border:1px solid '+border+';border-radius:8px;padding:8px 4px;">'
+        +'<div style="font-size:14px;font-weight:800;color:'+col+';">'+(h.win?'W':'L')+'</div>'
+        +'<div style="font-size:9px;color:'+col+';margin-top:2px;">'+gain+'</div>'
+        +'<div style="font-size:8px;color:rgba(255,255,255,.3);margin-top:2px;">@'+h.cote+'</div>'
+        +'</div>';
+    }).join('') : '<div style="color:var(--t3);font-size:12px;">Pas encore de paris</div>')
+    +'</div></div>'
+
+    // ── 3. Dom vs Ext ──
+    +(paris.length ? '<div class="cwrap"><div class="ctitle">🏠 Domicile vs 🚌 Extérieur</div>'
+    +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;padding:8px 0;">'
+    +'<div style="text-align:center;background:rgba(30,215,96,.08);border:1px solid rgba(30,215,96,.2);border-radius:8px;padding:12px;">'
+    +'<div style="font-size:11px;color:var(--t3);margin-bottom:4px;">🏠 Domicile</div>'
+    +(domParis.length
+      ? '<div style="font-size:20px;font-weight:800;color:#1ed760;">'+domWr+'%</div>'
+        +'<div style="font-size:10px;color:var(--t3);">'+domParis.length+' paris</div>'
+        +'<div style="font-size:12px;font-weight:700;color:'+(domProfit>=0?'#1ed760':'#ff4545')+';">'+(domProfit>=0?'+':'')+domProfit.toFixed(2)+'€</div>'
+      : '<div style="font-size:12px;color:var(--t3);">Aucune donnée</div><div style="font-size:9px;color:var(--t3);margin-top:4px;">Coche Dom à la saisie</div>')
+    +'</div>'
+    +'<div style="text-align:center;background:rgba(77,132,255,.08);border:1px solid rgba(77,132,255,.2);border-radius:8px;padding:12px;">'
+    +'<div style="font-size:11px;color:var(--t3);margin-bottom:4px;">🚌 Extérieur</div>'
+    +(extParis.length
+      ? '<div style="font-size:20px;font-weight:800;color:#4d84ff;">'+extWr+'%</div>'
+        +'<div style="font-size:10px;color:var(--t3);">'+extParis.length+' paris</div>'
+        +'<div style="font-size:12px;font-weight:700;color:'+(extProfit>=0?'#1ed760':'#ff4545')+';">'+(extProfit>=0?'+':'')+extProfit.toFixed(2)+'€</div>'
+      : '<div style="font-size:12px;color:var(--t3);">Aucune donnée</div><div style="font-size:9px;color:var(--t3);margin-top:4px;">Coche Ext à la saisie</div>')
+    +'</div>'
+    +'</div></div>' : '')
+
+    // ── 4. Top types de paris ──
+    +(topTypes.length ? '<div class="cwrap"><div class="ctitle">🎯 Mes types de paris</div>'
+    +'<div style="display:flex;flex-direction:column;gap:7px;padding:8px 0;">'
+    +topTypes.map(function(e){
+      var t=e[0], d=e[1];
+      var pct=(d.wins/d.n*100).toFixed(0);
+      var col=d.profit>=0?'#1ed760':'#ff4545';
+      var barCol=d.profit>=0?'rgba(30,215,96,.6)':'rgba(255,69,69,.5)';
+      var maxBar=topTypes[0][1].n;
+      return '<div style="display:flex;align-items:center;gap:8px;">'
+        +'<div style="font-size:11px;font-weight:700;color:var(--t1);width:80px;flex-shrink:0;">'+t+'</div>'
+        +'<div style="flex:1;height:6px;background:rgba(255,255,255,.06);border-radius:3px;">'
+        +'<div style="height:6px;border-radius:3px;background:'+barCol+';width:'+(d.n/maxBar*100).toFixed(0)+'%;"></div></div>'
+        +'<div style="font-size:10px;color:var(--t3);width:20px;text-align:right;">'+d.n+'</div>'
+        +'<div style="font-size:11px;font-weight:700;color:'+col+';width:55px;text-align:right;">'+(d.profit>=0?'+':'')+d.profit.toFixed(1)+'€</div>'
+        +'<div style="font-size:10px;color:var(--t3);width:30px;text-align:right;">'+pct+'%</div>'
+        +'</div>';
+    }).join('')
+    +'</div></div>' : '')
+
+    // ── 5. Profit par mois ──
+    +(mK.length?'<div class="cwrap"><div class="ctitle">📅 Profit par mois</div><div style="height:150px;position:relative;"><canvas id="dc-mois"></canvas></div></div>':'');
 
   /* archive */
   var am2={};
@@ -2441,7 +2582,7 @@ function pari(isS){
     state.b[b]=(parseFloat(state.b[b])-m).toFixed(2);
     var isFlash=!isS&&$i('n-flashboost')&&$i('n-flashboost').checked;
     var isFreebet=!isS&&$i('n-freebet')&&$i('n-freebet').checked;
-    var domicile=$i('p-domicile')?$i('p-domicile').value:'';state.h.unshift({id:Date.now().toString(),n:n,target:target,b:b,l:l,m:m,cote:c,isS:isS,isFlash:isFlash,isFreebet:isFreebet,t:t,sport:sport,type:type,comp:comp,heure:heure,date:date,notes:notes||'',domicile:domicile});
+    var domicile=($i('n-lieu')&&$i('n-lieu').value)||($i('p-domicile')?$i('p-domicile').value:'');state.h.unshift({id:Date.now().toString(),n:n,target:target,b:b,l:l,m:m,cote:c,isS:isS,isFlash:isFlash,isFreebet:isFreebet,t:t,sport:sport,type:type,comp:comp,heure:heure,date:date,notes:notes||'',domicile:domicile});
     save();
     if(isS){$i('c-target').value='';$i('c-comp').value='';if($i('c-notes'))$i('c-notes').value='';}
     else{$i('n-comp').value='';$i('n-type').value='';$i('n-analysis').value='';if($i('n-notes'))$i('n-notes').value='';if($i('n-team'))$i('n-team').value='';if($i('n-flashboost'))$i('n-flashboost').checked=false;if($i('n-freebet'))$i('n-freebet').checked=false;mmRowsSimple=[{type:'',cote:1.50}];renderMmRowsSimple();}
@@ -2845,6 +2986,84 @@ function addMmType(t){
   if(existing)return;
   mmRows.push({type:t,cote:1.50});renderMmRows();
 }
+
+// ── ENREGISTRER MYMATCH COMME PARI ──
+
+function setLieu(v) {
+  var inp = document.getElementById('n-lieu');
+  if(inp) inp.value = v;
+  var btns = {'dom':'btn-dom','ext':'btn-ext','':'btn-neut'};
+  Object.keys(btns).forEach(function(k){
+    var b = document.getElementById(btns[k]);
+    if(!b) return;
+    if(k===v){
+      b.style.borderColor='rgba(30,215,96,.5)';b.style.background='rgba(30,215,96,.12)';b.style.color='#1ed760';
+    } else {
+      b.style.borderColor='var(--b2)';b.style.background='none';b.style.color='var(--t3)';
+    }
+  });
+}
+
+function saveMmAsPari(mode) {
+  var rows = mode === 'cockpit' ? mmRows : mmRowsSimple;
+  if (!rows || !rows.length || !rows.some(function(r){ return r.type; })) {
+    alert('Ajoute au moins une sélection !'); return;
+  }
+  var cote = rows.reduce(function(a,r){ return a*(parseFloat(r.cote)||1); }, 1);
+  var label = rows.filter(function(r){ return r.type; }).map(function(r){ return r.type+' @'+r.cote; }).join(' + ');
+
+  // Récupérer les infos selon le mode
+  var team, mise, book, date, sport, comp;
+  if (mode === 'cockpit') {
+    team = ($i('c-unit') && $i('c-unit').value) || 'MyMatch';
+    mise = parseFloat($i('c-mise') && $i('c-mise').value) || 0;
+    book = ($i('c-book') && $i('c-book').value) || '';
+    date = ($i('c-date') && $i('c-date').value) || new Date().toISOString().split('T')[0];
+    sport = ($i('c-sport') && $i('c-sport').value) || '⚽';
+    comp = ($i('c-comp') && $i('c-comp').value) || '';
+  } else {
+    team = ($i('n-team') && $i('n-team').value) || 'MyMatch';
+    mise = parseFloat($i('n-mise') && $i('n-mise').value) || 0;
+    book = ($i('n-book') && $i('n-book').value) || '';
+    date = ($i('n-date') && $i('n-date').value) || new Date().toISOString().split('T')[0];
+    sport = ($i('p-sport') && $i('p-sport').value) || '⚽';
+    comp = ($i('n-comp') && $i('n-comp').value) || '';
+  }
+
+  if (!mise) { alert('Renseigne une mise !'); return; }
+
+  // Créer le pari dans l'archive comme un pari en attente
+  var pari = {
+    id: Date.now(),
+    n: team || 'Combiné',
+    cote: parseFloat(cote.toFixed(2)),
+    m: mise,
+    book: book,
+    date: date,
+    sport: sport,
+    comp: comp,
+    type: label,
+    mm: true,  // marqué comme MyMatch
+    win: null, // en attente de résultat
+    r: null
+  };
+
+  if (!state.p) state.p = [];
+  state.p.push(pari);
+  save();
+
+  // Feedback visuel
+  var btn = event && event.target;
+  if (btn) {
+    btn.textContent = '✓ Enregistré !';
+    btn.style.borderColor = 'rgba(30,215,96,.8)';
+    btn.style.background = 'rgba(30,215,96,.2)';
+    setTimeout(function(){ btn.textContent = '💾 Enregistrer pari'; btn.style.borderColor='rgba(30,215,96,.4)'; btn.style.background='rgba(30,215,96,.1)'; }, 2000);
+  }
+
+  render();
+}
+
 function getMmLabel(){
   return mmRows.filter(function(r){return r.type;}).map(function(r){return r.type+' @'+r.cote;}).join(' + ');
 }
@@ -3818,8 +4037,7 @@ function setUnitType(t) {
 
 // ── PARAMÈTRES CHAT ──
 // déclaré plus haut
-var _CP_TYPES = ['Victoire','Nul','Défaite','Over 2.5','Under 2.5','BTS Oui','BTS Non','HC -1','HC +1','Mi-temps','1er buteur'];
-var _chatParams = { equipe:'', lieu:'domicile', types:['Victoire','Over 2.5','BTS Oui'], champOnly:false };
+// _CP_TYPES et _chatParams déclarés en haut
 
 
 function toggleChatParamsPC() {
