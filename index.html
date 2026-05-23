@@ -425,6 +425,17 @@ input[type="date"],input[type="time"]{color-scheme:dark;}
       <div class="prog-meta"><span id="g-lbl">Définir un objectif</span><span id="g-tgt"></span></div>
     </div>
   </div>
+  <!-- GENERATEUR PARI DU JOUR -->
+  <div class="fc" style="margin-bottom:10px;">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
+      <div>
+        <div style="font-size:13px;font-weight:800;color:var(--t1);">🎯 Pari du jour</div>
+        <div style="font-size:10px;color:var(--t3);margin-top:2px;">Analyse IA de tes équipes favorites</div>
+      </div>
+      <button id="btn-generate-pari" style="padding:8px 16px;border-radius:var(--r6);border:none;background:var(--a);color:#fff;font-size:11px;font-weight:700;cursor:pointer;">⚡ Générer</button>
+    </div>
+    <div id="pari-du-jour-content" style="display:none;"></div>
+  </div>
   <div class="sec">Équipes <span style="font-size:9px;color:var(--t3);font-weight:400;">(dernières perf.)</span></div>
   <div class="card" style="overflow:visible;"><div id="dash-units" style="padding:0;"><div class="empty">Aucune équipe</div></div></div>
 </div>
@@ -4658,6 +4669,106 @@ function toggleCpType(btn) {
 // ── BUILDCONTEXT AMÉLIORÉ ──
 
 
+
+// ── GENERATEUR PARI DU JOUR ──
+async function generatePariDuJour() {
+  var btn = document.getElementById('btn-generate-pari');
+  var cont = document.getElementById('pari-du-jour-content');
+  if(!btn||!cont) return;
+
+  btn.textContent = '⏳ Analyse...';
+  btn.disabled = true;
+  cont.style.display = 'block';
+  cont.innerHTML = '<div style="display:flex;align-items:center;gap:8px;color:var(--t3);font-size:11px;padding:8px 0;"><div style="width:12px;height:12px;border:2px solid rgba(77,132,255,.2);border-top-color:#4d84ff;border-radius:50%;animation:spin .8s linear infinite;flex-shrink:0;"></div>Analyse de tes équipes en cours...</div>';
+
+  var groqKey = getGeminiKey();
+  var fdKey = getFdorgKey();
+  if(!groqKey) {
+    cont.innerHTML = '<div style="color:#ff4545;font-size:11px;">Configure ta clé Groq dans Outils.</div>';
+    btn.textContent = '⚡ Générer'; btn.disabled = false; return;
+  }
+
+  // Récupérer les équipes favorites avec leurs stats perso
+  var today = new Date();
+  var dateStr = today.toLocaleDateString('fr-FR');
+  var equipes = state.u.slice(0,8).map(function(u){
+    var paris = state.a.filter(function(h){return h.n===u.n;});
+    var wins = paris.filter(function(h){return h.win;}).length;
+    var profit = paris.reduce(function(a,h){return a+(h.win?(h.m*h.cote)-h.m:-h.m);},0);
+    var wr = paris.length ? Math.round(wins/paris.length*100) : 0;
+    return u.n+' ('+paris.length+' paris, '+wr+'% réussite, '+(profit>=0?'+':'')+profit.toFixed(0)+'€)';
+  }).join(' | ');
+
+  // Récupérer les prochains matchs via football-data pour les équipes connues
+  var upcomingInfo = '';
+  if(fdKey) {
+    cont.innerHTML = cont.innerHTML.replace('Analyse de tes équipes en cours...', 'Récupération du calendrier...');
+    var knownTeams = state.u.slice(0,5).filter(function(u){
+      for(var k in TEAM_IDS){ if(k.toLowerCase()===u.n.toLowerCase()||u.n.toLowerCase().indexOf(k.toLowerCase())>=0) return true; }
+      return false;
+    });
+    var matchInfos = [];
+    for(var i=0;i<Math.min(knownTeams.length,4);i++){
+      var u = knownTeams[i];
+      var tid = null;
+      for(var k in TEAM_IDS){ if(k.toLowerCase()===u.n.toLowerCase()||u.n.toLowerCase().indexOf(k.toLowerCase())>=0){tid=TEAM_IDS[k];break;} }
+      if(!tid) continue;
+      var data = await fdFetch('/v4/teams/'+tid+'/matches?status=SCHEDULED&limit=2');
+      if(data&&data.matches&&data.matches.length){
+        var m = data.matches[0];
+        var isDom = m.homeTeam&&m.homeTeam.id===tid;
+        var adv = isDom?(m.awayTeam&&m.awayTeam.name||'?'):(m.homeTeam&&m.homeTeam.name||'?');
+        var md = new Date(m.utcDate);
+        var mdate = md.toLocaleDateString('fr-FR');
+        var mtime = md.toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'});
+        matchInfos.push(u.n+' joue '+(isDom?'à domicile':'à l exterieur')+' contre '+adv+' le '+mdate+' à '+mtime+' ('+( m.competition&&m.competition.name||'')+')');
+      }
+    }
+    if(matchInfos.length) upcomingInfo = 'Prochains matchs de ses equipes : '+matchInfos.join(' | ')+'. ';
+  }
+
+  // Prompt Groq
+  cont.innerHTML = cont.innerHTML.replace('Récupération du calendrier...', 'Groq analyse...').replace('Analyse de tes équipes en cours...','Groq analyse...');
+
+  var prompt = 'Tu es un expert paris sportifs. Nous sommes le '+dateStr+'. '
+    + 'Voici les equipes favorites de l utilisateur avec ses stats perso : '+equipes+'. '
+    + (upcomingInfo||'')
+    + 'En te basant sur les prochains matchs et les stats de l utilisateur, propose 2-3 paris concrets pour les prochains jours. '
+    + 'Pour chaque pari : equipe, type de pari (Victoire/Over 2.5/BTS/etc), cote recommandee (fourchette), et une phrase de justification. '
+    + 'Format: "⚽ EQUIPE — TYPE @cote : justification". Sois direct et precis. En francais. Max 4 lignes.';
+
+  try {
+    var r = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+      method:'POST',
+      headers:{'Content-Type':'application/json','Authorization':'Bearer '+groqKey},
+      body:JSON.stringify({model:'llama-3.3-70b-versatile',messages:[{role:'user',content:prompt}],max_tokens:300,temperature:0.4})
+    });
+    var d = await r.json();
+    if(d.error) throw new Error(d.error.message);
+    var reply = d.choices[0].message.content.trim();
+
+    // Formater la réponse
+    var lines = reply.split('\n').filter(function(l){return l.trim();});
+    var html = '<div style="display:flex;flex-direction:column;gap:8px;">';
+    lines.forEach(function(line){
+      var isMain = line.indexOf('⚽')>=0||line.indexOf('🏆')>=0||line.indexOf('@')>=0;
+      if(isMain) {
+        // Mettre en valeur la cote
+        line = line.replace(/@([\d.,]+)/g, '<span style="color:#f0b020;font-weight:800;">@$1</span>');
+        html += '<div style="background:rgba(77,132,255,.06);border:1px solid rgba(77,132,255,.2);border-radius:8px;padding:10px 12px;font-size:12px;color:var(--t1);line-height:1.6;">'+line+'</div>';
+      }
+    });
+    html += '</div>';
+    html += '<div style="text-align:right;margin-top:6px;"><button onclick="generatePariDuJour()" style="background:none;border:none;color:var(--t3);font-size:10px;cursor:pointer;">↻ Régénérer</button></div>';
+    cont.innerHTML = html;
+
+  } catch(e) {
+    cont.innerHTML = '<div style="color:#ff4545;font-size:11px;">Erreur : '+e.message+'</div>';
+  }
+
+  btn.textContent = '⚡ Générer'; btn.disabled = false;
+}
+
 // ── ARCHIVE — filtres ──
 var _archFilter = 'all';
 function setArchFilter(f, el) {
@@ -4686,6 +4797,7 @@ function updateBankTotal() {
 }
 
 var _bcp=document.getElementById('btn-chat-params-pc');if(_bcp)_bcp.onclick=function(){toggleChatParamsPC();};var _bcm=document.getElementById('btn-chat-params-mobile');if(_bcm)_bcm.onclick=function(){toggleChatParams();};
+  var _bgen=document.getElementById('btn-generate-pari');if(_bgen)_bgen.onclick=function(){generatePariDuJour();};
   var _bsaisons=document.getElementById('itab-saisons');if(_bsaisons)_bsaisons.onclick=function(){swInner('saisons',this);};
 
   // Listener global pour les paramètres chat
