@@ -907,7 +907,10 @@ input[type="date"],input[type="time"]{color-scheme:dark;}
 
   <!-- BACKUP -->
   <div class="fc" style="border-style:dashed;">
-    <label class="fl" style="color:var(--a);">⚡ Groq AI — Clé API</label>
+    <div style="display:flex;align-items:center;justify-content:space-between;">
+      <label class="fl" style="color:var(--a);">⚡ Groq AI — Clé API</label>
+      <button onclick="showKeyHelp('groq')" style="background:rgba(77,132,255,.12);border:1px solid rgba(77,132,255,.3);color:#7aaaff;border-radius:50%;width:20px;height:20px;font-size:11px;font-weight:700;cursor:pointer;flex-shrink:0;">?</button>
+    </div>
     <div style="font-size:10px;color:var(--t3);margin-bottom:8px;margin-top:4px;">Gratuit sur console.groq.com · Stockée localement</div>
     <div style="display:flex;gap:6px;margin-bottom:8px;">
       <input id="gemini-key-input" class="fi" type="password" placeholder="gsk_…" style="font-size:11px;flex:1;">
@@ -933,7 +936,10 @@ input[type="date"],input[type="time"]{color-scheme:dark;}
     <div id="tavily-key-status" style="margin-top:7px;font-size:11px;font-weight:700;"></div>
   </div>
   <div class="fc" style="border-style:dashed;">
-    <label class="fl" style="color:#1ed760;">⚽ Football-Data.org — Stats</label>
+    <div style="display:flex;align-items:center;justify-content:space-between;">
+      <label class="fl" style="color:#1ed760;">⚽ Football-Data.org — Stats</label>
+      <button onclick="showKeyHelp('fdorg')" style="background:rgba(30,215,96,.12);border:1px solid rgba(30,215,96,.3);color:#1ed760;border-radius:50%;width:20px;height:20px;font-size:11px;font-weight:700;cursor:pointer;flex-shrink:0;">?</button>
+    </div>
     <div style="font-size:10px;color:var(--t3);margin-bottom:8px;margin-top:4px;">Gratuit sur football-data.org · Résultats, forme, stats · Stockée localement</div>
     <div style="display:flex;align-items:center;gap:6px;background:rgba(240,176,32,.08);border:1px solid rgba(240,176,32,.2);border-radius:var(--r6);padding:7px 10px;margin-bottom:8px;">
       <span style="font-size:14px;">⚠️</span>
@@ -4117,6 +4123,73 @@ async function getTeamStatsViaGroq(teamName, cpTypes) {
 // ── STATS 2 SAISONS PAR ÉQUIPE ──
 var _saisonsCache = {};
 
+// ── AIDE CLÉS API ──
+var KEY_HELP = {
+  groq: {
+    title: '⚡ Comment obtenir ta clé Groq',
+    color: '#7aaaff',
+    steps: [
+      {n:'1', t:'Aller sur console.groq.com', d:'Ouvre le site dans ton navigateur'},
+      {n:'2', t:'Créer un compte', d:'Clique sur "Sign Up" — gratuit, juste un email'},
+      {n:'3', t:'Aller dans API Keys', d:'Dans le menu gauche, clique sur "API Keys"'},
+      {n:'4', t:'Créer une clé', d:'Clique "Create API Key", donne un nom (ex: gones45)'},
+      {n:'5', t:'Copier la clé', d:'Copie la clé qui commence par gsk_... et colle-la ici'},
+    ],
+    note: 'Gratuit · 6000 requêtes/minute · Aucune carte bancaire requise',
+    url: 'https://console.groq.com'
+  },
+  tavily: {
+    title: '🔍 Comment obtenir ta clé Tavily',
+    color: '#f0b020',
+    steps: [
+      {n:'1', t:'Aller sur app.tavily.com', d:'Ouvre le site dans ton navigateur'},
+      {n:'2', t:'Créer un compte', d:'Clique "Sign Up" — gratuit'},
+      {n:'3', t:'Copier ta clé', d:'Elle est affichée directement sur le tableau de bord — commence par tvly-...'},
+    ],
+    note: 'Gratuit · 1000 recherches/mois · Pour la recherche web en temps réel',
+    url: 'https://app.tavily.com'
+  },
+  fdorg: {
+    title: '⚽ Comment obtenir ta clé Football-Data',
+    color: '#1ed760',
+    steps: [
+      {n:'1', t:'Aller sur football-data.org', d:'Ouvre le site dans ton navigateur'},
+      {n:'2', t:'Cliquer sur "Register"', d:'En haut à droite du site'},
+      {n:'3', t:'Remplir le formulaire', d:'Prénom, email — pour "arme" choisis "Je veux rester désarmé"'},
+      {n:'4', t:'Vérifier ton email', d:'Tu recevras ta clé API par email'},
+      {n:'5', t:'Coller la clé ici', d:'Elle ressemble à une suite de lettres et chiffres'},
+    ],
+    note: '⚠️ Gratuit · 10 requêtes/minute · Bundesliga, Ligue 1, Liga, Serie A, Premier League, Champions League uniquement',
+    url: 'https://www.football-data.org'
+  }
+};
+
+function showKeyHelp(key) {
+  var modal = document.getElementById('key-help-modal');
+  var title = document.getElementById('key-help-title');
+  var body = document.getElementById('key-help-body');
+  if(!modal||!title||!body) return;
+  var h = KEY_HELP[key];
+  if(!h) return;
+  title.textContent = h.title;
+  var html = '';
+  h.steps.forEach(function(s){
+    html += '<div style="display:flex;gap:12px;margin-bottom:14px;">';
+    html += '<div style="width:26px;height:26px;border-radius:50%;background:'+h.color+';display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:800;color:#000;flex-shrink:0;">'+s.n+'</div>';
+    html += '<div><div style="font-size:13px;font-weight:700;color:var(--t1);">'+s.t+'</div><div style="font-size:11px;color:var(--t3);margin-top:2px;">'+s.d+'</div></div>';
+    html += '</div>';
+  });
+  html += '<div style="background:rgba(255,255,255,.05);border-radius:8px;padding:10px 12px;font-size:11px;color:var(--t3);margin-top:4px;">'+h.note+'</div>';
+  html += '<a href="'+h.url+'" target="_blank" style="display:block;text-align:center;margin-top:14px;padding:12px;background:'+h.color+';color:#000;border-radius:var(--r8);font-size:13px;font-weight:800;text-decoration:none;">→ Aller sur le site</a>';
+  body.innerHTML = html;
+  modal.style.display = 'flex';
+}
+
+function closeKeyHelp() {
+  var modal = document.getElementById('key-help-modal');
+  if(modal) modal.style.display = 'none';
+}
+
 async function loadTeamSaisons() {
   var el = document.getElementById('ip-saisons');
   if(!el) return;
@@ -5158,6 +5231,17 @@ var _bcp=document.getElementById('btn-chat-params-pc');if(_bcp)_bcp.onclick=func
     </div>
     <div class="fg" style="margin-bottom:14px;"><label class="fl">Notes</label><input id="edit-notes" class="fi" placeholder="Notes…"></div>
     <button class="btn btn-p" style="width:100%;" onclick="saveEditBet()">💾 Enregistrer</button>
+  </div>
+</div>
+
+<!-- MODAL AIDE CLÉS -->
+<div id="key-help-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:9999;display:flex;align-items:flex-end;justify-content:center;" onclick="if(event.target===this)closeKeyHelp()">
+  <div id="key-help-content" style="background:var(--bg2);border-radius:16px 16px 0 0;padding:20px;width:100%;max-width:500px;max-height:80vh;overflow-y:auto;border-top:2px solid rgba(77,132,255,.4);">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
+      <div id="key-help-title" style="font-size:15px;font-weight:800;color:var(--t1);"></div>
+      <button onclick="closeKeyHelp()" style="background:none;border:none;color:var(--t3);font-size:20px;cursor:pointer;">✕</button>
+    </div>
+    <div id="key-help-body"></div>
   </div>
 </div>
 </body>
