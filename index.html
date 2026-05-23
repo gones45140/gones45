@@ -1043,6 +1043,9 @@ input[type="date"],input[type="time"]{color-scheme:dark;}
     <a href="https://app.tavily.com" target="_blank" style="display:flex;align-items:center;gap:10px;padding:13px 12px;background:var(--s1);border-radius:var(--r8);text-decoration:none;color:var(--t1);font-size:12px;font-weight:700;border:1px solid rgba(77,132,255,.3);box-shadow:0 0 10px rgba(77,132,255,.12);border-left:3px solid #4d84ff;">
       <span style="font-size:16px;">🔍</span>Tavily
     </a>
+    <a href="https://www.football-data.org" target="_blank" style="display:flex;align-items:center;gap:10px;padding:13px 12px;background:var(--s1);border-radius:var(--r8);text-decoration:none;color:var(--t1);font-size:12px;font-weight:700;border:1px solid rgba(77,132,255,.3);box-shadow:0 0 10px rgba(77,132,255,.12);border-left:3px solid #1ed760;">
+      <span style="font-size:16px;">⚽</span>Football-Data.org
+    </a>
     <a href="https://www.dropbox.com" target="_blank" style="display:flex;align-items:center;gap:10px;padding:13px 12px;background:var(--s1);border-radius:var(--r8);text-decoration:none;color:var(--t1);font-size:12px;font-weight:700;border:1px solid rgba(77,132,255,.3);box-shadow:0 0 10px rgba(77,132,255,.12);border-left:3px solid #0061ff;">
       <span style="font-size:16px;">📦</span>Dropbox
     </a>
@@ -3338,17 +3341,123 @@ function loadTeamLive(){
   var uObj=state.u.find(function(x){return x.n===nom;})||{};
   var col=uObj.color||'#4d84ff';
   var sport=uObj.sport||'⚽';
-  /* Use TheSportsDB for NRL/Rugby */
   if(sport==='🏉🇦🇺'||sport==='🏉'){loadTeamLiveTSDB(el,nom,sport);return;}
+
+  // Trouver l'ID football-data
+  var teamId=null;
+  for(var k in TEAM_IDS){
+    if(k.toLowerCase()===nom.toLowerCase()||nom.toLowerCase().indexOf(k.toLowerCase())>=0||k.toLowerCase().indexOf(nom.toLowerCase())>=0){
+      teamId=TEAM_IDS[k];break;
+    }
+  }
+
   var customLink=(uObj&&uObj.link)||null;
-  var url=customLink||SOFASCORE_LINKS[nom]||('https://www.sofascore.com/search#q='+encodeURIComponent(nom));
-  el.innerHTML='<div style="text-align:center;padding:40px 20px;">'
-    +'<div style="font-size:48px;margin-bottom:16px">📡</div>'
-    +'<div style="font-size:15px;font-weight:800;margin-bottom:6px;color:'+col+'">'+nom+'</div>'
-    +'<div style="font-size:11px;color:var(--t3);margin-bottom:24px">Résultats · Classement · Stats en direct</div>'
-    +'<a href="'+url+'" target="_blank" style="display:inline-flex;align-items:center;gap:8px;background:'+col+';color:#fff;padding:13px 26px;border-radius:var(--r8);font-size:13px;font-weight:700;text-decoration:none;box-shadow:0 4px 15px rgba(0,0,0,.3)">📊 Voir sur Sofascore</a>'
-    +'<div style="margin-top:14px;font-size:10px;color:var(--t3)">Ouvre dans un nouvel onglet</div>'
+  var sofaUrl=customLink||SOFASCORE_LINKS[nom]||('https://www.sofascore.com/search#q='+encodeURIComponent(nom));
+
+  if(!teamId||!getFdorgKey()){
+    // Pas de clé ou équipe inconnue → Sofascore
+    el.innerHTML='<div style="text-align:center;padding:40px 20px;">'
+      +'<div style="font-size:48px;margin-bottom:16px">📡</div>'
+      +'<div style="font-size:15px;font-weight:800;margin-bottom:6px;color:'+col+'">'+nom+'</div>'
+      +'<div style="font-size:11px;color:var(--t3);margin-bottom:24px">Résultats · Classement · Stats en direct</div>'
+      +'<a href="'+sofaUrl+'" target="_blank" style="display:inline-flex;align-items:center;gap:8px;background:'+col+';color:#fff;padding:13px 26px;border-radius:var(--r8);font-size:13px;font-weight:700;text-decoration:none;">📊 Voir sur Sofascore</a>'
+      +'</div>';
+    return;
+  }
+
+  // Afficher bouton de chargement
+  el.innerHTML='<div class="fc" style="text-align:center;">'
+    +'<div style="font-size:13px;font-weight:700;color:var(--t1);margin-bottom:6px;">'+nom+'</div>'
+    +'<div style="font-size:11px;color:var(--t3);margin-bottom:14px;">Charge les prochains matchs et résultats récents via football-data</div>'
+    +'<button id="btn-load-calendar" style="padding:11px 24px;border-radius:var(--r8);border:none;background:'+col+';color:#fff;font-size:13px;font-weight:700;cursor:pointer;margin-bottom:10px;">📅 Charger le calendrier</button>'
+    +'<div style="font-size:10px;color:var(--t3);">1 requête · données mises en cache</div>'
+    +'</div>'
+    +'<div id="calendar-content"></div>'
+    +'<div style="margin-top:12px;text-align:center;">'
+    +'<a href="'+sofaUrl+'" target="_blank" style="font-size:11px;color:var(--t3);">→ Voir aussi sur Sofascore</a>'
     +'</div>';
+
+  document.getElementById('btn-load-calendar').onclick = function(){
+    loadTeamCalendar(teamId, nom, col);
+  };
+}
+
+async function loadTeamCalendar(teamId, nom, col) {
+  var btn = document.getElementById('btn-load-calendar');
+  var cont = document.getElementById('calendar-content');
+  if(!btn||!cont) return;
+  btn.textContent = 'Chargement...';
+  btn.disabled = true;
+
+  try {
+    // Matchs à venir
+    var upcoming = await fdFetch('/v4/teams/'+teamId+'/matches?status=SCHEDULED&limit=5');
+    // Résultats récents
+    var finished = await fdFetch('/v4/teams/'+teamId+'/matches?status=FINISHED&limit=5');
+
+    var html = '';
+
+    // ── Prochains matchs ──
+    if(upcoming && upcoming.matches && upcoming.matches.length) {
+      html += '<div class="cwrap" style="margin-top:10px;">';
+      html += '<div style="font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#4f5d88;margin-bottom:10px;">Prochains matchs</div>';
+      upcoming.matches.forEach(function(m){
+        var isDom = m.homeTeam && m.homeTeam.id === teamId;
+        var adv = isDom ? (m.awayTeam&&m.awayTeam.name||'?') : (m.homeTeam&&m.homeTeam.name||'?');
+        var d = new Date(m.utcDate);
+        var dateStr = d.toLocaleDateString('fr-FR',{weekday:'short',day:'numeric',month:'short'});
+        var timeStr = d.toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'});
+        var comp = m.competition&&m.competition.name||'';
+        html += '<div style="display:flex;align-items:center;padding:10px 12px;background:var(--s1);border-radius:var(--r6);margin-bottom:6px;border-left:3px solid '+col+';">';
+        html += '<div style="flex:1;">';
+        html += '<div style="font-size:12px;font-weight:700;color:var(--t1);">'+(isDom?'🏠 vs ':'🚌 @ ')+adv+'</div>';
+        html += '<div style="font-size:10px;color:var(--t3);margin-top:2px;">'+comp+'</div>';
+        html += '</div>';
+        html += '<div style="text-align:right;">';
+        html += '<div style="font-size:11px;font-weight:700;color:var(--a);">'+dateStr+'</div>';
+        html += '<div style="font-size:10px;color:var(--t3);">'+timeStr+'</div>';
+        html += '</div></div>';
+      });
+      html += '</div>';
+    }
+
+    // ── Résultats récents ──
+    if(finished && finished.matches && finished.matches.length) {
+      html += '<div class="cwrap" style="margin-top:10px;">';
+      html += '<div style="font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#4f5d88;margin-bottom:10px;">Résultats récents</div>';
+      finished.matches.slice(0,5).reverse().forEach(function(m){
+        var isDom = m.homeTeam && m.homeTeam.id === teamId;
+        var adv = isDom ? (m.awayTeam&&m.awayTeam.name||'?') : (m.homeTeam&&m.homeTeam.name||'?');
+        var hg = m.score&&m.score.fullTime ? (m.score.fullTime.home||0) : 0;
+        var ag = m.score&&m.score.fullTime ? (m.score.fullTime.away||0) : 0;
+        var tg = isDom?hg:ag, og = isDom?ag:hg;
+        var won = tg>og, draw = tg===og;
+        var rc = won?'#1ed760':draw?'#f0b020':'#ff4545';
+        var rl = won?'V':draw?'N':'D';
+        var scoreStr = isDom ? hg+' - '+ag : ag+' - '+hg;
+        var d = new Date(m.utcDate);
+        var dateStr = d.toLocaleDateString('fr-FR',{day:'numeric',month:'short'});
+        var comp = m.competition&&m.competition.name||'';
+        html += '<div style="display:flex;align-items:center;padding:10px 12px;background:var(--s1);border-radius:var(--r6);margin-bottom:6px;border-left:3px solid '+rc+';">';
+        html += '<div style="width:22px;height:22px;border-radius:50%;background:'+rc+';display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:800;color:#fff;flex-shrink:0;margin-right:10px;">'+rl+'</div>';
+        html += '<div style="flex:1;">';
+        html += '<div style="font-size:12px;font-weight:700;color:var(--t1);">'+(isDom?'🏠 vs ':'🚌 @ ')+adv+'</div>';
+        html += '<div style="font-size:10px;color:var(--t3);margin-top:2px;">'+comp+' · '+dateStr+'</div>';
+        html += '</div>';
+        html += '<div style="font-size:15px;font-weight:800;color:'+rc+';">'+scoreStr+'</div>';
+        html += '</div>';
+      });
+      html += '</div>';
+    }
+
+    if(!html) html = '<div class="fc" style="color:var(--t3);text-align:center;">Aucune donnee disponible</div>';
+    cont.innerHTML = html;
+    btn.style.display = 'none';
+
+  } catch(e) {
+    btn.textContent = 'Erreur - Reessayer';
+    btn.disabled = false;
+  }
 }
 
 /* ── DROPBOX AUTO-SAVE (refresh token permanent) ── */
