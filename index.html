@@ -4188,6 +4188,8 @@ function showKeyHelp(key) {
   html += '<a href="'+h.url+'" target="_blank" style="display:block;text-align:center;margin-top:14px;padding:12px;background:'+h.color+';color:#000;border-radius:var(--r8);font-size:13px;font-weight:800;text-decoration:none;">→ Aller sur le site</a>';
   body.innerHTML = html;
   modal.style.display = 'flex';
+  modal.style.alignItems = 'flex-end';
+  modal.style.justifyContent = 'center';
 }
 
 function closeKeyHelp() {
@@ -4308,9 +4310,13 @@ async function loadVideoHighlights(el, nom, col, sport) {
               +'<a href="'+link+'" target="_blank" style="display:block;margin-top:8px;padding:8px;background:rgba(255,0,0,.15);color:#ff4545;border-radius:6px;font-size:11px;font-weight:700;text-decoration:none;text-align:center;">📺 Ouvrir sur YouTube</a>'
               +'</div>';
           } else {
+            // Pas d'ID YouTube — bouton direct vers le lien
+            var isYT = link.indexOf('youtube.com') >= 0 || link.indexOf('youtu.be') >= 0;
+            var btnColor = isYT ? '#ff0000' : 'var(--a)';
+            var btnLabel = isYT ? '📺 Voir sur YouTube' : '▶ Voir le résumé';
             res.innerHTML = '<div style="background:rgba(77,132,255,.08);border:1px solid rgba(77,132,255,.2);border-radius:8px;padding:12px;">'
               +'<div style="font-size:11px;color:var(--t3);margin-bottom:8px;">'+desc+'</div>'
-              +'<a href="'+link+'" target="_blank" style="display:block;padding:10px;background:var(--a);color:#fff;border-radius:6px;font-size:12px;font-weight:700;text-decoration:none;text-align:center;">▶ Voir le résumé</a>'
+              +'<a href="'+link+'" target="_blank" style="display:block;padding:10px;background:'+btnColor+';color:#fff;border-radius:6px;font-size:12px;font-weight:700;text-decoration:none;text-align:center;">'+btnLabel+'</a>'
               +'</div>';
           }
         } else {
@@ -5369,7 +5375,7 @@ var _bcp=document.getElementById('btn-chat-params-pc');if(_bcp)_bcp.onclick=func
 </div>
 
 <!-- MODAL AIDE CLÉS -->
-<div id="key-help-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:9999;display:flex;align-items:flex-end;justify-content:center;" onclick="if(event.target===this)closeKeyHelp()">
+<div id="key-help-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:9999;align-items:flex-end;justify-content:center;" onclick="if(event.target===this)closeKeyHelp()">
   <div id="key-help-content" style="background:var(--bg2);border-radius:16px 16px 0 0;padding:20px;width:100%;max-width:500px;max-height:80vh;overflow-y:auto;border-top:2px solid rgba(77,132,255,.4);">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
       <div id="key-help-title" style="font-size:15px;font-weight:800;color:var(--t1);"></div>
