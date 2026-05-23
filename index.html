@@ -4871,9 +4871,9 @@ function initPariChips() {
   var chipsEl = document.getElementById('pari-equipe-chips');
   if(!chipsEl||!state.u||!state.u.length) return;
   var html = '<span style="font-size:10px;color:var(--t3);align-self:center;flex-shrink:0;">Focus :</span>';
-  html += '<div data-equipe="" onclick="setPariEquipe(this)" style="padding:4px 10px;border-radius:12px;border:1px solid rgba(77,132,255,.5);background:rgba(77,132,255,.12);color:#7aaaff;font-size:10px;font-weight:700;cursor:pointer;">Toutes</div>';
+  html += '<div data-equipe="" data-action="pari-equipe" style="padding:4px 10px;border-radius:12px;border:1px solid rgba(77,132,255,.5);background:rgba(77,132,255,.12);color:#7aaaff;font-size:10px;font-weight:700;cursor:pointer;">Toutes</div>';
   state.u.slice(0,8).forEach(function(u){
-    html += '<div data-equipe="'+u.n+'" onclick="setPariEquipe(this)" style="padding:4px 10px;border-radius:12px;border:1px solid rgba(255,255,255,.08);background:none;color:var(--t3);font-size:10px;font-weight:700;cursor:pointer;">'+u.n+'</div>';
+    html += '<div data-equipe="'+u.n+'" data-action="pari-equipe" style="padding:4px 10px;border-radius:12px;border:1px solid rgba(255,255,255,.08);background:none;color:var(--t3);font-size:10px;font-weight:700;cursor:pointer;">'+u.n+'</div>';
   });
   chipsEl.innerHTML = html;
 }
