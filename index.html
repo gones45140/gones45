@@ -3838,27 +3838,79 @@ async function getTeamStatsViaGroq(teamName, cpTypes) {
     + '10 derniers matchs (resultats), % Over 2.5 buts, % Over 3.5 buts, % BTS Oui, % victoires domicile, % victoires exterieur. '
     + 'Donne les stats chiffrees precises puis une analyse de 3 phrases en francais sur ces types de paris : '+typesStr+'.';
 
+  // Map noms équipes vers IDs football-data (plan gratuit)
+  var TEAM_IDS = {
+    'Bayern Munich':5,'Bayern München':5,'FC Bayern':5,
+    'Borussia Dortmund':4,'BVB':4,
+    'Real Madrid':86,'Real Madrid CF':86,
+    'FC Barcelona':81,'Barcelona':81,'Barça':81,
+    'Manchester City':65,'Man City':65,
+    'Manchester United':66,'Man United':66,
+    'Liverpool':64,'Liverpool FC':64,
+    'Arsenal':57,'Arsenal FC':57,
+    'Chelsea':61,'Chelsea FC':61,
+    'Tottenham':73,'Spurs':73,
+    'PSG':524,'Paris Saint-Germain':524,'Paris SG':524,
+    'Juventus':109,'Juve':109,
+    'Inter Milan':108,'Inter':108,'Internazionale':108,
+    'AC Milan':98,'Milan':98,
+    'Atletico Madrid':78,'Atletico':78,
+    'Bayer Leverkusen':3,'Leverkusen':3,
+    'RB Leipzig':721,'Leipzig':721,
+    'Napoli':113,'SSC Napoli':113,
+    'Roma':100,'AS Roma':100,
+    'Lazio':110,'SS Lazio':110,
+    'Sevilla':559,'FC Sevilla':559,
+    'Villarreal':533,'Villarreal CF':533,
+    'Benfica':1903,'SL Benfica':1903,
+    'Porto':503,'FC Porto':503,
+    'Ajax':678,'AFC Ajax':678,
+    'Lyon':1359,'Olympique Lyonnais':1359,'OL':1359,
+    'Marseille':516,'Olympique de Marseille':516,'OM':516,
+    'Monaco':548,'AS Monaco':548,
+    'Lens':546,'RC Lens':546,
+    'Nice':522,'OGC Nice':522,
+    'Rennes':518,'Stade Rennais':518,
+    'Lille':521,'LOSC':521,
+    'Borussia Mönchengladbach':18,
+    'Eintracht Frankfurt':19,
+    'Freiburg':17,'SC Freiburg':17,
+    'Wolfsburg':11,'VfL Wolfsburg':11,
+    'Stuttgart':10,'VfB Stuttgart':10,
+  };
+
   try {
-    // 1. Chercher l'équipe via proxy football-data
-    var teamsData = await fdFetch('/v4/teams?name='+encodeURIComponent(teamName)+'&limit=5');
+    // Trouver l'ID de l'équipe
     var teamId = null;
-    if(teamsData && teamsData.teams && teamsData.teams.length) {
-      teamId = teamsData.teams[0].id;
+    var nameToTry = teamName;
+    // Essai direct
+    for(var k in TEAM_IDS) {
+      if(k.toLowerCase()===teamName.toLowerCase()) { teamId=TEAM_IDS[k]; break; }
+    }
+    // Essai partiel si pas trouvé
+    if(!teamId) {
+      for(var k in TEAM_IDS) {
+        if(teamName.toLowerCase().indexOf(k.toLowerCase())>=0 || k.toLowerCase().indexOf(teamName.toLowerCase())>=0) {
+          teamId=TEAM_IDS[k]; break;
+        }
+      }
     }
 
     var matchStats = '';
     if(teamId) {
-      // 2. Récupérer les 10 derniers matchs
+      // Récupérer les 10 derniers matchs via proxy
       var matches = await fdFetch('/v4/teams/'+teamId+'/matches?status=FINISHED&limit=10');
       if(matches && matches.matches && matches.matches.length) {
         var ms = matches.matches;
         var over25=0, over35=0, bts=0, domW=0, domTotal=0, extW=0, extTotal=0;
         ms.forEach(function(m){
-          var hg=m.score.fullTime.home||0, ag=m.score.fullTime.away||0, total=hg+ag;
+          var hg=m.score&&m.score.fullTime?m.score.fullTime.home||0:0;
+          var ag=m.score&&m.score.fullTime?m.score.fullTime.away||0:0;
+          var total=hg+ag;
           if(total>2.5) over25++;
           if(total>3.5) over35++;
           if(hg>0&&ag>0) bts++;
-          var isDom = m.homeTeam.id===teamId;
+          var isDom = m.homeTeam&&m.homeTeam.id===teamId;
           var won = isDom?(hg>ag):(ag>hg);
           if(isDom){domTotal++;if(won)domW++;}
           else{extTotal++;if(won)extW++;}
@@ -3868,8 +3920,8 @@ async function getTeamStatsViaGroq(teamName, cpTypes) {
           +'Over 2.5='+over25+'/'+n+' ('+Math.round(over25/n*100)+'%), '
           +'Over 3.5='+over35+'/'+n+' ('+Math.round(over35/n*100)+'%), '
           +'BTS='+bts+'/'+n+' ('+Math.round(bts/n*100)+'%), '
-          +'Dom='+domW+'/'+domTotal+' victoires, '
-          +'Ext='+extW+'/'+extTotal+' victoires.';
+          +'Dom='+domW+'/'+(domTotal||1)+' victoires, '
+          +'Ext='+extW+'/'+(extTotal||1)+' victoires.';
       }
     }
 
