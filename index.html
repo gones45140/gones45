@@ -698,7 +698,7 @@ input[type="date"],input[type="time"]{color-scheme:dark;}
       <button class="itab" onclick="swInner('archive',this)">Archive</button>
       <button class="itab" onclick="swInner('types',this)">Types</button>
       <button class="itab" onclick="swInner('live',this);setTimeout(loadTeamLive,30)">🔴 Live</button>
-      <button class="itab" onclick="swInner('saisons',this);loadTeamSaisons()">📊 Saisons</button>
+      <button class="itab" id="itab-saisons">📊 Saisons</button>
     </div>
     <div id="ip-bilan" class="ipanel on"></div>
     <div id="ip-graphiques" class="ipanel"></div>
@@ -1150,6 +1150,45 @@ input[type="date"],input[type="time"]{color-scheme:dark;}
 </nav>
 
 <script>
+var TEAM_IDS = {
+    'Bayern Munich':5,'Bayern München':5,'FC Bayern':5,
+    'Borussia Dortmund':4,'BVB':4,
+    'Real Madrid':86,'Real Madrid CF':86,
+    'FC Barcelona':81,'Barcelona':81,'Barça':81,
+    'Manchester City':65,'Man City':65,
+    'Manchester United':66,'Man United':66,
+    'Liverpool':64,'Liverpool FC':64,
+    'Arsenal':57,'Arsenal FC':57,
+    'Chelsea':61,'Chelsea FC':61,
+    'Tottenham':73,'Spurs':73,
+    'PSG':524,'Paris Saint-Germain':524,'Paris SG':524,
+    'Juventus':109,'Juve':109,
+    'Inter Milan':108,'Inter':108,'Internazionale':108,
+    'AC Milan':98,'Milan':98,
+    'Atletico Madrid':78,'Atletico':78,
+    'Bayer Leverkusen':3,'Leverkusen':3,
+    'RB Leipzig':721,'Leipzig':721,
+    'Napoli':113,'SSC Napoli':113,
+    'Roma':100,'AS Roma':100,
+    'Lazio':110,'SS Lazio':110,
+    'Sevilla':559,'FC Sevilla':559,
+    'Villarreal':533,'Villarreal CF':533,
+    'Benfica':1903,'SL Benfica':1903,
+    'Porto':503,'FC Porto':503,
+    'Ajax':678,'AFC Ajax':678,
+    'Lyon':1359,'Olympique Lyonnais':1359,'OL':1359,
+    'Marseille':516,'Olympique de Marseille':516,'OM':516,
+    'Monaco':548,'AS Monaco':548,
+    'Lens':546,'RC Lens':546,
+    'Nice':522,'OGC Nice':522,
+    'Rennes':518,'Stade Rennais':518,
+    'Lille':521,'LOSC':521,
+    'Borussia Mönchengladbach':18,
+    'Eintracht Frankfurt':19,
+    'Freiburg':17,'SC Freiburg':17,
+    'Wolfsburg':11,'VfL Wolfsburg':11,
+    'Stuttgart':10,'VfB Stuttgart':10,
+  };
 var _currentUnitNom = "";
 var _CP_TYPES = ['Victoire','Nul','Défaite','Over 2.5','Under 2.5','BTS Oui','BTS Non','HC -1','HC +1','Mi-temps','1er buteur'];
 var _chatParams = { equipe:'', lieu:'domicile', types:['Victoire','Over 2.5','BTS Oui'], champOnly:false };
@@ -2561,7 +2600,8 @@ function openClub(nom,idx){
 
 function setUG(nom){var v=prompt('Objectif profit pour '+nom+' (€) :',state.ugoals[nom]||0);if(v!=null&&!isNaN(+v)){state.ugoals[nom]=+v;save();}}
 function closeClub(){Object.values(AC).forEach(function(c){try{c.destroy();}catch(e){}});AC={};$i('detail').style.display='none';$i('t-bilan').style.display='block';}
-function swInner(id,btn){document.querySelectorAll('.itab').forEach(function(t){t.classList.remove('on');});document.querySelectorAll('.ipanel').forEach(function(c){c.classList.remove('on');});if(btn)btn.classList.add('on');$i('ip-'+id).classList.add('on');}
+function swInner(id,btn){
+  if(id==='saisons') setTimeout(loadTeamSaisons, 50);document.querySelectorAll('.itab').forEach(function(t){t.classList.remove('on');});document.querySelectorAll('.ipanel').forEach(function(c){c.classList.remove('on');});if(btn)btn.classList.add('on');$i('ip-'+id).classList.add('on');}
 
 /* ── PARIS ── */
 function pari(isS){
@@ -3843,45 +3883,7 @@ async function getTeamStatsViaGroq(teamName, cpTypes) {
     + 'Donne les stats chiffrees precises puis une analyse de 3 phrases en francais sur ces types de paris : '+typesStr+'.';
 
   // Map noms équipes vers IDs football-data (plan gratuit)
-  var TEAM_IDS = {
-    'Bayern Munich':5,'Bayern München':5,'FC Bayern':5,
-    'Borussia Dortmund':4,'BVB':4,
-    'Real Madrid':86,'Real Madrid CF':86,
-    'FC Barcelona':81,'Barcelona':81,'Barça':81,
-    'Manchester City':65,'Man City':65,
-    'Manchester United':66,'Man United':66,
-    'Liverpool':64,'Liverpool FC':64,
-    'Arsenal':57,'Arsenal FC':57,
-    'Chelsea':61,'Chelsea FC':61,
-    'Tottenham':73,'Spurs':73,
-    'PSG':524,'Paris Saint-Germain':524,'Paris SG':524,
-    'Juventus':109,'Juve':109,
-    'Inter Milan':108,'Inter':108,'Internazionale':108,
-    'AC Milan':98,'Milan':98,
-    'Atletico Madrid':78,'Atletico':78,
-    'Bayer Leverkusen':3,'Leverkusen':3,
-    'RB Leipzig':721,'Leipzig':721,
-    'Napoli':113,'SSC Napoli':113,
-    'Roma':100,'AS Roma':100,
-    'Lazio':110,'SS Lazio':110,
-    'Sevilla':559,'FC Sevilla':559,
-    'Villarreal':533,'Villarreal CF':533,
-    'Benfica':1903,'SL Benfica':1903,
-    'Porto':503,'FC Porto':503,
-    'Ajax':678,'AFC Ajax':678,
-    'Lyon':1359,'Olympique Lyonnais':1359,'OL':1359,
-    'Marseille':516,'Olympique de Marseille':516,'OM':516,
-    'Monaco':548,'AS Monaco':548,
-    'Lens':546,'RC Lens':546,
-    'Nice':522,'OGC Nice':522,
-    'Rennes':518,'Stade Rennais':518,
-    'Lille':521,'LOSC':521,
-    'Borussia Mönchengladbach':18,
-    'Eintracht Frankfurt':19,
-    'Freiburg':17,'SC Freiburg':17,
-    'Wolfsburg':11,'VfL Wolfsburg':11,
-    'Stuttgart':10,'VfB Stuttgart':10,
-  };
+  
 
   try {
     // Trouver ID equipe
@@ -4457,6 +4459,7 @@ function updateBankTotal() {
 }
 
 var _bcp=document.getElementById('btn-chat-params-pc');if(_bcp)_bcp.onclick=function(){toggleChatParamsPC();};var _bcm=document.getElementById('btn-chat-params-mobile');if(_bcm)_bcm.onclick=function(){toggleChatParams();};
+  var _bsaisons=document.getElementById('itab-saisons');if(_bsaisons)_bsaisons.onclick=function(){swInner('saisons',this);};
 
   // Listener global pour les paramètres chat
   document.addEventListener('click', function(e) {
