@@ -3396,6 +3396,11 @@ function loadTeamLive(){
   var col=uObj.color||'#4d84ff';
   var sport=uObj.sport||'⚽';
   if(sport==='🏉🇦🇺'||sport==='🏉'){loadTeamLiveTSDB(el,nom,sport);return;}
+  // Sports avec résumés vidéo dédiés
+  if(sport==='🏒'||sport==='🏒🇺🇸') { loadVideoHighlights(el,nom,col,'nhl'); return; }
+  if(sport==='⚾'||sport==='⚾🇺🇸') { loadVideoHighlights(el,nom,col,'mlb'); return; }
+  if(sport==='🏀'||sport==='🏀🇺🇸') { loadVideoHighlights(el,nom,col,'nba'); return; }
+  if(sport==='🏎️'||sport==='🏎') { loadVideoHighlights(el,nom,col,'f1'); return; }
 
   // Trouver l'ID football-data
   var teamId=null;
@@ -4188,6 +4193,122 @@ function showKeyHelp(key) {
 function closeKeyHelp() {
   var modal = document.getElementById('key-help-modal');
   if(modal) modal.style.display = 'none';
+}
+
+// ── RÉSUMÉS VIDÉO PAR SPORT ──
+var SPORT_CONFIG = {
+  nhl: {
+    name: 'NHL', icon: '🏒',
+    sources: [
+      {label: '🎬 NHL.com — Highlights officiels', url: 'https://www.nhl.com/video', color: '#000'},
+      {label: '📺 YouTube NHL', url: 'https://www.youtube.com/@NHL', color: '#ff0000'},
+    ],
+    searchUrl: function(nom){ return 'https://www.nhl.com/video/search#q='+encodeURIComponent(nom); },
+    tavilyQuery: function(nom){ return nom+' NHL highlights recap video today 2026'; }
+  },
+  mlb: {
+    name: 'MLB', icon: '⚾',
+    sources: [
+      {label: '🎬 MLB.com — Highlights officiels', url: 'https://www.mlb.com/video', color: '#002d72'},
+      {label: '📺 YouTube MLB', url: 'https://www.youtube.com/@MLB', color: '#ff0000'},
+    ],
+    searchUrl: function(nom){ return 'https://www.mlb.com/video/search#q='+encodeURIComponent(nom); },
+    tavilyQuery: function(nom){ return nom+' MLB highlights recap video today 2026'; }
+  },
+  nba: {
+    name: 'NBA', icon: '🏀',
+    sources: [
+      {label: '🎬 NBA.com — Highlights officiels', url: 'https://www.nba.com/watch', color: '#c8102e'},
+      {label: '📺 YouTube NBA', url: 'https://www.youtube.com/@NBA', color: '#ff0000'},
+      {label: '🎬 @TheGametimeHighlights', url: 'https://twitter.com/TheGametimeHighlights', color: '#1da1f2'},
+    ],
+    searchUrl: function(nom){ return 'https://www.nba.com/watch?q='+encodeURIComponent(nom); },
+    tavilyQuery: function(nom){ return nom+' NBA highlights recap video today 2026'; }
+  },
+  f1: {
+    name: 'F1', icon: '🏎️',
+    sources: [
+      {label: '🎬 Formula1.com — Highlights', url: 'https://www.formula1.com/en/video.html', color: '#e8002d'},
+      {label: '📺 YouTube F1', url: 'https://www.youtube.com/@Formula1', color: '#ff0000'},
+    ],
+    searchUrl: function(nom){ return 'https://www.formula1.com/en/video.html'; },
+    tavilyQuery: function(nom){ return 'Formula 1 GP highlights recap video 2026 '+nom; }
+  }
+};
+
+async function loadVideoHighlights(el, nom, col, sport) {
+  var cfg = SPORT_CONFIG[sport];
+  if(!cfg) return;
+
+  var tavilyKey = getTavilyKey();
+  var groqKey = getGeminiKey();
+
+  // Affichage initial avec sources directes
+  var html = '<div style="text-align:center;padding:20px 16px;">';
+  html += '<div style="font-size:36px;margin-bottom:8px;">'+cfg.icon+'</div>';
+  html += '<div style="font-size:15px;font-weight:800;color:'+col+';margin-bottom:4px;">'+nom+'</div>';
+  html += '<div style="font-size:11px;color:var(--t3);margin-bottom:20px;">Résumés & Highlights '+cfg.name+'</div>';
+
+  // Boutons sources directes
+  cfg.sources.forEach(function(s){
+    html += '<a href="'+s.url+'" target="_blank" style="display:flex;align-items:center;justify-content:center;gap:8px;margin-bottom:8px;padding:12px;border-radius:var(--r8);background:'+s.color+';color:#fff;font-size:12px;font-weight:700;text-decoration:none;">'+s.label+'</a>';
+  });
+
+  html += '</div>';
+
+  // Bouton recherche IA
+  if(tavilyKey && groqKey) {
+    html += '<div class="fc" style="margin-top:4px;text-align:center;">';
+    html += '<div style="font-size:11px;color:var(--t3);margin-bottom:10px;">Ou trouve le dernier résumé automatiquement :</div>';
+    html += '<button id="btn-find-highlights" style="padding:10px 20px;border-radius:var(--r8);border:1px solid rgba(77,132,255,.4);background:rgba(77,132,255,.1);color:#7aaaff;font-size:12px;font-weight:700;cursor:pointer;">🔍 Trouver le dernier résumé</button>';
+    html += '<div id="highlights-result" style="margin-top:12px;"></div>';
+    html += '</div>';
+  }
+
+  el.innerHTML = html;
+
+  if(tavilyKey && groqKey) {
+    document.getElementById('btn-find-highlights').onclick = async function(){
+      var btn = this;
+      var res = document.getElementById('highlights-result');
+      btn.textContent = '⏳ Recherche...';
+      btn.disabled = true;
+
+      // Tavily cherche le dernier résumé
+      var webData = await searchTavily(cfg.tavilyQuery(nom));
+      if(!webData) {
+        res.innerHTML = '<div style="color:#ff4545;font-size:11px;">Aucun résultat trouvé.</div>';
+        btn.textContent = '🔍 Réessayer'; btn.disabled = false; return;
+      }
+
+      // Groq extrait le lien
+      var prompt = 'Voici des résultats de recherche sur les highlights de '+nom+' en '+cfg.name+' : '+webData.substring(0,800)+'. Extrais uniquement le lien vidéo le plus pertinent (YouTube, site officiel) et donne une description en 1 phrase. Format: "LIEN: url\nDESC: description". En français.';
+      try {
+        var r = await fetch('https://api.groq.com/openai/v1/chat/completions',{
+          method:'POST',
+          headers:{'Content-Type':'application/json','Authorization':'Bearer '+groqKey},
+          body:JSON.stringify({model:'llama-3.3-70b-versatile',messages:[{role:'user',content:prompt}],max_tokens:150,temperature:0.2})
+        });
+        var d = await r.json();
+        var reply = d.choices[0].message.content.trim();
+        var linkMatch = reply.match(/LIEN:\s*(https?:\/\/[^\s\n]+)/);
+        var descMatch = reply.match(/DESC:\s*(.+)/);
+        if(linkMatch) {
+          var link = linkMatch[1];
+          var desc = descMatch ? descMatch[1] : 'Voir le résumé';
+          res.innerHTML = '<div style="background:rgba(77,132,255,.08);border:1px solid rgba(77,132,255,.2);border-radius:8px;padding:12px;">'
+            +'<div style="font-size:11px;color:var(--t3);margin-bottom:8px;">'+desc+'</div>'
+            +'<a href="'+link+'" target="_blank" style="display:block;padding:10px;background:var(--a);color:#fff;border-radius:6px;font-size:12px;font-weight:700;text-decoration:none;text-align:center;">▶ Voir le résumé</a>'
+            +'</div>';
+        } else {
+          res.innerHTML = '<div style="font-size:11px;color:var(--t3);">'+reply+'</div>';
+        }
+      } catch(e) {
+        res.innerHTML = '<div style="color:#ff4545;font-size:11px;">Erreur IA.</div>';
+      }
+      btn.textContent = '🔍 Trouver le dernier résumé'; btn.disabled = false;
+    };
+  }
 }
 
 async function loadTeamSaisons() {
