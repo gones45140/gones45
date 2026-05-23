@@ -4357,16 +4357,33 @@ async function loadTeamSaisons() {
   el.innerHTML = '<div style="display:flex;align-items:center;gap:10px;padding:20px;color:var(--t3);"><div style="width:16px;height:16px;border:2px solid rgba(77,132,255,.2);border-top-color:#4d84ff;border-radius:50%;animation:spin .8s linear infinite;"></div>Chargement des 2 dernières saisons...</div>';
 
   // Charger saison en cours + saison précédente
-  var saisons = ['2024','2023'];
+  // Charger les 50 derniers matchs et séparer par saison
   var results = {};
-
-  for(var s=0; s<saisons.length; s++) {
-    var season = saisons[s];
-    var data = await fdFetch('/v4/teams/'+teamId+'/matches?status=FINISHED&limit=50&season='+season);
-    if(data && data.matches && data.matches.length) {
-      results[season] = data.matches;
-    }
+  var allData = await fdFetch('/v4/teams/'+teamId+'/matches?status=FINISHED&limit=60');
+  
+  if(allData && allData.matches && allData.matches.length) {
+    var matches2526 = []; // saison 2025-2026 : après août 2025
+    var matches2425 = []; // saison 2024-2025 : entre août 2024 et juillet 2025
+    
+    allData.matches.forEach(function(m) {
+      var d = new Date(m.utcDate);
+      var y = d.getFullYear();
+      var mo = d.getMonth(); // 0=jan, 7=août
+      // Saison 2025-2026 : août 2025 (mois 7, année 2025) à juillet 2026
+      if((y === 2025 && mo >= 7) || y === 2026) {
+        matches2526.push(m);
+      }
+      // Saison 2024-2025 : août 2024 à juillet 2025
+      else if((y === 2024 && mo >= 7) || (y === 2025 && mo < 7)) {
+        matches2425.push(m);
+      }
+    });
+    
+    if(matches2526.length) results['2025'] = matches2526;
+    if(matches2425.length) results['2024'] = matches2425;
   }
+  
+  var saisons = Object.keys(results).sort().reverse();
 
   if(!Object.keys(results).length) {
     el.innerHTML = '<div class="fc" style="text-align:center;color:var(--t3);">Aucune donnee disponible.</div>';
@@ -4377,7 +4394,48 @@ async function loadTeamSaisons() {
   renderSaisonsChart(el, results, nom);
 }
 
-function calcSaisonStats(matches, teamId) {
+
+// ── FILTRES ONGLET SAISONS ──
+function updateSaisonFilter() {
+  var allChk = document.getElementById('sf-all');
+  if(!allChk) return;
+  // Si on coche "Toutes" → décocher les autres
+  if(allChk.checked) {
+    ['Championnat','Coupe_Europe','Coupe_Nationale','Autre'].forEach(function(g){
+      var el=document.getElementById('sf-'+g); if(el) el.checked=false;
+    });
+    localStorage.setItem('g45_saison_filters', JSON.stringify({all:true}));
+  } else {
+    // Si on coche un groupe → décocher "Toutes"
+    localStorage.setItem('g45_saison_filters', JSON.stringify({
+      all: false,
+      'sf-Championnat': !!(document.getElementById('sf-Championnat')&&document.getElementById('sf-Championnat').checked),
+      'sf-Coupe_Europe': !!(document.getElementById('sf-Coupe_Europe')&&document.getElementById('sf-Coupe_Europe').checked),
+      'sf-Coupe_Nationale': !!(document.getElementById('sf-Coupe_Nationale')&&document.getElementById('sf-Coupe_Nationale').checked),
+      'sf-Autre': !!(document.getElementById('sf-Autre')&&document.getElementById('sf-Autre').checked),
+    }));
+  }
+  // Recharger les saisons
+  _saisonsCache = {};
+  loadTeamSaisons();
+}
+
+function filterMatchesByComp(matches, filters) {
+  if(!filters || filters.all) return matches;
+  return matches.filter(function(m){
+    var ct = m.competition&&m.competition.type||'';
+    var cn = m.competition&&m.competition.name||'';
+    if(filters['sf-Championnat'] && ct==='LEAGUE') return true;
+    if(filters['sf-Coupe_Europe'] && ct==='CUP' && (cn.indexOf('Champion')>=0||cn.indexOf('Europa')>=0||cn.indexOf('UEFA')>=0||cn.indexOf('Conference')>=0)) return true;
+    if(filters['sf-Coupe_Nationale'] && ct==='CUP' && !(cn.indexOf('Champion')>=0||cn.indexOf('Europa')>=0||cn.indexOf('UEFA')>=0||cn.indexOf('Conference')>=0)) return true;
+    if(filters['sf-Autre'] && ct!=='LEAGUE' && ct!=='CUP') return true;
+    return false;
+  });
+}
+
+function calcSaisonStats(matchesRaw, teamId) {
+  // Trier du plus récent au plus ancien
+  var matches = matchesRaw.slice().sort(function(a,b){ return new Date(b.utcDate)-new Date(a.utcDate); });
   var stats = {
     n:0, over05:0, over15:0, over25:0, over35:0, over45:0, bts:0,
     domW:0, domD:0, domL:0, domN:0, extW:0, extD:0, extL:0, extN:0,
@@ -4473,11 +4531,67 @@ function renderSaisonsChart(el, results, nom) {
     if(k.toLowerCase()===nom.toLowerCase() || nom.toLowerCase().indexOf(k.toLowerCase())>=0) { teamId=TEAM_IDS[k]; break; }
   }
 
+  // Détecter toutes les compétitions disponibles
+  var allComps = {};
+  saisons.forEach(function(s){
+    (results[s]||[]).forEach(function(m){
+      var cn = m.competition&&m.competition.name||'Autre';
+      var ct = m.competition&&m.competition.type||'';
+      if(!allComps[cn]) allComps[cn] = {type:ct, count:0};
+      allComps[cn].count++;
+    });
+  });
+
+  // Grouper par type
+  var compGroups = {
+    'Championnat': [],
+    'Coupe Europe': [],
+    'Coupe Nationale': [],
+    'Autre': []
+  };
+  Object.keys(allComps).forEach(function(cn){
+    var ct = allComps[cn].type;
+    if(ct==='LEAGUE') compGroups['Championnat'].push(cn);
+    else if(ct==='CUP' && (cn.indexOf('Champion')+cn.indexOf('Europa')+cn.indexOf('UEFA')+cn.indexOf('Conference'))>-3) compGroups['Coupe Europe'].push(cn);
+    else if(ct==='CUP') compGroups['Coupe Nationale'].push(cn);
+    else compGroups['Autre'].push(cn);
+  });
+
+  // Filtres actifs (par défaut tout coché)
+  var _saisonFilters = JSON.parse(localStorage.getItem('g45_saison_filters')||'null') || {all:true};
+
   var html = '<div style="padding:4px 0;">';
+
+  // Barre de filtres
+  html += '<div class="cwrap" style="margin-bottom:10px;">';
+  html += '<div style="font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#4f5d88;margin-bottom:10px;">Filtrer par compétition</div>';
+  html += '<div style="display:flex;gap:6px;flex-wrap:wrap;" id="saison-filter-chips">';
+
+  // Chip "Toutes"
+  var allActive = !_saisonFilters || _saisonFilters.all;
+  html += '<label style="display:flex;align-items:center;gap:5px;padding:5px 10px;border-radius:12px;border:1px solid '+(allActive?'rgba(77,132,255,.5)':'rgba(255,255,255,.1)')+';background:'+(allActive?'rgba(77,132,255,.12)':'none')+';cursor:pointer;font-size:10px;font-weight:700;color:'+(allActive?'#7aaaff':'var(--t3)')+';">'
+    +'<input type="checkbox" id="sf-all" '+(allActive?'checked':'')+' onchange="updateSaisonFilter()" style="accent-color:var(--a);">Toutes</label>';
+
+  // Chips par groupe
+  var groupColors = {'Championnat':'#1ed760','Coupe Europe':'#f0b020','Coupe Nationale':'#ff7b54','Autre':'#a78bfa'};
+  Object.keys(compGroups).forEach(function(g){
+    if(!compGroups[g].length) return;
+    var key = 'sf-'+g.replace(/ /g,'_');
+    var active = _saisonFilters.all || (_saisonFilters[key]);
+    var col = groupColors[g]||'#7aaaff';
+    html += '<label style="display:flex;align-items:center;gap:5px;padding:5px 10px;border-radius:12px;border:1px solid '+(active?col.replace('#','rgba(').replace(/(..)(..)(..)/, function(m,r,g2,b){ return parseInt(r,16)+','+parseInt(g2,16)+','+parseInt(b,16); })+',.4)':'rgba(255,255,255,.1)')+';background:'+(active?'rgba(77,132,255,.08)':'none')+';cursor:pointer;font-size:10px;font-weight:700;color:'+(active?col:'var(--t3)')+';">'
+      +'<input type="checkbox" id="'+key+'" '+(active?'checked':'')+' onchange="updateSaisonFilter()" style="accent-color:'+col+';">'+g+'</label>';
+    // Tooltip avec les compétitions
+    html += '';
+  });
+  html += '</div></div>';
 
   saisons.forEach(function(s) {
     var matches = results[s];
-    var st = calcSaisonStats(matches, teamId);
+    var filters = JSON.parse(localStorage.getItem('g45_saison_filters')||'null');
+    var filteredMatches = filterMatchesByComp(matches, filters);
+    if(!filteredMatches.length) filteredMatches = matches; // fallback si filtre vide
+    var st = calcSaisonStats(filteredMatches, teamId);
     var champMatches = matches.filter(function(m){ return m.competition && (m.competition.type==='LEAGUE' || m.competition.code==='BL1'||m.competition.code==='PL'||m.competition.code==='PD'||m.competition.code==='SA'||m.competition.code==='FL1'||m.competition.code==='PPL'); });
     var stC = champMatches.length ? calcSaisonStats(champMatches, teamId) : null;
 
