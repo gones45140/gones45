@@ -4296,10 +4296,23 @@ async function loadVideoHighlights(el, nom, col, sport) {
         if(linkMatch) {
           var link = linkMatch[1];
           var desc = descMatch ? descMatch[1] : 'Voir le résumé';
-          res.innerHTML = '<div style="background:rgba(77,132,255,.08);border:1px solid rgba(77,132,255,.2);border-radius:8px;padding:12px;">'
-            +'<div style="font-size:11px;color:var(--t3);margin-bottom:8px;">'+desc+'</div>'
-            +'<a href="'+link+'" target="_blank" style="display:block;padding:10px;background:var(--a);color:#fff;border-radius:6px;font-size:12px;font-weight:700;text-decoration:none;text-align:center;">▶ Voir le résumé</a>'
-            +'</div>';
+          // YouTube → embed direct
+          var ytMatch = link.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/)([a-zA-Z0-9_-]{11})/);
+          if(ytMatch) {
+            var videoId = ytMatch[1];
+            res.innerHTML = '<div style="border-radius:10px;overflow:hidden;margin-bottom:8px;">'
+              +'<div style="font-size:11px;color:var(--t3);margin-bottom:8px;text-align:center;">'+desc+'</div>'
+              +'<div style="position:relative;padding-bottom:56.25%;height:0;overflow:hidden;border-radius:8px;">'
+              +'<iframe src="https://www.youtube.com/embed/'+videoId+'?autoplay=0" style="position:absolute;top:0;left:0;width:100%;height:100%;border:none;border-radius:8px;" allowfullscreen></iframe>'
+              +'</div>'
+              +'<a href="'+link+'" target="_blank" style="display:block;margin-top:8px;padding:8px;background:rgba(255,0,0,.15);color:#ff4545;border-radius:6px;font-size:11px;font-weight:700;text-decoration:none;text-align:center;">📺 Ouvrir sur YouTube</a>'
+              +'</div>';
+          } else {
+            res.innerHTML = '<div style="background:rgba(77,132,255,.08);border:1px solid rgba(77,132,255,.2);border-radius:8px;padding:12px;">'
+              +'<div style="font-size:11px;color:var(--t3);margin-bottom:8px;">'+desc+'</div>'
+              +'<a href="'+link+'" target="_blank" style="display:block;padding:10px;background:var(--a);color:#fff;border-radius:6px;font-size:12px;font-weight:700;text-decoration:none;text-align:center;">▶ Voir le résumé</a>'
+              +'</div>';
+          }
         } else {
           res.innerHTML = '<div style="font-size:11px;color:var(--t3);">'+reply+'</div>';
         }
