@@ -434,6 +434,8 @@ input[type="date"],input[type="time"]{color-scheme:dark;}
       </div>
       <button id="btn-generate-pari" style="padding:8px 16px;border-radius:var(--r6);border:none;background:var(--a);color:#fff;font-size:11px;font-weight:700;cursor:pointer;">⚡ Générer</button>
     </div>
+    <!-- Sélecteur équipe -->
+    <div id="pari-equipe-chips" style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px;"></div>
     <div id="pari-du-jour-content" style="display:none;"></div>
   </div>
   <div class="sec">Équipes <span style="font-size:9px;color:var(--t3);font-weight:400;">(dernières perf.)</span></div>
@@ -4671,6 +4673,31 @@ function toggleCpType(btn) {
 
 
 // ── GENERATEUR PARI DU JOUR ──
+var _pariEquipeFocus = '';
+
+function initPariChips() {
+  var chipsEl = document.getElementById('pari-equipe-chips');
+  if(!chipsEl||!state.u||!state.u.length) return;
+  var html = '<span style="font-size:10px;color:var(--t3);align-self:center;flex-shrink:0;">Focus :</span>';
+  html += '<div data-equipe="" onclick="setPariEquipe(this)" style="padding:4px 10px;border-radius:12px;border:1px solid rgba(77,132,255,.5);background:rgba(77,132,255,.12);color:#7aaaff;font-size:10px;font-weight:700;cursor:pointer;">Toutes</div>';
+  state.u.slice(0,8).forEach(function(u){
+    html += '<div data-equipe="'+u.n+'" onclick="setPariEquipe(this)" style="padding:4px 10px;border-radius:12px;border:1px solid rgba(255,255,255,.08);background:none;color:var(--t3);font-size:10px;font-weight:700;cursor:pointer;">'+u.n+'</div>';
+  });
+  chipsEl.innerHTML = html;
+}
+
+function setPariEquipe(el) {
+  _pariEquipeFocus = el.dataset.equipe || '';
+  document.querySelectorAll('#pari-equipe-chips [data-equipe]').forEach(function(c){
+    c.style.borderColor='rgba(255,255,255,.08)';
+    c.style.background='none';
+    c.style.color='var(--t3)';
+  });
+  el.style.borderColor='rgba(77,132,255,.5)';
+  el.style.background='rgba(77,132,255,.12)';
+  el.style.color='#7aaaff';
+}
+
 async function generatePariDuJour() {
   var btn = document.getElementById('btn-generate-pari');
   var cont = document.getElementById('pari-du-jour-content');
@@ -4679,7 +4706,7 @@ async function generatePariDuJour() {
   btn.textContent = '⏳ Analyse...';
   btn.disabled = true;
   cont.style.display = 'block';
-  cont.innerHTML = '<div style="display:flex;align-items:center;gap:8px;color:var(--t3);font-size:11px;padding:8px 0;"><div style="width:12px;height:12px;border:2px solid rgba(77,132,255,.2);border-top-color:#4d84ff;border-radius:50%;animation:spin .8s linear infinite;flex-shrink:0;"></div>Analyse de tes équipes en cours...</div>';
+  cont.innerHTML = '<div style="display:flex;align-items:center;gap:8px;color:var(--t3);font-size:11px;padding:8px 0;"><div style="width:12px;height:12px;border:2px solid rgba(77,132,255,.2);border-top-color:#4d84ff;border-radius:50%;animation:spin .8s linear infinite;flex-shrink:0;"></div>Analyse en cours...</div>';
 
   var groqKey = getGeminiKey();
   var fdKey = getFdorgKey();
@@ -4688,10 +4715,14 @@ async function generatePariDuJour() {
     btn.textContent = '⚡ Générer'; btn.disabled = false; return;
   }
 
-  // Récupérer les équipes favorites avec leurs stats perso
+  // Filtrer selon équipe focus
+  var unitesToAnalyze = _pariEquipeFocus
+    ? state.u.filter(function(u){ return u.n === _pariEquipeFocus; })
+    : state.u.slice(0,8);
+
   var today = new Date();
   var dateStr = today.toLocaleDateString('fr-FR');
-  var equipes = state.u.slice(0,8).map(function(u){
+  var equipes = unitesToAnalyze.map(function(u){
     var paris = state.a.filter(function(h){return h.n===u.n;});
     var wins = paris.filter(function(h){return h.win;}).length;
     var profit = paris.reduce(function(a,h){return a+(h.win?(h.m*h.cote)-h.m:-h.m);},0);
@@ -4811,7 +4842,7 @@ var _bcp=document.getElementById('btn-chat-params-pc');if(_bcp)_bcp.onclick=func
     else if(action === 'cp-add-mobile') { addCpType('mobile'); }
     else if(action === 'cp-add-pc') { addCpType('pc'); }
   });
-  render();updMise();buildSbRows();buildDtRows();buildArjelRows();renderCrash();renderMmRows();renderMmRowsSimple();updateCompList();calcVb();calcLay();calcFreebet();renderArchive();updateBankTotal();_apStyle=localStorage.getItem('g45_ap_style')||'halo';_apIntensity=parseInt(localStorage.getItem('g45_ap_intensity')||'40');var _apInp=document.getElementById('ap-intensity');if(_apInp)_apInp.value=_apIntensity;setCardStyle(_apStyle);};
+  render();updMise();buildSbRows();setTimeout(initPariChips,100);buildDtRows();buildArjelRows();renderCrash();renderMmRows();renderMmRowsSimple();updateCompList();calcVb();calcLay();calcFreebet();renderArchive();updateBankTotal();setTimeout(initPariChips,200);_apStyle=localStorage.getItem('g45_ap_style')||'halo';_apIntensity=parseInt(localStorage.getItem('g45_ap_intensity')||'40');var _apInp=document.getElementById('ap-intensity');if(_apInp)_apInp.value=_apIntensity;setCardStyle(_apStyle);};
 
 </script>
 
