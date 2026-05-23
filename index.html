@@ -1076,9 +1076,9 @@ input[type="date"],input[type="time"]{color-scheme:dark;}
   <div style="margin-bottom:8px;">
     <div style="font-size:10px;color:var(--t2);font-weight:600;margin-bottom:5px;">Lieu favori</div>
     <div style="display:flex;gap:5px;">
-      <button class="cp-lieu-btn on-param" data-val="domicile" onclick="setCpLieu(this)" style="flex:1;padding:6px;border-radius:var(--r4);border:1px solid rgba(30,215,96,.4);background:rgba(30,215,96,.1);color:#1ed760;font-size:10px;font-weight:700;cursor:pointer;">🏠 Dom</button>
-      <button class="cp-lieu-btn" data-val="exterieur" onclick="setCpLieu(this)" style="flex:1;padding:6px;border-radius:var(--r4);border:1px solid var(--b2);background:none;color:var(--t3);font-size:10px;font-weight:700;cursor:pointer;">🚌 Ext</button>
-      <button class="cp-lieu-btn" data-val="both" onclick="setCpLieu(this)" style="flex:1;padding:6px;border-radius:var(--r4);border:1px solid var(--b2);background:none;color:var(--t3);font-size:10px;font-weight:700;cursor:pointer;">➖ Les 2</button>
+      <button class="cp-lieu-btn on-param" data-val="domicile" data-action="cp-lieu" style="flex:1;padding:6px;border-radius:var(--r4);border:1px solid rgba(30,215,96,.4);background:rgba(30,215,96,.1);color:#1ed760;font-size:10px;font-weight:700;cursor:pointer;">🏠 Dom</button>
+      <button class="cp-lieu-btn" data-val="exterieur" data-action="cp-lieu" style="flex:1;padding:6px;border-radius:var(--r4);border:1px solid var(--b2);background:none;color:var(--t3);font-size:10px;font-weight:700;cursor:pointer;">🚌 Ext</button>
+      <button class="cp-lieu-btn" data-val="both" data-action="cp-lieu" style="flex:1;padding:6px;border-radius:var(--r4);border:1px solid var(--b2);background:none;color:var(--t3);font-size:10px;font-weight:700;cursor:pointer;">➖ Les 2</button>
     </div>
   </div>
   <div style="margin-bottom:8px;">
@@ -1086,7 +1086,7 @@ input[type="date"],input[type="time"]{color-scheme:dark;}
     <div id="cp-types" style="display:flex;gap:5px;flex-wrap:wrap;margin-bottom:8px;"></div>
     <div style="display:flex;gap:5px;">
       <input id="cp-new-type" class="fi" placeholder="Ajouter un type…" style="flex:1;font-size:11px;padding:6px 8px;">
-      <button onclick="addCpType('mobile')" style="padding:6px 10px;border-radius:var(--r4);border:1px solid rgba(77,132,255,.4);background:rgba(77,132,255,.12);color:#7aaaff;font-size:11px;font-weight:700;cursor:pointer;">+</button>
+      <button data-action="cp-add-mobile" style="padding:6px 10px;border-radius:var(--r4);border:1px solid rgba(77,132,255,.4);background:rgba(77,132,255,.12);color:#7aaaff;font-size:11px;font-weight:700;cursor:pointer;">+</button>
     </div>
   </div>
   <div>
@@ -4110,7 +4110,7 @@ function initChatParamsPC() {
       var s = on ? 'border:1px solid rgba(77,132,255,.5);background:rgba(77,132,255,.12);color:#7aaaff;' : 'border:1px solid rgba(255,255,255,.1);background:none;color:var(--t3);';
       var isDefault = ['Victoire','Nul','Défaite','Over 2.5','Under 2.5','BTS Oui','BTS Non','HC -1','HC +1','Mi-temps','1er buteur'].indexOf(t) >= 0;
       var delBtn = isDefault ? '' : '<span data-deltype="'+t+'" onclick="delCpType(this)" style="margin-left:4px;opacity:.6;cursor:pointer;">✕</span>';
-      return '<button data-cptype="'+t+'" onclick="toggleCpType(this)" style="display:inline-flex;align-items:center;padding:3px 7px;border-radius:12px;'+s+'font-size:9px;font-weight:700;cursor:pointer;">'+t+delBtn+'</button>';
+      return '<button data-cptype="'+t+'" data-action="cp-type" style="display:inline-flex;align-items:center;padding:3px 7px;border-radius:12px;'+s+'font-size:9px;font-weight:700;cursor:pointer;">'+t+delBtn+'</button>';
     }).join('');
   }
   var chk = document.getElementById('cp-champ-only-pc');
@@ -4175,7 +4175,7 @@ function initChatParams() {
       var s = on ? 'border:1px solid rgba(77,132,255,.5);background:rgba(77,132,255,.12);color:#7aaaff;' : 'border:1px solid rgba(255,255,255,.1);background:none;color:var(--t3);';
       var isDefault = ['Victoire','Nul','Défaite','Over 2.5','Under 2.5','BTS Oui','BTS Non','HC -1','HC +1','Mi-temps','1er buteur'].indexOf(t) >= 0;
       var delBtn = isDefault ? '' : '<span data-deltype="'+t+'" onclick="delCpType(this)" style="margin-left:4px;opacity:.6;cursor:pointer;">✕</span>';
-      return '<button data-cptype="'+t+'" onclick="toggleCpType(this)" style="display:inline-flex;align-items:center;padding:4px 8px;border-radius:12px;'+s+'font-size:9px;font-weight:700;cursor:pointer;">'+t+delBtn+'</button>';
+      return '<button data-cptype="'+t+'" data-action="cp-type" style="display:inline-flex;align-items:center;padding:4px 8px;border-radius:12px;'+s+'font-size:9px;font-weight:700;cursor:pointer;">'+t+delBtn+'</button>';
     }).join('');
   }
   // Checkbox championnat
@@ -4234,6 +4234,18 @@ function updateBankTotal() {
 }
 
 var _bcp=document.getElementById('btn-chat-params-pc');if(_bcp)_bcp.onclick=function(){toggleChatParamsPC();};var _bcm=document.getElementById('btn-chat-params-mobile');if(_bcm)_bcm.onclick=function(){toggleChatParams();};
+
+  // Listener global pour les paramètres chat
+  document.addEventListener('click', function(e) {
+    var el = e.target.closest('[data-action]');
+    if(!el) return;
+    var action = el.dataset.action;
+    if(action === 'cp-lieu') { setCpLieu(el); }
+    else if(action === 'cp-lieu-pc') { setCpLieuPC(el); }
+    else if(action === 'cp-type') { toggleCpType(el); }
+    else if(action === 'cp-add-mobile') { addCpType('mobile'); }
+    else if(action === 'cp-add-pc') { addCpType('pc'); }
+  });
   render();updMise();buildSbRows();buildDtRows();buildArjelRows();renderCrash();renderMmRows();renderMmRowsSimple();updateCompList();calcVb();calcLay();calcFreebet();renderArchive();updateBankTotal();_apStyle=localStorage.getItem('g45_ap_style')||'halo';_apIntensity=parseInt(localStorage.getItem('g45_ap_intensity')||'40');var _apInp=document.getElementById('ap-intensity');if(_apInp)_apInp.value=_apIntensity;setCardStyle(_apStyle);};
 
 </script>
@@ -4266,9 +4278,9 @@ var _bcp=document.getElementById('btn-chat-params-pc');if(_bcp)_bcp.onclick=func
     <div style="margin-bottom:8px;">
       <div style="font-size:10px;color:var(--t2);font-weight:600;margin-bottom:4px;">Lieu favori</div>
       <div style="display:flex;gap:5px;">
-        <button class="cp-lieu-btn-pc" data-val="domicile" onclick="setCpLieuPC(this)" style="flex:1;padding:6px;border-radius:var(--r4);border:1px solid rgba(30,215,96,.4);background:rgba(30,215,96,.1);color:#1ed760;font-size:10px;font-weight:700;cursor:pointer;">🏠 Dom</button>
-        <button class="cp-lieu-btn-pc" data-val="exterieur" onclick="setCpLieuPC(this)" style="flex:1;padding:6px;border-radius:var(--r4);border:1px solid var(--b2);background:none;color:var(--t3);font-size:10px;font-weight:700;cursor:pointer;">🚌 Ext</button>
-        <button class="cp-lieu-btn-pc" data-val="both" onclick="setCpLieuPC(this)" style="flex:1;padding:6px;border-radius:var(--r4);border:1px solid var(--b2);background:none;color:var(--t3);font-size:10px;font-weight:700;cursor:pointer;">➖ Les 2</button>
+        <button class="cp-lieu-btn-pc" data-val="domicile" data-action="cp-lieu-pc" style="flex:1;padding:6px;border-radius:var(--r4);border:1px solid rgba(30,215,96,.4);background:rgba(30,215,96,.1);color:#1ed760;font-size:10px;font-weight:700;cursor:pointer;">🏠 Dom</button>
+        <button class="cp-lieu-btn-pc" data-val="exterieur" data-action="cp-lieu-pc" style="flex:1;padding:6px;border-radius:var(--r4);border:1px solid var(--b2);background:none;color:var(--t3);font-size:10px;font-weight:700;cursor:pointer;">🚌 Ext</button>
+        <button class="cp-lieu-btn-pc" data-val="both" data-action="cp-lieu-pc" style="flex:1;padding:6px;border-radius:var(--r4);border:1px solid var(--b2);background:none;color:var(--t3);font-size:10px;font-weight:700;cursor:pointer;">➖ Les 2</button>
       </div>
     </div>
     <div style="margin-bottom:8px;">
@@ -4276,7 +4288,7 @@ var _bcp=document.getElementById('btn-chat-params-pc');if(_bcp)_bcp.onclick=func
       <div id="cp-types-pc" style="display:flex;gap:4px;flex-wrap:wrap;margin-bottom:6px;"></div>
       <div style="display:flex;gap:5px;">
         <input id="cp-new-type-pc" class="fi" placeholder="Ajouter…" style="flex:1;font-size:11px;padding:5px 8px;">
-        <button onclick="addCpType('pc')" style="padding:5px 10px;border-radius:var(--r4);border:1px solid rgba(77,132,255,.4);background:rgba(77,132,255,.12);color:#7aaaff;font-size:11px;font-weight:700;cursor:pointer;">+</button>
+        <button data-action="cp-add-pc" style="padding:5px 10px;border-radius:var(--r4);border:1px solid rgba(77,132,255,.4);background:rgba(77,132,255,.12);color:#7aaaff;font-size:11px;font-weight:700;cursor:pointer;">+</button>
       </div>
     </div>
     <label style="display:flex;align-items:center;gap:7px;cursor:pointer;">
