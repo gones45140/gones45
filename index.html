@@ -3614,7 +3614,9 @@ function buildContext(){
   var totalProfit=s.a.reduce(function(a,h){return a+(h.win?(h.m*h.cote)-h.m:-h.m);},0);
   var cap=Object.values(s.b).reduce(function(a,v){return a+parseFloat(v||0);},0);
   var today=new Date();var dateStr=today.toLocaleDateString('fr-FR');
-  return 'Tu es un assistant paris sportifs. Date: '+dateStr+'. RÈGLES ABSOLUES: 1) Jamais de "je vous recommande de consulter", jamais de "je n ai pas accès", jamais de redirection. 2) Max 2 phrases. 3) Si tu as l info via web, dis-la directement. 4) Pas de markdown. Bankroll:'+cap.toFixed(0)+'€ profit:'+totalProfit.toFixed(0)+'€ equipes:'+top5+'.';
+  var dayNames=['Dimanche','Lundi','Mardi','Mercredi','Jeudi','Vendredi','Samedi'];
+  var dayName=dayNames[today.getDay()];
+  return 'Tu es un assistant paris sportifs. Nous sommes le '+dayName+' '+dateStr+'. IMPORTANT: tout match dont la date est AVANT ce jour est TERMINE - ne jamais le presenter comme futur. REGLES: 1) Jamais de redirection ou "je n ai pas acces". 2) Max 2-3 phrases directes. 3) Si info via web dis-la directement. 4) Pas de markdown. 5) Si on te demande un match passe, donne le resultat si tu le sais. Bankroll:'+cap.toFixed(0)+'€ profit:'+totalProfit.toFixed(0)+'€ equipes:'+top5+'.';
 }
 function buildContextWithParams() {
   var base = buildContext();
@@ -4006,14 +4008,27 @@ async function loadTeamSaisons() {
 }
 
 function calcSaisonStats(matches, teamId) {
-  var stats = { n:0, over05:0, over15:0, over25:0, over35:0, over45:0, bts:0, domW:0, domD:0, domL:0, domN:0, extW:0, extD:0, extL:0, extN:0, butsM:0, butsE:0, champOnly:[] };
+  var stats = {
+    n:0, over05:0, over15:0, over25:0, over35:0, over45:0, bts:0,
+    domW:0, domD:0, domL:0, domN:0, extW:0, extD:0, extL:0, extN:0,
+    butsM:0, butsE:0,
+    cleanSheet:0, failedToScore:0, scoredFirst:0,
+    btsFH:0, over15FH:0,
+    last5:[], serie:0, serieType:'',
+    byComp:{}
+  };
+
   matches.forEach(function(m) {
     var hg = m.score&&m.score.fullTime ? (m.score.fullTime.home||0) : 0;
     var ag = m.score&&m.score.fullTime ? (m.score.fullTime.away||0) : 0;
+    var hh = m.score&&m.score.halfTime ? (m.score.halfTime.home||0) : 0;
+    var ah = m.score&&m.score.halfTime ? (m.score.halfTime.away||0) : 0;
     var total = hg+ag;
     var isDom = m.homeTeam && m.homeTeam.id === teamId;
     var teamGoals = isDom ? hg : ag;
     var oppGoals = isDom ? ag : hg;
+    var teamHT = isDom ? hh : ah;
+    var oppHT = isDom ? ah : hh;
 
     stats.n++;
     if(total>0.5) stats.over05++;
@@ -4022,10 +4037,18 @@ function calcSaisonStats(matches, teamId) {
     if(total>3.5) stats.over35++;
     if(total>4.5) stats.over45++;
     if(hg>0&&ag>0) stats.bts++;
+    if(oppGoals===0) stats.cleanSheet++;
+    if(teamGoals===0) stats.failedToScore++;
+    if(hh>0&&ah>0) stats.btsFH++;
+    if(hh+ah>1.5) stats.over15FH++;
     stats.butsM += teamGoals;
     stats.butsE += oppGoals;
 
-    var won = teamGoals>oppGoals, draw = teamGoals===oppGoals, lost = teamGoals<oppGoals;
+    // Score en premier
+    if(isDom && hh>0 && hh>ah) stats.scoredFirst++;
+    else if(!isDom && ah>0 && ah>hh) stats.scoredFirst++;
+
+    var won = teamGoals>oppGoals, draw = teamGoals===oppGoals;
     if(isDom) {
       stats.domN++;
       if(won) stats.domW++; else if(draw) stats.domD++; else stats.domL++;
@@ -4033,7 +4056,41 @@ function calcSaisonStats(matches, teamId) {
       stats.extN++;
       if(won) stats.extW++; else if(draw) stats.extD++; else stats.extL++;
     }
+
+    // 5 derniers matchs
+    if(stats.last5.length < 5) {
+      stats.last5.push({
+        w: won, d: draw,
+        score: (isDom ? hg+'-'+ag : ag+'-'+hg),
+        adv: isDom ? (m.awayTeam&&m.awayTeam.name||'?') : (m.homeTeam&&m.homeTeam.name||'?'),
+        comp: m.competition&&m.competition.name||''
+      });
+    }
+
+    // Par compétition
+    var cn = m.competition&&m.competition.name||'Autre';
+    if(!stats.byComp[cn]) stats.byComp[cn]={n:0,w:0,over25:0,buts:0};
+    stats.byComp[cn].n++;
+    if(won) stats.byComp[cn].w++;
+    if(total>2.5) stats.byComp[cn].over25++;
+    stats.byComp[cn].buts += total;
   });
+
+  // Série en cours
+  var sortedM = matches.slice().sort(function(a,b){ return new Date(b.utcDate)-new Date(a.utcDate); });
+  var serieCount = 0, serieT = '';
+  for(var i=0;i<sortedM.length;i++){
+    var m=sortedM[i];
+    var hg=m.score&&m.score.fullTime?(m.score.fullTime.home||0):0;
+    var ag=m.score&&m.score.fullTime?(m.score.fullTime.away||0):0;
+    var isDom=m.homeTeam&&m.homeTeam.id===teamId;
+    var tg=isDom?hg:ag, og=isDom?ag:hg;
+    var r=tg>og?'W':tg===og?'D':'L';
+    if(i===0){serieT=r;}
+    if(r===serieT){serieCount++;}else{break;}
+  }
+  stats.serie=serieCount; stats.serieType=serieT;
+
   return stats;
 }
 
@@ -4059,6 +4116,29 @@ function renderSaisonsChart(el, results, nom) {
     html += '<div style="font-size:13px;font-weight:800;color:var(--t1);">Saison '+s+'-'+(parseInt(s)+1)+'</div>';
     html += '<div style="font-size:10px;color:var(--t3);">'+st.n+' matchs toutes compétitions'+(stC?' · '+champMatches.length+' champ.':'')+'</div>';
     html += '</div>';
+
+    // ── Série + derniers matchs ──
+    if(st.last5.length) {
+      html += '<div style="font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#4f5d88;margin-bottom:8px;">Forme récente</div>';
+      html += '<div style="display:flex;gap:6px;align-items:center;margin-bottom:8px;">';
+      st.last5.forEach(function(m){
+        var col = m.w?'#1ed760':m.d?'#f0b020':'#ff4545';
+        var bg = m.w?'rgba(30,215,96,.15)':m.d?'rgba(240,176,32,.15)':'rgba(255,69,69,.15)';
+        var letter = m.w?'V':m.d?'N':'D';
+        html += '<div style="flex:1;text-align:center;background:'+bg+';border:1px solid '+col+';border-radius:8px;padding:6px 3px;" title="'+m.adv+' '+m.score+'">';
+        html += '<div style="font-size:13px;font-weight:800;color:'+col+';">'+letter+'</div>';
+        html += '<div style="font-size:8px;color:rgba(255,255,255,.4);margin-top:1px;">'+m.score+'</div>';
+        html += '</div>';
+      });
+      if(st.serie>1){
+        var sc=st.serieType==='W'?'#1ed760':st.serieType==='D'?'#f0b020':'#ff4545';
+        var sl=st.serieType==='W'?'Victoires':'Matchs sans victoire';
+        html += '<div style="padding:6px 10px;background:rgba(255,255,255,.04);border-radius:8px;text-align:center;flex-shrink:0;">';
+        html += '<div style="font-size:16px;font-weight:800;color:'+sc+';">'+st.serie+'</div>';
+        html += '<div style="font-size:8px;color:rgba(255,255,255,.4);">'+sl+'</div></div>';
+      }
+      html += '</div>';
+    }
 
     // ── Over/Under bars ──
     html += '<div style="font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#4f5d88;margin-bottom:8px;">Over / Under</div>';
@@ -4114,6 +4194,44 @@ function renderSaisonsChart(el, results, nom) {
     html += '<div style="font-size:22px;font-weight:800;color:#f0b020;">'+((st.butsM+st.butsE)/st.n).toFixed(1)+'</div>';
     html += '</div>';
     html += '</div>';
+
+    // ── Stats offensives/défensives ──
+    html += '<div style="font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#4f5d88;margin:12px 0 8px;">Stats clés</div>';
+    html += '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-bottom:12px;">';
+    var statCards = [
+      {l:'Clean Sheets', v:st.cleanSheet, t:st.n, c:'#1ed760'},
+      {l:'Marque 1er', v:st.scoredFirst, t:st.n, c:'#4d84ff'},
+      {l:'Sans marquer', v:st.failedToScore, t:st.n, c:'#ff4545'},
+      {l:'BTS 1ère MT', v:st.btsFH, t:st.n, c:'#a78bfa'},
+      {l:'Over 1.5 MT', v:st.over15FH, t:st.n, c:'#f0b020'},
+      {l:'Moy buts/match', v:(st.butsM/st.n).toFixed(1), t:null, c:'#22d3ee'},
+    ];
+    statCards.forEach(function(sc){
+      html += '<div style="background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:8px;padding:8px;text-align:center;">';
+      html += '<div style="font-size:17px;font-weight:800;color:'+sc.c+';">'+(sc.t?pct(sc.v,sc.t)+'%':sc.v)+'</div>';
+      html += '<div style="font-size:8px;color:rgba(255,255,255,.4);margin-top:2px;">'+sc.l+(sc.t?' ('+sc.v+'/'+sc.t+')':'')+'</div>';
+      html += '</div>';
+    });
+    html += '</div>';
+
+    // ── Par compétition ──
+    var comps = Object.entries(st.byComp).sort(function(a,b){return b[1].n-a[1].n;});
+    if(comps.length > 1) {
+      html += '<div style="font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#4f5d88;margin-bottom:8px;">Par compétition</div>';
+      html += '<div style="display:flex;flex-direction:column;gap:5px;margin-bottom:8px;">';
+      comps.forEach(function(e){
+        var cn=e[0], cd=e[1];
+        var wr=pct(cd.w,cd.n), o25=pct(cd.over25,cd.n), bpm=(cd.buts/cd.n).toFixed(1);
+        html += '<div style="display:flex;align-items:center;gap:8px;padding:7px 10px;background:rgba(255,255,255,.03);border-radius:6px;border:1px solid rgba(255,255,255,.06);">';
+        html += '<div style="font-size:10px;font-weight:700;color:var(--t1);flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">'+cn+'</div>';
+        html += '<div style="font-size:9px;color:var(--t3);">'+cd.n+' matchs</div>';
+        html += '<div style="font-size:10px;font-weight:700;color:#1ed760;min-width:30px;text-align:right;">'+wr+'%V</div>';
+        html += '<div style="font-size:10px;font-weight:700;color:#f0b020;min-width:40px;text-align:right;">O2.5:'+o25+'%</div>';
+        html += '<div style="font-size:10px;color:#22d3ee;min-width:30px;text-align:right;">'+bpm+'⚽</div>';
+        html += '</div>';
+      });
+      html += '</div>';
+    }
 
     html += '</div>'; // cwrap
   });
