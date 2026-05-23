@@ -4745,38 +4745,51 @@ async function loadTeamAI(nom) {
   var statsPerso = nom+' : '+paris.length+' paris, '+wr+'% réussite, profit '+profit.toFixed(2)+'€, cote moy '+cote+', derniers résultats : '+last5;
 
   // Stats réelles via football-data proxy
-  box.innerHTML = '<div style="display:flex;align-items:center;gap:8px;color:#4f5d88;"><div style="width:12px;height:12px;border:2px solid rgba(77,132,255,.2);border-top-color:#4d84ff;border-radius:50%;animation:spin .8s linear infinite;flex-shrink:0;"></div>Calcul des vraies stats…</div>';
-  
-  var vraisStats = '';
+  box.innerHTML = '<div style="display:flex;align-items:center;gap:8px;color:#4f5d88;"><div style="width:12px;height:12px;border:2px solid rgba(77,132,255,.2);border-top-color:#4d84ff;border-radius:50%;animation:spin .8s linear infinite;flex-shrink:0;"></div>Calcul des stats réelles…</div>';
+
   var teamId = null;
   for(var k in TEAM_IDS){ if(k.toLowerCase()===nom.toLowerCase()||nom.toLowerCase().indexOf(k.toLowerCase())>=0||k.toLowerCase().indexOf(nom.toLowerCase())>=0){teamId=TEAM_IDS[k];break;} }
-  
+
+  // Utiliser uniquement les vraies stats football-data
   if(teamId && getFdorgKey()) {
     var matchData = await fdFetch('/v4/teams/'+teamId+'/matches?status=FINISHED&limit=10');
     if(matchData && matchData.matches && matchData.matches.length) {
       var st = calcSaisonStats(matchData.matches, teamId);
       var n = st.n;
-      vraisStats = nom+' sur '+n+' derniers matchs (données réelles football-data) : '
-        +'Victoires dom='+st.domW+'/'+st.domN+' ('+pct(st.domW,st.domN)+'%), '
-        +'Victoires ext='+st.extW+'/'+st.extN+' ('+pct(st.extW,st.extN)+'%), '
-        +'Over 2.5='+st.over25+'/'+n+' ('+pct(st.over25,n)+'%), '
-        +'Over 3.5='+st.over35+'/'+n+' ('+pct(st.over35,n)+'%), '
-        +'BTS Oui='+st.bts+'/'+n+' ('+pct(st.bts,n)+'%), '
-        +'Clean Sheets='+st.cleanSheet+'/'+n+' ('+pct(st.cleanSheet,n)+'%), '
-        +'Buts marqués/match='+(st.butsM/n).toFixed(1)+', '
-        +'Buts encaissés/match='+(st.butsE/n).toFixed(1)+'.';
+
+      // Identifier les paris les plus solides
+      var paris = [
+        {label:'Over 2.5', val:pct(st.over25,n), n:st.over25+'/'+n},
+        {label:'Over 3.5', val:pct(st.over35,n), n:st.over35+'/'+n},
+        {label:'BTS Oui', val:pct(st.bts,n), n:st.bts+'/'+n},
+        {label:'Victoire Dom', val:pct(st.domW,st.domN||1), n:st.domW+'/'+(st.domN||0)},
+        {label:'Victoire Ext', val:pct(st.extW,st.extN||1), n:st.extW+'/'+(st.extN||0)},
+        {label:'Clean Sheet', val:pct(st.cleanSheet,n), n:st.cleanSheet+'/'+n},
+      ].sort(function(a,b){return b.val-a.val;});
+
+      var html = '<div style="margin-bottom:10px;">';
+      // Top 3 paris recommandés
+      html += '<div style="font-size:9px;font-weight:700;letter-spacing:1px;color:#4f5d88;text-transform:uppercase;margin-bottom:8px;">Top paris — '+n+' derniers matchs</div>';
+      paris.slice(0,4).forEach(function(p){
+        var col = p.val>=70?'#1ed760':p.val>=50?'#f0b020':'#ff7b54';
+        var badge = p.val>=70?'🔥':p.val>=50?'✓':'';
+        html += '<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">';
+        html += '<div style="font-size:11px;font-weight:700;color:var(--t1);width:90px;flex-shrink:0;">'+badge+' '+p.label+'</div>';
+        html += '<div style="flex:1;height:6px;background:rgba(255,255,255,.06);border-radius:3px;">';
+        html += '<div style="height:6px;border-radius:3px;background:'+col+';width:'+p.val+'%;"></div></div>';
+        html += '<div style="font-size:11px;font-weight:800;color:'+col+';min-width:36px;text-align:right;">'+p.val+'%</div>';
+        html += '<div style="font-size:10px;color:var(--t3);min-width:32px;">'+p.n+'</div>';
+        html += '</div>';
+      });
+      html += '</div>';
+      html += '<div style="font-size:10px;color:#4f5d88;text-align:right;">Source : football-data.org ✓</div>';
+      box.innerHTML = html;
+      return;
     }
   }
 
-  // Fallback Tavily si pas de données football-data
-  var webCtx = vraisStats || '';
-  if(!webCtx && tavilyKey) {
-    var query = isJoueur
-    ? nom + ' statistiques buts buteur 2025 2026 derniers matchs'
-    : nom + ' football résultats récents forme prochains matchs 2025 2026';
-    var tvResult = await searchTavily(query);
-    if (tvResult) webCtx = tvResult.substring(0, 800);
-  }
+  // Si pas de clé football-data — message simple
+  var webCtx = '';
 
   if (!groqKey) {
     box.innerHTML = '<span style="color:#ff4545;">Configure ta clé Groq dans Outils.</span>';
