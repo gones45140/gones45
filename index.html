@@ -4931,8 +4931,8 @@ async function searchTennisPlayer(nom) {
   try {
     if(tavilyKey && groqKey) {
       // Recherche multi-sources
-      var webData = await searchTavily(nom+' tennis 2026 ATP ranking stats wins losses surface aces breaks sets tiebreak');
-      var eloData = await searchTavily(nom+' tennis ELO rating surface hard clay grass ranking 2026 tennisabstract');
+      var fullName = nom; var webData = await searchTavily('"'+nom+'" tennis stats 2025 2026 win rate surface clay hard grass break points aces sets per match tennisabstract');
+      var eloData = await searchTavily('"'+nom+'" tennis ELO rating clay hard grass tennisabstract surface ranking 2026');
       var allData = (webData||'') + ' ' + (eloData||'');
       
       if(allData) {
@@ -5115,7 +5115,7 @@ async function searchTennisPlayer(nom) {
   }, 200);
 
   // Boutons liens
-  var taUrl2 = 'https://www.tennisabstract.com/cgi-bin/player.cgi?p='+encodeURIComponent(nom);
+  var taUrl2 = 'https://www.tennisabstract.com/cgi-bin/player.cgi?p='+encodeURIComponent(nom.replace(/ /g,'+'));
   html += '<div style="display:flex;gap:5px;flex-wrap:wrap;">';
   html += '<a href="'+taUrl2+'" target="_blank" style="flex:1;min-width:80px;padding:8px 4px;background:rgba(77,132,255,.1);border:1px solid rgba(77,132,255,.3);border-radius:6px;color:#4d84ff;font-size:9px;font-weight:700;text-decoration:none;text-align:center;">📊 Tennis Abstract</a>';
   html += '<a href="https://www.atptour.com/en/players/'+nom.toLowerCase().replace(/ /g,'-')+'/overview" target="_blank" style="flex:1;min-width:80px;padding:8px 4px;background:rgba(240,176,32,.1);border:1px solid rgba(240,176,32,.3);border-radius:6px;color:#f0b020;font-size:9px;font-weight:700;text-decoration:none;text-align:center;">🎾 ATP Tour</a>';
