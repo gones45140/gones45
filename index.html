@@ -396,6 +396,7 @@ input[type="date"],input[type="time"]{color-scheme:dark;}
 #pc-note:empty:before{content:attr(data-placeholder);color:var(--t3);pointer-events:none;}
 #pc-note img{max-width:100%;border-radius:6px;margin:4px 0;display:block;}
 
+.t-chip{padding:4px 10px;border-radius:12px;border:1px solid rgba(255,255,255,.1);background:rgba(255,255,255,.04);color:var(--t3);font-size:10px;font-weight:700;cursor:pointer;white-space:nowrap;}.t-chip:hover{border-color:rgba(77,132,255,.5);background:rgba(77,132,255,.1);color:#7aaaff;}.t-chip.active{border-color:rgba(77,132,255,.5);background:rgba(77,132,255,.12);color:#7aaaff;}
 .mm-row input.fi{color:var(--t1) !important;background:var(--bg2) !important;}
 .mm-del{background:rgba(255,69,69,.15);border:1px solid rgba(255,69,69,.3);color:#ff6b6b;border-radius:50%;width:22px;height:22px;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:11px;flex-shrink:0;padding:0;}
 </style>
@@ -4731,8 +4732,36 @@ async function loadTennisSaisons(el, nom) {
     // Recherche joueur
     +'<div class="cwrap" style="margin-bottom:10px;">'
     +'<div style="font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#4f5d88;margin-bottom:10px;">🎾 Rechercher un joueur</div>'
+
+    // Chips pré-sélection ATP
+    +'<div style="font-size:9px;color:#4f5d88;margin-bottom:6px;">ATP</div>'
+    +'<div style="display:flex;gap:5px;flex-wrap:wrap;margin-bottom:8px;" id="tennis-atp-chips">'
+    +'<div class="t-chip" data-player="Jannik Sinner">Sinner</div>'
+    +'<div class="t-chip" data-player="Carlos Alcaraz">Alcaraz</div>'
+    +'<div class="t-chip" data-player="Alexander Zverev">Zverev</div>'
+    +'<div class="t-chip" data-player="Novak Djokovic">Djokovic</div>'
+    +'<div class="t-chip" data-player="Daniil Medvedev">Medvedev</div>'
+    +'<div class="t-chip" data-player="Andrey Rublev">Rublev</div>'
+    +'<div class="t-chip" data-player="Holger Rune">Rune</div>'
+    +'<div class="t-chip" data-player="Taylor Fritz">Fritz</div>'
+    +'<div class="t-chip" data-player="Casper Ruud">Ruud</div>'
+    +'<div class="t-chip" data-player="Stefanos Tsitsipas">Tsitsipas</div>'
+    +'<div class="t-chip" data-player="Hubert Hurkacz">Hurkacz</div>'
+    +'<div class="t-chip" data-player="Tommy Paul">T.Paul</div>'
+    +'<div class="t-chip" data-player="Benoit Paire">Paire 😂</div>'
+    +'</div>'
+    +'<div style="font-size:9px;color:#4f5d88;margin-bottom:6px;">WTA</div>'
+    +'<div style="display:flex;gap:5px;flex-wrap:wrap;margin-bottom:10px;">'
+    +'<div class="t-chip" data-player="Iga Swiatek">Swiatek</div>'
+    +'<div class="t-chip" data-player="Aryna Sabalenka">Sabalenka</div>'
+    +'<div class="t-chip" data-player="Coco Gauff">Gauff</div>'
+    +'<div class="t-chip" data-player="Elena Rybakina">Rybakina</div>'
+    +'<div class="t-chip" data-player="Jessica Pegula">Pegula</div>'
+    +'<div class="t-chip" data-player="Barbora Krejcikova">Krejcikova</div>'
+    +'</div>'
+
     +'<div style="display:flex;gap:8px;margin-bottom:8px;">'
-    +'<input id="tennis-search-input" class="fi" placeholder="Alcaraz, Sinner, Djokovic..." style="flex:1;font-size:12px;">'
+    +'<input id="tennis-search-input" class="fi" placeholder="Ou tape un nom..." style="flex:1;font-size:12px;">'
     +'<button id="tennis-search-btn" style="padding:8px 14px;border-radius:var(--r6);border:none;background:var(--a);color:#fff;font-size:11px;font-weight:700;cursor:pointer;">🔍</button>'
     +'</div>'
     +'<div id="tennis-player-result"></div>'
@@ -4769,6 +4798,16 @@ async function loadTennisSaisons(el, nom) {
   document.getElementById('tennis-search-input').onkeydown = function(e){
     if(e.key==='Enter') { var q=this.value.trim(); if(q) searchTennisPlayer(q); }
   };
+  // Chips pré-sélection
+  document.querySelectorAll('.t-chip').forEach(function(chip){
+    chip.addEventListener('click', function(){
+      document.querySelectorAll('.t-chip').forEach(function(c){ c.classList.remove('active'); });
+      chip.classList.add('active');
+      var player = chip.dataset.player;
+      document.getElementById('tennis-search-input').value = player;
+      searchTennisPlayer(player);
+    });
+  });
   document.getElementById('tennis-h2h-btn').onclick = function(){
     var p1 = document.getElementById('tennis-h2h-p1').value.trim();
     var p2 = document.getElementById('tennis-h2h-p2').value.trim();
@@ -5113,6 +5152,12 @@ async function searchTennisPlayer(nom) {
       customInp.onkeydown = function(e){ if(e.key==='Enter') searchFn(); };
     }
   }, 200);
+
+  // Avertissement Groq
+  html += '<div style="display:flex;align-items:center;gap:8px;background:rgba(240,176,32,.08);border:1px solid rgba(240,176,32,.25);border-radius:8px;padding:10px 12px;margin-bottom:10px;">';
+  html += '<span style="font-size:18px;flex-shrink:0;">⚠️</span>';
+  html += '<div style="font-size:10px;color:#f0b020;line-height:1.5;"><strong>Stats estimées par IA</strong> — Certaines valeurs peuvent être inexactes. Vérifie sur Tennis Abstract ou ATP Tour avant de parier !</div>';
+  html += '</div>';
 
   // Boutons liens
   var taUrl2 = 'https://www.tennisabstract.com/cgi-bin/player.cgi?p='+encodeURIComponent(nom.replace(/ /g,'+'));
