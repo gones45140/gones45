@@ -4650,6 +4650,117 @@ async function loadMlbSaisons(el, nom) {
 }
 
 
+
+// ── F1 SAISONS ──
+var F1_TEAMS = {
+  'Formula 1': true, 'F1': true, 'Formule 1': true,
+  'McLaren': true, 'Red Bull': true, 'Ferrari': true,
+  'Mercedes': true, 'Aston Martin': true, 'Alpine': true,
+  'Williams': true, 'Haas': true, 'Sauber': true, 'Racing Bulls': true,
+};
+var F1_DRIVERS = {
+  'Lando Norris': 'norris', 'Max Verstappen': 'max_verstappen',
+  'Charles Leclerc': 'leclerc', 'Carlos Sainz': 'sainz',
+  'Lewis Hamilton': 'hamilton', 'George Russell': 'russell',
+  'Fernando Alonso': 'alonso', 'Oscar Piastri': 'piastri',
+  'Sergio Perez': 'perez', 'Lance Stroll': 'stroll',
+};
+
+async function loadF1Saisons(el, nom) {
+  el.innerHTML = '<div style="display:flex;align-items:center;gap:8px;padding:20px;color:var(--t3);"><div style="width:14px;height:14px;border:2px solid rgba(77,132,255,.2);border-top-color:#4d84ff;border-radius:50%;animation:spin .8s linear infinite;"></div>Chargement stats F1...</div>';
+
+  try {
+    var driverQuery = F1_DRIVERS[nom] ? '&driver='+F1_DRIVERS[nom] : '';
+    
+    // Classement pilotes saison en cours
+    var standUrl = 'https://fd-proxy.touraine-antoine.workers.dev?key=f1&path=/api/f1/current/driverStandings.json&host=ergast';
+    var standResp = await fetch(standUrl);
+    var standData = await standResp.json();
+    var standings = standData.MRData&&standData.MRData.StandingsTable&&standData.MRData.StandingsTable.StandingsLists;
+    var driverStandings = standings&&standings.length ? standings[0].DriverStandings : [];
+
+    // Derniers résultats GP
+    var resUrl = 'https://fd-proxy.touraine-antoine.workers.dev?key=f1&path=/api/f1/current/last/5/results.json&host=ergast';
+    var resResp = await fetch(resUrl);
+    var resData = await resResp.json();
+    var races = resData.MRData&&resData.MRData.RaceTable ? resData.MRData.RaceTable.Races : [];
+
+    var html = '<div style="padding:4px 0;">';
+
+    // ── Classement top 5 pilotes ──
+    if(driverStandings.length) {
+      html += '<div class="cwrap" style="margin-bottom:10px;">';
+      html += '<div style="font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#4f5d88;margin-bottom:10px;">🏆 Classement pilotes '+new Date().getFullYear()+'</div>';
+      
+      // Si c'est un pilote spécifique, le mettre en avant
+      var driverRef = F1_DRIVERS[nom];
+      var targetDriver = driverRef ? driverStandings.find(function(d){ return d.Driver.driverId===driverRef; }) : null;
+      
+      var top5 = targetDriver ? 
+        [targetDriver].concat(driverStandings.filter(function(d){ return d.Driver.driverId!==driverRef; }).slice(0,4)) :
+        driverStandings.slice(0,5);
+
+      top5.forEach(function(d){
+        var isTarget = driverRef && d.Driver.driverId===driverRef;
+        var col = isTarget ? '#f0b020' : 'var(--t1)';
+        var bg = isTarget ? 'rgba(240,176,32,.08)' : 'rgba(255,255,255,.03)';
+        var wins = d.wins||0;
+        html += '<div style="display:flex;align-items:center;gap:10px;padding:8px 10px;background:'+bg+';border-radius:8px;margin-bottom:4px;'+(isTarget?'border:1px solid rgba(240,176,32,.3);':'border:1px solid rgba(255,255,255,.05);')+'">';
+        html += '<div style="font-size:14px;font-weight:800;color:#4f5d88;min-width:20px;text-align:center;">'+d.position+'</div>';
+        html += '<div style="flex:1;">';
+        html += '<div style="font-size:12px;font-weight:700;color:'+col+';">'+d.Driver.familyName+' <span style="font-weight:400;font-size:10px;color:var(--t3);">'+d.Constructors[0].name+'</span></div>';
+        html += '</div>';
+        html += '<div style="font-size:12px;font-weight:800;color:'+col+';">'+d.points+' pts</div>';
+        if(wins>0) html += '<div style="font-size:9px;color:#f0b020;min-width:20px;text-align:right;">'+wins+'V</div>';
+        html += '</div>';
+      });
+      html += '</div>';
+    }
+
+    // ── Derniers GP ──
+    if(races.length) {
+      html += '<div class="cwrap">';
+      html += '<div style="font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#4f5d88;margin-bottom:10px;">🏁 Derniers GP</div>';
+      html += '<div style="display:flex;flex-direction:column;gap:6px;">';
+      
+      races.slice().reverse().forEach(function(race){
+        var results = race.Results||[];
+        var top3 = results.slice(0,3);
+        var targetResult = driverRef ? results.find(function(r){ return r.Driver.driverId===driverRef; }) : null;
+        
+        html += '<div style="padding:8px 10px;background:rgba(255,255,255,.03);border-radius:8px;border:1px solid rgba(255,255,255,.06);">';
+        html += '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">';
+        html += '<div style="font-size:11px;font-weight:700;color:var(--t1);">🏎️ '+race.raceName+'</div>';
+        html += '<div style="font-size:10px;color:var(--t3);">'+race.date+'</div>';
+        html += '</div>';
+        
+        // Podium
+        html += '<div style="display:flex;gap:4px;">';
+        top3.forEach(function(r,i){
+          var medals = ['🥇','🥈','🥉'];
+          var isTarget = driverRef && r.Driver.driverId===driverRef;
+          html += '<div style="font-size:10px;color:'+(isTarget?'#f0b020':'var(--t3)')+';">'+medals[i]+' '+r.Driver.familyName+'</div>';
+          if(i<2) html += '<span style="color:var(--t3);font-size:10px;"> · </span>';
+        });
+        html += '</div>';
+        
+        // Position du pilote cible si pas dans le top 3
+        if(targetResult && parseInt(targetResult.position) > 3) {
+          html += '<div style="font-size:10px;color:#f0b020;margin-top:4px;">'+nom.split(' ')[1]+' : P'+targetResult.position+'</div>';
+        }
+        html += '</div>';
+      });
+      html += '</div></div>';
+    }
+
+    html += '</div>';
+    el.innerHTML = html;
+
+  } catch(e) {
+    el.innerHTML = '<div style="color:#ff4545;text-align:center;padding:20px;">Erreur F1 API<br><small>'+e.message+'</small></div>';
+  }
+}
+
 async function loadNbaSaisons(el, nom) {
   var teamInfo = NBA_TEAMS[nom];
   if(!teamInfo) { el.innerHTML='<div style="color:var(--t3);text-align:center;padding:20px;">Equipe NBA non reconnue.</div>'; return; }
@@ -4676,6 +4787,7 @@ async function loadTeamSaisons() {
   if(sport2==='🏒'||sport2==='🏒🇺🇸'||NHL_TEAMS[nom]) { loadNhlSaisons(el, nom); return; }
   if(sport2==='⚾'||sport2==='⚾🇺🇸'||MLB_TEAMS[nom]) { loadMlbSaisons(el, nom); return; }
   if(sport2==='🏀'||sport2==='🏀🇺🇸'||NBA_TEAMS[nom]) { loadNbaSaisons(el, nom); return; }
+  if(sport2==='🏎️'||sport2==='🏎'||F1_TEAMS[nom]||F1_DRIVERS[nom]) { loadF1Saisons(el, nom); return; }
   if(sport2==='🏈'||sport2==='🏈🇺🇸'||NFL_TEAMS[nom]) { loadNflSaisons(el, nom); return; }
 
   // Trouver ID football
