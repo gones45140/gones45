@@ -3,7 +3,7 @@
 <html lang="fr">
 <head>
 <meta charset="UTF-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-eval' 'unsafe-inline' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com; connect-src 'self' https://api.groq.com https://api.tavily.com https://fd-proxy.touraine-antoine.workers.dev https://media.api-sports.io https://api.football-data.org https://api-web.nhle.com https://statsapi.mlb.com https://www.thesportsdb.com https://cdn.jsdelivr.net https://api.openf1.org https://api.jolpi.ca; img-src 'self' data: https: blob:; style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com;">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-eval' 'unsafe-inline' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com; connect-src 'self' https://tessdata.projectnaptha.com https://api.groq.com https://api.tavily.com https://fd-proxy.touraine-antoine.workers.dev https://media.api-sports.io https://api.football-data.org https://api-web.nhle.com https://statsapi.mlb.com https://www.thesportsdb.com https://cdn.jsdelivr.net https://api.openf1.org https://api.jolpi.ca; img-src 'self' data: https: blob:; style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com;">
 <meta http-equiv="Content-Security-Policy" content="default-src 'self' 'unsafe-inline' 'unsafe-eval' https: data: blob:;">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
 <title>GONES45</title>
@@ -4077,7 +4077,12 @@ function handleScanFile(file, mode) {
       if(status) status.innerText = '❌ Tesseract non chargé';
       return;
     }
-    Tesseract.recognize(img, 'fra').then(function(result) {
+    Tesseract.recognize(img, 'eng+fra', {
+      workerPath: 'https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/worker.min.js',
+      langPath: 'https://tessdata.projectnaptha.com/4.0.0',
+      corePath: 'https://cdn.jsdelivr.net/npm/tesseract.js-core@5/tesseract-core.wasm.js',
+      logger: function(m) { if(m.status==='recognizing text'&&status) status.innerText='⏳ ' + Math.round(m.progress*100) + '%...'; }
+    }).then(function(result) {
       var text = result.data.text;
       applyScanResult(text, mode);
       if(status) { status.innerText = '✅ Ticket lu !'; status.style.color = 'var(--g)'; }
