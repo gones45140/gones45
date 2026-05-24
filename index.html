@@ -4436,6 +4436,25 @@ async function loadVideoHighlights(el, nom, col, sport) {
 
 
 // ── NHL / MLB IDs ──
+var TENNIS_PLAYERS = {
+  'Novak Djokovic': {id:'n-djokovic', atp:true},
+  'Carlos Alcaraz': {id:'c-alcaraz', atp:true},
+  'Jannik Sinner': {id:'j-sinner', atp:true},
+  'Daniil Medvedev': {id:'d-medvedev', atp:true},
+  'Alexander Zverev': {id:'a-zverev', atp:true},
+  'Holger Rune': {id:'h-rune', atp:true},
+  'Andrey Rublev': {id:'a-rublev', atp:true},
+  'Taylor Fritz': {id:'t-fritz', atp:true},
+  'Stefanos Tsitsipas': {id:'s-tsitsipas', atp:true},
+  'Casper Ruud': {id:'c-ruud', atp:true},
+  'Rafael Nadal': {id:'r-nadal', atp:true},
+  'Roger Federer': {id:'r-federer', atp:true},
+  'Benoit Paire': {id:'b-paire', atp:true},
+  'Iga Swiatek': {id:'i-swiatek', atp:false},
+  'Aryna Sabalenka': {id:'a-sabalenka', atp:false},
+  'Coco Gauff': {id:'c-gauff', atp:false},
+};
+
 var NBA_TEAMS = {
   'Los Angeles Lakers': {id:'1610612747', abbr:'LAL'},
   'Boston Celtics': {id:'1610612738', abbr:'BOS'},
@@ -4669,70 +4688,317 @@ var F1_DRIVERS = {
 async function loadF1Saisons(el, nom) {
   el.innerHTML = '<div style="display:flex;align-items:center;gap:8px;padding:20px;color:var(--t3);"><div style="width:14px;height:14px;border:2px solid rgba(77,132,255,.2);border-top-color:#4d84ff;border-radius:50%;animation:spin .8s linear infinite;"></div>Chargement stats F1...</div>';
 
+  var year = new Date().getFullYear();
+  var driverRef = F1_DRIVERS[nom] || null;
+  
+  var html = '<div style="padding:4px 0;">';
+  
+  // ── Classement ──
+  html += '<div class="cwrap" style="margin-bottom:10px;">';
+  html += '<div style="font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#4f5d88;margin-bottom:10px;">🏆 Saison F1 '+year+'</div>';
+  
+  var links = [
+    {label:'🏆 Classement pilotes', url:'https://www.formula1.com/en/results/'+year+'/drivers', col:'#e8002d'},
+    {label:'🏗️ Classement constructeurs', url:'https://www.formula1.com/en/results/'+year+'/team', col:'#e8002d'},
+    {label:'🏁 Résultats des GP', url:'https://www.formula1.com/en/results/'+year+'/races', col:'#ff7b54'},
+    {label:'📅 Calendrier', url:'https://www.formula1.com/en/racing/'+year, col:'#4d84ff'},
+    {label:'📺 Highlights YouTube', url:'https://www.youtube.com/@Formula1', col:'#ff0000'},
+  ];
+  
+  if(driverRef) {
+    links.unshift({label:'👤 Stats '+nom, url:'https://www.formula1.com/en/drivers/'+driverRef, col:'#f0b020'});
+  }
+  
+  links.forEach(function(l){
+    html += '<a href="'+l.url+'" target="_blank" style="display:flex;align-items:center;gap:10px;padding:11px 14px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:8px;margin-bottom:7px;text-decoration:none;">';
+    html += '<div style="font-size:13px;font-weight:700;color:'+l.col+';flex:1;">'+l.label+'</div>';
+    html += '<div style="font-size:12px;color:var(--t3);">→</div>';
+    html += '</a>';
+  });
+  
+  html += '</div></div>';
+  el.innerHTML = html;
+}
+
+
+// ── TENNIS SAISONS ──
+async function loadTennisSaisons(el, nom) {
+  var year = new Date().getFullYear();
+  
+  // Interface principale Tennis
+  el.innerHTML = '<div style="padding:4px 0;">'
+
+    // Recherche joueur
+    +'<div class="cwrap" style="margin-bottom:10px;">'
+    +'<div style="font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#4f5d88;margin-bottom:10px;">🎾 Rechercher un joueur</div>'
+    +'<div style="display:flex;gap:8px;margin-bottom:8px;">'
+    +'<input id="tennis-search-input" class="fi" placeholder="Alcaraz, Sinner, Djokovic..." style="flex:1;font-size:12px;">'
+    +'<button id="tennis-search-btn" style="padding:8px 14px;border-radius:var(--r6);border:none;background:var(--a);color:#fff;font-size:11px;font-weight:700;cursor:pointer;">🔍</button>'
+    +'</div>'
+    +'<div id="tennis-player-result"></div>'
+    +'</div>'
+
+    // Comparateur H2H
+    +'<div class="cwrap" style="margin-bottom:10px;">'
+    +'<div style="font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#4f5d88;margin-bottom:10px;">⚔️ Comparateur H2H</div>'
+    +'<div style="display:grid;grid-template-columns:1fr auto 1fr;gap:8px;align-items:center;margin-bottom:8px;">'
+    +'<input id="tennis-h2h-p1" class="fi" placeholder="Joueur 1" style="font-size:11px;">'
+    +'<span style="color:var(--t3);font-weight:700;text-align:center;">vs</span>'
+    +'<input id="tennis-h2h-p2" class="fi" placeholder="Joueur 2" style="font-size:11px;">'
+    +'</div>'
+    +'<button id="tennis-h2h-btn" style="width:100%;padding:10px;border-radius:var(--r8);border:none;background:var(--a);color:#fff;font-size:12px;font-weight:700;cursor:pointer;">⚡ Comparer H2H</button>'
+    +'<div id="tennis-h2h-result" style="margin-top:10px;"></div>'
+    +'</div>'
+
+    // Liens utiles
+    +'<div class="cwrap">'
+    +'<div style="font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#4f5d88;margin-bottom:10px;">Liens utiles</div>'
+    +'<a href="https://www.atptour.com/en/rankings/singles" target="_blank" style="display:flex;align-items:center;gap:10px;padding:10px 14px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:8px;margin-bottom:6px;text-decoration:none;"><div style="font-size:12px;font-weight:700;color:#f0b020;flex:1;">🏆 Classement ATP</div><div style="color:var(--t3);">→</div></a>'
+    +'<a href="https://www.wtatennis.com/rankings/singles" target="_blank" style="display:flex;align-items:center;gap:10px;padding:10px 14px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:8px;margin-bottom:6px;text-decoration:none;"><div style="font-size:12px;font-weight:700;color:#ff7b54;flex:1;">🏆 Classement WTA</div><div style="color:var(--t3);">→</div></a>'
+    +'<a href="https://www.tennisabstract.com" target="_blank" style="display:flex;align-items:center;gap:10px;padding:10px 14px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:8px;margin-bottom:6px;text-decoration:none;"><div style="font-size:12px;font-weight:700;color:#4d84ff;flex:1;">📊 Tennis Abstract — Stats avancées</div><div style="color:var(--t3);">→</div></a>'
+    +'<a href="https://www.atptour.com/en/tournaments" target="_blank" style="display:flex;align-items:center;gap:10px;padding:10px 14px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:8px;margin-bottom:6px;text-decoration:none;"><div style="font-size:12px;font-weight:700;color:#1ed760;flex:1;">📅 Calendrier ATP</div><div style="color:var(--t3);">→</div></a>'
+    +'<a href="https://www.youtube.com/@TennisTV" target="_blank" style="display:flex;align-items:center;gap:10px;padding:10px 14px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:8px;margin-bottom:6px;text-decoration:none;"><div style="font-size:12px;font-weight:700;color:#ff0000;flex:1;">📺 Tennis TV YouTube</div><div style="color:var(--t3);">→</div></a>'
+    +'</div>'
+    +'</div>';
+
+  // Branche les boutons
+  document.getElementById('tennis-search-btn').onclick = function(){
+    var q = document.getElementById('tennis-search-input').value.trim();
+    if(q) searchTennisPlayer(q);
+  };
+  document.getElementById('tennis-search-input').onkeydown = function(e){
+    if(e.key==='Enter') { var q=this.value.trim(); if(q) searchTennisPlayer(q); }
+  };
+  document.getElementById('tennis-h2h-btn').onclick = function(){
+    var p1 = document.getElementById('tennis-h2h-p1').value.trim();
+    var p2 = document.getElementById('tennis-h2h-p2').value.trim();
+    if(p1&&p2) compareTennisH2H(p1, p2);
+  };
+
+  // Pré-remplir si c'est un joueur connu
+  if(TENNIS_PLAYERS[nom]) {
+    document.getElementById('tennis-search-input').value = nom;
+    searchTennisPlayer(nom);
+  }
+
+  return; // Stop ici — le reste de la fonction est remplacé par les handlers
+  var player = TENNIS_PLAYERS[nom] || {id: nom.toLowerCase().replace(/ /g,'-'), atp:true};
+  var year2 = year;
+
   try {
-    var driverRef = F1_DRIVERS[nom] || null;
-
-    // OpenF1 API - classement via sessions récentes
-    var sessResp = await fetch('https://api.openf1.org/v1/sessions?session_type=Race&year=2026');
-    var sessions = await sessResp.json();
-    sessions = sessions.sort(function(a,b){ return new Date(b.date_start)-new Date(a.date_start); });
-    
-    var driverStandings = [];
-    var races = [];
-
-    // Récupérer les résultats des 5 dernières courses
-    for(var si=0; si<Math.min(5, sessions.length); si++) {
-      var sess = sessions[si];
-      var posResp = await fetch('https://api.openf1.org/v1/position?session_key='+sess.session_key+'&position<=3');
-      var positions = await posResp.json();
-      if(positions && positions.length) {
-        races.push({
-          name: sess.meeting_name||sess.circuit_short_name||'GP',
-          date: (sess.date_start||'').substring(0,10),
-          top3: positions.slice(0,3)
-        });
-      }
+    // Sofascore API pour les stats du joueur
+    var searchResp = await fetch('https://api.sofascore.com/api/v1/player/search?query='+encodeURIComponent(nom), {
+      headers: {'User-Agent': 'Mozilla/5.0'}
+    });
+    var searchData = await searchResp.json();
+    var playerId = null;
+    if(searchData.players && searchData.players.length) {
+      playerId = searchData.players[0].id;
     }
 
     var html = '<div style="padding:4px 0;">';
 
-    // ── Lien classement officiel ──
-    html += '<div class="cwrap" style="margin-bottom:10px;">';
-    html += '<div style="font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#4f5d88;margin-bottom:10px;">🏆 Classement pilotes '+new Date().getFullYear()+'</div>';
-    html += '<a href="https://www.formula1.com/en/results/'+new Date().getFullYear()+'/drivers" target="_blank" style="display:block;padding:12px;background:rgba(232,0,45,.1);border:1px solid rgba(232,0,45,.3);border-radius:8px;color:#e8002d;font-size:12px;font-weight:700;text-decoration:none;text-align:center;">🏎️ Voir le classement sur Formula1.com</a>';
-    html += '</div>';
+    // Stats par surface via Tennis Abstract
+    var surfaceUrl = 'https://www.tennisabstract.com/cgi-bin/player.cgi?p='+encodeURIComponent(nom)+'&f=A';
 
-    // ── Derniers GP via OpenF1 ──
-    if(races.length) {
-      html += '<div class="cwrap">';
-      html += '<div style="font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#4f5d88;margin-bottom:10px;">🏁 Derniers GP 2026</div>';
-      html += '<div style="display:flex;flex-direction:column;gap:6px;">';
-      races.forEach(function(race){
-        html += '<div style="padding:8px 10px;background:rgba(255,255,255,.03);border-radius:8px;border:1px solid rgba(255,255,255,.06);">';
-        html += '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;">';
-        html += '<div style="font-size:11px;font-weight:700;color:var(--t1);">🏎️ '+race.name+'</div>';
-        html += '<div style="font-size:10px;color:var(--t3);">'+race.date+'</div>';
-        html += '</div>';
-        if(race.top3 && race.top3.length) {
-          var medals = ['🥇','🥈','🥉'];
-          html += '<div style="display:flex;gap:6px;">';
-          race.top3.forEach(function(r,i){
-            html += '<span style="font-size:10px;color:var(--t3);">'+medals[i]+' P'+r.position+'</span>';
-          });
+    // Stats générales ATP
+    if(playerId) {
+      var statsResp = await fetch('https://api.sofascore.com/api/v1/player/'+playerId+'/statistics/seasons');
+      var statsData = await statsResp.json();
+      var currentStats = statsData.statistics && statsData.statistics[0];
+
+      if(currentStats) {
+        html += '<div class="cwrap" style="margin-bottom:10px;">';
+        html += '<div style="font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#4f5d88;margin-bottom:10px;">🎾 Stats saison '+year+'</div>';
+        html += '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;">';
+        
+        var wins = currentStats.wins || 0;
+        var losses = currentStats.losses || 0;
+        var total = wins + losses;
+        var pct = total ? Math.round(wins/total*100) : 0;
+        
+        [
+          {l:'Victoires', v:wins, c:'#1ed760'},
+          {l:'Défaites', v:losses, c:'#ff4545'},
+          {l:'% victoires', v:pct+'%', c:'#f0b020'},
+        ].forEach(function(s){
+          html += '<div style="text-align:center;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:8px;padding:10px 4px;">';
+          html += '<div style="font-size:22px;font-weight:800;color:'+s.c+';">'+s.v+'</div>';
+          html += '<div style="font-size:9px;color:var(--t3);margin-top:2px;">'+s.l+'</div>';
           html += '</div>';
-        }
-        html += '</div>';
-      });
-      html += '</div></div>';
-    } else {
-      html += '<div class="cwrap"><div style="text-align:center;color:var(--t3);padding:10px;font-size:11px;">Chargement des GP en cours...<br><a href="https://www.formula1.com/en/results" target="_blank" style="color:#e8002d;">Voir les résultats sur F1.com</a></div></div>';
+        });
+        html += '</div></div>';
+      }
+
+      // Derniers matchs
+      var matchesResp = await fetch('https://api.sofascore.com/api/v1/player/'+playerId+'/events/last/0');
+      var matchesData = await matchesResp.json();
+      var matches = matchesData.events || [];
+
+      if(matches.length) {
+        html += '<div class="cwrap" style="margin-bottom:10px;">';
+        html += '<div style="font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#4f5d88;margin-bottom:10px;">Forme récente</div>';
+        html += '<div style="display:flex;gap:6px;">';
+        matches.slice(0,5).forEach(function(m){
+          var isHome = m.homeTeam && m.homeTeam.name === nom;
+          var won = (isHome && m.winnerCode===1) || (!isHome && m.winnerCode===2);
+          var col = won ? '#1ed760' : '#ff4545';
+          var opp = isHome ? (m.awayTeam&&m.awayTeam.name||'?') : (m.homeTeam&&m.homeTeam.name||'?');
+          var oppShort = opp.split(' ').pop().substring(0,7);
+          var score = m.homeScore&&m.homeScore.current ? m.homeScore.current+'-'+m.awayScore.current : '?';
+          var dateStr = m.startTimestamp ? new Date(m.startTimestamp*1000).toLocaleDateString('fr-FR',{day:'numeric',month:'short'}) : '';
+          html += '<div style="flex:1;text-align:center;background:var(--s1);border-radius:10px;padding:6px 3px;border-top:3px solid '+col+';border:1px solid rgba(255,255,255,.06);border-top:3px solid '+col+';">';
+          html += '<div style="font-size:14px;">🎾</div>';
+          html += '<div style="font-size:16px;font-weight:700;color:'+col+';">'+score+'</div>';
+          html += '<div style="font-size:9px;color:var(--t2);font-weight:600;">'+oppShort+'</div>';
+          html += '<div style="font-size:8px;color:rgba(255,255,255,.25);">'+dateStr+'</div>';
+          html += '</div>';
+        });
+        html += '</div></div>';
+      }
     }
+
+    // Stats par surface
+    html += '<div class="cwrap" style="margin-bottom:10px;">';
+    html += '<div style="font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#4f5d88;margin-bottom:10px;">Stats par surface</div>';
+    html += '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;">';
+    var surfaces = [
+      {l:'🟠 Terre', k:'clay', c:'#ff7b54'},
+      {l:'🔵 Dur', k:'hard', c:'#4d84ff'},
+      {l:'🟢 Gazon', k:'grass', c:'#1ed760'},
+    ];
+    surfaces.forEach(function(s){
+      html += '<div style="text-align:center;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:8px;padding:10px 4px;">';
+      html += '<div style="font-size:12px;margin-bottom:4px;">'+s.l+'</div>';
+      html += '<a href="https://www.tennisabstract.com/cgi-bin/player.cgi?p='+encodeURIComponent(nom)+'&f=A'+s.k+'" target="_blank" style="font-size:10px;color:'+s.c+';text-decoration:none;">Stats →</a>';
+      html += '</div>';
+    });
+    html += '</div></div>';
+
+    // Liens utiles
+    html += '<div class="cwrap">';
+    html += '<div style="font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#4f5d88;margin-bottom:10px;">Liens utiles</div>';
+    var links = [
+      {l:'🏆 Classement ATP', url:'https://www.atptour.com/en/rankings/singles', c:'#f0b020'},
+      {l:'📊 Tennis Abstract', url:'https://www.tennisabstract.com/cgi-bin/player.cgi?p='+encodeURIComponent(nom), c:'#4d84ff'},
+      {l:'📅 Calendrier ATP', url:'https://www.atptour.com/en/tournaments', c:'#1ed760'},
+      {l:'📺 YouTube Tennis', url:'https://www.youtube.com/@TennisTV', c:'#ff0000'},
+    ];
+    links.forEach(function(l){
+      html += '<a href="'+l.url+'" target="_blank" style="display:flex;align-items:center;gap:10px;padding:10px 14px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:8px;margin-bottom:7px;text-decoration:none;">';
+      html += '<div style="font-size:12px;font-weight:700;color:'+l.c+';flex:1;">'+l.l+'</div>';
+      html += '<div style="font-size:12px;color:var(--t3);">→</div>';
+      html += '</a>';
+    });
+    html += '</div>';
 
     html += '</div>';
     el.innerHTML = html;
 
   } catch(e) {
-    el.innerHTML = '<div style="color:#ff4545;text-align:center;padding:20px;">Erreur F1 API<br><small>'+e.message+'</small></div>';
+    // Fallback si Sofascore bloque
+    var html = '<div style="padding:4px 0;">';
+    html += '<div class="cwrap">';
+    html += '<div style="font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#4f5d88;margin-bottom:10px;">🎾 '+nom+'</div>';
+    var links = [
+      {l:'🏆 Classement ATP', url:'https://www.atptour.com/en/rankings/singles', c:'#f0b020'},
+      {l:'📊 Stats Tennis Abstract', url:'https://www.tennisabstract.com/cgi-bin/player.cgi?p='+encodeURIComponent(nom), c:'#4d84ff'},
+      {l:'📺 Résultats Flashscore', url:'https://www.flashscore.fr/joueur/tennis/'+nom.toLowerCase().replace(/ /g,'-')+'/', c:'#ff7b54'},
+      {l:'📅 Calendrier ATP', url:'https://www.atptour.com/en/tournaments', c:'#1ed760'},
+    ];
+    links.forEach(function(l){
+      html += '<a href="'+l.url+'" target="_blank" style="display:flex;align-items:center;gap:10px;padding:10px 14px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:8px;margin-bottom:7px;text-decoration:none;">';
+      html += '<div style="font-size:12px;font-weight:700;color:'+l.c+';flex:1;">'+l.l+'</div>';
+      html += '<div style="font-size:12px;color:var(--t3);">→</div>';
+      html += '</a>';
+    });
+    html += '</div></div>';
+    el.innerHTML = html;
+  }
+}
+
+
+async function searchTennisPlayer(nom) {
+  var res = document.getElementById('tennis-player-result');
+  if(!res) return;
+  res.innerHTML = '<div style="color:var(--t3);font-size:11px;padding:8px 0;">Recherche en cours...</div>';
+  
+  var groqKey = getGeminiKey();
+  var tavilyKey = getTavilyKey();
+  
+  if(!tavilyKey && !groqKey) {
+    res.innerHTML = '<div style="text-align:center;padding:10px;">'
+      +'<a href="https://www.tennisabstract.com/cgi-bin/player.cgi?p='+encodeURIComponent(nom)+'" target="_blank" style="color:#4d84ff;font-size:12px;font-weight:700;">📊 Voir stats '+nom+' sur Tennis Abstract →</a>'
+      +'<br><a href="https://www.flashscore.fr/tennis/" target="_blank" style="color:#ff7b54;font-size:11px;">📺 Résultats sur Flashscore</a>'
+      +'</div>';
+    return;
+  }
+
+  try {
+    // Tavily cherche les stats du joueur
+    var query = nom+' tennis stats 2026 classement ATP WTA victoires surfaces';
+    var webData = await searchTavily(query);
+    
+    if(groqKey && webData) {
+      var prompt = 'Donnees web sur le joueur de tennis '+nom+' : '+webData.substring(0,800)+'. Résume en 4 lignes max : classement actuel, bilan victoires/defaites 2026, surfaces preferees, et 1-2 paris interessants (ex: victoire en 2 sets, nombre de jeux). Sois precis avec les chiffres. En francais.';
+      var r = await fetch('https://api.groq.com/openai/v1/chat/completions',{
+        method:'POST',
+        headers:{'Content-Type':'application/json','Authorization':'Bearer '+groqKey},
+        body:JSON.stringify({model:'llama-3.3-70b-versatile',messages:[{role:'user',content:prompt}],max_tokens:250,temperature:0.2})
+      });
+      var d = await r.json();
+      var reply = d.choices[0].message.content.trim();
+      res.innerHTML = '<div style="background:rgba(77,132,255,.06);border:1px solid rgba(77,132,255,.15);border-radius:8px;padding:10px 12px;font-size:11px;color:var(--t1);line-height:1.7;">'+reply+'</div>'
+        +'<div style="margin-top:8px;display:flex;gap:6px;">'
+        +'<a href="https://www.tennisabstract.com/cgi-bin/player.cgi?p='+encodeURIComponent(nom)+'" target="_blank" style="flex:1;padding:8px;background:rgba(77,132,255,.1);border:1px solid rgba(77,132,255,.3);border-radius:6px;color:#4d84ff;font-size:10px;font-weight:700;text-decoration:none;text-align:center;">📊 Tennis Abstract</a>'
+        +'<a href="https://www.atptour.com/en/players/'+nom.toLowerCase().replace(/ /g,'-')+'/overview" target="_blank" style="flex:1;padding:8px;background:rgba(240,176,32,.1);border:1px solid rgba(240,176,32,.3);border-radius:6px;color:#f0b020;font-size:10px;font-weight:700;text-decoration:none;text-align:center;">🎾 ATP Tour</a>'
+        +'</div>';
+    } else {
+      res.innerHTML = '<a href="https://www.tennisabstract.com/cgi-bin/player.cgi?p='+encodeURIComponent(nom)+'" target="_blank" style="display:block;padding:10px;background:rgba(77,132,255,.1);border:1px solid rgba(77,132,255,.3);border-radius:8px;color:#4d84ff;font-size:12px;font-weight:700;text-decoration:none;text-align:center;">📊 Voir stats '+nom+' sur Tennis Abstract</a>';
+    }
+  } catch(e) {
+    res.innerHTML = '<div style="color:#ff4545;font-size:11px;">Erreur recherche</div>';
+  }
+}
+
+async function compareTennisH2H(p1, p2) {
+  var res = document.getElementById('tennis-h2h-result');
+  if(!res) return;
+  res.innerHTML = '<div style="color:var(--t3);font-size:11px;">Recherche H2H...</div>';
+
+  var groqKey = getGeminiKey();
+  var tavilyKey = getTavilyKey();
+  
+  if(!tavilyKey || !groqKey) {
+    res.innerHTML = '<a href="https://www.atptour.com/en/players/player-comparison/h2h" target="_blank" style="display:block;padding:10px;background:rgba(255,69,69,.1);border:1px solid rgba(255,69,69,.3);border-radius:8px;color:#ff4545;font-size:11px;font-weight:700;text-decoration:none;text-align:center;">⚔️ H2H sur ATP Tour →</a>';
+    return;
+  }
+
+  try {
+    var query = p1+' vs '+p2+' head to head tennis h2h historique surfaces statistiques';
+    var webData = await searchTavily(query);
+    
+    if(webData && groqKey) {
+      var prompt = 'Voici des données sur le H2H entre '+p1+' et '+p2+' au tennis : '+webData.substring(0,800)+'. Donne : 1) Score global H2H, 2) Stats par surface, 3) Derniers confrontations, 4) Qui favoriser pour un prochain match et pourquoi. En francais, max 5 lignes.';
+      var r = await fetch('https://api.groq.com/openai/v1/chat/completions',{
+        method:'POST',
+        headers:{'Content-Type':'application/json','Authorization':'Bearer '+groqKey},
+        body:JSON.stringify({model:'llama-3.3-70b-versatile',messages:[{role:'user',content:prompt}],max_tokens:300,temperature:0.2})
+      });
+      var d = await r.json();
+      var reply = d.choices[0].message.content.trim();
+      
+      // Header H2H
+      res.innerHTML = '<div style="display:grid;grid-template-columns:1fr auto 1fr;gap:8px;align-items:center;margin-bottom:10px;text-align:center;">'
+        +'<div style="font-size:12px;font-weight:700;color:#4d84ff;">'+p1.split(' ').pop()+'</div>'
+        +'<div style="font-size:11px;color:var(--t3);font-weight:700;">H2H</div>'
+        +'<div style="font-size:12px;font-weight:700;color:#f0b020;">'+p2.split(' ').pop()+'</div>'
+        +'</div>'
+        +'<div style="background:rgba(77,132,255,.06);border:1px solid rgba(77,132,255,.15);border-radius:8px;padding:10px 12px;font-size:11px;color:var(--t1);line-height:1.7;margin-bottom:8px;">'+reply+'</div>'
+        +'<a href="https://www.atptour.com/en/players/player-comparison/h2h" target="_blank" style="display:block;padding:8px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:6px;color:var(--t3);font-size:10px;text-decoration:none;text-align:center;">Voir H2H complet sur ATP Tour →</a>';
+    }
+  } catch(e) {
+    res.innerHTML = '<div style="color:#ff4545;font-size:11px;">Erreur H2H</div>';
   }
 }
 
@@ -4763,6 +5029,7 @@ async function loadTeamSaisons() {
   if(sport2==='⚾'||sport2==='⚾🇺🇸'||MLB_TEAMS[nom]) { loadMlbSaisons(el, nom); return; }
   if(sport2==='🏀'||sport2==='🏀🇺🇸'||NBA_TEAMS[nom]) { loadNbaSaisons(el, nom); return; }
   if(sport2==='🏎️'||sport2==='🏎'||F1_TEAMS[nom]||F1_DRIVERS[nom]) { loadF1Saisons(el, nom); return; }
+  if(sport2==='🎾'||TENNIS_PLAYERS[nom]) { loadTennisSaisons(el, nom); return; }
   if(sport2==='🏈'||sport2==='🏈🇺🇸'||NFL_TEAMS[nom]) { loadNflSaisons(el, nom); return; }
 
   // Trouver ID football
