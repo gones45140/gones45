@@ -1355,6 +1355,20 @@ function logoErr(img){
   var s=img.nextSibling;
   if(s)s.style.display='flex';
 }
+var SPORT_EMOJIS={
+  'basket':'🏀','basketball':'🏀','nba':'🏀',
+  'tennis':'🎾',
+  'formule 1':'🏎️','formula 1':'🏎️','f1':'🏎️','formule1':'🏎️',
+  'rugby':'🏉','rugby union':'🏉',
+  'au nrl':'🏉','nrl':'🏉',
+  'hockey':'🏒','nhl':'🏒',
+  'baseball':'⚾','mlb':'⚾',
+  'nfl':'🏈','football américain':'🏈','football americain':'🏈',
+  'football':'⚽','foot':'⚽','soccer':'⚽',
+  'golf':'⛳',
+  'mma':'🥊','ufc':'🥊','boxe':'🥊',
+  'natation':'🏊','cyclisme':'🚴','athlétisme':'🏃'
+};
 function logoHtml(name,color,abbr,sz){
   var s=sz||46;
   var logo=LOGOS[name];
@@ -1366,6 +1380,20 @@ function logoHtml(name,color,abbr,sz){
       +'<img src="'+logo+'" style="width:'+(s-10)+'px;height:'+(s-10)+'px;object-fit:contain;" loading="lazy" onerror="logoErr(this)">'
       +'<span style="display:none;width:100%;height:100%;align-items:center;justify-content:center;font-size:11px;font-weight:800;color:'+color+';">'+fb+'</span>'
       +'</div>';
+  }
+  // Détecter emoji sport par nom générique
+  var sportEmoji = SPORT_EMOJIS[name.toLowerCase().trim()];
+  if(!sportEmoji) {
+    // Chercher aussi via le sport de l'unité dans state
+    var uMatch = (typeof state !== 'undefined' && state.u) ? state.u.find(function(u){return u.n===name;}) : null;
+    if(uMatch && uMatch.sport) {
+      var sportMap={'🏀':'🏀','🎾':'🎾','🏎':'🏎️','🏎️':'🏎️','🏉':'🏉','🏉🇦🇺':'🏉','🏒':'🏒','⚾':'⚾','🏈':'🏈','⚽':'⚽'};
+      sportEmoji = sportMap[uMatch.sport];
+    }
+  }
+  if(sportEmoji){
+    var emojiSz = Math.round(s * 0.56);
+    return '<div style="'+baseStyle+'background:rgba('+rgb+',.14);border:1px solid rgba('+rgb+',.28);display:flex;align-items:center;justify-content:center;font-size:'+emojiSz+'px;">'+sportEmoji+'</div>';
   }
   return '<div style="'+baseStyle+'background:rgba('+rgb+',.14);border:1px solid rgba('+rgb+',.28);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:800;color:'+color+';">'+fb+'</div>';
 }
@@ -5054,7 +5082,18 @@ async function searchTennisPlayer(nom) {
 async function loadNbaSaisons(el, nom) {
   var teamInfo = NBA_TEAMS[nom];
   if(!teamInfo) {
-    el.innerHTML='<div style="color:var(--t3);text-align:center;padding:20px;">Equipe NBA non reconnue.<br><small>Ajoute-la dans NBA_TEAMS</small></div>';
+    var ls2 = 'display:flex;align-items:center;gap:10px;padding:10px 14px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:8px;margin-bottom:6px;text-decoration:none;';
+    el.innerHTML = '<div style="padding:4px 0;">'
+      +'<div class="cwrap" style="margin-bottom:10px;">'
+      +'<div style="font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#4f5d88;margin-bottom:10px;">🏀 Basket — Liens utiles NBA</div>'
+      +'<a href="https://www.nba.com/standings" target="_blank" style="'+ls2+'"><div style="font-size:12px;font-weight:700;color:#c8102e;flex:1;">🏆 Classement NBA</div><div style="color:var(--t3);">→</div></a>'
+      +'<a href="https://www.nba.com/schedule" target="_blank" style="'+ls2+'"><div style="font-size:12px;font-weight:700;color:#f0b020;flex:1;">📅 Programme NBA</div><div style="color:var(--t3);">→</div></a>'
+      +'<a href="https://www.nba.com/stats/leaders" target="_blank" style="'+ls2+'"><div style="font-size:12px;font-weight:700;color:#1ed760;flex:1;">📊 Leaders stats NBA</div><div style="color:var(--t3);">→</div></a>'
+      +'<a href="https://www.sofascore.com/basketball/nba" target="_blank" style="'+ls2+'"><div style="font-size:12px;font-weight:700;color:#ff7b54;flex:1;">⚡ Sofascore NBA</div><div style="color:var(--t3);">→</div></a>'
+      +'<a href="https://www.basketball-reference.com/leagues/NBA_2026_standings.html" target="_blank" style="'+ls2+'"><div style="font-size:12px;font-weight:700;color:#4d84ff;flex:1;">📈 Basketball-Reference</div><div style="color:var(--t3);">→</div></a>'
+      +'</div>'
+      +'<div style="font-size:9px;color:#4f5d88;text-align:center;padding:8px;">Pour une équipe précise, renseigne son nom dans Bilan &gt; Équipes</div>'
+      +'</div>';
     return;
   }
 
@@ -5230,12 +5269,17 @@ async function loadTeamSaisons() {
   var saisons = Object.keys(results).sort().reverse();
 
   if(!Object.keys(results).length) {
-    el.innerHTML = '<div class="fc" style="text-align:center;color:var(--t3);padding:20px;">'
-      +'<div style="font-size:24px;margin-bottom:10px;">⚠️</div>'
-      +'<div style="font-size:12px;font-weight:700;margin-bottom:6px;">Données non disponibles</div>'
-      +'<div style="font-size:11px;">Cette equipe ou competition<br>nest pas couverte par le plan gratuit<br>football-data.org</div>'
-      +'<div style="font-size:10px;color:#4f5d88;margin-top:8px;">Grands championnats uniquement :<br>🇩🇪🏴󠁧󠁢󠁥󠁮󠁧󠁿🇪🇸🇮🇹🇫🇷 + ⭐ Champions League</div>'
-      +'</div>';
+    var sofaFb = SOFASCORE_LINKS[nom] || ('https://www.sofascore.com/search#q=' + encodeURIComponent(nom));
+    var flashFb = FLASHSCORE_LINKS && FLASHSCORE_LINKS[nom] ? FLASHSCORE_LINKS[nom] : ('https://www.flashscore.fr/recherche/?q=' + encodeURIComponent(nom));
+    var ls = 'display:flex;align-items:center;gap:10px;padding:10px 14px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:8px;margin-bottom:6px;text-decoration:none;';
+    el.innerHTML = '<div style="padding:4px 0;">'
+      +'<div class="cwrap" style="margin-bottom:10px;">'
+      +'<div style="font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#4f5d88;margin-bottom:6px;">⚽ ' + nom + ' — Accès direct</div>'
+      +'<div style="font-size:10px;color:var(--t3);margin-bottom:12px;">Données non disponibles via football-data.org. Consulter directement :</div>'
+      +'<a href="'+sofaFb+'" target="_blank" style="'+ls+'"><div style="font-size:12px;font-weight:700;color:#ff7b54;flex:1;">⚡ Sofascore — Stats & résultats</div><div style="color:var(--t3);">→</div></a>'
+      +'<a href="'+flashFb+'" target="_blank" style="'+ls+'"><div style="font-size:12px;font-weight:700;color:#f0b020;flex:1;">⚡ Flashscore — Résultats live</div><div style="color:var(--t3);">→</div></a>'
+      +'<a href="https://fbref.com/fr/search/search.fcgi?search='+encodeURIComponent(nom)+'" target="_blank" style="'+ls+'"><div style="font-size:12px;font-weight:700;color:#4d84ff;flex:1;">📊 FBref — Stats avancées</div><div style="color:var(--t3);">→</div></a>'
+      +'</div></div>';
     return;
   }
 
