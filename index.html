@@ -5008,7 +5008,9 @@ async function searchTennisPlayer(nom) {
           var pct = parseFloat(s.v)||0;
           html += '<div style="text-align:center;background:rgba(255,255,255,.04);border-radius:8px;padding:8px 4px;border:1px solid rgba(255,255,255,.06);">';
           html += '<div style="font-size:12px;margin-bottom:4px;">'+s.l+'</div>';
-          html += '<div style="font-size:17px;font-weight:800;color:'+s.c+';">'+(s.v||'?')+'</div>';
+          var rawV = parseFloat(s.v)||0;
+          var dispV = s.v && s.v.toString().indexOf('%')>=0 ? s.v : (rawV<=1 ? Math.round(rawV*100)+'%' : Math.round(rawV)+'%');
+          html += '<div style="font-size:17px;font-weight:800;color:'+s.c+';">'+(s.v?dispV:'?')+'</div>';
           html += '<div style="font-size:9px;color:var(--t3);">victoires</div>';
           if(s.elo) { html += '<div style="font-size:11px;font-weight:700;color:#a78bfa;margin-top:3px;">ELO '+s.elo+'</div>'; }
           if(s.rang) { html += '<div style="font-size:9px;color:#4f5d88;">Rang #'+s.rang+'</div>'; }
