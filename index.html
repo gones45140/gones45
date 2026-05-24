@@ -714,6 +714,7 @@ input[type="date"],input[type="time"]{color-scheme:dark;}
       <button class="itab" onclick="swInner('types',this)">Types</button>
       <button class="itab" onclick="swInner('live',this);setTimeout(loadTeamLive,30)">🔴 Live</button>
       <button class="itab" id="itab-saisons">📊 Saisons</button>
+      <button class="itab" id="itab-mondial" style="display:none;">🌍 Mondial</button>
     </div>
     <div id="ip-bilan" class="ipanel on"></div>
     <div id="ip-graphiques" class="ipanel"></div>
@@ -721,6 +722,7 @@ input[type="date"],input[type="time"]{color-scheme:dark;}
     <div id="ip-types" class="ipanel"></div>
     <div id="ip-live" class="ipanel"></div>
     <div id="ip-saisons" class="ipanel"></div>
+    <div id="ip-mondial" class="ipanel"></div>
   </div>
 </section>
 
@@ -2479,6 +2481,7 @@ function renderEquipes(){
 function openClub(nom,idx){
   _currentTeam=nom;
   Object.values(AC).forEach(function(c){try{c.destroy();}catch(e){}});AC={};
+  showOngletMondialIfNational(nom);
   var u=state.u.find(function(x){return x.n===nom;});
   var p=gp(u||{color:PCOLS[0]});
   var paris=state.a.filter(function(h){return h.n===nom;});
@@ -5202,6 +5205,126 @@ async function loadRugbySaisons(el, nom) {
   el.innerHTML = html;
 }
 
+
+/* ── NATIONS : afficher/cacher onglet Mondial ── */
+var NATIONS_MONDIALES = ['France','Espagne','Allemagne','Angleterre','Brésil','Argentine','Portugal','Pays-Bas','Belgique','Italie','Croatie','Maroc','Sénégal','Colombie','Uruguay','Japon','Suisse','Norvège','Danemark','Mexique','Canada','États-Unis','Australie','Iran','Corée du Sud','Équateur','Autriche','Algérie','Égypte','Qatar','Tunisie','Côte d\'Ivoire','Ouzbékistan','Écosse','Paraguay','Haïti','Afrique du Sud','Cap-Vert','Ghana','Arabie saoudite','Jordanie','Curaçao','Nouvelle-Zélande','Panama','RD Congo','Suède','Ukraine','Turquie','Irak','Bolivie','Suriname'];
+
+function showOngletMondialIfNational(nom) {
+  var btn = document.getElementById('itab-mondial');
+  if(!btn) return;
+  var isNat = NATIONS_MONDIALES.indexOf(nom) >= 0;
+  btn.style.display = isNat ? '' : 'none';
+}
+
+function loadMondial2026() {
+  var el = document.getElementById('ip-mondial');
+  if(!el) return;
+
+  var GROUPES = [
+    {id:'A', teams:['Mexique','Corée du Sud','Afrique du Sud','Tchéquie']},
+    {id:'B', teams:['Canada','Suisse','Qatar','Bosnie-Herzégovine']},
+    {id:'C', teams:['Brésil','Maroc','Écosse','Haïti']},
+    {id:'D', teams:['États-Unis','Paraguay','Australie','Turquie']},
+    {id:'E', teams:['Allemagne','Équateur','Côte d\'Ivoire','Curaçao']},
+    {id:'F', teams:['Pays-Bas','Japon','Tunisie','Suède']},
+    {id:'G', teams:['Belgique','Iran','Égypte','Nouvelle-Zélande']},
+    {id:'H', teams:['Espagne','Uruguay','Cap-Vert','Arabie saoudite']},
+    {id:'I', teams:['France','Sénégal','Norvège','Irak']},
+    {id:'J', teams:['Argentine','Algérie','Autriche','Jordanie']},
+    {id:'K', teams:['Portugal','Colombie','RD Congo','Ouzbékistan']},
+    {id:'L', teams:['Angleterre','Croatie','Ghana','Panama']}
+  ];
+
+  var MY_TEAMS = (typeof state !== 'undefined' && state.u) ? state.u.map(function(u){return u.n;}) : [];
+
+  var lsLink = 'display:flex;align-items:center;gap:10px;padding:10px 14px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:8px;margin-bottom:6px;text-decoration:none;';
+
+  var html = '<div style="padding:4px 0;">';
+
+  // ── Header ──
+  html += '<div style="background:linear-gradient(135deg,rgba(30,119,255,.15),rgba(30,215,96,.1));border:1px solid rgba(77,132,255,.3);border-radius:12px;padding:16px;margin-bottom:14px;text-align:center;">';
+  html += '<div style="font-size:22px;margin-bottom:4px;">🌍</div>';
+  html += '<div style="font-size:16px;font-weight:800;color:var(--t1);">Coupe du Monde 2026</div>';
+  html += '<div style="font-size:10px;color:var(--t3);margin-top:3px;">🇺🇸🇨🇦🇲🇽 USA · Canada · Mexique</div>';
+  html += '<div style="font-size:11px;color:#4d84ff;font-weight:700;margin-top:5px;">11 juin — 19 juillet 2026</div>';
+  html += '</div>';
+
+  // ── Matchs France ──
+  html += '<div class="cwrap" style="margin-bottom:10px;border:1px solid rgba(0,100,255,.3);background:rgba(0,85,255,.06);">';
+  html += '<div style="font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#4d84ff;margin-bottom:10px;">🇫🇷 France — Groupe I</div>';
+  var fMatchs = [
+    {d:'16 juin 2026', h:'21h00', adv:'Sénégal', flag:'🇸🇳', lieu:'MetLife Stadium, New York', note:'Match 1'},
+    {d:'22 juin 2026', h:'23h00', adv:'Irak / Bolivie / Suriname', flag:'🏳️', lieu:'Lincoln Financial Field, Philadelphie', note:'Match 2'},
+    {d:'26 juin 2026', h:'21h00', adv:'Norvège 🪄 Haaland', flag:'🇳🇴', lieu:'Gillette Stadium, Boston', note:'Match 3'}
+  ];
+  fMatchs.forEach(function(m){
+    html += '<div style="display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid rgba(255,255,255,.05);">';
+    html += '<div style="font-size:18px;">🇫🇷</div>';
+    html += '<div style="flex:1;">';
+    html += '<div style="font-size:11px;font-weight:700;color:var(--t1);">France vs '+m.adv+' '+m.flag+'</div>';
+    html += '<div style="font-size:9px;color:var(--t3);margin-top:2px;">'+m.d+' · '+m.h+' · '+m.lieu+'</div>';
+    html += '</div>';
+    html += '<div style="font-size:9px;font-weight:700;color:#4d84ff;background:rgba(77,132,255,.12);padding:3px 7px;border-radius:4px;">'+m.note+'</div>';
+    html += '</div>';
+  });
+  html += '</div>';
+
+  // ── Les 12 Groupes ──
+  html += '<div class="cwrap" style="margin-bottom:10px;">';
+  html += '<div style="font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#4f5d88;margin-bottom:10px;">🏆 Les 12 Groupes</div>';
+  html += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;">';
+
+  GROUPES.forEach(function(g){
+    var isFrance = g.id === 'I';
+    var borderCol = isFrance ? 'rgba(77,132,255,.5)' : 'rgba(255,255,255,.07)';
+    var bgCol = isFrance ? 'rgba(77,132,255,.08)' : 'rgba(255,255,255,.02)';
+    html += '<div style="background:'+bgCol+';border:1px solid '+borderCol+';border-radius:8px;padding:8px;">';
+    html += '<div style="font-size:9px;font-weight:800;color:'+(isFrance?'#4d84ff':'#4f5d88')+';margin-bottom:5px;letter-spacing:.5px;">GROUPE '+g.id+(isFrance?' 🇫🇷':'')+'</div>';
+    g.teams.forEach(function(t){
+      var isMine = MY_TEAMS.indexOf(t) >= 0;
+      var isFr = t === 'France';
+      html += '<div style="font-size:10px;color:'+(isFr?'#4d84ff':isMine?'#1ed760':'var(--t2)')+';font-weight:'+(isFr||isMine?'700':'400')+';padding:1px 0;">'+(isFr?'🇫🇷 ':isMine?'⭐ ':'')+t+'</div>';
+    });
+    html += '</div>';
+  });
+  html += '</div></div>';
+
+  // ── Tableau knockout ──
+  html += '<div class="cwrap" style="margin-bottom:10px;">';
+  html += '<div style="font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#4f5d88;margin-bottom:10px;">🏟️ Tableau élimination directe</div>';
+
+  var rounds = [
+    {label:'32e de finale', date:'29 juin – 2 juil.', col:'#4f5d88'},
+    {label:'16e de finale', date:'4 – 7 juillet', col:'#4d84ff'},
+    {label:'Quarts de finale', date:'9 – 10 juillet', col:'#a78bfa'},
+    {label:'Demi-finales', date:'14 – 15 juillet', col:'#f0b020'},
+    {label:'🏆 Finale', date:'19 juillet · MetLife Stadium, NY', col:'#1ed760'}
+  ];
+  rounds.forEach(function(r){
+    html += '<div style="display:flex;align-items:center;gap:10px;padding:8px 10px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.06);border-left:3px solid '+r.col+';border-radius:6px;margin-bottom:5px;">';
+    html += '<div style="flex:1;">';
+    html += '<div style="font-size:11px;font-weight:700;color:'+r.col+';">'+r.label+'</div>';
+    html += '<div style="font-size:9px;color:var(--t3);margin-top:1px;">'+r.date+'</div>';
+    html += '</div>';
+    html += '<div style="font-size:9px;color:var(--t3);font-weight:700;">TBD</div>';
+    html += '</div>';
+  });
+  html += '</div>';
+
+  // ── Liens utiles ──
+  html += '<div class="cwrap">';
+  html += '<div style="font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#4f5d88;margin-bottom:10px;">🔗 Liens utiles</div>';
+  html += '<a href="https://www.fifa.com/fr/tournaments/mens/worldcup/canadamexicousa2026" target="_blank" style="'+lsLink+'"><div style="font-size:12px;font-weight:700;color:#4d84ff;flex:1;">🌐 Site officiel FIFA 2026</div><div style="color:var(--t3);">→</div></a>';
+  html += '<a href="https://www.lequipe.fr/Football/Coupe-du-monde/" target="_blank" style="'+lsLink+'"><div style="font-size:12px;font-weight:700;color:#f0b020;flex:1;">📰 L\'Équipe — Suivi complet</div><div style="color:var(--t3);">→</div></a>';
+  html += '<a href="https://www.sofascore.com/tournament/football/world/fifa-world-cup/16" target="_blank" style="'+lsLink+'"><div style="font-size:12px;font-weight:700;color:#ff7b54;flex:1;">⚡ Sofascore — Scores live</div><div style="color:var(--t3);">→</div></a>';
+  html += '<a href="https://www.flashscore.fr/football/monde/coupe-du-monde/" target="_blank" style="'+lsLink+'"><div style="font-size:12px;font-weight:700;color:#22d3ee;flex:1;">⚡ Flashscore — Résultats</div><div style="color:var(--t3);">→</div></a>';
+  html += '<a href="https://www.transfermarkt.fr/weltmeisterschaft-2026/startseite/pokalwettbewerb/WM26" target="_blank" style="'+lsLink+'"><div style="font-size:12px;font-weight:700;color:#1ed760;flex:1;">💰 Transfermarkt — Valeurs</div><div style="color:var(--t3);">→</div></a>';
+  html += '</div>';
+
+  html += '</div>';
+  el.innerHTML = html;
+}
+
 async function loadTeamSaisons() {
   var el = document.getElementById('ip-saisons');
   if(!el) return;
@@ -6325,6 +6448,7 @@ function updateBankTotal() {
 var _bcp=document.getElementById('btn-chat-params-pc');if(_bcp)_bcp.onclick=function(){toggleChatParamsPC();};var _bcm=document.getElementById('btn-chat-params-mobile');if(_bcm)_bcm.onclick=function(){toggleChatParams();};
   var _bgen=document.getElementById('btn-generate-pari');if(_bgen)_bgen.onclick=function(){generatePariDuJour();};
   var _bsaisons=document.getElementById('itab-saisons');if(_bsaisons)_bsaisons.onclick=function(){swInner('saisons',this);};
+  var _bmondial=document.getElementById('itab-mondial');if(_bmondial)_bmondial.onclick=function(){swInner('mondial',this);loadMondial2026();};
   var _brcal=document.getElementById('btn-refresh-cal');if(_brcal)_brcal.onclick=loadCalendrier;
   var _bcomp=document.getElementById('btn-comparer');if(_bcomp)_bcomp.onclick=runComparateur;
   document.querySelectorAll('[data-action-comp="init"]').forEach(function(b){
