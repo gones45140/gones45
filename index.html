@@ -4760,6 +4760,15 @@ async function loadTennisSaisons(el, nom) {
     +'<div class="t-chip" data-player="Barbora Krejcikova">Krejcikova</div>'
     +'</div>'
 
+    +'<div style="display:flex;gap:8px;margin-bottom:8px;align-items:center;">'
+    +'<div style="font-size:9px;color:#4f5d88;flex-shrink:0;">Année :</div>'
+    +'<div style="display:flex;gap:4px;" id="tennis-year-chips">'
+    +'<div class="t-chip active" data-year="2026">2026</div>'
+    +'<div class="t-chip" data-year="2025">2025</div>'
+    +'<div class="t-chip" data-year="2024">2024</div>'
+    +'<div class="t-chip" data-year="2023">2023</div>'
+    +'</div>'
+    +'</div>'
     +'<div style="display:flex;gap:8px;margin-bottom:8px;">'
     +'<input id="tennis-search-input" class="fi" placeholder="Ou tape un nom..." style="flex:1;font-size:12px;">'
     +'<button id="tennis-search-btn" style="padding:8px 14px;border-radius:var(--r6);border:none;background:var(--a);color:#fff;font-size:11px;font-weight:700;cursor:pointer;">🔍</button>'
@@ -4798,14 +4807,25 @@ async function loadTennisSaisons(el, nom) {
   document.getElementById('tennis-search-input').onkeydown = function(e){
     if(e.key==='Enter') { var q=this.value.trim(); if(q) searchTennisPlayer(q); }
   };
-  // Chips pré-sélection
-  document.querySelectorAll('.t-chip').forEach(function(chip){
+  // Chips pré-sélection joueur
+  document.querySelectorAll('.t-chip[data-player]').forEach(function(chip){
     chip.addEventListener('click', function(){
-      document.querySelectorAll('.t-chip').forEach(function(c){ c.classList.remove('active'); });
+      document.querySelectorAll('.t-chip[data-player]').forEach(function(c){ c.classList.remove('active'); });
       chip.classList.add('active');
       var player = chip.dataset.player;
       document.getElementById('tennis-search-input').value = player;
       searchTennisPlayer(player);
+    });
+  });
+  // Chips année
+  document.querySelectorAll('.t-chip[data-year]').forEach(function(chip){
+    chip.addEventListener('click', function(){
+      document.querySelectorAll('.t-chip[data-year]').forEach(function(c){ c.classList.remove('active'); });
+      chip.classList.add('active');
+      _tennisYear = chip.dataset.year;
+      // Relancer la recherche si un joueur est déjà affiché
+      var inp = document.getElementById('tennis-search-input');
+      if(inp && inp.value.trim()) searchTennisPlayer(inp.value.trim());
     });
   });
   document.getElementById('tennis-h2h-btn').onclick = function(){
@@ -4971,7 +4991,7 @@ async function searchTennisPlayer(nom) {
     if(tavilyKey && groqKey) {
       // Recherche multi-sources
       var fullName = nom; var webData = await searchTavily('"'+nom+'" tennis stats 2025 2026 win rate surface clay hard grass break points aces sets per match tennisabstract');
-      var eloData = await searchTavily('"'+nom+'" tennis ELO rating clay hard grass tennisabstract surface ranking 2026');
+      var eloData = await searchTavily('"'+nom+'" tennis ELO rating clay hard grass tennisabstract surface ranking '+yr);
       var allData = (webData||'') + ' ' + (eloData||'');
       
       if(allData) {
@@ -5030,7 +5050,7 @@ async function searchTennisPlayer(nom) {
         
         // Bilan saison
         if(data.bilan_saison) {
-          html += '<div style="text-align:center;background:rgba(255,255,255,.04);border-radius:6px;padding:8px;font-size:12px;font-weight:700;color:var(--t1);">'+data.bilan_saison+'</div>';
+          html += '<div style="text-align:center;background:rgba(255,255,255,.04);border-radius:6px;padding:8px;font-size:12px;font-weight:700;color:var(--t1);">'+yr+' — '+data.bilan_saison+'</div>';
         }
         html += '</div>';
 
@@ -5160,7 +5180,7 @@ async function searchTennisPlayer(nom) {
   html += '</div>';
 
   // Boutons liens
-  var taUrl2 = 'https://www.tennisabstract.com/cgi-bin/player.cgi?p='+encodeURIComponent(nom.replace(/ /g,'+'));
+  var yr2 = (typeof _tennisYear!=='undefined'?_tennisYear:'2026'); var taUrl2 = 'https://www.tennisabstract.com/cgi-bin/player.cgi?p='+encodeURIComponent(nom.replace(/ /g,'+'))+'&f=A&wf=&wl=&sd=A&sdf='+yr2+'0101&sdl='+yr2+'1231';
   html += '<div style="display:flex;gap:5px;flex-wrap:wrap;">';
   html += '<a href="'+taUrl2+'" target="_blank" style="flex:1;min-width:80px;padding:8px 4px;background:rgba(77,132,255,.1);border:1px solid rgba(77,132,255,.3);border-radius:6px;color:#4d84ff;font-size:9px;font-weight:700;text-decoration:none;text-align:center;">📊 Tennis Abstract</a>';
   html += '<a href="https://www.atptour.com/en/players/'+nom.toLowerCase().replace(/ /g,'-')+'/overview" target="_blank" style="flex:1;min-width:80px;padding:8px 4px;background:rgba(240,176,32,.1);border:1px solid rgba(240,176,32,.3);border-radius:6px;color:#f0b020;font-size:9px;font-weight:700;text-decoration:none;text-align:center;">🎾 ATP Tour</a>';
@@ -6302,6 +6322,7 @@ async function runComparateur() {
 }
 
 var _pariEquipeFocus = '';
+var _tennisYear = '2026';
 
 function initPariChips() {
   var chipsEl = document.getElementById('pari-equipe-chips');
