@@ -5003,21 +5003,7 @@ async function searchTennisPlayer(nom) {
 
     // Groq extrait les chiffres + traduit
     if(groqKey) {
-      var prompt = 'Texte sur ' + nom + ' (' + yr + '): ' + raw.substring(0, 800) + '
-
-'
-        + 'Fais 2 choses:
-'
-        + '1) Traduis en 2-3 phrases en francais avec UNIQUEMENT les chiffres presents dans le texte.
-'
-        + '2) Extrait ces valeurs si presentes (% entre 0-100, nombre reel): '
-        + 'g=% victoires global, t=% victoires terre, h=% victoires dur, gr=% victoires gazon, '
-        + 's1=% 1er set gagne, s2sets=% matchs en 2 sets, brk=% breaks convertis, brks=% breaks sauves, '
-        + 'aces=nombre aces/match, tb=% tiebreaks joues, jeux=nombre jeux/match
-'
-        + 'Format de reponse: RESUME|||{"g":null,"t":null,"h":null,"gr":null,"s1":null,"s2sets":null,"brk":null,"brks":null,"aces":null,"tb":null,"jeux":null}
-'
-        + 'Mets null si absent. JAMAIS de valeur > 100 pour les %.';
+      var prompt = 'Texte sur ' + nom + ' (' + yr + '): ' + raw.substring(0, 800) + ' Fais 2 choses: 1) Traduis en 2-3 phrases en francais avec UNIQUEMENT les chiffres du texte. 2) Extrait si presentes (% entre 0-100): g=victoires global, t=terre, h=dur, gr=gazon, s1=1er set, s2sets=2 sets, brk=breaks convertis, brks=breaks sauves, aces=aces/match, tb=tiebreaks, jeux=jeux/match. Reponds: RESUME|||{"g":null,"t":null,"h":null,"gr":null,"s1":null,"s2sets":null,"brk":null,"brks":null,"aces":null,"tb":null,"jeux":null} Null si absent, jamais > 100 pour %.' ;
 
       var r = await fetch('https://api.groq.com/openai/v1/chat/completions', {
         method: 'POST',
