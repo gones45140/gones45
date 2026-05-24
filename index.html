@@ -4987,14 +4987,15 @@ async function searchTennisPlayer(nom) {
   var taUrl = 'https://www.tennisabstract.com/cgi-bin/player.cgi?p='+encodeURIComponent(nom);
   var html = '';
 
+  var yr = (typeof _tennisYear!=='undefined'?_tennisYear:'2026');
   try {
     if(tavilyKey && groqKey) {
-      // Recherche multi-sources
-      var fullName = nom; var webData = await searchTavily('"'+nom+'" tennis stats 2025 2026 win rate surface clay hard grass break points aces sets per match tennisabstract');
+      var webData = await searchTavily('"'+nom+'" tennis stats '+yr+' win rate surface clay hard grass break points aces sets per match tennisabstract');
       var eloData = await searchTavily('"'+nom+'" tennis ELO rating clay hard grass tennisabstract surface ranking '+yr);
       var allData = (webData||'') + ' ' + (eloData||'');
+      console.log('[Tennis] allData length:', allData.trim().length);
       
-      if(allData) {
+      if(allData && allData.trim().length > 10) {
         var prompt = 'Tu es expert stats tennis pour les paris sportifs. Voici des donnees sur '+nom+' : '+allData.substring(0,1400)+'.'
           +' Reponds UNIQUEMENT en JSON valide avec cette structure exacte (pas de markdown, pas de texte avant ou apres) :'
           +'{'
