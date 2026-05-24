@@ -3,7 +3,7 @@
 <html lang="fr">
 <head>
 <meta charset="UTF-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-eval' 'unsafe-inline' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com; connect-src 'self' https://api.groq.com https://api.tavily.com https://fd-proxy.touraine-antoine.workers.dev https://media.api-sports.io https://api.football-data.org; img-src 'self' data: https: blob:; style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com;">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-eval' 'unsafe-inline' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com; connect-src 'self' https://api.groq.com https://api.tavily.com https://fd-proxy.touraine-antoine.workers.dev https://media.api-sports.io https://api.football-data.org https://api-web.nhle.com https://statsapi.mlb.com https://www.thesportsdb.com https://cdn.jsdelivr.net; img-src 'self' data: https: blob:; style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com;">
 <meta http-equiv="Content-Security-Policy" content="default-src 'self' 'unsafe-inline' 'unsafe-eval' https: data: blob:;">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
 <title>GONES45</title>
@@ -897,8 +897,8 @@ input[type="date"],input[type="time"]{color-scheme:dark;}
       <div class="fg" style="margin-bottom:10px"><label class="fl" style="color:var(--t3)">📡 Lien Flashscore (optionnel)</label><input id="u-link2" class="fi" placeholder="https://www.flashscore.fr/equipe/…"></div>
       <div class="fg" style="margin-bottom:8px;"><label class="fl">📌 Note rapide</label><input id="u-note" class="fi" placeholder="Ex: Under 3.5 buts, forme à domicile…"></div>
       <div style="display:flex;gap:6px;margin-bottom:10px;">
-        <button id="u-type-club" onclick="setUnitType('club')" style="flex:1;padding:9px;border-radius:var(--r6);border:2px solid rgba(77,132,255,.5);background:rgba(77,132,255,.12);color:#7aaaff;font-size:11px;font-weight:700;cursor:pointer;">⚽ Club / Équipe</button>
-        <button id="u-type-joueur" onclick="setUnitType('joueur')" style="flex:1;padding:9px;border-radius:var(--r6);border:2px solid var(--b2);background:var(--bg3);color:var(--t3);font-size:11px;font-weight:700;cursor:pointer;">👤 Joueur / Buteur</button>
+        <button id="u-type-club" data-action="unit-type-club" style="flex:1;padding:9px;border-radius:var(--r6);border:2px solid rgba(77,132,255,.5);background:rgba(77,132,255,.12);color:#7aaaff;font-size:11px;font-weight:700;cursor:pointer;">⚽ Club / Équipe</button>
+        <button id="u-type-joueur" data-action="unit-type-joueur" style="flex:1;padding:9px;border-radius:var(--r6);border:2px solid var(--b2);background:var(--bg3);color:var(--t3);font-size:11px;font-weight:700;cursor:pointer;">👤 Joueur / Buteur</button>
       </div>
       <input type="hidden" id="u-type" value="club">
       <button class="btn btn-p" onclick="addUnit()">Ajouter</button>
@@ -1270,6 +1270,7 @@ var TEAM_IDS = {
     'Stuttgart':10,'VfB Stuttgart':10,
   };
 var _currentUnitNom = "";
+var _unitType = "club";
 var _CP_TYPES = ['Victoire','Nul','Défaite','Over 2.5','Under 2.5','BTS Oui','BTS Non','HC -1','HC +1','Mi-temps','1er buteur'];
 var _chatParams = { equipe:'', lieu:'domicile', types:['Victoire','Over 2.5','BTS Oui'], champOnly:false };
 
@@ -2847,10 +2848,14 @@ function closeEditUnit(){var m=$i('edit-unit-modal');if(m)m.style.display='none'
 function saveEditUnit(){
   var i=parseInt($i('edit-unit-idx').value);
   var u=state.u[i];if(!u)return;
-  u.n=($i('edit-unit-name').value||u.n).trim().toUpperCase();
+  var newName=($i('edit-unit-name').value||u.n).trim().toUpperCase();
+  // Si le nom change, on garde le logo existant
+  u.n=newName;
   u.s=$i('edit-unit-stars').value||u.s;
   u.note=$i('edit-unit-note').value.trim();
   u.color=$i('edit-unit-color').value||u.color;
+  // Conserver le logoUrl existant — ne pas l'effacer
+  // u.logoUrl reste intact
   save();render();closeEditUnit();
 }
 function rmUnit(i){var u=state.u[parseInt(i)];if(u&&confirm('Supprimer '+u.n+' ?')){state.u.splice(parseInt(i),1);save();}}
@@ -4429,15 +4434,251 @@ async function loadVideoHighlights(el, nom, col, sport) {
   }
 }
 
+
+// ── NHL / MLB IDs ──
+var NBA_TEAMS = {
+  'Los Angeles Lakers': {id:'1610612747', abbr:'LAL'},
+  'Boston Celtics': {id:'1610612738', abbr:'BOS'},
+  'Golden State Warriors': {id:'1610612744', abbr:'GSW'},
+  'Miami Heat': {id:'1610612748', abbr:'MIA'},
+  'Chicago Bulls': {id:'1610612741', abbr:'CHI'},
+  'New York Knicks': {id:'1610612752', abbr:'NYK'},
+  'Denver Nuggets': {id:'1610612743', abbr:'DEN'},
+  'Phoenix Suns': {id:'1610612756', abbr:'PHX'},
+  'Milwaukee Bucks': {id:'1610612749', abbr:'MIL'},
+  'Dallas Mavericks': {id:'1610612742', abbr:'DAL'},
+};
+
+var NFL_TEAMS = {
+  'Kansas City Chiefs': {id:'KC'},
+  'San Francisco 49ers': {id:'SF'},
+  'Philadelphia Eagles': {id:'PHI'},
+  'Dallas Cowboys': {id:'DAL'},
+  'Buffalo Bills': {id:'BUF'},
+  'Baltimore Ravens': {id:'BAL'},
+  'Cincinnati Bengals': {id:'CIN'},
+  'Miami Dolphins': {id:'MIA'},
+  'Green Bay Packers': {id:'GB'},
+  'New England Patriots': {id:'NE'},
+};
+
+var NHL_TEAMS = {
+  'Colorado Avalanche': {abbr:'COL', id:21, mlb:false},
+  'Carolina Hurricanes': {abbr:'CAR', id:12, mlb:false},
+  'Vegas Golden Knights': {abbr:'VGK', id:54, mlb:false},
+  'Tampa Bay Lightning': {abbr:'TBL', id:14, mlb:false},
+  'Boston Bruins': {abbr:'BOS', id:6, mlb:false},
+  'Toronto Maple Leafs': {abbr:'TOR', id:10, mlb:false},
+  'New York Rangers': {abbr:'NYR', id:3, mlb:false},
+  'Edmonton Oilers': {abbr:'EDM', id:22, mlb:false},
+};
+
+var MLB_TEAMS = {
+  'LA Dodgers': {id:119},
+  'Los Angeles Dodgers': {id:119},
+  'New York Yankees': {id:147},
+  'Atlanta Braves': {id:144},
+  'Houston Astros': {id:117},
+  'Boston Red Sox': {id:111},
+  'Chicago Cubs': {id:112},
+  'San Francisco Giants': {id:137},
+  'New York Mets': {id:121},
+  'Philadelphia Phillies': {id:143},
+};
+
+async function loadNhlSaisons(el, nom) {
+  var teamInfo = NHL_TEAMS[nom];
+  if(!teamInfo) {
+    el.innerHTML = '<div style="color:var(--t3);text-align:center;padding:20px;">Équipe NHL non reconnue.<br><small>Ajoute-la dans la liste NHL_TEAMS</small></div>';
+    return;
+  }
+  el.innerHTML = '<div style="display:flex;align-items:center;gap:8px;padding:20px;color:var(--t3);"><div style="width:14px;height:14px;border:2px solid rgba(77,132,255,.2);border-top-color:#4d84ff;border-radius:50%;animation:spin .8s linear infinite;"></div>Chargement stats NHL...</div>';
+
+  try {
+    // Classement en cours
+    var standResp = await fetch('https://api-web.nhle.com/v1/standings/now');
+    var standData = await standResp.json();
+    var teams = standData.standings||[];
+    var team = teams.find(function(t){ return (t.teamAbbrev&&t.teamAbbrev.default)===teamInfo.abbr; });
+
+    // Derniers matchs
+    var schedResp = await fetch('https://api-web.nhle.com/v1/club-schedule-season/'+teamInfo.abbr+'/now');
+    var schedData = await schedResp.json();
+    var games = (schedData.games||[]).filter(function(g){ return g.gameState==='OFF'||g.gameState==='FINAL'; }).slice(-5).reverse();
+
+    var html = '<div style="padding:4px 0;">';
+
+    if(team) {
+      var pts = team.points||0;
+      var w = team.wins||0;
+      var l = team.losses||0;
+      var otl = team.otLosses||0;
+      var gf = team.goalFor||0;
+      var ga = team.goalAgainst||0;
+      var rank = team.wildcardSequence||team.conferenceSequence||'?';
+
+      html += '<div class="cwrap" style="margin-bottom:10px;">';
+      html += '<div style="font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#4f5d88;margin-bottom:10px;">Saison 2025-2026 — Classement</div>';
+      html += '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;">';
+      var statsCards = [
+        {l:'Points', v:pts, c:'#4d84ff'},
+        {l:'Victoires', v:w, c:'#1ed760'},
+        {l:'Défaites', v:l+(otl?'+'+otl+' OT':''), c:'#ff4545'},
+        {l:'Buts marqués', v:gf, c:'#f0b020'},
+        {l:'Buts encaissés', v:ga, c:'#ff7b54'},
+        {l:'Diff.', v:(gf-ga>0?'+':'')+(gf-ga), c:gf>=ga?'#1ed760':'#ff4545'},
+      ];
+      statsCards.forEach(function(s){
+        html += '<div style="text-align:center;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:8px;padding:10px 4px;">';
+        html += '<div style="font-size:20px;font-weight:800;color:'+s.c+';">'+s.v+'</div>';
+        html += '<div style="font-size:9px;color:var(--t3);margin-top:2px;">'+s.l+'</div>';
+        html += '</div>';
+      });
+      html += '</div></div>';
+    }
+
+    if(games.length) {
+      html += '<div class="cwrap">';
+      html += '<div style="font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#4f5d88;margin-bottom:10px;">Forme récente</div>';
+      html += '<div style="display:flex;gap:6px;">';
+      games.forEach(function(g){
+        var isDom = g.homeTeam&&g.homeTeam.abbrev===teamInfo.abbr;
+        var teamScore = isDom ? (g.homeTeam.score||0) : (g.awayTeam.score||0);
+        var oppScore = isDom ? (g.awayTeam.score||0) : (g.homeTeam.score||0);
+        var oppName = isDom ? (g.awayTeam&&g.awayTeam.abbrev||'?') : (g.homeTeam&&g.homeTeam.abbrev||'?');
+        var won = teamScore > oppScore;
+        var col = won ? '#1ed760' : '#ff4545';
+        var d = new Date(g.gameDate);
+        var dateStr = d.toLocaleDateString('fr-FR',{day:'numeric',month:'short'});
+        html += '<div style="flex:1;text-align:center;background:var(--s1);border-radius:10px;padding:6px 3px;border-top:3px solid '+col+';border:1px solid rgba(255,255,255,.06);border-top:3px solid '+col+';">';
+        html += '<div style="font-size:13px;">🏒</div>';
+        html += '<div style="font-size:17px;font-weight:700;color:'+col+';">'+teamScore+'-'+oppScore+'</div>';
+        html += '<div style="font-size:9px;color:var(--t3);">'+(isDom?'vs':'@')+' '+oppName+'</div>';
+        html += '<div style="font-size:8px;color:rgba(255,255,255,.25);">'+dateStr+'</div>';
+        html += '</div>';
+      });
+      html += '</div></div>';
+    }
+
+    html += '</div>';
+    el.innerHTML = html;
+  } catch(e) {
+    el.innerHTML = '<div style="color:#ff4545;text-align:center;padding:20px;">Erreur chargement NHL API<br><small>'+e.message+'</small></div>';
+  }
+}
+
+async function loadMlbSaisons(el, nom) {
+  var teamInfo = MLB_TEAMS[nom];
+  if(!teamInfo) {
+    el.innerHTML = '<div style="color:var(--t3);text-align:center;padding:20px;">Équipe MLB non reconnue.</div>';
+    return;
+  }
+  el.innerHTML = '<div style="display:flex;align-items:center;gap:8px;padding:20px;color:var(--t3);"><div style="width:14px;height:14px;border:2px solid rgba(77,132,255,.2);border-top-color:#4d84ff;border-radius:50%;animation:spin .8s linear infinite;"></div>Chargement stats MLB...</div>';
+
+  try {
+    var r = await fetch('https://statsapi.mlb.com/api/v1/standings?leagueId=103,104&season=2026&hydrate=team,record');
+    var d = await r.json();
+    var teamRecord = null;
+    (d.records||[]).forEach(function(div){
+      (div.teamRecords||[]).forEach(function(tr){
+        if(tr.team&&tr.team.id===teamInfo.id) teamRecord=tr;
+      });
+    });
+
+    // Derniers matchs
+    var today = new Date().toISOString().split('T')[0];
+    var past = new Date(Date.now()-15*24*3600*1000).toISOString().split('T')[0];
+    var sr = await fetch('https://statsapi.mlb.com/api/v1/schedule?teamId='+teamInfo.id+'&startDate='+past+'&endDate='+today+'&sportId=1&gameType=R');
+    var sd = await sr.json();
+    var games = [];
+    (sd.dates||[]).forEach(function(date){
+      (date.games||[]).forEach(function(g){
+        if(g.status&&g.status.abstractGameState==='Final') games.push(g);
+      });
+    });
+    games = games.slice(-5).reverse();
+
+    var html = '<div style="padding:4px 0;">';
+
+    if(teamRecord) {
+      var w=teamRecord.wins||0, l=teamRecord.losses||0;
+      var pct=(teamRecord.winningPercentage||'0');
+      html += '<div class="cwrap" style="margin-bottom:10px;">';
+      html += '<div style="font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#4f5d88;margin-bottom:10px;">Saison 2026 — Bilan</div>';
+      html += '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;">';
+      [
+        {l:'Victoires', v:w, c:'#1ed760'},
+        {l:'Défaites', v:l, c:'#ff4545'},
+        {l:'% victoires', v:pct, c:'#f0b020'},
+      ].forEach(function(s){
+        html += '<div style="text-align:center;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:8px;padding:10px 4px;">';
+        html += '<div style="font-size:22px;font-weight:800;color:'+s.c+';">'+s.v+'</div>';
+        html += '<div style="font-size:9px;color:var(--t3);margin-top:2px;">'+s.l+'</div>';
+        html += '</div>';
+      });
+      html += '</div></div>';
+    }
+
+    if(games.length) {
+      html += '<div class="cwrap">';
+      html += '<div style="font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#4f5d88;margin-bottom:10px;">Forme récente</div>';
+      html += '<div style="display:flex;gap:6px;">';
+      games.forEach(function(g){
+        var isDom = g.teams&&g.teams.home&&g.teams.home.team&&g.teams.home.team.id===teamInfo.id;
+        var teamScore = isDom ? (g.teams.home.score||0) : (g.teams.away.score||0);
+        var oppScore = isDom ? (g.teams.away.score||0) : (g.teams.home.score||0);
+        var oppTeam = isDom ? (g.teams.away.team&&g.teams.away.team.name||'?') : (g.teams.home.team&&g.teams.home.team.name||'?');
+        var oppShort = oppTeam.split(' ').pop().substring(0,6);
+        var won = teamScore > oppScore;
+        var col = won ? '#1ed760' : '#ff4545';
+        var dateStr = (g.gameDate||'').split('T')[0].substring(5).replace('-','/');
+        html += '<div style="flex:1;text-align:center;background:var(--s1);border-radius:10px;padding:6px 3px;border-top:3px solid '+col+';border:1px solid rgba(255,255,255,.06);border-top:3px solid '+col+';">';
+        html += '<div style="font-size:13px;">⚾</div>';
+        html += '<div style="font-size:17px;font-weight:700;color:'+col+';">'+teamScore+'-'+oppScore+'</div>';
+        html += '<div style="font-size:9px;color:var(--t3);">'+(isDom?'vs':'@')+' '+oppShort+'</div>';
+        html += '<div style="font-size:8px;color:rgba(255,255,255,.25);">'+dateStr+'</div>';
+        html += '</div>';
+      });
+      html += '</div></div>';
+    }
+
+    html += '</div>';
+    el.innerHTML = html;
+  } catch(e) {
+    el.innerHTML = '<div style="color:#ff4545;text-align:center;padding:20px;">Erreur MLB API</div>';
+  }
+}
+
+
+async function loadNbaSaisons(el, nom) {
+  var teamInfo = NBA_TEAMS[nom];
+  if(!teamInfo) { el.innerHTML='<div style="color:var(--t3);text-align:center;padding:20px;">Equipe NBA non reconnue.</div>'; return; }
+  el.innerHTML='<div style="padding:20px;color:var(--t3);text-align:center;">🏀 Stats NBA — Saison 2025-2026<br><br><a href="https://www.nba.com/stats/team/'+teamInfo.id+'" target="_blank" style="color:#4d84ff;font-size:12px;">Voir les stats sur NBA.com</a><br><br><a href="https://www.basketball-reference.com/teams/'+teamInfo.abbr+'/2026.html" target="_blank" style="color:#f0b020;font-size:12px;">Stats détaillées sur Basketball-Reference</a></div>';
+}
+
+async function loadNflSaisons(el, nom) {
+  var teamInfo = NFL_TEAMS[nom];
+  if(!teamInfo) { el.innerHTML='<div style="color:var(--t3);text-align:center;padding:20px;">Equipe NFL non reconnue.</div>'; return; }
+  el.innerHTML='<div style="padding:20px;color:var(--t3);text-align:center;">🏈 Stats NFL — Saison 2025-2026<br><br><a href="https://www.nfl.com/teams" target="_blank" style="color:#4d84ff;font-size:12px;">Voir sur NFL.com</a><br><br><a href="https://www.pro-football-reference.com/teams/'+teamInfo.id.toLowerCase()+'/2025.htm" target="_blank" style="color:#f0b020;font-size:12px;">Stats sur Pro-Football-Reference</a></div>';
+}
+
 async function loadTeamSaisons() {
   var el = document.getElementById('ip-saisons');
   if(!el) return;
 
   // Récupérer nom depuis le titre affiché
   var nom = (typeof _currentTeam !== 'undefined' ? _currentTeam : '') || _currentUnitNom || '';
-  if(!nom) { el.innerHTML = '<div class="empty">Équipe non trouvée</div>'; return; }
+  if(!nom) { el.innerHTML = '<div class="empty">Equipe non trouvee</div>'; return; }
 
-  // Trouver ID
+  // Détection sport
+  var uObj2 = state.u.find(function(u){ return u.n === nom; }) || {};
+  var sport2 = uObj2.sport || '⚽';
+  if(sport2==='🏒'||sport2==='🏒🇺🇸'||NHL_TEAMS[nom]) { loadNhlSaisons(el, nom); return; }
+  if(sport2==='⚾'||sport2==='⚾🇺🇸'||MLB_TEAMS[nom]) { loadMlbSaisons(el, nom); return; }
+  if(sport2==='🏀'||sport2==='🏀🇺🇸'||NBA_TEAMS[nom]) { loadNbaSaisons(el, nom); return; }
+  if(sport2==='🏈'||sport2==='🏈🇺🇸'||NFL_TEAMS[nom]) { loadNflSaisons(el, nom); return; }
+
+  // Trouver ID football
   var teamId = null;
   for(var k in TEAM_IDS) {
     if(k.toLowerCase()===nom.toLowerCase() || nom.toLowerCase().indexOf(k.toLowerCase())>=0 || k.toLowerCase().indexOf(nom.toLowerCase())>=0) {
@@ -4742,14 +4983,12 @@ function renderSaisonsChart(el, results, nom) {
       html += '<div style="display:flex;gap:6px;align-items:center;margin-bottom:8px;">';
       st.last5.forEach(function(m){
         var col = m.w?'#1ed760':m.d?'#f0b020':'#ff4545';
-        var bg = m.w?'rgba(30,215,96,.15)':m.d?'rgba(240,176,32,.15)':'rgba(255,69,69,.15)';
-        var letter = m.w?'V':m.d?'N':'D';
-        var advShort = (m.adv||'').split(' ').slice(0,1).join('').substring(0,6);
-        html += '<div style="flex:1;text-align:center;background:'+bg+';border:1px solid '+col+';border-radius:8px;padding:5px 2px;">';
-        html += '<div style="font-size:12px;line-height:1.2;">'+(m.compIcon||'⚽')+'</div>';
-        html += '<div style="font-size:13px;font-weight:800;color:'+col+';line-height:1.2;">'+letter+'</div>';
-        html += '<div style="font-size:8px;color:rgba(255,255,255,.5);line-height:1.3;">'+m.score+'</div>';
-        html += '<div style="font-size:7px;color:rgba(255,255,255,.3);line-height:1.2;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">'+advShort+'</div>';
+        var advShort = (m.adv||'').split(' ')[0].substring(0,8);
+        html += '<div style="flex:1;text-align:center;background:var(--s1);border-radius:10px;padding:7px 3px;border-top:3px solid '+col+';border-left:1px solid rgba(255,255,255,.06);border-right:1px solid rgba(255,255,255,.06);border-bottom:1px solid rgba(255,255,255,.06);">';
+        html += '<div style="font-size:14px;line-height:1.3;">'+(m.compIcon||'⚽')+'</div>';
+        html += '<div style="font-size:18px;font-weight:800;color:'+col+';line-height:1.2;">'+m.score+'</div>';
+        html += '<div style="font-size:10px;color:var(--t2);line-height:1.4;font-weight:600;">'+advShort+'</div>';
+        html += '<div style="font-size:9px;color:var(--t3);line-height:1.3;">'+m.date+'</div>';
         html += '</div>';
       });
       if(st.serie>1){
@@ -4940,11 +5179,9 @@ async function loadTeamAI(nom) {
   if (isJoueur) prompt = 'Tu es un expert paris sportifs spécialisé dans les stats de joueurs. Voici mes stats de paris sur le joueur '+nom+' : '+statsPerso+'.';
   if (webCtx) prompt += ' Infos récentes sur cette équipe : '+webCtx+'.';
   if (isJoueur) {
-    prompt += ' En 3-4 phrases max : stats récentes du joueur (buts, passes), forme actuelle, et 1-2 types de paris pertinents (1er buteur, marque à tout moment, nombre de buts). Sois direct. Reponds en francais.';
-  } else if (vraisStats) {
-    prompt += ' Ces stats sont EXACTES issues de football-data.org. Utilise UNIQUEMENT ces chiffres, ne les modifie pas. En 3 phrases : analyse la forme, identifie les paris les plus solides avec les vrais pourcentages, et donne une recommandation concrete. Reponds en francais.';
+    prompt += ' En 3-4 phrases max : stats recentes du joueur (buts, passes), forme actuelle, et 1-2 types de paris pertinents. Sois direct. En francais.';
   } else {
-    prompt += ' En 3-4 phrases max, donne une analyse concise : forme actuelle, tendances, et 1-2 types de paris pertinents. Sois direct. Reponds en francais.';
+    prompt += ' Ces stats sont EXACTES. Utilise UNIQUEMENT ces chiffres. En 3 phrases : analyse la forme, identifie les paris les plus solides avec les vrais pourcentages, et donne une recommandation concrete. En francais.';
   }
 
   try {
@@ -5533,6 +5770,8 @@ var _bcp=document.getElementById('btn-chat-params-pc');if(_bcp)_bcp.onclick=func
     else if(action === 'cp-add-mobile') { addCpType('mobile'); }
     else if(action === 'cp-add-pc') { addCpType('pc'); }
     else if(action === 'pari-equipe') { setPariEquipe(el); }
+    else if(action === 'unit-type-club') { setUnitType('club'); }
+    else if(action === 'unit-type-joueur') { setUnitType('joueur'); }
   });
   render();updMise();buildSbRows();setTimeout(initPariChips,100);buildDtRows();buildArjelRows();renderCrash();renderMmRows();renderMmRowsSimple();updateCompList();calcVb();calcLay();calcFreebet();renderArchive();updateBankTotal();setTimeout(initPariChips,200);_apStyle=localStorage.getItem('g45_ap_style')||'halo';_apIntensity=parseInt(localStorage.getItem('g45_ap_intensity')||'40');var _apInp=document.getElementById('ap-intensity');if(_apInp)_apInp.value=_apIntensity;setCardStyle(_apStyle);};
 
