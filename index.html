@@ -1257,6 +1257,8 @@ var TEAM_IDS = {
     'Benfica':1903,'SL Benfica':1903,
     'Porto':503,'FC Porto':503,
     'Ajax':678,'AFC Ajax':678,
+    'PSV':674,'PSV Eindhoven':674,
+    'Palmeiras':1957,'SE Palmeiras':1957,
     'Lyon':523,'Olympique Lyonnais':523,'OL':523,
     'Marseille':516,'Olympique de Marseille':516,'OM':516,
     'Monaco':548,'AS Monaco':548,
@@ -5055,129 +5057,110 @@ async function loadNbaSaisons(el, nom) {
     el.innerHTML='<div style="color:var(--t3);text-align:center;padding:20px;">Equipe NBA non reconnue.<br><small>Ajoute-la dans NBA_TEAMS</small></div>';
     return;
   }
-  
-  el.innerHTML='<div style="display:flex;align-items:center;gap:8px;padding:20px;color:var(--t3);"><div style="width:14px;height:14px;border:2px solid rgba(77,132,255,.2);border-top-color:#4d84ff;border-radius:50%;animation:spin .8s linear infinite;"></div>Chargement stats NBA...</div>';
 
-  try {
-    // NBA Stats API officielle - pas de clé requise
-    var season = '2025-26';
-    var standUrl = 'https://stats.nba.com/stats/leaguestandingsv3?LeagueID=00&Season='+season+'&SeasonType=Regular+Season';
-    var resp = await fetch(standUrl, {
-      headers: {
-        'Accept': 'application/json, text/plain, */*',
-        'Referer': 'https://www.nba.com',
-        'Origin': 'https://www.nba.com',
-        'x-nba-stats-origin': 'stats',
-        'x-nba-stats-token': 'true'
-      }
-    });
-    var data = await resp.json();
-    
-    var rows = data.resultSets[0].rowSet;
-    var headers = data.resultSets[0].headers;
-    var teamIdx = headers.indexOf('TeamID');
-    var winIdx = headers.indexOf('WINS');
-    var lossIdx = headers.indexOf('LOSSES');
-    var pctIdx = headers.indexOf('WinPCT');
-    var rankIdx = headers.indexOf('PlayoffRank');
-    var nameIdx = headers.indexOf('TeamName');
-    var confIdx = headers.indexOf('Conference');
-    
-    var teamRow = rows.find(function(r){ return String(r[teamIdx])===String(teamInfo.id); });
-    
-    var html = '<div style="padding:4px 0;">';
-    
-    if(teamRow) {
-      var w = teamRow[winIdx]||0;
-      var l = teamRow[lossIdx]||0;
-      var pct = teamRow[pctIdx]||0;
-      var rank = teamRow[rankIdx]||'?';
-      var conf = teamRow[confIdx]||'';
-      
-      html += '<div class="cwrap" style="margin-bottom:10px;">';
-      html += '<div style="font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#4f5d88;margin-bottom:10px;">🏀 Saison NBA '+season+'</div>';
-      html += '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:8px;">';
-      [
-        {l:'Victoires', v:w, c:'#1ed760'},
-        {l:'Défaites', v:l, c:'#ff4545'},
-        {l:'% victoires', v:Math.round(pct*100)+'%', c:'#f0b020'},
-      ].forEach(function(s){
-        html += '<div style="text-align:center;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:8px;padding:10px 4px;">';
-        html += '<div style="font-size:22px;font-weight:800;color:'+s.c+';">'+s.v+'</div>';
-        html += '<div style="font-size:9px;color:var(--t3);margin-top:2px;">'+s.l+'</div>';
-        html += '</div>';
-      });
-      html += '</div>';
-      html += '<div style="text-align:center;font-size:11px;color:var(--t3);">Rang Playoffs : #'+rank+' '+conf+'</div>';
-      html += '</div>';
-    }
+  var ls = 'display:flex;align-items:center;gap:10px;padding:10px 14px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:8px;margin-bottom:6px;text-decoration:none;';
+  var ll = 'font-size:12px;font-weight:700;flex:1;';
+  var la = 'color:var(--t3);';
+  var id = teamInfo.id;
+  var ab = teamInfo.abbr;
 
-    // Derniers matchs via NBA schedule
-    var schedUrl = 'https://stats.nba.com/stats/teamgamelog?TeamID='+teamInfo.id+'&Season='+season+'&SeasonType=Regular+Season';
-    var schedResp = await fetch(schedUrl, {
-      headers: {
-        'Referer': 'https://www.nba.com',
-        'x-nba-stats-origin': 'stats',
-        'x-nba-stats-token': 'true'
-      }
-    });
-    var schedData = await schedResp.json();
-    var games = schedData.resultSets[0].rowSet.slice(0,5);
-    var gHeaders = schedData.resultSets[0].headers;
-    
-    if(games.length) {
-      var matchupIdx = gHeaders.indexOf('MATCHUP');
-      var wlIdx = gHeaders.indexOf('WL');
-      var ptsIdx = gHeaders.indexOf('PTS');
-      var dateIdx = gHeaders.indexOf('GAME_DATE');
-      
-      html += '<div class="cwrap">';
-      html += '<div style="font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#4f5d88;margin-bottom:10px;">Forme récente</div>';
-      html += '<div style="display:flex;gap:6px;">';
-      
-      games.forEach(function(g){
-        var won = g[wlIdx]==='W';
-        var col = won?'#1ed760':'#ff4545';
-        var matchup = (g[matchupIdx]||'').replace('LAL ','').replace('vs. ','vs ').replace('@ ','@');
-        var opp = matchup.split(/vs |@ /)[1]||'?';
-        var oppShort = opp.substring(0,4);
-        var pts = g[ptsIdx]||'?';
-        var date = (g[dateIdx]||'').substring(0,5);
-        
-        html += '<div style="flex:1;text-align:center;background:var(--s1);border-radius:10px;padding:6px 3px;border-top:3px solid '+col+';border:1px solid rgba(255,255,255,.06);border-top:3px solid '+col+';">';
-        html += '<div style="font-size:13px;">🏀</div>';
-        html += '<div style="font-size:16px;font-weight:700;color:'+col+';">'+pts+'</div>';
-        html += '<div style="font-size:9px;color:var(--t2);">'+oppShort+'</div>';
-        html += '<div style="font-size:8px;color:rgba(255,255,255,.25);">'+date+'</div>';
-        html += '</div>';
-      });
-      html += '</div></div>';
-    }
+  var html = '<div style="padding:4px 0;">';
 
-    // Liens
-    html += '<div class="cwrap">';
-    html += '<a href="https://www.nba.com/team/'+teamInfo.id+'" target="_blank" style="display:flex;align-items:center;gap:10px;padding:10px 14px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:8px;margin-bottom:6px;text-decoration:none;"><div style="font-size:12px;font-weight:700;color:#c8102e;flex:1;">🏀 Page officielle NBA</div><div style="color:var(--t3);">→</div></a>';
-    html += '<a href="https://www.basketball-reference.com/teams/'+teamInfo.abbr+'/2026.html" target="_blank" style="display:flex;align-items:center;gap:10px;padding:10px 14px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:8px;margin-bottom:6px;text-decoration:none;"><div style="font-size:12px;font-weight:700;color:#4d84ff;flex:1;">📊 Basketball-Reference</div><div style="color:var(--t3);">→</div></a>';
-    html += '</div>';
+  // ── Équipe ──
+  html += '<div class="cwrap" style="margin-bottom:10px;">';
+  html += '<div style="font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#4f5d88;margin-bottom:10px;">🏀 ' + nom + ' — Saison 2025-26</div>';
+  html += '<a href="https://www.nba.com/team/'+id+'" target="_blank" style="'+ls+'"><div style="'+ll+'color:#c8102e;">🏀 Page officielle NBA</div><div style="'+la+'">→</div></a>';
+  html += '<a href="https://www.nba.com/stats/team/'+id+'?Season=2025-26" target="_blank" style="'+ls+'"><div style="'+ll+'color:#f0b020;">📊 Stats équipe — NBA.com</div><div style="'+la+'">→</div></a>';
+  html += '<a href="https://www.basketball-reference.com/teams/'+ab+'/2026.html" target="_blank" style="'+ls+'"><div style="'+ll+'color:#4d84ff;">📈 Basketball-Reference 2025-26</div><div style="'+la+'">→</div></a>';
+  html += '<a href="https://www.nba.com/team/'+id+'/schedule" target="_blank" style="'+ls+'"><div style="'+ll+'color:#1ed760;">📅 Calendrier & Résultats</div><div style="'+la+'">→</div></a>';
+  html += '</div>';
 
-    html += '</div>';
-    el.innerHTML = html;
+  // ── Ligue ──
+  html += '<div class="cwrap" style="margin-bottom:10px;">';
+  html += '<div style="font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#4f5d88;margin-bottom:10px;">🏆 Ligue NBA</div>';
+  html += '<a href="https://www.nba.com/standings" target="_blank" style="'+ls+'"><div style="'+ll+'color:#f0b020;">🏆 Classement NBA (Playoffs)</div><div style="'+la+'">→</div></a>';
+  html += '<a href="https://www.nba.com/stats/leaders?Season=2025-26" target="_blank" style="'+ls+'"><div style="'+ll+'color:#a78bfa;">🥇 Leaders stats saison</div><div style="'+la+'">→</div></a>';
+  html += '<a href="https://www.nba.com/schedule" target="_blank" style="'+ls+'"><div style="'+ll+'color:#22d3ee;">📅 Programme NBA complet</div><div style="'+la+'">→</div></a>';
+  html += '</div>';
 
-  } catch(e) {
-    // Fallback liens directs
-    el.innerHTML = '<div style="padding:10px;">'
-      +'<div class="cwrap">'
-      +'<div style="font-size:11px;color:var(--t3);margin-bottom:10px;">Stats NBA non disponibles directement — liens utiles :</div>'
-      +'<a href="https://www.nba.com/stats/team/'+teamInfo.id+'" target="_blank" style="display:flex;align-items:center;gap:10px;padding:10px 14px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:8px;margin-bottom:6px;text-decoration:none;"><div style="font-size:12px;font-weight:700;color:#c8102e;flex:1;">🏀 Stats sur NBA.com</div><div style="color:var(--t3);">→</div></a>'
-      +'<a href="https://www.basketball-reference.com/teams/'+teamInfo.abbr+'/2026.html" target="_blank" style="display:flex;align-items:center;gap:10px;padding:10px 14px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:8px;margin-bottom:6px;text-decoration:none;"><div style="font-size:12px;font-weight:700;color:#4d84ff;flex:1;">📊 Basketball-Reference</div><div style="color:var(--t3);">→</div></a>'
-      +'</div></div>';
-  }
+  // ── Suivi & Stats avancées ──
+  html += '<div class="cwrap">';
+  html += '<div style="font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#4f5d88;margin-bottom:10px;">📊 Stats avancées & Suivi</div>';
+  html += '<a href="https://www.sofascore.com/basketball/nba" target="_blank" style="'+ls+'"><div style="'+ll+'color:#ff7b54;">⚡ Sofascore NBA</div><div style="'+la+'">→</div></a>';
+  html += '<a href="https://www.espn.com/nba/team/_/abbr/'+ab.toLowerCase()+'" target="_blank" style="'+ls+'"><div style="'+ll+'color:#ff0000;">🎙 ESPN — Fiche équipe</div><div style="'+la+'">→</div></a>';
+  html += '<a href="https://www.basketball-reference.com/leagues/NBA_2026_standings.html" target="_blank" style="'+ls+'"><div style="'+ll+'color:#4d84ff;">📋 Classement détaillé BBRef</div><div style="'+la+'">→</div></a>';
+  html += '</div>';
+
+  html += '</div>';
+  el.innerHTML = html;
 }
 
 async function loadNflSaisons(el, nom) {
   var teamInfo = NFL_TEAMS[nom];
   if(!teamInfo) { el.innerHTML='<div style="color:var(--t3);text-align:center;padding:20px;">Equipe NFL non reconnue.</div>'; return; }
   el.innerHTML='<div style="padding:20px;color:var(--t3);text-align:center;">🏈 Stats NFL — Saison 2025-2026<br><br><a href="https://www.nfl.com/teams" target="_blank" style="color:#4d84ff;font-size:12px;">Voir sur NFL.com</a><br><br><a href="https://www.pro-football-reference.com/teams/'+teamInfo.id.toLowerCase()+'/2025.htm" target="_blank" style="color:#f0b020;font-size:12px;">Stats sur Pro-Football-Reference</a></div>';
+}
+
+async function loadRugbySaisons(el, nom) {
+  var isNRL = nom && (
+    ['Melbourne Storm','Sydney Roosters','Penrith Panthers','Brisbane Broncos','South Sydney Rabbitohs',
+     'Parramatta Eels','Cronulla Sharks','Manly Sea Eagles','Canterbury Bulldogs','New Zealand Warriors',
+     'Gold Coast Titans','Canberra Raiders'].indexOf(nom) >= 0
+  );
+
+  var lienStyle = 'display:flex;align-items:center;gap:10px;padding:10px 14px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:8px;margin-bottom:6px;text-decoration:none;';
+  var labelStyle = 'font-size:12px;font-weight:700;flex:1;';
+  var arr = 'color:var(--t3);';
+
+  var html = '<div style="padding:4px 0;">';
+
+  if(isNRL) {
+    // ── NRL ──
+    html += '<div class="cwrap" style="margin-bottom:10px;">';
+    html += '<div style="font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#4f5d88;margin-bottom:10px;">🏉🇦🇺 NRL — ' + nom + '</div>';
+    html += '<a href="https://www.nrl.com/draw/" target="_blank" style="'+lienStyle+'"><div style="'+labelStyle+'color:#f0b020;">📅 Programme NRL</div><div style="'+arr+'">→</div></a>';
+    html += '<a href="https://www.nrl.com/ladder/" target="_blank" style="'+lienStyle+'"><div style="'+labelStyle+'color:#4d84ff;">🏆 Classement NRL</div><div style="'+arr+'">→</div></a>';
+    html += '<a href="https://www.nrl.com/stats/" target="_blank" style="'+lienStyle+'"><div style="'+labelStyle+'color:#1ed760;">📊 Stats NRL</div><div style="'+arr+'">→</div></a>';
+    html += '<a href="https://www.foxsports.com.au/nrl" target="_blank" style="'+lienStyle+'"><div style="'+labelStyle+'color:#ff7b54;">🦊 Fox Sports NRL</div><div style="'+arr+'">→</div></a>';
+    html += '<a href="https://www.sofascore.com/rugby-league/australia-nrl" target="_blank" style="'+lienStyle+'"><div style="'+labelStyle+'color:#a78bfa;">⚡ Sofascore NRL</div><div style="'+arr+'">→</div></a>';
+    html += '</div>';
+  } else {
+    // ── Rugby Union ──
+    // Bloc Top 14 / Pro D2
+    html += '<div class="cwrap" style="margin-bottom:10px;">';
+    html += '<div style="font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#4f5d88;margin-bottom:10px;">🏉 Rugby XV — Saison 2025-26</div>';
+    html += '<a href="https://www.lnr.fr/top-14/classement" target="_blank" style="'+lienStyle+'"><div style="'+labelStyle+'color:#f0b020;">🏆 Classement Top 14</div><div style="'+arr+'">→</div></a>';
+    html += '<a href="https://www.lnr.fr/top-14/calendrier-et-resultats" target="_blank" style="'+lienStyle+'"><div style="'+labelStyle+'color:#4d84ff;">📅 Calendrier Top 14</div><div style="'+arr+'">→</div></a>';
+    html += '<a href="https://www.lnr.fr/top-14/stats" target="_blank" style="'+lienStyle+'"><div style="'+labelStyle+'color:#1ed760;">📊 Stats Top 14</div><div style="'+arr+'">→</div></a>';
+    html += '</div>';
+
+    // Bloc Coupes d'Europe
+    html += '<div class="cwrap" style="margin-bottom:10px;">';
+    html += '<div style="font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#4f5d88;margin-bottom:10px;">🏆 Coupes d\'Europe</div>';
+    html += '<a href="https://www.epcrugby.com/champions-cup/fixtures-results/" target="_blank" style="'+lienStyle+'"><div style="'+labelStyle+'color:#f0b020;">🌍 Champions Cup — Résultats</div><div style="'+arr+'">→</div></a>';
+    html += '<a href="https://www.epcrugby.com/champions-cup/standings/" target="_blank" style="'+lienStyle+'"><div style="'+labelStyle+'color:#4d84ff;">🏆 Champions Cup — Classement</div><div style="'+arr+'">→</div></a>';
+    html += '<a href="https://www.epcrugby.com/challenge-cup/fixtures-results/" target="_blank" style="'+lienStyle+'"><div style="'+labelStyle+'color:#a78bfa;">🥈 Challenge Cup</div><div style="'+arr+'">→</div></a>';
+    html += '</div>';
+
+    // Bloc Équipes nationales
+    html += '<div class="cwrap" style="margin-bottom:10px;">';
+    html += '<div style="font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#4f5d88;margin-bottom:10px;">🌍 Équipes nationales</div>';
+    html += '<a href="https://www.sixnationsrugby.com/standings/" target="_blank" style="'+lienStyle+'"><div style="'+labelStyle+'color:#4d84ff;">6️⃣ Six Nations — Classement</div><div style="'+arr+'">→</div></a>';
+    html += '<a href="https://www.world.rugby/rankings/mru" target="_blank" style="'+lienStyle+'"><div style="'+labelStyle+'color:#f0b020;">🌐 World Rugby Rankings</div><div style="'+arr+'">→</div></a>';
+    html += '<a href="https://www.rugbyworldcup.com/2027" target="_blank" style="'+lienStyle+'"><div style="'+labelStyle+'color:#1ed760;">🏆 Coupe du Monde 2027</div><div style="'+arr+'">→</div></a>';
+    html += '</div>';
+
+    // Bloc Stats & Suivi
+    html += '<div class="cwrap">';
+    html += '<div style="font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#4f5d88;margin-bottom:10px;">📊 Stats & Suivi</div>';
+    html += '<a href="https://www.sofascore.com/rugby-union" target="_blank" style="'+lienStyle+'"><div style="'+labelStyle+'color:#ff7b54;">⚡ Sofascore Rugby</div><div style="'+arr+'">→</div></a>';
+    html += '<a href="https://www.rugbypass.com/fixtures/" target="_blank" style="'+lienStyle+'"><div style="'+labelStyle+'color:#a78bfa;">📡 RugbyPass — Matchs en direct</div><div style="'+arr+'">→</div></a>';
+    html += '<a href="https://www.espn.com/rugby/" target="_blank" style="'+lienStyle+'"><div style="'+labelStyle+'color:#22d3ee;">🎙 ESPN Rugby</div><div style="'+arr+'">→</div></a>';
+    html += '</div>';
+  }
+
+  html += '</div>';
+  el.innerHTML = html;
 }
 
 async function loadTeamSaisons() {
@@ -5197,6 +5180,7 @@ async function loadTeamSaisons() {
   if(sport2==='🏎️'||sport2==='🏎'||F1_TEAMS[nom]||F1_DRIVERS[nom]) { loadF1Saisons(el, nom); return; }
   if(sport2==='🎾'||TENNIS_PLAYERS[nom]) { loadTennisSaisons(el, nom); return; }
   if(sport2==='🏈'||sport2==='🏈🇺🇸'||NFL_TEAMS[nom]) { loadNflSaisons(el, nom); return; }
+  if(sport2==='🏉'||sport2==='🏉🇦🇺') { loadRugbySaisons(el, nom); return; }
 
   // Trouver ID football
   var teamId = null;
