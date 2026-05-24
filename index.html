@@ -3,11 +3,13 @@
 <html lang="fr">
 <head>
 <meta charset="UTF-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-eval' 'unsafe-inline' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com; connect-src 'self' https://api.groq.com https://api.tavily.com https://fd-proxy.touraine-antoine.workers.dev https://media.api-sports.io https://api.football-data.org https://api-web.nhle.com https://statsapi.mlb.com https://www.thesportsdb.com https://cdn.jsdelivr.net https://api.openf1.org https://api.jolpi.ca https://api.dropbox.com https://content.dropboxapi.com https://api.dropboxapi.com; img-src 'self' data: https: blob:; style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com;">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-eval' 'unsafe-inline' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com; connect-src 'self' https://api.groq.com https://api.tavily.com https://fd-proxy.touraine-antoine.workers.dev https://media.api-sports.io https://api.football-data.org https://api-web.nhle.com https://statsapi.mlb.com https://www.thesportsdb.com https://cdn.jsdelivr.net https://api.openf1.org https://api.jolpi.ca; img-src 'self' data: https: blob:; style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com;">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self' 'unsafe-inline' 'unsafe-eval' https: data: blob:;">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
 <title>GONES45</title>
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js" crossorigin="anonymous"></script>
+<script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;}
 :root{
@@ -486,7 +488,15 @@ input[type="date"],input[type="time"]{color-scheme:dark;}
         <div class="fg"><label class="fl">Date</label><input type="date" id="c-date" class="fi"></div>
         <div class="fg"><label class="fl">Heure</label><input type="time" id="c-heure" class="fi"></div>
       </div>
-      <div class="fg" style="margin-top:9px"><label class="fl">📝 Notes</label><textarea id="c-notes" class="fi" style="height:44px;resize:none;" placeholder="Analyse, contexte…"></textarea></div>
+      <div class="fg" style="margin-top:9px;">
+  <label class="fl">📸 Scanner un ticket</label>
+  <div id="scan-zone-cock" onclick="document.getElementById('scan-input-cock').click()" style="border:2px dashed rgba(77,132,255,.35);border-radius:var(--r8);padding:12px;text-align:center;cursor:pointer;color:var(--t3);font-size:11px;background:rgba(77,132,255,.04);transition:border-color .2s;" ondragover="event.preventDefault()" ondrop="handleScanDrop(event,'cock')">
+    📎 Colle ou glisse ton screenshot ici
+    <input id="scan-input-cock" type="file" accept="image/*" style="display:none" onchange="handleScanFile(this.files[0],'cock')">
+  </div>
+  <div id="scan-status-cock" style="font-size:10px;color:var(--t3);margin-top:4px;text-align:center;"></div>
+</div>
+<div class="fg" style="margin-top:9px"><label class="fl">📝 Notes</label><textarea id="c-notes" class="fi" style="height:44px;resize:none;" placeholder="Analyse, contexte…"></textarea></div>
       <button class="btn btn-p" style="margin-top:11px;" onclick="pari(true)">Engager la montante</button>
     </div>
     <div class="sec" style="display:flex;justify-content:space-between;align-items:center;">
@@ -547,7 +557,15 @@ input[type="date"],input[type="time"]{color-scheme:dark;}
         <div class="fg"><label class="fl">Mise (€)</label><input type="number" id="n-mise" class="fi" value="10"></div>
       </div>
       <div class="fg" style="margin-bottom:9px;"><label class="fl">Bookmaker</label><select id="n-book" class="fi"></select></div>
-      <div class="fg" style="margin-bottom:9px;"><label class="fl">📝 Notes</label><textarea id="n-notes" class="fi" style="height:44px;resize:none;" placeholder="Analyse, contexte…"></textarea></div>
+      <div class="fg" style="margin-bottom:9px;">
+  <label class="fl">📸 Scanner un ticket</label>
+  <div id="scan-zone-simple" onclick="document.getElementById('scan-input-simple').click()" style="border:2px dashed rgba(77,132,255,.35);border-radius:var(--r8);padding:12px;text-align:center;cursor:pointer;color:var(--t3);font-size:11px;background:rgba(77,132,255,.04);transition:border-color .2s;" ondragover="event.preventDefault()" ondrop="handleScanDrop(event,'simple')">
+    📎 Colle ou glisse ton screenshot ici
+    <input id="scan-input-simple" type="file" accept="image/*" style="display:none" onchange="handleScanFile(this.files[0],'simple')">
+  </div>
+  <div id="scan-status-simple" style="font-size:10px;color:var(--t3);margin-top:4px;text-align:center;"></div>
+</div>
+<div class="fg" style="margin-bottom:9px;"><label class="fl">📝 Notes</label><textarea id="n-notes" class="fi" style="height:44px;resize:none;" placeholder="Analyse, contexte…"></textarea></div>
       <div class="fg" style="margin-bottom:8px;">
         <label class="fl">🏠 Lieu</label>
         <div style="display:flex;gap:8px;margin-top:6px;">
@@ -3586,122 +3604,76 @@ async function loadTeamCalendar(teamId, nom, col) {
 }
 
 /* ── DROPBOX AUTO-SAVE (refresh token permanent) ── */
-var _dbxConfig = {
-  appKey: 'x9j8qikpa21j1pv',
-  appSecret: 'vk2o926kopta87b',
-  refreshToken: localStorage.getItem('gones45_dbx_token') || ''
+var _dbxConfig={
+  appKey:'x9j8qikpa21j1pv',
+  appSecret:'vk2o926kopta87b',
+  refreshToken:localStorage.getItem('gones45_dbx_token')||''
 };
-var _dbxSaving = false;
-var _dbxAccessToken = null;
-
-async function getValidToken() {
-  var rt = localStorage.getItem('gones45_dbx_token') || _dbxConfig.refreshToken;
-  if (!rt) return null;
-  
-  try {
-    var res = await fetch('https://api.dropbox.com/oauth2/token', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-      body: new URLSearchParams({
-        grant_type: 'refresh_token',
-        refresh_token: rt.trim(), // .trim() pour éviter les espaces invisibles du copier-coller
-        client_id: _dbxConfig.appKey,
-        client_secret: _dbxConfig.appSecret
-      })
+var _dbxSaving=false;
+var _dbxAccessToken=null;
+async function getValidToken(){
+  var rt=localStorage.getItem('gones45_dbx_token')||_dbxConfig.refreshToken;
+  if(!rt)return null;
+  try{
+    var res=await fetch('https://api.dropbox.com/oauth2/token',{
+      method:'POST',
+      headers:{'Content-Type':'application/x-www-form-urlencoded'},
+      body:new URLSearchParams({grant_type:'refresh_token',refresh_token:rt,client_id:_dbxConfig.appKey,client_secret:_dbxConfig.appSecret})
     });
-    
-    var d = await res.json();
-    
-    if (!res.ok) {
-      console.error("Erreur de rafraîchissement Dropbox :", d);
-      return null;
-    }
-    
-    _dbxAccessToken = d.access_token;
+    var d=await res.json();
+    _dbxAccessToken=d.access_token;
     return _dbxAccessToken;
-  } catch (e) {
-    console.error("Erreur réseau lors du getValidToken :", e);
-    return null;
-  }
+  }catch(e){return null;}
 }
-
-async function saveToDropbox() {
-  if (_dbxSaving) return;
-  _dbxSaving = true;
-  
-  try {
-    var token = await getValidToken();
-    if (!token) {
-      _dbxSaving = false; 
-      showDbxStatus('❌ Token Dropbox invalide ou expiré');
-      return;
-    }
-    
-    var res = await fetch('https://content.dropboxapi.com/2/files/upload', {
-      method: 'POST',
-      headers: {
-        'Authorization': 'Bearer ' + token,
-        'Dropbox-API-Arg': JSON.stringify({ path: '/GONES45/backup.json', mode: 'overwrite', autorename: false }),
-        'Content-Type': 'application/octet-stream'
+async function saveToDropbox(){
+  if(_dbxSaving)return;
+  _dbxSaving=true;
+  try{
+    var token=await getValidToken();
+    if(!token){_dbxSaving=false;showDbxStatus('❌ Token Dropbox invalide');return;}
+    var res=await fetch('https://content.dropboxapi.com/2/files/upload',{
+      method:'POST',
+      headers:{
+        'Authorization':'Bearer '+token,
+        'Dropbox-API-Arg':JSON.stringify({path:'/GONES45/backup.json',mode:'overwrite',autorename:false}),
+        'Content-Type':'application/octet-stream'
       },
-      body: JSON.stringify(state)
+      body:JSON.stringify(state)
     });
-    
-    // CORRECTION : On remet TOUJOURS à false ici, peu importe le résultat du serveur
-    _dbxSaving = false; 
-    
-    if (res.ok) {
-      showDbxStatus('✅ Sauvegardé sur Dropbox');
-    } else {
-      var errData = await res.text();
-      console.error("Détail refus upload Dropbox :", errData);
-      showDbxStatus('⚠️ Erreur Dropbox ' + res.status);
-    }
-  } catch (e) {
-    _dbxSaving = false; // CORRECTION : Déblocage en cas de crash réseau total
-    console.error("Crash saveToDropbox :", e);
-    showDbxStatus('❌ Dropbox hors ligne');
-  }
+    _dbxSaving=false;
+    if(res.ok){showDbxStatus('✅ Sauvegardé sur Dropbox');}
+    else{showDbxStatus('⚠️ Erreur Dropbox '+res.status);}
+  }catch(e){_dbxSaving=false;showDbxStatus('❌ Dropbox hors ligne');}
 }
-
-async function loadFromDropbox() {
-  var el = document.getElementById('dbx-load-status');
-  if (el) el.innerText = '⏳ Chargement...';
-  try {
-    var token = await getValidToken();
-    if (!token) { if (el) el.innerText = '❌ Token Dropbox invalide ou expiré'; return; }
-    
-    var res = await fetch('https://content.dropboxapi.com/2/files/download', {
-      method: 'POST',
-      headers: {
-        'Authorization': 'Bearer ' + token,
-        'Dropbox-API-Arg': JSON.stringify({ path: '/GONES45/backup.json' })
+async function loadFromDropbox(){
+  var el=document.getElementById('dbx-load-status');
+  if(el)el.innerText='⏳ Chargement...';
+  try{
+    var token=await getValidToken();
+    if(!token){if(el)el.innerText='❌ Token Dropbox invalide';return;}
+    var res=await fetch('https://content.dropboxapi.com/2/files/download',{
+      method:'POST',
+      headers:{
+        'Authorization':'Bearer '+token,
+        'Dropbox-API-Arg':JSON.stringify({path:'/GONES45/backup.json'})
       }
     });
-    
-    if (!res.ok) { if (el) el.innerText = '❌ Fichier introuvable sur Dropbox'; return; }
-    
-    var data = await res.json();
-    state = data;
+    if(!res.ok){if(el)el.innerText='❌ Fichier introuvable sur Dropbox';return;}
+    var data=await res.json();
+    state=data;
     save();
-    if (el) el.innerText = '✅ Données chargées !';
-    setTimeout(function() { location.reload(); }, 1200);
-  } catch (e) {
-    if (el) el.innerText = '❌ Erreur : ' + e.message;
-  }
+    if(el)el.innerText='✅ Données chargées !';
+    setTimeout(function(){location.reload();},1200);
+  }catch(e){if(el)el.innerText='❌ Erreur : '+e.message;}
 }
-
-function showDbxStatus(msg) {
-  var el = document.getElementById('dbx-status');
-  if (!el) {
-    el = document.createElement('div'); el.id = 'dbx-status';
-    el.style.cssText = 'position:fixed;bottom:80px;left:50%;transform:translateX(-50%);background:rgba(14,18,32,.97);border:1px solid rgba(255,255,255,.1);border-radius:20px;padding:7px 16px;font-size:11px;font-weight:700;z-index:9999;color:var(--t1);white-space:nowrap;transition:opacity 0.3s;';
-    document.body.appendChild(el);
-  }
-  el.innerText = msg; el.style.opacity = '1';
-  setTimeout(function() { el.style.opacity = '0'; }, 3000);
+function showDbxStatus(msg){
+  var el=document.getElementById('dbx-status');
+  if(!el){el=document.createElement('div');el.id='dbx-status';
+    el.style.cssText='position:fixed;bottom:80px;left:50%;transform:translateX(-50%);background:rgba(14,18,32,.97);border:1px solid rgba(255,255,255,.1);border-radius:20px;padding:7px 16px;font-size:11px;font-weight:700;z-index:9999;color:var(--t1);white-space:nowrap;';
+    document.body.appendChild(el);}
+  el.innerText=msg;el.style.opacity='1';
+  setTimeout(function(){el.style.opacity='0';},3000);
 }
-
 /* ── DROPBOX-TRIGGERED SAVE ── */
 var _origSave=save;
 save=function(){localStorage.setItem('g45v5',JSON.stringify(state));render();saveToDropbox();};
@@ -4083,6 +4055,114 @@ function resetChat(){
   var b1=$i('chat-messages');if(b1)b1.innerHTML='';
   var b2=$i('chat-messages-pc');if(b2)b2.innerHTML='';
 }
+
+/* ── SCAN TICKET ── */
+function handleScanDrop(e, mode) {
+  e.preventDefault();
+  var file = e.dataTransfer.files[0];
+  if(file && file.type.indexOf('image') !== -1) handleScanFile(file, mode);
+}
+
+function handleScanFile(file, mode) {
+  if(!file) return;
+  var status = document.getElementById('scan-status-' + mode);
+  var zone = document.getElementById('scan-zone-' + mode);
+  if(status) status.innerText = '⏳ Lecture du ticket en cours...';
+  if(zone) zone.style.borderColor = 'rgba(240,176,32,.5)';
+
+  var reader = new FileReader();
+  reader.onload = function(e) {
+    var img = e.target.result;
+    if(typeof Tesseract === 'undefined') {
+      if(status) status.innerText = '❌ Tesseract non chargé';
+      return;
+    }
+    Tesseract.recognize(img, 'fra').then(function(result) {
+      var text = result.data.text;
+      applyScanResult(text, mode);
+      if(status) { status.innerText = '✅ Ticket lu !'; status.style.color = 'var(--g)'; }
+      if(zone) zone.style.borderColor = 'rgba(30,215,96,.5)';
+      setTimeout(function(){ if(status) { status.innerText=''; status.style.color='var(--t3)'; } if(zone) zone.style.borderColor='rgba(77,132,255,.35)'; }, 3000);
+    }).catch(function(err) {
+      if(status) { status.innerText = '❌ Erreur de lecture'; status.style.color = 'var(--r)'; }
+    });
+  };
+  reader.readAsDataURL(file);
+}
+
+// Coller depuis le presse-papiers (Ctrl+V sur la zone)
+document.addEventListener('paste', function(e) {
+  var active = document.activeElement;
+  var mode = null;
+  if(active && active.closest && active.closest('#scan-zone-cock')) mode='cock';
+  else if(active && active.closest && active.closest('#scan-zone-simple')) mode='simple';
+  if(!mode) {
+    // Si on est dans la page pari, on essaie quand même
+    var t = document.getElementById('t-paris');
+    if(!t || !t.classList.contains('on')) return;
+    mode = 'simple'; // défaut
+  }
+  var items = e.clipboardData.items;
+  for(var i=0; i<items.length; i++){
+    if(items[i].type.indexOf('image') !== -1){
+      handleScanFile(items[i].getAsFile(), mode);
+      break;
+    }
+  }
+});
+
+function applyScanResult(text, mode) {
+  var pfx = mode === 'cock' ? 'c-' : 'n-';
+  var txtLow = text.toLowerCase();
+
+  // Cote
+  var mCote = text.match(/(\d)[,.](\d{2})/);
+  if(mCote) {
+    var coteVal = mCote[1] + '.' + mCote[2];
+    var coteEl = document.getElementById(pfx === 'c-' ? 'c-cote' : 'n-cote');
+    if(coteEl) { coteEl.value = coteVal; coteEl.dispatchEvent(new Event('input')); }
+  }
+
+  // Mise
+  var mMise = text.match(/[Mm]ise\s*:?\s*([\d ,]+[.,]\d{2})/);
+  if(!mMise) mMise = text.match(/[Mm]ise\s*:?\s*([\d]+)/);
+  if(mMise) {
+    var miseVal = parseFloat(mMise[1].replace(/\s/g,'').replace(',','.'));
+    var miseEl = document.getElementById(pfx + 'mise');
+    if(miseEl && miseVal > 0) miseEl.value = miseVal;
+  }
+
+  // Équipe / adversaire
+  var lignes = text.split('\n');
+  var ligneMatch = lignes.find(function(l){ return l.includes(' - ') && !l.toLowerCase().includes('mise') && !l.toLowerCase().includes('gain') && l.trim().length > 5; });
+  if(ligneMatch) {
+    var teamEl = document.getElementById(pfx === 'c-' ? 'c-target' : 'n-team');
+    if(teamEl) teamEl.value = ligneMatch.trim();
+  }
+
+  // Bookmaker
+  var books = {'winamax':'Winamax','betclic':'Betclic','pmu':'PMU','unibet':'Unibet','zebet':'ZEbet','bwin':'Bwin','parionssport':'ParionsSport','netbet':'NetBet','vbet':'VBet'};
+  var bookEl = document.getElementById(pfx + 'book');
+  if(bookEl) {
+    for(var k in books){
+      if(txtLow.includes(k)){ bookEl.value=books[k]; break; }
+    }
+  }
+
+  // Sport
+  var sportEl = document.getElementById(pfx + 'sport');
+  if(sportEl) {
+    if(txtLow.includes('nhl')||txtLow.includes('hockey')) sportEl.value='🏒';
+    else if(txtLow.includes('tennis')||txtLow.includes('atp')||txtLow.includes('wta')) sportEl.value='🎾';
+    else if(txtLow.includes('nba')||txtLow.includes('basket')) sportEl.value='🏀';
+    else if(txtLow.includes('nfl')||txtLow.includes('football américain')) sportEl.value='🏈';
+    else if(txtLow.includes('football')||txtLow.includes('ligue 1')||txtLow.includes('champions')) sportEl.value='⚽';
+    else if(txtLow.includes('rugby')) sportEl.value='🏉';
+    else if(txtLow.includes('f1')||txtLow.includes('formule')) sportEl.value='🏎';
+    else if(txtLow.includes('baseball')||txtLow.includes('mlb')) sportEl.value='⚾';
+  }
+}
+
 function saveNote(){
   var n=$i('pc-note');if(!n)return;
   localStorage.setItem('gones45_note',n.innerHTML);
