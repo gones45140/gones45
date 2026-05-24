@@ -9,7 +9,6 @@
 <title>GONES45</title>
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js" crossorigin="anonymous"></script>
-<script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;}
 :root{
@@ -401,6 +400,7 @@ input[type="date"],input[type="time"]{color-scheme:dark;}
 .mm-row input.fi{color:var(--t1) !important;background:var(--bg2) !important;}
 .mm-del{background:rgba(255,69,69,.15);border:1px solid rgba(255,69,69,.3);color:#ff6b6b;border-radius:50%;width:22px;height:22px;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:11px;flex-shrink:0;padding:0;}
 </style>
+<script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
 </head>
 <body>
 
@@ -488,14 +488,6 @@ input[type="date"],input[type="time"]{color-scheme:dark;}
         <div class="fg"><label class="fl">Date</label><input type="date" id="c-date" class="fi"></div>
         <div class="fg"><label class="fl">Heure</label><input type="time" id="c-heure" class="fi"></div>
       </div>
-      <div class="fg" style="margin-top:9px;">
-        <label class="fl">📸 Scanner un ticket</label>
-        <div id="scan-zone-cock" onclick="document.getElementById('scan-input-cock').click()" style="border:2px dashed rgba(77,132,255,.35);border-radius:var(--r8);padding:12px;text-align:center;cursor:pointer;color:var(--t3);font-size:11px;background:rgba(77,132,255,.04);" ondragover="event.preventDefault()" ondrop="handleScanDrop(event,'cock')">
-          📎 Colle ou glisse ton screenshot ici
-          <input id="scan-input-cock" type="file" accept="image/*" style="display:none" onchange="handleScanFile(this.files[0],'cock')">
-        </div>
-        <div id="scan-status-cock" style="font-size:10px;color:var(--t3);margin-top:4px;text-align:center;"></div>
-      </div>
       <div class="fg" style="margin-top:9px"><label class="fl">📝 Notes</label><textarea id="c-notes" class="fi" style="height:44px;resize:none;" placeholder="Analyse, contexte…"></textarea></div>
       <button class="btn btn-p" style="margin-top:11px;" onclick="pari(true)">Engager la montante</button>
     </div>
@@ -557,14 +549,6 @@ input[type="date"],input[type="time"]{color-scheme:dark;}
         <div class="fg"><label class="fl">Mise (€)</label><input type="number" id="n-mise" class="fi" value="10"></div>
       </div>
       <div class="fg" style="margin-bottom:9px;"><label class="fl">Bookmaker</label><select id="n-book" class="fi"></select></div>
-      <div class="fg" style="margin-bottom:9px;">
-        <label class="fl">📸 Scanner un ticket</label>
-        <div id="scan-zone-simple" onclick="document.getElementById('scan-input-simple').click()" style="border:2px dashed rgba(77,132,255,.35);border-radius:var(--r8);padding:12px;text-align:center;cursor:pointer;color:var(--t3);font-size:11px;background:rgba(77,132,255,.04);" ondragover="event.preventDefault()" ondrop="handleScanDrop(event,'simple')">
-          📎 Colle ou glisse ton screenshot ici
-          <input id="scan-input-simple" type="file" accept="image/*" style="display:none" onchange="handleScanFile(this.files[0],'simple')">
-        </div>
-        <div id="scan-status-simple" style="font-size:10px;color:var(--t3);margin-top:4px;text-align:center;"></div>
-      </div>
       <div class="fg" style="margin-bottom:9px;"><label class="fl">📝 Notes</label><textarea id="n-notes" class="fi" style="height:44px;resize:none;" placeholder="Analyse, contexte…"></textarea></div>
       <div class="fg" style="margin-bottom:8px;">
         <label class="fl">🏠 Lieu</label>
@@ -4056,64 +4040,96 @@ function resetChat(){
   var b2=$i('chat-messages-pc');if(b2)b2.innerHTML='';
 }
 
-/* ── SCAN TICKET ── */
-function handleScanDrop(e,mode){e.preventDefault();var f=e.dataTransfer.files[0];if(f&&f.type.indexOf('image')!==-1)handleScanFile(f,mode);}
-function handleScanFile(file,mode){
-  if(!file)return;
-  var status=document.getElementById('scan-status-'+mode);
-  var zone=document.getElementById('scan-zone-'+mode);
-  if(status)status.innerText='⏳ Lecture en cours...';
-  if(zone)zone.style.borderColor='rgba(240,176,32,.5)';
-  var reader=new FileReader();
-  reader.onload=function(e){
-    var img=e.target.result;
-    if(typeof Tesseract==='undefined'){if(status)status.innerText='❌ Tesseract non chargé';return;}
-    Tesseract.recognize(img,'fra',{
-      workerPath:'https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/worker.min.js',
-      langPath:'https://tessdata.projectnaptha.com/4.0.0',
-      corePath:'https://cdn.jsdelivr.net/npm/tesseract.js-core@5/tesseract-core.wasm.js',
-      logger:function(m){if(m.status==='recognizing text'&&status)status.innerText='⏳ '+Math.round(m.progress*100)+'%...';}
-    }).then(function(result){
-      applyScanResult(result.data.text,mode);
-      if(status){status.innerText='✅ Ticket lu !';status.style.color='var(--g)';}
-      if(zone)zone.style.borderColor='rgba(30,215,96,.5)';
-      setTimeout(function(){if(status){status.innerText='';status.style.color='var(--t3)';}if(zone)zone.style.borderColor='rgba(77,132,255,.35)';},3000);
-    }).catch(function(){if(status){status.innerText='❌ Erreur de lecture';status.style.color='var(--r)';}if(zone)zone.style.borderColor='rgba(255,69,69,.5)';});
-  };
-  reader.readAsDataURL(file);
-}
-document.addEventListener('paste',function(e){
-  var t=document.getElementById('t-paris');
-  if(!t||!t.classList.contains('on'))return;
-  var items=e.clipboardData.items;
-  for(var i=0;i<items.length;i++){if(items[i].type.indexOf('image')!==-1){handleScanFile(items[i].getAsFile(),'simple');break;}}
-});
-function applyScanResult(text,mode){
-  var pfx=mode==='cock'?'c-':'n-';
-  var txtLow=text.toLowerCase();
-  var allCotes=[];var reCote=/(\d)[,.](\d{2})/g;var mc;
-  while((mc=reCote.exec(text))!==null){var v=parseFloat(mc[1]+'.'+mc[2]);if(v>=1.01&&v<=10)allCotes.push(v);}
-  if(allCotes.length){var best=allCotes.sort(function(a,b){return b-a;})[0];var cEl=document.getElementById(pfx==='c-'?'c-cote':'n-cote');if(cEl){cEl.value=best.toFixed(2);cEl.dispatchEvent(new Event('input'));}}
-  var mMise=text.match(/[Mm]ise\s*:?\s*([\d ,]+[.,]\d{2})/);if(!mMise)mMise=text.match(/[Mm]ise\s*:?\s*([\d]+)/);
-  if(mMise){var mv=parseFloat(mMise[1].replace(/\s/g,'').replace(',','.'));var mEl=document.getElementById(pfx+'mise');if(mEl&&mv>0)mEl.value=mv;}
-  var lignes=text.split('\n');var BRUIT=['mise','gain','cashout','compléter','vainqueur','réf','simple','combiné','en cours','demain','aujourd','gains','potentiels'];var lm=null;
-  for(var i=0;i<lignes.length;i++){var l=lignes[i].trim();var lLow=l.toLowerCase();if(!l.includes(' - '))continue;if(BRUIT.some(function(b){return lLow.includes(b);}))continue;if(l.length<5||l.length>80)continue;lm=l.replace(/\s*(demain|aujourd'hui|\d{2}:\d{2}|LS &|LS&)\s*/gi,'').trim();break;}
-  if(lm){var tEl=document.getElementById(pfx==='c-'?'c-target':'n-team');if(tEl)tEl.value=lm;}
-  var books={'winamax':'Winamax','betclic':'Betclic','pmu':'PMU','unibet':'Unibet','zebet':'ZEbet','bwin':'Bwin','parionssport':'ParionsSport','netbet':'NetBet','vbet':'VBet'};
-  var bEl=document.getElementById(pfx+'book');if(bEl){for(var k in books){if(txtLow.includes(k)){bEl.value=books[k];break;}}}
-  var nhlTeams=['golden knights','avalanche','maple leafs','canadiens','bruins','rangers','penguins','oilers','flames','canucks','sharks','kings','ducks','blackhawks','red wings','blues','lightning','panthers','capitals','flyers','devils','islanders','sabres','senators','coyotes','jets','predators','wild','stars','blue jackets','kraken','hurricanes'];
-  var spEl=document.getElementById(pfx+'sport');if(spEl){
-    if(txtLow.includes('nhl')||nhlTeams.some(function(t){return txtLow.includes(t);}))spEl.value='🏒';
-    else if(txtLow.includes('tennis')||txtLow.includes('atp')||txtLow.includes('wta'))spEl.value='🎾';
-    else if(txtLow.includes('nba')||txtLow.includes('basketball'))spEl.value='🏀';
-    else if(txtLow.includes('nfl')||txtLow.includes('touchdown'))spEl.value='🏈';
-    else if(txtLow.includes('ligue 1')||txtLow.includes('champions league')||txtLow.includes('premier league'))spEl.value='⚽';
-    else if(txtLow.includes('rugby')||txtLow.includes('top 14'))spEl.value='🏉';
-    else if(txtLow.includes('formule 1')||txtLow.includes('grand prix'))spEl.value='🏎';
-    else if(txtLow.includes('baseball')||txtLow.includes('mlb'))spEl.value='⚾';
-    else if(txtLow.includes('football'))spEl.value='⚽';
-  }
-}
+/* ── SCAN TICKET via bloc-notes ── */
+(function(){
+  var penseBeteZone = document.getElementById('pc-note');
+  if(!penseBeteZone) return;
+
+  penseBeteZone.addEventListener('paste', function(e) {
+    var items = e.clipboardData.items;
+    for(var i=0;i<items.length;i++){
+      var item = items[i];
+      if(item.type.indexOf('image') !== -1){
+        var blob = item.getAsFile();
+        var reader = new FileReader();
+        reader.onload = (function(blob){return function(event){
+          var imageBase64 = event.target.result;
+
+          penseBeteZone.innerHTML = '<img src="'+imageBase64+'" alt="Pense-bête" style="max-width:100%;border-radius:6px;">';
+          localStorage.setItem('penseBeteImage', imageBase64);
+
+          var avertissement = document.createElement('div');
+          avertissement.style.cssText = 'position:absolute;bottom:10px;left:10px;background:rgba(0,0,0,0.8);color:#00ff88;padding:5px 10px;border-radius:5px;font-size:12px;z-index:10;';
+          avertissement.innerText = 'Lecture du ticket en cours... ⏳';
+          penseBeteZone.style.position = 'relative';
+          penseBeteZone.appendChild(avertissement);
+
+          if(typeof Tesseract === 'undefined'){ avertissement.innerText='❌ Tesseract non chargé'; return; }
+
+          Tesseract.recognize(imageBase64, 'fra').then(function(result){
+            var text = result.data.text;
+            console.log('Texte: '+text);
+            avertissement.innerText = 'Lecture réussie ! 🎯';
+            setTimeout(function(){ avertissement.remove(); }, 2000);
+
+            // Cote
+            var matchCote = text.match(/(\d)[,.](\d{2})/);
+            if(matchCote){
+              var cEl = document.getElementById('n-cote')||document.getElementById('c-cote');
+              if(cEl){ cEl.value = matchCote[1]+'.'+matchCote[2]; cEl.dispatchEvent(new Event('input')); }
+            }
+
+            // Mise
+            var matchMise = text.match(/[Mm]ise\s*([\d,. ]+)/i);
+            if(matchMise){
+              var mv = parseFloat(matchMise[1].trim().replace(',','.').replace(/\s/g,''));
+              var mEl = document.getElementById('n-mise')||document.getElementById('c-mise');
+              if(mEl && mv>0) mEl.value = mv;
+            }
+
+            // Équipes
+            var lignes = text.split('\n');
+            var BRUIT = ['mise','gain','cashout','compléter','vainqueur','réf'];
+            var ligneMatch = lignes.find(function(l){ return l.includes(' - ') && !BRUIT.some(function(b){return l.toLowerCase().includes(b);}); });
+            if(ligneMatch){
+              var tEl = document.getElementById('n-team')||document.getElementById('c-target');
+              if(tEl) tEl.value = ligneMatch.trim().replace(/\s*(demain|aujourd'hui|\d{2}:\d{2}|LS &)\s*/gi,'').trim();
+            }
+
+            // Bookmaker
+            var txtLow = text.toLowerCase();
+            var bEl = document.getElementById('n-book')||document.getElementById('c-book');
+            if(bEl){
+              if(txtLow.includes('winamax')||txtLow.includes('cashout')||txtLow.includes('compléter')) bEl.value='Winamax';
+              else if(txtLow.includes('betclic')) bEl.value='Betclic';
+              else if(txtLow.includes('pmu')) bEl.value='PMU';
+              else if(txtLow.includes('unibet')) bEl.value='Unibet';
+              else if(txtLow.includes('zebet')) bEl.value='ZEbet';
+            }
+
+            // Sport
+            var spEl = document.getElementById('n-sport')||document.getElementById('c-sport');
+            if(spEl){
+              var nhlTeams = ['golden knights','avalanche','maple leafs','canadiens','bruins','rangers','penguins','oilers','flames','canucks'];
+              if(txtLow.includes('nhl')||txtLow.includes('hockey')||nhlTeams.some(function(t){return txtLow.includes(t);})) spEl.value='🏒';
+              else if(txtLow.includes('tennis')||txtLow.includes('atp')||txtLow.includes('wta')||txtLow.includes('roland garros')) spEl.value='🎾';
+              else if(txtLow.includes('nba')||txtLow.includes('basket')) spEl.value='🏀';
+              else if(txtLow.includes('ligue 1')||txtLow.includes('champions league')||txtLow.includes('premier league')) spEl.value='⚽';
+              else if(txtLow.includes('rugby')) spEl.value='🏉';
+              else if(txtLow.includes('football')) spEl.value='⚽';
+            }
+
+          }).catch(function(err){
+            console.error('Erreur Tesseract :', err);
+            avertissement.innerText = 'Erreur de lecture ❌';
+            setTimeout(function(){ avertissement.remove(); }, 2000);
+          });
+        };})(blob);
+        reader.readAsDataURL(blob);
+      }
+    }
+  });
+})();
 
 function saveNote(){
   var n=$i('pc-note');if(!n)return;
