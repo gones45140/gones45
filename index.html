@@ -4670,87 +4670,62 @@ async function loadF1Saisons(el, nom) {
   el.innerHTML = '<div style="display:flex;align-items:center;gap:8px;padding:20px;color:var(--t3);"><div style="width:14px;height:14px;border:2px solid rgba(77,132,255,.2);border-top-color:#4d84ff;border-radius:50%;animation:spin .8s linear infinite;"></div>Chargement stats F1...</div>';
 
   try {
-    var driverQuery = F1_DRIVERS[nom] ? '&driver='+F1_DRIVERS[nom] : '';
-    
-    // Classement pilotes saison en cours
-    var standUrl = 'https://api.jolpi.ca/ergast/f1/current/driverStandings.json';
-    var standResp = await fetch(standUrl, {headers:{'Accept':'application/json'}});
-    var standData = await standResp.json();
-    var standings = standData.MRData&&standData.MRData.StandingsTable&&standData.MRData.StandingsTable.StandingsLists;
-    var driverStandings = standings&&standings.length ? standings[0].DriverStandings : [];
+    var driverRef = F1_DRIVERS[nom] || null;
 
-    // Derniers résultats GP
-    var resUrl = 'https://api.jolpi.ca/ergast/f1/current/last/5/results.json';
-    var resResp = await fetch(resUrl, {headers:{'Accept':'application/json'}});
-    var resData = await resResp.json();
-    var races = resData.MRData&&resData.MRData.RaceTable ? resData.MRData.RaceTable.Races : [];
+    // OpenF1 API - classement via sessions récentes
+    var sessResp = await fetch('https://api.openf1.org/v1/sessions?session_type=Race&year=2026');
+    var sessions = await sessResp.json();
+    sessions = sessions.sort(function(a,b){ return new Date(b.date_start)-new Date(a.date_start); });
+    
+    var driverStandings = [];
+    var races = [];
+
+    // Récupérer les résultats des 5 dernières courses
+    for(var si=0; si<Math.min(5, sessions.length); si++) {
+      var sess = sessions[si];
+      var posResp = await fetch('https://api.openf1.org/v1/position?session_key='+sess.session_key+'&position<=3');
+      var positions = await posResp.json();
+      if(positions && positions.length) {
+        races.push({
+          name: sess.meeting_name||sess.circuit_short_name||'GP',
+          date: (sess.date_start||'').substring(0,10),
+          top3: positions.slice(0,3)
+        });
+      }
+    }
 
     var html = '<div style="padding:4px 0;">';
 
-    // ── Classement top 5 pilotes ──
-    if(driverStandings.length) {
-      html += '<div class="cwrap" style="margin-bottom:10px;">';
-      html += '<div style="font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#4f5d88;margin-bottom:10px;">🏆 Classement pilotes '+new Date().getFullYear()+'</div>';
-      
-      // Si c'est un pilote spécifique, le mettre en avant
-      var driverRef = F1_DRIVERS[nom];
-      var targetDriver = driverRef ? driverStandings.find(function(d){ return d.Driver.driverId===driverRef; }) : null;
-      
-      var top5 = targetDriver ? 
-        [targetDriver].concat(driverStandings.filter(function(d){ return d.Driver.driverId!==driverRef; }).slice(0,4)) :
-        driverStandings.slice(0,5);
+    // ── Lien classement officiel ──
+    html += '<div class="cwrap" style="margin-bottom:10px;">';
+    html += '<div style="font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#4f5d88;margin-bottom:10px;">🏆 Classement pilotes '+new Date().getFullYear()+'</div>';
+    html += '<a href="https://www.formula1.com/en/results/'+new Date().getFullYear()+'/drivers" target="_blank" style="display:block;padding:12px;background:rgba(232,0,45,.1);border:1px solid rgba(232,0,45,.3);border-radius:8px;color:#e8002d;font-size:12px;font-weight:700;text-decoration:none;text-align:center;">🏎️ Voir le classement sur Formula1.com</a>';
+    html += '</div>';
 
-      top5.forEach(function(d){
-        var isTarget = driverRef && d.Driver.driverId===driverRef;
-        var col = isTarget ? '#f0b020' : 'var(--t1)';
-        var bg = isTarget ? 'rgba(240,176,32,.08)' : 'rgba(255,255,255,.03)';
-        var wins = d.wins||0;
-        html += '<div style="display:flex;align-items:center;gap:10px;padding:8px 10px;background:'+bg+';border-radius:8px;margin-bottom:4px;'+(isTarget?'border:1px solid rgba(240,176,32,.3);':'border:1px solid rgba(255,255,255,.05);')+'">';
-        html += '<div style="font-size:14px;font-weight:800;color:#4f5d88;min-width:20px;text-align:center;">'+d.position+'</div>';
-        html += '<div style="flex:1;">';
-        html += '<div style="font-size:12px;font-weight:700;color:'+col+';">'+d.Driver.familyName+' <span style="font-weight:400;font-size:10px;color:var(--t3);">'+d.Constructors[0].name+'</span></div>';
-        html += '</div>';
-        html += '<div style="font-size:12px;font-weight:800;color:'+col+';">'+d.points+' pts</div>';
-        if(wins>0) html += '<div style="font-size:9px;color:#f0b020;min-width:20px;text-align:right;">'+wins+'V</div>';
-        html += '</div>';
-      });
-      html += '</div>';
-    }
-
-    // ── Derniers GP ──
+    // ── Derniers GP via OpenF1 ──
     if(races.length) {
       html += '<div class="cwrap">';
-      html += '<div style="font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#4f5d88;margin-bottom:10px;">🏁 Derniers GP</div>';
+      html += '<div style="font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#4f5d88;margin-bottom:10px;">🏁 Derniers GP 2026</div>';
       html += '<div style="display:flex;flex-direction:column;gap:6px;">';
-      
-      races.slice().reverse().forEach(function(race){
-        var results = race.Results||[];
-        var top3 = results.slice(0,3);
-        var targetResult = driverRef ? results.find(function(r){ return r.Driver.driverId===driverRef; }) : null;
-        
+      races.forEach(function(race){
         html += '<div style="padding:8px 10px;background:rgba(255,255,255,.03);border-radius:8px;border:1px solid rgba(255,255,255,.06);">';
-        html += '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">';
-        html += '<div style="font-size:11px;font-weight:700;color:var(--t1);">🏎️ '+race.raceName+'</div>';
+        html += '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;">';
+        html += '<div style="font-size:11px;font-weight:700;color:var(--t1);">🏎️ '+race.name+'</div>';
         html += '<div style="font-size:10px;color:var(--t3);">'+race.date+'</div>';
         html += '</div>';
-        
-        // Podium
-        html += '<div style="display:flex;gap:4px;">';
-        top3.forEach(function(r,i){
+        if(race.top3 && race.top3.length) {
           var medals = ['🥇','🥈','🥉'];
-          var isTarget = driverRef && r.Driver.driverId===driverRef;
-          html += '<div style="font-size:10px;color:'+(isTarget?'#f0b020':'var(--t3)')+';">'+medals[i]+' '+r.Driver.familyName+'</div>';
-          if(i<2) html += '<span style="color:var(--t3);font-size:10px;"> · </span>';
-        });
-        html += '</div>';
-        
-        // Position du pilote cible si pas dans le top 3
-        if(targetResult && parseInt(targetResult.position) > 3) {
-          html += '<div style="font-size:10px;color:#f0b020;margin-top:4px;">'+nom.split(' ')[1]+' : P'+targetResult.position+'</div>';
+          html += '<div style="display:flex;gap:6px;">';
+          race.top3.forEach(function(r,i){
+            html += '<span style="font-size:10px;color:var(--t3);">'+medals[i]+' P'+r.position+'</span>';
+          });
+          html += '</div>';
         }
         html += '</div>';
       });
       html += '</div></div>';
+    } else {
+      html += '<div class="cwrap"><div style="text-align:center;color:var(--t3);padding:10px;font-size:11px;">Chargement des GP en cours...<br><a href="https://www.formula1.com/en/results" target="_blank" style="color:#e8002d;">Voir les résultats sur F1.com</a></div></div>';
     }
 
     html += '</div>';
