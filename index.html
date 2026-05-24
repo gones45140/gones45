@@ -5021,6 +5021,80 @@ async function searchTennisPlayer(nom) {
     }
   } catch(e) {}
 
+  // Tableau stats via JSON Groq
+  if(tavilyKey && groqKey) {
+    try {
+      var webData2 = await searchTavily('"'+nom+'" tennis '+yr+' win percentage clay hard grass surface first set aces breaks tiebreak games');
+      if(webData2) {
+        var r2 = await fetch('https://api.groq.com/openai/v1/chat/completions',{
+          method:'POST',
+          headers:{'Content-Type':'application/json','Authorization':'Bearer '+groqKey},
+          body:JSON.stringify({
+            model:'llama-3.3-70b-versatile',
+            messages:[{role:'user',content:'Extrait UNIQUEMENT les chiffres explicitement mentionnes dans ce texte sur '+nom+' en '+yr+'. Reponds en JSON strict sans markdown. Si un chiffre nest pas dans le texte mets null. Texte: '+webData2.substring(0,800)+'. JSON: {"pct_victoires_global":null,"pct_victoires_terre":null,"pct_victoires_dur":null,"pct_victoires_gazon":null,"pct_1er_set":null,"pct_2sets":null,"aces_par_match":null,"pct_break_convertis":null,"pct_break_sauves":null,"pct_tiebreak":null,"jeux_par_match":null}'}],
+            max_tokens:200,
+            temperature:0
+          })
+        });
+        var d2 = await r2.json();
+        var reply2 = d2.choices[0].message.content.trim().replace(/```json|```/g,'').trim();
+        var jsonMatch2 = reply2.match(/\{[\s\S]*\}/);
+        if(jsonMatch2) {
+          var stats = JSON.parse(jsonMatch2[0]);
+          
+          html += '<div class="cwrap" style="margin-bottom:8px;">';
+          html += '<div style="font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#4f5d88;margin-bottom:10px;">% Victoires par surface</div>';
+          html += '<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-bottom:8px;">';
+          [{l:'Global',v:stats.pct_victoires_global,c:'#4d84ff'},{l:'🟠 Terre',v:stats.pct_victoires_terre,c:'#ff7b54'},{l:'🔵 Dur',v:stats.pct_victoires_dur,c:'#4d84ff'},{l:'🟢 Gazon',v:stats.pct_victoires_gazon,c:'#1ed760'}].forEach(function(s){
+            var raw = parseFloat(s.v)||0;
+            var disp = s.v===null||s.v===undefined ? 'N/A' : (raw<=1?Math.round(raw*100)+'%':Math.round(raw)+'%');
+            var col = disp==='N/A'?'var(--t3)':s.c;
+            html += '<div style="text-align:center;background:rgba(255,255,255,.04);border-radius:8px;padding:8px 4px;border:1px solid rgba(255,255,255,.06);">';
+            html += '<div style="font-size:11px;margin-bottom:4px;">'+s.l+'</div>';
+            html += '<div style="font-size:17px;font-weight:800;color:'+col+';">'+disp+'</div>';
+            html += '</div>';
+          });
+          html += '</div>';
+
+          // Stats de match
+          var matchStats2 = [
+            {l:'1er set gagne',v:stats.pct_1er_set},
+            {l:'Matchs en 2 sets',v:stats.pct_2sets},
+            {l:'Breaks convertis',v:stats.pct_break_convertis},
+            {l:'Breaks sauves',v:stats.pct_break_sauves},
+            {l:'Tie-breaks joues',v:stats.pct_tiebreak},
+          ];
+          var hasStats = matchStats2.some(function(s){return s.v!==null&&s.v!==undefined;});
+          if(hasStats) {
+            html += '<div style="font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#4f5d88;margin-bottom:8px;">Stats de match</div>';
+            matchStats2.forEach(function(s){
+              if(s.v===null||s.v===undefined) return;
+              var raw = parseFloat(s.v)||0;
+              var pct = raw<=1?Math.round(raw*100):Math.round(raw);
+              var col = pct>=65?'#1ed760':pct>=50?'#f0b020':'#ff4545';
+              html += '<div style="display:flex;align-items:center;gap:8px;margin-bottom:5px;">';
+              html += '<div style="font-size:10px;color:var(--t2);flex:1;">'+s.l+'</div>';
+              html += '<div style="width:80px;height:5px;background:rgba(255,255,255,.06);border-radius:3px;"><div style="height:5px;border-radius:3px;background:'+col+';width:'+Math.min(pct,100)+'%;"></div></div>';
+              html += '<div style="font-size:11px;font-weight:700;color:'+col+';">'+pct+'%</div>';
+              html += '</div>';
+            });
+          }
+          
+          // Aces + jeux
+          html += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:6px;">';
+          if(stats.aces_par_match!==null&&stats.aces_par_match!==undefined) {
+            html += '<div style="background:rgba(255,255,255,.04);border-radius:8px;padding:8px;text-align:center;"><div style="font-size:18px;font-weight:800;color:#a78bfa;">'+stats.aces_par_match+'</div><div style="font-size:9px;color:var(--t3);">Aces/match</div></div>';
+          }
+          if(stats.jeux_par_match!==null&&stats.jeux_par_match!==undefined) {
+            html += '<div style="background:rgba(255,255,255,.04);border-radius:8px;padding:8px;text-align:center;"><div style="font-size:18px;font-weight:800;color:#22d3ee;">'+stats.jeux_par_match+'</div><div style="font-size:9px;color:var(--t3);">Jeux/match</div></div>';
+          }
+          html += '</div>';
+          html += '</div>';
+        }
+      }
+    } catch(e2) {}
+  }
+
   // Avertissement
   html += '<div style="display:flex;align-items:center;gap:8px;background:rgba(240,176,32,.08);border:1px solid rgba(240,176,32,.25);border-radius:8px;padding:8px 12px;margin-bottom:8px;">';
   html += '<span style="font-size:16px;">⚠️</span>';
