@@ -4996,7 +4996,7 @@ async function searchTennisPlayer(nom) {
           
           catLines.forEach(function(l){
             var parts = l.split(':');
-            var label = parts[0].replace(/^[-•*\s]+/,'').trim();
+            var label = parts[0].replace(/^[-*\s]+/,'').trim();
             var val = parts.slice(1).join(':').trim();
             var pct = parseFloat(val);
             var col = pct>=65?'#1ed760':pct>=50?'#f0b020':'#ff4545';
