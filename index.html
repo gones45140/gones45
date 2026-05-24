@@ -1009,6 +1009,8 @@ input[type="date"],input[type="time"]{color-scheme:dark;}
       <button class="btn" style="background:rgba(77,132,255,.14);color:var(--a);border:1px solid rgba(77,132,255,.25);" onclick="exportData()">⬇ Exporter</button>
       <button class="btn" style="background:var(--s1);color:var(--t2);border:1px solid var(--b2);" onclick="importData()">⬆ Importer</button>
     </div>
+    <button class="btn" style="margin-top:8px;background:rgba(0,107,255,.18);color:#4d9fff;border:1px solid rgba(77,132,255,.35);font-size:12px;" onclick="loadFromDropbox()">☁️ Charger depuis Dropbox</button>
+    <div id="dbx-load-status" style="margin-top:6px;font-size:11px;font-weight:700;text-align:center;"></div>
   </div>
   <div class="fc" style="border-style:dashed;">
     <label class="fl" style="color:var(--gold);">☁️ Dropbox — Sauvegarde auto</label>
@@ -3432,7 +3434,7 @@ function updateCompList(){
 function saveDbxKey(){
   var inp=$i('dbx-key-input');if(!inp)return;
   var key=inp.value.trim();if(!key)return;
-  _dbxConfig.refreshToken=key;localStorage.setItem('g45_dbx',key);
+  localStorage.setItem('gones45_dbx_token', key);
   var st=$i('dbx-key-status');
   if(st){st.innerText='✅ Clé enregistrée !';st.style.color='var(--g)';}
   setTimeout(function(){if(st)st.innerText='';},3000);
@@ -3584,24 +3586,15 @@ async function loadTeamCalendar(teamId, nom, col) {
 }
 
 /* ── DROPBOX AUTO-SAVE (refresh token permanent) ── */
-var _dbxConfig={
-  appKey:'x9j8qikpa21j1pv',
-  appSecret:'vk2o926kopta87b',
-  refreshToken:'sl.u.AGfGM9ID1NQIOOhe-dYMd7gmeSp9FohnSYC0m1T-t1TDF6kE4hAVz3rKY1_RvQkUgo5Pw3pLvoHBY_k7JzrPFCupxLVsjkSem9gBJNbiGs0d_J8-yyT7vVOa3z4GyxMfz64w8JS0pdmlwD3L4fi0O_-nJ950zOQMHmiavTK87JRGrmDNGghcJHnfnrKLRK2goDVvHmqyseMiPfYnd136Cnuk1cdaR_ZbuXm2FNEqPZ72ULAEWCruSkFJB_r2YPuxRUofsxgP8BAzDG9p0HXiDn4lcOofSnhdZxpmrOFRwi_4dXdsy4xS2wEXw6NQb7ZIK5LERZL6W3guwtBaqiuTCdG1NZt41s9yjUxT4dFu_vGLd-G-g-LKKwVo9DVIGuuWDPXdbK-s0UCoN5Rk0SZBlZ-Mj4JZWzHnFkabGkspSLeR-jeWWVlAGtJHwRRXgKeUf0dEtsrffH6cd9lmiWDYkquXylNu-ZDvfiTmjCh23IXdW3aKyK9zfDsv6P3nIqQP0dp89tTFWKriT_Xd3aaGbVrskP6kfeSzwu7ic8iW3hoiwYPipJMB1cqGxMI5Pmgp3-INckJx7F4U5pGIKhy-3VPWyz2XvWIGJEMsDHJlFdYmezGeMr-5n1-_KlMUCrL0RP7T7axdJL_YBk2iHiuxx5MrGXIVcV6IfXIUcbP4poNpoRsSzHu784Fml1L4c45LTKHiFMjFA7SbmG9oIp5unyThykCWLmWxSpigua0ZjIUt6n68t_kXbaHg8y5fdhbqtVLdczMGd4nNeNqHqgTeAQOB41rpSAkBDutViGWFWNWWEge8hRpG7AmVkciP7G4t1ocLqRo9TvLhJvs9VMAEF6ydwfgrQPzw9cIvSVPJob7KRgPK2pPTTm_qgEuvd7ObrXeLGXC4vgDwLmKr8U6ydwmRU4CsHsegp1HCxzxSsYu82uXzatTKwLjp6ulB32DGxL-Xw74TXwFkVYlF7XjMgOj4rBOSyrTEor_HHWMKlgz6Y9rjUVZ-pO8zVALXntzmcJ6zleeTaDWNjquHkbIuC7fAW23fMTMLxZStrcGNweqRj9QBXlNYVcaJDajz1MOb_ygc1RFJBzO_guEsenA07B6rw1BG9_uTRlCFt49SRclLPxGt4YuMZ7WOq9T47mwfd_sxgHduBaGYwugZ4mIKZDtPGBo7Ntse5ZBF7Qu5rNMwytgaq0wDKylpam8jK8GX2054_oN8OjFseXWaHxVwI0Fln8MwA9iMD3K0cf7zbgvxE3rPCj7OuSMHt-1zAWvwCAM1YhrOUAL6Ny4RVBdag_YqL-BznfG7XoNBGYiBSmIhrIdrDp8v3cjG_OwWdvXfr4_MTrDSUe0EZr0qfxFhd16zLCWj0cKLdI_yybKxzFZp1YXDK8ezOYCZusqmtCw52FZtELOIG2DjgtfTw6YUHEr4pgU5FtIpPF691bFZmKrc7MDiosDFr7iehD8yr_6lrmk'
-};
+/* Token Dropbox stocké dans localStorage uniquement */
 var _dbxSaving=false;
 var _dbxAccessToken=null;
 async function getValidToken(){
-  try{
-    var res=await fetch('https://api.dropbox.com/oauth2/token',{
-      method:'POST',
-      headers:{'Content-Type':'application/x-www-form-urlencoded'},
-      body:new URLSearchParams({grant_type:'refresh_token',refresh_token:_dbxConfig.refreshToken,client_id:_dbxConfig.appKey,client_secret:_dbxConfig.appSecret})
-    });
-    var d=await res.json();
-    _dbxAccessToken=d.access_token;
-    return _dbxAccessToken;
-  }catch(e){return null;}
+  // Utilise le token saisi manuellement dans Outils
+  var token = localStorage.getItem('gones45_dbx_token') || '';
+  if(!token) return null;
+  _dbxAccessToken = token;
+  return token;
 }
 async function saveToDropbox(){
   if(_dbxSaving)return;
@@ -3622,6 +3615,27 @@ async function saveToDropbox(){
     if(res.ok){showDbxStatus('✅ Sauvegardé sur Dropbox');}
     else{showDbxStatus('⚠️ Erreur Dropbox '+res.status);}
   }catch(e){_dbxSaving=false;showDbxStatus('❌ Dropbox hors ligne');}
+}
+async function loadFromDropbox(){
+  var el=document.getElementById('dbx-load-status');
+  if(el)el.innerText='⏳ Chargement...';
+  try{
+    var token=await getValidToken();
+    if(!token){if(el)el.innerText='❌ Token Dropbox invalide';return;}
+    var res=await fetch('https://content.dropboxapi.com/2/files/download',{
+      method:'POST',
+      headers:{
+        'Authorization':'Bearer '+token,
+        'Dropbox-API-Arg':JSON.stringify({path:'/GONES45/backup.json'})
+      }
+    });
+    if(!res.ok){if(el)el.innerText='❌ Fichier introuvable sur Dropbox';return;}
+    var data=await res.json();
+    state=data;
+    save();
+    if(el)el.innerText='✅ Données chargées !';
+    setTimeout(function(){location.reload();},1200);
+  }catch(e){if(el)el.innerText='❌ Erreur : '+e.message;}
 }
 function showDbxStatus(msg){
   var el=document.getElementById('dbx-status');
@@ -5925,8 +5939,8 @@ window.onload=function(){if(!state.bkColors)state.bkColors={};loadCustomLinks();
     }catch(err){}
   },{passive:true});
   var saved=localStorage.getItem('g45_dbx');
-  if(saved){_dbxConfig.refreshToken=saved;}
-  var inp=$i('dbx-key-input');if(inp)inp.value='(token auto — permanent)';
+  /* token chargé via getValidToken() */
+  var inp=$i('dbx-key-input');var saved=localStorage.getItem('gones45_dbx_token');if(inp)inp.value=saved?'(token enregistré)':'';
   var gk=localStorage.getItem('gones45_gemini_key');var gki=$i('gemini-key-input');if(gki&&gk)gki.value=gk;var fdk=localStorage.getItem('gones45_fdorg_key');var fdki=$i('fdorg-key-input');if(fdki&&fdk)fdki.value='(clé enregistrée)';var afk=localStorage.getItem('gones45_apifootball_key');var afki=$i('apifootball-key-input');if(afki&&afk)afki.value='(clé enregistrée)';
 
 // ── APPARENCE — halo cartes ──
