@@ -4921,82 +4921,164 @@ async function loadTennisSaisons(el, nom) {
 async function searchTennisPlayer(nom) {
   var res = document.getElementById('tennis-player-result');
   if(!res) return;
-  res.innerHTML = '<div style="color:var(--t3);font-size:11px;padding:8px 0;">Recherche en cours...</div>';
+  res.innerHTML = '<div style="display:flex;align-items:center;gap:8px;color:var(--t3);font-size:11px;padding:8px 0;"><div style="width:12px;height:12px;border:2px solid rgba(77,132,255,.2);border-top-color:#4d84ff;border-radius:50%;animation:spin .8s linear infinite;flex-shrink:0;"></div>Chargement fiche joueur...</div>';
   
   var groqKey = getGeminiKey();
   var tavilyKey = getTavilyKey();
   var taUrl = 'https://www.tennisabstract.com/cgi-bin/player.cgi?p='+encodeURIComponent(nom);
-
-  // Stats à extraire
-  var statsPrompt = 'Stats tennis '+nom+': ';
-
   var html = '';
 
   try {
     if(tavilyKey && groqKey) {
-      var webData = await searchTavily(nom+' tennis stats 2025 2026 win percentage surface first set tiebreak aces games sets tennisabstract');
+      // Recherche multi-sources
+      var webData = await searchTavily(nom+' tennis 2026 ATP ranking stats wins losses surface aces breaks sets tiebreak');
+      var eloData = await searchTavily(nom+' tennis ELO rating surface hard clay grass ranking 2026 tennisabstract');
+      var allData = (webData||'') + ' ' + (eloData||'');
       
-      if(webData) {
+      if(allData) {
+        var prompt = 'Tu es expert stats tennis pour les paris sportifs. Voici des donnees sur '+nom+' : '+allData.substring(0,1400)+'.'
+          +' Reponds UNIQUEMENT en JSON valide avec cette structure exacte (pas de markdown, pas de texte avant ou apres) :'
+          +'{'
+          +'"classement":"",'
+          +'"meilleur_classement":"",'
+          +'"nationalite":"",'
+          +'"age":"",'
+          +'"taille":"",'
+          +'"main_dominante":"",'
+          +'"bilan_saison":"X victoires / Y defaites",'
+          +'"pct_victoires_global":"",'
+          +'"pct_victoires_terre":"",'
+          +'"pct_victoires_dur":"",'
+          +'"pct_victoires_gazon":"",'
+          +'"pct_1er_set":"",'
+          +'"pct_2eme_set":"",'
+          +'"pct_2sets":"",'
+          +'"aces_par_match":"",'
+          +'"pct_over_aces":"",'
+          +'"pct_1er_service":"",'
+          +'"pct_break_convertis":"",'
+          +'"pct_break_sauves":"",'
+          +'"jeux_par_match":"",'
+          +'"pct_tiebreak":"",'
+          +'"elo_terre":"","rang_elo_terre":"","elo_dur":"","rang_elo_dur":"","elo_gazon":"","rang_elo_gazon":"","paris_recommandes":["","",""]'
+          +'}';
+
         var r = await fetch('https://api.groq.com/openai/v1/chat/completions',{
           method:'POST',
           headers:{'Content-Type':'application/json','Authorization':'Bearer '+groqKey},
-          body:JSON.stringify({model:'llama-3.3-70b-versatile',messages:[{role:'user',content:statsPrompt+webData.substring(0,1000)}],max_tokens:400,temperature:0.1})
+          body:JSON.stringify({model:'llama-3.3-70b-versatile',messages:[{role:'user',content:prompt}],max_tokens:500,temperature:0.1})
         });
         var d = await r.json();
         var reply = d.choices[0].message.content.trim();
-        var lines = reply.split('\n').filter(function(l){return l.trim()&&l.indexOf(':')>=0;});
-
-        // Grouper par catégorie
-        var cats = {
-          'Victoires': ['victoires globales','victoires terre','victoires dur','victoires gazon'],
-          'Sets & Jeux': ['1er set','2eme set','matchs en 2 sets','sets par match','jeux par match'],
-          'Tie-breaks': ['tie-breaks joués','tie-breaks gagnés'],
-          'Service': ['aces'],
-        };
-
-        html += '<div style="display:flex;flex-direction:column;gap:8px;margin-bottom:10px;">';
         
-        Object.keys(cats).forEach(function(cat){
-          var catLines = lines.filter(function(l){
-            return cats[cat].some(function(k){ return l.toLowerCase().indexOf(k)>=0; });
-          });
-          if(!catLines.length) return;
-          
-          html += '<div style="background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.07);border-radius:8px;padding:10px 12px;">';
-          html += '<div style="font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#4f5d88;margin-bottom:8px;">'+cat+'</div>';
-          
-          catLines.forEach(function(l){
-            var parts = l.split(':');
-            var label = parts[0].replace(/^[-*\s]+/,'').trim();
-            var val = parts.slice(1).join(':').trim();
-            var pct = parseFloat(val);
-            var col = pct>=65?'#1ed760':pct>=50?'#f0b020':'#ff4545';
-            
-            html += '<div style="display:flex;align-items:center;gap:8px;margin-bottom:5px;">';
-            html += '<div style="font-size:10px;color:var(--t2);flex:1;">'+label+'</div>';
-            if(!isNaN(pct) && val.indexOf('%')>=0) {
-              html += '<div style="width:80px;height:5px;background:rgba(255,255,255,.06);border-radius:3px;">';
-              html += '<div style="height:5px;border-radius:3px;background:'+col+';width:'+Math.min(pct,100)+'%;"></div></div>';
-            }
-            html += '<div style="font-size:11px;font-weight:700;color:'+(isNaN(pct)?'var(--t1)':col)+';">'+val+'</div>';
-            html += '</div>';
-          });
+        // Parser le JSON
+        var clean = reply.replace(/```json|```/g,'').trim();
+        var data = JSON.parse(clean);
+
+        // ── Header joueur ──
+        html += '<div class="cwrap" style="margin-bottom:8px;">';
+        html += '<div style="display:flex;align-items:center;gap:12px;margin-bottom:10px;">';
+        html += '<div style="width:44px;height:44px;border-radius:50%;background:rgba(77,132,255,.2);border:2px solid rgba(77,132,255,.4);display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0;">🎾</div>';
+        html += '<div style="flex:1;">';
+        html += '<div style="font-size:15px;font-weight:800;color:var(--t1);">'+nom+'</div>';
+        html += '<div style="font-size:11px;color:var(--t3);margin-top:2px;">'+(data.nationalite||'')+(data.age?' · '+data.age:'')+(data.taille?' · '+data.taille:'')+(data.main_dominante?' · '+data.main_dominante:'')+'</div>';
+        html += '</div>';
+        html += '<div style="text-align:right;">';
+        html += '<div style="font-size:20px;font-weight:800;color:#f0b020;">'+(data.classement||'?')+'</div>';
+        html += '<div style="font-size:9px;color:var(--t3);">Classement actuel</div>';
+        if(data.meilleur_classement) html += '<div style="font-size:9px;color:#4d84ff;">Best: '+data.meilleur_classement+'</div>';
+        html += '</div></div>';
+        
+        // Bilan saison
+        if(data.bilan_saison) {
+          html += '<div style="text-align:center;background:rgba(255,255,255,.04);border-radius:6px;padding:8px;font-size:12px;font-weight:700;color:var(--t1);">'+data.bilan_saison+'</div>';
+        }
+        html += '</div>';
+
+        // ── Stats par surface ──
+        html += '<div class="cwrap" style="margin-bottom:8px;">';
+        html += '<div style="font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#4f5d88;margin-bottom:10px;">% Victoires par surface</div>';
+        html += '<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:6px;">';
+        [
+          {l:'Global', v:data.pct_victoires_global, c:'#4d84ff', elo:null, rang:null},
+          {l:'🟠 Terre', v:data.pct_victoires_terre, c:'#ff7b54', elo:data.elo_terre, rang:data.rang_elo_terre},
+          {l:'🔵 Dur', v:data.pct_victoires_dur, c:'#4d84ff', elo:data.elo_dur, rang:data.rang_elo_dur},
+          {l:'🟢 Gazon', v:data.pct_victoires_gazon, c:'#1ed760', elo:data.elo_gazon, rang:data.rang_elo_gazon},
+        ].forEach(function(s){
+          var pct = parseFloat(s.v)||0;
+          html += '<div style="text-align:center;background:rgba(255,255,255,.04);border-radius:8px;padding:8px 4px;">';
+          html += '<div style="font-size:16px;font-weight:800;color:'+s.c+';">'+(s.v||'?')+'</div>';
+          html += '<div style="font-size:9px;color:var(--t3);">victoires</div>';
+          if(s.elo) { html += '<div style="font-size:11px;font-weight:700;color:#a78bfa;margin-top:3px;">ELO '+s.elo+'</div>'; }
+          if(s.rang) { html += '<div style="font-size:9px;color:#4f5d88;">Rang #'+s.rang+'</div>'; }
           html += '</div>';
         });
-        html += '</div>';
+        html += '</div></div>';
+
+        // ── Stats de match ──
+        html += '<div class="cwrap" style="margin-bottom:8px;">';
+        html += '<div style="font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#4f5d88;margin-bottom:10px;">Stats de match</div>';
+        
+        var matchStats = [
+          {l:'1er set gagne', v:data.pct_1er_set},
+          {l:'2eme set gagne', v:data.pct_2eme_set},
+          {l:'Matchs en 2 sets', v:data.pct_2sets},
+          {l:'1er service', v:data.pct_1er_service},
+          {l:'Breaks convertis', v:data.pct_break_convertis},
+          {l:'Breaks sauves', v:data.pct_break_sauves},
+          {l:'Tie-breaks joues', v:data.pct_tiebreak},
+        ];
+        
+        matchStats.forEach(function(s){
+          if(!s.v) return;
+          var pct = parseFloat(s.v)||0;
+          var col = pct>=65?'#1ed760':pct>=50?'#f0b020':'#ff4545';
+          html += '<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">';
+          html += '<div style="font-size:10px;color:var(--t2);flex:1;">'+s.l+'</div>';
+          html += '<div style="width:80px;height:5px;background:rgba(255,255,255,.06);border-radius:3px;">';
+          html += '<div style="height:5px;border-radius:3px;background:'+col+';width:'+Math.min(pct,100)+'%;"></div></div>';
+          html += '<div style="font-size:11px;font-weight:700;color:'+col+';">'+s.v+'</div>';
+          html += '</div>';
+        });
+
+        // Aces et jeux
+        html += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:8px;">';
+        if(data.aces_par_match) {
+          html += '<div style="background:rgba(255,255,255,.04);border-radius:8px;padding:8px;text-align:center;">';
+          html += '<div style="font-size:18px;font-weight:800;color:#a78bfa;">'+data.aces_par_match+'</div>';
+          html += '<div style="font-size:9px;color:var(--t3);">Aces/match</div></div>';
+        }
+        if(data.jeux_par_match) {
+          html += '<div style="background:rgba(255,255,255,.04);border-radius:8px;padding:8px;text-align:center;">';
+          html += '<div style="font-size:18px;font-weight:800;color:#22d3ee;">'+data.jeux_par_match+'</div>';
+          html += '<div style="font-size:9px;color:var(--t3);">Jeux/match</div></div>';
+        }
+        html += '</div></div>';
+
+        // ── Paris recommandes ──
+        if(data.paris_recommandes && data.paris_recommandes.filter(function(p){return p;}).length) {
+          html += '<div class="cwrap" style="margin-bottom:8px;">';
+          html += '<div style="font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#4f5d88;margin-bottom:8px;">🎯 Paris recommandes</div>';
+          data.paris_recommandes.filter(function(p){return p;}).forEach(function(p){
+            html += '<div style="background:rgba(30,215,96,.06);border:1px solid rgba(30,215,96,.15);border-radius:8px;padding:8px 12px;font-size:11px;color:var(--t1);margin-bottom:5px;">'+p+'</div>';
+          });
+          html += '</div>';
+        }
       }
     }
-  } catch(e) {}
+  } catch(e) {
+    html = '';
+  }
 
-  // Pas d'iframe - Tennis Abstract bloque
-
-  html += '<div style="display:flex;gap:6px;">';
-  html += '<a href="'+taUrl+'" target="_blank" style="flex:1;padding:8px;background:rgba(77,132,255,.1);border:1px solid rgba(77,132,255,.3);border-radius:6px;color:#4d84ff;font-size:10px;font-weight:700;text-decoration:none;text-align:center;">📊 Tennis Abstract</a>';
-  html += '<a href="https://www.atptour.com/en/players/'+nom.toLowerCase().replace(/ /g,'-')+'/overview" target="_blank" style="flex:1;padding:8px;background:rgba(240,176,32,.1);border:1px solid rgba(240,176,32,.3);border-radius:6px;color:#f0b020;font-size:10px;font-weight:700;text-decoration:none;text-align:center;">🎾 ATP Tour</a>';
-  html += '<a href="https://www.flashscore.fr/joueur/tennis/'+nom.toLowerCase().replace(/ /g,'-')+'/" target="_blank" style="flex:1;padding:8px;background:rgba(255,123,84,.1);border:1px solid rgba(255,123,84,.3);border-radius:6px;color:#ff7b54;font-size:10px;font-weight:700;text-decoration:none;text-align:center;">⚡ Flashscore</a>';
+  // Boutons liens
+  var taUrl2 = 'https://www.tennisabstract.com/cgi-bin/player.cgi?p='+encodeURIComponent(nom);
+  html += '<div style="display:flex;gap:5px;flex-wrap:wrap;">';
+  html += '<a href="'+taUrl2+'" target="_blank" style="flex:1;min-width:80px;padding:8px 4px;background:rgba(77,132,255,.1);border:1px solid rgba(77,132,255,.3);border-radius:6px;color:#4d84ff;font-size:9px;font-weight:700;text-decoration:none;text-align:center;">📊 Tennis Abstract</a>';
+  html += '<a href="https://www.atptour.com/en/players/'+nom.toLowerCase().replace(/ /g,'-')+'/overview" target="_blank" style="flex:1;min-width:80px;padding:8px 4px;background:rgba(240,176,32,.1);border:1px solid rgba(240,176,32,.3);border-radius:6px;color:#f0b020;font-size:9px;font-weight:700;text-decoration:none;text-align:center;">🎾 ATP Tour</a>';
+  html += '<a href="https://www.sofascore.com/search#q='+encodeURIComponent(nom)+'" target="_blank" style="flex:1;min-width:80px;padding:8px 4px;background:rgba(255,123,84,.1);border:1px solid rgba(255,123,84,.3);border-radius:6px;color:#ff7b54;font-size:9px;font-weight:700;text-decoration:none;text-align:center;">⚡ Sofascore</a>';
   html += '</div>';
 
-  res.innerHTML = html || '<div style="text-align:center;"><a href="'+taUrl+'" target="_blank" style="color:#4d84ff;">📊 Voir sur Tennis Abstract</a></div>';
+  res.innerHTML = html || '<div style="text-align:center;padding:10px;"><a href="'+taUrl+'" target="_blank" style="color:#4d84ff;font-size:12px;">📊 Voir sur Tennis Abstract</a></div>';
 }
 
 async function compareTennisH2H(p1, p2) {
