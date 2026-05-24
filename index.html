@@ -1014,8 +1014,10 @@ input[type="date"],input[type="time"]{color-scheme:dark;}
   </div>
   <div class="fc" style="border-style:dashed;">
     <label class="fl" style="color:var(--gold);">☁️ Dropbox — Sauvegarde auto</label>
-    <div style="font-size:10px;color:var(--t3);margin-bottom:8px;margin-top:4px;">Colle ton token Dropbox ici. Il sera sauvegardé sur cet appareil.</div>
-    <input id="dbx-key-input" class="fi" type="text" placeholder="sl.u.XXXXXXX…" style="margin-bottom:8px;font-size:11px;filter:blur(4px);transition:filter .2s;" onfocus="this.style.filter='none'" onblur="this.style.filter='blur(4px)'">
+    <div style="font-size:10px;color:var(--t3);margin-bottom:8px;margin-top:4px;">Refresh Token (permanent) + App Key + App Secret depuis dropbox.com/developers</div>
+    <input id="dbx-key-input" class="fi" type="text" placeholder="Refresh Token (sl.u.XXXXXXX…)" style="margin-bottom:6px;font-size:11px;filter:blur(4px);transition:filter .2s;" onfocus="this.style.filter='none'" onblur="this.style.filter='blur(4px)'">
+    <input id="dbx-appkey-input" class="fi" type="text" placeholder="App Key" style="margin-bottom:6px;font-size:11px;filter:blur(4px);transition:filter .2s;" onfocus="this.style.filter='none'" onblur="this.style.filter='blur(4px)'">
+    <input id="dbx-appsecret-input" class="fi" type="text" placeholder="App Secret" style="margin-bottom:8px;font-size:11px;filter:blur(4px);transition:filter .2s;" onfocus="this.style.filter='none'" onblur="this.style.filter='blur(4px)'">
     <div style="display:flex;gap:7px;">
       <button class="btn btn-p" style="font-size:11px;" onclick="saveDbxKey()">💾 Enregistrer</button>
       <button class="btn" style="background:rgba(255,69,69,.12);color:var(--r);border:1px solid rgba(255,69,69,.2);font-size:11px;" onclick="testDbxKey()">🧪 Tester</button>
@@ -3432,11 +3434,17 @@ function updateCompList(){
   var dl2=$i('comp-list-simple');if(dl2)dl2.innerHTML=comps.map(function(c){return '<option value="'+c+'">';}).join('');
 }
 function saveDbxKey(){
-  var inp=$i('dbx-key-input');if(!inp)return;
-  var key=inp.value.trim();if(!key)return;
-  localStorage.setItem('gones45_dbx_token', key);
+  var inp=$i('dbx-key-input');
+  var inpKey=$i('dbx-appkey-input');
+  var inpSec=$i('dbx-appsecret-input');
+  var token=(inp&&inp.value.trim())||'';
+  var appKey=(inpKey&&inpKey.value.trim())||'';
+  var appSec=(inpSec&&inpSec.value.trim())||'';
+  if(token) localStorage.setItem('gones45_dbx_token', token);
+  if(appKey) localStorage.setItem('gones45_dbx_appkey', appKey);
+  if(appSec) localStorage.setItem('gones45_dbx_appsecret', appSec);
   var st=$i('dbx-key-status');
-  if(st){st.innerText='✅ Clé enregistrée !';st.style.color='var(--g)';}
+  if(st){st.innerText='✅ Enregistré !';st.style.color='var(--g)';}
   setTimeout(function(){if(st)st.innerText='';},3000);
 }
 async function testDbxKey(){
@@ -3585,16 +3593,35 @@ async function loadTeamCalendar(teamId, nom, col) {
   }
 }
 
-/* ── DROPBOX AUTO-SAVE (refresh token permanent) ── */
-/* Token Dropbox stocké dans localStorage uniquement */
+/* ── DROPBOX AUTO-SAVE ── */
+/* appKey/appSecret stockés dans localStorage — jamais dans le code */
 var _dbxSaving=false;
 var _dbxAccessToken=null;
+function getDbxConfig(){
+  return {
+    appKey:    localStorage.getItem('gones45_dbx_appkey')    || '',
+    appSecret: localStorage.getItem('gones45_dbx_appsecret') || '',
+    refreshToken: localStorage.getItem('gones45_dbx_token')  || ''
+  };
+}
 async function getValidToken(){
-  // Utilise le token saisi manuellement dans Outils
-  var token = localStorage.getItem('gones45_dbx_token') || '';
-  if(!token) return null;
-  _dbxAccessToken = token;
-  return token;
+  var cfg = getDbxConfig();
+  if(!cfg.refreshToken) return null;
+  // Si on a appKey+appSecret on peut rafraîchir
+  if(cfg.appKey && cfg.appSecret){
+    try{
+      var res=await fetch('https://api.dropbox.com/oauth2/token',{
+        method:'POST',
+        headers:{'Content-Type':'application/x-www-form-urlencoded'},
+        body:new URLSearchParams({grant_type:'refresh_token',refresh_token:cfg.refreshToken,client_id:cfg.appKey,client_secret:cfg.appSecret})
+      });
+      var d=await res.json();
+      if(d.access_token){ _dbxAccessToken=d.access_token; return d.access_token; }
+    }catch(e){}
+  }
+  // Sinon on utilise le token directement (token court 4h)
+  _dbxAccessToken = cfg.refreshToken;
+  return cfg.refreshToken;
 }
 async function saveToDropbox(){
   if(_dbxSaving)return;
