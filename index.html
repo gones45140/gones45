@@ -4776,18 +4776,6 @@ async function loadTennisSaisons(el, nom) {
     +'<div id="tennis-player-result"></div>'
     +'</div>'
 
-    // Comparateur H2H
-    +'<div class="cwrap" style="margin-bottom:10px;">'
-    +'<div style="font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#4f5d88;margin-bottom:10px;">⚔️ Comparateur H2H</div>'
-    +'<div style="display:grid;grid-template-columns:1fr auto 1fr;gap:8px;align-items:center;margin-bottom:8px;">'
-    +'<input id="tennis-h2h-p1" class="fi" placeholder="Joueur 1" style="font-size:11px;">'
-    +'<span style="color:var(--t3);font-weight:700;text-align:center;">vs</span>'
-    +'<input id="tennis-h2h-p2" class="fi" placeholder="Joueur 2" style="font-size:11px;">'
-    +'</div>'
-    +'<button id="tennis-h2h-btn" style="width:100%;padding:10px;border-radius:var(--r8);border:none;background:var(--a);color:#fff;font-size:12px;font-weight:700;cursor:pointer;">⚡ Comparer H2H</button>'
-    +'<div id="tennis-h2h-result" style="margin-top:10px;"></div>'
-    +'</div>'
-
     // Liens utiles
     +'<div class="cwrap">'
     +'<div style="font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#4f5d88;margin-bottom:10px;">Liens utiles</div>'
@@ -4828,12 +4816,6 @@ async function loadTennisSaisons(el, nom) {
       if(inp && inp.value.trim()) searchTennisPlayer(inp.value.trim());
     });
   });
-  document.getElementById('tennis-h2h-btn').onclick = function(){
-    var p1 = document.getElementById('tennis-h2h-p1').value.trim();
-    var p2 = document.getElementById('tennis-h2h-p2').value.trim();
-    if(p1&&p2) compareTennisH2H(p1, p2);
-  };
-
   // Pré-remplir si c'est un joueur connu
   if(TENNIS_PLAYERS[nom]) {
     document.getElementById('tennis-search-input').value = nom;
@@ -5045,76 +5027,6 @@ async function searchTennisPlayer(nom) {
     html += '<div style="font-size:11px;color:var(--t1);line-height:1.7;">' + resume + '</div>';
     html += '</div>';
 
-    // ── Bilan ──
-    html += '<div class="cwrap" style="margin-bottom:8px;">';
-    html += '<div style="font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#4f5d88;margin-bottom:8px;">Bilan ' + yr + '</div>';
-    html += '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px;">';
-    [{l:'Matchs', v:stats.matchs, c:'#4d84ff'},{l:'Victoires', v:stats.victoires, c:'#1ed760'},{l:'Defaites', v:stats.defaites, c:'#ff4545'}].forEach(function(s){
-      html += '<div style="text-align:center;background:rgba(255,255,255,.04);border-radius:8px;padding:10px 4px;border:1px solid rgba(255,255,255,.06);">';
-      html += '<div style="font-size:22px;font-weight:800;color:' + s.c + ';">' + (s.v !== null ? s.v : 'N/A') + '</div>';
-      html += '<div style="font-size:9px;color:var(--t3);margin-top:2px;">' + s.l + '</div>';
-      html += '</div>';
-    });
-    html += '</div></div>';
-
-    // ── Stats de service ──
-    var serviceRows = [
-      {l:'1er service %', v:stats.pct_1er_service},
-      {l:'Pts gagnes sur 1er service %', v:stats.pts_1er_service},
-      {l:'2e service %', v:stats.pct_2e_service},
-      {l:'Pts gagnes sur 2e service %', v:stats.pts_2e_service},
-    ].filter(function(s){return s.v !== null;});
-
-    if(serviceRows.length || stats.aces !== null || stats.doubles_fautes !== null) {
-      html += '<div class="cwrap" style="margin-bottom:8px;">';
-      html += '<div style="font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#4f5d88;margin-bottom:8px;">Stats de service</div>';
-      serviceRows.forEach(function(s){
-        var pct = parseFloat(s.v)||0;
-        var col = pct >= 65 ? '#1ed760' : pct >= 50 ? '#f0b020' : '#ff4545';
-        html += '<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">';
-        html += '<div style="font-size:10px;color:var(--t2);flex:1;">' + s.l + '</div>';
-        html += '<div style="width:80px;height:5px;background:rgba(255,255,255,.06);border-radius:3px;"><div style="height:5px;border-radius:3px;background:' + col + ';width:' + Math.min(pct,100) + '%;"></div></div>';
-        html += '<div style="font-size:11px;font-weight:700;color:' + col + ';">' + Math.round(pct) + '%</div>';
-        html += '</div>';
-      });
-      html += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:6px;">';
-      if(stats.aces !== null) html += '<div style="background:rgba(255,255,255,.04);border-radius:8px;padding:8px;text-align:center;"><div style="font-size:20px;font-weight:800;color:#a78bfa;">' + stats.aces + '</div><div style="font-size:9px;color:var(--t3);">Aces/match</div></div>';
-      if(stats.doubles_fautes !== null) html += '<div style="background:rgba(255,255,255,.04);border-radius:8px;padding:8px;text-align:center;"><div style="font-size:20px;font-weight:800;color:#ff4545;">' + stats.doubles_fautes + '</div><div style="font-size:9px;color:var(--t3);">DF/match</div></div>';
-      html += '</div>';
-
-      // Breaks et tie-breaks
-      var hasBreaks = stats.brk_sauves_pct !== null || stats.brk_conv_pct !== null || stats.tiebreaks_gagnes !== null;
-      if(hasBreaks) {
-        html += '<div style="margin-top:8px;">';
-        html += '<div style="font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#4f5d88;margin-bottom:8px;">Breaks & Tie-breaks</div>';
-        var brkRows = [
-          {l:'Balles de break sauvees', n:stats.brk_sauves_n, tot:stats.brk_sauves_total, pct:stats.brk_sauves_pct, c:'#1ed760'},
-          {l:'Balles de break converties', n:stats.brk_conv_n, tot:stats.brk_conv_total, pct:stats.brk_conv_pct, c:'#f0b020'},
-        ];
-        brkRows.forEach(function(s){
-          if(s.pct === null && s.n === null) return;
-          var pct = parseFloat(s.pct)||0;
-          var col = s.c;
-          var scoreStr = (s.n !== null && s.tot !== null) ? s.n + '/' + s.tot : '';
-          html += '<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">';
-          html += '<div style="font-size:10px;color:var(--t2);flex:1;">' + s.l + (scoreStr?' ('+scoreStr+')':'') + '</div>';
-          if(pct) {
-            html += '<div style="width:80px;height:5px;background:rgba(255,255,255,.06);border-radius:3px;"><div style="height:5px;border-radius:3px;background:' + col + ';width:' + Math.min(pct,100) + '%;"></div></div>';
-            html += '<div style="font-size:11px;font-weight:700;color:' + col + ';">' + Math.round(pct) + '%</div>';
-          }
-          html += '</div>';
-        });
-        if(stats.tiebreaks_gagnes !== null || stats.tiebreaks_joues !== null) {
-          html += '<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">';
-          html += '<div style="font-size:10px;color:var(--t2);flex:1;">Jeux decisifs gagnes' + (stats.tiebreaks_joues !== null ? ' (/' + stats.tiebreaks_joues + ')' : '') + '</div>';
-          html += '<div style="font-size:11px;font-weight:700;color:#22d3ee;">' + (stats.tiebreaks_gagnes !== null ? stats.tiebreaks_gagnes : 'N/A') + '</div>';
-          html += '</div>';
-        }
-        html += '</div>';
-      }
-      html += '</div></div>';
-    }
-
   } catch(e) {
     html += '<div style="color:var(--t3);font-size:11px;padding:10px;text-align:center;">Donnees non disponibles — consulte Tennis Abstract directement.</div>';
   }
@@ -5132,75 +5044,9 @@ async function searchTennisPlayer(nom) {
   html += '<a href="https://www.sofascore.com/search#q=' + encodeURIComponent(nom) + '" target="_blank" style="flex:1;min-width:80px;padding:8px 4px;background:rgba(255,123,84,.1);border:1px solid rgba(255,123,84,.3);border-radius:6px;color:#ff7b54;font-size:9px;font-weight:700;text-decoration:none;text-align:center;">⚡ Sofascore</a>';
   html += '</div>';
 
-  // ── Recherche stat perso ──
-  html += '<div class="cwrap">';
-  html += '<div style="font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#4f5d88;margin-bottom:8px;">🔍 Recherche stat</div>';
-  html += '<div style="display:flex;gap:6px;">';
-  html += '<input id="tennis-custom-stat" class="fi" placeholder="Ex: % victoires quand perd le 1er set..." style="flex:1;font-size:11px;">';
-  html += '<button id="tennis-custom-btn" style="padding:8px 12px;border-radius:var(--r6);border:none;background:var(--a);color:#fff;font-size:11px;font-weight:700;cursor:pointer;flex-shrink:0;">→</button>';
-  html += '</div>';
-  html += '<div id="tennis-custom-result" style="margin-top:6px;"></div>';
-  html += '</div>';
-
   res.innerHTML = html;
-
-  // Brancher recherche stat
-  setTimeout(function() {
-    var cb = document.getElementById('tennis-custom-btn');
-    var ci = document.getElementById('tennis-custom-stat');
-    if(!cb || !ci) return;
-    var fn = async function() {
-      var q = ci.value.trim();
-      if(!q) return;
-      var r2 = document.getElementById('tennis-custom-result');
-      r2.innerHTML = '<div style="color:var(--t3);font-size:11px;">Recherche...</div>';
-      var tk = getTavilyKey();
-      var gk = getGeminiKey();
-      if(!tk) { r2.innerHTML = '<div style="color:#ff4545;font-size:11px;">Cle Tavily requise</div>'; return; }
-      try {
-        var wd = await searchTavily('"' + nom + '" tennis ' + q + ' ' + yr);
-        if(!wd) { r2.innerHTML = '<div style="color:var(--t3);font-size:11px;">Aucun resultat</div>'; return; }
-        if(gk) {
-          var rx = await fetch('https://api.groq.com/openai/v1/chat/completions', {
-            method: 'POST',
-            headers: {'Content-Type': 'application/json', 'Authorization': 'Bearer ' + gk},
-            body: JSON.stringify({model: 'llama-3.3-70b-versatile', messages: [{role: 'user', content: 'Traduis en francais en 2 lignes max avec les chiffres exacts du texte: ' + wd.substring(0, 400)}], max_tokens: 100, temperature: 0})
-          });
-          var dx = await rx.json();
-          r2.innerHTML = '<div style="background:rgba(77,132,255,.06);border:1px solid rgba(77,132,255,.15);border-radius:8px;padding:8px 12px;font-size:11px;color:var(--t1);line-height:1.6;">' + dx.choices[0].message.content.trim() + '</div>';
-        } else {
-          r2.innerHTML = '<div style="font-size:11px;color:var(--t1);">' + wd.substring(0, 300) + '</div>';
-        }
-      } catch(e) { r2.innerHTML = '<div style="color:#ff4545;font-size:11px;">Erreur</div>'; }
-    };
-    cb.onclick = fn;
-    ci.onkeydown = function(e) { if(e.key === 'Enter') fn(); };
-  }, 300);
 }
 
-async function compareTennisH2H(p1, p2) {
-  var res = document.getElementById('tennis-h2h-result');
-  if(!res) return;
-
-  var h2hUrl = 'https://www.atptour.com/en/players/player-comparison/h2h?player1=' + encodeURIComponent(p1) + '&player2=' + encodeURIComponent(p2);
-  var sofaUrl = 'https://www.sofascore.com/search#q=' + encodeURIComponent(p1 + ' ' + p2);
-  var taUrl = 'https://www.tennisabstract.com/cgi-bin/player.cgi?p=' + encodeURIComponent(p1.replace(/ /g,'+')) + '&o=' + encodeURIComponent(p2.replace(/ /g,'+'));
-
-  res.innerHTML = '<div style="background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.07);border-radius:8px;padding:10px 12px;">'
-    + '<div style="display:grid;grid-template-columns:1fr auto 1fr;gap:8px;align-items:center;text-align:center;margin-bottom:10px;">'
-    + '<div style="font-size:13px;font-weight:800;color:#4d84ff;">' + p1.split(' ').pop() + '</div>'
-    + '<div style="font-size:11px;color:var(--t3);font-weight:700;">H2H</div>'
-    + '<div style="font-size:13px;font-weight:800;color:#f0b020;">' + p2.split(' ').pop() + '</div>'
-    + '</div>'
-    + '<div style="display:flex;flex-direction:column;gap:6px;">'
-    + '<a href="' + h2hUrl + '" target="_blank" style="display:flex;align-items:center;gap:10px;padding:10px 14px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:8px;text-decoration:none;">'
-    + '<div style="font-size:12px;font-weight:700;color:#f0b020;flex:1;">🎾 H2H officiel sur ATP Tour</div><div style="color:var(--t3);">→</div></a>'
-    + '<a href="' + sofaUrl + '" target="_blank" style="display:flex;align-items:center;gap:10px;padding:10px 14px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:8px;text-decoration:none;">'
-    + '<div style="font-size:12px;font-weight:700;color:#ff7b54;flex:1;">⚡ Recherche sur Sofascore</div><div style="color:var(--t3);">→</div></a>'
-    + '<a href="' + taUrl + '" target="_blank" style="display:flex;align-items:center;gap:10px;padding:10px 14px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:8px;text-decoration:none;">'
-    + '<div style="font-size:12px;font-weight:700;color:#4d84ff;flex:1;">📊 Tennis Abstract H2H</div><div style="color:var(--t3);">→</div></a>'
-    + '</div></div>';
-}
 
 
 async function loadNbaSaisons(el, nom) {
