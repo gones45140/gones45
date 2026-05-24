@@ -5006,8 +5006,9 @@ async function searchTennisPlayer(nom) {
           {l:'🟢 Gazon', v:data.pct_victoires_gazon, c:'#1ed760', elo:data.elo_gazon, rang:data.rang_elo_gazon},
         ].forEach(function(s){
           var pct = parseFloat(s.v)||0;
-          html += '<div style="text-align:center;background:rgba(255,255,255,.04);border-radius:8px;padding:8px 4px;">';
-          html += '<div style="font-size:16px;font-weight:800;color:'+s.c+';">'+(s.v||'?')+'</div>';
+          html += '<div style="text-align:center;background:rgba(255,255,255,.04);border-radius:8px;padding:8px 4px;border:1px solid rgba(255,255,255,.06);">';
+          html += '<div style="font-size:12px;margin-bottom:4px;">'+s.l+'</div>';
+          html += '<div style="font-size:17px;font-weight:800;color:'+s.c+';">'+(s.v||'?')+'</div>';
           html += '<div style="font-size:9px;color:var(--t3);">victoires</div>';
           if(s.elo) { html += '<div style="font-size:11px;font-weight:700;color:#a78bfa;margin-top:3px;">ELO '+s.elo+'</div>'; }
           if(s.rang) { html += '<div style="font-size:9px;color:#4f5d88;">Rang #'+s.rang+'</div>'; }
@@ -5055,6 +5056,16 @@ async function searchTennisPlayer(nom) {
         }
         html += '</div></div>';
 
+        // ── Recherche stat personnalisée ──
+        html += '<div class="cwrap" style="margin-bottom:8px;">';
+        html += '<div style="font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#4f5d88;margin-bottom:8px;">🔍 Recherche stat</div>';
+        html += '<div style="display:flex;gap:6px;margin-bottom:6px;">';
+        html += '<input id="tennis-custom-stat" class="fi" placeholder="Ex: % victoires quand perd le 1er set..." style="flex:1;font-size:11px;">';
+        html += '<button id="tennis-custom-btn" style="padding:8px 12px;border-radius:var(--r6);border:none;background:var(--a);color:#fff;font-size:11px;font-weight:700;cursor:pointer;flex-shrink:0;">→</button>';
+        html += '</div>';
+        html += '<div id="tennis-custom-result"></div>';
+        html += '</div>';
+
         // ── Paris recommandes ──
         if(data.paris_recommandes && data.paris_recommandes.filter(function(p){return p;}).length) {
           html += '<div class="cwrap" style="margin-bottom:8px;">';
@@ -5069,6 +5080,37 @@ async function searchTennisPlayer(nom) {
   } catch(e) {
     html = '';
   }
+
+  // Brancher recherche stat perso
+  setTimeout(function(){
+    var customBtn = document.getElementById('tennis-custom-btn');
+    var customInp = document.getElementById('tennis-custom-stat');
+    if(customBtn && customInp) {
+      var searchFn = async function(){
+        var q = customInp.value.trim();
+        if(!q) return;
+        var res = document.getElementById('tennis-custom-result');
+        res.innerHTML = '<div style="color:var(--t3);font-size:11px;">Recherche...</div>';
+        var groqKey = getGeminiKey();
+        var tavilyKey = getTavilyKey();
+        if(!tavilyKey||!groqKey){res.innerHTML='<div style="color:#ff4545;font-size:11px;">Clés Tavily+Groq requises</div>';return;}
+        try {
+          var wd = await searchTavily(nom+' tennis '+q+' statistique pourcentage tennisabstract 2025 2026');
+          if(!wd){res.innerHTML='<div style="color:var(--t3);font-size:11px;">Aucun résultat</div>';return;}
+          var r = await fetch('https://api.groq.com/openai/v1/chat/completions',{
+            method:'POST',
+            headers:{'Content-Type':'application/json','Authorization':'Bearer '+groqKey},
+            body:JSON.stringify({model:'llama-3.3-70b-versatile',messages:[{role:'user',content:'Stats tennis sur '+nom+' pour la question "'+q+'". Donnees: '+wd.substring(0,800)+'. Reponds en 2-3 phrases maximum avec les chiffres exacts. En francais.'}],max_tokens:150,temperature:0.1})
+          });
+          var d = await r.json();
+          var reply = d.choices[0].message.content.trim();
+          res.innerHTML = '<div style="background:rgba(77,132,255,.06);border:1px solid rgba(77,132,255,.15);border-radius:8px;padding:10px 12px;font-size:11px;color:var(--t1);line-height:1.6;">'+reply+'</div>';
+        } catch(e){ res.innerHTML='<div style="color:#ff4545;font-size:11px;">Erreur</div>'; }
+      };
+      customBtn.onclick = searchFn;
+      customInp.onkeydown = function(e){ if(e.key==='Enter') searchFn(); };
+    }
+  }, 200);
 
   // Boutons liens
   var taUrl2 = 'https://www.tennisabstract.com/cgi-bin/player.cgi?p='+encodeURIComponent(nom);
