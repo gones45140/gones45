@@ -4980,183 +4980,71 @@ async function loadTennisSaisons(el, nom) {
 async function searchTennisPlayer(nom) {
   var res = document.getElementById('tennis-player-result');
   if(!res) return;
-  res.innerHTML = '<div style="display:flex;align-items:center;gap:8px;color:var(--t3);font-size:11px;padding:8px 0;"><div style="width:12px;height:12px;border:2px solid rgba(77,132,255,.2);border-top-color:#4d84ff;border-radius:50%;animation:spin .8s linear infinite;flex-shrink:0;"></div>Chargement fiche joueur...</div>';
+  res.innerHTML = '<div style="display:flex;align-items:center;gap:8px;color:var(--t3);font-size:11px;padding:8px 0;"><div style="width:12px;height:12px;border:2px solid rgba(77,132,255,.2);border-top-color:#4d84ff;border-radius:50%;animation:spin .8s linear infinite;flex-shrink:0;"></div>Recherche en cours...</div>';
   
   var groqKey = getGeminiKey();
   var tavilyKey = getTavilyKey();
-  var taUrl = 'https://www.tennisabstract.com/cgi-bin/player.cgi?p='+encodeURIComponent(nom);
+  var yr = (typeof _tennisYear!=='undefined'?_tennisYear:'2026');
+  var taUrl = 'https://www.tennisabstract.com/cgi-bin/player.cgi?p='+encodeURIComponent(nom.replace(/ /g,'+'))+'&f=A&sdf='+yr+'0101&sdl='+yr+'1231';
   var html = '';
 
-  var yr = (typeof _tennisYear!=='undefined'?_tennisYear:'2026');
   try {
-    if(tavilyKey && groqKey) {
-      var webData = await searchTavily('"'+nom+'" tennis stats '+yr+' win rate surface clay hard grass break points aces sets per match tennisabstract');
-      var eloData = await searchTavily('"'+nom+'" tennis ELO rating clay hard grass tennisabstract surface ranking '+yr);
-      var allData = (webData||'') + ' ' + (eloData||'');
-      console.log('[Tennis] allData length:', allData.trim().length);
+    if(tavilyKey) {
+      // Tavily cherche les vraies stats
+      var webData = await searchTavily('"'+nom+'" tennis stats '+yr+' wins losses surface clay hard grass aces breaks sets');
       
-      if(allData && allData.trim().length > 10) {
-        var prompt = 'Tu es expert stats tennis pour les paris sportifs. Voici des donnees sur '+nom+' : '+allData.substring(0,1400)+'.'
-          +' Reponds UNIQUEMENT en JSON valide avec cette structure exacte (pas de markdown, pas de texte avant ou apres) :'
-          +'{'
-          +'"classement":"",'
-          +'"meilleur_classement":"",'
-          +'"nationalite":"",'
-          +'"age":"",'
-          +'"taille":"",'
-          +'"main_dominante":"",'
-          +'"bilan_saison":"X victoires / Y defaites",'
-          +'"pct_victoires_global":"",'
-          +'"pct_victoires_terre":"",'
-          +'"pct_victoires_dur":"",'
-          +'"pct_victoires_gazon":"",'
-          +'"pct_1er_set":"",'
-          +'"pct_2eme_set":"",'
-          +'"pct_2sets":"",'
-          +'"aces_par_match":"",'
-          +'"pct_over_aces":"",'
-          +'"pct_1er_service":"",'
-          +'"pct_break_convertis":"",'
-          +'"pct_break_sauves":"",'
-          +'"jeux_par_match":"",'
-          +'"pct_tiebreak":"",'
-          +'"elo_terre":"","rang_elo_terre":"","elo_dur":"","rang_elo_dur":"","elo_gazon":"","rang_elo_gazon":"","paris_recommandes":["pari 1 avec cote recommandee ex: Victoire Sinner @1.20","pari 2 plus specifique ex: Over 22.5 jeux @1.85","pari 3 original ex: Sinner gagne 1er set @1.35"]'
-          +'}';
-
+      if(webData && groqKey) {
+        // Groq traduit uniquement — pas de JSON, pas de chiffres inventés
         var r = await fetch('https://api.groq.com/openai/v1/chat/completions',{
           method:'POST',
           headers:{'Content-Type':'application/json','Authorization':'Bearer '+groqKey},
-          body:JSON.stringify({model:'llama-3.3-70b-versatile',messages:[{role:'user',content:prompt}],max_tokens:500,temperature:0.1})
+          body:JSON.stringify({
+            model:'llama-3.3-70b-versatile',
+            messages:[{role:'user',content:'Traduis et resume en francais ces informations sur '+nom+' (saison '+yr+'). Garde UNIQUEMENT les chiffres qui sont explicitement dans le texte, ninvente rien. 4 lignes max : '+webData.substring(0,800)}],
+            max_tokens:200,
+            temperature:0.1
+          })
         });
         var d = await r.json();
         var reply = d.choices[0].message.content.trim();
         
-        // Parser le JSON avec fallback robuste
-        console.log('[Tennis] Reply Groq:', reply.substring(0,200));
-        var data = {};
-        try {
-          var clean = reply.replace(/```json|```/g,'').trim();
-          // Extraire le premier objet JSON valide
-          var jsonMatch = clean.match(/\{[\s\S]*\}/);
-          if(jsonMatch) data = JSON.parse(jsonMatch[0]);
-          else data = JSON.parse(clean);
-        } catch(jsonErr) {
-          // Fallback — afficher ce que Groq a retourné en texte
-          html += '<div class="cwrap" style="margin-bottom:8px;">';
-          html += '<div style="font-size:13px;font-weight:800;color:var(--t1);margin-bottom:8px;">'+nom+'</div>';
-          html += '<div style="font-size:11px;color:var(--t1);line-height:1.7;">'+reply.substring(0,500)+'</div>';
-          html += '</div>';
-          data = null;
-        }
-        if(!data) { throw new Error('JSON invalide'); }
-
-        // ── Header joueur ──
         html += '<div class="cwrap" style="margin-bottom:8px;">';
-        html += '<div style="display:flex;align-items:center;gap:12px;margin-bottom:10px;">';
-        html += '<div style="width:44px;height:44px;border-radius:50%;background:rgba(77,132,255,.2);border:2px solid rgba(77,132,255,.4);display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0;">🎾</div>';
-        html += '<div style="flex:1;">';
-        html += '<div style="font-size:15px;font-weight:800;color:var(--t1);">'+nom+'</div>';
-        html += '<div style="font-size:11px;color:var(--t3);margin-top:2px;">'+(data.nationalite||'')+(data.age?' · '+data.age:'')+(data.taille?' · '+data.taille:'')+(data.main_dominante?' · '+data.main_dominante:'')+'</div>';
+        html += '<div style="font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#4f5d88;margin-bottom:8px;">'+nom+' — '+yr+'</div>';
+        html += '<div style="font-size:11px;color:var(--t1);line-height:1.7;">'+reply+'</div>';
         html += '</div>';
-        html += '<div style="text-align:right;">';
-        html += '<div style="font-size:20px;font-weight:800;color:#f0b020;">'+(data.classement||'?')+'</div>';
-        html += '<div style="font-size:9px;color:var(--t3);">Classement actuel</div>';
-        if(data.meilleur_classement) html += '<div style="font-size:9px;color:#4d84ff;">Best: '+data.meilleur_classement+'</div>';
-        html += '</div></div>';
-        
-        // Bilan saison
-        if(data.bilan_saison) {
-          html += '<div style="text-align:center;background:rgba(255,255,255,.04);border-radius:6px;padding:8px;font-size:12px;font-weight:700;color:var(--t1);">'+yr+' — '+data.bilan_saison+'</div>';
-        }
-        html += '</div>';
-
-        // ── Stats par surface ──
+      } else if(webData) {
+        // Pas de Groq — afficher Tavily brut
         html += '<div class="cwrap" style="margin-bottom:8px;">';
-        html += '<div style="font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#4f5d88;margin-bottom:10px;">% Victoires par surface</div>';
-        html += '<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:6px;">';
-        [
-          {l:'Global', v:data.pct_victoires_global, c:'#4d84ff', elo:null, rang:null},
-          {l:'🟠 Terre', v:data.pct_victoires_terre, c:'#ff7b54', elo:data.elo_terre, rang:data.rang_elo_terre},
-          {l:'🔵 Dur', v:data.pct_victoires_dur, c:'#4d84ff', elo:data.elo_dur, rang:data.rang_elo_dur},
-          {l:'🟢 Gazon', v:data.pct_victoires_gazon, c:'#1ed760', elo:data.elo_gazon, rang:data.rang_elo_gazon},
-        ].forEach(function(s){
-          var pct = parseFloat(s.v)||0;
-          html += '<div style="text-align:center;background:rgba(255,255,255,.04);border-radius:8px;padding:8px 4px;border:1px solid rgba(255,255,255,.06);">';
-          html += '<div style="font-size:12px;margin-bottom:4px;">'+s.l+'</div>';
-          var rawV = parseFloat(s.v)||0;
-          var dispV = s.v && s.v.toString().indexOf('%')>=0 ? s.v : (rawV<=1 ? Math.round(rawV*100)+'%' : Math.round(rawV)+'%');
-          html += '<div style="font-size:17px;font-weight:800;color:'+s.c+';">'+(s.v?dispV:'?')+'</div>';
-          html += '<div style="font-size:9px;color:var(--t3);">victoires</div>';
-          if(s.elo) { html += '<div style="font-size:11px;font-weight:700;color:#a78bfa;margin-top:3px;">ELO '+s.elo+'</div>'; }
-          if(s.rang) { html += '<div style="font-size:9px;color:#4f5d88;">Rang #'+s.rang+'</div>'; }
-          html += '</div>';
-        });
-        html += '</div></div>';
-
-        // ── Stats de match ──
-        html += '<div class="cwrap" style="margin-bottom:8px;">';
-        html += '<div style="font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#4f5d88;margin-bottom:10px;">Stats de match</div>';
-        
-        var matchStats = [
-          {l:'1er set gagne', v:data.pct_1er_set},
-          {l:'2eme set gagne', v:data.pct_2eme_set},
-          {l:'Matchs en 2 sets', v:data.pct_2sets},
-          {l:'1er service', v:data.pct_1er_service},
-          {l:'Breaks convertis', v:data.pct_break_convertis},
-          {l:'Breaks sauves', v:data.pct_break_sauves},
-          {l:'Tie-breaks joues', v:data.pct_tiebreak},
-        ];
-        
-        matchStats.forEach(function(s){
-          if(!s.v) return;
-          var pct = parseFloat(s.v)||0;
-          var col = pct>=65?'#1ed760':pct>=50?'#f0b020':'#ff4545';
-          html += '<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">';
-          html += '<div style="font-size:10px;color:var(--t2);flex:1;">'+s.l+'</div>';
-          html += '<div style="width:80px;height:5px;background:rgba(255,255,255,.06);border-radius:3px;">';
-          html += '<div style="height:5px;border-radius:3px;background:'+col+';width:'+Math.min(pct,100)+'%;"></div></div>';
-          html += '<div style="font-size:11px;font-weight:700;color:'+col+';">'+s.v+'</div>';
-          html += '</div>';
-        });
-
-        // Aces et jeux
-        html += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:8px;">';
-        if(data.aces_par_match) {
-          html += '<div style="background:rgba(255,255,255,.04);border-radius:8px;padding:8px;text-align:center;">';
-          html += '<div style="font-size:18px;font-weight:800;color:#a78bfa;">'+data.aces_par_match+'</div>';
-          html += '<div style="font-size:9px;color:var(--t3);">Aces/match</div></div>';
-        }
-        if(data.jeux_par_match) {
-          html += '<div style="background:rgba(255,255,255,.04);border-radius:8px;padding:8px;text-align:center;">';
-          html += '<div style="font-size:18px;font-weight:800;color:#22d3ee;">'+data.jeux_par_match+'</div>';
-          html += '<div style="font-size:9px;color:var(--t3);">Jeux/match</div></div>';
-        }
-        html += '</div></div>';
-
-        // ── Recherche stat personnalisée ──
-        html += '<div class="cwrap" style="margin-bottom:8px;">';
-        html += '<div style="font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#4f5d88;margin-bottom:8px;">🔍 Recherche stat</div>';
-        html += '<div style="display:flex;gap:6px;margin-bottom:6px;">';
-        html += '<input id="tennis-custom-stat" class="fi" placeholder="Ex: % victoires quand perd le 1er set..." style="flex:1;font-size:11px;">';
-        html += '<button id="tennis-custom-btn" style="padding:8px 12px;border-radius:var(--r6);border:none;background:var(--a);color:#fff;font-size:11px;font-weight:700;cursor:pointer;flex-shrink:0;">→</button>';
+        html += '<div style="font-size:11px;color:var(--t1);line-height:1.7;">'+webData.substring(0,400)+'</div>';
         html += '</div>';
-        html += '<div id="tennis-custom-result"></div>';
-        html += '</div>';
-
-        // ── Paris recommandes ──
-        if(data.paris_recommandes && data.paris_recommandes.filter(function(p){return p;}).length) {
-          html += '<div class="cwrap" style="margin-bottom:8px;">';
-          html += '<div style="font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#4f5d88;margin-bottom:8px;">🎯 Paris recommandes</div>';
-          data.paris_recommandes.filter(function(p){return p;}).forEach(function(p){
-            html += '<div style="background:rgba(30,215,96,.06);border:1px solid rgba(30,215,96,.15);border-radius:8px;padding:8px 12px;font-size:11px;color:var(--t1);margin-bottom:5px;">'+p+'</div>';
-          });
-          html += '</div>';
-        }
       }
     }
-  } catch(e) {
-    html = '';
-  }
+  } catch(e) {}
+
+  // Avertissement
+  html += '<div style="display:flex;align-items:center;gap:8px;background:rgba(240,176,32,.08);border:1px solid rgba(240,176,32,.25);border-radius:8px;padding:8px 12px;margin-bottom:8px;">';
+  html += '<span style="font-size:16px;">⚠️</span>';
+  html += '<div style="font-size:10px;color:#f0b020;">Resume base sur des sources web. Verifie les chiffres sur Tennis Abstract !</div>';
+  html += '</div>';
+
+  // Boutons
+  html += '<div style="display:flex;gap:5px;flex-wrap:wrap;">';
+  html += '<a href="'+taUrl+'" target="_blank" style="flex:1;min-width:80px;padding:8px 4px;background:rgba(77,132,255,.1);border:1px solid rgba(77,132,255,.3);border-radius:6px;color:#4d84ff;font-size:9px;font-weight:700;text-decoration:none;text-align:center;">📊 Tennis Abstract</a>';
+  html += '<a href="https://www.atptour.com/en/players/'+nom.toLowerCase().replace(/ /g,'-')+'/overview" target="_blank" style="flex:1;min-width:80px;padding:8px 4px;background:rgba(240,176,32,.1);border:1px solid rgba(240,176,32,.3);border-radius:6px;color:#f0b020;font-size:9px;font-weight:700;text-decoration:none;text-align:center;">🎾 ATP Tour</a>';
+  html += '<a href="https://www.sofascore.com/search#q='+encodeURIComponent(nom)+'" target="_blank" style="flex:1;min-width:80px;padding:8px 4px;background:rgba(255,123,84,.1);border:1px solid rgba(255,123,84,.3);border-radius:6px;color:#ff7b54;font-size:9px;font-weight:700;text-decoration:none;text-align:center;">⚡ Sofascore</a>';
+  html += '</div>';
+
+  // Section recherche stat perso
+  html += '<div class="cwrap" style="margin-top:8px;">';
+  html += '<div style="font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#4f5d88;margin-bottom:8px;">🔍 Recherche stat</div>';
+  html += '<div style="display:flex;gap:6px;margin-bottom:6px;">';
+  html += '<input id="tennis-custom-stat" class="fi" placeholder="Ex: % victoires quand perd le 1er set..." style="flex:1;font-size:11px;">';
+  html += '<button id="tennis-custom-btn" style="padding:8px 12px;border-radius:var(--r6);border:none;background:var(--a);color:#fff;font-size:11px;font-weight:700;cursor:pointer;flex-shrink:0;">→</button>';
+  html += '</div>';
+  html += '<div id="tennis-custom-result"></div>';
+  html += '</div>';
+
+  res.innerHTML = html || '<div style="text-align:center;padding:10px;"><a href="'+taUrl+'" target="_blank" style="color:#4d84ff;">📊 Voir sur Tennis Abstract</a></div>';
 
   // Brancher recherche stat perso
   setTimeout(function(){
@@ -5166,44 +5054,30 @@ async function searchTennisPlayer(nom) {
       var searchFn = async function(){
         var q = customInp.value.trim();
         if(!q) return;
-        var res = document.getElementById('tennis-custom-result');
-        res.innerHTML = '<div style="color:var(--t3);font-size:11px;">Recherche...</div>';
-        var groqKey = getGeminiKey();
-        var tavilyKey = getTavilyKey();
-        if(!tavilyKey||!groqKey){res.innerHTML='<div style="color:#ff4545;font-size:11px;">Clés Tavily+Groq requises</div>';return;}
+        var res2 = document.getElementById('tennis-custom-result');
+        res2.innerHTML = '<div style="color:var(--t3);font-size:11px;">Recherche...</div>';
+        var gk = getGeminiKey(); var tk = getTavilyKey();
+        if(!tk){res2.innerHTML='<div style="color:#ff4545;font-size:11px;">Cle Tavily requise</div>';return;}
         try {
-          var wd = await searchTavily(nom+' tennis '+q+' statistique pourcentage tennisabstract 2025 2026');
-          if(!wd){res.innerHTML='<div style="color:var(--t3);font-size:11px;">Aucun résultat</div>';return;}
-          var r = await fetch('https://api.groq.com/openai/v1/chat/completions',{
-            method:'POST',
-            headers:{'Content-Type':'application/json','Authorization':'Bearer '+groqKey},
-            body:JSON.stringify({model:'llama-3.3-70b-versatile',messages:[{role:'user',content:'Stats tennis sur '+nom+' pour la question "'+q+'". Donnees: '+wd.substring(0,800)+'. Reponds en 2-3 phrases maximum avec les chiffres exacts. En francais.'}],max_tokens:150,temperature:0.1})
-          });
-          var d = await r.json();
-          var reply = d.choices[0].message.content.trim();
-          res.innerHTML = '<div style="background:rgba(77,132,255,.06);border:1px solid rgba(77,132,255,.15);border-radius:8px;padding:10px 12px;font-size:11px;color:var(--t1);line-height:1.6;">'+reply+'</div>';
-        } catch(e){ res.innerHTML='<div style="color:#ff4545;font-size:11px;">Erreur</div>'; }
+          var wd = await searchTavily('"'+nom+'" tennis '+q+' '+yr+' statistique tennisabstract');
+          if(!wd){res2.innerHTML='<div style="color:var(--t3);font-size:11px;">Aucun resultat</div>';return;}
+          if(gk) {
+            var r2 = await fetch('https://api.groq.com/openai/v1/chat/completions',{
+              method:'POST',
+              headers:{'Content-Type':'application/json','Authorization':'Bearer '+gk},
+              body:JSON.stringify({model:'llama-3.3-70b-versatile',messages:[{role:'user',content:'Traduis en francais, garde uniquement les chiffres du texte: '+wd.substring(0,500)}],max_tokens:100,temperature:0.1})
+            });
+            var d2 = await r2.json();
+            res2.innerHTML = '<div style="background:rgba(77,132,255,.06);border:1px solid rgba(77,132,255,.15);border-radius:8px;padding:8px 12px;font-size:11px;color:var(--t1);line-height:1.6;">'+d2.choices[0].message.content.trim()+'</div>';
+          } else {
+            res2.innerHTML = '<div style="font-size:11px;color:var(--t1);">'+wd.substring(0,300)+'</div>';
+          }
+        } catch(e){ res2.innerHTML='<div style="color:#ff4545;font-size:11px;">Erreur</div>'; }
       };
       customBtn.onclick = searchFn;
       customInp.onkeydown = function(e){ if(e.key==='Enter') searchFn(); };
     }
-  }, 200);
-
-  // Avertissement Groq
-  html += '<div style="display:flex;align-items:center;gap:8px;background:rgba(240,176,32,.08);border:1px solid rgba(240,176,32,.25);border-radius:8px;padding:10px 12px;margin-bottom:10px;">';
-  html += '<span style="font-size:18px;flex-shrink:0;">⚠️</span>';
-  html += '<div style="font-size:10px;color:#f0b020;line-height:1.5;"><strong>Stats estimées par IA</strong> — Certaines valeurs peuvent etre inexactes. Verifie sur Tennis Abstract avant de parier !</div>';
-  html += '</div>';
-
-  // Boutons liens
-  var yr2 = (typeof _tennisYear!=='undefined'?_tennisYear:'2026'); var taUrl2 = 'https://www.tennisabstract.com/cgi-bin/player.cgi?p='+encodeURIComponent(nom.replace(/ /g,'+'))+'&f=A&wf=&wl=&sd=A&sdf='+yr2+'0101&sdl='+yr2+'1231';
-  html += '<div style="display:flex;gap:5px;flex-wrap:wrap;">';
-  html += '<a href="'+taUrl2+'" target="_blank" style="flex:1;min-width:80px;padding:8px 4px;background:rgba(77,132,255,.1);border:1px solid rgba(77,132,255,.3);border-radius:6px;color:#4d84ff;font-size:9px;font-weight:700;text-decoration:none;text-align:center;">📊 Tennis Abstract</a>';
-  html += '<a href="https://www.atptour.com/en/players/'+nom.toLowerCase().replace(/ /g,'-')+'/overview" target="_blank" style="flex:1;min-width:80px;padding:8px 4px;background:rgba(240,176,32,.1);border:1px solid rgba(240,176,32,.3);border-radius:6px;color:#f0b020;font-size:9px;font-weight:700;text-decoration:none;text-align:center;">🎾 ATP Tour</a>';
-  html += '<a href="https://www.sofascore.com/search#q='+encodeURIComponent(nom)+'" target="_blank" style="flex:1;min-width:80px;padding:8px 4px;background:rgba(255,123,84,.1);border:1px solid rgba(255,123,84,.3);border-radius:6px;color:#ff7b54;font-size:9px;font-weight:700;text-decoration:none;text-align:center;">⚡ Sofascore</a>';
-  html += '</div>';
-
-  res.innerHTML = html || '<div style="text-align:center;padding:10px;"><a href="'+taUrl+'" target="_blank" style="color:#4d84ff;font-size:12px;">📊 Voir sur Tennis Abstract</a></div>';
+  }, 300);
 }
 
 async function compareTennisH2H(p1, p2) {
