@@ -3,7 +3,7 @@
 <html lang="fr">
 <head>
 <meta charset="UTF-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-eval' 'unsafe-inline' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com; worker-src 'self' blob:; connect-src 'self' https://tessdata.projectnaptha.com https://api.groq.com https://api.tavily.com https://fd-proxy.touraine-antoine.workers.dev https://media.api-sports.io https://api.football-data.org https://api-web.nhle.com https://statsapi.mlb.com https://www.thesportsdb.com https://cdn.jsdelivr.net https://api.openf1.org https://api.jolpi.ca; img-src 'self' data: https: blob:; style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com;">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-eval' 'unsafe-inline' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com; worker-src 'self' blob:; connect-src 'self' data: blob: https://tessdata.projectnaptha.com https://api.groq.com https://api.tavily.com https://fd-proxy.touraine-antoine.workers.dev https://media.api-sports.io https://api.football-data.org https://api-web.nhle.com https://statsapi.mlb.com https://www.thesportsdb.com https://cdn.jsdelivr.net https://api.openf1.org https://api.jolpi.ca; img-src 'self' data: https: blob:; style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com;">
 <meta http-equiv="Content-Security-Policy" content="default-src 'self' 'unsafe-inline' 'unsafe-eval' https: data: blob:;">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
 <title>GONES45</title>
@@ -4120,12 +4120,21 @@ function applyScanResult(text, mode) {
   var pfx = mode === 'cock' ? 'c-' : 'n-';
   var txtLow = text.toLowerCase();
 
-  // Cote
-  var mCote = text.match(/(\d)[,.](\d{2})/);
-  if(mCote) {
-    var coteVal = mCote[1] + '.' + mCote[2];
-    var coteEl = document.getElementById(pfx === 'c-' ? 'c-cote' : 'n-cote');
-    if(coteEl) { coteEl.value = coteVal; coteEl.dispatchEvent(new Event('input')); }
+  // Cote — prendre la PLUS GRANDE cote (ex: 1,64 et pas 0,00)
+  var allCotes = [];
+  var reCote = /(\d)[,.]((\d{2}))/g;
+  var mc;
+  while((mc = reCote.exec(text)) !== null) {
+    var v = parseFloat(mc[1] + '.' + mc[2]);
+    if(v >= 1.01 && v <= 30) allCotes.push(v);
+  }
+  if(allCotes.length) {
+    // Prendre la cote la plus proche de 1,64 (entre 1.01 et 10)
+    var bestCote = allCotes.filter(function(c){return c>=1.01&&c<=10;}).sort(function(a,b){return b-a;})[0];
+    if(bestCote) {
+      var coteEl = document.getElementById(pfx === 'c-' ? 'c-cote' : 'n-cote');
+      if(coteEl) { coteEl.value = bestCote.toFixed(2); coteEl.dispatchEvent(new Event('input')); }
+    }
   }
 
   // Mise
@@ -4137,12 +4146,28 @@ function applyScanResult(text, mode) {
     if(miseEl && miseVal > 0) miseEl.value = miseVal;
   }
 
-  // Équipe / adversaire
+  // Équipe — chercher pattern "Equipe1 - Equipe2" et nettoyer le bruit
   var lignes = text.split('\n');
-  var ligneMatch = lignes.find(function(l){ return l.includes(' - ') && !l.toLowerCase().includes('mise') && !l.toLowerCase().includes('gain') && l.trim().length > 5; });
+  var ligneMatch = null;
+  var BRUIT = ['mise','gain','cashout','compléter','vainqueur','réf','simple','combiné','en cours','demain','aujourd','gains','potentiels'];
+  for(var i=0;i<lignes.length;i++){
+    var l = lignes[i].trim();
+    var lLow = l.toLowerCase();
+    if(!l.includes(' - ')) continue;
+    var isBruit = BRUIT.some(function(b){return lLow.includes(b);});
+    if(isBruit) continue;
+    if(l.length < 5 || l.length > 80) continue;
+    ligneMatch = l;
+    break;
+  }
   if(ligneMatch) {
+    // Nettoyer : virer tout ce qui suit des mots parasites
+    var clean = ligneMatch
+      .replace(/\s*(demain|aujourd'hui|\d{2}:\d{2}|LS &|LS&)\s*/gi,'')
+      .replace(/^\s*[-–—]\s*/,'')
+      .trim();
     var teamEl = document.getElementById(pfx === 'c-' ? 'c-target' : 'n-team');
-    if(teamEl) teamEl.value = ligneMatch.trim();
+    if(teamEl && clean) teamEl.value = clean;
   }
 
   // Bookmaker
@@ -4154,17 +4179,21 @@ function applyScanResult(text, mode) {
     }
   }
 
-  // Sport
+  // Sport — ordre IMPORTANT : spécifique avant générique
   var sportEl = document.getElementById(pfx + 'sport');
   if(sportEl) {
-    if(txtLow.includes('nhl')||txtLow.includes('hockey')) sportEl.value='🏒';
-    else if(txtLow.includes('tennis')||txtLow.includes('atp')||txtLow.includes('wta')) sportEl.value='🎾';
-    else if(txtLow.includes('nba')||txtLow.includes('basket')) sportEl.value='🏀';
-    else if(txtLow.includes('nfl')||txtLow.includes('football américain')) sportEl.value='🏈';
-    else if(txtLow.includes('football')||txtLow.includes('ligue 1')||txtLow.includes('champions')) sportEl.value='⚽';
-    else if(txtLow.includes('rugby')) sportEl.value='🏉';
-    else if(txtLow.includes('f1')||txtLow.includes('formule')) sportEl.value='🏎';
+    // Équipes NHL connues pour éviter faux positifs
+    var nhlTeams = ['golden knights','avalanche','maple leafs','canadiens','bruins','rangers','penguins','oilers','flames','canucks','sharks','kings','ducks','blackhawks','red wings','blues','lightning','panthers','capitals','flyers','devils','islanders','sabres','senators','coyotes','jets','predators','wild','stars','blue jackets','kraken','hurricanes','golden state'];
+    var isNHL = txtLow.includes('nhl') || nhlTeams.some(function(t){return txtLow.includes(t);});
+    if(isNHL) sportEl.value='🏒';
+    else if(txtLow.includes('tennis')||txtLow.includes('atp')||txtLow.includes('wta')||txtLow.includes('roland garros')) sportEl.value='🎾';
+    else if(txtLow.includes('nba')||txtLow.includes('basketball')) sportEl.value='🏀';
+    else if(txtLow.includes('nfl')||txtLow.includes('touchdown')) sportEl.value='🏈';
+    else if(txtLow.includes('ligue 1')||txtLow.includes('champions league')||txtLow.includes('premier league')||txtLow.includes('liga')||txtLow.includes('serie a')) sportEl.value='⚽';
+    else if(txtLow.includes('rugby')||txtLow.includes('top 14')) sportEl.value='🏉';
+    else if(txtLow.includes('formule 1')||txtLow.includes('grand prix')) sportEl.value='🏎';
     else if(txtLow.includes('baseball')||txtLow.includes('mlb')) sportEl.value='⚾';
+    else if(txtLow.includes('football')) sportEl.value='⚽';
   }
 }
 
