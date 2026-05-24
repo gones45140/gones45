@@ -4995,7 +4995,7 @@ async function searchTennisPlayer(nom) {
 
   try {
     // 1 recherche Tavily ciblée
-    var raw = await searchTavily('"' + nom + '" tennis ' + yr + ' win percentage clay hard grass surface aces breaks first set tiebreak games per match ranking');
+    var raw = await searchTavily('"' + nom + '" tennis ' + yr + ' stats first serve percentage second serve aces double faults break points saved converted tiebreaks won matches wins losses');
     if(!raw) throw new Error('Aucun resultat Tavily');
 
     var resume = raw.substring(0, 400);
