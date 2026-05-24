@@ -5031,6 +5031,7 @@ async function searchTennisPlayer(nom) {
         var reply = d.choices[0].message.content.trim();
         
         // Parser le JSON avec fallback robuste
+        console.log('[Tennis] Reply Groq:', reply.substring(0,200));
         var data = {};
         try {
           var clean = reply.replace(/```json|```/g,'').trim();
