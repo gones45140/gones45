@@ -4925,40 +4925,114 @@ async function searchTennisPlayer(nom) {
   
   var groqKey = getGeminiKey();
   var tavilyKey = getTavilyKey();
-  
-  if(!tavilyKey && !groqKey) {
-    res.innerHTML = '<div style="text-align:center;padding:10px;">'
-      +'<a href="https://www.tennisabstract.com/cgi-bin/player.cgi?p='+encodeURIComponent(nom)+'" target="_blank" style="color:#4d84ff;font-size:12px;font-weight:700;">📊 Voir stats '+nom+' sur Tennis Abstract →</a>'
-      +'<br><a href="https://www.flashscore.fr/tennis/" target="_blank" style="color:#ff7b54;font-size:11px;">📺 Résultats sur Flashscore</a>'
-      +'</div>';
-    return;
-  }
+  var taUrl = 'https://www.tennisabstract.com/cgi-bin/player.cgi?p='+encodeURIComponent(nom);
+
+  // Stats à extraire
+  var statsPrompt = 'Tu es expert stats tennis pour les paris. Donnees sur '+nom+' :
+'
+    +'Extrais ces stats EXACTES (format: stat: valeur%) :
+'
+    +'- % victoires globales
+'
+    +'- % victoires terre battue
+'
+    +'- % victoires dur
+'
+    +'- % victoires gazon
+'
+    +'- % 1er set gagné
+'
+    +'- % 2eme set gagné (quand joue)
+'
+    +'- % matchs en 2 sets
+'
+    +'- % tie-breaks joués
+'
+    +'- % tie-breaks gagnés
+'
+    +'- Nombre moyen de jeux par match
+'
+    +'- Nombre moyen de sets par match
+'
+    +'- % aces par point de service
+'
+    +'Données web : ';
+
+  var html = '';
 
   try {
-    // Tavily cherche les stats du joueur
-    var query = nom+' tennis stats 2026 classement ATP WTA victoires surfaces';
-    var webData = await searchTavily(query);
-    
-    if(groqKey && webData) {
-      var prompt = 'Donnees web sur le joueur de tennis '+nom+' : '+webData.substring(0,800)+'. Résume en 4 lignes max : classement actuel, bilan victoires/defaites 2026, surfaces preferees, et 1-2 paris interessants (ex: victoire en 2 sets, nombre de jeux). Sois precis avec les chiffres. En francais.';
-      var r = await fetch('https://api.groq.com/openai/v1/chat/completions',{
-        method:'POST',
-        headers:{'Content-Type':'application/json','Authorization':'Bearer '+groqKey},
-        body:JSON.stringify({model:'llama-3.3-70b-versatile',messages:[{role:'user',content:prompt}],max_tokens:250,temperature:0.2})
-      });
-      var d = await r.json();
-      var reply = d.choices[0].message.content.trim();
-      res.innerHTML = '<div style="background:rgba(77,132,255,.06);border:1px solid rgba(77,132,255,.15);border-radius:8px;padding:10px 12px;font-size:11px;color:var(--t1);line-height:1.7;">'+reply+'</div>'
-        +'<div style="margin-top:8px;display:flex;gap:6px;">'
-        +'<a href="https://www.tennisabstract.com/cgi-bin/player.cgi?p='+encodeURIComponent(nom)+'" target="_blank" style="flex:1;padding:8px;background:rgba(77,132,255,.1);border:1px solid rgba(77,132,255,.3);border-radius:6px;color:#4d84ff;font-size:10px;font-weight:700;text-decoration:none;text-align:center;">📊 Tennis Abstract</a>'
-        +'<a href="https://www.atptour.com/en/players/'+nom.toLowerCase().replace(/ /g,'-')+'/overview" target="_blank" style="flex:1;padding:8px;background:rgba(240,176,32,.1);border:1px solid rgba(240,176,32,.3);border-radius:6px;color:#f0b020;font-size:10px;font-weight:700;text-decoration:none;text-align:center;">🎾 ATP Tour</a>'
-        +'</div>';
-    } else {
-      res.innerHTML = '<a href="https://www.tennisabstract.com/cgi-bin/player.cgi?p='+encodeURIComponent(nom)+'" target="_blank" style="display:block;padding:10px;background:rgba(77,132,255,.1);border:1px solid rgba(77,132,255,.3);border-radius:8px;color:#4d84ff;font-size:12px;font-weight:700;text-decoration:none;text-align:center;">📊 Voir stats '+nom+' sur Tennis Abstract</a>';
+    if(tavilyKey && groqKey) {
+      var webData = await searchTavily(nom+' tennis stats 2025 2026 win percentage surface first set tiebreak aces games sets tennisabstract');
+      
+      if(webData) {
+        var r = await fetch('https://api.groq.com/openai/v1/chat/completions',{
+          method:'POST',
+          headers:{'Content-Type':'application/json','Authorization':'Bearer '+groqKey},
+          body:JSON.stringify({model:'llama-3.3-70b-versatile',messages:[{role:'user',content:statsPrompt+webData.substring(0,1000)}],max_tokens:400,temperature:0.1})
+        });
+        var d = await r.json();
+        var reply = d.choices[0].message.content.trim();
+        var lines = reply.split('
+').filter(function(l){return l.trim()&&l.indexOf(':')>=0;});
+
+        // Grouper par catégorie
+        var cats = {
+          'Victoires': ['victoires globales','victoires terre','victoires dur','victoires gazon'],
+          'Sets & Jeux': ['1er set','2eme set','matchs en 2 sets','sets par match','jeux par match'],
+          'Tie-breaks': ['tie-breaks joués','tie-breaks gagnés'],
+          'Service': ['aces'],
+        };
+
+        html += '<div style="display:flex;flex-direction:column;gap:8px;margin-bottom:10px;">';
+        
+        Object.keys(cats).forEach(function(cat){
+          var catLines = lines.filter(function(l){
+            return cats[cat].some(function(k){ return l.toLowerCase().indexOf(k)>=0; });
+          });
+          if(!catLines.length) return;
+          
+          html += '<div style="background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.07);border-radius:8px;padding:10px 12px;">';
+          html += '<div style="font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#4f5d88;margin-bottom:8px;">'+cat+'</div>';
+          
+          catLines.forEach(function(l){
+            var parts = l.split(':');
+            var label = parts[0].replace(/^[-•*\s]+/,'').trim();
+            var val = parts.slice(1).join(':').trim();
+            var pct = parseFloat(val);
+            var col = pct>=65?'#1ed760':pct>=50?'#f0b020':'#ff4545';
+            
+            html += '<div style="display:flex;align-items:center;gap:8px;margin-bottom:5px;">';
+            html += '<div style="font-size:10px;color:var(--t2);flex:1;">'+label+'</div>';
+            if(!isNaN(pct) && val.indexOf('%')>=0) {
+              html += '<div style="width:80px;height:5px;background:rgba(255,255,255,.06);border-radius:3px;">';
+              html += '<div style="height:5px;border-radius:3px;background:'+col+';width:'+Math.min(pct,100)+'%;"></div></div>';
+            }
+            html += '<div style="font-size:11px;font-weight:700;color:'+(isNaN(pct)?'var(--t1)':col)+';">'+val+'</div>';
+            html += '</div>';
+          });
+          html += '</div>';
+        });
+        html += '</div>';
+      }
     }
-  } catch(e) {
-    res.innerHTML = '<div style="color:#ff4545;font-size:11px;">Erreur recherche</div>';
-  }
+  } catch(e) {}
+
+  // Iframe Tennis Abstract + boutons
+  html += '<div style="border-radius:8px;overflow:hidden;border:1px solid rgba(255,255,255,.08);margin-bottom:8px;">';
+  html += '<div style="background:rgba(255,255,255,.04);padding:8px 12px;font-size:10px;color:var(--t3);display:flex;align-items:center;justify-content:space-between;">';
+  html += '<span>📊 Tennis Abstract — '+nom+'</span>';
+  html += '<a href="'+taUrl+'" target="_blank" style="color:#4d84ff;font-size:10px;text-decoration:none;">Ouvrir ↗</a>';
+  html += '</div>';
+  html += '<iframe src="'+taUrl+'" style="width:100%;height:400px;border:none;background:#fff;" loading="lazy"></iframe>';
+  html += '</div>';
+
+  html += '<div style="display:flex;gap:6px;">';
+  html += '<a href="'+taUrl+'" target="_blank" style="flex:1;padding:8px;background:rgba(77,132,255,.1);border:1px solid rgba(77,132,255,.3);border-radius:6px;color:#4d84ff;font-size:10px;font-weight:700;text-decoration:none;text-align:center;">📊 Tennis Abstract</a>';
+  html += '<a href="https://www.atptour.com/en/players/'+nom.toLowerCase().replace(/ /g,'-')+'/overview" target="_blank" style="flex:1;padding:8px;background:rgba(240,176,32,.1);border:1px solid rgba(240,176,32,.3);border-radius:6px;color:#f0b020;font-size:10px;font-weight:700;text-decoration:none;text-align:center;">🎾 ATP Tour</a>';
+  html += '<a href="https://www.flashscore.fr/joueur/tennis/'+nom.toLowerCase().replace(/ /g,'-')+'/" target="_blank" style="flex:1;padding:8px;background:rgba(255,123,84,.1);border:1px solid rgba(255,123,84,.3);border-radius:6px;color:#ff7b54;font-size:10px;font-weight:700;text-decoration:none;text-align:center;">⚡ Flashscore</a>';
+  html += '</div>';
+
+  res.innerHTML = html || '<div style="text-align:center;"><a href="'+taUrl+'" target="_blank" style="color:#4d84ff;">📊 Voir sur Tennis Abstract</a></div>';
 }
 
 async function compareTennisH2H(p1, p2) {
@@ -5004,8 +5078,127 @@ async function compareTennisH2H(p1, p2) {
 
 async function loadNbaSaisons(el, nom) {
   var teamInfo = NBA_TEAMS[nom];
-  if(!teamInfo) { el.innerHTML='<div style="color:var(--t3);text-align:center;padding:20px;">Equipe NBA non reconnue.</div>'; return; }
-  el.innerHTML='<div style="padding:20px;color:var(--t3);text-align:center;">🏀 Stats NBA — Saison 2025-2026<br><br><a href="https://www.nba.com/stats/team/'+teamInfo.id+'" target="_blank" style="color:#4d84ff;font-size:12px;">Voir les stats sur NBA.com</a><br><br><a href="https://www.basketball-reference.com/teams/'+teamInfo.abbr+'/2026.html" target="_blank" style="color:#f0b020;font-size:12px;">Stats détaillées sur Basketball-Reference</a></div>';
+  if(!teamInfo) {
+    el.innerHTML='<div style="color:var(--t3);text-align:center;padding:20px;">Equipe NBA non reconnue.<br><small>Ajoute-la dans NBA_TEAMS</small></div>';
+    return;
+  }
+  
+  el.innerHTML='<div style="display:flex;align-items:center;gap:8px;padding:20px;color:var(--t3);"><div style="width:14px;height:14px;border:2px solid rgba(77,132,255,.2);border-top-color:#4d84ff;border-radius:50%;animation:spin .8s linear infinite;"></div>Chargement stats NBA...</div>';
+
+  try {
+    // NBA Stats API officielle - pas de clé requise
+    var season = '2025-26';
+    var standUrl = 'https://stats.nba.com/stats/leaguestandingsv3?LeagueID=00&Season='+season+'&SeasonType=Regular+Season';
+    var resp = await fetch(standUrl, {
+      headers: {
+        'Accept': 'application/json, text/plain, */*',
+        'Referer': 'https://www.nba.com',
+        'Origin': 'https://www.nba.com',
+        'x-nba-stats-origin': 'stats',
+        'x-nba-stats-token': 'true'
+      }
+    });
+    var data = await resp.json();
+    
+    var rows = data.resultSets[0].rowSet;
+    var headers = data.resultSets[0].headers;
+    var teamIdx = headers.indexOf('TeamID');
+    var winIdx = headers.indexOf('WINS');
+    var lossIdx = headers.indexOf('LOSSES');
+    var pctIdx = headers.indexOf('WinPCT');
+    var rankIdx = headers.indexOf('PlayoffRank');
+    var nameIdx = headers.indexOf('TeamName');
+    var confIdx = headers.indexOf('Conference');
+    
+    var teamRow = rows.find(function(r){ return String(r[teamIdx])===String(teamInfo.id); });
+    
+    var html = '<div style="padding:4px 0;">';
+    
+    if(teamRow) {
+      var w = teamRow[winIdx]||0;
+      var l = teamRow[lossIdx]||0;
+      var pct = teamRow[pctIdx]||0;
+      var rank = teamRow[rankIdx]||'?';
+      var conf = teamRow[confIdx]||'';
+      
+      html += '<div class="cwrap" style="margin-bottom:10px;">';
+      html += '<div style="font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#4f5d88;margin-bottom:10px;">🏀 Saison NBA '+season+'</div>';
+      html += '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:8px;">';
+      [
+        {l:'Victoires', v:w, c:'#1ed760'},
+        {l:'Défaites', v:l, c:'#ff4545'},
+        {l:'% victoires', v:Math.round(pct*100)+'%', c:'#f0b020'},
+      ].forEach(function(s){
+        html += '<div style="text-align:center;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:8px;padding:10px 4px;">';
+        html += '<div style="font-size:22px;font-weight:800;color:'+s.c+';">'+s.v+'</div>';
+        html += '<div style="font-size:9px;color:var(--t3);margin-top:2px;">'+s.l+'</div>';
+        html += '</div>';
+      });
+      html += '</div>';
+      html += '<div style="text-align:center;font-size:11px;color:var(--t3);">Rang Playoffs : #'+rank+' '+conf+'</div>';
+      html += '</div>';
+    }
+
+    // Derniers matchs via NBA schedule
+    var schedUrl = 'https://stats.nba.com/stats/teamgamelog?TeamID='+teamInfo.id+'&Season='+season+'&SeasonType=Regular+Season';
+    var schedResp = await fetch(schedUrl, {
+      headers: {
+        'Referer': 'https://www.nba.com',
+        'x-nba-stats-origin': 'stats',
+        'x-nba-stats-token': 'true'
+      }
+    });
+    var schedData = await schedResp.json();
+    var games = schedData.resultSets[0].rowSet.slice(0,5);
+    var gHeaders = schedData.resultSets[0].headers;
+    
+    if(games.length) {
+      var matchupIdx = gHeaders.indexOf('MATCHUP');
+      var wlIdx = gHeaders.indexOf('WL');
+      var ptsIdx = gHeaders.indexOf('PTS');
+      var dateIdx = gHeaders.indexOf('GAME_DATE');
+      
+      html += '<div class="cwrap">';
+      html += '<div style="font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#4f5d88;margin-bottom:10px;">Forme récente</div>';
+      html += '<div style="display:flex;gap:6px;">';
+      
+      games.forEach(function(g){
+        var won = g[wlIdx]==='W';
+        var col = won?'#1ed760':'#ff4545';
+        var matchup = (g[matchupIdx]||'').replace('LAL ','').replace('vs. ','vs ').replace('@ ','@');
+        var opp = matchup.split(/vs |@ /)[1]||'?';
+        var oppShort = opp.substring(0,4);
+        var pts = g[ptsIdx]||'?';
+        var date = (g[dateIdx]||'').substring(0,5);
+        
+        html += '<div style="flex:1;text-align:center;background:var(--s1);border-radius:10px;padding:6px 3px;border-top:3px solid '+col+';border:1px solid rgba(255,255,255,.06);border-top:3px solid '+col+';">';
+        html += '<div style="font-size:13px;">🏀</div>';
+        html += '<div style="font-size:16px;font-weight:700;color:'+col+';">'+pts+'</div>';
+        html += '<div style="font-size:9px;color:var(--t2);">'+oppShort+'</div>';
+        html += '<div style="font-size:8px;color:rgba(255,255,255,.25);">'+date+'</div>';
+        html += '</div>';
+      });
+      html += '</div></div>';
+    }
+
+    // Liens
+    html += '<div class="cwrap">';
+    html += '<a href="https://www.nba.com/team/'+teamInfo.id+'" target="_blank" style="display:flex;align-items:center;gap:10px;padding:10px 14px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:8px;margin-bottom:6px;text-decoration:none;"><div style="font-size:12px;font-weight:700;color:#c8102e;flex:1;">🏀 Page officielle NBA</div><div style="color:var(--t3);">→</div></a>';
+    html += '<a href="https://www.basketball-reference.com/teams/'+teamInfo.abbr+'/2026.html" target="_blank" style="display:flex;align-items:center;gap:10px;padding:10px 14px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:8px;margin-bottom:6px;text-decoration:none;"><div style="font-size:12px;font-weight:700;color:#4d84ff;flex:1;">📊 Basketball-Reference</div><div style="color:var(--t3);">→</div></a>';
+    html += '</div>';
+
+    html += '</div>';
+    el.innerHTML = html;
+
+  } catch(e) {
+    // Fallback liens directs
+    el.innerHTML = '<div style="padding:10px;">'
+      +'<div class="cwrap">'
+      +'<div style="font-size:11px;color:var(--t3);margin-bottom:10px;">Stats NBA non disponibles directement — liens utiles :</div>'
+      +'<a href="https://www.nba.com/stats/team/'+teamInfo.id+'" target="_blank" style="display:flex;align-items:center;gap:10px;padding:10px 14px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:8px;margin-bottom:6px;text-decoration:none;"><div style="font-size:12px;font-weight:700;color:#c8102e;flex:1;">🏀 Stats sur NBA.com</div><div style="color:var(--t3);">→</div></a>'
+      +'<a href="https://www.basketball-reference.com/teams/'+teamInfo.abbr+'/2026.html" target="_blank" style="display:flex;align-items:center;gap:10px;padding:10px 14px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:8px;margin-bottom:6px;text-decoration:none;"><div style="font-size:12px;font-weight:700;color:#4d84ff;flex:1;">📊 Basketball-Reference</div><div style="color:var(--t3);">→</div></a>'
+      +'</div></div>';
+  }
 }
 
 async function loadNflSaisons(el, nom) {
