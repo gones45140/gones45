@@ -488,6 +488,14 @@ input[type="date"],input[type="time"]{color-scheme:dark;}
         <div class="fg"><label class="fl">Date</label><input type="date" id="c-date" class="fi"></div>
         <div class="fg"><label class="fl">Heure</label><input type="time" id="c-heure" class="fi"></div>
       </div>
+      <div class="fg" style="margin-top:9px;">
+        <label class="fl">📸 Scanner un ticket</label>
+        <div id="scan-zone-cock" onclick="document.getElementById('scan-input-cock').click()" style="border:2px dashed rgba(77,132,255,.35);border-radius:var(--r8);padding:12px;text-align:center;cursor:pointer;color:var(--t3);font-size:11px;background:rgba(77,132,255,.04);" ondragover="event.preventDefault()" ondrop="handleScanDrop(event,'cock')">
+          📎 Colle ou glisse ton screenshot ici
+          <input id="scan-input-cock" type="file" accept="image/*" style="display:none" onchange="handleScanFile(this.files[0],'cock')">
+        </div>
+        <div id="scan-status-cock" style="font-size:10px;color:var(--t3);margin-top:4px;text-align:center;"></div>
+      </div>
       <div class="fg" style="margin-top:9px"><label class="fl">📝 Notes</label><textarea id="c-notes" class="fi" style="height:44px;resize:none;" placeholder="Analyse, contexte…"></textarea></div>
       <button class="btn btn-p" style="margin-top:11px;" onclick="pari(true)">Engager la montante</button>
     </div>
@@ -1018,12 +1026,12 @@ input[type="date"],input[type="time"]{color-scheme:dark;}
       <button class="btn" style="background:rgba(77,132,255,.14);color:var(--a);border:1px solid rgba(77,132,255,.25);" onclick="exportData()">⬇ Exporter</button>
       <button class="btn" style="background:var(--s1);color:var(--t2);border:1px solid var(--b2);" onclick="importData()">⬆ Importer</button>
     </div>
-    <button class="btn" style="margin-top:8px;background:rgba(0,107,255,.18);color:#4d9fff;border:1px solid rgba(77,132,255,.35);font-size:12px;width:100%;" onclick="loadFromDropbox()">☁️ Charger depuis Dropbox</button>
+    <button class="btn" style="margin-top:8px;background:rgba(0,107,255,.18);color:#4d9fff;border:1px solid rgba(77,132,255,.35);font-size:12px;" onclick="loadFromDropbox()">☁️ Charger depuis Dropbox</button>
     <div id="dbx-load-status" style="margin-top:6px;font-size:11px;font-weight:700;text-align:center;"></div>
   </div>
   <div class="fc" style="border-style:dashed;">
     <label class="fl" style="color:var(--gold);">☁️ Dropbox — Sauvegarde auto</label>
-    <div style="font-size:10px;color:var(--t3);margin-bottom:8px;margin-top:4px;">Colle ton token Dropbox ici. Il sera sauvegardé sur cet appareil.</div>
+    <div style="font-size:10px;color:var(--t3);margin-bottom:8px;margin-top:4px;">Colle ton Refresh Token Dropbox. Il sera sauvegardé sur cet appareil.</div>
     <input id="dbx-key-input" class="fi" type="text" placeholder="sl.u.XXXXXXX…" style="margin-bottom:8px;font-size:11px;filter:blur(4px);transition:filter .2s;" onfocus="this.style.filter='none'" onblur="this.style.filter='blur(4px)'">
     <div style="display:flex;gap:7px;">
       <button class="btn btn-p" style="font-size:11px;" onclick="saveDbxKey()">💾 Enregistrer</button>
@@ -1368,7 +1376,20 @@ function logoErr(img){
   var s=img.nextSibling;
   if(s)s.style.display='flex';
 }
-var SPORT_EMOJIS={'basket':'🏀','basketball':'🏀','nba':'🏀','tennis':'🎾','formule 1':'🏎️','f1':'🏎️','rugby':'🏉','au nrl':'🏉','nrl':'🏉','hockey':'🏒','nhl':'🏒','baseball':'⚾','mlb':'⚾','nfl':'🏈','football':'⚽','foot':'⚽'};
+var SPORT_EMOJIS={
+  'basket':'🏀','basketball':'🏀','nba':'🏀',
+  'tennis':'🎾',
+  'formule 1':'🏎️','formula 1':'🏎️','f1':'🏎️','formule1':'🏎️',
+  'rugby':'🏉','rugby union':'🏉',
+  'au nrl':'🏉','nrl':'🏉',
+  'hockey':'🏒','nhl':'🏒',
+  'baseball':'⚾','mlb':'⚾',
+  'nfl':'🏈','football américain':'🏈','football americain':'🏈',
+  'football':'⚽','foot':'⚽','soccer':'⚽',
+  'golf':'⛳',
+  'mma':'🥊','ufc':'🥊','boxe':'🥊',
+  'natation':'🏊','cyclisme':'🚴','athlétisme':'🏃'
+};
 function logoHtml(name,color,abbr,sz){
   var s=sz||46;
   var logo=LOGOS[name];
@@ -1381,9 +1402,20 @@ function logoHtml(name,color,abbr,sz){
       +'<span style="display:none;width:100%;height:100%;align-items:center;justify-content:center;font-size:11px;font-weight:800;color:'+color+';">'+fb+'</span>'
       +'</div>';
   }
-  var sportEmoji=SPORT_EMOJIS[name.toLowerCase().trim()];
-  if(!sportEmoji){var uM=(typeof state!=='undefined'&&state.u)?state.u.find(function(u){return u.n===name;}):null;if(uM&&uM.sport){var sm={'🏀':'🏀','🎾':'🎾','🏎':'🏎️','🏎️':'🏎️','🏉':'🏉','🏉🇦🇺':'🏉','🏒':'🏒','⚾':'⚾','🏈':'🏈','⚽':'⚽'};sportEmoji=sm[uM.sport];}}
-  if(sportEmoji){var eSz=Math.round(s*.56);return '<div style="'+baseStyle+'background:rgba('+rgb+',.14);border:1px solid rgba('+rgb+',.28);display:flex;align-items:center;justify-content:center;font-size:'+eSz+'px;">'+sportEmoji+'</div>';}
+  // Détecter emoji sport par nom générique
+  var sportEmoji = SPORT_EMOJIS[name.toLowerCase().trim()];
+  if(!sportEmoji) {
+    // Chercher aussi via le sport de l'unité dans state
+    var uMatch = (typeof state !== 'undefined' && state.u) ? state.u.find(function(u){return u.n===name;}) : null;
+    if(uMatch && uMatch.sport) {
+      var sportMap={'🏀':'🏀','🎾':'🎾','🏎':'🏎️','🏎️':'🏎️','🏉':'🏉','🏉🇦🇺':'🏉','🏒':'🏒','⚾':'⚾','🏈':'🏈','⚽':'⚽'};
+      sportEmoji = sportMap[uMatch.sport];
+    }
+  }
+  if(sportEmoji){
+    var emojiSz = Math.round(s * 0.56);
+    return '<div style="'+baseStyle+'background:rgba('+rgb+',.14);border:1px solid rgba('+rgb+',.28);display:flex;align-items:center;justify-content:center;font-size:'+emojiSz+'px;">'+sportEmoji+'</div>';
+  }
   return '<div style="'+baseStyle+'background:rgba('+rgb+',.14);border:1px solid rgba('+rgb+',.28);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:800;color:'+color+';">'+fb+'</div>';
 }
 function hexRgb(h){
@@ -3419,9 +3451,10 @@ function updateCompList(){
 function saveDbxKey(){
   var inp=$i('dbx-key-input');if(!inp)return;
   var key=inp.value.trim();if(!key)return;
-  _dbxConfig.refreshToken=key;localStorage.setItem('g45_dbx',key);
+  localStorage.setItem('gones45_dbx_token',key);
+  _dbxConfig.refreshToken=key;
   var st=$i('dbx-key-status');
-  if(st){st.innerText='✅ Clé enregistrée !';st.style.color='var(--g)';}
+  if(st){st.innerText='✅ Token enregistré !';st.style.color='var(--g)';}
   setTimeout(function(){if(st)st.innerText='';},3000);
 }
 async function testDbxKey(){
@@ -3574,16 +3607,18 @@ async function loadTeamCalendar(teamId, nom, col) {
 var _dbxConfig={
   appKey:'x9j8qikpa21j1pv',
   appSecret:'vk2o926kopta87b',
-  refreshToken:'sl.u.AGfGM9ID1NQIOOhe-dYMd7gmeSp9FohnSYC0m1T-t1TDF6kE4hAVz3rKY1_RvQkUgo5Pw3pLvoHBY_k7JzrPFCupxLVsjkSem9gBJNbiGs0d_J8-yyT7vVOa3z4GyxMfz64w8JS0pdmlwD3L4fi0O_-nJ950zOQMHmiavTK87JRGrmDNGghcJHnfnrKLRK2goDVvHmqyseMiPfYnd136Cnuk1cdaR_ZbuXm2FNEqPZ72ULAEWCruSkFJB_r2YPuxRUofsxgP8BAzDG9p0HXiDn4lcOofSnhdZxpmrOFRwi_4dXdsy4xS2wEXw6NQb7ZIK5LERZL6W3guwtBaqiuTCdG1NZt41s9yjUxT4dFu_vGLd-G-g-LKKwVo9DVIGuuWDPXdbK-s0UCoN5Rk0SZBlZ-Mj4JZWzHnFkabGkspSLeR-jeWWVlAGtJHwRRXgKeUf0dEtsrffH6cd9lmiWDYkquXylNu-ZDvfiTmjCh23IXdW3aKyK9zfDsv6P3nIqQP0dp89tTFWKriT_Xd3aaGbVrskP6kfeSzwu7ic8iW3hoiwYPipJMB1cqGxMI5Pmgp3-INckJx7F4U5pGIKhy-3VPWyz2XvWIGJEMsDHJlFdYmezGeMr-5n1-_KlMUCrL0RP7T7axdJL_YBk2iHiuxx5MrGXIVcV6IfXIUcbP4poNpoRsSzHu784Fml1L4c45LTKHiFMjFA7SbmG9oIp5unyThykCWLmWxSpigua0ZjIUt6n68t_kXbaHg8y5fdhbqtVLdczMGd4nNeNqHqgTeAQOB41rpSAkBDutViGWFWNWWEge8hRpG7AmVkciP7G4t1ocLqRo9TvLhJvs9VMAEF6ydwfgrQPzw9cIvSVPJob7KRgPK2pPTTm_qgEuvd7ObrXeLGXC4vgDwLmKr8U6ydwmRU4CsHsegp1HCxzxSsYu82uXzatTKwLjp6ulB32DGxL-Xw74TXwFkVYlF7XjMgOj4rBOSyrTEor_HHWMKlgz6Y9rjUVZ-pO8zVALXntzmcJ6zleeTaDWNjquHkbIuC7fAW23fMTMLxZStrcGNweqRj9QBXlNYVcaJDajz1MOb_ygc1RFJBzO_guEsenA07B6rw1BG9_uTRlCFt49SRclLPxGt4YuMZ7WOq9T47mwfd_sxgHduBaGYwugZ4mIKZDtPGBo7Ntse5ZBF7Qu5rNMwytgaq0wDKylpam8jK8GX2054_oN8OjFseXWaHxVwI0Fln8MwA9iMD3K0cf7zbgvxE3rPCj7OuSMHt-1zAWvwCAM1YhrOUAL6Ny4RVBdag_YqL-BznfG7XoNBGYiBSmIhrIdrDp8v3cjG_OwWdvXfr4_MTrDSUe0EZr0qfxFhd16zLCWj0cKLdI_yybKxzFZp1YXDK8ezOYCZusqmtCw52FZtELOIG2DjgtfTw6YUHEr4pgU5FtIpPF691bFZmKrc7MDiosDFr7iehD8yr_6lrmk'
+  refreshToken:localStorage.getItem('gones45_dbx_token')||''
 };
 var _dbxSaving=false;
 var _dbxAccessToken=null;
 async function getValidToken(){
+  var rt=localStorage.getItem('gones45_dbx_token')||_dbxConfig.refreshToken;
+  if(!rt)return null;
   try{
     var res=await fetch('https://api.dropbox.com/oauth2/token',{
       method:'POST',
       headers:{'Content-Type':'application/x-www-form-urlencoded'},
-      body:new URLSearchParams({grant_type:'refresh_token',refresh_token:_dbxConfig.refreshToken,client_id:_dbxConfig.appKey,client_secret:_dbxConfig.appSecret})
+      body:new URLSearchParams({grant_type:'refresh_token',refresh_token:rt,client_id:_dbxConfig.appKey,client_secret:_dbxConfig.appSecret})
     });
     var d=await res.json();
     _dbxAccessToken=d.access_token;
@@ -3615,14 +3650,18 @@ async function loadFromDropbox(){
   if(el)el.innerText='⏳ Chargement...';
   try{
     var token=await getValidToken();
-    if(!token){if(el)el.innerText='❌ Token invalide';return;}
+    if(!token){if(el)el.innerText='❌ Token Dropbox invalide';return;}
     var res=await fetch('https://content.dropboxapi.com/2/files/download',{
       method:'POST',
-      headers:{'Authorization':'Bearer '+token,'Dropbox-API-Arg':JSON.stringify({path:'/GONES45/backup.json'})}
+      headers:{
+        'Authorization':'Bearer '+token,
+        'Dropbox-API-Arg':JSON.stringify({path:'/GONES45/backup.json'})
+      }
     });
     if(!res.ok){if(el)el.innerText='❌ Fichier introuvable sur Dropbox';return;}
     var data=await res.json();
-    state=data;save();
+    state=data;
+    save();
     if(el)el.innerText='✅ Données chargées !';
     setTimeout(function(){location.reload();},1200);
   }catch(e){if(el)el.innerText='❌ Erreur : '+e.message;}
@@ -5141,127 +5180,252 @@ async function searchTennisPlayer(nom) {
   html += '<a href="https://www.sofascore.com/search#q=' + encodeURIComponent(nom) + '" target="_blank" style="flex:1;min-width:80px;padding:8px 4px;background:rgba(255,123,84,.1);border:1px solid rgba(255,123,84,.3);border-radius:6px;color:#ff7b54;font-size:9px;font-weight:700;text-decoration:none;text-align:center;">⚡ Sofascore</a>';
   html += '</div>';
 
-  // ── Recherche stat perso ──
-  html += '<div class="cwrap">';
-  html += '<div style="font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#4f5d88;margin-bottom:8px;">🔍 Recherche stat</div>';
-  html += '<div style="display:flex;gap:6px;">';
-  html += '<input id="tennis-custom-stat" class="fi" placeholder="Ex: % victoires quand perd le 1er set..." style="flex:1;font-size:11px;">';
-  html += '<button id="tennis-custom-btn" style="padding:8px 12px;border-radius:var(--r6);border:none;background:var(--a);color:#fff;font-size:11px;font-weight:700;cursor:pointer;flex-shrink:0;">→</button>';
-  html += '</div>';
-  html += '<div id="tennis-custom-result" style="margin-top:6px;"></div>';
-  html += '</div>';
-
   res.innerHTML = html;
-
-  // Brancher recherche stat
-  setTimeout(function() {
-    var cb = document.getElementById('tennis-custom-btn');
-    var ci = document.getElementById('tennis-custom-stat');
-    if(!cb || !ci) return;
-    var fn = async function() {
-      var q = ci.value.trim();
-      if(!q) return;
-      var r2 = document.getElementById('tennis-custom-result');
-      r2.innerHTML = '<div style="color:var(--t3);font-size:11px;">Recherche...</div>';
-      var tk = getTavilyKey();
-      var gk = getGeminiKey();
-      if(!tk) { r2.innerHTML = '<div style="color:#ff4545;font-size:11px;">Cle Tavily requise</div>'; return; }
-      try {
-        var wd = await searchTavily('"' + nom + '" tennis ' + q + ' ' + yr);
-        if(!wd) { r2.innerHTML = '<div style="color:var(--t3);font-size:11px;">Aucun resultat</div>'; return; }
-        if(gk) {
-          var rx = await fetch('https://api.groq.com/openai/v1/chat/completions', {
-            method: 'POST',
-            headers: {'Content-Type': 'application/json', 'Authorization': 'Bearer ' + gk},
-            body: JSON.stringify({model: 'llama-3.3-70b-versatile', messages: [{role: 'user', content: 'Traduis en francais en 2 lignes max avec les chiffres exacts du texte: ' + wd.substring(0, 400)}], max_tokens: 100, temperature: 0})
-          });
-          var dx = await rx.json();
-          r2.innerHTML = '<div style="background:rgba(77,132,255,.06);border:1px solid rgba(77,132,255,.15);border-radius:8px;padding:8px 12px;font-size:11px;color:var(--t1);line-height:1.6;">' + dx.choices[0].message.content.trim() + '</div>';
-        } else {
-          r2.innerHTML = '<div style="font-size:11px;color:var(--t1);">' + wd.substring(0, 300) + '</div>';
-        }
-      } catch(e) { r2.innerHTML = '<div style="color:#ff4545;font-size:11px;">Erreur</div>'; }
-    };
-    cb.onclick = fn;
-    ci.onkeydown = function(e) { if(e.key === 'Enter') fn(); };
-  }, 300);
 }
 
 
 
 async function loadNbaSaisons(el, nom) {
   var teamInfo = NBA_TEAMS[nom];
-  var ls='display:flex;align-items:center;gap:10px;padding:10px 14px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:8px;margin-bottom:6px;text-decoration:none;';
-  var ll='font-size:12px;font-weight:700;flex:1;';
-  var la='color:var(--t3);';
-  if(!teamInfo){
-    el.innerHTML='<div style="padding:4px 0;"><div class="cwrap"><div style="font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#4f5d88;margin-bottom:10px;">🏀 Basket — Liens NBA</div>'
-      +'<a href="https://www.nba.com/standings" target="_blank" style="'+ls+'"><div style="'+ll+'color:#c8102e;flex:1;">🏆 Classement NBA</div><div style="'+la+'">→</div></a>'
-      +'<a href="https://www.nba.com/schedule" target="_blank" style="'+ls+'"><div style="'+ll+'color:#f0b020;flex:1;">📅 Programme NBA</div><div style="'+la+'">→</div></a>'
-      +'<a href="https://www.nba.com/stats/leaders" target="_blank" style="'+ls+'"><div style="'+ll+'color:#1ed760;flex:1;">📊 Leaders stats</div><div style="'+la+'">→</div></a>'
-      +'<a href="https://www.sofascore.com/basketball/nba" target="_blank" style="'+ls+'"><div style="'+ll+'color:#ff7b54;flex:1;">⚡ Sofascore NBA</div><div style="'+la+'">→</div></a>'
-      +'</div></div>';
+  if(!teamInfo) {
+    var ls2 = 'display:flex;align-items:center;gap:10px;padding:10px 14px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:8px;margin-bottom:6px;text-decoration:none;';
+    el.innerHTML = '<div style="padding:4px 0;">'
+      +'<div class="cwrap" style="margin-bottom:10px;">'
+      +'<div style="font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#4f5d88;margin-bottom:10px;">🏀 Basket — Liens utiles NBA</div>'
+      +'<a href="https://www.nba.com/standings" target="_blank" style="'+ls2+'"><div style="font-size:12px;font-weight:700;color:#c8102e;flex:1;">🏆 Classement NBA</div><div style="color:var(--t3);">→</div></a>'
+      +'<a href="https://www.nba.com/schedule" target="_blank" style="'+ls2+'"><div style="font-size:12px;font-weight:700;color:#f0b020;flex:1;">📅 Programme NBA</div><div style="color:var(--t3);">→</div></a>'
+      +'<a href="https://www.nba.com/stats/leaders" target="_blank" style="'+ls2+'"><div style="font-size:12px;font-weight:700;color:#1ed760;flex:1;">📊 Leaders stats NBA</div><div style="color:var(--t3);">→</div></a>'
+      +'<a href="https://www.sofascore.com/basketball/nba" target="_blank" style="'+ls2+'"><div style="font-size:12px;font-weight:700;color:#ff7b54;flex:1;">⚡ Sofascore NBA</div><div style="color:var(--t3);">→</div></a>'
+      +'<a href="https://www.basketball-reference.com/leagues/NBA_2026_standings.html" target="_blank" style="'+ls2+'"><div style="font-size:12px;font-weight:700;color:#4d84ff;flex:1;">📈 Basketball-Reference</div><div style="color:var(--t3);">→</div></a>'
+      +'</div>'
+      +'<div style="font-size:9px;color:#4f5d88;text-align:center;padding:8px;">Pour une équipe précise, renseigne son nom dans Bilan &gt; Équipes</div>'
+      +'</div>';
     return;
   }
-  var id=teamInfo.id; var ab=teamInfo.abbr;
-  var html='<div style="padding:4px 0;">';
-  html+='<div class="cwrap" style="margin-bottom:10px;"><div style="font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#4f5d88;margin-bottom:10px;">🏀 '+nom+' — 2025-26</div>';
-  html+='<a href="https://www.nba.com/team/'+id+'" target="_blank" style="'+ls+'"><div style="'+ll+'color:#c8102e;">🏀 Page officielle NBA</div><div style="'+la+'">→</div></a>';
-  html+='<a href="https://www.basketball-reference.com/teams/'+ab+'/2026.html" target="_blank" style="'+ls+'"><div style="'+ll+'color:#4d84ff;">📈 Basketball-Reference</div><div style="'+la+'">→</div></a>';
-  html+='<a href="https://www.nba.com/team/'+id+'/schedule" target="_blank" style="'+ls+'"><div style="'+ll+'color:#1ed760;">📅 Calendrier</div><div style="'+la+'">→</div></a>';
-  html+='<a href="https://www.sofascore.com/basketball/nba" target="_blank" style="'+ls+'"><div style="'+ll+'color:#ff7b54;">⚡ Sofascore</div><div style="'+la+'">→</div></a>';
-  html+='</div></div>';
-  el.innerHTML=html;
+
+  var ls = 'display:flex;align-items:center;gap:10px;padding:10px 14px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:8px;margin-bottom:6px;text-decoration:none;';
+  var ll = 'font-size:12px;font-weight:700;flex:1;';
+  var la = 'color:var(--t3);';
+  var id = teamInfo.id;
+  var ab = teamInfo.abbr;
+
+  var html = '<div style="padding:4px 0;">';
+
+  // ── Équipe ──
+  html += '<div class="cwrap" style="margin-bottom:10px;">';
+  html += '<div style="font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#4f5d88;margin-bottom:10px;">🏀 ' + nom + ' — Saison 2025-26</div>';
+  html += '<a href="https://www.nba.com/team/'+id+'" target="_blank" style="'+ls+'"><div style="'+ll+'color:#c8102e;">🏀 Page officielle NBA</div><div style="'+la+'">→</div></a>';
+  html += '<a href="https://www.nba.com/stats/team/'+id+'?Season=2025-26" target="_blank" style="'+ls+'"><div style="'+ll+'color:#f0b020;">📊 Stats équipe — NBA.com</div><div style="'+la+'">→</div></a>';
+  html += '<a href="https://www.basketball-reference.com/teams/'+ab+'/2026.html" target="_blank" style="'+ls+'"><div style="'+ll+'color:#4d84ff;">📈 Basketball-Reference 2025-26</div><div style="'+la+'">→</div></a>';
+  html += '<a href="https://www.nba.com/team/'+id+'/schedule" target="_blank" style="'+ls+'"><div style="'+ll+'color:#1ed760;">📅 Calendrier & Résultats</div><div style="'+la+'">→</div></a>';
+  html += '</div>';
+
+  // ── Ligue ──
+  html += '<div class="cwrap" style="margin-bottom:10px;">';
+  html += '<div style="font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#4f5d88;margin-bottom:10px;">🏆 Ligue NBA</div>';
+  html += '<a href="https://www.nba.com/standings" target="_blank" style="'+ls+'"><div style="'+ll+'color:#f0b020;">🏆 Classement NBA (Playoffs)</div><div style="'+la+'">→</div></a>';
+  html += '<a href="https://www.nba.com/stats/leaders?Season=2025-26" target="_blank" style="'+ls+'"><div style="'+ll+'color:#a78bfa;">🥇 Leaders stats saison</div><div style="'+la+'">→</div></a>';
+  html += '<a href="https://www.nba.com/schedule" target="_blank" style="'+ls+'"><div style="'+ll+'color:#22d3ee;">📅 Programme NBA complet</div><div style="'+la+'">→</div></a>';
+  html += '</div>';
+
+  // ── Suivi & Stats avancées ──
+  html += '<div class="cwrap">';
+  html += '<div style="font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#4f5d88;margin-bottom:10px;">📊 Stats avancées & Suivi</div>';
+  html += '<a href="https://www.sofascore.com/basketball/nba" target="_blank" style="'+ls+'"><div style="'+ll+'color:#ff7b54;">⚡ Sofascore NBA</div><div style="'+la+'">→</div></a>';
+  html += '<a href="https://www.espn.com/nba/team/_/abbr/'+ab.toLowerCase()+'" target="_blank" style="'+ls+'"><div style="'+ll+'color:#ff0000;">🎙 ESPN — Fiche équipe</div><div style="'+la+'">→</div></a>';
+  html += '<a href="https://www.basketball-reference.com/leagues/NBA_2026_standings.html" target="_blank" style="'+ls+'"><div style="'+ll+'color:#4d84ff;">📋 Classement détaillé BBRef</div><div style="'+la+'">→</div></a>';
+  html += '</div>';
+
+  html += '</div>';
+  el.innerHTML = html;
+}
+
+async function loadNflSaisons(el, nom) {
+  var teamInfo = NFL_TEAMS[nom];
+  if(!teamInfo) { el.innerHTML='<div style="color:var(--t3);text-align:center;padding:20px;">Equipe NFL non reconnue.</div>'; return; }
+  el.innerHTML='<div style="padding:20px;color:var(--t3);text-align:center;">🏈 Stats NFL — Saison 2025-2026<br><br><a href="https://www.nfl.com/teams" target="_blank" style="color:#4d84ff;font-size:12px;">Voir sur NFL.com</a><br><br><a href="https://www.pro-football-reference.com/teams/'+teamInfo.id.toLowerCase()+'/2025.htm" target="_blank" style="color:#f0b020;font-size:12px;">Stats sur Pro-Football-Reference</a></div>';
+}
+
+async function loadRugbySaisons(el, nom) {
+  var isNRL = nom && (
+    ['Melbourne Storm','Sydney Roosters','Penrith Panthers','Brisbane Broncos','South Sydney Rabbitohs',
+     'Parramatta Eels','Cronulla Sharks','Manly Sea Eagles','Canterbury Bulldogs','New Zealand Warriors',
+     'Gold Coast Titans','Canberra Raiders'].indexOf(nom) >= 0
+  );
+
+  var lienStyle = 'display:flex;align-items:center;gap:10px;padding:10px 14px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:8px;margin-bottom:6px;text-decoration:none;';
+  var labelStyle = 'font-size:12px;font-weight:700;flex:1;';
+  var arr = 'color:var(--t3);';
+
+  var html = '<div style="padding:4px 0;">';
+
+  if(isNRL) {
+    // ── NRL ──
+    html += '<div class="cwrap" style="margin-bottom:10px;">';
+    html += '<div style="font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#4f5d88;margin-bottom:10px;">🏉🇦🇺 NRL — ' + nom + '</div>';
+    html += '<a href="https://www.nrl.com/draw/" target="_blank" style="'+lienStyle+'"><div style="'+labelStyle+'color:#f0b020;">📅 Programme NRL</div><div style="'+arr+'">→</div></a>';
+    html += '<a href="https://www.nrl.com/ladder/" target="_blank" style="'+lienStyle+'"><div style="'+labelStyle+'color:#4d84ff;">🏆 Classement NRL</div><div style="'+arr+'">→</div></a>';
+    html += '<a href="https://www.nrl.com/stats/" target="_blank" style="'+lienStyle+'"><div style="'+labelStyle+'color:#1ed760;">📊 Stats NRL</div><div style="'+arr+'">→</div></a>';
+    html += '<a href="https://www.foxsports.com.au/nrl" target="_blank" style="'+lienStyle+'"><div style="'+labelStyle+'color:#ff7b54;">🦊 Fox Sports NRL</div><div style="'+arr+'">→</div></a>';
+    html += '<a href="https://www.sofascore.com/rugby-league/australia-nrl" target="_blank" style="'+lienStyle+'"><div style="'+labelStyle+'color:#a78bfa;">⚡ Sofascore NRL</div><div style="'+arr+'">→</div></a>';
+    html += '</div>';
+  } else {
+    // ── Rugby Union ──
+    // Bloc Top 14 / Pro D2
+    html += '<div class="cwrap" style="margin-bottom:10px;">';
+    html += '<div style="font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#4f5d88;margin-bottom:10px;">🏉 Rugby XV — Saison 2025-26</div>';
+    html += '<a href="https://www.lnr.fr/top-14/classement" target="_blank" style="'+lienStyle+'"><div style="'+labelStyle+'color:#f0b020;">🏆 Classement Top 14</div><div style="'+arr+'">→</div></a>';
+    html += '<a href="https://www.lnr.fr/top-14/calendrier-et-resultats" target="_blank" style="'+lienStyle+'"><div style="'+labelStyle+'color:#4d84ff;">📅 Calendrier Top 14</div><div style="'+arr+'">→</div></a>';
+    html += '<a href="https://www.lnr.fr/top-14/stats" target="_blank" style="'+lienStyle+'"><div style="'+labelStyle+'color:#1ed760;">📊 Stats Top 14</div><div style="'+arr+'">→</div></a>';
+    html += '</div>';
+
+    // Bloc Coupes d'Europe
+    html += '<div class="cwrap" style="margin-bottom:10px;">';
+    html += '<div style="font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#4f5d88;margin-bottom:10px;">🏆 Coupes d\'Europe</div>';
+    html += '<a href="https://www.epcrugby.com/champions-cup/fixtures-results/" target="_blank" style="'+lienStyle+'"><div style="'+labelStyle+'color:#f0b020;">🌍 Champions Cup — Résultats</div><div style="'+arr+'">→</div></a>';
+    html += '<a href="https://www.epcrugby.com/champions-cup/standings/" target="_blank" style="'+lienStyle+'"><div style="'+labelStyle+'color:#4d84ff;">🏆 Champions Cup — Classement</div><div style="'+arr+'">→</div></a>';
+    html += '<a href="https://www.epcrugby.com/challenge-cup/fixtures-results/" target="_blank" style="'+lienStyle+'"><div style="'+labelStyle+'color:#a78bfa;">🥈 Challenge Cup</div><div style="'+arr+'">→</div></a>';
+    html += '</div>';
+
+    // Bloc Équipes nationales
+    html += '<div class="cwrap" style="margin-bottom:10px;">';
+    html += '<div style="font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#4f5d88;margin-bottom:10px;">🌍 Équipes nationales</div>';
+    html += '<a href="https://www.sixnationsrugby.com/standings/" target="_blank" style="'+lienStyle+'"><div style="'+labelStyle+'color:#4d84ff;">6️⃣ Six Nations — Classement</div><div style="'+arr+'">→</div></a>';
+    html += '<a href="https://www.world.rugby/rankings/mru" target="_blank" style="'+lienStyle+'"><div style="'+labelStyle+'color:#f0b020;">🌐 World Rugby Rankings</div><div style="'+arr+'">→</div></a>';
+    html += '<a href="https://www.rugbyworldcup.com/2027" target="_blank" style="'+lienStyle+'"><div style="'+labelStyle+'color:#1ed760;">🏆 Coupe du Monde 2027</div><div style="'+arr+'">→</div></a>';
+    html += '</div>';
+
+    // Bloc Stats & Suivi
+    html += '<div class="cwrap">';
+    html += '<div style="font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#4f5d88;margin-bottom:10px;">📊 Stats & Suivi</div>';
+    html += '<a href="https://www.sofascore.com/rugby-union" target="_blank" style="'+lienStyle+'"><div style="'+labelStyle+'color:#ff7b54;">⚡ Sofascore Rugby</div><div style="'+arr+'">→</div></a>';
+    html += '<a href="https://www.rugbypass.com/fixtures/" target="_blank" style="'+lienStyle+'"><div style="'+labelStyle+'color:#a78bfa;">📡 RugbyPass — Matchs en direct</div><div style="'+arr+'">→</div></a>';
+    html += '<a href="https://www.espn.com/rugby/" target="_blank" style="'+lienStyle+'"><div style="'+labelStyle+'color:#22d3ee;">🎙 ESPN Rugby</div><div style="'+arr+'">→</div></a>';
+    html += '</div>';
+  }
+
+  html += '</div>';
+  el.innerHTML = html;
 }
 
 
-var NATIONS_MONDIALES=['France','Espagne','Allemagne','Angleterre','Brésil','Argentine','Portugal','Pays-Bas','Belgique','Italie','Croatie','Maroc','Sénégal','Colombie','Uruguay','Japon','Suisse','Norvège','Danemark','Mexique','Canada','États-Unis','Australie'];
-function showOngletMondialIfNational(nom){var btn=document.getElementById('itab-mondial');if(!btn)return;btn.style.display=NATIONS_MONDIALES.indexOf(nom)>=0?'':'none';}
-function loadMondial2026(){
-  var el=document.getElementById('ip-mondial');if(!el)return;
-  var GROUPES=[
-    {id:'A',teams:['Mexique','Corée du Sud','Afrique du Sud','Tchéquie']},
-    {id:'B',teams:['Canada','Suisse','Qatar','Bosnie-Herzégovine']},
-    {id:'C',teams:['Brésil','Maroc','Écosse','Haïti']},
-    {id:'D',teams:['États-Unis','Paraguay','Australie','Turquie']},
-    {id:'E',teams:['Allemagne','Équateur','Côte d\'Ivoire','Curaçao']},
-    {id:'F',teams:['Pays-Bas','Japon','Tunisie','Suède']},
-    {id:'G',teams:['Belgique','Iran','Égypte','Nouvelle-Zélande']},
-    {id:'H',teams:['Espagne','Uruguay','Cap-Vert','Arabie saoudite']},
-    {id:'I',teams:['France','Sénégal','Norvège','Irak']},
-    {id:'J',teams:['Argentine','Algérie','Autriche','Jordanie']},
-    {id:'K',teams:['Portugal','Colombie','RD Congo','Ouzbékistan']},
-    {id:'L',teams:['Angleterre','Croatie','Ghana','Panama']}
+/* ── NATIONS : afficher/cacher onglet Mondial ── */
+var NATIONS_MONDIALES = ['France','Espagne','Allemagne','Angleterre','Brésil','Argentine','Portugal','Pays-Bas','Belgique','Italie','Croatie','Maroc','Sénégal','Colombie','Uruguay','Japon','Suisse','Norvège','Danemark','Mexique','Canada','États-Unis','Australie','Iran','Corée du Sud','Équateur','Autriche','Algérie','Égypte','Qatar','Tunisie','Côte d\'Ivoire','Ouzbékistan','Écosse','Paraguay','Haïti','Afrique du Sud','Cap-Vert','Ghana','Arabie saoudite','Jordanie','Curaçao','Nouvelle-Zélande','Panama','RD Congo','Suède','Ukraine','Turquie','Irak','Bolivie','Suriname'];
+
+function showOngletMondialIfNational(nom) {
+  var btn = document.getElementById('itab-mondial');
+  if(!btn) return;
+  var isNat = NATIONS_MONDIALES.indexOf(nom) >= 0;
+  btn.style.display = isNat ? '' : 'none';
+}
+
+function loadMondial2026() {
+  var el = document.getElementById('ip-mondial');
+  if(!el) return;
+
+  var GROUPES = [
+    {id:'A', teams:['Mexique','Corée du Sud','Afrique du Sud','Tchéquie']},
+    {id:'B', teams:['Canada','Suisse','Qatar','Bosnie-Herzégovine']},
+    {id:'C', teams:['Brésil','Maroc','Écosse','Haïti']},
+    {id:'D', teams:['États-Unis','Paraguay','Australie','Turquie']},
+    {id:'E', teams:['Allemagne','Équateur','Côte d\'Ivoire','Curaçao']},
+    {id:'F', teams:['Pays-Bas','Japon','Tunisie','Suède']},
+    {id:'G', teams:['Belgique','Iran','Égypte','Nouvelle-Zélande']},
+    {id:'H', teams:['Espagne','Uruguay','Cap-Vert','Arabie saoudite']},
+    {id:'I', teams:['France','Sénégal','Norvège','Irak']},
+    {id:'J', teams:['Argentine','Algérie','Autriche','Jordanie']},
+    {id:'K', teams:['Portugal','Colombie','RD Congo','Ouzbékistan']},
+    {id:'L', teams:['Angleterre','Croatie','Ghana','Panama']}
   ];
-  var MY=typeof state!=='undefined'&&state.u?state.u.map(function(u){return u.n;}):[];
-  var ls='display:flex;align-items:center;gap:10px;padding:10px 14px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:8px;margin-bottom:6px;text-decoration:none;';
-  var html='<div style="padding:4px 0;">';
-  html+='<div style="background:linear-gradient(135deg,rgba(30,119,255,.15),rgba(30,215,96,.1));border:1px solid rgba(77,132,255,.3);border-radius:12px;padding:16px;margin-bottom:14px;text-align:center;"><div style="font-size:22px;">🌍</div><div style="font-size:16px;font-weight:800;color:var(--t1);">Coupe du Monde 2026</div><div style="font-size:10px;color:var(--t3);">🇺🇸🇨🇦🇲🇽 USA · Canada · Mexique</div><div style="font-size:11px;color:#4d84ff;font-weight:700;margin-top:5px;">11 juin — 19 juillet 2026</div></div>';
-  html+='<div class="cwrap" style="margin-bottom:10px;border:1px solid rgba(0,100,255,.3);background:rgba(0,85,255,.06);"><div style="font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#4d84ff;margin-bottom:10px;">🇫🇷 France — Groupe I</div>';
-  [{d:'16 juin',h:'21h00',adv:'Sénégal 🇸🇳',lieu:'MetLife, New York'},{d:'22 juin',h:'23h00',adv:'Irak 🇮🇶',lieu:'Philadelphia'},{d:'26 juin',h:'21h00',adv:'Norvège 🇳🇴',lieu:'Gillette, Boston'}].forEach(function(m){
-    html+='<div style="display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid rgba(255,255,255,.05);"><div style="font-size:18px;">🇫🇷</div><div style="flex:1;"><div style="font-size:11px;font-weight:700;color:var(--t1);">France vs '+m.adv+'</div><div style="font-size:9px;color:var(--t3);">'+m.d+' · '+m.h+' · '+m.lieu+'</div></div></div>';
+
+  var MY_TEAMS = (typeof state !== 'undefined' && state.u) ? state.u.map(function(u){return u.n;}) : [];
+
+  var lsLink = 'display:flex;align-items:center;gap:10px;padding:10px 14px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:8px;margin-bottom:6px;text-decoration:none;';
+
+  var html = '<div style="padding:4px 0;">';
+
+  // ── Header ──
+  html += '<div style="background:linear-gradient(135deg,rgba(30,119,255,.15),rgba(30,215,96,.1));border:1px solid rgba(77,132,255,.3);border-radius:12px;padding:16px;margin-bottom:14px;text-align:center;">';
+  html += '<div style="font-size:22px;margin-bottom:4px;">🌍</div>';
+  html += '<div style="font-size:16px;font-weight:800;color:var(--t1);">Coupe du Monde 2026</div>';
+  html += '<div style="font-size:10px;color:var(--t3);margin-top:3px;">🇺🇸🇨🇦🇲🇽 USA · Canada · Mexique</div>';
+  html += '<div style="font-size:11px;color:#4d84ff;font-weight:700;margin-top:5px;">11 juin — 19 juillet 2026</div>';
+  html += '</div>';
+
+  // ── Matchs France ──
+  html += '<div class="cwrap" style="margin-bottom:10px;border:1px solid rgba(0,100,255,.3);background:rgba(0,85,255,.06);">';
+  html += '<div style="font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#4d84ff;margin-bottom:10px;">🇫🇷 France — Groupe I</div>';
+  var fMatchs = [
+    {d:'16 juin 2026', h:'21h00', adv:'Sénégal', flag:'🇸🇳', lieu:'MetLife Stadium, New York', note:'Match 1'},
+    {d:'22 juin 2026', h:'23h00', adv:'Irak / Bolivie / Suriname', flag:'🏳️', lieu:'Lincoln Financial Field, Philadelphie', note:'Match 2'},
+    {d:'26 juin 2026', h:'21h00', adv:'Norvège 🪄 Haaland', flag:'🇳🇴', lieu:'Gillette Stadium, Boston', note:'Match 3'}
+  ];
+  fMatchs.forEach(function(m){
+    html += '<div style="display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid rgba(255,255,255,.05);">';
+    html += '<div style="font-size:18px;">🇫🇷</div>';
+    html += '<div style="flex:1;">';
+    html += '<div style="font-size:11px;font-weight:700;color:var(--t1);">France vs '+m.adv+' '+m.flag+'</div>';
+    html += '<div style="font-size:9px;color:var(--t3);margin-top:2px;">'+m.d+' · '+m.h+' · '+m.lieu+'</div>';
+    html += '</div>';
+    html += '<div style="font-size:9px;font-weight:700;color:#4d84ff;background:rgba(77,132,255,.12);padding:3px 7px;border-radius:4px;">'+m.note+'</div>';
+    html += '</div>';
   });
-  html+='</div>';
-  html+='<div class="cwrap" style="margin-bottom:10px;"><div style="font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#4f5d88;margin-bottom:10px;">🏆 Les 12 Groupes</div><div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;">';
+  html += '</div>';
+
+  // ── Les 12 Groupes ──
+  html += '<div class="cwrap" style="margin-bottom:10px;">';
+  html += '<div style="font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#4f5d88;margin-bottom:10px;">🏆 Les 12 Groupes</div>';
+  html += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;">';
+
   GROUPES.forEach(function(g){
-    var isFr=g.id==='I';
-    html+='<div style="background:'+(isFr?'rgba(77,132,255,.08)':'rgba(255,255,255,.02)')+';border:1px solid '+(isFr?'rgba(77,132,255,.5)':'rgba(255,255,255,.07)')+';border-radius:8px;padding:8px;">';
-    html+='<div style="font-size:9px;font-weight:800;color:'+(isFr?'#4d84ff':'#4f5d88')+';margin-bottom:5px;">GROUPE '+g.id+(isFr?' 🇫🇷':'')+'</div>';
-    g.teams.forEach(function(t){var isFrance=t==='France';var isMine=MY.indexOf(t)>=0;html+='<div style="font-size:10px;color:'+(isFrance?'#4d84ff':isMine?'#1ed760':'var(--t2)')+';font-weight:'+(isFrance||isMine?700:400)+';padding:1px 0;">'+(isFrance?'🇫🇷 ':isMine?'⭐ ':'')+t+'</div>';});
-    html+='</div>';
+    var isFrance = g.id === 'I';
+    var borderCol = isFrance ? 'rgba(77,132,255,.5)' : 'rgba(255,255,255,.07)';
+    var bgCol = isFrance ? 'rgba(77,132,255,.08)' : 'rgba(255,255,255,.02)';
+    html += '<div style="background:'+bgCol+';border:1px solid '+borderCol+';border-radius:8px;padding:8px;">';
+    html += '<div style="font-size:9px;font-weight:800;color:'+(isFrance?'#4d84ff':'#4f5d88')+';margin-bottom:5px;letter-spacing:.5px;">GROUPE '+g.id+(isFrance?' 🇫🇷':'')+'</div>';
+    g.teams.forEach(function(t){
+      var isMine = MY_TEAMS.indexOf(t) >= 0;
+      var isFr = t === 'France';
+      html += '<div style="font-size:10px;color:'+(isFr?'#4d84ff':isMine?'#1ed760':'var(--t2)')+';font-weight:'+(isFr||isMine?'700':'400')+';padding:1px 0;">'+(isFr?'🇫🇷 ':isMine?'⭐ ':'')+t+'</div>';
+    });
+    html += '</div>';
   });
-  html+='</div></div>';
-  html+='<div class="cwrap" style="margin-bottom:10px;"><div style="font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#4f5d88;margin-bottom:10px;">🏟️ Tableau knockout</div>';
-  [{label:'32e de finale',date:'29 juin – 2 juil.',col:'#4f5d88'},{label:'16e de finale',date:'4 – 7 juillet',col:'#4d84ff'},{label:'Quarts',date:'9 – 10 juillet',col:'#a78bfa'},{label:'Demi-finales',date:'14 – 15 juillet',col:'#f0b020'},{label:'🏆 Finale',date:'19 juillet · MetLife NY',col:'#1ed760'}].forEach(function(r){
-    html+='<div style="display:flex;align-items:center;gap:10px;padding:8px 10px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.06);border-left:3px solid '+r.col+';border-radius:6px;margin-bottom:5px;"><div style="flex:1;"><div style="font-size:11px;font-weight:700;color:'+r.col+';">'+r.label+'</div><div style="font-size:9px;color:var(--t3);">'+r.date+'</div></div><div style="font-size:9px;color:var(--t3);">TBD</div></div>';
+  html += '</div></div>';
+
+  // ── Tableau knockout ──
+  html += '<div class="cwrap" style="margin-bottom:10px;">';
+  html += '<div style="font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#4f5d88;margin-bottom:10px;">🏟️ Tableau élimination directe</div>';
+
+  var rounds = [
+    {label:'32e de finale', date:'29 juin – 2 juil.', col:'#4f5d88'},
+    {label:'16e de finale', date:'4 – 7 juillet', col:'#4d84ff'},
+    {label:'Quarts de finale', date:'9 – 10 juillet', col:'#a78bfa'},
+    {label:'Demi-finales', date:'14 – 15 juillet', col:'#f0b020'},
+    {label:'🏆 Finale', date:'19 juillet · MetLife Stadium, NY', col:'#1ed760'}
+  ];
+  rounds.forEach(function(r){
+    html += '<div style="display:flex;align-items:center;gap:10px;padding:8px 10px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.06);border-left:3px solid '+r.col+';border-radius:6px;margin-bottom:5px;">';
+    html += '<div style="flex:1;">';
+    html += '<div style="font-size:11px;font-weight:700;color:'+r.col+';">'+r.label+'</div>';
+    html += '<div style="font-size:9px;color:var(--t3);margin-top:1px;">'+r.date+'</div>';
+    html += '</div>';
+    html += '<div style="font-size:9px;color:var(--t3);font-weight:700;">TBD</div>';
+    html += '</div>';
   });
-  html+='</div>';
-  html+='<div class="cwrap"><div style="font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#4f5d88;margin-bottom:10px;">🔗 Liens utiles</div>';
-  [['https://www.fifa.com/fr/tournaments/mens/worldcup/canadamexicousa2026','#4d84ff','🌐 FIFA 2026 officiel'],['https://www.lequipe.fr/Football/Coupe-du-monde/','#f0b020',"📰 L'Équipe"],['https://www.sofascore.com/tournament/football/world/fifa-world-cup/16','#ff7b54','⚡ Sofascore'],['https://www.flashscore.fr/football/monde/coupe-du-monde/','#22d3ee','⚡ Flashscore']].forEach(function(l){
-    html+='<a href="'+l[0]+'" target="_blank" style="'+ls+'"><div style="font-size:12px;font-weight:700;color:'+l[1]+';flex:1;">'+l[2]+'</div><div style="color:var(--t3);">→</div></a>';
-  });
-  html+='</div></div>';
-  el.innerHTML=html;
+  html += '</div>';
+
+  // ── Liens utiles ──
+  html += '<div class="cwrap">';
+  html += '<div style="font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#4f5d88;margin-bottom:10px;">🔗 Liens utiles</div>';
+  html += '<a href="https://www.fifa.com/fr/tournaments/mens/worldcup/canadamexicousa2026" target="_blank" style="'+lsLink+'"><div style="font-size:12px;font-weight:700;color:#4d84ff;flex:1;">🌐 Site officiel FIFA 2026</div><div style="color:var(--t3);">→</div></a>';
+  html += '<a href="https://www.lequipe.fr/Football/Coupe-du-monde/" target="_blank" style="'+lsLink+'"><div style="font-size:12px;font-weight:700;color:#f0b020;flex:1;">📰 L\'Équipe — Suivi complet</div><div style="color:var(--t3);">→</div></a>';
+  html += '<a href="https://www.sofascore.com/tournament/football/world/fifa-world-cup/16" target="_blank" style="'+lsLink+'"><div style="font-size:12px;font-weight:700;color:#ff7b54;flex:1;">⚡ Sofascore — Scores live</div><div style="color:var(--t3);">→</div></a>';
+  html += '<a href="https://www.flashscore.fr/football/monde/coupe-du-monde/" target="_blank" style="'+lsLink+'"><div style="font-size:12px;font-weight:700;color:#22d3ee;flex:1;">⚡ Flashscore — Résultats</div><div style="color:var(--t3);">→</div></a>';
+  html += '<a href="https://www.transfermarkt.fr/weltmeisterschaft-2026/startseite/pokalwettbewerb/WM26" target="_blank" style="'+lsLink+'"><div style="font-size:12px;font-weight:700;color:#1ed760;flex:1;">💰 Transfermarkt — Valeurs</div><div style="color:var(--t3);">→</div></a>';
+  html += '</div>';
+
+  html += '</div>';
+  el.innerHTML = html;
 }
 
 async function loadTeamSaisons() {
@@ -5331,14 +5495,16 @@ async function loadTeamSaisons() {
   var saisons = Object.keys(results).sort().reverse();
 
   if(!Object.keys(results).length) {
-    var sofaFb=SOFASCORE_LINKS[nom]||('https://www.sofascore.com/search#q='+encodeURIComponent(nom));
-    var flashFb=FLASHSCORE_LINKS&&FLASHSCORE_LINKS[nom]?FLASHSCORE_LINKS[nom]:('https://www.flashscore.fr/recherche/?q='+encodeURIComponent(nom));
-    var ls='display:flex;align-items:center;gap:10px;padding:10px 14px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:8px;margin-bottom:6px;text-decoration:none;';
-    el.innerHTML='<div style="padding:4px 0;"><div class="cwrap"><div style="font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#4f5d88;margin-bottom:6px;">⚽ '+nom+' — Accès direct</div>'
+    var sofaFb = SOFASCORE_LINKS[nom] || ('https://www.sofascore.com/search#q=' + encodeURIComponent(nom));
+    var flashFb = FLASHSCORE_LINKS && FLASHSCORE_LINKS[nom] ? FLASHSCORE_LINKS[nom] : ('https://www.flashscore.fr/recherche/?q=' + encodeURIComponent(nom));
+    var ls = 'display:flex;align-items:center;gap:10px;padding:10px 14px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:8px;margin-bottom:6px;text-decoration:none;';
+    el.innerHTML = '<div style="padding:4px 0;">'
+      +'<div class="cwrap" style="margin-bottom:10px;">'
+      +'<div style="font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#4f5d88;margin-bottom:6px;">⚽ ' + nom + ' — Accès direct</div>'
       +'<div style="font-size:10px;color:var(--t3);margin-bottom:12px;">Données non disponibles via football-data.org. Consulter directement :</div>'
-      +'<a href="'+sofaFb+'" target="_blank" style="'+ls+'"><div style="font-size:12px;font-weight:700;color:#ff7b54;flex:1;">⚡ Sofascore</div><div style="color:var(--t3);">→</div></a>'
-      +'<a href="'+flashFb+'" target="_blank" style="'+ls+'"><div style="font-size:12px;font-weight:700;color:#f0b020;flex:1;">⚡ Flashscore</div><div style="color:var(--t3);">→</div></a>'
-      +'<a href="https://fbref.com/fr/search/search.fcgi?search='+encodeURIComponent(nom)+'" target="_blank" style="'+ls+'"><div style="font-size:12px;font-weight:700;color:#4d84ff;flex:1;">📊 FBref</div><div style="color:var(--t3);">→</div></a>'
+      +'<a href="'+sofaFb+'" target="_blank" style="'+ls+'"><div style="font-size:12px;font-weight:700;color:#ff7b54;flex:1;">⚡ Sofascore — Stats & résultats</div><div style="color:var(--t3);">→</div></a>'
+      +'<a href="'+flashFb+'" target="_blank" style="'+ls+'"><div style="font-size:12px;font-weight:700;color:#f0b020;flex:1;">⚡ Flashscore — Résultats live</div><div style="color:var(--t3);">→</div></a>'
+      +'<a href="https://fbref.com/fr/search/search.fcgi?search='+encodeURIComponent(nom)+'" target="_blank" style="'+ls+'"><div style="font-size:12px;font-weight:700;color:#4d84ff;flex:1;">📊 FBref — Stats avancées</div><div style="color:var(--t3);">→</div></a>'
       +'</div></div>';
     return;
   }
@@ -5862,8 +6028,8 @@ window.onload=function(){if(!state.bkColors)state.bkColors={};loadCustomLinks();
     }catch(err){}
   },{passive:true});
   var saved=localStorage.getItem('g45_dbx');
-  if(saved){_dbxConfig.refreshToken=saved;}
-  var inp=$i('dbx-key-input');if(inp)inp.value='(token auto — permanent)';
+  /* token chargé via getValidToken() */
+  var inp=$i('dbx-key-input');var saved=localStorage.getItem('gones45_dbx_token');if(inp)inp.value=saved?'(token enregistré)':'';
   var gk=localStorage.getItem('gones45_gemini_key');var gki=$i('gemini-key-input');if(gki&&gk)gki.value=gk;var fdk=localStorage.getItem('gones45_fdorg_key');var fdki=$i('fdorg-key-input');if(fdki&&fdk)fdki.value='(clé enregistrée)';var afk=localStorage.getItem('gones45_apifootball_key');var afki=$i('apifootball-key-input');if(afki&&afk)afki.value='(clé enregistrée)';
 
 // ── APPARENCE — halo cartes ──
