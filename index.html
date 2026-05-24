@@ -5030,9 +5030,23 @@ async function searchTennisPlayer(nom) {
         var d = await r.json();
         var reply = d.choices[0].message.content.trim();
         
-        // Parser le JSON
-        var clean = reply.replace(/```json|```/g,'').trim();
-        var data = JSON.parse(clean);
+        // Parser le JSON avec fallback robuste
+        var data = {};
+        try {
+          var clean = reply.replace(/```json|```/g,'').trim();
+          // Extraire le premier objet JSON valide
+          var jsonMatch = clean.match(/\{[\s\S]*\}/);
+          if(jsonMatch) data = JSON.parse(jsonMatch[0]);
+          else data = JSON.parse(clean);
+        } catch(jsonErr) {
+          // Fallback — afficher ce que Groq a retourné en texte
+          html += '<div class="cwrap" style="margin-bottom:8px;">';
+          html += '<div style="font-size:13px;font-weight:800;color:var(--t1);margin-bottom:8px;">'+nom+'</div>';
+          html += '<div style="font-size:11px;color:var(--t1);line-height:1.7;">'+reply.substring(0,500)+'</div>';
+          html += '</div>';
+          data = null;
+        }
+        if(!data) { throw new Error('JSON invalide'); }
 
         // ── Header joueur ──
         html += '<div class="cwrap" style="margin-bottom:8px;">';
