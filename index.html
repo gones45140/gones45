@@ -5003,7 +5003,7 @@ async function searchTennisPlayer(nom) {
 
     // Groq extrait les chiffres + traduit
     if(groqKey) {
-      var prompt = 'Texte sur ' + nom + ' (' + yr + '): ' + raw.substring(0, 800) + ' Fais 2 choses: 1) Traduis en 2-3 phrases en francais avec UNIQUEMENT les chiffres du texte. 2) Extrait si presentes (% entre 0-100): g=victoires global, t=terre, h=dur, gr=gazon, s1=1er set, s2sets=2 sets, brk=breaks convertis, brks=breaks sauves, aces=aces/match, tb=tiebreaks, jeux=jeux/match. Reponds: RESUME|||{"g":null,"t":null,"h":null,"gr":null,"s1":null,"s2sets":null,"brk":null,"brks":null,"aces":null,"tb":null,"jeux":null} Null si absent, jamais > 100 pour %.' ;
+      var prompt = 'Donnees sur ' + nom + ' saison ' + yr + ': ' + raw.substring(0, 800) + ' Extrait UNIQUEMENT ces stats si presentes. Reponds: RESUME|||{"matchs":null,"victoires":null,"defaites":null,"pct_1er_service":null,"pts_1er_service":null,"pct_2e_service":null,"pts_2e_service":null,"aces":null,"doubles_fautes":null,"brk_sauves_n":null,"brk_sauves_total":null,"brk_sauves_pct":null,"brk_conv_n":null,"brk_conv_total":null,"brk_conv_pct":null,"tiebreaks_gagnes":null,"tiebreaks_joues":null} RESUME=1 phrase francais. Valeurs: matchs/victoires/defaites=entier, pourcentages=40-85, aces=1-20, df=0-8, breaks=entiers. Null si absent.' ;
 
       var r = await fetch('https://api.groq.com/openai/v1/chat/completions', {
         method: 'POST',
@@ -5045,48 +5045,74 @@ async function searchTennisPlayer(nom) {
     html += '<div style="font-size:11px;color:var(--t1);line-height:1.7;">' + resume + '</div>';
     html += '</div>';
 
-    // ── Surfaces ──
+    // ── Bilan ──
     html += '<div class="cwrap" style="margin-bottom:8px;">';
-    html += '<div style="font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#4f5d88;margin-bottom:8px;">% Victoires par surface</div>';
-    html += '<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:6px;">';
-    [{l:'Global', v:stats.g, c:'#4d84ff'}, {l:'🟠 Terre', v:stats.t, c:'#ff7b54'}, {l:'🔵 Dur', v:stats.h, c:'#4d84ff'}, {l:'🟢 Gazon', v:stats.gr, c:'#1ed760'}].forEach(function(s) {
-      var disp = s.v === null ? 'N/A' : (s.v <= 1 ? Math.round(s.v * 100) + '%' : Math.round(s.v) + '%');
-      var col = s.v === null ? 'var(--t3)' : s.c;
-      html += '<div style="text-align:center;background:rgba(255,255,255,.04);border-radius:8px;padding:8px 4px;border:1px solid rgba(255,255,255,.06);">';
-      html += '<div style="font-size:10px;margin-bottom:4px;">' + s.l + '</div>';
-      html += '<div style="font-size:17px;font-weight:800;color:' + col + ';">' + disp + '</div>';
+    html += '<div style="font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#4f5d88;margin-bottom:8px;">Bilan ' + yr + '</div>';
+    html += '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px;">';
+    [{l:'Matchs', v:stats.matchs, c:'#4d84ff'},{l:'Victoires', v:stats.victoires, c:'#1ed760'},{l:'Defaites', v:stats.defaites, c:'#ff4545'}].forEach(function(s){
+      html += '<div style="text-align:center;background:rgba(255,255,255,.04);border-radius:8px;padding:10px 4px;border:1px solid rgba(255,255,255,.06);">';
+      html += '<div style="font-size:22px;font-weight:800;color:' + s.c + ';">' + (s.v !== null ? s.v : 'N/A') + '</div>';
+      html += '<div style="font-size:9px;color:var(--t3);margin-top:2px;">' + s.l + '</div>';
       html += '</div>';
     });
     html += '</div></div>';
 
-    // ── Stats de match ──
-    var rows = [
-      {l:'1er set gagne', v:stats.s1},
-      {l:'Matchs en 2 sets', v:stats.s2sets},
-      {l:'Breaks convertis', v:stats.brk},
-      {l:'Breaks sauves', v:stats.brks},
-      {l:'Tie-breaks joues', v:stats.tb}
-    ].filter(function(s) { return s.v !== null; });
+    // ── Stats de service ──
+    var serviceRows = [
+      {l:'1er service %', v:stats.pct_1er_service},
+      {l:'Pts gagnes sur 1er service %', v:stats.pts_1er_service},
+      {l:'2e service %', v:stats.pct_2e_service},
+      {l:'Pts gagnes sur 2e service %', v:stats.pts_2e_service},
+    ].filter(function(s){return s.v !== null;});
 
-    if(rows.length || stats.aces !== null || stats.jeux !== null) {
+    if(serviceRows.length || stats.aces !== null || stats.doubles_fautes !== null) {
       html += '<div class="cwrap" style="margin-bottom:8px;">';
-      html += '<div style="font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#4f5d88;margin-bottom:8px;">Stats de match</div>';
-      rows.forEach(function(s) {
-        var pct = s.v <= 1 ? Math.round(s.v * 100) : Math.round(s.v);
+      html += '<div style="font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#4f5d88;margin-bottom:8px;">Stats de service</div>';
+      serviceRows.forEach(function(s){
+        var pct = parseFloat(s.v)||0;
         var col = pct >= 65 ? '#1ed760' : pct >= 50 ? '#f0b020' : '#ff4545';
-        html += '<div style="display:flex;align-items:center;gap:8px;margin-bottom:5px;">';
+        html += '<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">';
         html += '<div style="font-size:10px;color:var(--t2);flex:1;">' + s.l + '</div>';
-        html += '<div style="width:80px;height:5px;background:rgba(255,255,255,.06);border-radius:3px;"><div style="height:5px;border-radius:3px;background:' + col + ';width:' + Math.min(pct, 100) + '%;"></div></div>';
-        html += '<div style="font-size:11px;font-weight:700;color:' + col + ';">' + pct + '%</div>';
+        html += '<div style="width:80px;height:5px;background:rgba(255,255,255,.06);border-radius:3px;"><div style="height:5px;border-radius:3px;background:' + col + ';width:' + Math.min(pct,100) + '%;"></div></div>';
+        html += '<div style="font-size:11px;font-weight:700;color:' + col + ';">' + Math.round(pct) + '%</div>';
         html += '</div>';
       });
-      if(stats.aces !== null || stats.jeux !== null) {
-        html += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:6px;">';
-        if(stats.aces !== null) html += '<div style="background:rgba(255,255,255,.04);border-radius:8px;padding:8px;text-align:center;"><div style="font-size:18px;font-weight:800;color:#a78bfa;">' + stats.aces + '</div><div style="font-size:9px;color:var(--t3);">Aces/match</div></div>';
-        if(stats.jeux !== null) html += '<div style="background:rgba(255,255,255,.04);border-radius:8px;padding:8px;text-align:center;"><div style="font-size:18px;font-weight:800;color:#22d3ee;">' + stats.jeux + '</div><div style="font-size:9px;color:var(--t3);">Jeux/match</div></div>';
+      html += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:6px;">';
+      if(stats.aces !== null) html += '<div style="background:rgba(255,255,255,.04);border-radius:8px;padding:8px;text-align:center;"><div style="font-size:20px;font-weight:800;color:#a78bfa;">' + stats.aces + '</div><div style="font-size:9px;color:var(--t3);">Aces/match</div></div>';
+      if(stats.doubles_fautes !== null) html += '<div style="background:rgba(255,255,255,.04);border-radius:8px;padding:8px;text-align:center;"><div style="font-size:20px;font-weight:800;color:#ff4545;">' + stats.doubles_fautes + '</div><div style="font-size:9px;color:var(--t3);">DF/match</div></div>';
+      html += '</div>';
+
+      // Breaks et tie-breaks
+      var hasBreaks = stats.brk_sauves_pct !== null || stats.brk_conv_pct !== null || stats.tiebreaks_gagnes !== null;
+      if(hasBreaks) {
+        html += '<div style="margin-top:8px;">';
+        html += '<div style="font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#4f5d88;margin-bottom:8px;">Breaks & Tie-breaks</div>';
+        var brkRows = [
+          {l:'Balles de break sauvees', n:stats.brk_sauves_n, tot:stats.brk_sauves_total, pct:stats.brk_sauves_pct, c:'#1ed760'},
+          {l:'Balles de break converties', n:stats.brk_conv_n, tot:stats.brk_conv_total, pct:stats.brk_conv_pct, c:'#f0b020'},
+        ];
+        brkRows.forEach(function(s){
+          if(s.pct === null && s.n === null) return;
+          var pct = parseFloat(s.pct)||0;
+          var col = s.c;
+          var scoreStr = (s.n !== null && s.tot !== null) ? s.n + '/' + s.tot : '';
+          html += '<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">';
+          html += '<div style="font-size:10px;color:var(--t2);flex:1;">' + s.l + (scoreStr?' ('+scoreStr+')':'') + '</div>';
+          if(pct) {
+            html += '<div style="width:80px;height:5px;background:rgba(255,255,255,.06);border-radius:3px;"><div style="height:5px;border-radius:3px;background:' + col + ';width:' + Math.min(pct,100) + '%;"></div></div>';
+            html += '<div style="font-size:11px;font-weight:700;color:' + col + ';">' + Math.round(pct) + '%</div>';
+          }
+          html += '</div>';
+        });
+        if(stats.tiebreaks_gagnes !== null || stats.tiebreaks_joues !== null) {
+          html += '<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">';
+          html += '<div style="font-size:10px;color:var(--t2);flex:1;">Jeux decisifs gagnes' + (stats.tiebreaks_joues !== null ? ' (/' + stats.tiebreaks_joues + ')' : '') + '</div>';
+          html += '<div style="font-size:11px;font-weight:700;color:#22d3ee;">' + (stats.tiebreaks_gagnes !== null ? stats.tiebreaks_gagnes : 'N/A') + '</div>';
+          html += '</div>';
+        }
         html += '</div>';
       }
-      html += '</div>';
+      html += '</div></div>';
     }
 
   } catch(e) {
