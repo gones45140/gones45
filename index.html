@@ -1194,7 +1194,7 @@ input[type="date"],input[type="time"]{color-scheme:dark;}
   <button class="ni pc-only" onclick="showTab('t-outils',this)"><span>🔧</span>Outils</button>
   <button class="ni pc-only" onclick="showTab('t-bank',this)"><span>💳</span>Bank</button>
   <button class="ni pc-only" onclick="showTab('t-cal',this);loadCalendrier()"><span>📅</span>Agenda</button>
-  <button class="ni pc-only" onclick="showTab('t-comp',this);initComparateur()"><span>⚖️</span>Vs</button>
+  <button class="ni pc-only" onclick="showTab('t-comp',this);" data-action-comp="init"><span>⚖️</span>Vs</button>
 
   <div style="flex:1;display:flex;flex-direction:column;padding:0 8px 8px;min-height:0;" class="pc-note-area">
     <div id="pc-note" contenteditable="true" style="flex:1;min-height:100px;background:var(--bg3);border:1px solid var(--b1);border-radius:var(--r6);color:var(--t1);font-size:11px;line-height:1.6;padding:10px;outline:none;font-family:inherit;overflow-y:auto;word-break:break-word;" data-placeholder="Notes, cotes, screenshots…" oninput="saveNote()"></div>
@@ -4988,14 +4988,7 @@ async function searchTennisPlayer(nom) {
     }
   } catch(e) {}
 
-  // Iframe Tennis Abstract + boutons
-  html += '<div style="border-radius:8px;overflow:hidden;border:1px solid rgba(255,255,255,.08);margin-bottom:8px;">';
-  html += '<div style="background:rgba(255,255,255,.04);padding:8px 12px;font-size:10px;color:var(--t3);display:flex;align-items:center;justify-content:space-between;">';
-  html += '<span>📊 Tennis Abstract — '+nom+'</span>';
-  html += '<a href="'+taUrl+'" target="_blank" style="color:#4d84ff;font-size:10px;text-decoration:none;">Ouvrir ↗</a>';
-  html += '</div>';
-  html += '<iframe src="'+taUrl+'" style="width:100%;height:400px;border:none;background:#fff;" loading="lazy"></iframe>';
-  html += '</div>';
+  // Pas d'iframe - Tennis Abstract bloque
 
   html += '<div style="display:flex;gap:6px;">';
   html += '<a href="'+taUrl+'" target="_blank" style="flex:1;padding:8px;background:rgba(77,132,255,.1);border:1px solid rgba(77,132,255,.3);border-radius:6px;color:#4d84ff;font-size:10px;font-weight:700;text-decoration:none;text-align:center;">📊 Tennis Abstract</a>';
@@ -6296,6 +6289,9 @@ var _bcp=document.getElementById('btn-chat-params-pc');if(_bcp)_bcp.onclick=func
   var _bsaisons=document.getElementById('itab-saisons');if(_bsaisons)_bsaisons.onclick=function(){swInner('saisons',this);};
   var _brcal=document.getElementById('btn-refresh-cal');if(_brcal)_brcal.onclick=loadCalendrier;
   var _bcomp=document.getElementById('btn-comparer');if(_bcomp)_bcomp.onclick=runComparateur;
+  document.querySelectorAll('[data-action-comp="init"]').forEach(function(b){
+    b.addEventListener('click', function(){ setTimeout(initComparateur, 100); });
+  });
   setTimeout(initComparateur, 300);
 
   // Listener global pour les paramètres chat
