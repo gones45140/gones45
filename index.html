@@ -4617,12 +4617,16 @@ function calcSaisonStats(matchesRaw, teamId) {
 
     // 5 derniers matchs
     if(stats.last5.length < 5) {
+      var mDate = new Date(m.utcDate);
+      var mDateStr = mDate.toLocaleDateString('fr-FR',{day:'numeric',month:'short'});
       stats.last5.push({
         w: won, d: draw,
         score: (isDom ? hg+'-'+ag : ag+'-'+hg),
         adv: isDom ? (m.awayTeam&&m.awayTeam.name||'?') : (m.homeTeam&&m.homeTeam.name||'?'),
+        isDom: isDom,
         comp: m.competition&&m.competition.name||'',
-        compIcon: getCompIcon(m.competition&&m.competition.name||'')
+        compIcon: getCompIcon(m.competition&&m.competition.name||''),
+        date: mDateStr
       });
     }
 
@@ -4740,9 +4744,12 @@ function renderSaisonsChart(el, results, nom) {
         var col = m.w?'#1ed760':m.d?'#f0b020':'#ff4545';
         var bg = m.w?'rgba(30,215,96,.15)':m.d?'rgba(240,176,32,.15)':'rgba(255,69,69,.15)';
         var letter = m.w?'V':m.d?'N':'D';
-        html += '<div style="flex:1;text-align:center;background:'+bg+';border:1px solid '+col+';border-radius:8px;padding:6px 3px;" title="'+m.adv+' '+m.score+'">';
-        html += '<div style="font-size:13px;font-weight:800;color:'+col+';">'+letter+'</div>';
-        html += '<div style="font-size:8px;color:rgba(255,255,255,.4);margin-top:1px;">'+m.score+'</div>';
+        var advShort = (m.adv||'').split(' ').slice(0,1).join('').substring(0,6);
+        html += '<div style="flex:1;text-align:center;background:'+bg+';border:1px solid '+col+';border-radius:8px;padding:5px 2px;">';
+        html += '<div style="font-size:12px;line-height:1.2;">'+(m.compIcon||'⚽')+'</div>';
+        html += '<div style="font-size:13px;font-weight:800;color:'+col+';line-height:1.2;">'+letter+'</div>';
+        html += '<div style="font-size:8px;color:rgba(255,255,255,.5);line-height:1.3;">'+m.score+'</div>';
+        html += '<div style="font-size:7px;color:rgba(255,255,255,.3);line-height:1.2;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">'+advShort+'</div>';
         html += '</div>';
       });
       if(st.serie>1){
