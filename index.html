@@ -4673,15 +4673,15 @@ async function loadF1Saisons(el, nom) {
     var driverQuery = F1_DRIVERS[nom] ? '&driver='+F1_DRIVERS[nom] : '';
     
     // Classement pilotes saison en cours
-    var standUrl = 'https://fd-proxy.touraine-antoine.workers.dev?key=f1&path=/f1/current/driverStandings.json&host=ergast';
-    var standResp = await fetch(standUrl);
+    var standUrl = 'https://api.jolpi.ca/ergast/f1/current/driverStandings.json';
+    var standResp = await fetch(standUrl, {headers:{'Accept':'application/json'}});
     var standData = await standResp.json();
     var standings = standData.MRData&&standData.MRData.StandingsTable&&standData.MRData.StandingsTable.StandingsLists;
     var driverStandings = standings&&standings.length ? standings[0].DriverStandings : [];
 
     // Derniers résultats GP
-    var resUrl = 'https://fd-proxy.touraine-antoine.workers.dev?key=f1&path=/f1/current/last/5/results.json&host=ergast';
-    var resResp = await fetch(resUrl);
+    var resUrl = 'https://api.jolpi.ca/ergast/f1/current/last/5/results.json';
+    var resResp = await fetch(resUrl, {headers:{'Accept':'application/json'}});
     var resData = await resResp.json();
     var races = resData.MRData&&resData.MRData.RaceTable ? resData.MRData.RaceTable.Races : [];
 
