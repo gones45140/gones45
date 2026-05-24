@@ -4496,13 +4496,13 @@ async function loadNhlSaisons(el, nom) {
 
   try {
     // Classement en cours
-    var standResp = await fetch('https://api-web.nhle.com/v1/standings/now');
+    var standResp = await fetch('https://fd-proxy.touraine-antoine.workers.dev?key=nhl&path=/v1/standings/now&host=nhl');
     var standData = await standResp.json();
     var teams = standData.standings||[];
     var team = teams.find(function(t){ return (t.teamAbbrev&&t.teamAbbrev.default)===teamInfo.abbr; });
 
     // Derniers matchs
-    var schedResp = await fetch('https://api-web.nhle.com/v1/club-schedule-season/'+teamInfo.abbr+'/now');
+    var schedResp = await fetch('https://fd-proxy.touraine-antoine.workers.dev?key=nhl&path=/v1/club-schedule-season/'+teamInfo.abbr+'/now&host=nhl');
     var schedData = await schedResp.json();
     var games = (schedData.games||[]).filter(function(g){ return g.gameState==='OFF'||g.gameState==='FINAL'; }).slice(-5).reverse();
 
@@ -4576,7 +4576,7 @@ async function loadMlbSaisons(el, nom) {
   el.innerHTML = '<div style="display:flex;align-items:center;gap:8px;padding:20px;color:var(--t3);"><div style="width:14px;height:14px;border:2px solid rgba(77,132,255,.2);border-top-color:#4d84ff;border-radius:50%;animation:spin .8s linear infinite;"></div>Chargement stats MLB...</div>';
 
   try {
-    var r = await fetch('https://statsapi.mlb.com/api/v1/standings?leagueId=103,104&season=2026&hydrate=team,record');
+    var r = await fetch('https://fd-proxy.touraine-antoine.workers.dev?key=mlb&path=/api/v1/standings?leagueId=103,104%26season=2026%26hydrate=team,record&host=mlb');
     var d = await r.json();
     var teamRecord = null;
     (d.records||[]).forEach(function(div){
@@ -4588,7 +4588,7 @@ async function loadMlbSaisons(el, nom) {
     // Derniers matchs
     var today = new Date().toISOString().split('T')[0];
     var past = new Date(Date.now()-15*24*3600*1000).toISOString().split('T')[0];
-    var sr = await fetch('https://statsapi.mlb.com/api/v1/schedule?teamId='+teamInfo.id+'&startDate='+past+'&endDate='+today+'&sportId=1&gameType=R');
+    var sr = await fetch('https://fd-proxy.touraine-antoine.workers.dev?key=mlb&path=/api/v1/schedule?teamId='+teamInfo.id+'%26startDate='+past+'%26endDate='+today+'%26sportId=1%26gameType=R&host=mlb');
     var sd = await sr.json();
     var games = [];
     (sd.dates||[]).forEach(function(date){
@@ -4983,7 +4983,11 @@ function renderSaisonsChart(el, results, nom) {
       html += '<div style="display:flex;gap:6px;align-items:center;margin-bottom:8px;">';
       st.last5.forEach(function(m){
         var col = m.w?'#1ed760':m.d?'#f0b020':'#ff4545';
-        var advShort = (m.adv||'').split(' ')[0].substring(0,8);
+        // Abréger intelligemment — sauter les préfixes génériques
+        var advWords = (m.adv||'').split(' ');
+        var skipWords = ['1.','FC','SC','VfL','VfB','SV','RB','TSG','SSC','AS','AC','RC','OGC','LOSC','AFC','CFR'];
+        var advMain = advWords.filter(function(w){ return skipWords.indexOf(w)<0 && w.length>1; });
+        var advShort = (advMain[0]||advWords[0]||'?').substring(0,8);
         html += '<div style="flex:1;text-align:center;background:var(--s1);border-radius:10px;padding:7px 3px;border-top:3px solid '+col+';border-left:1px solid rgba(255,255,255,.06);border-right:1px solid rgba(255,255,255,.06);border-bottom:1px solid rgba(255,255,255,.06);">';
         html += '<div style="font-size:14px;line-height:1.3;">'+(m.compIcon||'⚽')+'</div>';
         html += '<div style="font-size:18px;font-weight:800;color:'+col+';line-height:1.2;">'+m.score+'</div>';
