@@ -972,6 +972,12 @@ input[type="date"],input[type="time"]{color-scheme:dark;}
     </div>
     <div id="fdorg-key-status" style="margin-top:7px;font-size:11px;font-weight:700;"></div>
   </div>
+  <div class="fc" style="border-style:dashed;margin-bottom:10px;">
+    <label class="fl" style="color:#a78bfa;">🖼️ Logos officiels — TheSportsDB</label>
+    <div style="font-size:10px;color:var(--t3);margin-bottom:10px;margin-top:4px;">Gratuit · Sans clé · Logos HD pour tes équipes</div>
+    <button class="btn btn-p" style="font-size:11px;" onclick="enrichTeamLogos()">🔄 Enrichir les logos</button>
+    <div style="font-size:10px;color:var(--t3);margin-top:6px;">Met à jour les logos manquants automatiquement</div>
+  </div>
   <div class="sec">APPARENCE</div>
   <div class="fc">
     <label class="fl">Cadre des sections</label>
@@ -4030,6 +4036,39 @@ async function sendChatPC(){
 // ── FOOTBALL-DATA.ORG ──
 
 // ── API-FOOTBALL (RAPIDAPI) ──
+
+// ── THESPORTSDB — LOGOS OFFICIELS ──
+var _tsdbCache = {};
+
+async function getTeamLogo(teamName) {
+  if(_tsdbCache[teamName]) return _tsdbCache[teamName];
+  try {
+    var r = await fetch('https://www.thesportsdb.com/api/v1/json/3/searchteams.php?t='+encodeURIComponent(teamName));
+    var d = await r.json();
+    if(d.teams && d.teams.length) {
+      var logo = d.teams[0].strTeamBadge;
+      _tsdbCache[teamName] = logo;
+      return logo;
+    }
+  } catch(e) {}
+  return null;
+}
+
+async function enrichTeamLogos() {
+  // Mettre à jour les logos des équipes depuis TheSportsDB
+  if(!state.u || !state.u.length) return;
+  for(var i=0; i<Math.min(state.u.length, 5); i++) {
+    var u = state.u[i];
+    if(u.logoUrl && u.logoUrl.indexOf('thesportsdb') >= 0) continue; // déjà enrichi
+    var logo = await getTeamLogo(u.n);
+    if(logo && !u.logoUrl) {
+      u.logoUrl = logo;
+    }
+  }
+  save();
+  render();
+}
+
 function getApiFootballKey(){ return localStorage.getItem('gones45_apifootball_key')||null; }
 
 function saveApiFootballKey(){
