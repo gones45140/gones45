@@ -4928,35 +4928,7 @@ async function searchTennisPlayer(nom) {
   var taUrl = 'https://www.tennisabstract.com/cgi-bin/player.cgi?p='+encodeURIComponent(nom);
 
   // Stats à extraire
-  var statsPrompt = 'Tu es expert stats tennis pour les paris. Donnees sur '+nom+' :
-'
-    +'Extrais ces stats EXACTES (format: stat: valeur%) :
-'
-    +'- % victoires globales
-'
-    +'- % victoires terre battue
-'
-    +'- % victoires dur
-'
-    +'- % victoires gazon
-'
-    +'- % 1er set gagné
-'
-    +'- % 2eme set gagné (quand joue)
-'
-    +'- % matchs en 2 sets
-'
-    +'- % tie-breaks joués
-'
-    +'- % tie-breaks gagnés
-'
-    +'- Nombre moyen de jeux par match
-'
-    +'- Nombre moyen de sets par match
-'
-    +'- % aces par point de service
-'
-    +'Données web : ';
+  var statsPrompt = 'Stats tennis '+nom+': ';
 
   var html = '';
 
@@ -4972,8 +4944,7 @@ async function searchTennisPlayer(nom) {
         });
         var d = await r.json();
         var reply = d.choices[0].message.content.trim();
-        var lines = reply.split('
-').filter(function(l){return l.trim()&&l.indexOf(':')>=0;});
+        var lines = reply.split('\n').filter(function(l){return l.trim()&&l.indexOf(':')>=0;});
 
         // Grouper par catégorie
         var cats = {
