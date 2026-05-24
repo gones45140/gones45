@@ -6,8 +6,8 @@
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-eval' 'unsafe-inline' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com; connect-src 'self' https://api.groq.com https://api.tavily.com https://fd-proxy.touraine-antoine.workers.dev https://media.api-sports.io https://api.football-data.org; img-src 'self' data: https: blob:; style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com;">
 <meta http-equiv="Content-Security-Policy" content="default-src 'self' 'unsafe-inline' 'unsafe-eval' https: data: blob:;">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
-<title>GONES45  </title>
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<title>GONES45</title>
+
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js" crossorigin="anonymous"></script>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;}
@@ -451,9 +451,9 @@ input[type="date"],input[type="time"]{color-scheme:dark;}
   </div>
   <div id="sub-strat">
     <div class="crash-wrap">
-      <div class="crash-hdr"><i class="fa-solid fa-triangle-exclamation" style="color:var(--gold);"></i> Simulateur crash par palier</div>
+      <div class="crash-hdr"><span>⚠️</span> Simulateur crash par palier</div>
       <div class="crash-grid" id="crash-grid"><div style="color:var(--t3);font-size:11px;grid-column:span 4;text-align:center;padding:8px;">Sélectionne une équipe</div></div>
-      <div class="crash-alert" id="crash-alert"><i class="fa-solid fa-circle-exclamation"></i><span id="crash-txt"></span></div>
+      <div class="crash-alert" id="crash-alert"><span>⚠️</span><span id="crash-txt"></span></div>
     </div>
     <div class="mm-wrap">
       <div class="mm-title">
@@ -938,6 +938,22 @@ input[type="date"],input[type="time"]{color-scheme:dark;}
   </div>
   <div class="fc" style="border-style:dashed;">
     <div style="display:flex;align-items:center;justify-content:space-between;">
+      <label class="fl" style="color:#ff6b35;">🏆 API-Football (RapidAPI) — Stats avancées</label>
+      <button onclick="showKeyHelp('apifootball')" style="background:rgba(255,107,53,.12);border:1px solid rgba(255,107,53,.3);color:#ff6b35;border-radius:50%;width:20px;height:20px;font-size:11px;font-weight:700;cursor:pointer;flex-shrink:0;">?</button>
+    </div>
+    <div style="font-size:10px;color:var(--t3);margin-bottom:8px;margin-top:4px;">Via RapidAPI · Logos officiels · Toutes compétitions · Stats avancées</div>
+    <div style="display:flex;gap:6px;margin-bottom:8px;">
+      <input id="apifootball-key-input" class="fi" type="password" placeholder="Clé RapidAPI…" style="font-size:11px;flex:1;">
+      <button onclick="var i=$i('apifootball-key-input');i.type=i.type==='password'?'text':'password';" style="flex-shrink:0;padding:0 10px;height:38px;background:var(--bg3);border:1px solid var(--b2);border-radius:var(--r6);color:var(--t3);font-size:14px;cursor:pointer;">👁</button>
+    </div>
+    <div style="display:flex;gap:7px;margin-bottom:8px;">
+      <button class="btn btn-p" style="font-size:11px;" onclick="saveApiFootballKey()">💾 Enregistrer</button>
+      <button class="btn" style="background:rgba(30,215,96,.12);color:var(--g);border:1px solid rgba(30,215,96,.2);font-size:11px;" onclick="testApiFootballKey()">🧪 Tester</button>
+    </div>
+    <div id="apifootball-key-status" style="margin-top:7px;font-size:11px;font-weight:700;"></div>
+  </div>
+  <div class="fc" style="border-style:dashed;">
+    <div style="display:flex;align-items:center;justify-content:space-between;">
       <label class="fl" style="color:#1ed760;">⚽ Football-Data.org — Stats</label>
       <button onclick="showKeyHelp('fdorg')" style="background:rgba(30,215,96,.12);border:1px solid rgba(30,215,96,.3);color:#1ed760;border-radius:50%;width:20px;height:20px;font-size:11px;font-weight:700;cursor:pointer;flex-shrink:0;">?</button>
     </div>
@@ -1162,17 +1178,17 @@ input[type="date"],input[type="time"]{color-scheme:dark;}
 </main>
 
 <nav class="nav">
-  <button class="ni on" onclick="showTab('t-dash',this)"><i class="fa-solid fa-chart-pie"></i>Mur</button>
-  <button class="ni" onclick="showTab('t-paris',this)"><i class="fa-solid fa-futbol"></i>Pari</button>
-  <button class="ni" onclick="showTab('t-arch',this)"><i class="fa-solid fa-clock-rotate-left"></i>Archive</button>
-  <button class="ni" onclick="showTab('t-bilan',this)"><i class="fa-solid fa-chart-line"></i>Bilan</button>
-  <button class="ni" onclick="showTab('t-calc',this)"><i class="fa-solid fa-calculator"></i>Calc</button>
-  <button class="ni pc-only" onclick="showTab('t-links',this)"><i class="fa-solid fa-link"></i>Liens</button>
-  <button class="ni pc-hide-chat" id="btn-plus-menu" onclick="togglePlusMenu()" style="position:relative;"><i class="fa-solid fa-plus"></i>Plus</button>
-  <button class="ni pc-only" onclick="showTab('t-outils',this)"><i class="fa-solid fa-wrench"></i>Outils</button>
-  <button class="ni pc-only" onclick="showTab('t-bank',this)"><i class="fa-solid fa-wallet"></i>Bank</button>
-  <button class="ni pc-only" onclick="showTab('t-cal',this);loadCalendrier()"><i class="fa-solid fa-calendar"></i>Agenda</button>
-  <button class="ni pc-only" onclick="showTab('t-comp',this);initComparateur()"><i class="fa-solid fa-scale-balanced"></i>Vs</button>
+  <button class="ni on" onclick="showTab('t-dash',this)"><span>🥧</span>Mur</button>
+  <button class="ni" onclick="showTab('t-paris',this)"><span>⚽</span>Pari</button>
+  <button class="ni" onclick="showTab('t-arch',this)"><span>🕐</span>Archive</button>
+  <button class="ni" onclick="showTab('t-bilan',this)"><span>📈</span>Bilan</button>
+  <button class="ni" onclick="showTab('t-calc',this)"><span>🧮</span>Calc</button>
+  <button class="ni pc-only" onclick="showTab('t-links',this)"><span>🔗</span>Liens</button>
+  <button class="ni pc-hide-chat" id="btn-plus-menu" onclick="togglePlusMenu()" style="position:relative;"><span>+</span>Plus</button>
+  <button class="ni pc-only" onclick="showTab('t-outils',this)"><span>🔧</span>Outils</button>
+  <button class="ni pc-only" onclick="showTab('t-bank',this)"><span>💳</span>Bank</button>
+  <button class="ni pc-only" onclick="showTab('t-cal',this);loadCalendrier()"><span>📅</span>Agenda</button>
+  <button class="ni pc-only" onclick="showTab('t-comp',this);initComparateur()"><span>⚖️</span>Vs</button>
 
   <div style="flex:1;display:flex;flex-direction:column;padding:0 8px 8px;min-height:0;" class="pc-note-area">
     <div id="pc-note" contenteditable="true" style="flex:1;min-height:100px;background:var(--bg3);border:1px solid var(--b1);border-radius:var(--r6);color:var(--t1);font-size:11px;line-height:1.6;padding:10px;outline:none;font-family:inherit;overflow-y:auto;word-break:break-word;" data-placeholder="Notes, cotes, screenshots…" oninput="saveNote()"></div>
@@ -1183,25 +1199,25 @@ input[type="date"],input[type="time"]{color-scheme:dark;}
   <div id="plus-menu" style="display:none;position:fixed;bottom:68px;right:0;left:0;background:var(--s1);border-top:1px solid var(--b2);z-index:300;padding:8px 0;">
     <div style="display:flex;flex-direction:column;gap:2px;padding:0 12px;">
       <button onclick="showTab('t-bank',$i('btn-plus-menu'));togglePlusMenu();" style="display:flex;align-items:center;gap:12px;padding:14px 12px;background:var(--bg3);border:none;border-radius:8px;color:var(--t1);font-size:13px;font-weight:700;cursor:pointer;text-align:left;">
-        <i class="fa-solid fa-wallet" style="color:var(--a);width:20px;"></i> Bank
+        <span>💳</span> Bank
       </button>
       <button onclick="showTab('t-chat',$i('btn-plus-menu'));togglePlusMenu();" style="display:flex;align-items:center;gap:12px;padding:14px 12px;background:var(--bg3);border:none;border-radius:8px;color:var(--t1);font-size:13px;font-weight:700;cursor:pointer;text-align:left;margin-top:4px;">
-        <i class="fa-solid fa-comment" style="color:var(--a);width:20px;"></i> Chat IA
+        <span>💬</span> Chat IA
       </button>
       <button onclick="showTab('t-cal',$i('btn-plus-menu'));togglePlusMenu();loadCalendrier();" style="display:flex;align-items:center;gap:12px;padding:14px 12px;background:var(--bg3);border:none;border-radius:8px;color:var(--t1);font-size:13px;font-weight:700;cursor:pointer;text-align:left;margin-top:4px;">
-        <i class="fa-solid fa-calendar" style="color:var(--a);width:20px;"></i> Calendrier
+        <span>📅</span> Calendrier
       </button>
       <button onclick="showTab('t-comp',$i('btn-plus-menu'));togglePlusMenu();initComparateur();" style="display:flex;align-items:center;gap:12px;padding:14px 12px;background:var(--bg3);border:none;border-radius:8px;color:var(--t1);font-size:13px;font-weight:700;cursor:pointer;text-align:left;margin-top:4px;">
-        <i class="fa-solid fa-scale-balanced" style="color:var(--a);width:20px;"></i> Comparateur
+        <span>⚖️</span> Comparateur
       </button>
       <button onclick="showTab('t-outils',$i('btn-plus-menu'));togglePlusMenu();" style="display:flex;align-items:center;gap:12px;padding:14px 12px;background:var(--bg3);border:none;border-radius:8px;color:var(--t1);font-size:13px;font-weight:700;cursor:pointer;text-align:left;margin-top:4px;">
-        <i class="fa-solid fa-wrench" style="color:var(--a);width:20px;"></i> Outils
+        <span>🔧</span> Outils
       </button>
       <button onclick="showTab('t-links',$i('btn-plus-menu'));togglePlusMenu();" style="display:flex;align-items:center;gap:12px;padding:14px 12px;background:var(--bg3);border:none;border-radius:8px;color:var(--t1);font-size:13px;font-weight:700;cursor:pointer;text-align:left;margin-top:4px;">
-        <i class="fa-solid fa-link" style="color:var(--a);width:20px;"></i> Liens
+        <span>🔗</span> Liens
       </button>
       <button onclick="togglePlusMenu();" style="display:flex;align-items:center;gap:12px;padding:14px 12px;background:none;border:none;border-radius:8px;color:var(--t3);font-size:12px;font-weight:700;cursor:pointer;text-align:left;margin-top:4px;">
-        <i class="fa-solid fa-xmark" style="width:20px;"></i> Fermer
+        <span>✕</span> Fermer
       </button>
     </div>
   </div>
@@ -2448,7 +2464,7 @@ function openClub(nom,idx){
   var forme=formeHtml(paris,7);
 
   $i('d-hero').innerHTML='<div class="dhero" style="background:'+p.bg+';border-bottom:1px solid '+p.border+';">'
-    +'<button class="dback" onclick="closeClub()"><i class="fa-solid fa-arrow-left"></i> Retour</button>'
+    +'<button class="dback" onclick="closeClub()"><span>←</span> Retour</button>'
     +'<div class="dtop">'+logo
     +'<div><div class="dname">'+(u&&u.sport?u.sport+' ':'')+nom+'</div>'
     +'<div class="dsub">'+paris.length+' paris · '+'⭐'.repeat(u?u.s:1)+' · Palier '+(u?u.l:1)+'</div>'
@@ -4012,6 +4028,47 @@ async function sendChatPC(){
 // ── ANALYSE IA ÉQUIPE ──
 
 // ── FOOTBALL-DATA.ORG ──
+
+// ── API-FOOTBALL (RAPIDAPI) ──
+function getApiFootballKey(){ return localStorage.getItem('gones45_apifootball_key')||null; }
+
+function saveApiFootballKey(){
+  var v = ($i('apifootball-key-input')||{}).value||'';
+  if(!v){ document.getElementById('apifootball-key-status').textContent='Clé vide'; return; }
+  localStorage.setItem('gones45_apifootball_key', v.trim());
+  document.getElementById('apifootball-key-status').textContent='✓ Clé sauvegardée';
+  document.getElementById('apifootball-key-status').style.color='#1ed760';
+}
+
+async function testApiFootballKey(){
+  var key = getApiFootballKey();
+  var el = document.getElementById('apifootball-key-status');
+  if(!key){ el.textContent='Aucune clé'; return; }
+  el.textContent='Test...'; el.style.color='#f0b020';
+  try {
+    var r = await fetch('https://fd-proxy.touraine-antoine.workers.dev?key='+encodeURIComponent(key)+'&path=/v4/competitions&host=api-football', {});
+    if(r.ok){ el.textContent='✓ Clé valide !'; el.style.color='#1ed760'; }
+    else { el.textContent='✗ Invalide'; el.style.color='#ff4545'; }
+  } catch(e) {
+    el.textContent='✓ Clé enregistrée'; el.style.color='#1ed760';
+  }
+}
+
+async function apiFootballFetch(endpoint) {
+  var key = getApiFootballKey();
+  if(!key) return null;
+  try {
+    var r = await fetch('https://api-football-v1.p.rapidapi.com'+endpoint, {
+      headers: {
+        'x-rapidapi-key': key,
+        'x-rapidapi-host': 'api-football-v1.p.rapidapi.com'
+      }
+    });
+    if(!r.ok) return null;
+    return await r.json();
+  } catch(e) { return null; }
+}
+
 function getFdorgKey(){ return localStorage.getItem('gones45_fdorg_key')||null; }
 var FD_PROXY = 'https://fd-proxy.touraine-antoine.workers.dev';
 
@@ -4895,7 +4952,7 @@ window.onload=function(){if(!state.bkColors)state.bkColors={};loadCustomLinks();
   var saved=localStorage.getItem('g45_dbx');
   if(saved){_dbxConfig.refreshToken=saved;}
   var inp=$i('dbx-key-input');if(inp)inp.value='(token auto — permanent)';
-  var gk=localStorage.getItem('gones45_gemini_key');var gki=$i('gemini-key-input');if(gki&&gk)gki.value=gk;var fdk=localStorage.getItem('gones45_fdorg_key');var fdki=$i('fdorg-key-input');if(fdki&&fdk)fdki.value='(clé enregistrée)';
+  var gk=localStorage.getItem('gones45_gemini_key');var gki=$i('gemini-key-input');if(gki&&gk)gki.value=gk;var fdk=localStorage.getItem('gones45_fdorg_key');var fdki=$i('fdorg-key-input');if(fdki&&fdk)fdki.value='(clé enregistrée)';var afk=localStorage.getItem('gones45_apifootball_key');var afki=$i('apifootball-key-input');if(afki&&afk)afki.value='(clé enregistrée)';
 
 // ── APPARENCE — halo cartes ──
 var _apStyle = 'halo';
