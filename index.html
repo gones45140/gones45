@@ -4984,144 +4984,186 @@ async function searchTennisPlayer(nom) {
 
   var groqKey = getGeminiKey();
   var tavilyKey = getTavilyKey();
-  var yr = (typeof _tennisYear!=='undefined'?_tennisYear:'2026');
-  var taUrl = 'https://www.tennisabstract.com/cgi-bin/player.cgi?p='+encodeURIComponent(nom.replace(/ /g,'+'))+'&f=A&sdf='+yr+'0101&sdl='+yr+'1231';
+  var yr = (typeof _tennisYear !== 'undefined' ? _tennisYear : '2026');
+  var taUrl = 'https://www.tennisabstract.com/cgi-bin/player.cgi?p=' + encodeURIComponent(nom.replace(/ /g, '+')) + '&f=A&sdf=' + yr + '0101&sdl=' + yr + '1231';
   var html = '';
 
+  if(!tavilyKey) {
+    res.innerHTML = '<div style="color:#ff4545;font-size:11px;padding:10px;">Cle Tavily requise dans Outils</div>';
+    return;
+  }
+
   try {
-    if(tavilyKey) {
-      // 1 seule recherche Tavily — tout en un
-      var webData = await searchTavily('"'+nom+'" tennis '+yr+' wins losses win% clay hard grass surface aces breaks first set tiebreak games per match');
+    // 1 recherche Tavily ciblée
+    var raw = await searchTavily('"' + nom + '" tennis ' + yr + ' win percentage clay hard grass surface aces breaks first set tiebreak games per match ranking');
+    if(!raw) throw new Error('Aucun resultat Tavily');
 
-      if(webData && groqKey) {
-        // Groq fait 2 choses : traduit + extrait les chiffres trouvés
-        var r = await fetch('https://api.groq.com/openai/v1/chat/completions',{
-          method:'POST',
-          headers:{'Content-Type':'application/json','Authorization':'Bearer '+groqKey},
-          body:JSON.stringify({
-            model:'llama-3.3-70b-versatile',
-            messages:[{role:'user',content:'Voici des donnees sur '+nom+' en '+yr+'. '
-              +'1) Ecris un resume de 3 lignes en francais avec les chiffres exacts du texte. '
-              +'2) Reponds en JSON sur la meme ligne apres le resume (separe par |||). '
-              +'JSON: {"g":null,"t":null,"h":null,"gr":null,"s1":null,"s2":null,"s2sets":null,"aces":null,"brk":null,"brks":null,"tb":null,"jeux":null} '
-              +'Remplis UNIQUEMENT les valeurs presentes dans le texte, mets null sinon. Valeurs en % (ex: 85) ou nombre. '
-              +'Texte: '+webData.substring(0,900)}],
-            max_tokens:300,
-            temperature:0
-          })
-        });
-        var d = await r.json();
-        var reply = d.choices[0].message.content.trim();
+    var resume = raw.substring(0, 400);
+    var stats = {g: null, t: null, h: null, gr: null, s1: null, s2sets: null, brk: null, brks: null, aces: null, tb: null, jeux: null};
 
-        // Separer resume et JSON
-        var parts = reply.split('|||');
-        var resume = parts[0].trim();
-        var statsData = {};
-        if(parts[1]) {
-          try {
-            var jm = parts[1].trim().match(/\{[\s\S]*\}/);
-            if(jm) statsData = JSON.parse(jm[0]);
-          } catch(e2) {}
-        }
+    // Groq extrait les chiffres + traduit
+    if(groqKey) {
+      var prompt = 'Texte sur ' + nom + ' (' + yr + '): ' + raw.substring(0, 800) + '
 
-        // Resume texte
-        html += '<div class="cwrap" style="margin-bottom:8px;">';
-        html += '<div style="font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#4f5d88;margin-bottom:6px;">'+nom+' — '+yr+'</div>';
-        html += '<div style="font-size:11px;color:var(--t1);line-height:1.7;">'+resume+'</div>';
-        html += '</div>';
+'
+        + 'Fais 2 choses:
+'
+        + '1) Traduis en 2-3 phrases en francais avec UNIQUEMENT les chiffres presents dans le texte.
+'
+        + '2) Extrait ces valeurs si presentes (% entre 0-100, nombre reel): '
+        + 'g=% victoires global, t=% victoires terre, h=% victoires dur, gr=% victoires gazon, '
+        + 's1=% 1er set gagne, s2sets=% matchs en 2 sets, brk=% breaks convertis, brks=% breaks sauves, '
+        + 'aces=nombre aces/match, tb=% tiebreaks joues, jeux=nombre jeux/match
+'
+        + 'Format de reponse: RESUME|||{"g":null,"t":null,"h":null,"gr":null,"s1":null,"s2sets":null,"brk":null,"brks":null,"aces":null,"tb":null,"jeux":null}
+'
+        + 'Mets null si absent. JAMAIS de valeur > 100 pour les %.';
 
-        // Tableau surfaces
-        html += '<div class="cwrap" style="margin-bottom:8px;">';
-        html += '<div style="font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#4f5d88;margin-bottom:8px;">% Victoires par surface</div>';
-        html += '<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:6px;">';
-        [{l:'Global',v:statsData.g,c:'#4d84ff'},{l:'🟠 Terre',v:statsData.t,c:'#ff7b54'},{l:'🔵 Dur',v:statsData.h,c:'#4d84ff'},{l:'🟢 Gazon',v:statsData.gr,c:'#1ed760'}].forEach(function(s){
-          var raw = parseFloat(s.v);
-          var disp = isNaN(raw) ? 'N/A' : (raw<=1?Math.round(raw*100)+'%':Math.round(raw)+'%');
-          var col = disp==='N/A'?'var(--t3)':s.c;
-          html += '<div style="text-align:center;background:rgba(255,255,255,.04);border-radius:8px;padding:8px 4px;border:1px solid rgba(255,255,255,.06);">';
-          html += '<div style="font-size:10px;margin-bottom:4px;">'+s.l+'</div>';
-          html += '<div style="font-size:17px;font-weight:800;color:'+col+';">'+disp+'</div>';
-          html += '</div>';
-        });
-        html += '</div></div>';
+      var r = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json', 'Authorization': 'Bearer ' + groqKey},
+        body: JSON.stringify({
+          model: 'llama-3.3-70b-versatile',
+          messages: [{role: 'user', content: prompt}],
+          max_tokens: 300,
+          temperature: 0
+        })
+      });
+      var d = await r.json();
+      var reply = d.choices[0].message.content.trim();
 
-        // Stats de match
-        var matchStats = [{l:'1er set gagne',v:statsData.s1},{l:'2eme set gagne',v:statsData.s2},{l:'Matchs en 2 sets',v:statsData.s2sets},{l:'Breaks convertis',v:statsData.brk},{l:'Breaks sauves',v:statsData.brks},{l:'Tie-breaks joues',v:statsData.tb}];
-        var hasAny = matchStats.some(function(s){return s.v!==null&&s.v!==undefined;});
-        if(hasAny) {
-          html += '<div class="cwrap" style="margin-bottom:8px;">';
-          html += '<div style="font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#4f5d88;margin-bottom:8px;">Stats de match</div>';
-          matchStats.forEach(function(s){
-            if(s.v===null||s.v===undefined) return;
-            var raw = parseFloat(s.v)||0;
-            var pct = raw<=1?Math.round(raw*100):Math.round(raw);
-            var col = pct>=65?'#1ed760':pct>=50?'#f0b020':'#ff4545';
-            html += '<div style="display:flex;align-items:center;gap:8px;margin-bottom:5px;">';
-            html += '<div style="font-size:10px;color:var(--t2);flex:1;">'+s.l+'</div>';
-            html += '<div style="width:80px;height:5px;background:rgba(255,255,255,.06);border-radius:3px;"><div style="height:5px;border-radius:3px;background:'+col+';width:'+Math.min(pct,100)+'%;"></div></div>';
-            html += '<div style="font-size:11px;font-weight:700;color:'+col+';">'+pct+'%</div>';
-            html += '</div>';
-          });
-          html += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:6px;">';
-          if(statsData.aces!==null&&statsData.aces!==undefined) html += '<div style="background:rgba(255,255,255,.04);border-radius:8px;padding:8px;text-align:center;"><div style="font-size:18px;font-weight:800;color:#a78bfa;">'+statsData.aces+'</div><div style="font-size:9px;color:var(--t3);">Aces/match</div></div>';
-          if(statsData.jeux!==null&&statsData.jeux!==undefined) html += '<div style="background:rgba(255,255,255,.04);border-radius:8px;padding:8px;text-align:center;"><div style="font-size:18px;font-weight:800;color:#22d3ee;">'+statsData.jeux+'</div><div style="font-size:9px;color:var(--t3);">Jeux/match</div></div>';
-          html += '</div></div>';
-        }
-
-      } else if(webData) {
-        html += '<div class="cwrap"><div style="font-size:11px;color:var(--t1);line-height:1.7;">'+webData.substring(0,400)+'</div></div>';
+      var sep = reply.indexOf('|||');
+      if(sep >= 0) {
+        resume = reply.substring(0, sep).trim();
+        try {
+          var jm = reply.substring(sep + 3).match(/\{[\s\S]*\}/);
+          if(jm) {
+            var parsed = JSON.parse(jm[0]);
+            // Valider chaque valeur — rejeter si > 100 pour les %
+            Object.keys(parsed).forEach(function(k) {
+              var v = parseFloat(parsed[k]);
+              if(isNaN(v)) { stats[k] = null; return; }
+              if(k !== 'aces' && k !== 'jeux' && v > 100) { stats[k] = null; return; }
+              stats[k] = v;
+            });
+          }
+        } catch(je) {}
+      } else {
+        resume = reply.substring(0, 300);
       }
     }
-  } catch(e) {}
 
-  // Avertissement
+    // ── Resume ──
+    html += '<div class="cwrap" style="margin-bottom:8px;">';
+    html += '<div style="font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#4f5d88;margin-bottom:6px;">' + nom + ' — ' + yr + '</div>';
+    html += '<div style="font-size:11px;color:var(--t1);line-height:1.7;">' + resume + '</div>';
+    html += '</div>';
+
+    // ── Surfaces ──
+    html += '<div class="cwrap" style="margin-bottom:8px;">';
+    html += '<div style="font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#4f5d88;margin-bottom:8px;">% Victoires par surface</div>';
+    html += '<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:6px;">';
+    [{l:'Global', v:stats.g, c:'#4d84ff'}, {l:'🟠 Terre', v:stats.t, c:'#ff7b54'}, {l:'🔵 Dur', v:stats.h, c:'#4d84ff'}, {l:'🟢 Gazon', v:stats.gr, c:'#1ed760'}].forEach(function(s) {
+      var disp = s.v === null ? 'N/A' : (s.v <= 1 ? Math.round(s.v * 100) + '%' : Math.round(s.v) + '%');
+      var col = s.v === null ? 'var(--t3)' : s.c;
+      html += '<div style="text-align:center;background:rgba(255,255,255,.04);border-radius:8px;padding:8px 4px;border:1px solid rgba(255,255,255,.06);">';
+      html += '<div style="font-size:10px;margin-bottom:4px;">' + s.l + '</div>';
+      html += '<div style="font-size:17px;font-weight:800;color:' + col + ';">' + disp + '</div>';
+      html += '</div>';
+    });
+    html += '</div></div>';
+
+    // ── Stats de match ──
+    var rows = [
+      {l:'1er set gagne', v:stats.s1},
+      {l:'Matchs en 2 sets', v:stats.s2sets},
+      {l:'Breaks convertis', v:stats.brk},
+      {l:'Breaks sauves', v:stats.brks},
+      {l:'Tie-breaks joues', v:stats.tb}
+    ].filter(function(s) { return s.v !== null; });
+
+    if(rows.length || stats.aces !== null || stats.jeux !== null) {
+      html += '<div class="cwrap" style="margin-bottom:8px;">';
+      html += '<div style="font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#4f5d88;margin-bottom:8px;">Stats de match</div>';
+      rows.forEach(function(s) {
+        var pct = s.v <= 1 ? Math.round(s.v * 100) : Math.round(s.v);
+        var col = pct >= 65 ? '#1ed760' : pct >= 50 ? '#f0b020' : '#ff4545';
+        html += '<div style="display:flex;align-items:center;gap:8px;margin-bottom:5px;">';
+        html += '<div style="font-size:10px;color:var(--t2);flex:1;">' + s.l + '</div>';
+        html += '<div style="width:80px;height:5px;background:rgba(255,255,255,.06);border-radius:3px;"><div style="height:5px;border-radius:3px;background:' + col + ';width:' + Math.min(pct, 100) + '%;"></div></div>';
+        html += '<div style="font-size:11px;font-weight:700;color:' + col + ';">' + pct + '%</div>';
+        html += '</div>';
+      });
+      if(stats.aces !== null || stats.jeux !== null) {
+        html += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:6px;">';
+        if(stats.aces !== null) html += '<div style="background:rgba(255,255,255,.04);border-radius:8px;padding:8px;text-align:center;"><div style="font-size:18px;font-weight:800;color:#a78bfa;">' + stats.aces + '</div><div style="font-size:9px;color:var(--t3);">Aces/match</div></div>';
+        if(stats.jeux !== null) html += '<div style="background:rgba(255,255,255,.04);border-radius:8px;padding:8px;text-align:center;"><div style="font-size:18px;font-weight:800;color:#22d3ee;">' + stats.jeux + '</div><div style="font-size:9px;color:var(--t3);">Jeux/match</div></div>';
+        html += '</div>';
+      }
+      html += '</div>';
+    }
+
+  } catch(e) {
+    html += '<div style="color:var(--t3);font-size:11px;padding:10px;text-align:center;">Donnees non disponibles — consulte Tennis Abstract directement.</div>';
+  }
+
+  // ── Avertissement ──
   html += '<div style="display:flex;align-items:center;gap:8px;background:rgba(240,176,32,.08);border:1px solid rgba(240,176,32,.25);border-radius:8px;padding:8px 12px;margin-bottom:8px;">';
   html += '<span style="font-size:16px;">⚠️</span>';
-  html += '<div style="font-size:10px;color:#f0b020;">Stats issues du web — verifie sur Tennis Abstract avant de parier !</div>';
+  html += '<div style="font-size:10px;color:#f0b020;">Stats issues du web. Verifie sur Tennis Abstract avant de parier !</div>';
   html += '</div>';
 
-  // Boutons
+  // ── Boutons ──
   html += '<div style="display:flex;gap:5px;flex-wrap:wrap;margin-bottom:8px;">';
-  html += '<a href="'+taUrl+'" target="_blank" style="flex:1;min-width:80px;padding:8px 4px;background:rgba(77,132,255,.1);border:1px solid rgba(77,132,255,.3);border-radius:6px;color:#4d84ff;font-size:9px;font-weight:700;text-decoration:none;text-align:center;">📊 Tennis Abstract</a>';
-  html += '<a href="https://www.atptour.com/en/players/'+nom.toLowerCase().replace(/ /g,'-')+'/overview" target="_blank" style="flex:1;min-width:80px;padding:8px 4px;background:rgba(240,176,32,.1);border:1px solid rgba(240,176,32,.3);border-radius:6px;color:#f0b020;font-size:9px;font-weight:700;text-decoration:none;text-align:center;">🎾 ATP Tour</a>';
-  html += '<a href="https://www.sofascore.com/search#q='+encodeURIComponent(nom)+'" target="_blank" style="flex:1;min-width:80px;padding:8px 4px;background:rgba(255,123,84,.1);border:1px solid rgba(255,123,84,.3);border-radius:6px;color:#ff7b54;font-size:9px;font-weight:700;text-decoration:none;text-align:center;">⚡ Sofascore</a>';
+  html += '<a href="' + taUrl + '" target="_blank" style="flex:1;min-width:80px;padding:8px 4px;background:rgba(77,132,255,.1);border:1px solid rgba(77,132,255,.3);border-radius:6px;color:#4d84ff;font-size:9px;font-weight:700;text-decoration:none;text-align:center;">📊 Tennis Abstract</a>';
+  html += '<a href="https://www.atptour.com/en/players/' + nom.toLowerCase().replace(/ /g, '-') + '/overview" target="_blank" style="flex:1;min-width:80px;padding:8px 4px;background:rgba(240,176,32,.1);border:1px solid rgba(240,176,32,.3);border-radius:6px;color:#f0b020;font-size:9px;font-weight:700;text-decoration:none;text-align:center;">🎾 ATP Tour</a>';
+  html += '<a href="https://www.sofascore.com/search#q=' + encodeURIComponent(nom) + '" target="_blank" style="flex:1;min-width:80px;padding:8px 4px;background:rgba(255,123,84,.1);border:1px solid rgba(255,123,84,.3);border-radius:6px;color:#ff7b54;font-size:9px;font-weight:700;text-decoration:none;text-align:center;">⚡ Sofascore</a>';
   html += '</div>';
 
-  // Recherche stat perso
+  // ── Recherche stat perso ──
   html += '<div class="cwrap">';
   html += '<div style="font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#4f5d88;margin-bottom:8px;">🔍 Recherche stat</div>';
   html += '<div style="display:flex;gap:6px;">';
   html += '<input id="tennis-custom-stat" class="fi" placeholder="Ex: % victoires quand perd le 1er set..." style="flex:1;font-size:11px;">';
   html += '<button id="tennis-custom-btn" style="padding:8px 12px;border-radius:var(--r6);border:none;background:var(--a);color:#fff;font-size:11px;font-weight:700;cursor:pointer;flex-shrink:0;">→</button>';
   html += '</div>';
-  html += '<div id="tennis-custom-result"></div>';
+  html += '<div id="tennis-custom-result" style="margin-top:6px;"></div>';
   html += '</div>';
 
-  res.innerHTML = html || '<a href="'+taUrl+'" target="_blank" style="color:#4d84ff;">📊 Voir sur Tennis Abstract</a>';
+  res.innerHTML = html;
 
-  setTimeout(function(){
+  // Brancher recherche stat
+  setTimeout(function() {
     var cb = document.getElementById('tennis-custom-btn');
     var ci = document.getElementById('tennis-custom-stat');
-    if(cb&&ci){
-      var fn = async function(){
-        var q=ci.value.trim(); if(!q)return;
-        var r2=document.getElementById('tennis-custom-result');
-        r2.innerHTML='<div style="color:var(--t3);font-size:11px;">Recherche...</div>';
-        var tk=getTavilyKey(); var gk=getGeminiKey();
-        if(!tk){r2.innerHTML='<div style="color:#ff4545;font-size:11px;">Cle Tavily requise</div>';return;}
-        try{
-          var wd=await searchTavily('"'+nom+'" tennis '+q+' '+yr);
-          if(!wd){r2.innerHTML='<div style="color:var(--t3);font-size:11px;">Aucun resultat</div>';return;}
-          if(gk){
-            var rx=await fetch('https://api.groq.com/openai/v1/chat/completions',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+gk},body:JSON.stringify({model:'llama-3.3-70b-versatile',messages:[{role:'user',content:'Traduis en francais en 2 lignes max, garde les chiffres exacts: '+wd.substring(0,400)}],max_tokens:100,temperature:0})});
-            var dx=await rx.json();
-            r2.innerHTML='<div style="background:rgba(77,132,255,.06);border:1px solid rgba(77,132,255,.15);border-radius:8px;padding:8px 12px;font-size:11px;color:var(--t1);line-height:1.6;">'+dx.choices[0].message.content.trim()+'</div>';
-          } else { r2.innerHTML='<div style="font-size:11px;color:var(--t1);">'+wd.substring(0,300)+'</div>'; }
-        }catch(e){r2.innerHTML='<div style="color:#ff4545;font-size:11px;">Erreur</div>';}
-      };
-      cb.onclick=fn; ci.onkeydown=function(e){if(e.key==='Enter')fn();};
-    }
-  },300);
+    if(!cb || !ci) return;
+    var fn = async function() {
+      var q = ci.value.trim();
+      if(!q) return;
+      var r2 = document.getElementById('tennis-custom-result');
+      r2.innerHTML = '<div style="color:var(--t3);font-size:11px;">Recherche...</div>';
+      var tk = getTavilyKey();
+      var gk = getGeminiKey();
+      if(!tk) { r2.innerHTML = '<div style="color:#ff4545;font-size:11px;">Cle Tavily requise</div>'; return; }
+      try {
+        var wd = await searchTavily('"' + nom + '" tennis ' + q + ' ' + yr);
+        if(!wd) { r2.innerHTML = '<div style="color:var(--t3);font-size:11px;">Aucun resultat</div>'; return; }
+        if(gk) {
+          var rx = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json', 'Authorization': 'Bearer ' + gk},
+            body: JSON.stringify({model: 'llama-3.3-70b-versatile', messages: [{role: 'user', content: 'Traduis en francais en 2 lignes max avec les chiffres exacts du texte: ' + wd.substring(0, 400)}], max_tokens: 100, temperature: 0})
+          });
+          var dx = await rx.json();
+          r2.innerHTML = '<div style="background:rgba(77,132,255,.06);border:1px solid rgba(77,132,255,.15);border-radius:8px;padding:8px 12px;font-size:11px;color:var(--t1);line-height:1.6;">' + dx.choices[0].message.content.trim() + '</div>';
+        } else {
+          r2.innerHTML = '<div style="font-size:11px;color:var(--t1);">' + wd.substring(0, 300) + '</div>';
+        }
+      } catch(e) { r2.innerHTML = '<div style="color:#ff4545;font-size:11px;">Erreur</div>'; }
+    };
+    cb.onclick = fn;
+    ci.onkeydown = function(e) { if(e.key === 'Enter') fn(); };
+  }, 300);
 }
 
 async function compareTennisH2H(p1, p2) {
