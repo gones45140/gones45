@@ -5603,7 +5603,7 @@ function showGroupDetail(gid) {
     var bg = qual ? 'rgba(30,215,96,.06)' : 'rgba(255,255,255,.02)';
     html += '<div style="display:grid;grid-template-columns:auto 1fr repeat(5,28px);gap:4px;align-items:center;background:'+bg+';border-radius:6px;padding:6px 4px;margin-bottom:3px;">';
     html += '<div style="font-size:10px;font-weight:700;color:'+(qual?'#1ed760':'#4f5d88')+';width:16px;">'+(i+1)+'</div>';
-    html += '<div style="font-size:10px;font-weight:'+(qual?'700':'400')+';color:'+(name==='France'?'#4d84ff':qual?'var(--t1)':'var(--t2)')+';">'+name+'</div>';
+    html += '<div style="display:flex;align-items:center;font-size:10px;font-weight:'+(qual?'700':'400')+';color:'+(name==='France'?'#4d84ff':qual?'var(--t1)':'var(--t2)')+';">'+flagImg(name,14)+name+'</div>';
     ['j','g','n','p','pts'].forEach(function(k){
       var v = typeof t === 'object' ? (t[k]||0) : 0;
       html += '<div style="text-align:center;font-size:10px;font-weight:'+(k==='pts'?'800':'400')+';color:'+(k==='pts'&&v>0?'#f0b020':'var(--t2)')+';">'+v+'</div>';
@@ -5619,14 +5619,14 @@ function showGroupDetail(gid) {
     matches.forEach(function(m){
       var played = m.score !== null;
       html += '<div style="display:flex;align-items:center;gap:8px;padding:8px;background:rgba(255,255,255,.03);border-radius:6px;margin-bottom:4px;">';
-      html += '<div style="flex:1;font-size:10px;font-weight:600;color:var(--t1);text-align:right;">'+m.home+'</div>';
+      html += '<div style="display:flex;align-items:center;justify-content:flex-end;flex:1;font-size:10px;font-weight:600;color:var(--t1);">'+flagImg(m.home,14)+m.home+'</div>';
       if(played) {
         var col = '#f0b020';
         html += '<div style="font-size:13px;font-weight:800;color:'+col+';min-width:40px;text-align:center;">'+m.score+'</div>';
       } else {
         html += '<div style="font-size:10px;color:#4f5d88;min-width:40px;text-align:center;">'+m.date+'</div>';
       }
-      html += '<div style="flex:1;font-size:10px;font-weight:600;color:var(--t1);">'+m.away+'</div>';
+      html += '<div style="display:flex;align-items:center;flex:1;font-size:10px;font-weight:600;color:var(--t1);">'+flagImg(m.away,14)+m.away+'</div>';
       html += '</div>';
     });
   } else {
@@ -5635,9 +5635,9 @@ function showGroupDetail(gid) {
     for(var i=0;i<ts.length;i++){
       for(var j=i+1;j<ts.length;j++){
         html += '<div style="display:flex;align-items:center;gap:8px;padding:8px;background:rgba(255,255,255,.03);border-radius:6px;margin-bottom:4px;">';
-        html += '<div style="flex:1;font-size:10px;font-weight:600;color:var(--t1);text-align:right;">'+ts[i]+'</div>';
+        html += '<div style="display:flex;align-items:center;justify-content:flex-end;flex:1;font-size:10px;font-weight:600;color:var(--t1);">'+flagImg(ts[i],14)+ts[i]+'</div>';
         html += '<div style="font-size:10px;color:#4f5d88;min-width:40px;text-align:center;">vs</div>';
-        html += '<div style="flex:1;font-size:10px;font-weight:600;color:var(--t1);">'+ts[j]+'</div>';
+        html += '<div style="display:flex;align-items:center;flex:1;font-size:10px;font-weight:600;color:var(--t1);">'+flagImg(ts[j],14)+ts[j]+'</div>';
         html += '</div>';
       }
     }
@@ -6174,28 +6174,140 @@ function chargerSimuDepuisUrl() {
     var data = JSON.parse(json);
     if(!data || !data.groups) return false;
 
-    // Charger dans localStorage
-    Object.keys(data.groups).forEach(function(gid){
-      localStorage.setItem(simuKey(gid), JSON.stringify(data.groups[gid]));
-    });
-    Object.keys(data.ko||{}).forEach(function(k){
-      localStorage.setItem(simuKoKey(k), JSON.stringify(data.ko[k]));
-    });
+    // Sauvegarder dans les simis REÇUES — pas écraser la simu active
+    var recues = JSON.parse(localStorage.getItem('simu2026_recues')||'[]');
+    var nom = data.nom || 'Joueur';
+    // Éviter les doublons (même nom + même date)
+    var existe = recues.find(function(r){ return r.nom===nom && r.date===data.date; });
+    if(!existe) {
+      recues.unshift({nom:nom, date:data.date||'', data:data, recu:new Date().toLocaleDateString('fr-FR')});
+      if(recues.length > 20) recues = recues.slice(0,20); // max 20 simis
+      localStorage.setItem('simu2026_recues', JSON.stringify(recues));
+    }
 
     // Nettoyer l'URL
     history.replaceState(null, '', window.location.pathname);
 
-    var nom = data.nom || 'quelqu\'un';
     setTimeout(function(){
-      // Naviguer vers la simu
       var btn = document.querySelector('[onclick*="t-simu"]');
       if(btn) btn.click();
       setTimeout(function(){
-        alert('🏆 Simulation de ' + nom + ' chargée ! (' + (data.date||'') + ')\nTu peux la modifier librement.');
+        alert('📥 Simulation de ' + nom + ' reçue et sauvegardée !\nTa propre simulation n\'a pas été modifiée.\nConsulte l\'onglet "Simis reçues" pour la voir.');
+        renderSimuMain(null);
       }, 300);
     }, 500);
     return true;
   } catch(e) { return false; }
+}
+
+function voirSimuRecue(idx) {
+  var recues = JSON.parse(localStorage.getItem('simu2026_recues')||'[]');
+  var r = recues[idx];
+  if(!r) return;
+  var el = getSimuContainer();
+  if(!el) return;
+
+  var data = r.data;
+  var html = '<div style="padding:4px 0;">';
+  html += '<div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;">';
+  html += '<button onclick="renderSimuMain(null)" style="padding:6px 12px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);border-radius:6px;color:var(--t2);font-size:11px;cursor:pointer;">← Retour</button>';
+  html += '<div style="font-size:15px;font-weight:800;color:var(--t1);">🏆 Simu de '+r.nom+'</div>';
+  html += '<div style="font-size:10px;color:var(--t3);">'+r.date+'</div>';
+  html += '</div>';
+
+  // Afficher les groupes en lecture seule
+  html += '<div class="cwrap" style="margin-bottom:10px;">';
+  html += '<div style="font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#4f5d88;margin-bottom:10px;">📊 Phase de groupes</div>';
+  html += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;">';
+
+  SIMU_GROUPES.forEach(function(g){
+    // Recalculer le classement depuis les scores reçus
+    var savedScores = data.groups[g.id] || {};
+    var origScores = getSimuGroupScores(g.id);
+    // Temporairement utiliser les scores reçus
+    localStorage.setItem(simuKey(g.id), JSON.stringify(savedScores));
+    var standings = calcSimuStandings(g.id);
+    // Restaurer les scores originaux
+    localStorage.setItem(simuKey(g.id), JSON.stringify(origScores));
+
+    var isFr = g.id==='I';
+    html += '<div style="background:'+(isFr?'rgba(77,132,255,.08)':'rgba(255,255,255,.02)')+';border:1px solid '+(isFr?'rgba(77,132,255,.4)':'rgba(255,255,255,.07)')+';border-radius:8px;padding:8px;">';
+    html += '<div style="font-size:9px;font-weight:800;color:'+(isFr?'#4d84ff':'#4f5d88')+';margin-bottom:5px;">GROUPE '+g.id+'</div>';
+    standings.forEach(function(t,i){
+      var qual = i<2;
+      html += '<div style="display:flex;align-items:center;justify-content:space-between;padding:1px 0;">';
+      html += '<div style="display:flex;align-items:center;font-size:9px;color:'+(t.name==='France'?'#4d84ff':qual?'var(--t1)':'var(--t2)')+';font-weight:'+(qual?700:400)+';">'+flagImg(t.name,12)+(qual?'✅ ':'')+t.name+'</div>';
+      html += '<div style="font-size:9px;font-weight:700;color:'+(t.pts>0?'#f0b020':'var(--t3)')+';">'+t.pts+'pts</div>';
+      html += '</div>';
+    });
+    html += '</div>';
+  });
+  html += '</div></div>';
+
+  // Knockout reçu
+  var KO_ROUNDS = [
+    {key:'r32',label:'32e de finale',col:'#4f5d88'},
+    {key:'r16',label:'16e de finale',col:'#4d84ff'},
+    {key:'qf', label:'Quarts',col:'#a78bfa'},
+    {key:'sf', label:'Demi-finales',col:'#f0b020'},
+    {key:'f',  label:'🏆 Finale',col:'#1ed760'}
+  ];
+  KO_ROUNDS.forEach(function(r){
+    var matches = (data.ko||{})[r.key]||[];
+    if(!matches.length) return;
+    html += '<div class="cwrap" style="margin-bottom:8px;">';
+    html += '<div style="font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:'+r.col+';margin-bottom:8px;">'+r.label+'</div>';
+    matches.forEach(function(m){
+      var played = m.sh!==''&&m.sh!==undefined&&m.sa!==''&&m.sa!==undefined;
+      var isFr = m.home==='France'||m.away==='France';
+      html += '<div style="display:flex;align-items:center;gap:6px;padding:6px;background:'+(isFr?'rgba(77,132,255,.06)':'rgba(255,255,255,.02)')+';border-radius:6px;margin-bottom:4px;">';
+      html += '<div style="display:flex;align-items:center;justify-content:flex-end;flex:1;font-size:10px;font-weight:'+(isFr?700:500)+';color:'+(m.home==='France'?'#4d84ff':'var(--t1)')+';">'+flagImg(m.home,14)+m.home+'</div>';
+      if(played){
+        var hw=parseInt(m.sh),aw=parseInt(m.sa);
+        html += '<div style="font-size:12px;font-weight:800;min-width:50px;text-align:center;"><span style="color:'+(hw>aw?'#1ed760':hw<aw?'#ff4545':'#f0b020')+';">'+hw+'</span><span style="color:var(--t3);"> - </span><span style="color:'+(aw>hw?'#1ed760':aw<hw?'#ff4545':'#f0b020')+';">'+aw+'</span></div>';
+        if(r.key==='f'&&hw!==aw){
+          var winner=hw>hw?m.home:m.away;
+        }
+      } else {
+        html += '<div style="font-size:9px;color:#4f5d88;min-width:50px;text-align:center;">vs</div>';
+      }
+      html += '<div style="display:flex;align-items:center;flex:1;font-size:10px;font-weight:'+(isFr?700:500)+';color:'+(m.away==='France'?'#4d84ff':'var(--t1)')+';">'+flagImg(m.away,14)+m.away+'</div>';
+      html += '</div>';
+    });
+    // Champion final
+    if(r.key==='f'&&matches[0]&&matches[0].sh!==''&&matches[0].sh!==undefined){
+      var fm=matches[0];
+      var w=parseInt(fm.sh)>parseInt(fm.sa)?fm.home:parseInt(fm.sh)<parseInt(fm.sa)?fm.away:null;
+      if(w) html += '<div style="text-align:center;padding:12px;background:rgba(240,176,32,.1);border:1px solid rgba(240,176,32,.3);border-radius:8px;margin-top:8px;"><div style="font-size:20px;">🏆</div><div style="font-size:14px;font-weight:800;color:#f0b020;">'+flagImg(w,18)+w+'</div><div style="font-size:10px;color:var(--t3);">Champion du Monde selon '+r.nom+'</div></div>';
+    }
+    html += '</div>';
+  });
+
+  // Simis reçues
+  var recues = JSON.parse(localStorage.getItem('simu2026_recues')||'[]');
+  if(recues.length) {
+    html += '<div class="cwrap" style="margin-top:10px;">';
+    html += '<div style="font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#4f5d88;margin-bottom:10px;">📥 Simis reçues ('+recues.length+')</div>';
+    recues.forEach(function(r,i){
+      var winner = null;
+      if(r.data&&r.data.ko&&r.data.ko.f&&r.data.ko.f[0]){
+        var fm=r.data.ko.f[0];
+        if(fm.sh!==''&&fm.sh!==undefined&&fm.sa!==undefined) winner=parseInt(fm.sh)>parseInt(fm.sa)?fm.home:parseInt(fm.sh)<parseInt(fm.sa)?fm.away:null;
+      }
+      html += '<div onclick="voirSimuRecue('+i+')" style="display:flex;align-items:center;gap:10px;padding:10px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.07);border-radius:8px;margin-bottom:6px;cursor:pointer;">';
+      html += '<div style="font-size:20px;">🏆</div>';
+      html += '<div style="flex:1;">';
+      html += '<div style="font-size:12px;font-weight:800;color:var(--t1);">'+r.nom+'</div>';
+      html += '<div style="font-size:10px;color:var(--t3);">Reçu le '+r.recu+(winner?' · Champion : '+winner:'')+'</div>';
+      html += '</div>';
+      html += '<div style="font-size:11px;color:#4d84ff;">Voir →</div>';
+      html += '</div>';
+    });
+    html += '</div>';
+  }
+
+  html += '</div>';
+  el.innerHTML = html;
 }
 
 function resetSimu2026() {
