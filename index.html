@@ -3,7 +3,7 @@
 <html lang="fr">
 <head>
 <meta charset="UTF-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-eval' 'unsafe-inline' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com; worker-src 'self' blob:; connect-src 'self' data: blob: https://tessdata.projectnaptha.com https://api.dropbox.com https://content.dropboxapi.com https://api.dropboxapi.com https://api.groq.com https://api.tavily.com https://fd-proxy.touraine-antoine.workers.dev https://media.api-sports.io https://api.football-data.org https://api-web.nhle.com https://statsapi.mlb.com https://www.thesportsdb.com https://cdn.jsdelivr.net https://api.openf1.org https://api.jolpi.ca; img-src 'self' data: https: blob:; style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com;">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-eval' 'unsafe-inline' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com; worker-src 'self' blob:; connect-src 'self' data: blob: https://tessdata.projectnaptha.com https://api.dropbox.com https://content.dropboxapi.com https://api.dropboxapi.com https://api.groq.com https://api.tavily.com https://fd-proxy.touraine-antoine.workers.dev https://media.api-sports.io https://api.football-data.org https://api-web.nhle.com https://statsapi.mlb.com https://www.thesportsdb.com https://cdn.jsdelivr.net https://api.openf1.org https://api.jolpi.ca; img-src 'self' data: https: blob: https://flagcdn.com; style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com;">
 <meta http-equiv="Content-Security-Policy" content="default-src 'self' 'unsafe-inline' 'unsafe-eval' https: data: blob:;">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
 <title>GONES45</title>
@@ -1373,6 +1373,31 @@ function logoErr(img){
   var s=img.nextSibling;
   if(s)s.style.display='flex';
 }
+var FLAG_CDN={
+  'France':'fr','Espagne':'es','Allemagne':'de','Angleterre':'gb-eng',
+  'Italie':'it','Portugal':'pt','Brésil':'br','Argentine':'ar',
+  'Pays-Bas':'nl','Belgique':'be','Croatie':'hr','Maroc':'ma',
+  'Sénégal':'sn','Colombie':'co','Uruguay':'uy','Japon':'jp',
+  'Suisse':'ch','Norvège':'no','Danemark':'dk','Mexique':'mx',
+  'Canada':'ca','États-Unis':'us','Australie':'au','Iran':'ir',
+  'Corée du Sud':'kr','Équateur':'ec','Autriche':'at','Algérie':'dz',
+  'Égypte':'eg','Qatar':'qa','Tunisie':'tn','Ghana':'gh',
+  'Arabie saoudite':'sa','Arabie Saoudite':'sa','Jordanie':'jo',
+  'Nouvelle-Zélande':'nz','Panama':'pa','Suède':'se','Ukraine':'ua',
+  'Turquie':'tr','Irak':'iq','Bolivie':'bo','Suriname':'sr',
+  'Écosse':'gb-sct','Paraguay':'py','Haïti':'ht','Afrique du Sud':'za',
+  'Cap-Vert':'cv','Curaçao':'cw','RD Congo':'cd','Ouzbékistan':'uz',
+  'Bosnie-Herzégovine':'ba','Tchéquie':'cz','Irlande':'ie',
+  'Pays de Galles':'gb-wls','Pologne':'pl','Serbie':'rs','Roumanie':'ro',
+  'Slovaquie':'sk','Hongrie':'hu','Grèce':'gr','Côte d\'Ivoire':'ci',
+  'Cameroun':'cm','Nigéria':'ng','Mali':'ml','Burkina Faso':'bf',
+  'Guinée':'gn','Chili':'cl','Pérou':'pe','Venezuela':'ve',
+  'Costa Rica':'cr','Honduras':'hn','Jamaïque':'jm','Guatemala':'gt',
+  'Russie':'ru','Chine':'cn','Inde':'in','Islande':'is',
+  'Finlande':'fi','Albanie':'al','Monténégro':'me','Géorgie':'ge',
+  'Kazakhstan':'kz','Slovénie':'si','Azerbaïdjan':'az'
+};
+function flagUrl(name){ var c=FLAG_CDN[name]||FLAG_CDN[name.trim()]; return c?'https://flagcdn.com/w40/'+c+'.png':null; }
 var FLAG_EMOJIS={
   'France':'🇫🇷','Espagne':'🇪🇸','Allemagne':'🇩🇪','Angleterre':'🏴󠁧󠁢󠁥󠁮󠁧󠁿',
   'Italie':'🇮🇹','Portugal':'🇵🇹','Brésil':'🇧🇷','Argentine':'🇦🇷',
@@ -1411,30 +1436,43 @@ var SPORT_EMOJIS={
 };
 function logoHtml(name,color,abbr,sz){
   var s=sz||46;
-  var logo=LOGOS[name];
   var fb=abbr||(name.substring(0,3).toUpperCase());
   var rgb=hexRgb(color);
   var baseStyle='width:'+s+'px;height:'+s+'px;border-radius:50%;flex-shrink:0;overflow:hidden;';
+
+  // 1. Vrai drapeau flagcdn en priorité pour les nations
+  var flagUrl2=flagUrl(name);
+  if(flagUrl2){
+    var fDiv='<div style="'+baseStyle+'background:rgba('+rgb+',.08);border:1px solid rgba('+rgb+',.2);display:flex;align-items:center;justify-content:center;overflow:hidden;">';
+    fDiv+='<img src="'+flagUrl2+'" style="width:100%;height:100%;object-fit:cover;" loading="lazy">';
+    fDiv+='</div>';
+    return fDiv;
+  }
+
+  // 2. Logo URL si disponible
+  var logo=LOGOS[name];
   if(logo){
     return '<div style="'+baseStyle+'background:rgba('+rgb+',.07);border:1px solid rgba('+rgb+',.18);display:flex;align-items:center;justify-content:center;">'
       +'<img src="'+logo+'" style="width:'+(s-10)+'px;height:'+(s-10)+'px;object-fit:contain;" loading="lazy" onerror="logoErr(this)">'
       +'<span style="display:none;width:100%;height:100%;align-items:center;justify-content:center;font-size:11px;font-weight:800;color:'+color+';">'+fb+'</span>'
       +'</div>';
   }
-  // Détecter emoji sport par nom générique
-  var sportEmoji = SPORT_EMOJIS[name.toLowerCase().trim()];
-  if(!sportEmoji) {
-    // Chercher aussi via le sport de l'unité dans state
-    var uMatch = (typeof state !== 'undefined' && state.u) ? state.u.find(function(u){return u.n===name;}) : null;
-    if(uMatch && uMatch.sport) {
+
+  // 3. Emoji sport générique
+  var sportEmoji=SPORT_EMOJIS[name.toLowerCase().trim()];
+  if(!sportEmoji){
+    var uMatch=(typeof state!=='undefined'&&state.u)?state.u.find(function(u){return u.n===name;}):null;
+    if(uMatch&&uMatch.sport){
       var sportMap={'🏀':'🏀','🎾':'🎾','🏎':'🏎️','🏎️':'🏎️','🏉':'🏉','🏉🇦🇺':'🏉','🏒':'🏒','⚾':'⚾','🏈':'🏈','⚽':'⚽'};
-      sportEmoji = sportMap[uMatch.sport];
+      sportEmoji=sportMap[uMatch.sport];
     }
   }
   if(sportEmoji){
-    var emojiSz = Math.round(s * 0.56);
-    return '<div style="'+baseStyle+'background:rgba('+rgb+',.14);border:1px solid rgba('+rgb+',.28);display:flex;align-items:center;justify-content:center;font-size:'+emojiSz+'px;">'+sportEmoji+'</div>';
+    var eSz=Math.round(s*.56);
+    return '<div style="'+baseStyle+'background:rgba('+rgb+',.14);border:1px solid rgba('+rgb+',.28);display:flex;align-items:center;justify-content:center;font-size:'+eSz+'px;">'+sportEmoji+'</div>';
   }
+
+  // 4. Fallback abbr
   return '<div style="'+baseStyle+'background:rgba('+rgb+',.14);border:1px solid rgba('+rgb+',.28);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:800;color:'+color+';">'+fb+'</div>';
 }
 function hexRgb(h){
