@@ -3596,7 +3596,11 @@ var _dbxConfig={
 var _dbxSaving=false;
 var _dbxAccessToken=null;
 async function getValidToken(){
-  var rt=localStorage.getItem('gones45_dbx_token')||_dbxConfig.refreshToken;
+  // Token court saisi manuellement en priorité
+  var shortToken=localStorage.getItem('gones45_dbx_token')||'';
+  if(shortToken) return shortToken;
+  // Sinon essayer le refresh token
+  var rt=_dbxConfig.refreshToken;
   if(!rt)return null;
   try{
     var res=await fetch('https://api.dropbox.com/oauth2/token',{
@@ -3605,8 +3609,8 @@ async function getValidToken(){
       body:new URLSearchParams({grant_type:'refresh_token',refresh_token:rt,client_id:_dbxConfig.appKey,client_secret:_dbxConfig.appSecret})
     });
     var d=await res.json();
-    _dbxAccessToken=d.access_token;
-    return _dbxAccessToken;
+    if(d.access_token){_dbxAccessToken=d.access_token;return d.access_token;}
+    return null;
   }catch(e){return null;}
 }
 async function saveToDropbox(){
@@ -4131,6 +4135,8 @@ function resetChat(){
   });
 })();
 
+
+localStorage.setItem('gones45_dbx_token','sl.u.AGhBCqnmWUxbU0tdeMSXTeodWfHcx6CsLZpS2B51mZRlQLDTdM6tBwBlpQbsGPF0n7gUSPrmGn1zj7L9VynnPF6ZSwCFMOgGWT2QckUF49Bmwq1PeRBJYUbcSo-77CPcCTlaXWCIAiMKAytR1UKvlLm7qn1xmZ1T8cZcCX9lqOqkVPRQenzqhmYOKoJJ91cO6nc9_Y9a7s9miN_q7DwVoUutucbLFMRvjy31DlipjxEbDaVhviOiIaaz0VzZsN3L9QEmTASGuE-vWB6QFUUhOZ-TJb4UeyEG9iz0bF-LedTVsSRMmax2yHVKF9ecD0nuMhIa9cE3qcZ6HqPYzu_Nl14dRZ4IFRORuPYD4uWEgiEIaTl3EBfPZPWB0uM8CIarVQh8YcW5QDv26IUIWpZ1bQ7PGPOW-bQog7CKA1yApPxZ-67upPzkUAT_rR529H-K_k9wYMGk_tv7ojT_9SnF2tm5xbm8QXz7UsEG-CKHVockwMJ8jY3U_EbyXy4XGnw66-afjlXFMVxhfQUnNmxlLILs36JKN4uPeS6bNbksxI_XbGM_6-wClAsLCOg5jAqhGsqLfc-HdbmdpHlxqVM_IXJ3N3B3K5PCaijAkVWLQnSnQ6CLBDRPuxLhJUtySInpU4fQ_Ub6MDX5t7bA3k3CMyLT9MPhOLHChwwuwBdr4V7G48oUbvC-HYLwyH6EiMu2xLDlNBdVauf5HSzS6b51phLQByTUk6dWeQ58jAYGx8TVyEQFCf2DOJfcRjZ7L2vdXj81ARXsz0nrUgHX1sRTDjg-Kq4MaMAG_AQ9kchodb0quM7IvgfSOdYqpfcWbEtPaznvpL8gGLjtjRRVwa9FPxKXE3cb8flbqbS4b8IfldwpiD3gZxvkehAsWkk9zD_lrFdCT01COg17RBT2XIgEbvLkmZbeXMFsHe7BXAghrmZ_ifFhKaiZeaFZJc0e7kZ5vek3FaNHzZv-HOYmGdBs4TQ0WjqaIsOciVoLKFgRxw7OUgzgSNUxLewgd91_O7GBzfgc1i5dWwR7dm5ZQWZAItzKGG_4i9belqxTUHLdKNTZ_D2R3doykmOiK9_Ch_Pv22SKolHN2-uR4UvIymo8k30Dbh828KQn5402b5W_P3eMHZVTfERdKiht4EsXF1zAJGJ21Nvd1zMVmhmbB4y3v3mAXJg_iRyYGxMBz1gPtgQcx1HyalTwzLncRVhF3Pdq9dBDLHv-Y7JBH4XaT4f6kOc9JtDANJF10xEZQUZyzAI8AWkGq8VfvghTAYZUazZ_3yYUMBFuunTp3gQMCZf8A3Gs3eIRIgOZKOS-y6nL3Qhe_wC3C3gyvmnuM5IgvgoWK4nq5XsDluYvLIClJACp_lh3VtMcXYB850Pqlf_VXspgK89199OCaiCQOLWLrS4i4mkg2RNBIwfsCWePZinRwXSzKTgqHcJr43zC0TCsaAWIlbGM0tz66L15rNQPNgcypBI');
 function saveNote(){
   var n=$i('pc-note');if(!n)return;
   localStorage.setItem('gones45_note',n.innerHTML);
