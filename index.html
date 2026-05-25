@@ -716,6 +716,7 @@ input[type="date"],input[type="time"]{color-scheme:dark;}
       <button class="itab" onclick="swInner('live',this);setTimeout(loadTeamLive,30)">🔴 Live</button>
       <button class="itab" id="itab-saisons">📊 Saisons</button>
       <button class="itab" id="itab-mondial" style="display:none;">🌍 Mondial</button>
+      <button class="itab" id="itab-simu" style="display:none;">🎮 Simu</button>
     </div>
     <div id="ip-bilan" class="ipanel on"></div>
     <div id="ip-graphiques" class="ipanel"></div>
@@ -724,6 +725,7 @@ input[type="date"],input[type="time"]{color-scheme:dark;}
     <div id="ip-live" class="ipanel"></div>
     <div id="ip-saisons" class="ipanel"></div>
     <div id="ip-mondial" class="ipanel"></div>
+    <div id="ip-simu" class="ipanel"></div>
   </div>
 </section>
 
@@ -5685,6 +5687,324 @@ async function fetchMondialLive() {
   }
 }
 
+
+/* ══════════════════════════════════════
+   SIMULATION COUPE DU MONDE 2026
+══════════════════════════════════════ */
+var SIMU_GROUPES = [
+  {id:'A', teams:['Mexique','Corée du Sud','Afrique du Sud','Tchéquie']},
+  {id:'B', teams:['Canada','Suisse','Qatar','Bosnie-Herzégovine']},
+  {id:'C', teams:['Brésil','Maroc','Écosse','Haïti']},
+  {id:'D', teams:['États-Unis','Paraguay','Australie','Turquie']},
+  {id:'E', teams:['Allemagne','Équateur','Côte d\'Ivoire','Curaçao']},
+  {id:'F', teams:['Pays-Bas','Japon','Tunisie','Suède']},
+  {id:'G', teams:['Belgique','Iran','Égypte','Nouvelle-Zélande']},
+  {id:'H', teams:['Espagne','Uruguay','Cap-Vert','Arabie saoudite']},
+  {id:'I', teams:['France','Sénégal','Norvège','Irak']},
+  {id:'J', teams:['Argentine','Algérie','Autriche','Jordanie']},
+  {id:'K', teams:['Portugal','Colombie','RD Congo','Ouzbékistan']},
+  {id:'L', teams:['Angleterre','Croatie','Ghana','Panama']}
+];
+
+// Paires de matchs par groupe (6 matchs)
+function getGroupPairs(teams) {
+  var pairs = [];
+  for(var i=0;i<teams.length;i++)
+    for(var j=i+1;j<teams.length;j++)
+      pairs.push([teams[i],teams[j]]);
+  return pairs;
+}
+
+function simuKey(gid) { return 'simu2026_g'+gid; }
+function simuKoKey(round) { return 'simu2026_ko_'+round; }
+
+function getSimuGroupScores(gid) {
+  return JSON.parse(localStorage.getItem(simuKey(gid))||'{}');
+}
+function saveSimuGroupScore(gid, matchKey, h, a) {
+  var scores = getSimuGroupScores(gid);
+  scores[matchKey] = {h:h, a:a};
+  localStorage.setItem(simuKey(gid), JSON.stringify(scores));
+}
+
+function calcSimuStandings(gid) {
+  var g = SIMU_GROUPES.find(function(x){return x.id===gid;});
+  if(!g) return [];
+  var scores = getSimuGroupScores(gid);
+  var pairs = getGroupPairs(g.teams);
+  var st = {};
+  g.teams.forEach(function(t){ st[t]={name:t,pts:0,j:0,g:0,n:0,p:0,gf:0,ga:0}; });
+  pairs.forEach(function(p){
+    var k = p[0]+'_'+p[1];
+    var s = scores[k];
+    if(!s||s.h===''||s.a==='') return;
+    var h=parseInt(s.h), a=parseInt(s.a);
+    if(isNaN(h)||isNaN(a)) return;
+    st[p[0]].j++; st[p[1]].j++;
+    st[p[0]].gf+=h; st[p[0]].ga+=a;
+    st[p[1]].gf+=a; st[p[1]].ga+=h;
+    if(h>a){ st[p[0]].g++; st[p[0]].pts+=3; st[p[1]].p++; }
+    else if(h<a){ st[p[1]].g++; st[p[1]].pts+=3; st[p[0]].p++; }
+    else { st[p[0]].n++; st[p[0]].pts++; st[p[1]].n++; st[p[1]].pts++; }
+  });
+  return Object.values(st).sort(function(a,b){
+    if(b.pts!==a.pts) return b.pts-a.pts;
+    return (b.gf-b.ga)-(a.gf-a.ga);
+  });
+}
+
+function loadSimu2026() {
+  var el = document.getElementById('ip-simu');
+  if(!el) return;
+  renderSimuMain(el);
+}
+
+function renderSimuMain(el) {
+  var html = '<div style="padding:4px 0;" id="simu-main">';
+
+  // Header
+  html += '<div style="background:linear-gradient(135deg,rgba(167,139,250,.15),rgba(240,176,32,.1));border:1px solid rgba(167,139,250,.3);border-radius:12px;padding:14px;margin-bottom:14px;text-align:center;">';
+  html += '<div style="font-size:20px;">🎮</div>';
+  html += '<div style="font-size:15px;font-weight:800;color:var(--t1);">Simulation Coupe du Monde 2026</div>';
+  html += '<div style="font-size:10px;color:var(--t3);margin-top:3px;">Entre les scores — les qualifiés avancent automatiquement</div>';
+  html += '<button onclick="resetSimu2026()" style="margin-top:8px;padding:5px 12px;background:rgba(255,69,69,.15);border:1px solid rgba(255,69,69,.3);border-radius:6px;color:#ff4545;font-size:10px;font-weight:700;cursor:pointer;">🗑 Réinitialiser</button>';
+  html += '</div>';
+
+  // Groupes
+  html += '<div class="cwrap" style="margin-bottom:10px;">';
+  html += '<div style="font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#4f5d88;margin-bottom:10px;">📊 Phase de groupes</div>';
+  html += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;">';
+
+  SIMU_GROUPES.forEach(function(g){
+    var standings = calcSimuStandings(g.id);
+    var isFr = g.id==='I';
+    var allPlayed = standings.every(function(t){return t.j===3;});
+    html += '<div onclick="renderSimuGroup(\''+g.id+'\')" style="background:'+(isFr?'rgba(77,132,255,.08)':'rgba(255,255,255,.02)')+';border:1px solid '+(isFr?'rgba(77,132,255,.4)':'rgba(255,255,255,.07)')+';border-radius:8px;padding:8px;cursor:pointer;" onmouseover="this.style.opacity=\'.8\'" onmouseout="this.style.opacity=\'1\'">';
+    html += '<div style="display:flex;justify-content:space-between;margin-bottom:5px;">';
+    html += '<div style="font-size:9px;font-weight:800;color:'+(isFr?'#4d84ff':'#4f5d88')+';">GROUPE '+g.id+(isFr?' 🇫🇷':'')+'</div>';
+    html += '<div style="font-size:9px;color:'+(allPlayed?'#1ed760':'#4f5d88')+'">'+(allPlayed?'✅':'✏️')+'</div>';
+    html += '</div>';
+    standings.forEach(function(t,i){
+      var qual = i<2;
+      var third = i===2;
+      var col = t.name==='France'?'#4d84ff':qual?'var(--t1)':third?'#f0b020':'var(--t2)';
+      var prefix = allPlayed?(qual?'✅ ':third?'❓ ':''):'';
+      html += '<div style="display:flex;justify-content:space-between;padding:1px 0;">';
+      html += '<div style="font-size:9px;color:'+col+';font-weight:'+(qual||third?700:400)+';max-width:70px;overflow:hidden;white-space:nowrap;">'+prefix+t.name+'</div>';
+      html += '<div style="font-size:9px;font-weight:700;color:'+(t.pts>0?'#f0b020':'var(--t3)')+';">'+t.pts+'pts</div>';
+      html += '</div>';
+    });
+    html += '</div>';
+  });
+  html += '</div>';
+  html += '<div style="font-size:9px;color:#4f5d88;text-align:center;margin-top:6px;">✅ Qualifié direct · ❓ 3e potentiellement qualifiable (8 meilleurs sur 12)</div>';
+  html += '</div>';
+
+  // Knockout
+  var KO_ROUNDS = [
+    {key:'r32', label:'32e de finale', col:'#4f5d88', next:'r16'},
+    {key:'r16', label:'16e de finale', col:'#4d84ff', next:'qf'},
+    {key:'qf',  label:'Quarts',        col:'#a78bfa', next:'sf'},
+    {key:'sf',  label:'Demi-finales',  col:'#f0b020', next:'f'},
+    {key:'f',   label:'🏆 Finale',     col:'#1ed760', next:null}
+  ];
+
+  KO_ROUNDS.forEach(function(r){
+    var matches = JSON.parse(localStorage.getItem(simuKoKey(r.key))||'[]');
+    if(!matches.length) return;
+    html += '<div class="cwrap" style="margin-bottom:8px;">';
+    html += '<div style="font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:'+r.col+';margin-bottom:8px;">'+r.label+'</div>';
+    matches.forEach(function(m, idx){
+      var isFr = m.home==='France'||m.away==='France';
+      html += '<div style="display:grid;grid-template-columns:1fr auto auto auto 1fr;gap:6px;align-items:center;padding:6px;background:'+(isFr?'rgba(77,132,255,.06)':'rgba(255,255,255,.02)')+';border-radius:6px;margin-bottom:4px;">';
+      html += '<div style="font-size:10px;font-weight:700;color:'+(m.home==='France'?'#4d84ff':'var(--t1)')+';text-align:right;">'+m.home+'</div>';
+      html += '<input type="number" min="0" max="20" value="'+(m.sh!==undefined?m.sh:'')+'" placeholder="-" style="width:32px;text-align:center;background:var(--bg3);border:1px solid var(--b2);border-radius:4px;color:var(--t1);font-size:13px;font-weight:800;padding:4px;" oninput="saveSimuKo(\''+r.key+'\','+idx+',this.value,null)">';
+      html += '<div style="font-size:10px;color:var(--t3);">-</div>';
+      html += '<input type="number" min="0" max="20" value="'+(m.sa!==undefined?m.sa:'')+'" placeholder="-" style="width:32px;text-align:center;background:var(--bg3);border:1px solid var(--b2);border-radius:4px;color:var(--t1);font-size:13px;font-weight:800;padding:4px;" oninput="saveSimuKo(\''+r.key+'\','+idx+',null,this.value)">';
+      html += '<div style="font-size:10px;font-weight:700;color:'+(m.away==='France'?'#4d84ff':'var(--t1)')+';">'+m.away+'</div>';
+      html += '</div>';
+    });
+
+    // Bouton générer le tour suivant
+    if(r.next) {
+      var allDone = matches.every(function(m){return m.sh!==undefined&&m.sa!==undefined&&m.sh!==''&&m.sa!=='';});
+      if(allDone) {
+        html += '<button onclick="generateNextRound(\''+r.key+'\',\''+r.next+'\')" style="width:100%;margin-top:6px;padding:8px;background:rgba(77,132,255,.15);border:1px solid rgba(77,132,255,.3);border-radius:6px;color:#4d84ff;font-size:11px;font-weight:700;cursor:pointer;">→ Générer les '+r.next.toUpperCase()+'</button>';
+      }
+    } else {
+      // Finale — afficher le vainqueur
+      var fin = matches[0];
+      if(fin&&fin.sh!==undefined&&fin.sa!==undefined&&fin.sh!==''&&fin.sa!=='') {
+        var winner = parseInt(fin.sh)>parseInt(fin.sa)?fin.home:parseInt(fin.sh)<parseInt(fin.sa)?fin.away:'?';
+        html += '<div style="margin-top:10px;text-align:center;padding:14px;background:rgba(240,176,32,.1);border:1px solid rgba(240,176,32,.3);border-radius:8px;">';
+        html += '<div style="font-size:24px;">🏆</div>';
+        html += '<div style="font-size:16px;font-weight:800;color:#f0b020;">'+winner+'</div>';
+        html += '<div style="font-size:10px;color:var(--t3);margin-top:3px;">Champion du Monde 2026</div>';
+        html += '</div>';
+      }
+    }
+    html += '</div>';
+  });
+
+  // Bouton générer 32es depuis groupes si pas encore fait
+  var r32 = JSON.parse(localStorage.getItem(simuKoKey('r32'))||'[]');
+  if(!r32.length) {
+    var groupsComplete = SIMU_GROUPES.every(function(g){
+      return calcSimuStandings(g.id).every(function(t){return t.j===3;});
+    });
+    if(groupsComplete) {
+      html += '<div class="cwrap">';
+      html += '<button onclick="generateR32()" style="width:100%;padding:12px;background:rgba(30,215,96,.15);border:1px solid rgba(30,215,96,.3);border-radius:8px;color:#1ed760;font-size:13px;font-weight:800;cursor:pointer;">🚀 Générer les 32e de finale !</button>';
+      html += '</div>';
+    } else {
+      html += '<div style="text-align:center;padding:10px;font-size:10px;color:#4f5d88;">Complète tous les groupes pour générer les 32es de finale</div>';
+    }
+  }
+
+  html += '</div>';
+  el.innerHTML = html;
+}
+
+function renderSimuGroup(gid) {
+  var el = document.getElementById('ip-simu');
+  if(!el) return;
+  var g = SIMU_GROUPES.find(function(x){return x.id===gid;});
+  var pairs = getGroupPairs(g.teams);
+  var scores = getSimuGroupScores(gid);
+  var isFr = gid==='I';
+
+  var html = '<div style="padding:4px 0;">';
+  html += '<div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;">';
+  html += '<button onclick="loadSimu2026()" style="padding:6px 12px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);border-radius:6px;color:var(--t2);font-size:11px;cursor:pointer;">← Retour</button>';
+  html += '<div style="font-size:15px;font-weight:800;color:'+(isFr?'#4d84ff':'var(--t1)')+';">GROUPE '+gid+(isFr?' 🇫🇷':'')+'</div>';
+  html += '</div>';
+
+  // Matchs à scorer
+  html += '<div class="cwrap" style="margin-bottom:10px;">';
+  html += '<div style="font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#4f5d88;margin-bottom:10px;">⚽ Scores</div>';
+  pairs.forEach(function(p){
+    var k = p[0]+'_'+p[1];
+    var s = scores[k]||{h:'',a:''};
+    var isFrMatch = p[0]==='France'||p[1]==='France';
+    html += '<div style="display:grid;grid-template-columns:1fr auto auto auto 1fr;gap:8px;align-items:center;padding:8px;background:'+(isFrMatch?'rgba(77,132,255,.06)':'rgba(255,255,255,.02)')+';border-radius:8px;margin-bottom:6px;border:1px solid '+(isFrMatch?'rgba(77,132,255,.2)':'rgba(255,255,255,.05)')+'">';
+    html += '<div style="font-size:11px;font-weight:700;color:'+(p[0]==='France'?'#4d84ff':'var(--t1)')+';text-align:right;">'+p[0]+'</div>';
+    html += '<input type="number" min="0" max="20" value="'+s.h+'" placeholder="-" id="simu_'+gid+'_'+k+'_h" style="width:36px;text-align:center;background:var(--bg3);border:1px solid var(--b2);border-radius:6px;color:var(--t1);font-size:16px;font-weight:800;padding:6px 2px;" oninput="onSimuScore(\''+gid+'\',\''+k+'\',true,this.value)">';
+    html += '<div style="font-size:12px;color:var(--t3);font-weight:700;">—</div>';
+    html += '<input type="number" min="0" max="20" value="'+s.a+'" placeholder="-" id="simu_'+gid+'_'+k+'_a" style="width:36px;text-align:center;background:var(--bg3);border:1px solid var(--b2);border-radius:6px;color:var(--t1);font-size:16px;font-weight:800;padding:6px 2px;" oninput="onSimuScore(\''+gid+'\',\''+k+'\',false,this.value)">';
+    html += '<div style="font-size:11px;font-weight:700;color:'+(p[1]==='France'?'#4d84ff':'var(--t1)')+';">'+p[1]+'</div>';
+    html += '</div>';
+  });
+  html += '</div>';
+
+  // Classement live
+  html += '<div class="cwrap" id="simu-standings-'+gid+'">';
+  html += renderSimuStandings(gid);
+  html += '</div>';
+  html += '</div>';
+  el.innerHTML = html;
+}
+
+function renderSimuStandings(gid) {
+  var standings = calcSimuStandings(gid);
+  var html = '<div style="font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#4f5d88;margin-bottom:8px;">📊 Classement</div>';
+  html += '<div style="display:grid;grid-template-columns:20px 1fr 28px 28px 28px 28px 32px;gap:4px;font-size:9px;color:#4f5d88;font-weight:700;padding:0 4px;margin-bottom:4px;">';
+  html += '<div>#</div><div>Équipe</div><div style="text-align:center">J</div><div style="text-align:center">G</div><div style="text-align:center">N</div><div style="text-align:center">P</div><div style="text-align:center">Pts</div></div>';
+  standings.forEach(function(t,i){
+    var qual = i<2;
+    var third = i===2;
+    var bg = qual?'rgba(30,215,96,.06)':third?'rgba(240,176,32,.04)':'rgba(255,255,255,.02)';
+    var numCol = qual?'#1ed760':third?'#f0b020':'#4f5d88';
+    html += '<div style="display:grid;grid-template-columns:20px 1fr 28px 28px 28px 28px 32px;gap:4px;align-items:center;background:'+bg+';border-radius:6px;padding:6px 4px;margin-bottom:3px;">';
+    html += '<div style="font-size:10px;font-weight:700;color:'+numCol+'">'+(i+1)+'</div>';
+    html += '<div style="font-size:10px;font-weight:'+(qual||third?700:400)+';color:'+(t.name==='France'?'#4d84ff':qual?'var(--t1)':third?'#f0b020':'var(--t2)')+';overflow:hidden;white-space:nowrap;">'+(third?'❓ ':'')+t.name+'</div>';
+    ['j','g','n','p'].forEach(function(k){ html += '<div style="text-align:center;font-size:10px;color:var(--t2);">'+t[k]+'</div>'; });
+    html += '<div style="text-align:center;font-size:11px;font-weight:800;color:'+(t.pts>0?'#f0b020':'var(--t3)')+';">'+t.pts+'</div>';
+    html += '</div>';
+  });
+  return html;
+}
+
+function onSimuScore(gid, matchKey, isHome, val) {
+  var scores = getSimuGroupScores(gid);
+  if(!scores[matchKey]) scores[matchKey]={h:'',a:''};
+  if(isHome) scores[matchKey].h=val; else scores[matchKey].a=val;
+  localStorage.setItem(simuKey(gid), JSON.stringify(scores));
+  // Mettre à jour classement live
+  var el = document.getElementById('simu-standings-'+gid);
+  if(el) el.innerHTML = renderSimuStandings(gid);
+}
+
+function saveSimuKo(round, idx, sh, sa) {
+  var matches = JSON.parse(localStorage.getItem(simuKoKey(round))||'[]');
+  if(!matches[idx]) return;
+  if(sh!==null) matches[idx].sh=sh;
+  if(sa!==null) matches[idx].sa=sa;
+  localStorage.setItem(simuKoKey(round), JSON.stringify(matches));
+  // Re-render
+  var el = document.getElementById('ip-simu');
+  if(el) renderSimuMain(el);
+}
+
+function generateR32() {
+  // Les 32 qualifiés : top 2 de chaque groupe + 8 meilleurs 3es
+  var qualifieds = {};
+  var thirds = [];
+  SIMU_GROUPES.forEach(function(g){
+    var st = calcSimuStandings(g.id);
+    qualifieds['1'+g.id] = st[0].name;
+    qualifieds['2'+g.id] = st[1].name;
+    thirds.push({name:st[2].name, pts:st[2].pts, gd:st[2].gf-st[2].ga, gf:st[2].gf, group:g.id});
+  });
+  // 8 meilleurs 3es
+  thirds.sort(function(a,b){ return b.pts-a.pts||b.gd-a.gd||b.gf-a.gf; });
+  var best8thirds = thirds.slice(0,8).map(function(t){return t.name;});
+
+  // Bracket simplifié (paires logiques)
+  var r32 = [
+    {home:qualifieds['1A'],away:qualifieds['2B'],sh:'',sa:''},
+    {home:qualifieds['1C'],away:qualifieds['2D'],sh:'',sa:''},
+    {home:qualifieds['1E'],away:qualifieds['2F'],sh:'',sa:''},
+    {home:qualifieds['1G'],away:qualifieds['2H'],sh:'',sa:''},
+    {home:qualifieds['1I'],away:qualifieds['2J'],sh:'',sa:''},
+    {home:qualifieds['1K'],away:qualifieds['2L'],sh:'',sa:''},
+    {home:qualifieds['1B'],away:qualifieds['2A'],sh:'',sa:''},
+    {home:qualifieds['1D'],away:qualifieds['2C'],sh:'',sa:''},
+    {home:qualifieds['1F'],away:qualifieds['2E'],sh:'',sa:''},
+    {home:qualifieds['1H'],away:qualifieds['2G'],sh:'',sa:''},
+    {home:qualifieds['1J'],away:qualifieds['2I'],sh:'',sa:''},
+    {home:qualifieds['1L'],away:qualifieds['2K'],sh:'',sa:''},
+    {home:best8thirds[0],away:best8thirds[1],sh:'',sa:''},
+    {home:best8thirds[2],away:best8thirds[3],sh:'',sa:''},
+    {home:best8thirds[4],away:best8thirds[5],sh:'',sa:''},
+    {home:best8thirds[6],away:best8thirds[7],sh:'',sa:''}
+  ];
+  localStorage.setItem(simuKoKey('r32'), JSON.stringify(r32));
+  var el = document.getElementById('ip-simu');
+  if(el) renderSimuMain(el);
+}
+
+function generateNextRound(currentKey, nextKey) {
+  var matches = JSON.parse(localStorage.getItem(simuKoKey(currentKey))||'[]');
+  var nextMatches = [];
+  for(var i=0;i<matches.length;i+=2){
+    var m1=matches[i], m2=matches[i+1]||{home:'TBD',away:'TBD',sh:0,sa:0};
+    var w1 = parseInt(m1.sh)>parseInt(m1.sa)?m1.home:parseInt(m1.sh)<parseInt(m1.sa)?m1.away:m1.home+' (pen)';
+    var w2 = m2 ? (parseInt(m2.sh)>parseInt(m2.sa)?m2.home:parseInt(m2.sh)<parseInt(m2.sa)?m2.away:m2.home+' (pen)') : 'TBD';
+    nextMatches.push({home:w1,away:w2,sh:'',sa:''});
+  }
+  localStorage.setItem(simuKoKey(nextKey), JSON.stringify(nextMatches));
+  var el = document.getElementById('ip-simu');
+  if(el) renderSimuMain(el);
+}
+
+function resetSimu2026() {
+  if(!confirm('Réinitialiser toute la simulation ?')) return;
+  SIMU_GROUPES.forEach(function(g){ localStorage.removeItem(simuKey(g.id)); });
+  ['r32','r16','qf','sf','f'].forEach(function(k){ localStorage.removeItem(simuKoKey(k)); });
+  var el = document.getElementById('ip-simu');
+  if(el) renderSimuMain(el);
+}
+
 async function loadTeamSaisons() {
   var el = document.getElementById('ip-saisons');
   if(!el) return;
@@ -6809,6 +7129,7 @@ var _bcp=document.getElementById('btn-chat-params-pc');if(_bcp)_bcp.onclick=func
   var _bgen=document.getElementById('btn-generate-pari');if(_bgen)_bgen.onclick=function(){generatePariDuJour();};
   var _bsaisons=document.getElementById('itab-saisons');if(_bsaisons)_bsaisons.onclick=function(){swInner('saisons',this);};
   var _bmondial=document.getElementById('itab-mondial');if(_bmondial)_bmondial.onclick=function(){swInner('mondial',this);loadMondial2026();};
+  var _bsimu=document.getElementById('itab-simu');if(_bsimu)_bsimu.onclick=function(){swInner('simu',this);loadSimu2026();};
   var _brcal=document.getElementById('btn-refresh-cal');if(_brcal)_brcal.onclick=loadCalendrier;
   var _bcomp=document.getElementById('btn-comparer');if(_bcomp)_bcomp.onclick=runComparateur;
   document.querySelectorAll('[data-action-comp="init"]').forEach(function(b){
