@@ -928,7 +928,10 @@ input[type="date"],input[type="time"]{color-scheme:dark;}
     <div id="gemini-key-status" style="margin-top:7px;font-size:11px;font-weight:700;"></div>
   </div>
   <div class="fc" style="border-style:dashed;">
-    <label class="fl" style="color:var(--a);">🔍 Tavily — Recherche web</label>
+    <div style="display:flex;align-items:center;justify-content:space-between;">
+      <label class="fl" style="color:var(--a);">🔍 Tavily — Recherche web</label>
+      <button onclick="showKeyHelp('tavily')" style="background:rgba(240,176,32,.12);border:1px solid rgba(240,176,32,.3);color:#f0b020;border-radius:50%;width:20px;height:20px;font-size:11px;font-weight:700;cursor:pointer;flex-shrink:0;">?</button>
+    </div>
     <div style="font-size:10px;color:var(--t3);margin-bottom:8px;margin-top:4px;">Gratuit sur tavily.com · 1000 recherches/mois · Stockée localement</div>
     <div style="display:flex;gap:6px;margin-bottom:8px;">
       <input id="tavily-key-input" class="fi" type="password" placeholder="tvly-…" style="font-size:11px;flex:1;">
@@ -1014,7 +1017,10 @@ input[type="date"],input[type="time"]{color-scheme:dark;}
     <div id="dbx-load-status" style="margin-top:6px;font-size:11px;font-weight:700;text-align:center;"></div>
   </div>
   <div class="fc" style="border-style:dashed;">
-    <label class="fl" style="color:var(--gold);">☁️ Dropbox — Sauvegarde auto</label>
+    <div style="display:flex;align-items:center;justify-content:space-between;">
+      <label class="fl" style="color:var(--gold);">☁️ Dropbox — Sauvegarde auto</label>
+      <button onclick="showKeyHelp('dropbox')" style="background:rgba(0,97,255,.12);border:1px solid rgba(0,97,255,.3);color:#0061ff;border-radius:50%;width:20px;height:20px;font-size:11px;font-weight:700;cursor:pointer;flex-shrink:0;">?</button>
+    </div>
     <div style="font-size:10px;color:var(--t3);margin-bottom:8px;margin-top:4px;">Colle ton Refresh Token Dropbox. Il sera sauvegardé sur cet appareil.</div>
     <input id="dbx-key-input" class="fi" type="text" placeholder="sl.u.XXXXXXX…" style="margin-bottom:8px;font-size:11px;filter:blur(4px);transition:filter .2s;" onfocus="this.style.filter='none'" onblur="this.style.filter='blur(4px)'">
     <div style="display:flex;gap:7px;">
@@ -4382,7 +4388,7 @@ var KEY_HELP = {
     title: '⚡ Comment obtenir ta clé Groq',
     color: '#7aaaff',
     steps: [
-      {n:'1', t:'Aller sur console.groq.com', d:'Ouvre le site dans ton navigateur'},
+      {n:'1', t:'<a href="https://console.groq.com" target="_blank" style="color:#7aaaff;text-decoration:underline;">console.groq.com</a>', d:'Clique sur le lien pour ouvrir le site'},
       {n:'2', t:'Créer un compte', d:'Clique sur "Sign Up" — gratuit, juste un email'},
       {n:'3', t:'Aller dans API Keys', d:'Dans le menu gauche, clique sur "API Keys"'},
       {n:'4', t:'Créer une clé', d:'Clique "Create API Key", donne un nom (ex: gones45)'},
@@ -4395,18 +4401,32 @@ var KEY_HELP = {
     title: '🔍 Comment obtenir ta clé Tavily',
     color: '#f0b020',
     steps: [
-      {n:'1', t:'Aller sur app.tavily.com', d:'Ouvre le site dans ton navigateur'},
-      {n:'2', t:'Créer un compte', d:'Clique "Sign Up" — gratuit'},
+      {n:'1', t:'<a href="https://app.tavily.com" target="_blank" style="color:#f0b020;text-decoration:underline;">app.tavily.com</a>', d:'Clique sur le lien pour ouvrir le site'},
+      {n:'2', t:'Créer un compte', d:'Clique "Sign Up" — gratuit, juste un email'},
       {n:'3', t:'Copier ta clé', d:'Elle est affichée directement sur le tableau de bord — commence par tvly-...'},
     ],
     note: 'Gratuit · 1000 recherches/mois · Pour la recherche web en temps réel',
     url: 'https://app.tavily.com'
   },
+  dropbox: {
+    title: '☁️ Comment obtenir ton token Dropbox',
+    color: '#0061ff',
+    steps: [
+      {n:'1', t:'<a href="https://www.dropbox.com/developers/apps" target="_blank" style="color:#0061ff;text-decoration:underline;">dropbox.com/developers</a>', d:'Clique sur le lien — connecte-toi avec ton compte Dropbox'},
+      {n:'2', t:'Cliquer sur "App Console"', d:'En haut à droite'},
+      {n:'3', t:'Sélectionner ton app GONES45', d:'Ou créer une nouvelle app si besoin'},
+      {n:'4', t:'Aller dans l\'onglet Settings', d:'En bas de la page de ton app'},
+      {n:'5', t:'Cliquer "Generate access token"', d:'Dans la section OAuth 2 — copie le token sl.u.XXXX'},
+      {n:'6', t:'Coller le token ici', d:'Il expire après 4h — à renouveler si besoin'},
+    ],
+    note: '⚠️ Token valable 4h · Gratuit · Sauvegarde automatique de toutes tes données',
+    url: 'https://www.dropbox.com/developers/apps'
+  },
   fdorg: {
     title: '⚽ Comment obtenir ta clé Football-Data',
     color: '#1ed760',
     steps: [
-      {n:'1', t:'Aller sur football-data.org', d:'Ouvre le site dans ton navigateur'},
+      {n:'1', t:'<a href="https://www.football-data.org" target="_blank" style="color:#1ed760;text-decoration:underline;">football-data.org</a>', d:'Clique sur le lien pour ouvrir le site'},
       {n:'2', t:'Cliquer sur "Register"', d:'En haut à droite du site'},
       {n:'3', t:'Remplir le formulaire', d:'Prénom, email — pour "arme" choisis "Je veux rester désarmé"'},
       {n:'4', t:'Vérifier ton email', d:'Tu recevras ta clé API par email'},
@@ -5423,13 +5443,45 @@ function loadMondial2026() {
   });
   html += '</div></div>';
 
-  // Tableau knockout
+  // Tableau knockout dynamique
+  var ROUNDS = [
+    {key:'r32',  label:'32e de finale', date:'29 juin – 2 juil.', col:'#4f5d88'},
+    {key:'r16',  label:'16e de finale', date:'4 – 7 juillet',     col:'#4d84ff'},
+    {key:'qf',   label:'Quarts de finale', date:'9 – 10 juillet', col:'#a78bfa'},
+    {key:'sf',   label:'Demi-finales',  date:'14 – 15 juillet',   col:'#f0b020'},
+    {key:'f',    label:'🏆 Finale',     date:'19 juillet · MetLife NY', col:'#1ed760'}
+  ];
   html += '<div class="cwrap" style="margin-bottom:10px;">';
   html += '<div style="font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#4f5d88;margin-bottom:10px;">🏟️ Tableau knockout</div>';
-  [{label:'32e de finale',date:'29 juin – 2 juil.',col:'#4f5d88'},{label:'16e de finale',date:'4 – 7 juil.',col:'#4d84ff'},{label:'Quarts',date:'9 – 10 juil.',col:'#a78bfa'},{label:'Demi-finales',date:'14 – 15 juil.',col:'#f0b020'},{label:'🏆 Finale',date:'19 juillet · MetLife NY',col:'#1ed760'}].forEach(function(r){
-    html += '<div style="display:flex;align-items:center;gap:10px;padding:8px 10px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.06);border-left:3px solid '+r.col+';border-radius:6px;margin-bottom:5px;">';
-    html += '<div style="flex:1;"><div style="font-size:11px;font-weight:700;color:'+r.col+';">'+r.label+'</div><div style="font-size:9px;color:var(--t3);">'+r.date+'</div></div>';
-    html += '<div style="font-size:9px;color:var(--t3);">TBD</div></div>';
+  ROUNDS.forEach(function(r){
+    var matches = JSON.parse(localStorage.getItem('wc2026_ko_'+r.key)||'[]');
+    html += '<div style="border:1px solid rgba(255,255,255,.06);border-left:3px solid '+r.col+';border-radius:6px;margin-bottom:6px;overflow:hidden;">';
+    html += '<div style="padding:7px 10px;background:rgba(255,255,255,.03);display:flex;align-items:center;justify-content:space-between;">';
+    html += '<div><div style="font-size:11px;font-weight:700;color:'+r.col+';">'+r.label+'</div><div style="font-size:9px;color:var(--t3);">'+r.date+'</div></div>';
+    html += '<div style="font-size:9px;color:#4f5d88;">'+matches.length+' matchs</div></div>';
+    if(matches.length) {
+      matches.forEach(function(m){
+        var played = m.score !== null;
+        var isFrance = m.home==='France'||m.away==='France';
+        var bg = isFrance?'rgba(77,132,255,.08)':'rgba(255,255,255,.02)';
+        html += '<div style="display:flex;align-items:center;gap:6px;padding:6px 10px;background:'+bg+';border-top:1px solid rgba(255,255,255,.04);">';
+        html += '<div style="flex:1;font-size:10px;font-weight:'+(isFrance?'700':'500')+';color:'+(m.home==='France'?'#4d84ff':'var(--t1)')+';text-align:right;">'+m.home+'</div>';
+        if(played){
+          var parts = m.score.split(' - ');
+          var hw=parseInt(parts[0]),aw=parseInt(parts[1]);
+          var hcol=hw>aw?'#1ed760':hw<aw?'#ff4545':'#f0b020';
+          var acol=aw>hw?'#1ed760':aw<hw?'#ff4545':'#f0b020';
+          html += '<div style="font-size:12px;font-weight:800;min-width:50px;text-align:center;"><span style="color:'+hcol+';">'+hw+'</span><span style="color:var(--t3);"> - </span><span style="color:'+acol+';">'+aw+'</span></div>';
+        } else {
+          html += '<div style="font-size:9px;color:#4f5d88;min-width:50px;text-align:center;">'+m.date+'</div>';
+        }
+        html += '<div style="flex:1;font-size:10px;font-weight:'+(isFrance?'700':'500')+';color:'+(m.away==='France'?'#4d84ff':'var(--t1)')+';">'+m.away+'</div>';
+        html += '</div>';
+      });
+    } else {
+      html += '<div style="padding:8px 10px;font-size:10px;color:#4f5d88;text-align:center;">À venir</div>';
+    }
+    html += '</div>';
   });
   html += '</div>';
 
@@ -5587,7 +5639,36 @@ async function fetchMondialLive() {
       }
     });
 
-    // Sauvegarder en localStorage
+    // Récupérer matchs knockout
+    var koMap = {
+      'Round of 32':  'r32',
+      'Round of 16':  'r16',
+      'Quarter-Final':'qf',
+      'Quarter-Finals':'qf',
+      'Semi-Final':   'sf',
+      'Semi-Finals':  'sf',
+      'Final':        'f'
+    };
+    var koMatches = {};
+    events.forEach(function(e){
+      var round = e.strRound || '';
+      var koKey = null;
+      for(var k in koMap){ if(round.indexOf(k)>=0 && round.indexOf('Group')<0){ koKey=koMap[k]; break; } }
+      if(!koKey) return;
+      if(!koMatches[koKey]) koMatches[koKey]=[];
+      var played = e.intHomeScore!==null && e.intHomeScore!=='';
+      koMatches[koKey].push({
+        home: e.strHomeTeam,
+        away: e.strAwayTeam,
+        score: played ? e.intHomeScore+' - '+e.intAwayScore : null,
+        date: e.dateEvent ? e.dateEvent.substring(5) : '?'
+      });
+    });
+    for(var k in koMatches){
+      localStorage.setItem('wc2026_ko_'+k, JSON.stringify(koMatches[k]));
+    }
+
+    // Sauvegarder groupes en localStorage
     for(var gid in groupMatches){
       localStorage.setItem('wc2026_matches_'+gid, JSON.stringify(groupMatches[gid]));
     }
