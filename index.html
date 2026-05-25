@@ -5543,7 +5543,7 @@ function loadMondial2026() {
         } else {
           html += '<div style="font-size:9px;color:#4f5d88;min-width:50px;text-align:center;">'+m.date+'</div>';
         }
-        html += '<div style="flex:1;font-size:10px;font-weight:'+(isFrance?'700':'500')+';color:'+(m.away==='France'?'#4d84ff':'var(--t1)')+';">'+m.away+'</div>';
+        html += '<div style="display:flex;align-items:center;flex:1;font-size:10px;font-weight:'+(isFrance?'700':'500')+';color:'+(m.away==='France'?'#4d84ff':'var(--t1)')+';">'+flagImg(m.away,15)+m.away+'</div>';
         html += '</div>';
       });
     } else {
@@ -5843,6 +5843,12 @@ function getSimuContainer() {
   if(tab && document.getElementById('t-simu') && document.getElementById('t-simu').classList.contains('on')) return tab;
   return document.getElementById('ip-simu') || tab;
 }
+function flagImg(name, sz) {
+  sz = sz || 20;
+  var c = FLAG_CDN[name] || FLAG_CDN[name.trim()];
+  if(!c) return '';
+  return '<img src="https://flagcdn.com/w40/'+c+'.png" style="width:'+sz+'px;height:'+(sz*0.67)+'px;object-fit:cover;border-radius:2px;vertical-align:middle;margin-right:5px;" loading="lazy">';
+}
 function renderSimuMain(el) {
   if(!el) el = getSimuContainer();
   if(!el) return;
@@ -5875,8 +5881,8 @@ function renderSimuMain(el) {
       var third = i===2;
       var col = t.name==='France'?'#4d84ff':qual?'var(--t1)':third?'#f0b020':'var(--t2)';
       var prefix = allPlayed?(qual?'✅ ':third?'❓ ':''):'';
-      html += '<div style="display:flex;justify-content:space-between;padding:1px 0;">';
-      html += '<div style="font-size:9px;color:'+col+';font-weight:'+(qual||third?700:400)+';max-width:70px;overflow:hidden;white-space:nowrap;">'+prefix+t.name+'</div>';
+      html += '<div style="display:flex;justify-content:space-between;align-items:center;padding:2px 0;">';
+      html += '<div style="display:flex;align-items:center;font-size:9px;color:'+col+';font-weight:'+(qual||third?700:400)+';max-width:95px;overflow:hidden;white-space:nowrap;">'+flagImg(t.name,14)+prefix+t.name+'</div>';
       html += '<div style="font-size:9px;font-weight:700;color:'+(t.pts>0?'#f0b020':'var(--t3)')+';">'+t.pts+'pts</div>';
       html += '</div>';
     });
@@ -5973,7 +5979,7 @@ function renderSimuGroup(gid) {
     var s = scores[k]||{h:'',a:''};
     var isFrMatch = p[0]==='France'||p[1]==='France';
     html += '<div style="display:grid;grid-template-columns:1fr auto auto auto 1fr;gap:8px;align-items:center;padding:8px;background:'+(isFrMatch?'rgba(77,132,255,.06)':'rgba(255,255,255,.02)')+';border-radius:8px;margin-bottom:6px;border:1px solid '+(isFrMatch?'rgba(77,132,255,.2)':'rgba(255,255,255,.05)')+'">';
-    html += '<div style="font-size:11px;font-weight:700;color:'+(p[0]==='France'?'#4d84ff':'var(--t1)')+';text-align:right;">'+p[0]+'</div>';
+    html += '<div style="display:flex;align-items:center;justify-content:flex-end;font-size:11px;font-weight:700;color:'+(p[0]==='France'?'#4d84ff':'var(--t1)')+';">'+flagImg(p[0],16)+p[0]+'</div>';
     html += '<input type="number" min="0" max="20" value="'+s.h+'" placeholder="-" id="simu_'+gid+'_'+k+'_h" style="width:36px;text-align:center;background:var(--bg3);border:1px solid var(--b2);border-radius:6px;color:var(--t1);font-size:16px;font-weight:800;padding:6px 2px;" oninput="onSimuScore(\''+gid+'\',\''+k+'\',true,this.value)">';
     html += '<div style="font-size:12px;color:var(--t3);font-weight:700;">—</div>';
     html += '<input type="number" min="0" max="20" value="'+s.a+'" placeholder="-" id="simu_'+gid+'_'+k+'_a" style="width:36px;text-align:center;background:var(--bg3);border:1px solid var(--b2);border-radius:6px;color:var(--t1);font-size:16px;font-weight:800;padding:6px 2px;" oninput="onSimuScore(\''+gid+'\',\''+k+'\',false,this.value)">';
@@ -6002,7 +6008,7 @@ function renderSimuStandings(gid) {
     var numCol = qual?'#1ed760':third?'#f0b020':'#4f5d88';
     html += '<div style="display:grid;grid-template-columns:20px 1fr 28px 28px 28px 28px 32px;gap:4px;align-items:center;background:'+bg+';border-radius:6px;padding:6px 4px;margin-bottom:3px;">';
     html += '<div style="font-size:10px;font-weight:700;color:'+numCol+'">'+(i+1)+'</div>';
-    html += '<div style="font-size:10px;font-weight:'+(qual||third?700:400)+';color:'+(t.name==='France'?'#4d84ff':qual?'var(--t1)':third?'#f0b020':'var(--t2)')+';overflow:hidden;white-space:nowrap;">'+(third?'❓ ':'')+t.name+'</div>';
+    html += '<div style="display:flex;align-items:center;font-size:10px;font-weight:'+(qual||third?700:400)+';color:'+(t.name==='France'?'#4d84ff':qual?'var(--t1)':third?'#f0b020':'var(--t2)')+';overflow:hidden;white-space:nowrap;">'+flagImg(t.name,16)+(third?'❓ ':'')+t.name+'</div>';
     ['j','g','n','p'].forEach(function(k){ html += '<div style="text-align:center;font-size:10px;color:var(--t2);">'+t[k]+'</div>'; });
     html += '<div style="text-align:center;font-size:11px;font-weight:800;color:'+(t.pts>0?'#f0b020':'var(--t3)')+';">'+t.pts+'</div>';
     html += '</div>';
