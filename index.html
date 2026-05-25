@@ -4194,6 +4194,7 @@ function resetChat(){
 
 
 localStorage.setItem('gones45_dbx_token','sl.u.AGhBCqnmWUxbU0tdeMSXTeodWfHcx6CsLZpS2B51mZRlQLDTdM6tBwBlpQbsGPF0n7gUSPrmGn1zj7L9VynnPF6ZSwCFMOgGWT2QckUF49Bmwq1PeRBJYUbcSo-77CPcCTlaXWCIAiMKAytR1UKvlLm7qn1xmZ1T8cZcCX9lqOqkVPRQenzqhmYOKoJJ91cO6nc9_Y9a7s9miN_q7DwVoUutucbLFMRvjy31DlipjxEbDaVhviOiIaaz0VzZsN3L9QEmTASGuE-vWB6QFUUhOZ-TJb4UeyEG9iz0bF-LedTVsSRMmax2yHVKF9ecD0nuMhIa9cE3qcZ6HqPYzu_Nl14dRZ4IFRORuPYD4uWEgiEIaTl3EBfPZPWB0uM8CIarVQh8YcW5QDv26IUIWpZ1bQ7PGPOW-bQog7CKA1yApPxZ-67upPzkUAT_rR529H-K_k9wYMGk_tv7ojT_9SnF2tm5xbm8QXz7UsEG-CKHVockwMJ8jY3U_EbyXy4XGnw66-afjlXFMVxhfQUnNmxlLILs36JKN4uPeS6bNbksxI_XbGM_6-wClAsLCOg5jAqhGsqLfc-HdbmdpHlxqVM_IXJ3N3B3K5PCaijAkVWLQnSnQ6CLBDRPuxLhJUtySInpU4fQ_Ub6MDX5t7bA3k3CMyLT9MPhOLHChwwuwBdr4V7G48oUbvC-HYLwyH6EiMu2xLDlNBdVauf5HSzS6b51phLQByTUk6dWeQ58jAYGx8TVyEQFCf2DOJfcRjZ7L2vdXj81ARXsz0nrUgHX1sRTDjg-Kq4MaMAG_AQ9kchodb0quM7IvgfSOdYqpfcWbEtPaznvpL8gGLjtjRRVwa9FPxKXE3cb8flbqbS4b8IfldwpiD3gZxvkehAsWkk9zD_lrFdCT01COg17RBT2XIgEbvLkmZbeXMFsHe7BXAghrmZ_ifFhKaiZeaFZJc0e7kZ5vek3FaNHzZv-HOYmGdBs4TQ0WjqaIsOciVoLKFgRxw7OUgzgSNUxLewgd91_O7GBzfgc1i5dWwR7dm5ZQWZAItzKGG_4i9belqxTUHLdKNTZ_D2R3doykmOiK9_Ch_Pv22SKolHN2-uR4UvIymo8k30Dbh828KQn5402b5W_P3eMHZVTfERdKiht4EsXF1zAJGJ21Nvd1zMVmhmbB4y3v3mAXJg_iRyYGxMBz1gPtgQcx1HyalTwzLncRVhF3Pdq9dBDLHv-Y7JBH4XaT4f6kOc9JtDANJF10xEZQUZyzAI8AWkGq8VfvghTAYZUazZ_3yYUMBFuunTp3gQMCZf8A3Gs3eIRIgOZKOS-y6nL3Qhe_wC3C3gyvmnuM5IgvgoWK4nq5XsDluYvLIClJACp_lh3VtMcXYB850Pqlf_VXspgK89199OCaiCQOLWLrS4i4mkg2RNBIwfsCWePZinRwXSzKTgqHcJr43zC0TCsaAWIlbGM0tz66L15rNQPNgcypBI');
+if(window.location.hash.indexOf('#simu=')>=0) setTimeout(chargerSimuDepuisUrl, 800);
 function saveNote(){
   var n=$i('pc-note');if(!n)return;
   localStorage.setItem('gones45_note',n.innerHTML);
@@ -5500,7 +5501,7 @@ function loadMondial2026() {
       var isFrance = tName === 'France';
       var qual = standings && idx < 2;
       html += '<div style="display:flex;justify-content:space-between;align-items:center;padding:2px 0;">';
-      html += '<div style="font-size:10px;color:'+(isFrance?'#4d84ff':isMine?'#1ed760':qual?'var(--t1)':'var(--t2)')+';font-weight:'+(isFrance||isMine||qual?'700':'400')+';white-space:nowrap;overflow:hidden;max-width:85px;">'+(isFrance?'🇫🇷 ':isMine?'⭐ ':idx<2&&standings?'✅ ':'')+tName+'</div>';
+      html += '<div style="display:flex;align-items:center;font-size:10px;color:'+(isFrance?'#4d84ff':isMine?'#1ed760':qual?'var(--t1)':'var(--t2)')+';font-weight:'+(isFrance||isMine||qual?'700':'400')+';white-space:nowrap;overflow:hidden;max-width:95px;padding:1px 0;">'+flagImg(tName,13)+(isMine&&!isFrance?'⭐ ':idx<2&&standings?'✅ ':'')+tName+'</div>';
       html += '<div style="font-size:10px;font-weight:700;color:'+(pts>0?'#f0b020':'var(--t3)')+';">'+pts+'</div>';
       html += '</div>';
     });
@@ -5850,7 +5851,10 @@ function renderSimuMain(el) {
   html += '<div style="font-size:20px;">🎮</div>';
   html += '<div style="font-size:15px;font-weight:800;color:var(--t1);">Simulation Coupe du Monde 2026</div>';
   html += '<div style="font-size:10px;color:var(--t3);margin-top:3px;">Entre les scores — les qualifiés avancent automatiquement</div>';
-  html += '<button onclick="resetSimu2026()" style="margin-top:8px;padding:5px 12px;background:rgba(255,69,69,.15);border:1px solid rgba(255,69,69,.3);border-radius:6px;color:#ff4545;font-size:10px;font-weight:700;cursor:pointer;">🗑 Réinitialiser</button>';
+  html += '<div style="display:flex;gap:8px;justify-content:center;margin-top:10px;">';
+  html += '<button onclick="partagerSimu()" style="padding:8px 16px;background:rgba(37,211,102,.2);border:1px solid rgba(37,211,102,.4);border-radius:8px;color:#25d366;font-size:12px;font-weight:800;cursor:pointer;">📱 Partager sur WhatsApp</button>';
+  html += '<button onclick="resetSimu2026()" style="padding:8px 12px;background:rgba(255,69,69,.15);border:1px solid rgba(255,69,69,.3);border-radius:8px;color:#ff4545;font-size:11px;font-weight:700;cursor:pointer;">🗑</button>';
+  html += '</div>';
   html += '</div>';
 
   // Groupes
@@ -5974,7 +5978,7 @@ function renderSimuGroup(gid) {
     html += '<input type="number" min="0" max="20" value="'+s.h+'" placeholder="-" id="simu_'+gid+'_'+k+'_h" style="width:36px;text-align:center;background:var(--bg3);border:1px solid var(--b2);border-radius:6px;color:var(--t1);font-size:16px;font-weight:800;padding:6px 2px;" oninput="onSimuScore(\''+gid+'\',\''+k+'\',true,this.value)">';
     html += '<div style="font-size:12px;color:var(--t3);font-weight:700;">—</div>';
     html += '<input type="number" min="0" max="20" value="'+s.a+'" placeholder="-" id="simu_'+gid+'_'+k+'_a" style="width:36px;text-align:center;background:var(--bg3);border:1px solid var(--b2);border-radius:6px;color:var(--t1);font-size:16px;font-weight:800;padding:6px 2px;" oninput="onSimuScore(\''+gid+'\',\''+k+'\',false,this.value)">';
-    html += '<div style="font-size:11px;font-weight:700;color:'+(p[1]==='France'?'#4d84ff':'var(--t1)')+';">'+p[1]+'</div>';
+    html += '<div style="display:flex;align-items:center;font-size:11px;font-weight:700;color:'+(p[1]==='France'?'#4d84ff':'var(--t1)')+';">'+flagImg(p[1],16)+p[1]+'</div>';
     html += '</div>';
   });
   html += '</div>';
@@ -6078,6 +6082,120 @@ function generateNextRound(currentKey, nextKey) {
   localStorage.setItem(simuKoKey(nextKey), JSON.stringify(nextMatches));
   var el = document.getElementById('ip-simu');
   if(el) renderSimuMain(el);
+}
+
+
+/* ══ PARTAGE SIMULATION ══ */
+function exportSimuData() {
+  // Collecter toutes les données de la simu
+  var data = {v:1, groups:{}, ko:{}};
+  SIMU_GROUPES.forEach(function(g){
+    var scores = getSimuGroupScores(g.id);
+    if(Object.keys(scores).length) data.groups[g.id] = scores;
+  });
+  ['r32','r16','qf','sf','f'].forEach(function(k){
+    var m = localStorage.getItem(simuKoKey(k));
+    if(m) data.ko[k] = JSON.parse(m);
+  });
+  return data;
+}
+
+function getSimuWinner() {
+  var fin = JSON.parse(localStorage.getItem(simuKoKey('f'))||'[]');
+  if(!fin.length) return null;
+  var m = fin[0];
+  if(m.sh===''||m.sa===''||m.sh===undefined) return null;
+  return parseInt(m.sh)>parseInt(m.sa)?m.home:parseInt(m.sh)<parseInt(m.sa)?m.away:null;
+}
+
+function partagerSimu() {
+  // Demander le prénom
+  var prenom = prompt('Ton prénom (pour identifier ta simulation) :', '');
+  if(!prenom) return;
+
+  var data = exportSimuData();
+  var groupCount = Object.keys(data.groups).length;
+  if(!groupCount) { alert('Ta simulation est vide ! Entre des scores d\'abord.'); return; }
+
+  data.nom = prenom.trim();
+  data.date = new Date().toLocaleDateString('fr-FR');
+
+  // Encoder en base64
+  var json = JSON.stringify(data);
+  var b64 = btoa(unescape(encodeURIComponent(json)));
+
+  // URL de partage
+  var url = window.location.origin + window.location.pathname + '#simu=' + b64;
+
+  // Trouver le champion simulé
+  var winner = getSimuWinner();
+  var flagW = winner ? (flagImg(winner,16)||'') : '';
+
+  // Message WhatsApp
+  var msg = '🏆 ' + prenom + ' — Ma simulation Coupe du Monde 2026 !\n';
+  if(winner) msg += '🥇 Mon champion : ' + winner + '\n';
+  msg += '👉 Voir ma simu complète :\n' + url;
+
+  var waUrl = 'https://wa.me/?text=' + encodeURIComponent(msg);
+
+  // Afficher modal de partage
+  var modal = document.getElementById('simu-share-modal');
+  if(!modal) {
+    modal = document.createElement('div');
+    modal.id = 'simu-share-modal';
+    modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:9999;display:flex;align-items:center;justify-content:center;padding:16px;';
+    document.body.appendChild(modal);
+  }
+
+  modal.innerHTML = '<div style="background:var(--s1);border:1px solid var(--b2);border-radius:16px;padding:20px;max-width:420px;width:100%;max-height:80vh;overflow-y:auto;">'
+    +'<div style="text-align:center;margin-bottom:16px;">'
+    +'<div style="font-size:28px;">📤</div>'
+    +'<div style="font-size:15px;font-weight:800;color:var(--t1);margin-top:6px;">Partager ta simulation</div>'
+    +'<div style="font-size:11px;color:var(--t3);margin-top:4px;">'+prenom+' · '+groupCount+'/12 groupes remplis'+(winner?' · 🏆 '+winner:'')+'</div>'
+    +'</div>'
+    +'<textarea id="simu-share-url" readonly style="width:100%;height:70px;background:rgba(255,255,255,.04);border:1px solid var(--b2);border-radius:8px;color:var(--t3);font-size:10px;padding:8px;resize:none;margin-bottom:12px;box-sizing:border-box;">'+url+'</textarea>'
+    +'<div style="display:flex;flex-direction:column;gap:8px;">'
+    +'<a href="'+waUrl+'" target="_blank" style="display:flex;align-items:center;justify-content:center;gap:10px;padding:14px;background:#25d366;border-radius:10px;color:#fff;font-size:14px;font-weight:800;text-decoration:none;">📱 Envoyer sur WhatsApp</a>'
+    +'<button onclick="var t=document.getElementById(\'simu-share-url\');t.select();document.execCommand(\'copy\');this.innerText=\'✅ Copié !\';" style="padding:12px;background:rgba(255,255,255,.06);border:1px solid var(--b2);border-radius:10px;color:var(--t1);font-size:13px;font-weight:700;cursor:pointer;">📋 Copier le lien</button>'
+    +'<button onclick="document.getElementById(\'simu-share-modal\').style.display=\'none\'" style="padding:10px;background:none;border:none;color:var(--t3);font-size:12px;cursor:pointer;">Fermer</button>'
+    +'</div>'
+    +'</div>';
+
+  modal.style.display = 'flex';
+  modal.onclick = function(e){ if(e.target===modal) modal.style.display='none'; };
+}
+
+function chargerSimuDepuisUrl() {
+  var hash = window.location.hash;
+  if(!hash || hash.indexOf('#simu=') < 0) return false;
+  try {
+    var b64 = hash.replace('#simu=','');
+    var json = decodeURIComponent(escape(atob(b64)));
+    var data = JSON.parse(json);
+    if(!data || !data.groups) return false;
+
+    // Charger dans localStorage
+    Object.keys(data.groups).forEach(function(gid){
+      localStorage.setItem(simuKey(gid), JSON.stringify(data.groups[gid]));
+    });
+    Object.keys(data.ko||{}).forEach(function(k){
+      localStorage.setItem(simuKoKey(k), JSON.stringify(data.ko[k]));
+    });
+
+    // Nettoyer l'URL
+    history.replaceState(null, '', window.location.pathname);
+
+    var nom = data.nom || 'quelqu\'un';
+    setTimeout(function(){
+      // Naviguer vers la simu
+      var btn = document.querySelector('[onclick*="t-simu"]');
+      if(btn) btn.click();
+      setTimeout(function(){
+        alert('🏆 Simulation de ' + nom + ' chargée ! (' + (data.date||'') + ')\nTu peux la modifier librement.');
+      }, 300);
+    }, 500);
+    return true;
+  } catch(e) { return false; }
 }
 
 function resetSimu2026() {
