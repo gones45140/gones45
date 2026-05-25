@@ -1368,6 +1368,28 @@ function logoErr(img){
   var s=img.nextSibling;
   if(s)s.style.display='flex';
 }
+var FLAG_EMOJIS={
+  'France':'🇫🇷','Espagne':'🇪🇸','Allemagne':'🇩🇪','Angleterre':'🏴󠁧󠁢󠁥󠁮󠁧󠁿',
+  'Italie':'🇮🇹','Portugal':'🇵🇹','Brésil':'🇧🇷','Argentine':'🇦🇷',
+  'Pays-Bas':'🇳🇱','Belgique':'🇧🇪','Croatie':'🇭🇷','Maroc':'🇲🇦',
+  'Sénégal':'🇸🇳','Colombie':'🇨🇴','Uruguay':'🇺🇾','Japon':'🇯🇵',
+  'Suisse':'🇨🇭','Norvège':'🇳🇴','Danemark':'🇩🇰','Mexique':'🇲🇽',
+  'Canada':'🇨🇦','États-Unis':'🇺🇸','Australie':'🇦🇺','Iran':'🇮🇷',
+  'Corée du Sud':'🇰🇷','Équateur':'🇪🇨','Autriche':'🇦🇹','Algérie':'🇩🇿',
+  'Égypte':'🇪🇬','Qatar':'🇶🇦','Tunisie':'🇹🇳','Ghana':'🇬🇭',
+  'Arabie saoudite':'🇸🇦','Jordanie':'🇯🇴','Nouvelle-Zélande':'🇳🇿',
+  'Panama':'🇵🇦','Suède':'🇸🇪','Ukraine':'🇺🇦','Turquie':'🇹🇷',
+  'Irak':'🇮🇶','Bolivie':'🇧🇴','Suriname':'🇸🇷','Écosse':'🏴󠁧󠁢󠁳󠁣󠁴󠁿',
+  'Paraguay':'🇵🇾','Haïti':'🇭🇹','Afrique du Sud':'🇿🇦','Cap-Vert':'🇨🇻',
+  'Curaçao':'🇨🇼','RD Congo':'🇨🇩','Ouzbékistan':'🇺🇿','Bosnie-Herzégovine':'🇧🇦',
+  'Tchéquie':'🇨🇿','Irlande':'🇮🇪','Nouvelle-Zélande':'🇳🇿','Pays de Galles':'🏴󠁧󠁢󠁷󠁬󠁳󠁿',
+  'Pologne':'🇵🇱','Serbie':'🇷🇸','Roumanie':'🇷🇴','Slovaquie':'🇸🇰',
+  'Hongrie':'🇭🇺','Grèce':'🇬🇷','Côte d\'Ivoire':'🇨🇮','Cameroun':'🇨🇲',
+  'Nigéria':'🇳🇬','Mali':'🇲🇱','Burkina Faso':'🇧🇫','Guinée':'🇬🇳',
+  'Chili':'🇨🇱','Pérou':'🇵🇪','Venezuela':'🇻🇪','États-Unis':'🇺🇸',
+  'Costa Rica':'🇨🇷','Honduras':'🇭🇳','Jamaïque':'🇯🇲','Guatemala':'🇬🇹',
+  'Arabie Saoudite':'🇸🇦','Asie':'🌏','Afrique':'🌍'
+};
 var SPORT_EMOJIS={
   'basket':'🏀','basketball':'🏀','nba':'🏀',
   'tennis':'🎾',
@@ -5342,10 +5364,11 @@ async function loadRugbySaisons(el, nom) {
 var NATIONS_MONDIALES = ['France','Espagne','Allemagne','Angleterre','Brésil','Argentine','Portugal','Pays-Bas','Belgique','Italie','Croatie','Maroc','Sénégal','Colombie','Uruguay','Japon','Suisse','Norvège','Danemark','Mexique','Canada','États-Unis','Australie','Iran','Corée du Sud','Équateur','Autriche','Algérie','Égypte','Qatar','Tunisie','Côte d\'Ivoire','Ouzbékistan','Écosse','Paraguay','Haïti','Afrique du Sud','Cap-Vert','Ghana','Arabie saoudite','Jordanie','Curaçao','Nouvelle-Zélande','Panama','RD Congo','Suède','Ukraine','Turquie','Irak','Bolivie','Suriname'];
 
 function showOngletMondialIfNational(nom) {
-  var btn = document.getElementById('itab-mondial');
-  if(!btn) return;
   var isNat = NATIONS_MONDIALES.indexOf(nom) >= 0;
-  btn.style.display = isNat ? '' : 'none';
+  var btn = document.getElementById('itab-mondial');
+  if(btn) btn.style.display = isNat ? '' : 'none';
+  var bsimu = document.getElementById('itab-simu');
+  if(bsimu) bsimu.style.display = isNat ? '' : 'none';
 }
 
 function loadMondial2026() {
