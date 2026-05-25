@@ -1396,6 +1396,7 @@ var FLAG_CDN={
   'Kazakhstan':'kz','Slovénie':'si','Azerbaïdjan':'az'
 };
 function flagUrl(name){ var c=FLAG_CDN[name]||FLAG_CDN[name.trim()]; return c?'https://flagcdn.com/w40/'+c+'.png':null; }
+function flagImg(name,sz){sz=sz||20;var c=FLAG_CDN[name]||FLAG_CDN[(name||"").trim()];if(!c)return '';return '<img src="https://flagcdn.com/w40/'+c+'.png" style="width:'+sz+'px;height:'+(sz*.67)+'px;object-fit:cover;border-radius:2px;vertical-align:middle;margin-right:4px;" loading="lazy">';}
 var FLAG_EMOJIS={
   'France':'🇫🇷','Espagne':'🇪🇸','Allemagne':'🇩🇪','Angleterre':'🏴󠁧󠁢󠁥󠁮󠁧󠁿',
   'Italie':'🇮🇹','Portugal':'🇵🇹','Brésil':'🇧🇷','Argentine':'🇦🇷',
@@ -5838,12 +5839,6 @@ function getSimuContainer() {
   var tab = document.getElementById('simu-tab-wrap');
   if(tab && document.getElementById('t-simu') && document.getElementById('t-simu').classList.contains('on')) return tab;
   return document.getElementById('ip-simu') || tab;
-}
-function flagImg(name, sz) {
-  sz = sz || 20;
-  var c = FLAG_CDN[name] || FLAG_CDN[name.trim()];
-  if(!c) return '';
-  return '<img src="https://flagcdn.com/w40/'+c+'.png" style="width:'+sz+'px;height:'+(sz*0.67)+'px;object-fit:cover;border-radius:2px;vertical-align:middle;margin-right:5px;" loading="lazy">';
 }
 function renderSimuMain(el) {
   if(!el) el = getSimuContainer();
