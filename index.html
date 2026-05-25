@@ -1082,6 +1082,7 @@ input[type="date"],input[type="time"]{color-scheme:dark;}
 </div>
 
 <!-- COMPARATEUR -->
+<div id="t-simu" class="tab"></div>
 <div id="t-comp" class="tab">
   <div class="sec" style="margin-top:0;">⚖️ Comparateur d'équipes</div>
   <div class="fc" style="margin-bottom:10px;">
@@ -1209,6 +1210,7 @@ input[type="date"],input[type="time"]{color-scheme:dark;}
   <button class="ni pc-only" onclick="showTab('t-bank',this)"><span>💳</span>Bank</button>
   <button class="ni pc-only" onclick="showTab('t-cal',this);loadCalendrier()"><span>📅</span>Agenda</button>
   <button class="ni pc-only" onclick="showTab('t-comp',this);" data-action-comp="init"><span>⚖️</span>Vs</button>
+  <button class="ni pc-only" onclick="showTab('t-simu',this);loadSimuTab();"><span>🎮</span>Simu</button>
 
   <div style="flex:1;display:flex;flex-direction:column;padding:0 8px 8px;min-height:0;" class="pc-note-area">
     <div id="pc-note" contenteditable="true" style="flex:1;min-height:100px;background:var(--bg3);border:1px solid var(--b1);border-radius:var(--r6);color:var(--t1);font-size:11px;line-height:1.6;padding:10px;outline:none;font-family:inherit;overflow-y:auto;word-break:break-word;" data-placeholder="Notes, cotes, screenshots…" oninput="saveNote()"></div>
@@ -1235,6 +1237,9 @@ input[type="date"],input[type="time"]{color-scheme:dark;}
       </button>
       <button onclick="showTab('t-links',$i('btn-plus-menu'));togglePlusMenu();" style="display:flex;align-items:center;gap:12px;padding:14px 12px;background:var(--bg3);border:none;border-radius:8px;color:var(--t1);font-size:13px;font-weight:700;cursor:pointer;text-align:left;margin-top:4px;">
         <span>🔗</span> Liens
+      </button>
+      <button onclick="showTab('t-simu',$i('btn-plus-menu'));togglePlusMenu();loadSimuTab();" style="display:flex;align-items:center;gap:12px;padding:14px 12px;background:var(--bg3);border:none;border-radius:8px;color:var(--t1);font-size:13px;font-weight:700;cursor:pointer;text-align:left;margin-top:4px;">
+        <span>🎮</span> Simulation Mondial
       </button>
       <button onclick="togglePlusMenu();" style="display:flex;align-items:center;gap:12px;padding:14px 12px;background:none;border:none;border-radius:8px;color:var(--t3);font-size:12px;font-weight:700;cursor:pointer;text-align:left;margin-top:4px;">
         <span>✕</span> Fermer
@@ -5776,13 +5781,33 @@ function calcSimuStandings(gid) {
   });
 }
 
+
+function loadSimuTab() {
+  var el = document.getElementById('t-simu');
+  if(!el) return;
+  // Créer un wrapper qui utilise renderSimuMain
+  if(!el.querySelector('#simu-main')) {
+    el.innerHTML = '<div style="max-width:700px;margin:0 auto;padding:12px 8px;" id="simu-tab-wrap"></div>';
+  }
+  var wrap = document.getElementById('simu-tab-wrap');
+  if(wrap) renderSimuMain(wrap);
+}
+
 function loadSimu2026() {
   var el = document.getElementById('ip-simu');
   if(!el) return;
   renderSimuMain(el);
 }
 
+function getSimuContainer() {
+  // Priorité au tab principal, sinon ip-simu dans la fiche équipe
+  var tab = document.getElementById('simu-tab-wrap');
+  if(tab && document.getElementById('t-simu') && document.getElementById('t-simu').classList.contains('on')) return tab;
+  return document.getElementById('ip-simu') || tab;
+}
 function renderSimuMain(el) {
+  if(!el) el = getSimuContainer();
+  if(!el) return;
   var html = '<div style="padding:4px 0;" id="simu-main">';
 
   // Header
@@ -5889,7 +5914,7 @@ function renderSimuMain(el) {
 }
 
 function renderSimuGroup(gid) {
-  var el = document.getElementById('ip-simu');
+  var el = getSimuContainer();
   if(!el) return;
   var g = SIMU_GROUPES.find(function(x){return x.id===gid;});
   var pairs = getGroupPairs(g.teams);
