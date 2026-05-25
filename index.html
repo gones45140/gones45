@@ -716,7 +716,6 @@ input[type="date"],input[type="time"]{color-scheme:dark;}
       <button class="itab" onclick="swInner('live',this);setTimeout(loadTeamLive,30)">🔴 Live</button>
       <button class="itab" id="itab-saisons">📊 Saisons</button>
       <button class="itab" id="itab-mondial" style="display:none;">🌍 Mondial</button>
-      <button class="itab" id="itab-simu" style="display:none;">🎮 Simu</button>
     </div>
     <div id="ip-bilan" class="ipanel on"></div>
     <div id="ip-graphiques" class="ipanel"></div>
@@ -725,7 +724,6 @@ input[type="date"],input[type="time"]{color-scheme:dark;}
     <div id="ip-live" class="ipanel"></div>
     <div id="ip-saisons" class="ipanel"></div>
     <div id="ip-mondial" class="ipanel"></div>
-    <div id="ip-simu" class="ipanel"></div>
   </div>
 </section>
 
@@ -5410,8 +5408,6 @@ function showOngletMondialIfNational(nom) {
   var isNat = NATIONS_MONDIALES.indexOf(nom) >= 0;
   var btn = document.getElementById('itab-mondial');
   if(btn) btn.style.display = isNat ? '' : 'none';
-  var bsimu = document.getElementById('itab-simu');
-  if(bsimu) bsimu.style.display = isNat ? '' : 'none';
 }
 
 function loadMondial2026() {
@@ -7221,7 +7217,6 @@ var _bcp=document.getElementById('btn-chat-params-pc');if(_bcp)_bcp.onclick=func
   var _bgen=document.getElementById('btn-generate-pari');if(_bgen)_bgen.onclick=function(){generatePariDuJour();};
   var _bsaisons=document.getElementById('itab-saisons');if(_bsaisons)_bsaisons.onclick=function(){swInner('saisons',this);};
   var _bmondial=document.getElementById('itab-mondial');if(_bmondial)_bmondial.onclick=function(){swInner('mondial',this);loadMondial2026();};
-  var _bsimu=document.getElementById('itab-simu');if(_bsimu)_bsimu.onclick=function(){swInner('simu',this);loadSimu2026();};
   var _brcal=document.getElementById('btn-refresh-cal');if(_brcal)_brcal.onclick=loadCalendrier;
   var _bcomp=document.getElementById('btn-comparer');if(_bcomp)_bcomp.onclick=runComparateur;
   document.querySelectorAll('[data-action-comp="init"]').forEach(function(b){
