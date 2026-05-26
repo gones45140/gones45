@@ -715,6 +715,7 @@ input[type="date"],input[type="time"]{color-scheme:dark;}
       <button class="itab" onclick="swInner('types',this)">Types</button>
       <button class="itab" onclick="swInner('live',this);setTimeout(loadTeamLive,30)">🔴 Live</button>
       <button class="itab" id="itab-saisons">📊 Saisons</button>
+      <button class="itab" id="itab-liens-equipe" onclick="swInner('liens-equipe',this);loadLiensEquipe();">🔗 Liens</button>
       <button class="itab" id="itab-mondial" style="display:none;">🌍 Mondial</button>
     </div>
     <div id="ip-bilan" class="ipanel on"></div>
@@ -723,6 +724,7 @@ input[type="date"],input[type="time"]{color-scheme:dark;}
     <div id="ip-types" class="ipanel"></div>
     <div id="ip-live" class="ipanel"></div>
     <div id="ip-saisons" class="ipanel"></div>
+    <div id="ip-liens-equipe" class="ipanel"></div>
     <div id="ip-mondial" class="ipanel"></div>
   </div>
 </section>
@@ -1014,6 +1016,7 @@ input[type="date"],input[type="time"]{color-scheme:dark;}
       <button class="btn" style="background:var(--s1);color:var(--t2);border:1px solid var(--b2);" onclick="importData()">⬆ Importer</button>
     </div>
     <button class="btn" style="margin-top:8px;background:rgba(0,107,255,.18);color:#4d9fff;border:1px solid rgba(77,132,255,.35);font-size:12px;" onclick="loadFromDropbox()">☁️ Charger depuis Dropbox</button>
+    <button class="btn" style="margin-top:8px;background:rgba(30,215,96,.15);color:#1ed760;border:1px solid rgba(30,215,96,.3);font-size:12px;" onclick="partagerProfil()">📤 Partager mon profil</button>
     <div id="dbx-load-status" style="margin-top:6px;font-size:11px;font-weight:700;text-align:center;"></div>
   </div>
   <div class="fc" style="border-style:dashed;">
@@ -1381,6 +1384,61 @@ function toggleQuickStat(btn) {
   if(i>=0) window._quickStats.splice(i,1);
   else window._quickStats.push(stat);
   loadTeamSaisons();
+}
+
+
+async function _loadScorers(el) {
+  var nom = el.dataset.nom;
+  var s = el.dataset.saison;
+  el.innerHTML = '⏳ Chargement...';
+
+  // Trouver le code ligue depuis le cache
+  var teamId = null;
+  for(var k in TEAM_IDS){ if(k.toLowerCase()===nom.toLowerCase()||(nom.toLowerCase().indexOf(k.toLowerCase())>=0)){teamId=TEAM_IDS[k];break;} }
+  if(!teamId){ el.innerHTML='<div style="color:var(--t3);font-size:10px;text-align:center;">Équipe non reconnue</div>'; return; }
+
+  var cached = _saisonsCache && _saisonsCache[teamId] && _saisonsCache[teamId][s];
+  var leagueCode = null;
+  if(cached) {
+    var LEAGUE_CODES = ['PL','PD','BL1','SA','FL1','PPL'];
+    for(var i=0;i<cached.length;i++){
+      var c = cached[i].competition && cached[i].competition.code;
+      if(c && LEAGUE_CODES.indexOf(c)>=0){ leagueCode=c; break; }
+    }
+  }
+  if(!leagueCode){ el.innerHTML='<div style="color:var(--t3);font-size:10px;text-align:center;">Ligue non disponible</div>'; return; }
+
+  try {
+    var data = await fdFetch('/v4/competitions/'+leagueCode+'/scorers?season='+s+'&limit=50');
+    if(!data||!data.scorers){ el.innerHTML='<div style="color:var(--t3);font-size:10px;text-align:center;">Données non disponibles</div>'; return; }
+
+    // Filtrer les joueurs de l'équipe
+    var teamScorers = data.scorers.filter(function(sc){ return sc.team && sc.team.id === teamId; });
+
+    if(!teamScorers.length){ el.outerHTML='<div style="font-size:10px;color:var(--t3);text-align:center;padding:8px;">Aucun buteur trouvé pour cette équipe</div>'; return; }
+
+    var html = '<div style="font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#4f5d88;margin-bottom:8px;">⚽ Top buteurs '+s+'-'+(parseInt(s)+1)+'</div>';
+    html += '<div style="display:flex;flex-direction:column;gap:4px;">';
+    teamScorers.forEach(function(sc, i){
+      var p = sc.player;
+      var goals = sc.goals || 0;
+      var assists = sc.assists || 0;
+      var nat = p&&p.nationality||'';
+      var natCode = FLAG_CDN[nat]||null;
+      html += '<div style="display:flex;align-items:center;gap:8px;padding:7px 10px;background:rgba(255,255,255,.03);border-radius:6px;border:1px solid rgba(255,255,255,.05);">';
+      html += '<div style="font-size:11px;font-weight:800;color:#4f5d88;width:18px;text-align:center;">'+(i+1)+'</div>';
+      if(natCode) html += '<img src="https://flagcdn.com/w20/'+natCode+'.png" style="width:18px;height:12px;object-fit:cover;border-radius:2px;" loading="lazy">';
+      html += '<div style="flex:1;font-size:11px;font-weight:700;color:var(--t1);">'+(p&&p.name||'?')+'</div>';
+      html += '<div style="display:flex;gap:8px;">';
+      html += '<div style="text-align:center;"><div style="font-size:14px;font-weight:800;color:#1ed760;">'+goals+'</div><div style="font-size:8px;color:var(--t3);">buts</div></div>';
+      if(assists) html += '<div style="text-align:center;"><div style="font-size:14px;font-weight:800;color:#4d84ff;">'+assists+'</div><div style="font-size:8px;color:var(--t3);">passes</div></div>';
+      html += '</div></div>';
+    });
+    html += '</div>';
+    el.outerHTML = html;
+  } catch(e) {
+    el.innerHTML = '<div style="color:var(--t3);font-size:10px;text-align:center;">Erreur de chargement</div>';
+  }
 }
 
 async function _loadStd(el) {
@@ -4223,6 +4281,7 @@ function resetChat(){
 
 localStorage.setItem('gones45_dbx_token','sl.u.AGhBCqnmWUxbU0tdeMSXTeodWfHcx6CsLZpS2B51mZRlQLDTdM6tBwBlpQbsGPF0n7gUSPrmGn1zj7L9VynnPF6ZSwCFMOgGWT2QckUF49Bmwq1PeRBJYUbcSo-77CPcCTlaXWCIAiMKAytR1UKvlLm7qn1xmZ1T8cZcCX9lqOqkVPRQenzqhmYOKoJJ91cO6nc9_Y9a7s9miN_q7DwVoUutucbLFMRvjy31DlipjxEbDaVhviOiIaaz0VzZsN3L9QEmTASGuE-vWB6QFUUhOZ-TJb4UeyEG9iz0bF-LedTVsSRMmax2yHVKF9ecD0nuMhIa9cE3qcZ6HqPYzu_Nl14dRZ4IFRORuPYD4uWEgiEIaTl3EBfPZPWB0uM8CIarVQh8YcW5QDv26IUIWpZ1bQ7PGPOW-bQog7CKA1yApPxZ-67upPzkUAT_rR529H-K_k9wYMGk_tv7ojT_9SnF2tm5xbm8QXz7UsEG-CKHVockwMJ8jY3U_EbyXy4XGnw66-afjlXFMVxhfQUnNmxlLILs36JKN4uPeS6bNbksxI_XbGM_6-wClAsLCOg5jAqhGsqLfc-HdbmdpHlxqVM_IXJ3N3B3K5PCaijAkVWLQnSnQ6CLBDRPuxLhJUtySInpU4fQ_Ub6MDX5t7bA3k3CMyLT9MPhOLHChwwuwBdr4V7G48oUbvC-HYLwyH6EiMu2xLDlNBdVauf5HSzS6b51phLQByTUk6dWeQ58jAYGx8TVyEQFCf2DOJfcRjZ7L2vdXj81ARXsz0nrUgHX1sRTDjg-Kq4MaMAG_AQ9kchodb0quM7IvgfSOdYqpfcWbEtPaznvpL8gGLjtjRRVwa9FPxKXE3cb8flbqbS4b8IfldwpiD3gZxvkehAsWkk9zD_lrFdCT01COg17RBT2XIgEbvLkmZbeXMFsHe7BXAghrmZ_ifFhKaiZeaFZJc0e7kZ5vek3FaNHzZv-HOYmGdBs4TQ0WjqaIsOciVoLKFgRxw7OUgzgSNUxLewgd91_O7GBzfgc1i5dWwR7dm5ZQWZAItzKGG_4i9belqxTUHLdKNTZ_D2R3doykmOiK9_Ch_Pv22SKolHN2-uR4UvIymo8k30Dbh828KQn5402b5W_P3eMHZVTfERdKiht4EsXF1zAJGJ21Nvd1zMVmhmbB4y3v3mAXJg_iRyYGxMBz1gPtgQcx1HyalTwzLncRVhF3Pdq9dBDLHv-Y7JBH4XaT4f6kOc9JtDANJF10xEZQUZyzAI8AWkGq8VfvghTAYZUazZ_3yYUMBFuunTp3gQMCZf8A3Gs3eIRIgOZKOS-y6nL3Qhe_wC3C3gyvmnuM5IgvgoWK4nq5XsDluYvLIClJACp_lh3VtMcXYB850Pqlf_VXspgK89199OCaiCQOLWLrS4i4mkg2RNBIwfsCWePZinRwXSzKTgqHcJr43zC0TCsaAWIlbGM0tz66L15rNQPNgcypBI');
 if(window.location.hash.indexOf('#simu=')>=0) setTimeout(chargerSimuDepuisUrl, 800);
+if(window.location.hash.indexOf('#profil=')>=0) setTimeout(chargerProfilDepuisUrl, 800);
 function saveNote(){
   var n=$i('pc-note');if(!n)return;
   localStorage.setItem('gones45_note',n.innerHTML);
@@ -5440,6 +5499,149 @@ function showOngletMondialIfNational(nom) {
   if(btn) btn.style.display = isNat ? '' : 'none';
 }
 
+
+function getLiensPerso(nom) {
+  var all = JSON.parse(localStorage.getItem('g45_liens_perso')||'{}');
+  return all[nom] || [];
+}
+function saveLiensPerso(nom, liens) {
+  var all = JSON.parse(localStorage.getItem('g45_liens_perso')||'{}');
+  all[nom] = liens;
+  localStorage.setItem('g45_liens_perso', JSON.stringify(all));
+  saveToDropbox();
+}
+
+function loadLiensEquipe() {
+  var el = document.getElementById('ip-liens-equipe');
+  if(!el) return;
+  var nom = _currentTeam || '';
+  var u = (typeof state !== 'undefined' && state.u) ? state.u.find(function(x){return x.n===nom;}) : null;
+
+  var sofaUrl  = (u&&u.sofascore)  || SOFASCORE_LINKS[nom]  || ('https://www.sofascore.com/search#q='+encodeURIComponent(nom));
+  var flashUrl = (u&&u.flashscore) || FLASHSCORE_LINKS[nom] || ('https://www.flashscore.fr/recherche/?q='+encodeURIComponent(nom));
+  var tmUrl    = 'https://www.transfermarkt.fr/schnellsuche/ergebnis/schnellsuche?query='+encodeURIComponent(nom);
+  var fbrefUrl = 'https://fbref.com/fr/search/search.fcgi?search='+encodeURIComponent(nom);
+  var wikiUrl  = 'https://fr.wikipedia.org/wiki/'+encodeURIComponent(nom.replace(/ /g,'_'));
+  var ytUrl    = 'https://www.youtube.com/results?search_query='+encodeURIComponent(nom+' 2026 highlights');
+  var col = u ? u.color : '#4d84ff';
+  var liensPerso = getLiensPerso(nom);
+
+  var ls = 'display:flex;align-items:center;gap:12px;padding:12px 14px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:10px;margin-bottom:8px;text-decoration:none;';
+  var lsBtn = 'display:flex;align-items:center;gap:12px;padding:12px 14px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:10px;margin-bottom:8px;';
+
+  var html = '<div style="padding:4px 0;">';
+
+  // Header
+  html += '<div style="display:flex;align-items:center;gap:12px;margin-bottom:16px;">';
+  html += logoHtml(nom, col, u?u.abbr:nom.substring(0,3), 40);
+  html += '<div><div style="font-size:16px;font-weight:800;color:var(--t1);">'+nom+'</div>';
+  html += '<div style="font-size:10px;color:var(--t3);">Liens & ressources</div></div>';
+  html += '</div>';
+
+  // Liens par défaut
+  var DEFAULT_LIENS = [
+    {url:sofaUrl,  ico:'⚡', label:'Sofascore',     desc:'Stats live, compos, cotes',    col:'#ff7b54', key:'sofa'},
+    {url:flashUrl, ico:'⚡', label:'Flashscore',    desc:'Résultats, cotes, H2H',         col:'#f0b020', key:'flash'},
+    {url:fbrefUrl, ico:'📈', label:'FBref',          desc:'Stats avancées xG, passes',    col:'#4d84ff', key:'fbref'},
+    {url:tmUrl,    ico:'💰', label:'Transfermarkt',  desc:'Valeurs, transferts, contrats', col:'#1ed760', key:'tm'},
+    {url:wikiUrl,  ico:'📖', label:'Wikipedia',      desc:'Histoire, palmarès, stade',    col:'#a78bfa', key:'wiki'},
+    {url:ytUrl,    ico:'▶️', label:'YouTube',        desc:'Highlights & résumés',          col:'#ff0000', key:'yt'},
+  ];
+
+  // Liens masqués par l'utilisateur
+  var hidden = JSON.parse(localStorage.getItem('g45_liens_hidden_'+nom)||'[]');
+
+  // Liens actifs
+  var actifs = DEFAULT_LIENS.filter(function(l){ return hidden.indexOf(l.key)<0; });
+
+  if(actifs.length) {
+    html += '<div class="cwrap" style="margin-bottom:10px;">';
+    html += '<div style="font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#4f5d88;margin-bottom:10px;">Liens</div>';
+    actifs.forEach(function(l){
+      html += '<div style="'+lsBtn+'">';
+      html += '<a href="'+l.url+'" target="_blank" style="display:flex;align-items:center;gap:12px;flex:1;text-decoration:none;">';
+      html += '<div style="font-size:20px;">'+l.ico+'</div>';
+      html += '<div style="flex:1;"><div style="font-size:13px;font-weight:700;color:'+l.col+';">'+l.label+'</div>';
+      html += '<div style="font-size:10px;color:var(--t3);">'+l.desc+'</div></div>';
+      html += '<div style="color:var(--t3);">→</div></a>';
+      html += '<button onclick="toggleLienHidden(\''+nom+'\',\''+l.key+'\')" style="background:rgba(255,69,69,.1);border:1px solid rgba(255,69,69,.2);border-radius:6px;color:#ff4545;font-size:10px;padding:4px 8px;cursor:pointer;flex-shrink:0;">🗑</button>';
+      html += '</div>';
+    });
+    html += '</div>';
+  }
+
+  // Liens perso
+  if(liensPerso.length) {
+    html += '<div class="cwrap" style="margin-bottom:10px;">';
+    html += '<div style="font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#4f5d88;margin-bottom:10px;">⭐ Mes liens</div>';
+    liensPerso.forEach(function(l, i){
+      html += '<div style="'+lsBtn+'">';
+      html += '<a href="'+l.url+'" target="_blank" style="display:flex;align-items:center;gap:12px;flex:1;text-decoration:none;">';
+      html += '<div style="font-size:20px;">'+l.ico+'</div>';
+      html += '<div style="flex:1;"><div style="font-size:13px;font-weight:700;color:#7aaaff;">'+l.label+'</div>';
+      html += '<div style="font-size:10px;color:var(--t3);">'+l.url.substring(0,40)+'...</div></div>';
+      html += '<div style="color:var(--t3);">→</div></a>';
+      html += '<button onclick="supprimerLienPerso(\''+nom+'\','+i+')" style="background:rgba(255,69,69,.1);border:1px solid rgba(255,69,69,.2);border-radius:6px;color:#ff4545;font-size:10px;padding:4px 8px;cursor:pointer;flex-shrink:0;">🗑</button>';
+      html += '</div>';
+    });
+    html += '</div>';
+  }
+
+  // Liens masqués — réactiver
+  if(hidden.length) {
+    html += '<div class="cwrap" style="margin-bottom:10px;">';
+    html += '<div style="font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#4f5d88;margin-bottom:8px;">Liens masqués</div>';
+    DEFAULT_LIENS.filter(function(l){return hidden.indexOf(l.key)>=0;}).forEach(function(l){
+      html += '<button onclick="toggleLienHidden(\''+nom+'\',\''+l.key+'\')" style="display:flex;align-items:center;gap:8px;padding:7px 10px;background:rgba(255,255,255,.02);border:1px solid rgba(255,255,255,.06);border-radius:8px;color:var(--t3);font-size:11px;cursor:pointer;width:100%;margin-bottom:4px;text-align:left;">+ Réafficher '+l.label+'</button>';
+    });
+    html += '</div>';
+  }
+
+  // Ajouter un lien perso
+  html += '<div class="cwrap">';
+  html += '<div style="font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#4f5d88;margin-bottom:10px;">➕ Ajouter un lien</div>';
+  html += '<input id="lien-perso-label" class="fi" placeholder="Nom (ex: Stats officiel)" style="margin-bottom:6px;font-size:12px;">';
+  html += '<input id="lien-perso-url" class="fi" placeholder="https://..." style="margin-bottom:6px;font-size:12px;">';
+  html += '<div style="display:flex;gap:6px;margin-bottom:6px;">';
+  ['⭐','📊','📰','🎥','🔗','🏆','💡','📱'].forEach(function(ico){
+    html += '<button onclick="document.getElementById(\'lien-perso-ico\').value=\''+ico+'\';document.querySelectorAll(\'.ico-btn\').forEach(function(b){b.style.opacity=\'.4\'});this.style.opacity=\'1\';" class="ico-btn" style="font-size:18px;background:none;border:none;cursor:pointer;opacity:.4;padding:2px;">'+ico+'</button>';
+  });
+  html += '</div>';
+  html += '<input id="lien-perso-ico" type="hidden" value="⭐">';
+  html += '<button onclick="ajouterLienPerso(\''+nom+'\')" style="width:100%;padding:10px;background:rgba(77,132,255,.15);border:1px solid rgba(77,132,255,.3);border-radius:8px;color:#4d84ff;font-size:12px;font-weight:700;cursor:pointer;">➕ Ajouter</button>';
+  html += '</div>';
+
+  html += '</div>';
+  el.innerHTML = html;
+}
+
+function toggleLienHidden(nom, key) {
+  var hidden = JSON.parse(localStorage.getItem('g45_liens_hidden_'+nom)||'[]');
+  var i = hidden.indexOf(key);
+  if(i>=0) hidden.splice(i,1); else hidden.push(key);
+  localStorage.setItem('g45_liens_hidden_'+nom, JSON.stringify(hidden));
+  loadLiensEquipe();
+}
+
+function ajouterLienPerso(nom) {
+  var label = (document.getElementById('lien-perso-label')||{}).value||'';
+  var url   = (document.getElementById('lien-perso-url')||{}).value||'';
+  var ico   = (document.getElementById('lien-perso-ico')||{}).value||'⭐';
+  if(!label||!url) { alert('Nom et URL requis'); return; }
+  if(url.indexOf('http')<0) url = 'https://'+url;
+  var liens = getLiensPerso(nom);
+  liens.push({label:label, url:url, ico:ico});
+  saveLiensPerso(nom, liens);
+  loadLiensEquipe();
+}
+
+function supprimerLienPerso(nom, idx) {
+  var liens = getLiensPerso(nom);
+  liens.splice(idx, 1);
+  saveLiensPerso(nom, liens);
+  loadLiensEquipe();
+}
+
 function loadMondial2026() {
   var el = document.getElementById('ip-mondial');
   if(!el) return;
@@ -6134,6 +6336,165 @@ function getSimuWinner() {
   var m = fin[0];
   if(m.sh===''||m.sa===''||m.sh===undefined) return null;
   return parseInt(m.sh)>parseInt(m.sa)?m.home:parseInt(m.sh)<parseInt(m.sa)?m.away:null;
+}
+
+
+/* ══ PARTAGE PROFIL ══ */
+function partagerProfil() {
+  var prenom = prompt('Ton prénom :', '');
+  if(!prenom) return;
+
+  // Données légères à partager
+  var total = Object.values(state.b||{}).reduce(function(a,v){return a+parseFloat(v||0);},0);
+  var archive = (state.a||[]).slice(-100); // 100 derniers paris max
+  var enCours = (state.p||[]).slice(0,20);
+
+  var data = {
+    v: 1,
+    nom: prenom.trim(),
+    date: new Date().toLocaleDateString('fr-FR'),
+    capital: total,
+    bankroll: state.b||{},
+    a: archive,
+    p: enCours,
+    u: (state.u||[]).map(function(u){return {n:u.n,color:u.color,abbr:u.abbr,sport:u.sport,s:u.s,l:u.l};})
+  };
+
+  var json = JSON.stringify(data);
+  var b64 = btoa(unescape(encodeURIComponent(json)));
+  var url = window.location.origin + window.location.pathname + '#profil=' + b64;
+
+  // Stats rapides
+  var wins = archive.filter(function(h){return h.win;}).length;
+  var pct = archive.length ? Math.round(wins/archive.length*100) : 0;
+  var profit = archive.reduce(function(a,h){return a+(h.profit||0);},0);
+
+  var msg = '🎯 ' + prenom + ' — Mon profil GONES45\n';
+  msg += '💰 Capital : ' + total.toFixed(2) + '€\n';
+  msg += '📊 ' + archive.length + ' paris · ' + pct + '% réussite · ' + (profit>=0?'+':'') + profit.toFixed(2) + '€\n';
+  msg += '👉 Voir mon profil : ' + url;
+
+  var waUrl = 'https://wa.me/?text=' + encodeURIComponent(msg);
+
+  // Modal
+  var modal = document.getElementById('profil-share-modal');
+  if(!modal) {
+    modal = document.createElement('div');
+    modal.id = 'profil-share-modal';
+    modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:9999;display:flex;align-items:center;justify-content:center;padding:16px;';
+    document.body.appendChild(modal);
+  }
+
+  modal.innerHTML = '<div style="background:var(--s1);border:1px solid var(--b2);border-radius:16px;padding:20px;max-width:420px;width:100%;">'
+    +'<div style="text-align:center;margin-bottom:16px;">'
+    +'<div style="font-size:28px;">📤</div>'
+    +'<div style="font-size:15px;font-weight:800;color:var(--t1);margin-top:6px;">Partager mon profil</div>'
+    +'<div style="font-size:11px;color:var(--t3);margin-top:4px;">'+prenom+' · '+archive.length+' paris · '+total.toFixed(2)+'€</div>'
+    +'</div>'
+    +'<textarea readonly style="width:100%;height:60px;background:rgba(255,255,255,.04);border:1px solid var(--b2);border-radius:8px;color:var(--t3);font-size:10px;padding:8px;resize:none;margin-bottom:12px;box-sizing:border-box;">'+url+'</textarea>'
+    +'<div style="display:flex;flex-direction:column;gap:8px;">'
+    +'<a href="'+waUrl+'" target="_blank" style="display:flex;align-items:center;justify-content:center;gap:10px;padding:14px;background:#25d366;border-radius:10px;color:#fff;font-size:14px;font-weight:800;text-decoration:none;">📱 Envoyer sur WhatsApp</a>'
+    +'<button onclick="var t=this.parentNode.previousSibling;t.select();document.execCommand(\'copy\');this.innerText=\'✅ Copié !\';" style="padding:12px;background:rgba(255,255,255,.06);border:1px solid var(--b2);border-radius:10px;color:var(--t1);font-size:13px;font-weight:700;cursor:pointer;">📋 Copier le lien</button>'
+    +'<button onclick="document.getElementById(\'profil-share-modal\').style.display=\'none\'" style="padding:10px;background:none;border:none;color:var(--t3);font-size:12px;cursor:pointer;">Fermer</button>'
+    +'</div></div>';
+
+  modal.style.display = 'flex';
+  modal.onclick = function(e){ if(e.target===modal) modal.style.display='none'; };
+}
+
+function chargerProfilDepuisUrl() {
+  var hash = window.location.hash;
+  if(!hash || hash.indexOf('#profil=') < 0) return false;
+  try {
+    var b64 = hash.replace('#profil=','');
+    var json = decodeURIComponent(escape(atob(b64)));
+    var data = JSON.parse(json);
+    if(!data || !data.nom) return false;
+
+    history.replaceState(null, '', window.location.pathname);
+
+    // Afficher dans une vue lecture seule
+    setTimeout(function(){
+      afficherProfilInvite(data);
+    }, 500);
+    return true;
+  } catch(e) { return false; }
+}
+
+function afficherProfilInvite(data) {
+  var modal = document.getElementById('profil-invite-modal');
+  if(!modal) {
+    modal = document.createElement('div');
+    modal.id = 'profil-invite-modal';
+    modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.85);z-index:9999;display:flex;align-items:flex-start;justify-content:center;padding:16px;overflow-y:auto;';
+    document.body.appendChild(modal);
+  }
+
+  var archive = data.a || [];
+  var wins = archive.filter(function(h){return h.win;}).length;
+  var pct = archive.length ? Math.round(wins/archive.length*100) : 0;
+  var profit = archive.reduce(function(a,h){return a+(h.profit||0);},0);
+  var capital = data.capital || 0;
+  var enCours = data.p || [];
+
+  var html = '<div style="background:var(--s1);border:1px solid var(--b2);border-radius:16px;padding:20px;max-width:500px;width:100%;margin:16px auto;">';
+
+  // Header
+  html += '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">';
+  html += '<div><div style="font-size:18px;font-weight:800;color:var(--t1);">🎯 '+data.nom+'</div>';
+  html += '<div style="font-size:10px;color:var(--t3);">Profil partagé · '+data.date+'</div></div>';
+  html += '<button onclick="document.getElementById(\'profil-invite-modal\').style.display=\'none\'" style="background:rgba(255,255,255,.06);border:1px solid var(--b2);border-radius:8px;color:var(--t2);font-size:12px;padding:6px 12px;cursor:pointer;">✕ Fermer</button>';
+  html += '</div>';
+
+  // Stats principales
+  html += '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:14px;">';
+  [{l:'Capital',v:capital.toFixed(2)+'€',c:'#f0b020'},{l:'Réussite',v:pct+'%',c:pct>=55?'#1ed760':pct>=45?'#f0b020':'#ff4545'},{l:'Profit',v:(profit>=0?'+':'')+profit.toFixed(2)+'€',c:profit>=0?'#1ed760':'#ff4545'}].forEach(function(s){
+    html += '<div style="background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:10px;padding:12px;text-align:center;">';
+    html += '<div style="font-size:18px;font-weight:800;color:'+s.c+';">'+s.v+'</div>';
+    html += '<div style="font-size:9px;color:var(--t3);margin-top:2px;">'+s.l+'</div></div>';
+  });
+  html += '</div>';
+
+  // Paris en cours
+  if(enCours.length) {
+    html += '<div style="background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.08);border-radius:10px;padding:12px;margin-bottom:12px;">';
+    html += '<div style="font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#4f5d88;margin-bottom:8px;">🔴 Paris en cours ('+enCours.length+')</div>';
+    enCours.slice(0,5).forEach(function(p){
+      html += '<div style="display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid rgba(255,255,255,.05);">';
+      html += '<div style="font-size:10px;font-weight:700;color:var(--t1);flex:1;">'+(p.n||p.nom||'?')+'</div>';
+      html += '<div style="font-size:10px;color:#4d84ff;">@'+(p.cote||'?')+'</div>';
+      html += '<div style="font-size:10px;color:var(--t3);">'+(p.mise||'?')+'€</div>';
+      html += '</div>';
+    });
+    html += '</div>';
+  }
+
+  // Derniers paris
+  if(archive.length) {
+    html += '<div style="background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.08);border-radius:10px;padding:12px;margin-bottom:12px;">';
+    html += '<div style="font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#4f5d88;margin-bottom:8px;">📊 Derniers paris</div>';
+    archive.slice(-10).reverse().forEach(function(h){
+      var rc = h.win?'#1ed760':h.nul?'#f0b020':'#ff4545';
+      var rl = h.win?'V':h.nul?'N':'D';
+      html += '<div style="display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:1px solid rgba(255,255,255,.04);">';
+      html += '<div style="width:18px;height:18px;border-radius:50%;background:'+rc+';display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:800;color:#fff;flex-shrink:0;">'+rl+'</div>';
+      html += '<div style="font-size:10px;font-weight:700;color:var(--t1);flex:1;">'+(h.n||'?')+'</div>';
+      html += '<div style="font-size:10px;color:'+rc+';">'+(h.profit>=0?'+':'')+parseFloat(h.profit||0).toFixed(2)+'€</div>';
+      html += '</div>';
+    });
+    html += '</div>';
+  }
+
+  // CTA télécharger l'app
+  html += '<div style="text-align:center;padding:12px;background:rgba(77,132,255,.08);border:1px solid rgba(77,132,255,.2);border-radius:10px;">';
+  html += '<div style="font-size:12px;color:var(--t1);font-weight:700;margin-bottom:6px;">🎮 Essaie GONES45 !</div>';
+  html += '<div style="font-size:10px;color:var(--t3);">L\'app de suivi de paris sportifs</div>';
+  html += '</div>';
+
+  html += '</div>';
+  modal.innerHTML = html;
+  modal.style.display = 'flex';
+  modal.onclick = function(e){ if(e.target===modal) modal.style.display='none'; };
 }
 
 function partagerSimu() {
@@ -6999,6 +7360,9 @@ function renderSaisonsChart(el, results, nom) {
     } else {
       html += '<div id="std-'+s+'" data-nom="'+nom+'" data-tid="'+teamId+'" data-saison="'+s+'" style="font-size:10px;color:var(--t3);text-align:center;padding:8px;cursor:pointer;background:rgba(255,255,255,.03);border-radius:6px;" onclick="_loadStd(this)">📊 Charger le classement →</div>';
     }
+
+    // ── Top buteurs ──
+    html += '<div id="scorers-placeholder-'+s+'" data-nom="'+nom+'" data-saison="'+s+'" style="font-size:10px;color:var(--t3);text-align:center;padding:8px;cursor:pointer;background:rgba(255,255,255,.03);border-radius:6px;margin-top:8px;" onclick="_loadScorers(this)">⚽ Charger les top buteurs →</div>';
 
     html += '</div>'; // cwrap
   });
