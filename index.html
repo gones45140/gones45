@@ -6977,11 +6977,11 @@ function renderSaisonsChart(el, results, nom) {
 
     // ── Classement de la ligue ──
     if(!_standingsCache) _standingsCache = {};
-    var cacheKey = nom + '_' + saison;
+    var cacheKey = nom + '_' + s;
     if(_standingsCache[cacheKey]) {
-      html += renderStandingsTable(_standingsCache[cacheKey], teamId, col);
+      html += renderStandingsTable(_standingsCache[cacheKey], teamId);
     } else {
-      html += '<div id="std-'+saison+'" data-nom="'+nom+'" data-tid="'+teamId+'" data-saison="'+saison+'" style="font-size:10px;color:var(--t3);text-align:center;padding:8px;cursor:pointer;background:rgba(255,255,255,.03);border-radius:6px;" onclick="_loadStd(this)">📊 Charger le classement →</div>';
+      html += '<div id="std-'+s+'" data-nom="'+nom+'" data-tid="'+teamId+'" data-saison="'+s+'" style="font-size:10px;color:var(--t3);text-align:center;padding:8px;cursor:pointer;background:rgba(255,255,255,.03);border-radius:6px;" onclick="_loadStd(this)">📊 Charger le classement →</div>';
     }
 
     html += '</div>'; // cwrap
