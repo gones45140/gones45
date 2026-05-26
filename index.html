@@ -1372,6 +1372,33 @@ function logoErr(img){
   if(s)s.style.display='flex';
 }
 var _statFilter = 'global';
+var _standingsCache = {};
+
+function toggleQuickStat(btn) {
+  var stat = btn.dataset.qs;
+  if(!window._quickStats) window._quickStats = ['O2.5','BTS'];
+  var i = window._quickStats.indexOf(stat);
+  if(i>=0) window._quickStats.splice(i,1);
+  else window._quickStats.push(stat);
+  loadTeamSaisons();
+}
+
+async function _loadStd(el) {
+  var nom = el.dataset.nom;
+  var teamId = parseInt(el.dataset.tid);
+  var saison = el.dataset.saison;
+  el.innerHTML = '⏳ Chargement...';
+  // Récupérer les matchs depuis le cache saison
+  var matches = (_saisonsCache && _saisonsCache[teamId] && _saisonsCache[teamId][saison]) || [];
+  var data = await loadStandings(nom, teamId, matches);
+  if(data) {
+    _standingsCache[nom+'_'+saison] = data;
+    el.outerHTML = renderStandingsTable(data, teamId);
+  } else {
+    el.innerHTML = '<div style="color:var(--t3);font-size:10px;text-align:center;">Non disponible</div>';
+  }
+}
+
 var FLAG_CDN={
   'France':'fr','Espagne':'es','Allemagne':'de','Angleterre':'gb-eng',
   'Italie':'it','Portugal':'pt','Brésil':'br','Argentine':'ar',
@@ -6463,12 +6490,27 @@ var COMP_ICONS = {
   'KNVB Beker': '🏆',
 };
 
+var COMP_FLAGS = {
+  'Bundesliga':'de','Brasileirao':'br','Serie A Brasileira':'br','Brasileirão':'br',
+  'Liga Profesional':'ar','Superliga Argentina':'ar','Eredivisie':'nl',
+  'Primeira Liga':'pt','Pro League':'be','Super League':'ch','Super Lig':'tr',
+  'Allsvenskan':'se','Ekstraklasa':'pl','Premier League':'gb-eng',
+  'Primera Division':'es','Serie A':'it','Ligue 1':'fr',
+  'UEFA Champions League':null,'UEFA Europa League':null,'UEFA Europa Conference League':null
+};
 function getCompIcon(name) {
   if(!name) return '⚽';
-  for(var k in COMP_ICONS) {
-    if(name.indexOf(k) >= 0) return COMP_ICONS[k];
+  for(var k in COMP_FLAGS) {
+    if(name.indexOf(k) >= 0) {
+      var cc = COMP_FLAGS[k];
+      if(cc) return '<img src="https://flagcdn.com/w20/'+cc+'.png" style="width:18px;height:12px;object-fit:cover;border-radius:2px;vertical-align:middle;" loading="lazy">';
+      // Compétitions européennes
+      if(name.indexOf('Champions')>=0) return '⭐';
+      if(name.indexOf('Europa')>=0&&name.indexOf('Conference')<0) return '🟠';
+      if(name.indexOf('Conference')>=0) return '🟢';
+    }
   }
-  if(name.indexOf('Cup')>=0||name.indexOf('Pokal')>=0||name.indexOf('Coupe')>=0||name.indexOf('Copa')>=0) return '🏆';
+  if(name.indexOf('Cup')>=0||name.indexOf('Pokal')>=0||name.indexOf('Coupe')>=0||name.indexOf('Copa')>=0||name.indexOf('Taca')>=0||name.indexOf('KNVB')>=0) return '🏆';
   if(name.indexOf('League')>=0||name.indexOf('Liga')>=0||name.indexOf('Division')>=0) return '🏟️';
   return '⚽';
 }
@@ -6512,9 +6554,9 @@ function calcSaisonStats(matchesRaw, teamId) {
     var oppHT = isDom ? ah : hh;
 
     stats.n++;
-    if(total>0.5) stats.over05++;
-    if(total>1.5) stats.over15++;
-    if(total>2.5) stats.over25++;
+    if(total>0.5){stats.over05++;}else{stats.under05=(stats.under05||0)+1;}
+    if(total>1.5){stats.over15++;}else{stats.under15=(stats.under15||0)+1;}
+    if(total>2.5){stats.over25++;}else{stats.under25=(stats.under25||0)+1;}
     if(total>3.5) stats.over35++;
     if(total>4.5) stats.over45++;
     if(hg>0&&ag>0) stats.bts++;
@@ -6594,6 +6636,77 @@ function calcSaisonStats(matchesRaw, teamId) {
 
 function pct(v,n) { return n ? Math.round(v/n*100) : 0; }
 
+
+/* ══ CLASSEMENT LIGUE ══ */
+async function loadStandings(nom, teamId, filteredMatches) {
+  // Trouver le code de la ligue depuis les matchs
+  var leagueCode = null;
+  var LEAGUE_CODES = ['PL','PD','BL1','SA','FL1','PPL','CL','EL'];
+  for(var i=0;i<filteredMatches.length;i++){
+    var m = filteredMatches[i];
+    var code = m.competition && m.competition.code;
+    if(code && LEAGUE_CODES.indexOf(code)>=0 && code!=='CL' && code!=='EL') {
+      leagueCode = code;
+      break;
+    }
+  }
+  if(!leagueCode) return null;
+
+  try {
+    var data = await fdFetch('/v4/competitions/'+leagueCode+'/standings');
+    if(!data || !data.standings || !data.standings.length) return null;
+    var table = data.standings[0].table || [];
+    var compName = data.competition && data.competition.name || '';
+    return {table: table, compName: compName, leagueCode: leagueCode};
+  } catch(e) { return null; }
+}
+
+function renderStandingsTable(standData, teamId) {
+  if(!standData || !standData.table) return '';
+  var table = standData.table;
+  var html = '';
+  html += '<div style="font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#4f5d88;margin:12px 0 8px;">'+getCompIcon(standData.compName)+' Classement '+standData.compName+'</div>';
+  html += '<div style="display:grid;grid-template-columns:24px 1fr 28px 28px 28px 28px 32px;gap:3px;align-items:center;font-size:8px;color:#4f5d88;font-weight:700;padding:3px 4px;margin-bottom:4px;">';
+  html += '<div>#</div><div>Équipe</div><div style="text-align:center">J</div><div style="text-align:center">G</div><div style="text-align:center">N</div><div style="text-align:center">P</div><div style="text-align:center">Pts</div>';
+  html += '</div>';
+
+  // Zone affichée : équipe ±5 ou top 6 + équipe
+  var teamRow = table.find(function(r){ return r.team && r.team.id === teamId; });
+  var teamPos = teamRow ? teamRow.position : 0;
+
+  // Afficher tout le tableau
+  var showAll = false;
+  var showBtn = table.length > 12;
+  var displayTable = showAll ? table : table;
+
+  table.forEach(function(r){
+    var isOur = r.team && r.team.id === teamId;
+    var pos = r.position;
+    var cl = pos<=4?'rgba(30,215,96,.08)':pos>=table.length-2?'rgba(255,69,69,.06)':'rgba(255,255,255,.02)';
+    var posCol = pos<=4?'#1ed760':pos>=table.length-2?'#ff4545':'#4f5d88';
+    var bg = isOur ? 'rgba(77,132,255,.15)' : cl;
+    var border = isOur ? 'border:1px solid rgba(77,132,255,.4);' : 'border:1px solid rgba(255,255,255,.04);';
+
+    html += '<div style="display:grid;grid-template-columns:24px 1fr 28px 28px 28px 28px 32px;gap:3px;align-items:center;background:'+bg+';'+border+'border-radius:5px;padding:5px 4px;margin-bottom:2px;">';
+    html += '<div style="font-size:10px;font-weight:700;color:'+posCol+';">'+pos+'</div>';
+    // Logo équipe + nom
+    var teamName = r.team&&r.team.name||'?';
+    var shortName = r.team&&r.team.shortName||teamName;
+    var logo = r.team&&r.team.crest||'';
+    html += '<div style="display:flex;align-items:center;gap:5px;overflow:hidden;">';
+    if(logo) html += '<img src="'+logo+'" style="width:16px;height:16px;object-fit:contain;" loading="lazy" onerror="this.style.display=\'none\'">';
+    html += '<div style="font-size:10px;font-weight:'+(isOur?'800':'400')+';color:'+(isOur?'#4d84ff':'var(--t1)')+';white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">'+shortName+'</div>';
+    html += '</div>';
+    // Stats
+    ['playedGames','won','draw','lost'].forEach(function(k){
+      html += '<div style="text-align:center;font-size:10px;color:var(--t2);">'+(r[k]||0)+'</div>';
+    });
+    html += '<div style="text-align:center;font-size:11px;font-weight:800;color:'+(isOur?'#4d84ff':r.points>0?'#f0b020':'var(--t3)')+';">'+(r.points||0)+'</div>';
+    html += '</div>';
+  });
+
+  return html;
+}
 function renderSaisonsChart(el, results, nom) {
   var saisons = Object.keys(results).sort().reverse();
   var teamId = null;
@@ -6671,7 +6784,16 @@ function renderSaisonsChart(el, results, nom) {
     html += '<div class="cwrap" style="margin-bottom:12px;">';
     html += '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">';
     html += '<div style="font-size:13px;font-weight:800;color:var(--t1);">Saison '+s+'-'+(parseInt(s)+1)+'</div>';
-    html += '<div style="font-size:10px;color:var(--t3);">'+st.n+' matchs toutes compétitions'+(stC?' · '+champMatches.length+' champ.':'')+'</div>';
+    html += '<div style="font-size:10px;color:var(--t3);">'+st.n+' matchs'+(stC?' · '+champMatches.length+' champ.':'')+'</div>';
+    html += '</div>';
+    // Sélecteur stats rapides
+    var QUICK_STATS = ['O0.5','O1.5','O2.5','O3.5','O4.5','U0.5','U1.5','U2.5','BTS','CS'];
+    if(!window._quickStats) window._quickStats = ['O2.5','BTS'];
+    html += '<div style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:10px;">';
+    QUICK_STATS.forEach(function(qs){
+      var isOn = window._quickStats.indexOf(qs)>=0;
+      html += '<button data-qs="'+qs+'" style="padding:4px 8px;border-radius:12px;border:1px solid rgba(255,255,255,'+(isOn?'.3':'.08')+');background:rgba(255,255,255,'+(isOn?'.15':'.04')+');color:'+(isOn?'var(--t1)':'var(--t3)')+';font-size:9px;font-weight:'+(isOn?'700':'400')+';cursor:pointer;" onclick="toggleQuickStat(this)">'+qs+'</button>';
+    });
     html += '</div>';
 
     // ── Série + derniers matchs ──
@@ -6717,20 +6839,25 @@ function renderSaisonsChart(el, results, nom) {
            : st;
     var sfN = sf.n||1;
 
-    // ── Over/Under bars ──
-    html += '<div style="font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#4f5d88;margin-bottom:8px;">Over / Under</div>';
-    var overs = [
-      {label:'Over 0.5', v:pct(sf.over05,sfN), color:'#1ed760'},
-      {label:'Over 1.5', v:pct(sf.over15,sfN), color:'#4d84ff'},
-      {label:'Over 2.5', v:pct(sf.over25,sfN), color:'#f0b020'},
-      {label:'Over 3.5', v:pct(sf.over35,sfN), color:'#ff7b54'},
-      {label:'Over 4.5', v:pct(sf.over45,sfN), color:'#ff4545'},
-      {label:'BTS Oui',  v:pct(sf.bts,sfN),    color:'#a78bfa'},
+    // ── Over/Under bars avec sélecteur ──
+    var ALL_STAT_ROWS = [
+      {key:'O0.5',  label:'Over 0.5',  v:pct(sf.over05,sfN),         color:'#1ed760'},
+      {key:'O1.5',  label:'Over 1.5',  v:pct(sf.over15,sfN),         color:'#4d84ff'},
+      {key:'O2.5',  label:'Over 2.5',  v:pct(sf.over25,sfN),         color:'#f0b020'},
+      {key:'O3.5',  label:'Over 3.5',  v:pct(sf.over35,sfN),         color:'#ff7b54'},
+      {key:'O4.5',  label:'Over 4.5',  v:pct(sf.over45,sfN),         color:'#ff4545'},
+      {key:'U0.5',  label:'Under 0.5', v:pct(sf.under05||0,sfN),     color:'#22d3ee'},
+      {key:'U1.5',  label:'Under 1.5', v:pct(sf.under15||0,sfN),     color:'#67e8f9'},
+      {key:'U2.5',  label:'Under 2.5', v:pct(sf.under25||0,sfN),     color:'#a5f3fc'},
+      {key:'BTS',   label:'BTS Oui',   v:pct(sf.bts,sfN),            color:'#a78bfa'},
+      {key:'CS',    label:'Clean Sheet',v:pct(st.cleanSheet,st.n),   color:'#1ed760'},
     ];
+    var activeRows = ALL_STAT_ROWS.filter(function(r){ return !window._quickStats || window._quickStats.length===0 || window._quickStats.indexOf(r.key)>=0; });
+    html += '<div style="font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#4f5d88;margin-bottom:8px;">Stats sélectionnées</div>';
     html += '<div style="display:flex;flex-direction:column;gap:6px;margin-bottom:14px;">';
-    overs.forEach(function(o){
+    activeRows.forEach(function(o){
       html += '<div style="display:flex;align-items:center;gap:8px;">';
-      html += '<div style="font-size:10px;font-weight:700;color:var(--t2);width:68px;flex-shrink:0;">'+o.label+'</div>';
+      html += '<div style="font-size:10px;font-weight:700;color:var(--t2);width:78px;flex-shrink:0;">'+o.label+'</div>';
       html += '<div style="flex:1;height:8px;background:rgba(255,255,255,.06);border-radius:4px;">';
       html += '<div style="height:8px;border-radius:4px;background:'+o.color+';width:'+o.v+'%;transition:width .4s;"></div></div>';
       html += '<div style="font-size:11px;font-weight:800;color:'+o.color+';width:36px;text-align:right;">'+o.v+'%</div>';
@@ -6846,6 +6973,15 @@ function renderSaisonsChart(el, results, nom) {
         html += '</div>';
       });
       html += '</div>';
+    }
+
+    // ── Classement de la ligue ──
+    if(!_standingsCache) _standingsCache = {};
+    var cacheKey = nom + '_' + saison;
+    if(_standingsCache[cacheKey]) {
+      html += renderStandingsTable(_standingsCache[cacheKey], teamId, col);
+    } else {
+      html += '<div id="std-'+saison+'" data-nom="'+nom+'" data-tid="'+teamId+'" data-saison="'+saison+'" style="font-size:10px;color:var(--t3);text-align:center;padding:8px;cursor:pointer;background:rgba(255,255,255,.03);border-radius:6px;" onclick="_loadStd(this)">📊 Charger le classement →</div>';
     }
 
     html += '</div>'; // cwrap
