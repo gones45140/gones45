@@ -5517,8 +5517,8 @@ function loadLiensEquipe() {
   var nom = _currentTeam || '';
   var u = (typeof state !== 'undefined' && state.u) ? state.u.find(function(x){return x.n===nom;}) : null;
 
-  var sofaUrl  = (u&&u.sofascore)  || SOFASCORE_LINKS[nom]  || ('https://www.sofascore.com/search#q='+encodeURIComponent(nom));
-  var flashUrl = (u&&u.flashscore) || FLASHSCORE_LINKS[nom] || ('https://www.flashscore.fr/recherche/?q='+encodeURIComponent(nom));
+  var sofaUrl  = (u&&u.link) || (u&&u.sofascore) || SOFASCORE_LINKS[nom] || ('https://www.sofascore.com/search#q='+encodeURIComponent(nom));
+  var flashUrl = (u&&u.link2) || (u&&u.flashscore) || FAV_LINKS[nom] || ('https://www.flashscore.fr/recherche/?q='+encodeURIComponent(nom));
   var tmUrl    = 'https://www.transfermarkt.fr/schnellsuche/ergebnis/schnellsuche?query='+encodeURIComponent(nom);
   var fbrefUrl = 'https://fbref.com/fr/search/search.fcgi?search='+encodeURIComponent(nom);
   var wikiUrl  = 'https://fr.wikipedia.org/wiki/'+encodeURIComponent(nom.replace(/ /g,'_'));
