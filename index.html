@@ -6969,7 +6969,23 @@ function renderSaisonsChart(el, results, nom) {
         // Equipe ext
         html += '<div style="font-size:10px;font-weight:'+(!isOurHome?'800':'400')+';color:'+(!isOurHome?'var(--t1)':'var(--t2)')+';overflow:hidden;white-space:nowrap;text-overflow:ellipsis;">'+awayName+'</div>';
         // Over/BTS
-        html += '<div style="font-size:8px;color:var(--t3);text-align:right;">'+compIco+'<br>'+(total>2.5?'<span style="color:#f0b020">O2.5</span>':'')+''+(hg>0&&ag>0?'<span style="color:#a78bfa"> BTS</span>':'')+'</div>';
+        var badges = '';
+        var qs = window._quickStats || ['O2.5','BTS'];
+        var MATCH_CHECKS = {
+          'O0.5': total>0.5, 'O1.5': total>1.5, 'O2.5': total>2.5,
+          'O3.5': total>3.5, 'O4.5': total>4.5,
+          'U0.5': total<=0.5, 'U1.5': total<=1.5, 'U2.5': total<=2.5,
+          'BTS': hg>0&&ag>0, 'CS': tg===0&&og>0||tg>0&&og===0
+        };
+        var BADGE_COLORS = {
+          'O0.5':'#1ed760','O1.5':'#4d84ff','O2.5':'#f0b020','O3.5':'#ff7b54','O4.5':'#ff4545',
+          'U0.5':'#22d3ee','U1.5':'#67e8f9','U2.5':'#a5f3fc',
+          'BTS':'#a78bfa','CS':'#1ed760'
+        };
+        qs.forEach(function(k){
+          if(MATCH_CHECKS[k]) badges += '<span style="color:'+BADGE_COLORS[k]+';">'+k+'</span> ';
+        });
+        html += '<div style="font-size:8px;text-align:right;min-width:40px;">'+compIco+'<br>'+badges+'</div>';
         html += '</div>';
       });
       html += '</div>';
