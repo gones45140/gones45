@@ -1534,9 +1534,14 @@ function renderDetailMatch(modal, m) {
   var googleUrl = 'https://www.google.com/search?q='+query;
   var sofaUrl2  = 'https://www.google.com/search?q='+sofaQuery;
 
+  var ytMatchUrl = 'https://www.youtube.com/results?search_query='+encodeURIComponent(homeName+' '+awayName+' '+d2.toLocaleDateString('fr-FR',{day:'numeric',month:'long',year:'numeric'})+' buts résumé highlights');
+
   html += '<div style="display:flex;gap:8px;margin-top:12px;">';
   html += '<a href="'+sofaUrl2+'" target="_blank" style="flex:1;display:flex;align-items:center;justify-content:center;gap:6px;padding:10px;background:rgba(255,107,54,.15);border:1px solid rgba(255,107,54,.3);border-radius:10px;text-decoration:none;color:#ff7b54;font-size:12px;font-weight:700;">⚡ Sofascore</a>';
   html += '<a href="'+googleUrl+'" target="_blank" style="flex:1;display:flex;align-items:center;justify-content:center;gap:6px;padding:10px;background:rgba(77,132,255,.15);border:1px solid rgba(77,132,255,.3);border-radius:10px;text-decoration:none;color:#4d84ff;font-size:12px;font-weight:700;">🔍 Résumé</a>';
+  html += '</div>';
+  html += '<div style="margin-top:8px;">';
+  html += '<a href="'+ytMatchUrl+'" target="_blank" style="width:100%;display:flex;align-items:center;justify-content:center;gap:8px;padding:10px;background:rgba(255,0,0,.15);border:1px solid rgba(255,0,0,.3);border-radius:10px;text-decoration:none;color:#ff4545;font-size:12px;font-weight:700;box-sizing:border-box;">▶️ Voir les buts sur YouTube</a>';
   html += '</div>';
 
   html += '</div>';
@@ -7144,8 +7149,8 @@ function calcSaisonStats(matchesRaw, teamId) {
     if(total>0.5){stats.over05++;}else{stats.under05=(stats.under05||0)+1;}
     if(total>1.5){stats.over15++;}else{stats.under15=(stats.under15||0)+1;}
     if(total>2.5){stats.over25++;}else{stats.under25=(stats.under25||0)+1;}
-    if(total>3.5) stats.over35++;
-    if(total>4.5) stats.over45++;
+    if(total>3.5){stats.over35++;}else{stats.under35=(stats.under35||0)+1;}
+    if(total>4.5){stats.over45++;}else{stats.under45=(stats.under45||0)+1;}
     if(hg>0&&ag>0) stats.bts++;
     if(oppGoals===0) stats.cleanSheet++;
     if(teamGoals===0) stats.failedToScore++;
@@ -7375,7 +7380,7 @@ function renderSaisonsChart(el, results, nom) {
     html += '<div style="font-size:10px;color:var(--t3);">'+st.n+' matchs'+(stC?' · '+champMatches.length+' champ.':'')+'</div>';
     html += '</div>';
     // Sélecteur stats rapides
-    var QUICK_STATS = ['O0.5','O1.5','O2.5','O3.5','O4.5','U0.5','U1.5','U2.5','BTS','CS'];
+    var QUICK_STATS = ['O0.5','O1.5','O2.5','O3.5','O4.5','U0.5','U1.5','U2.5','U3.5','U4.5','BTS','CS'];
     if(!window._quickStats) window._quickStats = ['O2.5','BTS'];
     html += '<div style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:10px;">';
     QUICK_STATS.forEach(function(qs){
@@ -7422,8 +7427,8 @@ function renderSaisonsChart(el, results, nom) {
     });
     html += '</div>';
     // Stats filtrées
-    var sf = _statFilter==='dom' ? {n:st.domN, over05:st.domOver05||0, over15:st.domOver15||0, over25:st.domOver25||0, over35:st.domOver35||0, over45:st.domOver45||0, bts:st.domBts||0}
-           : _statFilter==='ext' ? {n:st.extN, over05:st.extOver05||0, over15:st.extOver15||0, over25:st.extOver25||0, over35:st.extOver35||0, over45:st.extOver45||0, bts:st.extBts||0}
+    var sf = _statFilter==='dom' ? {n:st.domN, over05:st.domOver05||0, over15:st.domOver15||0, over25:st.domOver25||0, over35:st.domOver35||0, over45:st.domOver45||0, under05:st.domUnder05||0, under15:st.domUnder15||0, under25:st.domUnder25||0, under35:st.domUnder35||0, under45:st.domUnder45||0, bts:st.domBts||0}
+           : _statFilter==='ext' ? {n:st.extN, over05:st.extOver05||0, over15:st.extOver15||0, over25:st.extOver25||0, over35:st.extOver35||0, over45:st.extOver45||0, under05:st.extUnder05||0, under15:st.extUnder15||0, under25:st.extUnder25||0, under35:st.extUnder35||0, under45:st.extUnder45||0, bts:st.extBts||0}
            : st;
     var sfN = sf.n||1;
 
@@ -7437,6 +7442,8 @@ function renderSaisonsChart(el, results, nom) {
       {key:'U0.5',  label:'Under 0.5', v:pct(sf.under05||0,sfN),     color:'#22d3ee'},
       {key:'U1.5',  label:'Under 1.5', v:pct(sf.under15||0,sfN),     color:'#67e8f9'},
       {key:'U2.5',  label:'Under 2.5', v:pct(sf.under25||0,sfN),     color:'#a5f3fc'},
+      {key:'U3.5',  label:'Under 3.5', v:pct(sf.under35||0,sfN),     color:'#bae6fd'},
+      {key:'U4.5',  label:'Under 4.5', v:pct(sf.under45||0,sfN),     color:'#e0f2fe'},
       {key:'BTS',   label:'BTS Oui',   v:pct(sf.bts,sfN),            color:'#a78bfa'},
       {key:'CS',    label:'Clean Sheet',v:pct(st.cleanSheet,st.n),   color:'#1ed760'},
     ];
@@ -7563,12 +7570,12 @@ function renderSaisonsChart(el, results, nom) {
         var MATCH_CHECKS = {
           'O0.5': total>0.5, 'O1.5': total>1.5, 'O2.5': total>2.5,
           'O3.5': total>3.5, 'O4.5': total>4.5,
-          'U0.5': total<=0.5, 'U1.5': total<=1.5, 'U2.5': total<=2.5,
+          'U0.5': total<=0.5, 'U1.5': total<=1.5, 'U2.5': total<=2.5, 'U3.5': total<=3.5, 'U4.5': total<=4.5,
           'BTS': hg>0&&ag>0, 'CS': tg===0&&og>0||tg>0&&og===0
         };
         var BADGE_COLORS = {
           'O0.5':'#1ed760','O1.5':'#4d84ff','O2.5':'#f0b020','O3.5':'#ff7b54','O4.5':'#ff4545',
-          'U0.5':'#22d3ee','U1.5':'#67e8f9','U2.5':'#a5f3fc',
+          'U0.5':'#22d3ee','U1.5':'#67e8f9','U2.5':'#a5f3fc','U3.5':'#bae6fd','U4.5':'#e0f2fe',
           'BTS':'#a78bfa','CS':'#1ed760'
         };
         qs.forEach(function(k){
