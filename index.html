@@ -3,7 +3,7 @@
 <html lang="fr">
 <head>
 <meta charset="UTF-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-eval' 'unsafe-inline' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com; worker-src 'self' blob:; connect-src 'self' data: blob: https://tessdata.projectnaptha.com https://api.balldontlie.io https://api.dropbox.com https://content.dropboxapi.com https://api.dropboxapi.com https://api.groq.com https://api.tavily.com https://fd-proxy.touraine-antoine.workers.dev https://media.api-sports.io https://api.football-data.org https://api-web.nhle.com https://statsapi.mlb.com https://www.thesportsdb.com https://cdn.jsdelivr.net https://api.openf1.org https://api.jolpi.ca; img-src 'self' data: https: blob: https://flagcdn.com; style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com;">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-eval' 'unsafe-inline' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com; worker-src 'self' blob:; connect-src 'self' data: blob: https://tessdata.projectnaptha.com https://api.dropbox.com https://content.dropboxapi.com https://api.dropboxapi.com https://api.groq.com https://api.tavily.com https://fd-proxy.touraine-antoine.workers.dev https://media.api-sports.io https://api.football-data.org https://api-web.nhle.com https://statsapi.mlb.com https://www.thesportsdb.com https://cdn.jsdelivr.net https://api.openf1.org https://api.jolpi.ca; img-src 'self' data: https: blob: https://flagcdn.com; style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com;">
 <meta http-equiv="Content-Security-Policy" content="default-src 'self' 'unsafe-inline' 'unsafe-eval' https: data: blob:;">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
 <title>GONES45</title>
@@ -5307,7 +5307,12 @@ async function loadNhlSaisons(el, nom) {
         html += '<div style="font-size:10px;font-weight:'+(isDom?'800':'400')+';color:'+(isDom?'var(--t1)':'var(--t2)')+';text-align:right;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;">'+hName+'</div>';
         html += '<div style="font-size:11px;font-weight:800;color:'+rc+';text-align:center;min-width:40px;">'+g.homeTeam.score+' - '+g.awayTeam.score+'</div>';
         html += '<div style="font-size:10px;font-weight:'+(!isDom?'800':'400')+';color:'+(!isDom?'var(--t1)':'var(--t2)')+';overflow:hidden;white-space:nowrap;text-overflow:ellipsis;">'+aName+'</div>';
-        html += '<div style="font-size:8px;text-align:right;">🏒<br>'+badges+'</div>';
+        var nhlBadges='';
+        var nqs2 = window._nhlQuickStats||['O5.5','O6.5','BTS'];
+        var NHL_CHK={'O4.5':total>4.5,'O5.5':total>5.5,'O6.5':total>6.5,'O7.5':total>7.5,'U5.5':total<=5.5,'U6.5':total<=6.5,'U7.5':total<=7.5,'BTS':g.homeTeam.score>0&&g.awayTeam.score>0};
+        var NHL_COL={'O4.5':'#4d84ff','O5.5':'#1ed760','O6.5':'#f0b020','O7.5':'#ff7b54','U5.5':'#22d3ee','U6.5':'#67e8f9','U7.5':'#a5f3fc','BTS':'#a78bfa'};
+        nqs2.forEach(function(k){if(NHL_CHK[k])nhlBadges+='<span style="color:'+NHL_COL[k]+';">'+k+'</span><br>';});
+        html += '<div style="font-size:8px;text-align:right;">🏒<br>'+nhlBadges+'</div>';
         html += '</div>';
       });
       html += '</div></div>';
@@ -5924,15 +5929,39 @@ async function loadNbaSaisons(el, nom) {
     var past2 = new Date(Date.now()-90*24*3600*1000).toISOString().split('T')[0];
     var future2 = new Date(Date.now()+14*24*3600*1000).toISOString().split('T')[0];
 
-    var [gamesResp, nextResp] = await Promise.all([
-      fetch('https://api.balldontlie.io/v1/games?team_ids[]='+bdlId+'&start_date='+past2+'&end_date='+today2+'&per_page=100&postseason=false'),
-      fetch('https://api.balldontlie.io/v1/games?team_ids[]='+bdlId+'&start_date='+today2+'&end_date='+future2+'&per_page=10')
-    ]);
+    // TheSportsDB pour NBA — gratuit sans clé
+    var sdbTeamId = teamInfo.sdbId || null;
+    var gamesResp = await fetch('https://www.thesportsdb.com/api/v1/json/3/eventsseason.php?id=4387&s=2025-2026');
     var gamesData = await gamesResp.json();
-    var nextData = await nextResp.json();
+    var allEvts = (gamesData.events||[]);
+    var teamName = nom;
 
-    var allGames = (gamesData.data||[]).filter(function(g){ return g.status==='Final'; });
-    var nextGames = (nextData.data||[]).filter(function(g){ return g.status!=='Final'; });
+    var allGames = allEvts.filter(function(e){
+      return (e.strHomeTeam===teamName||e.strAwayTeam===teamName) &&
+             e.intHomeScore!==null && e.intHomeScore!=='' &&
+             e.intAwayScore!==null && e.intAwayScore!=='';
+    }).map(function(e){
+      return {
+        home_team:{id:e.strHomeTeam===teamName?bdlId:0, full_name:e.strHomeTeam, abbreviation:e.strHomeTeam.split(' ').pop().substring(0,3).toUpperCase()},
+        visitor_team:{id:e.strAwayTeam===teamName?bdlId:0, full_name:e.strAwayTeam, abbreviation:e.strAwayTeam.split(' ').pop().substring(0,3).toUpperCase()},
+        home_team_score:parseInt(e.intHomeScore)||0,
+        visitor_team_score:parseInt(e.intAwayScore)||0,
+        date:e.dateEvent||'',
+        status:'Final'
+      };
+    });
+
+    var nextGames = allEvts.filter(function(e){
+      return (e.strHomeTeam===teamName||e.strAwayTeam===teamName) &&
+             (e.intHomeScore===null || e.intHomeScore==='');
+    }).map(function(e){
+      return {
+        home_team:{id:e.strHomeTeam===teamName?bdlId:0, full_name:e.strHomeTeam},
+        visitor_team:{id:e.strAwayTeam===teamName?bdlId:0, full_name:e.strAwayTeam},
+        home_team_score:0, visitor_team_score:0,
+        date:e.dateEvent||'', status:'Scheduled'
+      };
+    });
     var last5 = allGames.slice(-5).reverse();
     var n = allGames.length;
 
@@ -6054,9 +6083,8 @@ async function loadNbaSaisons(el, nom) {
       // Forme adversaire
       if(oppIdN) {
         try {
-          var or3 = await fetch('https://api.balldontlie.io/v1/games?team_ids[]='+oppIdN+'&start_date='+past2+'&end_date='+today2+'&per_page=20&postseason=false');
-          var od3 = await or3.json();
-          var oppGames3 = (od3.data||[]).filter(function(g){return g.status==='Final';}).slice(-5).reverse();
+          // Pas de fetch adversaire NBA — on affiche juste le prochain match
+          var oppGames3 = [];
           if(oppGames3.length) {
             html += '<div style="margin-top:8px;">';
             html += '<div style="font-size:9px;color:#4f5d88;margin-bottom:4px;">Forme '+oppN.split(' ').pop()+' :</div>';
