@@ -5211,7 +5211,20 @@ async function loadNhlSaisons(el, nom) {
 
     // Forme récente + Over/Under
     if(last5.length) {
-      // Stats Over/Under sur toute la saison
+      html += '<div class="cwrap" style="margin-bottom:10px;">';
+      // Filtre Global/Dom/Ext NHL
+      html += '<div style="display:flex;gap:6px;margin-bottom:10px;">';
+      ['global','dom','ext'].forEach(function(f){
+        var lbl=f==='global'?'🌐 Global':f==='dom'?'🏠 Dom':'🚌 Ext';
+        var isOn=f===window._nhlFilter;
+        html += '<button onclick="_nhlFilter=\''+f+'\';loadTeamSaisons();" style="flex:1;padding:6px 4px;border-radius:6px;border:1px solid rgba(255,255,255,'+(isOn?'.3':'.08')+');background:rgba(255,255,255,'+(isOn?'.12':'.04')+');color:'+(isOn?'var(--t1)':'var(--t3)')+';font-size:10px;font-weight:'+(isOn?'700':'400')+';cursor:pointer;">'+lbl+'</button>';
+      });
+      html += '</div>';
+      // Filtrer les matchs selon dom/ext AVANT les calculs
+      if(window._nhlFilter==='dom') allGames=allGames.filter(function(g){return g.homeTeam&&g.homeTeam.abbrev===teamInfo.abbr;});
+      else if(window._nhlFilter==='ext') allGames=allGames.filter(function(g){return g.awayTeam&&g.awayTeam.abbrev===teamInfo.abbr;});
+
+      // Stats Over/Under sur les matchs filtrés
       var over55=0, over65=0, over75=0, bts5=0, n=allGames.length;
       var over45nhl=0;
       allGames.forEach(function(g){
@@ -5223,19 +5236,6 @@ async function loadNhlSaisons(el, nom) {
         if(tot>7.5) over75++;
         if(hs>0&&as2>0) bts5++;
       });
-
-      html += '<div class="cwrap" style="margin-bottom:10px;">';
-      // Filtre Global/Dom/Ext NHL
-      html += '<div style="display:flex;gap:6px;margin-bottom:10px;">';
-      ['global','dom','ext'].forEach(function(f){
-        var lbl=f==='global'?'🌐 Global':f==='dom'?'🏠 Dom':'🚌 Ext';
-        var isOn=f===window._nhlFilter;
-        html += '<button onclick="_nhlFilter=\''+f+'\';loadTeamSaisons();" style="flex:1;padding:6px 4px;border-radius:6px;border:1px solid rgba(255,255,255,'+(isOn?'.3':'.08')+');background:rgba(255,255,255,'+(isOn?'.12':'.04')+');color:'+(isOn?'var(--t1)':'var(--t3)')+';font-size:10px;font-weight:'+(isOn?'700':'400')+';cursor:pointer;">'+lbl+'</button>';
-      });
-      html += '</div>';
-      // Filtrer les matchs selon dom/ext
-      if(window._nhlFilter==='dom') allGames=allGames.filter(function(g){return g.homeTeam&&g.homeTeam.abbrev===teamInfo.abbr;});
-      else if(window._nhlFilter==='ext') allGames=allGames.filter(function(g){return g.awayTeam&&g.awayTeam.abbrev===teamInfo.abbr;});
       html += '<div style="font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#4f5d88;margin-bottom:8px;">Forme récente</div>';
       html += '<div style="display:flex;gap:5px;margin-bottom:12px;">';
       last5.forEach(function(g){
@@ -5428,19 +5428,8 @@ async function loadMlbSaisons(el, nom) {
     }
 
     if(last5.length) {
-      // Over/Under baseball
-      var over7=0,over8=0,over9=0,btsMlb=0;
-      var over6mlb=0;
-      allGames.forEach(function(g){
-        var hs=g.teams&&g.teams.home&&g.teams.home.score||0;
-        var as2=g.teams&&g.teams.away&&g.teams.away.score||0;
-        var tot=hs+as2;
-        if(tot>6) over6mlb++; if(tot>7) over7++; if(tot>8) over8++; if(tot>9) over9++;
-        if(hs>0&&as2>0) btsMlb++;
-      });
-
       html += '<div class="cwrap" style="margin-bottom:10px;">';
-      // Filtre Global/Dom/Ext MLB
+      // Filtre Global/Dom/Ext MLB — AVANT les calculs
       html += '<div style="display:flex;gap:6px;margin-bottom:10px;">';
       ['global','dom','ext'].forEach(function(f){
         var lbl=f==='global'?'🌐 Global':f==='dom'?'🏠 Dom':'🚌 Ext';
@@ -5450,6 +5439,17 @@ async function loadMlbSaisons(el, nom) {
       html += '</div>';
       if(window._mlbFilter==='dom') allGames=allGames.filter(function(g){return g.teams&&g.teams.home&&g.teams.home.team&&g.teams.home.team.id===teamInfo.id;});
       else if(window._mlbFilter==='ext') allGames=allGames.filter(function(g){return g.teams&&g.teams.away&&g.teams.away.team&&g.teams.away.team.id===teamInfo.id;});
+
+      // Over/Under baseball sur matchs filtrés
+      var over7=0,over8=0,over9=0,btsMlb=0;
+      var over6mlb=0;
+      allGames.forEach(function(g){
+        var hs=g.teams&&g.teams.home&&g.teams.home.score||0;
+        var as2=g.teams&&g.teams.away&&g.teams.away.score||0;
+        var tot=hs+as2;
+        if(tot>6) over6mlb++; if(tot>7) over7++; if(tot>8) over8++; if(tot>9) over9++;
+        if(hs>0&&as2>0) btsMlb++;
+      });
       html += '<div style="font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#4f5d88;margin-bottom:8px;">Forme récente</div>';
       html += '<div style="display:flex;gap:5px;margin-bottom:12px;">';
       last5.forEach(function(g){
@@ -6044,12 +6044,8 @@ async function loadNbaSaisons(el, nom) {
 
     // Forme récente + Over/Under NBA
     if(last5.length) {
-      var over210=0, over220=0, over230=0;
-      var over200=0;
-      allGames.forEach(function(g){ var tot=g.home_team_score+g.visitor_team_score; if(tot>200)over200++; if(tot>210) over210++; if(tot>220) over220++; if(tot>230) over230++; });
-
       html += '<div class="cwrap" style="margin-bottom:10px;">';
-      // Filtre Global/Dom/Ext NBA
+      // Filtre Global/Dom/Ext NBA — AVANT les calculs
       html += '<div style="display:flex;gap:6px;margin-bottom:10px;">';
       ['global','dom','ext'].forEach(function(f){
         var lbl=f==='global'?'🌐 Global':f==='dom'?'🏠 Dom':'🚌 Ext';
@@ -6059,6 +6055,10 @@ async function loadNbaSaisons(el, nom) {
       html += '</div>';
       if(window._nbaFilter==='dom') allGames=allGames.filter(function(g){return g.home_team&&g.home_team.id===bdlId;});
       else if(window._nbaFilter==='ext') allGames=allGames.filter(function(g){return g.visitor_team&&g.visitor_team.id===bdlId;});
+
+      var over210=0, over220=0, over230=0;
+      var over200=0;
+      allGames.forEach(function(g){ var tot=g.home_team_score+g.visitor_team_score; if(tot>200)over200++; if(tot>210) over210++; if(tot>220) over220++; if(tot>230) over230++; });
       html += '<div style="font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#4f5d88;margin-bottom:8px;">Forme récente</div>';
       html += '<div style="display:flex;gap:5px;margin-bottom:12px;">';
       last5.forEach(function(g){
@@ -6122,7 +6122,7 @@ async function loadNbaSaisons(el, nom) {
         var ds=(g.date||'').split('T')[0].substring(5);
         var bKey='b_'+Math.random().toString(36).substr(2,6); _usMatchCache[bKey]={sport:'🏀',h:hName,a:aName,hs:g.home_team_score,as:g.visitor_team_score,d:(g.date||'').split('T')[0]};
         var bqlqs=window._nbaQuickStats||['O210','O220'];
-        var nbaChk={'O200':total>200,'O210':total>210,'O220':total>220,'O230':total>230,'U210':total<=210,'U220':total<=220,'U230':total<=230,'WIN':ts>os,'LOSE':ts<os};
+        var nbaChk={'O200':tot>200,'O210':tot>210,'O220':tot>220,'O230':tot>230,'U210':tot<=210,'U220':tot<=220,'U230':tot<=230,'WIN':ts>os,'LOSE':ts<os};
         var nbaAllOk=bqlqs.every(function(k){return nbaChk[k]!==undefined?nbaChk[k]:true;});
         var nbaBar=nbaAllOk?'#1ed760':'#ff4545';
         html += '<div onclick="_callUS(\''+bKey+'\')" style="display:grid;grid-template-columns:32px 1fr auto 1fr 40px;gap:4px;align-items:center;padding:5px 8px;background:'+(isDom?'rgba(255,255,255,.04)':'rgba(255,255,255,.02)')+';border-radius:6px;border-left:3px solid '+nbaBar+';cursor:pointer;">';
