@@ -2216,7 +2216,9 @@ function filteredA(){
   if(bilanMode==='cockpit')base=base.filter(function(h){return h.isS;});
   else if(bilanMode==='simple')base=base.filter(function(h){return !h.isS&&!h.isFlash;});
   else if(bilanMode==='flash')base=base.filter(function(h){return h.isFlash;});
-  return bilanSport==='ALL'?base:base.filter(function(h){return h.sport===bilanSport;});
+  var filtered = bilanSport==='ALL'?base:base.filter(function(h){return h.sport===bilanSport;});
+  if(window._bilanBkFilter) filtered=filtered.filter(function(h){return h.b===window._bilanBkFilter;});
+  return filtered;
 }
 
 /* ── BILAN TAB (autonome) ── */
@@ -2246,30 +2248,54 @@ function renderBilanTab(){
       var ct=ctx.getContext('2d');
       var g=ct.createLinearGradient(0,0,0,150);
       g.addColorStop(0,color+'44');g.addColorStop(1,color+'00');
-      _bilanChart=new Chart(ct,{type:'line',data:{labels:clabels,datasets:[{data:curve,borderColor:color,backgroundColor:g,borderWidth:2,fill:true,tension:.4,pointRadius:3,pointBackgroundColor:color,pointHoverRadius:6,pointHoverBorderColor:'#fff',pointHoverBorderWidth:2}]},options:{responsive:true,maintainAspectRatio:false,events:['mousemove','mouseout','click','touchstart','touchmove'],
+
+      // Courbes par bookmaker
+      var datasets = [{label:'Global',data:curve,borderColor:color,backgroundColor:g,borderWidth:2,fill:true,tension:.4,pointRadius:2,pointBackgroundColor:color,pointHoverRadius:5,pointHoverBorderColor:'#fff',pointHoverBorderWidth:2}];
+      var bkColors = ['#ff4545','#4d84ff','#f0b020','#1ed760','#a78bfa','#ff7b54','#22d3ee','#e879f9'];
+      var bkList = Object.keys(state.b);
+      bkList.forEach(function(bk, i){
+        var bkParis = paris.filter(function(h){return h.b===bk;});
+        if(!bkParis.length) return;
+        var bkCum=0;
+        // Aligner sur les mêmes labels (indices)
+        var bkCurve = paris.slice().reverse().map(function(h){
+          if(h.b===bk) bkCum+=(h.win?(h.m*h.cote)-h.m:-h.m);
+          return parseFloat(bkCum.toFixed(2));
+        });
+        var bkCol = bki(bk).c || bkColors[i%bkColors.length];
+        datasets.push({label:bki(bk).n,data:bkCurve,borderColor:bkCol,backgroundColor:'transparent',borderWidth:1.5,fill:false,tension:.4,pointRadius:0,pointHoverRadius:4,borderDash:[4,3]});
+      });
+
+      _bilanChart=new Chart(ct,{type:'line',data:{labels:clabels,datasets:datasets},options:{responsive:true,maintainAspectRatio:false,events:['mousemove','mouseout','click','touchstart','touchmove'],
         interaction:{mode:'nearest',intersect:false},
-            interaction:{mode:'nearest',intersect:false},
-            plugins:{legend:{display:false},
+            plugins:{legend:{display:true,position:'bottom',labels:{color:'#4f5d88',font:{size:9},boxWidth:20,padding:8}},
               tooltip:{backgroundColor:'rgba(8,11,18,.96)',borderColor:color,borderWidth:1,padding:10,
                 callbacks:{
                   title:function(ii){return clabels[ii[0].dataIndex]||('Pari '+(ii[0].dataIndex+1));},
-                  label:function(ii){return (ii.raw>=0?'+':'')+ii.raw.toFixed(2)+'€';}
+                  label:function(ii){return ii.dataset.label+' : '+(ii.raw>=0?'+':'')+ii.raw.toFixed(2)+'€';}
                 }}},
             scales:{x:{display:false},y:{grid:{color:'rgba(255,255,255,.03)'},ticks:{color:'#4f5d88',font:{size:9},callback:function(v){return v+'€';}}}}}});
         attachTouchTooltip('bilan-chart',function(){return _bilanChart;},'cib-bilan','cib-bilan-txt','cib-bilan-val');
     }
   }
-  /* Par bookmaker */
-  var bks={};Object.keys(state.b).forEach(function(k){bks[k]=0;});
-  paris.forEach(function(h){bks[h.b]=(bks[h.b]||0)+(h.win?(h.m*h.cote)-h.m:-h.m);});
+  /* Par bookmaker — cliquable pour filtrer */
+  var bks={};Object.keys(state.b).forEach(function(k){bks[k]={profit:0,n:0,wins:0};});
+  paris.forEach(function(h){
+    if(!bks[h.b]) bks[h.b]={profit:0,n:0,wins:0};
+    bks[h.b].profit+=(h.win?(h.m*h.cote)-h.m:-h.m);
+    bks[h.b].n++;
+    if(h.win) bks[h.b].wins++;
+  });
   var bke=$i('bk-stats');
-  if(bke)bke.innerHTML=Object.entries(bks).map(function(e){
-    var b=bki(e[0]),p=e[1];
-    return '<div class="bkrow" style="--bc:'+b.c+';display:flex;align-items:center;gap:8px;">'
+  if(bke) bke.innerHTML=Object.entries(bks).map(function(e){
+    var b=bki(e[0]), p=e[1].profit, n=e[1].n, wr=n?Math.round(e[1].wins/n*100):0;
+    var isActive = window._bilanBkFilter===e[0];
+    return '<div class="bkrow" onclick="window._bilanBkFilter=(window._bilanBkFilter===\''+e[0]+'\'?null:\''+e[0]+'\');renderBilanTab();" style="--bc:'+b.c+';display:flex;align-items:center;gap:8px;cursor:pointer;padding:8px;border-radius:8px;border:1px solid rgba(255,255,255,'+(isActive?'.2':'.04')+');background:rgba(255,255,255,'+(isActive?'.06':'.02')+');margin-bottom:4px;">'
       +bkFavicon(e[0],18)
       +'<span style="flex:1;font-size:11px;font-weight:700;color:'+b.c+';">'+b.n+'</span>'
+      +(n?'<span style="font-size:10px;color:var(--t3);">'+n+' paris · '+wr+'%</span>':'')
       +'<span style="font-size:13px;font-weight:800;color:'+(p>=0?'var(--g)':'var(--r)')+';">'+fmt(p)+'</span></div>';
-  }).join('');
+  }).join('')+(window._bilanBkFilter?'<button onclick="window._bilanBkFilter=null;renderBilanTab();" style="width:100%;padding:6px;margin-top:4px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:6px;color:var(--t3);font-size:10px;cursor:pointer;">✕ Effacer le filtre</button>':'');
 }
 
 /* ── RENDER PRINCIPAL ── */
