@@ -1376,6 +1376,7 @@ function logoErr(img){
 }
 var _statFilter = 'global';
 var _nhlFilter = 'global';
+var _nhlTypeFilter = 'all'; // 'all', 'reg', 'playoffs'
 var _mlbFilter = 'global';
 var _nbaFilter = 'global';
 var _standingsCache = {};
@@ -5223,6 +5224,9 @@ async function loadNhlSaisons(el, nom) {
       // Filtrer les matchs selon dom/ext AVANT les calculs
       if(window._nhlFilter==='dom') allGames=allGames.filter(function(g){return g.homeTeam&&g.homeTeam.abbrev===teamInfo.abbr;});
       else if(window._nhlFilter==='ext') allGames=allGames.filter(function(g){return g.awayTeam&&g.awayTeam.abbrev===teamInfo.abbr;});
+      // Filtre saison régulière / playoffs
+      if(window._nhlTypeFilter==='reg') allGames=allGames.filter(function(g){return g.gameType===2;});
+      else if(window._nhlTypeFilter==='playoffs') allGames=allGames.filter(function(g){return g.gameType===3;});
 
       // Stats Over/Under sur les matchs filtrés
       var over55=0, over65=0, over75=0, bts5=0, n=allGames.length;
@@ -5236,6 +5240,13 @@ async function loadNhlSaisons(el, nom) {
         if(tot>7.5) over75++;
         if(hs>0&&as2>0) bts5++;
       });
+      // Boutons Saison régulière / Playoffs
+      html += '<div style="display:flex;gap:6px;margin-bottom:10px;">';
+      [{k:'all',l:'Tout'},{k:'reg',l:'Saison rég.'},{k:'playoffs',l:'Playoffs'}].forEach(function(f){
+        var isOn=f.k===(window._nhlTypeFilter||'all');
+        html += '<button onclick="_nhlTypeFilter=\''+f.k+'\';loadTeamSaisons();" style="flex:1;padding:5px 4px;border-radius:6px;border:1px solid rgba(255,255,255,'+(isOn?'.3':'.08')+');background:rgba(255,255,255,'+(isOn?'.12':'.04')+');color:'+(isOn?'#f0b020':'var(--t3)')+';font-size:9px;font-weight:'+(isOn?'700':'400')+';cursor:pointer;">'+f.l+'</button>';
+      });
+      html += '</div>';
       html += '<div style="font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#4f5d88;margin-bottom:8px;">Forme récente</div>';
       html += '<div style="display:flex;gap:5px;margin-bottom:12px;">';
       last5.forEach(function(g){
@@ -5989,12 +6000,15 @@ async function loadNbaSaisons(el, nom) {
       var c = e.competitions[0];
       var home = c.competitors.find(function(t){return t.homeAway==='home';})||c.competitors[0];
       var away = c.competitors.find(function(t){return t.homeAway==='away';})||c.competitors[1];
-      var isOurHome = home.team&&(home.team.displayName===nom||home.team.id==espnId);
+      var isOurHome = home.team&&(home.team.displayName===nom||home.team.abbreviation===teamInfo.abbr||home.team.id==espnId);
+      // ESPN score peut être dans score.value ou score (string)
+      var homeScore = parseInt((home.score&&home.score.value)||home.score||0)||0;
+      var awayScore = parseInt((away.score&&away.score.value)||away.score||0)||0;
       return {
         home_team:{id:isOurHome?bdlId:0, full_name:home.team&&home.team.displayName||'?', abbreviation:home.team&&home.team.abbreviation||'?'},
         visitor_team:{id:!isOurHome?bdlId:0, full_name:away.team&&away.team.displayName||'?', abbreviation:away.team&&away.team.abbreviation||'?'},
-        home_team_score:parseInt(home.score)||0,
-        visitor_team_score:parseInt(away.score)||0,
+        home_team_score:homeScore,
+        visitor_team_score:awayScore,
         date:e.date||'',
         status:'Final'
       };
