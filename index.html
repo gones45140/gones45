@@ -1387,6 +1387,30 @@ var _matchDetailCache = {};
 
 var _usMatchCache = {};
 
+
+async function ouvrirYouTubeAvecScore(titre, date, comp) {
+  // Chercher le match via football-data pour avoir le score exact
+  var query = titre + ' ' + (date||'') + ' highlights';
+  try {
+    var teamKey = Object.keys(TEAM_IDS).find(function(k){ return titre.toLowerCase().indexOf(k.toLowerCase())>=0; });
+    if(teamKey) {
+      var teamId = TEAM_IDS[teamKey];
+      var d = new Date(date||'');
+      var ds = d.toISOString().split('T')[0];
+      var data = await fdFetch('/v4/teams/'+teamId+'/matches?dateFrom='+ds+'&dateTo='+ds+'&status=FINISHED');
+      if(data&&data.matches&&data.matches.length) {
+        var m = data.matches[0];
+        var hg = m.score&&m.score.fullTime ? m.score.fullTime.home : '?';
+        var ag = m.score&&m.score.fullTime ? m.score.fullTime.away : '?';
+        var home = m.homeTeam&&m.homeTeam.name||'';
+        var away = m.awayTeam&&m.awayTeam.name||'';
+        query = home+' '+away+' '+hg+'-'+ag+' highlights '+(comp||'');
+      }
+    }
+  } catch(e) {}
+  window.open('https://www.youtube.com/results?search_query='+encodeURIComponent(query), '_blank');
+}
+
 function _callUS(k){var m=_usMatchCache[k];if(m)ouvrirDetailMatchUS(m.sport,m.h,m.a,m.hs,m.as,m.d);}
 function ouvrirDetailMatchUS(sport, homeTeam, awayTeam, homeScore, awayScore, date) {
   var modal = document.getElementById('match-detail-modal');
@@ -2640,7 +2664,8 @@ function renderArchive(){
           +'<div style="font-size:10px;color:var(--t3);">'+parseFloat(h.m).toFixed(2)+'€</div>'
           +'</div>'
           +'<div style="display:flex;flex-direction:column;gap:3px;flex-shrink:0;">'
-          +'<a href="https://www.google.com/search?q='+encodeURIComponent(titre+' sofascore résumé')+'" target="_blank" style="background:none;border:none;color:#4d84ff;font-size:14px;cursor:pointer;padding:0;text-decoration:none;" title="Résumé">🔍</a>'
+          +'<a href="https://www.google.com/search?q='+encodeURIComponent(titre+' sofascore')+'" target="_blank" style="background:none;border:none;color:#ff7b54;font-size:13px;cursor:pointer;padding:0;text-decoration:none;" title="Sofascore">⚡</a>'
+          +'<button data-titre="'+titre.replace(/"/g,'&quot;')+'" data-date="'+(h.date||'')+'" data-comp="'+(h.comp||'')+'" onclick="var d=this.dataset;ouvrirYouTubeAvecScore(d.titre,d.date,d.comp)" style="background:none;border:none;color:#ff0000;font-size:13px;cursor:pointer;padding:0;" title="YouTube highlights">▶️</button>'
           +'<button data-aid="'+h.id+'" onclick="editArchived(this.dataset.aid)" style="background:none;border:none;color:var(--t3);font-size:14px;cursor:pointer;padding:0;">✏️</button>'
           +'<button data-aid="'+h.id+'" onclick="deleteArchived(this.dataset.aid)" style="background:none;border:none;color:var(--r);font-size:14px;cursor:pointer;padding:0;">🗑</button>'
           +'</div>'
