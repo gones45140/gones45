@@ -1526,6 +1526,19 @@ function renderDetailMatch(modal, m) {
   });
   html += '</div>';
 
+  // Boutons résumé externe
+  var d2 = new Date(m.utcDate);
+  var dateQuery = d2.toLocaleDateString('fr-FR',{day:'numeric',month:'long',year:'numeric'});
+  var query = encodeURIComponent(homeName+' '+awayName+' '+dateQuery+' résumé');
+  var sofaQuery = encodeURIComponent(homeName+' '+awayName+' sofascore');
+  var googleUrl = 'https://www.google.com/search?q='+query;
+  var sofaUrl2  = 'https://www.google.com/search?q='+sofaQuery;
+
+  html += '<div style="display:flex;gap:8px;margin-top:12px;">';
+  html += '<a href="'+sofaUrl2+'" target="_blank" style="flex:1;display:flex;align-items:center;justify-content:center;gap:6px;padding:10px;background:rgba(255,107,54,.15);border:1px solid rgba(255,107,54,.3);border-radius:10px;text-decoration:none;color:#ff7b54;font-size:12px;font-weight:700;">⚡ Sofascore</a>';
+  html += '<a href="'+googleUrl+'" target="_blank" style="flex:1;display:flex;align-items:center;justify-content:center;gap:6px;padding:10px;background:rgba(77,132,255,.15);border:1px solid rgba(77,132,255,.3);border-radius:10px;text-decoration:none;color:#4d84ff;font-size:12px;font-weight:700;">🔍 Résumé</a>';
+  html += '</div>';
+
   html += '</div>';
   modal.innerHTML = html;
 }
