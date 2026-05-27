@@ -1555,7 +1555,7 @@ function toggleQuickStat(btn) {
 
 function renderScorersList(scorers, teamId, title, highlightTeam) {
   if(!scorers||!scorers.length) return '<div style="color:var(--t3);font-size:10px;text-align:center;padding:8px;">Aucune donnée</div>';
-  var html = '<div style="font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#4f5d88;margin-bottom:8px;">'+title+'</div>';
+  var html = title ? '<div style="font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#4f5d88;margin-bottom:8px;">'+title+'</div>' : '';
   html += '<div style="display:flex;flex-direction:column;gap:3px;">';
   scorers.slice(0,20).forEach(function(sc,i){
     var p = sc.player;
@@ -1563,17 +1563,28 @@ function renderScorersList(scorers, teamId, title, highlightTeam) {
     var assists = sc.assists||0;
     var nat = p&&p.nationality||'';
     var natCode = FLAG_CDN[nat]||null;
+    var clubCrest = sc.team&&sc.team.crest||'';
     var isOur = highlightTeam && sc.team && sc.team.id===teamId;
-    html += '<div style="display:flex;align-items:center;gap:8px;padding:6px 10px;background:'+(isOur?'rgba(77,132,255,.1)':'rgba(255,255,255,.02)')+';border-radius:6px;border:1px solid '+(isOur?'rgba(77,132,255,.3)':'rgba(255,255,255,.04)')+'">';
-    html += '<div style="font-size:10px;font-weight:700;color:#4f5d88;width:16px;text-align:center;">'+(i+1)+'</div>';
-    if(natCode) html += '<img src="https://flagcdn.com/w20/'+natCode+'.png" style="width:16px;height:11px;object-fit:cover;border-radius:2px;" loading="lazy">';
-    html += '<div style="flex:1;">';
-    html += '<div style="font-size:11px;font-weight:'+(isOur?'800':'600')+';color:'+(isOur?'#4d84ff':'var(--t1)')+';">'+(p&&p.name||'?')+'</div>';
-    if(!isOur && sc.team) html += '<div style="font-size:9px;color:var(--t3);">'+sc.team.shortName+'</div>';
+    html += '<div style="display:flex;align-items:center;gap:7px;padding:7px 10px;background:'+(isOur?'rgba(77,132,255,.1)':'rgba(255,255,255,.02)')+';border-radius:8px;border:1px solid '+(isOur?'rgba(77,132,255,.3)':'rgba(255,255,255,.05)')+'">';
+    // Rang
+    html += '<div style="font-size:10px;font-weight:700;color:'+(i===0?'#f0b020':i===1?'#aaa':i===2?'#cd7f32':'#4f5d88')+';width:16px;text-align:center;flex-shrink:0;">'+(i+1)+'</div>';
+    // Drapeau nationalité
+    if(natCode) html += '<img src="https://flagcdn.com/w20/'+natCode+'.png" style="width:18px;height:12px;object-fit:cover;border-radius:2px;flex-shrink:0;" loading="lazy" title="'+nat+'">';
+    else html += '<div style="width:18px;height:12px;flex-shrink:0;"></div>';
+    // Nom + club
+    html += '<div style="flex:1;min-width:0;">';
+    html += '<div style="font-size:11px;font-weight:'+(isOur?'800':'600')+';color:'+(isOur?'#4d84ff':'var(--t1)')+';white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">'+(p&&p.name||'?')+'</div>';
+    if(sc.team) {
+      html += '<div style="display:flex;align-items:center;gap:4px;margin-top:1px;">';
+      if(clubCrest) html += '<img src="'+clubCrest+'" style="width:12px;height:12px;object-fit:contain;" loading="lazy">';
+      html += '<div style="font-size:9px;color:var(--t3);">'+sc.team.shortName+'</div>';
+      html += '</div>';
+    }
     html += '</div>';
-    html += '<div style="display:flex;gap:10px;align-items:center;">';
-    html += '<div style="text-align:center;min-width:28px;"><div style="font-size:13px;font-weight:800;color:#1ed760;">'+goals+'</div><div style="font-size:8px;color:var(--t3);">⚽</div></div>';
-    if(assists>0) html += '<div style="text-align:center;min-width:28px;"><div style="font-size:13px;font-weight:800;color:#4d84ff;">'+assists+'</div><div style="font-size:8px;color:var(--t3);">🅰️</div></div>';
+    // Stats
+    html += '<div style="display:flex;gap:8px;align-items:center;flex-shrink:0;">';
+    html += '<div style="text-align:center;min-width:26px;"><div style="font-size:14px;font-weight:900;color:#1ed760;">'+goals+'</div><div style="font-size:8px;color:var(--t3);">⚽</div></div>';
+    if(assists>0) html += '<div style="text-align:center;min-width:26px;"><div style="font-size:14px;font-weight:900;color:#4d84ff;">'+assists+'</div><div style="font-size:8px;color:var(--t3);">🅰️</div></div>';
     html += '</div></div>';
   });
   html += '</div>';
@@ -7376,27 +7387,26 @@ function renderSaisonsChart(el, results, nom) {
     // ── Série + derniers matchs ──
     if(st.last5.length) {
       html += '<div style="font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#4f5d88;margin-bottom:8px;">Forme récente</div>';
-      html += '<div style="display:flex;gap:6px;align-items:center;margin-bottom:8px;">';
+      html += '<div style="display:grid;grid-template-columns:repeat('+st.last5.length+',1fr)'+(st.serie>1?' auto':'')+';gap:4px;margin-bottom:8px;">';
       st.last5.forEach(function(m){
         var col = m.w?'#1ed760':m.d?'#f0b020':'#ff4545';
-        // Abréger intelligemment — sauter les préfixes génériques
         var advWords = (m.adv||'').split(' ');
         var skipWords = ['1.','FC','SC','VfL','VfB','SV','RB','TSG','SSC','AS','AC','RC','OGC','LOSC','AFC','CFR'];
         var advMain = advWords.filter(function(w){ return skipWords.indexOf(w)<0 && w.length>1; });
-        var advShort = (advMain[0]||advWords[0]||'?').substring(0,8);
+        var advShort = (advMain[0]||advWords[0]||'?').substring(0,7);
         var cmid = m.id||'';
-        html += '<div onclick="ouvrirDetailMatch('+cmid+')" style="flex:1;text-align:center;background:var(--s1);border-radius:10px;padding:7px 3px;border-top:3px solid '+col+';border-left:1px solid rgba(255,255,255,.06);border-right:1px solid rgba(255,255,255,.06);border-bottom:1px solid rgba(255,255,255,.06);cursor:pointer;">';
-        html += '<div style="font-size:11px;line-height:1.3;">'+(m.isDom?'🏠':'🚌')+'</div>';
-        html += '<div style="font-size:18px;font-weight:800;color:'+col+';line-height:1.2;">'+m.score+'</div>';
-        html += '<div style="display:flex;align-items:center;justify-content:center;gap:2px;">'+flagImg(m.adv||'',13)+'<div style="font-size:9px;color:var(--t2);font-weight:600;">'+advShort+'</div></div>';
-        html += '<div style="font-size:9px;color:var(--t3);line-height:1.3;">'+m.date+'</div>';
+        html += '<div onclick="ouvrirDetailMatch('+cmid+')" style="text-align:center;background:var(--s1);border-radius:8px;padding:6px 2px;border-top:3px solid '+col+';border:1px solid rgba(255,255,255,.06);border-top:3px solid '+col+';cursor:pointer;min-width:0;">';
+        html += '<div style="font-size:10px;line-height:1.2;">'+(m.isDom?'🏠':'🚌')+'</div>';
+        html += '<div style="font-size:16px;font-weight:800;color:'+col+';line-height:1.2;">'+m.score+'</div>';
+        html += '<div style="font-size:8px;color:var(--t2);font-weight:600;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;padding:0 2px;">'+advShort+'</div>';
+        html += '<div style="font-size:8px;color:var(--t3);">'+m.date+'</div>';
         html += '</div>';
       });
       if(st.serie>1){
         var sc=st.serieType==='W'?'#1ed760':st.serieType==='D'?'#f0b020':'#ff4545';
-        var sl=st.serieType==='W'?'Victoires':'Matchs sans victoire';
-        html += '<div style="padding:6px 10px;background:rgba(255,255,255,.04);border-radius:8px;text-align:center;flex-shrink:0;">';
-        html += '<div style="font-size:16px;font-weight:800;color:'+sc+';">'+st.serie+'</div>';
+        var sl=st.serieType==='W'?'V consec.':'Sans V';
+        html += '<div style="padding:4px 8px;background:rgba(255,255,255,.04);border-radius:8px;text-align:center;display:flex;flex-direction:column;justify-content:center;">';
+        html += '<div style="font-size:18px;font-weight:800;color:'+sc+';">'+st.serie+'</div>';
         html += '<div style="font-size:8px;color:rgba(255,255,255,.4);">'+sl+'</div></div>';
       }
       html += '</div>';
