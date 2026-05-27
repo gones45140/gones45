@@ -5205,9 +5205,11 @@ async function loadNhlSaisons(el, nom) {
     if(last5.length) {
       // Stats Over/Under sur toute la saison
       var over55=0, over65=0, over75=0, bts5=0, n=allGames.length;
+      var over45nhl=0;
       allGames.forEach(function(g){
         var hs=g.homeTeam&&g.homeTeam.score||0, as2=g.awayTeam&&g.awayTeam.score||0;
         var tot=hs+as2;
+        if(tot>4.5) over45nhl++;
         if(tot>5.5) over55++;
         if(tot>6.5) over65++;
         if(tot>7.5) over75++;
@@ -5237,20 +5239,41 @@ async function loadNhlSaisons(el, nom) {
       });
       html += '</div>';
 
-      // Barres Over/Under hockey
+      // Calcul Under
+      var under55=0, under65=0, under75=0;
+      allGames.forEach(function(g){
+        var tot=(g.homeTeam.score||0)+(g.awayTeam.score||0);
+        if(tot<=5.5) under55++; if(tot<=6.5) under65++; if(tot<=7.5) under75++;
+      });
+
+      // Sélecteur + barres Over/Under hockey
       if(n>0) {
-        var overs = [
-          {label:'Over 5.5', v:Math.round(over55/n*100), color:'#1ed760'},
-          {label:'Over 6.5', v:Math.round(over65/n*100), color:'#f0b020'},
-          {label:'Over 7.5', v:Math.round(over75/n*100), color:'#ff7b54'},
-          {label:'Les 2 équipes marquent', v:Math.round(bts5/n*100), color:'#a78bfa'},
+        var NHL_STATS = [
+          {key:'O4.5', label:'Over 4.5', v:Math.round(over45nhl/n*100)||0, color:'#4d84ff'},
+          {key:'O5.5', label:'Over 5.5', v:Math.round(over55/n*100), color:'#1ed760'},
+          {key:'O6.5', label:'Over 6.5', v:Math.round(over65/n*100), color:'#f0b020'},
+          {key:'O7.5', label:'Over 7.5', v:Math.round(over75/n*100), color:'#ff7b54'},
+          {key:'U5.5', label:'Under 5.5', v:Math.round(under55/n*100), color:'#22d3ee'},
+          {key:'U6.5', label:'Under 6.5', v:Math.round(under65/n*100), color:'#67e8f9'},
+          {key:'U7.5', label:'Under 7.5', v:Math.round(under75/n*100), color:'#a5f3fc'},
+          {key:'BTS', label:'Les 2 équipes', v:Math.round(bts5/n*100), color:'#a78bfa'},
         ];
+        if(!window._nhlQuickStats) window._nhlQuickStats = ['O5.5','O6.5','BTS'];
+
+        // Chips sélecteur
+        html += '<div style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:10px;">';
+        NHL_STATS.forEach(function(s){
+          var isOn = window._nhlQuickStats.indexOf(s.key)>=0;
+          html += '<button data-nqs="'+s.key+'" onclick="var a=window._nhlQuickStats,i=a.indexOf(this.dataset.nqs);i>=0?a.splice(i,1):a.push(this.dataset.nqs);loadTeamSaisons();" style="padding:3px 8px;border-radius:10px;border:1px solid rgba(255,255,255,'+(isOn?'.3':'.08')+');background:rgba(255,255,255,'+(isOn?'.12':'.04')+');color:'+(isOn?'var(--t1)':'var(--t3)')+';font-size:9px;font-weight:'+(isOn?'700':'400')+';cursor:pointer;">'+s.key+'</button>';
+        });
+        html += '</div>';
+
+        var activeNhl = NHL_STATS.filter(function(s){ return window._nhlQuickStats.indexOf(s.key)>=0; });
         html += '<div style="font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#4f5d88;margin-bottom:8px;">Stats saison ('+n+' matchs)</div>';
-        overs.forEach(function(o){
+        activeNhl.forEach(function(o){
           html += '<div style="display:flex;align-items:center;gap:8px;margin-bottom:5px;">';
-          html += '<div style="font-size:10px;color:var(--t2);width:160px;flex-shrink:0;">'+o.label+'</div>';
-          html += '<div style="flex:1;height:7px;background:rgba(255,255,255,.06);border-radius:4px;">';
-          html += '<div style="height:7px;border-radius:4px;background:'+o.color+';width:'+o.v+'%;"></div></div>';
+          html += '<div style="font-size:10px;color:var(--t2);width:100px;flex-shrink:0;">'+o.label+'</div>';
+          html += '<div style="flex:1;height:7px;background:rgba(255,255,255,.06);border-radius:4px;"><div style="height:7px;border-radius:4px;background:'+o.color+';width:'+o.v+'%;"></div></div>';
           html += '<div style="font-size:11px;font-weight:800;color:'+o.color+';width:34px;text-align:right;">'+o.v+'%</div>';
           html += '</div>';
         });
@@ -5372,11 +5395,12 @@ async function loadMlbSaisons(el, nom) {
     if(last5.length) {
       // Over/Under baseball
       var over7=0,over8=0,over9=0,btsMlb=0;
+      var over6mlb=0;
       allGames.forEach(function(g){
         var hs=g.teams&&g.teams.home&&g.teams.home.score||0;
         var as2=g.teams&&g.teams.away&&g.teams.away.score||0;
         var tot=hs+as2;
-        if(tot>7) over7++; if(tot>8) over8++; if(tot>9) over9++;
+        if(tot>6) over6mlb++; if(tot>7) over7++; if(tot>8) over8++; if(tot>9) over9++;
         if(hs>0&&as2>0) btsMlb++;
       });
 
@@ -5403,9 +5427,25 @@ async function loadMlbSaisons(el, nom) {
       html += '</div>';
 
       if(n>0) {
-        [{label:'Over 7 runs',v:Math.round(over7/n*100),color:'#1ed760'},{label:'Over 8 runs',v:Math.round(over8/n*100),color:'#f0b020'},{label:'Over 9 runs',v:Math.round(over9/n*100),color:'#ff7b54'},{label:'Les 2 équipes marquent',v:Math.round(btsMlb/n*100),color:'#a78bfa'}].forEach(function(o){
+        var under7=0,under8=0,under9=0;
+        allGames.forEach(function(g){ var tot=(g.teams.home.score||0)+(g.teams.away.score||0); if(tot<=7)under7++; if(tot<=8)under8++; if(tot<=9)under9++; });
+        var MLB_STATS=[
+          {key:'O6',label:'Over 6',v:Math.round(over6mlb/n*100)||0,color:'#4d84ff'},
+          {key:'O7',label:'Over 7',v:Math.round(over7/n*100),color:'#1ed760'},
+          {key:'O8',label:'Over 8',v:Math.round(over8/n*100),color:'#f0b020'},
+          {key:'O9',label:'Over 9',v:Math.round(over9/n*100),color:'#ff7b54'},
+          {key:'U7',label:'Under 7',v:Math.round(under7/n*100),color:'#22d3ee'},
+          {key:'U8',label:'Under 8',v:Math.round(under8/n*100),color:'#67e8f9'},
+          {key:'U9',label:'Under 9',v:Math.round(under9/n*100),color:'#a5f3fc'},
+          {key:'BTS',label:'Les 2 équipes',v:Math.round(btsMlb/n*100),color:'#a78bfa'},
+        ];
+        if(!window._mlbQuickStats) window._mlbQuickStats=['O7','O8','BTS'];
+        html += '<div style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:10px;">';
+        MLB_STATS.forEach(function(s){ var isOn=window._mlbQuickStats.indexOf(s.key)>=0; html += '<button data-mqs="'+s.key+'" onclick="var a=window._mlbQuickStats,i=a.indexOf(this.dataset.mqs);i>=0?a.splice(i,1):a.push(this.dataset.mqs);loadTeamSaisons();" style="padding:3px 8px;border-radius:10px;border:1px solid rgba(255,255,255,'+(isOn?'.3':'.08')+');background:rgba(255,255,255,'+(isOn?'.12':'.04')+');color:'+(isOn?'var(--t1)':'var(--t3)')+';font-size:9px;font-weight:'+(isOn?'700':'400')+';cursor:pointer;">'+s.key+'</button>'; });
+        html += '</div>';
+        MLB_STATS.filter(function(s){return window._mlbQuickStats.indexOf(s.key)>=0;}).forEach(function(o){
           html += '<div style="display:flex;align-items:center;gap:8px;margin-bottom:5px;">';
-          html += '<div style="font-size:10px;color:var(--t2);width:160px;flex-shrink:0;">'+o.label+'</div>';
+          html += '<div style="font-size:10px;color:var(--t2);width:100px;flex-shrink:0;">'+o.label+'</div>';
           html += '<div style="flex:1;height:7px;background:rgba(255,255,255,.06);border-radius:4px;"><div style="height:7px;border-radius:4px;background:'+o.color+';width:'+o.v+'%;"></div></div>';
           html += '<div style="font-size:11px;font-weight:800;color:'+o.color+';width:34px;text-align:right;">'+o.v+'%</div></div>';
         });
@@ -5925,7 +5965,8 @@ async function loadNbaSaisons(el, nom) {
     // Forme récente + Over/Under NBA
     if(last5.length) {
       var over210=0, over220=0, over230=0;
-      allGames.forEach(function(g){ var tot=g.home_team_score+g.visitor_team_score; if(tot>210) over210++; if(tot>220) over220++; if(tot>230) over230++; });
+      var over200=0;
+      allGames.forEach(function(g){ var tot=g.home_team_score+g.visitor_team_score; if(tot>200)over200++; if(tot>210) over210++; if(tot>220) over220++; if(tot>230) over230++; });
 
       html += '<div class="cwrap" style="margin-bottom:10px;">';
       html += '<div style="font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#4f5d88;margin-bottom:8px;">Forme récente</div>';
@@ -5949,7 +5990,22 @@ async function loadNbaSaisons(el, nom) {
       html += '</div>';
 
       if(n>0) {
-        [{label:'Over 210 pts',v:Math.round(over210/n*100),color:'#1ed760'},{label:'Over 220 pts',v:Math.round(over220/n*100),color:'#f0b020'},{label:'Over 230 pts',v:Math.round(over230/n*100),color:'#ff7b54'}].forEach(function(o){
+        var under210=0,under220=0,under230=0;
+        allGames.forEach(function(g){ var tot=g.home_team_score+g.visitor_team_score; if(tot<=210)under210++; if(tot<=220)under220++; if(tot<=230)under230++; });
+        var NBA_STATS=[
+          {key:'O200',label:'Over 200',v:Math.round(over200/n*100)||0,color:'#4d84ff'},
+          {key:'O210',label:'Over 210',v:Math.round(over210/n*100),color:'#1ed760'},
+          {key:'O220',label:'Over 220',v:Math.round(over220/n*100),color:'#f0b020'},
+          {key:'O230',label:'Over 230',v:Math.round(over230/n*100),color:'#ff7b54'},
+          {key:'U210',label:'Under 210',v:Math.round(under210/n*100),color:'#22d3ee'},
+          {key:'U220',label:'Under 220',v:Math.round(under220/n*100),color:'#67e8f9'},
+          {key:'U230',label:'Under 230',v:Math.round(under230/n*100),color:'#a5f3fc'},
+        ];
+        if(!window._nbaQuickStats) window._nbaQuickStats=['O210','O220'];
+        html += '<div style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:10px;">';
+        NBA_STATS.forEach(function(s){ var isOn=window._nbaQuickStats.indexOf(s.key)>=0; html += '<button data-bqs="'+s.key+'" onclick="var a=window._nbaQuickStats,i=a.indexOf(this.dataset.bqs);i>=0?a.splice(i,1):a.push(this.dataset.bqs);loadTeamSaisons();" style="padding:3px 8px;border-radius:10px;border:1px solid rgba(255,255,255,'+(isOn?'.3':'.08')+');background:rgba(255,255,255,'+(isOn?'.12':'.04')+');color:'+(isOn?'var(--t1)':'var(--t3)')+';font-size:9px;font-weight:'+(isOn?'700':'400')+';cursor:pointer;">'+s.key+'</button>'; });
+        html += '</div>';
+        NBA_STATS.filter(function(s){return window._nbaQuickStats.indexOf(s.key)>=0;}).forEach(function(o){
           html += '<div style="display:flex;align-items:center;gap:8px;margin-bottom:5px;">';
           html += '<div style="font-size:10px;color:var(--t2);width:100px;flex-shrink:0;">'+o.label+'</div>';
           html += '<div style="flex:1;height:7px;background:rgba(255,255,255,.06);border-radius:4px;"><div style="height:7px;border-radius:4px;background:'+o.color+';width:'+o.v+'%;"></div></div>';
