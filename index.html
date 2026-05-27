@@ -1553,57 +1553,106 @@ function toggleQuickStat(btn) {
 }
 
 
+function renderScorersList(scorers, teamId, title, highlightTeam) {
+  if(!scorers||!scorers.length) return '<div style="color:var(--t3);font-size:10px;text-align:center;padding:8px;">Aucune donnée</div>';
+  var html = '<div style="font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#4f5d88;margin-bottom:8px;">'+title+'</div>';
+  html += '<div style="display:flex;flex-direction:column;gap:3px;">';
+  scorers.slice(0,20).forEach(function(sc,i){
+    var p = sc.player;
+    var goals = sc.goals||0;
+    var assists = sc.assists||0;
+    var nat = p&&p.nationality||'';
+    var natCode = FLAG_CDN[nat]||null;
+    var isOur = highlightTeam && sc.team && sc.team.id===teamId;
+    html += '<div style="display:flex;align-items:center;gap:8px;padding:6px 10px;background:'+(isOur?'rgba(77,132,255,.1)':'rgba(255,255,255,.02)')+';border-radius:6px;border:1px solid '+(isOur?'rgba(77,132,255,.3)':'rgba(255,255,255,.04)')+'">';
+    html += '<div style="font-size:10px;font-weight:700;color:#4f5d88;width:16px;text-align:center;">'+(i+1)+'</div>';
+    if(natCode) html += '<img src="https://flagcdn.com/w20/'+natCode+'.png" style="width:16px;height:11px;object-fit:cover;border-radius:2px;" loading="lazy">';
+    html += '<div style="flex:1;">';
+    html += '<div style="font-size:11px;font-weight:'+(isOur?'800':'600')+';color:'+(isOur?'#4d84ff':'var(--t1)')+';">'+(p&&p.name||'?')+'</div>';
+    if(!isOur && sc.team) html += '<div style="font-size:9px;color:var(--t3);">'+sc.team.shortName+'</div>';
+    html += '</div>';
+    html += '<div style="display:flex;gap:10px;align-items:center;">';
+    html += '<div style="text-align:center;min-width:28px;"><div style="font-size:13px;font-weight:800;color:#1ed760;">'+goals+'</div><div style="font-size:8px;color:var(--t3);">⚽</div></div>';
+    if(assists>0) html += '<div style="text-align:center;min-width:28px;"><div style="font-size:13px;font-weight:800;color:#4d84ff;">'+assists+'</div><div style="font-size:8px;color:var(--t3);">🅰️</div></div>';
+    html += '</div></div>';
+  });
+  html += '</div>';
+  return html;
+}
+
 async function _loadScorers(el) {
   var nom = el.dataset.nom;
   var s = el.dataset.saison;
-  el.innerHTML = '⏳ Chargement...';
+  el.innerHTML = '<div style="color:var(--t3);font-size:11px;text-align:center;padding:12px;">⏳ Chargement buteurs...</div>';
 
-  // Trouver le code ligue depuis le cache
   var teamId = null;
   for(var k in TEAM_IDS){ if(k.toLowerCase()===nom.toLowerCase()||(nom.toLowerCase().indexOf(k.toLowerCase())>=0)){teamId=TEAM_IDS[k];break;} }
   if(!teamId){ el.innerHTML='<div style="color:var(--t3);font-size:10px;text-align:center;">Équipe non reconnue</div>'; return; }
 
   var cached = _saisonsCache && _saisonsCache[teamId] && _saisonsCache[teamId][s];
   var leagueCode = null;
+  var euCodes = [];
   if(cached) {
     var LEAGUE_CODES = ['PL','PD','BL1','SA','FL1','PPL'];
+    var EU_CODES = ['CL','EL','ECL'];
     for(var i=0;i<cached.length;i++){
       var c = cached[i].competition && cached[i].competition.code;
-      if(c && LEAGUE_CODES.indexOf(c)>=0){ leagueCode=c; break; }
+      if(c && LEAGUE_CODES.indexOf(c)>=0 && !leagueCode) leagueCode=c;
+      if(c && EU_CODES.indexOf(c)>=0 && euCodes.indexOf(c)<0) euCodes.push(c);
     }
   }
   if(!leagueCode){ el.innerHTML='<div style="color:var(--t3);font-size:10px;text-align:center;">Ligue non disponible</div>'; return; }
 
   try {
+    // 1 seule requête — top scorers du championnat
     var data = await fdFetch('/v4/competitions/'+leagueCode+'/scorers?season='+s+'&limit=50');
     if(!data||!data.scorers){ el.innerHTML='<div style="color:var(--t3);font-size:10px;text-align:center;">Données non disponibles</div>'; return; }
 
-    // Filtrer les joueurs de l'équipe
-    var teamScorers = data.scorers.filter(function(sc){ return sc.team && sc.team.id === teamId; });
+    var allScorers = data.scorers;
+    var teamScorers = allScorers.filter(function(sc){ return sc.team && sc.team.id===teamId; });
+    var compName = data.competition&&data.competition.name||'Championnat';
 
-    if(!teamScorers.length){ el.outerHTML='<div style="font-size:10px;color:var(--t3);text-align:center;padding:8px;">Aucun buteur trouvé pour cette équipe</div>'; return; }
+    var html = '<div style="display:flex;flex-direction:column;gap:10px;">';
 
-    var html = '<div style="font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#4f5d88;margin-bottom:8px;">⚽ Top buteurs '+s+'-'+(parseInt(s)+1)+'</div>';
-    html += '<div style="display:flex;flex-direction:column;gap:4px;">';
-    teamScorers.forEach(function(sc, i){
-      var p = sc.player;
-      var goals = sc.goals || 0;
-      var assists = sc.assists || 0;
-      var nat = p&&p.nationality||'';
-      var natCode = FLAG_CDN[nat]||null;
-      html += '<div style="display:flex;align-items:center;gap:8px;padding:7px 10px;background:rgba(255,255,255,.03);border-radius:6px;border:1px solid rgba(255,255,255,.05);">';
-      html += '<div style="font-size:11px;font-weight:800;color:#4f5d88;width:18px;text-align:center;">'+(i+1)+'</div>';
-      if(natCode) html += '<img src="https://flagcdn.com/w20/'+natCode+'.png" style="width:18px;height:12px;object-fit:cover;border-radius:2px;" loading="lazy">';
-      html += '<div style="flex:1;font-size:11px;font-weight:700;color:var(--t1);">'+(p&&p.name||'?')+'</div>';
-      html += '<div style="display:flex;gap:8px;">';
-      html += '<div style="text-align:center;"><div style="font-size:14px;font-weight:800;color:#1ed760;">'+goals+'</div><div style="font-size:8px;color:var(--t3);">buts</div></div>';
-      if(assists) html += '<div style="text-align:center;"><div style="font-size:14px;font-weight:800;color:#4d84ff;">'+assists+'</div><div style="font-size:8px;color:var(--t3);">passes</div></div>';
-      html += '</div></div>';
-    });
+    // Section 1 — Buteurs du club
+    if(teamScorers.length) {
+      html += '<div class="cwrap">';
+      html += renderScorersList(teamScorers, teamId, '⚽ '+nom+' — Buteurs & passeurs', false);
+      html += '</div>';
+    }
+
+    // Section 2 — Top 20 championnat
+    html += '<div class="cwrap">';
+    html += '<div id="champ-scorers-header" style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">';
+    html += '<div style="font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#4f5d88;">🏆 Top buteurs — '+compName+'</div>';
+    html += '</div>';
+    html += renderScorersList(allScorers, teamId, '', true);
+    html += '</div>';
+
+    // Section 3 — Coupe d'Europe (requête séparée si disponible)
+    if(euCodes.length) {
+      html += '<div class="cwrap" id="eu-scorers-section">';
+      html += '<div style="font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#4f5d88;margin-bottom:8px;">⭐ Coupe d\'Europe</div>';
+      html += '<div id="eu-scorers-content" style="font-size:10px;color:var(--t3);text-align:center;padding:8px;cursor:pointer;background:rgba(255,255,255,.03);border-radius:6px;" onclick="_loadEuScorers(this,\''+euCodes[0]+'\',\''+s+'\','+teamId+')">⭐ Charger top buteurs Coupe d\'Europe →</div>';
+      html += '</div>';
+    }
+
     html += '</div>';
     el.outerHTML = html;
+
   } catch(e) {
-    el.innerHTML = '<div style="color:var(--t3);font-size:10px;text-align:center;">Erreur de chargement</div>';
+    el.innerHTML = '<div style="color:var(--t3);font-size:10px;text-align:center;">Erreur : '+e.message+'</div>';
+  }
+}
+
+async function _loadEuScorers(el, code, saison, teamId) {
+  el.innerHTML = '⏳ Chargement...';
+  try {
+    var data = await fdFetch('/v4/competitions/'+code+'/scorers?season='+saison+'&limit=30');
+    if(!data||!data.scorers){ el.innerHTML='<div style="color:var(--t3);font-size:10px;text-align:center;">Non disponible</div>'; return; }
+    el.outerHTML = renderScorersList(data.scorers, teamId, '', true);
+  } catch(e) {
+    el.innerHTML = '<div style="color:var(--t3);font-size:10px;">Erreur</div>';
   }
 }
 
