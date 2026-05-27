@@ -3,7 +3,7 @@
 <html lang="fr">
 <head>
 <meta charset="UTF-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-eval' 'unsafe-inline' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com; worker-src 'self' blob:; connect-src 'self' data: blob: https://tessdata.projectnaptha.com https://api.dropbox.com https://content.dropboxapi.com https://api.dropboxapi.com https://api.groq.com https://api.tavily.com https://fd-proxy.touraine-antoine.workers.dev https://media.api-sports.io https://api.football-data.org https://api-web.nhle.com https://statsapi.mlb.com https://www.thesportsdb.com https://cdn.jsdelivr.net https://api.openf1.org https://api.jolpi.ca; img-src 'self' data: https: blob: https://flagcdn.com; style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com;">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-eval' 'unsafe-inline' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com; worker-src 'self' blob:; connect-src 'self' data: blob: https://tessdata.projectnaptha.com https://api.balldontlie.io https://api.dropbox.com https://content.dropboxapi.com https://api.dropboxapi.com https://api.groq.com https://api.tavily.com https://fd-proxy.touraine-antoine.workers.dev https://media.api-sports.io https://api.football-data.org https://api-web.nhle.com https://statsapi.mlb.com https://www.thesportsdb.com https://cdn.jsdelivr.net https://api.openf1.org https://api.jolpi.ca; img-src 'self' data: https: blob: https://flagcdn.com; style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com;">
 <meta http-equiv="Content-Security-Policy" content="default-src 'self' 'unsafe-inline' 'unsafe-eval' https: data: blob:;">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
 <title>GONES45</title>
@@ -5010,16 +5010,21 @@ var TENNIS_PLAYERS = {
 };
 
 var NBA_TEAMS = {
-  'Los Angeles Lakers': {id:'1610612747', abbr:'LAL'},
-  'Boston Celtics': {id:'1610612738', abbr:'BOS'},
-  'Golden State Warriors': {id:'1610612744', abbr:'GSW'},
-  'Miami Heat': {id:'1610612748', abbr:'MIA'},
-  'Chicago Bulls': {id:'1610612741', abbr:'CHI'},
-  'New York Knicks': {id:'1610612752', abbr:'NYK'},
-  'Denver Nuggets': {id:'1610612743', abbr:'DEN'},
-  'Phoenix Suns': {id:'1610612756', abbr:'PHX'},
-  'Milwaukee Bucks': {id:'1610612749', abbr:'MIL'},
-  'Dallas Mavericks': {id:'1610612742', abbr:'DAL'},
+  'Los Angeles Lakers':   {id:'1610612747', abbr:'LAL', bdlId:14},
+  'Boston Celtics':       {id:'1610612738', abbr:'BOS', bdlId:2},
+  'Golden State Warriors':{id:'1610612744', abbr:'GSW', bdlId:10},
+  'Miami Heat':           {id:'1610612748', abbr:'MIA', bdlId:16},
+  'Chicago Bulls':        {id:'1610612741', abbr:'CHI', bdlId:4},
+  'New York Knicks':      {id:'1610612752', abbr:'NYK', bdlId:20},
+  'Denver Nuggets':       {id:'1610612743', abbr:'DEN', bdlId:7},
+  'Phoenix Suns':         {id:'1610612756', abbr:'PHX', bdlId:24},
+  'Milwaukee Bucks':      {id:'1610612749', abbr:'MIL', bdlId:17},
+  'Dallas Mavericks':     {id:'1610612742', abbr:'DAL', bdlId:6},
+  'Oklahoma City Thunder':{id:'1610612760', abbr:'OKC', bdlId:21},
+  'Minnesota Timberwolves':{id:'1610612750', abbr:'MIN', bdlId:18},
+  'Cleveland Cavaliers':  {id:'1610612739', abbr:'CLE', bdlId:5},
+  'Indiana Pacers':       {id:'1610612754', abbr:'IND', bdlId:12},
+  'New York Knicks':      {id:'1610612752', abbr:'NYK', bdlId:20},
 };
 
 var NFL_TEAMS = {
@@ -5059,166 +5064,367 @@ var MLB_TEAMS = {
   'Philadelphia Phillies': {id:143},
 };
 
+
+/* ══ FORME US HELPER ══ */
+function renderFormeUS(games, teamAbbr, sport, isNHL, isMLB) {
+  if(!games||!games.length) return '';
+  var html = '<div style="display:flex;gap:4px;flex-wrap:wrap;margin-bottom:8px;">';
+  games.slice(0,10).forEach(function(g){
+    var isDom, ts, os, won;
+    if(isNHL) {
+      isDom = g.homeTeam&&g.homeTeam.abbrev===teamAbbr;
+      ts = isDom?(g.homeTeam.score||0):(g.awayTeam.score||0);
+      os = isDom?(g.awayTeam.score||0):(g.homeTeam.score||0);
+    } else if(isMLB) {
+      isDom = g.teams&&g.teams.home&&g.teams.home.team&&g.teams.home.team.name===teamAbbr;
+      ts = isDom?(g.teams.home.score||0):(g.teams.away.score||0);
+      os = isDom?(g.teams.away.score||0):(g.teams.home.score||0);
+    } else {
+      // NBA bdl
+      isDom = g.home_team&&g.home_team.abbreviation===teamAbbr;
+      ts = isDom?(g.home_team_score||0):(g.visitor_team_score||0);
+      os = isDom?(g.visitor_team_score||0):(g.home_team_score||0);
+    }
+    won = ts>os;
+    var col = won?'#1ed760':'#ff4545';
+    html += '<div style="width:20px;height:20px;border-radius:4px;background:'+col+';display:flex;align-items:center;justify-content:center;font-size:8px;font-weight:800;color:#fff;">'+(won?'V':'D')+'</div>';
+  });
+  html += '</div>';
+  return html;
+}
+
+function renderProchainMatch(label, adversaire, date, lieu, sport) {
+  var ls = 'display:flex;align-items:center;gap:10px;padding:10px 12px;background:rgba(77,132,255,.06);border:1px solid rgba(77,132,255,.2);border-radius:8px;';
+  var html = '<div style="'+ls+'">';
+  html += '<div style="font-size:20px;">'+sport+'</div>';
+  html += '<div style="flex:1;">';
+  html += '<div style="font-size:12px;font-weight:800;color:var(--t1);">'+label+' vs '+adversaire+'</div>';
+  if(date) html += '<div style="font-size:10px;color:var(--t3);">📅 '+date+'</div>';
+  if(lieu) html += '<div style="font-size:10px;color:var(--t3);">🏟️ '+lieu+'</div>';
+  html += '</div></div>';
+  return html;
+}
+
 async function loadNhlSaisons(el, nom) {
   var teamInfo = NHL_TEAMS[nom];
   if(!teamInfo) {
-    el.innerHTML = '<div style="color:var(--t3);text-align:center;padding:20px;">Équipe NHL non reconnue.<br><small>Ajoute-la dans la liste NHL_TEAMS</small></div>';
+    el.innerHTML = '<div style="color:var(--t3);text-align:center;padding:20px;">Équipe NHL non reconnue.</div>';
     return;
   }
-  el.innerHTML = '<div style="display:flex;align-items:center;gap:8px;padding:20px;color:var(--t3);"><div style="width:14px;height:14px;border:2px solid rgba(77,132,255,.2);border-top-color:#4d84ff;border-radius:50%;animation:spin .8s linear infinite;"></div>Chargement stats NHL...</div>';
+  el.innerHTML = '<div style="display:flex;align-items:center;gap:8px;padding:20px;color:var(--t3);"><div style="width:14px;height:14px;border:2px solid rgba(77,132,255,.2);border-top-color:#4d84ff;border-radius:50%;animation:spin .8s linear infinite;"></div>Chargement NHL...</div>';
 
   try {
-    // Classement en cours
-    var standResp = await fetch('https://fd-proxy.touraine-antoine.workers.dev?key=nhl&path=/v1/standings/now&host=nhl');
+    var [standResp, schedResp] = await Promise.all([
+      fetch('https://fd-proxy.touraine-antoine.workers.dev?key=nhl&path=/v1/standings/now&host=nhl'),
+      fetch('https://fd-proxy.touraine-antoine.workers.dev?key=nhl&path=/v1/club-schedule-season/'+teamInfo.abbr+'/now&host=nhl')
+    ]);
     var standData = await standResp.json();
-    var teams = standData.standings||[];
-    var team = teams.find(function(t){ return (t.teamAbbrev&&t.teamAbbrev.default)===teamInfo.abbr; });
-
-    // Derniers matchs
-    var schedResp = await fetch('https://fd-proxy.touraine-antoine.workers.dev?key=nhl&path=/v1/club-schedule-season/'+teamInfo.abbr+'/now&host=nhl');
     var schedData = await schedResp.json();
-    var games = (schedData.games||[]).filter(function(g){ return g.gameState==='OFF'||g.gameState==='FINAL'; }).slice(-5).reverse();
+
+    var team = (standData.standings||[]).find(function(t){ return (t.teamAbbrev&&t.teamAbbrev.default)===teamInfo.abbr; });
+    var allGames = (schedData.games||[]).filter(function(g){ return g.gameState==='OFF'||g.gameState==='FINAL'; });
+    var last5 = allGames.slice(-5).reverse();
 
     var html = '<div style="padding:4px 0;">';
 
+    // Classement
     if(team) {
-      var pts = team.points||0;
-      var w = team.wins||0;
-      var l = team.losses||0;
-      var otl = team.otLosses||0;
-      var gf = team.goalFor||0;
-      var ga = team.goalAgainst||0;
-      var rank = team.wildcardSequence||team.conferenceSequence||'?';
-
+      var pts=team.points||0, w=team.wins||0, l=team.losses||0, otl=team.otLosses||0;
+      var gf=team.goalFor||0, ga=team.goalAgainst||0;
       html += '<div class="cwrap" style="margin-bottom:10px;">';
-      html += '<div style="font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#4f5d88;margin-bottom:10px;">Saison 2025-2026 — Classement</div>';
-      html += '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;">';
-      var statsCards = [
-        {l:'Points', v:pts, c:'#4d84ff'},
-        {l:'Victoires', v:w, c:'#1ed760'},
-        {l:'Défaites', v:l+(otl?'+'+otl+' OT':''), c:'#ff4545'},
-        {l:'Buts marqués', v:gf, c:'#f0b020'},
-        {l:'Buts encaissés', v:ga, c:'#ff7b54'},
-        {l:'Diff.', v:(gf-ga>0?'+':'')+(gf-ga), c:gf>=ga?'#1ed760':'#ff4545'},
-      ];
-      statsCards.forEach(function(s){
-        html += '<div style="text-align:center;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:8px;padding:10px 4px;">';
-        html += '<div style="font-size:20px;font-weight:800;color:'+s.c+';">'+s.v+'</div>';
-        html += '<div style="font-size:9px;color:var(--t3);margin-top:2px;">'+s.l+'</div>';
+      html += '<div style="font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#4f5d88;margin-bottom:8px;">🏒 Saison 2025-2026</div>';
+      html += '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px;">';
+      [{l:'Points',v:pts,c:'#4d84ff'},{l:'Victoires',v:w,c:'#1ed760'},{l:l+(otl?'+'+otl+' OT':''),v:'Défaites',c:'#ff4545'},{l:'Buts +',v:gf,c:'#f0b020'},{l:'Buts -',v:ga,c:'#ff7b54'},{l:'Diff.',v:(gf-ga>0?'+':'')+(gf-ga),c:gf>=ga?'#1ed760':'#ff4545'}].forEach(function(s){
+        html += '<div style="text-align:center;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:8px;padding:8px 4px;">';
+        html += '<div style="font-size:18px;font-weight:800;color:'+s.c+';">'+(s.v==='Défaites'?s.l:s.v)+'</div>';
+        html += '<div style="font-size:8px;color:var(--t3);">'+(s.v==='Défaites'?'Défaites':s.l)+'</div>';
         html += '</div>';
       });
       html += '</div></div>';
     }
 
-    if(games.length) {
-      html += '<div class="cwrap">';
-      html += '<div style="font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#4f5d88;margin-bottom:10px;">Forme récente</div>';
-      html += '<div style="display:flex;gap:6px;">';
-      games.forEach(function(g){
+    // Forme récente + Over/Under
+    if(last5.length) {
+      // Stats Over/Under sur toute la saison
+      var over55=0, over65=0, over75=0, bts5=0, n=allGames.length;
+      allGames.forEach(function(g){
+        var hs=g.homeTeam&&g.homeTeam.score||0, as2=g.awayTeam&&g.awayTeam.score||0;
+        var tot=hs+as2;
+        if(tot>5.5) over55++;
+        if(tot>6.5) over65++;
+        if(tot>7.5) over75++;
+        if(hs>0&&as2>0) bts5++;
+      });
+
+      html += '<div class="cwrap" style="margin-bottom:10px;">';
+      html += '<div style="font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#4f5d88;margin-bottom:8px;">Forme récente</div>';
+      html += '<div style="display:flex;gap:5px;margin-bottom:12px;">';
+      last5.forEach(function(g){
         var isDom = g.homeTeam&&g.homeTeam.abbrev===teamInfo.abbr;
-        var teamScore = isDom ? (g.homeTeam.score||0) : (g.awayTeam.score||0);
-        var oppScore = isDom ? (g.awayTeam.score||0) : (g.homeTeam.score||0);
-        var oppName = isDom ? (g.awayTeam&&g.awayTeam.abbrev||'?') : (g.homeTeam&&g.homeTeam.abbrev||'?');
-        var won = teamScore > oppScore;
-        var col = won ? '#1ed760' : '#ff4545';
-        var d = new Date(g.gameDate);
-        var dateStr = d.toLocaleDateString('fr-FR',{day:'numeric',month:'short'});
-        html += '<div style="flex:1;text-align:center;background:var(--s1);border-radius:10px;padding:6px 3px;border-top:3px solid '+col+';border:1px solid rgba(255,255,255,.06);border-top:3px solid '+col+';">';
-        html += '<div style="font-size:13px;">🏒</div>';
-        html += '<div style="font-size:17px;font-weight:700;color:'+col+';">'+teamScore+'-'+oppScore+'</div>';
-        html += '<div style="font-size:9px;color:var(--t3);">'+(isDom?'vs':'@')+' '+oppName+'</div>';
-        html += '<div style="font-size:8px;color:rgba(255,255,255,.25);">'+dateStr+'</div>';
+        var ts = isDom?(g.homeTeam.score||0):(g.awayTeam.score||0);
+        var os = isDom?(g.awayTeam.score||0):(g.homeTeam.score||0);
+        var opp = isDom?(g.awayTeam&&g.awayTeam.abbrev||'?'):(g.homeTeam&&g.homeTeam.abbrev||'?');
+        var won = ts>os; var col = won?'#1ed760':'#ff4545';
+        var d2 = new Date(g.gameDate);
+        var ds = d2.toLocaleDateString('fr-FR',{day:'numeric',month:'short'});
+        var total = ts+os;
+        html += '<div style="flex:1;text-align:center;background:var(--s1);border-radius:10px;padding:7px 3px;border-top:3px solid '+col+';border:1px solid rgba(255,255,255,.06);">';
+        html += '<div style="font-size:10px;">'+(isDom?'🏠':'🚌')+'</div>';
+        html += '<div style="font-size:16px;font-weight:800;color:'+col+';">'+ts+'-'+os+'</div>';
+        html += '<div style="font-size:9px;color:var(--t2);">'+opp+'</div>';
+        html += '<div style="font-size:8px;color:var(--t3);">'+ds+'</div>';
+        if(total>5.5) html += '<div style="font-size:8px;color:#f0b020;">O5.5</div>';
+        html += '</div>';
+      });
+      html += '</div>';
+
+      // Barres Over/Under hockey
+      if(n>0) {
+        var overs = [
+          {label:'Over 5.5', v:Math.round(over55/n*100), color:'#1ed760'},
+          {label:'Over 6.5', v:Math.round(over65/n*100), color:'#f0b020'},
+          {label:'Over 7.5', v:Math.round(over75/n*100), color:'#ff7b54'},
+          {label:'Les 2 équipes marquent', v:Math.round(bts5/n*100), color:'#a78bfa'},
+        ];
+        html += '<div style="font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#4f5d88;margin-bottom:8px;">Stats saison ('+n+' matchs)</div>';
+        overs.forEach(function(o){
+          html += '<div style="display:flex;align-items:center;gap:8px;margin-bottom:5px;">';
+          html += '<div style="font-size:10px;color:var(--t2);width:160px;flex-shrink:0;">'+o.label+'</div>';
+          html += '<div style="flex:1;height:7px;background:rgba(255,255,255,.06);border-radius:4px;">';
+          html += '<div style="height:7px;border-radius:4px;background:'+o.color+';width:'+o.v+'%;"></div></div>';
+          html += '<div style="font-size:11px;font-weight:800;color:'+o.color+';width:34px;text-align:right;">'+o.v+'%</div>';
+          html += '</div>';
+        });
+      }
+      html += '</div>';
+
+      // Résultats complets
+      html += '<div class="cwrap">';
+      html += '<div style="font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#4f5d88;margin-bottom:8px;">📅 Résultats saison ('+n+' matchs)</div>';
+      html += '<div style="display:flex;flex-direction:column;gap:3px;">';
+      allGames.slice().reverse().forEach(function(g){
+        var isDom = g.homeTeam&&g.homeTeam.abbrev===teamInfo.abbr;
+        var ts=isDom?(g.homeTeam.score||0):(g.awayTeam.score||0);
+        var os=isDom?(g.awayTeam.score||0):(g.homeTeam.score||0);
+        var hName=g.homeTeam&&(g.homeTeam.name&&g.homeTeam.name.default||g.homeTeam.abbrev)||'?';
+        var aName=g.awayTeam&&(g.awayTeam.name&&g.awayTeam.name.default||g.awayTeam.abbrev)||'?';
+        var won=ts>os, draw=ts===os;
+        var rc=won?'#1ed760':draw?'#f0b020':'#ff4545';
+        var total=ts+os;
+        var d3=new Date(g.gameDate);
+        var ds2=d3.toLocaleDateString('fr-FR',{day:'numeric',month:'short'});
+        var qs2 = window._quickStats||['O2.5','BTS'];
+        var NHL_CHECKS={'O5.5':total>5.5,'O6.5':total>6.5,'O7.5':total>7.5,'U5.5':total<=5.5,'U6.5':total<=6.5,'BTS':ts>0&&os>0};
+        var NHL_COLORS={'O5.5':'#1ed760','O6.5':'#f0b020','O7.5':'#ff4545','U5.5':'#22d3ee','U6.5':'#67e8f9','BTS':'#a78bfa'};
+        var badges='';
+        qs2.forEach(function(k){if(NHL_CHECKS[k])badges+='<span style="color:'+NHL_COLORS[k]+';">'+k+'</span> ';});
+
+        html += '<div style="display:grid;grid-template-columns:32px 1fr auto 1fr 50px;gap:4px;align-items:center;padding:5px 8px;background:'+(isDom?'rgba(255,255,255,.04)':'rgba(255,255,255,.02)')+';border-radius:6px;border-left:3px solid '+rc+';">';
+        html += '<div style="font-size:9px;color:var(--t3);text-align:center;">'+ds2+'</div>';
+        html += '<div style="font-size:10px;font-weight:'+(isDom?'800':'400')+';color:'+(isDom?'var(--t1)':'var(--t2)')+';text-align:right;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;">'+hName+'</div>';
+        html += '<div style="font-size:11px;font-weight:800;color:'+rc+';text-align:center;min-width:40px;">'+g.homeTeam.score+' - '+g.awayTeam.score+'</div>';
+        html += '<div style="font-size:10px;font-weight:'+(!isDom?'800':'400')+';color:'+(!isDom?'var(--t1)':'var(--t2)')+';overflow:hidden;white-space:nowrap;text-overflow:ellipsis;">'+aName+'</div>';
+        html += '<div style="font-size:8px;text-align:right;">🏒<br>'+badges+'</div>';
         html += '</div>';
       });
       html += '</div></div>';
+    }
+
+    // Prochain match
+    var upcoming = (schedData.games||[]).filter(function(g){ return g.gameState==='FUT'||g.gameState==='PRE'; });
+    if(upcoming.length) {
+      var next = upcoming[0];
+      var isDomNext = next.homeTeam&&next.homeTeam.abbrev===teamInfo.abbr;
+      var oppNext = isDomNext ? (next.awayTeam&&next.awayTeam.placeName&&next.awayTeam.placeName.default||next.awayTeam.abbrev||'?') : (next.homeTeam&&next.homeTeam.placeName&&next.homeTeam.placeName.default||next.homeTeam.abbrev||'?');
+      var oppAbbr = isDomNext ? (next.awayTeam&&next.awayTeam.abbrev||'?') : (next.homeTeam&&next.homeTeam.abbrev||'?');
+      var dNext = new Date(next.startTimeUTC||next.gameDate);
+      var dsNext = dNext.toLocaleDateString('fr-FR',{weekday:'short',day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'});
+      var lieu = isDomNext ? (next.venue&&next.venue.default||'') : '@ '+oppNext;
+
+      html += '<div class="cwrap" style="margin-bottom:10px;">';
+      html += '<div style="font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#4d84ff;margin-bottom:8px;">📅 Prochain match</div>';
+      html += renderProchainMatch(nom, oppNext, dsNext, lieu, '🏒');
+
+      // Forme adversaire depuis les matchs déjà en cache
+      var oppGames = (schedData.games||[]).filter(function(g){
+        return (g.gameState==='OFF'||g.gameState==='FINAL') &&
+               (g.homeTeam&&g.homeTeam.abbrev===oppAbbr || g.awayTeam&&g.awayTeam.abbrev===oppAbbr);
+      }).slice(-5);
+
+      if(oppGames.length) {
+        html += '<div style="margin-top:8px;">';
+        html += '<div style="font-size:9px;color:#4f5d88;margin-bottom:4px;">Forme '+oppNext+' :</div>';
+        html += renderFormeUS(oppGames.reverse(), oppAbbr, 'NHL', true, false);
+        // Over/Under adversaire
+        var oppOver55=0, oppN=oppGames.length;
+        oppGames.forEach(function(g){ if((g.homeTeam.score||0)+(g.awayTeam.score||0)>5.5) oppOver55++; });
+        html += '<div style="font-size:10px;color:var(--t3);">Over 5.5 : <span style="color:#f0b020;font-weight:700;">'+Math.round(oppOver55/oppN*100)+'%</span> ('+oppN+' matchs)</div>';
+        html += '</div>';
+      }
+      html += '</div>';
     }
 
     html += '</div>';
     el.innerHTML = html;
   } catch(e) {
-    el.innerHTML = '<div style="color:#ff4545;text-align:center;padding:20px;">Erreur chargement NHL API<br><small>'+e.message+'</small></div>';
+    el.innerHTML = '<div style="color:#ff4545;text-align:center;padding:20px;">Erreur NHL<br><small>'+e.message+'</small></div>';
   }
 }
 
 async function loadMlbSaisons(el, nom) {
   var teamInfo = MLB_TEAMS[nom];
-  if(!teamInfo) {
-    el.innerHTML = '<div style="color:var(--t3);text-align:center;padding:20px;">Équipe MLB non reconnue.</div>';
-    return;
-  }
-  el.innerHTML = '<div style="display:flex;align-items:center;gap:8px;padding:20px;color:var(--t3);"><div style="width:14px;height:14px;border:2px solid rgba(77,132,255,.2);border-top-color:#4d84ff;border-radius:50%;animation:spin .8s linear infinite;"></div>Chargement stats MLB...</div>';
+  if(!teamInfo) { el.innerHTML='<div style="color:var(--t3);text-align:center;padding:20px;">Équipe MLB non reconnue.</div>'; return; }
+  el.innerHTML = '<div style="display:flex;align-items:center;gap:8px;padding:20px;color:var(--t3);"><div style="width:14px;height:14px;border:2px solid rgba(77,132,255,.2);border-top-color:#4d84ff;border-radius:50%;animation:spin .8s linear infinite;"></div>Chargement MLB...</div>';
 
   try {
-    var r = await fetch('https://fd-proxy.touraine-antoine.workers.dev?key=mlb&path=/api/v1/standings?leagueId=103,104%26season=2026%26hydrate=team,record&host=mlb');
-    var d = await r.json();
-    var teamRecord = null;
-    (d.records||[]).forEach(function(div){
-      (div.teamRecords||[]).forEach(function(tr){
-        if(tr.team&&tr.team.id===teamInfo.id) teamRecord=tr;
-      });
-    });
-
-    // Derniers matchs
     var today = new Date().toISOString().split('T')[0];
-    var past = new Date(Date.now()-15*24*3600*1000).toISOString().split('T')[0];
-    var sr = await fetch('https://fd-proxy.touraine-antoine.workers.dev?key=mlb&path=/api/v1/schedule?teamId='+teamInfo.id+'%26startDate='+past+'%26endDate='+today+'%26sportId=1%26gameType=R&host=mlb');
+    var past = new Date(Date.now()-120*24*3600*1000).toISOString().split('T')[0];
+    var [r, sr] = await Promise.all([
+      fetch('https://fd-proxy.touraine-antoine.workers.dev?key=mlb&path=/api/v1/standings?leagueId=103,104%26season=2026%26hydrate=team,record&host=mlb'),
+      fetch('https://fd-proxy.touraine-antoine.workers.dev?key=mlb&path=/api/v1/schedule?teamId='+teamInfo.id+'%26startDate='+past+'%26endDate='+today+'%26sportId=1%26gameType=R&host=mlb')
+    ]);
+    var d = await r.json();
     var sd = await sr.json();
-    var games = [];
-    (sd.dates||[]).forEach(function(date){
-      (date.games||[]).forEach(function(g){
-        if(g.status&&g.status.abstractGameState==='Final') games.push(g);
-      });
-    });
-    games = games.slice(-5).reverse();
+
+    var teamRecord = null;
+    (d.records||[]).forEach(function(div){ (div.teamRecords||[]).forEach(function(tr){ if(tr.team&&tr.team.id===teamInfo.id) teamRecord=tr; }); });
+
+    var allGames = [];
+    (sd.dates||[]).forEach(function(date){ (date.games||[]).forEach(function(g){ if(g.status&&g.status.abstractGameState==='Final') allGames.push(g); }); });
+    var last5 = allGames.slice(-5).reverse();
+    var n = allGames.length;
 
     var html = '<div style="padding:4px 0;">';
 
+    // Bilan
     if(teamRecord) {
-      var w=teamRecord.wins||0, l=teamRecord.losses||0;
-      var pct=(teamRecord.winningPercentage||'0');
+      var w=teamRecord.wins||0, l=teamRecord.losses||0, pct=teamRecord.winningPercentage||'0';
+      var runs = teamRecord.runsScored||0, ra = teamRecord.runsAllowed||0;
       html += '<div class="cwrap" style="margin-bottom:10px;">';
-      html += '<div style="font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#4f5d88;margin-bottom:10px;">Saison 2026 — Bilan</div>';
-      html += '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;">';
-      [
-        {l:'Victoires', v:w, c:'#1ed760'},
-        {l:'Défaites', v:l, c:'#ff4545'},
-        {l:'% victoires', v:pct, c:'#f0b020'},
-      ].forEach(function(s){
-        html += '<div style="text-align:center;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:8px;padding:10px 4px;">';
-        html += '<div style="font-size:22px;font-weight:800;color:'+s.c+';">'+s.v+'</div>';
-        html += '<div style="font-size:9px;color:var(--t3);margin-top:2px;">'+s.l+'</div>';
+      html += '<div style="font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#4f5d88;margin-bottom:8px;">⚾ Saison 2026</div>';
+      html += '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px;">';
+      [{l:'Victoires',v:w,c:'#1ed760'},{l:'Défaites',v:l,c:'#ff4545'},{l:'% victoires',v:pct,c:'#f0b020'}].forEach(function(s){
+        html += '<div style="text-align:center;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:8px;padding:8px 4px;"><div style="font-size:18px;font-weight:800;color:'+s.c+';">'+s.v+'</div><div style="font-size:8px;color:var(--t3);">'+s.l+'</div></div>';
+      });
+      html += '</div></div>';
+    }
+
+    if(last5.length) {
+      // Over/Under baseball
+      var over7=0,over8=0,over9=0,btsMlb=0;
+      allGames.forEach(function(g){
+        var hs=g.teams&&g.teams.home&&g.teams.home.score||0;
+        var as2=g.teams&&g.teams.away&&g.teams.away.score||0;
+        var tot=hs+as2;
+        if(tot>7) over7++; if(tot>8) over8++; if(tot>9) over9++;
+        if(hs>0&&as2>0) btsMlb++;
+      });
+
+      html += '<div class="cwrap" style="margin-bottom:10px;">';
+      html += '<div style="font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#4f5d88;margin-bottom:8px;">Forme récente</div>';
+      html += '<div style="display:flex;gap:5px;margin-bottom:12px;">';
+      last5.forEach(function(g){
+        var isDom=g.teams&&g.teams.home&&g.teams.home.team&&g.teams.home.team.id===teamInfo.id;
+        var ts=isDom?(g.teams.home.score||0):(g.teams.away.score||0);
+        var os=isDom?(g.teams.away.score||0):(g.teams.home.score||0);
+        var opp=isDom?(g.teams.away.team&&g.teams.away.team.name||'?'):(g.teams.home.team&&g.teams.home.team.name||'?');
+        var oppShort=opp.split(' ').pop().substring(0,5);
+        var won=ts>os; var col=won?'#1ed760':'#ff4545';
+        var ds=(g.gameDate||'').split('T')[0].substring(5);
+        var total=ts+os;
+        html += '<div style="flex:1;text-align:center;background:var(--s1);border-radius:10px;padding:7px 3px;border-top:3px solid '+col+';border:1px solid rgba(255,255,255,.06);">';
+        html += '<div style="font-size:10px;">'+(isDom?'🏠':'🚌')+'</div>';
+        html += '<div style="font-size:16px;font-weight:800;color:'+col+';">'+ts+'-'+os+'</div>';
+        html += '<div style="font-size:9px;color:var(--t2);">'+oppShort+'</div>';
+        html += '<div style="font-size:8px;color:var(--t3);">'+ds+'</div>';
+        if(total>8) html += '<div style="font-size:8px;color:#f0b020;">O8</div>';
+        html += '</div>';
+      });
+      html += '</div>';
+
+      if(n>0) {
+        [{label:'Over 7 runs',v:Math.round(over7/n*100),color:'#1ed760'},{label:'Over 8 runs',v:Math.round(over8/n*100),color:'#f0b020'},{label:'Over 9 runs',v:Math.round(over9/n*100),color:'#ff7b54'},{label:'Les 2 équipes marquent',v:Math.round(btsMlb/n*100),color:'#a78bfa'}].forEach(function(o){
+          html += '<div style="display:flex;align-items:center;gap:8px;margin-bottom:5px;">';
+          html += '<div style="font-size:10px;color:var(--t2);width:160px;flex-shrink:0;">'+o.label+'</div>';
+          html += '<div style="flex:1;height:7px;background:rgba(255,255,255,.06);border-radius:4px;"><div style="height:7px;border-radius:4px;background:'+o.color+';width:'+o.v+'%;"></div></div>';
+          html += '<div style="font-size:11px;font-weight:800;color:'+o.color+';width:34px;text-align:right;">'+o.v+'%</div></div>';
+        });
+      }
+      html += '</div>';
+
+      // Résultats complets
+      html += '<div class="cwrap">';
+      html += '<div style="font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#4f5d88;margin-bottom:8px;">📅 Résultats ('+n+' matchs)</div>';
+      html += '<div style="display:flex;flex-direction:column;gap:3px;">';
+      allGames.slice().reverse().forEach(function(g){
+        var isDom=g.teams&&g.teams.home&&g.teams.home.team&&g.teams.home.team.id===teamInfo.id;
+        var ts=isDom?(g.teams.home.score||0):(g.teams.away.score||0);
+        var os=isDom?(g.teams.away.score||0):(g.teams.home.score||0);
+        var hName=g.teams&&g.teams.home&&g.teams.home.team&&g.teams.home.team.name||'?';
+        var aName=g.teams&&g.teams.away&&g.teams.away.team&&g.teams.away.team.name||'?';
+        var won=ts>os; var rc=won?'#1ed760':'#ff4545';
+        var total=ts+os;
+        var ds2=(g.gameDate||'').split('T')[0].substring(5);
+        html += '<div style="display:grid;grid-template-columns:32px 1fr auto 1fr 36px;gap:4px;align-items:center;padding:5px 8px;background:'+(isDom?'rgba(255,255,255,.04)':'rgba(255,255,255,.02)')+';border-radius:6px;border-left:3px solid '+rc+';">';
+        html += '<div style="font-size:9px;color:var(--t3);text-align:center;">'+ds2+'</div>';
+        html += '<div style="font-size:10px;font-weight:'+(isDom?'800':'400')+';color:'+(isDom?'var(--t1)':'var(--t2)')+';text-align:right;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;">'+hName+'</div>';
+        html += '<div style="font-size:11px;font-weight:800;color:'+rc+';text-align:center;min-width:40px;">'+g.teams.home.score+' - '+g.teams.away.score+'</div>';
+        html += '<div style="font-size:10px;font-weight:'+(!isDom?'800':'400')+';color:'+(!isDom?'var(--t1)':'var(--t2)')+';overflow:hidden;white-space:nowrap;text-overflow:ellipsis;">'+aName+'</div>';
+        html += '<div style="font-size:8px;text-align:right;">⚾<br>'+(total>8?'<span style="color:#f0b020;">O8</span>':'')+'</div>';
         html += '</div>';
       });
       html += '</div></div>';
     }
 
-    if(games.length) {
-      html += '<div class="cwrap">';
-      html += '<div style="font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#4f5d88;margin-bottom:10px;">Forme récente</div>';
-      html += '<div style="display:flex;gap:6px;">';
-      games.forEach(function(g){
-        var isDom = g.teams&&g.teams.home&&g.teams.home.team&&g.teams.home.team.id===teamInfo.id;
-        var teamScore = isDom ? (g.teams.home.score||0) : (g.teams.away.score||0);
-        var oppScore = isDom ? (g.teams.away.score||0) : (g.teams.home.score||0);
-        var oppTeam = isDom ? (g.teams.away.team&&g.teams.away.team.name||'?') : (g.teams.home.team&&g.teams.home.team.name||'?');
-        var oppShort = oppTeam.split(' ').pop().substring(0,6);
-        var won = teamScore > oppScore;
-        var col = won ? '#1ed760' : '#ff4545';
-        var dateStr = (g.gameDate||'').split('T')[0].substring(5).replace('-','/');
-        html += '<div style="flex:1;text-align:center;background:var(--s1);border-radius:10px;padding:6px 3px;border-top:3px solid '+col+';border:1px solid rgba(255,255,255,.06);border-top:3px solid '+col+';">';
-        html += '<div style="font-size:13px;">⚾</div>';
-        html += '<div style="font-size:17px;font-weight:700;color:'+col+';">'+teamScore+'-'+oppScore+'</div>';
-        html += '<div style="font-size:9px;color:var(--t3);">'+(isDom?'vs':'@')+' '+oppShort+'</div>';
-        html += '<div style="font-size:8px;color:rgba(255,255,255,.25);">'+dateStr+'</div>';
+    // Prochain match MLB
+    var futureDates = new Date(Date.now()+14*24*3600*1000).toISOString().split('T')[0];
+    try {
+      var nr = await fetch('https://fd-proxy.touraine-antoine.workers.dev?key=mlb&path=/api/v1/schedule?teamId='+teamInfo.id+'%26startDate='+today+'%26endDate='+futureDates+'%26sportId=1%26gameType=R&host=mlb');
+      var nd = await nr.json();
+      var nextGames = [];
+      (nd.dates||[]).forEach(function(date){ (date.games||[]).forEach(function(g){ if(g.status&&g.status.abstractGameState!=='Final') nextGames.push(g); }); });
+
+      if(nextGames.length) {
+        var ng = nextGames[0];
+        var isDomN = ng.teams&&ng.teams.home&&ng.teams.home.team&&ng.teams.home.team.id===teamInfo.id;
+        var oppN2 = isDomN ? (ng.teams.away.team&&ng.teams.away.team.name||'?') : (ng.teams.home.team&&ng.teams.home.team.name||'?');
+        var oppId2 = isDomN ? (ng.teams.away.team&&ng.teams.away.team.id) : (ng.teams.home.team&&ng.teams.home.team.id);
+        var dN2 = new Date(ng.gameDate||'');
+        var dsN2 = dN2.toLocaleDateString('fr-FR',{weekday:'short',day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'});
+        var venue2 = ng.venue&&ng.venue.name||'';
+
+        html += '<div class="cwrap" style="margin-bottom:10px;">';
+        html += '<div style="font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#4d84ff;margin-bottom:8px;">📅 Prochain match</div>';
+        html += renderProchainMatch(nom, oppN2, dsN2, venue2, '⚾');
+
+        // Forme adversaire
+        if(oppId2) {
+          try {
+            var or2 = await fetch('https://fd-proxy.touraine-antoine.workers.dev?key=mlb&path=/api/v1/schedule?teamId='+oppId2+'%26startDate='+past+'%26endDate='+today+'%26sportId=1%26gameType=R&host=mlb');
+            var od2 = await or2.json();
+            var oppGames2 = [];
+            (od2.dates||[]).forEach(function(date){ (date.games||[]).forEach(function(g){ if(g.status&&g.status.abstractGameState==='Final') oppGames2.push(g); }); });
+            oppGames2 = oppGames2.slice(-5).reverse();
+
+            if(oppGames2.length) {
+              html += '<div style="margin-top:8px;">';
+              html += '<div style="font-size:9px;color:#4f5d88;margin-bottom:4px;">Forme '+oppN2.split(' ').pop()+' :</div>';
+              html += renderFormeUS(oppGames2, oppN2, 'MLB', false, true);
+              var oO8=0;
+              oppGames2.forEach(function(g){ if((g.teams.home.score||0)+(g.teams.away.score||0)>8) oO8++; });
+              html += '<div style="font-size:10px;color:var(--t3);">Over 8 : <span style="color:#f0b020;font-weight:700;">'+Math.round(oO8/oppGames2.length*100)+'%</span></div>';
+              html += '</div>';
+            }
+          } catch(e2){}
+        }
         html += '</div>';
-      });
-      html += '</div></div>';
-    }
+      }
+    } catch(e3){}
 
     html += '</div>';
     el.innerHTML = html;
   } catch(e) {
-    el.innerHTML = '<div style="color:#ff4545;text-align:center;padding:20px;">Erreur MLB API</div>';
+    el.innerHTML = '<div style="color:#ff4545;text-align:center;padding:20px;">Erreur MLB</div>';
   }
 }
 
@@ -5605,56 +5811,153 @@ async function searchTennisPlayer(nom) {
 async function loadNbaSaisons(el, nom) {
   var teamInfo = NBA_TEAMS[nom];
   if(!teamInfo) {
-    var ls2 = 'display:flex;align-items:center;gap:10px;padding:10px 14px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:8px;margin-bottom:6px;text-decoration:none;';
-    el.innerHTML = '<div style="padding:4px 0;">'
-      +'<div class="cwrap" style="margin-bottom:10px;">'
-      +'<div style="font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#4f5d88;margin-bottom:10px;">🏀 Basket — Liens utiles NBA</div>'
-      +'<a href="https://www.nba.com/standings" target="_blank" style="'+ls2+'"><div style="font-size:12px;font-weight:700;color:#c8102e;flex:1;">🏆 Classement NBA</div><div style="color:var(--t3);">→</div></a>'
-      +'<a href="https://www.nba.com/schedule" target="_blank" style="'+ls2+'"><div style="font-size:12px;font-weight:700;color:#f0b020;flex:1;">📅 Programme NBA</div><div style="color:var(--t3);">→</div></a>'
-      +'<a href="https://www.nba.com/stats/leaders" target="_blank" style="'+ls2+'"><div style="font-size:12px;font-weight:700;color:#1ed760;flex:1;">📊 Leaders stats NBA</div><div style="color:var(--t3);">→</div></a>'
-      +'<a href="https://www.sofascore.com/basketball/nba" target="_blank" style="'+ls2+'"><div style="font-size:12px;font-weight:700;color:#ff7b54;flex:1;">⚡ Sofascore NBA</div><div style="color:var(--t3);">→</div></a>'
-      +'<a href="https://www.basketball-reference.com/leagues/NBA_2026_standings.html" target="_blank" style="'+ls2+'"><div style="font-size:12px;font-weight:700;color:#4d84ff;flex:1;">📈 Basketball-Reference</div><div style="color:var(--t3);">→</div></a>'
-      +'</div>'
-      +'<div style="font-size:9px;color:#4f5d88;text-align:center;padding:8px;">Pour une équipe précise, renseigne son nom dans Bilan &gt; Équipes</div>'
-      +'</div>';
+    el.innerHTML = '<div style="color:var(--t3);text-align:center;padding:20px;">Équipe NBA non reconnue.</div>';
     return;
   }
+  el.innerHTML = '<div style="display:flex;align-items:center;gap:8px;padding:20px;color:var(--t3);"><div style="width:14px;height:14px;border:2px solid rgba(77,132,255,.2);border-top-color:#4d84ff;border-radius:50%;animation:spin .8s linear infinite;"></div>Chargement NBA...</div>';
 
-  var ls = 'display:flex;align-items:center;gap:10px;padding:10px 14px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:8px;margin-bottom:6px;text-decoration:none;';
-  var ll = 'font-size:12px;font-weight:700;flex:1;';
-  var la = 'color:var(--t3);';
-  var id = teamInfo.id;
-  var ab = teamInfo.abbr;
+  try {
+    var bdlId = teamInfo.bdlId;
+    // balldontlie API — résultats + prochains matchs
+    var today2 = new Date().toISOString().split('T')[0];
+    var past2 = new Date(Date.now()-90*24*3600*1000).toISOString().split('T')[0];
+    var future2 = new Date(Date.now()+14*24*3600*1000).toISOString().split('T')[0];
 
-  var html = '<div style="padding:4px 0;">';
+    var [gamesResp, nextResp] = await Promise.all([
+      fetch('https://api.balldontlie.io/v1/games?team_ids[]='+bdlId+'&start_date='+past2+'&end_date='+today2+'&per_page=100&postseason=false'),
+      fetch('https://api.balldontlie.io/v1/games?team_ids[]='+bdlId+'&start_date='+today2+'&end_date='+future2+'&per_page=10')
+    ]);
+    var gamesData = await gamesResp.json();
+    var nextData = await nextResp.json();
 
-  // ── Équipe ──
-  html += '<div class="cwrap" style="margin-bottom:10px;">';
-  html += '<div style="font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#4f5d88;margin-bottom:10px;">🏀 ' + nom + ' — Saison 2025-26</div>';
-  html += '<a href="https://www.nba.com/team/'+id+'" target="_blank" style="'+ls+'"><div style="'+ll+'color:#c8102e;">🏀 Page officielle NBA</div><div style="'+la+'">→</div></a>';
-  html += '<a href="https://www.nba.com/stats/team/'+id+'?Season=2025-26" target="_blank" style="'+ls+'"><div style="'+ll+'color:#f0b020;">📊 Stats équipe — NBA.com</div><div style="'+la+'">→</div></a>';
-  html += '<a href="https://www.basketball-reference.com/teams/'+ab+'/2026.html" target="_blank" style="'+ls+'"><div style="'+ll+'color:#4d84ff;">📈 Basketball-Reference 2025-26</div><div style="'+la+'">→</div></a>';
-  html += '<a href="https://www.nba.com/team/'+id+'/schedule" target="_blank" style="'+ls+'"><div style="'+ll+'color:#1ed760;">📅 Calendrier & Résultats</div><div style="'+la+'">→</div></a>';
-  html += '</div>';
+    var allGames = (gamesData.data||[]).filter(function(g){ return g.status==='Final'; });
+    var nextGames = (nextData.data||[]).filter(function(g){ return g.status!=='Final'; });
+    var last5 = allGames.slice(-5).reverse();
+    var n = allGames.length;
 
-  // ── Ligue ──
-  html += '<div class="cwrap" style="margin-bottom:10px;">';
-  html += '<div style="font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#4f5d88;margin-bottom:10px;">🏆 Ligue NBA</div>';
-  html += '<a href="https://www.nba.com/standings" target="_blank" style="'+ls+'"><div style="'+ll+'color:#f0b020;">🏆 Classement NBA (Playoffs)</div><div style="'+la+'">→</div></a>';
-  html += '<a href="https://www.nba.com/stats/leaders?Season=2025-26" target="_blank" style="'+ls+'"><div style="'+ll+'color:#a78bfa;">🥇 Leaders stats saison</div><div style="'+la+'">→</div></a>';
-  html += '<a href="https://www.nba.com/schedule" target="_blank" style="'+ls+'"><div style="'+ll+'color:#22d3ee;">📅 Programme NBA complet</div><div style="'+la+'">→</div></a>';
-  html += '</div>';
+    var html = '<div style="padding:4px 0;">';
 
-  // ── Suivi & Stats avancées ──
-  html += '<div class="cwrap">';
-  html += '<div style="font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#4f5d88;margin-bottom:10px;">📊 Stats avancées & Suivi</div>';
-  html += '<a href="https://www.sofascore.com/basketball/nba" target="_blank" style="'+ls+'"><div style="'+ll+'color:#ff7b54;">⚡ Sofascore NBA</div><div style="'+la+'">→</div></a>';
-  html += '<a href="https://www.espn.com/nba/team/_/abbr/'+ab.toLowerCase()+'" target="_blank" style="'+ls+'"><div style="'+ll+'color:#ff0000;">🎙 ESPN — Fiche équipe</div><div style="'+la+'">→</div></a>';
-  html += '<a href="https://www.basketball-reference.com/leagues/NBA_2026_standings.html" target="_blank" style="'+ls+'"><div style="'+ll+'color:#4d84ff;">📋 Classement détaillé BBRef</div><div style="'+la+'">→</div></a>';
-  html += '</div>';
+    // Bilan
+    var wins=0, losses=0, pts=0, ptsA=0;
+    allGames.forEach(function(g){
+      var isDom = g.home_team&&g.home_team.id===bdlId;
+      var ts = isDom?g.home_team_score:g.visitor_team_score;
+      var os = isDom?g.visitor_team_score:g.home_team_score;
+      if(ts>os) wins++; else losses++;
+      pts+=ts; ptsA+=os;
+    });
 
-  html += '</div>';
-  el.innerHTML = html;
+    if(n>0) {
+      html += '<div class="cwrap" style="margin-bottom:10px;">';
+      html += '<div style="font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#4f5d88;margin-bottom:8px;">🏀 Saison 2025-26</div>';
+      html += '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px;">';
+      [{l:'Victoires',v:wins,c:'#1ed760'},{l:'Défaites',v:losses,c:'#ff4545'},{l:'% victoires',v:Math.round(wins/n*100)+'%',c:'#f0b020'},
+       {l:'Pts/match',v:(pts/n).toFixed(1),c:'#4d84ff'},{l:'Pts encaissés',v:(ptsA/n).toFixed(1),c:'#ff7b54'},{l:'Diff.',v:((pts-ptsA)/n>0?'+':'')+((pts-ptsA)/n).toFixed(1),c:pts>=ptsA?'#1ed760':'#ff4545'}
+      ].forEach(function(s){
+        html += '<div style="text-align:center;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:8px;padding:8px 4px;">';
+        html += '<div style="font-size:16px;font-weight:800;color:'+s.c+';">'+s.v+'</div>';
+        html += '<div style="font-size:8px;color:var(--t3);">'+s.l+'</div></div>';
+      });
+      html += '</div></div>';
+    }
+
+    // Forme récente + Over/Under NBA
+    if(last5.length) {
+      var over210=0, over220=0, over230=0;
+      allGames.forEach(function(g){ var tot=g.home_team_score+g.visitor_team_score; if(tot>210) over210++; if(tot>220) over220++; if(tot>230) over230++; });
+
+      html += '<div class="cwrap" style="margin-bottom:10px;">';
+      html += '<div style="font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#4f5d88;margin-bottom:8px;">Forme récente</div>';
+      html += '<div style="display:flex;gap:5px;margin-bottom:12px;">';
+      last5.forEach(function(g){
+        var isDom = g.home_team&&g.home_team.id===bdlId;
+        var ts=isDom?g.home_team_score:g.visitor_team_score;
+        var os=isDom?g.visitor_team_score:g.home_team_score;
+        var opp=isDom?(g.visitor_team&&g.visitor_team.abbreviation||'?'):(g.home_team&&g.home_team.abbreviation||'?');
+        var won=ts>os; var col=won?'#1ed760':'#ff4545';
+        var ds=(g.date||'').split('T')[0].substring(5);
+        var tot=ts+os;
+        html += '<div style="flex:1;text-align:center;background:var(--s1);border-radius:10px;padding:7px 3px;border-top:3px solid '+col+';border:1px solid rgba(255,255,255,.06);">';
+        html += '<div style="font-size:10px;">'+(isDom?'🏠':'🚌')+'</div>';
+        html += '<div style="font-size:14px;font-weight:800;color:'+col+';">'+ts+'-'+os+'</div>';
+        html += '<div style="font-size:9px;color:var(--t2);">'+opp+'</div>';
+        html += '<div style="font-size:8px;color:var(--t3);">'+ds+'</div>';
+        if(tot>220) html += '<div style="font-size:8px;color:#f0b020;">O220</div>';
+        html += '</div>';
+      });
+      html += '</div>';
+
+      if(n>0) {
+        [{label:'Over 210 pts',v:Math.round(over210/n*100),color:'#1ed760'},{label:'Over 220 pts',v:Math.round(over220/n*100),color:'#f0b020'},{label:'Over 230 pts',v:Math.round(over230/n*100),color:'#ff7b54'}].forEach(function(o){
+          html += '<div style="display:flex;align-items:center;gap:8px;margin-bottom:5px;">';
+          html += '<div style="font-size:10px;color:var(--t2);width:100px;flex-shrink:0;">'+o.label+'</div>';
+          html += '<div style="flex:1;height:7px;background:rgba(255,255,255,.06);border-radius:4px;"><div style="height:7px;border-radius:4px;background:'+o.color+';width:'+o.v+'%;"></div></div>';
+          html += '<div style="font-size:11px;font-weight:800;color:'+o.color+';width:34px;text-align:right;">'+o.v+'%</div></div>';
+        });
+      }
+      html += '</div>';
+
+      // Résultats complets
+      html += '<div class="cwrap" style="margin-bottom:10px;">';
+      html += '<div style="font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#4f5d88;margin-bottom:8px;">📅 Résultats ('+n+' matchs)</div>';
+      html += '<div style="display:flex;flex-direction:column;gap:3px;">';
+      allGames.slice().reverse().forEach(function(g){
+        var isDom=g.home_team&&g.home_team.id===bdlId;
+        var ts=isDom?g.home_team_score:g.visitor_team_score;
+        var os=isDom?g.visitor_team_score:g.home_team_score;
+        var hName=g.home_team&&g.home_team.full_name||'?';
+        var aName=g.visitor_team&&g.visitor_team.full_name||'?';
+        var won=ts>os; var rc=won?'#1ed760':'#ff4545';
+        var tot=ts+os;
+        var ds=(g.date||'').split('T')[0].substring(5);
+        html += '<div style="display:grid;grid-template-columns:32px 1fr auto 1fr 40px;gap:4px;align-items:center;padding:5px 8px;background:'+(isDom?'rgba(255,255,255,.04)':'rgba(255,255,255,.02)')+';border-radius:6px;border-left:3px solid '+rc+';">';
+        html += '<div style="font-size:9px;color:var(--t3);text-align:center;">'+ds+'</div>';
+        html += '<div style="font-size:10px;font-weight:'+(isDom?'800':'400')+';color:'+(isDom?'var(--t1)':'var(--t2)')+';text-align:right;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;">'+hName+'</div>';
+        html += '<div style="font-size:11px;font-weight:800;color:'+rc+';text-align:center;min-width:50px;">'+g.home_team_score+' - '+g.visitor_team_score+'</div>';
+        html += '<div style="font-size:10px;font-weight:'+(!isDom?'800':'400')+';color:'+(!isDom?'var(--t1)':'var(--t2)')+';overflow:hidden;white-space:nowrap;text-overflow:ellipsis;">'+aName+'</div>';
+        html += '<div style="font-size:8px;text-align:right;">🏀<br>'+(tot>220?'<span style="color:#f0b020;">O220</span>':'')+'</div>';
+        html += '</div>';
+      });
+      html += '</div></div>';
+    }
+
+    // Prochain match NBA
+    if(nextGames.length) {
+      var ng = nextGames[0];
+      var isDomN = ng.home_team&&ng.home_team.id===bdlId;
+      var oppN = isDomN ? (ng.visitor_team&&ng.visitor_team.full_name||'?') : (ng.home_team&&ng.home_team.full_name||'?');
+      var oppIdN = isDomN ? (ng.visitor_team&&ng.visitor_team.id) : (ng.home_team&&ng.home_team.id);
+      var dsN = new Date(ng.date||'').toLocaleDateString('fr-FR',{weekday:'short',day:'numeric',month:'short'});
+
+      html += '<div class="cwrap" style="margin-bottom:10px;">';
+      html += '<div style="font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#4d84ff;margin-bottom:8px;">📅 Prochain match</div>';
+      html += renderProchainMatch(nom, oppN, dsN, isDomN?'Domicile':'Extérieur', '🏀');
+
+      // Forme adversaire
+      if(oppIdN) {
+        try {
+          var or3 = await fetch('https://api.balldontlie.io/v1/games?team_ids[]='+oppIdN+'&start_date='+past2+'&end_date='+today2+'&per_page=20&postseason=false');
+          var od3 = await or3.json();
+          var oppGames3 = (od3.data||[]).filter(function(g){return g.status==='Final';}).slice(-5).reverse();
+          if(oppGames3.length) {
+            html += '<div style="margin-top:8px;">';
+            html += '<div style="font-size:9px;color:#4f5d88;margin-bottom:4px;">Forme '+oppN.split(' ').pop()+' :</div>';
+            html += renderFormeUS(oppGames3, oppN, 'NBA', false, false);
+            var oO220=0;
+            oppGames3.forEach(function(g){ if(g.home_team_score+g.visitor_team_score>220) oO220++; });
+            html += '<div style="font-size:10px;color:var(--t3);">Over 220 : <span style="color:#f0b020;font-weight:700;">'+Math.round(oO220/oppGames3.length*100)+'%</span></div>';
+            html += '</div>';
+          }
+        } catch(e4){}
+      }
+      html += '</div>';
+    }
+
+    html += '</div>';
+    el.innerHTML = html;
+  } catch(e) {
+    el.innerHTML = '<div style="color:#ff4545;text-align:center;padding:20px;">Erreur NBA : '+e.message+'<br><small>Vérifier la connexion</small></div>';
+  }
 }
 
 async function loadNflSaisons(el, nom) {
