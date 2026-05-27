@@ -1375,6 +1375,9 @@ function logoErr(img){
   if(s)s.style.display='flex';
 }
 var _statFilter = 'global';
+var _nhlFilter = 'global';
+var _mlbFilter = 'global';
+var _nbaFilter = 'global';
 var _standingsCache = {};
 
 
@@ -5222,6 +5225,17 @@ async function loadNhlSaisons(el, nom) {
       });
 
       html += '<div class="cwrap" style="margin-bottom:10px;">';
+      // Filtre Global/Dom/Ext NHL
+      html += '<div style="display:flex;gap:6px;margin-bottom:10px;">';
+      ['global','dom','ext'].forEach(function(f){
+        var lbl=f==='global'?'🌐 Global':f==='dom'?'🏠 Dom':'🚌 Ext';
+        var isOn=f===window._nhlFilter;
+        html += '<button onclick="_nhlFilter=\''+f+'\';loadTeamSaisons();" style="flex:1;padding:6px 4px;border-radius:6px;border:1px solid rgba(255,255,255,'+(isOn?'.3':'.08')+');background:rgba(255,255,255,'+(isOn?'.12':'.04')+');color:'+(isOn?'var(--t1)':'var(--t3)')+';font-size:10px;font-weight:'+(isOn?'700':'400')+';cursor:pointer;">'+lbl+'</button>';
+      });
+      html += '</div>';
+      // Filtrer les matchs selon dom/ext
+      if(window._nhlFilter==='dom') allGames=allGames.filter(function(g){return g.homeTeam&&g.homeTeam.abbrev===teamInfo.abbr;});
+      else if(window._nhlFilter==='ext') allGames=allGames.filter(function(g){return g.awayTeam&&g.awayTeam.abbrev===teamInfo.abbr;});
       html += '<div style="font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#4f5d88;margin-bottom:8px;">Forme récente</div>';
       html += '<div style="display:flex;gap:5px;margin-bottom:12px;">';
       last5.forEach(function(g){
@@ -5426,6 +5440,16 @@ async function loadMlbSaisons(el, nom) {
       });
 
       html += '<div class="cwrap" style="margin-bottom:10px;">';
+      // Filtre Global/Dom/Ext MLB
+      html += '<div style="display:flex;gap:6px;margin-bottom:10px;">';
+      ['global','dom','ext'].forEach(function(f){
+        var lbl=f==='global'?'🌐 Global':f==='dom'?'🏠 Dom':'🚌 Ext';
+        var isOn=f===window._mlbFilter;
+        html += '<button onclick="_mlbFilter=\''+f+'\';loadTeamSaisons();" style="flex:1;padding:6px 4px;border-radius:6px;border:1px solid rgba(255,255,255,'+(isOn?'.3':'.08')+');background:rgba(255,255,255,'+(isOn?'.12':'.04')+');color:'+(isOn?'var(--t1)':'var(--t3)')+';font-size:10px;font-weight:'+(isOn?'700':'400')+';cursor:pointer;">'+lbl+'</button>';
+      });
+      html += '</div>';
+      if(window._mlbFilter==='dom') allGames=allGames.filter(function(g){return g.teams&&g.teams.home&&g.teams.home.team&&g.teams.home.team.id===teamInfo.id;});
+      else if(window._mlbFilter==='ext') allGames=allGames.filter(function(g){return g.teams&&g.teams.away&&g.teams.away.team&&g.teams.away.team.id===teamInfo.id;});
       html += '<div style="font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#4f5d88;margin-bottom:8px;">Forme récente</div>';
       html += '<div style="display:flex;gap:5px;margin-bottom:12px;">';
       last5.forEach(function(g){
@@ -6025,6 +6049,16 @@ async function loadNbaSaisons(el, nom) {
       allGames.forEach(function(g){ var tot=g.home_team_score+g.visitor_team_score; if(tot>200)over200++; if(tot>210) over210++; if(tot>220) over220++; if(tot>230) over230++; });
 
       html += '<div class="cwrap" style="margin-bottom:10px;">';
+      // Filtre Global/Dom/Ext NBA
+      html += '<div style="display:flex;gap:6px;margin-bottom:10px;">';
+      ['global','dom','ext'].forEach(function(f){
+        var lbl=f==='global'?'🌐 Global':f==='dom'?'🏠 Dom':'🚌 Ext';
+        var isOn=f===window._nbaFilter;
+        html += '<button onclick="_nbaFilter=\''+f+'\';loadTeamSaisons();" style="flex:1;padding:6px 4px;border-radius:6px;border:1px solid rgba(255,255,255,'+(isOn?'.3':'.08')+');background:rgba(255,255,255,'+(isOn?'.12':'.04')+');color:'+(isOn?'var(--t1)':'var(--t3)')+';font-size:10px;font-weight:'+(isOn?'700':'400')+';cursor:pointer;">'+lbl+'</button>';
+      });
+      html += '</div>';
+      if(window._nbaFilter==='dom') allGames=allGames.filter(function(g){return g.home_team&&g.home_team.id===bdlId;});
+      else if(window._nbaFilter==='ext') allGames=allGames.filter(function(g){return g.visitor_team&&g.visitor_team.id===bdlId;});
       html += '<div style="font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#4f5d88;margin-bottom:8px;">Forme récente</div>';
       html += '<div style="display:flex;gap:5px;margin-bottom:12px;">';
       last5.forEach(function(g){
