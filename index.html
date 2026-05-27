@@ -1276,6 +1276,10 @@ var TEAM_IDS = {
     'Benfica':1903,'SL Benfica':1903,
     'Porto':503,'FC Porto':503,
     'Ajax':678,'AFC Ajax':678,
+    // Équipes nationales
+    'France':773,'Espagne':760,'Allemagne':759,'Angleterre':770,
+    'Italie':771,'Portugal':765,'Pays-Bas':772,'Belgique':780,
+    'Brésil':764,'Argentine':762,'Croatie':799,'Maroc':1580,
     'PSV':674,'PSV Eindhoven':674,
     'Palmeiras':1957,'SE Palmeiras':1957,
     'Lyon':523,'Olympique Lyonnais':523,'OL':523,
@@ -1427,6 +1431,9 @@ function renderDetailMatch(modal, m) {
   var d = new Date(m.utcDate);
   var dateStr = d.toLocaleDateString('fr-FR',{weekday:'long',day:'numeric',month:'long',year:'numeric'});
   var comp = m.competition&&m.competition.name||'';
+  var journee = m.matchday ? 'J'+m.matchday : '';
+  var stade = m.venue||'';
+  var arbitre = m.referees&&m.referees.length ? m.referees[0].name : '';
   var goals = (m.goals||[]).sort(function(a,b){return (a.minute||0)-(b.minute||0);});
   var bookings = (m.bookings||[]).sort(function(a,b){return (a.minute||0)-(b.minute||0);});
 
@@ -1434,7 +1441,7 @@ function renderDetailMatch(modal, m) {
 
   // Header fermer
   html += '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">';
-  html += '<div style="font-size:10px;color:var(--t3);">'+getCompIcon(comp)+' '+comp+'</div>';
+  html += '<div style="font-size:10px;color:var(--t3);">'+getCompIcon(comp)+' '+comp+(journee?' · '+journee:'')+'</div>';
   html += '<button onclick="document.getElementById(\'match-detail-modal\').style.display=\'none\'" style="background:rgba(255,255,255,.06);border:1px solid var(--b2);border-radius:6px;color:var(--t2);font-size:11px;padding:4px 10px;cursor:pointer;">✕</button>';
   html += '</div>';
 
@@ -1449,6 +1456,8 @@ function renderDetailMatch(modal, m) {
   html += '<div style="font-size:36px;font-weight:900;color:'+rc+';">'+hg+' - '+ag+'</div>';
   if(hgHT!==null) html += '<div style="font-size:10px;color:var(--t3);">(MT: '+hgHT+' - '+agHT+')</div>';
   html += '<div style="font-size:9px;color:var(--t3);margin-top:2px;">'+dateStr+'</div>';
+  if(stade) html += '<div style="font-size:9px;color:var(--t3);margin-top:2px;">🏟️ '+stade+'</div>';
+  if(arbitre) html += '<div style="font-size:9px;color:var(--t3);margin-top:2px;">⚽ Arbitre : '+arbitre+'</div>';
   html += '</div>';
   // Ext
   html += '<div style="text-align:center;">';
