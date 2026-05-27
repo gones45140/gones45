@@ -1457,6 +1457,9 @@ function renderDetailMatch(modal, m) {
   html += '</div>';
 
   // Buts
+  if(!goals.length && !bookings.length) {
+    html += '<div style="background:rgba(255,255,255,.03);border-radius:10px;padding:12px;margin-bottom:8px;text-align:center;color:var(--t3);font-size:11px;">Détail des buts non disponible sur ce plan</div>';
+  }
   if(goals.length) {
     html += '<div style="background:rgba(255,255,255,.03);border-radius:10px;padding:12px;margin-bottom:8px;">';
     html += '<div style="font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#4f5d88;margin-bottom:8px;">⚽ Buts</div>';
@@ -7108,6 +7111,7 @@ function calcSaisonStats(matchesRaw, teamId) {
       var mDate = new Date(m.utcDate);
       var mDateStr = mDate.toLocaleDateString('fr-FR',{day:'numeric',month:'short'});
       stats.last5.push({
+        id: m.id||null,
         w: won, d: draw,
         score: (isDom ? hg+'-'+ag : ag+'-'+hg),
         adv: isDom ? (m.awayTeam&&m.awayTeam.name||'?') : (m.homeTeam&&m.homeTeam.name||'?'),
