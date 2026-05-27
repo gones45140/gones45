@@ -7015,7 +7015,7 @@ async function loadTeamSaisons() {
 
   if(!Object.keys(results).length) {
     var sofaFb = SOFASCORE_LINKS[nom] || ('https://www.sofascore.com/search#q=' + encodeURIComponent(nom));
-    var flashFb = FLASHSCORE_LINKS && FLASHSCORE_LINKS[nom] ? FLASHSCORE_LINKS[nom] : ('https://www.flashscore.fr/recherche/?q=' + encodeURIComponent(nom));
+    var flashFb = FAV_LINKS[nom] || ('https://www.flashscore.fr/recherche/?q=' + encodeURIComponent(nom));
     var ls = 'display:flex;align-items:center;gap:10px;padding:10px 14px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:8px;margin-bottom:6px;text-decoration:none;';
     el.innerHTML = '<div style="padding:4px 0;">'
       +'<div class="cwrap" style="margin-bottom:10px;">'
