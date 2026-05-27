@@ -5257,7 +5257,10 @@ async function loadNhlSaisons(el, nom) {
           {key:'U6.5', label:'Under 6.5', v:Math.round(under65/n*100), color:'#67e8f9'},
           {key:'U7.5', label:'Under 7.5', v:Math.round(under75/n*100), color:'#a5f3fc'},
           {key:'BTS', label:'Les 2 équipes', v:Math.round(bts5/n*100), color:'#a78bfa'},
+          {key:'WIN', label:'Victoire', v:Math.round(wins/n*100), color:'#1ed760'},
+          {key:'LOSE', label:'Défaite', v:Math.round(losses/n*100), color:'#ff4545'},
         ];
+        var wins=0,losses=0; allGames.forEach(function(g){var id=g.homeTeam&&g.homeTeam.abbrev===teamInfo.abbr;var ts2=id?(g.homeTeam.score||0):(g.awayTeam.score||0);var os2=id?(g.awayTeam.score||0):(g.homeTeam.score||0);if(ts2>os2)wins++;else losses++;});
         if(!window._nhlQuickStats) window._nhlQuickStats = ['O5.5','O6.5','BTS'];
 
         // Chips sélecteur
@@ -5309,8 +5312,8 @@ async function loadNhlSaisons(el, nom) {
         html += '<div style="font-size:10px;font-weight:'+(!isDom?'800':'400')+';color:'+(!isDom?'var(--t1)':'var(--t2)')+';overflow:hidden;white-space:nowrap;text-overflow:ellipsis;">'+aName+'</div>';
         var nhlBadges='';
         var nqs2 = window._nhlQuickStats||['O5.5','O6.5','BTS'];
-        var NHL_CHK={'O4.5':total>4.5,'O5.5':total>5.5,'O6.5':total>6.5,'O7.5':total>7.5,'U5.5':total<=5.5,'U6.5':total<=6.5,'U7.5':total<=7.5,'BTS':g.homeTeam.score>0&&g.awayTeam.score>0};
-        var NHL_COL={'O4.5':'#4d84ff','O5.5':'#1ed760','O6.5':'#f0b020','O7.5':'#ff7b54','U5.5':'#22d3ee','U6.5':'#67e8f9','U7.5':'#a5f3fc','BTS':'#a78bfa'};
+        var NHL_CHK={'O4.5':total>4.5,'O5.5':total>5.5,'O6.5':total>6.5,'O7.5':total>7.5,'U5.5':total<=5.5,'U6.5':total<=6.5,'U7.5':total<=7.5,'BTS':g.homeTeam.score>0&&g.awayTeam.score>0,'WIN':ts>os,'LOSE':ts<os};
+        var NHL_COL={'O4.5':'#4d84ff','O5.5':'#1ed760','O6.5':'#f0b020','O7.5':'#ff7b54','U5.5':'#22d3ee','U6.5':'#67e8f9','U7.5':'#a5f3fc','BTS':'#a78bfa','WIN':'#1ed760','LOSE':'#ff4545'};
         nqs2.forEach(function(k){if(NHL_CHK[k])nhlBadges+='<span style="color:'+NHL_COL[k]+';">'+k+'</span><br>';});
         html += '<div style="font-size:8px;text-align:right;">🏒<br>'+nhlBadges+'</div>';
         html += '</div>';
@@ -5443,7 +5446,10 @@ async function loadMlbSaisons(el, nom) {
           {key:'U8',label:'Under 8',v:Math.round(under8/n*100),color:'#67e8f9'},
           {key:'U9',label:'Under 9',v:Math.round(under9/n*100),color:'#a5f3fc'},
           {key:'BTS',label:'Les 2 équipes',v:Math.round(btsMlb/n*100),color:'#a78bfa'},
+          {key:'WIN',label:'Victoire',v:Math.round(winsM/n*100),color:'#1ed760'},
+          {key:'LOSE',label:'Défaite',v:Math.round(lossesM/n*100),color:'#ff4545'},
         ];
+        var winsM=0,lossesM=0; allGames.forEach(function(g){var id=g.teams&&g.teams.home&&g.teams.home.team&&g.teams.home.team.id===teamInfo.id;var ts2=id?(g.teams.home.score||0):(g.teams.away.score||0);var os2=id?(g.teams.away.score||0):(g.teams.home.score||0);if(ts2>os2)winsM++;else lossesM++;});
         if(!window._mlbQuickStats) window._mlbQuickStats=['O7','O8','BTS'];
         html += '<div style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:10px;">';
         MLB_STATS.forEach(function(s){ var isOn=window._mlbQuickStats.indexOf(s.key)>=0; html += '<button data-mqs="'+s.key+'" onclick="var a=window._mlbQuickStats,i=a.indexOf(this.dataset.mqs);i>=0?a.splice(i,1):a.push(this.dataset.mqs);loadTeamSaisons();" style="padding:3px 8px;border-radius:10px;border:1px solid rgba(255,255,255,'+(isOn?'.3':'.08')+');background:rgba(255,255,255,'+(isOn?'.12':'.04')+');color:'+(isOn?'var(--t1)':'var(--t3)')+';font-size:9px;font-weight:'+(isOn?'700':'400')+';cursor:pointer;">'+s.key+'</button>'; });
@@ -6029,7 +6035,10 @@ async function loadNbaSaisons(el, nom) {
           {key:'U210',label:'Under 210',v:Math.round(under210/n*100),color:'#22d3ee'},
           {key:'U220',label:'Under 220',v:Math.round(under220/n*100),color:'#67e8f9'},
           {key:'U230',label:'Under 230',v:Math.round(under230/n*100),color:'#a5f3fc'},
+          {key:'WIN',label:'Victoire',v:Math.round(winsN/n*100),color:'#1ed760'},
+          {key:'LOSE',label:'Défaite',v:Math.round(lossesN/n*100),color:'#ff4545'},
         ];
+        var winsN=0,lossesN=0; allGames.forEach(function(g){var id=g.home_team&&g.home_team.id===bdlId;var ts2=id?g.home_team_score:g.visitor_team_score;var os2=id?g.visitor_team_score:g.home_team_score;if(ts2>os2)winsN++;else lossesN++;});
         if(!window._nbaQuickStats) window._nbaQuickStats=['O210','O220'];
         html += '<div style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:10px;">';
         NBA_STATS.forEach(function(s){ var isOn=window._nbaQuickStats.indexOf(s.key)>=0; html += '<button data-bqs="'+s.key+'" onclick="var a=window._nbaQuickStats,i=a.indexOf(this.dataset.bqs);i>=0?a.splice(i,1):a.push(this.dataset.bqs);loadTeamSaisons();" style="padding:3px 8px;border-radius:10px;border:1px solid rgba(255,255,255,'+(isOn?'.3':'.08')+');background:rgba(255,255,255,'+(isOn?'.12':'.04')+');color:'+(isOn?'var(--t1)':'var(--t3)')+';font-size:9px;font-weight:'+(isOn?'700':'400')+';cursor:pointer;">'+s.key+'</button>'; });
@@ -7834,7 +7843,7 @@ function renderSaisonsChart(el, results, nom) {
     html += '<div style="font-size:10px;color:var(--t3);">'+st.n+' matchs'+(stC?' · '+champMatches.length+' champ.':'')+'</div>';
     html += '</div>';
     // Sélecteur stats rapides
-    var QUICK_STATS = ['O0.5','O1.5','O2.5','O3.5','O4.5','U0.5','U1.5','U2.5','U3.5','U4.5','BTS','CS'];
+    var QUICK_STATS = ['O0.5','O1.5','O2.5','O3.5','O4.5','U0.5','U1.5','U2.5','U3.5','U4.5','BTS','CS','WIN','LOSE'];
     if(!window._quickStats) window._quickStats = ['O2.5','BTS'];
     html += '<div style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:10px;">';
     QUICK_STATS.forEach(function(qs){
@@ -8025,12 +8034,13 @@ function renderSaisonsChart(el, results, nom) {
           'O0.5': total>0.5, 'O1.5': total>1.5, 'O2.5': total>2.5,
           'O3.5': total>3.5, 'O4.5': total>4.5,
           'U0.5': total<=0.5, 'U1.5': total<=1.5, 'U2.5': total<=2.5, 'U3.5': total<=3.5, 'U4.5': total<=4.5,
-          'BTS': hg>0&&ag>0, 'CS': tg===0&&og>0||tg>0&&og===0
+          'BTS': hg>0&&ag>0, 'CS': tg===0&&og>0||tg>0&&og===0,
+          'WIN': tg>og, 'LOSE': tg<og
         };
         var BADGE_COLORS = {
           'O0.5':'#1ed760','O1.5':'#4d84ff','O2.5':'#f0b020','O3.5':'#ff7b54','O4.5':'#ff4545',
           'U0.5':'#22d3ee','U1.5':'#67e8f9','U2.5':'#a5f3fc','U3.5':'#bae6fd','U4.5':'#e0f2fe',
-          'BTS':'#a78bfa','CS':'#1ed760'
+          'BTS':'#a78bfa','CS':'#1ed760','WIN':'#1ed760','LOSE':'#ff4545','WIN':'#1ed760','LOSE':'#ff4545'
         };
         qs.forEach(function(k){
           if(MATCH_CHECKS[k]) badges += '<span style="color:'+BADGE_COLORS[k]+';">'+k+'</span> ';
