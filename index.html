@@ -4082,14 +4082,20 @@ async function chargerFicheAdversaire(matchId, advId, advNom) {
     var teamId = null;
     for(var k in TEAM_IDS){ if(k.toLowerCase()===nomEquipe.toLowerCase()||(nomEquipe.toLowerCase().indexOf(k.toLowerCase())>=0)){teamId=TEAM_IDS[k];break;} }
 
-    // Récupérer les données des deux équipes en parallèle
-    var [advData, myData] = await Promise.all([
-      fdFetch('/v4/teams/'+advId+'/matches?status=FINISHED&limit=10'),
-      teamId ? fdFetch('/v4/teams/'+teamId+'/matches?status=FINISHED&limit=10') : Promise.resolve(null)
-    ]);
+    // 3 requêtes en parallèle — adv, mon équipe, H2H
+    var requests = [
+      fdFetch('/v4/teams/'+advId+'/matches?status=FINISHED&limit=20'),
+      teamId ? fdFetch('/v4/teams/'+teamId+'/matches?status=FINISHED&limit=20') : Promise.resolve(null),
+      teamId ? fdFetch('/v4/teams/'+teamId+'/matches?status=FINISHED&limit=50&opponent='+advId) : Promise.resolve(null)
+    ];
+    var [advData, myData, h2hData] = await Promise.all(requests);
 
     var advMatches = advData&&advData.matches||[];
     var myMatches = myData&&myData.matches||[];
+    var h2hMatches = (h2hData&&h2hData.matches||[]).filter(function(m){
+      return (m.homeTeam&&m.homeTeam.id===teamId&&m.awayTeam&&m.awayTeam.id===advId) ||
+             (m.homeTeam&&m.homeTeam.id===advId&&m.awayTeam&&m.awayTeam.id===teamId);
+    });
 
     function calcStats(matches, tId) {
       var n=matches.length, wins=0, draws=0, goals=0, conceded=0, over25=0, bts=0;
@@ -4112,12 +4118,16 @@ async function chargerFicheAdversaire(matchId, advId, advNom) {
     var advStats = calcStats(advMatches, advId);
     var myStats = teamId ? calcStats(myMatches, teamId) : null;
 
+    // Nom court
+    var myShort = nomEquipe.replace('FC ','').replace(' FC','').replace(' CF','').split(' ').slice(0,2).join(' ');
+    var advShort = advNom.replace('FC ','').replace(' FC','').replace(' CF','').split(' ').slice(0,2).join(' ');
+
     var html = '<div style="padding:12px;">';
 
     // Forme adversaire
-    html += '<div style="font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#4f5d88;margin-bottom:8px;">📊 Forme '+advNom+' ('+advStats.n+' matchs)</div>';
-    html += '<div style="display:flex;gap:4px;margin-bottom:10px;">';
-    advMatches.slice(0,8).reverse().forEach(function(m){
+    html += '<div style="font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#4f5d88;margin-bottom:8px;">📊 Forme '+advShort+' ('+advStats.n+' matchs)</div>';
+    html += '<div style="display:flex;gap:4px;flex-wrap:wrap;margin-bottom:10px;">';
+    advMatches.slice(0,10).reverse().forEach(function(m){
       var isDom = m.homeTeam&&m.homeTeam.id===advId;
       var hg=m.score&&m.score.fullTime?(m.score.fullTime.home||0):0;
       var ag=m.score&&m.score.fullTime?(m.score.fullTime.away||0):0;
@@ -4130,7 +4140,7 @@ async function chargerFicheAdversaire(matchId, advId, advNom) {
 
     // Comparaison côte à côte
     if(myStats) {
-      html += '<div style="font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#4f5d88;margin-bottom:8px;">⚡ Comparaison</div>';
+      html += '<div style="font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#4f5d88;margin-bottom:8px;">⚡ Comparaison ('+myStats.n+' matchs)</div>';
       html += '<div style="display:grid;grid-template-columns:1fr auto 1fr;gap:4px;margin-bottom:10px;">';
 
       var COMPARE = [
@@ -4141,10 +4151,9 @@ async function chargerFicheAdversaire(matchId, advId, advNom) {
         {l:'BTS', a:myStats.bts+'%', b:advStats.bts+'%', aVal:myStats.bts, bVal:advStats.bts},
       ];
 
-      // Header
-      html += '<div style="font-size:10px;font-weight:700;color:'+col+';text-align:center;padding:4px;">'+nomEquipe.split(' ').pop()+'</div>';
+      html += '<div style="font-size:10px;font-weight:700;color:'+col+';text-align:center;padding:4px;">'+myShort+'</div>';
       html += '<div style="font-size:9px;color:var(--t3);text-align:center;padding:4px;"></div>';
-      html += '<div style="font-size:10px;font-weight:700;color:#a78bfa;text-align:center;padding:4px;">'+advNom.split(' ').pop()+'</div>';
+      html += '<div style="font-size:10px;font-weight:700;color:#a78bfa;text-align:center;padding:4px;">'+advShort+'</div>';
 
       COMPARE.forEach(function(c){
         var aBetter = c.aVal > c.bVal;
@@ -4156,8 +4165,39 @@ async function chargerFicheAdversaire(matchId, advId, advNom) {
       html += '</div>';
     }
 
-    // Prediction simple
-    var advice = '';
+    // H2H
+    if(h2hMatches.length) {
+      html += '<div style="font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#4f5d88;margin-bottom:8px;">🔁 H2H — '+myShort+' vs '+advShort+' ('+h2hMatches.length+' matchs)</div>';
+      var h2hWins=0, h2hDraws=0, h2hLoss=0;
+      html += '<div style="display:flex;flex-direction:column;gap:3px;margin-bottom:8px;">';
+      h2hMatches.slice(0,6).forEach(function(m){
+        var isMyHome = m.homeTeam&&m.homeTeam.id===teamId;
+        var hg=m.score&&m.score.fullTime?(m.score.fullTime.home||0):0;
+        var ag=m.score&&m.score.fullTime?(m.score.fullTime.away||0):0;
+        var tg=isMyHome?hg:ag, og=isMyHome?ag:hg;
+        var won=tg>og, draw=tg===og;
+        if(won)h2hWins++; else if(draw)h2hDraws++; else h2hLoss++;
+        var rc=won?'#1ed760':draw?'#f0b020':'#ff4545';
+        var d=new Date(m.utcDate);
+        var ds=d.toLocaleDateString('fr-FR',{day:'numeric',month:'short',year:'2-digit'});
+        html += '<div style="display:flex;align-items:center;gap:6px;padding:5px 8px;background:rgba(255,255,255,.03);border-radius:6px;border-left:2px solid '+rc+';">';
+        html += '<div style="font-size:9px;color:var(--t3);width:50px;flex-shrink:0;">'+ds+'</div>';
+        html += '<div style="flex:1;font-size:10px;color:var(--t2);">'+(isMyHome?myShort+' vs '+advShort:advShort+' vs '+myShort)+'</div>';
+        html += '<div style="font-size:11px;font-weight:800;color:'+rc+';">'+hg+' - '+ag+'</div>';
+        html += '</div>';
+      });
+      html += '</div>';
+      // Résumé H2H
+      html += '<div style="display:flex;gap:6px;margin-bottom:10px;">';
+      [{l:myShort,v:h2hWins,c:col},{l:'Nul',v:h2hDraws,c:'#f0b020'},{l:advShort,v:h2hLoss,c:'#a78bfa'}].forEach(function(s){
+        html += '<div style="flex:1;text-align:center;background:rgba(255,255,255,.04);border-radius:6px;padding:6px;">';
+        html += '<div style="font-size:14px;font-weight:800;color:'+s.c+';">'+s.v+'</div>';
+        html += '<div style="font-size:8px;color:var(--t3);">'+s.l+'</div></div>';
+      });
+      html += '</div>';
+    }
+
+    // Analyse
     if(myStats && advStats) {
       var totalAvg = (parseFloat(myStats.gpg)+parseFloat(advStats.gpg)).toFixed(1);
       var o25prob = Math.round((myStats.o25+advStats.o25)/2);
