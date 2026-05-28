@@ -1524,6 +1524,166 @@ async function ouvrirDetailMatch(matchId) {
   }
 }
 
+
+/* ══ STATS MATCH API-SPORTS ══ */
+var _apiMatchCache = {};
+
+async function chargerStatsMatchApiSports(fdMatchId, homeTeamName) {
+  var zone = document.getElementById('match-player-stats-'+fdMatchId);
+  if(!zone) return;
+  if(zone.innerHTML && zone.innerHTML.length > 10) { zone.innerHTML=''; return; }
+  zone.innerHTML = '<div style="text-align:center;padding:12px;color:var(--t3);font-size:11px;">⏳ Chargement stats joueurs...</div>';
+
+  try {
+    // Trouver l'ID api-sports du match via la date et les équipes
+    if(_apiMatchCache[fdMatchId]) {
+      renderApiSportsStats(zone, _apiMatchCache[fdMatchId]);
+      return;
+    }
+
+    // Chercher le match par équipe et date dans api-sports
+    var cached = _matchDetailCache[fdMatchId];
+    if(!cached) { zone.innerHTML='<div style="color:#ff4545;font-size:10px;text-align:center;">Match non chargé</div>'; return; }
+
+    var d = new Date(cached.utcDate);
+    var dateStr = d.toISOString().split('T')[0];
+    var teamId = await findApiSportsTeamId(cached.homeTeam&&cached.homeTeam.name||homeTeamName);
+
+    if(!teamId) { zone.innerHTML='<div style="color:var(--t3);font-size:10px;text-align:center;">Équipe non trouvée sur api-sports</div>'; return; }
+
+    // Chercher les fixtures de cette date pour cette équipe
+    var data = await apiSportsFetch('/fixtures?team='+teamId+'&date='+dateStr);
+    var fixtures = data&&data.response||[];
+
+    if(!fixtures.length) {
+      zone.innerHTML='<div style="color:var(--t3);font-size:10px;text-align:center;">Match non trouvé sur api-sports</div>';
+      return;
+    }
+
+    // Prendre le bon match
+    var fix = fixtures[0];
+    var fixtureId = fix.fixture&&fix.fixture.id;
+
+    // Récupérer les stats joueurs ET les events ET les stats de match en parallèle
+    var [playersData, statsData, eventsData] = await Promise.all([
+      apiSportsFetch('/fixtures/players?fixture='+fixtureId),
+      apiSportsFetch('/fixtures/statistics?fixture='+fixtureId),
+      apiSportsFetch('/fixtures/events?fixture='+fixtureId)
+    ]);
+
+    _apiMatchCache[fdMatchId] = {fix:fix, players:playersData, stats:statsData, events:eventsData};
+    renderApiSportsStats(zone, _apiMatchCache[fdMatchId]);
+
+  } catch(e) {
+    zone.innerHTML = '<div style="color:#ff4545;font-size:10px;text-align:center;">Erreur : '+e.message+'</div>';
+  }
+}
+
+function renderApiSportsStats(zone, data) {
+  var fix = data.fix||{};
+  var teams = fix.teams||{};
+  var homeId = teams.home&&teams.home.id;
+  var awayId = teams.away&&teams.away.id;
+  var homeNom = teams.home&&teams.home.name||'Dom';
+  var awayNom = teams.away&&teams.away.name||'Ext';
+
+  var html = '<div style="margin-top:10px;">';
+
+  // Stats de match (xG, possession etc.)
+  var statsResp = data.stats&&data.stats.response||[];
+  if(statsResp.length) {
+    var homeSt = statsResp.find(function(s){return s.team&&s.team.id===homeId;})||statsResp[0];
+    var awaySt = statsResp.find(function(s){return s.team&&s.team.id===awayId;})||statsResp[1];
+
+    if(homeSt&&awaySt) {
+      html += '<div style="font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#4f5d88;margin-bottom:8px;">📊 Stats du match</div>';
+      html += '<div style="display:flex;flex-direction:column;gap:4px;margin-bottom:10px;">';
+
+      var SHOW_STATS = ['Ball Possession','Expected Goals','Total Shots','Shots on Goal','Corner Kicks','Fouls','Yellow Cards'];
+      SHOW_STATS.forEach(function(sn){
+        var hs = (homeSt.statistics||[]).find(function(x){return x.type===sn;});
+        var as2 = (awaySt.statistics||[]).find(function(x){return x.type===sn;});
+        if(!hs||!as2) return;
+        var hv = hs.value||0, av = as2.value||0;
+        var label = sn.replace('Ball Possession','Possession').replace('Expected Goals','xG')
+          .replace('Total Shots','Tirs total').replace('Shots on Goal','Tirs cadrés')
+          .replace('Corner Kicks','Corners').replace('Yellow Cards','Cartons jaunes');
+        var isPercent = sn==='Ball Possession';
+        var hNum = parseFloat(hv)||0, aNum = parseFloat(av)||0;
+        var total = hNum+aNum||1;
+        var hPct = Math.round(hNum/total*100);
+        html += '<div style="display:flex;align-items:center;gap:6px;padding:3px 0;">';
+        html += '<div style="font-size:10px;font-weight:700;color:var(--t1);width:30px;text-align:center;">'+hv+'</div>';
+        html += '<div style="flex:1;">';
+        html += '<div style="font-size:8px;color:var(--t3);text-align:center;margin-bottom:2px;">'+label+'</div>';
+        html += '<div style="height:6px;background:rgba(255,255,255,.06);border-radius:3px;overflow:hidden;display:flex;">';
+        html += '<div style="width:'+hPct+'%;background:#4d84ff;border-radius:3px 0 0 3px;"></div>';
+        html += '<div style="width:'+(100-hPct)+'%;background:#a78bfa;border-radius:0 3px 3px 0;"></div>';
+        html += '</div></div>';
+        html += '<div style="font-size:10px;font-weight:700;color:var(--t1);width:30px;text-align:center;">'+av+'</div>';
+        html += '</div>';
+      });
+      html += '</div>';
+    }
+  }
+
+  // Stats joueurs
+  var playersResp = data.players&&data.players.response||[];
+  if(playersResp.length) {
+    html += '<div style="font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#4f5d88;margin-bottom:8px;">👤 Top joueurs</div>';
+
+    // Trouver les meilleurs joueurs (par note)
+    var allPlayers = [];
+    playersResp.forEach(function(teamData){
+      (teamData.players||[]).forEach(function(p){
+        var stats = p.statistics&&p.statistics[0]||{};
+        var rating = parseFloat(stats.games&&stats.games.rating||0);
+        if(rating>0) allPlayers.push({
+          name:p.player&&p.player.name||'?',
+          photo:p.player&&p.player.photo||'',
+          teamId:teamData.team&&teamData.team.id,
+          rating:rating,
+          goals:stats.goals&&stats.goals.total||0,
+          assists:stats.goals&&stats.goals.assists||0,
+          shots:stats.shots&&stats.shots.total||0,
+          shotsOn:stats.shots&&stats.shots.on||0,
+          minutes:stats.games&&stats.games.minutes||0,
+          yellowCard:stats.cards&&stats.cards.yellow||0,
+          redCard:stats.cards&&stats.cards.red||0,
+        });
+      });
+    });
+
+    allPlayers.sort(function(a,b){return b.rating-a.rating;});
+
+    html += '<div style="display:flex;flex-direction:column;gap:4px;">';
+    allPlayers.slice(0,8).forEach(function(p){
+      var isHome = p.teamId===homeId;
+      var ratingColor = p.rating>=8?'#1ed760':p.rating>=7?'#f0b020':'#ff7b54';
+      html += '<div style="display:flex;align-items:center;gap:8px;padding:6px 8px;background:rgba(255,255,255,.03);border-radius:6px;border-left:2px solid '+(isHome?'#4d84ff':'#a78bfa')+'">';
+      if(p.photo) html += '<img src="'+p.photo+'" style="width:24px;height:24px;border-radius:50%;object-fit:cover;flex-shrink:0;" loading="lazy">';
+      html += '<div style="flex:1;min-width:0;">';
+      html += '<div style="font-size:10px;font-weight:700;color:var(--t1);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">'+p.name+'</div>';
+      html += '<div style="font-size:9px;color:var(--t3);">'+(isHome?homeNom:awayNom)+(p.minutes?' · '+p.minutes+"'":'')+' '+(p.yellowCard?'🟨':'')+(p.redCard?'🟥':'')+'</div>';
+      html += '</div>';
+      html += '<div style="display:flex;gap:8px;align-items:center;flex-shrink:0;">';
+      if(p.goals) html += '<div style="text-align:center;"><div style="font-size:12px;font-weight:800;color:#1ed760;">'+p.goals+'</div><div style="font-size:7px;color:var(--t3);">⚽</div></div>';
+      if(p.assists) html += '<div style="text-align:center;"><div style="font-size:12px;font-weight:800;color:#4d84ff;">'+p.assists+'</div><div style="font-size:7px;color:var(--t3);">🅰️</div></div>';
+      if(p.shotsOn) html += '<div style="text-align:center;"><div style="font-size:11px;font-weight:700;color:var(--t3);">'+p.shotsOn+'/'+p.shots+'</div><div style="font-size:7px;color:var(--t3);">tirs</div></div>';
+      html += '<div style="text-align:center;"><div style="font-size:13px;font-weight:900;color:'+ratingColor+';">'+p.rating.toFixed(1)+'</div><div style="font-size:7px;color:var(--t3);">note</div></div>';
+      html += '</div></div>';
+    });
+    html += '</div>';
+  }
+
+  if(!statsResp.length && !playersResp.length) {
+    html += '<div style="color:var(--t3);font-size:10px;text-align:center;padding:8px;">Stats non disponibles pour ce match</div>';
+  }
+
+  html += '</div>';
+  zone.innerHTML = html;
+}
+
 function renderDetailMatch(modal, m) {
   var hg = m.score&&m.score.fullTime ? (m.score.fullTime.home||0) : 0;
   var ag = m.score&&m.score.fullTime ? (m.score.fullTime.away||0) : 0;
@@ -1658,6 +1818,12 @@ function renderDetailMatch(modal, m) {
   html += '</div>';
   html += '<div style="margin-top:8px;">';
   html += '<a href="'+ytMatchUrl+'" target="_blank" style="width:100%;display:flex;align-items:center;justify-content:center;gap:8px;padding:10px;background:rgba(255,0,0,.15);border:1px solid rgba(255,0,0,.3);border-radius:10px;text-decoration:none;color:#ff4545;font-size:12px;font-weight:700;box-sizing:border-box;">▶️ Voir les buts sur YouTube</a>';
+
+  // Bouton stats joueurs si api-sports disponible
+  if(getApiSportsKey()) {
+    html += '<button onclick="chargerStatsMatchApiSports(\''+matchId+'\',\''+homeName.replace(/'/g,"\\'")+'\')" style="width:100%;display:flex;align-items:center;justify-content:center;gap:8px;padding:10px;background:rgba(30,215,96,.1);border:1px solid rgba(30,215,96,.25);border-radius:10px;color:#1ed760;font-size:12px;font-weight:700;cursor:pointer;margin-top:8px;box-sizing:border-box;">👤 Stats joueurs & xG</button>';
+    html += '<div id="match-player-stats-'+matchId+'"></div>';
+  }
   html += '</div>';
 
   html += '</div>';
