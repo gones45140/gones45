@@ -4469,13 +4469,45 @@ async function loadLiveApiSports(el, nom, col, teamId, key) {
 // Cache des IDs api-sports par équipe
 var _apiSportsTeamCache = {};
 
+// IDs api-sports des équipes principales
+var API_SPORTS_IDS = {
+  'PSG':85,'Paris Saint-Germain':85,'Paris SG':85,
+  'Lyon':80,'Olympique Lyonnais':80,
+  'Marseille':81,'Olympique de Marseille':81,
+  'Monaco':91,'AS Monaco':91,
+  'Lille':79,'Lens':116,
+  'Nice':84,'Rennes':111,'Nantes':83,
+  'Real Madrid':541,'FC Barcelona':529,'Barcelona':529,
+  'Bayern Munich':157,'Borussia Dortmund':165,
+  'Inter Milan':505,'AC Milan':489,'Juventus':496,
+  'Arsenal':42,'Chelsea':49,'Liverpool':40,
+  'Manchester City':50,'Manchester United':33,
+  'Tottenham':47,'Newcastle':34,'Aston Villa':66,
+  'PSV':674,'Ajax':194,'AFC Ajax':194,
+  'Porto':212,'Benfica':211,'Sporting':228,
+  'Atletico Madrid':530,'Sevilla':536,'Villarreal':533,
+  'Boca Juniors':405,'River Plate':410,
+  'Flamengo':127,'Palmeiras':121,'Fluminense':119,
+  'France':2,'Espagne':9,'Allemagne':25,
+  'Angleterre':10,'Italie':27,'Portugal':27,
+};
+
 async function findApiSportsTeamId(nom, key) {
   if(_apiSportsTeamCache[nom]) return _apiSportsTeamCache[nom];
+  // Chercher dans le dictionnaire d'abord
+  if(API_SPORTS_IDS[nom]) { _apiSportsTeamCache[nom]=API_SPORTS_IDS[nom]; return API_SPORTS_IDS[nom]; }
+  // Chercher par clé partielle
+  for(var k in API_SPORTS_IDS) {
+    if(nom.toLowerCase().indexOf(k.toLowerCase())>=0 || k.toLowerCase().indexOf(nom.toLowerCase())>=0) {
+      _apiSportsTeamCache[nom]=API_SPORTS_IDS[k];
+      return API_SPORTS_IDS[k];
+    }
+  }
+  // Sinon requête API
   try {
     var d = await apiSportsFetch('/teams?search='+encodeURIComponent(nom.substring(0,10)));
     var teams = d&&d.response||[];
     if(!teams.length) return null;
-    // Chercher la meilleure correspondance
     var match = teams.find(function(t){ return t.team&&t.team.name&&t.team.name.toLowerCase()===nom.toLowerCase(); });
     if(!match) match = teams.find(function(t){ return t.team&&t.team.name&&nom.toLowerCase().indexOf(t.team.name.toLowerCase())>=0; });
     if(!match) match = teams[0];
