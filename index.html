@@ -1518,7 +1518,7 @@ async function ouvrirDetailMatch(matchId) {
       data = resp;
     }
 
-    renderDetailMatch(modal, data);
+    renderDetailMatch(modal, data, matchId);
   } catch(e) {
     modal.innerHTML = '<div style="background:var(--s1);border:1px solid var(--b2);border-radius:16px;padding:24px;max-width:420px;width:100%;text-align:center;"><div style="color:#ff4545;">❌ Erreur : '+e.message+'</div><button onclick="document.getElementById(\'match-detail-modal\').style.display=\'none\'" style="margin-top:12px;padding:8px 16px;background:rgba(255,255,255,.06);border:1px solid var(--b2);border-radius:8px;color:var(--t2);cursor:pointer;">Fermer</button></div>';
   }
@@ -1684,7 +1684,7 @@ function renderApiSportsStats(zone, data) {
   zone.innerHTML = html;
 }
 
-function renderDetailMatch(modal, m) {
+function renderDetailMatch(modal, m, matchId) {
   var hg = m.score&&m.score.fullTime ? (m.score.fullTime.home||0) : 0;
   var ag = m.score&&m.score.fullTime ? (m.score.fullTime.away||0) : 0;
   var hgHT = m.score&&m.score.halfTime ? (m.score.halfTime.home||0) : null;
