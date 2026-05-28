@@ -4168,7 +4168,7 @@ async function chargerFicheAdversaire(matchId, advId, advNom) {
     // Boutons filtre compétition
     html += '<div style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:10px;">';
     html += '<button onclick="setAdvComp(null)" style="padding:3px 10px;border-radius:10px;border:1px solid rgba(255,255,255,'+(_advCompFilter==='all'?'.3':'.08')+');background:rgba(255,255,255,'+(_advCompFilter==='all'?'.12':'.04')+');color:'+(_advCompFilter==='all'?'var(--t1)':'var(--t3)')+';font-size:9px;font-weight:'+(_advCompFilter==='all'?'700':'400')+';cursor:pointer;">Tous</button>';
-    compsList.forEach(function(c){
+    compsList.forEach(function(c, i){
       var isOn = _advCompFilter===c;
       var cLabel=c.replace('UEFA ','').substring(0,15); var cKey2='advc_'+i; _usMatchCache[cKey2]=c;
       var cKey3='advc_'+i; _usMatchCache[cKey3]=c;
