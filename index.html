@@ -1377,6 +1377,7 @@ function logoErr(img){
 }
 var _statFilter = 'global';
 var _nhlFilter = 'global';
+var _advCompFilter = 'all';
 var _nhlTypeFilter = 'all'; // 'all', 'reg', 'playoffs'
 var _mlbFilter = 'global';
 var _nbaFilter = 'global';
@@ -1410,6 +1411,13 @@ async function ouvrirYouTubeAvecScore(titre, date, comp) {
     }
   } catch(e) {}
   window.open('https://www.youtube.com/results?search_query='+encodeURIComponent(query), '_blank');
+}
+
+
+function setAdvComp(ckey) {
+  _advCompFilter = ckey ? (_usMatchCache[ckey]||'all') : 'all';
+  var cx = window._advCtx;
+  if(cx) chargerFicheAdversaire(cx.matchId, cx.advId, cx.advNom);
 }
 
 function _callUS(k){var m=_usMatchCache[k];if(m)ouvrirDetailMatchUS(m.sport,m.h,m.a,m.hs,m.as,m.d);}
@@ -4086,33 +4094,63 @@ async function chargerFicheAdversaire(matchId, advId, advNom) {
     var requests = [
       fdFetch('/v4/teams/'+advId+'/matches?status=FINISHED&limit=20'),
       teamId ? fdFetch('/v4/teams/'+teamId+'/matches?status=FINISHED&limit=20') : Promise.resolve(null),
-      teamId ? fdFetch('/v4/teams/'+teamId+'/matches?status=FINISHED&limit=50&opponent='+advId) : Promise.resolve(null)
+      teamId ? fdFetch('/v4/teams/'+teamId+'/matches?status=FINISHED&limit=50&opponent='+advId+'&dateFrom=2015-01-01') : Promise.resolve(null)
     ];
     var [advData, myData, h2hData] = await Promise.all(requests);
 
-    var advMatches = advData&&advData.matches||[];
-    var myMatches = myData&&myData.matches||[];
+    var advMatchesAll = advData&&advData.matches||[];
+    var myMatchesAll = myData&&myData.matches||[];
+
+    // Extraire les compétitions disponibles
+    var compsSet = {};
+    advMatchesAll.concat(myMatchesAll).forEach(function(m){
+      var c = m.competition&&m.competition.name||'';
+      if(c) compsSet[c] = m.competition&&m.competition.emblem||'';
+    });
+    var compsList = Object.keys(compsSet);
+
+    // Appliquer le filtre compétition
+    var advMatches = _advCompFilter==='all' ? advMatchesAll : advMatchesAll.filter(function(m){ return m.competition&&m.competition.name===_advCompFilter; });
+    var myMatches = _advCompFilter==='all' ? myMatchesAll : myMatchesAll.filter(function(m){ return m.competition&&m.competition.name===_advCompFilter; });
+
     var h2hMatches = (h2hData&&h2hData.matches||[]).filter(function(m){
       return (m.homeTeam&&m.homeTeam.id===teamId&&m.awayTeam&&m.awayTeam.id===advId) ||
              (m.homeTeam&&m.homeTeam.id===advId&&m.awayTeam&&m.awayTeam.id===teamId);
     });
 
     function calcStats(matches, tId) {
-      var n=matches.length, wins=0, draws=0, goals=0, conceded=0, over25=0, bts=0;
-      matches.forEach(function(m){
+      var n=matches.length, wins=0, draws=0, goals=0, conceded=0, over25=0, bts=0, cs=0, goalsHT=0;
+      var domW=0, domN=0, domL=0, domN2=0, extW=0, extN2=0, extL=0, extN3=0;
+      var streak=0, streakType='';
+      matches.slice().reverse().forEach(function(m,i){
         var isDom = m.homeTeam&&m.homeTeam.id===tId;
         var hg=m.score&&m.score.fullTime?(m.score.fullTime.home||0):0;
         var ag=m.score&&m.score.fullTime?(m.score.fullTime.away||0):0;
+        var hgHT=m.score&&m.score.halfTime?(m.score.halfTime.home||0):0;
+        var agHT=m.score&&m.score.halfTime?(m.score.halfTime.away||0):0;
         var tg=isDom?hg:ag, og=isDom?ag:hg;
-        if(tg>og)wins++; else if(tg===og)draws++;
-        goals+=tg; conceded+=og;
+        var tgHT=isDom?hgHT:agHT;
+        var won=tg>og, draw=tg===og;
+        if(won)wins++; else if(draw)draws++;
+        goals+=tg; conceded+=og; goalsHT+=tgHT;
         if(hg+ag>2.5)over25++;
         if(hg>0&&ag>0)bts++;
+        if(og===0)cs++;
+        if(isDom){domN2++;if(won)domW++;else if(draw)domN++;else domL++;}
+        else{extN3++;if(won)extW++;else if(draw)extN2++;else extL++;}
+        // Série
+        if(i===0){streakType=won?'V':draw?'N':'D';streak=1;}
+        else if((won&&streakType==='V')||(draw&&streakType==='N')||(!won&&!draw&&streakType==='D'))streak++;
       });
       return {n:n, wins:wins, draws:draws, losses:n-wins-draws,
         pct:n?Math.round(wins/n*100):0,
         gpg:n?(goals/n).toFixed(1):0, cpg:n?(conceded/n).toFixed(1):0,
-        o25:n?Math.round(over25/n*100):0, bts:n?Math.round(bts/n*100):0};
+        gpgHT:n?(goalsHT/n).toFixed(1):0,
+        o25:n?Math.round(over25/n*100):0, bts:n?Math.round(bts/n*100):0,
+        cs:n?Math.round(cs/n*100):0,
+        domPct:domN2?Math.round(domW/domN2*100):0, domN:domN2,
+        extPct:extN3?Math.round(extW/extN3*100):0, extN:extN3,
+        streak:streak, streakType:streakType};
     }
 
     var advStats = calcStats(advMatches, advId);
@@ -4123,6 +4161,21 @@ async function chargerFicheAdversaire(matchId, advId, advNom) {
     var advShort = advNom.replace('FC ','').replace(' FC','').replace(' CF','').split(' ').slice(0,2).join(' ');
 
     var html = '<div style="padding:12px;">';
+
+    // Stocker contexte pour les boutons
+    window._advCtx = {matchId:matchId, advId:advId, advNom:advNom};
+
+    // Boutons filtre compétition
+    html += '<div style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:10px;">';
+    html += '<button onclick="setAdvComp(null)" style="padding:3px 10px;border-radius:10px;border:1px solid rgba(255,255,255,'+(_advCompFilter==='all'?'.3':'.08')+');background:rgba(255,255,255,'+(_advCompFilter==='all'?'.12':'.04')+');color:'+(_advCompFilter==='all'?'var(--t1)':'var(--t3)')+';font-size:9px;font-weight:'+(_advCompFilter==='all'?'700':'400')+';cursor:pointer;">Tous</button>';
+    compsList.forEach(function(c){
+      var isOn = _advCompFilter===c;
+      var cLabel=c.replace('UEFA ','').substring(0,15); var cKey2='advc_'+i; _usMatchCache[cKey2]=c;
+      var cKey3='advc_'+i; _usMatchCache[cKey3]=c;
+      var cLabel=c.replace('UEFA ','').replace("Ligue 1 McDonald's","Ligue 1").substring(0,15);
+      html += '<button data-ck="'+cKey3+'" onclick="setAdvComp(this.dataset.ck)" style="padding:3px 10px;border-radius:10px;border:1px solid rgba(255,255,255,'+(isOn?'.3':'.08')+');background:rgba(255,255,255,'+(isOn?'.12':'.04')+');color:'+(isOn?'var(--t1)':'var(--t3)')+';font-size:9px;font-weight:'+(isOn?'700':'400')+';cursor:pointer;">'+getCompIcon(c)+' '+cLabel+'</button>';
+    });
+    html += '</div>';
 
     // Forme adversaire
     html += '<div style="font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#4f5d88;margin-bottom:8px;">📊 Forme '+advShort+' ('+advStats.n+' matchs)</div>';
@@ -4145,8 +4198,12 @@ async function chargerFicheAdversaire(matchId, advId, advNom) {
 
       var COMPARE = [
         {l:'Victoires %', a:myStats.pct+'%', b:advStats.pct+'%', aVal:myStats.pct, bVal:advStats.pct},
+        {l:'Dom %', a:myStats.domPct+'% ('+myStats.domN+')', b:advStats.domPct+'% ('+advStats.domN+')', aVal:myStats.domPct, bVal:advStats.domPct},
+        {l:'Ext %', a:myStats.extPct+'% ('+myStats.extN+')', b:advStats.extPct+'% ('+advStats.extN+')', aVal:myStats.extPct, bVal:advStats.extPct},
         {l:'Buts/match', a:myStats.gpg, b:advStats.gpg, aVal:parseFloat(myStats.gpg), bVal:parseFloat(advStats.gpg)},
+        {l:'Buts 1ère MT', a:myStats.gpgHT, b:advStats.gpgHT, aVal:parseFloat(myStats.gpgHT), bVal:parseFloat(advStats.gpgHT)},
         {l:'Encaissés', a:myStats.cpg, b:advStats.cpg, aVal:parseFloat(advStats.cpg), bVal:parseFloat(myStats.cpg)},
+        {l:'Clean Sheet', a:myStats.cs+'%', b:advStats.cs+'%', aVal:myStats.cs, bVal:advStats.cs},
         {l:'Over 2.5', a:myStats.o25+'%', b:advStats.o25+'%', aVal:myStats.o25, bVal:advStats.o25},
         {l:'BTS', a:myStats.bts+'%', b:advStats.bts+'%', aVal:myStats.bts, bVal:advStats.bts},
       ];
@@ -4203,7 +4260,18 @@ async function chargerFicheAdversaire(matchId, advId, advNom) {
       var o25prob = Math.round((myStats.o25+advStats.o25)/2);
       var btsprob = Math.round((myStats.bts+advStats.bts)/2);
       html += '<div style="background:rgba(77,132,255,.08);border:1px solid rgba(77,132,255,.2);border-radius:8px;padding:10px;">';
-      html += '<div style="font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#4d84ff;margin-bottom:6px;">🎯 Analyse</div>';
+      html += '<div style="font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#4d84ff;margin-bottom:8px;">🎯 Analyse</div>';
+      // Séries
+      var mySerieCol = myStats.streakType==='V'?'#1ed760':myStats.streakType==='N'?'#f0b020':'#ff4545';
+      var advSerieCol = advStats.streakType==='V'?'#1ed760':advStats.streakType==='N'?'#f0b020':'#ff4545';
+      html += '<div style="display:flex;gap:8px;margin-bottom:8px;">';
+      html += '<div style="flex:1;background:rgba(255,255,255,.04);border-radius:6px;padding:6px;text-align:center;">';
+      html += '<div style="font-size:9px;color:var(--t3);">'+myShort+'</div>';
+      html += '<div style="font-size:12px;font-weight:800;color:'+mySerieCol+';">'+myStats.streak+myStats.streakType+' d\'affilée</div></div>';
+      html += '<div style="flex:1;background:rgba(255,255,255,.04);border-radius:6px;padding:6px;text-align:center;">';
+      html += '<div style="font-size:9px;color:var(--t3);">'+advShort+'</div>';
+      html += '<div style="font-size:12px;font-weight:800;color:'+advSerieCol+';">'+advStats.streak+advStats.streakType+' d\'affilée</div></div>';
+      html += '</div>';
       html += '<div style="font-size:11px;color:var(--t1);">Moy. buts attendus : <strong>'+totalAvg+'</strong></div>';
       html += '<div style="font-size:11px;color:var(--t1);">Over 2.5 probable : <strong style="color:'+(o25prob>55?'#1ed760':'#f0b020')+'">'+o25prob+'%</strong></div>';
       html += '<div style="font-size:11px;color:var(--t1);">BTS probable : <strong style="color:'+(btsprob>55?'#a78bfa':'#f0b020')+'">'+btsprob+'%</strong></div>';
