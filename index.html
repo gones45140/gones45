@@ -1014,6 +1014,7 @@ input[type="date"],input[type="time"]{color-scheme:dark;}
     <div class="g2" style="margin-top:7px;">
       <button class="btn" style="background:rgba(77,132,255,.14);color:var(--a);border:1px solid rgba(77,132,255,.25);" onclick="exportData()">⬇ Exporter</button>
       <button class="btn" style="background:var(--s1);color:var(--t2);border:1px solid var(--b2);" onclick="importData()">⬆ Importer</button>
+      <button class="btn" style="margin-top:6px;background:rgba(240,176,32,.12);color:#f0b020;border:1px solid rgba(240,176,32,.3);font-size:11px;" onclick="importBetAnalytix()">📊 Importer Bet-Analytix CSV</button>
     </div>
     <button class="btn" style="margin-top:8px;background:rgba(0,107,255,.18);color:#4d9fff;border:1px solid rgba(77,132,255,.35);font-size:12px;" onclick="loadFromDropbox()">☁️ Charger depuis Dropbox</button>
     <button class="btn" style="margin-top:8px;background:rgba(30,215,96,.15);color:#1ed760;border:1px solid rgba(30,215,96,.3);font-size:12px;" onclick="partagerProfil()">📤 Partager mon profil</button>
@@ -3424,6 +3425,123 @@ function swBet(mode){
   var bs=$i('btn-simp');if(bs)bs.classList.toggle('on',!isS);
 }
 function exportData(){var d='data:text/json;charset=utf-8,'+encodeURIComponent(JSON.stringify(state));var a=document.createElement('a');a.href=d;a.download='gones45_backup.json';a.click();}
+
+function importBetAnalytix() {
+  var input = document.createElement('input');
+  input.type = 'file';
+  input.accept = '.csv';
+  input.onchange = function(e) {
+    var file = e.target.files[0];
+    if(!file) return;
+    var reader = new FileReader();
+    reader.onload = function(ev) {
+      var text = ev.target.result;
+      var lines = text.split('\n').filter(function(l){ return l.trim(); });
+      if(!lines.length) return;
+
+      // Parser CSV avec séparateur ;
+      function parseCSVLine(line) {
+        var result = [], cur = '', inQ = false;
+        for(var i=0;i<line.length;i++){
+          var c = line[i];
+          if(c==='"') { inQ=!inQ; }
+          else if(c===';' && !inQ) { result.push(cur.trim()); cur=''; }
+          else { cur+=c; }
+        }
+        result.push(cur.trim());
+        return result;
+      }
+
+      var headers = parseCSVLine(lines[0]);
+      var idxDate=headers.indexOf('Date'), idxType=headers.indexOf('Type'),
+          idxSport=headers.indexOf('Sport'), idxLabel=headers.indexOf('Label'),
+          idxOdds=headers.indexOf('Odds'), idxStake=headers.indexOf('Stake'),
+          idxState=headers.indexOf('State'), idxBook=headers.indexOf('Bookmaker'),
+          idxComp=headers.indexOf('Competition'), idxCat=headers.indexOf('Category'),
+          idxComment=headers.indexOf('Comment'), idxBonus=headers.indexOf('Bonus'),
+          idxFB=headers.indexOf('Freebet');
+
+      var imported = 0, skipped = 0;
+      if(!state.a) state.a = [];
+
+      lines.slice(1).forEach(function(line) {
+        var cols = parseCSVLine(line);
+        if(cols.length < 5) { skipped++; return; }
+
+        var dateStr = cols[idxDate]||'';
+        var label   = cols[idxLabel]||'';
+        var odds    = parseFloat(cols[idxOdds])||1;
+        var stake   = parseFloat(cols[idxStake])||0;
+        var state2  = cols[idxState]||''; // W/L/V
+        var book    = cols[idxBook]||'';
+        var sport   = cols[idxSport]||'Football';
+        var comp    = cols[idxComp]||'';
+        var cat     = cols[idxCat]||'';
+        var comment = cols[idxComment]||'';
+        var isBonus = cols[idxBonus]==='1'||cols[idxBonus]==='true'||cols[idxBonus]==='TRUE';
+        var isFB    = cols[idxFB]==='1'||cols[idxFB]==='true'||cols[idxFB]==='TRUE';
+
+        if(!stake || !odds) { skipped++; return; }
+
+        // Convertir W/L en win
+        var win = state2==='W'||state2==='V'||state2==='WIN'||state2==='GAGNE';
+        var isLoss = state2==='L'||state2==='PERDU'||state2==='LOSE';
+        if(!win && !isLoss) { skipped++; return; } // En cours = skip
+
+        // Convertir sport
+        var sportIco = '⚽';
+        var sportLower = sport.toLowerCase();
+        if(sportLower.indexOf('tennis')>=0) sportIco='🎾';
+        else if(sportLower.indexOf('basket')>=0||sportLower.indexOf('nba')>=0) sportIco='🏀';
+        else if(sportLower.indexOf('hockey')>=0||sportLower.indexOf('nhl')>=0) sportIco='🏒';
+        else if(sportLower.indexOf('baseball')>=0||sportLower.indexOf('mlb')>=0) sportIco='⚾';
+        else if(sportLower.indexOf('rugby')>=0) sportIco='🏉';
+
+        // Parser la date
+        var dateParts = dateStr.split(' ');
+        var dateOnly = dateParts[0]||'';
+        var timeOnly = dateParts[1]||'';
+
+        // Extraire le match depuis le label (ex: "Cagliari 0-2 Inter")
+        var target = label.replace(/\s+/g,' ').trim();
+        // Enlever le score si présent
+        var targetClean = target.replace(/\d+\s*[-–]\s*\d+/g,'').replace(/\s+/g,' ').trim();
+
+        var pari = {
+          id: 'ba_'+Date.now()+'_'+Math.random().toString(36).substr(2,5),
+          n: cat || label,
+          target: targetClean || label,
+          cote: odds,
+          m: stake,
+          win: win,
+          sport: sportIco,
+          b: book,
+          comp: comp,
+          t: dateOnly,
+          date: dateOnly,
+          heure: timeOnly,
+          isFlash: false,
+          isFreebet: isFB,
+          notes: comment,
+          source: 'bet-analytix'
+        };
+
+        state.a.push(pari);
+        imported++;
+      });
+
+      save();
+      renderArchive && renderArchive();
+
+      var msg = '✅ '+imported+' paris importés depuis Bet-Analytix !';
+      if(skipped) msg += '\n('+skipped+' lignes ignorées — en cours ou invalides)';
+      alert(msg);
+    };
+    reader.readAsText(file, 'UTF-8');
+  };
+  input.click();
+}
+
 function importData(){var i=document.createElement('input');i.type='file';i.onchange=function(e){var r=new FileReader();r.onload=function(ev){state=JSON.parse(ev.target.result);save();location.reload();};r.readAsText(e.target.files[0]);};i.click();}
 
 
@@ -3920,6 +4038,116 @@ function pickAdv(val,targetId,resId){
   var res=$i(resId);if(res)res.style.display='none';
 }
 var TSDB_IDS={"Melbourne Storm":"134029","Sydney Roosters":"134031","Penrith Panthers":"134030","Brisbane Broncos":"134021","South Sydney Rabbitohs":"134026","Parramatta Eels":"134024","Cronulla Sharks":"134022","Manly Sea Eagles":"134028","Canterbury Bulldogs":"134023","New Zealand Warriors":"134025","Gold Coast Titans":"134032","Canberra Raiders":"134027","Newcastle Knights":"134033","North Queensland Cowboys":"134034","Wests Tigers":"134035","St George Illawarra Dragons":"134036","Dolphins":"134037"};
+async function chargerFicheAdversaire(matchId, advId, advNom) {
+  var zone = document.getElementById('adv-detail-'+matchId);
+  if(!zone) return;
+  if(zone.style.display !== 'none') { zone.style.display='none'; return; }
+  zone.style.display = 'block';
+  zone.innerHTML = '<div style="padding:12px;text-align:center;color:var(--t3);font-size:11px;">⏳ Chargement fiche '+advNom+'...</div>';
+
+  try {
+    var nomEquipe = _currentTeam || '';
+    var uObj = state.u.find(function(x){return x.n===nomEquipe;})||{};
+    var col = uObj.color||'#4d84ff';
+    var teamId = null;
+    for(var k in TEAM_IDS){ if(k.toLowerCase()===nomEquipe.toLowerCase()||(nomEquipe.toLowerCase().indexOf(k.toLowerCase())>=0)){teamId=TEAM_IDS[k];break;} }
+
+    // Récupérer les données des deux équipes en parallèle
+    var [advData, myData] = await Promise.all([
+      fdFetch('/v4/teams/'+advId+'/matches?status=FINISHED&limit=10'),
+      teamId ? fdFetch('/v4/teams/'+teamId+'/matches?status=FINISHED&limit=10') : Promise.resolve(null)
+    ]);
+
+    var advMatches = advData&&advData.matches||[];
+    var myMatches = myData&&myData.matches||[];
+
+    function calcStats(matches, tId) {
+      var n=matches.length, wins=0, draws=0, goals=0, conceded=0, over25=0, bts=0;
+      matches.forEach(function(m){
+        var isDom = m.homeTeam&&m.homeTeam.id===tId;
+        var hg=m.score&&m.score.fullTime?(m.score.fullTime.home||0):0;
+        var ag=m.score&&m.score.fullTime?(m.score.fullTime.away||0):0;
+        var tg=isDom?hg:ag, og=isDom?ag:hg;
+        if(tg>og)wins++; else if(tg===og)draws++;
+        goals+=tg; conceded+=og;
+        if(hg+ag>2.5)over25++;
+        if(hg>0&&ag>0)bts++;
+      });
+      return {n:n, wins:wins, draws:draws, losses:n-wins-draws,
+        pct:n?Math.round(wins/n*100):0,
+        gpg:n?(goals/n).toFixed(1):0, cpg:n?(conceded/n).toFixed(1):0,
+        o25:n?Math.round(over25/n*100):0, bts:n?Math.round(bts/n*100):0};
+    }
+
+    var advStats = calcStats(advMatches, advId);
+    var myStats = teamId ? calcStats(myMatches, teamId) : null;
+
+    var html = '<div style="padding:12px;">';
+
+    // Forme adversaire
+    html += '<div style="font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#4f5d88;margin-bottom:8px;">📊 Forme '+advNom+' ('+advStats.n+' matchs)</div>';
+    html += '<div style="display:flex;gap:4px;margin-bottom:10px;">';
+    advMatches.slice(0,8).reverse().forEach(function(m){
+      var isDom = m.homeTeam&&m.homeTeam.id===advId;
+      var hg=m.score&&m.score.fullTime?(m.score.fullTime.home||0):0;
+      var ag=m.score&&m.score.fullTime?(m.score.fullTime.away||0):0;
+      var tg=isDom?hg:ag, og=isDom?ag:hg;
+      var won=tg>og, draw=tg===og;
+      var rc=won?'#1ed760':draw?'#f0b020':'#ff4545';
+      html += '<div style="width:24px;height:24px;border-radius:5px;background:'+rc+';display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:800;color:#fff;">'+(won?'V':draw?'N':'D')+'</div>';
+    });
+    html += '</div>';
+
+    // Comparaison côte à côte
+    if(myStats) {
+      html += '<div style="font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#4f5d88;margin-bottom:8px;">⚡ Comparaison</div>';
+      html += '<div style="display:grid;grid-template-columns:1fr auto 1fr;gap:4px;margin-bottom:10px;">';
+
+      var COMPARE = [
+        {l:'Victoires %', a:myStats.pct+'%', b:advStats.pct+'%', aVal:myStats.pct, bVal:advStats.pct},
+        {l:'Buts/match', a:myStats.gpg, b:advStats.gpg, aVal:parseFloat(myStats.gpg), bVal:parseFloat(advStats.gpg)},
+        {l:'Encaissés', a:myStats.cpg, b:advStats.cpg, aVal:parseFloat(advStats.cpg), bVal:parseFloat(myStats.cpg)},
+        {l:'Over 2.5', a:myStats.o25+'%', b:advStats.o25+'%', aVal:myStats.o25, bVal:advStats.o25},
+        {l:'BTS', a:myStats.bts+'%', b:advStats.bts+'%', aVal:myStats.bts, bVal:advStats.bts},
+      ];
+
+      // Header
+      html += '<div style="font-size:10px;font-weight:700;color:'+col+';text-align:center;padding:4px;">'+nomEquipe.split(' ').pop()+'</div>';
+      html += '<div style="font-size:9px;color:var(--t3);text-align:center;padding:4px;"></div>';
+      html += '<div style="font-size:10px;font-weight:700;color:#a78bfa;text-align:center;padding:4px;">'+advNom.split(' ').pop()+'</div>';
+
+      COMPARE.forEach(function(c){
+        var aBetter = c.aVal > c.bVal;
+        var bBetter = c.bVal > c.aVal;
+        html += '<div style="font-size:11px;font-weight:800;color:'+(aBetter?col:'var(--t2)')+';text-align:center;padding:5px 4px;background:rgba(255,255,255,.03);border-radius:5px;">'+c.a+'</div>';
+        html += '<div style="font-size:9px;color:var(--t3);text-align:center;padding:5px 4px;">'+c.l+'</div>';
+        html += '<div style="font-size:11px;font-weight:800;color:'+(bBetter?'#a78bfa':'var(--t2)')+';text-align:center;padding:5px 4px;background:rgba(255,255,255,.03);border-radius:5px;">'+c.b+'</div>';
+      });
+      html += '</div>';
+    }
+
+    // Prediction simple
+    var advice = '';
+    if(myStats && advStats) {
+      var totalAvg = (parseFloat(myStats.gpg)+parseFloat(advStats.gpg)).toFixed(1);
+      var o25prob = Math.round((myStats.o25+advStats.o25)/2);
+      var btsprob = Math.round((myStats.bts+advStats.bts)/2);
+      html += '<div style="background:rgba(77,132,255,.08);border:1px solid rgba(77,132,255,.2);border-radius:8px;padding:10px;">';
+      html += '<div style="font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#4d84ff;margin-bottom:6px;">🎯 Analyse</div>';
+      html += '<div style="font-size:11px;color:var(--t1);">Moy. buts attendus : <strong>'+totalAvg+'</strong></div>';
+      html += '<div style="font-size:11px;color:var(--t1);">Over 2.5 probable : <strong style="color:'+(o25prob>55?'#1ed760':'#f0b020')+'">'+o25prob+'%</strong></div>';
+      html += '<div style="font-size:11px;color:var(--t1);">BTS probable : <strong style="color:'+(btsprob>55?'#a78bfa':'#f0b020')+'">'+btsprob+'%</strong></div>';
+      html += '</div>';
+    }
+
+    html += '</div>';
+    zone.innerHTML = html;
+
+  } catch(e) {
+    zone.innerHTML = '<div style="padding:10px;color:#ff4545;font-size:11px;text-align:center;">Erreur : '+e.message+'</div>';
+  }
+}
+
 function loadTeamLiveTSDB(el,nom,sport){
   var tid=TSDB_IDS[nom];
   var p=(state.u.find(function(u){return u.n===nom;})||{color:'#4d84ff'}).color||'#4d84ff';
@@ -4023,10 +4251,10 @@ async function loadTeamCalendar(teamId, nom, col) {
   btn.disabled = true;
 
   try {
-    // Matchs à venir
-    var upcoming = await fdFetch('/v4/teams/'+teamId+'/matches?status=SCHEDULED&limit=5');
-    // Résultats récents
-    var finished = await fdFetch('/v4/teams/'+teamId+'/matches?status=FINISHED&limit=5');
+    var [upcoming, finished] = await Promise.all([
+      fdFetch('/v4/teams/'+teamId+'/matches?status=SCHEDULED&limit=5'),
+      fdFetch('/v4/teams/'+teamId+'/matches?status=FINISHED&limit=10')
+    ]);
 
     var html = '';
 
@@ -4037,12 +4265,17 @@ async function loadTeamCalendar(teamId, nom, col) {
       upcoming.matches.forEach(function(m){
         var isDom = m.homeTeam && m.homeTeam.id === teamId;
         var adv = isDom ? (m.awayTeam&&m.awayTeam.name||'?') : (m.homeTeam&&m.homeTeam.name||'?');
+        var advId = isDom ? (m.awayTeam&&m.awayTeam.id) : (m.homeTeam&&m.homeTeam.id);
+        var advCrest = isDom ? (m.awayTeam&&m.awayTeam.crest||'') : (m.homeTeam&&m.homeTeam.crest||'');
         var d = new Date(m.utcDate);
         var dateStr = d.toLocaleDateString('fr-FR',{weekday:'short',day:'numeric',month:'short'});
         var timeStr = d.toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'});
         var comp = m.competition&&m.competition.name||'';
         var compIco2 = getCompIcon(comp);
-        html += '<div style="display:flex;align-items:center;padding:10px 12px;background:var(--s1);border-radius:var(--r6);margin-bottom:6px;border-left:3px solid '+col+';">';
+        html += '<div id="match-adv-'+m.id+'" style="background:var(--s1);border-radius:10px;margin-bottom:8px;border:1px solid rgba(255,255,255,.06);overflow:hidden;">';
+        // Header match
+        html += '<div style="display:flex;align-items:center;padding:10px 12px;border-left:3px solid '+col+';cursor:pointer;" onclick="chargerFicheAdversaire('+m.id+','+advId+',\''+adv.replace(/'/g,"\\'")+'\')">';
+        if(advCrest) html += '<img src="'+advCrest+'" style="width:28px;height:28px;object-fit:contain;margin-right:10px;flex-shrink:0;" loading="lazy">';
         html += '<div style="flex:1;">';
         html += '<div style="font-size:12px;font-weight:700;color:var(--t1);">'+(isDom?'🏠 vs ':'🚌 @ ')+adv+'</div>';
         html += '<div style="font-size:10px;color:var(--t3);margin-top:2px;">'+compIco2+' '+comp+'</div>';
@@ -4050,7 +4283,11 @@ async function loadTeamCalendar(teamId, nom, col) {
         html += '<div style="text-align:right;">';
         html += '<div style="font-size:11px;font-weight:700;color:var(--a);">'+dateStr+'</div>';
         html += '<div style="font-size:10px;color:var(--t3);">'+timeStr+'</div>';
+        html += '<div style="font-size:9px;color:#4d84ff;margin-top:2px;">🔍 Analyser →</div>';
         html += '</div></div>';
+        // Zone pour la fiche adversaire (cachée au départ)
+        html += '<div id="adv-detail-'+m.id+'" style="display:none;"></div>';
+        html += '</div>';
       });
       html += '</div>';
     }
@@ -4073,7 +4310,7 @@ async function loadTeamCalendar(teamId, nom, col) {
         var dateStr = d.toLocaleDateString('fr-FR',{day:'numeric',month:'short'});
         var comp = m.competition&&m.competition.name||'';
         var compIco = getCompIcon(comp);
-        html += '<div style="display:flex;align-items:center;padding:10px 12px;background:var(--s1);border-radius:var(--r6);margin-bottom:6px;border-left:3px solid '+rc+';">';
+        html += '<div onclick="ouvrirDetailMatch('+m.id+')" style="display:flex;align-items:center;padding:10px 12px;background:var(--s1);border-radius:var(--r6);margin-bottom:6px;border-left:3px solid '+rc+';cursor:pointer;">';
         html += '<div style="width:22px;height:22px;border-radius:50%;background:'+rc+';display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:800;color:#fff;flex-shrink:0;margin-right:10px;">'+rl+'</div>';
         html += '<div style="flex:1;">';
         html += '<div style="font-size:12px;font-weight:700;color:var(--t1);">'+(isDom?'🏠 vs ':'🚌 @ ')+adv+'</div>';
@@ -4085,7 +4322,7 @@ async function loadTeamCalendar(teamId, nom, col) {
       html += '</div>';
     }
 
-    if(!html) html = '<div class="fc" style="color:var(--t3);text-align:center;">Aucune donnee disponible</div>';
+    if(!html) html = '<div class="fc" style="color:var(--t3);text-align:center;">Aucune donnée disponible</div>';
     cont.innerHTML = html;
     btn.style.display = 'none';
 
