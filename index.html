@@ -4122,7 +4122,7 @@ async function chargerFicheAdversaire(matchId, advId, advNom) {
       var n=matches.length, wins=0, draws=0, goals=0, conceded=0, over25=0, bts=0, cs=0, goalsHT=0;
       var domW=0, domN=0, domL=0, domN2=0, extW=0, extN2=0, extL=0, extN3=0;
       var streak=0, streakType='';
-      matches.slice().reverse().forEach(function(m,i){
+      matches.forEach(function(m){
         var isDom = m.homeTeam&&m.homeTeam.id===tId;
         var hg=m.score&&m.score.fullTime?(m.score.fullTime.home||0):0;
         var ag=m.score&&m.score.fullTime?(m.score.fullTime.away||0):0;
@@ -4138,10 +4138,20 @@ async function chargerFicheAdversaire(matchId, advId, advNom) {
         if(og===0)cs++;
         if(isDom){domN2++;if(won)domW++;else if(draw)domN++;else domL++;}
         else{extN3++;if(won)extW++;else if(draw)extN2++;else extL++;}
-        // Série
-        if(i===0){streakType=won?'V':draw?'N':'D';streak=1;}
-        else if((won&&streakType==='V')||(draw&&streakType==='N')||(!won&&!draw&&streakType==='D'))streak++;
       });
+      // Série depuis le plus récent
+      for(var si=0;si<matches.length;si++){
+        var ms=matches[si];
+        var isDomS=ms.homeTeam&&ms.homeTeam.id===tId;
+        var hgs=ms.score&&ms.score.fullTime?(ms.score.fullTime.home||0):0;
+        var ags=ms.score&&ms.score.fullTime?(ms.score.fullTime.away||0):0;
+        var tgs=isDomS?hgs:ags, ogs=isDomS?ags:hgs;
+        var wons=tgs>ogs, draws=tgs===ogs;
+        var res=wons?'V':draws?'N':'D';
+        if(si===0){streakType=res;streak=1;}
+        else if(res===streakType){streak++;}
+        else{break;}
+      }
       return {n:n, wins:wins, draws:draws, losses:n-wins-draws,
         pct:n?Math.round(wins/n*100):0,
         gpg:n?(goals/n).toFixed(1):0, cpg:n?(conceded/n).toFixed(1):0,
