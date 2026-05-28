@@ -3427,6 +3427,10 @@ function swBet(mode){
 function exportData(){var d='data:text/json;charset=utf-8,'+encodeURIComponent(JSON.stringify(state));var a=document.createElement('a');a.href=d;a.download='gones45_backup.json';a.click();}
 
 function importBetAnalytix() {
+  var bkStr = prompt('💰 Bankroll de départ au moment du premier pari (ex: 1000) :', '');
+  if(bkStr === null) return;
+  var bkDepart = parseFloat(bkStr) || 0;
+
   var input = document.createElement('input');
   input.type = 'file';
   input.accept = '.csv';
@@ -3530,11 +3534,37 @@ function importBetAnalytix() {
         imported++;
       });
 
+      // Trier par date croissante
+      state.a.sort(function(a,b){ return new Date(a.date+' '+(a.heure||'00:00')) - new Date(b.date+' '+(b.heure||'00:00')); });
+
+      // Recalculer la BK si bankroll de départ fournie
+      if(bkDepart > 0) {
+        // Trouver le bookmaker principal (celui avec le plus de paris)
+        var bkCount = {};
+        state.a.forEach(function(h){ if(h.source==='bet-analytix') bkCount[h.b]=(bkCount[h.b]||0)+1; });
+        var mainBk = Object.keys(bkCount).sort(function(a,b){return bkCount[b]-bkCount[a];})[0]||'Winamax';
+
+        // Calculer le profit total
+        var profitTotal = 0;
+        state.a.forEach(function(h){
+          if(h.source==='bet-analytix') profitTotal += h.win ? (h.m*h.cote-h.m) : -h.m;
+        });
+
+        // Mettre à jour la bankroll
+        if(!state.b) state.b = {};
+        state.b[mainBk] = parseFloat((bkDepart + profitTotal).toFixed(2));
+      }
+
       save();
       renderArchive && renderArchive();
+      render && render();
 
       var msg = '✅ '+imported+' paris importés depuis Bet-Analytix !';
-      if(skipped) msg += '\n('+skipped+' lignes ignorées — en cours ou invalides)';
+      if(skipped) msg += '\n⏭ '+skipped+' lignes ignorées (en cours ou invalides)';
+      if(bkDepart > 0) {
+        var profit = state.a.filter(function(h){return h.source==='bet-analytix';}).reduce(function(acc,h){return acc+(h.win?(h.m*h.cote-h.m):-h.m);},0);
+        msg += '\n💰 BK actuelle recalculée : '+(bkDepart+profit).toFixed(2)+'€ (départ '+bkDepart+'€ + profit '+profit.toFixed(2)+'€)';
+      }
       alert(msg);
     };
     reader.readAsText(file, 'UTF-8');
