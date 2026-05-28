@@ -1547,7 +1547,11 @@ async function chargerStatsMatchApiSports(fdMatchId, homeTeamName) {
 
     var d = new Date(cached.utcDate);
     var dateStr = d.toISOString().split('T')[0];
-    var teamId = await findApiSportsTeamId(cached.homeTeam&&cached.homeTeam.name||homeTeamName);
+    
+    // Chercher l'ID api-sports — essayer home ET away
+    var homeNom2 = cached.homeTeam&&cached.homeTeam.name||'';
+    var awayNom2 = cached.awayTeam&&cached.awayTeam.name||'';
+    var teamId = API_SPORTS_IDS[homeNom2] || API_SPORTS_IDS[awayNom2] || await findApiSportsTeamId(homeNom2) || await findApiSportsTeamId(awayNom2);
 
     if(!teamId) { zone.innerHTML='<div style="color:var(--t3);font-size:10px;text-align:center;">Équipe non trouvée sur api-sports</div>'; return; }
 
@@ -4638,7 +4642,7 @@ var _apiSportsTeamCache = {};
 
 // IDs api-sports des équipes principales
 var API_SPORTS_IDS = {
-  'PSG':85,'Paris Saint-Germain':85,'Paris SG':85,
+  'PSG':85,'Paris Saint-Germain':85,'Paris SG':85,'Paris Saint-Germain FC':85,
   'Lyon':80,'Olympique Lyonnais':80,
   'Marseille':81,'Olympique de Marseille':81,
   'Monaco':91,'AS Monaco':91,
