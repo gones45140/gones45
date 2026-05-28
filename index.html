@@ -4094,7 +4094,7 @@ async function chargerFicheAdversaire(matchId, advId, advNom) {
     var requests = [
       fdFetch('/v4/teams/'+advId+'/matches?status=FINISHED&limit=20'),
       teamId ? fdFetch('/v4/teams/'+teamId+'/matches?status=FINISHED&limit=20') : Promise.resolve(null),
-      teamId ? fdFetch('/v4/teams/'+teamId+'/matches?status=FINISHED&limit=50&opponent='+advId+'&dateFrom=2015-01-01') : Promise.resolve(null)
+      teamId ? fdFetch('/v4/teams/'+teamId+'/matches?status=FINISHED&limit=50&opponent='+advId) : Promise.resolve(null)
     ];
     var [advData, myData, h2hData] = await Promise.all(requests);
 
