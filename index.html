@@ -4320,7 +4320,7 @@ var _liveCache = null;
 var _liveTeamId = null;
 
 async function loadLiveApiSports(el, nom, col, teamId, key) {
-  el.innerHTML = '<div style="text-align:center;padding:20px;color:var(--t3);font-size:11px;"><div style="font-size:24px;margin-bottom:8px;">🔴</div>Chargement live...</div>';
+  el.innerHTML = '<div style="text-align:center;padding:20px;color:var(--t3);font-size:11px;"><div style="font-size:24px;margin-bottom:8px;">🔴</div>Chargement live via api-sports...</div>';
 
   try {
     // Chercher l'ID api-sports pour cette équipe
@@ -4462,7 +4462,8 @@ async function loadLiveApiSports(el, nom, col, teamId, key) {
     el.innerHTML = html;
 
   } catch(e) {
-    el.innerHTML = '<div style="text-align:center;padding:20px;color:#ff4545;font-size:11px;">Erreur live : '+e.message+'<br><small>Vérifie ta clé api-sports dans Outils</small></div>';
+    el.innerHTML = '<div style="text-align:center;padding:20px;"><div style="color:#ff4545;font-size:13px;font-weight:700;margin-bottom:8px;">❌ Erreur live</div><div style="color:var(--t3);font-size:11px;">'+e.message+'</div><button onclick="loadTeamLive()" style="margin-top:12px;padding:8px 16px;background:rgba(77,132,255,.12);border:1px solid rgba(77,132,255,.3);border-radius:8px;color:#4d84ff;font-size:11px;cursor:pointer;">🔄 Réessayer</button></div>';
+    console.error('loadLiveApiSports error:', e);
   }
 }
 
