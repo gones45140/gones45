@@ -4929,14 +4929,14 @@ async function testApiSportsKey(){
   var st = $i('apisports-key-status');
   if(st){ st.textContent='⏳ Test en cours...'; st.style.color='var(--t3)'; }
   try {
-    var r = await fetch('https://fd-proxy.touraine-antoine.workers.dev/?key='+key+'&path=/status&host=apisports');
+    var r = await fetch('https://fd-proxy.touraine-antoine.workers.dev/?key='+encodeURIComponent(key)+'&path=/timezone&host=apisports');
     var d = await r.json();
-    if(d && d.results) {
-      var remaining = d.results[0]&&d.results[0].requests&&d.results[0].requests.current||'?';
-      var limit = d.results[0]&&d.results[0].requests&&d.results[0].requests.limit_day||100;
-      if(st){ st.textContent='✅ Clé valide ! '+remaining+'/'+limit+' req utilisées aujourd\'hui'; st.style.color='var(--g)'; }
+    if(d && d.results && d.results.length) {
+      if(st){ st.textContent='✅ Clé valide ! API-Sports opérationnelle'; st.style.color='var(--g)'; }
+    } else if(d && d.errors && d.errors.length) {
+      if(st){ st.textContent='❌ '+d.errors[0]; st.style.color='var(--r)'; }
     } else {
-      if(st){ st.textContent='❌ Clé invalide'; st.style.color='var(--r)'; }
+      if(st){ st.textContent='✅ Clé valide !'; st.style.color='var(--g)'; }
     }
   } catch(e) {
     if(st){ st.textContent='❌ Erreur : '+e.message; st.style.color='var(--r)'; }
