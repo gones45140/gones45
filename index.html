@@ -3,7 +3,7 @@
 <html lang="fr">
 <head>
 <meta charset="UTF-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-eval' 'unsafe-inline' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com; worker-src 'self' blob:; connect-src 'self' data: blob: https://tessdata.projectnaptha.com https://site.api.espn.com https://api.dropbox.com https://content.dropboxapi.com https://api.dropboxapi.com https://api.groq.com https://api.tavily.com https://fd-proxy.touraine-antoine.workers.dev https://media.api-sports.io https://api.football-data.org https://api-web.nhle.com https://statsapi.mlb.com https://www.thesportsdb.com https://cdn.jsdelivr.net https://api.openf1.org https://api.jolpi.ca; img-src 'self' data: https: blob: https://flagcdn.com; style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com;">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-eval' 'unsafe-inline' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com; worker-src 'self' blob:; connect-src 'self' data: blob: https://tessdata.projectnaptha.com https://site.api.espn.com https://fantasy.premierleague.com https://api.dropbox.com https://content.dropboxapi.com https://api.dropboxapi.com https://api.groq.com https://api.tavily.com https://fd-proxy.touraine-antoine.workers.dev https://media.api-sports.io https://api.football-data.org https://api-web.nhle.com https://statsapi.mlb.com https://www.thesportsdb.com https://cdn.jsdelivr.net https://api.openf1.org https://api.jolpi.ca; img-src 'self' data: https: blob: https://flagcdn.com; style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com;">
 <meta http-equiv="Content-Security-Policy" content="default-src 'self' 'unsafe-inline' 'unsafe-eval' https: data: blob:;">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
 <title>GONES45</title>
@@ -4768,10 +4768,21 @@ function loadTeamLive(){
     return;
   }
 
+  // FPL pour les équipes de Premier League
+  var fplNom = FPL_TEAM_MAP&&FPL_TEAM_MAP[nom];
+  if(fplNom) {
+    // Afficher en deux sections : Live + Squad FPL
+    el.innerHTML = '<div id="live-apisports-section"></div><div id="live-fpl-section" style="margin-top:10px;"></div>';
+    var fplEl = document.getElementById('live-fpl-section');
+    if(fplEl) loadFplSquad(fplEl, nom);
+  }
+
   // Vérifier si un match est en cours via api-sports
   var apiSportsKey = getApiSportsKey();
   if(apiSportsKey) {
-    loadLiveApiSports(el, nom, col, teamId, apiSportsKey);
+    var liveTarget = fplNom ? document.getElementById('live-apisports-section') : el;
+    if(liveTarget) loadLiveApiSports(liveTarget, nom, col, teamId, apiSportsKey);
+    if(!fplNom) return;
     return;
   }
 
@@ -6149,6 +6160,135 @@ function compareUSTeams(myGames, oppGames, myAbbr, oppAbbr, myNom, oppNom, myCol
 
   html += '</div>';
   return html;
+}
+
+
+/* ══ FPL API ══ */
+var _fplCache = null;
+var _fplCacheTime = 0;
+
+async function fplFetch(path) {
+  var r = await fetch('https://fd-proxy.touraine-antoine.workers.dev/?key=fpl&path='+encodeURIComponent(path)+'&host=fpl');
+  if(!r.ok) throw new Error('FPL HTTP '+r.status);
+  return await r.json();
+}
+
+async function getFplData() {
+  var now = Date.now();
+  if(_fplCache && now-_fplCacheTime < 300000) return _fplCache; // Cache 5min
+  _fplCache = await fplFetch('/api/bootstrap-static/');
+  _fplCacheTime = now;
+  return _fplCache;
+}
+
+// Mapping noms football-data → noms FPL
+var FPL_TEAM_MAP = {
+  'Arsenal':'Arsenal','Chelsea':'Chelsea','Liverpool':'Liverpool',
+  'Manchester City':'Man City','Manchester United':'Man Utd',
+  'Tottenham Hotspur':'Spurs','Tottenham':'Spurs',
+  'Newcastle United':'Newcastle','Newcastle':'Newcastle',
+  'Aston Villa':'Aston Villa','Brighton':'Brighton',
+  'West Ham United':'West Ham','West Ham':'West Ham',
+  'Fulham':'Fulham','Crystal Palace':'Crystal Palace',
+  'Brentford':'Brentford','Wolves':'Wolves',
+  'Wolverhampton Wanderers':'Wolves',
+  'Everton':'Everton','Leicester City':'Leicester',
+  'Southampton':'Southampton','Ipswich Town':'Ipswich',
+  'Nottingham Forest':'Nott\'m Forest',
+  'Bournemouth':'Bournemouth','AFC Bournemouth':'Bournemouth',
+};
+
+async function loadFplSquad(el, nom) {
+  el.innerHTML = '<div style="text-align:center;padding:12px;color:var(--t3);font-size:11px;">⏳ Chargement squad FPL...</div>';
+  try {
+    var data = await getFplData();
+    var teams = data.teams||[];
+    var elements = data.elements||[];
+    var elementTypes = data.element_types||[];
+
+    // Trouver l'équipe FPL
+    var fplName = FPL_TEAM_MAP[nom]||nom;
+    var team = teams.find(function(t){
+      return t.name===fplName||t.short_name===fplName||
+             t.name.toLowerCase()===nom.toLowerCase()||
+             nom.toLowerCase().indexOf(t.name.toLowerCase())>=0;
+    });
+
+    if(!team) {
+      el.innerHTML='<div style="color:var(--t3);font-size:10px;text-align:center;padding:8px;">Équipe non trouvée dans FPL (PL uniquement)</div>';
+      return;
+    }
+
+    // Joueurs de cette équipe
+    var players = elements.filter(function(p){ return p.team===team.id; });
+
+    // Trier par poste puis par total_points
+    var posNames = {1:'GK',2:'DEF',3:'MID',4:'ATT'};
+    players.sort(function(a,b){ return a.element_type-b.element_type||b.total_points-a.total_points; });
+
+    var statusEmoji = {'a':'✅','d':'⚠️','i':'🏥','s':'🚫','u':'❓','n':'❌'};
+    var statusLabel = {'a':'Disponible','d':'Incertain','i':'Blessé','s':'Suspendu','u':'Inconnu','n':'Indisponible'};
+
+    var html = '<div style="padding:4px 0;">';
+
+    // Header
+    html += '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">';
+    html += '<div style="font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#4f5d88;">👤 Squad FPL — '+team.name+' ('+players.length+' joueurs)</div>';
+    html += '<div style="font-size:9px;color:var(--t3);">Saison en cours</div>';
+    html += '</div>';
+
+    // Alertes blessures/suspensions
+    var unavail = players.filter(function(p){ return p.status!=='a'; });
+    if(unavail.length) {
+      html += '<div style="background:rgba(255,107,54,.08);border:1px solid rgba(255,107,54,.2);border-radius:8px;padding:10px;margin-bottom:10px;">';
+      html += '<div style="font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#ff7b54;margin-bottom:6px;">⚠️ Absences & Incertains</div>';
+      unavail.forEach(function(p){
+        var pct = p.chance_of_playing_next_round;
+        html += '<div style="display:flex;align-items:center;gap:8px;padding:4px 0;border-bottom:1px solid rgba(255,255,255,.04);">';
+        html += '<div style="font-size:12px;">'+statusEmoji[p.status]+'</div>';
+        html += '<div style="flex:1;">';
+        html += '<div style="font-size:11px;font-weight:700;color:var(--t1);">'+p.web_name+'</div>';
+        html += '<div style="font-size:9px;color:var(--t3);">'+posNames[p.element_type]+' · '+statusLabel[p.status||'u']+(p.news?' · '+p.news:'')+'</div>';
+        html += '</div>';
+        if(pct!==null&&pct!==undefined) {
+          var pctCol = pct>=75?'#1ed760':pct>=50?'#f0b020':'#ff4545';
+          html += '<div style="text-align:center;"><div style="font-size:12px;font-weight:800;color:'+pctCol+';">'+pct+'%</div><div style="font-size:8px;color:var(--t3);">chance</div></div>';
+        }
+        html += '</div>';
+      });
+      html += '</div>';
+    }
+
+    // Squad par poste
+    [1,2,3,4].forEach(function(pos){
+      var posPlayers = players.filter(function(p){ return p.element_type===pos; });
+      if(!posPlayers.length) return;
+      var posLabel = {1:'🧤 Gardiens',2:'🛡️ Défenseurs',3:'🎯 Milieux',4:'⚽ Attaquants'}[pos];
+      html += '<div style="margin-bottom:10px;">';
+      html += '<div style="font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#4f5d88;margin-bottom:6px;">'+posLabel+'</div>';
+      posPlayers.forEach(function(p){
+        var form = parseFloat(p.form)||0;
+        var formCol = form>=6?'#1ed760':form>=4?'#f0b020':'#ff7b54';
+        var isUnavail = p.status!=='a';
+        html += '<div style="display:flex;align-items:center;gap:8px;padding:6px 8px;background:rgba(255,255,255,'+(isUnavail?'.02':'.03')+');border-radius:6px;margin-bottom:3px;border-left:2px solid '+(isUnavail?'#ff4545':'rgba(255,255,255,.1)')+';opacity:'+(isUnavail?'.7':'1')+'">';
+        html += '<div style="flex:1;">';
+        html += '<div style="font-size:11px;font-weight:700;color:var(--t1);">'+p.web_name+' '+(isUnavail?statusEmoji[p.status]:'')+'</div>';
+        html += '<div style="font-size:9px;color:var(--t3);">';
+        html += p.total_points+'pts · '+p.goals_scored+'⚽ '+p.assists+'🅰️ '+p.clean_sheets+'CS';
+        html += '</div></div>';
+        html += '<div style="display:flex;gap:8px;align-items:center;">';
+        html += '<div style="text-align:center;"><div style="font-size:11px;font-weight:700;color:'+formCol+';">'+p.form+'</div><div style="font-size:8px;color:var(--t3);">forme</div></div>';
+        html += '<div style="text-align:center;"><div style="font-size:11px;font-weight:700;color:var(--t3);">'+p.minutes+"'</div><div style=\"font-size:8px;color:var(--t3);\">min</div></div>";
+        html += '</div></div>';
+      });
+      html += '</div>';
+    });
+
+    html += '</div>';
+    el.innerHTML = html;
+  } catch(e) {
+    el.innerHTML = '<div style="color:#ff4545;font-size:10px;text-align:center;padding:8px;">Erreur FPL : '+e.message+'</div>';
+  }
 }
 
 function renderProchainMatch(label, adversaire, date, lieu, sport) {
