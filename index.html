@@ -640,6 +640,26 @@ input[type="date"],input[type="time"]{color-scheme:dark;}
   <div style="background:var(--bg2);border:1px solid var(--card-border,rgba(77,132,255,.32));border-radius:var(--r8);padding:10px;margin-bottom:10px;box-shadow:var(--card-glow,0 0 14px rgba(77,132,255,.18),0 0 4px rgba(77,132,255,.28));">
     <div id="bk-stats"></div>
   </div>
+  <!-- Graphiques avancés -->
+  <div class="sec">📊 Graphiques avancés</div>
+  <div class="cwrap" style="margin-bottom:10px;">
+    <div class="ctitle">📈 Bankroll totale</div>
+    <div style="height:150px;position:relative;"><canvas id="chart-bankroll"></canvas></div>
+  </div>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px;">
+    <div class="cwrap">
+      <div class="ctitle">🥧 Mises par book</div>
+      <div style="height:150px;position:relative;"><canvas id="chart-pie-bk"></canvas></div>
+    </div>
+    <div class="cwrap">
+      <div class="ctitle">⚽ Réussite par sport</div>
+      <div style="height:150px;position:relative;"><canvas id="chart-sport"></canvas></div>
+    </div>
+  </div>
+  <div class="cwrap" style="margin-bottom:10px;">
+    <div class="ctitle">📉 Drawdown & ROI dans le temps</div>
+    <div style="height:150px;position:relative;"><canvas id="chart-roi-time"></canvas></div>
+  </div>
   <!-- Par mois -->
   <div class="sec" style="display:flex;align-items:center;justify-content:space-between;">
     <span>Par mois</span>
@@ -2427,6 +2447,76 @@ function filteredA(){
 
 /* ── BILAN TAB (autonome) ── */
 var _bilanChart=null;
+var _advCharts={};
+
+function renderAdvancedCharts(paris, bankroll) {
+  // Détruire les anciens charts
+  Object.values(_advCharts).forEach(function(c){try{c.destroy();}catch(e){}});
+  _advCharts = {};
+  if(!paris||!paris.length) return;
+
+  var sorted = paris.slice().sort(function(a,b){ return new Date(a.date+' '+(a.heure||'00:00'))-new Date(b.date+' '+(b.heure||'00:00')); });
+
+  // ── 1. Bankroll totale ──
+  var bkTotal = Object.values(bankroll||{}).reduce(function(s,v){return s+parseFloat(v||0);},0);
+  var cumProfits = [], cum=0;
+  sorted.forEach(function(h){cum+=(h.win?(h.m*h.cote-h.m):-h.m);cumProfits.push(parseFloat(cum.toFixed(2)));});
+  var startBk = bkTotal - cum;
+  var bkCurve = cumProfits.map(function(p){return parseFloat((startBk+p).toFixed(2));});
+  var ctx1 = document.getElementById('chart-bankroll');
+  if(ctx1){
+    var g1=ctx1.getContext('2d').createLinearGradient(0,0,0,150);
+    g1.addColorStop(0,'rgba(240,176,32,.3)');g1.addColorStop(1,'rgba(240,176,32,0)');
+    _advCharts.bk=new Chart(ctx1,{type:'line',data:{labels:sorted.map(function(h,i){return i+1;}),datasets:[{data:bkCurve,borderColor:'#f0b020',backgroundColor:g1,borderWidth:2,fill:true,tension:.4,pointRadius:0}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:function(i){return i.raw.toFixed(2)+'€';}}}},scales:{x:{display:false},y:{ticks:{color:'#4f5d88',font:{size:9},callback:function(v){return v+'€';}},grid:{color:'rgba(255,255,255,.03)'}}}}});
+  }
+
+  // ── 2. Camembert bookmakers ──
+  var bkMises={};
+  paris.forEach(function(h){bkMises[h.b]=(bkMises[h.b]||0)+parseFloat(h.m||0);});
+  var bkKeys=Object.keys(bkMises).sort(function(a,b){return bkMises[b]-bkMises[a];}).slice(0,6);
+  var ctx2=document.getElementById('chart-pie-bk');
+  if(ctx2&&bkKeys.length){
+    var bkColors=['#4d84ff','#1ed760','#f0b020','#ff7b54','#a78bfa','#22d3ee'];
+    _advCharts.pie=new Chart(ctx2,{type:'doughnut',data:{labels:bkKeys.map(function(k){return bki(k).n;}),datasets:[{data:bkKeys.map(function(k){return bkMises[k].toFixed(0);}),backgroundColor:bkColors,borderWidth:0}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'right',labels:{color:'#4f5d88',font:{size:9},boxWidth:10,padding:6}}}}});
+  }
+
+  // ── 3. Réussite par sport ──
+  var sportStats={};
+  paris.forEach(function(h){
+    var s=h.sport||'⚽';
+    if(!sportStats[s])sportStats[s]={n:0,wins:0,profit:0};
+    sportStats[s].n++;
+    if(h.win)sportStats[s].wins++;
+    sportStats[s].profit+=(h.win?(h.m*h.cote-h.m):-h.m);
+  });
+  var sportKeys=Object.keys(sportStats).filter(function(s){return sportStats[s].n>=3;});
+  var ctx3=document.getElementById('chart-sport');
+  if(ctx3&&sportKeys.length){
+    var sportWr=sportKeys.map(function(s){return Math.round(sportStats[s].wins/sportStats[s].n*100);});
+    var sportColors=sportWr.map(function(v){return v>=55?'#1ed760':v>=45?'#f0b020':'#ff4545';});
+    _advCharts.sport=new Chart(ctx3,{type:'bar',data:{labels:sportKeys,datasets:[{data:sportWr,backgroundColor:sportColors,borderRadius:4}]},options:{responsive:true,maintainAspectRatio:false,indexAxis:'y',plugins:{legend:{display:false},tooltip:{callbacks:{label:function(i){var s=sportKeys[i.dataIndex];return sportStats[s].wins+'/'+sportStats[s].n+' ('+i.raw+'%)';}}}},scales:{x:{max:100,ticks:{color:'#4f5d88',font:{size:9},callback:function(v){return v+'%';}},grid:{color:'rgba(255,255,255,.03)'}},y:{ticks:{color:'#4f5d88',font:{size:11}},grid:{display:false}}}}});
+  }
+
+  // ── 4. ROI dans le temps + Drawdown ──
+  var roiCurve=[], ddCurve=[], totalMise=0, totalProfit=0, peak=0, maxDD=0;
+  sorted.forEach(function(h){
+    totalMise+=parseFloat(h.m||0);
+    totalProfit+=(h.win?(h.m*h.cote-h.m):-h.m);
+    var roi=totalMise>0?parseFloat((totalProfit/totalMise*100).toFixed(1)):0;
+    roiCurve.push(roi);
+    if(totalProfit>peak)peak=totalProfit;
+    var dd=peak>0?parseFloat(((peak-totalProfit)/peak*100).toFixed(1)):0;
+    if(dd>maxDD)maxDD=dd;
+    ddCurve.push(-dd);
+  });
+  var ctx4=document.getElementById('chart-roi-time');
+  if(ctx4){
+    _advCharts.roi=new Chart(ctx4,{type:'line',data:{labels:sorted.map(function(h,i){return i+1;}),datasets:[
+      {label:'ROI %',data:roiCurve,borderColor:'#4d84ff',backgroundColor:'transparent',borderWidth:2,tension:.4,pointRadius:0,yAxisID:'y'},
+      {label:'Drawdown %',data:ddCurve,borderColor:'#ff4545',backgroundColor:'rgba(255,69,69,.1)',fill:true,borderWidth:1.5,tension:.4,pointRadius:0,yAxisID:'y'}
+    ]},options:{responsive:true,maintainAspectRatio:false,interaction:{mode:'nearest',intersect:false},plugins:{legend:{position:'bottom',labels:{color:'#4f5d88',font:{size:9},boxWidth:12}}},scales:{x:{display:false},y:{ticks:{color:'#4f5d88',font:{size:9},callback:function(v){return v+'%';}},grid:{color:'rgba(255,255,255,.03)'}}}}});
+  }
+}
 function renderBilanTab(){
   renderSportFilter();
   var paris=filteredA();
@@ -2482,7 +2572,9 @@ function renderBilanTab(){
         attachTouchTooltip('bilan-chart',function(){return _bilanChart;},'cib-bilan','cib-bilan-txt','cib-bilan-val');
     }
   }
-  /* Par bookmaker — cliquable pour filtrer */
+  /* ── Graphiques avancés ── */
+  renderAdvancedCharts(paris, state.b);
+
   var bks={};Object.keys(state.b).forEach(function(k){bks[k]={profit:0,n:0,wins:0};});
   paris.forEach(function(h){
     if(!bks[h.b]) bks[h.b]={profit:0,n:0,wins:0};
