@@ -6247,12 +6247,12 @@ async function loadFplSquad(el, nom) {
         html += '<div style="display:flex;align-items:center;gap:8px;padding:4px 0;border-bottom:1px solid rgba(255,255,255,.04);">';
         html += '<div style="font-size:12px;">'+statusEmoji[p.status]+'</div>';
         html += '<div style="flex:1;">';
-        html += '<div style="font-size:11px;font-weight:700;color:var(--t1);">'+p.web_name+'</div>';
+        html += '<div style="font-size:13px;font-weight:700;color:var(--t1);">'+p.web_name+'</div>';
         html += '<div style="font-size:9px;color:var(--t3);">'+posNames[p.element_type]+' · '+statusLabel[p.status||'u']+(p.news?' · '+p.news:'')+'</div>';
         html += '</div>';
         if(pct!==null&&pct!==undefined) {
           var pctCol = pct>=75?'#1ed760':pct>=50?'#f0b020':'#ff4545';
-          html += '<div style="text-align:center;"><div style="font-size:12px;font-weight:800;color:'+pctCol+';">'+pct+'%</div><div style="font-size:8px;color:var(--t3);">chance</div></div>';
+          html += '<div style="text-align:center;"><div style="font-size:15px;font-weight:900;color:'+pctCol+';">'+pct+'%</div><div style="font-size:8px;color:var(--t3);">chance</div></div>';
         }
         html += '</div>';
       });
@@ -6270,15 +6270,15 @@ async function loadFplSquad(el, nom) {
         var form = parseFloat(p.form)||0;
         var formCol = form>=6?'#1ed760':form>=4?'#f0b020':'#ff7b54';
         var isUnavail = p.status!=='a';
-        html += '<div style="display:flex;align-items:center;gap:8px;padding:6px 8px;background:rgba(255,255,255,'+(isUnavail?'.02':'.03')+');border-radius:6px;margin-bottom:3px;border-left:2px solid '+(isUnavail?'#ff4545':'rgba(255,255,255,.1)')+';opacity:'+(isUnavail?'.7':'1')+'">';
+        html += '<div style="display:flex;align-items:center;gap:8px;padding:10px 12px;background:rgba(255,255,255,'+(isUnavail?'.02':'.03')+');border-radius:8px;margin-bottom:5px;border-left:2px solid '+(isUnavail?'#ff4545':'rgba(255,255,255,.1)')+';opacity:'+(isUnavail?'.7':'1')+'">';
         html += '<div style="flex:1;">';
-        html += '<div style="font-size:11px;font-weight:700;color:var(--t1);">'+p.web_name+' '+(isUnavail?statusEmoji[p.status]:'')+'</div>';
+        html += '<div style="font-size:13px;font-weight:700;color:var(--t1);">'+p.web_name+' '+(isUnavail?statusEmoji[p.status]:'')+' </div>';
         html += '<div style="font-size:9px;color:var(--t3);">';
         html += p.total_points+'pts · '+p.goals_scored+'⚽ '+p.assists+'🅰️ '+p.clean_sheets+'CS';
         html += '</div></div>';
         html += '<div style="display:flex;gap:8px;align-items:center;">';
-        html += '<div style="text-align:center;"><div style="font-size:11px;font-weight:700;color:'+formCol+';">'+p.form+'</div><div style="font-size:8px;color:var(--t3);">forme</div></div>';
-        html += '<div style="text-align:center;"><div style="font-size:11px;font-weight:700;color:var(--t3);">'+p.minutes+"'</div><div style=\"font-size:8px;color:var(--t3);\">min</div></div>";
+        html += '<div style="text-align:center;"><div style="font-size:14px;font-weight:900;color:'+formCol+';">'+p.form+'</div><div style="font-size:9px;color:var(--t3);">forme</div></div>';
+        html += '<div style="text-align:center;"><div style="font-size:13px;font-weight:700;color:var(--t3);">'+p.minutes+"'</div><div style=\"font-size:8px;color:var(--t3);\">min</div></div>";
         html += '</div></div>';
       });
       html += '</div>';
