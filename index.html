@@ -6805,7 +6805,6 @@ async function loadFdSquad(el, nom, teamId) {
         showTip(p, selectedXiId?'🔄 Clique remplaçant (même poste)':'');
       });
       card.addEventListener('mouseenter', function(){ showTip(p, selectedXiId?'🔄 Clique remplaçant':''); });
-      card.addEventListener('mouseleave', function(){ tip.style.display='none'; });
     }
 
     el.querySelectorAll('.fd-player-card[data-uid="'+uid+'"]').forEach(function(card){ attachXiCard(card); });
@@ -6835,7 +6834,6 @@ async function loadFdSquad(el, nom, teamId) {
         }
       });
       row.addEventListener('mouseenter', function(){ showTip(p, selectedXiId?'🔄 Clique pour swapper':'↗ Clic → Sofascore'); });
-      row.addEventListener('mouseleave', function(){ tip.style.display='none'; });
     });
 
     document.addEventListener('click', function(){ tip.style.display='none'; selectedXiId=null; highlightSelected(); });
