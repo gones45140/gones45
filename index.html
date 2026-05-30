@@ -4887,6 +4887,22 @@ function loadTeamLive(){
     return;
   }
 
+  // Squad via football-data pour équipes hors PL
+  var fdKeyCheck = getFdorgKey();
+  var fdTeamId = TEAM_IDS[nom]||null;
+  if(!fdTeamId){ for(var k in TEAM_IDS){ if(nom.toLowerCase().indexOf(k.toLowerCase())>=0||k.toLowerCase().indexOf(nom.toLowerCase())>=0){fdTeamId=TEAM_IDS[k];break;} } }
+  if(fdKeyCheck && fdTeamId) {
+    el.innerHTML = '<div id="live-apisports-section2"></div><div id="live-fd-section" style="margin-top:10px;"></div>';
+    var fdSquadEl = document.getElementById('live-fd-section');
+    if(fdSquadEl) loadFdSquad(fdSquadEl, nom, fdTeamId);
+    var apiSportsKey2b = getApiSportsKey();
+    if(apiSportsKey2b){
+      var liveTarget2 = document.getElementById('live-apisports-section2');
+      if(liveTarget2) loadLiveApiSports(liveTarget2, nom, col, teamId, apiSportsKey2b);
+    }
+    return;
+  }
+
   // Vérifier si un match est en cours via api-sports
   var apiSportsKey = getApiSportsKey();
   if(apiSportsKey) {
@@ -6336,8 +6352,20 @@ async function loadFplSquad(el, nom) {
     var xi = [];
     var xiCounts = {1:1, 2:4, 3:3, 4:3}; // formation de base 4-3-3
     [1,2,3,4].forEach(function(pos){
-      var pp = players.filter(function(p){ return p.element_type===pos; });
-      pp.sort(function(a,b){ return b.minutes-a.minutes; });
+      // Exclure prêtés/indisponibles sans minutes
+      var pp = players.filter(function(p){
+        return p.element_type===pos && p.status==='a' && p.minutes>90;
+      });
+      // Fallback : disponibles avec n'importe quel temps de jeu
+      if(pp.length < xiCounts[pos]) {
+        var pp2 = players.filter(function(p){
+          return p.element_type===pos && p.status==='a';
+        });
+        pp2.sort(function(a,b){ return b.minutes-a.minutes; });
+        pp = pp2;
+      } else {
+        pp.sort(function(a,b){ return b.minutes-a.minutes; });
+      }
       xi = xi.concat(pp.slice(0, xiCounts[pos]));
     });
 
@@ -6403,11 +6431,14 @@ async function loadFplSquad(el, nom) {
     });
 
     // Hauteur terrain
-    html += '<div style="height:340px;"></div>';
-
-    // Tooltip flottant
-    html += '<div id="fpl-tip-'+uid+'" style="display:none;position:absolute;z-index:50;background:rgba(14,18,32,.97);border:1px solid rgba(77,132,255,.4);border-radius:10px;padding:10px 12px;min-width:150px;box-shadow:0 4px 20px rgba(0,0,0,.6);pointer-events:none;"></div>';
+    html += '<div style="height:360px;"></div>';
     html += '</div>'; // fin terrain
+
+    // Panneau latéral fiche joueur
+    html += '<div id="fpl-tip-'+uid+'" style="width:140px;flex-shrink:0;border-radius:12px;background:rgba(14,18,32,.95);border:1px solid rgba(77,132,255,.25);padding:12px;display:none;flex-direction:column;gap:8px;">';
+    html += '<div style="font-size:9px;color:var(--t3);text-align:center;letter-spacing:1px;text-transform:uppercase;">← Sélectionne</div>';
+    html += '</div>';
+    html += '</div>'; // fin flex wrapper
 
     // ── Absences ──
     if(unavail.length) {
@@ -6456,6 +6487,17 @@ async function loadFplSquad(el, nom) {
       html += '<div style="flex:1;height:1px;background:rgba(255,255,255,.05);"></div>';
       html += '<div style="font-size:9px;color:var(--t3);">'+pp.length+'</div>';
       html += '</div>';
+      // En-tête colonnes
+      html += '<div style="display:grid;grid-template-columns:16px 1fr 36px 36px 22px 22px 26px;gap:0 6px;padding:3px 10px;margin-bottom:2px;">';
+      html += '<div></div>';
+      html += '<div style="font-size:8px;color:var(--t3);font-weight:700;text-transform:uppercase;letter-spacing:.5px;">Joueur</div>';
+      html += '<div style="font-size:8px;color:var(--t3);font-weight:700;text-align:right;">Forme</div>';
+      html += '<div style="font-size:8px;color:var(--t3);font-weight:700;text-align:right;">Min</div>';
+      html += '<div style="font-size:8px;color:var(--t3);font-weight:700;text-align:right;">B</div>';
+      html += '<div style="font-size:8px;color:var(--t3);font-weight:700;text-align:right;">A</div>';
+      html += '<div style="font-size:8px;color:var(--t3);font-weight:700;text-align:right;">CS</div>';
+      html += '</div>';
+
       pp.forEach(function(p, i){
         var form = parseFloat(p.form)||0;
         var formCol = form>=6?'#1ed760':form>=4?'#f0b020':'#8b97c4';
@@ -6464,17 +6506,24 @@ async function loadFplSquad(el, nom) {
         var minsK = mins>=1000?(mins/1000).toFixed(1)+'k':mins;
         var inXi = xi.some(function(x){return x.id===p.id;});
         var rowBg = i%2===0?'rgba(255,255,255,.025)':'rgba(255,255,255,.015)';
-        html += '<div style="display:flex;align-items:center;gap:7px;flex-wrap:wrap;padding:6px 10px;background:'+rowBg+';border-radius:6px;margin-bottom:2px;border-left:2px solid '+(isUnavail?'rgba(255,69,69,.5)':pc+'55')+';opacity:'+(isUnavail?.6:1)+';">';
-        if(inXi) html += '<span style="font-size:8px;background:'+pc+'33;color:'+pc+';border-radius:3px;padding:0 4px;font-weight:800;flex-shrink:0;">XI</span>';
-        html += '<span style="font-size:13px;font-weight:700;color:var(--t1);">'+p.web_name+'</span>';
-        if(isUnavail) html += '<span style="font-size:10px;">'+statusEmoji[p.status]+'</span>';
-        html += '<span style="font-size:10px;color:var(--t3);">·</span>';
-        html += '<span style="font-size:13px;font-weight:900;color:'+formCol+';">'+p.form+'</span>';
-        html += '<span style="font-size:10px;color:var(--t3);">·</span>';
-        html += '<span style="font-size:11px;font-weight:600;color:var(--t2);">'+minsK+"'</span>";
-        if(p.goals_scored>0){html += '<span style="font-size:10px;color:var(--t3);">·</span><span style="font-size:11px;font-weight:700;color:#1ed760;">'+p.goals_scored+'⚽</span>';}
-        if(p.assists>0){html += '<span style="font-size:10px;color:var(--t3);">·</span><span style="font-size:11px;font-weight:700;color:#4d84ff;">'+p.assists+'🅰</span>';}
-        if(p.clean_sheets>0){html += '<span style="font-size:10px;color:var(--t3);">·</span><span style="font-size:11px;font-weight:700;color:#f0b020;">'+p.clean_sheets+'CS</span>';}
+        html += '<div style="display:grid;grid-template-columns:16px 1fr 36px 36px 22px 22px 26px;gap:0 6px;align-items:center;padding:6px 10px;background:'+rowBg+';border-radius:6px;margin-bottom:2px;border-left:2px solid '+(isUnavail?'rgba(255,69,69,.5)':pc+'55')+';opacity:'+(isUnavail?.6:1)+';">';
+        // Badge XI
+        html += '<div>'+(inXi?'<span style="font-size:7px;background:'+pc+'33;color:'+pc+';border-radius:3px;padding:1px 3px;font-weight:800;">XI</span>':'')+'</div>';
+        // Nom + statut
+        html += '<div style="display:flex;align-items:center;gap:4px;min-width:0;">';
+        html += '<span style="font-size:12px;font-weight:700;color:var(--t1);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">'+p.web_name+'</span>';
+        if(isUnavail) html += '<span style="font-size:9px;flex-shrink:0;">'+statusEmoji[p.status]+'</span>';
+        html += '</div>';
+        // Forme
+        html += '<div style="text-align:right;"><span style="font-size:12px;font-weight:900;color:'+formCol+';">'+p.form+'</span></div>';
+        // Minutes
+        html += '<div style="text-align:right;"><span style="font-size:11px;font-weight:600;color:var(--t2);">'+minsK+'</span></div>';
+        // Buts
+        html += '<div style="text-align:right;"><span style="font-size:11px;font-weight:700;color:'+(p.goals_scored>0?'#1ed760':'var(--t3)')+';">'+p.goals_scored+'</span></div>';
+        // Passes
+        html += '<div style="text-align:right;"><span style="font-size:11px;font-weight:700;color:'+(p.assists>0?'#4d84ff':'var(--t3)')+';">'+p.assists+'</span></div>';
+        // CS
+        html += '<div style="text-align:right;"><span style="font-size:11px;font-weight:700;color:'+(p.clean_sheets>0?'#f0b020':'var(--t3)')+';">'+p.clean_sheets+'</span></div>';
         html += '</div>';
       });
       html += '</div>';
@@ -6495,30 +6544,30 @@ async function loadFplSquad(el, nom) {
       var pct = p.chance_of_playing_next_round;
       var mins = p.minutes||0;
       var minsK = mins>=1000?(mins/1000).toFixed(1)+'k':mins;
+      var posColors2 = {1:'#f5a623',2:'#4fc3f7',3:'#81c784',4:'#ef9a9a'};
+      var posNms = {1:'GK',2:'DEF',3:'MID',4:'ATT'};
+      var pc = posColors2[p.element_type]||'#8b97c4';
       var t = '';
-      t += '<div style="font-size:13px;font-weight:800;color:#fff;margin-bottom:6px;">'+p.web_name+'</div>';
-      t += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:4px 10px;font-size:11px;">';
-      t += '<span style="color:var(--t3);">Forme</span><span style="font-weight:800;color:'+formCol+';">'+p.form+'</span>';
-      t += '<span style="color:var(--t3);">Minutes</span><span style="font-weight:700;color:var(--t2);">'+minsK+"'</span>";
-      t += '<span style="color:var(--t3);">Points</span><span style="font-weight:700;">'+p.total_points+'</span>';
-      t += '<span style="color:var(--t3);">Buts</span><span style="font-weight:700;color:#1ed760;">'+p.goals_scored+'</span>';
-      t += '<span style="color:var(--t3);">Passes</span><span style="font-weight:700;color:#4d84ff;">'+p.assists+'</span>';
-      t += '<span style="color:var(--t3);">CS</span><span style="font-weight:700;color:#f0b020;">'+p.clean_sheets+'</span>';
-      t += '<span style="color:var(--t3);">Prix</span><span style="font-weight:700;color:#a78bfa;">£'+(p.now_cost/10).toFixed(1)+'m</span>';
-      if(pct!==null&&pct!==undefined) t += '<span style="color:var(--t3);">Dispo</span><span style="font-weight:800;color:'+(pct>=75?'#1ed760':pct>=50?'#f0b020':'#ff4545')+';">'+pct+'%</span>';
+      // Avatar + nom
+      t += '<div style="text-align:center;margin-bottom:10px;padding-bottom:10px;border-bottom:1px solid rgba(255,255,255,.07);">';
+      t += '<div style="width:40px;height:40px;border-radius:50%;background:'+pc+'33;border:2px solid '+pc+';display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:800;color:'+pc+';margin:0 auto 6px;">'+posNms[p.element_type]+'</div>';
+      t += '<div style="font-size:12px;font-weight:800;color:#fff;line-height:1.2;">'+p.web_name+'</div>';
       t += '</div>';
-      if(p.news) t += '<div style="margin-top:6px;font-size:9px;color:#ff7b54;line-height:1.4;">'+p.news+'</div>';
+      // Stats verticales
+      t += statV('Forme', '<span style="color:'+formCol+';font-weight:900;font-size:15px;">'+p.form+'</span>');
+      t += statV('Minutes', '<span style="color:var(--t2);">'+minsK+"'</span>");
+      t += statV('Points', p.total_points);
+      t += statV('Buts', '<span style="color:#1ed760;">'+p.goals_scored+'</span>');
+      t += statV('Passes', '<span style="color:#4d84ff;">'+p.assists+'</span>');
+      t += statV('CS', '<span style="color:#f0b020;">'+p.clean_sheets+'</span>');
+      t += statV('Prix', '<span style="color:#a78bfa;">£'+(p.now_cost/10).toFixed(1)+'m</span>');
+      if(pct!==null&&pct!==undefined) t += statV('Dispo', '<span style="color:'+(pct>=75?'#1ed760':pct>=50?'#f0b020':'#ff4545')+';">'+pct+'%</span>');
+      if(p.news) t += '<div style="margin-top:8px;padding-top:8px;border-top:1px solid rgba(255,255,255,.07);font-size:9px;color:#ff7b54;line-height:1.4;">'+p.news+'</div>';
       tip.innerHTML = t;
-      tip.style.display = 'block';
-      // Positionner
-      var rect = card.getBoundingClientRect();
-      var containerRect = el.getBoundingClientRect();
-      var left = rect.left - containerRect.left;
-      var top = rect.bottom - containerRect.top + 6;
-      // Ajuster si déborde à droite
-      tip.style.left = Math.min(left, containerRect.width - 165) + 'px';
-      tip.style.top = top + 'px';
+      tip.style.display = 'flex';
+      tip.style.flexDirection = 'column';
     }
+    function statV(l,v){ return '<div style="display:flex;justify-content:space-between;align-items:center;padding:4px 0;border-bottom:1px solid rgba(255,255,255,.04);"><span style="font-size:10px;color:var(--t3);">'+l+'</span><span style="font-size:11px;font-weight:700;">'+v+'</span></div>'; }
 
     cards.forEach(function(card){
       var pid = parseInt(card.dataset.pid);
@@ -6541,6 +6590,191 @@ async function loadFplSquad(el, nom) {
 
   } catch(e) {
     el.innerHTML = '<div style="color:#ff4545;font-size:10px;text-align:center;padding:8px;">Erreur FPL : '+e.message+'</div>';
+  }
+}
+
+async function loadFdSquad(el, nom, teamId) {
+  el.innerHTML = '<div style="text-align:center;padding:16px;color:var(--t3);font-size:11px;">⏳ Chargement squad...</div>';
+  try {
+    var fdKey = getFdorgKey();
+    if(!fdKey){ el.innerHTML='<div style="color:var(--t3);font-size:10px;text-align:center;padding:12px;">Clé football-data manquante (Outils)</div>'; return; }
+
+    // Squad de l'équipe
+    var squadData = await fdFetch('/v4/teams/'+teamId);
+    if(!squadData||!squadData.squad||!squadData.squad.length){
+      el.innerHTML='<div style="color:var(--t3);font-size:10px;text-align:center;padding:12px;">Squad non disponible pour cette équipe</div>'; return;
+    }
+
+    // Matchs récents pour calculer les minutes
+    var matchesData = await fdFetch('/v4/teams/'+teamId+'/matches?status=FINISHED&limit=20');
+    var matches = (matchesData&&matchesData.matches)||[];
+
+    // Calculer minutes approx par joueur depuis les matchs
+    var minMap = {};
+    matches.forEach(function(m){
+      var isHome = m.homeTeam && m.homeTeam.id===teamId;
+      var lineup = (m.lineups||(isHome?[m.homeTeam]:[m.awayTeam]))||[];
+      // API gratuite ne donne pas les lineups détaillés — on estime depuis l'équipe
+    });
+
+    var squad = squadData.squad;
+    // Mapping position FD → type
+    var posType = function(pos){
+      if(!pos) return 4;
+      var p = pos.toUpperCase();
+      if(p==='GOALKEEPER') return 1;
+      if(p==='DEFENCE') return 2;
+      if(p==='MIDFIELD') return 3;
+      return 4;
+    };
+    var posNames = {1:'GK',2:'DEF',3:'MID',4:'ATT'};
+    var posColors = {1:'#f5a623',2:'#4fc3f7',3:'#81c784',4:'#ef9a9a'};
+    var posLabels = {1:'🧤 Gardiens',2:'🛡️ Défenseurs',3:'🎯 Milieux',4:'⚽ Attaquants'};
+
+    squad.forEach(function(p){ p._type = posType(p.position); });
+    squad.sort(function(a,b){ return a._type-b._type; });
+
+    // XI type : top par minutes si dispo, sinon premier par poste
+    var xiCounts = {1:1,2:4,3:3,4:3};
+    var xi = [];
+    [1,2,3,4].forEach(function(pos){
+      var pp = squad.filter(function(p){return p._type===pos;});
+      xi = xi.concat(pp.slice(0, xiCounts[pos]));
+    });
+
+    var uid = 'fd_'+Date.now();
+    var html = '<div style="padding:2px 0;">';
+
+    // Header
+    html += '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">';
+    html += '<div style="font-size:9px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;color:var(--t3);">👤 Squad · '+nom+' <span style="color:var(--t2);font-weight:500;">('+squad.length+')</span></div>';
+    html += '<div style="font-size:9px;color:var(--t3);">football-data.org</div>';
+    html += '</div>';
+
+    // TERRAIN + FICHE CÔTE À CÔTE
+    html += '<div style="display:flex;gap:10px;margin-bottom:14px;align-items:stretch;">';
+    // Terrain
+    html += '<div style="position:relative;border-radius:12px;overflow:hidden;background:#1a3a1a;border:1px solid rgba(255,255,255,.08);flex:1;min-width:0;">';
+    html += '<svg style="position:absolute;top:0;left:0;width:100%;height:100%;opacity:.18;" viewBox="0 0 300 420" preserveAspectRatio="none">';
+    html += '<rect x="1" y="1" width="298" height="418" fill="none" stroke="#fff" stroke-width="1.5"/>';
+    html += '<line x1="0" y1="210" x2="300" y2="210" stroke="#fff" stroke-width="1"/>';
+    html += '<circle cx="150" cy="210" r="40" fill="none" stroke="#fff" stroke-width="1"/>';
+    html += '<circle cx="150" cy="210" r="2" fill="#fff"/>';
+    html += '<rect x="75" y="1" width="150" height="55" fill="none" stroke="#fff" stroke-width="1"/>';
+    html += '<rect x="75" y="364" width="150" height="55" fill="none" stroke="#fff" stroke-width="1"/>';
+    html += '<rect x="105" y="1" width="90" height="25" fill="none" stroke="#fff" stroke-width="1"/>';
+    html += '<rect x="105" y="394" width="90" height="25" fill="none" stroke="#fff" stroke-width="1"/>';
+    html += '</svg>';
+
+    var rows = [
+      { pos:4, players: xi.filter(function(p){return p._type===4;}), y:'13%' },
+      { pos:3, players: xi.filter(function(p){return p._type===3;}), y:'36%' },
+      { pos:2, players: xi.filter(function(p){return p._type===2;}), y:'60%' },
+      { pos:1, players: xi.filter(function(p){return p._type===1;}), y:'84%' },
+    ];
+
+    rows.forEach(function(row){
+      var rp = row.players;
+      if(!rp.length) return;
+      var pct = 100/rp.length;
+      html += '<div style="position:absolute;top:'+row.y+';left:0;right:0;display:flex;justify-content:space-around;align-items:center;transform:translateY(-50%);">';
+      rp.forEach(function(p){
+        var pc = posColors[p._type];
+        var shortName = p.name ? p.name.split(' ').pop() : '?';
+        html += '<div class="fd-player-card" data-uid="'+uid+'" data-pid="'+p.id+'" style="display:flex;flex-direction:column;align-items:center;gap:3px;cursor:pointer;max-width:'+Math.floor(pct-2)+'%;">';
+        html += '<div style="width:38px;height:38px;border-radius:50%;background:'+pc+'33;border:2px solid '+pc+';display:flex;align-items:center;justify-content:center;font-size:13px;box-shadow:0 2px 8px rgba(0,0,0,.4);">';
+        html += posNames[p._type].charAt(0);
+        html += '</div>';
+        html += '<div style="background:rgba(0,0,0,.7);backdrop-filter:blur(4px);border-radius:4px;padding:2px 5px;font-size:10px;font-weight:700;color:#fff;white-space:nowrap;max-width:70px;overflow:hidden;text-overflow:ellipsis;text-align:center;">'+shortName+'</div>';
+        html += '</div>';
+      });
+      html += '</div>';
+    });
+
+    html += '<div style="height:340px;"></div>';
+    html += '<div id="fd-tip-'+uid+'" style="display:none;position:absolute;z-index:50;background:rgba(14,18,32,.97);border:1px solid rgba(77,132,255,.4);border-radius:10px;padding:10px 12px;min-width:150px;box-shadow:0 4px 20px rgba(0,0,0,.6);pointer-events:none;"></div>';
+    html += '</div>';
+
+    // Tableau par poste
+    [1,2,3,4].forEach(function(pos){
+      var pp = squad.filter(function(p){return p._type===pos;});
+      if(!pp.length) return;
+      var pc = posColors[pos];
+      html += '<div style="margin-bottom:12px;">';
+      html += '<div style="display:flex;align-items:center;gap:7px;margin-bottom:7px;">';
+      html += '<div style="width:3px;height:14px;border-radius:2px;background:'+pc+';flex-shrink:0;"></div>';
+      html += '<div style="font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:'+pc+';">'+posLabels[pos]+'</div>';
+      html += '<div style="flex:1;height:1px;background:rgba(255,255,255,.05);"></div>';
+      html += '<div style="font-size:9px;color:var(--t3);">'+pp.length+'</div>';
+      html += '</div>';
+      // Header colonnes
+      html += '<div style="display:grid;grid-template-columns:16px 1fr 60px 40px;gap:0 6px;padding:3px 10px;margin-bottom:2px;">';
+      html += '<div></div>';
+      html += '<div style="font-size:8px;color:var(--t3);font-weight:700;text-transform:uppercase;letter-spacing:.5px;">Joueur</div>';
+      html += '<div style="font-size:8px;color:var(--t3);font-weight:700;text-align:right;">Nationalité</div>';
+      html += '<div style="font-size:8px;color:var(--t3);font-weight:700;text-align:right;">Âge</div>';
+      html += '</div>';
+      pp.forEach(function(p, i){
+        var inXi = xi.some(function(x){return x.id===p.id;});
+        var rowBg = i%2===0?'rgba(255,255,255,.025)':'rgba(255,255,255,.015)';
+        var age = p.dateOfBirth ? Math.floor((Date.now()-new Date(p.dateOfBirth))/(365.25*24*3600*1000)) : '—';
+        html += '<div style="display:grid;grid-template-columns:16px 1fr 60px 40px;gap:0 6px;align-items:center;padding:6px 10px;background:'+rowBg+';border-radius:6px;margin-bottom:2px;border-left:2px solid '+pc+'55;">';
+        html += '<div>'+(inXi?'<span style="font-size:7px;background:'+pc+'33;color:'+pc+';border-radius:3px;padding:1px 3px;font-weight:800;">XI</span>':'')+'</div>';
+        html += '<div style="font-size:12px;font-weight:700;color:var(--t1);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">'+p.name+'</div>';
+        html += '<div style="text-align:right;font-size:10px;color:var(--t3);">'+(p.nationality||'—')+'</div>';
+        html += '<div style="text-align:right;font-size:11px;font-weight:600;color:var(--t2);">'+age+'</div>';
+        html += '</div>';
+      });
+      html += '</div>';
+    });
+
+    html += '</div>';
+    el.innerHTML = html;
+
+    // Tooltip
+    var tip = document.getElementById('fd-tip-'+uid);
+    var cards = el.querySelectorAll('.fd-player-card[data-uid="'+uid+'"]');
+    var playerMap = {};
+    squad.forEach(function(p){ playerMap[p.id]=p; });
+
+    function showFdTip(card, p){
+      var age = p.dateOfBirth ? Math.floor((Date.now()-new Date(p.dateOfBirth))/(365.25*24*3600*1000)) : '—';
+      var shortName = p.name ? p.name.split(' ').pop() : '?';
+      var t = '<div style="font-size:13px;font-weight:800;color:#fff;margin-bottom:6px;">'+p.name+'</div>';
+      t += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:4px 10px;font-size:11px;">';
+      t += '<span style="color:var(--t3);">Poste</span><span style="font-weight:700;">'+posNames[p._type]+'</span>';
+      t += '<span style="color:var(--t3);">Âge</span><span style="font-weight:700;">'+age+' ans</span>';
+      t += '<span style="color:var(--t3);">Nationalité</span><span style="font-weight:700;">'+(p.nationality||'—')+'</span>';
+      if(p.shirtNumber) t += '<span style="color:var(--t3);">Numéro</span><span style="font-weight:700;">#'+p.shirtNumber+'</span>';
+      t += '</div>';
+      tip.innerHTML = t;
+      tip.style.display = 'block';
+      var rect = card.getBoundingClientRect();
+      var containerRect = el.getBoundingClientRect();
+      var cardTop = rect.top - containerRect.top;
+      var cardBottom = rect.bottom - containerRect.top;
+      var tipH = tip.offsetHeight || 120;
+      var top = cardBottom > containerRect.height * 0.55 ? cardTop - tipH - 6 : cardBottom + 6;
+      tip.style.left = Math.min(Math.max(0, rect.left-containerRect.left), containerRect.width-165)+'px';
+      tip.style.top = Math.max(4, top)+'px';
+    }
+
+    cards.forEach(function(card){
+      var pid = parseInt(card.dataset.pid);
+      var p = playerMap[pid];
+      if(!p) return;
+      card.addEventListener('click', function(e){
+        e.stopPropagation();
+        if(tip.style.display==='block'&&tip._pid===pid){tip.style.display='none';tip._pid=null;}
+        else{showFdTip(card,p);tip._pid=pid;}
+      });
+      card.addEventListener('mouseenter', function(){showFdTip(card,p);tip._pid=pid;});
+      card.addEventListener('mouseleave', function(){tip.style.display='none';tip._pid=null;});
+    });
+    document.addEventListener('click', function(){if(tip)tip.style.display='none';});
+
+  } catch(e) {
+    el.innerHTML='<div style="color:#ff4545;font-size:10px;text-align:center;padding:8px;">Erreur squad : '+e.message+'</div>';
   }
 }
 
