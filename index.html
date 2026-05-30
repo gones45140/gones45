@@ -6622,16 +6622,27 @@ async function loadFdSquad(el, nom, teamId) {
       p._age = p.dateOfBirth ? Math.floor((Date.now()-new Date(p.dateOfBirth))/(365.25*24*3600*1000)) : 0;
     });
 
-    // XI type : joueurs les plus âgés/expérimentés par poste (heuristique sans minutes)
+    // XI type : priorité aux joueurs avec numéro ≤ 30 (écarte les jeunes académie)
+    // puis tri par âge décroissant
     var xiCounts = {1:1,2:4,3:3,4:3};
     var xi = [];
     [1,2,3,4].forEach(function(pos){
       var pp = squad.filter(function(p){return p._type===pos;});
-      pp.sort(function(a,b){ return b._age-a._age; });
-      xi = xi.concat(pp.slice(0, xiCounts[pos]));
+      // D'abord les joueurs avec numéro pro (1-30), ensuite les autres
+      var pros = pp.filter(function(p){ return p.shirtNumber && p.shirtNumber <= 30; });
+      var rest = pp.filter(function(p){ return !p.shirtNumber || p.shirtNumber > 30; });
+      pros.sort(function(a,b){ return b._age-a._age; });
+      rest.sort(function(a,b){ return b._age-a._age; });
+      var sorted = pros.concat(rest);
+      xi = xi.concat(sorted.slice(0, xiCounts[pos]));
     });
 
-    squad.sort(function(a,b){ return a._type-b._type || b._age-a._age; });
+    squad.sort(function(a,b){
+      // Pros d'abord, puis par âge
+      var aP = a.shirtNumber&&a.shirtNumber<=30?0:1;
+      var bP = b.shirtNumber&&b.shirtNumber<=30?0:1;
+      return a._type-b._type || aP-bP || b._age-a._age;
+    });
 
     var uid = 'fd_'+Date.now();
     var html = '<div style="padding:2px 0;">';
@@ -6702,19 +6713,20 @@ async function loadFdSquad(el, nom, teamId) {
       html += '<div style="font-size:9px;color:var(--t3);">'+pp.length+'</div>';
       html += '</div>';
       // Header
-      html += '<div style="display:grid;grid-template-columns:16px minmax(0,200px) 70px 30px;gap:0 6px;padding:3px 10px;margin-bottom:2px;">';
+      html += '<div style="display:grid;grid-template-columns:16px 1fr 30px;gap:0 6px;padding:3px 10px;margin-bottom:2px;">';
       html += '<div></div>';
       html += '<div style="font-size:9px;color:var(--t3);font-weight:700;text-transform:uppercase;letter-spacing:.5px;">Joueur</div>';
-      html += '<div style="font-size:9px;color:var(--t3);font-weight:700;text-align:center;">Nationalité</div>';
       html += '<div style="font-size:9px;color:var(--t3);font-weight:700;text-align:center;">Âge</div>';
       html += '</div>';
       pp.forEach(function(p, i){
         var inXi = xi.some(function(x){return x.id===p.id;});
         var rowBg = i%2===0?'rgba(255,255,255,.025)':'rgba(255,255,255,.015)';
-        html += '<div style="display:grid;grid-template-columns:16px minmax(0,200px) 70px 30px;gap:0 6px;align-items:center;padding:6px 10px;background:'+rowBg+';border-radius:6px;margin-bottom:2px;border-left:2px solid '+pc+'55;">';
+        html += '<div style="display:grid;grid-template-columns:16px 1fr 30px;gap:0 6px;align-items:center;padding:6px 10px;background:'+rowBg+';border-radius:6px;margin-bottom:2px;border-left:2px solid '+pc+'55;">';
         html += '<div>'+(inXi?'<span style="font-size:7px;background:'+pc+'33;color:'+pc+';border-radius:3px;padding:1px 3px;font-weight:800;">XI</span>':'')+'</div>';
-        html += '<div style="font-size:12px;font-weight:700;color:var(--t1);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">'+p.name+'</div>';
-        html += '<div style="text-align:center;font-size:10px;color:var(--t3);">'+(p.nationality||'—')+'</div>';
+        html += '<div style="display:flex;align-items:center;gap:6px;min-width:0;">';
+        html += '<span style="font-size:12px;font-weight:700;color:var(--t1);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">'+p.name+'</span>';
+        html += '<span style="font-size:9px;color:var(--t3);flex-shrink:0;">'+(p.nationality||'')+'</span>';
+        html += '</div>';
         html += '<div style="text-align:center;font-size:11px;font-weight:600;color:var(--t2);">'+p._age+'</div>';
         html += '</div>';
       });
