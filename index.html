@@ -6330,10 +6330,22 @@ async function loadFplSquad(el, nom) {
     var posNames = {1:'GK',2:'DEF',3:'MID',4:'ATT'};
     var posColors = {1:'#f5a623',2:'#4fc3f7',3:'#81c784',4:'#ef9a9a'};
     var statusEmoji = {'a':'','d':'⚠️','i':'🩹','s':'🚫','u':'❓','n':'❌'};
-    var statusLabel = {'a':'Disponible','d':'Incertain','i':'Blessé','s':'Suspendu','u':'Inconnu','n':'Indisponible'};
     var statusBorder = {'d':'#ffc107','i':'#ff6432','s':'#9c27b0','u':'#607d8b','n':'#dc3545'};
 
+    // ── Calcul du 11 type (top minutes par poste) ──
+    var xi = [];
+    var xiCounts = {1:1, 2:4, 3:3, 4:3}; // formation de base 4-3-3
+    [1,2,3,4].forEach(function(pos){
+      var pp = players.filter(function(p){ return p.element_type===pos; });
+      pp.sort(function(a,b){ return b.minutes-a.minutes; });
+      xi = xi.concat(pp.slice(0, xiCounts[pos]));
+    });
+
     var unavail = players.filter(function(p){ return p.status!=='a'; });
+
+    // ── ID unique pour ce rendu ──
+    var uid = 'fpl_'+Date.now();
+
     var html = '<div style="padding:2px 0;">';
 
     // ── Header ──
@@ -6341,6 +6353,61 @@ async function loadFplSquad(el, nom) {
     html += '<div style="font-size:9px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;color:var(--t3);">👤 Squad FPL · '+team.name+' <span style="color:var(--t2);font-weight:500;">('+players.length+')</span></div>';
     html += '<div style="font-size:9px;color:var(--t3);">Saison en cours</div>';
     html += '</div>';
+
+    // ── TERRAIN ──
+    html += '<div style="position:relative;border-radius:12px;overflow:hidden;margin-bottom:14px;background:#1a3a1a;border:1px solid rgba(255,255,255,.08);">';
+    // Lignes terrain SVG
+    html += '<svg style="position:absolute;top:0;left:0;width:100%;height:100%;opacity:.18;" viewBox="0 0 300 420" preserveAspectRatio="none">';
+    html += '<rect x="1" y="1" width="298" height="418" fill="none" stroke="#fff" stroke-width="1.5"/>';
+    html += '<line x1="0" y1="210" x2="300" y2="210" stroke="#fff" stroke-width="1"/>';
+    html += '<circle cx="150" cy="210" r="40" fill="none" stroke="#fff" stroke-width="1"/>';
+    html += '<circle cx="150" cy="210" r="2" fill="#fff"/>';
+    html += '<rect x="75" y="1" width="150" height="55" fill="none" stroke="#fff" stroke-width="1"/>';
+    html += '<rect x="75" y="364" width="150" height="55" fill="none" stroke="#fff" stroke-width="1"/>';
+    html += '<rect x="105" y="1" width="90" height="25" fill="none" stroke="#fff" stroke-width="1"/>';
+    html += '<rect x="105" y="394" width="90" height="25" fill="none" stroke="#fff" stroke-width="1"/>';
+    html += '</svg>';
+
+    // Lignes de joueurs par poste
+    var rows = [
+      { pos: 4, players: xi.filter(function(p){return p.element_type===4;}), y: '13%' },
+      { pos: 3, players: xi.filter(function(p){return p.element_type===3;}), y: '36%' },
+      { pos: 2, players: xi.filter(function(p){return p.element_type===2;}), y: '60%' },
+      { pos: 1, players: xi.filter(function(p){return p.element_type===1;}), y: '84%' },
+    ];
+
+    rows.forEach(function(row){
+      var rp = row.players;
+      if(!rp.length) return;
+      var pct = 100/rp.length;
+      html += '<div style="position:absolute;top:'+row.y+';left:0;right:0;display:flex;justify-content:space-around;align-items:center;transform:translateY(-50%);">';
+      rp.forEach(function(p){
+        var isUnavail = p.status!=='a';
+        var pc = posColors[p.element_type];
+        var form = parseFloat(p.form)||0;
+        var formCol = form>=6?'#1ed760':form>=4?'#f0b020':'#ff7b54';
+        // carte joueur cliquable
+        html += '<div class="fpl-player-card" data-uid="'+uid+'" data-pid="'+p.id+'" style="display:flex;flex-direction:column;align-items:center;gap:3px;cursor:pointer;position:relative;max-width:'+Math.floor(pct-2)+'%;">';
+        // Avatar cercle
+        html += '<div style="width:38px;height:38px;border-radius:50%;background:'+pc+'33;border:2px solid '+(isUnavail?'#ff4545':pc)+';display:flex;align-items:center;justify-content:center;font-size:14px;position:relative;box-shadow:0 2px 8px rgba(0,0,0,.4);">';
+        html += '<span>'+posNames[p.element_type].charAt(0)+'</span>';
+        if(isUnavail) html += '<span style="position:absolute;top:-4px;right:-4px;font-size:9px;">'+statusEmoji[p.status]+'</span>';
+        html += '</div>';
+        // Nom
+        html += '<div style="background:rgba(0,0,0,.7);backdrop-filter:blur(4px);border-radius:4px;padding:2px 5px;font-size:10px;font-weight:700;color:#fff;white-space:nowrap;max-width:70px;overflow:hidden;text-overflow:ellipsis;text-align:center;">'+p.web_name+'</div>';
+        // Forme badge
+        html += '<div style="font-size:9px;font-weight:900;color:'+formCol+';">'+p.form+'</div>';
+        html += '</div>';
+      });
+      html += '</div>';
+    });
+
+    // Hauteur terrain
+    html += '<div style="height:340px;"></div>';
+
+    // Tooltip flottant
+    html += '<div id="fpl-tip-'+uid+'" style="display:none;position:absolute;z-index:50;background:rgba(14,18,32,.97);border:1px solid rgba(77,132,255,.4);border-radius:10px;padding:10px 12px;min-width:150px;box-shadow:0 4px 20px rgba(0,0,0,.6);pointer-events:none;"></div>';
+    html += '</div>'; // fin terrain
 
     // ── Absences ──
     if(unavail.length) {
@@ -6382,49 +6449,32 @@ async function loadFplSquad(el, nom) {
       if(!pp.length) return;
       var posLabel = {1:'🧤 Gardiens',2:'🛡️ Défenseurs',3:'🎯 Milieux',4:'⚽ Attaquants'}[pos];
       var pc = posColors[pos];
-
       html += '<div style="margin-bottom:12px;">';
-      // Section header
       html += '<div style="display:flex;align-items:center;gap:7px;margin-bottom:7px;">';
       html += '<div style="width:3px;height:14px;border-radius:2px;background:'+pc+';flex-shrink:0;"></div>';
       html += '<div style="font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:'+pc+';">'+posLabel+'</div>';
       html += '<div style="flex:1;height:1px;background:rgba(255,255,255,.05);"></div>';
       html += '<div style="font-size:9px;color:var(--t3);">'+pp.length+'</div>';
       html += '</div>';
-
-      // Table header
-      html += '<div style="display:grid;grid-template-columns:1fr 38px 34px 26px 26px 30px;gap:0;padding:4px 10px;margin-bottom:3px;">';
-      html += '<div style="font-size:8px;color:var(--t3);font-weight:700;text-transform:uppercase;letter-spacing:.5px;">Joueur</div>';
-      html += '<div style="font-size:8px;color:var(--t3);font-weight:700;text-align:center;">Forme</div>';
-      html += '<div style="font-size:8px;color:var(--t3);font-weight:700;text-align:center;">Min</div>';
-      html += '<div style="font-size:8px;color:var(--t3);font-weight:700;text-align:center;">⚽</div>';
-      html += '<div style="font-size:8px;color:var(--t3);font-weight:700;text-align:center;">🅰</div>';
-      html += '<div style="font-size:8px;color:var(--t3);font-weight:700;text-align:center;">CS</div>';
-      html += '</div>';
-
       pp.forEach(function(p, i){
         var form = parseFloat(p.form)||0;
         var formCol = form>=6?'#1ed760':form>=4?'#f0b020':'#8b97c4';
         var isUnavail = p.status!=='a';
         var mins = p.minutes||0;
         var minsK = mins>=1000?(mins/1000).toFixed(1)+'k':mins;
+        var inXi = xi.some(function(x){return x.id===p.id;});
         var rowBg = i%2===0?'rgba(255,255,255,.025)':'rgba(255,255,255,.015)';
-        html += '<div style="display:grid;grid-template-columns:1fr 38px 34px 26px 26px 30px;gap:0;padding:7px 10px;background:'+rowBg+';border-radius:6px;margin-bottom:2px;border-left:2px solid '+(isUnavail?'rgba(255,69,69,.4)':pc+'33')+';opacity:'+(isUnavail?.65:1)+';">';
-        // Nom
-        html += '<div style="display:flex;align-items:center;gap:5px;min-width:0;">';
-        html += '<span style="font-size:13px;font-weight:700;color:var(--t1);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">'+p.web_name+'</span>';
+        html += '<div style="display:flex;align-items:center;gap:7px;flex-wrap:wrap;padding:6px 10px;background:'+rowBg+';border-radius:6px;margin-bottom:2px;border-left:2px solid '+(isUnavail?'rgba(255,69,69,.5)':pc+'55')+';opacity:'+(isUnavail?.6:1)+';">';
+        if(inXi) html += '<span style="font-size:8px;background:'+pc+'33;color:'+pc+';border-radius:3px;padding:0 4px;font-weight:800;flex-shrink:0;">XI</span>';
+        html += '<span style="font-size:13px;font-weight:700;color:var(--t1);">'+p.web_name+'</span>';
         if(isUnavail) html += '<span style="font-size:10px;">'+statusEmoji[p.status]+'</span>';
-        html += '</div>';
-        // Forme
-        html += '<div style="text-align:center;"><span style="font-size:14px;font-weight:900;color:'+formCol+';">'+p.form+'</span></div>';
-        // Minutes
-        html += '<div style="text-align:center;"><span style="font-size:11px;font-weight:700;color:var(--t2);">'+minsK+'</span></div>';
-        // Buts
-        html += '<div style="text-align:center;"><span style="font-size:11px;font-weight:700;color:'+(p.goals_scored>0?'#1ed760':'var(--t3)')+'">'+p.goals_scored+'</span></div>';
-        // Passes
-        html += '<div style="text-align:center;"><span style="font-size:11px;font-weight:700;color:'+(p.assists>0?'#4d84ff':'var(--t3)')+'">'+p.assists+'</span></div>';
-        // CS
-        html += '<div style="text-align:center;"><span style="font-size:11px;font-weight:700;color:'+(p.clean_sheets>0?'#f0b020':'var(--t3)')+'">'+p.clean_sheets+'</span></div>';
+        html += '<span style="font-size:10px;color:var(--t3);">·</span>';
+        html += '<span style="font-size:13px;font-weight:900;color:'+formCol+';">'+p.form+'</span>';
+        html += '<span style="font-size:10px;color:var(--t3);">·</span>';
+        html += '<span style="font-size:11px;font-weight:600;color:var(--t2);">'+minsK+"'</span>";
+        if(p.goals_scored>0){html += '<span style="font-size:10px;color:var(--t3);">·</span><span style="font-size:11px;font-weight:700;color:#1ed760;">'+p.goals_scored+'⚽</span>';}
+        if(p.assists>0){html += '<span style="font-size:10px;color:var(--t3);">·</span><span style="font-size:11px;font-weight:700;color:#4d84ff;">'+p.assists+'🅰</span>';}
+        if(p.clean_sheets>0){html += '<span style="font-size:10px;color:var(--t3);">·</span><span style="font-size:11px;font-weight:700;color:#f0b020;">'+p.clean_sheets+'CS</span>';}
         html += '</div>';
       });
       html += '</div>';
@@ -6432,6 +6482,63 @@ async function loadFplSquad(el, nom) {
 
     html += '</div>';
     el.innerHTML = html;
+
+    // ── Tooltip interactif ──
+    var tip = document.getElementById('fpl-tip-'+uid);
+    var cards = el.querySelectorAll('.fpl-player-card[data-uid="'+uid+'"]');
+    var playerMap = {};
+    players.forEach(function(p){ playerMap[p.id] = p; });
+
+    function showTip(card, p) {
+      var form = parseFloat(p.form)||0;
+      var formCol = form>=6?'#1ed760':form>=4?'#f0b020':'#ff7b54';
+      var pct = p.chance_of_playing_next_round;
+      var mins = p.minutes||0;
+      var minsK = mins>=1000?(mins/1000).toFixed(1)+'k':mins;
+      var t = '';
+      t += '<div style="font-size:13px;font-weight:800;color:#fff;margin-bottom:6px;">'+p.web_name+'</div>';
+      t += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:4px 10px;font-size:11px;">';
+      t += '<span style="color:var(--t3);">Forme</span><span style="font-weight:800;color:'+formCol+';">'+p.form+'</span>';
+      t += '<span style="color:var(--t3);">Minutes</span><span style="font-weight:700;color:var(--t2);">'+minsK+"'</span>";
+      t += '<span style="color:var(--t3);">Points</span><span style="font-weight:700;">'+p.total_points+'</span>';
+      t += '<span style="color:var(--t3);">Buts</span><span style="font-weight:700;color:#1ed760;">'+p.goals_scored+'</span>';
+      t += '<span style="color:var(--t3);">Passes</span><span style="font-weight:700;color:#4d84ff;">'+p.assists+'</span>';
+      t += '<span style="color:var(--t3);">CS</span><span style="font-weight:700;color:#f0b020;">'+p.clean_sheets+'</span>';
+      t += '<span style="color:var(--t3);">Prix</span><span style="font-weight:700;color:#a78bfa;">£'+(p.now_cost/10).toFixed(1)+'m</span>';
+      if(pct!==null&&pct!==undefined) t += '<span style="color:var(--t3);">Dispo</span><span style="font-weight:800;color:'+(pct>=75?'#1ed760':pct>=50?'#f0b020':'#ff4545')+';">'+pct+'%</span>';
+      t += '</div>';
+      if(p.news) t += '<div style="margin-top:6px;font-size:9px;color:#ff7b54;line-height:1.4;">'+p.news+'</div>';
+      tip.innerHTML = t;
+      tip.style.display = 'block';
+      // Positionner
+      var rect = card.getBoundingClientRect();
+      var containerRect = el.getBoundingClientRect();
+      var left = rect.left - containerRect.left;
+      var top = rect.bottom - containerRect.top + 6;
+      // Ajuster si déborde à droite
+      tip.style.left = Math.min(left, containerRect.width - 165) + 'px';
+      tip.style.top = top + 'px';
+    }
+
+    cards.forEach(function(card){
+      var pid = parseInt(card.dataset.pid);
+      var p = playerMap[pid];
+      if(!p) return;
+      // Mobile: clic
+      card.addEventListener('click', function(e){
+        e.stopPropagation();
+        if(tip.style.display==='block' && tip._pid===pid){
+          tip.style.display='none'; tip._pid=null;
+        } else {
+          showTip(card, p); tip._pid=pid;
+        }
+      });
+      // Desktop: hover
+      card.addEventListener('mouseenter', function(){ showTip(card, p); tip._pid=pid; });
+      card.addEventListener('mouseleave', function(){ tip.style.display='none'; tip._pid=null; });
+    });
+    document.addEventListener('click', function(){ if(tip) tip.style.display='none'; });
+
   } catch(e) {
     el.innerHTML = '<div style="color:#ff4545;font-size:10px;text-align:center;padding:8px;">Erreur FPL : '+e.message+'</div>';
   }
