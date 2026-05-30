@@ -6487,15 +6487,15 @@ async function loadFplSquad(el, nom) {
       html += '<div style="flex:1;height:1px;background:rgba(255,255,255,.05);"></div>';
       html += '<div style="font-size:9px;color:var(--t3);">'+pp.length+'</div>';
       html += '</div>';
-      // En-tête colonnes
-      html += '<div style="display:grid;grid-template-columns:16px 1fr 36px 36px 22px 22px 26px;gap:0 6px;padding:3px 10px;margin-bottom:2px;">';
+      // En-tête colonnes : XI | Nom+Forme | B | A | CS | Min | Prix
+      html += '<div style="display:grid;grid-template-columns:16px 1fr 28px 28px 28px 36px 38px;gap:0 4px;padding:3px 10px;margin-bottom:2px;">';
       html += '<div></div>';
       html += '<div style="font-size:8px;color:var(--t3);font-weight:700;text-transform:uppercase;letter-spacing:.5px;">Joueur</div>';
-      html += '<div style="font-size:8px;color:var(--t3);font-weight:700;text-align:right;">Forme</div>';
-      html += '<div style="font-size:8px;color:var(--t3);font-weight:700;text-align:right;">Min</div>';
-      html += '<div style="font-size:8px;color:var(--t3);font-weight:700;text-align:right;">B</div>';
-      html += '<div style="font-size:8px;color:var(--t3);font-weight:700;text-align:right;">A</div>';
-      html += '<div style="font-size:8px;color:var(--t3);font-weight:700;text-align:right;">CS</div>';
+      html += '<div style="font-size:8px;color:var(--t3);font-weight:700;text-align:center;">B</div>';
+      html += '<div style="font-size:8px;color:var(--t3);font-weight:700;text-align:center;">A</div>';
+      html += '<div style="font-size:8px;color:var(--t3);font-weight:700;text-align:center;">CS</div>';
+      html += '<div style="font-size:8px;color:var(--t3);font-weight:700;text-align:center;">Min</div>';
+      html += '<div style="font-size:8px;color:var(--t3);font-weight:700;text-align:right;">Prix</div>';
       html += '</div>';
 
       pp.forEach(function(p, i){
@@ -6506,24 +6506,25 @@ async function loadFplSquad(el, nom) {
         var minsK = mins>=1000?(mins/1000).toFixed(1)+'k':mins;
         var inXi = xi.some(function(x){return x.id===p.id;});
         var rowBg = i%2===0?'rgba(255,255,255,.025)':'rgba(255,255,255,.015)';
-        html += '<div style="display:grid;grid-template-columns:16px 1fr 36px 36px 22px 22px 26px;gap:0 6px;align-items:center;padding:6px 10px;background:'+rowBg+';border-radius:6px;margin-bottom:2px;border-left:2px solid '+(isUnavail?'rgba(255,69,69,.5)':pc+'55')+';opacity:'+(isUnavail?.6:1)+';">';
+        html += '<div style="display:grid;grid-template-columns:16px 1fr 28px 28px 28px 36px 38px;gap:0 4px;align-items:center;padding:6px 10px;background:'+rowBg+';border-radius:6px;margin-bottom:2px;border-left:2px solid '+(isUnavail?'rgba(255,69,69,.5)':pc+'55')+';opacity:'+(isUnavail?.6:1)+';">';
         // Badge XI
         html += '<div>'+(inXi?'<span style="font-size:7px;background:'+pc+'33;color:'+pc+';border-radius:3px;padding:1px 3px;font-weight:800;">XI</span>':'')+'</div>';
-        // Nom + statut
-        html += '<div style="display:flex;align-items:center;gap:4px;min-width:0;">';
+        // Nom + Forme collés ensemble
+        html += '<div style="display:flex;align-items:center;gap:6px;min-width:0;">';
         html += '<span style="font-size:12px;font-weight:700;color:var(--t1);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">'+p.web_name+'</span>';
         if(isUnavail) html += '<span style="font-size:9px;flex-shrink:0;">'+statusEmoji[p.status]+'</span>';
+        html += '<span style="font-size:12px;font-weight:900;color:'+formCol+';flex-shrink:0;">'+p.form+'</span>';
         html += '</div>';
-        // Forme
-        html += '<div style="text-align:right;"><span style="font-size:12px;font-weight:900;color:'+formCol+';">'+p.form+'</span></div>';
-        // Minutes
-        html += '<div style="text-align:right;"><span style="font-size:11px;font-weight:600;color:var(--t2);">'+minsK+'</span></div>';
         // Buts
-        html += '<div style="text-align:right;"><span style="font-size:11px;font-weight:700;color:'+(p.goals_scored>0?'#1ed760':'var(--t3)')+';">'+p.goals_scored+'</span></div>';
+        html += '<div style="text-align:center;"><span style="font-size:11px;font-weight:700;color:'+(p.goals_scored>0?'#1ed760':'var(--t3)')+';">'+p.goals_scored+'</span></div>';
         // Passes
-        html += '<div style="text-align:right;"><span style="font-size:11px;font-weight:700;color:'+(p.assists>0?'#4d84ff':'var(--t3)')+';">'+p.assists+'</span></div>';
+        html += '<div style="text-align:center;"><span style="font-size:11px;font-weight:700;color:'+(p.assists>0?'#4d84ff':'var(--t3)')+';">'+p.assists+'</span></div>';
         // CS
-        html += '<div style="text-align:right;"><span style="font-size:11px;font-weight:700;color:'+(p.clean_sheets>0?'#f0b020':'var(--t3)')+';">'+p.clean_sheets+'</span></div>';
+        html += '<div style="text-align:center;"><span style="font-size:11px;font-weight:700;color:'+(p.clean_sheets>0?'#f0b020':'var(--t3)')+';">'+p.clean_sheets+'</span></div>';
+        // Minutes
+        html += '<div style="text-align:center;"><span style="font-size:11px;font-weight:600;color:var(--t2);">'+minsK+'</span></div>';
+        // Prix
+        html += '<div style="text-align:right;"><span style="font-size:11px;font-weight:700;color:#a78bfa;">£'+(p.now_cost/10).toFixed(1)+'</span></div>';
         html += '</div>';
       });
       html += '</div>';
