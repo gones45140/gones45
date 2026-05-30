@@ -6619,11 +6619,58 @@ async function loadFdSquad(el, nom, teamId) {
 
     // Corrections manuelles de positions mal classées par football-data
     var posCorrections = {
+      // PSG
       'Marquinhos':2, 'Lucas Hernández':2, 'Nuno Mendes':2, 'Achraf Hakimi':2,
       'Fabián Ruiz':3, 'Vitinha':3, 'Warren Zaïre-Emery':3, 'Joao Neves':3,
       'William Pacho':2, 'Illia Zabarnyi':2, 'Lucas Beraldo':2,
-      'Trent Alexander-Arnold':2, 'Ferland Mendy':2,
-      'Aurélien Tchouaméni':3, 'Eduardo Camavinga':3,
+      'Ousmane Dembélé':4, 'Bradley Barcola':4, 'Gonçalo Ramos':4,
+      'Khvicha Kvaratskhelia':4, 'Desire Doue':4, 'Senny Mayulu':4,
+      // Real Madrid
+      'Trent Alexander-Arnold':2, 'Ferland Mendy':2, 'Dani Carvajal':2,
+      'Éder Militão':2, 'Antonio Rüdiger':2, 'David Alaba':2,
+      'Aurélien Tchouaméni':3, 'Eduardo Camavinga':3, 'Federico Valverde':3,
+      'Luka Modrić':3, 'Jude Bellingham':3,
+      'Kylian Mbappé':4, 'Vinícius Júnior':4, 'Rodrygo':4,
+      'Endrick':4, 'Brahim Díaz':4,
+      // Bayern Munich
+      'Manuel Neuer':1,
+      'Alphonso Davies':2, 'Dayot Upamecano':2, 'Min-Jae Kim':2,
+      'Konrad Laimer':2, 'Josip Stanišić':2,
+      'Joshua Kimmich':3, 'Leon Goretzka':3, 'Jamal Musiala':3,
+      'Michael Olise':3, 'Aleksandar Pavlović':3,
+      'Harry Kane':4, 'Leroy Sané':4, 'Serge Gnabry':4,
+      'Thomas Müller':4, 'Hiroki Ito':2,
+      // Inter Milan
+      'Yann Sommer':1,
+      'Alessandro Bastoni':2, 'Francesco Acerbi':2, 'Benjamin Pavard':2,
+      'Denzel Dumfries':2, 'Federico Dimarco':2, 'Carlos Augusto':2,
+      'Nicolò Barella':3, 'Hakan Çalhanoğlu':3, 'Henrikh Mkhitaryan':3,
+      'Kristjan Asllani':3, 'Davide Frattesi':3,
+      'Lautaro Martínez':4, 'Marcus Thuram':4, 'Marko Arnautović':4,
+      // Lyon
+      'Lucas Perri':1,
+      'Ainsley Maitland-Niles':2, 'Duje Ćaleta-Car':2, 'Nicolas Tagliafico':2,
+      'Corentin Tolisso':3, 'Maxence Caqueret':3, 'Orel Mangala':3,
+      'Alexandre Lacazette':4, 'Ernest Nuamah':4, 'Gift Orban':4,
+      // Arsenal
+      'David Raya':1,
+      'Ben White':2, 'William Saliba':2, 'Gabriel Magalhães':2, 'Oleksandr Zinchenko':2,
+      'Thomas Partey':3, 'Martin Ødegaard':3, 'Declan Rice':3,
+      'Bukayo Saka':4, 'Gabriel Martinelli':4, 'Kai Havertz':4, 'Leandro Trossard':4,
+      // PSV
+      'Walter Benítez':1,
+      'Jordan Teze':2, 'Olivier Boscagli':2, 'Ryan Flamingo':2,
+      'Guus Til':3, 'Joey Veerman':3, 'Malik Tillman':3,
+      'Luuk de Jong':4, 'Ricardo Pepi':4, 'Noa Lang':4,
+      // Boca Juniors
+      'Sergio Romero':1,
+      'Luis Advíncula':2, 'Cristian Medina':3,
+      'Edinson Cavani':4, 'Miguel Merentiel':4,
+      // Palmeiras
+      'Weverton':1,
+      'Gustavo Gómez':2, 'Murilo':2,
+      'Richard Ríos':3, 'Raphael Veiga':3,
+      'Rony':4, 'Flaco López':4,
     };
 
     squad.forEach(function(p){
