@@ -6488,14 +6488,14 @@ async function loadFplSquad(el, nom) {
       html += '<div style="font-size:9px;color:var(--t3);">'+pp.length+'</div>';
       html += '</div>';
       // En-tête colonnes : XI | Nom+Forme | B | A | CS | Min | Prix
-      html += '<div style="display:grid;grid-template-columns:16px 1fr 28px 28px 28px 36px 38px;gap:0 4px;padding:3px 10px;margin-bottom:2px;">';
+      html += '<div style="display:grid;grid-template-columns:16px minmax(0,200px) 36px 36px 36px 44px 44px;gap:0 6px;padding:3px 10px;margin-bottom:2px;">';
       html += '<div></div>';
-      html += '<div style="font-size:8px;color:var(--t3);font-weight:700;text-transform:uppercase;letter-spacing:.5px;">Joueur</div>';
-      html += '<div style="font-size:8px;color:var(--t3);font-weight:700;text-align:center;">B</div>';
-      html += '<div style="font-size:8px;color:var(--t3);font-weight:700;text-align:center;">A</div>';
-      html += '<div style="font-size:8px;color:var(--t3);font-weight:700;text-align:center;">CS</div>';
-      html += '<div style="font-size:8px;color:var(--t3);font-weight:700;text-align:center;">Min</div>';
-      html += '<div style="font-size:8px;color:var(--t3);font-weight:700;text-align:right;">Prix</div>';
+      html += '<div style="font-size:9px;color:var(--t3);font-weight:700;text-transform:uppercase;letter-spacing:.5px;">Joueur</div>';
+      html += '<div style="font-size:9px;color:var(--t3);font-weight:700;text-align:center;">B</div>';
+      html += '<div style="font-size:9px;color:var(--t3);font-weight:700;text-align:center;">A</div>';
+      html += '<div style="font-size:9px;color:var(--t3);font-weight:700;text-align:center;">CS</div>';
+      html += '<div style="font-size:9px;color:var(--t3);font-weight:700;text-align:center;">Min</div>';
+      html += '<div style="font-size:9px;color:var(--t3);font-weight:700;text-align:right;">Prix</div>';
       html += '</div>';
 
       pp.forEach(function(p, i){
@@ -6506,7 +6506,7 @@ async function loadFplSquad(el, nom) {
         var minsK = mins>=1000?(mins/1000).toFixed(1)+'k':mins;
         var inXi = xi.some(function(x){return x.id===p.id;});
         var rowBg = i%2===0?'rgba(255,255,255,.025)':'rgba(255,255,255,.015)';
-        html += '<div style="display:grid;grid-template-columns:16px 1fr 28px 28px 28px 36px 38px;gap:0 4px;align-items:center;padding:6px 10px;background:'+rowBg+';border-radius:6px;margin-bottom:2px;border-left:2px solid '+(isUnavail?'rgba(255,69,69,.5)':pc+'55')+';opacity:'+(isUnavail?.6:1)+';">';
+        html += '<div style="display:grid;grid-template-columns:16px minmax(0,200px) 36px 36px 36px 44px 44px;gap:0 6px;align-items:center;padding:6px 10px;background:'+rowBg+';border-radius:6px;margin-bottom:2px;border-left:2px solid '+(isUnavail?'rgba(255,69,69,.5)':pc+'55')+';opacity:'+(isUnavail?.6:1)+';">';
         // Badge XI
         html += '<div>'+(inXi?'<span style="font-size:7px;background:'+pc+'33;color:'+pc+';border-radius:3px;padding:1px 3px;font-weight:800;">XI</span>':'')+'</div>';
         // Nom + Forme collés ensemble
