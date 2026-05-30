@@ -6596,88 +6596,79 @@ async function loadFplSquad(el, nom) {
 async function loadFdSquad(el, nom, teamId) {
   el.innerHTML = '<div style="text-align:center;padding:16px;color:var(--t3);font-size:11px;">⏳ Chargement squad...</div>';
   try {
-    var fdKey = getFdorgKey();
-    if(!fdKey){ el.innerHTML='<div style="color:var(--t3);font-size:10px;text-align:center;padding:12px;">Clé football-data manquante (Outils)</div>'; return; }
+    var afKey = getApiSportsKey();
+    if(!afKey){ el.innerHTML='<div style="color:var(--t3);font-size:10px;text-align:center;padding:12px;">Clé api-sports manquante (Outils)</div>'; return; }
 
-    var squadData = await fdFetch('/v4/teams/'+teamId);
-    if(!squadData||!squadData.squad||!squadData.squad.length){
+    // Trouver l'ID API-Football
+    var afId = await findApiSportsTeamId(nom, afKey);
+    if(!afId){ el.innerHTML='<div style="color:var(--t3);font-size:10px;text-align:center;padding:12px;">Équipe non trouvée dans API-Football</div>'; return; }
+
+    // Squad via API-Football
+    var squadData = await apiSportsFetch('/players/squads?team='+afId);
+    var squadResp = squadData&&squadData.response&&squadData.response[0];
+    if(!squadResp||!squadResp.players||!squadResp.players.length){
       el.innerHTML='<div style="color:var(--t3);font-size:10px;text-align:center;padding:12px;">Squad non disponible</div>'; return;
     }
 
-    var squad = squadData.squad;
+    var squad = squadResp.players;
     var posType = function(pos){
       if(!pos) return 4;
       var p = pos.toUpperCase();
       if(p==='GOALKEEPER') return 1;
-      if(p==='DEFENCE') return 2;
-      if(p==='MIDFIELD') return 3;
+      if(p==='DEFENDER') return 2;
+      if(p==='MIDFIELDER') return 3;
       return 4;
     };
     var posNames = {1:'GK',2:'DEF',3:'MID',4:'ATT'};
     var posColors = {1:'#f5a623',2:'#4fc3f7',3:'#81c784',4:'#ef9a9a'};
     var posLabels = {1:'🧤 Gardiens',2:'🛡️ Défenseurs',3:'🎯 Milieux',4:'⚽ Attaquants'};
 
-    // Corrections manuelles de positions mal classées par football-data
+    // Corrections manuelles de positions
     var posCorrections = {
       // PSG
-      'Marquinhos':2, 'Lucas Hernández':2, 'Nuno Mendes':2, 'Achraf Hakimi':2,
-      'Fabián Ruiz':3, 'Vitinha':3, 'Warren Zaïre-Emery':3, 'Joao Neves':3,
-      'William Pacho':2, 'Illia Zabarnyi':2, 'Lucas Beraldo':2,
-      'Ousmane Dembélé':4, 'Bradley Barcola':4, 'Gonçalo Ramos':4,
-      'Khvicha Kvaratskhelia':4, 'Desire Doue':4, 'Senny Mayulu':4,
+      'Marquinhos':2,'Lucas Hernandez':2,'Nuno Mendes':2,'Achraf Hakimi':2,
+      'Fabian Ruiz':3,'Vitinha':3,'Warren Zaire-Emery':3,'Joao Neves':3,
+      'William Pacho':2,'Illia Zabarnyi':2,'Lucas Beraldo':2,
+      'Ousmane Dembele':4,'Bradley Barcola':4,'Goncalo Ramos':4,
+      'Kvaratskhelia':4,'Desire Doue':4,
       // Real Madrid
-      'Trent Alexander-Arnold':2, 'Ferland Mendy':2, 'Dani Carvajal':2,
-      'Éder Militão':2, 'Antonio Rüdiger':2, 'David Alaba':2,
-      'Aurélien Tchouaméni':3, 'Eduardo Camavinga':3, 'Federico Valverde':3,
-      'Luka Modrić':3, 'Jude Bellingham':3,
-      'Kylian Mbappé':4, 'Vinícius Júnior':4, 'Rodrygo':4,
-      'Endrick':4, 'Brahim Díaz':4,
+      'Trent Alexander-Arnold':2,'Ferland Mendy':2,'Dani Carvajal':2,
+      'Eder Militao':2,'Antonio Rudiger':2,'David Alaba':2,
+      'Dean Huijsen':2,'Fran Garcia':2,'Alvaro Carreras':2,
+      'Aurelien Tchouameni':3,'Eduardo Camavinga':3,'Federico Valverde':3,
+      'Jude Bellingham':3,'Dani Ceballos':3,'Arda Guler':3,
+      'Kylian Mbappe':4,'Vinicius Junior':4,'Rodrygo':4,'Endrick':4,'Brahim Diaz':4,
       // Bayern Munich
-      'Manuel Neuer':1,
-      'Alphonso Davies':2, 'Dayot Upamecano':2, 'Min-Jae Kim':2,
-      'Konrad Laimer':2, 'Josip Stanišić':2,
-      'Joshua Kimmich':3, 'Leon Goretzka':3, 'Jamal Musiala':3,
-      'Michael Olise':3, 'Aleksandar Pavlović':3,
-      'Harry Kane':4, 'Leroy Sané':4, 'Serge Gnabry':4,
-      'Thomas Müller':4, 'Hiroki Ito':2,
+      'Alphonso Davies':2,'Dayot Upamecano':2,'Min-Jae Kim':2,'Konrad Laimer':2,
+      'Joshua Kimmich':3,'Leon Goretzka':3,'Jamal Musiala':3,'Michael Olise':3,
+      'Harry Kane':4,'Leroy Sane':4,'Serge Gnabry':4,'Thomas Muller':4,
       // Inter Milan
-      'Yann Sommer':1,
-      'Alessandro Bastoni':2, 'Francesco Acerbi':2, 'Benjamin Pavard':2,
-      'Denzel Dumfries':2, 'Federico Dimarco':2, 'Carlos Augusto':2,
-      'Nicolò Barella':3, 'Hakan Çalhanoğlu':3, 'Henrikh Mkhitaryan':3,
-      'Kristjan Asllani':3, 'Davide Frattesi':3,
-      'Lautaro Martínez':4, 'Marcus Thuram':4, 'Marko Arnautović':4,
+      'Alessandro Bastoni':2,'Francesco Acerbi':2,'Benjamin Pavard':2,
+      'Denzel Dumfries':2,'Federico Dimarco':2,
+      'Nicolo Barella':3,'Hakan Calhanoglu':3,'Henrikh Mkhitaryan':3,
+      'Lautaro Martinez':4,'Marcus Thuram':4,
       // Lyon
-      'Lucas Perri':1,
-      'Ainsley Maitland-Niles':2, 'Duje Ćaleta-Car':2, 'Nicolas Tagliafico':2,
-      'Corentin Tolisso':3, 'Maxence Caqueret':3, 'Orel Mangala':3,
-      'Alexandre Lacazette':4, 'Ernest Nuamah':4, 'Gift Orban':4,
+      'Corentin Tolisso':3,'Maxence Caqueret':3,'Orel Mangala':3,
+      'Alexandre Lacazette':4,'Ernest Nuamah':4,'Gift Orban':4,
       // Arsenal
-      'David Raya':1,
-      'Ben White':2, 'William Saliba':2, 'Gabriel Magalhães':2, 'Oleksandr Zinchenko':2,
-      'Thomas Partey':3, 'Martin Ødegaard':3, 'Declan Rice':3,
-      'Bukayo Saka':4, 'Gabriel Martinelli':4, 'Kai Havertz':4, 'Leandro Trossard':4,
+      'Ben White':2,'William Saliba':2,'Gabriel Magalhaes':2,'Oleksandr Zinchenko':2,
+      'Thomas Partey':3,'Martin Odegaard':3,'Declan Rice':3,
+      'Bukayo Saka':4,'Gabriel Martinelli':4,'Kai Havertz':4,
       // PSV
-      'Walter Benítez':1,
-      'Jordan Teze':2, 'Olivier Boscagli':2, 'Ryan Flamingo':2,
-      'Guus Til':3, 'Joey Veerman':3, 'Malik Tillman':3,
-      'Luuk de Jong':4, 'Ricardo Pepi':4, 'Noa Lang':4,
-      // Boca Juniors
-      'Sergio Romero':1,
-      'Luis Advíncula':2, 'Cristian Medina':3,
-      'Edinson Cavani':4, 'Miguel Merentiel':4,
-      // Palmeiras
-      'Weverton':1,
-      'Gustavo Gómez':2, 'Murilo':2,
-      'Richard Ríos':3, 'Raphael Veiga':3,
-      'Rony':4, 'Flaco López':4,
+      'Olivier Boscagli':2,'Ryan Flamingo':2,
+      'Guus Til':3,'Joey Veerman':3,'Malik Tillman':3,
+      'Luuk de Jong':4,'Ricardo Pepi':4,'Noa Lang':4,
     };
 
     squad.forEach(function(p){
       p._type = posType(p.position);
-      p._age = p.dateOfBirth ? Math.floor((Date.now()-new Date(p.dateOfBirth))/(365.25*24*3600*1000)) : 0;
-      // Appliquer correction si connue
-      if(posCorrections[p.name]) p._type = posCorrections[p.name];
+      p._age = p.age||0;
+      // Correction par nom partiel
+      for(var k in posCorrections){
+        if(p.name&&p.name.toLowerCase().indexOf(k.toLowerCase())>=0){
+          p._type = posCorrections[k]; break;
+        }
+      }
     });
 
     // XI type: numéros ≤30 en priorité, puis âge
@@ -6685,16 +6676,16 @@ async function loadFdSquad(el, nom, teamId) {
     var xi = [];
     [1,2,3,4].forEach(function(pos){
       var pp = squad.filter(function(p){return p._type===pos;});
-      var pros = pp.filter(function(p){return p.shirtNumber&&p.shirtNumber<=30;});
-      var rest = pp.filter(function(p){return !p.shirtNumber||p.shirtNumber>30;});
+      var pros = pp.filter(function(p){return p.number&&p.number<=30;});
+      var rest = pp.filter(function(p){return !p.number||p.number>30;});
       pros.sort(function(a,b){return b._age-a._age;});
       rest.sort(function(a,b){return b._age-a._age;});
       xi = xi.concat(pros.concat(rest).slice(0, xiCounts[pos]));
     });
 
     squad.sort(function(a,b){
-      var aP=a.shirtNumber&&a.shirtNumber<=30?0:1;
-      var bP=b.shirtNumber&&b.shirtNumber<=30?0:1;
+      var aP=a.number&&a.number<=30?0:1;
+      var bP=b.number&&b.number<=30?0:1;
       return a._type-b._type||aP-bP||b._age-a._age;
     });
 
@@ -6704,10 +6695,10 @@ async function loadFdSquad(el, nom, teamId) {
     // Header
     html += '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">';
     html += '<div style="font-size:9px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;color:var(--t3);">👤 Squad · '+nom+' <span style="color:var(--t2);font-weight:500;">('+squad.length+')</span></div>';
-    html += '<div style="font-size:9px;color:var(--t3);">football-data.org</div>';
+    html += '<div style="font-size:9px;color:var(--t3);">api-football</div>';
     html += '</div>';
 
-    // TERRAIN + FICHE côte à côte
+    // TERRAIN + FICHE
     html += '<div style="display:flex;gap:10px;margin-bottom:14px;">';
     html += '<div id="fd-pitch-'+uid+'" style="position:relative;border-radius:12px;overflow:hidden;background:#1a3a1a;border:1px solid rgba(255,255,255,.08);flex:1;min-width:0;">';
     html += '<svg style="position:absolute;top:0;left:0;width:100%;height:100%;opacity:.18;" viewBox="0 0 300 420" preserveAspectRatio="none">';
@@ -6737,13 +6728,13 @@ async function loadFdSquad(el, nom, teamId) {
     });
 
     html += '<div style="height:360px;"></div>';
-    html += '</div>'; // fin terrain
+    html += '</div>';
 
     // Panneau fiche
     html += '<div id="fd-tip-'+uid+'" style="width:140px;flex-shrink:0;border-radius:12px;background:rgba(14,18,32,.95);border:1px solid rgba(77,132,255,.25);padding:12px;display:flex;flex-direction:column;gap:2px;">';
     html += '<div style="font-size:9px;color:var(--t3);text-align:center;margin:auto 0;">← Sélectionne</div>';
     html += '</div>';
-    html += '</div>'; // fin flex
+    html += '</div>';
 
     // Tableau par poste
     [1,2,3,4].forEach(function(pos){
@@ -6758,8 +6749,7 @@ async function loadFdSquad(el, nom, teamId) {
       html += '<div style="font-size:9px;color:var(--t3);">'+pp.length+'</div>';
       html += '</div>';
       html += '<div style="display:grid;grid-template-columns:16px 1fr 30px;gap:0 6px;padding:3px 10px;margin-bottom:2px;">';
-      html += '<div></div>';
-      html += '<div style="font-size:9px;color:var(--t3);font-weight:700;text-transform:uppercase;">Joueur</div>';
+      html += '<div></div><div style="font-size:9px;color:var(--t3);font-weight:700;text-transform:uppercase;">Joueur</div>';
       html += '<div style="font-size:9px;color:var(--t3);font-weight:700;text-align:center;">Âge</div>';
       html += '</div>';
       pp.forEach(function(p, i){
@@ -6798,7 +6788,7 @@ async function loadFdSquad(el, nom, teamId) {
       t += statRow('Poste', posNames[p._type]);
       t += statRow('Âge', p._age+' ans');
       t += statRow('Nationalité', p.nationality||'—');
-      if(p.shirtNumber) t += statRow('Numéro', '#'+p.shirtNumber);
+      if(p.number) t += statRow('Numéro', '#'+p.number);
       if(msg) t += '<div style="margin-top:8px;font-size:10px;color:#4d84ff;font-weight:700;text-align:center;">'+msg+'</div>';
       tip.innerHTML = t;
       tip.style.display = 'flex';
@@ -6875,9 +6865,7 @@ async function loadFdSquad(el, nom, teamId) {
             showTip(p,'⚠️ Même poste requis');
           }
         } else {
-          // Ouvre Sofascore
-          var sofaQ = 'https://www.google.com/search?q='+encodeURIComponent(p.name+' '+nom+' Sofascore');
-          window.open(sofaQ,'_blank');
+          window.open('https://www.google.com/search?q='+encodeURIComponent(p.name+' '+nom+' Sofascore'),'_blank');
         }
       });
       row.addEventListener('mouseenter', function(){ showTip(p, selectedXiId?'🔄 Clique pour swapper':'↗ Clic → Sofascore'); });
