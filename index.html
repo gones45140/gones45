@@ -2467,7 +2467,32 @@ function renderAdvancedCharts(paris, bankroll) {
   if(ctx1){
     var g1=ctx1.getContext('2d').createLinearGradient(0,0,0,150);
     g1.addColorStop(0,'rgba(240,176,32,.3)');g1.addColorStop(1,'rgba(240,176,32,0)');
-    _advCharts.bk=new Chart(ctx1,{type:'line',data:{labels:sorted.map(function(h,i){return i+1;}),datasets:[{data:bkCurve,borderColor:'#f0b020',backgroundColor:g1,borderWidth:2,fill:true,tension:.4,pointRadius:0}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:function(i){return i.raw.toFixed(2)+'€';}}}},scales:{x:{display:false},y:{ticks:{color:'#4f5d88',font:{size:9},callback:function(v){return v+'€';}},grid:{color:'rgba(255,255,255,.03)'}}}}});
+    var bkLabels = sorted.map(function(h){
+      var adv = h.target&&h.target!=='-'?h.target:'';
+      return (h.date||'')+(adv?' · '+adv:'');
+    });
+    var bkGains = sorted.map(function(h){
+      return h.win ? '+'+(h.m*h.cote-h.m).toFixed(2)+'€' : '-'+parseFloat(h.m).toFixed(2)+'€';
+    });
+    _advCharts.bk=new Chart(ctx1,{type:'line',
+      data:{labels:bkLabels,datasets:[{data:bkCurve,borderColor:'#f0b020',backgroundColor:g1,borderWidth:2,fill:true,tension:.4,pointRadius:3,pointBackgroundColor:sorted.map(function(h){return h.win?'#1ed760':'#ff4545';}),pointRadius:4,pointHoverRadius:7}]},
+      options:{responsive:true,maintainAspectRatio:false,
+        interaction:{mode:'nearest',intersect:false},
+        plugins:{legend:{display:false},
+          tooltip:{backgroundColor:'rgba(8,11,18,.96)',borderColor:'#f0b020',borderWidth:1,padding:10,
+            callbacks:{
+              title:function(ii){return bkLabels[ii[0].dataIndex]||'';},
+              label:function(ii){
+                var h=sorted[ii.dataIndex];
+                var gain=bkGains[ii.dataIndex];
+                return ['Capital : '+ii.raw.toFixed(2)+'€', gain+(h.b?' · '+bki(h.b).n:'')];
+              }
+            }
+          }
+        },
+        scales:{x:{display:false},y:{ticks:{color:'#4f5d88',font:{size:9},callback:function(v){return v+'€';}},grid:{color:'rgba(255,255,255,.03)'}}}
+      }
+    });
   }
 
   // ── 2. Camembert bookmakers ──
