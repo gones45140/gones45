@@ -6299,9 +6299,23 @@ async function fplFetch(path) {
 
 async function getFplData() {
   var now = Date.now();
-  if(_fplCache && now-_fplCacheTime < 300000) return _fplCache; // Cache 5min
+  var cacheDuration = 6*60*60*1000; // 6h localStorage
+  // Cache mémoire 5min
+  if(_fplCache && now-_fplCacheTime < 300000) return _fplCache;
+  // Cache localStorage 6h
+  try {
+    var cached = localStorage.getItem('fpl_bootstrap_cache');
+    if(cached) {
+      var c = JSON.parse(cached);
+      if(now - c.ts < cacheDuration) {
+        _fplCache = c.data; _fplCacheTime = now;
+        return _fplCache;
+      }
+    }
+  } catch(e) {}
   _fplCache = await fplFetch('/api/bootstrap-static/');
   _fplCacheTime = now;
+  try { localStorage.setItem('fpl_bootstrap_cache', JSON.stringify({data:_fplCache, ts:now})); } catch(e) {}
   return _fplCache;
 }
 
@@ -6602,42 +6616,66 @@ async function loadFdSquad(el, nom, teamId) {
     var afId = await findApiSportsTeamId(nom, afKey);
     if(!afId){ el.innerHTML='<div style="color:var(--t3);font-size:10px;text-align:center;padding:12px;">Équipe non trouvée</div>'; return; }
 
-    // Squad + Stats en parallèle
     var season = new Date().getMonth()>=6?new Date().getFullYear():new Date().getFullYear()-1;
-    var [squadData, statsData] = await Promise.all([
-      apiSportsFetch('/players/squads?team='+afId),
-      apiSportsFetch('/players?team='+afId+'&season='+season+'&page=1')
-    ]);
+    var cacheKey = 'squad_cache_'+afId+'_'+season;
+    var cacheDuration = 24*60*60*1000; // 24h
 
-    var squadResp = squadData&&squadData.response&&squadData.response[0];
-    if(!squadResp||!squadResp.players||!squadResp.players.length){
-      el.innerHTML='<div style="color:var(--t3);font-size:10px;text-align:center;padding:12px;">Squad non disponible</div>'; return;
+    var squad, statsMap = {};
+
+    // Vérifier le cache
+    try {
+      var cached = localStorage.getItem(cacheKey);
+      if(cached) {
+        var cacheData = JSON.parse(cached);
+        if(Date.now() - cacheData.ts < cacheDuration) {
+          squad = cacheData.squad;
+          statsMap = cacheData.statsMap;
+          console.log('Squad '+nom+' chargé depuis le cache');
+        }
+      }
+    } catch(e) { console.warn('Cache read error:', e); }
+
+    // Si pas de cache valide, fetch API
+    if(!squad) {
+      var [squadData, statsData] = await Promise.all([
+        apiSportsFetch('/players/squads?team='+afId),
+        apiSportsFetch('/players?team='+afId+'&season='+season+'&page=1')
+      ]);
+
+      var squadResp = squadData&&squadData.response&&squadData.response[0];
+      if(!squadResp||!squadResp.players||!squadResp.players.length){
+        el.innerHTML='<div style="color:var(--t3);font-size:10px;text-align:center;padding:12px;">Squad non disponible</div>'; return;
+      }
+
+      squad = squadResp.players;
+
+      // Stats map
+      var allStats = (statsData&&statsData.response)||[];
+      var totalPages = statsData&&statsData.paging&&statsData.paging.total||1;
+      if(totalPages > 1) {
+        var extraPages = [];
+        for(var pg=2; pg<=Math.min(totalPages,5); pg++) extraPages.push(apiSportsFetch('/players?team='+afId+'&season='+season+'&page='+pg));
+        var extras = await Promise.all(extraPages);
+        extras.forEach(function(d){ allStats = allStats.concat((d&&d.response)||[]); });
+      }
+      allStats.forEach(function(r){
+        var pl = r.player; var st = r.statistics&&r.statistics[0];
+        if(!pl||!st) return;
+        statsMap[pl.id] = {
+          goals: st.goals&&st.goals.total||0,
+          assists: st.goals&&st.goals.assists||0,
+          minutes: st.games&&st.games.minutes||0,
+          rating: st.games&&st.games.rating?parseFloat(st.games.rating).toFixed(1):null,
+          position: st.games&&st.games.position||null
+        };
+      });
+
+      // Sauvegarder dans le cache
+      try {
+        localStorage.setItem(cacheKey, JSON.stringify({squad:squad, statsMap:statsMap, ts:Date.now()}));
+        console.log('Squad '+nom+' mis en cache');
+      } catch(e) { console.warn('Cache write error:', e); }
     }
-
-    var squad = squadResp.players;
-
-    // Stats map par id joueur
-    var statsMap = {};
-    var allStats = (statsData&&statsData.response)||[];
-    // Fetch pages suivantes si besoin
-    var totalPages = statsData&&statsData.paging&&statsData.paging.total||1;
-    if(totalPages > 1) {
-      var extraPages = [];
-      for(var pg=2; pg<=Math.min(totalPages,5); pg++) extraPages.push(apiSportsFetch('/players?team='+afId+'&season='+season+'&page='+pg));
-      var extras = await Promise.all(extraPages);
-      extras.forEach(function(d){ allStats = allStats.concat((d&&d.response)||[]); });
-    }
-    allStats.forEach(function(r){
-      var pl = r.player; var st = r.statistics&&r.statistics[0];
-      if(!pl||!st) return;
-      statsMap[pl.id] = {
-        goals: st.goals&&st.goals.total||0,
-        assists: st.goals&&st.goals.assists||0,
-        minutes: st.games&&st.games.minutes||0,
-        rating: st.games&&st.games.rating?parseFloat(st.games.rating).toFixed(1):null,
-        position: st.games&&st.games.position||null
-      };
-    });
 
     var posType = function(pos){
       if(!pos) return 4;
@@ -6729,10 +6767,14 @@ async function loadFdSquad(el, nom, teamId) {
         var shortName = p.name?p.name.split(' ').pop():'?';
         var sub = p._rating?(parseFloat(p._rating).toFixed(1)):p._age+'a';
         var subCol = p._rating?(parseFloat(p._rating)>=7?'#1ed760':parseFloat(p._rating)>=6?'#f0b020':'#ef9a9a'):'rgba(255,255,255,.5)';
-        html += '<div class="fd-player-card" data-uid="'+uid+'" data-pid="'+p.id+'" style="display:flex;flex-direction:column;align-items:center;gap:3px;cursor:pointer;">';
-        html += '<div style="width:38px;height:38px;border-radius:50%;background:'+pc+'33;border:2px solid '+pc+';display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:800;color:'+pc+';box-shadow:0 2px 8px rgba(0,0,0,.4);">'+posNames[p._type].charAt(0)+'</div>';
-        html += '<div style="background:rgba(0,0,0,.75);border-radius:4px;padding:2px 5px;font-size:10px;font-weight:700;color:#fff;white-space:nowrap;max-width:70px;overflow:hidden;text-overflow:ellipsis;text-align:center;">'+shortName+'</div>';
-        html += '<div style="font-size:9px;font-weight:700;color:'+subCol+';">'+sub+'</div>';
+        var cardW = rp.length>=4?'22%':'25%';
+        html += '<div class="fd-player-card" data-uid="'+uid+'" data-pid="'+p.id+'" style="display:flex;flex-direction:column;align-items:center;gap:2px;cursor:pointer;max-width:'+cardW+';">';
+        var circleSize = rp.length>=4?'32px':'38px';
+        var fontSize = rp.length>=4?'10px':'11px';
+        var textSize = rp.length>=4?'9px':'10px';
+        html += '<div style="width:'+circleSize+';height:'+circleSize+';border-radius:50%;background:'+pc+'33;border:2px solid '+pc+';display:flex;align-items:center;justify-content:center;font-size:'+fontSize+';font-weight:800;color:'+pc+';box-shadow:0 2px 8px rgba(0,0,0,.4);">'+posNames[p._type].charAt(0)+'</div>';
+        html += '<div style="background:rgba(0,0,0,.75);border-radius:4px;padding:1px 4px;font-size:'+textSize+';font-weight:700;color:#fff;white-space:nowrap;max-width:100%;overflow:hidden;text-overflow:ellipsis;text-align:center;">'+shortName+'</div>';
+        html += '<div style="font-size:8px;font-weight:700;color:'+subCol+';">'+sub+'</div>';
         html += '</div>';
       });
       html += '</div>';
