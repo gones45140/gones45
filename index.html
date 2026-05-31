@@ -6683,14 +6683,17 @@ function fdEditStats(btn) {
   popup.style.cssText = 'position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:var(--bg2);border:1px solid rgba(77,132,255,.4);border-radius:12px;padding:16px;z-index:9999;min-width:240px;box-shadow:0 8px 32px rgba(0,0,0,.8);';
   var inpStyle = 'width:100%;padding:5px;background:var(--bg3);border:1px solid var(--b2);border-radius:6px;color:var(--t1);font-size:13px;font-weight:700;text-align:center;';
   popup.innerHTML = '<div style="font-size:13px;font-weight:800;color:var(--t1);margin-bottom:10px;">✏️ Stats manuelles</div>'
-    +'<div style="display:grid;grid-template-columns:auto 1fr 1fr;gap:6px;align-items:center;margin-bottom:12px;">'
+    +'<div style="display:grid;grid-template-columns:auto 1fr 1fr 1fr;gap:6px;align-items:center;margin-bottom:12px;">'
     +'<div style="font-size:10px;color:var(--t3);font-weight:700;"></div>'
+    +'<div style="font-size:10px;color:var(--t2);font-weight:700;text-align:center;">MJ</div>'
     +'<div style="font-size:10px;color:#1ed760;font-weight:700;text-align:center;">Buts ⚽</div>'
     +'<div style="font-size:10px;color:#4d84ff;font-weight:700;text-align:center;">Passes 🅰</div>'
     +'<div style="font-size:10px;color:var(--t3);">🏆 Champ.</div>'
+    +'<input id="fe-lmj" type="number" min="0" value="'+(current.league_apps||0)+'" style="'+inpStyle+'">'
     +'<input id="fe-lg" type="number" min="0" value="'+(current.league_goals||0)+'" style="'+inpStyle+'">'
     +'<input id="fe-la" type="number" min="0" value="'+(current.league_assists||0)+'" style="'+inpStyle+'">'
     +'<div style="font-size:10px;color:var(--t3);">⭐ Europe</div>'
+    +'<input id="fe-emj" type="number" min="0" value="'+(current.euro_apps||0)+'" style="'+inpStyle+'">'
     +'<input id="fe-eg" type="number" min="0" value="'+(current.euro_goals||0)+'" style="'+inpStyle+'">'
     +'<input id="fe-ea" type="number" min="0" value="'+(current.euro_assists||0)+'" style="'+inpStyle+'">'
     +'</div>'
@@ -6700,17 +6703,19 @@ function fdEditStats(btn) {
     +'</div>';
   overlay.appendChild(popup);
   popup.addEventListener('click', function(e){ e.stopPropagation(); });
-  document.getElementById('fe-goals').focus();
+  var feFirst = document.getElementById('fe-lg'); if(feFirst) feFirst.focus();
 }
 
 function fdSaveStats(btn) {
   var key = btn ? btn.dataset.key : '';
   if(!key) return;
+  var lmj = parseInt(document.getElementById('fe-lmj').value)||0;
   var lg = parseInt(document.getElementById('fe-lg').value)||0;
   var la = parseInt(document.getElementById('fe-la').value)||0;
+  var emj = parseInt(document.getElementById('fe-emj').value)||0;
   var eg = parseInt(document.getElementById('fe-eg').value)||0;
   var ea = parseInt(document.getElementById('fe-ea').value)||0;
-  localStorage.setItem(key, JSON.stringify({league_goals:lg,league_assists:la,euro_goals:eg,euro_assists:ea,ts:Date.now()}));
+  localStorage.setItem(key, JSON.stringify({league_apps:lmj,league_goals:lg,league_assists:la,euro_apps:emj,euro_goals:eg,euro_assists:ea,ts:Date.now()}));
   var ov=document.getElementById('fd-edit-overlay');if(ov)ov.remove();
   var pid = key.split('_')[3];
   var activeEl = document.querySelector('[data-bench-pid="'+pid+'"]');
@@ -6841,9 +6846,8 @@ async function loadFdSquad(el, nom, teamId) {
                 s._assists=st.goals&&st.goals.assists||0;
                 s._minutes=st.games&&st.games.minutes||0;
                 s._rating=st.games&&st.games.rating?parseFloat(st.games.rating).toFixed(1):null;
-                s._apps = st.games&&st.games.appearences||0;
-                s._apps = st.games&&st.games.appearences||0;
               }
+                s._apps=st.games&&st.games.appearances||0;
             });
           }
         }
@@ -6987,7 +6991,7 @@ async function loadFdSquad(el, nom, teamId) {
       html += '<div style="font-size:9px;color:var(--t3);">'+pp.length+'</div></div>';
       var tc = 'font-size:8px;color:var(--t3);font-weight:700;text-align:center;padding:3px 4px;white-space:nowrap;';
       html += '<table style="width:100%;border-collapse:collapse;table-layout:fixed;">';
-      html += '<colgroup><col style="width:22px"><col><col style="width:26px"><col style="width:26px"><col style="width:8px"><col style="width:26px"><col style="width:26px"><col style="width:28px"><col style="width:28px"><col style="width:28px"><col style="width:28px"></colgroup>';
+      html += '<colgroup><col style="width:22px"><col><col style="width:26px"><col style="width:26px"><col style="width:26px"><col style="width:8px"><col style="width:26px"><col style="width:26px"><col style="width:26px"><col style="width:28px"><col style="width:28px"></colgroup>';
       html += '<thead><tr>';
       html += '<th style="'+tc+'"></th>';
       html += '<th style="'+tc+'text-align:left;">Joueur</th>';
@@ -6995,9 +6999,9 @@ async function loadFdSquad(el, nom, teamId) {
       html += '<th style="'+tc+'">🏆B</th>';
       html += '<th style="'+tc+'">A</th>';
       html += '<th style="'+tc+'color:rgba(255,255,255,.15);">|</th>';
+      html += '<th style="'+tc+'color:rgba(255,255,255,.15);">|</th>';
       html += '<th style="'+tc+'">MJ</th>';
       html += '<th style="'+tc+'">⭐B</th>';
-      html += '<th style="'+tc+'">A</th>';
       html += '<th style="'+tc+'">Âge</th>';
       html += '<th style="'+tc+'"></th>';
       html += '</tr></thead><tbody>';
@@ -7023,6 +7027,8 @@ async function loadFdSquad(el, nom, teamId) {
         var la = ms.league_assists!==undefined ? ms.league_assists : (hasManual?0:(p._assists||0));
         var eg = ms.euro_goals||0;
         var ea = ms.euro_assists||0;
+        var lmj = ms.league_apps!==undefined?ms.league_apps:(p._apps||0);
+        var emj = ms.euro_apps||0;
 
         var fmtS = function(v,col){ return '<td style="text-align:center;font-size:12px;font-weight:700;padding:6px 2px;color:'+(v>0?col:'rgba(255,255,255,.2)')+'">'+(v>0?v:'—')+'</td>'; };
         html += '<tr data-bench-pid="'+p.id+'" style="background:'+rowBg+';border-left:3px solid '+pc+'55;cursor:pointer;">';
@@ -7033,12 +7039,12 @@ async function loadFdSquad(el, nom, teamId) {
         html += '<a href="'+sofaUrl+'" target="_blank" onclick="event.stopPropagation()" style="font-size:12px;font-weight:700;color:var(--t1);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-decoration:none;display:block;">'+p.name+'</a>';
         html += '</td>';
         html += fmtS(lg,'#1ed760');
+        html += '<td style="text-align:center;font-size:11px;color:var(--t2);padding:6px 2px;">'+( lmj>0?lmj:'—')+'</td>';
         html += fmtS(la,'#4d84ff');
         html += '<td style="text-align:center;font-size:9px;color:rgba(255,255,255,.15);padding:6px 0;">|</td>';
         html += fmtS(eg,'#f0b020');
+        html += '<td style="text-align:center;font-size:11px;color:var(--t2);padding:6px 2px;">'+( emj>0?emj:'—')+'</td>';
         html += fmtS(ea,'#f59e0b');
-        html += '<td style="text-align:center;font-size:11px;color:var(--t2);padding:6px 2px;">'+(p._apps||'—')+'</td>';
-        html += '<td style="text-align:center;font-size:11px;color:var(--t2);padding:6px 2px;">'+(p._apps||'—')+'</td>';
         html += '<td style="text-align:center;font-size:11px;color:var(--t2);padding:6px 2px;">'+p._age+'</td>';
         html += '<td style="text-align:center;padding:6px 2px;"><button class="fd-edit-btn" data-pid="'+p.id+'" data-afid="'+afId+'" onclick="event.stopPropagation();fdEditStats(this)" style="background:rgba(255,255,255,.08);border:none;border-radius:4px;padding:2px 5px;font-size:10px;cursor:pointer;color:var(--t3);">✏️</button></td>';
         html += '</div>';
