@@ -6736,19 +6736,43 @@ async function loadFdSquad(el, nom, teamId) {
                 _age:p.age||0,marketValue:0,sofaId:null,_goals:0,_assists:0,_minutes:0,_rating:null};
             });
             var allStats = (statsData&&statsData.response)||[];
+            var allStats = (statsData&&statsData.response)||[];
             allStats.forEach(function(r){
               var pl=r.player; var st=r.statistics&&r.statistics[0];
               if(!pl||!st) return;
-              var s = squad.find(function(p){return p.id===pl.id;});
-              if(s){ s._goals=st.goals&&st.goals.total||0; s._assists=st.goals&&st.goals.assists||0;
+              // Matching par nom normalisé
+              var s = squad.find(function(p){return matchName(p.name, pl.name);});
+              if(s){
+                s._goals=st.goals&&st.goals.total||0;
+                s._assists=st.goals&&st.goals.assists||0;
                 s._minutes=st.games&&st.games.minutes||0;
-                s._rating=st.games&&st.games.rating?parseFloat(st.games.rating).toFixed(1):null; }
+                s._rating=st.games&&st.games.rating?parseFloat(st.games.rating).toFixed(1):null;
+              }
             });
           }
         }
       }
 
       if(!squad){ el.innerHTML='<div style="color:var(--t3);font-size:10px;text-align:center;padding:12px;">Squad non disponible</div>'; return; }
+
+      // Fonction de matching nom Sofascore → API-Football
+      function matchName(sofaName, afName) {
+        if(!sofaName || !afName) return false;
+        var s = sofaName.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/[^a-z ]/g,'');
+        var a = afName.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/[^a-z ]/g,'');
+        if(s === a) return true;
+        // Check last name match
+        var sLast = s.split(' ').pop();
+        var aLast = a.split(' ').pop();
+        if(sLast.length > 3 && sLast === aLast) return true;
+        // Check if one contains the other
+        if(s.indexOf(a) >= 0 || a.indexOf(s) >= 0) return true;
+        // Check first + last
+        var sParts = s.split(' ');
+        var aParts = a.split(' ');
+        if(sParts[0] === aParts[0] && sParts[sParts.length-1] === aParts[aParts.length-1]) return true;
+        return false;
+      }
 
       // Corrections positions
       var posCorrections = {
