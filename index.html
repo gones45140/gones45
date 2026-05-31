@@ -6674,40 +6674,30 @@ function fdEditStats(btn) {
     +'<div><label style="font-size:10px;color:var(--t3);">Passes 🅰</label><input id="fe-assists" type="number" min="0" value="'+(current.assists||0)+'" style="width:100%;padding:6px;background:var(--bg3);border:1px solid var(--b2);border-radius:6px;color:var(--t1);font-size:14px;font-weight:700;text-align:center;"></div>'
     +'</div>'
     +'<div style="display:flex;gap:8px;">'
-    +'<button onclick="fdSaveStats(''+key+'')" style="flex:1;padding:8px;background:var(--a);border:none;border-radius:8px;color:#fff;font-weight:700;cursor:pointer;">💾 Sauver</button>'
+    +'<button onclick="fdSaveStats(this)" data-key="'+key+'" style="flex:1;padding:8px;background:var(--a);border:none;border-radius:8px;color:#fff;font-weight:700;cursor:pointer;">💾 Sauver</button>'
     +'<button onclick="document.getElementById('fd-edit-popup').remove()" style="padding:8px 12px;background:var(--bg3);border:1px solid var(--b2);border-radius:8px;color:var(--t3);cursor:pointer;">✕</button>'
     +'</div>';
   document.body.appendChild(popup);
   document.getElementById('fe-goals').focus();
 }
 
-function fdSaveStats(key) {
+function fdSaveStats(btn) {
+  var key = btn ? btn.dataset.key : '';
+  if(!key) return;
   var goals = parseInt(document.getElementById('fe-goals').value)||0;
   var assists = parseInt(document.getElementById('fe-assists').value)||0;
   localStorage.setItem(key, JSON.stringify({goals:goals, assists:assists, ts:Date.now()}));
   document.getElementById('fd-edit-popup').remove();
-  // Vider le cache squad pour forcer un rechargement
-  var afId = key.split('_')[2];
-  var cacheKey = 'squad_sofa_'+Object.keys(SOFASCORE_TEAM_IDS).find(k=>SOFASCORE_TEAM_IDS[k]===parseInt(afId))||afId;
-  // On recharge juste l'élément actif
-  var activeEl = document.querySelector('[data-bench-pid="'+key.split('_')[3]+'"]');
+  var pid = key.split('_')[3];
+  var activeEl = document.querySelector('[data-bench-pid="'+pid+'"]');
   if(activeEl) {
-    // Update displayed values
-    var cells = activeEl.querySelectorAll('div');
-    // Refresh page section
-    var squadEl = activeEl.closest('[id^="fd-"]')?.parentElement;
+    var bDiv = activeEl.children[3];
+    var aDiv = activeEl.children[4];
+    if(bDiv) { bDiv.textContent = goals; bDiv.style.color = goals>0?'#1ed760':'var(--t3)'; }
+    if(aDiv) { aDiv.textContent = assists; aDiv.style.color = assists>0?'#4d84ff':'var(--t3)'; }
   }
-  // Simple: reload the squad section
-  var liveEl = document.querySelector('.live-content-inner');
-  if(liveEl) {
-    var nomEl = document.querySelector('.equipe-nom');
-  }
-  // Best: just update the DOM directly
-  var bDiv = activeEl ? activeEl.children[3] : null;
-  var aDiv = activeEl ? activeEl.children[4] : null;
-  if(bDiv) { bDiv.textContent = goals; bDiv.style.color = goals>0?'#1ed760':'var(--t3)'; }
-  if(aDiv) { aDiv.textContent = assists; aDiv.style.color = assists>0?'#4d84ff':'var(--t3)'; }
 }
+
 
 // ── IDs Sofascore par équipe ── AJOUTER ICI ──
 var SOFASCORE_TEAM_IDS = {
