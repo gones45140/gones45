@@ -7006,13 +7006,14 @@ async function loadFdSquad(el, nom, teamId) {
         if(manualStats.assists!==undefined) p._assists = manualStats.assists;
 
         var sofaUrl = p.sofaId ? 'https://www.sofascore.com/player/'+p.name.toLowerCase().replace(/ /g,'-')+'/'+p.sofaId : 'https://www.google.com/search?q='+encodeURIComponent(p.name+' '+nom+' Sofascore');
-        // Stats par compétition depuis localStorage
+        // Stats manuelles prioritaires sur API-Football
         var manualKey = 'manual_stats_'+afId+'_'+p.id;
         var ms = {}; try { ms = JSON.parse(localStorage.getItem(manualKey)||'{}'); } catch(e){}
-        var lg = ms.league_goals!==undefined?ms.league_goals:(p._goals||0);
-        var la = ms.league_assists!==undefined?ms.league_assists:(p._assists||0);
-        var eg = ms.euro_goals!==undefined?ms.euro_goals:0;
-        var ea = ms.euro_assists!==undefined?ms.euro_assists:0;
+        var hasManual = ms.league_goals!==undefined||ms.euro_goals!==undefined;
+        var lg = ms.league_goals!==undefined ? ms.league_goals : (hasManual?0:(p._goals||0));
+        var la = ms.league_assists!==undefined ? ms.league_assists : (hasManual?0:(p._assists||0));
+        var eg = ms.euro_goals||0;
+        var ea = ms.euro_assists||0;
 
         var fmtStat = function(v,col){ return '<div style="text-align:center;font-size:12px;font-weight:700;color:'+(v>0?col:'rgba(255,255,255,.2)')+'">'+(v>0?v:'—')+'</div>'; };
         html += '<div data-bench-pid="'+p.id+'" style="display:grid;grid-template-columns:minmax(80px,180px) 28px 28px 10px 28px 28px 30px 30px;gap:0 3px;align-items:center;padding:7px 10px;background:'+rowBg+';border-radius:6px;margin-bottom:2px;border-left:2px solid '+pc+'55;">';
