@@ -6675,7 +6675,7 @@ function fdEditStats(btn) {
     +'</div>'
     +'<div style="display:flex;gap:8px;">'
     +'<button onclick="fdSaveStats(this)" data-key="'+key+'" style="flex:1;padding:8px;background:var(--a);border:none;border-radius:8px;color:#fff;font-weight:700;cursor:pointer;">💾 Sauver</button>'
-    +'<button onclick="document.getElementById('fd-edit-popup').remove()" style="padding:8px 12px;background:var(--bg3);border:1px solid var(--b2);border-radius:8px;color:var(--t3);cursor:pointer;">✕</button>'
+    +'<button onclick="var p=document.getElementById(\'fd-edit-popup\');if(p)p.remove();" style="padding:8px 12px;background:var(--bg3);border:1px solid var(--b2);border-radius:8px;color:var(--t3);cursor:pointer;">✕</button>'
     +'</div>';
   document.body.appendChild(popup);
   document.getElementById('fe-goals').focus();
