@@ -1650,8 +1650,9 @@ function renderApiSportsStats(zone, data) {
         html += '<div style="width:'+(100-hPct)+'%;background:#a78bfa;border-radius:0 3px 3px 0;"></div>';
         html += '</div></div>';
         html += '<div style="font-size:10px;font-weight:700;color:var(--t1);width:30px;text-align:center;">'+av+'</div>';
-        html += '</div>';
+        html += '</tr>';
       });
+      html += '</tbody></table>';
       html += '</div>';
     }
   }
@@ -6982,16 +6983,20 @@ async function loadFdSquad(el, nom, teamId) {
       html += '<div style="font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:'+pc+';">'+posLabels[pos]+'</div>';
       html += '<div style="flex:1;height:1px;background:rgba(255,255,255,.05);"></div>';
       html += '<div style="font-size:9px;color:var(--t3);">'+pp.length+'</div></div>';
-      html += '<div style="display:flex;align-items:center;padding:3px 10px;margin-bottom:2px;">';
-      html += '<span style="width:24px;flex-shrink:0;margin-right:5px;"></span>'; // espace badge XI
-      html += '<span style="font-size:8px;color:var(--t3);font-weight:700;text-transform:uppercase;width:150px;flex-shrink:0;">Joueur</span>';
-      html += '<span style="font-size:8px;color:var(--t3);font-weight:700;width:28px;text-align:center;flex-shrink:0;">🏆B</span>';
-      html += '<span style="font-size:8px;color:var(--t3);font-weight:700;width:28px;text-align:center;flex-shrink:0;">A</span>';
-      html += '<span style="font-size:8px;color:rgba(255,255,255,.15);width:10px;text-align:center;flex-shrink:0;">|</span>';
-      html += '<span style="font-size:8px;color:var(--t3);font-weight:700;width:28px;text-align:center;flex-shrink:0;">⭐B</span>';
-      html += '<span style="font-size:8px;color:var(--t3);font-weight:700;width:28px;text-align:center;flex-shrink:0;">A</span>';
-      html += '<span style="font-size:8px;color:var(--t3);font-weight:700;width:30px;text-align:center;flex-shrink:0;margin-left:4px;">Âge</span>';
-      html += '</div>';
+      var tc = 'font-size:8px;color:var(--t3);font-weight:700;text-align:center;padding:3px 4px;white-space:nowrap;';
+      html += '<table style="width:100%;border-collapse:collapse;table-layout:fixed;">';
+      html += '<colgroup><col style="width:22px"><col><col style="width:26px"><col style="width:26px"><col style="width:8px"><col style="width:26px"><col style="width:26px"><col style="width:28px"><col style="width:28px"></colgroup>';
+      html += '<thead><tr>';
+      html += '<th style="'+tc+'"></th>';
+      html += '<th style="'+tc+'text-align:left;">Joueur</th>';
+      html += '<th style="'+tc+'">🏆B</th>';
+      html += '<th style="'+tc+'">A</th>';
+      html += '<th style="'+tc+'color:rgba(255,255,255,.15);">|</th>';
+      html += '<th style="'+tc+'">⭐B</th>';
+      html += '<th style="'+tc+'">A</th>';
+      html += '<th style="'+tc+'">Âge</th>';
+      html += '<th style="'+tc+'"></th>';
+      html += '</tr></thead><tbody>';
       pp.forEach(function(p,i){
         var inXi=xi.some(function(x){return x.id===p.id;});
         var rowBg=i%2===0?'rgba(255,255,255,.025)':'rgba(255,255,255,.015)';
@@ -7015,21 +7020,21 @@ async function loadFdSquad(el, nom, teamId) {
         var eg = ms.euro_goals||0;
         var ea = ms.euro_assists||0;
 
-        var cs = 'width:28px;text-align:center;font-size:12px;font-weight:700;flex-shrink:0;';
-        var fmtS = function(v,col){ return '<span style="'+cs+'color:'+(v>0?col:'rgba(255,255,255,.2)')+'">'+(v>0?v:'—')+'</span>'; };
-        html += '<div data-bench-pid="'+p.id+'" style="display:flex;align-items:center;padding:7px 10px;background:'+rowBg+';border-radius:6px;margin-bottom:2px;border-left:2px solid '+pc+'55;">';
-        // Badge XI
-        html += '<span class="xi-badge" style="font-size:7px;background:'+pc+'33;color:'+pc+';border-radius:3px;padding:1px 3px;font-weight:800;flex-shrink:0;margin-right:5px;'+(inXi?'':'display:none;')+'">XI</span>';
-        // Nom
-        html += '<a href="'+sofaUrl+'" target="_blank" onclick="event.stopPropagation()" style="font-size:12px;font-weight:700;color:var(--t1);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-decoration:none;width:150px;flex-shrink:0;">'+p.name+'</a>';
-        // Stats
+        var fmtS = function(v,col){ return '<td style="text-align:center;font-size:12px;font-weight:700;padding:6px 2px;color:'+(v>0?col:'rgba(255,255,255,.2)')+'">'+(v>0?v:'—')+'</td>'; };
+        html += '<tr data-bench-pid="'+p.id+'" style="background:'+rowBg+';border-left:3px solid '+pc+'55;cursor:pointer;">';
+        html += '<td style="padding:6px 4px;text-align:center;">';
+        html += '<span class="xi-badge" style="font-size:7px;background:'+pc+'33;color:'+pc+';border-radius:3px;padding:1px 3px;font-weight:800;'+(inXi?'':'visibility:hidden;')+'">XI</span>';
+        html += '</td>';
+        html += '<td style="padding:6px 4px;overflow:hidden;">';
+        html += '<a href="'+sofaUrl+'" target="_blank" onclick="event.stopPropagation()" style="font-size:12px;font-weight:700;color:var(--t1);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-decoration:none;display:block;">'+p.name+'</a>';
+        html += '</td>';
         html += fmtS(lg,'#1ed760');
         html += fmtS(la,'#4d84ff');
-        html += '<span style="width:10px;text-align:center;font-size:9px;color:rgba(255,255,255,.15);flex-shrink:0;">|</span>';
+        html += '<td style="text-align:center;font-size:9px;color:rgba(255,255,255,.15);padding:6px 0;">|</td>';
         html += fmtS(eg,'#f0b020');
         html += fmtS(ea,'#f59e0b');
-        html += '<span style="width:30px;text-align:center;font-size:11px;color:var(--t2);flex-shrink:0;">'+p._age+'</span>';
-        html += '<button class="fd-edit-btn" data-pid="'+p.id+'" data-afid="'+afId+'" onclick="event.stopPropagation();fdEditStats(this)" style="margin-left:4px;background:rgba(255,255,255,.08);border:none;border-radius:4px;padding:2px 5px;font-size:10px;cursor:pointer;color:var(--t3);flex-shrink:0;">✏️</button>';
+        html += '<td style="text-align:center;font-size:11px;color:var(--t2);padding:6px 2px;">'+p._age+'</td>';
+        html += '<td style="text-align:center;padding:6px 2px;"><button class="fd-edit-btn" data-pid="'+p.id+'" data-afid="'+afId+'" onclick="event.stopPropagation();fdEditStats(this)" style="background:rgba(255,255,255,.08);border:none;border-radius:4px;padding:2px 5px;font-size:10px;cursor:pointer;color:var(--t3);">✏️</button></td>';
         html += '</div>';
       });
       html += '</div>';
