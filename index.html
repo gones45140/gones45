@@ -6841,6 +6841,8 @@ async function loadFdSquad(el, nom, teamId) {
                 s._assists=st.goals&&st.goals.assists||0;
                 s._minutes=st.games&&st.games.minutes||0;
                 s._rating=st.games&&st.games.rating?parseFloat(st.games.rating).toFixed(1):null;
+                s._apps = st.games&&st.games.appearences||0;
+                s._apps = st.games&&st.games.appearences||0;
               }
             });
           }
@@ -6985,13 +6987,15 @@ async function loadFdSquad(el, nom, teamId) {
       html += '<div style="font-size:9px;color:var(--t3);">'+pp.length+'</div></div>';
       var tc = 'font-size:8px;color:var(--t3);font-weight:700;text-align:center;padding:3px 4px;white-space:nowrap;';
       html += '<table style="width:100%;border-collapse:collapse;table-layout:fixed;">';
-      html += '<colgroup><col style="width:22px"><col><col style="width:26px"><col style="width:26px"><col style="width:8px"><col style="width:26px"><col style="width:26px"><col style="width:28px"><col style="width:28px"></colgroup>';
+      html += '<colgroup><col style="width:22px"><col><col style="width:26px"><col style="width:26px"><col style="width:8px"><col style="width:26px"><col style="width:26px"><col style="width:28px"><col style="width:28px"><col style="width:28px"><col style="width:28px"></colgroup>';
       html += '<thead><tr>';
       html += '<th style="'+tc+'"></th>';
       html += '<th style="'+tc+'text-align:left;">Joueur</th>';
+      html += '<th style="'+tc+'">MJ</th>';
       html += '<th style="'+tc+'">🏆B</th>';
       html += '<th style="'+tc+'">A</th>';
       html += '<th style="'+tc+'color:rgba(255,255,255,.15);">|</th>';
+      html += '<th style="'+tc+'">MJ</th>';
       html += '<th style="'+tc+'">⭐B</th>';
       html += '<th style="'+tc+'">A</th>';
       html += '<th style="'+tc+'">Âge</th>';
@@ -7033,6 +7037,8 @@ async function loadFdSquad(el, nom, teamId) {
         html += '<td style="text-align:center;font-size:9px;color:rgba(255,255,255,.15);padding:6px 0;">|</td>';
         html += fmtS(eg,'#f0b020');
         html += fmtS(ea,'#f59e0b');
+        html += '<td style="text-align:center;font-size:11px;color:var(--t2);padding:6px 2px;">'+(p._apps||'—')+'</td>';
+        html += '<td style="text-align:center;font-size:11px;color:var(--t2);padding:6px 2px;">'+(p._apps||'—')+'</td>';
         html += '<td style="text-align:center;font-size:11px;color:var(--t2);padding:6px 2px;">'+p._age+'</td>';
         html += '<td style="text-align:center;padding:6px 2px;"><button class="fd-edit-btn" data-pid="'+p.id+'" data-afid="'+afId+'" onclick="event.stopPropagation();fdEditStats(this)" style="background:rgba(255,255,255,.08);border:none;border-radius:4px;padding:2px 5px;font-size:10px;cursor:pointer;color:var(--t3);">✏️</button></td>';
         html += '</div>';
