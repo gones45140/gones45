@@ -6982,15 +6982,14 @@ async function loadFdSquad(el, nom, teamId) {
       html += '<div style="font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:'+pc+';">'+posLabels[pos]+'</div>';
       html += '<div style="flex:1;height:1px;background:rgba(255,255,255,.05);"></div>';
       html += '<div style="font-size:9px;color:var(--t3);">'+pp.length+'</div></div>';
-      html += '<div style="display:grid;grid-template-columns:minmax(80px,180px) 28px 28px 10px 28px 28px 30px 30px;gap:0 3px;padding:3px 10px;margin-bottom:2px;align-items:center;">';
-      html += '<div style="font-size:8px;color:var(--t3);font-weight:700;text-transform:uppercase;letter-spacing:.5px;">Joueur</div>';
-      html += '<div style="font-size:8px;color:var(--t3);font-weight:700;text-align:center;">🏆B</div>';
-      html += '<div style="font-size:8px;color:var(--t3);font-weight:700;text-align:center;">A</div>';
-      html += '<div style="font-size:8px;color:rgba(255,255,255,.15);text-align:center;">|</div>';
-      html += '<div style="font-size:8px;color:var(--t3);font-weight:700;text-align:center;">⭐B</div>';
-      html += '<div style="font-size:8px;color:var(--t3);font-weight:700;text-align:center;">A</div>';
-      html += '<div style="font-size:8px;color:var(--t3);font-weight:700;text-align:center;">Âge</div>';
-      html += '<div></div>';
+      html += '<div style="display:flex;align-items:center;padding:3px 10px;margin-bottom:2px;">';
+      html += '<span style="font-size:8px;color:var(--t3);font-weight:700;text-transform:uppercase;width:150px;flex-shrink:0;margin-right:5px;">Joueur</span>';
+      html += '<span style="font-size:8px;color:var(--t3);font-weight:700;width:28px;text-align:center;flex-shrink:0;">🏆B</span>';
+      html += '<span style="font-size:8px;color:var(--t3);font-weight:700;width:28px;text-align:center;flex-shrink:0;">A</span>';
+      html += '<span style="font-size:8px;color:rgba(255,255,255,.15);width:10px;text-align:center;flex-shrink:0;">|</span>';
+      html += '<span style="font-size:8px;color:var(--t3);font-weight:700;width:28px;text-align:center;flex-shrink:0;">⭐B</span>';
+      html += '<span style="font-size:8px;color:var(--t3);font-weight:700;width:28px;text-align:center;flex-shrink:0;">A</span>';
+      html += '<span style="font-size:8px;color:var(--t3);font-weight:700;width:30px;text-align:center;flex-shrink:0;margin-left:4px;">Âge</span>';
       html += '</div>';
       pp.forEach(function(p,i){
         var inXi=xi.some(function(x){return x.id===p.id;});
@@ -7015,20 +7014,21 @@ async function loadFdSquad(el, nom, teamId) {
         var eg = ms.euro_goals||0;
         var ea = ms.euro_assists||0;
 
-        var fmtStat = function(v,col){ return '<div style="text-align:center;font-size:12px;font-weight:700;color:'+(v>0?col:'rgba(255,255,255,.2)')+'">'+(v>0?v:'—')+'</div>'; };
-        html += '<div data-bench-pid="'+p.id+'" style="display:grid;grid-template-columns:minmax(80px,180px) 28px 28px 10px 28px 28px 30px 30px;gap:0 3px;align-items:center;padding:7px 10px;background:'+rowBg+';border-radius:6px;margin-bottom:2px;border-left:2px solid '+pc+'55;">';
-        // Nom + badge XI
-        html += '<div style="display:flex;align-items:center;gap:5px;min-width:0;">';
-        html += '<span class="xi-badge" style="font-size:7px;background:'+pc+'33;color:'+pc+';border-radius:3px;padding:1px 3px;font-weight:800;flex-shrink:0;'+(inXi?'':'display:none;')+'">XI</span>';
-        html += '<a href="'+sofaUrl+'" target="_blank" onclick="event.stopPropagation()" style="font-size:12px;font-weight:700;color:var(--t1);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-decoration:none;">'+p.name+'</a>';
-        html += '</div>';
-        html += fmtStat(lg,'#1ed760');
-        html += fmtStat(la,'#4d84ff');
-        html += '<div style="text-align:center;font-size:9px;color:rgba(255,255,255,.15);">|</div>';
-        html += fmtStat(eg,'#f0b020');
-        html += fmtStat(ea,'#f59e0b');
-        html += '<div style="text-align:center;font-size:11px;color:var(--t2);">'+p._age+'</div>';
-        html += '<div style="text-align:center;"><button class="fd-edit-btn" data-pid="'+p.id+'" data-afid="'+afId+'" onclick="event.stopPropagation();fdEditStats(this)" style="background:rgba(255,255,255,.08);border:none;border-radius:4px;padding:2px 5px;font-size:10px;cursor:pointer;color:var(--t3);">✏️</button></div>';
+        var cs = 'width:28px;text-align:center;font-size:12px;font-weight:700;flex-shrink:0;';
+        var fmtS = function(v,col){ return '<span style="'+cs+'color:'+(v>0?col:'rgba(255,255,255,.2)')+'">'+(v>0?v:'—')+'</span>'; };
+        html += '<div data-bench-pid="'+p.id+'" style="display:flex;align-items:center;padding:7px 10px;background:'+rowBg+';border-radius:6px;margin-bottom:2px;border-left:2px solid '+pc+'55;">';
+        // Badge XI
+        html += '<span class="xi-badge" style="font-size:7px;background:'+pc+'33;color:'+pc+';border-radius:3px;padding:1px 3px;font-weight:800;flex-shrink:0;margin-right:5px;'+(inXi?'':'display:none;')+'">XI</span>';
+        // Nom
+        html += '<a href="'+sofaUrl+'" target="_blank" onclick="event.stopPropagation()" style="font-size:12px;font-weight:700;color:var(--t1);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-decoration:none;width:150px;flex-shrink:0;">'+p.name+'</a>';
+        // Stats
+        html += fmtS(lg,'#1ed760');
+        html += fmtS(la,'#4d84ff');
+        html += '<span style="width:10px;text-align:center;font-size:9px;color:rgba(255,255,255,.15);flex-shrink:0;">|</span>';
+        html += fmtS(eg,'#f0b020');
+        html += fmtS(ea,'#f59e0b');
+        html += '<span style="width:30px;text-align:center;font-size:11px;color:var(--t2);flex-shrink:0;">'+p._age+'</span>';
+        html += '<button class="fd-edit-btn" data-pid="'+p.id+'" data-afid="'+afId+'" onclick="event.stopPropagation();fdEditStats(this)" style="margin-left:4px;background:rgba(255,255,255,.08);border:none;border-radius:4px;padding:2px 5px;font-size:10px;cursor:pointer;color:var(--t3);flex-shrink:0;">✏️</button>';
         html += '</div>';
       });
       html += '</div>';
