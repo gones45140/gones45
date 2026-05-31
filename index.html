@@ -1714,10 +1714,15 @@ function renderApiSportsStats(zone, data) {
 }
 
 function renderDetailMatch(modal, m, matchId) {
-  var hg = m.score&&m.score.fullTime ? (m.score.fullTime.home||0) : 0;
-  var ag = m.score&&m.score.fullTime ? (m.score.fullTime.away||0) : 0;
+  // Utiliser regularTime si dispo (exclut TAB), sinon fullTime
+  var hg = m.score&&m.score.regularTime ? (m.score.regularTime.home||0) : ((m.score&&m.score.regularTime?m.score.regularTime.home:m.score&&m.score.fullTime?m.score.fullTime.home:0)||0);
+  var ag = m.score&&m.score.regularTime ? (m.score.regularTime.away||0) : ((m.score&&m.score.regularTime?m.score.regularTime.away:m.score&&m.score.fullTime?m.score.fullTime.away:0)||0);
   var hgHT = m.score&&m.score.halfTime ? (m.score.halfTime.home||0) : null;
   var agHT = m.score&&m.score.halfTime ? (m.score.halfTime.away||0) : null;
+  // Détecter tirs aux buts
+  var hasPenalties = m.score&&m.score.penalties&&(m.score.penalties.home!==null);
+  var penHome = hasPenalties ? m.score.penalties.home : null;
+  var penAway = hasPenalties ? m.score.penalties.away : null;
   var homeName = m.homeTeam&&m.homeTeam.name||'?';
   var awayName = m.awayTeam&&m.awayTeam.name||'?';
   var homeCrest = m.homeTeam&&m.homeTeam.crest||'';
@@ -1750,6 +1755,7 @@ function renderDetailMatch(modal, m, matchId) {
   // Score
   html += '<div style="text-align:center;">';
   html += '<div style="font-size:36px;font-weight:900;color:'+rc+';">'+hg+' - '+ag+'</div>';
+  if(hasPenalties) html += '<div style="font-size:11px;font-weight:700;color:var(--gold);margin-top:2px;">TAB: '+penHome+' - '+penAway+'</div>';
   if(hgHT!==null) html += '<div style="font-size:10px;color:var(--t3);">(MT: '+hgHT+' - '+agHT+')</div>';
   html += '<div style="font-size:9px;color:var(--t3);margin-top:2px;">'+dateStr+'</div>';
   if(stade) html += '<div style="font-size:9px;color:var(--t3);margin-top:2px;">🏟️ '+stade+'</div>';
@@ -4450,8 +4456,8 @@ async function chargerFicheAdversaire(matchId, advId, advNom) {
       var streak=0, streakType='';
       matches.forEach(function(m){
         var isDom = m.homeTeam&&m.homeTeam.id===tId;
-        var hg=m.score&&m.score.fullTime?(m.score.fullTime.home||0):0;
-        var ag=m.score&&m.score.fullTime?(m.score.fullTime.away||0):0;
+        var hg=(m.score&&m.score.regularTime?m.score.regularTime.home:m.score&&m.score.fullTime?m.score.fullTime.home:0)||0;
+        var ag=(m.score&&m.score.regularTime?m.score.regularTime.away:m.score&&m.score.fullTime?m.score.fullTime.away:0)||0;
         var hgHT=m.score&&m.score.halfTime?(m.score.halfTime.home||0):0;
         var agHT=m.score&&m.score.halfTime?(m.score.halfTime.away||0):0;
         var tg=isDom?hg:ag, og=isDom?ag:hg;
@@ -4469,8 +4475,8 @@ async function chargerFicheAdversaire(matchId, advId, advNom) {
       for(var si=0;si<matches.length;si++){
         var ms=matches[si];
         var isDomS=ms.homeTeam&&ms.homeTeam.id===tId;
-        var hgs=ms.score&&ms.score.fullTime?(ms.score.fullTime.home||0):0;
-        var ags=ms.score&&ms.score.fullTime?(ms.score.fullTime.away||0):0;
+        var hgs=(ms.score&&ms.score.regularTime?ms.score.regularTime.home:ms.score&&ms.score.fullTime?ms.score.fullTime.home:0)||0;
+        var ags=(ms.score&&ms.score.regularTime?ms.score.regularTime.away:ms.score&&ms.score.fullTime?ms.score.fullTime.away:0)||0;
         var tgs=isDomS?hgs:ags, ogs=isDomS?ags:hgs;
         var wons=tgs>ogs, draws=tgs===ogs;
         var res=wons?'V':draws?'N':'D';
@@ -4518,8 +4524,8 @@ async function chargerFicheAdversaire(matchId, advId, advNom) {
     html += '<div style="display:flex;gap:4px;flex-wrap:wrap;margin-bottom:10px;">';
     advMatches.slice(0,10).reverse().forEach(function(m){
       var isDom = m.homeTeam&&m.homeTeam.id===advId;
-      var hg=m.score&&m.score.fullTime?(m.score.fullTime.home||0):0;
-      var ag=m.score&&m.score.fullTime?(m.score.fullTime.away||0):0;
+      var hg=(m.score&&m.score.regularTime?m.score.regularTime.home:m.score&&m.score.fullTime?m.score.fullTime.home:0)||0;
+      var ag=(m.score&&m.score.regularTime?m.score.regularTime.away:m.score&&m.score.fullTime?m.score.fullTime.away:0)||0;
       var tg=isDom?hg:ag, og=isDom?ag:hg;
       var won=tg>og, draw=tg===og;
       var rc=won?'#1ed760':draw?'#f0b020':'#ff4545';
@@ -4565,8 +4571,8 @@ async function chargerFicheAdversaire(matchId, advId, advNom) {
       html += '<div style="display:flex;flex-direction:column;gap:3px;margin-bottom:8px;">';
       h2hMatches.slice(0,6).forEach(function(m){
         var isMyHome = m.homeTeam&&m.homeTeam.id===teamId;
-        var hg=m.score&&m.score.fullTime?(m.score.fullTime.home||0):0;
-        var ag=m.score&&m.score.fullTime?(m.score.fullTime.away||0):0;
+        var hg=(m.score&&m.score.regularTime?m.score.regularTime.home:m.score&&m.score.fullTime?m.score.fullTime.home:0)||0;
+        var ag=(m.score&&m.score.regularTime?m.score.regularTime.away:m.score&&m.score.fullTime?m.score.fullTime.away:0)||0;
         var tg=isMyHome?hg:ag, og=isMyHome?ag:hg;
         var won=tg>og, draw=tg===og;
         if(won)h2hWins++; else if(draw)h2hDraws++; else h2hLoss++;
@@ -5021,8 +5027,8 @@ async function loadTeamCalendar(teamId, nom, col) {
       finished.matches.slice(0,5).reverse().forEach(function(m){
         var isDom = m.homeTeam && m.homeTeam.id === teamId;
         var adv = isDom ? (m.awayTeam&&m.awayTeam.name||'?') : (m.homeTeam&&m.homeTeam.name||'?');
-        var hg = m.score&&m.score.fullTime ? (m.score.fullTime.home||0) : 0;
-        var ag = m.score&&m.score.fullTime ? (m.score.fullTime.away||0) : 0;
+        var hg = (m.score&&m.score.regularTime?m.score.regularTime.home:m.score&&m.score.fullTime?m.score.fullTime.home:0)||0;
+        var ag = (m.score&&m.score.regularTime?m.score.regularTime.away:m.score&&m.score.fullTime?m.score.fullTime.away:0)||0;
         var tg = isDom?hg:ag, og = isDom?ag:hg;
         var won = tg>og, draw = tg===og;
         var rc = won?'#1ed760':draw?'#f0b020':'#ff4545';
@@ -5850,8 +5856,8 @@ async function getTeamStatsViaGroq(teamName, cpTypes) {
         var ms = matches.matches;
         var over25=0, over35=0, bts=0, domW=0, domTotal=0, extW=0, extTotal=0;
         ms.forEach(function(m){
-          var hg=m.score&&m.score.fullTime?m.score.fullTime.home||0:0;
-          var ag=m.score&&m.score.fullTime?m.score.fullTime.away||0:0;
+          var hg=(m.score&&m.score.regularTime?m.score.regularTime.home:m.score&&m.score.fullTime?m.score.fullTime.home:0)||0;
+          var ag=(m.score&&m.score.regularTime?m.score.regularTime.away:m.score&&m.score.fullTime?m.score.fullTime.away:0)||0;
           var total=hg+ag;
           if(total>2.5) over25++;
           if(total>3.5) over35++;
@@ -9605,8 +9611,8 @@ function calcSaisonStats(matchesRaw, teamId) {
   };
 
   matches.forEach(function(m) {
-    var hg = m.score&&m.score.fullTime ? (m.score.fullTime.home||0) : 0;
-    var ag = m.score&&m.score.fullTime ? (m.score.fullTime.away||0) : 0;
+    var hg = (m.score&&m.score.regularTime?m.score.regularTime.home:m.score&&m.score.fullTime?m.score.fullTime.home:0)||0;
+    var ag = (m.score&&m.score.regularTime?m.score.regularTime.away:m.score&&m.score.fullTime?m.score.fullTime.away:0)||0;
     var hh = m.score&&m.score.halfTime ? (m.score.halfTime.home||0) : 0;
     var ah = m.score&&m.score.halfTime ? (m.score.halfTime.away||0) : 0;
     var total = hg+ag;
@@ -9685,8 +9691,8 @@ function calcSaisonStats(matchesRaw, teamId) {
   var serieCount = 0, serieT = '';
   for(var i=0;i<sortedM.length;i++){
     var m=sortedM[i];
-    var hg=m.score&&m.score.fullTime?(m.score.fullTime.home||0):0;
-    var ag=m.score&&m.score.fullTime?(m.score.fullTime.away||0):0;
+    var hg=(m.score&&m.score.regularTime?m.score.regularTime.home:m.score&&m.score.fullTime?m.score.fullTime.home:0)||0;
+    var ag=(m.score&&m.score.regularTime?m.score.regularTime.away:m.score&&m.score.fullTime?m.score.fullTime.away:0)||0;
     var isDom=m.homeTeam&&m.homeTeam.id===teamId;
     var tg=isDom?hg:ag, og=isDom?ag:hg;
     var r=tg>og?'W':tg===og?'D':'L';
@@ -10010,8 +10016,8 @@ function renderSaisonsChart(el, results, nom) {
       var qs0 = window._quickStats || ['O2.5','BTS'];
       var matchCount = 0;
       allMatchesSorted.forEach(function(m){
-        var hg0 = m.score&&m.score.fullTime ? (m.score.fullTime.home||0) : 0;
-        var ag0 = m.score&&m.score.fullTime ? (m.score.fullTime.away||0) : 0;
+        var hg0 = (m.score&&m.score.regularTime?m.score.regularTime.home:m.score&&m.score.fullTime?m.score.fullTime.home:0)||0;
+        var ag0 = (m.score&&m.score.regularTime?m.score.regularTime.away:m.score&&m.score.fullTime?m.score.fullTime.away:0)||0;
         var isDom0 = m.homeTeam && m.homeTeam.id === teamId;
         var tg0 = isDom0?hg0:ag0, og0 = isDom0?ag0:hg0;
         var tot0 = hg0+ag0;
@@ -10025,8 +10031,8 @@ function renderSaisonsChart(el, results, nom) {
       html += '</div>';
       html += '<div style="display:flex;flex-direction:column;gap:3px;">';
       allMatchesSorted.forEach(function(m){
-        var hg = m.score&&m.score.fullTime ? (m.score.fullTime.home||0) : 0;
-        var ag = m.score&&m.score.fullTime ? (m.score.fullTime.away||0) : 0;
+        var hg = (m.score&&m.score.regularTime?m.score.regularTime.home:m.score&&m.score.fullTime?m.score.fullTime.home:0)||0;
+        var ag = (m.score&&m.score.regularTime?m.score.regularTime.away:m.score&&m.score.fullTime?m.score.fullTime.away:0)||0;
         var isDom = m.homeTeam && m.homeTeam.id === teamId;
         var tg = isDom?hg:ag, og = isDom?ag:hg;
         var won = tg>og, draw = tg===og;
