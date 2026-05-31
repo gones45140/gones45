@@ -6999,13 +6999,12 @@ async function loadFdSquad(el, nom, teamId) {
       html += '<th style="'+tc+'">🏆B</th>';
       html += '<th style="'+tc+'">A</th>';
       html += '<th style="'+tc+'color:rgba(255,255,255,.15);">|</th>';
-      html += '<th style="'+tc+'color:rgba(255,255,255,.15);">|</th>';
       html += '<th style="'+tc+'">MJ</th>';
       html += '<th style="'+tc+'">⭐B</th>';
+      html += '<th style="'+tc+'">A</th>';
       html += '<th style="'+tc+'">Âge</th>';
       html += '<th style="'+tc+'"></th>';
       html += '</tr></thead><tbody>';
-      pp.forEach(function(p,i){
         var inXi=xi.some(function(x){return x.id===p.id;});
         var rowBg=i%2===0?'rgba(255,255,255,.025)':'rgba(255,255,255,.015)';
         var rCol=p._rating?(parseFloat(p._rating)>=7?'#1ed760':parseFloat(p._rating)>=6?'#f0b020':'#ef9a9a'):'var(--t3)';
@@ -7038,19 +7037,19 @@ async function loadFdSquad(el, nom, teamId) {
         html += '<td style="padding:6px 4px;overflow:hidden;">';
         html += '<a href="'+sofaUrl+'" target="_blank" onclick="event.stopPropagation()" style="font-size:12px;font-weight:700;color:var(--t1);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-decoration:none;display:block;">'+p.name+'</a>';
         html += '</td>';
+        html += '<td style="text-align:center;font-size:11px;color:var(--t2);padding:6px 2px;">'+(lmj>0?lmj:'—')+'</td>';
         html += fmtS(lg,'#1ed760');
-        html += '<td style="text-align:center;font-size:11px;color:var(--t2);padding:6px 2px;">'+( lmj>0?lmj:'—')+'</td>';
         html += fmtS(la,'#4d84ff');
         html += '<td style="text-align:center;font-size:9px;color:rgba(255,255,255,.15);padding:6px 0;">|</td>';
+        html += '<td style="text-align:center;font-size:11px;color:var(--t2);padding:6px 2px;">'+(emj>0?emj:'—')+'</td>';
         html += fmtS(eg,'#f0b020');
-        html += '<td style="text-align:center;font-size:11px;color:var(--t2);padding:6px 2px;">'+( emj>0?emj:'—')+'</td>';
         html += fmtS(ea,'#f59e0b');
         html += '<td style="text-align:center;font-size:11px;color:var(--t2);padding:6px 2px;">'+p._age+'</td>';
         html += '<td style="text-align:center;padding:6px 2px;"><button class="fd-edit-btn" data-pid="'+p.id+'" data-afid="'+afId+'" onclick="event.stopPropagation();fdEditStats(this)" style="background:rgba(255,255,255,.08);border:none;border-radius:4px;padding:2px 5px;font-size:10px;cursor:pointer;color:var(--t3);">✏️</button></td>';
-        html += '</div>';
+        html += '</tr>';
       });
+      html += '</tbody></table>';
       html += '</div>';
-    });
 
     html += '</div>';
     el.innerHTML = html;
