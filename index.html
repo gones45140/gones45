@@ -7005,6 +7005,7 @@ async function loadFdSquad(el, nom, teamId) {
       html += '<th style="'+tc+'">Âge</th>';
       html += '<th style="'+tc+'"></th>';
       html += '</tr></thead><tbody>';
+      pp.forEach(function(p,i){
         var inXi=xi.some(function(x){return x.id===p.id;});
         var rowBg=i%2===0?'rgba(255,255,255,.025)':'rgba(255,255,255,.015)';
         var rCol=p._rating?(parseFloat(p._rating)>=7?'#1ed760':parseFloat(p._rating)>=6?'#f0b020':'#ef9a9a'):'var(--t3)';
@@ -7050,6 +7051,7 @@ async function loadFdSquad(el, nom, teamId) {
       });
       html += '</tbody></table>';
       html += '</div>';
+    });
 
     html += '</div>';
     el.innerHTML = html;
