@@ -6668,12 +6668,18 @@ function fdEditStats(btn) {
   try { current = JSON.parse(localStorage.getItem(key)||'{}'); } catch(e){}
 
   // Mini popup
-  var existing = document.getElementById('fd-edit-popup');
+  var existing = document.getElementById('fd-edit-overlay');
   if(existing) existing.remove();
+
+  var overlay = document.createElement('div');
+  overlay.id = 'fd-edit-overlay';
+  overlay.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.6);z-index:9998;';
+  overlay.onclick = function(){ overlay.remove(); };
+  document.body.appendChild(overlay);
 
   var popup = document.createElement('div');
   popup.id = 'fd-edit-popup';
-  popup.style.cssText = 'position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:var(--bg2);border:1px solid rgba(77,132,255,.4);border-radius:12px;padding:16px;z-index:9999;min-width:200px;box-shadow:0 8px 32px rgba(0,0,0,.6);';
+  popup.style.cssText = 'position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:var(--bg2);border:1px solid rgba(77,132,255,.4);border-radius:12px;padding:16px;z-index:9999;min-width:240px;box-shadow:0 8px 32px rgba(0,0,0,.8);';
   var inpStyle = 'width:100%;padding:5px;background:var(--bg3);border:1px solid var(--b2);border-radius:6px;color:var(--t1);font-size:13px;font-weight:700;text-align:center;';
   popup.innerHTML = '<div style="font-size:13px;font-weight:800;color:var(--t1);margin-bottom:10px;">✏️ Stats manuelles</div>'
     +'<div style="display:grid;grid-template-columns:auto 1fr 1fr;gap:6px;align-items:center;margin-bottom:12px;">'
@@ -6689,9 +6695,9 @@ function fdEditStats(btn) {
     +'</div>'
     +'<div style="display:flex;gap:8px;">'
     +'<button onclick="fdSaveStats(this)" data-key="'+key+'" style="flex:1;padding:8px;background:var(--a);border:none;border-radius:8px;color:#fff;font-weight:700;cursor:pointer;">💾 Sauver</button>'
-    +'<button onclick="var p=document.getElementById(\'fd-edit-popup\');if(p)p.remove();" style="padding:8px 12px;background:var(--bg3);border:1px solid var(--b2);border-radius:8px;color:var(--t3);cursor:pointer;">✕</button>'
+    +'<button onclick="var o=document.getElementById(\'fd-edit-overlay\');if(o)o.remove();" style="padding:8px 12px;background:var(--bg3);border:1px solid var(--b2);border-radius:8px;color:var(--t3);cursor:pointer;">✕</button>'
     +'</div>';
-  document.body.appendChild(popup);
+  overlay.appendChild(popup);
   document.getElementById('fe-goals').focus();
 }
 
@@ -6703,7 +6709,7 @@ function fdSaveStats(btn) {
   var eg = parseInt(document.getElementById('fe-eg').value)||0;
   var ea = parseInt(document.getElementById('fe-ea').value)||0;
   localStorage.setItem(key, JSON.stringify({league_goals:lg,league_assists:la,euro_goals:eg,euro_assists:ea,ts:Date.now()}));
-  document.getElementById('fd-edit-popup').remove();
+  var ov=document.getElementById('fd-edit-overlay');if(ov)ov.remove();
   var pid = key.split('_')[3];
   var activeEl = document.querySelector('[data-bench-pid="'+pid+'"]');
   if(activeEl) {
@@ -6975,7 +6981,7 @@ async function loadFdSquad(el, nom, teamId) {
       html += '<div style="font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:'+pc+';">'+posLabels[pos]+'</div>';
       html += '<div style="flex:1;height:1px;background:rgba(255,255,255,.05);"></div>';
       html += '<div style="font-size:9px;color:var(--t3);">'+pp.length+'</div></div>';
-      html += '<div style="display:grid;grid-template-columns:minmax(80px,180px) 22px 22px 10px 22px 22px 28px 28px;gap:0 4px;padding:3px 10px;margin-bottom:2px;align-items:center;">';
+      html += '<div style="display:grid;grid-template-columns:minmax(80px,180px) 28px 28px 10px 28px 28px 30px 30px;gap:0 3px;padding:3px 10px;margin-bottom:2px;align-items:center;">';
       html += '<div style="font-size:8px;color:var(--t3);font-weight:700;text-transform:uppercase;letter-spacing:.5px;">Joueur</div>';
       html += '<div style="font-size:8px;color:var(--t3);font-weight:700;text-align:center;">🏆B</div>';
       html += '<div style="font-size:8px;color:var(--t3);font-weight:700;text-align:center;">A</div>';
@@ -7008,7 +7014,7 @@ async function loadFdSquad(el, nom, teamId) {
         var ea = ms.euro_assists!==undefined?ms.euro_assists:0;
 
         var fmtStat = function(v,col){ return '<div style="text-align:center;font-size:12px;font-weight:700;color:'+(v>0?col:'rgba(255,255,255,.2)')+'">'+(v>0?v:'—')+'</div>'; };
-        html += '<div data-bench-pid="'+p.id+'" style="display:grid;grid-template-columns:minmax(80px,180px) 22px 22px 10px 22px 22px 28px 28px;gap:0 4px;align-items:center;padding:7px 10px;background:'+rowBg+';border-radius:6px;margin-bottom:2px;border-left:2px solid '+pc+'55;">';
+        html += '<div data-bench-pid="'+p.id+'" style="display:grid;grid-template-columns:minmax(80px,180px) 28px 28px 10px 28px 28px 30px 30px;gap:0 3px;align-items:center;padding:7px 10px;background:'+rowBg+';border-radius:6px;margin-bottom:2px;border-left:2px solid '+pc+'55;">';
         // Nom + badge XI
         html += '<div style="display:flex;align-items:center;gap:5px;min-width:0;">';
         html += '<span class="xi-badge" style="font-size:7px;background:'+pc+'33;color:'+pc+';border-radius:3px;padding:1px 3px;font-weight:800;flex-shrink:0;'+(inXi?'':'display:none;')+'">XI</span>';
