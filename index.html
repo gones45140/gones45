@@ -814,19 +814,24 @@ input[type="date"],input[type="time"]{color-scheme:dark;}
       </div>
       <label style="display:flex;align-items:center;gap:8px;padding:7px 10px;background:rgba(77,132,255,.08);border:1px solid rgba(77,132,255,.2);border-radius:var(--r6);cursor:pointer;margin-bottom:8px;">
         <input type="checkbox" id="lay-mode-cible" onchange="toggleLayMode()" style="accent-color:var(--a)">
-        <span style="font-size:11px;font-weight:700;color:var(--a)">🎯 Mode Mise Lay cible — je saisis la mise Lay souhaitée</span>
+        <span style="font-size:11px;font-weight:700;color:var(--a)">🎯 Mode Liability cible — je saisis la Liability souhaitée</span>
+      </label></div>
+      <div class="fg" style="margin-bottom:4px;"><label style="display:flex;align-items:center;gap:8px;cursor:pointer;">
+        <input type="checkbox" id="lay-liability-mode" onchange="calcLay()" style="width:16px;height:16px;cursor:pointer;accent-color:var(--gold);">
+        <span style="font-size:11px;font-weight:700;color:var(--gold)">💰 Mode Liability — je saisis la Liability souhaitée</span>
       </label>
       <div style="display:none" id="lay-cible-wrap">
-        <div class="fg" style="margin-bottom:8px;"><label class="fl" style="color:var(--a);">Mise Lay sur Piwi (Stake €)</label><input type="number" id="lay-lay-mise" class="fi" value="15" oninput="calcLay()"></div>
+        <div class="fg" style="margin-bottom:8px;" id="lay-stake-group"><label class="fl" style="color:var(--a);">Stake (€)</label><input type="number" id="lay-lay-mise" class="fi" value="15" oninput="calcLay()"></div>
+        <div class="fg" style="margin-bottom:8px;display:none;" id="lay-liability-group"><label class="fl" style="color:var(--gold);">Liability cible (€)</label><input type="number" id="lay-liability-input" class="fi" value="240" oninput="calcLay()"></div>
       </div>
       <div class="g2" style="display:none">
       </div>
       <div style="background:var(--bg3);border-radius:var(--r6);padding:9px 12px;margin-bottom:9px;display:flex;justify-content:space-between">
         <div><div style="font-size:8px;color:var(--t3);text-transform:uppercase;letter-spacing:.7px">Cote réelle</div><div id="lay-real-cote" style="font-size:20px;font-weight:800;color:var(--r)">—</div></div>
-        <div style="text-align:right"><div style="font-size:8px;color:var(--t3);text-transform:uppercase;letter-spacing:.7px">Responsabilité</div><div id="lay-liability" style="font-size:20px;font-weight:800;color:var(--gold)">—</div></div>
+        <div style="text-align:right"><div style="font-size:8px;color:var(--t3);text-transform:uppercase;letter-spacing:.7px">Liability</div><div id="lay-liability" style="font-size:20px;font-weight:800;color:var(--gold)">—</div></div>
       </div>
       <div class="calc-res">
-        <div class="cres-row"><span class="cres-l">Mise Lay optimale</span><span class="cres-v" id="lay-mise-opt">—</span></div>
+        <div class="cres-row"><span class="cres-l">Stake optimal</span><span class="cres-v" id="lay-mise-opt">—</span></div>
         <div class="cres-row"><span class="cres-l">Profit si Back gagne</span><span class="cres-v" id="lay-profit-back">—</span></div>
         <div class="cres-row"><span class="cres-l">Profit si Lay gagne</span><span class="cres-v" id="lay-profit-lay">—</span></div>
         <div class="cres-row"><span class="cres-l">Profit garanti</span><span class="cres-v" id="lay-profit-garanti" style="font-size:15px;font-weight:800">—</span></div>
@@ -846,8 +851,8 @@ input[type="date"],input[type="time"]{color-scheme:dark;}
           <div class="fg"><label class="fl">Commission %</label><input type="number" id="fb-comm" class="fi" value="3" oninput="calcFreebet()"></div>
         </div>
         <div class="calc-res">
-          <div class="cres-row"><span class="cres-l">Mise Lay</span><span class="cres-v" id="fb-lay-mise">—</span></div>
-          <div class="cres-row"><span class="cres-l">Responsabilité</span><span class="cres-v" id="fb-liability">—</span></div>
+          <div class="cres-row"><span class="cres-l">Stake</span><span class="cres-v" id="fb-lay-mise">—</span></div>
+          <div class="cres-row"><span class="cres-l">Liability</span><span class="cres-v" id="fb-liability">—</span></div>
           <div class="cres-row"><span class="cres-l">Cash garanti</span><span class="cres-v" id="fb-cash" style="font-size:15px;font-weight:800;color:var(--g)">—</span></div>
           <div class="cres-row"><span class="cres-l">Taux conversion</span><span class="cres-v" id="fb-taux">—</span></div>
           <div class="cres-row"><span class="cres-l">Cash si remboursé</span><span class="cres-v" id="fb-cash-gorr" style="color:var(--gold)">—</span></div>
@@ -2359,14 +2364,32 @@ function calcLay(){
   var gorr=$i('lay-gorr')&&$i('lay-gorr').checked;
   var useComm=$i('lay-usecomm')&&$i('lay-usecomm').checked;
   var modeCible=$i('lay-mode-cible')&&$i('lay-mode-cible').checked;
+  var modeLiability=$i('lay-liability-mode')&&$i('lay-liability-mode').checked;
   var bc=parseFloat(($i('lay-back-cote')&&$i('lay-back-cote').value)||0);
   var lc=parseFloat(($i('lay-lay-cote')&&$i('lay-lay-cote').value)||0);
   var comm=parseFloat(($i('lay-commission')&&$i('lay-commission').value)||3);
   var commR=useComm?comm/100:0;
   var lr=1+(1-commR)/(lc-1);
   if(!bc||!lc||bc<=1||lc<=1)return;
+
+  // Toggle affichage input
+  var stakeGrp=$i('lay-stake-group'); var liabGrp=$i('lay-liability-group');
+  if(stakeGrp) stakeGrp.style.display=modeLiability?'none':'block';
+  if(liabGrp) liabGrp.style.display=modeLiability?'block':'none';
+
   var bm,ml,liabML,pbw,plw;
-  if(modeCible){
+  if(modeLiability){
+    // Saisie liability → calcule stake
+    var targetLiab=parseFloat(($i('lay-liability-input')&&$i('lay-liability-input').value)||0);
+    if(!targetLiab)return;
+    ml=targetLiab/(lc-1);
+    if(gorr){
+      bm=ml*(1-commR);
+    } else {
+      bm=ml*(lc-commR)/bc;
+    }
+    var bmEl=$i('lay-back-mise');if(bmEl)bmEl.value=bm.toFixed(2);
+  } else if(modeCible){
     ml=parseFloat(($i('lay-lay-mise')&&$i('lay-lay-mise').value)||0);
     if(!ml)return;
     if(gorr){
@@ -6630,6 +6653,62 @@ async function loadFplSquad(el, nom) {
   }
 }
 
+// ── Édition manuelle des stats joueurs ──
+function fdEditStats(btn) {
+  var pid = parseInt(btn.dataset.pid);
+  var afId = btn.dataset.afid;
+  var key = 'manual_stats_'+afId+'_'+pid;
+  var current = {};
+  try { current = JSON.parse(localStorage.getItem(key)||'{}'); } catch(e){}
+
+  // Mini popup
+  var existing = document.getElementById('fd-edit-popup');
+  if(existing) existing.remove();
+
+  var popup = document.createElement('div');
+  popup.id = 'fd-edit-popup';
+  popup.style.cssText = 'position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:var(--bg2);border:1px solid rgba(77,132,255,.4);border-radius:12px;padding:16px;z-index:9999;min-width:200px;box-shadow:0 8px 32px rgba(0,0,0,.6);';
+  popup.innerHTML = '<div style="font-size:13px;font-weight:800;color:var(--t1);margin-bottom:12px;">✏️ Stats manuelles</div>'
+    +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px;">'
+    +'<div><label style="font-size:10px;color:var(--t3);">Buts ⚽</label><input id="fe-goals" type="number" min="0" value="'+(current.goals||0)+'" style="width:100%;padding:6px;background:var(--bg3);border:1px solid var(--b2);border-radius:6px;color:var(--t1);font-size:14px;font-weight:700;text-align:center;"></div>'
+    +'<div><label style="font-size:10px;color:var(--t3);">Passes 🅰</label><input id="fe-assists" type="number" min="0" value="'+(current.assists||0)+'" style="width:100%;padding:6px;background:var(--bg3);border:1px solid var(--b2);border-radius:6px;color:var(--t1);font-size:14px;font-weight:700;text-align:center;"></div>'
+    +'</div>'
+    +'<div style="display:flex;gap:8px;">'
+    +'<button onclick="fdSaveStats(''+key+'')" style="flex:1;padding:8px;background:var(--a);border:none;border-radius:8px;color:#fff;font-weight:700;cursor:pointer;">💾 Sauver</button>'
+    +'<button onclick="document.getElementById('fd-edit-popup').remove()" style="padding:8px 12px;background:var(--bg3);border:1px solid var(--b2);border-radius:8px;color:var(--t3);cursor:pointer;">✕</button>'
+    +'</div>';
+  document.body.appendChild(popup);
+  document.getElementById('fe-goals').focus();
+}
+
+function fdSaveStats(key) {
+  var goals = parseInt(document.getElementById('fe-goals').value)||0;
+  var assists = parseInt(document.getElementById('fe-assists').value)||0;
+  localStorage.setItem(key, JSON.stringify({goals:goals, assists:assists, ts:Date.now()}));
+  document.getElementById('fd-edit-popup').remove();
+  // Vider le cache squad pour forcer un rechargement
+  var afId = key.split('_')[2];
+  var cacheKey = 'squad_sofa_'+Object.keys(SOFASCORE_TEAM_IDS).find(k=>SOFASCORE_TEAM_IDS[k]===parseInt(afId))||afId;
+  // On recharge juste l'élément actif
+  var activeEl = document.querySelector('[data-bench-pid="'+key.split('_')[3]+'"]');
+  if(activeEl) {
+    // Update displayed values
+    var cells = activeEl.querySelectorAll('div');
+    // Refresh page section
+    var squadEl = activeEl.closest('[id^="fd-"]')?.parentElement;
+  }
+  // Simple: reload the squad section
+  var liveEl = document.querySelector('.live-content-inner');
+  if(liveEl) {
+    var nomEl = document.querySelector('.equipe-nom');
+  }
+  // Best: just update the DOM directly
+  var bDiv = activeEl ? activeEl.children[3] : null;
+  var aDiv = activeEl ? activeEl.children[4] : null;
+  if(bDiv) { bDiv.textContent = goals; bDiv.style.color = goals>0?'#1ed760':'var(--t3)'; }
+  if(aDiv) { aDiv.textContent = assists; aDiv.style.color = assists>0?'#4d84ff':'var(--t3)'; }
+}
+
 // ── IDs Sofascore par équipe ── AJOUTER ICI ──
 var SOFASCORE_TEAM_IDS = {
   // Football
@@ -6889,12 +6968,13 @@ async function loadFdSquad(el, nom, teamId) {
       html += '<div style="font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:'+pc+';">'+posLabels[pos]+'</div>';
       html += '<div style="flex:1;height:1px;background:rgba(255,255,255,.05);"></div>';
       html += '<div style="font-size:9px;color:var(--t3);">'+pp.length+'</div></div>';
-      html += '<div style="display:grid;grid-template-columns:16px 1fr 32px 22px 22px 36px;gap:0 4px;padding:3px 10px;margin-bottom:2px;">';
+      html += '<div style="display:grid;grid-template-columns:16px 1fr 32px 22px 22px 30px 22px;gap:0 3px;padding:3px 10px;margin-bottom:2px;">';
       html += '<div></div><div style="font-size:8px;color:var(--t3);font-weight:700;text-transform:uppercase;">Joueur</div>';
       html += '<div style="font-size:8px;color:var(--t3);font-weight:700;text-align:center;">Note</div>';
       html += '<div style="font-size:8px;color:var(--t3);font-weight:700;text-align:center;">B</div>';
       html += '<div style="font-size:8px;color:var(--t3);font-weight:700;text-align:center;">A</div>';
       html += '<div style="font-size:8px;color:var(--t3);font-weight:700;text-align:center;">Val</div>';
+      html += '<div></div>';
       html += '</div>';
       pp.forEach(function(p,i){
         var inXi=xi.some(function(x){return x.id===p.id;});
@@ -6902,16 +6982,27 @@ async function loadFdSquad(el, nom, teamId) {
         var rCol=p._rating?(parseFloat(p._rating)>=7?'#1ed760':parseFloat(p._rating)>=6?'#f0b020':'#ef9a9a'):'var(--t3)';
         var val=p.marketValue>=1000000?(p.marketValue/1000000).toFixed(0)+'M':'—';
         var sofaUrl=p.sofaId?'https://www.sofascore.com/player/'+p.sofaId:'https://www.google.com/search?q='+encodeURIComponent(p.name+' '+nom+' Sofascore');
-        html += '<div data-bench-pid="'+p.id+'" style="display:grid;grid-template-columns:16px 1fr 32px 22px 22px 36px;gap:0 4px;align-items:center;padding:7px 10px;background:'+rowBg+';border-radius:6px;margin-bottom:2px;border-left:2px solid '+pc+'55;cursor:pointer;">';
+        // Charger stats manuelles depuis localStorage
+        var manualKey = 'manual_stats_'+afId+'_'+p.id;
+        var manualStats = {};
+        try { manualStats = JSON.parse(localStorage.getItem(manualKey)||'{}'); } catch(e){}
+        if(manualStats.goals!==undefined) p._goals = manualStats.goals;
+        if(manualStats.assists!==undefined) p._assists = manualStats.assists;
+
+        var sofaUrl = p.sofaId ? 'https://www.sofascore.com/player/'+p.name.toLowerCase().replace(/ /g,'-')+'/'+p.sofaId : 'https://www.google.com/search?q='+encodeURIComponent(p.name+' '+nom+' Sofascore');
+        html += '<div data-bench-pid="'+p.id+'" style="display:grid;grid-template-columns:16px 1fr 32px 22px 22px 30px 22px;gap:0 3px;align-items:center;padding:7px 10px;background:'+rowBg+';border-radius:6px;margin-bottom:2px;border-left:2px solid '+pc+'55;">';
         html += '<div><span class="xi-badge" style="font-size:7px;background:'+pc+'33;color:'+pc+';border-radius:3px;padding:1px 3px;font-weight:800;'+(inXi?'':'display:none;')+'">XI</span></div>';
+        // Nom cliquable → Sofascore
         html += '<div style="display:flex;align-items:center;gap:5px;min-width:0;">';
-        html += '<span style="font-size:12px;font-weight:700;color:var(--t1);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">'+p.name+'</span>';
+        html += '<a href="'+sofaUrl+'" target="_blank" onclick="event.stopPropagation()" style="font-size:12px;font-weight:700;color:var(--t1);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-decoration:none;">'+p.name+'</a>';
         html += '<span style="font-size:9px;color:var(--t3);flex-shrink:0;">'+(p.nationality||'')+'</span>';
         html += '</div>';
         html += '<div style="text-align:center;font-size:11px;font-weight:800;color:'+rCol+';">'+(p._rating||'—')+'</div>';
         html += '<div style="text-align:center;font-size:11px;font-weight:700;color:'+(p._goals>0?'#1ed760':'var(--t3)')+';">'+p._goals+'</div>';
         html += '<div style="text-align:center;font-size:11px;font-weight:700;color:'+(p._assists>0?'#4d84ff':'var(--t3)')+';">'+p._assists+'</div>';
         html += '<div style="text-align:center;font-size:10px;font-weight:700;color:#a78bfa;">'+val+'</div>';
+        // Bouton édition
+        html += '<div style="text-align:center;"><button class="fd-edit-btn" data-pid="'+p.id+'" data-afid="'+afId+'" onclick="event.stopPropagation();fdEditStats(this)" style="background:rgba(255,255,255,.08);border:none;border-radius:4px;padding:2px 5px;font-size:10px;cursor:pointer;color:var(--t3);">✏️</button></div>';
         html += '</div>';
       });
       html += '</div>';
