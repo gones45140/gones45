@@ -6698,6 +6698,7 @@ function fdEditStats(btn) {
     +'<button onclick="var o=document.getElementById(\'fd-edit-overlay\');if(o)o.remove();" style="padding:8px 12px;background:var(--bg3);border:1px solid var(--b2);border-radius:8px;color:var(--t3);cursor:pointer;">✕</button>'
     +'</div>';
   overlay.appendChild(popup);
+  popup.addEventListener('click', function(e){ e.stopPropagation(); });
   document.getElementById('fe-goals').focus();
 }
 
