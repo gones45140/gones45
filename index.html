@@ -6616,7 +6616,7 @@ async function loadFdSquad(el, nom, teamId) {
     var afId = await findApiSportsTeamId(nom, afKey);
     if(!afId){ el.innerHTML='<div style="color:var(--t3);font-size:10px;text-align:center;padding:12px;">Équipe non trouvée</div>'; return; }
 
-    var season = new Date().getMonth()>=6?new Date().getFullYear():new Date().getFullYear()-1;
+    var season = 2024; // API-Football: saison 2024-25, données 2025 vides
     var cacheKey = 'squad_cache_'+afId+'_'+season;
     var cacheDuration = 24*60*60*1000; // 24h
 
