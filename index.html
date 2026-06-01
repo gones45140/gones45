@@ -989,6 +989,21 @@ input[type="date"],input[type="time"]{color-scheme:dark;}
 
   <div class="fc" style="border-style:dashed;">
     <div style="display:flex;align-items:center;justify-content:space-between;">
+      <label class="fl" style="color:#6e9f3e;">🐙 GitHub — Sync stats joueurs</label>
+    </div>
+    <div style="font-size:10px;color:var(--t3);margin-bottom:8px;margin-top:4px;">Token GitHub pour synchroniser les stats entre appareils</div>
+    <div style="display:flex;gap:6px;margin-bottom:8px;">
+      <input id="github-token-input" class="fi" type="password" placeholder="ghp_xxxxxxxxxxxx…" style="font-size:11px;flex:1;">
+      <button onclick="var i=$i('github-token-input');i.type=i.type==='password'?'text':'password';" style="flex-shrink:0;padding:0 10px;height:38px;background:var(--bg3);border:1px solid var(--b2);border-radius:var(--r6);color:var(--t3);font-size:14px;cursor:pointer;">👁</button>
+    </div>
+    <div style="display:flex;gap:7px;">
+      <button class="btn btn-p" style="font-size:11px;" onclick="saveGithubToken()">💾 Enregistrer</button>
+    </div>
+    <div id="github-token-status" style="margin-top:7px;font-size:11px;font-weight:700;"></div>
+  </div>
+
+  <div class="fc" style="border-style:dashed;">
+    <div style="display:flex;align-items:center;justify-content:space-between;">
       <label class="fl" style="color:#f59e0b;">⚡ RapidAPI — Sofascore Squad & Valeurs</label>
     </div>
     <div style="font-size:10px;color:var(--t3);margin-bottom:8px;margin-top:4px;">rapidapi.com · Squad temps réel + valeurs marchandes via Sofascore</div>
@@ -5741,6 +5756,80 @@ async function enrichTeamLogos() {
 
 function getApiFootballKey(){ return localStorage.getItem('gones45_apifootball_key')||null; }
 
+function saveGithubToken(){
+  var v = ($i('github-token-input')||{}).value||'';
+  if(!v){ document.getElementById('github-token-status').textContent='Token vide'; return; }
+  localStorage.setItem('gones45_github_token', v.trim());
+  document.getElementById('github-token-status').textContent='✓ Token enregistré';
+  document.getElementById('github-token-status').style.color='#1ed760';
+}
+
+// ── GitHub Stats Sync ──
+var GITHUB_OWNER = 'gones45140';
+var GITHUB_REPO = 'gones45';
+var GITHUB_FILE = 'players.json';
+
+async function githubGetStats() {
+  var token = localStorage.getItem('gones45_github_token');
+  if(!token) return null;
+  try {
+    var r = await fetch('https://api.github.com/repos/'+GITHUB_OWNER+'/'+GITHUB_REPO+'/contents/'+GITHUB_FILE, {
+      headers: {'Authorization':'token '+token, 'Accept':'application/vnd.github.v3+json'}
+    });
+    if(r.status===404) return {data:{}, sha:null};
+    var d = await r.json();
+    var data = JSON.parse(atob(d.content.replace(/
+/g,'')));
+    return {data:data, sha:d.sha};
+  } catch(e) { console.warn('GitHub read error:', e); return null; }
+}
+
+async function githubSaveStats(data, sha) {
+  var token = localStorage.getItem('gones45_github_token');
+  if(!token) return false;
+  try {
+    var body = {
+      message: 'Update player stats',
+      content: btoa(unescape(encodeURIComponent(JSON.stringify(data, null, 2)))),
+    };
+    if(sha) body.sha = sha;
+    var r = await fetch('https://api.github.com/repos/'+GITHUB_OWNER+'/'+GITHUB_REPO+'/contents/'+GITHUB_FILE, {
+      method:'PUT',
+      headers:{'Authorization':'token '+token,'Content-Type':'application/json','Accept':'application/vnd.github.v3+json'},
+      body:JSON.stringify(body)
+    });
+    return r.ok;
+  } catch(e) { console.warn('GitHub write error:', e); return false; }
+}
+
+async function syncStatsFromGithub() {
+  var result = await githubGetStats();
+  if(!result) return;
+  var data = result.data;
+  // Merge GitHub stats into localStorage
+  Object.keys(data).forEach(function(key){
+    if(key.startsWith('manual_stats_')) {
+      localStorage.setItem(key, JSON.stringify(data[key]));
+    }
+  });
+  localStorage.setItem('github_stats_sha', result.sha||'');
+  console.log('Stats synced from GitHub:', Object.keys(data).length, 'entries');
+}
+
+async function saveStatToGithub(key, value) {
+  var result = await githubGetStats();
+  if(!result) return;
+  var data = result.data || {};
+  data[key] = value;
+  // Also save all local manual_stats
+  Object.keys(localStorage).forEach(function(k){
+    if(k.startsWith('manual_stats_')){
+      try { data[k] = JSON.parse(localStorage.getItem(k)); } catch(e){}
+    }
+  });
+  await githubSaveStats(data, result.sha);
+}
+
 function saveRapidApiKey(){
   var v = ($i('rapidapi-key-input')||{}).value||'';
   if(!v){ document.getElementById('rapidapi-key-status').textContent='Clé vide'; return; }
@@ -6715,7 +6804,14 @@ function fdSaveStats(btn) {
   var emj = parseInt(document.getElementById('fe-emj').value)||0;
   var eg = parseInt(document.getElementById('fe-eg').value)||0;
   var ea = parseInt(document.getElementById('fe-ea').value)||0;
-  localStorage.setItem(key, JSON.stringify({league_apps:lmj,league_goals:lg,league_assists:la,euro_apps:emj,euro_goals:eg,euro_assists:ea,ts:Date.now()}));
+  var statsObj = {league_apps:lmj,league_goals:lg,league_assists:la,euro_apps:emj,euro_goals:eg,euro_assists:ea,ts:Date.now()};
+  localStorage.setItem(key, JSON.stringify(statsObj));
+  // Sync sur GitHub si token dispo
+  if(localStorage.getItem('gones45_github_token')) {
+    saveStatToGithub(key, statsObj).then(function(ok){
+      if(ok) console.log('GitHub sync OK');
+    });
+  }
   var ov=document.getElementById('fd-edit-overlay');if(ov)ov.remove();
   var pid = key.split('_')[3];
   var activeEl = document.querySelector('[data-bench-pid="'+pid+'"]');
@@ -6778,6 +6874,16 @@ async function loadFdSquad(el, nom, teamId) {
     var cacheKey = 'squad_sofa_'+(sofaId||'af_'+nom);
     var cacheDuration = 24*60*60*1000;
     var squad, statsMap = {};
+
+    // Sync stats depuis GitHub au premier chargement du jour
+    if(localStorage.getItem('gones45_github_token') && !localStorage.getItem('github_synced_today')) {
+      try {
+        await syncStatsFromGithub();
+        localStorage.setItem('github_synced_today', Date.now());
+        setTimeout(function(){ localStorage.removeItem('github_synced_today'); }, 6*60*60*1000);
+      } catch(e) { console.warn('GitHub sync error:', e); }
+    }
+
     var usingSofa = false;
 
     // Vérifier cache
@@ -7011,7 +7117,8 @@ async function loadFdSquad(el, nom, teamId) {
         var rCol=p._rating?(parseFloat(p._rating)>=7?'#1ed760':parseFloat(p._rating)>=6?'#f0b020':'#ef9a9a'):'var(--t3)';
         var val=p.marketValue>=1000000?(p.marketValue/1000000).toFixed(0)+'M':'—';
         var sofaUrl=p.sofaId?'https://www.sofascore.com/player/'+p.sofaId:'https://www.google.com/search?q='+encodeURIComponent(p.name+' '+nom+' Sofascore');
-        var sofaUrl = p.sofaId ? 'https://www.sofascore.com/player/'+p.name.toLowerCase().replace(/ /g,'-')+'/'+p.sofaId : 'https://www.google.com/search?q='+encodeURIComponent(p.name+' '+nom+' Sofascore');
+        var pSlug = p.name ? p.name.toLowerCase().split(' ').join('-') : 'player';
+        var sofaUrl = p.sofaId ? 'https://www.sofascore.com/player/'+pSlug+'/'+p.sofaId : 'https://www.google.com/search?q='+encodeURIComponent(p.name+' '+nom+' Sofascore');
         var manualKey = 'manual_stats_'+afId+'_'+p.id;
         var ms = {}; try { ms = JSON.parse(localStorage.getItem(manualKey)||'{}'); } catch(e){}
         var hasManual = ms.league_goals!==undefined||ms.euro_goals!==undefined;
@@ -7021,7 +7128,7 @@ async function loadFdSquad(el, nom, teamId) {
         var ea = ms.euro_assists||0;
         var lmj = ms.league_apps!==undefined?ms.league_apps:(p._apps||0);
         var emj = ms.euro_apps||0;
-        var fmtS = function(v,col){ return '<td style="text-align:center;font-size:12px;font-weight:700;padding:6px 2px;color:'+(v>0?col:'rgba(255,255,255,.2)')+'">'+(v>0?v:'—')+'</td>'; };
+        var fmtS = function(v,col){ return '<td style="text-align:center;font-size:12px;font-weight:700;padding:6px 2px;color:'+(v>0?col:'rgba(255,255,255,.2)')+'">'+v+'</td>'; };
         html += '<tr data-bench-pid="'+p.id+'" style="background:'+rowBg+';border-left:3px solid '+pc+'55;cursor:pointer;">';
         html += '<td style="padding:6px 4px;text-align:center;">';
         html += '<span class="xi-badge" style="font-size:7px;background:'+pc+'33;color:'+pc+';border-radius:3px;padding:1px 3px;font-weight:800;'+(inXi?'':'visibility:hidden;')+'">XI</span>';
@@ -7029,11 +7136,11 @@ async function loadFdSquad(el, nom, teamId) {
         html += '<td style="padding:6px 4px;overflow:hidden;">';
         html += '<a href="'+sofaUrl+'" target="_blank" onclick="event.stopPropagation()" style="font-size:12px;font-weight:700;color:var(--t1);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-decoration:none;display:block;">'+p.name+'</a>';
         html += '</td>';
-        html += '<td style="text-align:center;font-size:11px;color:var(--t2);padding:6px 2px;">'+(lmj>0?lmj:'—')+'</td>';
+        html += '<td style="text-align:center;font-size:11px;color:var(--t2);padding:6px 2px;">'+(lmj||0)+'</td>';
         html += fmtS(lg,'#1ed760');
         html += fmtS(la,'#4d84ff');
         html += '<td style="text-align:center;font-size:9px;color:rgba(255,255,255,.15);padding:6px 0;">|</td>';
-        html += '<td style="text-align:center;font-size:11px;color:var(--t2);padding:6px 2px;">'+(emj>0?emj:'—')+'</td>';
+        html += '<td style="text-align:center;font-size:11px;color:var(--t2);padding:6px 2px;">'+(emj||0)+'</td>';
         html += fmtS(eg,'#f0b020');
         html += fmtS(ea,'#f59e0b');
         html += '<td style="text-align:center;font-size:11px;color:var(--t2);padding:6px 2px;">'+p._age+'</td>';
@@ -10284,7 +10391,7 @@ window.onload=function(){if(!state.bkColors)state.bkColors={};loadCustomLinks();
   var saved=localStorage.getItem('g45_dbx');
   /* token chargé via getValidToken() */
   var inp=$i('dbx-key-input');var saved=localStorage.getItem('gones45_dbx_token');if(inp)inp.value=saved?'(token enregistré)':'';
-  var gk=localStorage.getItem('gones45_gemini_key');var gki=$i('gemini-key-input');if(gki&&gk)gki.value=gk;var fdk=localStorage.getItem('gones45_fdorg_key');var fdki=$i('fdorg-key-input');if(fdki&&fdk)fdki.value='(clé enregistrée)';var afk=localStorage.getItem('gones45_apifootball_key');var afki=$i('apifootball-key-input');if(afki&&afk)afki.value='(clé enregistrée)';var rapk=localStorage.getItem('gones45_rapidapi_key');var rapki=$i('rapidapi-key-input');if(rapki&&rapk)rapki.value='(clé enregistrée)';
+  var gk=localStorage.getItem('gones45_gemini_key');var gki=$i('gemini-key-input');if(gki&&gk)gki.value=gk;var fdk=localStorage.getItem('gones45_fdorg_key');var fdki=$i('fdorg-key-input');if(fdki&&fdk)fdki.value='(clé enregistrée)';var afk=localStorage.getItem('gones45_apifootball_key');var afki=$i('apifootball-key-input');if(afki&&afk)afki.value='(clé enregistrée)';var rapk=localStorage.getItem('gones45_rapidapi_key');var rapki=$i('rapidapi-key-input');if(rapki&&rapk)rapki.value='(clé enregistrée)';var ghk=localStorage.getItem('gones45_github_token');var ghki=$i('github-token-input');if(ghki&&ghk)ghki.value='(token enregistré)';
 
 // ── APPARENCE — halo cartes ──
 var _apStyle = 'halo';
