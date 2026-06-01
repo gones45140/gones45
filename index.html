@@ -3893,22 +3893,35 @@ function importBetAnalytix() {
       // Trier par date croissante
       state.a.sort(function(a,b){ return new Date(a.date+' '+(a.heure||'00:00')) - new Date(b.date+' '+(b.heure||'00:00')); });
 
+      // Normaliser les noms de bookmakers
+      var bkNormMap = {
+        'piwi247':'Piwi247','piwi':'Piwi247',
+        'winamax':'Winamax','betclic':'Betclic','unibet':'Unibet',
+        'betsson':'Betsson','bet365':'Bet365','pinnacle':'Pinnacle',
+        'pmu':'PMU Antoine','betify':'Betify',
+        'parionssport':'ParionsSport','boursorama':'Boursorama Antoine'
+      };
+      state.a.forEach(function(h){
+        if(h.source==='bet-analytix'){
+          var norm = bkNormMap[h.b.toLowerCase()];
+          if(norm) h.b = norm;
+        }
+      });
+
       // Recalculer la BK si bankroll de départ fournie
       if(bkDepart > 0) {
-        // Trouver le bookmaker principal (celui avec le plus de paris)
-        var bkCount = {};
-        state.a.forEach(function(h){ if(h.source==='bet-analytix') bkCount[h.b]=(bkCount[h.b]||0)+1; });
-        var mainBk = Object.keys(bkCount).sort(function(a,b){return bkCount[b]-bkCount[a];})[0]||'Winamax';
-
-        // Calculer le profit total
+        // Calculer le profit total des paris importés
         var profitTotal = 0;
         state.a.forEach(function(h){
-          if(h.source==='bet-analytix') profitTotal += h.win ? (h.m*h.cote-h.m) : -h.m;
+          if(h.source==='bet-analytix'){
+            var gain = h.win ? (h.m * h.cote - h.m) : -h.m;
+            profitTotal += gain;
+          }
         });
 
-        // Mettre à jour la bankroll
+        // Mettre à jour la bankroll globale
+        state.bk = parseFloat((bkDepart + profitTotal).toFixed(2));
         if(!state.b) state.b = {};
-        state.b[mainBk] = parseFloat((bkDepart + profitTotal).toFixed(2));
       }
 
       save();
