@@ -2682,9 +2682,9 @@ function renderBilanTab(){
 /* ── RENDER PRINCIPAL ── */
 function render(){
   var total=Object.values(state.b).reduce(function(a,v){return a+parseFloat(v||0);},0);
-  // Bénéfice = total BK - BK initiale, OU profit calculé depuis les paris si BK initiale = 0
-  var ben;
-  if((state.start_bk||0) === 0 && state.a && state.a.length > 0) {
+  // Bénéfice = toujours calculé depuis les paris de l'archive
+  var ben = 0;
+  if(state.a && state.a.length > 0) {
     ben = state.a.reduce(function(acc,h){ return acc + (h.win ? (h.m*h.cote - h.m) : -h.m); }, 0);
   } else {
     ben = total - (state.start_bk||0);
@@ -3852,7 +3852,16 @@ function importBetAnalytix() {
         // Convertir W/L en win
         var win = state2==='W'||state2==='V'||state2==='WIN'||state2==='GAGNE';
         var isLoss = state2==='L'||state2==='PERDU'||state2==='LOSE';
-        if(!win && !isLoss) { skipped++; return; } // En cours = skip
+        var isCash = state2==='CASH'||state2==='CASHOUT';
+        if(!win && !isLoss && !isCash) { skipped++; return; } // En cours = skip
+
+        // Cashout : calculer le gain réel depuis la colonne Cashout
+        var idxCashout = headers.indexOf('Cashout');
+        var cashoutVal = isCash && idxCashout>=0 ? parseFloat(cols[idxCashout])||0 : 0;
+        // Si cashout, le profit = cashoutVal - stake
+        if(isCash && cashoutVal > 0) {
+          win = cashoutVal >= stake; // win si cashout >= mise
+        }
 
         // Convertir sport
         var sportIco = '⚽';
@@ -3873,11 +3882,20 @@ function importBetAnalytix() {
         // Enlever le score si présent
         var targetClean = target.replace(/\d+\s*[-–]\s*\d+/g,'').replace(/\s+/g,' ').trim();
 
+        // Pour cashout, ajuster la cote pour que le profit soit correct
+        // profit = win ? (m*cote - m) : -m
+        // Si cashout : profit = cashoutVal - stake → cote = cashoutVal/stake
+        var effectiveCote = odds;
+        if(isCash && cashoutVal > 0) {
+          effectiveCote = cashoutVal / stake;
+          win = true; // toujours win pour calculer le profit cashout
+        }
+
         var pari = {
           id: 'ba_'+Date.now()+'_'+Math.random().toString(36).substr(2,5),
           n: cat || label,
           target: targetClean || label,
-          cote: odds,
+          cote: effectiveCote,
           m: stake,
           win: win,
           sport: sportIco,
@@ -3888,6 +3906,7 @@ function importBetAnalytix() {
           heure: timeOnly,
           isFlash: false,
           isFreebet: isFB,
+          isCashout: isCash,
           notes: comment,
           source: 'bet-analytix'
         };
