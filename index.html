@@ -3893,19 +3893,22 @@ function importBetAnalytix() {
       // Trier par date croissante
       state.a.sort(function(a,b){ return new Date(a.date+' '+(a.heure||'00:00')) - new Date(b.date+' '+(b.heure||'00:00')); });
 
-      // Normaliser les noms de bookmakers
-      var bkNormMap = {
-        'piwi247':'Piwi247','piwi':'Piwi247',
-        'winamax':'Winamax','betclic':'Betclic','unibet':'Unibet',
-        'betsson':'Betsson','bet365':'Bet365','pinnacle':'Pinnacle',
-        'pmu':'PMU Antoine','betify':'Betify',
-        'parionssport':'ParionsSport','boursorama':'Boursorama Antoine'
-      };
+      // Normaliser les noms de bookmakers par correspondance partielle avec state.b
+      var existingBks = Object.keys(state.b||{});
+      function normalizeBk(name) {
+        if(!name) return name;
+        var nl = name.toLowerCase().trim();
+        // Correspondance exacte d'abord
+        if(existingBks.indexOf(nl)>=0) return nl;
+        // Correspondance partielle
+        var match = existingBks.find(function(k){
+          return nl.indexOf(k)>=0 || k.indexOf(nl)>=0 ||
+                 nl.replace(/[0-9]/g,'').trim() === k.replace(/[0-9]/g,'').trim();
+        });
+        return match || nl;
+      }
       state.a.forEach(function(h){
-        if(h.source==='bet-analytix'){
-          var norm = bkNormMap[h.b.toLowerCase()];
-          if(norm) h.b = norm;
-        }
+        if(h.source==='bet-analytix') h.b = normalizeBk(h.b);
       });
 
       // Recalculer la BK si bankroll de départ fournie
