@@ -2728,7 +2728,7 @@ function render(){
   $i('dash-units').innerHTML=state.u.length?state.u.map(function(u){
       var paris=state.a.filter(function(h){return h.n===u.n;});
       var profit=paris.reduce(function(a,h){return a+(h.win?(h.m*h.cote)-h.m:-h.m);},0);
-      var wins=paris.filter(function(h){return h.win;}).length;
+      var wins=paris.filter(function(h){return h.win&&!h.isCashout;}).length;
       var pc=paris.length?Math.round(wins/paris.length*100):0;
       var logo=logoHtml(u.n,u.color,u.abbr,32);
       var forme=formeHtml(paris,5);
@@ -3257,7 +3257,7 @@ function renderGlobalChart(){
     glabels.push(lbl+'||'+(gain>=0?'+':'')+gain.toFixed(2)+'€');
   });
   var tot=cum-startBk;
-  var wins=state.a.filter(function(h){return h.win;}).length,n=state.a.length;
+  var wins=state.a.filter(function(h){return h.win&&!h.isCashout;}).length,n=state.a.filter(function(h){return !h.isCashout;}).length;
   var wr=n?(wins/n*100).toFixed(1):0;
   var mise=state.a.reduce(function(a,h){return a+parseFloat(h.m);},0);
   var roi=mise?(tot/mise*100).toFixed(2):0;
@@ -3308,7 +3308,7 @@ function renderEquipes(){
     var p=gp(u);
     var paris=state.a.filter(function(h){return h.n===u.n;});
     var profit=paris.reduce(function(a,h){return a+(h.win?(h.m*h.cote)-h.m:-h.m);},0);
-    var wins=paris.filter(function(h){return h.win;}).length;
+    var wins=paris.filter(function(h){return h.win&&!h.isCashout;}).length;
     var losses=paris.filter(function(h){return !h.win;}).length;
     var wr=paris.length?(wins/paris.length*100).toFixed(0):0;
     var cote=paris.length?(paris.reduce(function(a,h){return a+h.cote;},0)/paris.length).toFixed(2):'—';
@@ -3360,7 +3360,7 @@ function openClub(nom,idx){
   var p=gp(u||{color:PCOLS[0]});
   var paris=state.a.filter(function(h){return h.n===nom;});
   var profit=paris.reduce(function(a,h){return a+(h.win?(h.m*h.cote)-h.m:-h.m);},0);
-  var wins=paris.filter(function(h){return h.win;}).length;
+  var wins=paris.filter(function(h){return h.win&&!h.isCashout;}).length;
   var losses=paris.filter(function(h){return !h.win;}).length;
   var wr=paris.length?(wins/paris.length*100).toFixed(0):0;
   var cote=paris.length?(paris.reduce(function(a,h){return a+h.cote;},0)/paris.length).toFixed(2):'—';
@@ -9260,7 +9260,7 @@ function partagerProfil() {
   var url = window.location.origin + window.location.pathname + '#profil=' + b64;
 
   // Stats rapides
-  var wins = archive.filter(function(h){return h.win;}).length;
+  var wins = archive.filter(function(h){return h.win&&!h.isCashout;}).length;
   var pct = archive.length ? Math.round(wins/archive.length*100) : 0;
   var profit = archive.reduce(function(a,h){return a+(h.profit||0);},0);
 
@@ -9326,7 +9326,7 @@ function afficherProfilInvite(data) {
   }
 
   var archive = data.a || [];
-  var wins = archive.filter(function(h){return h.win;}).length;
+  var wins = archive.filter(function(h){return h.win&&!h.isCashout;}).length;
   var pct = archive.length ? Math.round(wins/archive.length*100) : 0;
   var profit = archive.reduce(function(a,h){return a+(h.profit||0);},0);
   var capital = data.capital || 0;
@@ -10310,7 +10310,7 @@ async function loadTeamAI(nom) {
 
   // Stats perso
   var paris = state.a.filter(function(h){ return h.n === nom; });
-  var wins = paris.filter(function(h){ return h.win; }).length;
+  var wins = paris.filter(function(h){ return h.win&&!h.isCashout; }).length;
   var wr = paris.length ? (wins/paris.length*100).toFixed(0) : 0;
   var profit = paris.reduce(function(a,h){ return a+(h.win?(h.m*h.cote)-h.m:-h.m); }, 0);
   var cote = paris.length ? (paris.reduce(function(a,h){ return a+h.cote; },0)/paris.length).toFixed(2) : '—';
