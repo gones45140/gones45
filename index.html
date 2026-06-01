@@ -2682,7 +2682,13 @@ function renderBilanTab(){
 /* ── RENDER PRINCIPAL ── */
 function render(){
   var total=Object.values(state.b).reduce(function(a,v){return a+parseFloat(v||0);},0);
-  var ben=total-(state.start_bk||0);
+  // Bénéfice = total BK - BK initiale, OU profit calculé depuis les paris si BK initiale = 0
+  var ben;
+  if((state.start_bk||0) === 0 && state.a && state.a.length > 0) {
+    ben = state.a.reduce(function(acc,h){ return acc + (h.win ? (h.m*h.cote - h.m) : -h.m); }, 0);
+  } else {
+    ben = total - (state.start_bk||0);
+  }
   var benC=ben>=0?'var(--g)':'var(--r)';
   txt('top-val',total.toFixed(2)+' €');
   txt('d-cap',total.toFixed(2)+' €');
