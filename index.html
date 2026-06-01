@@ -6675,7 +6675,7 @@ function fdEditStats(btn) {
   var overlay = document.createElement('div');
   overlay.id = 'fd-edit-overlay';
   overlay.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.6);z-index:9998;';
-  overlay.onclick = function(){ overlay.remove(); };
+  // overlay.onclick désactivé - fermer uniquement via bouton
   document.body.appendChild(overlay);
 
   var popup = document.createElement('div');
@@ -6991,7 +6991,7 @@ async function loadFdSquad(el, nom, teamId) {
       html += '<div style="font-size:9px;color:var(--t3);">'+pp.length+'</div></div>';
       var tc = 'font-size:8px;color:var(--t3);font-weight:700;text-align:center;padding:3px 4px;white-space:nowrap;';
       html += '<table style="width:100%;border-collapse:collapse;table-layout:fixed;">';
-      html += '<colgroup><col style="width:22px"><col><col style="width:26px"><col style="width:26px"><col style="width:26px"><col style="width:8px"><col style="width:26px"><col style="width:26px"><col style="width:26px"><col style="width:28px"><col style="width:28px"></colgroup>';
+      html += '<colgroup><col style="width:20px"><col style="min-width:80px"><col style="width:22px"><col style="width:22px"><col style="width:22px"><col style="width:6px"><col style="width:22px"><col style="width:22px"><col style="width:22px"><col style="width:24px"><col style="width:26px"></colgroup>';
       html += '<thead><tr>';
       html += '<th style="'+tc+'"></th>';
       html += '<th style="'+tc+'text-align:left;">Joueur</th>';
@@ -7011,15 +7011,7 @@ async function loadFdSquad(el, nom, teamId) {
         var rCol=p._rating?(parseFloat(p._rating)>=7?'#1ed760':parseFloat(p._rating)>=6?'#f0b020':'#ef9a9a'):'var(--t3)';
         var val=p.marketValue>=1000000?(p.marketValue/1000000).toFixed(0)+'M':'—';
         var sofaUrl=p.sofaId?'https://www.sofascore.com/player/'+p.sofaId:'https://www.google.com/search?q='+encodeURIComponent(p.name+' '+nom+' Sofascore');
-        // Charger stats manuelles depuis localStorage
-        var manualKey = 'manual_stats_'+afId+'_'+p.id;
-        var manualStats = {};
-        try { manualStats = JSON.parse(localStorage.getItem(manualKey)||'{}'); } catch(e){}
-        if(manualStats.goals!==undefined) p._goals = manualStats.goals;
-        if(manualStats.assists!==undefined) p._assists = manualStats.assists;
-
         var sofaUrl = p.sofaId ? 'https://www.sofascore.com/player/'+p.name.toLowerCase().replace(/ /g,'-')+'/'+p.sofaId : 'https://www.google.com/search?q='+encodeURIComponent(p.name+' '+nom+' Sofascore');
-        // Stats manuelles prioritaires sur API-Football
         var manualKey = 'manual_stats_'+afId+'_'+p.id;
         var ms = {}; try { ms = JSON.parse(localStorage.getItem(manualKey)||'{}'); } catch(e){}
         var hasManual = ms.league_goals!==undefined||ms.euro_goals!==undefined;
@@ -7029,7 +7021,6 @@ async function loadFdSquad(el, nom, teamId) {
         var ea = ms.euro_assists||0;
         var lmj = ms.league_apps!==undefined?ms.league_apps:(p._apps||0);
         var emj = ms.euro_apps||0;
-
         var fmtS = function(v,col){ return '<td style="text-align:center;font-size:12px;font-weight:700;padding:6px 2px;color:'+(v>0?col:'rgba(255,255,255,.2)')+'">'+(v>0?v:'—')+'</td>'; };
         html += '<tr data-bench-pid="'+p.id+'" style="background:'+rowBg+';border-left:3px solid '+pc+'55;cursor:pointer;">';
         html += '<td style="padding:6px 4px;text-align:center;">';
