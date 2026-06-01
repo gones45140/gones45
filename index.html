@@ -5778,8 +5778,7 @@ async function githubGetStats() {
     });
     if(r.status===404) return {data:{}, sha:null};
     var d = await r.json();
-    var data = JSON.parse(atob(d.content.replace(/
-/g,'')));
+    var data = JSON.parse(atob(d.content.split('\n').join('')));
     return {data:data, sha:d.sha};
   } catch(e) { console.warn('GitHub read error:', e); return null; }
 }
