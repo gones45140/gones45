@@ -521,7 +521,22 @@ input[type="date"],input[type="time"]{color-scheme:dark;}
         <div class="fg"><label class="fl">Date</label><input type="date" id="combi-date" class="fi"></div>
         <div class="fg"><label class="fl">Heure</label><input type="time" id="combi-heure" class="fi"></div>
       </div>
-      <div class="fg" style="margin-bottom:12px;"><label class="fl">📝 Notes</label><textarea id="combi-notes" class="fi" style="height:44px;resize:none;" placeholder="Analyse…"></textarea></div>
+      <div class="fg" style="margin-bottom:9px;"><label class="fl">📝 Notes</label><textarea id="combi-notes" class="fi" style="height:44px;resize:none;" placeholder="Analyse…"></textarea></div>
+      <div class="fg" style="margin-bottom:9px;">
+        <label class="fl">🏠 Lieu</label>
+        <div style="display:flex;gap:8px;margin-top:6px;">
+          <button id="combi-dom-btn" type="button" onclick="setCombiLieu('dom')" style="flex:1;padding:9px;border-radius:var(--r6);border:2px solid rgba(30,215,96,.4);background:rgba(30,215,96,.1);color:#1ed760;font-size:12px;font-weight:700;cursor:pointer;">🏠 Dom</button>
+          <button id="combi-ext-btn" type="button" onclick="setCombiLieu('ext')" style="flex:1;padding:9px;border-radius:var(--r6);border:2px solid var(--b2);background:var(--bg3);color:var(--t2);font-size:12px;font-weight:700;cursor:pointer;">🚌 Ext</button>
+          <button id="combi-neu-btn" type="button" onclick="setCombiLieu('')" style="flex:1;padding:9px;border-radius:var(--r6);border:2px solid var(--b2);background:var(--bg3);color:var(--t2);font-size:12px;font-weight:700;cursor:pointer;">➖ N/A</button>
+        </div>
+        <input type="hidden" id="combi-lieu" value="dom">
+      </div>
+      <div class="fg" style="margin-bottom:9px;">
+        <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:12px;color:var(--t2);">
+          <input type="checkbox" id="combi-freebet" style="width:16px;height:16px;accent-color:var(--a);">
+          <span>🎁 Freebet</span>
+        </label>
+      </div>
       <div style="display:flex;gap:8px;">
         <button class="btn btn-p" style="flex:1;" onclick="saveCombi(true)">✅ Gagné</button>
         <button class="btn" style="flex:1;background:rgba(255,69,69,.15);border-color:rgba(255,69,69,.4);color:#ff4545;" onclick="saveCombi(false)">❌ Perdu</button>
@@ -3824,21 +3839,31 @@ function addCombiRow() {
 function renderCombiRows() {
   var el = document.getElementById('combi-rows');
   if(!el) return;
-  if(!combiRows.length) {
-    el.innerHTML = '';
-    updateCombiCote();
-    return;
-  }
+  if(!combiRows.length) { el.innerHTML=''; updateCombiCote(); return; }
+  var sports = ['⚽ Football','🏀 Basket','🎾 Tennis','🏈 NFL','🏒 Hockey','⚾ Baseball','🏉 Rugby','🏎 F1'];
   var html = '';
   combiRows.forEach(function(row, i) {
-    html += '<div style="background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.07);border-radius:8px;padding:10px;margin-bottom:8px;">';
-    html += '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">';
-    html += '<span style="font-size:11px;font-weight:700;color:var(--t2);">Sélection '+(i+1)+'</span>';
+    html += '<div style="background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.07);border-radius:10px;padding:12px;margin-bottom:10px;">';
+    html += '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">';
+    html += '<span style="font-size:12px;font-weight:800;color:var(--a);">Sélection '+(i+1)+'</span>';
     html += '<button onclick="removeCombiRow('+row.id+')" style="background:none;border:none;color:var(--t3);font-size:16px;cursor:pointer;">✕</button>';
     html += '</div>';
-    html += '<div style="display:grid;grid-template-columns:1fr 80px;gap:8px;">';
-    html += '<input class="fi" placeholder="Match ou sélection (ex: PSG gagne)" value="'+row.label+'" oninput="combiRows['+i+'].label=this.value" style="font-size:12px;">';
-    html += '<input class="fi" type="number" value="'+row.cote+'" min="1.01" step="0.01" oninput="combiRows['+i+'].cote=parseFloat(this.value)||1;updateCombiCote()" style="font-size:13px;font-weight:700;text-align:center;">';
+    // Sport + Compet
+    html += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px;">';
+    html += '<select class="fi" style="font-size:11px;" onchange="combiRows['+i+'].sport=this.value">';
+    sports.forEach(function(s){ var v=s.split(' ')[0]; html += '<option value="'+v+'"'+(row.sport===v?' selected':'')+'>'+s+'</option>'; });
+    html += '</select>';
+    html += '<input class="fi" placeholder="Compétition" value="'+(row.comp||'')+'" oninput="combiRows['+i+'].comp=this.value" style="font-size:11px;">';
+    html += '</div>';
+    // Equipe + Adversaire
+    html += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px;">';
+    html += '<input class="fi" placeholder="Équipe / Joueur" value="'+(row.team||'')+'" oninput="combiRows['+i+'].team=this.value" style="font-size:11px;">';
+    html += '<input class="fi" placeholder="Adversaire" value="'+(row.adv||'')+'" oninput="combiRows['+i+'].adv=this.value" style="font-size:11px;">';
+    html += '</div>';
+    // Type + Cote
+    html += '<div style="display:grid;grid-template-columns:1fr 80px;gap:8px;margin-bottom:8px;">';
+    html += '<input class="fi" placeholder="Type de pari (ex: Victoire, O2.5…)" value="'+(row.type||'')+'" oninput="combiRows['+i+'].type=this.value" style="font-size:11px;">';
+    html += '<input class="fi" type="number" value="'+row.cote+'" min="1.01" step="0.01" oninput="combiRows['+i+'].cote=parseFloat(this.value)||1;updateCombiCote()" style="font-size:14px;font-weight:800;text-align:center;color:#f0b020;">';
     html += '</div>';
     html += '</div>';
   });
@@ -3870,6 +3895,19 @@ function updateCombiCote() {
   }
 }
 
+function setCombiLieu(lieu) {
+  var el = document.getElementById('combi-lieu');
+  if(el) el.value = lieu;
+  ['dom','ext','neu'].forEach(function(l){
+    var btn = document.getElementById('combi-'+l+'-btn');
+    if(!btn) return;
+    var active = (l==='neu' && lieu==='') || l===lieu;
+    btn.style.border = active ? '2px solid rgba(30,215,96,.4)' : '2px solid var(--b2)';
+    btn.style.background = active ? 'rgba(30,215,96,.1)' : 'var(--bg3)';
+    btn.style.color = active ? '#1ed760' : 'var(--t2)';
+  });
+}
+
 function saveCombi(win) {
   if(!combiRows.length) { alert('Ajoute au moins une sélection'); return; }
   var coteTot = combiRows.reduce(function(acc,r){ return acc*(parseFloat(r.cote)||1); }, 1);
@@ -3878,28 +3916,32 @@ function saveCombi(win) {
   var date = document.getElementById('combi-date').value || new Date().toISOString().split('T')[0];
   var heure = document.getElementById('combi-heure').value || '';
   var notes = document.getElementById('combi-notes').value || '';
-  var label = combiRows.map(function(r){ return r.label||'Sél.'; }).join(' + ');
+  var label = combiRows.map(function(r){ return (r.team||r.type||'Sél.')+(r.adv?' vs '+r.adv:''); }).join(' + ');
+  var lieu = document.getElementById('combi-lieu') ? document.getElementById('combi-lieu').value : '';
+  var isFreebet = document.getElementById('combi-freebet') ? document.getElementById('combi-freebet').checked : false;
 
   if(!mise || !book) { alert('Mise et bookmaker requis'); return; }
 
   var pari = {
     id: Date.now().toString(),
     n: label,
-    target: label,
+    target: combiRows[0]?(combiRows[0].team||combiRows[0].adv||label):label,
     b: book,
     m: mise,
     cote: coteTot,
     win: win,
-    sport: '🎲',
+    sport: combiRows[0]?combiRows[0].sport:'🎲',
+    comp: combiRows[0]?combiRows[0].comp:'',
     type: 'Combiné ('+combiRows.length+' sél.)',
     isCombi: true,
-    combiRows: combiRows.map(function(r){ return {label:r.label, cote:r.cote}; }),
+    combiRows: combiRows.map(function(r){ return {team:r.team,adv:r.adv,type:r.type,cote:r.cote,sport:r.sport,comp:r.comp}; }),
     t: date,
     date: date,
     heure: heure,
     notes: notes,
+    domicile: lieu,
     isFlash: false,
-    isFreebet: false
+    isFreebet: isFreebet
   };
 
   state.a.unshift(pari);
