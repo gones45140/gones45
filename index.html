@@ -2982,6 +2982,7 @@ function toggleArchMonth(el){
   var next=el.nextElementSibling;if(!next)return;
   next.style.display=next.style.display==='none'?'block':'none';
 }
+var _archFilter = 'all';
 function renderArchive(){
   var pm={};
   state.a.forEach(function(h){
@@ -11168,7 +11169,6 @@ async function generatePariDuJour() {
 }
 
 // ── ARCHIVE — filtres ──
-var _archFilter = 'all';
 function setArchFilter(f, el) {
   _archFilter = f;
   document.querySelectorAll('#arch-f-all,#arch-f-w,#arch-f-l,#arch-f-p').forEach(function(b){b.classList.remove('on');});
