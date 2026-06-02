@@ -631,6 +631,7 @@ input[type="date"],input[type="time"]{color-scheme:dark;}
   <div class="kpi2" style="margin-bottom:10px;">
     <div class="kpibox" style="--ac:var(--g);"><div class="kpi-l">Victoires</div><div class="kpi-v" id="arch-wins" style="color:var(--g);">—</div></div>
     <div class="kpibox" style="--ac:var(--r);"><div class="kpi-l">Défaites</div><div class="kpi-v" id="arch-loss" style="color:var(--r);">—</div></div>
+    <div class="kpibox" style="--ac:#f0a020;"><div class="kpi-l">En cours</div><div class="kpi-v" id="arch-pending" style="color:#f0a020;">—</div></div>
   </div>
   <!-- Filtre sport -->
   <div class="sfrow" id="arch-sport-filter" style="margin-bottom:12px;"></div>
@@ -639,6 +640,7 @@ input[type="date"],input[type="time"]{color-scheme:dark;}
     <button class="sfbtn on" id="arch-f-all" onclick="setArchFilter('all',this)">Tous</button>
     <button class="sfbtn" id="arch-f-w" onclick="setArchFilter('w',this)" style="border-color:rgba(30,215,96,.3);color:var(--g);">✓ Gagnés</button>
     <button class="sfbtn" id="arch-f-l" onclick="setArchFilter('l',this)" style="border-color:rgba(255,69,69,.3);color:var(--r);">✗ Perdus</button>
+    <button class="sfbtn" id="arch-f-p" onclick="setArchFilter('p',this)" style="border-color:rgba(240,160,32,.3);color:#f0a020;">⏳ En cours</button>
   </div>
   <div id="arch-chart" class="cwrap"></div>
   <div class="sec" style="display:flex;align-items:center;justify-content:space-between;margin-top:0;">
@@ -666,6 +668,7 @@ input[type="date"],input[type="time"]{color-scheme:dark;}
     <button class="gtab on" id="btab-global" onclick="showBilanTab('global',this)" style="font-size:9px;">🌍 Global</button>
     <button class="gtab" id="btab-cockpit" onclick="showBilanTab('cockpit',this)" style="font-size:9px;">🚀 Cockpit</button>
     <button class="gtab" id="btab-simple" onclick="showBilanTab('simple',this)" style="font-size:9px;">🎯 Simple</button>
+    <button class="gtab" id="btab-combi" onclick="showBilanTab('combi',this)" style="font-size:9px;">🔗 Combiné</button>
     <button class="gtab" id="btab-flash" onclick="showBilanTab('flash',this)" style="font-size:9px;">⚡ Flash</button>
   </div>
   <!-- Filtre sport -->
@@ -2545,7 +2548,8 @@ function renderSportFilter(){
 function filteredA(){
   var base=state.a;
   if(bilanMode==='cockpit')base=base.filter(function(h){return h.isS;});
-  else if(bilanMode==='simple')base=base.filter(function(h){return !h.isS&&!h.isFlash;});
+  else if(bilanMode==='simple')base=base.filter(function(h){return !h.isS&&!h.isFlash&&!h.isCombi;});
+  else if(bilanMode==='combi')base=base.filter(function(h){return h.isCombi;});
   else if(bilanMode==='flash')base=base.filter(function(h){return h.isFlash;});
   var filtered = bilanSport==='ALL'?base:base.filter(function(h){return h.sport===bilanSport;});
   if(window._bilanBkFilter) filtered=filtered.filter(function(h){return h.b===window._bilanBkFilter;});
@@ -3041,7 +3045,13 @@ function renderArchive(){
     
     var daysHtml=Object.keys(md.days).sort().reverse().map(function(dk){
       var dayParis=md.days[dk];
-      var dayProfit=dayParis.reduce(function(a,h){return a+(h.win?(h.m*h.cote)-h.m:-h.m);},0);
+      // Appliquer le filtre résultat
+      var filteredDayParis = _archFilter==='w' ? dayParis.filter(function(h){return !h.isPending&&h.win;})
+        : _archFilter==='l' ? dayParis.filter(function(h){return !h.isPending&&!h.win;})
+        : _archFilter==='p' ? dayParis.filter(function(h){return h.isPending;})
+        : dayParis;
+      if(!filteredDayParis.length) return '';
+      var dayProfit=dayParis.reduce(function(a,h){return a+(h.isPending?0:(h.win?(h.m*h.cote)-h.m:-h.m));},0);
       var dpC=dayProfit>=0?'var(--g)':'var(--r)';
       /* Nom du jour */
       var dayLabel=dk;
@@ -3053,7 +3063,7 @@ function renderArchive(){
         }
       }catch(e){}
       
-      var betsHtml=dayParis.map(function(h){
+      var betsHtml=filteredDayParis.map(function(h){
         var b2=bki(h.b);
         var gain=h.isPending?0:(h.win?(h.m*h.cote-h.m):-h.m);
         var gainC=h.isPending?'#f0a020':(gain>=0?'var(--g)':'var(--r)');
@@ -3080,6 +3090,16 @@ function renderArchive(){
           +'<button data-aid="'+h.id+'" onclick="editArchived(this.dataset.aid)" style="background:none;border:none;color:var(--t3);font-size:14px;cursor:pointer;padding:0;">✏️</button>'
           +'<button data-aid="'+h.id+'" onclick="deleteArchived(this.dataset.aid)" style="background:none;border:none;color:var(--r);font-size:14px;cursor:pointer;padding:0;">🗑</button>'
           +'</div>'
+          +(h.sousParis && h.sousParis.length ? '<div style="margin:4px 10px 6px 42px;border-left:2px solid rgba(255,255,255,.08);padding-left:8px;">'
+            +h.sousParis.map(function(sp){
+              var spC=sp.isPending?'#f0a020':(sp.win?'var(--g)':'var(--r)');
+              var spIco=sp.isPending?'⏳':(sp.win?'✅':'❌');
+              return '<div style="display:flex;align-items:center;justify-content:space-between;padding:2px 0;font-size:10px;color:var(--t2);">'
+                +'<span>'+spIco+' '+sp.label+'</span>'
+                +'<span style="color:'+spC+';font-weight:700;">@'+parseFloat(sp.cote).toFixed(2)+'</span>'
+                +'</div>';
+            }).join('')
+            +'</div>' : '')
           +'</div>';
       }).join('');
       
@@ -4028,11 +4048,29 @@ function importBetAnalytix() {
       var imported = 0, skipped = 0;
       if(!state.a) state.a = [];
 
+      var lastCombined = null; // garde le dernier pari Combined pour y attacher les sous-paris
       lines.slice(1).forEach(function(line) {
         var cols = parseCSVLine(line);
         if(cols.length < 5) { skipped++; return; }
 
         var dateStr = cols[idxDate]||'';
+        var betType = cols[idxType]||'';
+        var label   = cols[idxLabel]||'';
+        var odds    = parseFloat(cols[idxOdds])||1;
+        var stake   = parseFloat(cols[idxStake])||0;
+
+        // Sous-pari d'un combiné : pas de date, pas de mise
+        if(!dateStr && !stake && label && lastCombined) {
+          var subState = cols[idxState]||'';
+          var subWin = subState==='W'||subState==='V'||subState==='WIN'||subState==='GAGNE';
+          var subLoss = subState==='L'||subState==='PERDU'||subState==='LOSE';
+          var subPend = subState==='P'||subState==='PENDING';
+          if(subWin || subLoss || subPend) {
+            if(!lastCombined.sousParis) lastCombined.sousParis = [];
+            lastCombined.sousParis.push({ label: label, cote: odds, win: subWin, isPending: subPend });
+          }
+          return;
+        }
         var label   = cols[idxLabel]||'';
         var odds    = parseFloat(cols[idxOdds])||1;
         var stake   = parseFloat(cols[idxStake])||0;
@@ -4107,12 +4145,19 @@ function importBetAnalytix() {
           isFreebet: isFB,
           isCashout: isCash,
           isPending: isPending,
+          isCombi: (betType==='Combined'||betType==='Combiné'||(label&&label.toLowerCase().indexOf('combin')>=0)),
           notes: comment,
           source: 'bet-analytix'
         };
 
         state.a.push(pari);
         imported++;
+        // Si c'est un combiné, le mémoriser pour attacher les sous-paris suivants
+        if(betType==='Combined'||betType==='Combiné'||(label&&label.toLowerCase().indexOf('combin')>=0)) {
+          lastCombined = pari;
+        } else {
+          lastCombined = null;
+        }
       });
 
       // Trier par date croissante
@@ -11126,17 +11171,20 @@ async function generatePariDuJour() {
 var _archFilter = 'all';
 function setArchFilter(f, el) {
   _archFilter = f;
-  document.querySelectorAll('#arch-f-all,#arch-f-w,#arch-f-l').forEach(function(b){b.classList.remove('on');});
+  document.querySelectorAll('#arch-f-all,#arch-f-w,#arch-f-l,#arch-f-p').forEach(function(b){b.classList.remove('on');});
   if(el) el.classList.add('on');
   buildArjelRows && renderArchive && renderArchive();
 }
 function renderArchive() {
-  var wins = state.a.filter(function(x){return x.r==='w';}).length;
-  var loss = state.a.filter(function(x){return x.r==='l';}).length;
+  var wins = state.a.filter(function(x){return !x.isPending && x.win;}).length;
+  var loss = state.a.filter(function(x){return !x.isPending && !x.win;}).length;
+  var pend = state.a.filter(function(x){return x.isPending;}).length;
   var wEl = document.getElementById('arch-wins');
   var lEl = document.getElementById('arch-loss');
+  var pEl = document.getElementById('arch-pending');
   if(wEl) wEl.textContent = wins;
   if(lEl) lEl.textContent = loss;
+  if(pEl) pEl.textContent = pend;
 }
 
 // ── BANK — total ──
