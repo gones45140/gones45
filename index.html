@@ -7159,7 +7159,7 @@ async function loadFdSquad(el, nom, teamId) {
         var sofaUrl=p.sofaId?'https://www.sofascore.com/player/'+p.sofaId:'https://www.google.com/search?q='+encodeURIComponent(p.name+' '+nom+' Sofascore');
         var pSlug = p.name ? p.name.toLowerCase().split(' ').join('-') : 'player';
         var sofaUrl = p.sofaId ? 'https://www.sofascore.com/player/'+pSlug+'/'+p.sofaId : 'https://www.google.com/search?q='+encodeURIComponent(p.name+' '+nom+' Sofascore');
-        var manualKey = 'manual_stats_'+afId+'_'+p.id;
+        var manualKey = 'manual_stats_'+(sofaId||afId||'0')+'_'+p.id;
         var ms = {}; try { ms = JSON.parse(localStorage.getItem(manualKey)||'{}'); } catch(e){}
         var hasManual = ms.league_goals!==undefined||ms.euro_goals!==undefined;
         var lg = ms.league_goals!==undefined ? ms.league_goals : (hasManual?0:(p._goals||0));
@@ -7184,7 +7184,7 @@ async function loadFdSquad(el, nom, teamId) {
         html += fmtS(eg,'#f0b020');
         html += fmtS(ea,'#f59e0b');
         html += '<td style="text-align:center;font-size:11px;color:var(--t2);padding:6px 2px;">'+p._age+'</td>';
-        html += '<td style="text-align:center;padding:6px 2px;"><button class="fd-edit-btn" data-pid="'+p.id+'" data-afid="'+afId+'" onclick="event.stopPropagation();fdEditStats(this)" style="background:rgba(255,255,255,.08);border:none;border-radius:4px;padding:2px 5px;font-size:10px;cursor:pointer;color:var(--t3);">✏️</button></td>';
+        html += '<td style="text-align:center;padding:6px 2px;"><button class="fd-edit-btn" data-pid="'+p.id+'" data-afid="'+(sofaId||afId||'0')+'" onclick="event.stopPropagation();fdEditStats(this)" style="background:rgba(255,255,255,.08);border:none;border-radius:4px;padding:2px 5px;font-size:10px;cursor:pointer;color:var(--t3);">✏️</button></td>';
         html += '</tr>';
       });
       html += '</tbody></table>';
