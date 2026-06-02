@@ -450,6 +450,7 @@ input[type="date"],input[type="time"]{color-scheme:dark;}
   <div class="tog">
     <button class="togb on" id="btn-cpit" onclick="swBet('strat')">🚀 Cockpit</button>
     <button class="togb" id="btn-simp" onclick="swBet('simple')">🎯 Simple</button>
+    <button class="togb" id="btn-comb" onclick="swBet('combi')">🎲 Combiné</button>
   </div>
   <div id="sub-strat">
     <div class="crash-wrap">
@@ -497,6 +498,37 @@ input[type="date"],input[type="time"]{color-scheme:dark;}
     </div>
     <div class="card"><table class="ltbl"><thead><tr><th>Équipe</th><th>Match</th><th>Cote</th><th>Mise</th><th style="text-align:right">Résultat</th></tr></thead><tbody id="live-strat"></tbody></table></div>
   </div>
+  <div id="sub-combi" style="display:none;">
+    <div class="fc">
+      <div style="font-size:11px;color:var(--t3);margin-bottom:10px;">Ajoute plusieurs matchs — la cote se multiplie automatiquement</div>
+      <div id="combi-rows"></div>
+      <button onclick="addCombiRow()" style="width:100%;padding:9px;border-radius:var(--r6);border:1px dashed rgba(77,132,255,.4);background:rgba(77,132,255,.06);color:#4d84ff;font-size:12px;font-weight:700;cursor:pointer;margin-bottom:12px;">+ Ajouter une sélection</button>
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 12px;background:rgba(255,255,255,.04);border-radius:var(--r6);margin-bottom:12px;">
+        <div>
+          <div style="font-size:10px;color:var(--t3);">Cote totale</div>
+          <div id="combi-cote-total" style="font-size:22px;font-weight:800;color:#f0b020;">—</div>
+        </div>
+        <div>
+          <div style="font-size:10px;color:var(--t3);">Gain potentiel</div>
+          <div id="combi-gain" style="font-size:16px;font-weight:700;color:#1ed760;">—</div>
+        </div>
+      </div>
+      <div class="g2" style="gap:9px;margin-bottom:9px;">
+        <div class="fg"><label class="fl" style="color:var(--g);">Mise (€)</label><input type="number" id="combi-mise" class="fi" value="10" oninput="updateCombiCote()"></div>
+        <div class="fg"><label class="fl">Bookmaker</label><select id="combi-book" class="fi"></select></div>
+      </div>
+      <div class="g2" style="gap:9px;margin-bottom:9px;">
+        <div class="fg"><label class="fl">Date</label><input type="date" id="combi-date" class="fi"></div>
+        <div class="fg"><label class="fl">Heure</label><input type="time" id="combi-heure" class="fi"></div>
+      </div>
+      <div class="fg" style="margin-bottom:12px;"><label class="fl">📝 Notes</label><textarea id="combi-notes" class="fi" style="height:44px;resize:none;" placeholder="Analyse…"></textarea></div>
+      <div style="display:flex;gap:8px;">
+        <button class="btn btn-p" style="flex:1;" onclick="saveCombi(true)">✅ Gagné</button>
+        <button class="btn" style="flex:1;background:rgba(255,69,69,.15);border-color:rgba(255,69,69,.4);color:#ff4545;" onclick="saveCombi(false)">❌ Perdu</button>
+      </div>
+    </div>
+  </div>
+
   <div id="sub-simple" style="display:none;">
     <div class="mm-wrap">
       <div class="mm-title">
@@ -3779,12 +3811,124 @@ function showTab(id,btn){
   /* Lazy-render tab-specific content */
   if(id==='t-bilan')setTimeout(function(){renderBilanTab();renderGlobalCharts();},50);
 }
+
+// ── COMBINÉ ──
+var combiRows = [];
+
+function addCombiRow() {
+  var id = Date.now();
+  combiRows.push({id:id, label:'', cote:1.50, sport:'⚽'});
+  renderCombiRows();
+}
+
+function renderCombiRows() {
+  var el = document.getElementById('combi-rows');
+  if(!el) return;
+  if(!combiRows.length) {
+    el.innerHTML = '';
+    updateCombiCote();
+    return;
+  }
+  var html = '';
+  combiRows.forEach(function(row, i) {
+    html += '<div style="background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.07);border-radius:8px;padding:10px;margin-bottom:8px;">';
+    html += '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">';
+    html += '<span style="font-size:11px;font-weight:700;color:var(--t2);">Sélection '+(i+1)+'</span>';
+    html += '<button onclick="removeCombiRow('+row.id+')" style="background:none;border:none;color:var(--t3);font-size:16px;cursor:pointer;">✕</button>';
+    html += '</div>';
+    html += '<div style="display:grid;grid-template-columns:1fr 80px;gap:8px;">';
+    html += '<input class="fi" placeholder="Match ou sélection (ex: PSG gagne)" value="'+row.label+'" oninput="combiRows['+i+'].label=this.value" style="font-size:12px;">';
+    html += '<input class="fi" type="number" value="'+row.cote+'" min="1.01" step="0.01" oninput="combiRows['+i+'].cote=parseFloat(this.value)||1;updateCombiCote()" style="font-size:13px;font-weight:700;text-align:center;">';
+    html += '</div>';
+    html += '</div>';
+  });
+  el.innerHTML = html;
+  updateCombiCote();
+}
+
+function removeCombiRow(id) {
+  combiRows = combiRows.filter(function(r){ return r.id !== id; });
+  renderCombiRows();
+}
+
+function updateCombiCote() {
+  var coteTot = combiRows.reduce(function(acc,r){ return acc*(parseFloat(r.cote)||1); }, 1);
+  var mise = parseFloat(document.getElementById('combi-mise')&&document.getElementById('combi-mise').value||0);
+  var gain = mise * coteTot;
+  var ctEl = document.getElementById('combi-cote-total');
+  var gEl = document.getElementById('combi-gain');
+  if(ctEl) ctEl.textContent = combiRows.length ? coteTot.toFixed(2) : '—';
+  if(gEl) gEl.textContent = (combiRows.length && mise) ? '+'+((gain-mise).toFixed(2))+'€' : '—';
+  // Fill bookmaker select
+  var bkEl = document.getElementById('combi-book');
+  if(bkEl && !bkEl.options.length) {
+    Object.keys(state.b||{}).forEach(function(k){
+      var opt = document.createElement('option');
+      opt.value = k; opt.textContent = k.charAt(0).toUpperCase()+k.slice(1);
+      bkEl.appendChild(opt);
+    });
+  }
+}
+
+function saveCombi(win) {
+  if(!combiRows.length) { alert('Ajoute au moins une sélection'); return; }
+  var coteTot = combiRows.reduce(function(acc,r){ return acc*(parseFloat(r.cote)||1); }, 1);
+  var mise = parseFloat(document.getElementById('combi-mise').value)||0;
+  var book = document.getElementById('combi-book').value;
+  var date = document.getElementById('combi-date').value || new Date().toISOString().split('T')[0];
+  var heure = document.getElementById('combi-heure').value || '';
+  var notes = document.getElementById('combi-notes').value || '';
+  var label = combiRows.map(function(r){ return r.label||'Sél.'; }).join(' + ');
+
+  if(!mise || !book) { alert('Mise et bookmaker requis'); return; }
+
+  var pari = {
+    id: Date.now().toString(),
+    n: label,
+    target: label,
+    b: book,
+    m: mise,
+    cote: coteTot,
+    win: win,
+    sport: '🎲',
+    type: 'Combiné ('+combiRows.length+' sél.)',
+    isCombi: true,
+    combiRows: combiRows.map(function(r){ return {label:r.label, cote:r.cote}; }),
+    t: date,
+    date: date,
+    heure: heure,
+    notes: notes,
+    isFlash: false,
+    isFreebet: false
+  };
+
+  state.a.unshift(pari);
+  save();
+
+  // Reset
+  combiRows = [];
+  renderCombiRows();
+  document.getElementById('combi-mise').value = '10';
+  document.getElementById('combi-notes').value = '';
+  document.getElementById('combi-cote-total').textContent = '—';
+  document.getElementById('combi-gain').textContent = '—';
+
+  // Feedback
+  var profit = win ? (mise*coteTot - mise) : -mise;
+  alert((win ? '✅ Gagné !' : '❌ Perdu') + '\n' + label + '\nCote: @'+coteTot.toFixed(2) + '\n' + (win ? '+' : '') + profit.toFixed(2)+'€');
+  render();
+}
+
 function swBet(mode){
   var isS=mode==='strat';
+  var isC=mode==='combi';
   var ss=$i('sub-strat');if(ss)ss.style.display=isS?'block':'none';
-  var sp=$i('sub-simple');if(sp)sp.style.display=isS?'none':'block';
+  var sp=$i('sub-simple');if(sp)sp.style.display=(!isS&&!isC)?'block':'none';
+  var sc=$i('sub-combi');if(sc)sc.style.display=isC?'block':'none';
   var bc=$i('btn-cpit');if(bc)bc.classList.toggle('on',isS);
-  var bs=$i('btn-simp');if(bs)bs.classList.toggle('on',!isS);
+  var bs=$i('btn-simp');if(bs)bs.classList.toggle('on',!isS&&!isC);
+  var bb=$i('btn-comb');if(bb)bb.classList.toggle('on',isC);
+  if(isC){ updateCombiCote(); }
 }
 function exportData(){var d='data:text/json;charset=utf-8,'+encodeURIComponent(JSON.stringify(state));var a=document.createElement('a');a.href=d;a.download='gones45_backup.json';a.click();}
 
