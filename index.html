@@ -3022,8 +3022,8 @@ function renderArchive(){
     var mKey=dk.substring(0,7)||'Inconnu';
     if(!byMonth[mKey])byMonth[mKey]={days:{},profit:0,n:0,wins:0};
     allByDate[dk].forEach(function(h){
-      var p=(h.win?(h.m*h.cote)-h.m:-h.m);
-      byMonth[mKey].profit+=p;byMonth[mKey].n++;if(h.win)byMonth[mKey].wins++;
+      var p=h.isPending?0:(h.win?(h.m*h.cote)-h.m:-h.m);
+      byMonth[mKey].profit+=p;byMonth[mKey].n++;if(!h.isPending&&h.win)byMonth[mKey].wins++;
       if(!byMonth[mKey].days[dk])byMonth[mKey].days[dk]=[];
       byMonth[mKey].days[dk].push(h);
     });
@@ -3055,13 +3055,14 @@ function renderArchive(){
       
       var betsHtml=dayParis.map(function(h){
         var b2=bki(h.b);
-        var gain=h.win?(h.m*h.cote-h.m):-h.m;
-        var gainC=gain>=0?'var(--g)':'var(--r)';
-        var winC=h.win?'var(--g)':'var(--r)';
+        var gain=h.isPending?0:(h.win?(h.m*h.cote-h.m):-h.m);
+        var gainC=h.isPending?'#f0a020':(gain>=0?'var(--g)':'var(--r)');
+        var winC=h.isPending?'#f0a020':(h.win?'var(--g)':'var(--r)');
+        var borderC=h.isPending?'#f0a020':(h.win?'var(--g)':'var(--r)');
         var bkBadge='<div style="width:22px;height:22px;border-radius:5px;background:'+b2.c+';color:#fff;font-size:9px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0;">'+b2.n.charAt(0).toUpperCase()+'</div>';
         var titre=(h.target&&h.target!=='-'?h.target:(h.n||'—'));
         var sous=(h.n&&h.target&&h.target!=='-'?h.n+' · ':'')+('@'+parseFloat(h.cote).toFixed(2))+(h.comp?' · '+h.comp:'');
-        return '<div style="display:flex;align-items:center;padding:8px 10px;background:var(--s1);border-radius:var(--r6);margin-bottom:4px;border-left:3px solid '+(h.win?'var(--g)':'var(--r)')+';gap:8px;">'
+        return '<div style="display:flex;align-items:center;padding:8px 10px;background:var(--s1);border-radius:var(--r6);margin-bottom:4px;border-left:3px solid '+borderC+';gap:8px;">'
           +'<div style="font-size:10px;color:var(--t3);min-width:32px;flex-shrink:0;text-align:center;">'+(h.heure||'—')+'</div>'
           +bkBadge
           +'<div style="flex:1;min-width:0;overflow:hidden;">'
@@ -3069,8 +3070,8 @@ function renderArchive(){
           +'<div style="font-size:10px;color:var(--t3);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">'+sous+'</div>'
           +'</div>'
           +'<div style="text-align:right;flex-shrink:0;">'
-          +'<div style="font-size:11px;font-weight:800;color:'+winC+';">'+(h.win?'✅':'❌')+'</div>'
-          +'<div style="font-size:11px;font-weight:700;color:'+gainC+';">'+(gain>=0?'+':'')+gain.toFixed(2)+'€</div>'
+          +'<div style="font-size:11px;font-weight:800;color:'+winC+';">'+(h.isPending?'⏳':(h.win?'✅':'❌'))+'</div>'
+          +'<div style="font-size:11px;font-weight:700;color:'+gainC+';">'+(h.isPending?'En cours':(gain>=0?'+':'')+gain.toFixed(2)+'€')+'</div>'
           +'<div style="font-size:10px;color:var(--t3);">'+parseFloat(h.m).toFixed(2)+'€</div>'
           +'</div>'
           +'<div style="display:flex;flex-direction:column;gap:3px;flex-shrink:0;">'
@@ -3696,6 +3697,17 @@ function deleteArchived(id){
 function editArchived(id){
   var idx=state.a.findIndex(function(x){return x.id===id;});if(idx===-1)return;
   var bet=state.a[idx];
+  if(bet.isPending){
+    // Pari en attente : choisir le résultat
+    var choix=confirm('Résultat du pari "'+((bet.target&&bet.target!=='-'?bet.target:bet.n)||'?')+'" ?\n\nOK = GAGNÉ ✅\nAnnuler = PERDU ❌');
+    bet.isPending=false;
+    bet.win=choix;
+    if(bet.b && state.b){
+      if(choix){state.b[bet.b]=(parseFloat(state.b[bet.b]||0)+(bet.m*bet.cote)-parseFloat(bet.m)).toFixed(2);}
+      else{state.b[bet.b]=(parseFloat(state.b[bet.b]||0)-parseFloat(bet.m)).toFixed(2);}
+    }
+    save();renderArchive();return;
+  }
   if(!confirm('Inverser le résultat ? (actuellement '+(bet.win?'WIN':'LOSS')+')'))return;
   if(bet.win){state.b[bet.b]=(parseFloat(state.b[bet.b]||0)-(bet.m*bet.cote)+parseFloat(bet.m)).toFixed(2);}
   else{state.b[bet.b]=(parseFloat(state.b[bet.b]||0)-parseFloat(bet.m)+(bet.m*bet.cote)).toFixed(2);}
@@ -4039,7 +4051,8 @@ function importBetAnalytix() {
         var win = state2==='W'||state2==='V'||state2==='WIN'||state2==='GAGNE';
         var isLoss = state2==='L'||state2==='PERDU'||state2==='LOSE';
         var isCash = state2==='CASH'||state2==='CASHOUT';
-        if(!win && !isLoss && !isCash) { skipped++; return; } // En cours = skip
+        var isPending = state2==='P'||state2==='EN COURS'||state2==='PENDING';
+        if(!win && !isLoss && !isCash && !isPending) { skipped++; return; } // Skip seulement si statut inconnu
 
         // Cashout : calculer le gain réel depuis la colonne Cashout
         var idxCashout = headers.indexOf('Cashout');
@@ -4093,6 +4106,7 @@ function importBetAnalytix() {
           isFlash: false,
           isFreebet: isFB,
           isCashout: isCash,
+          isPending: isPending,
           notes: comment,
           source: 'bet-analytix'
         };
