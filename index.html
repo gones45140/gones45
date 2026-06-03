@@ -2657,7 +2657,7 @@ function renderBilanTab(){
   renderSportFilter();
   var paris=filteredA();
   /* Stats */
-  var ben=paris.reduce(function(a,h){return a+(h.win?(h.m*h.cote)-h.m:-h.m);},0);
+  var ben=paris.reduce(function(a,h){return a+(h.isPending?0:(h.win?(h.m*h.cote)-h.m:-h.m));},0);
   var benEl=$i('stat-ben');if(benEl){benEl.innerText=fmt(ben);benEl.style.color=ben>=0?'var(--g)':'var(--r)';}
   var wr=paris.length?(paris.filter(function(h){return h.win;}).length/paris.length*100).toFixed(0):0;
   txt('stat-wr',wr+'%');
@@ -2877,10 +2877,10 @@ function getMoisData(paris, year){
     if(parseInt(y)!==year)return;
     var key=y+'-'+m;
     if(!mois[key])mois[key]={profit:0,n:0,wins:0};
-    var p=(h.win?(h.m*h.cote)-h.m:-h.m);
+    var p=h.isPending?0:(h.win?(h.m*h.cote)-h.m:-h.m);
     mois[key].profit+=p;
     mois[key].n++;
-    if(h.win)mois[key].wins++;
+    if(!h.isPending&&h.win)mois[key].wins++;
   });
   return mois;
 }
@@ -2950,10 +2950,10 @@ function getMoisDataAll(paris){
     if(!y||!m)return;
     var key=y+'-'+m;
     if(!mois[key])mois[key]={profit:0,n:0,wins:0};
-    var p=(h.win?(h.m*h.cote)-h.m:-h.m);
+    var p=h.isPending?0:(h.win?(h.m*h.cote)-h.m:-h.m);
     mois[key].profit+=p;
     mois[key].n++;
-    if(h.win)mois[key].wins++;
+    if(!h.isPending&&h.win)mois[key].wins++;
   });
   return mois;
 }
