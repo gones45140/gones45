@@ -5324,12 +5324,14 @@ function loadTeamLive(){
     return;
   }
 
-  // Squad déplacé dans l'onglet Compo
+  // Squad dans Live uniquement pour le terrain (noTerrain=false), tableau dans Compo
   var fdKeyCheck = getFdorgKey();
   var fdTeamId = TEAM_IDS[nom]||null;
   if(!fdTeamId){ for(var k in TEAM_IDS){ if(nom.toLowerCase().indexOf(k.toLowerCase())>=0||k.toLowerCase().indexOf(nom.toLowerCase())>=0){fdTeamId=TEAM_IDS[k];break;} } }
   if(fdKeyCheck && fdTeamId) {
-    el.innerHTML = '<div id="live-apisports-section2"></div>';
+    el.innerHTML = '<div id="live-apisports-section2"></div><div id="live-fd-section" style="margin-top:10px;"></div>';
+    var fdSquadEl = document.getElementById('live-fd-section');
+    if(fdSquadEl) loadFdSquad(fdSquadEl, nom, fdTeamId, false, true);
     var apiSportsKey2b = getApiSportsKey();
     if(apiSportsKey2b){
       var liveTarget2 = document.getElementById('live-apisports-section2');
@@ -7310,6 +7312,12 @@ async function runFbrefGroq(uid, nom, b64, groqKey, mode, comp) {
   mode = mode || 'replace';
   comp = comp || 'league';
   var prefix = comp === 'euro' ? 'euro' : 'league';
+
+  // Récupérer la journée sélectionnée dans le sélecteur admin
+  var journeeEl = document.getElementById('fbref-journee-'+uid);
+  var journee = journeeEl ? journeeEl.value : 'global';
+  // Si journée spécifique, on préfixe les clés
+  var savePrefix = (journee && journee !== 'global') ? prefix+'_'+journee : prefix;
   var zone = document.getElementById('fbref-paste-zone-'+uid);
   var btn = document.getElementById('btn-fbref-import-'+uid);
   if(zone) zone.innerHTML = '<span style="font-size:11px;color:var(--t3);">⏳ Lecture en cours...</span>';
@@ -7326,7 +7334,7 @@ async function runFbrefGroq(uid, nom, b64, groqKey, mode, comp) {
           role: 'user',
           content: [
             { type: 'image_url', image_url: { url: 'data:image/jpeg;base64,'+b64 } },
-            { type: 'text', text: 'Tu es un extracteur de données de statistiques football. Analyse ce tableau de stats (peut être FBref, Sofascore, ou autre) et retourne UNIQUEMENT un JSON valide (pas de texte autour, pas de markdown) avec ce format:\n{"players":[{"name":"Nom Joueur","apps":0,"starts":0,"goals":0,"assists":0,"minutes":0,"xg":0,"xa":0,"shots":0,"shots_on_target":0,"yellow":0,"red":0}]}\n\nCorrespondances de colonnes à reconnaître :\n- apps/matchs joués : "Député", "MJ", "MP", "Apps", "Matches"\n- starts/titularisations : "Débuts", "Starts", "Tit"\n- minutes : "Min", "Minutes"\n- buts : "Gls", "Buts", "Goals", "B"\n- passes décisives : "Ast", "Passes", "Assists", "A"\n- cartons jaunes : "CrdY", "CJ", "Yellow"\n- cartons rouges : \"CrdR\", \"CR\", \"Red\"\n- xG (expected goals) : \"xG\"\n- xA (expected assists) : \"xA\", \"xAG\"\n- tirs totaux : \"Sh\", \"Shots\", \"Tirs\"\n- tirs cadrés : \"SoT\", \"Tirs cadrés\"\n\nExtrais TOUS les joueurs visibles. Si une colonne est absente mets 0. Utilise le nom exact tel qu\'il apparaît.' }
+            { type: 'text', text: 'Tu es un extracteur de données de statistiques football. Analyse ce tableau de stats (peut être FBref, Sofascore, ou autre) et retourne UNIQUEMENT un JSON valide (pas de texte autour, pas de markdown) avec ce format:\n{"players":[{"name":"Nom Joueur","apps":0,"starts":0,"goals":0,"assists":0,"minutes":0,"xg":0,"xa":0,"xg90":0,"xa90":0,"shots":0,"shots_on_target":0,"yellow":0,"red":0}]}\n\nCorrespondances de colonnes à reconnaître :\n- apps/matchs joués : "Député", "MJ", "MP", "Apps", "Matches"\n- starts/titularisations : "Débuts", "Starts", "Tit"\n- minutes : "Min", "Minutes"\n- buts : "Gls", "Buts", "Goals", "B"\n- passes décisives : "Ast", "Passes", "Assists", "A"\n- cartons jaunes : "CrdY", "CJ", "Yellow"\n- cartons rouges : \"CrdR\", \"CR\", \"Red\"\n- xG (expected goals) : \"xG\"\n- xA (expected assists) : \"xA\", \"xAG\"\n- tirs totaux : \"Sh\", \"Shots\", \"Tirs\"\n- tirs cadrés : \"SoT\", \"Tirs cadrés\"\n\nExtrais TOUS les joueurs visibles. Si une colonne est absente mets 0. Utilise le nom exact tel qu\'il apparaît.' }
           ]
         }]
       })
@@ -7360,29 +7368,31 @@ async function runFbrefGroq(uid, nom, b64, groqKey, mode, comp) {
           var manualKey = 'manual_stats_'+(sofaId||'0')+'_'+match.id;
           var ms = {}; try { ms = JSON.parse(localStorage.getItem(manualKey)||'{}'); } catch(e){}
           if(mode === 'add') {
-            if(sp.apps)    ms[prefix+'_apps']    = (ms[prefix+'_apps']||0)    + sp.apps;
-            if(sp.starts !== undefined) ms[prefix+'_starts'] = (ms[prefix+'_starts']||0) + sp.starts;
-            if(sp.goals)   ms[prefix+'_goals']   = (ms[prefix+'_goals']||0)   + sp.goals;
-            if(sp.assists) ms[prefix+'_assists']  = (ms[prefix+'_assists']||0) + sp.assists;
-            if(sp.minutes) ms[prefix+'_minutes']  = (ms[prefix+'_minutes']||0) + sp.minutes;
-            if(sp.xg)      ms[prefix+'_xg']       = ((parseFloat(ms[prefix+'_xg'])||0) + parseFloat(sp.xg)).toFixed(1);
-            if(sp.xa)      ms[prefix+'_xa']       = ((parseFloat(ms[prefix+'_xa'])||0) + parseFloat(sp.xa)).toFixed(1);
-            if(sp.shots)   ms[prefix+'_shots']    = (ms[prefix+'_shots']||0)   + sp.shots;
-            if(sp.shots_on_target) ms[prefix+'_sot'] = (ms[prefix+'_sot']||0) + sp.shots_on_target;
-            if(sp.yellow)  ms[prefix+'_yellow']   = (ms[prefix+'_yellow']||0)  + sp.yellow;
-            if(sp.red)     ms[prefix+'_red']      = (ms[prefix+'_red']||0)     + sp.red;
+            if(sp.apps)    ms[savePrefix+'_apps']    = (ms[savePrefix+'_apps']||0)    + sp.apps;
+            if(sp.starts !== undefined) ms[savePrefix+'_starts'] = (ms[savePrefix+'_starts']||0) + sp.starts;
+            if(sp.goals)   ms[savePrefix+'_goals']   = (ms[savePrefix+'_goals']||0)   + sp.goals;
+            if(sp.assists) ms[savePrefix+'_assists']  = (ms[savePrefix+'_assists']||0) + sp.assists;
+            if(sp.minutes) ms[savePrefix+'_minutes']  = (ms[savePrefix+'_minutes']||0) + sp.minutes;
+            if(sp.xg)      ms[savePrefix+'_xg']       = ((parseFloat(ms[savePrefix+'_xg'])||0) + parseFloat(sp.xg)).toFixed(1);
+            if(sp.xa)      ms[savePrefix+'_xa']       = ((parseFloat(ms[savePrefix+'_xa'])||0) + parseFloat(sp.xa)).toFixed(1);
+            if(sp.shots)   ms[savePrefix+'_shots']    = (ms[savePrefix+'_shots']||0)   + sp.shots;
+            if(sp.shots_on_target) ms[savePrefix+'_sot'] = (ms[savePrefix+'_sot']||0) + sp.shots_on_target;
+            if(sp.yellow)  ms[savePrefix+'_yellow']   = (ms[savePrefix+'_yellow']||0)  + sp.yellow;
+            if(sp.red)     ms[savePrefix+'_red']      = (ms[savePrefix+'_red']||0)     + sp.red;
           } else {
-            if(sp.apps)    ms[prefix+'_apps']    = sp.apps;
-            if(sp.starts !== undefined) ms[prefix+'_starts'] = sp.starts;
-            if(sp.goals)   ms[prefix+'_goals']   = sp.goals;
-            if(sp.assists) ms[prefix+'_assists']  = sp.assists;
-            if(sp.minutes) ms[prefix+'_minutes']  = sp.minutes;
-            if(sp.xg !== undefined) ms[prefix+'_xg'] = parseFloat(sp.xg).toFixed(1);
-            if(sp.xa !== undefined) ms[prefix+'_xa'] = parseFloat(sp.xa).toFixed(1);
-            if(sp.shots)   ms[prefix+'_shots']    = sp.shots;
-            if(sp.shots_on_target) ms[prefix+'_sot'] = sp.shots_on_target;
-            if(sp.yellow)  ms[prefix+'_yellow']   = sp.yellow;
-            if(sp.red)     ms[prefix+'_red']      = sp.red;
+            if(sp.apps)    ms[savePrefix+'_apps']    = sp.apps;
+            if(sp.starts !== undefined) ms[savePrefix+'_starts'] = sp.starts;
+            if(sp.goals)   ms[savePrefix+'_goals']   = sp.goals;
+            if(sp.assists) ms[savePrefix+'_assists']  = sp.assists;
+            if(sp.minutes) ms[savePrefix+'_minutes']  = sp.minutes;
+            if(sp.xg !== undefined) ms[savePrefix+'_xg'] = parseFloat(sp.xg).toFixed(2);
+            if(sp.xa !== undefined) ms[savePrefix+'_xa'] = parseFloat(sp.xa).toFixed(2);
+            if(sp.xg90 !== undefined) ms[savePrefix+'_xg90'] = parseFloat(sp.xg90).toFixed(2);
+            if(sp.xa90 !== undefined) ms[savePrefix+'_xa90'] = parseFloat(sp.xa90).toFixed(2);
+            if(sp.shots)   ms[savePrefix+'_shots']    = sp.shots;
+            if(sp.shots_on_target) ms[savePrefix+'_sot'] = sp.shots_on_target;
+            if(sp.yellow)  ms[savePrefix+'_yellow']   = sp.yellow;
+            if(sp.red)     ms[savePrefix+'_red']      = sp.red;
           }
           localStorage.setItem(manualKey, JSON.stringify(ms));
           updated++;
@@ -7390,8 +7400,13 @@ async function runFbrefGroq(uid, nom, b64, groqKey, mode, comp) {
       });
     }
 
-    if(zone) zone.innerHTML = '<span style="font-size:11px;color:var(--g);">✅ '+updated+' joueur(s) '+(mode==='add'?'additionnés':'mis à jour')+' ('+(comp==='euro'?'Europe':'Championnat')+') — rechargement...</span>';
+    if(zone) zone.innerHTML = '<span style="font-size:11px;color:var(--g);">✅ '+updated+' joueur(s) '+(mode==='add'?'additionnés':'mis à jour')+' ('+(comp==='euro'?'Europe':'Championnat')+(journee&&journee!=='global'?' · '+journee:'')+') — rechargement...</span>';
     if(btn) { btn.textContent = '✅ '+updated+' MAJ'; btn.disabled = false; }
+
+    // Sauvegarder la dernière journée mise à jour
+    if(journee && journee !== 'global') {
+      localStorage.setItem('squad_lastJ_'+(sofaId||'0'), journee);
+    }
     setTimeout(function() {
       loadTeamLive();
     }, 1000);
@@ -7406,6 +7421,17 @@ async function runFbrefGroq(uid, nom, b64, groqKey, mode, comp) {
   }
 }
 
+
+function sortSquad(uid, col) {
+  var cur = window['_squadSort_'+uid] || 'name';
+  if(cur === col) {
+    window['_squadSortDir_'+uid] = (window['_squadSortDir_'+uid] || 1) * -1;
+  } else {
+    window['_squadSort_'+uid] = col;
+    window['_squadSortDir_'+uid] = col === 'name' ? 1 : -1;
+  }
+  loadTeamCompo && loadTeamCompo();
+}
 
 function toggleAdminLock(uid) {
   var isAdmin = localStorage.getItem('gones45_admin') === '1';
@@ -7472,7 +7498,7 @@ function updateFbrefHint(uid) {
   hint.textContent = c + ' - ' + m;
 }
 
-async function loadFdSquad(el, nom, teamId, noTerrain) {
+async function loadFdSquad(el, nom, teamId, noTerrain, terrainOnly) {
   el.innerHTML = '<div style="text-align:center;padding:16px;color:var(--t3);font-size:11px;">⏳ Chargement squad...</div>';
   try {
     var rapidKey = localStorage.getItem('gones45_rapidapi_key');
@@ -7674,9 +7700,29 @@ async function loadFdSquad(el, nom, teamId, noTerrain) {
     html += '</div>';
     html += '</div>';
 
+    if(!terrainOnly) {
     // ZONE COLLER SCREENSHOT - visible seulement en mode admin
     var isAdmin = localStorage.getItem('gones45_admin') === '1';
     html += '<div id="fbref-admin-zone-'+uid+'" style="'+(isAdmin?'':'display:none;') +'">';
+
+    // Sélecteur de journée
+    var lastJKey = 'squad_lastJ_'+(sofaId||'0');
+    var lastJ = localStorage.getItem(lastJKey)||'';
+    html += '<div style="margin-bottom:6px;display:flex;align-items:center;gap:6px;flex-wrap:wrap;">'
+      +'<span style="font-size:10px;color:var(--t3);">Journée :</span>'
+      +'<select id="fbref-journee-'+uid+'" style="padding:3px 8px;border-radius:6px;border:1px solid rgba(255,255,255,.15);background:var(--bg2,#1a1f2e);color:var(--t2);font-size:10px;font-weight:700;cursor:pointer;">'
+      +'<option value="global">Global (total)</option>';
+    // Championnat J1-J38
+    html += '<optgroup label="Championnat">';
+    for(var jj=1;jj<=38;jj++){ html += '<option value="J'+jj+'"'+(lastJ==='J'+jj?' selected':'')+'>J'+jj+'</option>'; }
+    html += '</optgroup>';
+    // Europe MD1-MD8
+    html += '<optgroup label="Europe">';
+    for(var mm=1;mm<=8;mm++){ html += '<option value="MD'+mm+'"'+(lastJ==='MD'+mm?' selected':'')+'>MD'+mm+'</option>'; }
+    html += '</optgroup>';
+    html += '</select>';
+    if(lastJ) html += '<span style="font-size:9px;color:#f0b020;">Dernière MAJ : <strong>'+lastJ+'</strong></span>';
+    html += '</div>';
     html += '<div style="margin-bottom:8px;display:flex;align-items:center;gap:6px;flex-wrap:wrap;">'
       +'<span style="font-size:10px;color:var(--t3);">Comp :</span>'
       +'<button id="fbref-comp-'+uid+'" data-comp="league" onclick="toggleFbrefComp(\''+uid+'\')" style="padding:3px 10px;border-radius:6px;border:1px solid rgba(77,132,255,.4);background:rgba(77,132,255,.15);color:#4d84ff;font-size:10px;font-weight:700;cursor:pointer;">Champ</button>'
@@ -7689,8 +7735,9 @@ async function loadFdSquad(el, nom, teamId, noTerrain) {
       +'</div>'
       +'<input type="file" id="fbref-file-'+uid+'" accept="image/*" style="display:none" onchange="handleFbrefFileInput(event,\''+uid+'\',\''+nom+'\')">';
     html += '</div>'; // fin fbref-admin-zone
+    } // fin if(!terrainOnly)
 
-    // TERRAIN + FICHE 
+    // TERRAIN + FICHE
 
     if(!noTerrain){
     // TERRAIN + FICHE
@@ -7745,7 +7792,7 @@ async function loadFdSquad(el, nom, teamId, noTerrain) {
       var tc = 'font-size:8px;color:var(--t3);font-weight:700;text-align:center;padding:3px 4px;white-space:nowrap;';
       var isMobilePortrait = window.innerWidth < 600;
 
-      if(isMobilePortrait) {
+      if(!terrainOnly) {     if(isMobilePortrait) {
         // ── MODE PORTRAIT MOBILE : Joueur + stats compactes ──
         html += '<table style="width:100%;border-collapse:collapse;table-layout:fixed;">';
         html += '<colgroup><col style="width:18px"><col style="auto"><col style="width:28px"><col style="width:28px"><col style="width:28px"></colgroup>';
@@ -7779,27 +7826,79 @@ async function loadFdSquad(el, nom, teamId, noTerrain) {
       } else {
         // ── MODE PAYSAGE / PC : colonnes selon comp toggle ──
         var compMode = (function(){ var b=document.getElementById('fbref-comp-'+uid); return b?b.dataset.comp:'league'; })();
+        var sortKey = window['_squadSort_'+uid] || 'name';
+        var sortDir = window['_squadSortDir_'+uid] || 1;
+        var lastJKey2 = 'squad_lastJ_'+(sofaId||'0');
+        var lastJBadge = localStorage.getItem(lastJKey2)||'';
+        var viewJournee = window['_squadViewJ_'+uid] || 'global';
+
+        // Sélecteur de vue journée (visible par tous)
+        html += '<div style="margin-bottom:8px;display:flex;align-items:center;gap:8px;flex-wrap:wrap;">';
+        html += '<span style="font-size:10px;color:var(--t3);">Voir :</span>';
+        html += '<select id="squad-view-j-'+uid+'" onchange="window[\'_squadViewJ_\'+ \''+uid+'\'] = this.value; loadTeamCompo&&loadTeamCompo();" style="padding:3px 8px;border-radius:6px;border:1px solid rgba(255,255,255,.15);background:var(--bg2,#1a1f2e);color:var(--t2);font-size:10px;font-weight:700;">';
+        html += '<option value="global"'+(viewJournee==='global'?' selected':'')+'>Global</option>';
+        html += '<optgroup label="Championnat">';
+        for(var jv=1;jv<=38;jv++){ html += '<option value="J'+jv+'"'+(viewJournee==='J'+jv?' selected':'')+'>J'+jv+'</option>'; }
+        html += '</optgroup><optgroup label="Europe">';
+        for(var mv=1;mv<=8;mv++){ html += '<option value="MD'+mv+'"'+(viewJournee==='MD'+mv?' selected':'')+'>MD'+mv+'</option>'; }
+        html += '</optgroup></select>';
+        if(lastJBadge) html += '<span style="font-size:9px;padding:2px 7px;border-radius:10px;background:rgba(240,180,32,.15);color:#f0b420;border:1px solid rgba(240,180,32,.3);">Dernière MAJ : <strong>'+lastJBadge+'</strong></span>';
+        html += '</div>';
+        var thS = function(col,lbl,title){
+          var active = sortKey===col;
+          var arrow = active?(sortDir===1?' ↓':' ↑'):'';
+          var color = active?'#4d84ff':'var(--t3)';
+          return '<th data-sort="'+col+'" data-uid="'+uid+'" onclick="sortSquad(this.dataset.uid,this.dataset.sort)" style="font-size:8px;color:'+color+';font-weight:700;text-align:center;padding:3px 4px;white-space:nowrap;cursor:pointer;" title="'+(title||lbl)+'">'+lbl+arrow+'</th>';
+        };
         html += '<div style="overflow-x:auto;" id="squad-table-'+uid+'">';
-        html += '<table style="width:100%;border-collapse:collapse;table-layout:fixed;min-width:620px;">';
-        html += '<colgroup><col style="width:20px"><col style="min-width:110px"><col style="width:28px"><col style="width:26px"><col style="width:26px"><col style="width:36px"><col style="width:26px"><col style="width:26px"><col style="width:30px"><col style="width:30px"><col style="width:26px"><col style="width:26px"><col style="width:26px"><col style="width:26px"><col style="width:26px"></colgroup>';
+        html += '<table style="width:100%;border-collapse:collapse;table-layout:fixed;min-width:700px;">';
+        html += '<colgroup><col style="width:20px"><col style="min-width:100px"><col style="width:26px"><col style="width:26px"><col style="width:26px"><col style="width:36px"><col style="width:26px"><col style="width:26px"><col style="width:30px"><col style="width:30px"><col style="width:30px"><col style="width:26px"><col style="width:26px"><col style="width:26px"><col style="width:26px"><col style="width:26px"></colgroup>';
         html += '<thead><tr>';
         html += '<th style="'+tc+'"></th>';
-        html += '<th style="'+tc+'text-align:left;">Joueur</th>';
-        html += '<th style="'+tc+'" title="Age">Age</th>';
-        html += '<th style="'+tc+'" title="Matchs joues">MJ</th>';
-        html += '<th style="'+tc+'" title="Titularisations">Tit</th>';
-        html += '<th style="'+tc+'" title="Minutes jouees">Min</th>';
-        html += '<th style="'+tc+'" title="Buts">B</th>';
-        html += '<th style="'+tc+'" title="Passes decisives">A</th>';
-        html += '<th style="'+tc+'" title="Expected Goals">xG</th>';
-        html += '<th style="'+tc+'" title="Expected Assists">xA</th>';
-        html += '<th style="'+tc+'" title="Tirs totaux">Sh</th>';
-        html += '<th style="'+tc+'" title="Tirs cadres">SoT</th>';
-        html += '<th style="'+tc+'color:#f0b020;" title="Cartons jaunes">CJ</th>';
-        html += '<th style="'+tc+'color:#ef4444;" title="Cartons rouges">CR</th>';
+                html += '<th data-sort="name" data-uid="'+uid+'" onclick="sortSquad(this.dataset.uid,this.dataset.sort)" style="'+tc+'text-align:left;cursor:pointer;">Joueur'+(sortKey==='name'?(sortDir===1?' ↓':' ↑'):''  )+'</th>';
+        html += thS('age','Age','Age du joueur');
+        html += thS('mj','MJ','Matchs joues');
+        html += thS('tit','Tit','Titularisations');
+        html += thS('min','Min','Minutes jouees');
+        html += thS('g','B','Buts');
+        html += thS('a','A','Passes decisives');
+        html += thS('xg','xG','Expected Goals total');
+        html += thS('xa','xA','Expected Assists total');
+        html += thS('xg90','xG90','xG par 90 minutes');
+        html += thS('sh','Sh','Tirs totaux');
+        html += thS('sot','SoT','Tirs cadres');
+        html += thS('cj','CJ','Cartons jaunes');
+        html += thS('cr','CR','Cartons rouges');
         html += '<th style="'+tc+'"></th>';
         html += '</tr></thead><tbody>';
-        pp.forEach(function(p,i){
+        // Trier les joueurs selon la colonne selectionnee
+        var sortedPp = pp.slice().sort(function(a,b){
+          var prefix2 = compMode==='euro'?'euro':'league';
+          var jPfx = (viewJournee&&viewJournee!=='global') ? prefix2+'_'+viewJournee : prefix2;
+          var getVal = function(p, key) {
+            var ms2={}; try{ms2=JSON.parse(localStorage.getItem('manual_stats_'+(sofaId||afId||'0')+'_'+p.id)||'{}');}catch(e){}
+            if(key==='name') return (p.name||'').toLowerCase();
+            if(key==='age') return parseInt(p._age)||0;
+            if(key==='mj') return ms2[jPfx+'_apps']!==undefined?ms2[jPfx+'_apps']:(p._apps||0);
+            if(key==='tit') return ms2[jPfx+'_starts']||0;
+            if(key==='min') return ms2[jPfx+'_minutes']!==undefined?ms2[jPfx+'_minutes']:(p._minutes||0);
+            if(key==='g') return ms2[jPfx+'_goals']!==undefined?ms2[jPfx+'_goals']:(p._goals||0);
+            if(key==='a') return ms2[jPfx+'_assists']!==undefined?ms2[jPfx+'_assists']:(p._assists||0);
+            if(key==='xg') return parseFloat(ms2[jPfx+'_xg'])||0;
+            if(key==='xa') return parseFloat(ms2[jPfx+'_xa'])||0;
+            if(key==='xg90') return parseFloat(ms2[jPfx+'_xg90'])||0;
+            if(key==='sh') return ms2[jPfx+'_shots']||0;
+            if(key==='sot') return ms2[jPfx+'_sot']||0;
+            if(key==='cj') return ms2[jPfx+'_yellow']||0;
+            if(key==='cr') return ms2[jPfx+'_red']||0;
+            return 0;
+          };
+          var va = getVal(a, sortKey), vb = getVal(b, sortKey);
+          if(sortKey==='name') return sortDir * va.localeCompare(vb);
+          return sortDir * (vb - va);
+        });
+
+        sortedPp.forEach(function(p,i){
           var inXi=xi.some(function(x){return x.id===p.id;});
           var rowBg=i%2===0?'rgba(255,255,255,.025)':'rgba(255,255,255,.015)';
           var pSlug=p.name?p.name.toLowerCase().split(' ').join('-'):'player';
@@ -7809,18 +7908,26 @@ async function loadFdSquad(el, nom, teamId, noTerrain) {
           var hasManual=ms.league_goals!==undefined||ms.euro_goals!==undefined;
           var isEuro = compMode==='euro';
           var prefix = isEuro ? 'euro' : 'league';
-          var g  = ms[prefix+'_goals']!==undefined ? ms[prefix+'_goals'] : (hasManual?0:(p._goals||0));
-          var a  = ms[prefix+'_assists']!==undefined ? ms[prefix+'_assists'] : (hasManual?0:(p._assists||0));
-          var mj = ms[prefix+'_apps']!==undefined ? ms[prefix+'_apps'] : (p._apps||0);
-          var tit= ms[prefix+'_starts']!==undefined ? ms[prefix+'_starts'] : (p._starts||0);
-          var min= ms[prefix+'_minutes']!==undefined ? ms[prefix+'_minutes'] : (p._minutes||0);
+
+          // Lecture selon la journée sélectionnée
+          var jPrefix = prefix; // par défaut global
+          if(viewJournee !== 'global') {
+            jPrefix = prefix + '_' + viewJournee;
+          }
+
+          var g  = ms[jPrefix+'_goals']!==undefined ? ms[jPrefix+'_goals'] : (viewJournee==='global'&&!isEuro?(hasManual?0:(p._goals||0)):0);
+          var a  = ms[jPrefix+'_assists']!==undefined ? ms[jPrefix+'_assists'] : (viewJournee==='global'&&!isEuro?(hasManual?0:(p._assists||0)):0);
+          var mj = ms[jPrefix+'_apps']!==undefined ? ms[jPrefix+'_apps'] : (viewJournee==='global'&&!isEuro?(p._apps||0):0);
+          var tit= ms[jPrefix+'_starts']||0;
+          var min= ms[jPrefix+'_minutes']!==undefined ? ms[jPrefix+'_minutes'] : (viewJournee==='global'&&!isEuro?(p._minutes||0):0);
           var minK=min>=1000?(min/1000).toFixed(1)+'k':min||0;
-          var xg = ms[prefix+'_xg']!==undefined?parseFloat(ms[prefix+'_xg']).toFixed(1):null;
-          var xa = ms[prefix+'_xa']!==undefined?parseFloat(ms[prefix+'_xa']).toFixed(1):null;
-          var sh = ms[prefix+'_shots']||0;
-          var sot= ms[prefix+'_sot']||0;
-          var cj = ms[prefix+'_yellow']||0;
-          var cr = ms[prefix+'_red']||0;
+          var xg = ms[jPrefix+'_xg']!==undefined?parseFloat(ms[jPrefix+'_xg']).toFixed(2):null;
+          var xa = ms[jPrefix+'_xa']!==undefined?parseFloat(ms[jPrefix+'_xa']).toFixed(2):null;
+          var xg90 = ms[jPrefix+'_xg90']!==undefined?parseFloat(ms[jPrefix+'_xg90']).toFixed(2):null;
+          var sh = ms[jPrefix+'_shots']||0;
+          var sot= ms[jPrefix+'_sot']||0;
+          var cj = ms[jPrefix+'_yellow']||0;
+          var cr = ms[jPrefix+'_red']||0;
           var fmtS=function(v,col){return '<td style="text-align:center;font-size:12px;font-weight:700;padding:6px 2px;color:'+(v>0?col:'rgba(255,255,255,.2)')+'">'+v+'</td>';};
           html += '<tr data-bench-pid="'+p.id+'" style="background:'+rowBg+';border-left:3px solid '+pc+'55;cursor:pointer;">';
           html += '<td style="padding:6px 4px;text-align:center;"><span class="xi-badge" style="font-size:7px;background:'+pc+'33;color:'+pc+';border-radius:3px;padding:1px 3px;font-weight:800;'+(inXi?'':'visibility:hidden;')+'">XI</span></td>';
@@ -7831,8 +7938,9 @@ async function loadFdSquad(el, nom, teamId, noTerrain) {
           html += '<td style="text-align:center;font-size:11px;color:var(--t2);padding:6px 2px;">'+(min?minK:'—')+'</td>';
           html += fmtS(g,'#1ed760');
           html += fmtS(a,'#4d84ff');
-          html += '<td style="text-align:center;font-size:11px;padding:6px 2px;color:'+(xg&&parseFloat(xg)>0?'#a78bfa':'rgba(255,255,255,.2)')+'">'+( xg||'—')+'</td>';
-          html += '<td style="text-align:center;font-size:11px;padding:6px 2px;color:'+(xa&&parseFloat(xa)>0?'#a78bfa':'rgba(255,255,255,.2)')+'">'+( xa||'—')+'</td>';
+          html += '<td style="text-align:center;font-size:11px;padding:6px 2px;color:'+(xg&&parseFloat(xg)>0?'#a78bfa':'rgba(255,255,255,.2)')+'" title="xG/90: '+(xg90||'—')+'">'+( xg||'—')+'</td>';
+          html += '<td style="text-align:center;font-size:11px;padding:6px 2px;color:'+(xa&&parseFloat(xa)>0?'#a78bfa':'rgba(255,255,255,.2)')+'" title="xA/90: '+(xg90||'—')+'">'+( xa||'—')+'</td>';
+          html += '<td style="text-align:center;font-size:11px;padding:6px 2px;color:'+(xg90&&parseFloat(xg90)>0?'#c4b5fd':'rgba(255,255,255,.2)')+'">'+( xg90||'—')+'</td>';
           html += '<td style="text-align:center;font-size:11px;color:var(--t2);padding:6px 2px;">'+(sh||'—')+'</td>';
           html += '<td style="text-align:center;font-size:11px;color:'+(sot>0?'#f0b020':'rgba(255,255,255,.2)')+';padding:6px 2px;">'+(sot||'—')+'</td>';
           html += '<td style="text-align:center;font-size:11px;padding:6px 2px;color:'+(cj>0?'#f0b020':'rgba(255,255,255,.2)')+'">'+( cj||'—')+'</td>';
@@ -7844,6 +7952,7 @@ async function loadFdSquad(el, nom, teamId, noTerrain) {
         html += '</div>';
         html += '</div>';
       }
+      } // fin if(!terrainOnly) pour le tableau
     });
 
     html += '</div>';
