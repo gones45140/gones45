@@ -2984,13 +2984,35 @@ function toggleArchMonth(el){
 }
 var _archFilter = 'all';
 function renderArchive(){
+  // Mise à jour compteurs KPI
+  var wins = state.a.filter(function(x){return !x.isPending && x.win;}).length;
+  var loss = state.a.filter(function(x){return !x.isPending && !x.win;}).length;
+  var pend = state.a.filter(function(x){return x.isPending;}).length;
+  var wEl = document.getElementById('arch-wins');
+  var lEl = document.getElementById('arch-loss');
+  var pEl = document.getElementById('arch-pending');
+  if(wEl) wEl.textContent = wins;
+  if(lEl) lEl.textContent = loss;
+  if(pEl) pEl.textContent = pend;
+
   var pm={};
   state.a.forEach(function(h){
-    var p=h.t?h.t.split(' ')[0].split('/'):['??','??'];
-    var k=p.length>=2?p[1]+'/'+(p[0].length===4?p[0]:'20'+p[0]):'Inconnu';
+    var dateRaw = h.date || h.t || '';
+    var k = 'Inconnu';
+    if(dateRaw) {
+      if(dateRaw.indexOf('-') !== -1) {
+        // Format ISO : 2026-05-31
+        var parts = dateRaw.split('-');
+        if(parts.length >= 2) k = parts[1]+'/'+parts[0]; // mois/année
+      } else if(dateRaw.indexOf('/') !== -1) {
+        // Format FR : 31/05/2026
+        var p = dateRaw.split('/');
+        if(p.length >= 2) k = p[1]+'/'+(p[0].length===4?p[0]:'20'+p[0]);
+      }
+    }
     if(!pm[k])pm[k]={paris:[],profit:0,wins:0};
-    pm[k].paris.push(h);pm[k].profit+=(h.win?(h.m*h.cote)-h.m:-h.m);
-    if(h.win)pm[k].wins++;
+    pm[k].paris.push(h);pm[k].profit+=(h.isPending?0:(h.win?(h.m*h.cote)-h.m:-h.m));
+    if(!h.isPending&&h.win)pm[k].wins++;
   });
   var keys=Object.keys(pm),profits=keys.map(function(k){return parseFloat(pm[k].profit.toFixed(2));});
   var maxA=Math.max.apply(null,profits.map(Math.abs).concat([1]));
@@ -11175,18 +11197,6 @@ function setArchFilter(f, el) {
   if(el) el.classList.add('on');
   buildArjelRows && renderArchive && renderArchive();
 }
-function renderArchive() {
-  var wins = state.a.filter(function(x){return !x.isPending && x.win;}).length;
-  var loss = state.a.filter(function(x){return !x.isPending && !x.win;}).length;
-  var pend = state.a.filter(function(x){return x.isPending;}).length;
-  var wEl = document.getElementById('arch-wins');
-  var lEl = document.getElementById('arch-loss');
-  var pEl = document.getElementById('arch-pending');
-  if(wEl) wEl.textContent = wins;
-  if(lEl) lEl.textContent = loss;
-  if(pEl) pEl.textContent = pend;
-}
-
 // ── BANK — total ──
 function updateBankTotal() {
   var total = 0;
