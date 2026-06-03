@@ -2657,7 +2657,7 @@ function renderBilanTab(){
   renderSportFilter();
   var paris=filteredA();
   /* Stats */
-  var ben=paris.reduce(function(a,h){return a+(h.isPending?0:(h.win?(h.m*h.cote)-h.m:-h.m));},0);
+  var ben=paris.reduce(function(a,h){return a+(h.win?(h.m*h.cote)-h.m:-h.m);},0);
   var benEl=$i('stat-ben');if(benEl){benEl.innerText=fmt(ben);benEl.style.color=ben>=0?'var(--g)':'var(--r)';}
   var wr=paris.length?(paris.filter(function(h){return h.win;}).length/paris.length*100).toFixed(0):0;
   txt('stat-wr',wr+'%');
@@ -2877,10 +2877,10 @@ function getMoisData(paris, year){
     if(parseInt(y)!==year)return;
     var key=y+'-'+m;
     if(!mois[key])mois[key]={profit:0,n:0,wins:0};
-    var p=h.isPending?0:(h.win?(h.m*h.cote)-h.m:-h.m);
+    var p=(h.win?(h.m*h.cote)-h.m:-h.m);
     mois[key].profit+=p;
     mois[key].n++;
-    if(!h.isPending&&h.win)mois[key].wins++;
+    if(h.win)mois[key].wins++;
   });
   return mois;
 }
@@ -2900,7 +2900,10 @@ function renderMoisRow(key, data, prevData){
     var diffCol=diff>=0?'var(--g)':'var(--r)';
     var diffIcon=diff>=0?'▲':'▼';
     var diffPct=prevData.profit!==0?((diff/Math.abs(prevData.profit))*100).toFixed(0):null;
-    compHtml='<div style="font-size:10px;color:'+diffCol+';font-weight:700;margin-top:3px;">'+diffIcon+' '+(diff>=0?'+':'')+diff.toFixed(2)+'€ vs mois préc.'+(diffPct?' ('+diffPct+'%)':'')+'</div>';
+    var prevMonthNames = ['','Jan','Fév','Mar','Avr','Mai','Juin','Juil','Aoû','Sep','Oct','Nov','Déc'];
+    var prevMNum = parseInt(prevKey.split('-')[1]);
+    var prevMName = prevMonthNames[prevMNum]||'';
+    compHtml='<div style="font-size:10px;color:'+diffCol+';font-weight:700;margin-top:3px;" title="Différence de profit entre ce mois et '+prevMName+' ('+( prevData.profit>=0?'+':'')+prevData.profit.toFixed(2)+'€)">'+diffIcon+' '+(diff>=0?'+':'')+diff.toFixed(2)+'€ vs '+prevMName+' ('+(prevData.profit>=0?'+':'')+prevData.profit.toFixed(2)+'€)'+(diffPct?' · '+diffPct+'%':'')+'</div>';
   }
   return '<div style="display:flex;align-items:center;padding:11px 14px;background:var(--s1);border-radius:var(--r6);margin-bottom:6px;border-left:3px solid '+(p>=0?'var(--g)':'var(--r)')+';">'
     +'<div style="flex:1;">'
@@ -2950,10 +2953,10 @@ function getMoisDataAll(paris){
     if(!y||!m)return;
     var key=y+'-'+m;
     if(!mois[key])mois[key]={profit:0,n:0,wins:0};
-    var p=h.isPending?0:(h.win?(h.m*h.cote)-h.m:-h.m);
+    var p=(h.win?(h.m*h.cote)-h.m:-h.m);
     mois[key].profit+=p;
     mois[key].n++;
-    if(!h.isPending&&h.win)mois[key].wins++;
+    if(h.win)mois[key].wins++;
   });
   return mois;
 }
