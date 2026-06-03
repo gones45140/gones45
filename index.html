@@ -7003,10 +7003,10 @@ async function loadFplSquad(el, nom) {
       html += '<div style="display:grid;grid-template-columns:16px minmax(0,200px) 36px 36px 36px 44px;gap:0 6px;padding:3px 10px;margin-bottom:2px;">';
       html += '<div></div>';
       html += '<div style="font-size:9px;color:var(--t3);font-weight:700;text-transform:uppercase;letter-spacing:.5px;">Joueur</div>';
-      html += '<div style="font-size:9px;color:var(--t3);font-weight:700;text-align:center;">B</div>';
-      html += '<div style="font-size:9px;color:var(--t3);font-weight:700;text-align:center;">A</div>';
-      html += '<div style="font-size:9px;color:var(--t3);font-weight:700;text-align:center;">CS</div>';
-      html += '<div style="font-size:9px;color:var(--t3);font-weight:700;text-align:center;">Min</div>';
+      html += '<div style="font-size:9px;color:var(--t3);font-weight:700;text-align:center;" title="Buts marqu\u00e9s">B</div>';
+      html += '<div style="font-size:9px;color:var(--t3);font-weight:700;text-align:center;" title="Passes d\u00e9cisives">A</div>';
+      html += '<div style="font-size:9px;color:var(--t3);font-weight:700;text-align:center;" title="Clean sheets - matchs sans encaisser">CS</div>';
+      html += '<div style="font-size:9px;color:var(--t3);font-weight:700;text-align:center;" title="Minutes jou\u00e9es">Min</div>';</div>';
       html += '</div>';
 
       pp.forEach(function(p, i){
@@ -7286,7 +7286,7 @@ async function runFbrefGroq(uid, nom, b64, groqKey) {
           role: 'user',
           content: [
             { type: 'image_url', image_url: { url: 'data:image/jpeg;base64,'+b64 } },
-            { type: 'text', text: 'Tu es un extracteur de données de statistiques football. Analyse ce tableau de stats et retourne UNIQUEMENT un JSON valide (pas de texte autour, pas de markdown) avec ce format:\n{"players":[{"name":"Nom Joueur","apps":0,"goals":0,"assists":0,"minutes":0}]}\nExtrais tous les joueurs visibles avec leurs stats. Si une colonne n\'est pas visible mets 0. Utilise le nom tel qu\'il apparaît dans le tableau.' }
+            { type: 'text', text: 'Tu es un extracteur de données de statistiques football. Analyse ce tableau de stats (peut être FBref, Sofascore, ou autre) et retourne UNIQUEMENT un JSON valide (pas de texte autour, pas de markdown) avec ce format:\n{"players":[{"name":"Nom Joueur","apps":0,"goals":0,"assists":0,"minutes":0,"yellow":0,"red":0}]}\n\nCorrespondances de colonnes à reconnaître :\n- apps/matchs joués : "Député", "MJ", "MP", "Apps", "Matches"\n- titularisations : "Début", "Starts"\n- minutes : "Min", "Minutes"\n- buts : "Gls", "Buts", "Goals", "B"\n- passes décisives : "Ast", "Passes", "Assists", "A"\n- cartons jaunes : "CrdY", "CJ", "Yellow"\n- cartons rouges : "CrdR", "CR", "Red"\n\nExtrais TOUS les joueurs visibles. Si une colonne est absente mets 0. Utilise le nom exact tel qu\'il apparaît.' }
           ]
         }]
       })
@@ -7323,6 +7323,8 @@ async function runFbrefGroq(uid, nom, b64, groqKey) {
           if(sp.goals) ms.league_goals = sp.goals;
           if(sp.assists) ms.league_assists = sp.assists;
           if(sp.minutes) ms.league_minutes = sp.minutes;
+          if(sp.yellow) ms.league_yellow = sp.yellow;
+          if(sp.red) ms.league_red = sp.red;
           localStorage.setItem(manualKey, JSON.stringify(ms));
           updated++;
         }
@@ -7605,14 +7607,14 @@ async function loadFdSquad(el, nom, teamId) {
       html += '<thead><tr>';
       html += '<th style="'+tc+'"></th>';
       html += '<th style="'+tc+'text-align:left;">Joueur</th>';
-      html += '<th style="'+tc+'">MJ</th>';
-      html += '<th style="'+tc+'">🏆B</th>';
-      html += '<th style="'+tc+'">A</th>';
+      html += '<th style="'+tc+'" title="Matchs jou\u00e9s - Championnat">MJ</th>';
+      html += '<th style="'+tc+'" title="Buts - Championnat">🏆B</th>';
+      html += '<th style="'+tc+'" title="Passes d\u00e9cisives - Championnat">A</th>';
       html += '<th style="'+tc+'color:rgba(255,255,255,.15);">|</th>';
-      html += '<th style="'+tc+'">MJ</th>';
-      html += '<th style="'+tc+'">⭐B</th>';
-      html += '<th style="'+tc+'">A</th>';
-      html += '<th style="'+tc+'">Âge</th>';
+      html += '<th style="'+tc+'" title="Matchs jou\u00e9s - Europe">MJ</th>';
+      html += '<th style="'+tc+'" title="Buts - Europe">⭐B</th>';
+      html += '<th style="'+tc+'" title="Passes d\u00e9cisives - Europe">A</th>';
+      html += '<th style="'+tc+'" title="Age du joueur">Âge</th>';
       html += '<th style="'+tc+'"></th>';
       html += '</tr></thead><tbody>';
       pp.forEach(function(p,i){
