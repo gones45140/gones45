@@ -7206,6 +7206,14 @@ async function sofascoreFetch(path) {
   return await r.json();
 }
 
+function refreshSquadCache(nom) {
+  var sofaId = SOFASCORE_TEAM_IDS && SOFASCORE_TEAM_IDS[nom];
+  if(!sofaId) { for(var k in SOFASCORE_TEAM_IDS){ if(nom.toLowerCase().indexOf(k.toLowerCase())>=0||k.toLowerCase().indexOf(nom.toLowerCase())>=0){sofaId=SOFASCORE_TEAM_IDS[k];break;} } }
+  var cacheKey = 'squad_sofa_'+(sofaId||'af_'+nom);
+  localStorage.removeItem(cacheKey);
+  loadTeamLive();
+}
+
 async function importFbrefStats(uid, nom) {
   var groqKey = getGeminiKey();
   if(!groqKey) { alert('❌ Clé Groq manquante — configure-la dans Outils.'); return; }
@@ -7227,7 +7235,9 @@ function handleFbrefFileInput(e, uid, nom) {
   if(!file) return;
   var groqKey = getGeminiKey();
   if(!groqKey) { alert('❌ Clé Groq manquante — configure-la dans Outils.'); return; }
-  fileToBase64(file).then(function(b64){ runFbrefGroq(uid, nom, b64, groqKey); });
+  var modeBtn = document.getElementById('fbref-mode-'+uid);
+  var mode = modeBtn ? modeBtn.dataset.mode : 'replace';
+  fileToBase64(file).then(function(b64){ runFbrefGroq(uid, nom, b64, groqKey, mode); });
 }
 
 function handleFbrefDrop(e, uid, nom) {
@@ -7238,12 +7248,13 @@ function handleFbrefDrop(e, uid, nom) {
   if(!file || file.type.indexOf('image')===-1) return;
   var groqKey = getGeminiKey();
   if(!groqKey) { alert('❌ Clé Groq manquante — configure-la dans Outils.'); return; }
-  fileToBase64(file).then(function(b64){ runFbrefGroq(uid, nom, b64, groqKey); });
+  var modeBtn = document.getElementById('fbref-mode-'+uid);
+  var mode = modeBtn ? modeBtn.dataset.mode : 'replace';
+  fileToBase64(file).then(function(b64){ runFbrefGroq(uid, nom, b64, groqKey, mode); });
 }
 
 function setupFbrefPaste(uid, nom) {
   document.addEventListener('paste', function handler(e) {
-    // Only if live tab is visible
     var liveEl = document.getElementById('ip-live');
     if(!liveEl || liveEl.style.display==='none') return;
     var items = e.clipboardData && e.clipboardData.items;
@@ -7252,8 +7263,10 @@ function setupFbrefPaste(uid, nom) {
       if(items[i].type.indexOf('image')!==-1){
         var groqKey = getGeminiKey();
         if(!groqKey) { alert('❌ Clé Groq manquante.'); return; }
+        var modeBtn = document.getElementById('fbref-mode-'+uid);
+        var mode = modeBtn ? modeBtn.dataset.mode : 'replace';
         var blob = items[i].getAsFile();
-        fileToBase64(blob).then(function(b64){ runFbrefGroq(uid, nom, b64, groqKey); });
+        fileToBase64(blob).then(function(b64){ runFbrefGroq(uid, nom, b64, groqKey, mode); });
         document.removeEventListener('paste', handler);
         break;
       }
@@ -7269,7 +7282,8 @@ function fileToBase64(file) {
   });
 }
 
-async function runFbrefGroq(uid, nom, b64, groqKey) {
+async function runFbrefGroq(uid, nom, b64, groqKey, mode) {
+  mode = mode || 'replace';
   var zone = document.getElementById('fbref-paste-zone-'+uid);
   var btn = document.getElementById('btn-fbref-import-'+uid);
   if(zone) zone.innerHTML = '<span style="font-size:11px;color:var(--t3);">⏳ Lecture en cours...</span>';
@@ -7286,7 +7300,7 @@ async function runFbrefGroq(uid, nom, b64, groqKey) {
           role: 'user',
           content: [
             { type: 'image_url', image_url: { url: 'data:image/jpeg;base64,'+b64 } },
-            { type: 'text', text: 'Tu es un extracteur de données de statistiques football. Analyse ce tableau de stats (peut être FBref, Sofascore, ou autre) et retourne UNIQUEMENT un JSON valide (pas de texte autour, pas de markdown) avec ce format:\n{"players":[{"name":"Nom Joueur","apps":0,"goals":0,"assists":0,"minutes":0,"yellow":0,"red":0}]}\n\nCorrespondances de colonnes à reconnaître :\n- apps/matchs joués : "Député", "MJ", "MP", "Apps", "Matches"\n- titularisations : "Début", "Starts"\n- minutes : "Min", "Minutes"\n- buts : "Gls", "Buts", "Goals", "B"\n- passes décisives : "Ast", "Passes", "Assists", "A"\n- cartons jaunes : "CrdY", "CJ", "Yellow"\n- cartons rouges : "CrdR", "CR", "Red"\n\nExtrais TOUS les joueurs visibles. Si une colonne est absente mets 0. Utilise le nom exact tel qu\'il apparaît.' }
+            { type: 'text', text: 'Tu es un extracteur de données de statistiques football. Analyse ce tableau de stats (peut être FBref, Sofascore, ou autre) et retourne UNIQUEMENT un JSON valide (pas de texte autour, pas de markdown) avec ce format:\n{"players":[{"name":"Nom Joueur","apps":0,"starts":0,"goals":0,"assists":0,"minutes":0,"yellow":0,"red":0}]}\n\nCorrespondances de colonnes à reconnaître :\n- apps/matchs joués : "Député", "MJ", "MP", "Apps", "Matches"\n- starts/titularisations : "Débuts", "Starts", "Tit"\n- minutes : "Min", "Minutes"\n- buts : "Gls", "Buts", "Goals", "B"\n- passes décisives : "Ast", "Passes", "Assists", "A"\n- cartons jaunes : "CrdY", "CJ", "Yellow"\n- cartons rouges : "CrdR", "CR", "Red"\n\nExtrais TOUS les joueurs visibles. Si une colonne est absente mets 0. Utilise le nom exact tel qu\'il apparaît.' }
           ]
         }]
       })
@@ -7319,19 +7333,32 @@ async function runFbrefGroq(uid, nom, b64, groqKey) {
         if(match) {
           var manualKey = 'manual_stats_'+(sofaId||'0')+'_'+match.id;
           var ms = {}; try { ms = JSON.parse(localStorage.getItem(manualKey)||'{}'); } catch(e){}
-          if(sp.apps) ms.league_apps = sp.apps;
-          if(sp.goals) ms.league_goals = sp.goals;
-          if(sp.assists) ms.league_assists = sp.assists;
-          if(sp.minutes) ms.league_minutes = sp.minutes;
-          if(sp.yellow) ms.league_yellow = sp.yellow;
-          if(sp.red) ms.league_red = sp.red;
+          if(mode === 'add') {
+            // Additionner aux stats existantes
+            if(sp.apps)    ms.league_apps    = (ms.league_apps||0)    + sp.apps;
+            if(sp.starts !== undefined) ms.league_starts = (ms.league_starts||0) + sp.starts;
+            if(sp.goals)   ms.league_goals   = (ms.league_goals||0)   + sp.goals;
+            if(sp.assists) ms.league_assists = (ms.league_assists||0) + sp.assists;
+            if(sp.minutes) ms.league_minutes = (ms.league_minutes||0) + sp.minutes;
+            if(sp.yellow)  ms.league_yellow  = (ms.league_yellow||0)  + sp.yellow;
+            if(sp.red)     ms.league_red     = (ms.league_red||0)     + sp.red;
+          } else {
+            // Remplacer les stats
+            if(sp.apps)    ms.league_apps    = sp.apps;
+            if(sp.starts !== undefined) ms.league_starts = sp.starts;
+            if(sp.goals)   ms.league_goals   = sp.goals;
+            if(sp.assists) ms.league_assists = sp.assists;
+            if(sp.minutes) ms.league_minutes = sp.minutes;
+            if(sp.yellow)  ms.league_yellow  = sp.yellow;
+            if(sp.red)     ms.league_red     = sp.red;
+          }
           localStorage.setItem(manualKey, JSON.stringify(ms));
           updated++;
         }
       });
     }
 
-    if(zone) zone.innerHTML = '<span style="font-size:11px;color:var(--g);">✅ '+updated+' joueur(s) mis à jour — rechargement...</span>';
+    if(zone) zone.innerHTML = '<span style="font-size:11px;color:var(--g);">✅ '+updated+' joueur(s) '+(mode==='add'?'additionnés':'mis à jour')+' — rechargement...</span>';
     if(btn) { btn.textContent = '✅ '+updated+' MAJ'; btn.disabled = false; }
     setTimeout(function() {
       loadTeamLive();
@@ -7544,14 +7571,20 @@ async function loadFdSquad(el, nom, teamId) {
     html += '<div style="display:flex;align-items:center;gap:8px;">';
     html += '<div style="font-size:9px;color:var(--t3);">'+(usingSofa?'sofascore':'api-football · 2024-25')+'</div>';
     html += '<button id="btn-fbref-import-'+uid+'" onclick="importFbrefStats(\''+uid+'\',\''+nom+'\')" style="display:flex;align-items:center;gap:4px;padding:4px 8px;border-radius:6px;border:1px solid rgba(255,255,255,.15);background:rgba(255,255,255,.07);color:var(--t2);font-size:9px;font-weight:700;cursor:pointer;">📸 Import FBref</button>';
+    html += '<button onclick="refreshSquadCache(\''+nom+'\')" style="display:flex;align-items:center;gap:4px;padding:4px 8px;border-radius:6px;border:1px solid rgba(255,255,255,.15);background:rgba(255,255,255,.07);color:var(--t2);font-size:9px;font-weight:700;cursor:pointer;" title="Vider le cache et recharger le squad depuis l\'API">🔄</button>';
     html += '</div>';
     html += '</div>';
 
     // ZONE COLLER SCREENSHOT
+    html += '<div style="margin-bottom:8px;display:flex;align-items:center;gap:6px;">'
+      +'<span style="font-size:10px;color:var(--t3);">Mode import :</span>'
+      +'<button id="fbref-mode-'+uid+'" data-mode="replace" onclick="this.dataset.mode=this.dataset.mode===\'replace\'?\'add\':\'replace\';this.textContent=this.dataset.mode===\'replace\'?\'🔄 Remplacer\':\'➕ Additionner\';this.style.background=this.dataset.mode===\'replace\'?\'rgba(255,120,80,.15)\':\'rgba(30,215,96,.15)\';this.style.borderColor=this.dataset.mode===\'replace\'?\'rgba(255,120,80,.4)\':\'rgba(30,215,96,.4)\';this.style.color=this.dataset.mode===\'replace\'?\'#ff7850\':\'#1ed760\';" style="padding:3px 10px;border-radius:6px;border:1px solid rgba(255,120,80,.4);background:rgba(255,120,80,.15);color:#ff7850;font-size:10px;font-weight:700;cursor:pointer;">🔄 Remplacer</button>'
+      +'<span style="font-size:9px;color:var(--t3);" id="fbref-mode-hint-'+uid+'">Saison complète FBref</span>'
+      +'</div>';
     html += '<div id="fbref-paste-zone-'+uid+'" onclick="document.getElementById(\'fbref-file-'+uid+'\').click()" ondragover="event.preventDefault();this.style.borderColor=\'var(--a)\'" ondragleave="this.style.borderColor=\'rgba(255,255,255,.1)\'" ondrop="handleFbrefDrop(event,\''+uid+'\',\''+nom+'\')" style="border:1.5px dashed rgba(255,255,255,.1);border-radius:8px;padding:10px 14px;margin-bottom:12px;text-align:center;cursor:pointer;transition:border-color .2s;display:flex;align-items:center;justify-content:center;gap:8px;">'
       +'<span style="font-size:11px;color:var(--t3);">📸 Colle ou glisse un screenshot FBref ici pour importer les stats automatiquement</span>'
       +'</div>'
-      +'<input type="file" id="fbref-file-'+uid+'" accept="image/*" style="display:none" onchange="handleFbrefFileInput(event,\''+uid+'\',\''+nom+'\')">';
+      +'<input type="file" id="fbref-file-'+uid+'" accept="image/*" style="display:none" onchange="handleFbrefFileInput(event,\''+uid+'\',\''+nom+'\')">'; 
 
     // TERRAIN + FICHE
     html += '<div style="display:flex;gap:10px;margin-bottom:14px;">';
@@ -7602,59 +7635,98 @@ async function loadFdSquad(el, nom, teamId) {
       html += '<div style="flex:1;height:1px;background:rgba(255,255,255,.05);"></div>';
       html += '<div style="font-size:9px;color:var(--t3);">'+pp.length+'</div></div>';
       var tc = 'font-size:8px;color:var(--t3);font-weight:700;text-align:center;padding:3px 4px;white-space:nowrap;';
-      html += '<table style="width:100%;border-collapse:collapse;table-layout:fixed;">';
-      html += '<colgroup><col style="width:20px"><col style="min-width:80px"><col style="width:22px"><col style="width:22px"><col style="width:22px"><col style="width:6px"><col style="width:22px"><col style="width:22px"><col style="width:22px"><col style="width:24px"><col style="width:26px"></colgroup>';
-      html += '<thead><tr>';
-      html += '<th style="'+tc+'"></th>';
-      html += '<th style="'+tc+'text-align:left;">Joueur</th>';
-      html += '<th style="'+tc+'" title="Matchs jou\u00e9s - Championnat">MJ</th>';
-      html += '<th style="'+tc+'" title="Buts - Championnat">🏆B</th>';
-      html += '<th style="'+tc+'" title="Passes d\u00e9cisives - Championnat">A</th>';
-      html += '<th style="'+tc+'color:rgba(255,255,255,.15);">|</th>';
-      html += '<th style="'+tc+'" title="Matchs jou\u00e9s - Europe">MJ</th>';
-      html += '<th style="'+tc+'" title="Buts - Europe">⭐B</th>';
-      html += '<th style="'+tc+'" title="Passes d\u00e9cisives - Europe">A</th>';
-      html += '<th style="'+tc+'" title="Age du joueur">Âge</th>';
-      html += '<th style="'+tc+'"></th>';
-      html += '</tr></thead><tbody>';
-      pp.forEach(function(p,i){
-        var inXi=xi.some(function(x){return x.id===p.id;});
-        var rowBg=i%2===0?'rgba(255,255,255,.025)':'rgba(255,255,255,.015)';
-        var rCol=p._rating?(parseFloat(p._rating)>=7?'#1ed760':parseFloat(p._rating)>=6?'#f0b020':'#ef9a9a'):'var(--t3)';
-        var val=p.marketValue>=1000000?(p.marketValue/1000000).toFixed(0)+'M':'—';
-        var sofaUrl=p.sofaId?'https://www.sofascore.com/player/'+p.sofaId:'https://www.google.com/search?q='+encodeURIComponent(p.name+' '+nom+' Sofascore');
-        var pSlug = p.name ? p.name.toLowerCase().split(' ').join('-') : 'player';
-        var sofaUrl = p.sofaId ? 'https://www.sofascore.com/player/'+pSlug+'/'+p.sofaId : 'https://www.google.com/search?q='+encodeURIComponent(p.name+' '+nom+' Sofascore');
-        var manualKey = 'manual_stats_'+(sofaId||afId||'0')+'_'+p.id;
-        var ms = {}; try { ms = JSON.parse(localStorage.getItem(manualKey)||'{}'); } catch(e){}
-        var hasManual = ms.league_goals!==undefined||ms.euro_goals!==undefined;
-        var lg = ms.league_goals!==undefined ? ms.league_goals : (hasManual?0:(p._goals||0));
-        var la = ms.league_assists!==undefined ? ms.league_assists : (hasManual?0:(p._assists||0));
-        var eg = ms.euro_goals||0;
-        var ea = ms.euro_assists||0;
-        var lmj = ms.league_apps!==undefined?ms.league_apps:(p._apps||0);
-        var emj = ms.euro_apps||0;
-        var fmtS = function(v,col){ return '<td style="text-align:center;font-size:12px;font-weight:700;padding:6px 2px;color:'+(v>0?col:'rgba(255,255,255,.2)')+'">'+v+'</td>'; };
-        html += '<tr data-bench-pid="'+p.id+'" style="background:'+rowBg+';border-left:3px solid '+pc+'55;cursor:pointer;">';
-        html += '<td style="padding:6px 4px;text-align:center;">';
-        html += '<span class="xi-badge" style="font-size:7px;background:'+pc+'33;color:'+pc+';border-radius:3px;padding:1px 3px;font-weight:800;'+(inXi?'':'visibility:hidden;')+'">XI</span>';
-        html += '</td>';
-        html += '<td style="padding:6px 4px;overflow:hidden;">';
-        html += '<a href="'+sofaUrl+'" target="_blank" onclick="event.stopPropagation()" style="font-size:12px;font-weight:700;color:var(--t1);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-decoration:none;display:block;">'+p.name+'</a>';
-        html += '</td>';
-        html += '<td style="text-align:center;font-size:11px;color:var(--t2);padding:6px 2px;">'+(lmj||0)+'</td>';
-        html += fmtS(lg,'#1ed760');
-        html += fmtS(la,'#4d84ff');
-        html += '<td style="text-align:center;font-size:9px;color:rgba(255,255,255,.15);padding:6px 0;">|</td>';
-        html += '<td style="text-align:center;font-size:11px;color:var(--t2);padding:6px 2px;">'+(emj||0)+'</td>';
-        html += fmtS(eg,'#f0b020');
-        html += fmtS(ea,'#f59e0b');
-        html += '<td style="text-align:center;font-size:11px;color:var(--t2);padding:6px 2px;">'+p._age+'</td>';
-        html += '<td style="text-align:center;padding:6px 2px;"><button class="fd-edit-btn" data-pid="'+p.id+'" data-afid="'+(sofaId||afId||'0')+'" onclick="event.stopPropagation();fdEditStats(this)" style="background:rgba(255,255,255,.08);border:none;border-radius:4px;padding:2px 5px;font-size:10px;cursor:pointer;color:var(--t3);">✏️</button></td>';
-        html += '</tr>';
-      });
-      html += '</tbody></table>';
-      html += '</div>';
+      var isMobilePortrait = window.innerWidth < 600;
+
+      if(isMobilePortrait) {
+        // ── MODE PORTRAIT MOBILE : Joueur + stats compactes ──
+        html += '<table style="width:100%;border-collapse:collapse;table-layout:fixed;">';
+        html += '<colgroup><col style="width:18px"><col style="auto"><col style="width:28px"><col style="width:28px"><col style="width:28px"></colgroup>';
+        html += '<thead><tr>';
+        html += '<th style="'+tc+'"></th>';
+        html += '<th style="'+tc+'text-align:left;">Joueur</th>';
+        html += '<th style="'+tc+'" title="Matchs jou\u00e9s">MJ</th>';
+        html += '<th style="'+tc+'" title="Buts">B</th>';
+        html += '<th style="'+tc+'" title="Passes d\u00e9cisives">A</th>';
+        html += '</tr></thead><tbody>';
+        pp.forEach(function(p,i){
+          var inXi=xi.some(function(x){return x.id===p.id;});
+          var rowBg=i%2===0?'rgba(255,255,255,.025)':'rgba(255,255,255,.015)';
+          var manualKey='manual_stats_'+(sofaId||afId||'0')+'_'+p.id;
+          var ms={}; try{ms=JSON.parse(localStorage.getItem(manualKey)||'{}');}catch(e){}
+          var hasManual=ms.league_goals!==undefined||ms.euro_goals!==undefined;
+          var lg=ms.league_goals!==undefined?ms.league_goals:(hasManual?0:(p._goals||0));
+          var la=ms.league_assists!==undefined?ms.league_assists:(hasManual?0:(p._assists||0));
+          var lmj=ms.league_apps!==undefined?ms.league_apps:(p._apps||0);
+          var sofaUrl=p.sofaId?'https://www.sofascore.com/player/'+p.sofaId:'https://www.google.com/search?q='+encodeURIComponent(p.name+' '+nom);
+          html += '<tr data-bench-pid="'+p.id+'" style="background:'+rowBg+';border-left:3px solid '+pc+'55;cursor:pointer;">';
+          html += '<td style="padding:5px 3px;text-align:center;"><span style="font-size:7px;background:'+pc+'33;color:'+pc+';border-radius:3px;padding:1px 3px;font-weight:800;'+(inXi?'':'visibility:hidden;')+'">XI</span></td>';
+          html += '<td style="padding:5px 4px;overflow:hidden;"><span style="font-size:12px;font-weight:700;color:var(--t1);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:block;">'+p.name+'</span></td>';
+          html += '<td style="text-align:center;font-size:11px;color:var(--t2);padding:5px 2px;">'+(lmj||0)+'</td>';
+          html += '<td style="text-align:center;font-size:12px;font-weight:700;padding:5px 2px;color:'+(lg>0?'#1ed760':'rgba(255,255,255,.2)')+'">'+lg+'</td>';
+          html += '<td style="text-align:center;font-size:12px;font-weight:700;padding:5px 2px;color:'+(la>0?'#4d84ff':'rgba(255,255,255,.2)')+'">'+la+'</td>';
+          html += '</tr>';
+        });
+        html += '</tbody></table>';
+        html += '</div>';
+      } else {
+        // ── MODE PAYSAGE / PC : toutes les colonnes ──
+        html += '<div style="overflow-x:auto;">';
+        html += '<table style="width:100%;border-collapse:collapse;table-layout:fixed;min-width:550px;">';
+        html += '<colgroup><col style="width:20px"><col style="min-width:100px"><col style="width:26px"><col style="width:26px"><col style="width:36px"><col style="width:26px"><col style="width:26px"><col style="width:6px"><col style="width:26px"><col style="width:26px"><col style="width:26px"><col style="width:28px"><col style="width:26px"></colgroup>';
+        html += '<thead><tr>';
+        html += '<th style="'+tc+'"></th>';
+        html += '<th style="'+tc+'text-align:left;">Joueur</th>';
+        html += '<th style="'+tc+'" title="Matchs jou\u00e9s - Championnat">MJ</th>';
+        html += '<th style="'+tc+'" title="Titularisations - Championnat">Tit</th>';
+        html += '<th style="'+tc+'" title="Minutes jou\u00e9es - Championnat">Min</th>';
+        html += '<th style="'+tc+'" title="Buts - Championnat">\uD83C\uDFC6B</th>';
+        html += '<th style="'+tc+'" title="Passes d\u00e9cisives - Championnat">A</th>';
+        html += '<th style="'+tc+'color:rgba(255,255,255,.15);">|</th>';
+        html += '<th style="'+tc+'" title="Matchs jou\u00e9s - Europe">MJ</th>';
+        html += '<th style="'+tc+'" title="Buts - Europe">\u2B50B</th>';
+        html += '<th style="'+tc+'" title="Passes d\u00e9cisives - Europe">A</th>';
+        html += '<th style="'+tc+'" title="\u00c2ge du joueur">\u00c2ge</th>';
+        html += '<th style="'+tc+'"></th>';
+        html += '</tr></thead><tbody>';
+        pp.forEach(function(p,i){
+          var inXi=xi.some(function(x){return x.id===p.id;});
+          var rowBg=i%2===0?'rgba(255,255,255,.025)':'rgba(255,255,255,.015)';
+          var sofaUrl=p.sofaId?'https://www.sofascore.com/player/'+p.sofaId:'https://www.google.com/search?q='+encodeURIComponent(p.name+' '+nom+' Sofascore');
+          var pSlug=p.name?p.name.toLowerCase().split(' ').join('-'):'player';
+          sofaUrl=p.sofaId?'https://www.sofascore.com/player/'+pSlug+'/'+p.sofaId:sofaUrl;
+          var manualKey='manual_stats_'+(sofaId||afId||'0')+'_'+p.id;
+          var ms={}; try{ms=JSON.parse(localStorage.getItem(manualKey)||'{}');}catch(e){}
+          var hasManual=ms.league_goals!==undefined||ms.euro_goals!==undefined;
+          var lg=ms.league_goals!==undefined?ms.league_goals:(hasManual?0:(p._goals||0));
+          var la=ms.league_assists!==undefined?ms.league_assists:(hasManual?0:(p._assists||0));
+          var eg=ms.euro_goals||0;
+          var ea=ms.euro_assists||0;
+          var lmj=ms.league_apps!==undefined?ms.league_apps:(p._apps||0);
+          var ltit=ms.league_starts!==undefined?ms.league_starts:(p._starts||0);
+          var lmin=ms.league_minutes!==undefined?ms.league_minutes:(p._minutes||0);
+          var lminK=lmin>=1000?(lmin/1000).toFixed(1)+'k':lmin||0;
+          var emj=ms.euro_apps||0;
+          var fmtS=function(v,col){return '<td style="text-align:center;font-size:12px;font-weight:700;padding:6px 2px;color:'+(v>0?col:'rgba(255,255,255,.2)')+'">'+v+'</td>';};
+          html += '<tr data-bench-pid="'+p.id+'" style="background:'+rowBg+';border-left:3px solid '+pc+'55;cursor:pointer;">';
+          html += '<td style="padding:6px 4px;text-align:center;"><span class="xi-badge" style="font-size:7px;background:'+pc+'33;color:'+pc+';border-radius:3px;padding:1px 3px;font-weight:800;'+(inXi?'':'visibility:hidden;')+'">XI</span></td>';
+          html += '<td style="padding:6px 4px;overflow:hidden;"><a href="'+sofaUrl+'" target="_blank" onclick="event.stopPropagation()" style="font-size:12px;font-weight:700;color:var(--t1);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-decoration:none;display:block;">'+p.name+'</a></td>';
+          html += '<td style="text-align:center;font-size:11px;color:var(--t2);padding:6px 2px;">'+(lmj||0)+'</td>';
+          html += '<td style="text-align:center;font-size:11px;color:var(--t2);padding:6px 2px;">'+(ltit||0)+'</td>';
+          html += '<td style="text-align:center;font-size:11px;color:var(--t2);padding:6px 2px;">'+(lmin?lminK:'—')+'</td>';
+          html += fmtS(lg,'#1ed760');
+          html += fmtS(la,'#4d84ff');
+          html += '<td style="text-align:center;font-size:9px;color:rgba(255,255,255,.15);padding:6px 0;">|</td>';
+          html += '<td style="text-align:center;font-size:11px;color:var(--t2);padding:6px 2px;">'+(emj||0)+'</td>';
+          html += fmtS(eg,'#f0b020');
+          html += fmtS(ea,'#f59e0b');
+          html += '<td style="text-align:center;font-size:11px;color:var(--t2);padding:6px 2px;">'+p._age+'</td>';
+          html += '<td style="text-align:center;padding:6px 2px;"><button class="fd-edit-btn" data-pid="'+p.id+'" data-afid="'+(sofaId||afId||'0')+'" onclick="event.stopPropagation();fdEditStats(this)" style="background:rgba(255,255,255,.08);border:none;border-radius:4px;padding:2px 5px;font-size:10px;cursor:pointer;color:var(--t3);">✏️</button></td>';
+          html += '</tr>';
+        });
+        html += '</tbody></table>';
+        html += '</div>';
+        html += '</div>';
+      }
     });
 
     html += '</div>';
@@ -7662,6 +7734,15 @@ async function loadFdSquad(el, nom, teamId) {
 
     // Activer le paste global pour la zone screenshot
     setupFbrefPaste(uid, nom);
+
+    // Mettre à jour le hint du mode import
+    var modeBtn2 = document.getElementById('fbref-mode-'+uid);
+    var hintEl = document.getElementById('fbref-mode-hint-'+uid);
+    if(modeBtn2 && hintEl) {
+      modeBtn2.addEventListener('click', function(){
+        hintEl.textContent = this.dataset.mode === 'replace' ? 'Saison compl\u00e8te FBref' : 'Update journée par journée';
+      });
+    }
 
     var tip=document.getElementById('fd-tip-'+uid);
     var playerMap={};
