@@ -4220,17 +4220,61 @@ function importBetAnalytix() {
         if(!state.b) state.b = {};
       }
 
-      save();
-      renderArchive && renderArchive();
-      render && render();
+      // Vérifier si tous les paris importés n'ont pas de book
+      var newBets = state.a.filter(function(h){ return h.source==='bet-analytix' && !h.b; });
+      var allMissingBook = newBets.length > 0 && newBets.length === state.a.filter(function(h){ return h.source==='bet-analytix'; }).length;
 
-      var msg = '✅ '+imported+' paris importés depuis Bet-Analytix !';
-      if(skipped) msg += '\n⏭ '+skipped+' lignes ignorées (en cours ou invalides)';
-      if(bkDepart > 0) {
-        var profit = state.a.filter(function(h){return h.source==='bet-analytix';}).reduce(function(acc,h){return acc+(h.win?(h.m*h.cote-h.m):-h.m);},0);
-        msg += '\n💰 BK actuelle recalculée : '+(bkDepart+profit).toFixed(2)+'€ (départ '+bkDepart+'€ + profit '+profit.toFixed(2)+'€)';
+      function finalizeImport(defaultBook) {
+        // Appliquer le book par défaut si fourni
+        if(defaultBook) {
+          state.a.forEach(function(h){
+            if(h.source==='bet-analytix' && !h.b) h.b = defaultBook;
+          });
+        }
+
+        save();
+        renderArchive && renderArchive();
+        render && render();
+
+        var msg = '✅ '+imported+' paris importés depuis Bet-Analytix !';
+        if(defaultBook) msg += '\n📚 Book appliqué : '+defaultBook;
+        if(skipped) msg += '\n⏭ '+skipped+' lignes ignorées (en cours ou invalides)';
+        if(bkDepart > 0) {
+          var profit = state.a.filter(function(h){return h.source==='bet-analytix';}).reduce(function(acc,h){return acc+(h.win?(h.m*h.cote-h.m):-h.m);},0);
+          msg += '\n💰 BK actuelle recalculée : '+(bkDepart+profit).toFixed(2)+'€ (départ '+bkDepart+'€ + profit '+profit.toFixed(2)+'€)';
+        }
+        alert(msg);
       }
-      alert(msg);
+
+      if(allMissingBook && existingBks.length > 0) {
+        // Créer une modale pour choisir le book par défaut
+        var overlay = document.createElement('div');
+        overlay.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.7);z-index:9999;display:flex;align-items:center;justify-content:center;';
+        var box = document.createElement('div');
+        box.style.cssText = 'background:var(--bg2,#1a1f2e);border:1px solid rgba(255,255,255,.1);border-radius:12px;padding:24px;min-width:280px;max-width:90%;';
+        var opts = existingBks.map(function(bk){ return '<option value="'+bk+'">'+bk+'</option>'; }).join('');
+        box.innerHTML = '<div style="font-size:14px;font-weight:700;color:var(--t1,#fff);margin-bottom:8px;">📚 Aucun bookmaker dans le CSV</div>'
+          +'<div style="font-size:12px;color:var(--t3,#aaa);margin-bottom:16px;">Choisir le book à appliquer à tous les paris importés :</div>'
+          +'<select id="default-bk-select" style="width:100%;padding:8px;border-radius:8px;background:var(--bg3,#252b3b);border:1px solid rgba(255,255,255,.15);color:var(--t1,#fff);font-size:13px;margin-bottom:16px;">'
+          +opts+'</select>'
+          +'<div style="display:flex;gap:8px;">'
+          +'<button id="default-bk-ok" style="flex:1;padding:10px;border-radius:8px;background:var(--accent,#4f8ef7);border:none;color:#fff;font-weight:700;cursor:pointer;">Appliquer</button>'
+          +'<button id="default-bk-skip" style="flex:1;padding:10px;border-radius:8px;background:rgba(255,255,255,.08);border:none;color:var(--t2,#ccc);cursor:pointer;">Ignorer</button>'
+          +'</div>';
+        overlay.appendChild(box);
+        document.body.appendChild(overlay);
+        document.getElementById('default-bk-ok').onclick = function(){
+          var chosen = document.getElementById('default-bk-select').value;
+          document.body.removeChild(overlay);
+          finalizeImport(chosen);
+        };
+        document.getElementById('default-bk-skip').onclick = function(){
+          document.body.removeChild(overlay);
+          finalizeImport(null);
+        };
+      } else {
+        finalizeImport(null);
+      }
     };
     reader.readAsText(file, 'UTF-8');
   };
