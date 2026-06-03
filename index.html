@@ -784,6 +784,7 @@ input[type="date"],input[type="time"]{color-scheme:dark;}
       <button class="itab" onclick="swInner('archive',this)">Archive</button>
       <button class="itab" onclick="swInner('types',this)">Types</button>
       <button class="itab" onclick="swInner('live',this);setTimeout(loadTeamLive,30)">🔴 Live</button>
+      <button class="itab" id="itab-compo" onclick="swInner('compo',this);setTimeout(loadTeamCompo,30)">👥 Compo</button>
       <button class="itab" id="itab-saisons">📊 Saisons</button>
       <button class="itab" id="itab-liens-equipe" onclick="swInner('liens-equipe',this);loadLiensEquipe();">🔗 Liens</button>
       <button class="itab" id="itab-mondial" style="display:none;">🌍 Mondial</button>
@@ -793,6 +794,7 @@ input[type="date"],input[type="time"]{color-scheme:dark;}
     <div id="ip-archive" class="ipanel"></div>
     <div id="ip-types" class="ipanel"></div>
     <div id="ip-live" class="ipanel"></div>
+    <div id="ip-compo" class="ipanel"></div>
     <div id="ip-saisons" class="ipanel"></div>
     <div id="ip-liens-equipe" class="ipanel"></div>
     <div id="ip-mondial" class="ipanel"></div>
@@ -5251,6 +5253,24 @@ async function testDbxKey(){
   }catch(e){if(st){st.innerText='❌ Erreur réseau';st.style.color='var(--r)';}}
 }
 
+function loadTeamCompo(){
+  var el = $i('ip-compo'); if(!el) return;
+  el.style.display = 'block';
+  var nom = _currentTeam||'';
+  var uObj = state.u.find(function(x){return x.n===nom;})||{};
+  var col = uObj.color||'#4d84ff';
+
+  // Chercher le teamId
+  var sofaId = SOFASCORE_TEAM_IDS && SOFASCORE_TEAM_IDS[nom];
+  if(!sofaId){ for(var k in SOFASCORE_TEAM_IDS){ if(nom.toLowerCase().indexOf(k.toLowerCase())>=0||k.toLowerCase().indexOf(nom.toLowerCase())>=0){sofaId=SOFASCORE_TEAM_IDS[k];break;} } }
+  var fdTeamId = TEAM_IDS[nom]||null;
+  if(!fdTeamId){ for(var k in TEAM_IDS){ if(nom.toLowerCase().indexOf(k.toLowerCase())>=0||k.toLowerCase().indexOf(nom.toLowerCase())>=0){fdTeamId=TEAM_IDS[k];break;} } }
+
+  el.innerHTML = '<div id="compo-squad-section"></div>';
+  var squadEl = document.getElementById('compo-squad-section');
+  if(squadEl) loadFdSquad(squadEl, nom, fdTeamId);
+}
+
 function loadTeamLive(){
   var el=$i('ip-live');if(!el)return;
   el.style.display='block';
@@ -7389,6 +7409,35 @@ async function runFbrefGroq(uid, nom, b64, groqKey, mode, comp) {
 }
 
 
+function toggleAdminLock(uid) {
+  var isAdmin = localStorage.getItem('gones45_admin') === '1';
+  if(isAdmin) {
+    // Verrouiller
+    localStorage.removeItem('gones45_admin');
+    var btn = document.getElementById('btn-admin-lock-'+uid);
+    if(btn) btn.textContent = '\uD83D\uDD12';
+    var zone = document.getElementById('fbref-admin-zone-'+uid);
+    if(zone) zone.style.display = 'none';
+  } else {
+    // Deverrouiller - demander le mot de passe
+    var pwd = prompt('Code admin :');
+    if(!pwd) return;
+    if(pwd === localStorage.getItem('gones45_admin_pwd') || pwd === 'gones45admin') {
+      localStorage.setItem('gones45_admin', '1');
+      // Sauvegarder le mot de passe si premier usage
+      if(!localStorage.getItem('gones45_admin_pwd')) {
+        localStorage.setItem('gones45_admin_pwd', pwd);
+      }
+      var btn = document.getElementById('btn-admin-lock-'+uid);
+      if(btn) btn.textContent = '\uD83D\uDD13';
+      var zone = document.getElementById('fbref-admin-zone-'+uid);
+      if(zone) zone.style.display = 'block';
+    } else {
+      alert('Code incorrect');
+    }
+  }
+}
+
 function toggleFbrefComp(uid) {
   var b = document.getElementById('fbref-comp-'+uid);
   if(!b) return;
@@ -7622,11 +7671,14 @@ async function loadFdSquad(el, nom, teamId) {
     html += '<div style="display:flex;align-items:center;gap:8px;">';
     html += '<div style="font-size:9px;color:var(--t3);">'+(usingSofa?'sofascore':'api-football · 2024-25')+'</div>';
     html += '<button id="btn-fbref-import-'+uid+'" onclick="importFbrefStats(\''+uid+'\',\''+nom+'\')" style="display:flex;align-items:center;gap:4px;padding:4px 8px;border-radius:6px;border:1px solid rgba(255,255,255,.15);background:rgba(255,255,255,.07);color:var(--t2);font-size:9px;font-weight:700;cursor:pointer;">📸 Import FBref</button>';
+    html += '<button id="btn-admin-lock-'+uid+'" onclick="toggleAdminLock(\''+uid+'\')" style="padding:4px 7px;border-radius:6px;border:1px solid rgba(255,255,255,.15);background:rgba(255,255,255,.07);color:var(--t2);font-size:12px;cursor:pointer;" title="Mode admin">'+(localStorage.getItem('gones45_admin')==='1'?'🔓':'🔒')+'</button>';
     html += '<button onclick="refreshSquadCache(\''+nom+'\')" style="display:flex;align-items:center;gap:4px;padding:4px 8px;border-radius:6px;border:1px solid rgba(255,255,255,.15);background:rgba(255,255,255,.07);color:var(--t2);font-size:9px;font-weight:700;cursor:pointer;" title="Vider le cache et recharger le squad depuis l\'API">🔄</button>';
     html += '</div>';
     html += '</div>';
 
-    // ZONE COLLER SCREENSHOT
+    // ZONE COLLER SCREENSHOT - visible seulement en mode admin
+    var isAdmin = localStorage.getItem('gones45_admin') === '1';
+    html += '<div id="fbref-admin-zone-'+uid+'" style="'+(isAdmin?'':'display:none;') +'">';
     html += '<div style="margin-bottom:8px;display:flex;align-items:center;gap:6px;flex-wrap:wrap;">'
       +'<span style="font-size:10px;color:var(--t3);">Comp :</span>'
       +'<button id="fbref-comp-'+uid+'" data-comp="league" onclick="toggleFbrefComp(\''+uid+'\')" style="padding:3px 10px;border-radius:6px;border:1px solid rgba(77,132,255,.4);background:rgba(77,132,255,.15);color:#4d84ff;font-size:10px;font-weight:700;cursor:pointer;">Champ</button>'
@@ -7637,7 +7689,10 @@ async function loadFdSquad(el, nom, teamId) {
     html += '<div id="fbref-paste-zone-'+uid+'" onclick="document.getElementById(\'fbref-file-'+uid+'\').click()" ondragover="event.preventDefault();this.style.borderColor=\'var(--a)\'" ondragleave="this.style.borderColor=\'rgba(255,255,255,.1)\'" ondrop="handleFbrefDrop(event,\''+uid+'\',\''+nom+'\')" style="border:1.5px dashed rgba(255,255,255,.1);border-radius:8px;padding:10px 14px;margin-bottom:12px;text-align:center;cursor:pointer;transition:border-color .2s;display:flex;align-items:center;justify-content:center;gap:8px;">'
       +'<span style="font-size:11px;color:var(--t3);">📸 Colle ou glisse un screenshot FBref ici pour importer les stats automatiquement</span>'
       +'</div>'
-      +'<input type="file" id="fbref-file-'+uid+'" accept="image/*" style="display:none" onchange="handleFbrefFileInput(event,\''+uid+'\',\''+nom+'\')">'; 
+      +'<input type="file" id="fbref-file-'+uid+'" accept="image/*" style="display:none" onchange="handleFbrefFileInput(event,\''+uid+'\',\''+nom+'\')">';
+    html += '</div>'; // fin fbref-admin-zone
+
+    // TERRAIN + FICHE 
 
     // TERRAIN + FICHE
     html += '<div style="display:flex;gap:10px;margin-bottom:14px;">';
