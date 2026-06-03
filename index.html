@@ -7237,7 +7237,9 @@ function handleFbrefFileInput(e, uid, nom) {
   if(!groqKey) { alert('❌ Clé Groq manquante — configure-la dans Outils.'); return; }
   var modeBtn = document.getElementById('fbref-mode-'+uid);
   var mode = modeBtn ? modeBtn.dataset.mode : 'replace';
-  fileToBase64(file).then(function(b64){ runFbrefGroq(uid, nom, b64, groqKey, mode); });
+  var compBtn = document.getElementById('fbref-comp-'+uid);
+  var comp = compBtn ? compBtn.dataset.comp : 'league';
+  fileToBase64(file).then(function(b64){ runFbrefGroq(uid, nom, b64, groqKey, mode, comp); });
 }
 
 function handleFbrefDrop(e, uid, nom) {
@@ -7250,7 +7252,9 @@ function handleFbrefDrop(e, uid, nom) {
   if(!groqKey) { alert('❌ Clé Groq manquante — configure-la dans Outils.'); return; }
   var modeBtn = document.getElementById('fbref-mode-'+uid);
   var mode = modeBtn ? modeBtn.dataset.mode : 'replace';
-  fileToBase64(file).then(function(b64){ runFbrefGroq(uid, nom, b64, groqKey, mode); });
+  var compBtn = document.getElementById('fbref-comp-'+uid);
+  var comp = compBtn ? compBtn.dataset.comp : 'league';
+  fileToBase64(file).then(function(b64){ runFbrefGroq(uid, nom, b64, groqKey, mode, comp); });
 }
 
 function setupFbrefPaste(uid, nom) {
@@ -7265,8 +7269,10 @@ function setupFbrefPaste(uid, nom) {
         if(!groqKey) { alert('❌ Clé Groq manquante.'); return; }
         var modeBtn = document.getElementById('fbref-mode-'+uid);
         var mode = modeBtn ? modeBtn.dataset.mode : 'replace';
+        var compBtn = document.getElementById('fbref-comp-'+uid);
+        var comp = compBtn ? compBtn.dataset.comp : 'league';
         var blob = items[i].getAsFile();
-        fileToBase64(blob).then(function(b64){ runFbrefGroq(uid, nom, b64, groqKey, mode); });
+        fileToBase64(blob).then(function(b64){ runFbrefGroq(uid, nom, b64, groqKey, mode, comp); });
         document.removeEventListener('paste', handler);
         break;
       }
@@ -7282,8 +7288,10 @@ function fileToBase64(file) {
   });
 }
 
-async function runFbrefGroq(uid, nom, b64, groqKey, mode) {
+async function runFbrefGroq(uid, nom, b64, groqKey, mode, comp) {
   mode = mode || 'replace';
+  comp = comp || 'league';
+  var prefix = comp === 'euro' ? 'euro' : 'league';
   var zone = document.getElementById('fbref-paste-zone-'+uid);
   var btn = document.getElementById('btn-fbref-import-'+uid);
   if(zone) zone.innerHTML = '<span style="font-size:11px;color:var(--t3);">⏳ Lecture en cours...</span>';
@@ -7300,7 +7308,11 @@ async function runFbrefGroq(uid, nom, b64, groqKey, mode) {
           role: 'user',
           content: [
             { type: 'image_url', image_url: { url: 'data:image/jpeg;base64,'+b64 } },
-            { type: 'text', text: 'Tu es un extracteur de données de statistiques football. Analyse ce tableau de stats (peut être FBref, Sofascore, ou autre) et retourne UNIQUEMENT un JSON valide (pas de texte autour, pas de markdown) avec ce format:\n{"players":[{"name":"Nom Joueur","apps":0,"starts":0,"goals":0,"assists":0,"minutes":0,"yellow":0,"red":0}]}\n\nCorrespondances de colonnes à reconnaître :\n- apps/matchs joués : "Député", "MJ", "MP", "Apps", "Matches"\n- starts/titularisations : "Débuts", "Starts", "Tit"\n- minutes : "Min", "Minutes"\n- buts : "Gls", "Buts", "Goals", "B"\n- passes décisives : "Ast", "Passes", "Assists", "A"\n- cartons jaunes : "CrdY", "CJ", "Yellow"\n- cartons rouges : "CrdR", "CR", "Red"\n\nExtrais TOUS les joueurs visibles. Si une colonne est absente mets 0. Utilise le nom exact tel qu\'il apparaît.' }
+            { type: 'text', text: 'Tu es un extracteur de données de statistiques football. Analyse ce tableau de stats (peut être FBref, Sofascore, ou autre) et retourne UNIQUEMENT un JSON valide (pas de texte autour, pas de markdown) avec ce format:\n{"players":[{"name":"Nom Joueur","apps":0,"starts":0,"goals":0,"assists":0,"minutes":0,"xg":0,"xa":0,"shots":0,"shots_on_target":0,"yellow":0,"red":0}]}\n\nCorrespondances de colonnes à reconnaître :\n- apps/matchs joués : "Député", "MJ", "MP", "Apps", "Matches"\n- starts/titularisations : "Débuts", "Starts", "Tit"\n- minutes : "Min", "Minutes"\n- buts : "Gls", "Buts", "Goals", "B"\n- passes décisives : "Ast", "Passes", "Assists", "A"\n- cartons jaunes : "CrdY", "CJ", "Yellow"\n- cartons rouges : "CrdR", "CR", "Red"
+- xG (expected goals) : "xG"
+- xA (expected assists) : "xA", "xAG"
+- tirs totaux : "Sh", "Shots", "Tirs"
+- tirs cadres : "SoT", "Tirs cadrés"\n\nExtrais TOUS les joueurs visibles. Si une colonne est absente mets 0. Utilise le nom exact tel qu\'il apparaît.' }
           ]
         }]
       })
@@ -7334,23 +7346,29 @@ async function runFbrefGroq(uid, nom, b64, groqKey, mode) {
           var manualKey = 'manual_stats_'+(sofaId||'0')+'_'+match.id;
           var ms = {}; try { ms = JSON.parse(localStorage.getItem(manualKey)||'{}'); } catch(e){}
           if(mode === 'add') {
-            // Additionner aux stats existantes
-            if(sp.apps)    ms.league_apps    = (ms.league_apps||0)    + sp.apps;
-            if(sp.starts !== undefined) ms.league_starts = (ms.league_starts||0) + sp.starts;
-            if(sp.goals)   ms.league_goals   = (ms.league_goals||0)   + sp.goals;
-            if(sp.assists) ms.league_assists = (ms.league_assists||0) + sp.assists;
-            if(sp.minutes) ms.league_minutes = (ms.league_minutes||0) + sp.minutes;
-            if(sp.yellow)  ms.league_yellow  = (ms.league_yellow||0)  + sp.yellow;
-            if(sp.red)     ms.league_red     = (ms.league_red||0)     + sp.red;
+            if(sp.apps)    ms[prefix+'_apps']    = (ms[prefix+'_apps']||0)    + sp.apps;
+            if(sp.starts !== undefined) ms[prefix+'_starts'] = (ms[prefix+'_starts']||0) + sp.starts;
+            if(sp.goals)   ms[prefix+'_goals']   = (ms[prefix+'_goals']||0)   + sp.goals;
+            if(sp.assists) ms[prefix+'_assists']  = (ms[prefix+'_assists']||0) + sp.assists;
+            if(sp.minutes) ms[prefix+'_minutes']  = (ms[prefix+'_minutes']||0) + sp.minutes;
+            if(sp.xg)      ms[prefix+'_xg']       = ((parseFloat(ms[prefix+'_xg'])||0) + parseFloat(sp.xg)).toFixed(1);
+            if(sp.xa)      ms[prefix+'_xa']       = ((parseFloat(ms[prefix+'_xa'])||0) + parseFloat(sp.xa)).toFixed(1);
+            if(sp.shots)   ms[prefix+'_shots']    = (ms[prefix+'_shots']||0)   + sp.shots;
+            if(sp.shots_on_target) ms[prefix+'_sot'] = (ms[prefix+'_sot']||0) + sp.shots_on_target;
+            if(sp.yellow)  ms[prefix+'_yellow']   = (ms[prefix+'_yellow']||0)  + sp.yellow;
+            if(sp.red)     ms[prefix+'_red']      = (ms[prefix+'_red']||0)     + sp.red;
           } else {
-            // Remplacer les stats
-            if(sp.apps)    ms.league_apps    = sp.apps;
-            if(sp.starts !== undefined) ms.league_starts = sp.starts;
-            if(sp.goals)   ms.league_goals   = sp.goals;
-            if(sp.assists) ms.league_assists = sp.assists;
-            if(sp.minutes) ms.league_minutes = sp.minutes;
-            if(sp.yellow)  ms.league_yellow  = sp.yellow;
-            if(sp.red)     ms.league_red     = sp.red;
+            if(sp.apps)    ms[prefix+'_apps']    = sp.apps;
+            if(sp.starts !== undefined) ms[prefix+'_starts'] = sp.starts;
+            if(sp.goals)   ms[prefix+'_goals']   = sp.goals;
+            if(sp.assists) ms[prefix+'_assists']  = sp.assists;
+            if(sp.minutes) ms[prefix+'_minutes']  = sp.minutes;
+            if(sp.xg !== undefined) ms[prefix+'_xg'] = parseFloat(sp.xg).toFixed(1);
+            if(sp.xa !== undefined) ms[prefix+'_xa'] = parseFloat(sp.xa).toFixed(1);
+            if(sp.shots)   ms[prefix+'_shots']    = sp.shots;
+            if(sp.shots_on_target) ms[prefix+'_sot'] = sp.shots_on_target;
+            if(sp.yellow)  ms[prefix+'_yellow']   = sp.yellow;
+            if(sp.red)     ms[prefix+'_red']      = sp.red;
           }
           localStorage.setItem(manualKey, JSON.stringify(ms));
           updated++;
@@ -7358,7 +7376,7 @@ async function runFbrefGroq(uid, nom, b64, groqKey, mode) {
       });
     }
 
-    if(zone) zone.innerHTML = '<span style="font-size:11px;color:var(--g);">✅ '+updated+' joueur(s) '+(mode==='add'?'additionnés':'mis à jour')+' — rechargement...</span>';
+    if(zone) zone.innerHTML = '<span style="font-size:11px;color:var(--g);">✅ '+updated+' joueur(s) '+(mode==='add'?'additionnés':'mis à jour')+' ('+(comp==='euro'?'Europe':'Championnat')+') — rechargement...</span>';
     if(btn) { btn.textContent = '✅ '+updated+' MAJ'; btn.disabled = false; }
     setTimeout(function() {
       loadTeamLive();
@@ -7576,10 +7594,12 @@ async function loadFdSquad(el, nom, teamId) {
     html += '</div>';
 
     // ZONE COLLER SCREENSHOT
-    html += '<div style="margin-bottom:8px;display:flex;align-items:center;gap:6px;">'
-      +'<span style="font-size:10px;color:var(--t3);">Mode import :</span>'
-      +'<button id="fbref-mode-'+uid+'" data-mode="replace" onclick="this.dataset.mode=this.dataset.mode===\'replace\'?\'add\':\'replace\';this.textContent=this.dataset.mode===\'replace\'?\'🔄 Remplacer\':\'➕ Additionner\';this.style.background=this.dataset.mode===\'replace\'?\'rgba(255,120,80,.15)\':\'rgba(30,215,96,.15)\';this.style.borderColor=this.dataset.mode===\'replace\'?\'rgba(255,120,80,.4)\':\'rgba(30,215,96,.4)\';this.style.color=this.dataset.mode===\'replace\'?\'#ff7850\':\'#1ed760\';" style="padding:3px 10px;border-radius:6px;border:1px solid rgba(255,120,80,.4);background:rgba(255,120,80,.15);color:#ff7850;font-size:10px;font-weight:700;cursor:pointer;">🔄 Remplacer</button>'
-      +'<span style="font-size:9px;color:var(--t3);" id="fbref-mode-hint-'+uid+'">Saison complète FBref</span>'
+    html += '<div style="margin-bottom:8px;display:flex;align-items:center;gap:6px;flex-wrap:wrap;">'
+      +'<span style="font-size:10px;color:var(--t3);">Comp :</span>'
+      +'<button id="fbref-comp-'+uid+'" data-comp="league" onclick="var b=this;b.dataset.comp=b.dataset.comp==="league"?"euro":"league";b.textContent=b.dataset.comp==="league"?"🏆 Champ":"⭐ Europe";b.style.background=b.dataset.comp==="league"?"rgba(77,132,255,.15)":"rgba(240,180,32,.15)";b.style.borderColor=b.dataset.comp==="league"?"rgba(77,132,255,.4)":"rgba(240,180,32,.4)";b.style.color=b.dataset.comp==="league"?"#4d84ff":"#f0b420";" style="padding:3px 10px;border-radius:6px;border:1px solid rgba(77,132,255,.4);background:rgba(77,132,255,.15);color:#4d84ff;font-size:10px;font-weight:700;cursor:pointer;">🏆 Champ</button>'
+      +'<span style="font-size:10px;color:var(--t3);margin-left:4px;">Mode :</span>'
+      +'<button id="fbref-mode-'+uid+'" data-mode="replace" onclick="var b=this;b.dataset.mode=b.dataset.mode==="replace"?"add":"replace";b.textContent=b.dataset.mode==="replace"?"🔄 Remplacer":"➕ Additionner";b.style.background=b.dataset.mode==="replace"?"rgba(255,120,80,.15)":"rgba(30,215,96,.15)";b.style.borderColor=b.dataset.mode==="replace"?"rgba(255,120,80,.4)":"rgba(30,215,96,.4)";b.style.color=b.dataset.mode==="replace"?"#ff7850":"#1ed760";" style="padding:3px 10px;border-radius:6px;border:1px solid rgba(255,120,80,.4);background:rgba(255,120,80,.15);color:#ff7850;font-size:10px;font-weight:700;cursor:pointer;">🔄 Remplacer</button>'
+      +'<span style="font-size:9px;color:var(--t3);" id="fbref-mode-hint-'+uid+'">Championnat · Saison complète</span>'
       +'</div>';
     html += '<div id="fbref-paste-zone-'+uid+'" onclick="document.getElementById(\'fbref-file-'+uid+'\').click()" ondragover="event.preventDefault();this.style.borderColor=\'var(--a)\'" ondragleave="this.style.borderColor=\'rgba(255,255,255,.1)\'" ondrop="handleFbrefDrop(event,\''+uid+'\',\''+nom+'\')" style="border:1.5px dashed rgba(255,255,255,.1);border-radius:8px;padding:10px 14px;margin-bottom:12px;text-align:center;cursor:pointer;transition:border-color .2s;display:flex;align-items:center;justify-content:center;gap:8px;">'
       +'<span style="font-size:11px;color:var(--t3);">📸 Colle ou glisse un screenshot FBref ici pour importer les stats automatiquement</span>'
@@ -7671,8 +7691,8 @@ async function loadFdSquad(el, nom, teamId) {
       } else {
         // ── MODE PAYSAGE / PC : toutes les colonnes ──
         html += '<div style="overflow-x:auto;">';
-        html += '<table style="width:100%;border-collapse:collapse;table-layout:fixed;min-width:550px;">';
-        html += '<colgroup><col style="width:20px"><col style="min-width:100px"><col style="width:26px"><col style="width:26px"><col style="width:36px"><col style="width:26px"><col style="width:26px"><col style="width:6px"><col style="width:26px"><col style="width:26px"><col style="width:26px"><col style="width:28px"><col style="width:26px"></colgroup>';
+        html += '<table style="width:100%;border-collapse:collapse;table-layout:fixed;min-width:750px;">';
+        html += '<colgroup><col style="width:20px"><col style="min-width:100px"><col style="width:26px"><col style="width:26px"><col style="width:36px"><col style="width:26px"><col style="width:26px"><col style="width:30px"><col style="width:30px"><col style="width:26px"><col style="width:26px"><col style="width:6px"><col style="width:26px"><col style="width:26px"><col style="width:26px"><col style="width:26px"><col style="width:26px"><col style="width:28px"><col style="width:26px"></colgroup>';
         html += '<thead><tr>';
         html += '<th style="'+tc+'"></th>';
         html += '<th style="'+tc+'text-align:left;">Joueur</th>';
@@ -7681,10 +7701,16 @@ async function loadFdSquad(el, nom, teamId) {
         html += '<th style="'+tc+'" title="Minutes jou\u00e9es - Championnat">Min</th>';
         html += '<th style="'+tc+'" title="Buts - Championnat">\uD83C\uDFC6B</th>';
         html += '<th style="'+tc+'" title="Passes d\u00e9cisives - Championnat">A</th>';
+        html += '<th style="'+tc+'" title="Expected Goals (buts attendus)">xG</th>';
+        html += '<th style="'+tc+'" title="Expected Assists (passes attendues)">xA</th>';
+        html += '<th style="'+tc+'" title="Tirs totaux">Sh</th>';
+        html += '<th style="'+tc+'" title="Tirs cadr\u00e9s">SoT</th>';
         html += '<th style="'+tc+'color:rgba(255,255,255,.15);">|</th>';
         html += '<th style="'+tc+'" title="Matchs jou\u00e9s - Europe">MJ</th>';
         html += '<th style="'+tc+'" title="Buts - Europe">\u2B50B</th>';
         html += '<th style="'+tc+'" title="Passes d\u00e9cisives - Europe">A</th>';
+        html += '<th style="'+tc+'color:#f0b020;" title="Cartons jaunes">CJ</th>';
+        html += '<th style="'+tc+'color:#ef4444;" title="Cartons rouges">CR</th>';
         html += '<th style="'+tc+'" title="\u00c2ge du joueur">\u00c2ge</th>';
         html += '<th style="'+tc+'"></th>';
         html += '</tr></thead><tbody>';
@@ -7706,6 +7732,12 @@ async function loadFdSquad(el, nom, teamId) {
           var lmin=ms.league_minutes!==undefined?ms.league_minutes:(p._minutes||0);
           var lminK=lmin>=1000?(lmin/1000).toFixed(1)+'k':lmin||0;
           var emj=ms.euro_apps||0;
+          var lxg=ms.league_xg!==undefined?parseFloat(ms.league_xg).toFixed(1):null;
+          var lxa=ms.league_xa!==undefined?parseFloat(ms.league_xa).toFixed(1):null;
+          var lsh=ms.league_shots||0;
+          var lsot=ms.league_sot||0;
+          var lcj=ms.league_yellow||0;
+          var lcr=ms.league_red||0;
           var fmtS=function(v,col){return '<td style="text-align:center;font-size:12px;font-weight:700;padding:6px 2px;color:'+(v>0?col:'rgba(255,255,255,.2)')+'">'+v+'</td>';};
           html += '<tr data-bench-pid="'+p.id+'" style="background:'+rowBg+';border-left:3px solid '+pc+'55;cursor:pointer;">';
           html += '<td style="padding:6px 4px;text-align:center;"><span class="xi-badge" style="font-size:7px;background:'+pc+'33;color:'+pc+';border-radius:3px;padding:1px 3px;font-weight:800;'+(inXi?'':'visibility:hidden;')+'">XI</span></td>';
@@ -7715,10 +7747,16 @@ async function loadFdSquad(el, nom, teamId) {
           html += '<td style="text-align:center;font-size:11px;color:var(--t2);padding:6px 2px;">'+(lmin?lminK:'—')+'</td>';
           html += fmtS(lg,'#1ed760');
           html += fmtS(la,'#4d84ff');
+          html += '<td style="text-align:center;font-size:11px;padding:6px 2px;color:'+(lxg&&parseFloat(lxg)>0?'#a78bfa':'rgba(255,255,255,.2)')+'">'+( lxg||'—')+'</td>';
+          html += '<td style="text-align:center;font-size:11px;padding:6px 2px;color:'+(lxa&&parseFloat(lxa)>0?'#a78bfa':'rgba(255,255,255,.2)')+'">'+( lxa||'—')+'</td>';
+          html += '<td style="text-align:center;font-size:11px;color:var(--t2);padding:6px 2px;">'+(lsh||'—')+'</td>';
+          html += '<td style="text-align:center;font-size:11px;color:'+(lsot>0?'#f0b020':'rgba(255,255,255,.2)')+';padding:6px 2px;">'+(lsot||'—')+'</td>';
           html += '<td style="text-align:center;font-size:9px;color:rgba(255,255,255,.15);padding:6px 0;">|</td>';
           html += '<td style="text-align:center;font-size:11px;color:var(--t2);padding:6px 2px;">'+(emj||0)+'</td>';
           html += fmtS(eg,'#f0b020');
           html += fmtS(ea,'#f59e0b');
+          html += '<td style="text-align:center;font-size:11px;padding:6px 2px;color:'+(lcj>0?'#f0b020':'rgba(255,255,255,.2)')+'">'+( lcj||'—')+'</td>';
+          html += '<td style="text-align:center;font-size:11px;padding:6px 2px;color:'+(lcr>0?'#ef4444':'rgba(255,255,255,.2)')+'">'+( lcr||'—')+'</td>';
           html += '<td style="text-align:center;font-size:11px;color:var(--t2);padding:6px 2px;">'+p._age+'</td>';
           html += '<td style="text-align:center;padding:6px 2px;"><button class="fd-edit-btn" data-pid="'+p.id+'" data-afid="'+(sofaId||afId||'0')+'" onclick="event.stopPropagation();fdEditStats(this)" style="background:rgba(255,255,255,.08);border:none;border-radius:4px;padding:2px 5px;font-size:10px;cursor:pointer;color:var(--t3);">✏️</button></td>';
           html += '</tr>';
@@ -7737,12 +7775,16 @@ async function loadFdSquad(el, nom, teamId) {
 
     // Mettre à jour le hint du mode import
     var modeBtn2 = document.getElementById('fbref-mode-'+uid);
+    var compBtn2 = document.getElementById('fbref-comp-'+uid);
     var hintEl = document.getElementById('fbref-mode-hint-'+uid);
-    if(modeBtn2 && hintEl) {
-      modeBtn2.addEventListener('click', function(){
-        hintEl.textContent = this.dataset.mode === 'replace' ? 'Saison compl\u00e8te FBref' : 'Update journée par journée';
-      });
+    function updateHint() {
+      if(!hintEl||!modeBtn2||!compBtn2) return;
+      var c = compBtn2.dataset.comp==='euro'?'Europe':'Championnat';
+      var m = modeBtn2.dataset.mode==='add'?'journée par journée':'saison complète';
+      hintEl.textContent = c+' · '+m;
     }
+    if(modeBtn2) modeBtn2.addEventListener('click', updateHint);
+    if(compBtn2) compBtn2.addEventListener('click', updateHint);
 
     var tip=document.getElementById('fd-tip-'+uid);
     var playerMap={};
