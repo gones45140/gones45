@@ -5268,7 +5268,7 @@ function loadTeamCompo(){
 
   el.innerHTML = '<div id="compo-squad-section"></div>';
   var squadEl = document.getElementById('compo-squad-section');
-  if(squadEl) loadFdSquad(squadEl, nom, fdTeamId);
+  if(squadEl) loadFdSquad(squadEl, nom, fdTeamId, true);
 }
 
 function loadTeamLive(){
@@ -5324,14 +5324,12 @@ function loadTeamLive(){
     return;
   }
 
-  // Squad via football-data pour équipes hors PL
+  // Squad déplacé dans l'onglet Compo
   var fdKeyCheck = getFdorgKey();
   var fdTeamId = TEAM_IDS[nom]||null;
   if(!fdTeamId){ for(var k in TEAM_IDS){ if(nom.toLowerCase().indexOf(k.toLowerCase())>=0||k.toLowerCase().indexOf(nom.toLowerCase())>=0){fdTeamId=TEAM_IDS[k];break;} } }
   if(fdKeyCheck && fdTeamId) {
-    el.innerHTML = '<div id="live-apisports-section2"></div><div id="live-fd-section" style="margin-top:10px;"></div>';
-    var fdSquadEl = document.getElementById('live-fd-section');
-    if(fdSquadEl) loadFdSquad(fdSquadEl, nom, fdTeamId);
+    el.innerHTML = '<div id="live-apisports-section2"></div>';
     var apiSportsKey2b = getApiSportsKey();
     if(apiSportsKey2b){
       var liveTarget2 = document.getElementById('live-apisports-section2');
@@ -7474,7 +7472,7 @@ function updateFbrefHint(uid) {
   hint.textContent = c + ' - ' + m;
 }
 
-async function loadFdSquad(el, nom, teamId) {
+async function loadFdSquad(el, nom, teamId, noTerrain) {
   el.innerHTML = '<div style="text-align:center;padding:16px;color:var(--t3);font-size:11px;">⏳ Chargement squad...</div>';
   try {
     var rapidKey = localStorage.getItem('gones45_rapidapi_key');
@@ -7694,6 +7692,7 @@ async function loadFdSquad(el, nom, teamId) {
 
     // TERRAIN + FICHE 
 
+    if(!noTerrain){
     // TERRAIN + FICHE
     html += '<div style="display:flex;gap:10px;margin-bottom:14px;">';
     html += '<div id="fd-pitch-'+uid+'" style="position:relative;border-radius:12px;overflow:hidden;background:#1a3a1a;border:1px solid rgba(255,255,255,.08);flex:1;min-width:0;">';
@@ -7727,6 +7726,7 @@ async function loadFdSquad(el, nom, teamId) {
     });
     html += '<div style="height:360px;"></div></div>';
 
+    }
     // Panneau fiche
     html += '<div id="fd-tip-'+uid+'" style="width:140px;flex-shrink:0;border-radius:12px;background:rgba(14,18,32,.95);border:1px solid rgba(77,132,255,.25);padding:12px;display:flex;flex-direction:column;gap:2px;">';
     html += '<div style="font-size:9px;color:var(--t3);text-align:center;margin:auto 0;">← Sélectionne</div>';
