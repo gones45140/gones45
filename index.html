@@ -7210,94 +7210,139 @@ async function importFbrefStats(uid, nom) {
   var groqKey = getGeminiKey();
   if(!groqKey) { alert('❌ Clé Groq manquante — configure-la dans Outils.'); return; }
 
-  // Input file
   var input = document.createElement('input');
   input.type = 'file';
   input.accept = 'image/*';
   input.onchange = async function(e) {
     var file = e.target.files[0];
     if(!file) return;
-
-    var btn = document.getElementById('btn-fbref-import-'+uid);
-    if(btn) { btn.textContent = '⏳ Lecture...'; btn.disabled = true; }
-
-    // Convert to base64
-    var b64 = await new Promise(function(res) {
-      var r = new FileReader();
-      r.onload = function(ev) { res(ev.target.result.split(',')[1]); };
-      r.readAsDataURL(file);
-    });
-
-    try {
-      var resp = await fetch('https://api.groq.com/openai/v1/chat/completions', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer '+groqKey },
-        body: JSON.stringify({
-          model: 'meta-llama/llama-4-scout-17b-16e-instruct',
-          max_tokens: 2000,
-          messages: [{
-            role: 'user',
-            content: [
-              { type: 'image_url', image_url: { url: 'data:image/jpeg;base64,'+b64 } },
-              { type: 'text', text: 'Tu es un extracteur de données de statistiques football. Analyse ce tableau de stats et retourne UNIQUEMENT un JSON valide (pas de texte autour, pas de markdown) avec ce format:\n{"players":[{"name":"Nom Joueur","apps":0,"goals":0,"assists":0,"minutes":0}]}\nExtrais tous les joueurs visibles avec leurs stats. Si une colonne n\'est pas visible mets 0. Utilise le nom tel qu\'il apparaît dans le tableau.' }
-            ]
-          }]
-        })
-      });
-
-      var data = await resp.json();
-      var raw = data.choices && data.choices[0] && data.choices[0].message && data.choices[0].message.content;
-      if(!raw) throw new Error('Réponse vide');
-
-      // Parse JSON
-      var clean = raw.replace(/```json|```/g, '').trim();
-      var parsed = JSON.parse(clean);
-      var players = parsed.players || [];
-      if(!players.length) throw new Error('Aucun joueur extrait');
-
-      // Find the squad in state and update stats
-      var uObj = state.u.find(function(x){ return x.n === nom; }) || {};
-      var sofaId = SOFASCORE_TEAM_IDS && SOFASCORE_TEAM_IDS[nom];
-      var afId = null;
-      var updated = 0;
-
-      players.forEach(function(sp) {
-        // Find matching player by name in localStorage manual stats
-        // Try to find player in squad cache
-        var cacheKey = 'squad_sofa_'+(sofaId||'af_'+nom);
-        var squadData = null;
-        try { var c = JSON.parse(localStorage.getItem(cacheKey)||'{}'); squadData = c.squad; } catch(e){}
-
-        if(squadData) {
-          var match = squadData.find(function(p) {
-            var pn = (p.name||p.shortName||'').toLowerCase();
-            var sn = sp.name.toLowerCase();
-            return pn.includes(sn) || sn.includes(pn) || pn.split(' ').some(function(part){ return part.length>3 && sn.includes(part); });
-          });
-          if(match) {
-            var manualKey = 'manual_stats_'+(sofaId||'0')+'_'+match.id;
-            var ms = {}; try { ms = JSON.parse(localStorage.getItem(manualKey)||'{}'); } catch(e){}
-            ms.league_apps = sp.apps || ms.league_apps || 0;
-            ms.league_goals = sp.goals || ms.league_goals || 0;
-            ms.league_assists = sp.assists || ms.league_assists || 0;
-            if(sp.minutes) ms.league_minutes = sp.minutes;
-            localStorage.setItem(manualKey, JSON.stringify(ms));
-            updated++;
-          }
-        }
-      });
-
-      if(btn) { btn.textContent = '✅ '+updated+' mis à jour'; btn.disabled = false; }
-      setTimeout(function() { loadTeamLive(); }, 500);
-
-    } catch(err) {
-      console.error('importFbrefStats error:', err);
-      if(btn) { btn.textContent = '❌ Erreur'; btn.disabled = false; }
-      alert('Erreur lecture image : '+err.message);
-      setTimeout(function(){ if(btn){ btn.textContent='📸 Import FBref'; btn.disabled=false; } }, 3000);
-    }
+    var b64 = await fileToBase64(file);
+    await runFbrefGroq(uid, nom, b64, groqKey);
   };
   input.click();
+}
+
+function handleFbrefFileInput(e, uid, nom) {
+  var file = e.target.files[0];
+  if(!file) return;
+  var groqKey = getGeminiKey();
+  if(!groqKey) { alert('❌ Clé Groq manquante — configure-la dans Outils.'); return; }
+  fileToBase64(file).then(function(b64){ runFbrefGroq(uid, nom, b64, groqKey); });
+}
+
+function handleFbrefDrop(e, uid, nom) {
+  e.preventDefault();
+  var zone = document.getElementById('fbref-paste-zone-'+uid);
+  if(zone) zone.style.borderColor = 'rgba(255,255,255,.1)';
+  var file = e.dataTransfer.files[0];
+  if(!file || file.type.indexOf('image')===-1) return;
+  var groqKey = getGeminiKey();
+  if(!groqKey) { alert('❌ Clé Groq manquante — configure-la dans Outils.'); return; }
+  fileToBase64(file).then(function(b64){ runFbrefGroq(uid, nom, b64, groqKey); });
+}
+
+function setupFbrefPaste(uid, nom) {
+  document.addEventListener('paste', function handler(e) {
+    // Only if live tab is visible
+    var liveEl = document.getElementById('ip-live');
+    if(!liveEl || liveEl.style.display==='none') return;
+    var items = e.clipboardData && e.clipboardData.items;
+    if(!items) return;
+    for(var i=0;i<items.length;i++){
+      if(items[i].type.indexOf('image')!==-1){
+        var groqKey = getGeminiKey();
+        if(!groqKey) { alert('❌ Clé Groq manquante.'); return; }
+        var blob = items[i].getAsFile();
+        fileToBase64(blob).then(function(b64){ runFbrefGroq(uid, nom, b64, groqKey); });
+        document.removeEventListener('paste', handler);
+        break;
+      }
+    }
+  });
+}
+
+function fileToBase64(file) {
+  return new Promise(function(res) {
+    var r = new FileReader();
+    r.onload = function(ev) { res(ev.target.result.split(',')[1]); };
+    r.readAsDataURL(file);
+  });
+}
+
+async function runFbrefGroq(uid, nom, b64, groqKey) {
+  var zone = document.getElementById('fbref-paste-zone-'+uid);
+  var btn = document.getElementById('btn-fbref-import-'+uid);
+  if(zone) zone.innerHTML = '<span style="font-size:11px;color:var(--t3);">⏳ Lecture en cours...</span>';
+  if(btn) { btn.textContent = '⏳...'; btn.disabled = true; }
+
+  try {
+    var resp = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer '+groqKey },
+      body: JSON.stringify({
+        model: 'meta-llama/llama-4-scout-17b-16e-instruct',
+        max_tokens: 2000,
+        messages: [{
+          role: 'user',
+          content: [
+            { type: 'image_url', image_url: { url: 'data:image/jpeg;base64,'+b64 } },
+            { type: 'text', text: 'Tu es un extracteur de données de statistiques football. Analyse ce tableau de stats et retourne UNIQUEMENT un JSON valide (pas de texte autour, pas de markdown) avec ce format:\n{"players":[{"name":"Nom Joueur","apps":0,"goals":0,"assists":0,"minutes":0}]}\nExtrais tous les joueurs visibles avec leurs stats. Si une colonne n\'est pas visible mets 0. Utilise le nom tel qu\'il apparaît dans le tableau.' }
+          ]
+        }]
+      })
+    });
+
+    var data = await resp.json();
+    var raw = data.choices && data.choices[0] && data.choices[0].message && data.choices[0].message.content;
+    if(!raw) throw new Error('Réponse vide');
+
+    var clean = raw.replace(/```json|```/g, '').trim();
+    var parsed = JSON.parse(clean);
+    var players = parsed.players || [];
+    if(!players.length) throw new Error('Aucun joueur extrait');
+
+    var sofaId = SOFASCORE_TEAM_IDS && SOFASCORE_TEAM_IDS[nom];
+    if(!sofaId) { for(var k in SOFASCORE_TEAM_IDS){ if(nom.toLowerCase().indexOf(k.toLowerCase())>=0||k.toLowerCase().indexOf(nom.toLowerCase())>=0){sofaId=SOFASCORE_TEAM_IDS[k];break;} } }
+    var updated = 0;
+
+    var cacheKey = 'squad_sofa_'+(sofaId||'af_'+nom);
+    var squadData = null;
+    try { var c = JSON.parse(localStorage.getItem(cacheKey)||'{}'); squadData = c.squad; } catch(e){}
+
+    if(squadData) {
+      players.forEach(function(sp) {
+        var match = squadData.find(function(p) {
+          var pn = (p.name||p.shortName||'').toLowerCase();
+          var sn = sp.name.toLowerCase();
+          return pn===sn || pn.includes(sn) || sn.includes(pn) || pn.split(' ').some(function(part){ return part.length>3 && sn.includes(part); });
+        });
+        if(match) {
+          var manualKey = 'manual_stats_'+(sofaId||'0')+'_'+match.id;
+          var ms = {}; try { ms = JSON.parse(localStorage.getItem(manualKey)||'{}'); } catch(e){}
+          if(sp.apps) ms.league_apps = sp.apps;
+          if(sp.goals) ms.league_goals = sp.goals;
+          if(sp.assists) ms.league_assists = sp.assists;
+          if(sp.minutes) ms.league_minutes = sp.minutes;
+          localStorage.setItem(manualKey, JSON.stringify(ms));
+          updated++;
+        }
+      });
+    }
+
+    if(zone) zone.innerHTML = '<span style="font-size:11px;color:var(--g);">✅ '+updated+' joueur(s) mis à jour — rechargement...</span>';
+    if(btn) { btn.textContent = '✅ '+updated+' MAJ'; btn.disabled = false; }
+    setTimeout(function() {
+      loadTeamLive();
+    }, 1000);
+
+  } catch(err) {
+    console.error('runFbrefGroq error:', err);
+    if(zone) zone.innerHTML = '<span style="font-size:11px;color:var(--r);">❌ Erreur : '+err.message+'</span>';
+    if(btn) { btn.textContent = '📸 Import FBref'; btn.disabled = false; }
+    setTimeout(function(){
+      if(zone) zone.innerHTML = '<span style="font-size:11px;color:var(--t3);">📸 Colle ou glisse un screenshot FBref ici pour importer les stats automatiquement</span>';
+    }, 4000);
+  }
 }
 
 async function loadFdSquad(el, nom, teamId) {
@@ -7500,6 +7545,12 @@ async function loadFdSquad(el, nom, teamId) {
     html += '</div>';
     html += '</div>';
 
+    // ZONE COLLER SCREENSHOT
+    html += '<div id="fbref-paste-zone-'+uid+'" onclick="document.getElementById(\'fbref-file-'+uid+'\').click()" ondragover="event.preventDefault();this.style.borderColor=\'var(--a)\'" ondragleave="this.style.borderColor=\'rgba(255,255,255,.1)\'" ondrop="handleFbrefDrop(event,\''+uid+'\',\''+nom+'\')" style="border:1.5px dashed rgba(255,255,255,.1);border-radius:8px;padding:10px 14px;margin-bottom:12px;text-align:center;cursor:pointer;transition:border-color .2s;display:flex;align-items:center;justify-content:center;gap:8px;">'
+      +'<span style="font-size:11px;color:var(--t3);">📸 Colle ou glisse un screenshot FBref ici pour importer les stats automatiquement</span>'
+      +'</div>'
+      +'<input type="file" id="fbref-file-'+uid+'" accept="image/*" style="display:none" onchange="handleFbrefFileInput(event,\''+uid+'\',\''+nom+'\')">';
+
     // TERRAIN + FICHE
     html += '<div style="display:flex;gap:10px;margin-bottom:14px;">';
     html += '<div id="fd-pitch-'+uid+'" style="position:relative;border-radius:12px;overflow:hidden;background:#1a3a1a;border:1px solid rgba(255,255,255,.08);flex:1;min-width:0;">';
@@ -7606,6 +7657,9 @@ async function loadFdSquad(el, nom, teamId) {
 
     html += '</div>';
     el.innerHTML = html;
+
+    // Activer le paste global pour la zone screenshot
+    setupFbrefPaste(uid, nom);
 
     var tip=document.getElementById('fd-tip-'+uid);
     var playerMap={};
