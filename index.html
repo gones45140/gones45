@@ -2901,7 +2901,8 @@ function renderMoisRow(key, data, prevData){
     var diffIcon=diff>=0?'▲':'▼';
     var diffPct=prevData.profit!==0?((diff/Math.abs(prevData.profit))*100).toFixed(0):null;
     var prevMonthNames = ['','Jan','Fév','Mar','Avr','Mai','Juin','Juil','Aoû','Sep','Oct','Nov','Déc'];
-    var prevMNum = parseInt(prevKey.split('-')[1]);
+    var prevMNum = parseInt(parts[1]) - 1;
+    if(prevMNum < 1) prevMNum = 12;
     var prevMName = prevMonthNames[prevMNum]||'';
     compHtml='<div style="font-size:10px;color:'+diffCol+';font-weight:700;margin-top:3px;" title="Différence de profit entre ce mois et '+prevMName+' ('+( prevData.profit>=0?'+':'')+prevData.profit.toFixed(2)+'€)">'+diffIcon+' '+(diff>=0?'+':'')+diff.toFixed(2)+'€ vs '+prevMName+' ('+(prevData.profit>=0?'+':'')+prevData.profit.toFixed(2)+'€)'+(diffPct?' · '+diffPct+'%':'')+'</div>';
   }
@@ -7205,6 +7206,100 @@ async function sofascoreFetch(path) {
   return await r.json();
 }
 
+async function importFbrefStats(uid, nom) {
+  var groqKey = getGeminiKey();
+  if(!groqKey) { alert('❌ Clé Groq manquante — configure-la dans Outils.'); return; }
+
+  // Input file
+  var input = document.createElement('input');
+  input.type = 'file';
+  input.accept = 'image/*';
+  input.onchange = async function(e) {
+    var file = e.target.files[0];
+    if(!file) return;
+
+    var btn = document.getElementById('btn-fbref-import-'+uid);
+    if(btn) { btn.textContent = '⏳ Lecture...'; btn.disabled = true; }
+
+    // Convert to base64
+    var b64 = await new Promise(function(res) {
+      var r = new FileReader();
+      r.onload = function(ev) { res(ev.target.result.split(',')[1]); };
+      r.readAsDataURL(file);
+    });
+
+    try {
+      var resp = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer '+groqKey },
+        body: JSON.stringify({
+          model: 'meta-llama/llama-4-scout-17b-16e-instruct',
+          max_tokens: 2000,
+          messages: [{
+            role: 'user',
+            content: [
+              { type: 'image_url', image_url: { url: 'data:image/jpeg;base64,'+b64 } },
+              { type: 'text', text: 'Tu es un extracteur de données de statistiques football. Analyse ce tableau de stats et retourne UNIQUEMENT un JSON valide (pas de texte autour, pas de markdown) avec ce format:\n{"players":[{"name":"Nom Joueur","apps":0,"goals":0,"assists":0,"minutes":0}]}\nExtrais tous les joueurs visibles avec leurs stats. Si une colonne n\'est pas visible mets 0. Utilise le nom tel qu\'il apparaît dans le tableau.' }
+            ]
+          }]
+        })
+      });
+
+      var data = await resp.json();
+      var raw = data.choices && data.choices[0] && data.choices[0].message && data.choices[0].message.content;
+      if(!raw) throw new Error('Réponse vide');
+
+      // Parse JSON
+      var clean = raw.replace(/```json|```/g, '').trim();
+      var parsed = JSON.parse(clean);
+      var players = parsed.players || [];
+      if(!players.length) throw new Error('Aucun joueur extrait');
+
+      // Find the squad in state and update stats
+      var uObj = state.u.find(function(x){ return x.n === nom; }) || {};
+      var sofaId = SOFASCORE_TEAM_IDS && SOFASCORE_TEAM_IDS[nom];
+      var afId = null;
+      var updated = 0;
+
+      players.forEach(function(sp) {
+        // Find matching player by name in localStorage manual stats
+        // Try to find player in squad cache
+        var cacheKey = 'squad_sofa_'+(sofaId||'af_'+nom);
+        var squadData = null;
+        try { var c = JSON.parse(localStorage.getItem(cacheKey)||'{}'); squadData = c.squad; } catch(e){}
+
+        if(squadData) {
+          var match = squadData.find(function(p) {
+            var pn = (p.name||p.shortName||'').toLowerCase();
+            var sn = sp.name.toLowerCase();
+            return pn.includes(sn) || sn.includes(pn) || pn.split(' ').some(function(part){ return part.length>3 && sn.includes(part); });
+          });
+          if(match) {
+            var manualKey = 'manual_stats_'+(sofaId||'0')+'_'+match.id;
+            var ms = {}; try { ms = JSON.parse(localStorage.getItem(manualKey)||'{}'); } catch(e){}
+            ms.league_apps = sp.apps || ms.league_apps || 0;
+            ms.league_goals = sp.goals || ms.league_goals || 0;
+            ms.league_assists = sp.assists || ms.league_assists || 0;
+            if(sp.minutes) ms.league_minutes = sp.minutes;
+            localStorage.setItem(manualKey, JSON.stringify(ms));
+            updated++;
+          }
+        }
+      });
+
+      if(btn) { btn.textContent = '✅ '+updated+' mis à jour'; btn.disabled = false; }
+      setTimeout(function() { loadTeamLive(); }, 500);
+
+    } catch(err) {
+      console.error('importFbrefStats error:', err);
+      if(btn) { btn.textContent = '❌ Erreur'; btn.disabled = false; }
+      alert('Erreur lecture image : '+err.message);
+      setTimeout(function(){ if(btn){ btn.textContent='📸 Import FBref'; btn.disabled=false; } }, 3000);
+    }
+  };
+  input.click();
+}
+
 async function loadFdSquad(el, nom, teamId) {
   el.innerHTML = '<div style="text-align:center;padding:16px;color:var(--t3);font-size:11px;">⏳ Chargement squad...</div>';
   try {
@@ -7399,7 +7494,10 @@ async function loadFdSquad(el, nom, teamId) {
     // Header
     html += '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">';
     html += '<div style="font-size:9px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;color:var(--t3);">👤 Squad · '+nom+' <span style="color:var(--t2);font-weight:500;">('+squad.length+')</span></div>';
+    html += '<div style="display:flex;align-items:center;gap:8px;">';
     html += '<div style="font-size:9px;color:var(--t3);">'+(usingSofa?'sofascore':'api-football · 2024-25')+'</div>';
+    html += '<button id="btn-fbref-import-'+uid+'" onclick="importFbrefStats(\''+uid+'\',\''+nom+'\')" style="display:flex;align-items:center;gap:4px;padding:4px 8px;border-radius:6px;border:1px solid rgba(255,255,255,.15);background:rgba(255,255,255,.07);color:var(--t2);font-size:9px;font-weight:700;cursor:pointer;">📸 Import FBref</button>';
+    html += '</div>';
     html += '</div>';
 
     // TERRAIN + FICHE
