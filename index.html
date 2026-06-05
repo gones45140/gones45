@@ -6204,8 +6204,13 @@ async function loadPublicStats() {
     if(!data || typeof data !== 'object') return;
     var count = 0;
     Object.keys(data).forEach(function(key){
-      if(key.startsWith('manual_stats_') || key.startsWith('squad_lastJ_')) {
-        localStorage.setItem(key, typeof data[key]==='string'?data[key]:JSON.stringify(data[key]));
+      if(key.startsWith('manual_stats_') || key.startsWith('squad_lastJ_') || key.startsWith('squad_sofa_')) {
+        var val = data[key];
+        // Rafraîchir le timestamp du cache squad pour éviter l'expiration côté ami
+        if(key.startsWith('squad_sofa_') && val && typeof val === 'object' && val.ts) {
+          val.ts = Date.now();
+        }
+        localStorage.setItem(key, typeof val==='string'?val:JSON.stringify(val));
         count++;
       }
     });
@@ -6225,7 +6230,7 @@ async function publishStats() {
 
   var payload = {};
   Object.keys(localStorage).forEach(function(k){
-    if(k.startsWith('manual_stats_') || k.startsWith('squad_lastJ_')) {
+    if(k.startsWith('manual_stats_') || k.startsWith('squad_lastJ_') || k.startsWith('squad_sofa_')) {
       try { payload[k] = JSON.parse(localStorage.getItem(k)); }
       catch(e){ payload[k] = localStorage.getItem(k); }
     }
