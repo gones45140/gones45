@@ -13272,11 +13272,25 @@ async function runFbrefGroq(uid, nom, b64, groqKey, mode, comp) {
 
     if(squadData) {
       players.forEach(function(sp) {
+        var normName = function(s){ return (s||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z ]/g,'').trim(); };
+        var sn = normName(sp.name);
+        var snParts = sn.split(' ').filter(function(x){return x.length>2;});
+        var snLast = snParts[snParts.length-1] || sn;
         var match = squadData.find(function(p) {
-          var pn = (p.name||p.shortName||'').toLowerCase();
-          var sn = sp.name.toLowerCase();
-          return pn===sn || pn.includes(sn) || sn.includes(pn) || pn.split(' ').some(function(part){ return part.length>3 && sn.includes(part); });
+          var pn = normName(p.name||p.shortName||'');
+          if(pn===sn) return true; // match exact
+          var pnParts = pn.split(' ').filter(function(x){return x.length>2;});
+          var pnLast = pnParts[pnParts.length-1] || pn;
+          // Le nom de famille doit matcher (évite Lucas Chevalier vs Lucas Hernandez)
+          return pnLast === snLast || (snLast.length>4 && pnLast.length>4 && (pnLast.includes(snLast)||snLast.includes(pnLast)));
         });
+        // Fallback : nom complet inclus
+        if(!match) {
+          match = squadData.find(function(p) {
+            var pn = normName(p.name||p.shortName||'');
+            return pn.includes(sn) || sn.includes(pn);
+          });
+        }
         if(match) {
           var manualKey = 'manual_stats_'+(sofaId||'0')+'_'+match.id;
           var ms = {}; try { ms = JSON.parse(localStorage.getItem(manualKey)||'{}'); } catch(e){}
