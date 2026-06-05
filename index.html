@@ -13410,7 +13410,7 @@ function toggleAdminLock(uid) {
     // Deverrouiller - demander le mot de passe
     var pwd = prompt('Code admin :');
     if(!pwd) return;
-    if(pwd === localStorage.getItem('gones45_admin_pwd') || pwd === 'gones45admin') {
+    if(pwd === localStorage.getItem('gones45_admin_pwd') || pwd === 'Laurajtm45') {
       localStorage.setItem('gones45_admin', '1');
       // Sauvegarder le mot de passe si premier usage
       if(!localStorage.getItem('gones45_admin_pwd')) {
