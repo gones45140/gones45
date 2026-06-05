@@ -13222,7 +13222,7 @@ async function runFbrefGroq(uid, nom, b64, groqKey, mode, comp) {
       headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer '+groqKey },
       body: JSON.stringify({
         model: 'meta-llama/llama-4-scout-17b-16e-instruct',
-        max_tokens: 2000,
+        max_tokens: 8000,
         messages: [{
           role: 'user',
           content: [
@@ -13238,7 +13238,27 @@ async function runFbrefGroq(uid, nom, b64, groqKey, mode, comp) {
     if(!raw) throw new Error('Réponse vide');
 
     var clean = raw.replace(/```json|```/g, '').trim();
-    var parsed = JSON.parse(clean);
+    var parsed;
+    try {
+      parsed = JSON.parse(clean);
+    } catch(parseErr) {
+      // JSON tronqué : tenter de récupérer les joueurs complets
+      var lastComplete = clean.lastIndexOf('}');
+      if(lastComplete > 0) {
+        var repaired = clean.substring(0, lastComplete+1);
+        // Fermer le tableau et l'objet
+        if(!repaired.trim().endsWith(']}')) {
+          repaired = repaired.replace(/,\s*$/, '') + ']}';
+        }
+        try {
+          parsed = JSON.parse(repaired);
+        } catch(e2) {
+          throw new Error('JSON illisible (réessaie avec moins de joueurs)');
+        }
+      } else {
+        throw parseErr;
+      }
+    }
     var players = parsed.players || [];
     if(!players.length) throw new Error('Aucun joueur extrait');
 
