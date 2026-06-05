@@ -13276,19 +13276,44 @@ async function runFbrefGroq(uid, nom, b64, groqKey, mode, comp) {
         var sn = normName(sp.name);
         var snParts = sn.split(' ').filter(function(x){return x.length>2;});
         var snLast = snParts[snParts.length-1] || sn;
+        // Comparaison de deux mots avec tolérance accents/orthographe (Fabien~Fabian)
+        var wordsClose = function(a, b) {
+          if(a === b) return true;
+          if(a.length>4 && b.length>4 && (a.includes(b)||b.includes(a))) return true;
+          // Tolérance 1-2 lettres différentes pour mots de meme longueur approx
+          if(Math.abs(a.length-b.length)<=1 && a.length>=5) {
+            var common=0; var minL=Math.min(a.length,b.length);
+            for(var i=0;i<minL;i++){ if(a[i]===b[i]) common++; }
+            if(common >= minL-1) return true;
+          }
+          return false;
+        };
         var match = squadData.find(function(p) {
           var pn = normName(p.name||p.shortName||'');
           if(pn===sn) return true; // match exact
           var pnParts = pn.split(' ').filter(function(x){return x.length>2;});
           var pnLast = pnParts[pnParts.length-1] || pn;
-          // Le nom de famille doit matcher (évite Lucas Chevalier vs Lucas Hernandez)
-          return pnLast === snLast || (snLast.length>4 && pnLast.length>4 && (pnLast.includes(snLast)||snLast.includes(pnLast)));
+          // 1. Nom de famille identique ou proche
+          if(wordsClose(pnLast, snLast)) return true;
+          // 2. Noms inverses (Lee Kang-In vs Kang-in Lee) : un mot significatif commun aux deux
+          var sharedSignificant = snParts.some(function(sp2){
+            return sp2.length>3 && pnParts.some(function(pp2){ return wordsClose(sp2, pp2); });
+          });
+          if(sharedSignificant) {
+            // Exiger qu'au moins 1 autre mot matche aussi OU que ce soit un nom rare
+            var matchCount = 0;
+            snParts.forEach(function(sp2){
+              if(pnParts.some(function(pp2){ return wordsClose(sp2, pp2); })) matchCount++;
+            });
+            return matchCount >= Math.min(snParts.length, pnParts.length);
+          }
+          return false;
         });
         // Fallback : nom complet inclus
         if(!match) {
           match = squadData.find(function(p) {
             var pn = normName(p.name||p.shortName||'');
-            return pn.includes(sn) || sn.includes(pn);
+            return pn===sn || (sn.length>5 && pn.includes(sn)) || (pn.length>5 && sn.includes(pn));
           });
         }
         if(match) {
