@@ -1050,8 +1050,10 @@ input[type="date"],input[type="time"]{color-scheme:dark;}
     </div>
     <div style="display:flex;gap:7px;">
       <button class="btn btn-p" style="font-size:11px;" onclick="saveGithubToken()">💾 Enregistrer</button>
+      <button class="btn" style="font-size:11px;background:rgba(30,215,96,.15);border:1px solid rgba(30,215,96,.4);color:#1ed760;" onclick="publishStats()">📤 Publier les stats</button>
     </div>
     <div id="github-token-status" style="margin-top:7px;font-size:11px;font-weight:700;"></div>
+    <div id="publish-stats-status" style="margin-top:5px;font-size:11px;font-weight:700;"></div>
   </div>
 
   <div class="fc" style="border-style:dashed;">
@@ -6144,7 +6146,7 @@ function saveGithubToken(){
 // ── GitHub Stats Sync ──
 var GITHUB_OWNER = 'gones45140';
 var GITHUB_REPO = 'gones45';
-var GITHUB_FILE = 'données/players.json';
+var GITHUB_FILE = 'données/joueurs.json';
 
 async function githubGetStats() {
   var token = localStorage.getItem('gones45_github_token');
@@ -6190,6 +6192,64 @@ async function syncStatsFromGithub() {
   });
   localStorage.setItem('github_stats_sha', result.sha||'');
   console.log('Stats synced from GitHub:', Object.keys(data).length, 'entries');
+}
+
+// Lecture PUBLIQUE (pour les amis, sans token) via GitHub Pages
+async function loadPublicStats() {
+  try {
+    var url = 'https://gones45140.github.io/gones45/données/joueurs.json?t=' + Date.now();
+    var r = await fetch(url);
+    if(!r.ok) return;
+    var data = await r.json();
+    if(!data || typeof data !== 'object') return;
+    var count = 0;
+    Object.keys(data).forEach(function(key){
+      if(key.startsWith('manual_stats_') || key.startsWith('squad_lastJ_')) {
+        localStorage.setItem(key, typeof data[key]==='string'?data[key]:JSON.stringify(data[key]));
+        count++;
+      }
+    });
+    if(count>0) console.log('Stats publiques chargees:', count);
+  } catch(e) { console.warn('Lecture publique echouee:', e); }
+}
+
+// PUBLIER : rassemble TOUTES les equipes/journees et pousse vers GitHub
+async function publishStats() {
+  var token = localStorage.getItem('gones45_github_token');
+  var statusEl = document.getElementById('publish-stats-status');
+  if(!token) {
+    if(statusEl){ statusEl.textContent = 'Enregistre ton token GitHub dabord'; statusEl.style.color='#ef4444'; }
+    return;
+  }
+  if(statusEl){ statusEl.textContent = 'Publication en cours...'; statusEl.style.color='var(--t3)'; }
+
+  var payload = {};
+  Object.keys(localStorage).forEach(function(k){
+    if(k.startsWith('manual_stats_') || k.startsWith('squad_lastJ_')) {
+      try { payload[k] = JSON.parse(localStorage.getItem(k)); }
+      catch(e){ payload[k] = localStorage.getItem(k); }
+    }
+  });
+  payload._meta = { updated: new Date().toISOString(), count: Object.keys(payload).length };
+
+  try {
+    var getR = await fetch('https://api.github.com/repos/'+GITHUB_OWNER+'/'+GITHUB_REPO+'/contents/'+GITHUB_FILE, {
+      headers: {'Authorization':'token '+token, 'Accept':'application/vnd.github.v3+json'}
+    });
+    var sha = null;
+    if(getR.ok) { var gd = await getR.json(); sha = gd.sha; }
+
+    var ok = await githubSaveStats(payload, sha);
+    if(ok && statusEl) {
+      statusEl.textContent = 'Publie ! ('+ (Object.keys(payload).length-1) +' joueurs) - tes amis verront la MAJ dans ~1 min';
+      statusEl.style.color = '#1ed760';
+    } else if(statusEl) {
+      statusEl.textContent = 'Echec de publication (verifie le token)';
+      statusEl.style.color = '#ef4444';
+    }
+  } catch(e) {
+    if(statusEl){ statusEl.textContent = 'Erreur : '+e.message; statusEl.style.color='#ef4444'; }
+  }
 }
 
 async function saveStatToGithub(key, value) {
@@ -12037,7 +12097,7 @@ function saveGithubToken(){
 // ── GitHub Stats Sync ──
 var GITHUB_OWNER = 'gones45140';
 var GITHUB_REPO = 'gones45';
-var GITHUB_FILE = 'données/players.json';
+var GITHUB_FILE = 'données/joueurs.json';
 
 async function githubGetStats() {
   var token = localStorage.getItem('gones45_github_token');
@@ -13494,6 +13554,13 @@ async function loadFdSquad(el, nom, teamId, noTerrain, terrainOnly) {
         localStorage.setItem('github_synced_today', Date.now());
         setTimeout(function(){ localStorage.removeItem('github_synced_today'); }, 6*60*60*1000);
       } catch(e) { console.warn('GitHub sync error:', e); }
+    } else if(!localStorage.getItem('gones45_github_token') && !localStorage.getItem('public_stats_loaded')) {
+      // Amis sans token : lecture publique des stats partagées
+      try {
+        await loadPublicStats();
+        localStorage.setItem('public_stats_loaded', Date.now());
+        setTimeout(function(){ localStorage.removeItem('public_stats_loaded'); }, 30*60*1000);
+      } catch(e) { console.warn('Public stats error:', e); }
     }
 
     var usingSofa = false;
