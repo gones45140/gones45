@@ -7304,6 +7304,20 @@ function refreshSquadCache(nom) {
   loadTeamLive();
 }
 
+function resetTeamStats(nom) {
+  var sofaId = SOFASCORE_TEAM_IDS && SOFASCORE_TEAM_IDS[nom];
+  if(!sofaId) { for(var k in SOFASCORE_TEAM_IDS){ if(nom.toLowerCase().indexOf(k.toLowerCase())>=0||k.toLowerCase().indexOf(nom.toLowerCase())>=0){sofaId=SOFASCORE_TEAM_IDS[k];break;} } }
+  if(!sofaId) { alert('Equipe introuvable'); return; }
+  if(!confirm('Effacer TOUTES les stats manuelles de '+nom+' (championnat + Europe + toutes journees) ? Le squad est conserve. Irreversible.')) return;
+  var prefix = 'manual_stats_'+sofaId+'_';
+  var toRemove = [];
+  Object.keys(localStorage).forEach(function(k){ if(k.indexOf(prefix)===0) toRemove.push(k); });
+  toRemove.forEach(function(k){ localStorage.removeItem(k); });
+  localStorage.removeItem('squad_lastJ_'+sofaId);
+  alert(toRemove.length+' joueur(s) reinitialise(s) pour '+nom+'. Tu peux reimporter proprement.');
+  if(typeof loadTeamCompo === 'function') loadTeamCompo();
+}
+
 async function importFbrefStats(uid, nom) {
   var groqKey = getGeminiKey();
   if(!groqKey) { alert('❌ Clé Groq manquante — configure-la dans Outils.'); return; }
@@ -13750,6 +13764,7 @@ async function loadFdSquad(el, nom, teamId, noTerrain, terrainOnly) {
     html += '<button id="btn-fbref-import-'+uid+'" onclick="importFbrefStats(\''+uid+'\',\''+nom+'\')" style="display:flex;align-items:center;gap:4px;padding:4px 8px;border-radius:6px;border:1px solid rgba(255,255,255,.15);background:rgba(255,255,255,.07);color:var(--t2);font-size:9px;font-weight:700;cursor:pointer;">📸 Import FBref</button>';
     html += '<button id="btn-admin-lock-'+uid+'" onclick="toggleAdminLock(\''+uid+'\')" style="padding:4px 7px;border-radius:6px;border:1px solid rgba(255,255,255,.15);background:rgba(255,255,255,.07);color:var(--t2);font-size:12px;cursor:pointer;" title="Mode admin">'+(localStorage.getItem('gones45_admin')==='1'?'🔓':'🔒')+'</button>';
     html += '<button onclick="refreshSquadCache(\''+nom+'\')" style="display:flex;align-items:center;gap:4px;padding:4px 8px;border-radius:6px;border:1px solid rgba(255,255,255,.15);background:rgba(255,255,255,.07);color:var(--t2);font-size:9px;font-weight:700;cursor:pointer;" title="Vider le cache et recharger le squad depuis l\'API">🔄</button>';
+    if(localStorage.getItem('gones45_admin')==='1'){ html += '<button onclick="resetTeamStats(\''+nom+'\')" style="display:flex;align-items:center;gap:4px;padding:4px 8px;border-radius:6px;border:1px solid rgba(255,69,69,.3);background:rgba(255,69,69,.1);color:#ff7b7b;font-size:9px;font-weight:700;cursor:pointer;" title="Effacer les stats de cette equipe">Reset</button>'; }
     html += '</div>';
     html += '</div>';
 
