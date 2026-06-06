@@ -13743,7 +13743,7 @@ async function loadFdSquad(el, nom, teamId, noTerrain, terrainOnly) {
     var posNames={1:'GK',2:'DEF',3:'MID',4:'ATT'};
     var posColors={1:'#f5a623',2:'#4fc3f7',3:'#81c784',4:'#ef9a9a'};
     var posLabels={1:'🧤 Gardiens',2:'🛡️ Défenseurs',3:'🎯 Milieux',4:'⚽ Attaquants'};
-    var uid = 'fd_'+Date.now();
+    var uid = 'fd_'+(sofaId||afId||nom||'x').toString().replace(/[^a-zA-Z0-9]/g,'');
     var html = '<div style="padding:2px 0;">';
 
     // Header
