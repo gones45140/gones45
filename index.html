@@ -6197,9 +6197,14 @@ async function syncStatsFromGithub() {
 // Lecture PUBLIQUE (pour les amis, sans token) via GitHub Pages
 async function loadPublicStats() {
   try {
-    var url = 'https://gones45140.github.io/gones45/données/joueurs.json?t=' + Date.now();
+    // Chemin relatif encodé (gère l'accent de "données" sur mobile)
+    var url = encodeURI('données/joueurs.json') + '?t=' + Date.now();
     var r = await fetch(url);
-    if(!r.ok) return;
+    if(!r.ok) {
+      // Fallback URL absolue encodée
+      r = await fetch(encodeURI('https://gones45140.github.io/gones45/données/joueurs.json') + '?t=' + Date.now());
+    }
+    if(!r.ok) { console.warn('Lecture publique: HTTP', r.status); return; }
     var data = await r.json();
     if(!data || typeof data !== 'object') return;
     var count = 0;
@@ -17235,7 +17240,9 @@ async function loadTeamAI(nom) {
   }
 }
 
-window.onload=function(){if(!state.bkColors)state.bkColors={};loadCustomLinks();_typeColors=JSON.parse(localStorage.getItem('g45_typecolors')||'{}');var _n=localStorage.getItem('gones45_note');var _ni=$i('pc-note');if(_ni&&_n)_ni.innerHTML=_n;var tk=localStorage.getItem('gones45_tavily_key');var tki=$i('tavily-key-input');if(tki&&tk)tki.value=tk;var ask=localStorage.getItem('gones45_apisports_key');var aski=$i('apisports-key-input');if(aski&&ask)aski.value=ask;
+window.onload=function(){if(!state.bkColors)state.bkColors={};loadCustomLinks();
+// Lecture publique des stats partagées au démarrage (pour les amis sans token)
+if(!localStorage.getItem('gones45_github_token')){ try { loadPublicStats(); } catch(e){} }_typeColors=JSON.parse(localStorage.getItem('g45_typecolors')||'{}');var _n=localStorage.getItem('gones45_note');var _ni=$i('pc-note');if(_ni&&_n)_ni.innerHTML=_n;var tk=localStorage.getItem('gones45_tavily_key');var tki=$i('tavily-key-input');if(tki&&tk)tki.value=tk;var ask=localStorage.getItem('gones45_apisports_key');var aski=$i('apisports-key-input');if(aski&&ask)aski.value=ask;
   /* Listener unique pour évolution bankroll — survivant aux re-renders */
   document.addEventListener('touchend',function(e){
     var cv=e.target;
