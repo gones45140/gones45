@@ -13500,14 +13500,16 @@ function toggleFbrefComp(uid) {
   var b = document.getElementById('fbref-comp-'+uid);
   if(!b) return;
   b.dataset.comp = b.dataset.comp === 'league' ? 'euro' : 'league';
+  window['_compMode_'+uid] = b.dataset.comp;
   var isLeague = b.dataset.comp === 'league';
   b.textContent = isLeague ? 'Champ' : 'Europe';
   b.style.background = isLeague ? 'rgba(77,132,255,.15)' : 'rgba(240,180,32,.15)';
   b.style.borderColor = isLeague ? 'rgba(77,132,255,.4)' : 'rgba(240,180,32,.4)';
   b.style.color = isLeague ? '#4d84ff' : '#f0b420';
   updateFbrefHint(uid);
-  // Recharger le tableau avec les stats de la bonne competition
-  loadTeamLive && loadTeamLive();
+  // Recharger le tableau Compo avec les stats de la bonne competition
+  if(typeof loadTeamCompo === 'function') loadTeamCompo();
+  else if(typeof loadTeamLive === 'function') loadTeamLive();
 }
 
 function toggleFbrefMode(uid) {
@@ -13764,7 +13766,7 @@ async function loadFdSquad(el, nom, teamId, noTerrain, terrainOnly) {
     html += '<div id="fbref-admin-zone-'+uid+'" style="'+(isAdmin?'':'display:none;') +'">';
     html += '<div style="margin-bottom:8px;display:flex;align-items:center;gap:6px;flex-wrap:wrap;">'
       +'<span style="font-size:10px;color:var(--t3);">Comp :</span>'
-      +'<button id="fbref-comp-'+uid+'" data-comp="league" onclick="toggleFbrefComp(\''+uid+'\')" style="padding:3px 10px;border-radius:6px;border:1px solid rgba(77,132,255,.4);background:rgba(77,132,255,.15);color:#4d84ff;font-size:10px;font-weight:700;cursor:pointer;">Champ</button>'
+      +'<button id="fbref-comp-'+uid+'" data-comp="'+(window['_compMode_'+uid]||'league')+'" onclick="toggleFbrefComp(\''+uid+'\')" style="padding:3px 10px;border-radius:6px;border:1px solid '+(window['_compMode_'+uid]==='euro'?'rgba(240,180,32,.4)':'rgba(77,132,255,.4)')+';background:'+(window['_compMode_'+uid]==='euro'?'rgba(240,180,32,.15)':'rgba(77,132,255,.15)')+';color:'+(window['_compMode_'+uid]==='euro'?'#f0b420':'#4d84ff')+';font-size:10px;font-weight:700;cursor:pointer;">'+(window['_compMode_'+uid]==='euro'?'Europe':'Champ')+'</button>'
       +'<span style="font-size:10px;color:var(--t3);margin-left:4px;">Mode :</span>'
       +'<button id="fbref-mode-'+uid+'" data-mode="replace" onclick="toggleFbrefMode(\''+uid+'\')" style="padding:3px 10px;border-radius:6px;border:1px solid rgba(255,120,80,.4);background:rgba(255,120,80,.15);color:#ff7850;font-size:10px;font-weight:700;cursor:pointer;">Remplacer</button>'
       +'<span style="font-size:9px;color:var(--t3);" id="fbref-mode-hint-'+uid+'">Championnat - saison complete</span>'
@@ -13865,7 +13867,7 @@ async function loadFdSquad(el, nom, teamId, noTerrain, terrainOnly) {
       } else {
         // ── MODE PAYSAGE / PC : colonnes selon comp toggle ──
         var isGK = (pos === 1); // Gardiens
-        var compMode = (function(){ var b=document.getElementById('fbref-comp-'+uid); return b?b.dataset.comp:'league'; })();
+        var compMode = (function(){ var b=document.getElementById('fbref-comp-'+uid); return (b&&b.dataset.comp) || window['_compMode_'+uid] || 'league'; })();
         var sortKey = window['_squadSort_'+uid] || 'name';
         var sortDir = window['_squadSortDir_'+uid] || 1;
         var lastJKey2 = 'squad_lastJ_'+(sofaId||'0');
