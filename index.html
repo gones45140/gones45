@@ -13496,6 +13496,20 @@ function toggleAdminLock(uid) {
   }
 }
 
+function setCompMode(uid, comp) {
+  window['_compMode_'+uid] = comp;
+  var b = document.getElementById('fbref-comp-'+uid);
+  if(b) {
+    b.dataset.comp = comp;
+    var isLeague = comp === 'league';
+    b.textContent = isLeague ? 'Champ' : 'Europe';
+    b.style.background = isLeague ? 'rgba(77,132,255,.15)' : 'rgba(240,180,32,.15)';
+    b.style.borderColor = isLeague ? 'rgba(77,132,255,.4)' : 'rgba(240,180,32,.4)';
+    b.style.color = isLeague ? '#4d84ff' : '#f0b420';
+  }
+  if(typeof loadTeamCompo === 'function') loadTeamCompo();
+}
+
 function toggleFbrefComp(uid) {
   var b = document.getElementById('fbref-comp-'+uid);
   if(!b) return;
@@ -13761,6 +13775,14 @@ async function loadFdSquad(el, nom, teamId, noTerrain, terrainOnly) {
     if(lastJ) html += '<span style="font-size:9px;padding:2px 7px;border-radius:10px;background:rgba(240,180,32,.15);color:#f0b420;border:1px solid rgba(240,180,32,.3);">Dernière MAJ : <strong>'+lastJ+'</strong></span>';
     html += '</div>';
 
+    // Selecteur Competition (Champ/Europe) - visible par tous
+    var curComp = window['_compMode_'+uid] || 'league';
+    html += '<div style="margin-bottom:8px;display:flex;align-items:center;gap:6px;flex-wrap:wrap;">'
+      +'<span style="font-size:10px;color:var(--t3);">Competition :</span>'
+      +'<button onclick="setCompMode(\''+uid+'\',\'league\')" style="padding:4px 12px;border-radius:6px;border:1px solid '+(curComp==='league'?'rgba(77,132,255,.5)':'rgba(255,255,255,.12)')+';background:'+(curComp==='league'?'rgba(77,132,255,.2)':'rgba(255,255,255,.05)')+';color:'+(curComp==='league'?'#4d84ff':'var(--t3)')+';font-size:11px;font-weight:700;cursor:pointer;">Championnat</button>'
+      +'<button onclick="setCompMode(\''+uid+'\',\'euro\')" style="padding:4px 12px;border-radius:6px;border:1px solid '+(curComp==='euro'?'rgba(240,180,32,.5)':'rgba(255,255,255,.12)')+';background:'+(curComp==='euro'?'rgba(240,180,32,.2)':'rgba(255,255,255,.05)')+';color:'+(curComp==='euro'?'#f0b420':'var(--t3)')+';font-size:11px;font-weight:700;cursor:pointer;">Europe</button>'
+      +'</div>';
+
     // ZONE ADMIN - visible seulement en mode admin
     var isAdmin = localStorage.getItem('gones45_admin') === '1';
     html += '<div id="fbref-admin-zone-'+uid+'" style="'+(isAdmin?'':'display:none;') +'">';
@@ -13835,31 +13857,56 @@ async function loadFdSquad(el, nom, teamId, noTerrain, terrainOnly) {
 
       if(!terrainOnly) {     if(isMobilePortrait) {
         // ── MODE PORTRAIT MOBILE : Joueur + stats compactes ──
+        var mCompMode = window['_compMode_'+uid] || 'league';
+        var mPrefix = mCompMode === 'euro' ? 'euro' : 'league';
+        var mView = (function(){ var el=document.getElementById('fbref-journee-'+uid); return el?el.value:'global'; })() || 'global';
+        var mJ = (mView && mView !== 'global') ? mPrefix+'_'+mView : mPrefix;
+        var mIsGK = (pos === 1);
         html += '<table style="width:100%;border-collapse:collapse;table-layout:fixed;">';
-        html += '<colgroup><col style="width:18px"><col style="auto"><col style="width:28px"><col style="width:28px"><col style="width:28px"></colgroup>';
-        html += '<thead><tr>';
-        html += '<th style="'+tc+'"></th>';
-        html += '<th style="'+tc+'text-align:left;">Joueur</th>';
-        html += '<th style="'+tc+'" title="Matchs jou\u00e9s">MJ</th>';
-        html += '<th style="'+tc+'" title="Buts">B</th>';
-        html += '<th style="'+tc+'" title="Passes d\u00e9cisives">A</th>';
-        html += '</tr></thead><tbody>';
+        if(mIsGK) {
+          html += '<colgroup><col style="width:18px"><col style="auto"><col style="width:30px"><col style="width:34px"><col style="width:34px"></colgroup>';
+          html += '<thead><tr>';
+          html += '<th style="'+tc+'"></th>';
+          html += '<th style="'+tc+'text-align:left;">Gardien</th>';
+          html += '<th style="'+tc+'" title="Buts encaiss\u00e9s">GA</th>';
+          html += '<th style="'+tc+'" title="Arr\u00eats">Arr</th>';
+          html += '<th style="'+tc+'" title="Clean sheets">CS</th>';
+          html += '</tr></thead><tbody>';
+        } else {
+          html += '<colgroup><col style="width:18px"><col style="auto"><col style="width:28px"><col style="width:28px"><col style="width:28px"></colgroup>';
+          html += '<thead><tr>';
+          html += '<th style="'+tc+'"></th>';
+          html += '<th style="'+tc+'text-align:left;">Joueur</th>';
+          html += '<th style="'+tc+'" title="Matchs jou\u00e9s">MJ</th>';
+          html += '<th style="'+tc+'" title="Buts">B</th>';
+          html += '<th style="'+tc+'" title="Passes d\u00e9cisives">A</th>';
+          html += '</tr></thead><tbody>';
+        }
         pp.forEach(function(p,i){
           var inXi=xi.some(function(x){return x.id===p.id;});
           var rowBg=i%2===0?'rgba(255,255,255,.025)':'rgba(255,255,255,.015)';
           var manualKey='manual_stats_'+(sofaId||afId||'0')+'_'+p.id;
           var ms={}; try{ms=JSON.parse(localStorage.getItem(manualKey)||'{}');}catch(e){}
           var hasManual=ms.league_goals!==undefined||ms.euro_goals!==undefined;
-          var lg=ms.league_goals!==undefined?ms.league_goals:(hasManual?0:(p._goals||0));
-          var la=ms.league_assists!==undefined?ms.league_assists:(hasManual?0:(p._assists||0));
-          var lmj=ms.league_apps!==undefined?ms.league_apps:(p._apps||0);
+          var lg=ms[mJ+'_goals']!==undefined?ms[mJ+'_goals']:(mView==='global'&&mCompMode==='league'?(hasManual?0:(p._goals||0)):0);
+          var la=ms[mJ+'_assists']!==undefined?ms[mJ+'_assists']:(mView==='global'&&mCompMode==='league'?(hasManual?0:(p._assists||0)):0);
+          var lmj=ms[mJ+'_apps']!==undefined?ms[mJ+'_apps']:(mView==='global'&&mCompMode==='league'?(p._apps||0):0);
+          var mga=ms[mJ+'_ga']||0;
+          var msaves=ms[mJ+'_saves']||0;
+          var mcs=ms[mJ+'_cs']||0;
           var sofaUrl=p.sofaId?'https://www.sofascore.com/player/'+p.sofaId:'https://www.google.com/search?q='+encodeURIComponent(p.name+' '+nom);
           html += '<tr data-bench-pid="'+p.id+'" style="background:'+rowBg+';border-left:3px solid '+pc+'55;cursor:pointer;">';
           html += '<td style="padding:5px 3px;text-align:center;"><span style="font-size:7px;background:'+pc+'33;color:'+pc+';border-radius:3px;padding:1px 3px;font-weight:800;'+(inXi?'':'visibility:hidden;')+'">XI</span></td>';
           html += '<td style="padding:5px 4px;overflow:hidden;"><span style="font-size:12px;font-weight:700;color:var(--t1);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:block;">'+p.name+'</span></td>';
-          html += '<td style="text-align:center;font-size:11px;color:var(--t2);padding:5px 2px;">'+(lmj||0)+'</td>';
-          html += '<td style="text-align:center;font-size:12px;font-weight:700;padding:5px 2px;color:'+(lg>0?'#1ed760':'rgba(255,255,255,.2)')+'">'+lg+'</td>';
-          html += '<td style="text-align:center;font-size:12px;font-weight:700;padding:5px 2px;color:'+(la>0?'#4d84ff':'rgba(255,255,255,.2)')+'">'+la+'</td>';
+          if(mIsGK) {
+            html += '<td style="text-align:center;font-size:12px;font-weight:700;padding:5px 2px;color:'+(mga>0?'#ef4444':'rgba(255,255,255,.2)')+'">'+(mga||'\u2014')+'</td>';
+            html += '<td style="text-align:center;font-size:12px;font-weight:700;padding:5px 2px;color:'+(msaves>0?'#1ed760':'rgba(255,255,255,.2)')+'">'+(msaves||'\u2014')+'</td>';
+            html += '<td style="text-align:center;font-size:12px;font-weight:700;padding:5px 2px;color:'+(mcs>0?'#1ed760':'rgba(255,255,255,.2)')+'">'+(mcs||'\u2014')+'</td>';
+          } else {
+            html += '<td style="text-align:center;font-size:11px;color:var(--t2);padding:5px 2px;">'+(lmj||0)+'</td>';
+            html += '<td style="text-align:center;font-size:12px;font-weight:700;padding:5px 2px;color:'+(lg>0?'#1ed760':'rgba(255,255,255,.2)')+'">'+lg+'</td>';
+            html += '<td style="text-align:center;font-size:12px;font-weight:700;padding:5px 2px;color:'+(la>0?'#4d84ff':'rgba(255,255,255,.2)')+'">'+la+'</td>';
+          }
           html += '</tr>';
         });
         html += '</tbody></table>';
@@ -13867,7 +13914,7 @@ async function loadFdSquad(el, nom, teamId, noTerrain, terrainOnly) {
       } else {
         // ── MODE PAYSAGE / PC : colonnes selon comp toggle ──
         var isGK = (pos === 1); // Gardiens
-        var compMode = (function(){ var b=document.getElementById('fbref-comp-'+uid); return (b&&b.dataset.comp) || window['_compMode_'+uid] || 'league'; })();
+        var compMode = window['_compMode_'+uid] || (function(){ var b=document.getElementById('fbref-comp-'+uid); return (b&&b.dataset.comp) || 'league'; })();
         var sortKey = window['_squadSort_'+uid] || 'name';
         var sortDir = window['_squadSortDir_'+uid] || 1;
         var lastJKey2 = 'squad_lastJ_'+(sofaId||'0');
