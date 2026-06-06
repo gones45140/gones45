@@ -13297,7 +13297,7 @@ async function runFbrefGroq(uid, nom, b64, groqKey, mode, comp) {
           role: 'user',
           content: [
             { type: 'image_url', image_url: { url: 'data:image/jpeg;base64,'+b64 } },
-            { type: 'text', text: 'Tu es un extracteur de données de statistiques football. Analyse ce tableau de stats (peut être FBref, Sofascore, ou autre) et retourne UNIQUEMENT un JSON valide (pas de texte autour, pas de markdown) avec ce format:\n{"players":[{"name":"Nom Joueur","apps":0,"starts":0,"goals":0,"assists":0,"minutes":0,"xg":0,"xa":0,"xg90":0,"xa90":0,"shots":0,"shots_on_target":0,"yellow":0,"red":0,"ga":0,"sota":0,"saves":0,"save_pct":0,"cs":0,"cs_pct":0}]}\n\nCorrespondances de colonnes à reconnaître :\n- apps/matchs joués : "Député", "MJ", "MP", "Apps", "Matches"\n- starts/titularisations : "Débuts", "Starts", "Tit"\n- minutes : "Min", "Minutes"\n- buts : "Gls", "Buts", "Goals", "B"\n- passes décisives : "Ast", "Passes", "Assists", "A"\n- cartons jaunes : "CrdY", "CJ", "Yellow"\n- cartons rouges : \"CrdR\", \"CR\", \"Red\"\n- xG (expected goals) : \"xG\"\n- xA (expected assists) : \"xA\" SEUL (Understat ordre Sh90 KP90 xG xA: KP90=passes cles A IGNORER, xA est la colonne APRES xG)\n- xG90 par 90min : \"xG90\"\n- xA90 par 90min : \"xA90\"\n- ATTENTION Understat: xG et xA ont un delta colore ex 9.37+3.37, prends UNIQUEMENT le premier nombre\n- tirs totaux : \"Sh\", \"Shots\", \"Tirs\", \"Chut\"\n- tirs cadrés : \"SoT\", \"Tirs cadrés\"\n- GARDIEN GA (buts encaisses) : \"GA\"\n- GARDIEN SoTA (tirs cadres subis) : \"SoTA\"\n- GARDIEN Arrets : \"Arrets\", \"Saves\"\n- GARDIEN Save pct : \"Save %\"\n- GARDIEN CS clean sheets : \"CS\"\n- GARDIEN CS pct : \"CS %\"\n\nExtrais TOUS les joueurs visibles. Si une colonne est absente mets 0. Utilise le nom exact tel qu\'il apparaît.' }
+            { type: 'text', text: 'Tu es un extracteur de données de statistiques football. Analyse ce tableau de stats (peut être FBref, Sofascore, ou autre) et retourne UNIQUEMENT un JSON valide (pas de texte autour, pas de markdown) avec ce format:\n{"players":[{"name":"Nom Joueur","apps":0,"starts":0,"goals":0,"assists":0,"minutes":0,"gpk":0,"pk":0,"pkatt":0,"yellow":0,"red":0,"ga":0,"sota":0,"saves":0,"save_pct":0,"cs":0,"cs_pct":0}]}\n\nCorrespondances de colonnes à reconnaître :\n- apps/matchs joués : "Député", "MJ", "MP", "Apps", "Matches"\n- starts/titularisations : "Débuts", "Starts", "Tit"\n- minutes : "Min", "Minutes"\n- buts : "Gls", "Buts", "Goals", "B"\n- passes décisives : "Ast", "Passes", "Assists", "A"\n- cartons jaunes : "CrdY", "CJ", "Yellow"\n- cartons rouges : \"CrdR\", \"CR\", \"Red\"\n- G+A (buts plus passes) : \\"G+A\\"\n- G-PK (buts hors penalty) : \\"G-PK\\"\n- PK (penalties marques) : \\"PK\\"\n- PKatt (penalties tentes) : \\"PKatt\\"\n- GARDIEN GA (buts encaisses) : \"GA\"\n- GARDIEN SoTA (tirs cadres subis) : \"SoTA\"\n- GARDIEN Arrets : \"Arrets\", \"Saves\"\n- GARDIEN Save pct : \"Save %\"\n- GARDIEN CS clean sheets : \"CS\"\n- GARDIEN CS pct : \"CS %\"\n\nExtrais TOUS les joueurs visibles. Si une colonne est absente mets 0. Utilise le nom exact tel qu\'il apparaît.' }
           ]
         }]
       })
@@ -13395,10 +13395,9 @@ async function runFbrefGroq(uid, nom, b64, groqKey, mode, comp) {
             if(sp.goals)   ms[savePrefix+'_goals']   = (ms[savePrefix+'_goals']||0)   + sp.goals;
             if(sp.assists) ms[savePrefix+'_assists']  = (ms[savePrefix+'_assists']||0) + sp.assists;
             if(sp.minutes) ms[savePrefix+'_minutes']  = (ms[savePrefix+'_minutes']||0) + sp.minutes;
-            if(sp.xg)      ms[savePrefix+'_xg']       = ((parseFloat(ms[savePrefix+'_xg'])||0) + parseFloat(sp.xg)).toFixed(1);
-            if(sp.xa)      ms[savePrefix+'_xa']       = ((parseFloat(ms[savePrefix+'_xa'])||0) + parseFloat(sp.xa)).toFixed(1);
-            if(sp.shots)   ms[savePrefix+'_shots']    = (ms[savePrefix+'_shots']||0)   + sp.shots;
-            if(sp.shots_on_target) ms[savePrefix+'_sot'] = (ms[savePrefix+'_sot']||0) + sp.shots_on_target;
+            if(sp.gpk)     ms[savePrefix+'_gpk']      = (ms[savePrefix+'_gpk']||0)     + sp.gpk;
+            if(sp.pk)      ms[savePrefix+'_pk']       = (ms[savePrefix+'_pk']||0)      + sp.pk;
+            if(sp.pkatt)   ms[savePrefix+'_pkatt']    = (ms[savePrefix+'_pkatt']||0)   + sp.pkatt;
             if(sp.yellow)  ms[savePrefix+'_yellow']   = (ms[savePrefix+'_yellow']||0)  + sp.yellow;
             if(sp.red)     ms[savePrefix+'_red']      = (ms[savePrefix+'_red']||0)     + sp.red;
             if(sp.ga)      ms[savePrefix+'_ga']       = (ms[savePrefix+'_ga']||0)      + sp.ga;
@@ -13413,12 +13412,9 @@ async function runFbrefGroq(uid, nom, b64, groqKey, mode, comp) {
             if(sp.goals)   ms[savePrefix+'_goals']   = sp.goals;
             if(sp.assists) ms[savePrefix+'_assists']  = sp.assists;
             if(sp.minutes) ms[savePrefix+'_minutes']  = sp.minutes;
-            if(sp.xg !== undefined) ms[savePrefix+'_xg'] = parseFloat(sp.xg).toFixed(2);
-            if(sp.xa !== undefined) ms[savePrefix+'_xa'] = parseFloat(sp.xa).toFixed(2);
-            if(sp.xg90 !== undefined) ms[savePrefix+'_xg90'] = parseFloat(sp.xg90).toFixed(2);
-            if(sp.xa90 !== undefined) ms[savePrefix+'_xa90'] = parseFloat(sp.xa90).toFixed(2);
-            if(sp.shots)   ms[savePrefix+'_shots']    = sp.shots;
-            if(sp.shots_on_target) ms[savePrefix+'_sot'] = sp.shots_on_target;
+            if(sp.gpk !== undefined)   ms[savePrefix+'_gpk']   = sp.gpk;
+            if(sp.pk !== undefined)    ms[savePrefix+'_pk']    = sp.pk;
+            if(sp.pkatt !== undefined) ms[savePrefix+'_pkatt'] = sp.pkatt;
             if(sp.yellow)  ms[savePrefix+'_yellow']   = sp.yellow;
             if(sp.red)     ms[savePrefix+'_red']      = sp.red;
             if(sp.ga !== undefined)    ms[savePrefix+'_ga']      = sp.ga;
@@ -13928,8 +13924,7 @@ async function loadFdSquad(el, nom, teamId, noTerrain, terrainOnly) {
           return '<th data-sort="'+col+'" data-uid="'+uid+'" onclick="sortSquad(this.dataset.uid,this.dataset.sort)" style="font-size:8px;color:'+color+';font-weight:700;text-align:center;padding:3px 4px;white-space:nowrap;cursor:pointer;" title="'+(title||lbl)+'">'+lbl+arrow+'</th>';
         };
         html += '<div style="overflow-x:auto;" id="squad-table-'+uid+'">';
-        html += '<table style="width:100%;border-collapse:collapse;table-layout:fixed;min-width:700px;">';
-        html += '<colgroup><col style="width:20px"><col style="min-width:100px"><col style="width:26px"><col style="width:26px"><col style="width:26px"><col style="width:36px"><col style="width:26px"><col style="width:26px"><col style="width:30px"><col style="width:30px"><col style="width:30px"><col style="width:26px"><col style="width:26px"><col style="width:26px"><col style="width:26px"><col style="width:26px"></colgroup>';
+        html += '<table style="width:100%;border-collapse:collapse;min-width:680px;">';
         html += '<thead><tr>';
         html += '<th style="'+tc+'"></th>';
         html += '<th data-sort="name" data-uid="'+uid+'" onclick="sortSquad(this.dataset.uid,this.dataset.sort)" style="'+tc+'text-align:left;cursor:pointer;">Joueur'+(sortKey==='name'?(sortDir===1?' ↓':' ↑'):'')+'</th>';
@@ -13951,12 +13946,11 @@ async function loadFdSquad(el, nom, teamId, noTerrain, terrainOnly) {
           html += thS('tit','Tit','Titularisations');
           html += thS('min','Min','Minutes jouées');
           html += thS('g','B','Buts');
-          html += thS('a','A','Passes decisives');
-          html += thS('xg','xG','Expected Goals total');
-          html += thS('xa','xA','Expected Assists total');
-          html += thS('xg90','xG90','xG par 90 minutes');
-          html += thS('sh','Sh','Tirs totaux');
-          html += thS('sot','SoT','Tirs cadrés');
+          html += thS('a','A','Passes décisives');
+          html += thS('ga_sum','G+A','Buts + Passes');
+          html += thS('gpk','G-PK','Buts hors penalty');
+          html += thS('pk','PK','Penalties marqués');
+          html += thS('pkatt','PKt','Penalties tentés');
           html += thS('cj','CJ','Cartons jaunes');
           html += thS('cr','CR','Cartons rouges');
           html += '<th style="'+tc+'"></th>';
@@ -13975,11 +13969,10 @@ async function loadFdSquad(el, nom, teamId, noTerrain, terrainOnly) {
             if(key==='min') return ms2[jPfx+'_minutes']!==undefined?ms2[jPfx+'_minutes']:(p._minutes||0);
             if(key==='g') return ms2[jPfx+'_goals']!==undefined?ms2[jPfx+'_goals']:(p._goals||0);
             if(key==='a') return ms2[jPfx+'_assists']!==undefined?ms2[jPfx+'_assists']:(p._assists||0);
-            if(key==='xg') return parseFloat(ms2[jPfx+'_xg'])||0;
-            if(key==='xa') return parseFloat(ms2[jPfx+'_xa'])||0;
-            if(key==='xg90') return parseFloat(ms2[jPfx+'_xg90'])||0;
-            if(key==='sh') return ms2[jPfx+'_shots']||0;
-            if(key==='sot') return ms2[jPfx+'_sot']||0;
+            if(key==='ga_sum') return (ms2[jPfx+'_goals']||0)+(ms2[jPfx+'_assists']||0);
+            if(key==='gpk') return ms2[jPfx+'_gpk']||0;
+            if(key==='pk') return ms2[jPfx+'_pk']||0;
+            if(key==='pkatt') return ms2[jPfx+'_pkatt']||0;
             if(key==='cj') return ms2[jPfx+'_yellow']||0;
             if(key==='cr') return ms2[jPfx+'_red']||0;
             return 0;
@@ -14020,10 +14013,9 @@ async function loadFdSquad(el, nom, teamId, noTerrain, terrainOnly) {
           var savepct = ms[jPrefix+'_savepct']?parseFloat(ms[jPrefix+'_savepct']).toFixed(1):null;
           var cs      = ms[jPrefix+'_cs']||0;
           var cspct   = ms[jPrefix+'_cspct']?parseFloat(ms[jPrefix+'_cspct']).toFixed(1):null;
-          var xg = ms[jPrefix+'_xg']!==undefined?parseFloat(ms[jPrefix+'_xg']).toFixed(2):null;
-          var xa = ms[jPrefix+'_xa']!==undefined?parseFloat(ms[jPrefix+'_xa']).toFixed(2):null;
-          var xg90 = ms[jPrefix+'_xg90']!==undefined?parseFloat(ms[jPrefix+'_xg90']).toFixed(2):null;
-          var xa90 = ms[jPrefix+'_xa90']!==undefined?parseFloat(ms[jPrefix+'_xa90']).toFixed(2):null;
+          var gpk = ms[jPrefix+'_gpk']!==undefined?ms[jPrefix+'_gpk']:0;
+          var pk = ms[jPrefix+'_pk']||0;
+          var pkatt = ms[jPrefix+'_pkatt']||0;
           var sh = ms[jPrefix+'_shots']||0;
           var sot= ms[jPrefix+'_sot']||0;
           var cj = ms[jPrefix+'_yellow']||0;
@@ -14046,11 +14038,10 @@ async function loadFdSquad(el, nom, teamId, noTerrain, terrainOnly) {
           } else {
             html += fmtS(g,'#1ed760');
             html += fmtS(a,'#4d84ff');
-            html += '<td style="text-align:center;font-size:11px;padding:6px 2px;color:'+(xg&&parseFloat(xg)>0?'#a78bfa':'rgba(255,255,255,.2)')+'" title="xG/90: '+(xg90||'—')+'">'+( xg||'—')+'</td>';
-            html += '<td style="text-align:center;font-size:11px;padding:6px 2px;color:'+(xa&&parseFloat(xa)>0?'#a78bfa':'rgba(255,255,255,.2)')+'" title="xA/90: '+(xa90||'—')+'">'+( xa||'—')+'</td>';
-            html += '<td style="text-align:center;font-size:11px;padding:6px 2px;color:'+(xg90&&parseFloat(xg90)>0?'#c4b5fd':'rgba(255,255,255,.2)')+'">'+( xg90||'—')+'</td>';
-            html += '<td style="text-align:center;font-size:11px;color:var(--t2);padding:6px 2px;">'+(sh||'—')+'</td>';
-            html += '<td style="text-align:center;font-size:11px;color:'+(sot>0?'#f0b020':'rgba(255,255,255,.2)')+';padding:6px 2px;">'+(sot||'—')+'</td>';
+            html += '<td style="text-align:center;font-size:11px;font-weight:700;padding:6px 2px;color:'+((g+a)>0?'#7ee0a0':'rgba(255,255,255,.2)')+'">'+((g+a)||'—')+'</td>';
+            html += '<td style="text-align:center;font-size:11px;padding:6px 2px;color:'+(gpk>0?'#1ed760':'rgba(255,255,255,.2)')+'">'+(gpk||'—')+'</td>';
+            html += '<td style="text-align:center;font-size:11px;padding:6px 2px;color:'+(pk>0?'#f0b020':'rgba(255,255,255,.2)')+'">'+(pk||'—')+'</td>';
+            html += '<td style="text-align:center;font-size:11px;padding:6px 2px;color:'+(pkatt>0?'var(--t2)':'rgba(255,255,255,.2)')+'">'+(pkatt||'—')+'</td>';
             html += '<td style="text-align:center;font-size:11px;padding:6px 2px;color:'+(cj>0?'#f0b020':'rgba(255,255,255,.2)')+'">'+( cj||'—')+'</td>';
             html += '<td style="text-align:center;font-size:11px;padding:6px 2px;color:'+(cr>0?'#ef4444':'rgba(255,255,255,.2)')+'">'+( cr||'—')+'</td>';
           }html += '</tr>';
