@@ -13319,7 +13319,11 @@ async function runFbrefGroq(uid, nom, b64, groqKey, mode, comp) {
 
     var data = await resp.json();
     var raw = data.choices && data.choices[0] && data.choices[0].message && data.choices[0].message.content;
-    if(!raw) throw new Error('Réponse vide');
+    if(!raw) {
+      console.error('Groq réponse complète:', JSON.stringify(data));
+      if(data.error) throw new Error('Groq: '+(data.error.message||data.error.type||'erreur API'));
+      throw new Error('Réponse vide (voir console)');
+    }
 
     var clean = raw.replace(/```json|```/g, '').trim();
     var parsed;
