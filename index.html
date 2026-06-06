@@ -14099,6 +14099,7 @@ async function loadFdSquad(el, nom, teamId, noTerrain, terrainOnly) {
       if(p.number) t+=statRow('Numéro','#'+p.number);
       if(val!=='—') t+=statRow('Valeur','<span style="color:#a78bfa;">'+val+'</span>');
       if(msg) t+='<div style="margin-top:8px;font-size:10px;color:#4d84ff;font-weight:700;text-align:center;">'+msg+'</div>';
+      if(!tip) return;
       tip.innerHTML=t; tip.style.display='flex'; tip.style.flexDirection='column';
     }
 
@@ -14167,7 +14168,7 @@ async function loadFdSquad(el, nom, teamId, noTerrain, terrainOnly) {
           window.open(sofaUrl,'_blank');
         }
       });
-      row.addEventListener('mouseenter',function(){showTip(p,selectedXiId?'🔄 Clique pour swapper':'↗ Clic → Sofascore');});
+      if(tip) row.addEventListener('mouseenter',function(){showTip(p,selectedXiId?'🔄 Clique pour swapper':'↗ Clic → Sofascore');});
     });
 
     document.addEventListener('click',function(){tip.style.display='none';selectedXiId=null;highlightSelected();});
