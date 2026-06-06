@@ -13924,7 +13924,8 @@ async function loadFdSquad(el, nom, teamId, noTerrain, terrainOnly) {
           return '<th data-sort="'+col+'" data-uid="'+uid+'" onclick="sortSquad(this.dataset.uid,this.dataset.sort)" style="font-size:8px;color:'+color+';font-weight:700;text-align:center;padding:3px 4px;white-space:nowrap;cursor:pointer;" title="'+(title||lbl)+'">'+lbl+arrow+'</th>';
         };
         html += '<div style="overflow-x:auto;" id="squad-table-'+uid+'">';
-        html += '<table style="width:100%;border-collapse:collapse;min-width:680px;">';
+        html += '<table style="width:100%;border-collapse:collapse;table-layout:fixed;min-width:680px;">';
+        html += '<colgroup><col style="width:22px"><col style="width:150px"><col style="width:32px"><col style="width:30px"><col style="width:30px"><col style="width:42px"><col style="width:auto"><col style="width:auto"><col style="width:auto"><col style="width:auto"><col style="width:auto"><col style="width:auto"><col style="width:auto"><col style="width:auto"><col style="width:30px"></colgroup>';
         html += '<thead><tr>';
         html += '<th style="'+tc+'"></th>';
         html += '<th data-sort="name" data-uid="'+uid+'" onclick="sortSquad(this.dataset.uid,this.dataset.sort)" style="'+tc+'text-align:left;cursor:pointer;">Joueur'+(sortKey==='name'?(sortDir===1?' ↓':' ↑'):'')+'</th>';
