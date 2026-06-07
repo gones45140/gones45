@@ -15577,8 +15577,8 @@ function loadMondial2026() {
 
   // Tableau knockout dynamique
   var ROUNDS = [
-    {key:'r32',  label:'32e de finale', date:'29 juin – 2 juil.', col:'#4f5d88'},
-    {key:'r16',  label:'16e de finale', date:'4 – 7 juillet',     col:'#4d84ff'},
+    {key:'r32',  label:'16e de finale', date:'29 juin – 2 juil.', col:'#4f5d88'},
+    {key:'r16',  label:'8e de finale', date:'4 – 7 juillet',     col:'#4d84ff'},
     {key:'qf',   label:'Quarts de finale', date:'9 – 10 juillet', col:'#a78bfa'},
     {key:'sf',   label:'Demi-finales',  date:'14 – 15 juillet',   col:'#f0b020'},
     {key:'f',    label:'🏆 Finale',     date:'19 juillet · MetLife NY', col:'#1ed760'}
@@ -16014,8 +16014,8 @@ function renderSimuMain(el) {
 
   // Knockout
   var KO_ROUNDS = [
-    {key:'r32', label:'32e de finale', col:'#4f5d88', next:'r16'},
-    {key:'r16', label:'16e de finale', col:'#4d84ff', next:'qf'},
+    {key:'r32', label:'16e de finale', col:'#4f5d88', next:'r16'},
+    {key:'r16', label:'8e de finale', col:'#4d84ff', next:'qf'},
     {key:'qf',  label:'Quarts',        col:'#a78bfa', next:'sf'},
     {key:'sf',  label:'Demi-finales',  col:'#f0b020', next:'f'},
     {key:'f',   label:'🏆 Finale',     col:'#1ed760', next:null}
@@ -16049,7 +16049,7 @@ function renderSimuMain(el) {
         html += '<div style="text-align:center;padding:6px;font-size:9px;color:#f0b020;">⚠️ Choisis les 3es dans les menus déroulants</div>';
       }
       if(allDone && thirdsResolved) {
-        html += '<button onclick="generateNextRound(\''+r.key+'\',\''+r.next+'\')" style="width:100%;margin-top:6px;padding:8px;background:rgba(77,132,255,.15);border:1px solid rgba(77,132,255,.3);border-radius:6px;color:#4d84ff;font-size:11px;font-weight:700;cursor:pointer;">→ Générer les '+r.next.toUpperCase()+'</button>';
+        html += '<button onclick="generateNextRound(\''+r.key+'\',\''+r.next+'\')" style="width:100%;margin-top:6px;padding:8px;background:rgba(77,132,255,.15);border:1px solid rgba(77,132,255,.3);border-radius:6px;color:#4d84ff;font-size:11px;font-weight:700;cursor:pointer;">→ Générer les '+({r16:'8es',qf:'quarts',sf:'demies',f:'finale'}[r.next]||r.next.toUpperCase())+'</button>';
       }
     } else {
       // Finale — afficher le vainqueur
@@ -16073,11 +16073,12 @@ function renderSimuMain(el) {
       return calcSimuStandings(g.id).every(function(t){return t.j===3;});
     });
     if(groupsComplete) {
+      html += renderThirdsRanking();
       html += '<div class="cwrap">';
-      html += '<button onclick="generateR32()" style="width:100%;padding:12px;background:rgba(30,215,96,.15);border:1px solid rgba(30,215,96,.3);border-radius:8px;color:#1ed760;font-size:13px;font-weight:800;cursor:pointer;">🚀 Générer les 32e de finale !</button>';
+      html += '<button onclick="generateR32()" style="width:100%;padding:12px;background:rgba(30,215,96,.15);border:1px solid rgba(30,215,96,.3);border-radius:8px;color:#1ed760;font-size:13px;font-weight:800;cursor:pointer;">🚀 Générer les 16e de finale !</button>';
       html += '</div>';
     } else {
-      html += '<div style="text-align:center;padding:10px;font-size:10px;color:#4f5d88;">Complète tous les groupes pour générer les 32es de finale</div>';
+      html += '<div style="text-align:center;padding:10px;font-size:10px;color:#4f5d88;">Complète tous les groupes pour générer les 16es de finale</div>';
     }
   }
 
@@ -16168,19 +16169,66 @@ function saveSimuKo(round, idx, sh, sa) {
   if(el) renderSimuMain(el);
 }
 
-function generateR32() {
-  // Les 32 qualifiés : top 2 de chaque groupe + 8 meilleurs 3es
-  var qualifieds = {};
+function getAllThirds() {
+  // Récupère les 12 troisièmes (un par groupe) avec leur classement par défaut
   var thirds = [];
+  SIMU_GROUPES.forEach(function(g){
+    var st = calcSimuStandings(g.id);
+    if(st[2]) thirds.push({name:st[2].name, pts:st[2].pts, gd:st[2].gf-st[2].ga, gf:st[2].gf, group:g.id});
+  });
+  thirds.sort(function(a,b){ return b.pts-a.pts||b.gd-a.gd||b.gf-a.gf; });
+  // Appliquer l'ordre manuel s'il existe
+  var manual = null; try{ manual = JSON.parse(localStorage.getItem('simu2026_thirdsorder')||'null'); }catch(e){}
+  if(manual && manual.length){
+    var byName = {}; thirds.forEach(function(t){ byName[t.name]=t; });
+    var ordered = [];
+    manual.forEach(function(n){ if(byName[n]){ ordered.push(byName[n]); delete byName[n]; } });
+    // Ajouter les éventuels nouveaux 3es pas encore dans l'ordre manuel
+    thirds.forEach(function(t){ if(byName[t.name]) ordered.push(t); });
+    return ordered;
+  }
+  return thirds;
+}
+
+function moveThird(idx, dir) {
+  var thirds = getAllThirds();
+  var ni = idx + dir;
+  if(ni<0 || ni>=thirds.length) return;
+  var tmp = thirds[idx]; thirds[idx] = thirds[ni]; thirds[ni] = tmp;
+  localStorage.setItem('simu2026_thirdsorder', JSON.stringify(thirds.map(function(t){return t.name;})));
+  var el = getSimuContainer(); if(el) renderSimuMain(el);
+}
+
+function renderThirdsRanking() {
+  var thirds = getAllThirds();
+  if(thirds.length < 12) return '';
+  var html = '<div class="cwrap" style="margin-bottom:10px;">';
+  html += '<div style="font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#f0b020;margin-bottom:4px;">🥉 Classement des 3es — glisse avec les flèches</div>';
+  html += '<div style="font-size:9px;color:#4f5d88;margin-bottom:8px;">Les 8 premiers sont qualifiés pour les 16es</div>';
+  thirds.forEach(function(t,i){
+    var qual = i<8;
+    var bg = qual?'rgba(30,215,96,.06)':'rgba(255,69,69,.04)';
+    var numCol = qual?'#1ed760':'#ff7b7b';
+    html += '<div style="display:flex;align-items:center;gap:8px;padding:7px 8px;background:'+bg+';border-radius:6px;margin-bottom:3px;'+(i===8?'margin-top:8px;border-top:2px dashed rgba(255,69,69,.3);padding-top:12px;':'')+'">';
+    html += '<div style="font-size:11px;font-weight:800;color:'+numCol+';min-width:18px;">'+(i+1)+'</div>';
+    html += '<div style="flex:1;font-size:11px;font-weight:'+(qual?700:400)+';color:'+(t.name==='France'?'#4d84ff':qual?'var(--t1)':'var(--t3)')+';">'+flagImg(t.name,16)+t.name+' <span style="font-size:8px;color:#4f5d88;">('+t.group+' · '+t.pts+'pts · '+(t.gd>0?'+':'')+t.gd+')</span></div>';
+    html += '<button onclick="moveThird('+i+',-1)" style="background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);border-radius:4px;color:var(--t2);font-size:13px;width:26px;height:26px;cursor:pointer;'+(i===0?'opacity:.25;':'')+'">↑</button>';
+    html += '<button onclick="moveThird('+i+',1)" style="background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);border-radius:4px;color:var(--t2);font-size:13px;width:26px;height:26px;cursor:pointer;'+(i===thirds.length-1?'opacity:.25;':'')+'">↓</button>';
+    html += '</div>';
+  });
+  html += '</div>';
+  return html;
+}
+
+function generateR32() {
+  // Les 32 qualifiés : top 2 de chaque groupe + 8 meilleurs 3es (ordre manuel respecté)
+  var qualifieds = {};
   SIMU_GROUPES.forEach(function(g){
     var st = calcSimuStandings(g.id);
     qualifieds['1'+g.id] = st[0].name;
     qualifieds['2'+g.id] = st[1].name;
-    thirds.push({name:st[2].name, pts:st[2].pts, gd:st[2].gf-st[2].ga, gf:st[2].gf, group:g.id});
   });
-  // 8 meilleurs 3es (classement officiel : points, diff de buts, buts marqués)
-  thirds.sort(function(a,b){ return b.pts-a.pts||b.gd-a.gd||b.gf-a.gf; });
-  var best8 = thirds.slice(0,8);
+  var best8 = getAllThirds().slice(0,8);
 
   // Vrai bracket officiel FIFA 2026 (matchs 73-88).
   // Les emplacements 3es sont des placeholders 'T:groupes' à choisir via menu déroulant.
@@ -16548,8 +16596,8 @@ function voirSimuRecue(idx) {
 
   // Knockout reçu
   var KO_ROUNDS = [
-    {key:'r32',label:'32e de finale',col:'#4f5d88'},
-    {key:'r16',label:'16e de finale',col:'#4d84ff'},
+    {key:'r32',label:'16e de finale',col:'#4f5d88'},
+    {key:'r16',label:'8e de finale',col:'#4d84ff'},
     {key:'qf', label:'Quarts',col:'#a78bfa'},
     {key:'sf', label:'Demi-finales',col:'#f0b020'},
     {key:'f',  label:'🏆 Finale',col:'#1ed760'}
