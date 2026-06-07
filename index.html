@@ -16601,6 +16601,27 @@ function supprSimuRecue(i){
   var el = getSimuContainer(); if(el) renderSimuMain(el);
 }
 
+function voirMatchsGroupeRecue(idxSimu, gid) {
+  var recues = JSON.parse(localStorage.getItem('simu2026_recues')||'[]');
+  var r = recues[idxSimu];
+  if(!r || !r.data || !r.data.groups) return;
+  var g = SIMU_GROUPES.find(function(x){return x.id===gid;});
+  if(!g) return;
+  var scores = r.data.groups[gid] || {};
+  var pairs = getGroupPairs(g.teams);
+  var lines = [];
+  pairs.forEach(function(p){
+    var k = p[0]+'_'+p[1];
+    var s = scores[k];
+    if(s && s.h!=='' && s.a!=='' && s.h!==undefined && s.a!==undefined){
+      lines.push(p[0]+'  '+s.h+' - '+s.a+'  '+p[1]);
+    } else {
+      lines.push(p[0]+'  - : -  '+p[1]);
+    }
+  });
+  alert('🏆 '+r.nom+' — Groupe '+gid+'\n\n'+lines.join('\n'));
+}
+
 function voirSimuRecue(idx) {
   var recues = JSON.parse(localStorage.getItem('simu2026_recues')||'[]');
   var r = recues[idx];
@@ -16633,7 +16654,7 @@ function voirSimuRecue(idx) {
 
     var isFr = g.id==='I';
     html += '<div style="background:'+(isFr?'rgba(77,132,255,.08)':'rgba(255,255,255,.02)')+';border:1px solid '+(isFr?'rgba(77,132,255,.4)':'rgba(255,255,255,.07)')+';border-radius:8px;padding:8px;">';
-    html += '<div style="font-size:9px;font-weight:800;color:'+(isFr?'#4d84ff':'#4f5d88')+';margin-bottom:5px;">GROUPE '+g.id+'</div>';
+    html += '<div onclick="voirMatchsGroupeRecue('+idx+',\''+g.id+'\')" style="font-size:9px;font-weight:800;color:'+(isFr?'#4d84ff':'#4f5d88')+';margin-bottom:5px;cursor:pointer;">GROUPE '+g.id+' <span style="color:#4d84ff;">▾ matchs</span></div>';
     standings.forEach(function(t,i){
       var qual = i<2;
       html += '<div style="display:flex;align-items:center;justify-content:space-between;padding:1px 0;">';
