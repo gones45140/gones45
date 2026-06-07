@@ -15982,6 +15982,9 @@ function renderSimuMain(el) {
   html += '</div>';
   html += '</div>';
 
+  // Liste des simulations reçues (cliquables)
+  html += renderRecuesList();
+
   // Groupes
   html += '<div class="cwrap" style="margin-bottom:10px;">';
   html += '<div style="font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#4f5d88;margin-bottom:10px;">📊 Phase de groupes</div>';
@@ -16558,12 +16561,44 @@ function chargerSimuDepuisUrl() {
       var btn = document.querySelector('[onclick*="t-simu"]');
       if(btn) btn.click();
       setTimeout(function(){
-        alert('📥 Simulation de ' + nom + ' reçue et sauvegardée !\nTa propre simulation n\'a pas été modifiée.\nConsulte l\'onglet "Simis reçues" pour la voir.');
+        alert('📥 Simulation de ' + nom + ' reçue et sauvegardée !\nTa propre simulation n\'a pas été modifiée.\nElle apparaît en haut de l\'onglet SIMU (section "Simis reçues").');
         renderSimuMain(null);
       }, 300);
     }, 500);
     return true;
   } catch(e) { return false; }
+}
+
+function renderRecuesList() {
+  var recues = JSON.parse(localStorage.getItem('simu2026_recues')||'[]');
+  if(!recues.length) return '';
+  var html = '<div class="cwrap" style="margin-bottom:10px;">';
+  html += '<div style="font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#f0b020;margin-bottom:10px;">📥 Simis reçues ('+recues.length+')</div>';
+  recues.forEach(function(r,i){
+    var winner = null;
+    if(r.data&&r.data.ko&&r.data.ko.f&&r.data.ko.f[0]){
+      var fm=r.data.ko.f[0];
+      if(fm.sh!==''&&fm.sh!==undefined&&fm.sa!==undefined) winner=parseInt(fm.sh)>parseInt(fm.sa)?fm.home:parseInt(fm.sh)<parseInt(fm.sa)?fm.away:null;
+    }
+    html += '<div onclick="voirSimuRecue('+i+')" style="display:flex;align-items:center;gap:10px;padding:10px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.07);border-radius:8px;margin-bottom:6px;cursor:pointer;">';
+    html += '<div style="font-size:20px;">🏆</div>';
+    html += '<div style="flex:1;">';
+    html += '<div style="font-size:12px;font-weight:800;color:var(--t1);">'+r.nom+'</div>';
+    html += '<div style="font-size:10px;color:var(--t3);">Reçu le '+r.recu+(winner?' · Champion : '+winner:'')+'</div>';
+    html += '</div>';
+    html += '<div style="font-size:11px;color:#4d84ff;">Voir →</div>';
+    html += '<button onclick="event.stopPropagation();supprSimuRecue('+i+')" style="background:rgba(255,69,69,.1);border:1px solid rgba(255,69,69,.3);border-radius:5px;color:#ff7b7b;font-size:10px;padding:4px 8px;cursor:pointer;">✕</button>';
+    html += '</div>';
+  });
+  html += '</div>';
+  return html;
+}
+
+function supprSimuRecue(i){
+  var recues = JSON.parse(localStorage.getItem('simu2026_recues')||'[]');
+  recues.splice(i,1);
+  localStorage.setItem('simu2026_recues', JSON.stringify(recues));
+  var el = getSimuContainer(); if(el) renderSimuMain(el);
 }
 
 function voirSimuRecue(idx) {
