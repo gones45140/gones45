@@ -15937,7 +15937,8 @@ function calcSimuStandings(gid) {
   });
   return Object.values(st).sort(function(a,b){
     if(b.pts!==a.pts) return b.pts-a.pts;
-    return (b.gf-b.ga)-(a.gf-a.ga);
+    if((b.gf-b.ga)!==(a.gf-a.ga)) return (b.gf-b.ga)-(a.gf-a.ga);
+    return b.gf-a.gf;
   });
 }
 
@@ -16127,17 +16128,19 @@ function renderSimuGroup(gid) {
 function renderSimuStandings(gid) {
   var standings = calcSimuStandings(gid);
   var html = '<div style="font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#4f5d88;margin-bottom:8px;">📊 Classement</div>';
-  html += '<div style="display:grid;grid-template-columns:20px 1fr 28px 28px 28px 28px 32px;gap:4px;font-size:9px;color:#4f5d88;font-weight:700;padding:0 4px;margin-bottom:4px;">';
-  html += '<div>#</div><div>Équipe</div><div style="text-align:center">J</div><div style="text-align:center">G</div><div style="text-align:center">N</div><div style="text-align:center">P</div><div style="text-align:center">Pts</div></div>';
+  html += '<div style="display:grid;grid-template-columns:20px 1fr 24px 24px 24px 24px 30px 30px;gap:3px;font-size:9px;color:#4f5d88;font-weight:700;padding:0 4px;margin-bottom:4px;">';
+  html += '<div>#</div><div>Équipe</div><div style="text-align:center">J</div><div style="text-align:center">G</div><div style="text-align:center">N</div><div style="text-align:center">P</div><div style="text-align:center">DB</div><div style="text-align:center">Pts</div></div>';
   standings.forEach(function(t,i){
     var qual = i<2;
     var third = i===2;
     var bg = qual?'rgba(30,215,96,.06)':third?'rgba(240,176,32,.04)':'rgba(255,255,255,.02)';
     var numCol = qual?'#1ed760':third?'#f0b020':'#4f5d88';
-    html += '<div style="display:grid;grid-template-columns:20px 1fr 28px 28px 28px 28px 32px;gap:4px;align-items:center;background:'+bg+';border-radius:6px;padding:6px 4px;margin-bottom:3px;">';
+    html += '<div style="display:grid;grid-template-columns:20px 1fr 24px 24px 24px 24px 30px 30px;gap:3px;align-items:center;background:'+bg+';border-radius:6px;padding:6px 4px;margin-bottom:3px;">';
     html += '<div style="font-size:10px;font-weight:700;color:'+numCol+'">'+(i+1)+'</div>';
     html += '<div style="display:flex;align-items:center;font-size:10px;font-weight:'+(qual||third?700:400)+';color:'+(t.name==='France'?'#4d84ff':qual?'var(--t1)':third?'#f0b020':'var(--t2)')+';overflow:hidden;white-space:nowrap;">'+flagImg(t.name,16)+(third?'❓ ':'')+t.name+'</div>';
     ['j','g','n','p'].forEach(function(k){ html += '<div style="text-align:center;font-size:10px;color:var(--t2);">'+t[k]+'</div>'; });
+    var db = t.gf-t.ga;
+    html += '<div style="text-align:center;font-size:10px;font-weight:700;color:'+(db>0?'#1ed760':db<0?'#ff7b7b':'var(--t3)')+';">'+(db>0?'+':'')+db+'</div>';
     html += '<div style="text-align:center;font-size:11px;font-weight:800;color:'+(t.pts>0?'#f0b020':'var(--t3)')+';">'+t.pts+'</div>';
     html += '</div>';
   });
