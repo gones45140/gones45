@@ -15896,7 +15896,7 @@ function loadSimuTab() {
 }
 
 function loadSimu2026() {
-  var el = document.getElementById('ip-simu');
+  var el = getSimuContainer();
   if(!el) return;
   renderSimuMain(el);
 }
@@ -16095,7 +16095,7 @@ function saveSimuKo(round, idx, sh, sa) {
   if(sa!==null) matches[idx].sa=sa;
   localStorage.setItem(simuKoKey(round), JSON.stringify(matches));
   // Re-render
-  var el = document.getElementById('ip-simu');
+  var el = getSimuContainer();
   if(el) renderSimuMain(el);
 }
 
@@ -16133,7 +16133,7 @@ function generateR32() {
     {home:best8thirds[6],away:best8thirds[7],sh:'',sa:''}
   ];
   localStorage.setItem(simuKoKey('r32'), JSON.stringify(r32));
-  var el = document.getElementById('ip-simu');
+  var el = getSimuContainer();
   if(el) renderSimuMain(el);
 }
 
@@ -16147,7 +16147,7 @@ function generateNextRound(currentKey, nextKey) {
     nextMatches.push({home:w1,away:w2,sh:'',sa:''});
   }
   localStorage.setItem(simuKoKey(nextKey), JSON.stringify(nextMatches));
-  var el = document.getElementById('ip-simu');
+  var el = getSimuContainer();
   if(el) renderSimuMain(el);
 }
 
@@ -16540,7 +16540,7 @@ function resetSimu2026() {
   if(!confirm('Réinitialiser toute la simulation ?')) return;
   SIMU_GROUPES.forEach(function(g){ localStorage.removeItem(simuKey(g.id)); });
   ['r32','r16','qf','sf','f'].forEach(function(k){ localStorage.removeItem(simuKoKey(k)); });
-  var el = document.getElementById('ip-simu');
+  var el = getSimuContainer();
   if(el) renderSimuMain(el);
 }
 
