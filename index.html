@@ -16003,7 +16003,7 @@ function renderSimuMain(el) {
       var prefix = allPlayed?(qual?'✅ ':third?'❓ ':''):'';
       html += '<div style="display:flex;justify-content:space-between;align-items:center;padding:2px 0;">';
       html += '<div style="display:flex;align-items:center;font-size:9px;color:'+col+';font-weight:'+(qual||third?700:400)+';max-width:95px;overflow:hidden;white-space:nowrap;">'+flagImg(t.name,14)+prefix+t.name+'</div>';
-      html += '<div style="font-size:9px;font-weight:700;color:'+(t.pts>0?'#f0b020':'var(--t3)')+';">'+t.pts+'pts</div>';
+      var _db=t.gf-t.ga; html += '<div style="display:flex;align-items:center;gap:6px;"><span style="font-size:8px;font-weight:600;color:'+(_db>0?'#1ed760':_db<0?'#ff7b7b':'var(--t3)')+';">'+(_db>0?'+':'')+_db+'</span><span style="font-size:9px;font-weight:700;color:'+(t.pts>0?'#f0b020':'var(--t3)')+';">'+t.pts+'pts</span></div>';
       html += '</div>';
     });
     html += '</div>';
@@ -16539,7 +16539,7 @@ function voirSimuRecue(idx) {
       var qual = i<2;
       html += '<div style="display:flex;align-items:center;justify-content:space-between;padding:1px 0;">';
       html += '<div style="display:flex;align-items:center;font-size:9px;color:'+(t.name==='France'?'#4d84ff':qual?'var(--t1)':'var(--t2)')+';font-weight:'+(qual?700:400)+';">'+flagImg(t.name,12)+(qual?'✅ ':'')+t.name+'</div>';
-      html += '<div style="font-size:9px;font-weight:700;color:'+(t.pts>0?'#f0b020':'var(--t3)')+';">'+t.pts+'pts</div>';
+      var _db=t.gf-t.ga; html += '<div style="display:flex;align-items:center;gap:6px;"><span style="font-size:8px;font-weight:600;color:'+(_db>0?'#1ed760':_db<0?'#ff7b7b':'var(--t3)')+';">'+(_db>0?'+':'')+_db+'</span><span style="font-size:9px;font-weight:700;color:'+(t.pts>0?'#f0b020':'var(--t3)')+';">'+t.pts+'pts</span></div>';
       html += '</div>';
     });
     html += '</div>';
