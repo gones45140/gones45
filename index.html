@@ -15864,12 +15864,19 @@ function simuTeamCell(value, side, rkey, idx){
     var chosen = picks[slotKey] || '';
     var used = pickedThirds(slotKey);
     var opts = best8.filter(function(t){
-      return groups.indexOf(t.group)>=0 && (used.indexOf(t.name)<0 || t.name===chosen);
+      return used.indexOf(t.name)<0 || t.name===chosen;
+    });
+    // Trier : éligibles (groupe dans la liste) en premier, puis les autres
+    opts.sort(function(a,b){
+      var ea = groups.indexOf(a.group)>=0 ? 0 : 1;
+      var eb = groups.indexOf(b.group)>=0 ? 0 : 1;
+      return ea - eb;
     });
     var sel = '<select onchange="pickThird(\''+rkey+'\','+idx+',\''+side+'\',this.value)" style="font-size:9px;background:var(--bg3);border:1px solid var(--b2);border-radius:4px;color:'+(chosen?'var(--t1)':'#f0b020')+';padding:3px 4px;max-width:120px;'+(alignLeft?'':'text-align:right;')+'">';
     sel += '<option value="">3e '+groups+'…</option>';
     opts.forEach(function(t){
-      sel += '<option value="'+t.name+'"'+(t.name===chosen?' selected':'')+'>'+t.name+' ('+t.group+')</option>';
+      var elig = groups.indexOf(t.group)>=0;
+      sel += '<option value="'+t.name+'"'+(t.name===chosen?' selected':'')+'>'+(elig?'★ ':'')+t.name+' ('+t.group+')</option>';
     });
     sel += '</select>';
     return '<div style="font-size:10px;'+(alignLeft?'':'text-align:right;')+'">'+sel+'</div>';
