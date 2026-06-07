@@ -14064,9 +14064,11 @@ async function loadFdSquad(el, nom, teamId, noTerrain, terrainOnly) {
           var ga      = ms[jPrefix+'_ga']||0;
           var sota    = ms[jPrefix+'_sota']||0;
           var saves   = ms[jPrefix+'_saves']||0;
-          var savepct = ms[jPrefix+'_savepct']?parseFloat(ms[jPrefix+'_savepct']).toFixed(1):null;
+          // Save% calculé : arrêts / (arrêts + buts encaissés)
+          var savepct = (saves+ga)>0 ? ((saves/(saves+ga))*100).toFixed(1) : null;
           var cs      = ms[jPrefix+'_cs']||0;
-          var cspct   = ms[jPrefix+'_cspct']?parseFloat(ms[jPrefix+'_cspct']).toFixed(1):null;
+          // CS% calculé : clean sheets / matchs joués
+          var cspct   = (mj>0) ? ((cs/mj)*100).toFixed(1) : null;
           var gpk = ms[jPrefix+'_gpk']!==undefined?ms[jPrefix+'_gpk']:0;
           var pk = ms[jPrefix+'_pk']||0;
           var pkatt = ms[jPrefix+'_pkatt']||0;
