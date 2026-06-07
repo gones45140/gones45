@@ -16037,13 +16037,14 @@ function renderSimuGroup(gid) {
   html += '<div style="font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#4f5d88;margin-bottom:10px;">⚽ Scores</div>';
   pairs.forEach(function(p){
     var k = p[0]+'_'+p[1];
+    var kEsc = k.replace(/\\/g,'\\\\').replace(/'/g,"\\'");
     var s = scores[k]||{h:'',a:''};
     var isFrMatch = p[0]==='France'||p[1]==='France';
     html += '<div style="display:grid;grid-template-columns:1fr auto auto auto 1fr;gap:8px;align-items:center;padding:8px;background:'+(isFrMatch?'rgba(77,132,255,.06)':'rgba(255,255,255,.02)')+';border-radius:8px;margin-bottom:6px;border:1px solid '+(isFrMatch?'rgba(77,132,255,.2)':'rgba(255,255,255,.05)')+'">';
     html += '<div style="display:flex;align-items:center;justify-content:flex-end;font-size:11px;font-weight:700;color:'+(p[0]==='France'?'#4d84ff':'var(--t1)')+';">'+flagImg(p[0],16)+p[0]+'</div>';
-    html += '<input type="number" min="0" max="20" value="'+s.h+'" placeholder="-" id="simu_'+gid+'_'+k+'_h" style="width:36px;text-align:center;background:var(--bg3);border:1px solid var(--b2);border-radius:6px;color:var(--t1);font-size:16px;font-weight:800;padding:6px 2px;" oninput="onSimuScore(\''+gid+'\',\''+k+'\',true,this.value)">';
+    html += '<input type="number" min="0" max="20" value="'+s.h+'" placeholder="-" id="simu_'+gid+'_'+k+'_h" style="width:36px;text-align:center;background:var(--bg3);border:1px solid var(--b2);border-radius:6px;color:var(--t1);font-size:16px;font-weight:800;padding:6px 2px;" oninput="onSimuScore(\''+gid+'\',\''+kEsc+'\',true,this.value)">';
     html += '<div style="font-size:12px;color:var(--t3);font-weight:700;">—</div>';
-    html += '<input type="number" min="0" max="20" value="'+s.a+'" placeholder="-" id="simu_'+gid+'_'+k+'_a" style="width:36px;text-align:center;background:var(--bg3);border:1px solid var(--b2);border-radius:6px;color:var(--t1);font-size:16px;font-weight:800;padding:6px 2px;" oninput="onSimuScore(\''+gid+'\',\''+k+'\',false,this.value)">';
+    html += '<input type="number" min="0" max="20" value="'+s.a+'" placeholder="-" id="simu_'+gid+'_'+k+'_a" style="width:36px;text-align:center;background:var(--bg3);border:1px solid var(--b2);border-radius:6px;color:var(--t1);font-size:16px;font-weight:800;padding:6px 2px;" oninput="onSimuScore(\''+gid+'\',\''+kEsc+'\',false,this.value)">';
     html += '<div style="display:flex;align-items:center;font-size:11px;font-weight:700;color:'+(p[1]==='France'?'#4d84ff':'var(--t1)')+';">'+flagImg(p[1],16)+p[1]+'</div>';
     html += '</div>';
   });
