@@ -7304,6 +7304,40 @@ function refreshSquadCache(nom) {
   loadTeamLive();
 }
 
+function editPlayerStats(teamId, playerId, encName, isGK, uid) {
+  var name = decodeURIComponent(encName);
+  var manualKey = 'manual_stats_'+teamId+'_'+playerId;
+  var ms = {}; try { ms = JSON.parse(localStorage.getItem(manualKey)||'{}'); } catch(e){}
+  // compMode + journée actuels
+  var compMode = window['_compMode_'+uid] || 'league';
+  var prefix = compMode === 'euro' ? 'euro' : 'league';
+  var vj = (function(){ var el=document.getElementById('fbref-journee-'+uid); return el?el.value:'global'; })() || 'global';
+  var jp = (vj !== 'global') ? prefix+'_'+vj : prefix;
+  var compLabel = (compMode==='euro'?'Europe':'Championnat') + (vj!=='global'?' '+vj:' (global)');
+
+  function g(k){ return ms[jp+'_'+k]!==undefined ? ms[jp+'_'+k] : ''; }
+  var fields = isGK
+    ? [['apps','Matchs'],['starts','Titularisations'],['minutes','Minutes'],['ga','Buts encaissés'],['sota','Tirs cadrés subis'],['saves','Arrêts'],['cs','Clean sheets']]
+    : [['apps','Matchs'],['starts','Titularisations'],['minutes','Minutes'],['goals','Buts'],['assists','Passes décisives'],['gpk','Buts hors penalty'],['pk','Penalties marqués'],['pkatt','Penalties tentés'],['yellow','Cartons jaunes'],['red','Cartons rouges']];
+
+  var msg = '✏️ '+name+'\n'+compLabel+'\n\nLaisse vide pour ne pas changer. Entre les valeurs séparées par des virgules dans cet ordre :\n\n'
+    + fields.map(function(f){ return f[1]+' ('+(g(f[0])!==''?g(f[0]):'0')+')'; }).join('\n')
+    + '\n\nFormat : '+fields.map(function(){return 'n';}).join(',');
+
+  var input = prompt(msg, fields.map(function(f){ return g(f[0])!==''?g(f[0]):''; }).join(','));
+  if(input===null) return;
+  var vals = input.split(',');
+  fields.forEach(function(f, i){
+    var v = (vals[i]||'').trim();
+    if(v !== '') {
+      var num = parseFloat(v);
+      if(!isNaN(num)) ms[jp+'_'+f[0]] = num;
+    }
+  });
+  localStorage.setItem(manualKey, JSON.stringify(ms));
+  if(typeof loadTeamCompo === 'function') loadTeamCompo();
+}
+
 function resetTeamStats(nom) {
   var sofaId = SOFASCORE_TEAM_IDS && SOFASCORE_TEAM_IDS[nom];
   if(!sofaId) { for(var k in SOFASCORE_TEAM_IDS){ if(nom.toLowerCase().indexOf(k.toLowerCase())>=0||k.toLowerCase().indexOf(nom.toLowerCase())>=0){sofaId=SOFASCORE_TEAM_IDS[k];break;} } }
@@ -14064,7 +14098,13 @@ async function loadFdSquad(el, nom, teamId, noTerrain, terrainOnly) {
             html += '<td style="text-align:center;font-size:11px;padding:6px 2px;color:'+(pkatt>0?'var(--t2)':'rgba(255,255,255,.2)')+'">'+(pkatt||'—')+'</td>';
             html += '<td style="text-align:center;font-size:11px;padding:6px 2px;color:'+(cj>0?'#f0b020':'rgba(255,255,255,.2)')+'">'+( cj||'—')+'</td>';
             html += '<td style="text-align:center;font-size:11px;padding:6px 2px;color:'+(cr>0?'#ef4444':'rgba(255,255,255,.2)')+'">'+( cr||'—')+'</td>';
-          }html += '</tr>';
+          }
+          if(localStorage.getItem('gones45_admin')==='1'){
+            html += '<td style="text-align:center;padding:6px 2px;"><span onclick="event.stopPropagation();editPlayerStats(\''+(sofaId||afId||'0')+'\',\''+p.id+'\',\''+encodeURIComponent(p.name)+'\','+(pos===1?'true':'false')+',\''+uid+'\')" style="cursor:pointer;font-size:13px;opacity:.6;" title="Editer les stats">✏️</span></td>';
+          } else {
+            html += '<td></td>';
+          }
+          html += '</tr>';
         });
         html += '</tbody></table>';
         html += '</div>';
