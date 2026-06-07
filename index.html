@@ -16115,6 +16115,13 @@ function renderSimuGroup(gid) {
     html += '<input type="number" min="0" max="20" value="'+s.a+'" placeholder="-" id="simu_'+gid+'_'+k+'_a" style="width:36px;text-align:center;background:var(--bg3);border:1px solid var(--b2);border-radius:6px;color:var(--t1);font-size:16px;font-weight:800;padding:6px 2px;" oninput="onSimuScore(\''+gid+'\',\''+kEsc+'\',false,this.value)">';
     html += '<div style="display:flex;align-items:center;font-size:11px;font-weight:700;color:'+(p[1]==='France'?'#4d84ff':'var(--t1)')+';">'+flagImg(p[1],16)+p[1]+'</div>';
     html += '</div>';
+    // Boutons rapides vainqueur/nul
+    var win = (s.h!==''&&s.a!=='')?(parseInt(s.h)>parseInt(s.a)?'home':parseInt(s.h)<parseInt(s.a)?'away':'draw'):'';
+    html += '<div style="display:flex;gap:4px;margin:-2px 0 8px 0;">';
+    html += '<button onclick="quickResult(\''+gid+'\',\''+kEsc+'\',\'home\')" style="flex:1;padding:4px;border-radius:5px;border:1px solid '+(win==='home'?'rgba(30,215,96,.5)':'rgba(255,255,255,.1)')+';background:'+(win==='home'?'rgba(30,215,96,.18)':'rgba(255,255,255,.03)')+';color:'+(win==='home'?'#1ed760':'var(--t3)')+';font-size:9px;font-weight:700;cursor:pointer;">'+p[0]+'</button>';
+    html += '<button onclick="quickResult(\''+gid+'\',\''+kEsc+'\',\'draw\')" style="padding:4px 10px;border-radius:5px;border:1px solid '+(win==='draw'?'rgba(240,176,32,.5)':'rgba(255,255,255,.1)')+';background:'+(win==='draw'?'rgba(240,176,32,.18)':'rgba(255,255,255,.03)')+';color:'+(win==='draw'?'#f0b020':'var(--t3)')+';font-size:9px;font-weight:700;cursor:pointer;">Nul</button>';
+    html += '<button onclick="quickResult(\''+gid+'\',\''+kEsc+'\',\'away\')" style="flex:1;padding:4px;border-radius:5px;border:1px solid '+(win==='away'?'rgba(30,215,96,.5)':'rgba(255,255,255,.1)')+';background:'+(win==='away'?'rgba(30,215,96,.18)':'rgba(255,255,255,.03)')+';color:'+(win==='away'?'#1ed760':'var(--t3)')+';font-size:9px;font-weight:700;cursor:pointer;">'+p[1]+'</button>';
+    html += '</div>';
   });
   html += '</div>';
 
@@ -16146,6 +16153,15 @@ function renderSimuStandings(gid) {
     html += '</div>';
   });
   return html;
+}
+
+function quickResult(gid, k, result) {
+  var scores = getSimuGroupScores(gid);
+  if(result==='home') scores[k]={h:1,a:0};
+  else if(result==='away') scores[k]={h:0,a:1};
+  else scores[k]={h:1,a:1};
+  localStorage.setItem(simuKey(gid), JSON.stringify(scores));
+  renderSimuGroup(gid);
 }
 
 function onSimuScore(gid, matchKey, isHome, val) {
