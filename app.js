@@ -41,6 +41,46 @@ var TEAM_IDS = {
   };
 var _currentUnitNom = "";
 var _unitType = "club";
+
+/* ── SAISONS ── */
+var _currentSaison = localStorage.getItem('g45_saison_active') || '2526';
+var SAISONS = [{id:'2526',label:'2025/26'},{id:'2627',label:'2026/27'}];
+
+function setSaison(id) {
+  if(_currentSaison === id) return;
+  _currentSaison = id;
+  localStorage.setItem('g45_saison_active', id);
+  if(typeof loadTeamCompo === 'function') loadTeamCompo();
+}
+
+function saisonKey(base) {
+  return _currentSaison + '_' + base;
+}
+
+// Migration : clés sans préfixe → 2526_
+(function migrateSaisonKeys() {
+  if(localStorage.getItem('g45_saison_migrated')) return;
+  var toMigrate = [];
+  for(var i=0;i<localStorage.length;i++){
+    var k = localStorage.key(i);
+    if(k && (k.startsWith('manual_stats_') || k.startsWith('squad_lastJ_')) && k.indexOf('2526_')<0 && k.indexOf('2627_')<0) {
+      toMigrate.push(k);
+    }
+  }
+  toMigrate.forEach(function(k){
+    var val = localStorage.getItem(k);
+    var parts = k.split('_');
+    // manual_stats_{teamId}_{playerId} → manual_stats_2526_{teamId}_{playerId}
+    // squad_lastJ_{teamId} → squad_lastJ_2526_{teamId}
+    var newKey;
+    if(k.startsWith('manual_stats_')) newKey = 'manual_stats_2526_'+k.slice('manual_stats_'.length);
+    else newKey = 'squad_lastJ_2526_'+k.slice('squad_lastJ_'.length);
+    localStorage.setItem(newKey, val);
+    localStorage.removeItem(k);
+  });
+  if(toMigrate.length > 0) console.log('Migration saison: '+toMigrate.length+' clés → 2526_');
+  localStorage.setItem('g45_saison_migrated', '1');
+})();
 var _CP_TYPES = ['Victoire','Nul','Défaite','Over 2.5','Under 2.5','BTS Oui','BTS Non','HC -1','HC +1','Mi-temps','1er buteur'];
 var _chatParams = { equipe:'', lieu:'domicile', types:['Victoire','Over 2.5','BTS Oui'], champOnly:false };
 
@@ -5836,7 +5876,7 @@ async function loadFplSquad(el, nom) {
 function fdEditStats(btn) {
   var pid = parseInt(btn.dataset.pid);
   var afId = btn.dataset.afid;
-  var key = 'manual_stats_'+afId+'_'+pid;
+  var key = 'manual_stats_'+saisonKey(afId+'_'+pid);
   var current = {};
   try { current = JSON.parse(localStorage.getItem(key)||'{}'); } catch(e){}
 
@@ -5943,7 +5983,7 @@ function refreshSquadCache(nom) {
 
 function editPlayerStats(teamId, playerId, encName, isGK, uid) {
   var name = decodeURIComponent(encName);
-  var manualKey = 'manual_stats_'+teamId+'_'+playerId;
+  var manualKey = 'manual_stats_'+saisonKey(teamId+'_'+playerId);
   var ms = {}; try { ms = JSON.parse(localStorage.getItem(manualKey)||'{}'); } catch(e){}
   // compMode + journée actuels
   var compMode = window['_compMode_'+uid] || 'league';
@@ -5980,11 +6020,11 @@ function resetTeamStats(nom) {
   if(!sofaId) { for(var k in SOFASCORE_TEAM_IDS){ if(nom.toLowerCase().indexOf(k.toLowerCase())>=0||k.toLowerCase().indexOf(nom.toLowerCase())>=0){sofaId=SOFASCORE_TEAM_IDS[k];break;} } }
   if(!sofaId) { alert('Equipe introuvable'); return; }
   if(!confirm('Effacer TOUTES les stats manuelles de '+nom+' (championnat + Europe + toutes journees) ? Le squad est conserve. Irreversible.')) return;
-  var prefix = 'manual_stats_'+sofaId+'_';
+  var prefix = 'manual_stats_'+_currentSaison+'_'+sofaId+'_';
   var toRemove = [];
   Object.keys(localStorage).forEach(function(k){ if(k.indexOf(prefix)===0) toRemove.push(k); });
   toRemove.forEach(function(k){ localStorage.removeItem(k); });
-  localStorage.removeItem('squad_lastJ_'+sofaId);
+  localStorage.removeItem('squad_lastJ_'+saisonKey(sofaId));
   alert(toRemove.length+' joueur(s) reinitialise(s) pour '+nom+'. Tu peux reimporter proprement.');
   if(typeof loadTeamCompo === 'function') loadTeamCompo();
 }
@@ -11777,7 +11817,7 @@ async function loadFplSquad(el, nom) {
 function fdEditStats(btn) {
   var pid = parseInt(btn.dataset.pid);
   var afId = btn.dataset.afid;
-  var key = 'manual_stats_'+afId+'_'+pid;
+  var key = 'manual_stats_'+saisonKey(afId+'_'+pid);
   var current = {};
   try { current = JSON.parse(localStorage.getItem(key)||'{}'); } catch(e){}
 
@@ -12076,7 +12116,7 @@ async function runFbrefGroq(uid, nom, b64, groqKey, mode, comp) {
           });
         }
         if(match) {
-          var manualKey = 'manual_stats_'+(sofaId||'0')+'_'+match.id;
+          var manualKey = 'manual_stats_'+saisonKey((sofaId||'0')+'_'+match.id);
           var ms = {}; try { ms = JSON.parse(localStorage.getItem(manualKey)||'{}'); } catch(e){}
           if(mode === 'add') {
             if(sp.apps)    ms[savePrefix+'_apps']    = (ms[savePrefix+'_apps']||0)    + sp.apps;
@@ -12124,7 +12164,7 @@ async function runFbrefGroq(uid, nom, b64, groqKey, mode, comp) {
 
     // Sauvegarder la dernière journée mise à jour
     if(journee && journee !== 'global') {
-      localStorage.setItem('squad_lastJ_'+(sofaId||'0'), journee);
+      localStorage.setItem('squad_lastJ_'+saisonKey(sofaId||'0'), journee);
     }
     setTimeout(function() {
       loadTeamLive();
@@ -12444,8 +12484,16 @@ async function loadFdSquad(el, nom, teamId, noTerrain, terrainOnly) {
     html += '</div>';
 
     if(!terrainOnly) {
+    // Sélecteur de saison
+    html += '<div style="margin-bottom:8px;display:flex;align-items:center;gap:6px;flex-wrap:wrap;">'      +'<span style="font-size:10px;color:var(--t3);">Saison :</span>';
+    SAISONS.forEach(function(s){
+      var isOn = _currentSaison === s.id;
+      html += '<button onclick="setSaison(\''+s.id+'\')" style="padding:4px 12px;border-radius:6px;border:1px solid '+(isOn?'rgba(77,132,255,.5)':'rgba(255,255,255,.12)')+';background:'+(isOn?'rgba(77,132,255,.2)':'rgba(255,255,255,.05)')+';color:'+(isOn?'#4d84ff':'var(--t3)')+';font-size:11px;font-weight:700;cursor:pointer;">'+s.label+'</button>';
+    });
+    html += '</div>';
+
     // Sélecteur de journée - visible par tous
-    var lastJKey = 'squad_lastJ_'+(sofaId||'0');
+    var lastJKey = 'squad_lastJ_'+saisonKey(sofaId||'0');
     var lastJ = localStorage.getItem(lastJKey)||'';
     html += '<div style="margin-bottom:8px;display:flex;align-items:center;gap:6px;flex-wrap:wrap;">'
       +'<span style="font-size:10px;color:var(--t3);">Journée :</span>'
@@ -12571,7 +12619,7 @@ async function loadFdSquad(el, nom, teamId, noTerrain, terrainOnly) {
         pp.forEach(function(p,i){
           var inXi=xi.some(function(x){return x.id===p.id;});
           var rowBg=i%2===0?'rgba(255,255,255,.025)':'rgba(255,255,255,.015)';
-          var manualKey='manual_stats_'+(sofaId||afId||'0')+'_'+p.id;
+          var manualKey='manual_stats_'+saisonKey((sofaId||afId||'0')+'_'+p.id);
           var ms={}; try{ms=JSON.parse(localStorage.getItem(manualKey)||'{}');}catch(e){}
           var hasManual=ms.league_goals!==undefined||ms.euro_goals!==undefined;
           var lg=ms[mJ+'_goals']!==undefined?ms[mJ+'_goals']:(mView==='global'&&mCompMode==='league'?(hasManual?0:(p._goals||0)):0);
@@ -12603,7 +12651,7 @@ async function loadFdSquad(el, nom, teamId, noTerrain, terrainOnly) {
         var compMode = window['_compMode_'+uid] || (function(){ var b=document.getElementById('fbref-comp-'+uid); return (b&&b.dataset.comp) || 'league'; })();
         var sortKey = window['_squadSort_'+uid] || 'name';
         var sortDir = window['_squadSortDir_'+uid] || 1;
-        var lastJKey2 = 'squad_lastJ_'+(sofaId||'0');
+        var lastJKey2 = 'squad_lastJ_'+saisonKey(sofaId||'0');
         var lastJBadge = localStorage.getItem(lastJKey2)||'';
         var viewJournee = (function(){ var el=document.getElementById('fbref-journee-'+uid); return el?el.value:'global'; })() || window['_squadViewJ_'+uid] || 'global';
 
@@ -12652,7 +12700,7 @@ async function loadFdSquad(el, nom, teamId, noTerrain, terrainOnly) {
           var prefix2 = compMode==='euro'?'euro':'league';
           var jPfx = (viewJournee&&viewJournee!=='global') ? prefix2+'_'+viewJournee : prefix2;
           var getVal = function(p, key) {
-            var ms2={}; try{ms2=JSON.parse(localStorage.getItem('manual_stats_'+(sofaId||afId||'0')+'_'+p.id)||'{}');}catch(e){}
+            var ms2={}; try{ms2=JSON.parse(localStorage.getItem('manual_stats_'+saisonKey((sofaId||afId||'0')+'_'+p.id))||'{}');}catch(e){}
             if(key==='name') return (p.name||'').toLowerCase();
             if(key==='age') return parseInt(p._age)||0;
             if(key==='mj') return ms2[jPfx+'_apps']!==undefined?ms2[jPfx+'_apps']:(p._apps||0);
@@ -12678,7 +12726,7 @@ async function loadFdSquad(el, nom, teamId, noTerrain, terrainOnly) {
           var rowBg=i%2===0?'rgba(255,255,255,.025)':'rgba(255,255,255,.015)';
           var pSlug=p.name?p.name.toLowerCase().split(' ').join('-'):'player';
           var sofaUrl=p.sofaId?'https://www.sofascore.com/player/'+pSlug+'/'+p.sofaId:'https://www.google.com/search?q='+encodeURIComponent(p.name+' '+nom+' Sofascore');
-          var manualKey='manual_stats_'+(sofaId||afId||'0')+'_'+p.id;
+          var manualKey='manual_stats_'+saisonKey((sofaId||afId||'0')+'_'+p.id);
           var ms={}; try{ms=JSON.parse(localStorage.getItem(manualKey)||'{}');}catch(e){}
           var hasManual=ms.league_goals!==undefined||ms.euro_goals!==undefined;
           var isEuro = compMode==='euro';
