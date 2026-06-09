@@ -4407,6 +4407,20 @@
     "euro_cspct": "0.0",
     "euro_yellow": 0
   },
+  "manual_stats_2697_301162": {
+    "league_apps": 1,
+    "league_starts": 0,
+    "league_minutes": 10,
+    "league_gpk": 0,
+    "league_pk": 0,
+    "league_pkatt": 0,
+    "league_ga": 1,
+    "league_sota": 2,
+    "league_saves": 1,
+    "league_cs": 0,
+    "league_savepct": "50.0",
+    "league_cspct": "0.0"
+  },
   "manual_stats_2697_759520": {
     "league_apps": 20,
     "league_starts": 15,
@@ -4437,20 +4451,6 @@
     "euro_savepct": "0.0",
     "euro_cspct": "0.0",
     "euro_yellow": 0
-  },
-  "manual_stats_2697_301162": {
-    "league_apps": 1,
-    "league_starts": 0,
-    "league_minutes": 10,
-    "league_gpk": 0,
-    "league_pk": 0,
-    "league_pkatt": 0,
-    "league_ga": 1,
-    "league_sota": 2,
-    "league_saves": 1,
-    "league_cs": 0,
-    "league_savepct": "50.0",
-    "league_cspct": "0.0"
   },
   "manual_stats_1644_784655": {
     "league_apps": 20,
@@ -4592,7 +4592,7 @@
     "euro_cspct": "0.0"
   },
   "_meta": {
-    "updated": "2026-06-07T17:41:06.015Z",
+    "updated": "2026-06-09T19:54:15.845Z",
     "count": 57
   }
 }
