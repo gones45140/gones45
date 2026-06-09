@@ -15124,26 +15124,14 @@ function genSimuId() {
 
 /* Sauvegarde la simu sur GitHub dans données/simulations/{id}.json */
 async function githubSaveSimu(id, data) {
-  var token = localStorage.getItem('gones45_github_token');
-  if(!token) return false;
-  var path = 'donn%C3%A9es/simulations/'+id+'.json';
+  // Passe par le Worker Cloudflare — le token GitHub est côté serveur
+  // Aucun token nécessaire côté client, fonctionne pour tous les utilisateurs
   try {
-    // Vérifier si le fichier existe déjà (pour récupérer le sha)
-    var getR = await fetch('https://api.github.com/repos/'+GITHUB_OWNER+'/'+GITHUB_REPO+'/contents/'+decodeURIComponent(path), {
-      headers:{'Authorization':'token '+token,'Accept':'application/vnd.github.v3+json'}
-    });
-    var sha = null;
-    if(getR.ok) { var gd = await getR.json(); sha = gd.sha; }
-
-    var body = {
-      message: 'Simu '+id+' — '+(data.nom||'Joueur'),
-      content: btoa(unescape(encodeURIComponent(JSON.stringify(data))))
-    };
-    if(sha) body.sha = sha;
-    var r = await fetch('https://api.github.com/repos/'+GITHUB_OWNER+'/'+GITHUB_REPO+'/contents/'+decodeURIComponent(path), {
-      method:'PUT',
-      headers:{'Authorization':'token '+token,'Content-Type':'application/json','Accept':'application/vnd.github.v3+json'},
-      body:JSON.stringify(body)
+    var workerUrl = 'https://fd-proxy.touraine-antoine.workers.dev/?host=github-simu&id='+encodeURIComponent(id);
+    var r = await fetch(workerUrl, {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify(data)
     });
     return r.ok;
   } catch(e) { console.warn('githubSaveSimu error:', e); return false; }
@@ -15181,61 +15169,35 @@ function partagerSimu() {
     +'</div>';
   modal.style.display = 'flex';
 
-  var token = localStorage.getItem('gones45_github_token');
   var id = genSimuId();
   var url = window.location.origin + window.location.pathname + '?sim=' + id;
   var msg = '🏆 ' + prenom + ' — Ma simulation Coupe du Monde 2026 !\n';
   if(winner) msg += '🥇 Mon champion : ' + winner + '\n';
   msg += '👉 Voir ma simu : ' + url;
-  var waUrl = 'https://wa.me/?text=' + encodeURIComponent(msg);
 
-  function showShareModal(urlFinal, msgFinal, waUrlFinal, saved) {
-    var waUrlFinal2 = 'https://wa.me/?text=' + encodeURIComponent(msgFinal);
+  function showShareModal(saved) {
+    var waUrl2 = 'https://wa.me/?text=' + encodeURIComponent(msg);
     modal.innerHTML = '<div style="background:var(--s1);border:1px solid var(--b2);border-radius:16px;padding:20px;max-width:420px;width:100%;max-height:80vh;overflow-y:auto;">'
       +'<div style="text-align:center;margin-bottom:16px;">'
       +'<div style="font-size:28px;">📤</div>'
       +'<div style="font-size:15px;font-weight:800;color:var(--t1);margin-top:6px;">Partager ta simulation</div>'
       +'<div style="font-size:11px;color:var(--t3);margin-top:4px;">'+prenom+' · '+groupCount+'/12 groupes remplis'+(winner?' · 🏆 '+winner:'')+'</div>'
-      +(saved?'<div style="font-size:10px;color:var(--g);margin-top:4px;">✅ Sauvegardé sur GitHub</div>':'<div style="font-size:10px;color:#f0b020;margin-top:4px;">⚠️ Lien long (token GitHub manquant)</div>')
+      +(saved?'<div style="font-size:10px;color:var(--g);margin-top:4px;">✅ Sauvegardé sur GitHub</div>':'<div style="font-size:10px;color:var(--r);margin-top:4px;">❌ Échec sauvegarde — réessaie</div>')
       +'</div>'
-      +'<textarea id="simu-share-url" readonly style="width:100%;height:52px;background:rgba(255,255,255,.04);border:1px solid var(--b2);border-radius:8px;color:var(--t3);font-size:11px;padding:8px;resize:none;margin-bottom:12px;box-sizing:border-box;">'+urlFinal+'</textarea>'
+      +'<textarea id="simu-share-url" readonly style="width:100%;height:52px;background:rgba(255,255,255,.04);border:1px solid var(--b2);border-radius:8px;color:var(--t3);font-size:11px;padding:8px;resize:none;margin-bottom:12px;box-sizing:border-box;">'+url+'</textarea>'
       +'<div style="display:flex;flex-direction:column;gap:8px;">'
-      +'<a href="'+waUrlFinal2+'" target="_blank" style="display:flex;align-items:center;justify-content:center;gap:10px;padding:14px;background:#25d366;border-radius:10px;color:#fff;font-size:14px;font-weight:800;text-decoration:none;">📱 Envoyer sur WhatsApp</a>'
+      +'<a href="'+waUrl2+'" target="_blank" style="display:flex;align-items:center;justify-content:center;gap:10px;padding:14px;background:#25d366;border-radius:10px;color:#fff;font-size:14px;font-weight:800;text-decoration:none;">📱 Envoyer sur WhatsApp</a>'
       +'<button onclick="var t=document.getElementById(\'simu-share-url\');t.select();document.execCommand(\'copy\');this.innerText=\'✅ Copié !\';" style="padding:12px;background:rgba(255,255,255,.06);border:1px solid var(--b2);border-radius:10px;color:var(--t1);font-size:13px;font-weight:700;cursor:pointer;">📋 Copier le lien</button>'
       +'<button onclick="document.getElementById(\'simu-share-modal\').style.display=\'none\'" style="padding:10px;background:none;border:none;color:var(--t3);font-size:12px;cursor:pointer;">Fermer</button>'
       +'</div>'
       +'</div>';
   }
 
-  if(!token) {
-    // Pas de token → fallback base64 comme avant
-    var json = JSON.stringify(data);
-    var b64 = btoa(unescape(encodeURIComponent(json)));
-    var urlFallback = window.location.origin + window.location.pathname + '#simu=' + b64;
-    var msgFallback = '🏆 ' + prenom + ' — Ma simulation Coupe du Monde 2026 !\n';
-    if(winner) msgFallback += '🥇 Mon champion : ' + winner + '\n';
-    msgFallback += '👉 Voir ma simu : ' + urlFallback;
-    showShareModal(urlFallback, msgFallback, '', false);
-    return;
-  }
-
-  // Sauvegarder sur GitHub puis afficher le lien court
+  // Sauvegarder via Worker Cloudflare (token côté serveur, fonctionne pour tous)
   githubSaveSimu(id, data).then(function(ok) {
-    if(ok) {
-      showShareModal(url, msg, waUrl, true);
-    } else {
-      // Échec GitHub → fallback base64
-      var json = JSON.stringify(data);
-      var b64 = btoa(unescape(encodeURIComponent(json)));
-      var urlFallback = window.location.origin + window.location.pathname + '#simu=' + b64;
-      var msgFallback = '🏆 ' + prenom + ' — Ma simulation Coupe du Monde 2026 !\n';
-      if(winner) msgFallback += '🥇 Mon champion : ' + winner + '\n';
-      msgFallback += '👉 Voir ma simu : ' + urlFallback;
-      showShareModal(urlFallback, msgFallback, '', false);
-    }
+    showShareModal(ok);
   });
 
-  modal.onclick = function(e){ if(e.target===modal) modal.style.display='none'; };
   modal.onclick = function(e){ if(e.target===modal) modal.style.display='none'; };
 }
 
