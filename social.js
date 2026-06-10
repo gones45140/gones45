@@ -206,6 +206,9 @@ async function publishBilan() {
       statut: h.win ? 'gagne' : 'perdu',
       sport: h.sport || '',
       bookmaker: h.b || '',
+      competition: h.comp || '',
+      type: h.isCombi ? 'Combiné' : (h.type || 'Simple'),
+      ref: (h.id ? String(h.id).slice(-8).toUpperCase() : ''),
       created_at: h.date ? _parseDateFr(h.date, h.heure) : new Date().toISOString()
     };
   });
@@ -256,6 +259,13 @@ async function renderSocialConnected() {
   html += _statBox('Paris', bilan.nb_paris, 'var(--t1)');
   html += '</div>';
   html += '<button id="btn-publish" onclick="publishBilan()" style="width:100%;margin-top:14px;padding:12px;border-radius:8px;border:none;background:#4d84ff;color:#fff;font-size:13px;font-weight:800;cursor:pointer;">📤 Publier mon bilan</button>';
+  // Ma courbe BK
+  if(bilan.courbe && bilan.courbe.length > 1) {
+    html += '<div style="margin-top:12px;background:rgba(255,255,255,.02);border-radius:8px;padding:8px;">';
+    html += '<div style="font-size:9px;color:var(--t3);text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px;">📈 Mon évolution bankroll</div>';
+    html += '<canvas id="curve-me" height="110"></canvas>';
+    html += '</div>';
+  }
   html += '</div>';
 
   // Recherche d'amis
@@ -273,6 +283,27 @@ async function renderSocialConnected() {
 
   html += '</div>';
   el.innerHTML = html;
+
+  // Dessiner ma courbe
+  if(bilan.courbe && bilan.courbe.length > 1) {
+    setTimeout(function(){
+      var ctx = document.getElementById('curve-me');
+      if(ctx && typeof Chart !== 'undefined') {
+        var last = bilan.courbe[bilan.courbe.length-1];
+        var col = last>=0 ? '#1ed760' : '#ff4545';
+        var grad = ctx.getContext('2d').createLinearGradient(0,0,0,110);
+        grad.addColorStop(0, last>=0?'rgba(30,215,96,.25)':'rgba(255,69,69,.25)');
+        grad.addColorStop(1, 'rgba(0,0,0,0)');
+        new Chart(ctx, {
+          type:'line',
+          data:{ labels:bilan.courbe.map(function(_,i){return i+1;}), datasets:[{ data:bilan.courbe, borderColor:col, backgroundColor:grad, borderWidth:2, fill:true, tension:.35, pointRadius:0, pointHoverRadius:4 }] },
+          options:{ responsive:true, maintainAspectRatio:false,
+            plugins:{legend:{display:false}, tooltip:{callbacks:{label:function(i){return (i.raw>=0?'+':'')+i.raw+'€';}}}},
+            scales:{x:{display:false}, y:{display:true, ticks:{color:'#8a93a8', font:{size:9}, callback:function(v){return v+'€';}}, grid:{color:'rgba(255,255,255,.04)'}}} }
+        });
+      }
+    }, 50);
+  }
 
   loadFriendsFeed(suiviIds);
 }
@@ -342,9 +373,12 @@ async function loadFriendsFeed(suiviIds) {
     html += _statBox('WR', b.win_rate+'%', 'var(--t1)');
     html += _statBox('Paris', b.nb_paris, 'var(--t1)');
     html += '</div>';
-    // Mini courbe
+    // Courbe BK
     if(b.courbe && b.courbe.length > 1) {
-      html += '<canvas id="curve-'+b.user_id+'" height="60" style="margin-top:6px;"></canvas>';
+      html += '<div style="margin-top:8px;background:rgba(255,255,255,.02);border-radius:8px;padding:8px;">';
+      html += '<div style="font-size:9px;color:var(--t3);text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px;">📈 Évolution bankroll</div>';
+      html += '<canvas id="curve-'+b.user_id+'" height="100"></canvas>';
+      html += '</div>';
     }
     html += '<button onclick="viewFriendBets(\''+b.user_id+'\',\''+b.pseudo+'\')" style="width:100%;margin-top:8px;padding:8px;border-radius:6px;border:1px solid var(--b2);background:rgba(255,255,255,.05);color:var(--t2);font-size:11px;font-weight:700;cursor:pointer;">Voir ses paris</button>';
     html += '<div id="bets-'+b.user_id+'" style="margin-top:8px;"></div>';
@@ -359,17 +393,22 @@ async function loadFriendsFeed(suiviIds) {
       if(ctx && typeof Chart !== 'undefined') {
         var last = b.courbe[b.courbe.length-1];
         var col = last>=0 ? '#1ed760' : '#ff4545';
+        var grad = ctx.getContext('2d').createLinearGradient(0,0,0,100);
+        grad.addColorStop(0, last>=0?'rgba(30,215,96,.25)':'rgba(255,69,69,.25)');
+        grad.addColorStop(1, 'rgba(0,0,0,0)');
         new Chart(ctx, {
           type:'line',
-          data:{ labels:b.courbe.map(function(_,i){return i;}), datasets:[{ data:b.courbe, borderColor:col, borderWidth:2, fill:false, tension:.3, pointRadius:0 }] },
-          options:{ responsive:true, maintainAspectRatio:false, plugins:{legend:{display:false}}, scales:{x:{display:false}, y:{display:false}} }
+          data:{ labels:b.courbe.map(function(_,i){return i+1;}), datasets:[{ data:b.courbe, borderColor:col, backgroundColor:grad, borderWidth:2, fill:true, tension:.35, pointRadius:0, pointHoverRadius:4 }] },
+          options:{ responsive:true, maintainAspectRatio:false,
+            plugins:{legend:{display:false}, tooltip:{callbacks:{label:function(i){return (i.raw>=0?'+':'')+i.raw+'€';}}}},
+            scales:{x:{display:false}, y:{display:true, ticks:{color:'#8a93a8', font:{size:9}, callback:function(v){return v+'€';}}, grid:{color:'rgba(255,255,255,.04)'}}} }
         });
       }
     }
   });
 }
 
-/* ── Voir les paris d'un pote ── */
+/* ── Voir les paris d'un pote (rendu ticket) ── */
 async function viewFriendBets(userId, pseudo) {
   var container = document.getElementById('bets-'+userId);
   if(!container) return;
@@ -377,22 +416,72 @@ async function viewFriendBets(userId, pseudo) {
 
   container.innerHTML = '<div style="text-align:center;padding:10px;color:var(--t3);font-size:11px;">⏳...</div>';
   var sb = sbClient();
-  var { data: bets } = await sb.from('paris').select('*').eq('user_id', userId).order('created_at', { ascending: false }).limit(20);
+  var { data: bets } = await sb.from('paris').select('*').eq('user_id', userId).order('created_at', { ascending: false }).limit(30);
 
   if(!bets || !bets.length) { container.innerHTML = '<div style="text-align:center;padding:10px;color:var(--t3);font-size:11px;">Aucun pari publié</div>'; return; }
 
-  var html = '<div style="border-top:1px solid var(--b1);padding-top:8px;">';
+  var html = '<div style="border-top:1px solid var(--b1);padding-top:10px;margin-top:4px;">';
   bets.forEach(function(p){
-    var win = p.statut === 'gagne';
-    var profit = win ? (p.mise*p.cote - p.mise) : -p.mise;
-    html += '<div style="display:flex;align-items:center;justify-content:space-between;padding:6px 0;border-bottom:1px solid rgba(255,255,255,.04);">';
-    html += '<div style="flex:1;min-width:0;">';
-    html += '<div style="font-size:11px;color:var(--t1);font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">'+(p.sport?p.sport+' ':'')+(p.match||'')+'</div>';
-    html += '<div style="font-size:9px;color:var(--t3);">'+(p.pronostic||'')+' · @'+p.cote+' · '+p.mise+'€'+(p.bookmaker?' · '+p.bookmaker:'')+'</div>';
-    html += '</div>';
-    html += '<div style="font-size:12px;font-weight:800;color:'+(win?'var(--g)':'var(--r)')+';margin-left:8px;">'+(profit>=0?'+':'')+profit.toFixed(2)+'€</div>';
-    html += '</div>';
+    html += _renderBetTicket(p);
   });
   html += '</div>';
   container.innerHTML = html;
+}
+
+/* ── Carte ticket de pari ── */
+function _renderBetTicket(p) {
+  var win = p.statut === 'gagne';
+  var gain = win ? (p.mise * p.cote) : 0;
+  var statutLabel = win ? 'Gagné' : 'Perdu';
+  var statutColor = win ? '#1ed760' : '#ff4545';
+  var statutBg = win ? 'rgba(30,215,96,.15)' : 'rgba(255,69,69,.15)';
+  var icon = win ? '✓' : '✗';
+  var sportIco = p.sport || '🎯';
+  var dateStr = '';
+  try {
+    var d = new Date(p.created_at);
+    var hh = String(d.getHours()).padStart(2,'0');
+    var mm = String(d.getMinutes()).padStart(2,'0');
+    var jours = ['dim','lun','mar','mer','jeu','ven','sam'];
+    var mois = ['jan','fév','mar','avr','mai','juin','juil','août','sep','oct','nov','déc'];
+    dateStr = hh+'h'+mm+' · '+d.getDate()+' '+mois[d.getMonth()]+' '+d.getFullYear();
+  } catch(e) {}
+
+  var h = '<div style="background:var(--bg2,#161b28);border:1px solid var(--b2);border-radius:12px;padding:0;margin-bottom:10px;overflow:hidden;">';
+
+  // Header : badge statut + type
+  h += '<div style="display:flex;align-items:center;gap:8px;padding:10px 12px 6px;">';
+  h += '<span style="background:'+statutBg+';color:'+statutColor+';font-size:11px;font-weight:800;padding:2px 8px;border-radius:6px;">'+statutLabel+'</span>';
+  h += '<span style="font-size:13px;font-weight:800;color:var(--t1);">'+(p.type||'Simple')+'</span>';
+  h += '</div>';
+
+  // Corps : pronostic + cote
+  h += '<div style="padding:4px 12px 8px;">';
+  h += '<div style="display:flex;align-items:flex-start;justify-content:space-between;gap:10px;">';
+  h += '<div style="flex:1;min-width:0;">';
+  h += '<div style="font-size:14px;font-weight:800;color:'+statutColor+';line-height:1.3;">'+icon+' '+(p.pronostic||p.match||'—')+'</div>';
+  if(p.competition || p.match) {
+    h += '<div style="font-size:11px;color:var(--t3);margin-top:4px;">'+sportIco+' '+(p.competition?p.competition:(p.match||''))+'</div>';
+  }
+  h += '</div>';
+  h += '<div style="background:rgba(77,132,255,.15);border:1px solid rgba(77,132,255,.3);color:#4d84ff;font-size:14px;font-weight:800;padding:4px 10px;border-radius:8px;white-space:nowrap;">'+parseFloat(p.cote).toFixed(2)+'</div>';
+  h += '</div>';
+  h += '</div>';
+
+  // Footer : mise / gains
+  h += '<div style="display:flex;align-items:center;justify-content:space-between;padding:8px 12px;background:rgba(255,255,255,.02);border-top:1px solid var(--b1);">';
+  h += '<div style="font-size:12px;color:var(--t3);">Mise <span style="color:var(--t1);font-weight:800;font-size:13px;">'+parseFloat(p.mise).toFixed(2)+' €</span></div>';
+  h += '<div style="font-size:12px;color:var(--t3);">Gains <span style="color:'+(win?statutColor:'var(--t1)')+';font-weight:800;font-size:13px;">'+gain.toFixed(2)+' €</span></div>';
+  h += '</div>';
+
+  // Réf + date
+  if(p.ref || dateStr || p.bookmaker) {
+    h += '<div style="display:flex;align-items:center;justify-content:space-between;padding:6px 12px;font-size:9px;color:var(--t3);">';
+    h += '<span>'+(p.bookmaker?p.bookmaker+(p.ref?' · ':''):'')+(p.ref?'Réf : '+p.ref:'')+'</span>';
+    h += '<span>'+dateStr+'</span>';
+    h += '</div>';
+  }
+
+  h += '</div>';
+  return h;
 }
