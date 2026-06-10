@@ -106,11 +106,11 @@ async function submitAuth() {
     var { data: exist } = await sb.from('profils').select('pseudo').eq('pseudo', pseudo).maybeSingle();
     if(exist) { msg.style.color='var(--r)'; msg.innerText='Ce pseudo est déjà pris'; btn.disabled=false; btn.style.opacity='1'; return; }
 
-    var { data, error } = await sb.auth.signUp({ email: email, password: pass });
+    var { data, error } = await sb.auth.signUp({ email: email, password: pass, options: { data: { pseudo: pseudo } } });
     if(error) { msg.style.color='var(--r)'; msg.innerText=error.message; btn.disabled=false; btn.style.opacity='1'; return; }
-    // Créer le profil
+    // Tenter de créer le profil (marche si pas de confirmation email ; sinon créé au 1er login via loadProfil)
     if(data.user) {
-      await sb.from('profils').insert({ id: data.user.id, pseudo: pseudo });
+      try { await sb.from('profils').insert({ id: data.user.id, pseudo: pseudo }); } catch(e){}
     }
     msg.style.color='var(--g)';
     msg.innerText='✅ Compte créé ! Vérifie ton email pour confirmer, puis connecte-toi.';
@@ -129,7 +129,15 @@ async function loadProfil() {
   var sb = sbClient();
   if(!_sbUser) return;
   var { data } = await sb.from('profils').select('*').eq('id', _sbUser.id).maybeSingle();
-  _sbProfil = data;
+  if(!data) {
+    // Profil absent (ex: créé avant confirmation email) → le créer maintenant
+    var pseudo = (_sbUser.user_metadata && _sbUser.user_metadata.pseudo)
+      || (_sbUser.email ? _sbUser.email.split('@')[0] : 'joueur'+Date.now());
+    var { data: created } = await sb.from('profils').insert({ id: _sbUser.id, pseudo: pseudo }).select().maybeSingle();
+    _sbProfil = created;
+  } else {
+    _sbProfil = data;
+  }
 }
 
 async function socialLogout() {
