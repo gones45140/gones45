@@ -14566,7 +14566,13 @@ function simuTeamCell(value, side, rkey, idx){
     sel += '</select>';
     return '<div style="font-size:10px;'+(alignLeft?'':'text-align:right;')+'">'+sel+'</div>';
   }
-  return '<div style="font-size:10px;font-weight:700;color:'+col+';'+(alignLeft?'':'text-align:right;')+'">'+value+'</div>';
+  // Équipe normale → cliquable pour désigner le vainqueur (option B)
+  var matches_ = JSON.parse(localStorage.getItem(simuKoKey(rkey))||'[]');
+  var m_ = matches_[idx] || {};
+  var isWinner = m_.koWinner === side;
+  var winStyle = isWinner ? 'background:rgba(30,215,96,.18);border:1px solid rgba(30,215,96,.4);' : 'border:1px solid transparent;';
+  var check = isWinner ? '✓ ' : '';
+  return '<div onclick="pickKoWinner(\''+rkey+'\','+idx+',\''+side+'\')" title="Cliquer pour qualifier" style="font-size:10px;font-weight:700;color:'+(isWinner?'#1ed760':col)+';'+(alignLeft?'':'text-align:right;')+'cursor:pointer;padding:3px 6px;border-radius:5px;'+winStyle+'">'+check+value+'</div>';
 }
 
 function pickThird(rkey, idx, side, name){
@@ -14713,7 +14719,8 @@ function renderSimuMain(el) {
     var matches = JSON.parse(localStorage.getItem(simuKoKey(r.key))||'[]');
     if(!matches.length) return;
     html += '<div class="cwrap" style="margin-bottom:8px;">';
-    html += '<div style="font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:'+r.col+';margin-bottom:8px;">'+r.label+'</div>';
+    html += '<div style="font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:'+r.col+';margin-bottom:4px;">'+r.label+'</div>';
+    html += '<div style="font-size:8px;color:var(--t3);margin-bottom:8px;">👆 Clique une équipe pour la qualifier, ou saisis le score</div>';
     matches.forEach(function(m, idx){
       var isFr = simuDisplayName(m,'home')==='France'||simuDisplayName(m,'away')==='France';
       html += '<div style="display:grid;grid-template-columns:1fr auto auto auto 1fr;gap:6px;align-items:center;padding:6px;background:'+(isFr?'rgba(77,132,255,.06)':'rgba(255,255,255,.02)')+';border-radius:6px;margin-bottom:4px;">';
@@ -14867,8 +14874,29 @@ function saveSimuKo(round, idx, sh, sa) {
   if(!matches[idx]) return;
   if(sh!==null) matches[idx].sh=sh;
   if(sa!==null) matches[idx].sa=sa;
+  // Si un score est saisi manuellement, il prime → on efface le vainqueur "clic"
+  if((sh!==null && sh!=='') || (sa!==null && sa!=='')) { delete matches[idx].koWinner; }
   localStorage.setItem(simuKoKey(round), JSON.stringify(matches));
   // Re-render
+  var el = getSimuContainer();
+  if(el) renderSimuMain(el);
+}
+
+// Option B : désigner le vainqueur d'un match KO d'un simple clic
+function pickKoWinner(round, idx, side) {
+  var matches = JSON.parse(localStorage.getItem(simuKoKey(round))||'[]');
+  if(!matches[idx]) return;
+  // Toggle : reclic sur le même vainqueur = annule
+  if(matches[idx].koWinner === side) {
+    delete matches[idx].koWinner;
+    matches[idx].sh = ''; matches[idx].sa = '';
+  } else {
+    matches[idx].koWinner = side;
+    // Score symbolique 1-0 pour le gagnant (compatibilité avec generateNextRound)
+    if(side === 'home') { matches[idx].sh = 1; matches[idx].sa = 0; }
+    else { matches[idx].sh = 0; matches[idx].sa = 1; }
+  }
+  localStorage.setItem(simuKoKey(round), JSON.stringify(matches));
   var el = getSimuContainer();
   if(el) renderSimuMain(el);
 }
