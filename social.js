@@ -53,13 +53,21 @@ function renderSocialAuth() {
     + '<div style="margin-bottom:10px;">'
     + '<input id="social-email" type="email" placeholder="Email" style="width:100%;padding:12px;border-radius:8px;border:1px solid var(--b2);background:rgba(255,255,255,.04);color:var(--t1);font-size:13px;box-sizing:border-box;">'
     + '</div>'
-    + '<div style="margin-bottom:16px;">'
-    + '<input id="social-pass" type="password" placeholder="Mot de passe" style="width:100%;padding:12px;border-radius:8px;border:1px solid var(--b2);background:rgba(255,255,255,.04);color:var(--t1);font-size:13px;box-sizing:border-box;">'
+    + '<div style="margin-bottom:16px;position:relative;">'
+    + '<input id="social-pass" type="password" placeholder="Mot de passe" style="width:100%;padding:12px;padding-right:42px;border-radius:8px;border:1px solid var(--b2);background:rgba(255,255,255,.04);color:var(--t1);font-size:13px;box-sizing:border-box;">'
+    + '<button type="button" onclick="togglePassView()" id="social-eye" style="position:absolute;right:8px;top:50%;transform:translateY(-50%);background:none;border:none;color:var(--t3);font-size:16px;cursor:pointer;padding:4px;">👁️</button>'
     + '</div>'
     + '<button id="social-submit" onclick="submitAuth()" style="width:100%;padding:14px;border-radius:10px;border:none;background:#4d84ff;color:#fff;font-size:14px;font-weight:800;cursor:pointer;">Se connecter</button>'
     + '<div id="social-auth-msg" style="margin-top:12px;font-size:12px;text-align:center;min-height:18px;"></div>'
     + '</div>';
   window._authMode = 'login';
+}
+
+function togglePassView() {
+  var inp = document.getElementById('social-pass');
+  var eye = document.getElementById('social-eye');
+  if(inp.type === 'password') { inp.type = 'text'; eye.innerText = '🙈'; }
+  else { inp.type = 'password'; eye.innerText = '👁️'; }
 }
 
 function switchAuthMode(mode) {
