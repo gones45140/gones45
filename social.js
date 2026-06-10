@@ -1,0 +1,382 @@
+/* ══════════════════════════════════════════════════════════
+   GONES45 SOCIAL — Partage de bilans entre amis (Supabase)
+   ══════════════════════════════════════════════════════════ */
+
+var SB_URL = 'https://vbsdewuvycaekfkixynh.supabase.co';
+var SB_KEY = 'sb_publishable_InmQEx1r4GDhUzDQTUzctA_LM_5Jpzg';
+var _sb = null;
+var _sbUser = null;
+var _sbProfil = null;
+
+function sbClient() {
+  if(_sb) return _sb;
+  if(typeof supabase === 'undefined') { console.error('SDK Supabase non chargé'); return null; }
+  _sb = supabase.createClient(SB_URL, SB_KEY);
+  return _sb;
+}
+
+/* ── Chargement de l'onglet Social ── */
+async function loadSocialTab() {
+  var el = document.getElementById('t-social');
+  if(!el) return;
+  var sb = sbClient();
+  if(!sb) { el.innerHTML = '<div style="padding:20px;color:var(--r);text-align:center;">Erreur : SDK Supabase non disponible</div>'; return; }
+
+  // Vérifier la session
+  var { data } = await sb.auth.getSession();
+  if(data && data.session) {
+    _sbUser = data.session.user;
+    await loadProfil();
+    renderSocialConnected();
+  } else {
+    renderSocialAuth();
+  }
+}
+
+/* ── Écran connexion / inscription ── */
+function renderSocialAuth() {
+  var el = document.getElementById('t-social');
+  el.innerHTML = ''
+    + '<div style="max-width:420px;margin:0 auto;padding:20px;">'
+    + '<div style="text-align:center;margin-bottom:24px;">'
+    + '<div style="font-size:32px;">🤝</div>'
+    + '<div style="font-size:18px;font-weight:800;color:var(--t1);margin-top:8px;">GONES45 Social</div>'
+    + '<div style="font-size:12px;color:var(--t3);margin-top:4px;">Partage ton évolution avec tes potes</div>'
+    + '</div>'
+    + '<div id="social-auth-tabs" style="display:flex;gap:8px;margin-bottom:16px;">'
+    + '<button id="tab-login" onclick="switchAuthMode(\'login\')" style="flex:1;padding:10px;border-radius:8px;border:1px solid var(--b2);background:rgba(77,132,255,.2);color:#4d84ff;font-size:13px;font-weight:700;cursor:pointer;">Connexion</button>'
+    + '<button id="tab-signup" onclick="switchAuthMode(\'signup\')" style="flex:1;padding:10px;border-radius:8px;border:1px solid var(--b2);background:rgba(255,255,255,.05);color:var(--t3);font-size:13px;font-weight:700;cursor:pointer;">Inscription</button>'
+    + '</div>'
+    + '<div id="social-signup-pseudo" style="display:none;margin-bottom:10px;">'
+    + '<input id="social-pseudo" type="text" placeholder="Pseudo (visible par tes potes)" style="width:100%;padding:12px;border-radius:8px;border:1px solid var(--b2);background:rgba(255,255,255,.04);color:var(--t1);font-size:13px;box-sizing:border-box;">'
+    + '</div>'
+    + '<div style="margin-bottom:10px;">'
+    + '<input id="social-email" type="email" placeholder="Email" style="width:100%;padding:12px;border-radius:8px;border:1px solid var(--b2);background:rgba(255,255,255,.04);color:var(--t1);font-size:13px;box-sizing:border-box;">'
+    + '</div>'
+    + '<div style="margin-bottom:16px;">'
+    + '<input id="social-pass" type="password" placeholder="Mot de passe" style="width:100%;padding:12px;border-radius:8px;border:1px solid var(--b2);background:rgba(255,255,255,.04);color:var(--t1);font-size:13px;box-sizing:border-box;">'
+    + '</div>'
+    + '<button id="social-submit" onclick="submitAuth()" style="width:100%;padding:14px;border-radius:10px;border:none;background:#4d84ff;color:#fff;font-size:14px;font-weight:800;cursor:pointer;">Se connecter</button>'
+    + '<div id="social-auth-msg" style="margin-top:12px;font-size:12px;text-align:center;min-height:18px;"></div>'
+    + '</div>';
+  window._authMode = 'login';
+}
+
+function switchAuthMode(mode) {
+  window._authMode = mode;
+  var tl = document.getElementById('tab-login'), ts = document.getElementById('tab-signup');
+  var pseudoBox = document.getElementById('social-signup-pseudo');
+  var btn = document.getElementById('social-submit');
+  if(mode === 'login') {
+    tl.style.background='rgba(77,132,255,.2)'; tl.style.color='#4d84ff';
+    ts.style.background='rgba(255,255,255,.05)'; ts.style.color='var(--t3)';
+    pseudoBox.style.display='none';
+    btn.innerText='Se connecter';
+  } else {
+    ts.style.background='rgba(77,132,255,.2)'; ts.style.color='#4d84ff';
+    tl.style.background='rgba(255,255,255,.05)'; tl.style.color='var(--t3)';
+    pseudoBox.style.display='block';
+    btn.innerText='Créer mon compte';
+  }
+  document.getElementById('social-auth-msg').innerText='';
+}
+
+async function submitAuth() {
+  var sb = sbClient();
+  var email = document.getElementById('social-email').value.trim();
+  var pass = document.getElementById('social-pass').value;
+  var msg = document.getElementById('social-auth-msg');
+  var btn = document.getElementById('social-submit');
+  if(!email || !pass) { msg.style.color='var(--r)'; msg.innerText='Email et mot de passe requis'; return; }
+
+  btn.disabled = true; btn.style.opacity='.6';
+
+  if(window._authMode === 'signup') {
+    var pseudo = document.getElementById('social-pseudo').value.trim();
+    if(!pseudo) { msg.style.color='var(--r)'; msg.innerText='Choisis un pseudo'; btn.disabled=false; btn.style.opacity='1'; return; }
+    // Vérifier que le pseudo est libre
+    var { data: exist } = await sb.from('profils').select('pseudo').eq('pseudo', pseudo).maybeSingle();
+    if(exist) { msg.style.color='var(--r)'; msg.innerText='Ce pseudo est déjà pris'; btn.disabled=false; btn.style.opacity='1'; return; }
+
+    var { data, error } = await sb.auth.signUp({ email: email, password: pass });
+    if(error) { msg.style.color='var(--r)'; msg.innerText=error.message; btn.disabled=false; btn.style.opacity='1'; return; }
+    // Créer le profil
+    if(data.user) {
+      await sb.from('profils').insert({ id: data.user.id, pseudo: pseudo });
+    }
+    msg.style.color='var(--g)';
+    msg.innerText='✅ Compte créé ! Vérifie ton email pour confirmer, puis connecte-toi.';
+    btn.disabled=false; btn.style.opacity='1';
+    switchAuthMode('login');
+  } else {
+    var { data, error } = await sb.auth.signInWithPassword({ email: email, password: pass });
+    if(error) { msg.style.color='var(--r)'; msg.innerText=error.message; btn.disabled=false; btn.style.opacity='1'; return; }
+    _sbUser = data.user;
+    await loadProfil();
+    renderSocialConnected();
+  }
+}
+
+async function loadProfil() {
+  var sb = sbClient();
+  if(!_sbUser) return;
+  var { data } = await sb.from('profils').select('*').eq('id', _sbUser.id).maybeSingle();
+  _sbProfil = data;
+}
+
+async function socialLogout() {
+  var sb = sbClient();
+  await sb.auth.signOut();
+  _sbUser = null; _sbProfil = null;
+  renderSocialAuth();
+}
+
+/* ── Calcul du bilan local (depuis state) ── */
+function computeMyBilan() {
+  var bankroll = Object.values(state.b || {}).reduce(function(a,v){ return a+parseFloat(v||0); }, 0);
+  var paris = (state.a || []).filter(function(h){ return !h.isPending; });
+  var benefice = paris.reduce(function(acc,h){ return acc + (h.win ? (h.m*h.cote - h.m) : -h.m); }, 0);
+  var wins = paris.filter(function(h){ return h.win; }).length;
+  var nbParis = paris.length;
+  var winRate = nbParis ? (wins/nbParis*100) : 0;
+  var totalMise = paris.reduce(function(a,h){ return a+parseFloat(h.m||0); }, 0);
+  var roi = totalMise ? (benefice/totalMise*100) : 0;
+  // Courbe : profit cumulé (ordre chronologique inverse de state.a qui est anté-chrono)
+  var cum = 0;
+  var courbe = paris.slice().reverse().map(function(h){
+    cum += (h.win ? (h.m*h.cote - h.m) : -h.m);
+    return parseFloat(cum.toFixed(2));
+  });
+  return {
+    bankroll: parseFloat(bankroll.toFixed(2)),
+    benefice: parseFloat(benefice.toFixed(2)),
+    win_rate: parseFloat(winRate.toFixed(1)),
+    nb_paris: nbParis,
+    roi: parseFloat(roi.toFixed(1)),
+    courbe: courbe
+  };
+}
+
+/* ── Publication du bilan + des paris ── */
+async function publishBilan() {
+  var sb = sbClient();
+  if(!_sbUser || !_sbProfil) return;
+  var btn = document.getElementById('btn-publish');
+  if(btn) { btn.disabled=true; btn.style.opacity='.6'; btn.innerText='⏳ Publication...'; }
+
+  var bilan = computeMyBilan();
+  // Upsert bilan
+  await sb.from('bilans').upsert({
+    user_id: _sbUser.id,
+    pseudo: _sbProfil.pseudo,
+    bankroll: bilan.bankroll,
+    benefice: bilan.benefice,
+    win_rate: bilan.win_rate,
+    nb_paris: bilan.nb_paris,
+    roi: bilan.roi,
+    courbe: bilan.courbe,
+    updated_at: new Date().toISOString()
+  });
+
+  // Remplacer les paris : on efface les anciens et on réinsère
+  await sb.from('paris').delete().eq('user_id', _sbUser.id);
+  var parisToInsert = (state.a || []).filter(function(h){ return !h.isPending; }).slice(0, 100).map(function(h){
+    return {
+      user_id: _sbUser.id,
+      match: (h.target && h.target !== '-') ? h.target : (h.n || 'Pari'),
+      pronostic: h.n || '',
+      cote: parseFloat(h.cote) || 0,
+      mise: parseFloat(h.m) || 0,
+      statut: h.win ? 'gagne' : 'perdu',
+      sport: h.sport || '',
+      bookmaker: h.b || '',
+      created_at: h.date ? _parseDateFr(h.date, h.heure) : new Date().toISOString()
+    };
+  });
+  if(parisToInsert.length) await sb.from('paris').insert(parisToInsert);
+
+  if(btn) { btn.disabled=false; btn.style.opacity='1'; btn.innerText='✅ Publié !'; setTimeout(function(){ btn.innerText='📤 Publier mon bilan'; }, 2000); }
+  renderSocialConnected();
+}
+
+function _parseDateFr(date, heure) {
+  // date format "JJ/MM/AAAA" ou ISO
+  try {
+    if(date.indexOf('/') >= 0) {
+      var p = date.split('/');
+      var iso = p[2]+'-'+p[1].padStart(2,'0')+'-'+p[0].padStart(2,'0')+'T'+(heure||'12:00')+':00';
+      return new Date(iso).toISOString();
+    }
+    return new Date(date).toISOString();
+  } catch(e) { return new Date().toISOString(); }
+}
+
+/* ── Écran connecté ── */
+async function renderSocialConnected() {
+  var el = document.getElementById('t-social');
+  var sb = sbClient();
+  var bilan = computeMyBilan();
+
+  // Récupérer les abonnements
+  var { data: follows } = await sb.from('abonnements').select('suivi_id').eq('follower_id', _sbUser.id);
+  var suiviIds = (follows || []).map(function(f){ return f.suivi_id; });
+
+  var html = '<div style="max-width:600px;margin:0 auto;padding:16px;">';
+
+  // Header profil
+  html += '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">';
+  html += '<div><div style="font-size:16px;font-weight:800;color:var(--t1);">👤 '+(_sbProfil?_sbProfil.pseudo:'?')+'</div>';
+  html += '<div style="font-size:10px;color:var(--t3);">Connecté · '+suiviIds.length+' abonnement(s)</div></div>';
+  html += '<button onclick="socialLogout()" style="padding:6px 12px;border-radius:6px;border:1px solid var(--b2);background:rgba(255,255,255,.05);color:var(--t3);font-size:11px;cursor:pointer;">Déconnexion</button>';
+  html += '</div>';
+
+  // Mon bilan
+  html += '<div style="background:var(--s1);border:1px solid var(--b2);border-radius:12px;padding:16px;margin-bottom:16px;">';
+  html += '<div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--t3);margin-bottom:12px;">Mon bilan</div>';
+  html += '<div style="display:grid;grid-template-columns:repeat(2,1fr);gap:12px;">';
+  html += _statBox('Bénéfice', (bilan.benefice>=0?'+':'')+bilan.benefice+'€', bilan.benefice>=0?'var(--g)':'var(--r)');
+  html += _statBox('ROI', bilan.roi+'%', bilan.roi>=0?'var(--g)':'var(--r)');
+  html += _statBox('Win rate', bilan.win_rate+'%', 'var(--t1)');
+  html += _statBox('Paris', bilan.nb_paris, 'var(--t1)');
+  html += '</div>';
+  html += '<button id="btn-publish" onclick="publishBilan()" style="width:100%;margin-top:14px;padding:12px;border-radius:8px;border:none;background:#4d84ff;color:#fff;font-size:13px;font-weight:800;cursor:pointer;">📤 Publier mon bilan</button>';
+  html += '</div>';
+
+  // Recherche d'amis
+  html += '<div style="background:var(--s1);border:1px solid var(--b2);border-radius:12px;padding:16px;margin-bottom:16px;">';
+  html += '<div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--t3);margin-bottom:10px;">Ajouter un pote</div>';
+  html += '<div style="display:flex;gap:8px;">';
+  html += '<input id="social-search" type="text" placeholder="Pseudo du pote" style="flex:1;padding:10px;border-radius:8px;border:1px solid var(--b2);background:rgba(255,255,255,.04);color:var(--t1);font-size:13px;box-sizing:border-box;">';
+  html += '<button onclick="searchAndFollow()" style="padding:10px 16px;border-radius:8px;border:none;background:var(--g);color:#000;font-size:13px;font-weight:800;cursor:pointer;">Suivre</button>';
+  html += '</div>';
+  html += '<div id="social-search-msg" style="margin-top:8px;font-size:11px;min-height:14px;"></div>';
+  html += '</div>';
+
+  // Feed des potes
+  html += '<div id="social-feed"><div style="text-align:center;padding:20px;color:var(--t3);font-size:12px;">⏳ Chargement des potes...</div></div>';
+
+  html += '</div>';
+  el.innerHTML = html;
+
+  loadFriendsFeed(suiviIds);
+}
+
+function _statBox(label, val, color) {
+  return '<div style="background:rgba(255,255,255,.03);border-radius:8px;padding:10px;text-align:center;">'
+    + '<div style="font-size:9px;color:var(--t3);text-transform:uppercase;letter-spacing:.5px;">'+label+'</div>'
+    + '<div style="font-size:18px;font-weight:800;color:'+color+';margin-top:4px;">'+val+'</div>'
+    + '</div>';
+}
+
+/* ── Recherche et suivi ── */
+async function searchAndFollow() {
+  var sb = sbClient();
+  var pseudo = document.getElementById('social-search').value.trim();
+  var msg = document.getElementById('social-search-msg');
+  if(!pseudo) return;
+  if(_sbProfil && pseudo === _sbProfil.pseudo) { msg.style.color='var(--r)'; msg.innerText='Tu ne peux pas te suivre toi-même 😄'; return; }
+
+  var { data: prof } = await sb.from('profils').select('id,pseudo').eq('pseudo', pseudo).maybeSingle();
+  if(!prof) { msg.style.color='var(--r)'; msg.innerText='Aucun pote avec ce pseudo'; return; }
+
+  var { error } = await sb.from('abonnements').insert({ follower_id: _sbUser.id, suivi_id: prof.id });
+  if(error) {
+    if(error.code === '23505') { msg.style.color='var(--gold)'; msg.innerText='Tu suis déjà '+pseudo; }
+    else { msg.style.color='var(--r)'; msg.innerText=error.message; }
+    return;
+  }
+  msg.style.color='var(--g)'; msg.innerText='✅ Tu suis maintenant '+pseudo;
+  setTimeout(function(){ renderSocialConnected(); }, 800);
+}
+
+async function unfollow(suiviId) {
+  var sb = sbClient();
+  await sb.from('abonnements').delete().eq('follower_id', _sbUser.id).eq('suivi_id', suiviId);
+  renderSocialConnected();
+}
+
+/* ── Feed des potes suivis ── */
+async function loadFriendsFeed(suiviIds) {
+  var feed = document.getElementById('social-feed');
+  if(!feed) return;
+  if(!suiviIds.length) {
+    feed.innerHTML = '<div style="text-align:center;padding:20px;color:var(--t3);font-size:12px;">Tu ne suis personne pour l\'instant.<br>Ajoute le pseudo d\'un pote ci-dessus 👆</div>';
+    return;
+  }
+
+  var sb = sbClient();
+  var { data: bilans } = await sb.from('bilans').select('*').in('user_id', suiviIds).order('updated_at', { ascending: false });
+
+  if(!bilans || !bilans.length) {
+    feed.innerHTML = '<div style="text-align:center;padding:20px;color:var(--t3);font-size:12px;">Tes potes n\'ont pas encore publié de bilan.</div>';
+    return;
+  }
+
+  var html = '<div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--t3);margin-bottom:12px;">Mes potes</div>';
+  bilans.forEach(function(b){
+    var benColor = b.benefice>=0?'var(--g)':'var(--r)';
+    html += '<div style="background:var(--s1);border:1px solid var(--b2);border-radius:12px;padding:14px;margin-bottom:12px;">';
+    html += '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">';
+    html += '<div style="font-size:14px;font-weight:800;color:var(--t1);">👤 '+b.pseudo+'</div>';
+    html += '<button onclick="unfollow(\''+b.user_id+'\')" style="padding:4px 10px;border-radius:6px;border:1px solid var(--b2);background:rgba(255,69,69,.1);color:#ff7b7b;font-size:10px;cursor:pointer;">Ne plus suivre</button>';
+    html += '</div>';
+    html += '<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:10px;">';
+    html += _statBox('Bénéf', (b.benefice>=0?'+':'')+b.benefice+'€', benColor);
+    html += _statBox('ROI', b.roi+'%', b.roi>=0?'var(--g)':'var(--r)');
+    html += _statBox('WR', b.win_rate+'%', 'var(--t1)');
+    html += _statBox('Paris', b.nb_paris, 'var(--t1)');
+    html += '</div>';
+    // Mini courbe
+    if(b.courbe && b.courbe.length > 1) {
+      html += '<canvas id="curve-'+b.user_id+'" height="60" style="margin-top:6px;"></canvas>';
+    }
+    html += '<button onclick="viewFriendBets(\''+b.user_id+'\',\''+b.pseudo+'\')" style="width:100%;margin-top:8px;padding:8px;border-radius:6px;border:1px solid var(--b2);background:rgba(255,255,255,.05);color:var(--t2);font-size:11px;font-weight:700;cursor:pointer;">Voir ses paris</button>';
+    html += '<div id="bets-'+b.user_id+'" style="margin-top:8px;"></div>';
+    html += '</div>';
+  });
+  feed.innerHTML = html;
+
+  // Dessiner les courbes
+  bilans.forEach(function(b){
+    if(b.courbe && b.courbe.length > 1) {
+      var ctx = document.getElementById('curve-'+b.user_id);
+      if(ctx && typeof Chart !== 'undefined') {
+        var last = b.courbe[b.courbe.length-1];
+        var col = last>=0 ? '#1ed760' : '#ff4545';
+        new Chart(ctx, {
+          type:'line',
+          data:{ labels:b.courbe.map(function(_,i){return i;}), datasets:[{ data:b.courbe, borderColor:col, borderWidth:2, fill:false, tension:.3, pointRadius:0 }] },
+          options:{ responsive:true, maintainAspectRatio:false, plugins:{legend:{display:false}}, scales:{x:{display:false}, y:{display:false}} }
+        });
+      }
+    }
+  });
+}
+
+/* ── Voir les paris d'un pote ── */
+async function viewFriendBets(userId, pseudo) {
+  var container = document.getElementById('bets-'+userId);
+  if(!container) return;
+  if(container.innerHTML.trim()) { container.innerHTML=''; return; } // toggle
+
+  container.innerHTML = '<div style="text-align:center;padding:10px;color:var(--t3);font-size:11px;">⏳...</div>';
+  var sb = sbClient();
+  var { data: bets } = await sb.from('paris').select('*').eq('user_id', userId).order('created_at', { ascending: false }).limit(20);
+
+  if(!bets || !bets.length) { container.innerHTML = '<div style="text-align:center;padding:10px;color:var(--t3);font-size:11px;">Aucun pari publié</div>'; return; }
+
+  var html = '<div style="border-top:1px solid var(--b1);padding-top:8px;">';
+  bets.forEach(function(p){
+    var win = p.statut === 'gagne';
+    var profit = win ? (p.mise*p.cote - p.mise) : -p.mise;
+    html += '<div style="display:flex;align-items:center;justify-content:space-between;padding:6px 0;border-bottom:1px solid rgba(255,255,255,.04);">';
+    html += '<div style="flex:1;min-width:0;">';
+    html += '<div style="font-size:11px;color:var(--t1);font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">'+(p.sport?p.sport+' ':'')+(p.match||'')+'</div>';
+    html += '<div style="font-size:9px;color:var(--t3);">'+(p.pronostic||'')+' · @'+p.cote+' · '+p.mise+'€'+(p.bookmaker?' · '+p.bookmaker:'')+'</div>';
+    html += '</div>';
+    html += '<div style="font-size:12px;font-weight:800;color:'+(win?'var(--g)':'var(--r)')+';margin-left:8px;">'+(profit>=0?'+':'')+profit.toFixed(2)+'€</div>';
+    html += '</div>';
+  });
+  html += '</div>';
+  container.innerHTML = html;
+}

@@ -11,6 +11,7 @@
 <link rel="stylesheet" href="style.css">
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js" crossorigin="anonymous"></script>
 <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body>
 
@@ -805,6 +806,7 @@
 
 <!-- COMPARATEUR -->
 <div id="t-simu" class="tab"></div>
+<div id="t-social" class="tab"></div>
 <div id="t-comp" class="tab">
   <div class="sec" style="margin-top:0;">⚖️ Comparateur d'équipes</div>
   <div class="fc" style="margin-bottom:10px;">
@@ -933,6 +935,7 @@
   <button class="ni pc-only" onclick="showTab('t-cal',this);loadCalendrier()"><span>📅</span>Agenda</button>
   <button class="ni pc-only" onclick="showTab('t-comp',this);" data-action-comp="init"><span>⚖️</span>Vs</button>
   <button class="ni pc-only" onclick="showTab('t-simu',this);loadSimuTab();"><span>🎮</span>Simu</button>
+  <button class="ni pc-only" onclick="showTab('t-social',this);loadSocialTab();"><span>🤝</span>Social</button>
 
   <div style="flex:1;display:flex;flex-direction:column;padding:0 8px 8px;min-height:0;" class="pc-note-area">
     <div id="pc-note" contenteditable="true" style="flex:1;min-height:100px;background:var(--bg3);border:1px solid var(--b1);border-radius:var(--r6);color:var(--t1);font-size:11px;line-height:1.6;padding:10px;outline:none;font-family:inherit;overflow-y:auto;word-break:break-word;" data-placeholder="Notes, cotes, screenshots…" oninput="saveNote()"></div>
@@ -963,6 +966,9 @@
       <button onclick="showTab('t-simu',$i('btn-plus-menu'));togglePlusMenu();loadSimuTab();" style="display:flex;align-items:center;gap:12px;padding:14px 12px;background:var(--bg3);border:none;border-radius:8px;color:var(--t1);font-size:13px;font-weight:700;cursor:pointer;text-align:left;margin-top:4px;">
         <span>🎮</span> Simulation Mondial
       </button>
+      <button onclick="showTab('t-social',$i('btn-plus-menu'));togglePlusMenu();loadSocialTab();" style="display:flex;align-items:center;gap:12px;padding:14px 12px;background:var(--bg3);border:none;border-radius:8px;color:var(--t1);font-size:13px;font-weight:700;cursor:pointer;text-align:left;margin-top:4px;">
+        <span>🤝</span> Social
+      </button>
       <button onclick="togglePlusMenu();" style="display:flex;align-items:center;gap:12px;padding:14px 12px;background:none;border:none;border-radius:8px;color:var(--t3);font-size:12px;font-weight:700;cursor:pointer;text-align:left;margin-top:4px;">
         <span>✕</span> Fermer
       </button>
@@ -972,6 +978,7 @@
 
 
 <script src="app.js"></script>
+<script src="social.js"></script>
 
 
 
