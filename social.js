@@ -263,7 +263,7 @@ async function renderSocialConnected() {
   if(bilan.courbe && bilan.courbe.length > 1) {
     html += '<div style="margin-top:12px;background:rgba(255,255,255,.02);border-radius:8px;padding:8px;">';
     html += '<div style="font-size:9px;color:var(--t3);text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px;">📈 Mon évolution bankroll</div>';
-    html += '<canvas id="curve-me" height="110"></canvas>';
+    html += '<div style="height:120px;position:relative;"><canvas id="curve-me"></canvas></div>';
     html += '</div>';
   }
   html += '</div>';
@@ -377,7 +377,7 @@ async function loadFriendsFeed(suiviIds) {
     if(b.courbe && b.courbe.length > 1) {
       html += '<div style="margin-top:8px;background:rgba(255,255,255,.02);border-radius:8px;padding:8px;">';
       html += '<div style="font-size:9px;color:var(--t3);text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px;">📈 Évolution bankroll</div>';
-      html += '<canvas id="curve-'+b.user_id+'" height="100"></canvas>';
+      html += '<div style="height:110px;position:relative;"><canvas id="curve-'+b.user_id+'"></canvas></div>';
       html += '</div>';
     }
     html += '<button onclick="viewFriendBets(\''+b.user_id+'\',\''+b.pseudo+'\')" style="width:100%;margin-top:8px;padding:8px;border-radius:6px;border:1px solid var(--b2);background:rgba(255,255,255,.05);color:var(--t2);font-size:11px;font-weight:700;cursor:pointer;">Voir ses paris</button>';
