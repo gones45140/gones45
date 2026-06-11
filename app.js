@@ -13820,9 +13820,10 @@ async function loadNbaSaisons(el, nom) {
       var c = e.competitions[0];
       var home = c.competitors.find(function(t){return t.homeAway==='home';})||c.competitors[0];
       var away = c.competitors.find(function(t){return t.homeAway==='away';})||c.competitors[1];
+      var isOurHomeN = home.team&&(home.team.displayName===nom||home.team.abbreviation===teamInfo.abbr||home.team.id==espnId);
       return {
-        home_team:{id:0, full_name:home.team&&home.team.displayName||'?'},
-        visitor_team:{id:0, full_name:away.team&&away.team.displayName||'?'},
+        home_team:{id:isOurHomeN?bdlId:0, full_name:home.team&&home.team.displayName||'?'},
+        visitor_team:{id:!isOurHomeN?bdlId:0, full_name:away.team&&away.team.displayName||'?'},
         home_team_score:0, visitor_team_score:0,
         date:e.date||'', status:'Scheduled'
       };
@@ -13982,10 +13983,16 @@ async function loadNbaSaisons(el, nom) {
     }
 
     html += '</div>';
-    // Bouton effectif (api-sports)
+    // Bouton effectif (ESPN)
     html += '<div class="cwrap" style="margin-bottom:10px;">';
     html += '<button onclick="loadNbaEffectif(\''+nom.replace(/'/g,"\\'")+'\')" id="nba-eff-btn" style="width:100%;padding:10px;background:rgba(77,132,255,.12);border:1px solid rgba(77,132,255,.3);border-radius:8px;color:#4d84ff;font-size:12px;font-weight:700;cursor:pointer;">👥 Voir l\'effectif & stats joueurs</button>';
     html += '<div id="nba-effectif"></div>';
+    html += '</div>';
+
+    // Bouton classement
+    html += '<div class="cwrap" style="margin-bottom:10px;">';
+    html += '<button onclick="loadNbaStandings(\''+nom.replace(/'/g,"\\'")+'\')" id="nba-std-btn" style="width:100%;padding:10px;background:rgba(240,176,32,.1);border:1px solid rgba(240,176,32,.3);border-radius:8px;color:#f0b020;font-size:12px;font-weight:700;cursor:pointer;">🏆 Classement conférence</button>';
+    html += '<div id="nba-standings"></div>';
     html += '</div>';
 
     el.innerHTML = html;
@@ -14113,10 +14120,121 @@ async function loadNbaPlayerStatsEspn(playerId, name) {
       var v = (map[s[0]]!==undefined && map[s[0]]!==null && map[s[0]]!=='') ? map[s[0]] : '—';
       html += '<div style="text-align:center;"><div style="font-size:14px;font-weight:800;color:'+s[2]+';">'+v+'</div><div style="font-size:8px;color:var(--t3);">'+s[1]+'</div></div>';
     });
-    html += '</div></div>';
+    html += '</div>';
+    html += '<button onclick="loadNbaGamelog(\''+playerId+'\',\''+name.replace(/'/g,"")+'\')" id="nba-gl-btn-'+playerId+'" style="width:100%;margin-top:8px;padding:7px;border-radius:6px;border:1px solid rgba(255,255,255,.1);background:rgba(255,255,255,.04);color:var(--t2);font-size:10px;font-weight:700;cursor:pointer;">📋 5 derniers matchs</button>';
+    html += '<div id="nba-gl-'+playerId+'"></div>';
+    html += '</div>';
     box.innerHTML = html;
   } catch(e) {
     box.innerHTML = '<div style="padding:8px;color:#ff4545;font-size:10px;">Erreur stats</div>';
+  }
+}
+
+async function loadNbaGamelog(playerId, name) {
+  var box = document.getElementById('nba-gl-' + playerId);
+  if(!box) return;
+  if(box.innerHTML.trim()) { box.innerHTML=''; return; } // toggle
+  box.innerHTML = '<div style="padding:8px;color:var(--t3);font-size:10px;">⏳ Matchs…</div>';
+  try {
+    var resp = await fetch('https://site.web.api.espn.com/apis/common/v3/sports/basketball/nba/athletes/'+playerId+'/gamelog');
+    var data = await resp.json();
+    // data.events = {id:{...}}, data.seasonTypes[].categories[].events[]
+    var events = data.events || {};
+    // labels des stats
+    var labels = data.labels || data.names || [];
+    var seasonTypes = data.seasonTypes || [];
+    var rows = [];
+    seasonTypes.forEach(function(st){
+      (st.categories||[]).forEach(function(cat){
+        (cat.events||[]).forEach(function(ev){
+          rows.push(ev);
+        });
+      });
+    });
+    if(!rows.length) { box.innerHTML='<div style="padding:8px;color:var(--t3);font-size:10px;">Pas de matchs récents</div>'; return; }
+
+    // Index des stats utiles
+    var idx = {};
+    labels.forEach(function(l,i){ idx[l]=i; });
+    var iPTS = idx['PTS']!==undefined?idx['PTS']:labels.length-1;
+    var iREB = idx['REB'], iAST = idx['AST'], iMIN = idx['MIN'];
+
+    var html = '<div style="margin-top:8px;background:rgba(255,255,255,.02);border-radius:8px;padding:8px;margin-left:38px;">';
+    html += '<div style="font-size:9px;color:var(--t3);margin-bottom:6px;">5 derniers matchs</div>';
+    rows.slice(0,5).forEach(function(ev){
+      var st = ev.stats || [];
+      var ev2 = events[ev.eventId] || {};
+      var opp = (ev2.opponent && ev2.opponent.abbreviation) || '';
+      var atVs = ev2.atVs || '';
+      var res = ev2.gameResult || '';
+      var score = ev2.score || '';
+      var pts = iPTS!==undefined?st[iPTS]:'';
+      var reb = iREB!==undefined?st[iREB]:'';
+      var ast = iAST!==undefined?st[iAST]:'';
+      var rc = res==='W'?'#1ed760':(res==='L'?'#ff4545':'var(--t3)');
+      html += '<div style="display:flex;align-items:center;justify-content:space-between;padding:4px 0;border-bottom:1px solid rgba(255,255,255,.04);">';
+      html += '<div style="font-size:10px;color:var(--t2);">'+(res?'<span style="color:'+rc+';font-weight:800;">'+res+'</span> ':'')+atVs+' '+opp+(score?' <span style="color:var(--t3);">'+score+'</span>':'')+'</div>';
+      html += '<div style="font-size:10px;color:var(--t1);font-weight:700;">'+pts+'pts'+(reb?' · '+reb+'reb':'')+(ast?' · '+ast+'ast':'')+'</div>';
+      html += '</div>';
+    });
+    html += '</div>';
+    box.innerHTML = html;
+  } catch(e) {
+    box.innerHTML = '<div style="padding:8px;color:#ff4545;font-size:10px;">Erreur matchs</div>';
+  }
+}
+
+async function loadNbaStandings(nom) {
+  var box = document.getElementById('nba-standings');
+  var btn = document.getElementById('nba-std-btn');
+  if(!box) return;
+  if(box.innerHTML.trim()) { box.innerHTML=''; return; } // toggle
+
+  box.innerHTML = '<div style="display:flex;align-items:center;gap:8px;padding:14px;color:var(--t3);font-size:11px;"><div style="width:12px;height:12px;border:2px solid rgba(240,176,32,.2);border-top-color:#f0b020;border-radius:50%;animation:spin .8s linear infinite;"></div>Chargement du classement…</div>';
+
+  var key = resolveNbaTeam(nom);
+  var info = key ? NBA_TEAMS[key] : null;
+  var myConf = (info && info.alias) ? null : null;
+
+  try {
+    var resp = await fetch('https://site.api.espn.com/apis/v2/sports/basketball/nba/standings?level=2');
+    var data = await resp.json();
+    // data.children = [Eastern, Western], chacun avec standings.entries
+    var conferences = data.children || [];
+    if(!conferences.length) {
+      box.innerHTML = '<div style="color:var(--t3);font-size:11px;text-align:center;padding:10px;">Classement indisponible</div>';
+      return;
+    }
+
+    var html = '<div style="margin-top:10px;border-top:1px solid var(--b1);padding-top:10px;">';
+    conferences.forEach(function(conf){
+      var confName = conf.name || conf.abbreviation || 'Conférence';
+      var entries = (conf.standings && conf.standings.entries) ? conf.standings.entries : [];
+      html += '<div style="font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#f0b020;margin:10px 0 6px;">'+confName+'</div>';
+      html += '<div style="display:flex;flex-direction:column;gap:2px;">';
+      entries.forEach(function(en, i){
+        var tname = en.team && (en.team.displayName||en.team.name) || '?';
+        var isMe = (key && tname===key) || (info && en.team && en.team.abbreviation===info.abbr);
+        var stats = {};
+        (en.stats||[]).forEach(function(s){ stats[s.name||s.type] = s.displayValue!==undefined?s.displayValue:s.value; });
+        var wins = stats['wins']||stats['W']||'?';
+        var losses = stats['losses']||stats['L']||'?';
+        var pct = stats['winPercent']||stats['PCT']||'';
+        var gb = stats['gamesBehind']||stats['GB']||'';
+        html += '<div style="display:grid;grid-template-columns:22px 1fr auto auto;gap:6px;align-items:center;padding:5px 8px;border-radius:6px;background:'+(isMe?'rgba(77,132,255,.15)':'rgba(255,255,255,.02)')+';'+(isMe?'border:1px solid rgba(77,132,255,.3);':'')+'">';
+        html += '<div style="font-size:10px;font-weight:800;color:'+(i<8?'#1ed760':'var(--t3)')+';text-align:center;">'+(i+1)+'</div>';
+        html += '<div style="font-size:11px;font-weight:'+(isMe?'800':'500')+';color:'+(isMe?'#4d84ff':'var(--t1)')+';white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">'+tname+'</div>';
+        html += '<div style="font-size:10px;color:var(--t2);font-weight:700;">'+wins+'-'+losses+'</div>';
+        html += '<div style="font-size:9px;color:var(--t3);min-width:34px;text-align:right;">'+(pct?pct:'')+'</div>';
+        html += '</div>';
+      });
+      html += '</div>';
+    });
+    html += '<div style="font-size:8px;color:var(--t3);margin-top:6px;text-align:center;">🟢 = qualifiés playoffs (top 8)</div>';
+    html += '</div>';
+    box.innerHTML = html;
+  } catch(e) {
+    box.innerHTML = '<div style="color:#ff4545;font-size:11px;text-align:center;padding:10px;">Erreur : '+e.message+'</div>';
   }
 }
 
