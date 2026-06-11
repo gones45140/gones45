@@ -5364,7 +5364,7 @@ var NBA_TEAMS = {
   'Dallas Mavericks':      {id:'1610612742', abbr:'DAL', bdlId:7,   espnId:6,  asId:8,  alias:['Mavericks','Mavs','Dallas']},
   'Denver Nuggets':        {id:'1610612743', abbr:'DEN', bdlId:8,   espnId:7,  asId:9,  alias:['Nuggets','Denver']},
   'Detroit Pistons':       {id:'1610612765', abbr:'DET', bdlId:9,   espnId:8,  asId:10, alias:['Pistons','Detroit']},
-  'Golden State Warriors': {id:'1610612744', abbr:'GSW', bdlId:10,  espnId:9,  asId:11, alias:['Warriors','Golden State','GSW']},
+  'Golden State Warriors': {id:'1610612744', abbr:'GSW', espnAbbr:'gs', bdlId:10,  espnId:9,  asId:11, alias:['Warriors','Golden State','GSW']},
   'Houston Rockets':       {id:'1610612745', abbr:'HOU', bdlId:11,  espnId:10, asId:14, alias:['Rockets','Houston']},
   'Indiana Pacers':        {id:'1610612754', abbr:'IND', bdlId:12,  espnId:11, asId:15, alias:['Pacers','Indiana']},
   'Los Angeles Clippers':  {id:'1610612746', abbr:'LAC', bdlId:13,  espnId:12, asId:16, alias:['Clippers','LA Clippers']},
@@ -5373,18 +5373,18 @@ var NBA_TEAMS = {
   'Miami Heat':            {id:'1610612748', abbr:'MIA', bdlId:16,  espnId:14, asId:20, alias:['Heat','Miami']},
   'Milwaukee Bucks':       {id:'1610612749', abbr:'MIL', bdlId:17,  espnId:15, asId:21, alias:['Bucks','Milwaukee']},
   'Minnesota Timberwolves':{id:'1610612750', abbr:'MIN', bdlId:18,  espnId:16, asId:22, alias:['Timberwolves','Wolves','Minnesota']},
-  'New Orleans Pelicans':  {id:'1610612740', abbr:'NOP', bdlId:19,  espnId:3,  asId:23, alias:['Pelicans','New Orleans']},
-  'New York Knicks':       {id:'1610612752', abbr:'NYK', bdlId:20,  espnId:18, asId:24, alias:['Knicks','New York']},
+  'New Orleans Pelicans':  {id:'1610612740', abbr:'NOP', espnAbbr:'no', bdlId:19,  espnId:3,  asId:23, alias:['Pelicans','New Orleans']},
+  'New York Knicks':       {id:'1610612752', abbr:'NYK', espnAbbr:'ny', bdlId:20,  espnId:18, asId:24, alias:['Knicks','New York']},
   'Oklahoma City Thunder': {id:'1610612760', abbr:'OKC', bdlId:21,  espnId:25, asId:25, alias:['Thunder','Oklahoma City','OKC']},
   'Orlando Magic':         {id:'1610612753', abbr:'ORL', bdlId:22,  espnId:22, asId:26, alias:['Magic','Orlando']},
   'Philadelphia 76ers':    {id:'1610612755', abbr:'PHI', bdlId:23,  espnId:20, asId:27, alias:['76ers','Sixers','Philadelphia']},
   'Phoenix Suns':          {id:'1610612756', abbr:'PHX', bdlId:24,  espnId:24, asId:28, alias:['Suns','Phoenix']},
   'Portland Trail Blazers':{id:'1610612757', abbr:'POR', bdlId:25,  espnId:21, asId:29, alias:['Trail Blazers','Blazers','Portland']},
   'Sacramento Kings':      {id:'1610612758', abbr:'SAC', bdlId:26,  espnId:23, asId:30, alias:['Kings','Sacramento']},
-  'San Antonio Spurs':     {id:'1610612759', abbr:'SAS', bdlId:27,  espnId:24, asId:31, alias:['Spurs','San Antonio']},
+  'San Antonio Spurs':     {id:'1610612759', abbr:'SAS', espnAbbr:'sa', bdlId:27,  espnId:24, asId:31, alias:['Spurs','San Antonio']},
   'Toronto Raptors':       {id:'1610612761', abbr:'TOR', bdlId:28,  espnId:28, asId:38, alias:['Raptors','Toronto']},
-  'Utah Jazz':             {id:'1610612762', abbr:'UTA', bdlId:29,  espnId:26, asId:40, alias:['Jazz','Utah']},
-  'Washington Wizards':    {id:'1610612764', abbr:'WAS', bdlId:30,  espnId:27, asId:41, alias:['Wizards','Washington']},
+  'Utah Jazz':             {id:'1610612762', abbr:'UTA', espnAbbr:'utah', bdlId:29,  espnId:26, asId:40, alias:['Jazz','Utah']},
+  'Washington Wizards':    {id:'1610612764', abbr:'WAS', espnAbbr:'wsh', bdlId:30,  espnId:27, asId:41, alias:['Wizards','Washington']},
 };
 
 // Résoudre un nom court/alias vers la clé complète NBA_TEAMS
@@ -11327,7 +11327,7 @@ var NBA_TEAMS = {
   'Dallas Mavericks':      {id:'1610612742', abbr:'DAL', bdlId:7,   espnId:6,  asId:8,  alias:['Mavericks','Mavs','Dallas']},
   'Denver Nuggets':        {id:'1610612743', abbr:'DEN', bdlId:8,   espnId:7,  asId:9,  alias:['Nuggets','Denver']},
   'Detroit Pistons':       {id:'1610612765', abbr:'DET', bdlId:9,   espnId:8,  asId:10, alias:['Pistons','Detroit']},
-  'Golden State Warriors': {id:'1610612744', abbr:'GSW', bdlId:10,  espnId:9,  asId:11, alias:['Warriors','Golden State','GSW']},
+  'Golden State Warriors': {id:'1610612744', abbr:'GSW', espnAbbr:'gs', bdlId:10,  espnId:9,  asId:11, alias:['Warriors','Golden State','GSW']},
   'Houston Rockets':       {id:'1610612745', abbr:'HOU', bdlId:11,  espnId:10, asId:14, alias:['Rockets','Houston']},
   'Indiana Pacers':        {id:'1610612754', abbr:'IND', bdlId:12,  espnId:11, asId:15, alias:['Pacers','Indiana']},
   'Los Angeles Clippers':  {id:'1610612746', abbr:'LAC', bdlId:13,  espnId:12, asId:16, alias:['Clippers','LA Clippers']},
@@ -11336,18 +11336,18 @@ var NBA_TEAMS = {
   'Miami Heat':            {id:'1610612748', abbr:'MIA', bdlId:16,  espnId:14, asId:20, alias:['Heat','Miami']},
   'Milwaukee Bucks':       {id:'1610612749', abbr:'MIL', bdlId:17,  espnId:15, asId:21, alias:['Bucks','Milwaukee']},
   'Minnesota Timberwolves':{id:'1610612750', abbr:'MIN', bdlId:18,  espnId:16, asId:22, alias:['Timberwolves','Wolves','Minnesota']},
-  'New Orleans Pelicans':  {id:'1610612740', abbr:'NOP', bdlId:19,  espnId:3,  asId:23, alias:['Pelicans','New Orleans']},
-  'New York Knicks':       {id:'1610612752', abbr:'NYK', bdlId:20,  espnId:18, asId:24, alias:['Knicks','New York']},
+  'New Orleans Pelicans':  {id:'1610612740', abbr:'NOP', espnAbbr:'no', bdlId:19,  espnId:3,  asId:23, alias:['Pelicans','New Orleans']},
+  'New York Knicks':       {id:'1610612752', abbr:'NYK', espnAbbr:'ny', bdlId:20,  espnId:18, asId:24, alias:['Knicks','New York']},
   'Oklahoma City Thunder': {id:'1610612760', abbr:'OKC', bdlId:21,  espnId:25, asId:25, alias:['Thunder','Oklahoma City','OKC']},
   'Orlando Magic':         {id:'1610612753', abbr:'ORL', bdlId:22,  espnId:22, asId:26, alias:['Magic','Orlando']},
   'Philadelphia 76ers':    {id:'1610612755', abbr:'PHI', bdlId:23,  espnId:20, asId:27, alias:['76ers','Sixers','Philadelphia']},
   'Phoenix Suns':          {id:'1610612756', abbr:'PHX', bdlId:24,  espnId:24, asId:28, alias:['Suns','Phoenix']},
   'Portland Trail Blazers':{id:'1610612757', abbr:'POR', bdlId:25,  espnId:21, asId:29, alias:['Trail Blazers','Blazers','Portland']},
   'Sacramento Kings':      {id:'1610612758', abbr:'SAC', bdlId:26,  espnId:23, asId:30, alias:['Kings','Sacramento']},
-  'San Antonio Spurs':     {id:'1610612759', abbr:'SAS', bdlId:27,  espnId:24, asId:31, alias:['Spurs','San Antonio']},
+  'San Antonio Spurs':     {id:'1610612759', abbr:'SAS', espnAbbr:'sa', bdlId:27,  espnId:24, asId:31, alias:['Spurs','San Antonio']},
   'Toronto Raptors':       {id:'1610612761', abbr:'TOR', bdlId:28,  espnId:28, asId:38, alias:['Raptors','Toronto']},
-  'Utah Jazz':             {id:'1610612762', abbr:'UTA', bdlId:29,  espnId:26, asId:40, alias:['Jazz','Utah']},
-  'Washington Wizards':    {id:'1610612764', abbr:'WAS', bdlId:30,  espnId:27, asId:41, alias:['Wizards','Washington']},
+  'Utah Jazz':             {id:'1610612762', abbr:'UTA', espnAbbr:'utah', bdlId:29,  espnId:26, asId:40, alias:['Jazz','Utah']},
+  'Washington Wizards':    {id:'1610612764', abbr:'WAS', espnAbbr:'wsh', bdlId:30,  espnId:27, asId:41, alias:['Wizards','Washington']},
 };
 
 // Résoudre un nom court/alias vers la clé complète NBA_TEAMS
@@ -14018,49 +14018,110 @@ async function loadNbaEffectif(nom) {
 
   var key = resolveNbaTeam(nom);
   var info = key ? NBA_TEAMS[key] : null;
-  if(!info || !info.asId) { box.innerHTML = '<div style="color:var(--t3);font-size:11px;text-align:center;padding:10px;">Équipe non mappée</div>'; return; }
+  if(!info) { box.innerHTML = '<div style="color:var(--t3);font-size:11px;text-align:center;padding:10px;">Équipe non mappée</div>'; return; }
 
   box.innerHTML = '<div style="display:flex;align-items:center;gap:8px;padding:14px;color:var(--t3);font-size:11px;"><div style="width:12px;height:12px;border:2px solid rgba(77,132,255,.2);border-top-color:#4d84ff;border-radius:50%;animation:spin .8s linear infinite;"></div>Chargement de l\'effectif…</div>';
 
   try {
-    var season = nbaCurrentSeason();
-    // Cache localStorage 24h
-    var cacheKey = 'nba_squad_' + info.asId + '_' + season;
-    var cached = null;
-    try { cached = JSON.parse(localStorage.getItem(cacheKey) || 'null'); } catch(e){}
-    var players;
-    if(cached && cached.ts && (Date.now() - cached.ts < 24*3600*1000) && cached.players) {
-      players = cached.players;
+    // ESPN roster (gratuit, saison en cours)
+    var espnAbbr = (info.espnAbbr || info.abbr).toLowerCase();
+    var resp = await fetch('https://site.api.espn.com/apis/site/v2/sports/basketball/nba/teams/'+espnAbbr+'/roster');
+    var data = await resp.json();
+    var athletes = (data && data.athletes) ? data.athletes : [];
+    // ESPN peut grouper par position (objet avec .items) ou liste plate
+    var players = [];
+    if(athletes.length && athletes[0] && athletes[0].items) {
+      athletes.forEach(function(grp){ (grp.items||[]).forEach(function(p){ players.push(p); }); });
     } else {
-      var resp = await nbaApiFetch('/players?team=' + info.asId + '&season=' + season);
-      players = (resp && resp.response) ? resp.response : [];
-      if(players.length) localStorage.setItem(cacheKey, JSON.stringify({ts:Date.now(), players:players}));
+      players = athletes;
     }
 
     if(!players.length) {
-      box.innerHTML = '<div style="color:var(--t3);font-size:11px;text-align:center;padding:10px;">Aucun joueur trouvé pour la saison '+season+'-'+(season+1)+'</div>';
+      box.innerHTML = '<div style="color:var(--t3);font-size:11px;text-align:center;padding:10px;">Aucun joueur trouvé</div>';
       return;
     }
 
+    var seasonLbl = (data.season && data.season.displayName) ? data.season.displayName : '2025-26';
     var html = '<div style="margin-top:10px;border-top:1px solid var(--b1);padding-top:10px;">';
-    html += '<div style="font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#4f5d88;margin-bottom:8px;">👥 Effectif '+season+'-'+(season+1)+' ('+players.length+')</div>';
+    html += '<div style="font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#4f5d88;margin-bottom:8px;">👥 Effectif '+seasonLbl+' ('+players.length+')</div>';
 
     players.forEach(function(p){
-      var num = (p.leagues && p.leagues.standard && p.leagues.standard.jersey != null) ? p.leagues.standard.jersey : '';
-      var pos = (p.leagues && p.leagues.standard && p.leagues.standard.pos) ? p.leagues.standard.pos : '';
-      var nameStr = (p.firstname||'') + ' ' + (p.lastname||'');
-      html += '<div onclick="loadNbaPlayerStats('+p.id+',\''+(nameStr.replace(/[^a-zA-Z ]/g,'').trim())+'\')" style="display:flex;align-items:center;gap:8px;padding:7px 6px;border-bottom:1px solid rgba(255,255,255,.04);cursor:pointer;border-radius:5px;" onmouseover="this.style.background=\'rgba(255,255,255,.03)\'" onmouseout="this.style.background=\'transparent\'">';
-      html += '<div style="width:26px;height:26px;border-radius:50%;background:rgba(77,132,255,.12);display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:800;color:#4d84ff;flex-shrink:0;">'+(num!==''?num:'—')+'</div>';
-      html += '<div style="flex:1;min-width:0;"><div style="font-size:12px;font-weight:600;color:var(--t1);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">'+nameStr+'</div>';
-      html += '<div style="font-size:9px;color:var(--t3);">'+(pos||'')+(p.height&&p.height.meters?' · '+p.height.meters+'m':'')+'</div></div>';
+      var num = p.jersey || '';
+      var pos = (p.position && p.position.abbreviation) ? p.position.abbreviation : '';
+      var nameStr = p.fullName || p.displayName || ((p.firstName||'')+' '+(p.lastName||''));
+      var ht = p.displayHeight || '';
+      var headshot = (p.headshot && p.headshot.href) ? p.headshot.href : '';
+      var pid = p.id;
+      html += '<div onclick="loadNbaPlayerStatsEspn(\''+pid+'\',\''+(nameStr.replace(/[^a-zA-Z .\\-]/g,'').trim())+'\')" style="display:flex;align-items:center;gap:8px;padding:7px 6px;border-bottom:1px solid rgba(255,255,255,.04);cursor:pointer;border-radius:5px;" onmouseover="this.style.background=\'rgba(255,255,255,.03)\'" onmouseout="this.style.background=\'transparent\'">';
+      if(headshot) {
+        html += '<img src="'+headshot+'" style="width:30px;height:30px;border-radius:50%;object-fit:cover;background:rgba(255,255,255,.05);flex-shrink:0;" onerror="this.style.display=\'none\'">';
+      } else {
+        html += '<div style="width:30px;height:30px;border-radius:50%;background:rgba(77,132,255,.12);display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:800;color:#4d84ff;flex-shrink:0;">'+(num||'—')+'</div>';
+      }
+      html += '<div style="flex:1;min-width:0;"><div style="font-size:12px;font-weight:600;color:var(--t1);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">'+(num?'#'+num+' ':'')+nameStr+'</div>';
+      html += '<div style="font-size:9px;color:var(--t3);">'+(pos||'')+(ht?' · '+ht:'')+'</div></div>';
       html += '<div style="font-size:14px;color:var(--t3);">📊</div>';
       html += '</div>';
-      html += '<div id="nba-pstat-'+p.id+'"></div>';
+      html += '<div id="nba-pstat-'+pid+'"></div>';
     });
     html += '</div>';
     box.innerHTML = html;
   } catch(e) {
     box.innerHTML = '<div style="color:#ff4545;font-size:11px;text-align:center;padding:10px;">Erreur : '+e.message+'</div>';
+  }
+}
+
+async function loadNbaPlayerStatsEspn(playerId, name) {
+  var box = document.getElementById('nba-pstat-' + playerId);
+  if(!box) return;
+  if(box.innerHTML.trim()) { box.innerHTML = ''; return; } // toggle
+
+  box.innerHTML = '<div style="padding:8px;color:var(--t3);font-size:10px;">⏳ Stats…</div>';
+  try {
+    // ESPN : stats saison via overview
+    var resp = await fetch('https://site.web.api.espn.com/apis/common/v3/sports/basketball/nba/athletes/'+playerId+'/overview');
+    var data = await resp.json();
+    // Chercher les moyennes saison en cours dans statistics
+    var stats = null;
+    if(data && data.statistics && data.statistics.splits && data.statistics.splits.categories) {
+      stats = data.statistics;
+    }
+    if(!data || !data.statistics) {
+      box.innerHTML = '<div style="padding:8px;color:var(--t3);font-size:10px;">Pas de stats disponibles</div>';
+      return;
+    }
+
+    // ESPN overview : data.statistics.displayName + names[] + splits.categories[].stats
+    var labels = data.statistics.names || [];
+    var displayNames = data.statistics.displayNames || [];
+    var splits = (data.statistics.splits && data.statistics.splits.length) ? data.statistics.splits : null;
+    // Format alternatif : statistics.splits.categories
+    var row = null;
+    if(splits) {
+      row = splits[0].stats; // saison en cours
+    }
+
+    if(!row || !labels.length) {
+      box.innerHTML = '<div style="padding:8px;color:var(--t3);font-size:10px;">Stats indisponibles</div>';
+      return;
+    }
+
+    // Mapper label → valeur
+    var want = {'PTS':'#4d84ff','REB':'#1ed760','AST':'#f0b020','STL':'#a78bfa','BLK':'#22d3ee','FG%':'#ff7b54','3P%':'#ec4899','FT%':'#84cc16'};
+    var pick = {};
+    labels.forEach(function(lab, i){ pick[lab] = row[i]; });
+
+    var html = '<div style="background:rgba(77,132,255,.05);border-radius:8px;padding:10px;margin:4px 0 8px 38px;">';
+    html += '<div style="font-size:9px;color:var(--t3);margin-bottom:8px;">Moyennes saison '+name+'</div>';
+    html += '<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:6px;">';
+    Object.keys(want).forEach(function(lab){
+      var v = pick[lab]!==undefined ? pick[lab] : '—';
+      html += '<div style="text-align:center;"><div style="font-size:14px;font-weight:800;color:'+want[lab]+';">'+v+'</div><div style="font-size:8px;color:var(--t3);">'+lab+'</div></div>';
+    });
+    html += '</div></div>';
+    box.innerHTML = html;
+  } catch(e) {
+    box.innerHTML = '<div style="padding:8px;color:#ff4545;font-size:10px;">Erreur stats</div>';
   }
 }
 
