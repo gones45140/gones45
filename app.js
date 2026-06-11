@@ -5355,27 +5355,49 @@ var TENNIS_PLAYERS = {
 };
 
 var NBA_TEAMS = {
-  'Los Angeles Lakers':    {id:'1610612747', abbr:'LAL', bdlId:14,  espnId:13},
-  'Boston Celtics':        {id:'1610612738', abbr:'BOS', bdlId:2,   espnId:2},
-  'Golden State Warriors': {id:'1610612744', abbr:'GSW', bdlId:10,  espnId:9},
-  'Miami Heat':            {id:'1610612748', abbr:'MIA', bdlId:16,  espnId:14},
-  'Chicago Bulls':         {id:'1610612741', abbr:'CHI', bdlId:4,   espnId:4},
-  'New York Knicks':       {id:'1610612752', abbr:'NYK', bdlId:20,  espnId:18},
-  'Denver Nuggets':        {id:'1610612743', abbr:'DEN', bdlId:7,   espnId:7},
-  'Phoenix Suns':          {id:'1610612756', abbr:'PHX', bdlId:24,  espnId:24},
-  'Milwaukee Bucks':       {id:'1610612749', abbr:'MIL', bdlId:17,  espnId:15},
-  'Dallas Mavericks':      {id:'1610612742', abbr:'DAL', bdlId:6,   espnId:6},
-  'Oklahoma City Thunder': {id:'1610612760', abbr:'OKC', bdlId:21,  espnId:25},
-  'Minnesota Timberwolves':{id:'1610612750', abbr:'MIN', bdlId:18,  espnId:16},
-  'Cleveland Cavaliers':   {id:'1610612739', abbr:'CLE', bdlId:5,   espnId:5},
-  'Indiana Pacers':        {id:'1610612754', abbr:'IND', bdlId:12,  espnId:11},
-  'Los Angeles Clippers':  {id:'1610612746', abbr:'LAC', bdlId:13,  espnId:12},
-  'Memphis Grizzlies':     {id:'1610612763', abbr:'MEM', bdlId:29,  espnId:29},
-  'New Orleans Pelicans':  {id:'1610612740', abbr:'NOP', bdlId:3,   espnId:3},
-  'Orlando Magic':         {id:'1610612753', abbr:'ORL', bdlId:22,  espnId:22},
-  'Sacramento Kings':      {id:'1610612758', abbr:'SAC', bdlId:26,  espnId:26},
-  'San Antonio Spurs':     {id:'1610612759', abbr:'SAS', bdlId:27,  espnId:27},
+  'Atlanta Hawks':         {id:'1610612737', abbr:'ATL', bdlId:1,   espnId:1,  asId:1,  alias:['Hawks','Atlanta']},
+  'Boston Celtics':        {id:'1610612738', abbr:'BOS', bdlId:2,   espnId:2,  asId:2,  alias:['Celtics','Boston']},
+  'Brooklyn Nets':         {id:'1610612751', abbr:'BKN', bdlId:3,   espnId:17, asId:4,  alias:['Nets','Brooklyn']},
+  'Charlotte Hornets':     {id:'1610612766', abbr:'CHA', bdlId:4,   espnId:30, asId:5,  alias:['Hornets','Charlotte']},
+  'Chicago Bulls':         {id:'1610612741', abbr:'CHI', bdlId:5,   espnId:4,  asId:6,  alias:['Bulls','Chicago']},
+  'Cleveland Cavaliers':   {id:'1610612739', abbr:'CLE', bdlId:6,   espnId:5,  asId:7,  alias:['Cavaliers','Cavs','Cleveland']},
+  'Dallas Mavericks':      {id:'1610612742', abbr:'DAL', bdlId:7,   espnId:6,  asId:8,  alias:['Mavericks','Mavs','Dallas']},
+  'Denver Nuggets':        {id:'1610612743', abbr:'DEN', bdlId:8,   espnId:7,  asId:9,  alias:['Nuggets','Denver']},
+  'Detroit Pistons':       {id:'1610612765', abbr:'DET', bdlId:9,   espnId:8,  asId:10, alias:['Pistons','Detroit']},
+  'Golden State Warriors': {id:'1610612744', abbr:'GSW', bdlId:10,  espnId:9,  asId:11, alias:['Warriors','Golden State','GSW']},
+  'Houston Rockets':       {id:'1610612745', abbr:'HOU', bdlId:11,  espnId:10, asId:14, alias:['Rockets','Houston']},
+  'Indiana Pacers':        {id:'1610612754', abbr:'IND', bdlId:12,  espnId:11, asId:15, alias:['Pacers','Indiana']},
+  'Los Angeles Clippers':  {id:'1610612746', abbr:'LAC', bdlId:13,  espnId:12, asId:16, alias:['Clippers','LA Clippers']},
+  'Los Angeles Lakers':    {id:'1610612747', abbr:'LAL', bdlId:14,  espnId:13, asId:17, alias:['Lakers','LA Lakers']},
+  'Memphis Grizzlies':     {id:'1610612763', abbr:'MEM', bdlId:15,  espnId:29, asId:19, alias:['Grizzlies','Memphis']},
+  'Miami Heat':            {id:'1610612748', abbr:'MIA', bdlId:16,  espnId:14, asId:20, alias:['Heat','Miami']},
+  'Milwaukee Bucks':       {id:'1610612749', abbr:'MIL', bdlId:17,  espnId:15, asId:21, alias:['Bucks','Milwaukee']},
+  'Minnesota Timberwolves':{id:'1610612750', abbr:'MIN', bdlId:18,  espnId:16, asId:22, alias:['Timberwolves','Wolves','Minnesota']},
+  'New Orleans Pelicans':  {id:'1610612740', abbr:'NOP', bdlId:19,  espnId:3,  asId:23, alias:['Pelicans','New Orleans']},
+  'New York Knicks':       {id:'1610612752', abbr:'NYK', bdlId:20,  espnId:18, asId:24, alias:['Knicks','New York']},
+  'Oklahoma City Thunder': {id:'1610612760', abbr:'OKC', bdlId:21,  espnId:25, asId:25, alias:['Thunder','Oklahoma City','OKC']},
+  'Orlando Magic':         {id:'1610612753', abbr:'ORL', bdlId:22,  espnId:22, asId:26, alias:['Magic','Orlando']},
+  'Philadelphia 76ers':    {id:'1610612755', abbr:'PHI', bdlId:23,  espnId:20, asId:27, alias:['76ers','Sixers','Philadelphia']},
+  'Phoenix Suns':          {id:'1610612756', abbr:'PHX', bdlId:24,  espnId:24, asId:28, alias:['Suns','Phoenix']},
+  'Portland Trail Blazers':{id:'1610612757', abbr:'POR', bdlId:25,  espnId:21, asId:29, alias:['Trail Blazers','Blazers','Portland']},
+  'Sacramento Kings':      {id:'1610612758', abbr:'SAC', bdlId:26,  espnId:23, asId:30, alias:['Kings','Sacramento']},
+  'San Antonio Spurs':     {id:'1610612759', abbr:'SAS', bdlId:27,  espnId:24, asId:31, alias:['Spurs','San Antonio']},
+  'Toronto Raptors':       {id:'1610612761', abbr:'TOR', bdlId:28,  espnId:28, asId:38, alias:['Raptors','Toronto']},
+  'Utah Jazz':             {id:'1610612762', abbr:'UTA', bdlId:29,  espnId:26, asId:40, alias:['Jazz','Utah']},
+  'Washington Wizards':    {id:'1610612764', abbr:'WAS', bdlId:30,  espnId:27, asId:41, alias:['Wizards','Washington']},
 };
+
+// Résoudre un nom court/alias vers la clé complète NBA_TEAMS
+function resolveNbaTeam(nom) {
+  if(NBA_TEAMS[nom]) return nom;
+  var lower = (nom||'').toLowerCase().trim();
+  for(var key in NBA_TEAMS) {
+    if(key.toLowerCase() === lower) return key;
+    var al = NBA_TEAMS[key].alias || [];
+    for(var i=0;i<al.length;i++){ if(al[i].toLowerCase() === lower) return key; }
+  }
+  return null;
+}
 
 var NFL_TEAMS = {
   'Kansas City Chiefs': {id:'KC'},
@@ -11296,27 +11318,49 @@ var TENNIS_PLAYERS = {
 };
 
 var NBA_TEAMS = {
-  'Los Angeles Lakers':    {id:'1610612747', abbr:'LAL', bdlId:14,  espnId:13},
-  'Boston Celtics':        {id:'1610612738', abbr:'BOS', bdlId:2,   espnId:2},
-  'Golden State Warriors': {id:'1610612744', abbr:'GSW', bdlId:10,  espnId:9},
-  'Miami Heat':            {id:'1610612748', abbr:'MIA', bdlId:16,  espnId:14},
-  'Chicago Bulls':         {id:'1610612741', abbr:'CHI', bdlId:4,   espnId:4},
-  'New York Knicks':       {id:'1610612752', abbr:'NYK', bdlId:20,  espnId:18},
-  'Denver Nuggets':        {id:'1610612743', abbr:'DEN', bdlId:7,   espnId:7},
-  'Phoenix Suns':          {id:'1610612756', abbr:'PHX', bdlId:24,  espnId:24},
-  'Milwaukee Bucks':       {id:'1610612749', abbr:'MIL', bdlId:17,  espnId:15},
-  'Dallas Mavericks':      {id:'1610612742', abbr:'DAL', bdlId:6,   espnId:6},
-  'Oklahoma City Thunder': {id:'1610612760', abbr:'OKC', bdlId:21,  espnId:25},
-  'Minnesota Timberwolves':{id:'1610612750', abbr:'MIN', bdlId:18,  espnId:16},
-  'Cleveland Cavaliers':   {id:'1610612739', abbr:'CLE', bdlId:5,   espnId:5},
-  'Indiana Pacers':        {id:'1610612754', abbr:'IND', bdlId:12,  espnId:11},
-  'Los Angeles Clippers':  {id:'1610612746', abbr:'LAC', bdlId:13,  espnId:12},
-  'Memphis Grizzlies':     {id:'1610612763', abbr:'MEM', bdlId:29,  espnId:29},
-  'New Orleans Pelicans':  {id:'1610612740', abbr:'NOP', bdlId:3,   espnId:3},
-  'Orlando Magic':         {id:'1610612753', abbr:'ORL', bdlId:22,  espnId:22},
-  'Sacramento Kings':      {id:'1610612758', abbr:'SAC', bdlId:26,  espnId:26},
-  'San Antonio Spurs':     {id:'1610612759', abbr:'SAS', bdlId:27,  espnId:27},
+  'Atlanta Hawks':         {id:'1610612737', abbr:'ATL', bdlId:1,   espnId:1,  asId:1,  alias:['Hawks','Atlanta']},
+  'Boston Celtics':        {id:'1610612738', abbr:'BOS', bdlId:2,   espnId:2,  asId:2,  alias:['Celtics','Boston']},
+  'Brooklyn Nets':         {id:'1610612751', abbr:'BKN', bdlId:3,   espnId:17, asId:4,  alias:['Nets','Brooklyn']},
+  'Charlotte Hornets':     {id:'1610612766', abbr:'CHA', bdlId:4,   espnId:30, asId:5,  alias:['Hornets','Charlotte']},
+  'Chicago Bulls':         {id:'1610612741', abbr:'CHI', bdlId:5,   espnId:4,  asId:6,  alias:['Bulls','Chicago']},
+  'Cleveland Cavaliers':   {id:'1610612739', abbr:'CLE', bdlId:6,   espnId:5,  asId:7,  alias:['Cavaliers','Cavs','Cleveland']},
+  'Dallas Mavericks':      {id:'1610612742', abbr:'DAL', bdlId:7,   espnId:6,  asId:8,  alias:['Mavericks','Mavs','Dallas']},
+  'Denver Nuggets':        {id:'1610612743', abbr:'DEN', bdlId:8,   espnId:7,  asId:9,  alias:['Nuggets','Denver']},
+  'Detroit Pistons':       {id:'1610612765', abbr:'DET', bdlId:9,   espnId:8,  asId:10, alias:['Pistons','Detroit']},
+  'Golden State Warriors': {id:'1610612744', abbr:'GSW', bdlId:10,  espnId:9,  asId:11, alias:['Warriors','Golden State','GSW']},
+  'Houston Rockets':       {id:'1610612745', abbr:'HOU', bdlId:11,  espnId:10, asId:14, alias:['Rockets','Houston']},
+  'Indiana Pacers':        {id:'1610612754', abbr:'IND', bdlId:12,  espnId:11, asId:15, alias:['Pacers','Indiana']},
+  'Los Angeles Clippers':  {id:'1610612746', abbr:'LAC', bdlId:13,  espnId:12, asId:16, alias:['Clippers','LA Clippers']},
+  'Los Angeles Lakers':    {id:'1610612747', abbr:'LAL', bdlId:14,  espnId:13, asId:17, alias:['Lakers','LA Lakers']},
+  'Memphis Grizzlies':     {id:'1610612763', abbr:'MEM', bdlId:15,  espnId:29, asId:19, alias:['Grizzlies','Memphis']},
+  'Miami Heat':            {id:'1610612748', abbr:'MIA', bdlId:16,  espnId:14, asId:20, alias:['Heat','Miami']},
+  'Milwaukee Bucks':       {id:'1610612749', abbr:'MIL', bdlId:17,  espnId:15, asId:21, alias:['Bucks','Milwaukee']},
+  'Minnesota Timberwolves':{id:'1610612750', abbr:'MIN', bdlId:18,  espnId:16, asId:22, alias:['Timberwolves','Wolves','Minnesota']},
+  'New Orleans Pelicans':  {id:'1610612740', abbr:'NOP', bdlId:19,  espnId:3,  asId:23, alias:['Pelicans','New Orleans']},
+  'New York Knicks':       {id:'1610612752', abbr:'NYK', bdlId:20,  espnId:18, asId:24, alias:['Knicks','New York']},
+  'Oklahoma City Thunder': {id:'1610612760', abbr:'OKC', bdlId:21,  espnId:25, asId:25, alias:['Thunder','Oklahoma City','OKC']},
+  'Orlando Magic':         {id:'1610612753', abbr:'ORL', bdlId:22,  espnId:22, asId:26, alias:['Magic','Orlando']},
+  'Philadelphia 76ers':    {id:'1610612755', abbr:'PHI', bdlId:23,  espnId:20, asId:27, alias:['76ers','Sixers','Philadelphia']},
+  'Phoenix Suns':          {id:'1610612756', abbr:'PHX', bdlId:24,  espnId:24, asId:28, alias:['Suns','Phoenix']},
+  'Portland Trail Blazers':{id:'1610612757', abbr:'POR', bdlId:25,  espnId:21, asId:29, alias:['Trail Blazers','Blazers','Portland']},
+  'Sacramento Kings':      {id:'1610612758', abbr:'SAC', bdlId:26,  espnId:23, asId:30, alias:['Kings','Sacramento']},
+  'San Antonio Spurs':     {id:'1610612759', abbr:'SAS', bdlId:27,  espnId:24, asId:31, alias:['Spurs','San Antonio']},
+  'Toronto Raptors':       {id:'1610612761', abbr:'TOR', bdlId:28,  espnId:28, asId:38, alias:['Raptors','Toronto']},
+  'Utah Jazz':             {id:'1610612762', abbr:'UTA', bdlId:29,  espnId:26, asId:40, alias:['Jazz','Utah']},
+  'Washington Wizards':    {id:'1610612764', abbr:'WAS', bdlId:30,  espnId:27, asId:41, alias:['Wizards','Washington']},
 };
+
+// Résoudre un nom court/alias vers la clé complète NBA_TEAMS
+function resolveNbaTeam(nom) {
+  if(NBA_TEAMS[nom]) return nom;
+  var lower = (nom||'').toLowerCase().trim();
+  for(var key in NBA_TEAMS) {
+    if(key.toLowerCase() === lower) return key;
+    var al = NBA_TEAMS[key].alias || [];
+    for(var i=0;i<al.length;i++){ if(al[i].toLowerCase() === lower) return key; }
+  }
+  return null;
+}
 
 var NFL_TEAMS = {
   'Kansas City Chiefs': {id:'KC'},
@@ -13727,7 +13771,9 @@ async function searchTennisPlayer(nom) {
 
 
 async function loadNbaSaisons(el, nom) {
-  var teamInfo = NBA_TEAMS[nom];
+  var resolvedKey = resolveNbaTeam(nom);
+  var teamInfo = resolvedKey ? NBA_TEAMS[resolvedKey] : null;
+  if(teamInfo) nom = resolvedKey; // utiliser le nom complet pour la suite
   if(!teamInfo) {
     el.innerHTML = '<div style="color:var(--t3);text-align:center;padding:20px;">Équipe NBA non reconnue.</div>';
     return;
@@ -15512,7 +15558,7 @@ async function loadTeamSaisons() {
   var sport2 = uObj2.sport || '⚽';
   if(sport2==='🏒'||sport2==='🏒🇺🇸'||NHL_TEAMS[nom]) { loadNhlSaisons(el, nom); return; }
   if(sport2==='⚾'||sport2==='⚾🇺🇸'||MLB_TEAMS[nom]) { loadMlbSaisons(el, nom); return; }
-  if(sport2==='🏀'||sport2==='🏀🇺🇸'||NBA_TEAMS[nom]) { loadNbaSaisons(el, nom); return; }
+  if(sport2==='🏀'||sport2==='🏀🇺🇸'||NBA_TEAMS[nom]||resolveNbaTeam(nom)) { loadNbaSaisons(el, nom); return; }
   if(sport2==='🏎️'||sport2==='🏎'||F1_TEAMS[nom]||F1_DRIVERS[nom]) { loadF1Saisons(el, nom); return; }
   if(sport2==='🎾'||TENNIS_PLAYERS[nom]) { loadTennisSaisons(el, nom); return; }
   if(sport2==='🏈'||sport2==='🏈🇺🇸'||NFL_TEAMS[nom]) { loadNflSaisons(el, nom); return; }
