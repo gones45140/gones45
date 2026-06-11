@@ -14078,45 +14078,40 @@ async function loadNbaPlayerStatsEspn(playerId, name) {
 
   box.innerHTML = '<div style="padding:8px;color:var(--t3);font-size:10px;">⏳ Stats…</div>';
   try {
-    // ESPN : stats saison via overview
     var resp = await fetch('https://site.web.api.espn.com/apis/common/v3/sports/basketball/nba/athletes/'+playerId+'/overview');
     var data = await resp.json();
-    // Chercher les moyennes saison en cours dans statistics
-    var stats = null;
-    if(data && data.statistics && data.statistics.splits && data.statistics.splits.categories) {
-      stats = data.statistics;
-    }
-    if(!data || !data.statistics) {
-      box.innerHTML = '<div style="padding:8px;color:var(--t3);font-size:10px;">Pas de stats disponibles</div>';
+    var st = data && data.statistics;
+    if(!st || !st.labels || !st.splits || !st.splits.length) {
+      box.innerHTML = '<div style="padding:8px;color:var(--t3);font-size:10px;">Pas de stats cette saison</div>';
       return;
     }
 
-    // ESPN overview : data.statistics.displayName + names[] + splits.categories[].stats
-    var labels = data.statistics.names || [];
-    var displayNames = data.statistics.displayNames || [];
-    var splits = (data.statistics.splits && data.statistics.splits.length) ? data.statistics.splits : null;
-    // Format alternatif : statistics.splits.categories
-    var row = null;
-    if(splits) {
-      row = splits[0].stats; // saison en cours
+    var labels = st.labels; // ["GP","MIN","FG%","3P%","FT%","REB","AST","BLK","STL","PF","TO","PTS"]
+    // Prendre le split "Regular Season" en priorité, sinon le premier
+    var split = null;
+    for(var i=0;i<st.splits.length;i++){
+      var dn = (st.splits[i].displayName||'').toLowerCase();
+      if(dn.indexOf('regular')>=0 || dn.indexOf('saison')>=0) { split = st.splits[i]; break; }
     }
-
-    if(!row || !labels.length) {
-      box.innerHTML = '<div style="padding:8px;color:var(--t3);font-size:10px;">Stats indisponibles</div>';
-      return;
-    }
+    if(!split) split = st.splits[0];
+    var vals = split.stats || [];
 
     // Mapper label → valeur
-    var want = {'PTS':'#4d84ff','REB':'#1ed760','AST':'#f0b020','STL':'#a78bfa','BLK':'#22d3ee','FG%':'#ff7b54','3P%':'#ec4899','FT%':'#84cc16'};
-    var pick = {};
-    labels.forEach(function(lab, i){ pick[lab] = row[i]; });
+    var map = {};
+    labels.forEach(function(lab, i){ map[lab] = vals[i]; });
+
+    // Stats à afficher : label ESPN → libellé court + couleur
+    var show = [
+      ['PTS','PTS','#4d84ff'], ['REB','REB','#1ed760'], ['AST','PAS','#f0b020'], ['STL','INT','#a78bfa'],
+      ['BLK','CTR','#22d3ee'], ['FG%','FG%','#ff7b54'], ['3P%','3P%','#ec4899'], ['FT%','LF%','#84cc16']
+    ];
 
     var html = '<div style="background:rgba(77,132,255,.05);border-radius:8px;padding:10px;margin:4px 0 8px 38px;">';
-    html += '<div style="font-size:9px;color:var(--t3);margin-bottom:8px;">Moyennes saison '+name+'</div>';
+    html += '<div style="font-size:9px;color:var(--t3);margin-bottom:8px;">Moyennes '+(split.displayName||'saison')+'</div>';
     html += '<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:6px;">';
-    Object.keys(want).forEach(function(lab){
-      var v = pick[lab]!==undefined ? pick[lab] : '—';
-      html += '<div style="text-align:center;"><div style="font-size:14px;font-weight:800;color:'+want[lab]+';">'+v+'</div><div style="font-size:8px;color:var(--t3);">'+lab+'</div></div>';
+    show.forEach(function(s){
+      var v = (map[s[0]]!==undefined && map[s[0]]!==null && map[s[0]]!=='') ? map[s[0]] : '—';
+      html += '<div style="text-align:center;"><div style="font-size:14px;font-weight:800;color:'+s[2]+';">'+v+'</div><div style="font-size:8px;color:var(--t3);">'+s[1]+'</div></div>';
     });
     html += '</div></div>';
     box.innerHTML = html;
