@@ -13982,9 +13982,136 @@ async function loadNbaSaisons(el, nom) {
     }
 
     html += '</div>';
+    // Bouton effectif (api-sports)
+    html += '<div class="cwrap" style="margin-bottom:10px;">';
+    html += '<button onclick="loadNbaEffectif(\''+nom.replace(/'/g,"\\'")+'\')" id="nba-eff-btn" style="width:100%;padding:10px;background:rgba(77,132,255,.12);border:1px solid rgba(77,132,255,.3);border-radius:8px;color:#4d84ff;font-size:12px;font-weight:700;cursor:pointer;">👥 Voir l\'effectif & stats joueurs</button>';
+    html += '<div id="nba-effectif"></div>';
+    html += '</div>';
+
     el.innerHTML = html;
   } catch(e) {
     el.innerHTML = '<div style="color:#ff4545;text-align:center;padding:20px;">Erreur NBA : '+e.message+'<br><small>Vérifier la connexion</small></div>';
+  }
+}
+
+/* ══ NBA API-SPORTS (effectif + stats) ══ */
+function nbaApiFetch(path) {
+  var key = getApiSportsKey();
+  if(!key) return Promise.reject(new Error('Clé api-sports manquante (Outils → Clés API)'));
+  var url = FD_PROXY + '?key=' + encodeURIComponent(key) + '&host=nba&path=' + encodeURIComponent(path);
+  return fetch(url).then(function(r){ return r.json(); });
+}
+
+// Saison NBA courante : la saison démarre en octobre. api-sports utilise l'année de début.
+function nbaCurrentSeason() {
+  var d = new Date();
+  return (d.getMonth() >= 9) ? d.getFullYear() : d.getFullYear() - 1;
+}
+
+async function loadNbaEffectif(nom) {
+  var box = document.getElementById('nba-effectif');
+  var btn = document.getElementById('nba-eff-btn');
+  if(!box) return;
+  if(box.innerHTML.trim()) { box.innerHTML = ''; if(btn) btn.style.opacity='1'; return; } // toggle
+
+  var key = resolveNbaTeam(nom);
+  var info = key ? NBA_TEAMS[key] : null;
+  if(!info || !info.asId) { box.innerHTML = '<div style="color:var(--t3);font-size:11px;text-align:center;padding:10px;">Équipe non mappée</div>'; return; }
+
+  box.innerHTML = '<div style="display:flex;align-items:center;gap:8px;padding:14px;color:var(--t3);font-size:11px;"><div style="width:12px;height:12px;border:2px solid rgba(77,132,255,.2);border-top-color:#4d84ff;border-radius:50%;animation:spin .8s linear infinite;"></div>Chargement de l\'effectif…</div>';
+
+  try {
+    var season = nbaCurrentSeason();
+    // Cache localStorage 24h
+    var cacheKey = 'nba_squad_' + info.asId + '_' + season;
+    var cached = null;
+    try { cached = JSON.parse(localStorage.getItem(cacheKey) || 'null'); } catch(e){}
+    var players;
+    if(cached && cached.ts && (Date.now() - cached.ts < 24*3600*1000) && cached.players) {
+      players = cached.players;
+    } else {
+      var resp = await nbaApiFetch('/players?team=' + info.asId + '&season=' + season);
+      players = (resp && resp.response) ? resp.response : [];
+      if(players.length) localStorage.setItem(cacheKey, JSON.stringify({ts:Date.now(), players:players}));
+    }
+
+    if(!players.length) {
+      box.innerHTML = '<div style="color:var(--t3);font-size:11px;text-align:center;padding:10px;">Aucun joueur trouvé pour la saison '+season+'-'+(season+1)+'</div>';
+      return;
+    }
+
+    var html = '<div style="margin-top:10px;border-top:1px solid var(--b1);padding-top:10px;">';
+    html += '<div style="font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#4f5d88;margin-bottom:8px;">👥 Effectif '+season+'-'+(season+1)+' ('+players.length+')</div>';
+
+    players.forEach(function(p){
+      var num = (p.leagues && p.leagues.standard && p.leagues.standard.jersey != null) ? p.leagues.standard.jersey : '';
+      var pos = (p.leagues && p.leagues.standard && p.leagues.standard.pos) ? p.leagues.standard.pos : '';
+      var nameStr = (p.firstname||'') + ' ' + (p.lastname||'');
+      html += '<div onclick="loadNbaPlayerStats('+p.id+',\''+(nameStr.replace(/[^a-zA-Z ]/g,'').trim())+'\')" style="display:flex;align-items:center;gap:8px;padding:7px 6px;border-bottom:1px solid rgba(255,255,255,.04);cursor:pointer;border-radius:5px;" onmouseover="this.style.background=\'rgba(255,255,255,.03)\'" onmouseout="this.style.background=\'transparent\'">';
+      html += '<div style="width:26px;height:26px;border-radius:50%;background:rgba(77,132,255,.12);display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:800;color:#4d84ff;flex-shrink:0;">'+(num!==''?num:'—')+'</div>';
+      html += '<div style="flex:1;min-width:0;"><div style="font-size:12px;font-weight:600;color:var(--t1);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">'+nameStr+'</div>';
+      html += '<div style="font-size:9px;color:var(--t3);">'+(pos||'')+(p.height&&p.height.meters?' · '+p.height.meters+'m':'')+'</div></div>';
+      html += '<div style="font-size:14px;color:var(--t3);">📊</div>';
+      html += '</div>';
+      html += '<div id="nba-pstat-'+p.id+'"></div>';
+    });
+    html += '</div>';
+    box.innerHTML = html;
+  } catch(e) {
+    box.innerHTML = '<div style="color:#ff4545;font-size:11px;text-align:center;padding:10px;">Erreur : '+e.message+'</div>';
+  }
+}
+
+async function loadNbaPlayerStats(playerId, name) {
+  var box = document.getElementById('nba-pstat-' + playerId);
+  if(!box) return;
+  if(box.innerHTML.trim()) { box.innerHTML = ''; return; } // toggle
+
+  box.innerHTML = '<div style="padding:8px;color:var(--t3);font-size:10px;">⏳ Stats…</div>';
+  try {
+    var season = nbaCurrentSeason();
+    var cacheKey = 'nba_pstat_' + playerId + '_' + season;
+    var cached = null;
+    try { cached = JSON.parse(localStorage.getItem(cacheKey) || 'null'); } catch(e){}
+    var games;
+    if(cached && cached.ts && (Date.now() - cached.ts < 24*3600*1000)) {
+      games = cached.games;
+    } else {
+      var resp = await nbaApiFetch('/players/statistics?id=' + playerId + '&season=' + season);
+      games = (resp && resp.response) ? resp.response : [];
+      localStorage.setItem(cacheKey, JSON.stringify({ts:Date.now(), games:games}));
+    }
+
+    if(!games.length) { box.innerHTML = '<div style="padding:8px;color:var(--t3);font-size:10px;">Pas de stats cette saison</div>'; return; }
+
+    // Moyennes
+    var n = games.length;
+    var sum = {points:0, totReb:0, assists:0, steals:0, blocks:0, min:0, fgp:0, tpp:0, ftp:0};
+    var minCount = 0;
+    games.forEach(function(g){
+      sum.points += g.points||0;
+      sum.totReb += g.totReb||0;
+      sum.assists += g.assists||0;
+      sum.steals += g.steals||0;
+      sum.blocks += g.blocks||0;
+      sum.fgp += parseFloat(g.fgp)||0;
+      sum.tpp += parseFloat(g.tpp)||0;
+      sum.ftp += parseFloat(g.ftp)||0;
+    });
+    var avg = function(x){ return (x/n).toFixed(1); };
+
+    var html = '<div style="background:rgba(77,132,255,.05);border-radius:8px;padding:10px;margin:4px 0 8px 34px;">';
+    html += '<div style="font-size:9px;color:var(--t3);margin-bottom:8px;">Moyennes sur '+n+' matchs</div>';
+    html += '<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:6px;">';
+    [['PTS',avg(sum.points),'#4d84ff'],['REB',avg(sum.totReb),'#1ed760'],['PAS',avg(sum.assists),'#f0b020'],['INT',avg(sum.steals),'#a78bfa'],
+     ['CTR',avg(sum.blocks),'#22d3ee'],['FG%',(sum.fgp/n).toFixed(1),'#ff7b54'],['3P%',(sum.tpp/n).toFixed(1),'#ec4899'],['LF%',(sum.ftp/n).toFixed(1),'#84cc16']
+    ].forEach(function(s){
+      html += '<div style="text-align:center;"><div style="font-size:14px;font-weight:800;color:'+s[2]+';">'+s[1]+'</div><div style="font-size:8px;color:var(--t3);">'+s[0]+'</div></div>';
+    });
+    html += '</div></div>';
+    box.innerHTML = html;
+  } catch(e) {
+    box.innerHTML = '<div style="padding:8px;color:#ff4545;font-size:10px;">Erreur stats</div>';
   }
 }
 
