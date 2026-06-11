@@ -14003,9 +14003,11 @@ function nbaApiFetch(path) {
 }
 
 // Saison NBA courante : la saison démarre en octobre. api-sports utilise l'année de début.
+// NB : plan FREE api-sports NBA limité aux saisons 2022-2024 → on plafonne à 2024.
 function nbaCurrentSeason() {
   var d = new Date();
-  return (d.getMonth() >= 9) ? d.getFullYear() : d.getFullYear() - 1;
+  var s = (d.getMonth() >= 9) ? d.getFullYear() : d.getFullYear() - 1;
+  return Math.min(s, 2024); // plafond free plan
 }
 
 async function loadNbaEffectif(nom) {
