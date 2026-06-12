@@ -14949,13 +14949,19 @@ async function fetchMondialLive() {
         if(comp.odds && comp.odds.length && comp.odds[0]) {
           var o = comp.odds[0];
           var ml = function(v){ return (v!=null) ? americanToDecimal(v) : null; };
-          var hOdd = (o && o.homeTeamOdds && o.homeTeamOdds.moneyLine!=null) ? o.homeTeamOdds.moneyLine : (o && o.moneylineHome!=null ? o.moneylineHome : null);
-          var aOdd = (o && o.awayTeamOdds && o.awayTeamOdds.moneyLine!=null) ? o.awayTeamOdds.moneyLine : (o && o.moneylineAway!=null ? o.moneylineAway : null);
-          var dOdd = (o && o.drawOdds && o.drawOdds.moneyLine!=null) ? o.drawOdds.moneyLine : null;
-          var ovOdd = (o && o.total && o.total.over && o.total.over.close && o.total.over.close.odds!=null) ? o.total.over.close.odds : null;
-          var unOdd = (o && o.total && o.total.under && o.total.under.close && o.total.under.close.odds!=null) ? o.total.under.close.odds : null;
-          var ouL = (o && o.total && o.total.over && o.total.over.close && o.total.over.close.line!=null) ? o.total.over.close.line : (o && o.overUnder!=null ? o.overUnder : null);
-          if(hOdd!=null || aOdd!=null || dOdd!=null) {
+          var mlObj = o.moneyline || {};
+          // Victoire / Nul / Victoire via moneyline.{home,away,draw}.close.odds
+          var hOdd = (mlObj.home && mlObj.home.close && mlObj.home.close.odds!=null) ? mlObj.home.close.odds : null;
+          var aOdd = (mlObj.away && mlObj.away.close && mlObj.away.close.odds!=null) ? mlObj.away.close.odds : null;
+          var dOdd = (mlObj.draw && mlObj.draw.close && mlObj.draw.close.odds!=null) ? mlObj.draw.close.odds
+                     : ((o.drawOdds && o.drawOdds.moneyLine!=null) ? o.drawOdds.moneyLine : null);
+          // Over / Under
+          var ovOdd = (o.total && o.total.over && o.total.over.close && o.total.over.close.odds!=null) ? o.total.over.close.odds : null;
+          var unOdd = (o.total && o.total.under && o.total.under.close && o.total.under.close.odds!=null) ? o.total.under.close.odds : null;
+          // Ligne O/U : nettoyer le préfixe "o"/"u" (ex "o2.5" → "2.5")
+          var rawLine = (o.total && o.total.over && o.total.over.close && o.total.over.close.line!=null) ? o.total.over.close.line : (o.overUnder!=null ? o.overUnder : null);
+          var ouL = (rawLine!=null) ? String(rawLine).replace(/^[ou]/i,'') : null;
+          if(hOdd!=null || aOdd!=null || dOdd!=null || ovOdd!=null) {
             odds = { home:ml(hOdd), away:ml(aOdd), draw:ml(dOdd), over:ml(ovOdd), under:ml(unOdd), ouLine:ouL };
           }
         }
