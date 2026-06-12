@@ -5001,14 +5001,49 @@ async function apiFootballFetch(endpoint) {
 function getFdorgKey(){ return localStorage.getItem('gones45_fdorg_key')||null; }
 var FD_PROXY = 'https://fd-proxy.touraine-antoine.workers.dev';
 
+// Cache mémoire + file d'attente anti-rate-limit pour football-data (plan free: 10 req/min)
+var _fdCache = {};
+var _fdQueue = Promise.resolve();
+var _fdLastCall = 0;
+var _FD_MIN_GAP = 6500; // ms entre 2 appels (≈9/min, sous la limite de 10/min)
+
 async function fdFetch(path) {
   var key = getFdorgKey();
   if(!key) return null;
-  try {
-    var r = await fetch(FD_PROXY+'?key='+encodeURIComponent(key)+'&path='+encodeURIComponent(path));
-    if(!r.ok) return null;
-    return await r.json();
-  } catch(e) { return null; }
+
+  // Cache : même chemin → réponse mémorisée (10 min)
+  var ck = path;
+  var now = Date.now();
+  if(_fdCache[ck] && (now - _fdCache[ck].ts < 600000)) {
+    return _fdCache[ck].data;
+  }
+
+  // Sérialiser les appels avec un délai minimum entre chacun
+  var run = _fdQueue.then(async function(){
+    var gap = Date.now() - _fdLastCall;
+    if(gap < _FD_MIN_GAP) await new Promise(function(res){ setTimeout(res, _FD_MIN_GAP - gap); });
+
+    for(var attempt=0; attempt<3; attempt++){
+      try {
+        var r = await fetch(FD_PROXY+'?key='+encodeURIComponent(key)+'&path='+encodeURIComponent(path));
+        _fdLastCall = Date.now();
+        if(r.status===429 || r.status===403){
+          // Rate limit → attendre et réessayer
+          await new Promise(function(res){ setTimeout(res, 8000); });
+          continue;
+        }
+        if(!r.ok) return null;
+        var data = await r.json();
+        _fdCache[ck] = {ts:Date.now(), data:data};
+        return data;
+      } catch(e) {
+        await new Promise(function(res){ setTimeout(res, 1500); });
+      }
+    }
+    return null;
+  });
+  _fdQueue = run.catch(function(){});
+  return run;
 }
 
 function saveFdorgKey(){
@@ -10964,14 +10999,49 @@ async function apiFootballFetch(endpoint) {
 function getFdorgKey(){ return localStorage.getItem('gones45_fdorg_key')||null; }
 var FD_PROXY = 'https://fd-proxy.touraine-antoine.workers.dev';
 
+// Cache mémoire + file d'attente anti-rate-limit pour football-data (plan free: 10 req/min)
+var _fdCache = {};
+var _fdQueue = Promise.resolve();
+var _fdLastCall = 0;
+var _FD_MIN_GAP = 6500; // ms entre 2 appels (≈9/min, sous la limite de 10/min)
+
 async function fdFetch(path) {
   var key = getFdorgKey();
   if(!key) return null;
-  try {
-    var r = await fetch(FD_PROXY+'?key='+encodeURIComponent(key)+'&path='+encodeURIComponent(path));
-    if(!r.ok) return null;
-    return await r.json();
-  } catch(e) { return null; }
+
+  // Cache : même chemin → réponse mémorisée (10 min)
+  var ck = path;
+  var now = Date.now();
+  if(_fdCache[ck] && (now - _fdCache[ck].ts < 600000)) {
+    return _fdCache[ck].data;
+  }
+
+  // Sérialiser les appels avec un délai minimum entre chacun
+  var run = _fdQueue.then(async function(){
+    var gap = Date.now() - _fdLastCall;
+    if(gap < _FD_MIN_GAP) await new Promise(function(res){ setTimeout(res, _FD_MIN_GAP - gap); });
+
+    for(var attempt=0; attempt<3; attempt++){
+      try {
+        var r = await fetch(FD_PROXY+'?key='+encodeURIComponent(key)+'&path='+encodeURIComponent(path));
+        _fdLastCall = Date.now();
+        if(r.status===429 || r.status===403){
+          // Rate limit → attendre et réessayer
+          await new Promise(function(res){ setTimeout(res, 8000); });
+          continue;
+        }
+        if(!r.ok) return null;
+        var data = await r.json();
+        _fdCache[ck] = {ts:Date.now(), data:data};
+        return data;
+      } catch(e) {
+        await new Promise(function(res){ setTimeout(res, 1500); });
+      }
+    }
+    return null;
+  });
+  _fdQueue = run.catch(function(){});
+  return run;
 }
 
 function saveFdorgKey(){
