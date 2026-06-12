@@ -14586,6 +14586,14 @@ function loadMondial2026() {
   var el = document.getElementById('ip-mondial');
   if(!el) return;
 
+  // Injecter l'animation pulse (point LIVE) une seule fois
+  if(!document.getElementById('wc-pulse-style')) {
+    var st = document.createElement('style');
+    st.id = 'wc-pulse-style';
+    st.textContent = '@keyframes pulse{0%{opacity:1}50%{opacity:.3}100%{opacity:1}}';
+    document.head.appendChild(st);
+  }
+
   var GROUPES = [
     {id:'A', teams:['Mexique','Corée du Sud','Afrique du Sud','Tchéquie']},
     {id:'B', teams:['Canada','Suisse','Qatar','Bosnie-Herzégovine']},
@@ -14786,18 +14794,26 @@ function showGroupDetail(gid) {
   html += '<div class="cwrap">';
   html += '<div style="font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#4f5d88;margin-bottom:8px;">Matchs</div>';
   if(matches && matches.length) {
-    matches.forEach(function(m){
+    matches.forEach(function(m, mi){
       var played = m.score !== null;
-      html += '<div style="display:flex;align-items:center;gap:8px;padding:8px;background:rgba(255,255,255,.03);border-radius:6px;margin-bottom:4px;">';
+      var clickable = played && m.eventId;
+      var rowId = 'wcm-'+gid+'-'+mi;
+      html += '<div '+(clickable?'onclick="toggleWcMatchStats(\''+m.eventId+'\',\''+rowId+'\')" ':'')+'style="display:flex;align-items:center;gap:8px;padding:8px;background:rgba(255,255,255,.03);border-radius:6px;margin-bottom:4px;'+(clickable?'cursor:pointer;':'')+'">';
       html += '<div style="display:flex;align-items:center;justify-content:flex-end;flex:1;font-size:10px;font-weight:600;color:var(--t1);">'+flagImg(m.home,14)+m.home+'</div>';
-      if(played) {
-        var col = '#f0b020';
-        html += '<div style="font-size:13px;font-weight:800;color:'+col+';min-width:40px;text-align:center;">'+m.score+'</div>';
+      if(m.live) {
+        // Match EN DIRECT
+        html += '<div style="min-width:60px;text-align:center;">';
+        html += '<div style="font-size:13px;font-weight:800;color:#ff4545;">'+m.score+'</div>';
+        html += '<div style="font-size:8px;font-weight:800;color:#ff4545;display:flex;align-items:center;justify-content:center;gap:3px;"><span style="width:5px;height:5px;background:#ff4545;border-radius:50%;display:inline-block;animation:pulse 1s infinite;"></span>'+(m.clock||'LIVE')+'</div>';
+        html += '</div>';
+      } else if(played) {
+        html += '<div style="font-size:13px;font-weight:800;color:#f0b020;min-width:40px;text-align:center;">'+m.score+(clickable?' <span style="font-size:8px;color:var(--t3);">📊</span>':'')+'</div>';
       } else {
         html += '<div style="font-size:10px;color:#4f5d88;min-width:40px;text-align:center;">'+m.date+'</div>';
       }
       html += '<div style="display:flex;align-items:center;flex:1;font-size:10px;font-weight:600;color:var(--t1);">'+flagImg(m.away,14)+m.away+'</div>';
       html += '</div>';
+      html += '<div id="'+rowId+'"></div>';
     });
   } else {
     // Générer les matchs à jouer depuis les équipes
@@ -14955,6 +14971,65 @@ async function fetchMondialLive() {
 /* ══════════════════════════════════════
    SIMULATION COUPE DU MONDE 2026
 ══════════════════════════════════════ */
+async function toggleWcMatchStats(eventId, rowId) {
+  var box = document.getElementById(rowId);
+  if(!box) return;
+  if(box.innerHTML.trim()) { box.innerHTML=''; return; } // toggle
+
+  box.innerHTML = '<div style="padding:8px;color:var(--t3);font-size:10px;text-align:center;">⏳ Stats du match…</div>';
+  try {
+    var res = await fetch('https://site.api.espn.com/apis/site/v2/sports/soccer/fifa.world/summary?event='+eventId);
+    var data = await res.json();
+    var box2 = data.boxscore;
+    if(!box2 || !box2.teams || !box2.teams.length) {
+      box.innerHTML = '<div style="padding:8px;color:var(--t3);font-size:10px;text-align:center;">Stats indisponibles</div>';
+      return;
+    }
+
+    // box2.teams[].statistics[] : {name, displayValue, label}
+    var t0 = box2.teams[0], t1 = box2.teams[1];
+    var s0 = {}, s1 = {};
+    (t0.statistics||[]).forEach(function(s){ s0[s.name]=s.displayValue; });
+    (t1.statistics||[]).forEach(function(s){ s1[s.name]=s.displayValue; });
+
+    // Stats à montrer : label FR → clé ESPN
+    var rows = [
+      ['Possession','possessionPct','%'],
+      ['Tirs','totalShots',''],
+      ['Tirs cadrés','shotsOnTarget',''],
+      ['Corners','wonCorners',''],
+      ['Fautes','foulsCommitted',''],
+      ['Cartons jaunes','yellowCards',''],
+      ['Hors-jeu','offsides','']
+    ];
+
+    var hasAny = rows.some(function(r){ return s0[r[1]]!==undefined || s1[r[1]]!==undefined; });
+    if(!hasAny) {
+      box.innerHTML = '<div style="padding:8px;color:var(--t3);font-size:10px;text-align:center;">Pas de stats détaillées pour ce match</div>';
+      return;
+    }
+
+    var nameA = (t0.team && (t0.team.abbreviation||t0.team.displayName)) || '';
+    var nameB = (t1.team && (t1.team.abbreviation||t1.team.displayName)) || '';
+
+    var h = '<div style="background:rgba(77,132,255,.05);border-radius:8px;padding:10px;margin:2px 0 8px;">';
+    h += '<div style="display:flex;justify-content:space-between;font-size:9px;font-weight:800;color:var(--t2);margin-bottom:8px;"><span>'+nameA+'</span><span>'+nameB+'</span></div>';
+    rows.forEach(function(r){
+      var va = s0[r[1]]!==undefined ? s0[r[1]] : '—';
+      var vb = s1[r[1]]!==undefined ? s1[r[1]] : '—';
+      h += '<div style="display:grid;grid-template-columns:40px 1fr 40px;gap:8px;align-items:center;margin-bottom:5px;">';
+      h += '<div style="font-size:11px;font-weight:800;color:var(--t1);text-align:left;">'+va+'</div>';
+      h += '<div style="font-size:8px;color:var(--t3);text-align:center;text-transform:uppercase;letter-spacing:.5px;">'+r[0]+'</div>';
+      h += '<div style="font-size:11px;font-weight:800;color:var(--t1);text-align:right;">'+vb+'</div>';
+      h += '</div>';
+    });
+    h += '</div>';
+    box.innerHTML = h;
+  } catch(e) {
+    box.innerHTML = '<div style="padding:8px;color:#ff4545;font-size:10px;text-align:center;">Erreur stats</div>';
+  }
+}
+
 var SIMU_GROUPES = [
   {id:'A', teams:['Mexique','Corée du Sud','Afrique du Sud','Tchéquie']},
   {id:'B', teams:['Canada','Suisse','Qatar','Bosnie-Herzégovine']},
