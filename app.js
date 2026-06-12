@@ -14582,9 +14582,34 @@ function supprimerLienPerso(nom, idx) {
   loadLiensEquipe();
 }
 
+// Rafraîchissement auto du Mondial quand un match est en direct
+function setupWcAutoRefresh() {
+  // Vérifier s'il y a un match live dans les données sauvegardées
+  var hasLive = false;
+  var groups = ['A','B','C','D','E','F','G','H','I','J','K','L'];
+  for(var i=0;i<groups.length;i++){
+    var ms = null;
+    try { ms = JSON.parse(localStorage.getItem('wc2026_matches_'+groups[i])||'null'); } catch(e){}
+    if(ms && ms.some(function(m){ return m.live; })) { hasLive = true; break; }
+  }
+
+  // Nettoyer un éventuel timer existant
+  if(window._wcLiveTimer){ clearInterval(window._wcLiveTimer); window._wcLiveTimer=null; }
+
+  if(hasLive) {
+    window._wcLiveTimer = setInterval(function(){
+      // Si on a quitté la page Mondial, stopper
+      if(!document.getElementById('ip-mondial')){ clearInterval(window._wcLiveTimer); window._wcLiveTimer=null; return; }
+      // Re-fetch silencieux
+      fetchMondialLive(true);
+    }, 45000); // 45 secondes
+  }
+}
+
 function loadMondial2026() {
+  window._wcOpenGroup = null;
   var el = document.getElementById('ip-mondial');
-  if(!el) return;
+  if(!el) { if(window._wcLiveTimer){ clearInterval(window._wcLiveTimer); window._wcLiveTimer=null; } return; }
 
   // Injecter l'animation pulse (point LIVE) une seule fois
   if(!document.getElementById('wc-pulse-style')) {
@@ -14593,6 +14618,9 @@ function loadMondial2026() {
     st.textContent = '@keyframes pulse{0%{opacity:1}50%{opacity:.3}100%{opacity:1}}';
     document.head.appendChild(st);
   }
+
+  // Auto-refresh si au moins un match est en direct (toutes les 45s)
+  setupWcAutoRefresh();
 
   var GROUPES = [
     {id:'A', teams:['Mexique','Corée du Sud','Afrique du Sud','Tchéquie']},
@@ -14741,6 +14769,7 @@ function loadMondial2026() {
 }
 
 function showGroupDetail(gid) {
+  window._wcOpenGroup = gid;
   var el = document.getElementById('ip-mondial');
   if(!el) return;
 
@@ -14830,6 +14859,12 @@ function showGroupDetail(gid) {
           html += '<div style="font-size:11px;font-weight:800;color:#f0b020;">'+m.odds.over+'</div>';
           html += '</div>';
         }
+        if(m.odds.under && m.odds.ouLine!=null) {
+          html += '<div style="flex:1;text-align:center;background:rgba(168,139,250,.08);border:1px solid rgba(168,139,250,.15);border-radius:5px;padding:3px 0;">';
+          html += '<div style="font-size:8px;color:var(--t3);">-'+m.odds.ouLine+'</div>';
+          html += '<div style="font-size:11px;font-weight:800;color:#a78bfa;">'+m.odds.under+'</div>';
+          html += '</div>';
+        }
         html += '</div>';
       }
       html += '<div id="'+rowId+'"></div>';
@@ -14876,8 +14911,8 @@ function americanToDecimal(am) {
   return dec.toFixed(2);
 }
 
-async function fetchMondialLive() {
-  var status = document.getElementById('mondial-update-status');
+async function fetchMondialLive(silent) {
+  var status = silent ? null : document.getElementById('mondial-update-status');
   if(status) status.innerText = '⏳ Récupération des résultats (ESPN)...';
   try {
     // ESPN scoreboard fifa.world : on balaie la plage de la phase de groupes + knockouts
@@ -15012,7 +15047,15 @@ async function fetchMondialLive() {
     for(var k in koMatches){ localStorage.setItem('wc2026_ko_'+k, JSON.stringify(koMatches[k])); }
 
     if(status){ status.innerText = '✅ Mis à jour !'; status.style.color='var(--g)'; }
-    setTimeout(function(){ loadMondial2026(); }, 800);
+    if(silent) {
+      // Rafraîchir uniquement la vue groupe ouverte (sans remonter en haut)
+      var openGroup = window._wcOpenGroup;
+      if(openGroup) {
+        showGroupDetail(openGroup);
+      }
+    } else {
+      setTimeout(function(){ loadMondial2026(); }, 800);
+    }
 
   } catch(e) {
     if(status){ status.innerText = '❌ Erreur : '+e.message; status.style.color='var(--r)'; }
