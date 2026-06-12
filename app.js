@@ -14816,108 +14816,138 @@ function showGroupDetail(gid) {
   el.innerHTML = html;
 }
 
+// Table noms ESPN (EN) → noms groupes (FR)
+var WC_NAME_EN_FR = {
+  'Mexico':'Mexique','South Korea':'Corée du Sud','Korea Republic':'Corée du Sud','South Africa':'Afrique du Sud','Czechia':'Tchéquie','Czech Republic':'Tchéquie',
+  'Canada':'Canada','Switzerland':'Suisse','Qatar':'Qatar','Bosnia-Herzegovina':'Bosnie-Herzégovine','Bosnia and Herzegovina':'Bosnie-Herzégovine',
+  'Brazil':'Brésil','Morocco':'Maroc','Scotland':'Écosse','Haiti':'Haïti',
+  'United States':'États-Unis','USA':'États-Unis','Paraguay':'Paraguay','Australia':'Australie','Turkey':'Turquie','Türkiye':'Turquie',
+  'Germany':'Allemagne','Ecuador':'Équateur','Ivory Coast':'Côte d\'Ivoire','Cote d\'Ivoire':'Côte d\'Ivoire','Curacao':'Curaçao','Curaçao':'Curaçao',
+  'Netherlands':'Pays-Bas','Japan':'Japon','Tunisia':'Tunisie','Sweden':'Suède',
+  'Belgium':'Belgique','Iran':'Iran','Egypt':'Égypte','New Zealand':'Nouvelle-Zélande',
+  'Spain':'Espagne','Uruguay':'Uruguay','Cape Verde':'Cap-Vert','Cabo Verde':'Cap-Vert','Saudi Arabia':'Arabie saoudite',
+  'France':'France','Senegal':'Sénégal','Norway':'Norvège','Iraq':'Irak',
+  'Argentina':'Argentine','Algeria':'Algérie','Austria':'Autriche','Jordan':'Jordanie',
+  'Portugal':'Portugal','Colombia':'Colombie','DR Congo':'RD Congo','Congo DR':'RD Congo','Uzbekistan':'Ouzbékistan',
+  'England':'Angleterre','Croatia':'Croatie','Ghana':'Ghana','Panama':'Panama'
+};
+function wcFr(name){ return WC_NAME_EN_FR[name] || name; }
+
 async function fetchMondialLive() {
   var status = document.getElementById('mondial-update-status');
-  if(status) status.innerText = '⏳ Récupération des résultats...';
+  if(status) status.innerText = '⏳ Récupération des résultats (ESPN)...';
   try {
-    // TheSportsDB — league 4429 = FIFA World Cup
-    var res = await fetch('https://www.thesportsdb.com/api/v1/json/3/eventsseason.php?id=4429&s=2026-2027');
-    var data = await res.json();
-    var events = (data && data.events) ? data.events : [];
+    // ESPN scoreboard fifa.world : on balaie la plage de la phase de groupes + knockouts
+    // Group: 11-27 juin ; KO: 28 juin → 19 juillet
+    var allEvents = [];
+    var ranges = [
+      ['20260611','20260627'], // groupes
+      ['20260628','20260719']  // knockouts
+    ];
+    for(var r=0; r<ranges.length; r++){
+      var url = 'https://site.api.espn.com/apis/site/v2/sports/soccer/fifa.world/scoreboard?dates='+ranges[r][0]+'-'+ranges[r][1]+'&limit=200';
+      var res = await fetch(url);
+      var data = await res.json();
+      if(data && data.events) allEvents = allEvents.concat(data.events);
+    }
 
-    if(!events.length) {
-      if(status) status.innerText = '⏳ Tournoi pas encore commencé — données disponibles le 11 juin';
+    if(!allEvents.length) {
+      if(status) status.innerText = '⏳ Aucun match disponible pour le moment';
       return;
     }
 
-    // Organiser par groupe
-    var groupMap = {
-      'Group A':'A','Group B':'B','Group C':'C','Group D':'D',
-      'Group E':'E','Group F':'F','Group G':'G','Group H':'H',
-      'Group I':'I','Group J':'J','Group K':'K','Group L':'L'
-    };
-
     var groupMatches = {};
     var groupStandings = {};
+    var koMatches = {};
+    var koMap = {'Round of 32':'r32','Round of 16':'r16','Quarterfinal':'qf','Semifinal':'sf','3rd Place':'tp','Third Place':'tp','Final':'f'};
 
-    events.forEach(function(e){
-      var round = e.strRound || '';
+    allEvents.forEach(function(e){
+      var comp = (e.competitions && e.competitions[0]) ? e.competitions[0] : null;
+      if(!comp || !comp.competitors || comp.competitors.length<2) return;
+      var home = comp.competitors.find(function(c){return c.homeAway==='home';}) || comp.competitors[0];
+      var away = comp.competitors.find(function(c){return c.homeAway==='away';}) || comp.competitors[1];
+      var hName = wcFr(home.team && (home.team.displayName||home.team.name) || '?');
+      var aName = wcFr(away.team && (away.team.displayName||away.team.name) || '?');
+      var st = comp.status && comp.status.type ? comp.status.type : {};
+      var completed = !!st.completed;
+      var inProgress = st.state === 'in';
+      var hScore = home.score!==undefined ? parseInt(home.score) : null;
+      var aScore = away.score!==undefined ? parseInt(away.score) : null;
+      var hasScore = (completed || inProgress) && hScore!==null && aScore!==null && !isNaN(hScore) && !isNaN(aScore);
+      var dateStr = e.date ? e.date.substring(5,10) : '?';
+
+      // Type de phase
+      var noteType = (e.season && e.season.type && e.season.slug) ? e.season.slug : '';
+      var groupName = '';
+      if(e.season && e.season.type==13802) groupName='group';
+      // Trouver le groupe via nos GROUPES définis (matching équipes)
       var gid = null;
-      for(var k in groupMap){ if(round.indexOf(k)>=0){ gid=groupMap[k]; break; } }
-      if(!gid) return;
+      var GR = [
+        {id:'A', t:['Mexique','Corée du Sud','Afrique du Sud','Tchéquie']},
+        {id:'B', t:['Canada','Suisse','Qatar','Bosnie-Herzégovine']},
+        {id:'C', t:['Brésil','Maroc','Écosse','Haïti']},
+        {id:'D', t:['États-Unis','Paraguay','Australie','Turquie']},
+        {id:'E', t:['Allemagne','Équateur','Côte d\'Ivoire','Curaçao']},
+        {id:'F', t:['Pays-Bas','Japon','Tunisie','Suède']},
+        {id:'G', t:['Belgique','Iran','Égypte','Nouvelle-Zélande']},
+        {id:'H', t:['Espagne','Uruguay','Cap-Vert','Arabie saoudite']},
+        {id:'I', t:['France','Sénégal','Norvège','Irak']},
+        {id:'J', t:['Argentine','Algérie','Autriche','Jordanie']},
+        {id:'K', t:['Portugal','Colombie','RD Congo','Ouzbékistan']},
+        {id:'L', t:['Angleterre','Croatie','Ghana','Panama']}
+      ];
+      for(var i=0;i<GR.length;i++){
+        if(GR[i].t.indexOf(hName)>=0 && GR[i].t.indexOf(aName)>=0){ gid=GR[i].id; break; }
+      }
 
-      if(!groupMatches[gid]) groupMatches[gid] = [];
-      var played = e.intHomeScore !== null && e.intHomeScore !== '';
-      var match = {
-        home: e.strHomeTeam,
-        away: e.strAwayTeam,
-        score: played ? e.intHomeScore+' - '+e.intAwayScore : null,
-        date: e.dateEvent ? e.dateEvent.substring(5) : '?'
+      var matchObj = {
+        home:hName, away:aName,
+        score: hasScore ? (hScore+' - '+aScore) : null,
+        live: inProgress,
+        clock: inProgress ? (comp.status.displayClock||'') : '',
+        date:dateStr,
+        eventId: e.id
       };
-      groupMatches[gid].push(match);
 
-      // Calculer classements
-      if(played){
-        var hs = parseInt(e.intHomeScore), as = parseInt(e.intAwayScore);
-        if(!groupStandings[gid]) groupStandings[gid] = {};
-        [e.strHomeTeam, e.strAwayTeam].forEach(function(t){
-          if(!groupStandings[gid][t]) groupStandings[gid][t]={name:t,pts:0,j:0,g:0,n:0,p:0,gf:0,ga:0};
-        });
-        groupStandings[gid][e.strHomeTeam].j++;
-        groupStandings[gid][e.strAwayTeam].j++;
-        groupStandings[gid][e.strHomeTeam].gf+=hs;
-        groupStandings[gid][e.strHomeTeam].ga+=as;
-        groupStandings[gid][e.strAwayTeam].gf+=as;
-        groupStandings[gid][e.strAwayTeam].ga+=hs;
-        if(hs>as){ groupStandings[gid][e.strHomeTeam].g++; groupStandings[gid][e.strHomeTeam].pts+=3; groupStandings[gid][e.strAwayTeam].p++; }
-        else if(hs<as){ groupStandings[gid][e.strAwayTeam].g++; groupStandings[gid][e.strAwayTeam].pts+=3; groupStandings[gid][e.strHomeTeam].p++; }
-        else { groupStandings[gid][e.strHomeTeam].n++; groupStandings[gid][e.strHomeTeam].pts++; groupStandings[gid][e.strAwayTeam].n++; groupStandings[gid][e.strAwayTeam].pts++; }
+      if(gid){
+        // Match de groupe
+        if(!groupMatches[gid]) groupMatches[gid]=[];
+        groupMatches[gid].push(matchObj);
+        if(hasScore && completed){
+          if(!groupStandings[gid]) groupStandings[gid]={};
+          [hName,aName].forEach(function(t){ if(!groupStandings[gid][t]) groupStandings[gid][t]={name:t,pts:0,j:0,g:0,n:0,p:0,gf:0,ga:0}; });
+          groupStandings[gid][hName].j++; groupStandings[gid][aName].j++;
+          groupStandings[gid][hName].gf+=hScore; groupStandings[gid][hName].ga+=aScore;
+          groupStandings[gid][aName].gf+=aScore; groupStandings[gid][aName].ga+=hScore;
+          if(hScore>aScore){ groupStandings[gid][hName].g++; groupStandings[gid][hName].pts+=3; groupStandings[gid][aName].p++; }
+          else if(hScore<aScore){ groupStandings[gid][aName].g++; groupStandings[gid][aName].pts+=3; groupStandings[gid][hName].p++; }
+          else { groupStandings[gid][hName].n++; groupStandings[gid][hName].pts++; groupStandings[gid][aName].n++; groupStandings[gid][aName].pts++; }
+        }
+      } else {
+        // Knockout : déterminer la phase via le nom du type
+        var koKey=null;
+        var tName = (e.season && e.season.type && e.season.type.name) ? e.season.type.name : (st.detail||'');
+        for(var k in koMap){ if((tName||'').indexOf(k)>=0){ koKey=koMap[k]; break; } }
+        if(koKey){
+          if(!koMatches[koKey]) koMatches[koKey]=[];
+          koMatches[koKey].push(matchObj);
+        }
       }
     });
 
-    // Récupérer matchs knockout
-    var koMap = {
-      'Round of 32':  'r32',
-      'Round of 16':  'r16',
-      'Quarter-Final':'qf',
-      'Quarter-Finals':'qf',
-      'Semi-Final':   'sf',
-      'Semi-Finals':  'sf',
-      'Final':        'f'
-    };
-    var koMatches = {};
-    events.forEach(function(e){
-      var round = e.strRound || '';
-      var koKey = null;
-      for(var k in koMap){ if(round.indexOf(k)>=0 && round.indexOf('Group')<0){ koKey=koMap[k]; break; } }
-      if(!koKey) return;
-      if(!koMatches[koKey]) koMatches[koKey]=[];
-      var played = e.intHomeScore!==null && e.intHomeScore!=='';
-      koMatches[koKey].push({
-        home: e.strHomeTeam,
-        away: e.strAwayTeam,
-        score: played ? e.intHomeScore+' - '+e.intAwayScore : null,
-        date: e.dateEvent ? e.dateEvent.substring(5) : '?'
-      });
-    });
-    for(var k in koMatches){
-      localStorage.setItem('wc2026_ko_'+k, JSON.stringify(koMatches[k]));
-    }
-
-    // Sauvegarder groupes en localStorage
-    for(var gid in groupMatches){
-      localStorage.setItem('wc2026_matches_'+gid, JSON.stringify(groupMatches[gid]));
-    }
+    // Sauvegarde
+    for(var gid in groupMatches){ localStorage.setItem('wc2026_matches_'+gid, JSON.stringify(groupMatches[gid])); }
     for(var gid in groupStandings){
-      var sorted = Object.values(groupStandings[gid]).sort(function(a,b){return b.pts-a.pts||(b.gf-b.ga)-(a.gf-a.ga);});
+      var sorted = Object.values(groupStandings[gid]).sort(function(a,b){return b.pts-a.pts||(b.gf-b.ga)-(a.gf-a.ga)||b.gf-a.gf;});
       localStorage.setItem('wc2026_standings_'+gid, JSON.stringify(sorted));
     }
+    for(var k in koMatches){ localStorage.setItem('wc2026_ko_'+k, JSON.stringify(koMatches[k])); }
 
-    if(status) { status.innerText = '✅ Mis à jour !'; status.style.color='var(--g)'; }
+    if(status){ status.innerText = '✅ Mis à jour !'; status.style.color='var(--g)'; }
     setTimeout(function(){ loadMondial2026(); }, 800);
 
   } catch(e) {
-    if(status) { status.innerText = '❌ Erreur réseau'; status.style.color='var(--r)'; }
+    if(status){ status.innerText = '❌ Erreur : '+e.message; status.style.color='var(--r)'; }
   }
 }
 
