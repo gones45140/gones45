@@ -15024,6 +15024,47 @@ async function toggleWcMatchStats(eventId, rowId) {
       h += '</div>';
     });
     h += '</div>';
+
+    // ── Buteurs & passeurs + cartons (keyEvents) ──
+    var ke = data.keyEvents || [];
+    var goals = ke.filter(function(e){ return e.scoringPlay===true || (e.type && e.type.text==='Goal'); });
+    if(goals.length) {
+      h += '<div style="background:rgba(30,215,96,.05);border-radius:8px;padding:10px;margin-bottom:8px;">';
+      h += '<div style="font-size:9px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;color:#1ed760;margin-bottom:8px;">⚽ Buts</div>';
+      goals.forEach(function(e){
+        var min = (e.clock && e.clock.displayValue) ? e.clock.displayValue : '';
+        var scorer = (e.participants && e.participants[0] && e.participants[0].athlete) ? e.participants[0].athlete.displayName : '?';
+        var assist = (e.participants && e.participants[1] && e.participants[1].athlete) ? e.participants[1].athlete.displayName : '';
+        var team = (e.team && e.team.displayName) ? wcFr(e.team.displayName) : '';
+        h += '<div style="display:flex;align-items:center;gap:8px;padding:4px 0;font-size:10px;">';
+        h += '<span style="font-size:11px;font-weight:800;color:#1ed760;min-width:30px;">'+min+'</span>';
+        h += '<span style="font-size:12px;">⚽</span>';
+        h += '<div style="flex:1;"><span style="color:var(--t1);font-weight:700;">'+scorer+'</span>';
+        if(assist) h += ' <span style="color:var(--t3);font-size:9px;">👟 '+assist+'</span>';
+        h += '<div style="font-size:8px;color:var(--t3);">'+team+'</div></div>';
+        h += '</div>';
+      });
+      h += '</div>';
+    }
+
+    // Cartons
+    var cards = ke.filter(function(e){ return e.type && (e.type.text==='Yellow Card'||e.type.text==='Red Card'); });
+    if(cards.length) {
+      h += '<div style="background:rgba(255,255,255,.02);border-radius:8px;padding:10px;">';
+      h += '<div style="font-size:9px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;color:#f0b020;margin-bottom:8px;">🟨 Cartons</div>';
+      cards.forEach(function(e){
+        var min = (e.clock && e.clock.displayValue) ? e.clock.displayValue : '';
+        var player = (e.participants && e.participants[0] && e.participants[0].athlete) ? e.participants[0].athlete.displayName : '?';
+        var isRed = e.type.text==='Red Card';
+        h += '<div style="display:flex;align-items:center;gap:8px;padding:3px 0;font-size:10px;">';
+        h += '<span style="font-size:11px;font-weight:800;color:var(--t2);min-width:30px;">'+min+'</span>';
+        h += '<span style="display:inline-block;width:9px;height:12px;border-radius:2px;background:'+(isRed?'#ff4545':'#f0b020')+';"></span>';
+        h += '<span style="color:var(--t1);">'+player+'</span>';
+        h += '</div>';
+      });
+      h += '</div>';
+    }
+
     box.innerHTML = h;
   } catch(e) {
     box.innerHTML = '<div style="padding:8px;color:#ff4545;font-size:10px;text-align:center;">Erreur stats</div>';
