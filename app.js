@@ -14813,6 +14813,25 @@ function showGroupDetail(gid) {
       }
       html += '<div style="display:flex;align-items:center;flex:1;font-size:10px;font-weight:600;color:var(--t1);">'+flagImg(m.away,14)+m.away+'</div>';
       html += '</div>';
+      // Cotes (matchs à venir uniquement)
+      if(!played && m.odds && (m.odds.home||m.odds.draw||m.odds.away)) {
+        html += '<div style="display:flex;gap:4px;margin:-2px 0 6px;padding:0 4px;">';
+        var oc = [['1',m.odds.home],['N',m.odds.draw],['2',m.odds.away]];
+        oc.forEach(function(c){
+          if(!c[1]) return;
+          html += '<div style="flex:1;text-align:center;background:rgba(77,132,255,.08);border:1px solid rgba(77,132,255,.15);border-radius:5px;padding:3px 0;">';
+          html += '<div style="font-size:8px;color:var(--t3);">'+c[0]+'</div>';
+          html += '<div style="font-size:11px;font-weight:800;color:#4d84ff;">'+c[1]+'</div>';
+          html += '</div>';
+        });
+        if(m.odds.over && m.odds.ouLine!=null) {
+          html += '<div style="flex:1;text-align:center;background:rgba(240,176,32,.08);border:1px solid rgba(240,176,32,.15);border-radius:5px;padding:3px 0;">';
+          html += '<div style="font-size:8px;color:var(--t3);">+'+m.odds.ouLine+'</div>';
+          html += '<div style="font-size:11px;font-weight:800;color:#f0b020;">'+m.odds.over+'</div>';
+          html += '</div>';
+        }
+        html += '</div>';
+      }
       html += '<div id="'+rowId+'"></div>';
     });
   } else {
@@ -14848,6 +14867,14 @@ var WC_NAME_EN_FR = {
   'England':'Angleterre','Croatia':'Croatie','Ghana':'Ghana','Panama':'Panama'
 };
 function wcFr(name){ return WC_NAME_EN_FR[name] || name; }
+
+// Convertir cote américaine (+150/-200) en cote décimale européenne (2.50/1.50)
+function americanToDecimal(am) {
+  am = parseFloat(am);
+  if(isNaN(am)) return null;
+  var dec = am > 0 ? (am/100 + 1) : (100/Math.abs(am) + 1);
+  return dec.toFixed(2);
+}
 
 async function fetchMondialLive() {
   var status = document.getElementById('mondial-update-status');
@@ -14916,13 +14943,28 @@ async function fetchMondialLive() {
         if(GR[i].t.indexOf(hName)>=0 && GR[i].t.indexOf(aName)>=0){ gid=GR[i].id; break; }
       }
 
+      // Cotes (ESPN → décimal européen)
+      var odds = null;
+      if(comp.odds && comp.odds.length) {
+        var o = comp.odds[0];
+        odds = {
+          home: o.moneylineHome!=null ? americanToDecimal(o.moneylineHome) : (o.homeTeamOdds&&o.homeTeamOdds.moneyLine!=null?americanToDecimal(o.homeTeamOdds.moneyLine):null),
+          away: o.moneylineAway!=null ? americanToDecimal(o.moneylineAway) : (o.awayTeamOdds&&o.awayTeamOdds.moneyLine!=null?americanToDecimal(o.awayTeamOdds.moneyLine):null),
+          draw: o.drawOdds&&o.drawOdds.moneyLine!=null ? americanToDecimal(o.drawOdds.moneyLine) : null,
+          over: (o.total&&o.total.over&&o.total.over.close&&o.total.over.close.odds)?americanToDecimal(o.total.over.close.odds):null,
+          under: (o.total&&o.total.under&&o.total.under.close&&o.total.under.close.odds)?americanToDecimal(o.total.under.close.odds):null,
+          ouLine: (o.total&&o.total.over&&o.total.over.close)?o.total.over.close.line:(o.overUnder!=null?o.overUnder:null)
+        };
+      }
+
       var matchObj = {
         home:hName, away:aName,
         score: hasScore ? (hScore+' - '+aScore) : null,
         live: inProgress,
         clock: inProgress ? (comp.status.displayClock||'') : '',
         date:dateStr,
-        eventId: e.id
+        eventId: e.id,
+        odds: odds
       };
 
       if(gid){
