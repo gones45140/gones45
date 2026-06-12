@@ -14943,19 +14943,23 @@ async function fetchMondialLive() {
         if(GR[i].t.indexOf(hName)>=0 && GR[i].t.indexOf(aName)>=0){ gid=GR[i].id; break; }
       }
 
-      // Cotes (ESPN → décimal européen)
+      // Cotes (ESPN → décimal européen) — protégé pour ne jamais bloquer la MAJ
       var odds = null;
-      if(comp.odds && comp.odds.length) {
-        var o = comp.odds[0];
-        odds = {
-          home: o.moneylineHome!=null ? americanToDecimal(o.moneylineHome) : (o.homeTeamOdds&&o.homeTeamOdds.moneyLine!=null?americanToDecimal(o.homeTeamOdds.moneyLine):null),
-          away: o.moneylineAway!=null ? americanToDecimal(o.moneylineAway) : (o.awayTeamOdds&&o.awayTeamOdds.moneyLine!=null?americanToDecimal(o.awayTeamOdds.moneyLine):null),
-          draw: o.drawOdds&&o.drawOdds.moneyLine!=null ? americanToDecimal(o.drawOdds.moneyLine) : null,
-          over: (o.total&&o.total.over&&o.total.over.close&&o.total.over.close.odds)?americanToDecimal(o.total.over.close.odds):null,
-          under: (o.total&&o.total.under&&o.total.under.close&&o.total.under.close.odds)?americanToDecimal(o.total.under.close.odds):null,
-          ouLine: (o.total&&o.total.over&&o.total.over.close)?o.total.over.close.line:(o.overUnder!=null?o.overUnder:null)
-        };
-      }
+      try {
+        if(comp.odds && comp.odds.length && comp.odds[0]) {
+          var o = comp.odds[0];
+          var ml = function(v){ return (v!=null) ? americanToDecimal(v) : null; };
+          var hOdd = (o && o.homeTeamOdds && o.homeTeamOdds.moneyLine!=null) ? o.homeTeamOdds.moneyLine : (o && o.moneylineHome!=null ? o.moneylineHome : null);
+          var aOdd = (o && o.awayTeamOdds && o.awayTeamOdds.moneyLine!=null) ? o.awayTeamOdds.moneyLine : (o && o.moneylineAway!=null ? o.moneylineAway : null);
+          var dOdd = (o && o.drawOdds && o.drawOdds.moneyLine!=null) ? o.drawOdds.moneyLine : null;
+          var ovOdd = (o && o.total && o.total.over && o.total.over.close && o.total.over.close.odds!=null) ? o.total.over.close.odds : null;
+          var unOdd = (o && o.total && o.total.under && o.total.under.close && o.total.under.close.odds!=null) ? o.total.under.close.odds : null;
+          var ouL = (o && o.total && o.total.over && o.total.over.close && o.total.over.close.line!=null) ? o.total.over.close.line : (o && o.overUnder!=null ? o.overUnder : null);
+          if(hOdd!=null || aOdd!=null || dOdd!=null) {
+            odds = { home:ml(hOdd), away:ml(aOdd), draw:ml(dOdd), over:ml(ovOdd), under:ml(unOdd), ouLine:ouL };
+          }
+        }
+      } catch(oe) { odds = null; }
 
       var matchObj = {
         home:hName, away:aName,
