@@ -15956,30 +15956,19 @@ async function loadTeamSaisons() {
   el.innerHTML = '<div style="display:flex;align-items:center;gap:10px;padding:20px;color:var(--t3);"><div style="width:16px;height:16px;border:2px solid rgba(77,132,255,.2);border-top-color:#4d84ff;border-radius:50%;animation:spin .8s linear infinite;"></div>Chargement des 2 dernières saisons...</div>';
 
   // Charger saison en cours + saison précédente
-  // Charger les 50 derniers matchs et séparer par saison
+  // IMPORTANT: football-data limite aux coupes si on ne précise PAS season.
+  // → on demande explicitement chaque saison (renvoie alors championnat + coupes).
   var results = {};
-  var allData = await fdFetch('/v4/teams/'+teamId+'/matches?status=FINISHED&limit=60');
-  
-  if(allData && allData.matches && allData.matches.length) {
-    var matches2526 = []; // saison 2025-2026 : après août 2025
-    var matches2425 = []; // saison 2024-2025 : entre août 2024 et juillet 2025
-    
-    allData.matches.forEach(function(m) {
-      var d = new Date(m.utcDate);
-      var y = d.getFullYear();
-      var mo = d.getMonth(); // 0=jan, 7=août
-      // Saison 2025-2026 : août 2025 (mois 7, année 2025) à juillet 2026
-      if((y === 2025 && mo >= 7) || y === 2026) {
-        matches2526.push(m);
-      }
-      // Saison 2024-2025 : août 2024 à juillet 2025
-      else if((y === 2024 && mo >= 7) || (y === 2025 && mo < 7)) {
-        matches2425.push(m);
-      }
-    });
-    
-    if(matches2526.length) results['2025'] = matches2526;
-    if(matches2425.length) results['2024'] = matches2425;
+  var [data2526, data2425] = await Promise.all([
+    fdFetch('/v4/teams/'+teamId+'/matches?status=FINISHED&season=2025'),
+    fdFetch('/v4/teams/'+teamId+'/matches?status=FINISHED&season=2024')
+  ]);
+
+  if(data2526 && data2526.matches && data2526.matches.length) {
+    results['2025'] = data2526.matches;
+  }
+  if(data2425 && data2425.matches && data2425.matches.length) {
+    results['2024'] = data2425.matches;
   }
   
   var saisons = Object.keys(results).sort().reverse();
