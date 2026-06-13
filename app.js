@@ -202,15 +202,23 @@ function espnToFdMatch(m, ourName, ourFdId) {
   var compName = cname || (type==='LEAGUE' ? 'Championnat' : 'Coupe');
 
   // Déterminer de quel côté est notre équipe (pour domicile/extérieur)
-  var nl = (ourName||'').toLowerCase();
-  var homeLow = (m.homeTeam||'').toLowerCase();
-  var awayLow = (m.awayTeam||'').toLowerCase();
-  var weAreHome = (homeLow.indexOf(nl)>=0 || nl.indexOf(homeLow)>=0);
-  // Si ambigu, comparer qui matche le mieux
-  if(!weAreHome && !(awayLow.indexOf(nl)>=0 || nl.indexOf(awayLow)>=0)) {
-    // fallback : si le nom est plus proche du home
-    weAreHome = homeLow.indexOf(nl.split(' ')[0])>=0;
+  var nl = (ourName||'').toLowerCase().trim();
+  var homeLow = (m.homeTeam||'').toLowerCase().trim();
+  var awayLow = (m.awayTeam||'').toLowerCase().trim();
+  // Score de similarité : combien de mots du nom de l'équipe se retrouvent dans home/away
+  function simScore(teamNameLow, ourLow){
+    if(teamNameLow===ourLow) return 100;
+    if(teamNameLow.indexOf(ourLow)>=0 || ourLow.indexOf(teamNameLow)>=0) return 50;
+    // mots communs significatifs (>3 lettres)
+    var words = ourLow.split(/\s+/).filter(function(w){return w.length>3;});
+    var hits = words.filter(function(w){ return teamNameLow.indexOf(w)>=0; }).length;
+    return hits>0 ? 10*hits : 0;
   }
+  var homeSim = simScore(homeLow, nl);
+  var awaySim = simScore(awayLow, nl);
+  var weAreHome = homeSim >= awaySim && homeSim > 0;
+  // Si aucun des deux ne matche, on garde home par défaut (rare)
+  if(homeSim===0 && awaySim===0) weAreHome = true;
   var homeId = weAreHome ? ourFdId : ('espn_'+(m.homeTeam||'h'));
   var awayId = weAreHome ? ('espn_'+(m.awayTeam||'a')) : ourFdId;
 
@@ -16436,8 +16444,10 @@ async function loadTeamSaisons() {
         espnClubSchedule(nom, 2025),
         espnClubSchedule(nom, 2024)
       ]);
-      if(esp25 && esp25.matches && esp25.matches.length) { results['2025'] = esp25.matches.map(function(mm){ return espnToFdMatch(mm, nom, teamId); }); espnOk = true; }
-      if(esp24 && esp24.matches && esp24.matches.length) { results['2024'] = esp24.matches.map(function(mm){ return espnToFdMatch(mm, nom, teamId); }); espnOk = true; }
+      var espnName25 = (esp25 && esp25.team && esp25.team.name) ? esp25.team.name : nom;
+      var espnName24 = (esp24 && esp24.team && esp24.team.name) ? esp24.team.name : nom;
+      if(esp25 && esp25.matches && esp25.matches.length) { results['2025'] = esp25.matches.map(function(mm){ return espnToFdMatch(mm, espnName25, teamId); }); espnOk = true; }
+      if(esp24 && esp24.matches && esp24.matches.length) { results['2024'] = esp24.matches.map(function(mm){ return espnToFdMatch(mm, espnName24, teamId); }); espnOk = true; }
     } catch(espErr) { /* on tentera football-data */ }
   }
 
