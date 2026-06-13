@@ -178,7 +178,7 @@ async function espnClubSchedule(nom, season) {
 
 
 // Convertir un match ESPN au format football-data (pour renderSaisonsChart)
-function espnToFdMatch(m) {
+function espnToFdMatch(m, ourName, ourFdId) {
   // Déterminer le type de compétition à partir du slug/nom ESPN
   var slug = (m.competition||'').toLowerCase();
   var cname = m.competitionName || '';
@@ -201,12 +201,25 @@ function espnToFdMatch(m) {
   // Nom lisible de la compétition
   var compName = cname || (type==='LEAGUE' ? 'Championnat' : 'Coupe');
 
+  // Déterminer de quel côté est notre équipe (pour domicile/extérieur)
+  var nl = (ourName||'').toLowerCase();
+  var homeLow = (m.homeTeam||'').toLowerCase();
+  var awayLow = (m.awayTeam||'').toLowerCase();
+  var weAreHome = (homeLow.indexOf(nl)>=0 || nl.indexOf(homeLow)>=0);
+  // Si ambigu, comparer qui matche le mieux
+  if(!weAreHome && !(awayLow.indexOf(nl)>=0 || nl.indexOf(awayLow)>=0)) {
+    // fallback : si le nom est plus proche du home
+    weAreHome = homeLow.indexOf(nl.split(' ')[0])>=0;
+  }
+  var homeId = weAreHome ? ourFdId : ('espn_'+(m.homeTeam||'h'));
+  var awayId = weAreHome ? ('espn_'+(m.awayTeam||'a')) : ourFdId;
+
   return {
     utcDate: m.date,
     status: m.completed ? 'FINISHED' : 'SCHEDULED',
     competition: { name: compName, type: type, code: m.competition || '' },
-    homeTeam: { name: m.homeTeam, shortName: m.homeTeam },
-    awayTeam: { name: m.awayTeam, shortName: m.awayTeam },
+    homeTeam: { id: homeId, name: m.homeTeam, shortName: m.homeTeam },
+    awayTeam: { id: awayId, name: m.awayTeam, shortName: m.awayTeam },
     score: {
       fullTime: { home: m.homeScore, away: m.awayScore },
       regularTime: { home: m.homeScore, away: m.awayScore }
@@ -2539,7 +2552,47 @@ function openClub(nom,idx){
 function setUG(nom){var v=prompt('Objectif profit pour '+nom+' (€) :',state.ugoals[nom]||0);if(v!=null&&!isNaN(+v)){state.ugoals[nom]=+v;save();}}
 function closeClub(){Object.values(AC).forEach(function(c){try{c.destroy();}catch(e){}});AC={};$i('detail').style.display='none';$i('t-bilan').style.display='block';}
 function swInner(id,btn){
+  window._currentInnerTab = id; // mémoriser pour le refresh
   if(id==='saisons') setTimeout(loadTeamSaisons, 50);document.querySelectorAll('.itab').forEach(function(t){t.classList.remove('on');});document.querySelectorAll('.ipanel').forEach(function(c){c.classList.remove('on');});if(btn)btn.classList.add('on');$i('ip-'+id).classList.add('on');}
+
+// ── BOUTON REFRESH INTELLIGENT (recharge la vue courante, sans revenir au Mur) ──
+function smartRefresh() {
+  var btn = document.getElementById('smart-refresh-btn');
+  if(btn){ btn.style.transition='transform .5s'; btn.style.transform='rotate(360deg)'; setTimeout(function(){ btn.style.transform='rotate(0deg)'; },500); }
+
+  var detail = document.getElementById('detail');
+  if(detail && detail.style.display !== 'none' && _currentTeam) {
+    var tab = window._currentInnerTab || 'bilan';
+    if(tab==='saisons'){
+      try {
+        var tid=null; for(var k in TEAM_IDS){ if(_currentTeam.toLowerCase().indexOf(k.toLowerCase())>=0||k.toLowerCase().indexOf(_currentTeam.toLowerCase())>=0){tid=TEAM_IDS[k];break;} }
+        if(tid && typeof _saisonsCache!=='undefined' && _saisonsCache) delete _saisonsCache[tid];
+      } catch(e){}
+      if(typeof loadTeamSaisons==='function') loadTeamSaisons();
+    }
+    else if(tab==='compo' && typeof loadTeamCompo==='function') loadTeamCompo();
+    else if(tab==='live' && typeof loadTeamLive==='function') loadTeamLive();
+    else if(tab==='mondial' && typeof loadMondial2026==='function') loadMondial2026();
+    else { if(typeof render==='function') render(); }
+    return;
+  }
+
+  if(typeof render==='function') render();
+  var tb = document.getElementById('t-bilan');
+  if(tb && tb.style.display!=='none'){ if(typeof renderBilanTab==='function') setTimeout(function(){renderBilanTab();renderGlobalCharts();},50); }
+}
+
+function injectRefreshButton() {
+  if(document.getElementById('smart-refresh-btn')) return;
+  var b = document.createElement('button');
+  b.id = 'smart-refresh-btn';
+  b.innerHTML = '🔄';
+  b.title = 'Rafraîchir cette page';
+  b.onclick = smartRefresh;
+  b.style.cssText = 'position:fixed;bottom:80px;right:16px;z-index:9999;width:48px;height:48px;border-radius:50%;border:1px solid rgba(77,132,255,.4);background:rgba(20,26,40,.95);color:#4d84ff;font-size:20px;cursor:pointer;box-shadow:0 4px 14px rgba(0,0,0,.4);display:flex;align-items:center;justify-content:center;';
+  document.body.appendChild(b);
+}
+if(document.readyState==='loading'){ document.addEventListener('DOMContentLoaded', injectRefreshButton); } else { injectRefreshButton(); }
 
 /* ── PARIS ── */
 function pari(isS){
@@ -16381,8 +16434,8 @@ async function loadTeamSaisons() {
         espnClubSchedule(nom, 2025),
         espnClubSchedule(nom, 2024)
       ]);
-      if(esp25 && esp25.matches && esp25.matches.length) results['2025'] = esp25.matches.map(espnToFdMatch);
-      if(esp24 && esp24.matches && esp24.matches.length) results['2024'] = esp24.matches.map(espnToFdMatch);
+      if(esp25 && esp25.matches && esp25.matches.length) results['2025'] = esp25.matches.map(function(mm){ return espnToFdMatch(mm, nom, teamId); });
+      if(esp24 && esp24.matches && esp24.matches.length) results['2024'] = esp24.matches.map(function(mm){ return espnToFdMatch(mm, nom, teamId); });
     } catch(espErr) { /* on tentera football-data */ }
   }
 
