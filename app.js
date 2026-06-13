@@ -2537,7 +2537,7 @@ function openClub(nom,idx){
     :'<div class="empty">Aucun type</div>';
 
   document.querySelectorAll('.itab').forEach(function(t){t.classList.remove('on');});
-  document.querySelectorAll('.ipanel').forEach(function(c){c.classList.remove('on');});
+  document.querySelectorAll('.ipanel').forEach(function(c){c.classList.remove('on');c.style.display='';});
   document.querySelector('.itab').classList.add('on');
   $i('ip-bilan').classList.add('on');
   $i('t-bilan').style.display='none';
@@ -2583,7 +2583,7 @@ function setUG(nom){var v=prompt('Objectif profit pour '+nom+' (€) :',state.ug
 function closeClub(){Object.values(AC).forEach(function(c){try{c.destroy();}catch(e){}});AC={};$i('detail').style.display='none';$i('t-bilan').style.display='block';}
 function swInner(id,btn){
   window._currentInnerTab = id; // mémoriser pour le refresh
-  if(id==='saisons') setTimeout(loadTeamSaisons, 50);document.querySelectorAll('.itab').forEach(function(t){t.classList.remove('on');});document.querySelectorAll('.ipanel').forEach(function(c){c.classList.remove('on');});if(btn)btn.classList.add('on');$i('ip-'+id).classList.add('on');}
+  if(id==='saisons') setTimeout(loadTeamSaisons, 50);document.querySelectorAll('.itab').forEach(function(t){t.classList.remove('on');});document.querySelectorAll('.ipanel').forEach(function(c){c.classList.remove('on');c.style.display='';});if(btn)btn.classList.add('on');$i('ip-'+id).classList.add('on');}
 
 // ── BOUTON REFRESH INTELLIGENT (recharge la vue courante, sans revenir au Mur) ──
 function smartRefresh() {
@@ -2604,7 +2604,19 @@ function smartRefresh() {
     else if(tab==='compo' && typeof loadTeamCompo==='function') loadTeamCompo();
     else if(tab==='live' && typeof loadTeamLive==='function') loadTeamLive();
     else if(tab==='mondial' && typeof loadMondial2026==='function') loadMondial2026();
-    else { if(typeof render==='function') render(); }
+    else if(tab==='liens-equipe' && typeof loadLiensEquipe==='function'){ loadLiensEquipe(); }
+    else {
+      // Bilan / Graphs / Archive / Types : données locales → on ré-ouvre la fiche puis on restaure le sous-onglet (sans revenir au Mur)
+      var _idx = (state && state.u) ? state.u.findIndex(function(x){ return x && x.n===_currentTeam; }) : -1;
+      if(typeof openClub==='function' && _idx>=0){
+        openClub(_currentTeam, _idx);
+        var _t = tab;
+        setTimeout(function(){
+          var _b = document.querySelector('.itab[onclick^="swInner(\''+_t+'\'"]');
+          if(typeof swInner==='function') swInner(_t, _b);
+        }, 80);
+      } else if(typeof render==='function'){ render(); }
+    }
     return;
   }
 
@@ -8644,7 +8656,7 @@ function openClub(nom,idx){
     :'<div class="empty">Aucun type</div>';
 
   document.querySelectorAll('.itab').forEach(function(t){t.classList.remove('on');});
-  document.querySelectorAll('.ipanel').forEach(function(c){c.classList.remove('on');});
+  document.querySelectorAll('.ipanel').forEach(function(c){c.classList.remove('on');c.style.display='';});
   document.querySelector('.itab').classList.add('on');
   $i('ip-bilan').classList.add('on');
   $i('t-bilan').style.display='none';
@@ -8689,7 +8701,7 @@ function openClub(nom,idx){
 function setUG(nom){var v=prompt('Objectif profit pour '+nom+' (€) :',state.ugoals[nom]||0);if(v!=null&&!isNaN(+v)){state.ugoals[nom]=+v;save();}}
 function closeClub(){Object.values(AC).forEach(function(c){try{c.destroy();}catch(e){}});AC={};$i('detail').style.display='none';$i('t-bilan').style.display='block';}
 function swInner(id,btn){
-  if(id==='saisons') setTimeout(loadTeamSaisons, 50);document.querySelectorAll('.itab').forEach(function(t){t.classList.remove('on');});document.querySelectorAll('.ipanel').forEach(function(c){c.classList.remove('on');});if(btn)btn.classList.add('on');$i('ip-'+id).classList.add('on');}
+  if(id==='saisons') setTimeout(loadTeamSaisons, 50);document.querySelectorAll('.itab').forEach(function(t){t.classList.remove('on');});document.querySelectorAll('.ipanel').forEach(function(c){c.classList.remove('on');c.style.display='';});if(btn)btn.classList.add('on');$i('ip-'+id).classList.add('on');}
 
 /* ── PARIS ── */
 function pari(isS){
