@@ -149,11 +149,11 @@ function _espnAmDec(am){ am=parseFloat(am); if(isNaN(am)) return null; var d=am>
 
 // Récupérer résultats + cotes d'un club via ESPN
 // season : année de début de saison (2025 = saison 2025-26). Par défaut saison courante.
-async function espnClubSchedule(nom, season) {
+async function espnClubSchedule(nom, season, leagueSlug) {
   var resolved = await espnResolveTeam(nom);
   if(!resolved) return null;
   try {
-    var schedPath = '/apis/site/v2/sports/soccer/'+resolved.league+'/teams/'+resolved.id+'/schedule';
+    var schedPath = '/apis/site/v2/sports/soccer/'+(leagueSlug||resolved.league)+'/teams/'+resolved.id+'/schedule';
     if(season) schedPath += '?season='+season;
     var r = await fetch(FD_PROXY+'?host=espn&path='+encodeURIComponent(schedPath));
     var d = await r.json();
@@ -188,7 +188,7 @@ async function espnClubSchedule(nom, season) {
         homeTeam: home.team ? home.team.displayName : '?',
         awayTeam: away.team ? away.team.displayName : '?',
         homeScore: hS, awayScore: aS,
-        competition: (e.season && e.season.slug) ? e.season.slug : (resolved.league),
+        competition: (e.season && e.season.slug) ? e.season.slug : (leagueSlug||resolved.league),
         competitionName: (e.season && e.season.name) ? e.season.name : '',
         odds: odds,
         venue: (comp.venue && comp.venue.fullName) ? comp.venue.fullName : ''
@@ -16670,6 +16670,7 @@ async function loadTeamSaisons() {
   var results = {};
 
   var espnOk = false;
+  var espnEuroYears = {}; // année -> true si ESPN a fourni les résultats d'Europe (C1/Europa/Conf)
 
   // ── 1) ESPN : championnat (avec cotes) ──
   if(espnLeagueOf(nom)) {
@@ -16702,6 +16703,23 @@ async function loadTeamSaisons() {
       var keyA = String(yA), keyB = String(yB);
       if(espA && espA.matches && espA.matches.length) { results[keyA] = espA.matches.map(function(mm){ return espnToFdMatch(mm, espNameA, teamId); }); espnOk = true; }
       if(espB && espB.matches && espB.matches.length) { results[keyB] = espB.matches.map(function(mm){ return espnToFdMatch(mm, espNameB, teamId); }); espnOk = true; }
+
+      // ── 1b) ESPN : Europe d'abord (C1 → Europa → Conference, auto-détectée par année) ──
+      var _euroSlugs = ['uefa.champions','uefa.europa','uefa.europa.conf'];
+      for(var _yi=0; _yi<2; _yi++){
+        var _yr = (_yi===0)?yA:yB; var _key = String(_yr);
+        for(var _es=0; _es<_euroSlugs.length; _es++){
+          try {
+            var _euro = await espnClubSchedule(nom, _yr, _euroSlugs[_es]);
+            if(_euro && _euro.matches && _euro.matches.length){
+              var _nm = (_euro.team && _euro.team.name) ? _euro.team.name : nom;
+              results[_key] = (results[_key]||[]).concat(_euro.matches.map(function(mm){ return espnToFdMatch(mm, _nm, teamId); }));
+              espnEuroYears[_key] = true; espnOk = true;
+              break; // coupe d'Europe trouvée pour cette année
+            }
+          } catch(_e){}
+        }
+      }
     } catch(espErr) { /* on tentera football-data */ }
   }
 
@@ -16725,7 +16743,15 @@ async function loadTeamSaisons() {
           var yr = keys[ki];
           var data = await fdFetch('/v4/teams/'+teamId+'/matches?status=FINISHED&season='+yr);
           if(data && data.matches && data.matches.length){
-            var cups = data.matches.filter(function(m){ return m.competition && m.competition.type === 'CUP'; });
+            var cups = data.matches.filter(function(m){
+              if(!(m.competition && m.competition.type === 'CUP')) return false;
+              // Europe déjà fournie par ESPN cette année → on exclut les coupes d'Europe de football-data (anti-doublon), on garde les coupes domestiques
+              if(espnEuroYears[yr]){
+                var _cc=(m.competition.code||''), _cn=(m.competition.name||'').toLowerCase();
+                if(['CL','EL','ECL','UCL','UEL','UECL'].indexOf(_cc)>=0 || _cn.indexOf('champions')>=0 || _cn.indexOf('europa')>=0 || _cn.indexOf('conference')>=0) return false;
+              }
+              return true;
+            });
             if(cups.length){
               results[yr] = (results[yr]||[]).concat(cups);
               _saisonsCache[teamId] = results;
