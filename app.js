@@ -16440,14 +16440,25 @@ async function loadTeamSaisons() {
   // ── 1) ESPN : championnat (avec cotes) ──
   if(espnLeagueOf(nom)) {
     try {
-      var [esp25, esp24] = await Promise.all([
-        espnClubSchedule(nom, 2025),
-        espnClubSchedule(nom, 2024)
+      // Championnats en ANNÉE CIVILE (jan→déc) : Brésil, MLS, pays nordiques...
+      // → la saison "en cours" porte l'année courante. On charge [2026, 2025].
+      // Championnats à cheval (Europe, août→mai) → on charge [2025, 2024].
+      var lg = espnLeagueOf(nom) || '';
+      var calendarYearLeagues = ['bra.1','usa.1','nor.1','swe.1','fin.1','irl.1','rus.1','jpn.1','kor.1'];
+      var isCalYear = calendarYearLeagues.indexOf(lg) >= 0;
+      var yA = isCalYear ? 2026 : 2025; // saison récente
+      var yB = isCalYear ? 2025 : 2024; // saison précédente
+
+      var [espA, espB] = await Promise.all([
+        espnClubSchedule(nom, yA),
+        espnClubSchedule(nom, yB)
       ]);
-      var espnName25 = (esp25 && esp25.team && esp25.team.name) ? esp25.team.name : nom;
-      var espnName24 = (esp24 && esp24.team && esp24.team.name) ? esp24.team.name : nom;
-      if(esp25 && esp25.matches && esp25.matches.length) { results['2025'] = esp25.matches.map(function(mm){ return espnToFdMatch(mm, espnName25, teamId); }); espnOk = true; }
-      if(esp24 && esp24.matches && esp24.matches.length) { results['2024'] = esp24.matches.map(function(mm){ return espnToFdMatch(mm, espnName24, teamId); }); espnOk = true; }
+      var espNameA = (espA && espA.team && espA.team.name) ? espA.team.name : nom;
+      var espNameB = (espB && espB.team && espB.team.name) ? espB.team.name : nom;
+      // Clé de résultat = année de la saison récente / précédente
+      var keyA = String(yA), keyB = String(yB);
+      if(espA && espA.matches && espA.matches.length) { results[keyA] = espA.matches.map(function(mm){ return espnToFdMatch(mm, espNameA, teamId); }); espnOk = true; }
+      if(espB && espB.matches && espB.matches.length) { results[keyB] = espB.matches.map(function(mm){ return espnToFdMatch(mm, espNameB, teamId); }); espnOk = true; }
     } catch(espErr) { /* on tentera football-data */ }
   }
 
@@ -16849,7 +16860,12 @@ function renderSaisonsChart(el, results, nom) {
 
     html += '<div class="cwrap" style="margin-bottom:12px;">';
     html += '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">';
-    html += '<div style="font-size:13px;font-weight:800;color:var(--t1);">Saison '+s+'-'+(parseInt(s)+1)+'</div>';
+    // Libellé saison : championnats en année civile (Brésil, MLS...) → "Saison 2026" ; sinon "2025-2026"
+    var _calLeagues = ['bra.1','usa.1','nor.1','swe.1','fin.1','irl.1','rus.1','jpn.1','kor.1'];
+    var _lgCode = (matches[0] && matches[0].competition && matches[0].competition.code) ? matches[0].competition.code : '';
+    var _isCal = _calLeagues.indexOf(_lgCode) >= 0;
+    var _saisonLabel = _isCal ? ('Saison '+s) : ('Saison '+s+'-'+(parseInt(s)+1));
+    html += '<div style="font-size:13px;font-weight:800;color:var(--t1);">'+_saisonLabel+'</div>';
     html += '<div style="font-size:10px;color:var(--t3);">'+st.n+' matchs'+(stC?' · '+champMatches.length+' champ.':'')+'</div>';
     html += '</div>';
     // Sélecteur stats rapides
