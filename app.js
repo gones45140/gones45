@@ -16462,29 +16462,49 @@ async function loadTeamSaisons() {
     } catch(espErr) { /* on tentera football-data */ }
   }
 
-  // ── 2) football-data ──
-  // Si ESPN OK : on complète UNIQUEMENT avec les coupes (Europe + nationales), car ESPN ne donne que le championnat.
-  // Si ESPN KO : football-data en fallback total.
-  try {
-    var [data2526, data2425] = await Promise.all([
-      fdFetch('/v4/teams/'+teamId+'/matches?status=FINISHED&season=2025'),
-      fdFetch('/v4/teams/'+teamId+'/matches?status=FINISHED&season=2024')
-    ]);
-    [['2025',data2526],['2024',data2425]].forEach(function(pair){
-      var sy = pair[0], data = pair[1];
-      if(!data || !data.matches || !data.matches.length) return;
-      if(espnOk) {
-        // Ne garder QUE les coupes (type CUP) pour compléter l'Europe
-        var cups = data.matches.filter(function(m){ return m.competition && m.competition.type === 'CUP'; });
-        if(cups.length) {
-          results[sy] = (results[sy]||[]).concat(cups);
+  // ── 2) football-data (pour les coupes d'Europe que ESPN ne fournit pas) ──
+  // Championnats SANS coupe d'Europe gérée par football-data → on saute (Brésil, MLS, nordiques...).
+  var lgNow = espnLeagueOf(nom) || '';
+  var noEuropeLeagues = ['bra.1','usa.1','nor.1','swe.1','fin.1','irl.1','rus.1','jpn.1','kor.1'];
+  var skipFd = espnOk && noEuropeLeagues.indexOf(lgNow) >= 0;
+
+  if(espnOk && !skipFd) {
+    // ESPN OK : afficher d'abord ESPN, compléter les coupes en arrière-plan (non bloquant)
+    _saisonsCache[teamId] = results;
+    renderSaisonsChart(el, results, nom);
+
+    // Compléter avec les coupes football-data SANS bloquer (years alignées sur ESPN)
+    var keys = Object.keys(results);
+    (async function(){
+      try {
+        for(var ki=0; ki<keys.length; ki++){
+          var yr = keys[ki];
+          var data = await fdFetch('/v4/teams/'+teamId+'/matches?status=FINISHED&season='+yr);
+          if(data && data.matches && data.matches.length){
+            var cups = data.matches.filter(function(m){ return m.competition && m.competition.type === 'CUP'; });
+            if(cups.length){
+              results[yr] = (results[yr]||[]).concat(cups);
+              _saisonsCache[teamId] = results;
+              renderSaisonsChart(el, results, nom); // re-render avec les coupes
+            }
+          }
         }
-      } else {
-        // ESPN a échoué → football-data complet
-        results[sy] = data.matches;
-      }
-    });
-  } catch(fdErr) { /* ESPN seul si football-data échoue */ }
+      } catch(e){ /* coupes non chargées, pas grave */ }
+    })();
+    return; // on a déjà affiché ESPN
+  }
+
+  if(!espnOk) {
+    // ESPN KO → football-data en fallback complet
+    try {
+      var [data2526, data2425] = await Promise.all([
+        fdFetch('/v4/teams/'+teamId+'/matches?status=FINISHED&season=2025'),
+        fdFetch('/v4/teams/'+teamId+'/matches?status=FINISHED&season=2024')
+      ]);
+      if(data2526 && data2526.matches && data2526.matches.length) results['2025'] = data2526.matches;
+      if(data2425 && data2425.matches && data2425.matches.length) results['2024'] = data2425.matches;
+    } catch(fdErr) {}
+  }
   
   var saisons = Object.keys(results).sort().reverse();
 
