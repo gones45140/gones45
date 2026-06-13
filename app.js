@@ -42,179 +42,6 @@ var TEAM_IDS = {
 var _currentUnitNom = "";
 var _unitType = "club";
 
-/* ══════════════ COUCHE ESPN SOCCER (clubs) ══════════════ */
-/* ESPN = source principale (gratuit, sans clé, cotes incluses). football-data = secondaire (fallback). */
-
-// Championnat ESPN (slug) de chaque équipe favorite
-var ESPN_TEAM_LEAGUE = {
-  // Ligue 1
-  'Lyon':'fra.1','Olympique Lyonnais':'fra.1','OL':'fra.1',
-  'Marseille':'fra.1','Olympique de Marseille':'fra.1','OM':'fra.1',
-  'PSG':'fra.1','Paris Saint-Germain':'fra.1','Paris SG':'fra.1',
-  'Monaco':'fra.1','AS Monaco':'fra.1','Lens':'fra.1','RC Lens':'fra.1',
-  'Nice':'fra.1','OGC Nice':'fra.1','Rennes':'fra.1','Stade Rennais':'fra.1',
-  'Lille':'fra.1','LOSC':'fra.1',
-  // Premier League
-  'Manchester City':'eng.1','Man City':'eng.1','Manchester United':'eng.1','Man United':'eng.1',
-  'Liverpool':'eng.1','Liverpool FC':'eng.1','Arsenal':'eng.1','Arsenal FC':'eng.1',
-  'Chelsea':'eng.1','Chelsea FC':'eng.1','Tottenham':'eng.1','Spurs':'eng.1',
-  // Liga
-  'Real Madrid':'esp.1','Real Madrid CF':'esp.1','FC Barcelona':'esp.1','Barcelona':'esp.1','Barça':'esp.1',
-  'Atletico Madrid':'esp.1','Atletico':'esp.1','Sevilla':'esp.1','FC Sevilla':'esp.1',
-  'Villarreal':'esp.1','Villarreal CF':'esp.1',
-  // Serie A
-  'Juventus':'ita.1','Juve':'ita.1','Inter Milan':'ita.1','Inter':'ita.1','Internazionale':'ita.1',
-  'AC Milan':'ita.1','Milan':'ita.1','Napoli':'ita.1','SSC Napoli':'ita.1',
-  'Roma':'ita.1','AS Roma':'ita.1','Lazio':'ita.1','SS Lazio':'ita.1',
-  // Bundesliga
-  'Bayern Munich':'ger.1','Bayern München':'ger.1','FC Bayern':'ger.1',
-  'Borussia Dortmund':'ger.1','BVB':'ger.1','Bayer Leverkusen':'ger.1','Leverkusen':'ger.1',
-  'RB Leipzig':'ger.1','Leipzig':'ger.1','Borussia Mönchengladbach':'ger.1',
-  'Eintracht Frankfurt':'ger.1','Freiburg':'ger.1','SC Freiburg':'ger.1',
-  'Wolfsburg':'ger.1','VfL Wolfsburg':'ger.1','Stuttgart':'ger.1','VfB Stuttgart':'ger.1',
-  // Autres
-  'Benfica':'por.1','SL Benfica':'por.1','Porto':'por.1','FC Porto':'por.1',
-  'Ajax':'ned.1','AFC Ajax':'ned.1','PSV':'ned.1','PSV Eindhoven':'ned.1',
-  'Palmeiras':'bra.1','SE Palmeiras':'bra.1'
-};
-
-// Cache des listes d'équipes par championnat (pour résoudre les IDs ESPN)
-var _espnTeamsCache = {};
-
-function espnLeagueOf(nom) {
-  if(ESPN_TEAM_LEAGUE[nom]) return ESPN_TEAM_LEAGUE[nom];
-  var low = (nom||'').toLowerCase();
-  for(var k in ESPN_TEAM_LEAGUE){ if(low.indexOf(k.toLowerCase())>=0 || k.toLowerCase().indexOf(low)>=0) return ESPN_TEAM_LEAGUE[k]; }
-  return null;
-}
-
-// Résoudre l'ID ESPN d'une équipe via la liste des équipes de son championnat
-async function espnResolveTeam(nom) {
-  var league = espnLeagueOf(nom);
-  if(!league) return null;
-
-  if(!_espnTeamsCache[league]) {
-    try {
-      var r = await fetch(FD_PROXY+'?host=espn&path='+encodeURIComponent('/apis/site/v2/sports/soccer/'+league+'/teams'));
-      var d = await r.json();
-      var list = (d.sports && d.sports[0] && d.sports[0].leagues && d.sports[0].leagues[0] && d.sports[0].leagues[0].teams) ? d.sports[0].leagues[0].teams : [];
-      _espnTeamsCache[league] = list.map(function(t){ return t.team; });
-    } catch(e) { return null; }
-  }
-
-  var teams = _espnTeamsCache[league] || [];
-  var low = (nom||'').toLowerCase();
-  // Match par displayName / name / shortDisplayName / abbreviation
-  var best = null;
-  for(var i=0;i<teams.length;i++){
-    var t = teams[i];
-    var cands = [t.displayName, t.name, t.shortDisplayName, t.location, t.abbreviation].filter(Boolean).map(function(x){return x.toLowerCase();});
-    if(cands.indexOf(low)>=0) { best = t; break; }
-  }
-  // Match partiel si pas de match exact
-  if(!best){
-    for(var j=0;j<teams.length;j++){
-      var t2 = teams[j];
-      var cands2 = [t2.displayName, t2.name, t2.shortDisplayName, t2.location].filter(Boolean).map(function(x){return x.toLowerCase();});
-      if(cands2.some(function(c){ return c.indexOf(low)>=0 || low.indexOf(c)>=0; })) { best = t2; break; }
-    }
-  }
-  return best ? {id:best.id, league:league, name:best.displayName, logo:(best.logos&&best.logos[0]&&best.logos[0].href)||''} : null;
-}
-
-// Convertir cote américaine → décimale (réutilise americanToDecimal si déjà défini plus bas)
-function _espnAmDec(am){ am=parseFloat(am); if(isNaN(am)) return null; var d=am>0?(am/100+1):(100/Math.abs(am)+1); return d.toFixed(2); }
-
-// Récupérer résultats + cotes d'un club via ESPN
-// season : année de début de saison (2025 = saison 2025-26). Par défaut saison courante.
-async function espnClubSchedule(nom, season) {
-  var resolved = await espnResolveTeam(nom);
-  if(!resolved) return null;
-  try {
-    var schedPath = '/apis/site/v2/sports/soccer/'+resolved.league+'/teams/'+resolved.id+'/schedule';
-    if(season) schedPath += '?season='+season;
-    var r = await fetch(FD_PROXY+'?host=espn&path='+encodeURIComponent(schedPath));
-    var d = await r.json();
-    var events = d.events || [];
-    var matches = events.map(function(e){
-      var comp = (e.competitions && e.competitions[0]) ? e.competitions[0] : null;
-      if(!comp) return null;
-      var home = comp.competitors.find(function(c){return c.homeAway==='home';}) || comp.competitors[0];
-      var away = comp.competitors.find(function(c){return c.homeAway==='away';}) || comp.competitors[1];
-      var st = comp.status && comp.status.type ? comp.status.type : {};
-      var completed = !!st.completed;
-      var hS = home.score ? parseInt(home.score.value!==undefined?home.score.value:home.score) : null;
-      var aS = away.score ? parseInt(away.score.value!==undefined?away.score.value:away.score) : null;
-      // Cotes
-      var odds=null;
-      try {
-        if(comp.odds && comp.odds.length && comp.odds[0]){
-          var o=comp.odds[0], mlo=o.moneyline||{};
-          var ho=(mlo.home&&mlo.home.close&&mlo.home.close.odds!=null)?mlo.home.close.odds:null;
-          var ao=(mlo.away&&mlo.away.close&&mlo.away.close.odds!=null)?mlo.away.close.odds:null;
-          var dr=(mlo.draw&&mlo.draw.close&&mlo.draw.close.odds!=null)?mlo.draw.close.odds:((o.drawOdds&&o.drawOdds.moneyLine!=null)?o.drawOdds.moneyLine:null);
-          var ov=(o.total&&o.total.over&&o.total.over.close&&o.total.over.close.odds!=null)?o.total.over.close.odds:null;
-          var un=(o.total&&o.total.under&&o.total.under.close&&o.total.under.close.odds!=null)?o.total.under.close.odds:null;
-          var rl=(o.total&&o.total.over&&o.total.over.close&&o.total.over.close.line!=null)?o.total.over.close.line:(o.overUnder!=null?o.overUnder:null);
-          var ouL=(rl!=null)?String(rl).replace(/^[ou]/i,''):null;
-          if(ho!=null||ao!=null||dr!=null||ov!=null) odds={home:_espnAmDec(ho),away:_espnAmDec(ao),draw:_espnAmDec(dr),over:_espnAmDec(ov),under:_espnAmDec(un),ouLine:ouL};
-        }
-      } catch(oe){ odds=null; }
-      return {
-        date: e.date,
-        completed: completed,
-        homeTeam: home.team ? home.team.displayName : '?',
-        awayTeam: away.team ? away.team.displayName : '?',
-        homeScore: hS, awayScore: aS,
-        competition: (e.season && e.season.slug) ? e.season.slug : (resolved.league),
-        competitionName: (e.season && e.season.name) ? e.season.name : '',
-        odds: odds,
-        venue: (comp.venue && comp.venue.fullName) ? comp.venue.fullName : ''
-      };
-    }).filter(Boolean);
-    return {team:resolved, matches:matches};
-  } catch(e) { return null; }
-}
-
-
-// Convertir un match ESPN au format football-data (pour renderSaisonsChart)
-function espnToFdMatch(m) {
-  // Déterminer le type de compétition à partir du slug/nom ESPN
-  var slug = (m.competition||'').toLowerCase();
-  var cname = m.competitionName || '';
-  var type = 'LEAGUE';
-  // Slugs de championnats nationaux : fra.1, eng.1, ita.1, esp.1, ger.1, por.1, ned.1, bra.1...
-  var isLeague = /\.(1|2)$/.test(slug) || slug.indexOf('league')>=0;
-  // Coupes d'Europe
-  if(slug.indexOf('uefa')>=0 || slug.indexOf('champions')>=0 || slug.indexOf('europa')>=0 || slug.indexOf('conference')>=0 ||
-     cname.indexOf('Champions')>=0 || cname.indexOf('Europa')>=0 || cname.indexOf('UEFA')>=0 || cname.indexOf('Conference')>=0) {
-    type = 'CUP';
-  } else if(slug.indexOf('cup')>=0 || slug.indexOf('coupe')>=0 || slug.indexOf('copa')>=0 || slug.indexOf('dfb')>=0 ||
-            cname.indexOf('Cup')>=0 || cname.indexOf('Coupe')>=0 || cname.indexOf('Copa')>=0) {
-    type = 'CUP';
-  } else if(isLeague) {
-    type = 'LEAGUE';
-  } else {
-    type = 'LEAGUE'; // par défaut championnat (slugs nationaux)
-  }
-
-  // Nom lisible de la compétition
-  var compName = cname || (type==='LEAGUE' ? 'Championnat' : 'Coupe');
-
-  return {
-    utcDate: m.date,
-    status: m.completed ? 'FINISHED' : 'SCHEDULED',
-    competition: { name: compName, type: type, code: m.competition || '' },
-    homeTeam: { name: m.homeTeam, shortName: m.homeTeam },
-    awayTeam: { name: m.awayTeam, shortName: m.awayTeam },
-    score: {
-      fullTime: { home: m.homeScore, away: m.awayScore },
-      regularTime: { home: m.homeScore, away: m.awayScore }
-    },
-    odds: m.odds || null
-  };
-}
-
 /* ── SAISONS ── */
 var _currentSaison = localStorage.getItem('g45_saison_active') || '2526';
 var SAISONS = [{id:'2526',label:'2025/26'},{id:'2627',label:'2026/27'}];
@@ -16370,30 +16197,19 @@ async function loadTeamSaisons() {
   el.innerHTML = '<div style="display:flex;align-items:center;gap:10px;padding:20px;color:var(--t3);"><div style="width:16px;height:16px;border:2px solid rgba(77,132,255,.2);border-top-color:#4d84ff;border-radius:50%;animation:spin .8s linear infinite;"></div>Chargement des 2 dernières saisons...</div>';
 
   // Charger saison en cours + saison précédente
-  // PRINCIPAL: ESPN (gratuit, sans clé, cotes incluses, accessible à tous).
-  // SECONDAIRE: football-data (fallback si ESPN ne couvre pas l'équipe).
+  // IMPORTANT: football-data limite aux coupes si on ne précise PAS season.
+  // → on demande explicitement chaque saison (renvoie alors championnat + coupes).
   var results = {};
+  var [data2526, data2425] = await Promise.all([
+    fdFetch('/v4/teams/'+teamId+'/matches?status=FINISHED&season=2025'),
+    fdFetch('/v4/teams/'+teamId+'/matches?status=FINISHED&season=2024')
+  ]);
 
-  // ── 1) Tentative ESPN ──
-  if(espnLeagueOf(nom)) {
-    try {
-      var [esp25, esp24] = await Promise.all([
-        espnClubSchedule(nom, 2025),
-        espnClubSchedule(nom, 2024)
-      ]);
-      if(esp25 && esp25.matches && esp25.matches.length) results['2025'] = esp25.matches.map(espnToFdMatch);
-      if(esp24 && esp24.matches && esp24.matches.length) results['2024'] = esp24.matches.map(espnToFdMatch);
-    } catch(espErr) { /* on tentera football-data */ }
+  if(data2526 && data2526.matches && data2526.matches.length) {
+    results['2025'] = data2526.matches;
   }
-
-  // ── 2) Fallback football-data si ESPN n'a rien donné ──
-  if(!Object.keys(results).length) {
-    var [data2526, data2425] = await Promise.all([
-      fdFetch('/v4/teams/'+teamId+'/matches?status=FINISHED&season=2025'),
-      fdFetch('/v4/teams/'+teamId+'/matches?status=FINISHED&season=2024')
-    ]);
-    if(data2526 && data2526.matches && data2526.matches.length) results['2025'] = data2526.matches;
-    if(data2425 && data2425.matches && data2425.matches.length) results['2024'] = data2425.matches;
+  if(data2425 && data2425.matches && data2425.matches.length) {
+    results['2024'] = data2425.matches;
   }
   
   var saisons = Object.keys(results).sort().reverse();
