@@ -93,6 +93,13 @@ async function espnResolveTeam(nom) {
   var league = espnLeagueOf(nom);
   if(!league) return null;
 
+  // Cache persistant des IDs ESPN (localStorage)
+  try {
+    var idCacheKey = 'espn_teamid_'+league+'_'+(nom||'').toLowerCase().replace(/\s+/g,'_');
+    var cachedId = localStorage.getItem(idCacheKey);
+    if(cachedId) { var ci = JSON.parse(cachedId); if(ci && ci.id) return ci; }
+  } catch(e){}
+
   if(!_espnTeamsCache[league]) {
     try {
       var r = await fetch(FD_PROXY+'?host=espn&path='+encodeURIComponent('/apis/site/v2/sports/soccer/'+league+'/teams'));
@@ -119,7 +126,9 @@ async function espnResolveTeam(nom) {
       if(cands2.some(function(c){ return c.indexOf(low)>=0 || low.indexOf(c)>=0; })) { best = t2; break; }
     }
   }
-  return best ? {id:best.id, league:league, name:best.displayName, logo:(best.logos&&best.logos[0]&&best.logos[0].href)||''} : null;
+  var resolvedObj = best ? {id:best.id, league:league, name:best.displayName, logo:(best.logos&&best.logos[0]&&best.logos[0].href)||''} : null;
+  if(resolvedObj){ try { localStorage.setItem('espn_teamid_'+league+'_'+(nom||'').toLowerCase().replace(/\s+/g,'_'), JSON.stringify(resolvedObj)); } catch(e){} }
+  return resolvedObj;
 }
 
 // Convertir cote américaine → décimale (réutilise americanToDecimal si déjà défini plus bas)
@@ -2575,6 +2584,7 @@ function smartRefresh() {
       try {
         var tid=null; for(var k in TEAM_IDS){ if(_currentTeam.toLowerCase().indexOf(k.toLowerCase())>=0||k.toLowerCase().indexOf(_currentTeam.toLowerCase())>=0){tid=TEAM_IDS[k];break;} }
         if(tid && typeof _saisonsCache!=='undefined' && _saisonsCache) delete _saisonsCache[tid];
+        if(tid) localStorage.removeItem('g45_saisons_cache_'+tid); // forcer un vrai refresh
       } catch(e){}
       if(typeof loadTeamSaisons==='function') loadTeamSaisons();
     }
@@ -16425,8 +16435,22 @@ async function loadTeamSaisons() {
     return;
   }
 
-  // Cache
+  // Cache mémoire (session courante)
   if(_saisonsCache[teamId]) { renderSaisonsChart(el, _saisonsCache[teamId], nom); return; }
+
+  // Cache localStorage (1h) — accélère les équipes déjà consultées
+  try {
+    var lsCacheKey = 'g45_saisons_cache_'+teamId;
+    var lsRaw = localStorage.getItem(lsCacheKey);
+    if(lsRaw){
+      var lsObj = JSON.parse(lsRaw);
+      if(lsObj && lsObj.ts && (Date.now()-lsObj.ts < 3600000) && lsObj.data){ // < 1h
+        _saisonsCache[teamId] = lsObj.data;
+        renderSaisonsChart(el, lsObj.data, nom);
+        return;
+      }
+    }
+  } catch(e){}
 
   el.innerHTML = '<div style="display:flex;align-items:center;gap:10px;padding:20px;color:var(--t3);"><div style="width:16px;height:16px;border:2px solid rgba(77,132,255,.2);border-top-color:#4d84ff;border-radius:50%;animation:spin .8s linear infinite;"></div>Chargement des 2 dernières saisons...</div>';
 
@@ -16471,6 +16495,7 @@ async function loadTeamSaisons() {
   if(espnOk && !skipFd) {
     // ESPN OK : afficher d'abord ESPN, compléter les coupes en arrière-plan (non bloquant)
     _saisonsCache[teamId] = results;
+    try { localStorage.setItem('g45_saisons_cache_'+teamId, JSON.stringify({ts:Date.now(), data:results})); } catch(e){}
     renderSaisonsChart(el, results, nom);
 
     // Compléter avec les coupes football-data SANS bloquer (years alignées sur ESPN)
@@ -16485,6 +16510,7 @@ async function loadTeamSaisons() {
             if(cups.length){
               results[yr] = (results[yr]||[]).concat(cups);
               _saisonsCache[teamId] = results;
+              try { localStorage.setItem('g45_saisons_cache_'+teamId, JSON.stringify({ts:Date.now(), data:results})); } catch(e){}
               renderSaisonsChart(el, results, nom); // re-render avec les coupes
             }
           }
@@ -16524,6 +16550,7 @@ async function loadTeamSaisons() {
   }
 
   _saisonsCache[teamId] = results;
+  try { localStorage.setItem('g45_saisons_cache_'+teamId, JSON.stringify({ts:Date.now(), data:results})); } catch(e){}
   renderSaisonsChart(el, results, nom);
 }
 
