@@ -16464,14 +16464,23 @@ async function loadTeamSaisons() {
   // ── 1) ESPN : championnat (avec cotes) ──
   if(espnLeagueOf(nom)) {
     try {
-      // Championnats en ANNÉE CIVILE (jan→déc) : Brésil, MLS, pays nordiques...
-      // → la saison "en cours" porte l'année courante. On charge [2026, 2025].
-      // Championnats à cheval (Europe, août→mai) → on charge [2025, 2024].
+      // Calcul AUTOMATIQUE des saisons à charger selon la date du jour (aucune maintenance annuelle).
       var lg = espnLeagueOf(nom) || '';
       var calendarYearLeagues = ['bra.1','usa.1','nor.1','swe.1','fin.1','irl.1','rus.1','jpn.1','kor.1'];
       var isCalYear = calendarYearLeagues.indexOf(lg) >= 0;
-      var yA = isCalYear ? 2026 : 2025; // saison récente
-      var yB = isCalYear ? 2025 : 2024; // saison précédente
+      var now = new Date();
+      var curY = now.getFullYear();
+      var curMonth = now.getMonth() + 1; // 1-12
+      var yA, yB;
+      if(isCalYear){
+        // Année civile (jan→déc) : saison en cours = année courante
+        yA = curY; yB = curY - 1;
+      } else {
+        // Europe (août→mai) : à partir d'août, la saison en cours porte l'année courante.
+        // Avant août (jan→juil), on est encore dans la saison qui a démarré l'année précédente.
+        var seasonStartY = (curMonth >= 8) ? curY : curY - 1;
+        yA = seasonStartY; yB = seasonStartY - 1;
+      }
 
       var [espA, espB] = await Promise.all([
         espnClubSchedule(nom, yA),
@@ -16521,14 +16530,17 @@ async function loadTeamSaisons() {
   }
 
   if(!espnOk) {
-    // ESPN KO → football-data en fallback complet
+    // ESPN KO → football-data en fallback complet (années calculées auto)
     try {
-      var [data2526, data2425] = await Promise.all([
-        fdFetch('/v4/teams/'+teamId+'/matches?status=FINISHED&season=2025'),
-        fdFetch('/v4/teams/'+teamId+'/matches?status=FINISHED&season=2024')
+      var _now = new Date(), _cy = _now.getFullYear(), _cm = _now.getMonth()+1;
+      var _sA = (_cm >= 8) ? _cy : _cy - 1; // saison en cours (Europe)
+      var _sB = _sA - 1;
+      var [dataA, dataB] = await Promise.all([
+        fdFetch('/v4/teams/'+teamId+'/matches?status=FINISHED&season='+_sA),
+        fdFetch('/v4/teams/'+teamId+'/matches?status=FINISHED&season='+_sB)
       ]);
-      if(data2526 && data2526.matches && data2526.matches.length) results['2025'] = data2526.matches;
-      if(data2425 && data2425.matches && data2425.matches.length) results['2024'] = data2425.matches;
+      if(dataA && dataA.matches && dataA.matches.length) results[String(_sA)] = dataA.matches;
+      if(dataB && dataB.matches && dataB.matches.length) results[String(_sB)] = dataB.matches;
     } catch(fdErr) {}
   }
   
