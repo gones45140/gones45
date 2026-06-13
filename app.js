@@ -16427,27 +16427,43 @@ async function loadTeamSaisons() {
   // SECONDAIRE: football-data (fallback si ESPN ne couvre pas l'équipe).
   var results = {};
 
-  // ── 1) Tentative ESPN ──
+  var espnOk = false;
+
+  // ── 1) ESPN : championnat (avec cotes) ──
   if(espnLeagueOf(nom)) {
     try {
       var [esp25, esp24] = await Promise.all([
         espnClubSchedule(nom, 2025),
         espnClubSchedule(nom, 2024)
       ]);
-      if(esp25 && esp25.matches && esp25.matches.length) results['2025'] = esp25.matches.map(function(mm){ return espnToFdMatch(mm, nom, teamId); });
-      if(esp24 && esp24.matches && esp24.matches.length) results['2024'] = esp24.matches.map(function(mm){ return espnToFdMatch(mm, nom, teamId); });
+      if(esp25 && esp25.matches && esp25.matches.length) { results['2025'] = esp25.matches.map(function(mm){ return espnToFdMatch(mm, nom, teamId); }); espnOk = true; }
+      if(esp24 && esp24.matches && esp24.matches.length) { results['2024'] = esp24.matches.map(function(mm){ return espnToFdMatch(mm, nom, teamId); }); espnOk = true; }
     } catch(espErr) { /* on tentera football-data */ }
   }
 
-  // ── 2) Fallback football-data si ESPN n'a rien donné ──
-  if(!Object.keys(results).length) {
+  // ── 2) football-data ──
+  // Si ESPN OK : on complète UNIQUEMENT avec les coupes (Europe + nationales), car ESPN ne donne que le championnat.
+  // Si ESPN KO : football-data en fallback total.
+  try {
     var [data2526, data2425] = await Promise.all([
       fdFetch('/v4/teams/'+teamId+'/matches?status=FINISHED&season=2025'),
       fdFetch('/v4/teams/'+teamId+'/matches?status=FINISHED&season=2024')
     ]);
-    if(data2526 && data2526.matches && data2526.matches.length) results['2025'] = data2526.matches;
-    if(data2425 && data2425.matches && data2425.matches.length) results['2024'] = data2425.matches;
-  }
+    [['2025',data2526],['2024',data2425]].forEach(function(pair){
+      var sy = pair[0], data = pair[1];
+      if(!data || !data.matches || !data.matches.length) return;
+      if(espnOk) {
+        // Ne garder QUE les coupes (type CUP) pour compléter l'Europe
+        var cups = data.matches.filter(function(m){ return m.competition && m.competition.type === 'CUP'; });
+        if(cups.length) {
+          results[sy] = (results[sy]||[]).concat(cups);
+        }
+      } else {
+        // ESPN a échoué → football-data complet
+        results[sy] = data.matches;
+      }
+    });
+  } catch(fdErr) { /* ESPN seul si football-data échoue */ }
   
   var saisons = Object.keys(results).sort().reverse();
 
