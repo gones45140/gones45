@@ -12659,6 +12659,63 @@ async function autoEspnFillSquad(uid, nom) {
       }));
     }
 
+    // ── Fallback : joueurs de TON effectif absents du roster ESPN (ex. prêts du mercato
+    //    d'hiver qu'ESPN n'a pas encore intégrés à l'équipe). On les cherche via la
+    //    recherche ESPN par nom, puis on récupère leurs stats du championnat.
+    var matchedIds = {}; pairs.forEach(function (p) { if (p.target && p.target.id != null) matchedIds[p.target.id] = 1; });
+    var unmatched = squadData.filter(function (p) { return p && p.id != null && !matchedIds[p.id] && (p.name || p.shortName); });
+    for (var u = 0; u < unmatched.length && u < 25; u++) {
+      var tp = unmatched[u];
+      try {
+        var sr = await fetch('https://site.web.api.espn.com/apis/search/v2?query=' + encodeURIComponent(tp.name || tp.shortName) + '&limit=10&region=us&lang=en');
+        var sj = await sr.json();
+        var cands = [];
+        (sj.results || []).forEach(function (grp) {
+          (grp.contents || []).forEach(function (c) {
+            var uid = c.uid || (c.athlete && c.athlete.uid) || '';
+            var m = /s:600~a:(\d+)/.exec(uid);
+            if (m) cands.push({ id: m[1], name: (c.displayName || c.title || (c.athlete && c.athlete.displayName) || '') });
+          });
+        });
+        if (!cands.length) { // parsing défensif : scanne tout le JSON pour des uid foot
+          var re = /s:600~a:(\d+)/g, mm, seen = {}, str = JSON.stringify(sj);
+          while ((mm = re.exec(str))) { if (!seen[mm[1]]) { seen[mm[1]] = 1; cands.push({ id: mm[1], name: '' }); } }
+        }
+        if (!cands.length) continue;
+        var tn = normName(tp.name || tp.shortName);
+        var pick = cands.find(function (c) { var cn = normName(c.name); return cn && (cn === tn || wordsClose(cn.split(' ').pop() || cn, tn.split(' ').pop() || tn)); }) || cands[0];
+        var stR = await fetch('https://sports.core.api.espn.com/v2/sports/soccer/leagues/' + resolved.league + '/seasons/' + season + '/types/0/athletes/' + pick.id + '/statistics?lang=en&region=us');
+        if (!stR.ok) continue;
+        var stJ = await stR.json(); var map2 = {};
+        (stJ.splits.categories || []).forEach(function (cat) { (cat.stats || []).forEach(function (s) { map2[s.name] = { value: s.value }; }); });
+        if (sv(map2, 'appearances') <= 0) continue; // rien en championnat → on n'écrit pas
+        var posStr = (typeof tp.position === 'string' ? tp.position : (tp.position && (tp.position.abbreviation || tp.position.name))) || '';
+        var gk2 = /^g/i.test(posStr);
+        var mk2 = 'manual_stats_' + saisonKey(keyTeam + '_' + tp.id);
+        var ms2 = {}; try { ms2 = JSON.parse(localStorage.getItem(mk2) || '{}'); } catch (e) {}
+        ms2[savePrefix + '_apps'] = sv(map2, 'appearances');
+        ms2[savePrefix + '_starts'] = sv(map2, 'starts');
+        ms2[savePrefix + '_minutes'] = sv(map2, 'minutes');
+        if (gk2) {
+          ms2[savePrefix + '_ga'] = sv(map2, 'goalsConceded');
+          ms2[savePrefix + '_saves'] = sv(map2, 'saves');
+          ms2[savePrefix + '_cs'] = sv(map2, 'cleanSheet');
+          ms2[savePrefix + '_sota'] = sv(map2, 'shotsFaced');
+        } else {
+          var g2 = sv(map2, 'totalGoals'), pk2 = sv(map2, 'penaltyKickGoals');
+          ms2[savePrefix + '_goals'] = g2;
+          ms2[savePrefix + '_assists'] = sv(map2, 'goalAssists');
+          ms2[savePrefix + '_gpk'] = g2 - pk2;
+          ms2[savePrefix + '_pk'] = pk2;
+          ms2[savePrefix + '_pkatt'] = sv(map2, 'penaltyKickShots');
+          ms2[savePrefix + '_yellow'] = sv(map2, 'yellowCards');
+          ms2[savePrefix + '_red'] = sv(map2, 'redCards');
+        }
+        localStorage.setItem(mk2, JSON.stringify(ms2));
+        updated++;
+      } catch (e) {}
+    }
+
     localStorage.setItem(srcFlag, '1'); // équipe marquée source ESPN (rafraîchissable)
     if (btn) btn.textContent = '✅ ' + updated + ' MAJ';
     setTimeout(function () { loadTeamLive(); }, 600);
