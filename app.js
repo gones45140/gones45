@@ -12539,6 +12539,122 @@ async function runFbrefGroq(uid, nom, b64, groqKey, mode, comp) {
 }
 
 
+/* ⚡ Auto ESPN — remplit l'effectif de la saison sélectionnée (Championnat) depuis ESPN.
+   - n'écrase JAMAIS une équipe déjà saisie manuellement (FBref) : seules les équipes vides
+     ou déjà sourcées ESPN sont (re)remplies → rafraîchissable à chaque journée.
+   - écrit uniquement dans manual_stats_{saison}_… → les autres saisons restent intactes.
+   - matching joueurs par nom (même logique que l'import FBref). */
+async function autoEspnFillSquad(uid, nom) {
+  if (typeof espnResolveTeam !== 'function') { alert('Module ESPN non chargé (foot.js / app.js).'); return; }
+  var btn = document.getElementById('btn-espn-auto-' + uid);
+
+  var sofaId = SOFASCORE_TEAM_IDS && SOFASCORE_TEAM_IDS[nom];
+  if (!sofaId) { for (var k in SOFASCORE_TEAM_IDS) { if (nom.toLowerCase().indexOf(k.toLowerCase()) >= 0 || k.toLowerCase().indexOf(nom.toLowerCase()) >= 0) { sofaId = SOFASCORE_TEAM_IDS[k]; break; } } }
+  var keyTeam = sofaId || '0';
+
+  var comp = window['_compMode_' + uid] || 'league';
+  if (comp === 'euro') { alert('⚡ Auto ESPN ne couvre que le Championnat pour l\'instant. Bascule sur « Championnat ».'); return; }
+  var savePrefix = 'league';
+
+  var cacheKey = 'squad_sofa_' + (sofaId || 'af_' + nom);
+  var squadData = null;
+  try { var cc = JSON.parse(localStorage.getItem(cacheKey) || '{}'); squadData = cc.squad; } catch (e) {}
+  if (!squadData || !squadData.length) { alert('Effectif Sofascore non chargé pour ' + nom + ' — ouvre d\'abord l\'effectif.'); return; }
+
+  // Équipe déjà saisie manuellement (FBref) et pas sourcée ESPN → on laisse intact
+  var srcFlag = 'espn_src_' + saisonKey(keyTeam + '_' + savePrefix);
+  var isEspnSourced = localStorage.getItem(srcFlag) === '1';
+  var hasManual = squadData.some(function (p) {
+    var ms = {}; try { ms = JSON.parse(localStorage.getItem('manual_stats_' + saisonKey(keyTeam + '_' + p.id)) || '{}'); } catch (e) {}
+    return ms[savePrefix + '_goals'] !== undefined || ms[savePrefix + '_apps'] !== undefined;
+  });
+  if (hasManual && !isEspnSourced) {
+    alert('« ' + nom + ' » est déjà rempli (saisie manuelle / FBref) — laissé intact.\nFais Reset d\'abord si tu veux le passer en source ESPN.');
+    return;
+  }
+
+  if (btn) { btn.disabled = true; btn.textContent = '⏳ ESPN…'; }
+  try {
+    var resolved = await espnResolveTeam(nom);
+    if (!resolved) throw new Error('club non résolu sur ESPN');
+
+    var rr = await fetch(FD_PROXY + '?host=espn&path=' + encodeURIComponent('/apis/site/v2/sports/soccer/' + resolved.league + '/teams/' + resolved.id + '/roster'));
+    var rd = await rr.json();
+    var raw = rd.athletes || [], espnPlayers = [];
+    if (raw.length && raw[0] && raw[0].items) raw.forEach(function (g) { (g.items || []).forEach(function (p) { espnPlayers.push(p); }); });
+    else espnPlayers = raw;
+    if (!espnPlayers.length) throw new Error('roster ESPN vide');
+
+    var normName = function (s) { return (s || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z ]/g, '').trim(); };
+    var wordsClose = function (a, b) { if (a === b) return true; if (a.length > 4 && b.length > 4 && (a.includes(b) || b.includes(a))) return true; if (Math.abs(a.length - b.length) <= 1 && a.length >= 5) { var common = 0, minL = Math.min(a.length, b.length); for (var i = 0; i < minL; i++) { if (a[i] === b[i]) common++; } if (common >= minL - 1) return true; } return false; };
+    var matchSquad = function (espnName) {
+      var sn = normName(espnName); var snParts = sn.split(' ').filter(function (x) { return x.length > 2; }); var snLast = snParts[snParts.length - 1] || sn;
+      var m = squadData.find(function (p) {
+        var pn = normName(p.name || p.shortName || ''); if (pn === sn) return true;
+        var pnParts = pn.split(' ').filter(function (x) { return x.length > 2; }); var pnLast = pnParts[pnParts.length - 1] || pn;
+        if (wordsClose(pnLast, snLast)) return true;
+        var shared = snParts.some(function (s2) { return s2.length > 3 && pnParts.some(function (p2) { return wordsClose(s2, p2); }); });
+        if (shared) { var mc = 0; snParts.forEach(function (s2) { if (pnParts.some(function (p2) { return wordsClose(s2, p2); })) mc++; }); return mc >= Math.min(snParts.length, pnParts.length); }
+        return false;
+      });
+      if (!m) m = squadData.find(function (p) { var pn = normName(p.name || p.shortName || ''); return pn === sn || (sn.length > 5 && pn.includes(sn)) || (pn.length > 5 && sn.includes(pn)); });
+      return m;
+    };
+
+    var pairs = [];
+    espnPlayers.forEach(function (ep) {
+      var nm = ep.fullName || ep.displayName || ((ep.firstName || '') + ' ' + (ep.lastName || ''));
+      var match = matchSquad(nm);
+      if (match) { var pos = (ep.position && (ep.position.abbreviation || ep.position.name)) || ''; pairs.push({ espnId: ep.id, isGk: /^(g|gk)$/i.test(pos), target: match }); }
+    });
+    if (!pairs.length) throw new Error('aucun joueur ESPN apparié à ton effectif');
+
+    var season = (function () { var d = new Date(); return (d.getMonth() >= 6) ? d.getFullYear() : d.getFullYear() - 1; })();
+    var sv = function (map, n) { return (map[n] && map[n].value != null) ? map[n].value : 0; };
+    var updated = 0;
+
+    for (var b = 0; b < pairs.length; b += 6) {
+      await Promise.all(pairs.slice(b, b + 6).map(async function (pair) {
+        try {
+          var u = 'https://sports.core.api.espn.com/v2/sports/soccer/leagues/' + resolved.league + '/seasons/' + season + '/types/0/athletes/' + pair.espnId + '/statistics?lang=en&region=us';
+          var r = await fetch(u); if (!r.ok) return;
+          var j = await r.json(); var map = {};
+          (j.splits.categories || []).forEach(function (cat) { (cat.stats || []).forEach(function (s) { map[s.name] = { value: s.value }; }); });
+          var mk = 'manual_stats_' + saisonKey(keyTeam + '_' + pair.target.id);
+          var ms = {}; try { ms = JSON.parse(localStorage.getItem(mk) || '{}'); } catch (e) {}
+          ms[savePrefix + '_apps'] = sv(map, 'appearances');
+          ms[savePrefix + '_starts'] = sv(map, 'starts');
+          ms[savePrefix + '_minutes'] = sv(map, 'minutes');
+          if (pair.isGk) {
+            ms[savePrefix + '_ga'] = sv(map, 'goalsConceded');
+            ms[savePrefix + '_saves'] = sv(map, 'saves');
+            ms[savePrefix + '_cs'] = sv(map, 'cleanSheet');
+            ms[savePrefix + '_sota'] = sv(map, 'shotsFaced');
+          } else {
+            var g = sv(map, 'totalGoals'), pk = sv(map, 'penaltyKickGoals');
+            ms[savePrefix + '_goals'] = g;
+            ms[savePrefix + '_assists'] = sv(map, 'goalAssists');
+            ms[savePrefix + '_gpk'] = g - pk;
+            ms[savePrefix + '_pk'] = pk;
+            ms[savePrefix + '_pkatt'] = sv(map, 'penaltyKickShots');
+            ms[savePrefix + '_yellow'] = sv(map, 'yellowCards');
+            ms[savePrefix + '_red'] = sv(map, 'redCards');
+          }
+          localStorage.setItem(mk, JSON.stringify(ms));
+          updated++;
+        } catch (e) {}
+      }));
+    }
+
+    localStorage.setItem(srcFlag, '1'); // équipe marquée source ESPN (rafraîchissable)
+    if (btn) btn.textContent = '✅ ' + updated + ' MAJ';
+    setTimeout(function () { loadTeamLive(); }, 600);
+  } catch (err) {
+    if (btn) { btn.disabled = false; btn.textContent = '⚡ Auto ESPN'; }
+    alert('❌ Auto ESPN : ' + err.message);
+  }
+}
+
 function sortSquad(uid, col) {
   var cur = window['_squadSort_'+uid] || 'name';
   if(cur === col) {
@@ -12834,6 +12950,7 @@ async function loadFdSquad(el, nom, teamId, noTerrain, terrainOnly) {
     html += '<div style="font-size:9px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;color:var(--t3);">👤 Squad · '+nom+' <span style="color:var(--t2);font-weight:500;">('+squad.length+')</span></div>';
     html += '<div style="display:flex;align-items:center;gap:8px;">';
     html += '<div style="font-size:9px;color:var(--t3);">'+(usingSofa?'sofascore':'api-football · 2024-25')+'</div>';
+    if(localStorage.getItem('gones45_admin')==='1'){ html += '<button id="btn-espn-auto-'+uid+'" onclick="autoEspnFillSquad(\''+uid+'\',\''+nom+'\')" style="display:flex;align-items:center;gap:4px;padding:4px 8px;border-radius:6px;border:1px solid rgba(30,215,96,.3);background:rgba(30,215,96,.12);color:#1ed760;font-size:9px;font-weight:700;cursor:pointer;" title="Remplir auto depuis ESPN (saison sélectionnée, Championnat) — n\'écrase pas une équipe déjà saisie">⚡ Auto ESPN</button>'; }
     html += '<button id="btn-fbref-import-'+uid+'" onclick="importFbrefStats(\''+uid+'\',\''+nom+'\')" style="display:flex;align-items:center;gap:4px;padding:4px 8px;border-radius:6px;border:1px solid rgba(255,255,255,.15);background:rgba(255,255,255,.07);color:var(--t2);font-size:9px;font-weight:700;cursor:pointer;">📸 Import FBref</button>';
     html += '<button id="btn-admin-lock-'+uid+'" onclick="toggleAdminLock(\''+uid+'\')" style="padding:4px 7px;border-radius:6px;border:1px solid rgba(255,255,255,.15);background:rgba(255,255,255,.07);color:var(--t2);font-size:12px;cursor:pointer;" title="Mode admin">'+(localStorage.getItem('gones45_admin')==='1'?'🔓':'🔒')+'</button>';
     html += '<button onclick="refreshSquadCache(\''+nom+'\')" style="display:flex;align-items:center;gap:4px;padding:4px 8px;border-radius:6px;border:1px solid rgba(255,255,255,.15);background:rgba(255,255,255,.07);color:var(--t2);font-size:9px;font-weight:700;cursor:pointer;" title="Vider le cache et recharger le squad depuis l\'API">🔄</button>';
