@@ -95,7 +95,7 @@ async function espnResolveTeam(nom) {
 
   if(!_espnTeamsCache[league]) {
     try {
-      var r = await fetch('https://site.api.espn.com/apis/site/v2/sports/soccer/'+league+'/teams');
+      var r = await fetch(FD_PROXY+'?host=espn&path='+encodeURIComponent('/apis/site/v2/sports/soccer/'+league+'/teams'));
       var d = await r.json();
       var list = (d.sports && d.sports[0] && d.sports[0].leagues && d.sports[0].leagues[0] && d.sports[0].leagues[0].teams) ? d.sports[0].leagues[0].teams : [];
       _espnTeamsCache[league] = list.map(function(t){ return t.team; });
@@ -130,7 +130,7 @@ async function espnClubSchedule(nom) {
   var resolved = await espnResolveTeam(nom);
   if(!resolved) return null;
   try {
-    var r = await fetch('https://site.api.espn.com/apis/site/v2/sports/soccer/'+resolved.league+'/teams/'+resolved.id+'/schedule');
+    var r = await fetch(FD_PROXY+'?host=espn&path='+encodeURIComponent('/apis/site/v2/sports/soccer/'+resolved.league+'/teams/'+resolved.id+'/schedule'));
     var d = await r.json();
     var events = d.events || [];
     var matches = events.map(function(e){
