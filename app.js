@@ -126,11 +126,14 @@ async function espnResolveTeam(nom) {
 function _espnAmDec(am){ am=parseFloat(am); if(isNaN(am)) return null; var d=am>0?(am/100+1):(100/Math.abs(am)+1); return d.toFixed(2); }
 
 // Récupérer résultats + cotes d'un club via ESPN
-async function espnClubSchedule(nom) {
+// season : année de début de saison (2025 = saison 2025-26). Par défaut saison courante.
+async function espnClubSchedule(nom, season) {
   var resolved = await espnResolveTeam(nom);
   if(!resolved) return null;
   try {
-    var r = await fetch(FD_PROXY+'?host=espn&path='+encodeURIComponent('/apis/site/v2/sports/soccer/'+resolved.league+'/teams/'+resolved.id+'/schedule'));
+    var schedPath = '/apis/site/v2/sports/soccer/'+resolved.league+'/teams/'+resolved.id+'/schedule';
+    if(season) schedPath += '?season='+season;
+    var r = await fetch(FD_PROXY+'?host=espn&path='+encodeURIComponent(schedPath));
     var d = await r.json();
     var events = d.events || [];
     var matches = events.map(function(e){
