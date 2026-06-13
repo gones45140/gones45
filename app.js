@@ -89,46 +89,59 @@ function espnLeagueOf(nom) {
 }
 
 // Résoudre l'ID ESPN d'une équipe via la liste des équipes de son championnat
-async function espnResolveTeam(nom) {
-  var league = espnLeagueOf(nom);
-  if(!league) return null;
-
-  // Cache persistant des IDs ESPN (localStorage)
+// Charge (et cache) la liste des équipes d'un championnat ESPN
+async function _espnLoadLeagueTeams(league) {
+  if(_espnTeamsCache[league]) return _espnTeamsCache[league];
   try {
-    var idCacheKey = 'espn_teamid_'+league+'_'+(nom||'').toLowerCase().replace(/\s+/g,'_');
-    var cachedId = localStorage.getItem(idCacheKey);
-    if(cachedId) { var ci = JSON.parse(cachedId); if(ci && ci.id) return ci; }
-  } catch(e){}
+    var r = await fetch(FD_PROXY+'?host=espn&path='+encodeURIComponent('/apis/site/v2/sports/soccer/'+league+'/teams'));
+    var d = await r.json();
+    var list = (d.sports && d.sports[0] && d.sports[0].leagues && d.sports[0].leagues[0] && d.sports[0].leagues[0].teams) ? d.sports[0].leagues[0].teams : [];
+    _espnTeamsCache[league] = list.map(function(t){ return t.team; });
+  } catch(e) { _espnTeamsCache[league] = []; }
+  return _espnTeamsCache[league];
+}
 
-  if(!_espnTeamsCache[league]) {
-    try {
-      var r = await fetch(FD_PROXY+'?host=espn&path='+encodeURIComponent('/apis/site/v2/sports/soccer/'+league+'/teams'));
-      var d = await r.json();
-      var list = (d.sports && d.sports[0] && d.sports[0].leagues && d.sports[0].leagues[0] && d.sports[0].leagues[0].teams) ? d.sports[0].leagues[0].teams : [];
-      _espnTeamsCache[league] = list.map(function(t){ return t.team; });
-    } catch(e) { return null; }
-  }
-
-  var teams = _espnTeamsCache[league] || [];
+// Cherche une équipe dans une liste. mode='exact' (displayName/name/abbr) ou 'partial' (inclusion)
+function _espnMatchTeam(nom, teams, league, mode) {
   var low = (nom||'').toLowerCase();
-  // Match par displayName / name / shortDisplayName / abbreviation
   var best = null;
-  for(var i=0;i<teams.length;i++){
-    var t = teams[i];
-    var cands = [t.displayName, t.name, t.shortDisplayName, t.location, t.abbreviation].filter(Boolean).map(function(x){return x.toLowerCase();});
-    if(cands.indexOf(low)>=0) { best = t; break; }
-  }
-  // Match partiel si pas de match exact
-  if(!best){
+  if(mode === 'exact') {
+    for(var i=0;i<teams.length;i++){
+      var t = teams[i];
+      var cands = [t.displayName, t.name, t.shortDisplayName, t.location, t.abbreviation].filter(Boolean).map(function(x){return x.toLowerCase();});
+      if(cands.indexOf(low)>=0){ best=t; break; }
+    }
+  } else {
     for(var j=0;j<teams.length;j++){
       var t2 = teams[j];
       var cands2 = [t2.displayName, t2.name, t2.shortDisplayName, t2.location].filter(Boolean).map(function(x){return x.toLowerCase();});
-      if(cands2.some(function(c){ return c.indexOf(low)>=0 || low.indexOf(c)>=0; })) { best = t2; break; }
+      if(cands2.some(function(c){ return c.length>2 && (c.indexOf(low)>=0 || (low.length>2 && low.indexOf(c)>=0)); })){ best=t2; break; }
     }
   }
-  var resolvedObj = best ? {id:best.id, league:league, name:best.displayName, logo:(best.logos&&best.logos[0]&&best.logos[0].href)||''} : null;
-  if(resolvedObj){ try { localStorage.setItem('espn_teamid_'+league+'_'+(nom||'').toLowerCase().replace(/\s+/g,'_'), JSON.stringify(resolvedObj)); } catch(e){} }
-  return resolvedObj;
+  return best ? {id:best.id, league:league, name:best.displayName, logo:(best.logos&&best.logos[0]&&best.logos[0].href)||''} : null;
+}
+
+// Résout l'équipe ESPN. Essaie le championnat deviné, sinon TOUS les championnats connus.
+async function espnResolveTeam(nom) {
+  var nomKey = (nom||'').toLowerCase().replace(/\s+/g,'_');
+  try { var cached = localStorage.getItem('espn_teamid_any_'+nomKey); if(cached){ var ci=JSON.parse(cached); if(ci&&ci.id) return ci; } } catch(e){}
+
+  // Ordre : championnat deviné en premier, puis tous les championnats connus (dédupliqués)
+  var order = [];
+  var guess = espnLeagueOf(nom);
+  if(guess) order.push(guess);
+  try { for(var k in ESPN_TEAM_LEAGUE){ var lg=ESPN_TEAM_LEAGUE[k]; if(order.indexOf(lg)<0) order.push(lg); } } catch(e){}
+
+  // 2 passes : match exact sur tous les championnats, puis match partiel sur tous
+  for(var pass=0; pass<2; pass++){
+    var mode = pass===0 ? 'exact' : 'partial';
+    for(var i=0;i<order.length;i++){
+      var teams = await _espnLoadLeagueTeams(order[i]);
+      var resolved = _espnMatchTeam(nom, teams, order[i], mode);
+      if(resolved){ try { localStorage.setItem('espn_teamid_any_'+nomKey, JSON.stringify(resolved)); } catch(e){} return resolved; }
+    }
+  }
+  return null;
 }
 
 // Convertir cote américaine → décimale (réutilise americanToDecimal si déjà défini plus bas)
@@ -12950,7 +12963,7 @@ async function loadFdSquad(el, nom, teamId, noTerrain, terrainOnly) {
     html += '<div style="font-size:9px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;color:var(--t3);">👤 Squad · '+nom+' <span style="color:var(--t2);font-weight:500;">('+squad.length+')</span></div>';
     html += '<div style="display:flex;align-items:center;gap:8px;">';
     html += '<div style="font-size:9px;color:var(--t3);">'+(usingSofa?'sofascore':'api-football · 2024-25')+'</div>';
-    if(localStorage.getItem('gones45_admin')==='1'){ html += '<button id="btn-espn-auto-'+uid+'" onclick="autoEspnFillSquad(\''+uid+'\',\''+nom+'\')" style="display:flex;align-items:center;gap:4px;padding:4px 8px;border-radius:6px;border:1px solid rgba(30,215,96,.3);background:rgba(30,215,96,.12);color:#1ed760;font-size:9px;font-weight:700;cursor:pointer;" title="Remplir auto depuis ESPN (saison sélectionnée, Championnat) — n\'écrase pas une équipe déjà saisie">⚡ Auto ESPN</button>'; }
+    html += '<button id="btn-espn-auto-'+uid+'" onclick="autoEspnFillSquad(\''+uid+'\',\''+nom+'\')" style="display:flex;align-items:center;gap:4px;padding:4px 8px;border-radius:6px;border:1px solid rgba(30,215,96,.3);background:rgba(30,215,96,.12);color:#1ed760;font-size:9px;font-weight:700;cursor:pointer;" title="Remplir auto depuis ESPN (saison sélectionnée, Championnat) — n\'écrase pas une équipe déjà saisie">⚡ Auto ESPN</button>';
     html += '<button id="btn-fbref-import-'+uid+'" onclick="importFbrefStats(\''+uid+'\',\''+nom+'\')" style="display:flex;align-items:center;gap:4px;padding:4px 8px;border-radius:6px;border:1px solid rgba(255,255,255,.15);background:rgba(255,255,255,.07);color:var(--t2);font-size:9px;font-weight:700;cursor:pointer;">📸 Import FBref</button>';
     html += '<button id="btn-admin-lock-'+uid+'" onclick="toggleAdminLock(\''+uid+'\')" style="padding:4px 7px;border-radius:6px;border:1px solid rgba(255,255,255,.15);background:rgba(255,255,255,.07);color:var(--t2);font-size:12px;cursor:pointer;" title="Mode admin">'+(localStorage.getItem('gones45_admin')==='1'?'🔓':'🔒')+'</button>';
     html += '<button onclick="refreshSquadCache(\''+nom+'\')" style="display:flex;align-items:center;gap:4px;padding:4px 8px;border-radius:6px;border:1px solid rgba(255,255,255,.15);background:rgba(255,255,255,.07);color:var(--t2);font-size:9px;font-weight:700;cursor:pointer;" title="Vider le cache et recharger le squad depuis l\'API">🔄</button>';
