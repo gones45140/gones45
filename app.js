@@ -12566,8 +12566,7 @@ async function autoEspnFillSquad(uid, nom) {
   var keyTeam = sofaId || '0';
 
   var comp = window['_compMode_' + uid] || 'league';
-  if (comp === 'euro') { alert('⚡ Auto ESPN ne couvre que le Championnat pour l\'instant. Bascule sur « Championnat ».'); return; }
-  var savePrefix = 'league';
+  var savePrefix = (comp === 'euro') ? 'euro' : 'league';
 
   var cacheKey = 'squad_sofa_' + (sofaId || 'af_' + nom);
   var squadData = null;
@@ -12626,10 +12625,34 @@ async function autoEspnFillSquad(uid, nom) {
     var sv = function (map, n) { return (map[n] && map[n].value != null) ? map[n].value : 0; };
     var updated = 0;
 
+    // Championnat à interroger pour les stats. En Europe : auto-détection de la coupe.
+    var statsLeague = resolved.league;
+    if (comp === 'euro') {
+      var euroSlugs = ['uefa.champions', 'uefa.europa', 'uefa.europa.conf'];
+      var foundEuro = null;
+      for (var pi = 0; pi < pairs.length && pi < 8 && !foundEuro; pi++) {
+        for (var si = 0; si < euroSlugs.length && !foundEuro; si++) {
+          try {
+            var pr = await fetch('https://sports.core.api.espn.com/v2/sports/soccer/leagues/' + euroSlugs[si] + '/seasons/' + season + '/types/0/athletes/' + pairs[pi].espnId + '/statistics?lang=en&region=us');
+            if (!pr.ok) continue;
+            var pj = await pr.json(); var apps = 0;
+            (pj.splits.categories || []).forEach(function (cat) { (cat.stats || []).forEach(function (s) { if (s.name === 'appearances') apps = s.value || 0; }); });
+            if (apps > 0) foundEuro = euroSlugs[si];
+          } catch (e) {}
+        }
+      }
+      if (!foundEuro) {
+        if (btn) { btn.disabled = false; btn.textContent = '⚡ Auto ESPN'; }
+        alert('Aucune donnée européenne trouvée pour ' + nom + ' cette saison (pas en C1/Europa/Conference, ou stats indisponibles).');
+        return;
+      }
+      statsLeague = foundEuro;
+    }
+
     for (var b = 0; b < pairs.length; b += 6) {
       await Promise.all(pairs.slice(b, b + 6).map(async function (pair) {
         try {
-          var u = 'https://sports.core.api.espn.com/v2/sports/soccer/leagues/' + resolved.league + '/seasons/' + season + '/types/0/athletes/' + pair.espnId + '/statistics?lang=en&region=us';
+          var u = 'https://sports.core.api.espn.com/v2/sports/soccer/leagues/' + statsLeague + '/seasons/' + season + '/types/0/athletes/' + pair.espnId + '/statistics?lang=en&region=us';
           var r = await fetch(u); if (!r.ok) return;
           var j = await r.json(); var map = {};
           (j.splits.categories || []).forEach(function (cat) { (cat.stats || []).forEach(function (s) { map[s.name] = { value: s.value }; }); });
@@ -12684,7 +12707,7 @@ async function autoEspnFillSquad(uid, nom) {
         if (!cands.length) continue;
         var tn = normName(tp.name || tp.shortName);
         var pick = cands.find(function (c) { var cn = normName(c.name); return cn && (cn === tn || wordsClose(cn.split(' ').pop() || cn, tn.split(' ').pop() || tn)); }) || cands[0];
-        var stR = await fetch('https://sports.core.api.espn.com/v2/sports/soccer/leagues/' + resolved.league + '/seasons/' + season + '/types/0/athletes/' + pick.id + '/statistics?lang=en&region=us');
+        var stR = await fetch('https://sports.core.api.espn.com/v2/sports/soccer/leagues/' + statsLeague + '/seasons/' + season + '/types/0/athletes/' + pick.id + '/statistics?lang=en&region=us');
         if (!stR.ok) continue;
         var stJ = await stR.json(); var map2 = {};
         (stJ.splits.categories || []).forEach(function (cat) { (cat.stats || []).forEach(function (s) { map2[s.name] = { value: s.value }; }); });
