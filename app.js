@@ -177,6 +177,44 @@ async function espnClubSchedule(nom, season) {
 }
 
 
+// Convertir un match ESPN au format football-data (pour renderSaisonsChart)
+function espnToFdMatch(m) {
+  // Déterminer le type de compétition à partir du slug/nom ESPN
+  var slug = (m.competition||'').toLowerCase();
+  var cname = m.competitionName || '';
+  var type = 'LEAGUE';
+  // Slugs de championnats nationaux : fra.1, eng.1, ita.1, esp.1, ger.1, por.1, ned.1, bra.1...
+  var isLeague = /\.(1|2)$/.test(slug) || slug.indexOf('league')>=0;
+  // Coupes d'Europe
+  if(slug.indexOf('uefa')>=0 || slug.indexOf('champions')>=0 || slug.indexOf('europa')>=0 || slug.indexOf('conference')>=0 ||
+     cname.indexOf('Champions')>=0 || cname.indexOf('Europa')>=0 || cname.indexOf('UEFA')>=0 || cname.indexOf('Conference')>=0) {
+    type = 'CUP';
+  } else if(slug.indexOf('cup')>=0 || slug.indexOf('coupe')>=0 || slug.indexOf('copa')>=0 || slug.indexOf('dfb')>=0 ||
+            cname.indexOf('Cup')>=0 || cname.indexOf('Coupe')>=0 || cname.indexOf('Copa')>=0) {
+    type = 'CUP';
+  } else if(isLeague) {
+    type = 'LEAGUE';
+  } else {
+    type = 'LEAGUE'; // par défaut championnat (slugs nationaux)
+  }
+
+  // Nom lisible de la compétition
+  var compName = cname || (type==='LEAGUE' ? 'Championnat' : 'Coupe');
+
+  return {
+    utcDate: m.date,
+    status: m.completed ? 'FINISHED' : 'SCHEDULED',
+    competition: { name: compName, type: type, code: m.competition || '' },
+    homeTeam: { name: m.homeTeam, shortName: m.homeTeam },
+    awayTeam: { name: m.awayTeam, shortName: m.awayTeam },
+    score: {
+      fullTime: { home: m.homeScore, away: m.awayScore },
+      regularTime: { home: m.homeScore, away: m.awayScore }
+    },
+    odds: m.odds || null
+  };
+}
+
 /* ── SAISONS ── */
 var _currentSaison = localStorage.getItem('g45_saison_active') || '2526';
 var SAISONS = [{id:'2526',label:'2025/26'},{id:'2627',label:'2026/27'}];
@@ -16332,19 +16370,30 @@ async function loadTeamSaisons() {
   el.innerHTML = '<div style="display:flex;align-items:center;gap:10px;padding:20px;color:var(--t3);"><div style="width:16px;height:16px;border:2px solid rgba(77,132,255,.2);border-top-color:#4d84ff;border-radius:50%;animation:spin .8s linear infinite;"></div>Chargement des 2 dernières saisons...</div>';
 
   // Charger saison en cours + saison précédente
-  // IMPORTANT: football-data limite aux coupes si on ne précise PAS season.
-  // → on demande explicitement chaque saison (renvoie alors championnat + coupes).
+  // PRINCIPAL: ESPN (gratuit, sans clé, cotes incluses, accessible à tous).
+  // SECONDAIRE: football-data (fallback si ESPN ne couvre pas l'équipe).
   var results = {};
-  var [data2526, data2425] = await Promise.all([
-    fdFetch('/v4/teams/'+teamId+'/matches?status=FINISHED&season=2025'),
-    fdFetch('/v4/teams/'+teamId+'/matches?status=FINISHED&season=2024')
-  ]);
 
-  if(data2526 && data2526.matches && data2526.matches.length) {
-    results['2025'] = data2526.matches;
+  // ── 1) Tentative ESPN ──
+  if(espnLeagueOf(nom)) {
+    try {
+      var [esp25, esp24] = await Promise.all([
+        espnClubSchedule(nom, 2025),
+        espnClubSchedule(nom, 2024)
+      ]);
+      if(esp25 && esp25.matches && esp25.matches.length) results['2025'] = esp25.matches.map(espnToFdMatch);
+      if(esp24 && esp24.matches && esp24.matches.length) results['2024'] = esp24.matches.map(espnToFdMatch);
+    } catch(espErr) { /* on tentera football-data */ }
   }
-  if(data2425 && data2425.matches && data2425.matches.length) {
-    results['2024'] = data2425.matches;
+
+  // ── 2) Fallback football-data si ESPN n'a rien donné ──
+  if(!Object.keys(results).length) {
+    var [data2526, data2425] = await Promise.all([
+      fdFetch('/v4/teams/'+teamId+'/matches?status=FINISHED&season=2025'),
+      fdFetch('/v4/teams/'+teamId+'/matches?status=FINISHED&season=2024')
+    ]);
+    if(data2526 && data2526.matches && data2526.matches.length) results['2025'] = data2526.matches;
+    if(data2425 && data2425.matches && data2425.matches.length) results['2024'] = data2425.matches;
   }
   
   var saisons = Object.keys(results).sort().reverse();
