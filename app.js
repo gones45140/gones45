@@ -1352,6 +1352,7 @@ function calcLay(){
   var stakeGrp=$i('lay-stake-group'); var liabGrp=$i('lay-liability-group');
   if(stakeGrp) stakeGrp.style.display=modeLiability?'none':'block';
   if(liabGrp) liabGrp.style.display=modeLiability?'block':'none';
+  var cibleWrap=$i('lay-cible-wrap'); if(cibleWrap) cibleWrap.style.display=(modeCible||modeLiability)?'block':'none';
 
   var bm,ml,liabML,pbw,plw;
   if(modeLiability){
@@ -7471,6 +7472,7 @@ function calcLay(){
   var stakeGrp=$i('lay-stake-group'); var liabGrp=$i('lay-liability-group');
   if(stakeGrp) stakeGrp.style.display=modeLiability?'none':'block';
   if(liabGrp) liabGrp.style.display=modeLiability?'block':'none';
+  var cibleWrap=$i('lay-cible-wrap'); if(cibleWrap) cibleWrap.style.display=(modeCible||modeLiability)?'block':'none';
 
   var bm,ml,liabML,pbw,plw;
   if(modeLiability){
