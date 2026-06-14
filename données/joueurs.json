@@ -93,7 +93,17 @@
     "league_pk": 0,
     "league_pkatt": 0,
     "league_yellow": 7,
-    "league_red": 0
+    "league_red": 0,
+    "euro_apps": 14,
+    "euro_starts": 13,
+    "euro_minutes": 1120,
+    "euro_goals": 1,
+    "euro_assists": 1,
+    "euro_gpk": 1,
+    "euro_pk": 0,
+    "euro_pkatt": 0,
+    "euro_yellow": 3,
+    "euro_red": 0
   },
   "manual_stats_2526_1644_1926085": {
     "league_apps": 12,
@@ -205,18 +215,6 @@
     "league_yellow": 1,
     "league_red": 0
   },
-  "manual_stats_2526_2952_850816": {
-    "league_apps": 30,
-    "league_starts": 27,
-    "league_minutes": 2370,
-    "league_goals": 8,
-    "league_assists": 14,
-    "league_gpk": 8,
-    "league_pk": 0,
-    "league_pkatt": 0,
-    "league_yellow": 4,
-    "league_red": 0
-  },
   "manual_stats_2526_2952_1136110": {
     "league_apps": 28,
     "league_starts": 8,
@@ -227,6 +225,18 @@
     "league_pk": 0,
     "league_pkatt": 0,
     "league_yellow": 0,
+    "league_red": 0
+  },
+  "manual_stats_2526_2952_850816": {
+    "league_apps": 30,
+    "league_starts": 27,
+    "league_minutes": 2370,
+    "league_goals": 8,
+    "league_assists": 14,
+    "league_gpk": 8,
+    "league_pk": 0,
+    "league_pkatt": 0,
+    "league_yellow": 4,
     "league_red": 0
   },
   "manual_stats_2526_1644_1142672": {
@@ -357,6 +367,34 @@
     "league_yellow": 1,
     "league_red": 0
   },
+  "manual_stats_2526_1649_123228": {
+    "league_apps": 10,
+    "league_starts": 2,
+    "league_minutes": 219,
+    "league_goals": 0,
+    "league_assists": 0,
+    "league_gpk": 0,
+    "league_pk": 0,
+    "league_pkatt": 0,
+    "league_yellow": 0,
+    "league_red": 0
+  },
+  "manual_stats_2526_2672_1130647": {
+    "league_apps": 14,
+    "league_starts": 11,
+    "league_minutes": 1110,
+    "league_ga": 15,
+    "league_saves": 25,
+    "league_cs": 5,
+    "league_sota": 0,
+    "euro_apps": 3,
+    "euro_starts": 3,
+    "euro_minutes": 270,
+    "euro_ga": 3,
+    "euro_saves": 15,
+    "euro_cs": 0,
+    "euro_sota": 0
+  },
   "manual_stats_2526_2697_759520": {
     "league_apps": 20,
     "league_starts": 15,
@@ -387,27 +425,6 @@
     "euro_savepct": "0.0",
     "euro_cspct": "0.0",
     "euro_yellow": 0
-  },
-  "manual_stats_2526_1649_123228": {
-    "league_apps": 10,
-    "league_starts": 2,
-    "league_minutes": 219,
-    "league_goals": 0,
-    "league_assists": 0,
-    "league_gpk": 0,
-    "league_pk": 0,
-    "league_pkatt": 0,
-    "league_yellow": 0,
-    "league_red": 0
-  },
-  "manual_stats_2526_2672_1130647": {
-    "league_apps": 14,
-    "league_starts": 11,
-    "league_minutes": 1110,
-    "league_ga": 15,
-    "league_saves": 25,
-    "league_cs": 5,
-    "league_sota": 0
   },
   "manual_stats_2627_2672_227672": {
     "league_apps": 0,
@@ -490,18 +507,6 @@
     "league_yellow": 0,
     "league_red": 0
   },
-  "manual_stats_2526_2829_2237795": {
-    "league_apps": 10,
-    "league_starts": 8,
-    "league_minutes": 596,
-    "league_goals": 0,
-    "league_assists": 2,
-    "league_gpk": 0,
-    "league_pk": 0,
-    "league_pkatt": 0,
-    "league_yellow": 2,
-    "league_red": 0
-  },
   "manual_stats_2526_2672_927407": {
     "league_apps": 26,
     "league_starts": 19,
@@ -512,6 +517,28 @@
     "league_pk": 0,
     "league_pkatt": 0,
     "league_yellow": 1,
+    "league_red": 0,
+    "euro_apps": 10,
+    "euro_starts": 10,
+    "euro_minutes": 769,
+    "euro_goals": 1,
+    "euro_assists": 1,
+    "euro_gpk": 1,
+    "euro_pk": 0,
+    "euro_pkatt": 0,
+    "euro_yellow": 2,
+    "euro_red": 0
+  },
+  "manual_stats_2526_2829_2237795": {
+    "league_apps": 10,
+    "league_starts": 8,
+    "league_minutes": 596,
+    "league_goals": 0,
+    "league_assists": 2,
+    "league_gpk": 0,
+    "league_pk": 0,
+    "league_pkatt": 0,
+    "league_yellow": 2,
     "league_red": 0
   },
   "manual_stats_2526_1963_984896": {
@@ -1148,6 +1175,18 @@
     "usingSofa": true,
     "ts": 1781343153964
   },
+  "manual_stats_2526_1963_881110": {
+    "league_apps": 30,
+    "league_starts": 28,
+    "league_minutes": 2416,
+    "league_goals": 3,
+    "league_assists": 1,
+    "league_gpk": 1,
+    "league_pk": 2,
+    "league_pkatt": 3,
+    "league_yellow": 2,
+    "league_red": 2
+  },
   "manual_stats_2526_2697_1530727": {
     "league_apps": 2,
     "league_starts": 0,
@@ -1161,18 +1200,6 @@
     "league_cs": 0,
     "league_savepct": "0.0",
     "league_cspct": "0.0"
-  },
-  "manual_stats_2526_1963_881110": {
-    "league_apps": 30,
-    "league_starts": 28,
-    "league_minutes": 2416,
-    "league_goals": 3,
-    "league_assists": 1,
-    "league_gpk": 1,
-    "league_pk": 2,
-    "league_pkatt": 3,
-    "league_yellow": 2,
-    "league_red": 2
   },
   "manual_stats_2526_2697_1086223": {
     "league_apps": 33,
@@ -1214,7 +1241,17 @@
     "league_pk": 0,
     "league_pkatt": 0,
     "league_yellow": 1,
-    "league_red": 0
+    "league_red": 0,
+    "euro_apps": 8,
+    "euro_starts": 1,
+    "euro_minutes": 213,
+    "euro_goals": 0,
+    "euro_assists": 2,
+    "euro_gpk": 0,
+    "euro_pk": 0,
+    "euro_pkatt": 0,
+    "euro_yellow": 0,
+    "euro_red": 0
   },
   "manual_stats_2526_2952_856744": {
     "league_apps": 13,
@@ -1235,7 +1272,14 @@
     "league_ga": 0,
     "league_saves": 0,
     "league_cs": 0,
-    "league_sota": 0
+    "league_sota": 0,
+    "euro_apps": 0,
+    "euro_starts": 0,
+    "euro_minutes": 0,
+    "euro_ga": 0,
+    "euro_saves": 0,
+    "euro_cs": 0,
+    "euro_sota": 0
   },
   "manual_stats_2526_2697_1048889": {
     "league_apps": 19,
@@ -1290,7 +1334,17 @@
     "league_pk": 0,
     "league_pkatt": 0,
     "league_yellow": 2,
-    "league_red": 0
+    "league_red": 0,
+    "euro_apps": 10,
+    "euro_starts": 3,
+    "euro_minutes": 359,
+    "euro_goals": 0,
+    "euro_assists": 0,
+    "euro_gpk": 0,
+    "euro_pk": 0,
+    "euro_pkatt": 0,
+    "euro_yellow": 1,
+    "euro_red": 0
   },
   "manual_stats_2526_2672_896569": {
     "league_apps": 25,
@@ -1302,7 +1356,17 @@
     "league_pk": 0,
     "league_pkatt": 0,
     "league_yellow": 1,
-    "league_red": 0
+    "league_red": 0,
+    "euro_apps": 8,
+    "euro_starts": 3,
+    "euro_minutes": 336,
+    "euro_goals": 0,
+    "euro_assists": 0,
+    "euro_gpk": 0,
+    "euro_pk": 0,
+    "euro_pkatt": 0,
+    "euro_yellow": 1,
+    "euro_red": 1
   },
   "manual_stats_2526_1963_34141": {
     "league_apps": 3,
@@ -2102,7 +2166,17 @@
     "league_pk": 0,
     "league_pkatt": 0,
     "league_yellow": 2,
-    "league_red": 1
+    "league_red": 1,
+    "euro_apps": 10,
+    "euro_starts": 3,
+    "euro_minutes": 313,
+    "euro_goals": 3,
+    "euro_assists": 2,
+    "euro_gpk": 3,
+    "euro_pk": 0,
+    "euro_pkatt": 0,
+    "euro_yellow": 0,
+    "euro_red": 0
   },
   "manual_stats_2526_2672_1976732": {
     "league_apps": 4,
@@ -2114,7 +2188,17 @@
     "league_pk": 0,
     "league_pkatt": 0,
     "league_yellow": 0,
-    "league_red": 0
+    "league_red": 0,
+    "euro_apps": 1,
+    "euro_starts": 0,
+    "euro_minutes": 9,
+    "euro_goals": 0,
+    "euro_assists": 0,
+    "euro_gpk": 0,
+    "euro_pk": 0,
+    "euro_pkatt": 0,
+    "euro_yellow": 0,
+    "euro_red": 0
   },
   "manual_stats_2526_2697_906275": {
     "league_apps": 23,
@@ -2321,7 +2405,17 @@
     "league_pk": 0,
     "league_pkatt": 0,
     "league_yellow": 1,
-    "league_red": 0
+    "league_red": 0,
+    "euro_apps": 8,
+    "euro_starts": 6,
+    "euro_minutes": 468,
+    "euro_goals": 4,
+    "euro_assists": 2,
+    "euro_gpk": 4,
+    "euro_pk": 0,
+    "euro_pkatt": 0,
+    "euro_yellow": 0,
+    "euro_red": 0
   },
   "manual_stats_2526_1963_973533": {
     "league_apps": 25,
@@ -2357,7 +2451,17 @@
     "league_pk": 0,
     "league_pkatt": 0,
     "league_yellow": 2,
-    "league_red": 0
+    "league_red": 0,
+    "euro_apps": 14,
+    "euro_starts": 14,
+    "euro_minutes": 1174,
+    "euro_goals": 1,
+    "euro_assists": 1,
+    "euro_gpk": 1,
+    "euro_pk": 0,
+    "euro_pkatt": 0,
+    "euro_yellow": 0,
+    "euro_red": 0
   },
   "squad_sofa_2697": {
     "squad": [
@@ -3643,6 +3747,28 @@
     "league_apps": 2,
     "league_starts": 7
   },
+  "manual_stats_2526_2672_873106": {
+    "league_apps": 16,
+    "league_starts": 10,
+    "league_minutes": 921,
+    "league_goals": 1,
+    "league_assists": 2,
+    "league_gpk": 1,
+    "league_pk": 0,
+    "league_pkatt": 0,
+    "league_yellow": 0,
+    "league_red": 0,
+    "euro_apps": 4,
+    "euro_starts": 1,
+    "euro_minutes": 122,
+    "euro_goals": 0,
+    "euro_assists": 0,
+    "euro_gpk": 0,
+    "euro_pk": 0,
+    "euro_pkatt": 0,
+    "euro_yellow": 0,
+    "euro_red": 0
+  },
   "manual_stats_2526_2697_126816": {
     "league_apps": 18,
     "league_starts": 15,
@@ -3691,7 +3817,14 @@
     "league_ga": 1,
     "league_saves": 6,
     "league_cs": 0,
-    "league_sota": 0
+    "league_sota": 0,
+    "euro_apps": 0,
+    "euro_starts": 0,
+    "euro_minutes": 0,
+    "euro_ga": 0,
+    "euro_saves": 0,
+    "euro_cs": 0,
+    "euro_sota": 0
   },
   "manual_stats_2526_2697_845291": {
     "league_apps": 5,
@@ -3742,6 +3875,28 @@
     "euro_savepct": "0.0",
     "euro_cspct": "0.0"
   },
+  "manual_stats_2526_2672_798583": {
+    "league_apps": 24,
+    "league_starts": 21,
+    "league_minutes": 1797,
+    "league_goals": 1,
+    "league_assists": 1,
+    "league_gpk": 1,
+    "league_pk": 0,
+    "league_pkatt": 0,
+    "league_yellow": 4,
+    "league_red": 0,
+    "euro_apps": 12,
+    "euro_starts": 12,
+    "euro_minutes": 1013,
+    "euro_goals": 1,
+    "euro_assists": 2,
+    "euro_gpk": 1,
+    "euro_pk": 0,
+    "euro_pkatt": 0,
+    "euro_yellow": 2,
+    "euro_red": 0
+  },
   "manual_stats_2526_2697_835600": {
     "league_apps": 22,
     "league_starts": 3,
@@ -3780,30 +3935,6 @@
     "league_yellow": 3,
     "league_red": 1
   },
-  "manual_stats_2526_2672_873106": {
-    "league_apps": 16,
-    "league_starts": 10,
-    "league_minutes": 921,
-    "league_goals": 1,
-    "league_assists": 2,
-    "league_gpk": 1,
-    "league_pk": 0,
-    "league_pkatt": 0,
-    "league_yellow": 0,
-    "league_red": 0
-  },
-  "manual_stats_2526_2672_798583": {
-    "league_apps": 24,
-    "league_starts": 21,
-    "league_minutes": 1797,
-    "league_goals": 1,
-    "league_assists": 1,
-    "league_gpk": 1,
-    "league_pk": 0,
-    "league_pkatt": 0,
-    "league_yellow": 4,
-    "league_red": 0
-  },
   "manual_stats_2526_2672_1584884": {
     "league_apps": 1,
     "league_starts": 0,
@@ -3814,7 +3945,17 @@
     "league_pk": 0,
     "league_pkatt": 0,
     "league_yellow": 0,
-    "league_red": 0
+    "league_red": 0,
+    "euro_apps": 1,
+    "euro_starts": 0,
+    "euro_minutes": 34,
+    "euro_goals": 0,
+    "euro_assists": 0,
+    "euro_gpk": 0,
+    "euro_pk": 0,
+    "euro_pkatt": 0,
+    "euro_yellow": 0,
+    "euro_red": 0
   },
   "manual_stats_2526_2672_355492": {
     "league_apps": 29,
@@ -3826,7 +3967,17 @@
     "league_pk": 0,
     "league_pkatt": 0,
     "league_yellow": 9,
-    "league_red": 0
+    "league_red": 0,
+    "euro_apps": 11,
+    "euro_starts": 10,
+    "euro_minutes": 854,
+    "euro_goals": 0,
+    "euro_assists": 3,
+    "euro_gpk": 0,
+    "euro_pk": 0,
+    "euro_pkatt": 0,
+    "euro_yellow": 4,
+    "euro_red": 0
   },
   "manual_stats_2526_1649_788180": {
     "league_apps": 5,
@@ -3921,6 +4072,18 @@
     "league_yellow": 0,
     "league_red": 0
   },
+  "manual_stats_2526_1649_957604": {
+    "league_apps": 27,
+    "league_starts": 17,
+    "league_minutes": 1568,
+    "league_goals": 11,
+    "league_assists": 3,
+    "league_gpk": 11,
+    "league_pk": 0,
+    "league_pkatt": 0,
+    "league_yellow": 3,
+    "league_red": 0
+  },
   "manual_stats_2526_2697_301162": {
     "league_apps": 1,
     "league_starts": 0,
@@ -3934,18 +4097,6 @@
     "league_cs": 0,
     "league_savepct": "50.0",
     "league_cspct": "0.0"
-  },
-  "manual_stats_2526_1649_957604": {
-    "league_apps": 27,
-    "league_starts": 17,
-    "league_minutes": 1568,
-    "league_goals": 11,
-    "league_assists": 3,
-    "league_gpk": 11,
-    "league_pk": 0,
-    "league_pkatt": 0,
-    "league_yellow": 3,
-    "league_red": 0
   },
   "manual_stats_2526_2829_1590121": {
     "league_apps": 2,
@@ -4998,6 +5149,30 @@
     "league_yellow": 2,
     "league_red": 0
   },
+  "manual_stats_2526_2952_986395": {
+    "league_apps": 26,
+    "league_starts": 16,
+    "league_minutes": 1415,
+    "league_goals": 16,
+    "league_assists": 1,
+    "league_gpk": 14,
+    "league_pk": 2,
+    "league_pkatt": 2,
+    "league_yellow": 1,
+    "league_red": 0
+  },
+  "manual_stats_2526_2829_138572": {
+    "league_apps": 17,
+    "league_starts": 10,
+    "league_minutes": 976,
+    "league_goals": 0,
+    "league_assists": 1,
+    "league_gpk": 0,
+    "league_pk": 0,
+    "league_pkatt": 0,
+    "league_yellow": 0,
+    "league_red": 0
+  },
   "squad_sofa_af_Arsenal": {
     "squad": [
       {
@@ -5549,30 +5724,6 @@
     "usingSofa": false,
     "ts": 1781249531424
   },
-  "manual_stats_2526_2829_138572": {
-    "league_apps": 17,
-    "league_starts": 10,
-    "league_minutes": 976,
-    "league_goals": 0,
-    "league_assists": 1,
-    "league_gpk": 0,
-    "league_pk": 0,
-    "league_pkatt": 0,
-    "league_yellow": 0,
-    "league_red": 0
-  },
-  "manual_stats_2526_2952_986395": {
-    "league_apps": 26,
-    "league_starts": 16,
-    "league_minutes": 1415,
-    "league_goals": 16,
-    "league_assists": 1,
-    "league_gpk": 14,
-    "league_pk": 2,
-    "league_pkatt": 2,
-    "league_yellow": 1,
-    "league_red": 0
-  },
   "manual_stats_2627_2672_1142251": {
     "league_apps": 0,
     "league_starts": 0,
@@ -5796,18 +5947,6 @@
     "euro_savepct": "71.8",
     "euro_cspct": "40.0"
   },
-  "manual_stats_2627_1963_844096": {
-    "league_apps": 12,
-    "league_starts": 12,
-    "league_minutes": 1080,
-    "league_goals": 1,
-    "league_assists": 4,
-    "league_gpk": 0,
-    "league_pk": 1,
-    "league_pkatt": 1,
-    "league_yellow": 1,
-    "league_red": 0
-  },
   "manual_stats_2526_2672_187433": {
     "league_apps": 21,
     "league_starts": 16,
@@ -5817,6 +5956,28 @@
     "league_gpk": 8,
     "league_pk": 0,
     "league_pkatt": 0,
+    "league_yellow": 1,
+    "league_red": 0,
+    "euro_apps": 11,
+    "euro_starts": 7,
+    "euro_minutes": 561,
+    "euro_goals": 2,
+    "euro_assists": 5,
+    "euro_gpk": 2,
+    "euro_pk": 0,
+    "euro_pkatt": 0,
+    "euro_yellow": 0,
+    "euro_red": 0
+  },
+  "manual_stats_2627_1963_844096": {
+    "league_apps": 12,
+    "league_starts": 12,
+    "league_minutes": 1080,
+    "league_goals": 1,
+    "league_assists": 4,
+    "league_gpk": 0,
+    "league_pk": 1,
+    "league_pkatt": 1,
     "league_yellow": 1,
     "league_red": 0
   },
@@ -5890,7 +6051,14 @@
     "league_ga": 0,
     "league_saves": 0,
     "league_cs": 0,
-    "league_sota": 0
+    "league_sota": 0,
+    "euro_apps": 0,
+    "euro_starts": 0,
+    "euro_minutes": 0,
+    "euro_ga": 0,
+    "euro_saves": 0,
+    "euro_cs": 0,
+    "euro_sota": 0
   },
   "manual_stats_2526_2697_1215062": {
     "league_apps": 1,
@@ -5919,24 +6087,24 @@
     "league_yellow": 5,
     "league_red": 0
   },
-  "manual_stats_2526_2952_1586639": {
-    "league_apps": 2,
-    "league_starts": 0,
-    "league_minutes": 13,
-    "league_goals": 0,
-    "league_assists": 0,
-    "league_gpk": 0,
-    "league_pk": 0,
-    "league_pkatt": 0,
-    "league_yellow": 0,
-    "league_red": 0
-  },
   "manual_stats_2526_1963_1116665": {
     "league_apps": 12,
     "league_starts": 7,
     "league_minutes": 763,
     "league_goals": 0,
     "league_assists": 3,
+    "league_gpk": 0,
+    "league_pk": 0,
+    "league_pkatt": 0,
+    "league_yellow": 0,
+    "league_red": 0
+  },
+  "manual_stats_2526_2952_1586639": {
+    "league_apps": 2,
+    "league_starts": 0,
+    "league_minutes": 13,
+    "league_goals": 0,
+    "league_assists": 0,
     "league_gpk": 0,
     "league_pk": 0,
     "league_pkatt": 0,
@@ -5996,7 +6164,17 @@
     "league_pk": 0,
     "league_pkatt": 0,
     "league_yellow": 5,
-    "league_red": 1
+    "league_red": 1,
+    "euro_apps": 12,
+    "euro_starts": 12,
+    "euro_minutes": 980,
+    "euro_goals": 7,
+    "euro_assists": 3,
+    "euro_gpk": 7,
+    "euro_pk": 0,
+    "euro_pkatt": 0,
+    "euro_yellow": 2,
+    "euro_red": 1
   },
   "manual_stats_2627_1963_1485294": {
     "league_apps": 2,
@@ -6064,7 +6242,17 @@
     "league_pk": 0,
     "league_pkatt": 0,
     "league_yellow": 4,
-    "league_red": 0
+    "league_red": 0,
+    "euro_apps": 10,
+    "euro_starts": 1,
+    "euro_minutes": 185,
+    "euro_goals": 0,
+    "euro_assists": 0,
+    "euro_gpk": 0,
+    "euro_pk": 0,
+    "euro_pkatt": 0,
+    "euro_yellow": 0,
+    "euro_red": 0
   },
   "squad_sofa_2672": {
     "squad": [
@@ -6629,6 +6817,22 @@
     "league_yellow": 1,
     "league_red": 0
   },
+  "manual_stats_2526_2672_2236493": {
+    "league_apps": 0,
+    "league_starts": 0,
+    "league_minutes": 0,
+    "league_ga": 0,
+    "league_saves": 0,
+    "league_cs": 0,
+    "league_sota": 0,
+    "euro_apps": 0,
+    "euro_starts": 0,
+    "euro_minutes": 0,
+    "euro_ga": 0,
+    "euro_saves": 0,
+    "euro_cs": 0,
+    "euro_sota": 0
+  },
   "manual_stats_2627_2672_1976732": {
     "league_apps": 4,
     "league_starts": 0,
@@ -6640,15 +6844,6 @@
     "league_pkatt": 0,
     "league_yellow": 0,
     "league_red": 0
-  },
-  "manual_stats_2526_2672_2236493": {
-    "league_apps": 0,
-    "league_starts": 0,
-    "league_minutes": 0,
-    "league_ga": 0,
-    "league_saves": 0,
-    "league_cs": 0,
-    "league_sota": 0
   },
   "manual_stats_2526_2952_906021": {
     "league_apps": 27,
@@ -6756,7 +6951,17 @@
     "league_pk": 0,
     "league_pkatt": 0,
     "league_yellow": 0,
-    "league_red": 0
+    "league_red": 0,
+    "euro_apps": 1,
+    "euro_starts": 0,
+    "euro_minutes": 18,
+    "euro_goals": 0,
+    "euro_assists": 0,
+    "euro_gpk": 0,
+    "euro_pk": 0,
+    "euro_pkatt": 0,
+    "euro_yellow": 0,
+    "euro_red": 0
   },
   "manual_stats_2526_2672_246999": {
     "league_apps": 18,
@@ -6768,7 +6973,17 @@
     "league_pk": 0,
     "league_pkatt": 0,
     "league_yellow": 0,
-    "league_red": 0
+    "league_red": 0,
+    "euro_apps": 7,
+    "euro_starts": 4,
+    "euro_minutes": 335,
+    "euro_goals": 1,
+    "euro_assists": 0,
+    "euro_gpk": 1,
+    "euro_pk": 0,
+    "euro_pkatt": 0,
+    "euro_yellow": 0,
+    "euro_red": 0
   },
   "manual_stats_2526_1963_1106603": {
     "league_apps": 29,
@@ -6792,7 +7007,17 @@
     "league_pk": 0,
     "league_pkatt": 0,
     "league_yellow": 8,
-    "league_red": 0
+    "league_red": 0,
+    "euro_apps": 13,
+    "euro_starts": 12,
+    "euro_minutes": 1081,
+    "euro_goals": 5,
+    "euro_assists": 6,
+    "euro_gpk": 5,
+    "euro_pk": 0,
+    "euro_pkatt": 0,
+    "euro_yellow": 3,
+    "euro_red": 0
   },
   "manual_stats_2526_1963_220833": {
     "league_apps": 27,
@@ -7355,7 +7580,17 @@
     "league_pk": 1,
     "league_pkatt": 1,
     "league_yellow": 1,
-    "league_red": 0
+    "league_red": 0,
+    "euro_apps": 6,
+    "euro_starts": 3,
+    "euro_minutes": 315,
+    "euro_goals": 2,
+    "euro_assists": 1,
+    "euro_gpk": 2,
+    "euro_pk": 0,
+    "euro_pkatt": 0,
+    "euro_yellow": 1,
+    "euro_red": 0
   },
   "manual_stats_2526_2672_8959": {
     "league_apps": 22,
@@ -7364,7 +7599,14 @@
     "league_ga": 20,
     "league_saves": 31,
     "league_cs": 6,
-    "league_sota": 0
+    "league_sota": 0,
+    "euro_apps": 11,
+    "euro_starts": 11,
+    "euro_minutes": 990,
+    "euro_ga": 17,
+    "euro_saves": 37,
+    "euro_cs": 2,
+    "euro_sota": 0
   },
   "manual_stats_2526_2672_259117": {
     "league_apps": 29,
@@ -7376,7 +7618,17 @@
     "league_pk": 0,
     "league_pkatt": 0,
     "league_yellow": 4,
-    "league_red": 0
+    "league_red": 0,
+    "euro_apps": 13,
+    "euro_starts": 13,
+    "euro_minutes": 1160,
+    "euro_goals": 0,
+    "euro_assists": 2,
+    "euro_gpk": 0,
+    "euro_pk": 0,
+    "euro_pkatt": 0,
+    "euro_yellow": 4,
+    "euro_red": 0
   },
   "manual_stats_2526_2829_1085081": {
     "league_apps": 28,
@@ -7467,15 +7719,6 @@
     "league_yellow": 7,
     "league_red": 1
   },
-  "manual_stats_2526_2829_1493226": {
-    "league_apps": 0,
-    "league_starts": 0,
-    "league_minutes": 0,
-    "league_ga": 0,
-    "league_saves": 0,
-    "league_cs": 0,
-    "league_sota": 0
-  },
   "manual_stats_2526_1649_973838": {
     "league_apps": 26,
     "league_starts": 25,
@@ -7487,6 +7730,15 @@
     "league_pkatt": 0,
     "league_yellow": 4,
     "league_red": 1
+  },
+  "manual_stats_2526_2829_1493226": {
+    "league_apps": 0,
+    "league_starts": 0,
+    "league_minutes": 0,
+    "league_ga": 0,
+    "league_saves": 0,
+    "league_cs": 0,
+    "league_sota": 0
   },
   "manual_stats_2526_1963_331397": {
     "league_apps": 19,
@@ -7522,7 +7774,17 @@
     "league_pk": 0,
     "league_pkatt": 0,
     "league_yellow": 0,
-    "league_red": 0
+    "league_red": 0,
+    "euro_apps": 0,
+    "euro_starts": 0,
+    "euro_minutes": 0,
+    "euro_goals": 0,
+    "euro_assists": 0,
+    "euro_gpk": 0,
+    "euro_pk": 0,
+    "euro_pkatt": 0,
+    "euro_yellow": 0,
+    "euro_red": 0
   },
   "manual_stats_2526_2672_1994983": {
     "league_apps": 1,
@@ -7534,7 +7796,17 @@
     "league_pk": 0,
     "league_pkatt": 0,
     "league_yellow": 0,
-    "league_red": 0
+    "league_red": 0,
+    "euro_apps": 0,
+    "euro_starts": 0,
+    "euro_minutes": 0,
+    "euro_goals": 0,
+    "euro_assists": 0,
+    "euro_gpk": 0,
+    "euro_pk": 0,
+    "euro_pkatt": 0,
+    "euro_yellow": 0,
+    "euro_red": 0
   },
   "manual_stats_2627_2672_8959": {
     "league_apps": 0,
@@ -7697,7 +7969,17 @@
     "league_pk": 10,
     "league_pkatt": 11,
     "league_yellow": 1,
-    "league_red": 0
+    "league_red": 0,
+    "euro_apps": 13,
+    "euro_starts": 12,
+    "euro_minutes": 1039,
+    "euro_goals": 14,
+    "euro_assists": 2,
+    "euro_gpk": 10,
+    "euro_pk": 4,
+    "euro_pkatt": 5,
+    "euro_yellow": 0,
+    "euro_red": 0
   },
   "manual_stats_2627_2672_2518029": {
     "league_apps": 0,
@@ -7723,18 +8005,6 @@
     "league_yellow": 0,
     "league_red": 0
   },
-  "manual_stats_2526_2952_893499": {
-    "league_apps": 26,
-    "league_starts": 24,
-    "league_minutes": 2086,
-    "league_goals": 1,
-    "league_assists": 9,
-    "league_gpk": 1,
-    "league_pk": 0,
-    "league_pkatt": 0,
-    "league_yellow": 2,
-    "league_red": 0
-  },
   "manual_stats_2526_2672_1489220": {
     "league_apps": 2,
     "league_starts": 0,
@@ -7745,6 +8015,28 @@
     "league_pk": 0,
     "league_pkatt": 0,
     "league_yellow": 0,
+    "league_red": 0,
+    "euro_apps": 0,
+    "euro_starts": 0,
+    "euro_minutes": 0,
+    "euro_goals": 0,
+    "euro_assists": 0,
+    "euro_gpk": 0,
+    "euro_pk": 0,
+    "euro_pkatt": 0,
+    "euro_yellow": 0,
+    "euro_red": 0
+  },
+  "manual_stats_2526_2952_893499": {
+    "league_apps": 26,
+    "league_starts": 24,
+    "league_minutes": 2086,
+    "league_goals": 1,
+    "league_assists": 9,
+    "league_gpk": 1,
+    "league_pk": 0,
+    "league_pkatt": 0,
+    "league_yellow": 2,
     "league_red": 0
   },
   "manual_stats_2526_2829_70988": {
@@ -8518,15 +8810,6 @@
     "euro_savepct": "0.0",
     "euro_cspct": "0.0"
   },
-  "manual_stats_2526_2952_1134720": {
-    "league_apps": 2,
-    "league_starts": 2,
-    "league_minutes": 180,
-    "league_ga": 3,
-    "league_saves": 5,
-    "league_cs": 0,
-    "league_sota": 0
-  },
   "manual_stats_2526_2952_1014222": {
     "league_apps": 21,
     "league_starts": 13,
@@ -8538,6 +8821,15 @@
     "league_pkatt": 0,
     "league_yellow": 2,
     "league_red": 0
+  },
+  "manual_stats_2526_2952_1134720": {
+    "league_apps": 2,
+    "league_starts": 2,
+    "league_minutes": 180,
+    "league_ga": 3,
+    "league_saves": 5,
+    "league_cs": 0,
+    "league_sota": 0
   },
   "manual_stats_2627_2672_843665": {
     "league_apps": 0,
@@ -8655,6 +8947,18 @@
     "euro_cspct": "0.0",
     "euro_yellow": 0
   },
+  "manual_stats_2526_2672_2361805": {
+    "league_apps": 0,
+    "league_starts": 0,
+    "league_minutes": 0,
+    "league_goals": 0,
+    "league_assists": 0,
+    "league_gpk": 0,
+    "league_pk": 0,
+    "league_pkatt": 0,
+    "league_yellow": 0,
+    "league_red": 0
+  },
   "manual_stats_2526_2697_977679": {
     "league_apps": 30,
     "league_starts": 18,
@@ -8683,18 +8987,6 @@
     "euro_cs": 0,
     "euro_savepct": "0.0",
     "euro_cspct": "0.0"
-  },
-  "manual_stats_2526_2672_2361805": {
-    "league_apps": 0,
-    "league_starts": 0,
-    "league_minutes": 0,
-    "league_goals": 0,
-    "league_assists": 0,
-    "league_gpk": 0,
-    "league_pk": 0,
-    "league_pkatt": 0,
-    "league_yellow": 0,
-    "league_red": 0
   },
   "manual_stats_2526_2829_792073": {
     "league_apps": 5,
@@ -8770,7 +9062,7 @@
     "league_red": 0
   },
   "_meta": {
-    "updated": "2026-06-13T22:01:40.559Z",
+    "updated": "2026-06-14T10:28:28.833Z",
     "count": 266
   }
 }
