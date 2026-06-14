@@ -899,7 +899,7 @@ async function _loadScorers(el) {
     var LEAGUE_CODES = ['PL','PD','BL1','SA','FL1','PPL'];
     var EU_CODES = ['CL','EL','ECL'];
     for(var i=0;i<cached.length;i++){
-      var c = cached[i].competition && cached[i].competition.code;
+      var c = espnSlugToFdCode(cached[i].competition && cached[i].competition.code);
       if(c && LEAGUE_CODES.indexOf(c)>=0 && !leagueCode) leagueCode=c;
       if(c && EU_CODES.indexOf(c)>=0 && euCodes.indexOf(c)<0) euCodes.push(c);
     }
@@ -7018,7 +7018,7 @@ async function _loadScorers(el) {
     var LEAGUE_CODES = ['PL','PD','BL1','SA','FL1','PPL'];
     var EU_CODES = ['CL','EL','ECL'];
     for(var i=0;i<cached.length;i++){
-      var c = cached[i].competition && cached[i].competition.code;
+      var c = espnSlugToFdCode(cached[i].competition && cached[i].competition.code);
       if(c && LEAGUE_CODES.indexOf(c)>=0 && !leagueCode) leagueCode=c;
       if(c && EU_CODES.indexOf(c)>=0 && euCodes.indexOf(c)<0) euCodes.push(c);
     }
@@ -17029,13 +17029,18 @@ function pct(v,n) { return n ? Math.round(v/n*100) : 0; }
 
 
 /* ══ CLASSEMENT LIGUE ══ */
+function espnSlugToFdCode(code){
+  if(!code) return code;
+  var M={'fra.1':'FL1','eng.1':'PL','esp.1':'PD','ita.1':'SA','ger.1':'BL1','por.1':'PPL','ned.1':'DED','bra.1':'BSA','uefa.champions':'CL','uefa.europa':'EL','uefa.europa.conf':'ECL'};
+  return M[code]||code;
+}
 async function loadStandings(nom, teamId, filteredMatches) {
   // Trouver le code de la ligue depuis les matchs
   var leagueCode = null;
   var LEAGUE_CODES = ['PL','PD','BL1','SA','FL1','PPL','CL','EL'];
   for(var i=0;i<filteredMatches.length;i++){
     var m = filteredMatches[i];
-    var code = m.competition && m.competition.code;
+    var code = espnSlugToFdCode(m.competition && m.competition.code);
     if(code && LEAGUE_CODES.indexOf(code)>=0 && code!=='CL' && code!=='EL') {
       leagueCode = code;
       break;
