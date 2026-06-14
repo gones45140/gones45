@@ -16826,21 +16826,15 @@ async function loadTeamSaisons() {
 function updateSaisonFilter() {
   var allChk = document.getElementById('sf-all');
   if(!allChk) return;
-  // Si on coche "Toutes" → décocher les autres
+  // Tous les chips de filtre (génériques : marche pour n'importe quels groupes)
+  var _boxes = Array.prototype.slice.call(document.querySelectorAll('#saison-filter-chips input[id^="sf-"]')).filter(function(b){ return b.id!=='sf-all'; });
   if(allChk.checked) {
-    ['Championnat','Coupe_Europe','Coupe_Nationale','Autre'].forEach(function(g){
-      var el=document.getElementById('sf-'+g); if(el) el.checked=false;
-    });
+    _boxes.forEach(function(b){ b.checked=false; });
     localStorage.setItem('g45_saison_filters', JSON.stringify({all:true}));
   } else {
-    // Si on coche un groupe → décocher "Toutes"
-    localStorage.setItem('g45_saison_filters', JSON.stringify({
-      all: false,
-      'sf-Championnat': !!(document.getElementById('sf-Championnat')&&document.getElementById('sf-Championnat').checked),
-      'sf-Coupe_Europe': !!(document.getElementById('sf-Coupe_Europe')&&document.getElementById('sf-Coupe_Europe').checked),
-      'sf-Coupe_Nationale': !!(document.getElementById('sf-Coupe_Nationale')&&document.getElementById('sf-Coupe_Nationale').checked),
-      'sf-Autre': !!(document.getElementById('sf-Autre')&&document.getElementById('sf-Autre').checked),
-    }));
+    var _f = { all:false };
+    _boxes.forEach(function(b){ _f[b.id] = !!b.checked; });
+    localStorage.setItem('g45_saison_filters', JSON.stringify(_f));
   }
   // Recharger les saisons
   _saisonsCache = {};
@@ -16911,8 +16905,14 @@ function filterMatchesByComp(matches, filters) {
     var ct = m.competition&&m.competition.type||'';
     var cn = m.competition&&m.competition.name||'';
     if(filters['sf-Championnat'] && ct==='LEAGUE') return true;
-    if(filters['sf-Coupe_Europe'] && ct==='CUP' && (cn.indexOf('Champion')>=0||cn.indexOf('Europa')>=0||cn.indexOf('UEFA')>=0||cn.indexOf('Conference')>=0)) return true;
-    if(filters['sf-Coupe_Nationale'] && ct==='CUP' && !(cn.indexOf('Champion')>=0||cn.indexOf('Europa')>=0||cn.indexOf('UEFA')>=0||cn.indexOf('Conference')>=0)) return true;
+    var code = (m.competition&&m.competition.code||'').toLowerCase();
+    var lown = cn.toLowerCase();
+    var euroKey = '';
+    if(code.indexOf('champions')>=0||lown.indexOf('champions')>=0) euroKey='sf-Ligue_des_Champions';
+    else if(code.indexOf('europa.conf')>=0||code.indexOf('conference')>=0||lown.indexOf('conference')>=0) euroKey='sf-Conference_League';
+    else if(code.indexOf('europa')>=0||lown.indexOf('europa')>=0||code.indexOf('uefa')>=0) euroKey='sf-Ligue_Europa';
+    if(euroKey && filters[euroKey]) return true;
+    if(filters['sf-Coupe_Nationale'] && ct==='CUP' && !euroKey) return true;
     if(filters['sf-Autre'] && ct!=='LEAGUE' && ct!=='CUP') return true;
     return false;
   });
@@ -17111,6 +17111,12 @@ function renderSaisonsChart(el, results, nom) {
     (results[s]||[]).forEach(function(m){
       var cn = m.competition&&m.competition.name||'Autre';
       var ct = m.competition&&m.competition.type||'';
+      var code = (m.competition&&m.competition.code||'').toLowerCase();
+      var lown = cn.toLowerCase();
+      // Coupes d'Europe normalisées (par code ESPN ou par nom football-data)
+      if(code.indexOf('champions')>=0||lown.indexOf('champions')>=0){ cn='Ligue des Champions'; ct='CUP'; }
+      else if(code.indexOf('europa.conf')>=0||code.indexOf('conference')>=0||lown.indexOf('conference')>=0){ cn='Conference League'; ct='CUP'; }
+      else if(code.indexOf('europa')>=0||lown.indexOf('europa')>=0){ cn='Ligue Europa'; ct='CUP'; }
       if(!allComps[cn]) allComps[cn] = {type:ct, count:0};
       allComps[cn].count++;
     });
@@ -17119,14 +17125,18 @@ function renderSaisonsChart(el, results, nom) {
   // Grouper par type
   var compGroups = {
     'Championnat': [],
-    'Coupe Europe': [],
+    'Ligue des Champions': [],
+    'Ligue Europa': [],
+    'Conference League': [],
     'Coupe Nationale': [],
     'Autre': []
   };
   Object.keys(allComps).forEach(function(cn){
     var ct = allComps[cn].type;
     if(ct==='LEAGUE') compGroups['Championnat'].push(cn);
-    else if(ct==='CUP' && (cn.indexOf('Champion')+cn.indexOf('Europa')+cn.indexOf('UEFA')+cn.indexOf('Conference'))>-3) compGroups['Coupe Europe'].push(cn);
+    else if(cn==='Ligue des Champions') compGroups['Ligue des Champions'].push(cn);
+    else if(cn==='Ligue Europa') compGroups['Ligue Europa'].push(cn);
+    else if(cn==='Conference League') compGroups['Conference League'].push(cn);
     else if(ct==='CUP') compGroups['Coupe Nationale'].push(cn);
     else compGroups['Autre'].push(cn);
   });
@@ -17147,14 +17157,15 @@ function renderSaisonsChart(el, results, nom) {
     +'<input type="checkbox" id="sf-all" '+(allActive?'checked':'')+' onchange="updateSaisonFilter()" style="accent-color:var(--a);">Toutes</label>';
 
   // Chips par groupe
-  var groupColors = {'Championnat':'#1ed760','Coupe Europe':'#f0b020','Coupe Nationale':'#ff7b54','Autre':'#a78bfa'};
+  var groupColors = {'Championnat':'#1ed760','Ligue des Champions':'#4d84ff','Ligue Europa':'#f0b020','Conference League':'#22d3ee','Coupe Nationale':'#ff7b54','Autre':'#a78bfa'};
+  var groupLabels = {'Ligue des Champions':'LDC','Ligue Europa':'Europa','Conference League':'Conference'};
   Object.keys(compGroups).forEach(function(g){
     if(!compGroups[g].length) return;
     var key = 'sf-'+g.replace(/ /g,'_');
     var active = _saisonFilters.all || (_saisonFilters[key]);
     var col = groupColors[g]||'#7aaaff';
     html += '<label style="display:flex;align-items:center;gap:5px;padding:5px 10px;border-radius:12px;border:1px solid '+(active?col.replace('#','rgba(').replace(/(..)(..)(..)/, function(m,r,g2,b){ return parseInt(r,16)+','+parseInt(g2,16)+','+parseInt(b,16); })+',.4)':'rgba(255,255,255,.1)')+';background:'+(active?'rgba(77,132,255,.08)':'none')+';cursor:pointer;font-size:10px;font-weight:700;color:'+(active?col:'var(--t3)')+';">'
-      +'<input type="checkbox" id="'+key+'" '+(active?'checked':'')+' onchange="updateSaisonFilter()" style="accent-color:'+col+';">'+g+'</label>';
+      +'<input type="checkbox" id="'+key+'" '+(active?'checked':'')+' onchange="updateSaisonFilter()" style="accent-color:'+col+';">'+(groupLabels[g]||g)+'</label>';
     // Tooltip avec les compétitions
     html += '';
   });
