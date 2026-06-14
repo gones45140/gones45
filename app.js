@@ -220,8 +220,15 @@ function espnToFdMatch(m, ourName, ourFdId) {
     type = 'LEAGUE'; // par défaut championnat (slugs nationaux)
   }
 
-  // Nom lisible de la compétition
-  var compName = cname || (type==='LEAGUE' ? 'Championnat' : 'Coupe');
+  // Nom lisible de la compétition (les coupes d'Europe doivent contenir Champions/Europa/Conference
+  // pour être bien classées en « Coupe Europe » au lieu de « Coupe Nationale »)
+  var compName = cname;
+  if(!compName){
+    if(slug.indexOf('champions')>=0) compName = 'Ligue des Champions';
+    else if(slug.indexOf('conference')>=0 || slug.indexOf('europa.conf')>=0) compName = 'Conference League';
+    else if(slug.indexOf('europa')>=0) compName = 'Ligue Europa';
+    else compName = (type==='LEAGUE' ? 'Championnat' : 'Coupe');
+  }
 
   // Déterminer de quel côté est notre équipe (pour domicile/extérieur)
   var nl = (ourName||'').toLowerCase().trim();
