@@ -15163,7 +15163,7 @@ function loadMondial2026() {
   // Les 12 groupes — cliquables
   html += '<div class="cwrap" style="margin-bottom:10px;">';
   html += '<div style="font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#4f5d88;margin-bottom:10px;">🏆 Les 12 Groupes — cliquer pour les résultats</div>';
-  html += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;">';
+  html += '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:6px;">';
 
   GROUPES.forEach(function(g){
     var isFr = g.id === 'I';
@@ -15812,7 +15812,7 @@ function renderSimuMain(el) {
   // Groupes
   html += '<div class="cwrap" style="margin-bottom:10px;">';
   html += '<div style="font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#4f5d88;margin-bottom:10px;">📊 Phase de groupes</div>';
-  html += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;">';
+  html += '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:6px;">';
 
   SIMU_GROUPES.forEach(function(g){
     var standings = calcSimuStandings(g.id);
@@ -16532,7 +16532,7 @@ function voirSimuRecue(idx) {
   // Afficher les groupes en lecture seule
   html += '<div class="cwrap" style="margin-bottom:10px;">';
   html += '<div style="font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#4f5d88;margin-bottom:10px;">📊 Phase de groupes</div>';
-  html += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;">';
+  html += '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:6px;">';
 
   SIMU_GROUPES.forEach(function(g){
     // Recalculer le classement depuis les scores reçus
