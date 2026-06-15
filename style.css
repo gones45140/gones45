@@ -8,7 +8,7 @@
   --r8:10px;--r6:8px;--r4:6px;
   --card-border:rgba(120,150,255,.13);--card-glow:0 3px 14px rgba(8,11,25,.35);
   /* ── FOND PHOTO : remplace la valeur de --bg-img par url('https://...ton-image.jpg') pour mettre une photo ── */
-  --bg-img:linear-gradient(168deg,#1d2645 0%,#171e36 55%,#10162a 100%);
+  --bg-img:url('img/fond.jpg');
   /* Voile sombre par-dessus la photo (lisibilité). Baisse les opacités (.86/.93) pour rendre la photo plus visible. */
   --scrim:linear-gradient(180deg,rgba(16,21,40,.86) 0%,rgba(13,17,32,.93) 100%);
 }
