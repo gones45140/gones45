@@ -41,7 +41,7 @@ input,select,textarea,button{font-family:inherit;color:var(--t1);}
 .sec::after{content:'';flex:1;height:1px;background:var(--b1);}
 .sec:first-child{margin-top:0;}
 
-.card{background:rgba(34,43,71,.82);backdrop-filter:blur(7px);-webkit-backdrop-filter:blur(7px);border:1px solid var(--card-border,var(--b1));border-radius:var(--r8);margin-bottom:10px;overflow:hidden;box-shadow:var(--card-glow,none);}
+.card{background:rgba(34,43,71,.64);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border:1px solid var(--card-border,var(--b1));border-radius:var(--r8);margin-bottom:10px;overflow:hidden;box-shadow:var(--card-glow,none);}
 .cp{padding:14px 16px;}
 
 .kpi2{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px;}
