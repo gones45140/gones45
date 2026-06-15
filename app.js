@@ -12642,7 +12642,7 @@ async function autoEspnFillSquad(uid, nom) {
     });
     if (!pairs.length) throw new Error('aucun joueur ESPN apparié à ton effectif');
 
-    var season = (function () { var d = new Date(); return (d.getMonth() >= 6) ? d.getFullYear() : d.getFullYear() - 1; })();
+    var season = 2000 + parseInt(String(_currentSaison).slice(0, 2), 10); // année de début de la saison sélectionnée (Europe: début ; Brésil: année civile)
     var sv = function (map, n) { return (map[n] && map[n].value != null) ? map[n].value : 0; };
     var updated = 0;
 
@@ -12886,13 +12886,20 @@ async function loadFdSquad(el, nom, teamId, noTerrain, terrainOnly) {
     var cacheDuration = 24*60*60*1000;
     var squad, statsMap = {};
 
-    // Sync stats depuis GitHub au premier chargement du jour
-    if(localStorage.getItem('gones45_github_token') && !localStorage.getItem('github_synced_today')) {
-      try {
-        await syncStatsFromGithub();
-        localStorage.setItem('github_synced_today', Date.now());
-        setTimeout(function(){ localStorage.removeItem('github_synced_today'); }, 6*60*60*1000);
-      } catch(e) { console.warn('GitHub sync error:', e); }
+    // Sync stats depuis GitHub
+    if(localStorage.getItem('gones45_github_token')) {
+      // Admin (token) : sync via API, 1x/6h
+      if(!localStorage.getItem('github_synced_today')) {
+        try {
+          await syncStatsFromGithub();
+          localStorage.setItem('github_synced_today', Date.now());
+          setTimeout(function(){ localStorage.removeItem('github_synced_today'); }, 6*60*60*1000);
+        } catch(e) { console.warn('GitHub sync error:', e); }
+      }
+    } else if(!window._publicStatsSynced) {
+      // Lecteur (telephone, amis, sans token) : lecture publique a chaque chargement de page
+      window._publicStatsSynced = true;
+      try { await loadPublicStats(); } catch(e) { console.warn('Public stats error:', e); }
     } else if(!localStorage.getItem('gones45_github_token') && !localStorage.getItem('public_stats_loaded')) {
       // Amis sans token : lecture publique des stats partagées
       try {
@@ -13064,8 +13071,8 @@ async function loadFdSquad(el, nom, teamId, noTerrain, terrainOnly) {
     html += '<div style="font-size:9px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;color:var(--t3);">👤 Squad · '+nom+' <span style="color:var(--t2);font-weight:500;">('+squad.length+')</span></div>';
     html += '<div style="display:flex;align-items:center;gap:8px;">';
     html += '<div style="font-size:9px;color:var(--t3);">'+(usingSofa?'sofascore':'api-football · 2024-25')+'</div>';
-    html += '<button id="btn-espn-auto-'+uid+'" onclick="autoEspnFillSquad(\''+uid+'\',\''+nom+'\')" style="display:flex;align-items:center;gap:4px;padding:4px 8px;border-radius:6px;border:1px solid rgba(30,215,96,.3);background:rgba(30,215,96,.12);color:#1ed760;font-size:9px;font-weight:700;cursor:pointer;" title="Remplir auto depuis ESPN (saison sélectionnée, Championnat) — n\'écrase pas une équipe déjà saisie">⚡ Auto ESPN</button>';
-    html += '<button id="btn-fbref-import-'+uid+'" onclick="importFbrefStats(\''+uid+'\',\''+nom+'\')" style="display:flex;align-items:center;gap:4px;padding:4px 8px;border-radius:6px;border:1px solid rgba(255,255,255,.15);background:rgba(255,255,255,.07);color:var(--t2);font-size:9px;font-weight:700;cursor:pointer;">📸 Import FBref</button>';
+    if(localStorage.getItem('gones45_admin')==='1'){html += '<button id="btn-espn-auto-'+uid+'" onclick="autoEspnFillSquad(\''+uid+'\',\''+nom+'\')" style="display:flex;align-items:center;gap:4px;padding:4px 8px;border-radius:6px;border:1px solid rgba(30,215,96,.3);background:rgba(30,215,96,.12);color:#1ed760;font-size:9px;font-weight:700;cursor:pointer;" title="Remplir auto depuis ESPN (saison sélectionnée, Championnat) — n\'écrase pas une équipe déjà saisie">⚡ Auto ESPN</button>';
+    html += '<button id="btn-fbref-import-'+uid+'" onclick="importFbrefStats(\''+uid+'\',\''+nom+'\')" style="display:flex;align-items:center;gap:4px;padding:4px 8px;border-radius:6px;border:1px solid rgba(255,255,255,.15);background:rgba(255,255,255,.07);color:var(--t2);font-size:9px;font-weight:700;cursor:pointer;">📸 Import FBref</button>';}
     html += '<button id="btn-admin-lock-'+uid+'" onclick="toggleAdminLock(\''+uid+'\')" style="padding:4px 7px;border-radius:6px;border:1px solid rgba(255,255,255,.15);background:rgba(255,255,255,.07);color:var(--t2);font-size:12px;cursor:pointer;" title="Mode admin">'+(localStorage.getItem('gones45_admin')==='1'?'🔓':'🔒')+'</button>';
     html += '<button onclick="refreshSquadCache(\''+nom+'\')" style="display:flex;align-items:center;gap:4px;padding:4px 8px;border-radius:6px;border:1px solid rgba(255,255,255,.15);background:rgba(255,255,255,.07);color:var(--t2);font-size:9px;font-weight:700;cursor:pointer;" title="Vider le cache et recharger le squad depuis l\'API">🔄</button>';
     if(localStorage.getItem('gones45_admin')==='1'){ html += '<button onclick="resetTeamStats(\''+nom+'\')" style="display:flex;align-items:center;gap:4px;padding:4px 8px;border-radius:6px;border:1px solid rgba(255,69,69,.3);background:rgba(255,69,69,.1);color:#ff7b7b;font-size:9px;font-weight:700;cursor:pointer;" title="Effacer les stats de cette equipe">Reset</button>'; }
@@ -17883,6 +17890,7 @@ function initComparateur() {
   var btn = document.getElementById('btn-comparer');
   if(!s1||!s2) return;
   var knownTeams = state.u.filter(function(u){
+    if(typeof espnLeagueOf==='function' && espnLeagueOf(u.n)) return true;
     for(var k in TEAM_IDS){ if(k.toLowerCase()===u.n.toLowerCase()||u.n.toLowerCase().indexOf(k.toLowerCase())>=0||k.toLowerCase().indexOf(u.n.toLowerCase())>=0) return true; }
     return false;
   });
@@ -17901,18 +17909,54 @@ async function runComparateur() {
   var n1=s1.value, n2=s2.value;
   if(n1===n2){cont.innerHTML='<div style="color:#f0b020;text-align:center;padding:12px;">Choisis deux equipes differentes !</div>';return;}
 
-  cont.innerHTML='<div style="display:flex;align-items:center;gap:8px;padding:20px;color:var(--t3);"><div style="width:14px;height:14px;border:2px solid rgba(77,132,255,.2);border-top-color:#4d84ff;border-radius:50%;animation:spin .8s linear infinite;"></div>Chargement des stats...</div>';
+  cont.innerHTML='<div style="display:flex;align-items:center;gap:8px;padding:20px;color:var(--t3);"><div style="width:14px;height:14px;border:2px solid rgba(77,132,255,.2);border-top-color:#4d84ff;border-radius:50%;animation:spin .8s linear infinite;"></div>Chargement des stats (ESPN)...</div>';
 
-  var getId=function(n){ for(var k in TEAM_IDS){ if(k.toLowerCase()===n.toLowerCase()||n.toLowerCase().indexOf(k.toLowerCase())>=0||k.toLowerCase().indexOf(n.toLowerCase())>=0) return TEAM_IDS[k]; } return null; };
-  var id1=getId(n1), id2=getId(n2);
-  if(!id1||!id2){cont.innerHTML='<div style="color:#ff4545;">Equipe non trouvee dans football-data.</div>';return;}
+  // Saison ESPN courante (Europe : à partir d'août = année en cours)
+  var _now=new Date(), _cy=_now.getFullYear(), _cm=_now.getMonth()+1;
+  var seasonY=(_cm>=8)?_cy:_cy-1;
 
-  var d1=await fdFetch('/v4/teams/'+id1+'/matches?status=FINISHED&limit=20');
-  var d2=await fdFetch('/v4/teams/'+id2+'/matches?status=FINISHED&limit=20');
-  if(!d1||!d2){cont.innerHTML='<div style="color:#ff4545;">Erreur de chargement.</div>';return;}
+  // Récupère + convertit les matchs d'une équipe via ESPN (championnat + coupe d'Europe), sans clé API.
+  async function _cmpLoad(nom){
+    var id='cmp_'+nom;
+    async function pull(year){
+      var acc=[];
+      try {
+        var sched=await espnClubSchedule(nom, year);
+        if(sched&&sched.matches&&sched.matches.length){
+          var nm=(sched.team&&sched.team.name)||nom;
+          acc=acc.concat(sched.matches.map(function(mm){return espnToFdMatch(mm,nm,id);}));
+        }
+        var euroSlugs=['uefa.champions','uefa.europa','uefa.europa.conf'];
+        for(var i=0;i<euroSlugs.length;i++){
+          try {
+            var e=await espnClubSchedule(nom, year, euroSlugs[i]);
+            if(e&&e.matches&&e.matches.length){
+              var enm=(e.team&&e.team.name)||nom;
+              acc=acc.concat(e.matches.map(function(mm){return espnToFdMatch(mm,enm,id);}));
+              break;
+            }
+          } catch(_e){}
+        }
+      } catch(_e){}
+      return acc;
+    }
+    function finOnly(arr){ return arr.filter(function(m){return m.status==='FINISHED'&&m.score&&m.score.fullTime&&m.score.fullTime.home!=null;}); }
+    var out=await pull(seasonY);
+    if(finOnly(out).length<8){ out=out.concat(await pull(seasonY-1)); }
+    out=finOnly(out);
+    out.sort(function(a,b){return new Date(b.utcDate)-new Date(a.utcDate);});
+    if(out.length>30) out=out.slice(0,30);
+    return {id:id, matches:out};
+  }
 
-  var s1s=calcSaisonStats(d1.matches||[],id1);
-  var s2s=calcSaisonStats(d2.matches||[],id2);
+  var _r=await Promise.all([_cmpLoad(n1), _cmpLoad(n2)]);
+  var t1=_r[0], t2=_r[1];
+  if(!t1.matches.length && !t2.matches.length){
+    cont.innerHTML='<div style="color:#ff4545;padding:12px;text-align:center;">Stats indisponibles via ESPN pour ces deux équipes.</div>';return;
+  }
+
+  var s1s=calcSaisonStats(t1.matches, t1.id);
+  var s2s=calcSaisonStats(t2.matches, t2.id);
 
   var u1=state.u.find(function(u){return u.n===n1;})||{color:'#4d84ff'};
   var u2=state.u.find(function(u){return u.n===n2;})||{color:'#f0b020'};
