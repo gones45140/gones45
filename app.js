@@ -15648,7 +15648,7 @@ async function toggleWcMatchStats(eventId, rowId) {
       h += '</div>';
     }
 
-    h += _renderEspnMatchLineups(data, '#4d84ff', (typeof wcFr==='function'?wcFr:null));
+    if(typeof _renderEspnMatchLineups==='function') h += _renderEspnMatchLineups(data, '#4d84ff', (typeof wcFr==='function'?wcFr:null));
 
     box.innerHTML = h;
   } catch(e) {
@@ -18217,7 +18217,7 @@ async function loadEspnMatchLive(el, nom, col){
   html+=_renderEspnMatchLineups(s, col);
   el.innerHTML=html;
 }
-window.loadEspnMatchLive=loadEspnMatchLive;
+window.loadEspnMatchLive=loadEspnMatchLive; window._renderEspnMatchLineups=_renderEspnMatchLineups; window._renderEspnMatchStats=_renderEspnMatchStats; window._espnMatchLiveData=_espnMatchLiveData;
 
 var _pariEquipeFocus = '';
 var _tennisYear = '2026';
