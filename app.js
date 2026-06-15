@@ -4241,6 +4241,9 @@ function loadTeamLive(){
   if(sport==='🏀'||sport==='🏀🇺🇸') { loadVideoHighlights(el,nom,col,'nba'); return; }
   if(sport==='🏎️'||sport==='🏎') { loadVideoHighlights(el,nom,col,'f1'); return; }
 
+  // ⚽ Football : match en direct (compos + stats) via ESPN, sans clé
+  if(sport==='⚽'){ loadEspnMatchLive(el, nom, col); return; }
+
   // Trouver l'ID football-data
   var teamId=null;
   for(var k in TEAM_IDS){
@@ -10307,6 +10310,9 @@ function loadTeamLive(){
   if(sport==='⚾'||sport==='⚾🇺🇸') { loadVideoHighlights(el,nom,col,'mlb'); return; }
   if(sport==='🏀'||sport==='🏀🇺🇸') { loadVideoHighlights(el,nom,col,'nba'); return; }
   if(sport==='🏎️'||sport==='🏎') { loadVideoHighlights(el,nom,col,'f1'); return; }
+
+  // ⚽ Football : match en direct (compos + stats) via ESPN, sans clé
+  if(sport==='⚽'){ loadEspnMatchLive(el, nom, col); return; }
 
   // Trouver l'ID football-data
   var teamId=null;
@@ -18085,6 +18091,131 @@ function _syncBgControls(){
 window.applyBgFromUrl=applyBgFromUrl; window.applyBgFromFile=applyBgFromFile; window.resetBgDefault=resetBgDefault; window.setScrimDark=setScrimDark; window.setCardAlpha=setCardAlpha; window._syncBgControls=_syncBgControls;
 if(document.readyState!=='loading') _syncBgControls();
 else document.addEventListener('DOMContentLoaded', _syncBgControls);
+
+// ── MATCH EN DIRECT (compos + stats) via ESPN — football, sans clé ──
+async function _espnMatchLiveData(nom){
+  var resolved = await espnResolveTeam(nom);
+  // Fallback équipes nationales / Coupe du Monde (fifa.world)
+  if(!resolved){
+    try {
+      var wcTeams = await _espnLoadLeagueTeams('fifa.world');
+      resolved = _espnMatchTeam(nom, wcTeams, 'fifa.world', 'exact') || _espnMatchTeam(nom, wcTeams, 'fifa.world', 'partial');
+    } catch(e){}
+  }
+  if(!resolved) return null;
+  var now = new Date(), ev=null, lg=resolved.league;
+  try {
+    var r = await fetch(FD_PROXY+'?host=espn&path='+encodeURIComponent('/apis/site/v2/sports/soccer/'+resolved.league+'/teams/'+resolved.id+'/schedule'));
+    var d = await r.json();
+    var events = (d.events||[]).map(function(e){
+      var comp=(e.competitions&&e.competitions[0])||null;
+      var st=(comp&&comp.status&&comp.status.type)?comp.status.type:{};
+      return {id:e.id, t:new Date(e.date).getTime(), state:st.state||'', leagueSlug:(e.season&&e.season.slug)||resolved.league};
+    }).filter(function(x){return x.id;});
+    ev = events.find(function(x){return x.state==='in';});
+    if(!ev && events.length){ var nt=now.getTime(); events.sort(function(a,b){return Math.abs(a.t-nt)-Math.abs(b.t-nt);}); ev=events[0]; }
+    if(ev) lg = ev.leagueSlug || resolved.league;
+  } catch(e){ return null; }
+  if(!ev) return {resolved:resolved, event:null, summary:null};
+  var summary=null;
+  try {
+    var rs = await fetch(FD_PROXY+'?host=espn&path='+encodeURIComponent('/apis/site/v2/sports/soccer/'+lg+'/summary?event='+ev.id));
+    summary = await rs.json();
+  } catch(e){}
+  return {resolved:resolved, event:ev, summary:summary, league:lg};
+}
+
+function _renderEspnMatchStats(s, homeId, awayId, col){
+  try {
+    var teams = (s.boxscore&&s.boxscore.teams)||[];
+    if(teams.length<2) return '';
+    function pick(side){ return teams.find(function(t){return t.team&&String(t.team.id)===String(side);}); }
+    var hT = pick(homeId) || teams.find(function(t){return t.homeAway==='home';}) || teams[0];
+    var aT = pick(awayId) || teams.find(function(t){return t.homeAway==='away';}) || teams[1];
+    var hStats=(hT&&hT.statistics)||[], aStats=(aT&&aT.statistics)||[];
+    if(!hStats.length && !aStats.length) return '';
+    var keys=[{n:'possessionPct',l:'Possession',suf:'%'},{n:'totalShots',l:'Tirs'},{n:'shotsOnTarget',l:'Tirs cadrés'},{n:'wonCorners',l:'Corners'},{n:'foulsCommitted',l:'Fautes'},{n:'yellowCards',l:'Cartons jaunes'},{n:'effectiveClearance',l:'Dégagements'},{n:'totalPasses',l:'Passes'},{n:'saves',l:'Arrêts'}];
+    function val(stats,name){ var f=stats.find(function(x){return x.name===name;}); return f?f.displayValue:null; }
+    var rows='';
+    keys.forEach(function(k){
+      var hv=val(hStats,k.n), av=val(aStats,k.n);
+      if(hv==null && av==null) return;
+      hv=(hv!=null?hv:'0'); av=(av!=null?av:'0');
+      var hn=parseFloat(String(hv))||0, an=parseFloat(String(av))||0, tot=hn+an;
+      var hp=tot>0?Math.round(hn/tot*100):50, ap=100-hp;
+      rows+='<div style="margin-bottom:9px;"><div style="display:flex;justify-content:space-between;align-items:center;font-size:11px;margin-bottom:3px;"><b style="color:var(--t1);min-width:34px;">'+hv+'</b><span style="color:var(--t3);">'+k.l+'</span><b style="color:var(--t1);min-width:34px;text-align:right;">'+av+'</b></div><div style="display:flex;height:5px;border-radius:3px;overflow:hidden;background:rgba(255,255,255,.06);"><div style="width:'+hp+'%;background:'+col+';"></div><div style="width:'+ap+'%;background:var(--t3);opacity:.55;"></div></div></div>';
+    });
+    if(!rows) return '';
+    return '<div class="fc" style="padding:14px;"><div style="font-size:11px;font-weight:800;letter-spacing:.5px;color:var(--t2);margin-bottom:12px;">📊 STATISTIQUES</div>'+rows+'</div>';
+  } catch(e){ return ''; }
+}
+
+function _renderEspnMatchLineups(s, col){
+  try {
+    var rosters = s.rosters||[];
+    if(!rosters.length) return '<div class="fc" style="padding:16px;text-align:center;color:var(--t3);font-size:11px;">👥 Compositions pas encore disponibles<br><span style="font-size:10px;">(publiées en général ~1h avant le coup d\'envoi)</span></div>';
+    var hR = rosters.find(function(r){return r.homeAway==='home';})||rosters[0];
+    var aR = rosters.find(function(r){return r.homeAway==='away';})||rosters[1];
+    function pRow(p){
+      var num=(p.jersey!=null)?p.jersey:((p.athlete&&p.athlete.jersey)||'');
+      var nm=(p.athlete&&(p.athlete.displayName||p.athlete.shortName))||'?';
+      var pos=(p.position&&(p.position.abbreviation||p.position.name))||'';
+      return '<div style="display:flex;align-items:center;gap:6px;font-size:11px;padding:3px 0;"><span style="display:inline-block;min-width:18px;text-align:center;font-weight:700;color:'+col+';">'+num+'</span><span style="flex:1;color:var(--t1);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">'+nm+'</span><span style="font-size:9px;color:var(--t3);">'+pos+'</span></div>';
+    }
+    function colHtml(r){
+      if(!r) return '';
+      var players=r.roster||[], starters=players.filter(function(p){return p.starter;}), subs=players.filter(function(p){return !p.starter;});
+      if(!starters.length) starters=players.slice(0,11);
+      var h='';
+      if(r.formation) h+='<div style="font-size:10px;font-weight:800;color:'+col+';margin-bottom:6px;">⚙️ '+r.formation+'</div>';
+      h+=starters.map(pRow).join('');
+      if(subs.length){ h+='<div style="font-size:9px;font-weight:800;color:var(--t3);margin:8px 0 2px;letter-spacing:.5px;">REMPLAÇANTS</div>'+subs.map(pRow).join(''); }
+      return h;
+    }
+    function tName(r){ return (r&&r.team&&(r.team.displayName||r.team.shortDisplayName||r.team.name))||''; }
+    return '<div class="fc" style="padding:14px;"><div style="font-size:11px;font-weight:800;letter-spacing:.5px;color:var(--t2);margin-bottom:12px;">👥 COMPOSITIONS</div><div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;"><div><div style="font-size:11px;font-weight:800;margin-bottom:6px;border-bottom:1px solid var(--b1);padding-bottom:4px;">'+tName(hR)+'</div>'+colHtml(hR)+'</div><div><div style="font-size:11px;font-weight:800;margin-bottom:6px;border-bottom:1px solid var(--b1);padding-bottom:4px;">'+tName(aR)+'</div>'+colHtml(aR)+'</div></div></div>';
+  } catch(e){ return ''; }
+}
+
+async function loadEspnMatchLive(el, nom, col){
+  if(!el) return;
+  col = col || '#4d84ff';
+  el.innerHTML='<div class="fc" style="text-align:center;padding:24px;"><div style="display:inline-flex;align-items:center;gap:8px;color:var(--t3);font-size:12px;"><div style="width:14px;height:14px;border:2px solid rgba(77,132,255,.2);border-top-color:'+col+';border-radius:50%;animation:spin .8s linear infinite;"></div>Chargement du match (ESPN)…</div></div>';
+  var data = await _espnMatchLiveData(nom);
+  if(!data || !data.event || !data.summary){
+    var sofaUrl=(typeof SOFASCORE_LINKS!=='undefined'&&SOFASCORE_LINKS[nom])||('https://www.sofascore.com/search#q='+encodeURIComponent(nom));
+    el.innerHTML='<div class="fc" style="text-align:center;padding:30px 16px;"><div style="font-size:40px;margin-bottom:12px;">📡</div><div style="font-size:13px;font-weight:700;color:'+col+';margin-bottom:4px;">'+nom+'</div><div style="font-size:11px;color:var(--t3);margin-bottom:18px;">Aucun match trouvé via ESPN pour le moment.</div><a href="'+sofaUrl+'" target="_blank" style="display:inline-flex;align-items:center;gap:6px;background:'+col+';color:#fff;padding:11px 22px;border-radius:var(--r8);font-size:12px;font-weight:700;text-decoration:none;">📊 Voir sur Sofascore</a></div>';
+    return;
+  }
+  var s=data.summary;
+  var comp=(s.header&&s.header.competitions&&s.header.competitions[0])||{};
+  var cs=comp.competitors||[];
+  var home=cs.find(function(c){return c.homeAway==='home';})||cs[0]||{};
+  var away=cs.find(function(c){return c.homeAway==='away';})||cs[1]||{};
+  function tname(c){ return (c.team&&(c.team.displayName||c.team.shortDisplayName||c.team.name))||'?'; }
+  function tlogo(c){ return (c.team&&((c.team.logos&&c.team.logos[0]&&c.team.logos[0].href)||c.team.logo))||''; }
+  function tscore(c){ return (c.score!=null&&c.score!=='')?c.score:''; }
+  var stType=(comp.status&&comp.status.type)||{}, stState=stType.state||'';
+  var stTxt=stType.shortDetail||stType.detail||stType.description||'';
+  var stLabel=stState==='in'?'EN DIRECT':(stState==='post'?'TERMINÉ':'À VENIR');
+  var stCol=stState==='in'?'#ff4545':'var(--t3)';
+  var dot=stState==='in'?'<span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#ff4545;margin-right:5px;vertical-align:middle;"></span>':'';
+  var html='';
+  html+='<div class="fc" style="padding:14px;">';
+  html+='<div style="text-align:center;font-size:10px;font-weight:800;letter-spacing:1px;color:'+stCol+';margin-bottom:10px;">'+dot+stLabel+(stTxt?(' · '+stTxt):'')+'</div>';
+  html+='<div style="display:flex;align-items:center;justify-content:space-between;gap:8px;">';
+  html+='<div style="flex:1;text-align:center;min-width:0;">'+(tlogo(home)?'<img src="'+tlogo(home)+'" style="width:38px;height:38px;object-fit:contain;">':'')+'<div style="font-size:12px;font-weight:700;margin-top:4px;overflow:hidden;text-overflow:ellipsis;">'+tname(home)+'</div></div>';
+  html+='<div style="font-size:26px;font-weight:800;min-width:74px;text-align:center;">'+(tscore(home)!==''?tscore(home):'–')+' : '+(tscore(away)!==''?tscore(away):'–')+'</div>';
+  html+='<div style="flex:1;text-align:center;min-width:0;">'+(tlogo(away)?'<img src="'+tlogo(away)+'" style="width:38px;height:38px;object-fit:contain;">':'')+'<div style="font-size:12px;font-weight:700;margin-top:4px;overflow:hidden;text-overflow:ellipsis;">'+tname(away)+'</div></div>';
+  html+='</div>';
+  html+='<div style="text-align:center;margin-top:10px;"><button onclick="loadTeamLive()" style="background:rgba(255,255,255,.06);border:1px solid var(--b2);color:var(--t2);font-size:11px;padding:6px 14px;border-radius:6px;cursor:pointer;">🔄 Rafraîchir</button></div>';
+  html+='</div>';
+  var homeId=(home.team&&home.team.id), awayId=(away.team&&away.team.id);
+  html+=_renderEspnMatchStats(s, homeId, awayId, col);
+  html+=_renderEspnMatchLineups(s, col);
+  el.innerHTML=html;
+}
+window.loadEspnMatchLive=loadEspnMatchLive;
 
 var _pariEquipeFocus = '';
 var _tennisYear = '2026';
