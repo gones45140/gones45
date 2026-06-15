@@ -9,8 +9,8 @@
   --card-border:rgba(120,150,255,.13);--card-glow:0 3px 14px rgba(8,11,25,.35);
   /* ── FOND PHOTO : remplace la valeur de --bg-img par url('https://...ton-image.jpg') pour mettre une photo ── */
   --bg-img:url('fond.jpg');
-  /* Voile sombre par-dessus la photo (lisibilité). Baisse les opacités (.86/.93) pour rendre la photo plus visible. */
-  --scrim:linear-gradient(180deg,rgba(16,21,40,.86) 0%,rgba(13,17,32,.93) 100%);
+  /* Voile sombre par-dessus la photo (lisibilité). Monte les opacités (.55/.72 → .80/.90) pour assombrir, baisse-les pour voir plus la photo. */
+  --scrim:linear-gradient(180deg,rgba(16,21,40,.55) 0%,rgba(13,17,32,.72) 100%);
 }
 html,body{background:#151c30;background:var(--scrim),var(--bg-img) center center/cover fixed no-repeat;color:var(--t1);font-family:-apple-system,'SF Pro Text','Segoe UI',system-ui,sans-serif;-webkit-font-smoothing:antialiased;min-height:100vh;}
 body{padding-bottom:68px;overflow-x:hidden;}
