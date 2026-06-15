@@ -55,7 +55,7 @@ input,select,textarea,button{font-family:inherit;color:var(--t1);}
 .prog-fill{height:100%;border-radius:2px;background:var(--a);transition:width .7s ease;}
 .prog-meta{display:flex;justify-content:space-between;font-size:10px;color:var(--t3);margin-top:5px;}
 
-.fc{background:var(--bg2);border:1px solid var(--card-border,var(--b1));border-radius:var(--r8);padding:14px;margin-bottom:10px;box-shadow:var(--card-glow,none);}
+.fc{background:rgba(26,34,56,var(--card-alpha,.64));backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);border:1px solid var(--card-border,var(--b1));border-radius:var(--r8);padding:14px;margin-bottom:10px;box-shadow:var(--card-glow,none);}
 .fl{font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--a);display:block;margin-bottom:4px;}
 .fi{width:100%;padding:9px 11px;background:var(--bg);border:1px solid var(--b2);color:var(--t1);border-radius:var(--r6);font-size:13px;outline:none;-webkit-appearance:none;appearance:none;transition:border-color .15s;}
 .fi:focus{border-color:var(--a);}
