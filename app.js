@@ -18071,13 +18071,18 @@ function setCardAlpha(val){
 function _syncBgControls(){
   try {
     var d=localStorage.getItem('g45_bg_dark'); var dv=(d!==null)?parseInt(d,10):60;
-    var r=$i('bg-dark-range'); if(r) r.value=dv; var dl=$i('bg-dark-val'); if(dl) dl.textContent='('+dv+'%)';
+    var r=$i('bg-dark-range'); if(r){ r.value=dv; r.oninput=function(){ setScrimDark(this.value); }; }
+    var dl=$i('bg-dark-val'); if(dl) dl.textContent='('+dv+'%)';
     var ca=localStorage.getItem('g45_bg_cardalpha'); var cv=(ca!==null)?parseInt(ca,10):64;
-    var cr=$i('bg-card-range'); if(cr) cr.value=cv; var cl=$i('bg-card-val'); if(cl) cl.textContent='('+(100-cv)+'% transparent)';
+    var cr=$i('bg-card-range'); if(cr){ cr.value=cv; cr.oninput=function(){ setCardAlpha(this.value); }; }
+    var cl=$i('bg-card-val'); if(cl) cl.textContent='('+(100-cv)+'% transparent)';
+    var fi=$i('bg-file-input'); if(fi) fi.onchange=function(){ applyBgFromFile(this); };
     var u=$i('bg-url-input'); var img=localStorage.getItem('g45_bg_img');
     if(u && img && img.indexOf('data:')!==0) u.value=img;
   } catch(e){}
 }
+// Exposer globalement pour les onclick inline (robustesse de portée)
+window.applyBgFromUrl=applyBgFromUrl; window.applyBgFromFile=applyBgFromFile; window.resetBgDefault=resetBgDefault; window.setScrimDark=setScrimDark; window.setCardAlpha=setCardAlpha; window._syncBgControls=_syncBgControls;
 if(document.readyState!=='loading') _syncBgControls();
 else document.addEventListener('DOMContentLoaded', _syncBgControls);
 
