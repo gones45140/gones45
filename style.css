@@ -13,6 +13,7 @@
   --scrim:linear-gradient(180deg,rgba(16,21,40,.55) 0%,rgba(13,17,32,.72) 100%);
 }
 html,body{background:#151c30;background:var(--scrim),var(--bg-img) center center/cover fixed no-repeat;color:var(--t1);font-family:-apple-system,'SF Pro Text','Segoe UI',system-ui,sans-serif;-webkit-font-smoothing:antialiased;min-height:100vh;scrollbar-width:thin;scrollbar-color:var(--b2) transparent;}
+@media(min-width:1100px){html,body{background-size:auto,contain;}}
 body{padding-bottom:68px;overflow-x:hidden;}
 input,select,textarea,button{font-family:inherit;color:var(--t1);}
 ::-webkit-scrollbar{width:2px;}
