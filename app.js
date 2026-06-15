@@ -17997,6 +17997,90 @@ async function runComparateur() {
   cont.innerHTML=html;
 }
 
+// ── APPARENCE : fond perso + curseurs (mémorisé par appareil) ──
+function _bgStatus(msg, color){ var e=$i('bg-status'); if(e){ e.textContent=msg; e.style.color=color||'var(--g)'; } }
+function _applyBgImg(val){ document.documentElement.style.setProperty('--bg-img', "url('"+val+"')"); }
+
+function applyBgFromUrl(){
+  var u=$i('bg-url-input'); var url=(u&&u.value||'').trim();
+  if(!url){ _bgStatus('URL vide','#ff6b6b'); return; }
+  try { localStorage.setItem('g45_bg_img', url); } catch(e){ _bgStatus('Stockage plein','#ff6b6b'); return; }
+  _applyBgImg(url); _bgStatus('✓ Fond appliqué','var(--g)');
+}
+
+function applyBgFromFile(input){
+  var f=input&&input.files&&input.files[0]; if(!f) return;
+  if(!/^image\//.test(f.type)){ _bgStatus('Fichier non image','#ff6b6b'); return; }
+  _bgStatus('Traitement de l\'image…','var(--t3)');
+  var reader=new FileReader();
+  reader.onload=function(ev){
+    var img=new Image();
+    img.onload=function(){
+      var maxW=900, scale=Math.min(1, maxW/img.width);
+      var w=Math.round(img.width*scale), h=Math.round(img.height*scale);
+      var c=document.createElement('canvas'); c.width=w; c.height=h;
+      c.getContext('2d').drawImage(img,0,0,w,h);
+      var dataUrl;
+      try { dataUrl=c.toDataURL('image/jpeg',0.82); } catch(e){ _bgStatus('Erreur image','#ff6b6b'); return; }
+      try { localStorage.setItem('g45_bg_img', dataUrl); }
+      catch(e){ _bgStatus('Image trop lourde, essaie une plus petite','#ff6b6b'); return; }
+      _applyBgImg(dataUrl); _bgStatus('✓ Photo appliquée','var(--g)');
+      if(input) input.value='';
+    };
+    img.onerror=function(){ _bgStatus('Image illisible','#ff6b6b'); };
+    img.src=ev.target.result;
+  };
+  reader.onerror=function(){ _bgStatus('Lecture échouée','#ff6b6b'); };
+  reader.readAsDataURL(f);
+}
+
+function resetBgDefault(){
+  try { localStorage.removeItem('g45_bg_img'); } catch(e){}
+  document.documentElement.style.removeProperty('--bg-img'); // revient à fond.jpg (CSS)
+  var u=$i('bg-url-input'); if(u) u.value='';
+  _bgStatus('✓ Fond par défaut','var(--g)');
+}
+
+function _scrimFrom(val){ var t=(val/100)*0.9, b=Math.min(0.97, t+0.15); return 'linear-gradient(180deg,rgba(16,21,40,'+t.toFixed(2)+') 0%,rgba(13,17,32,'+b.toFixed(2)+') 100%)'; }
+function setScrimDark(val){
+  val=parseInt(val,10); if(isNaN(val)) val=60;
+  document.documentElement.style.setProperty('--scrim', _scrimFrom(val));
+  try { localStorage.setItem('g45_bg_dark', val); } catch(e){}
+  var l=$i('bg-dark-val'); if(l) l.textContent='('+val+'%)';
+}
+function setCardAlpha(val){
+  val=parseInt(val,10); if(isNaN(val)) val=64;
+  document.documentElement.style.setProperty('--card-alpha',(val/100).toFixed(2));
+  try { localStorage.setItem('g45_bg_cardalpha', val); } catch(e){}
+  var l=$i('bg-card-val'); if(l) l.textContent='('+(100-val)+'% transparent)';
+}
+
+// Appliquer les préférences enregistrées dès le chargement
+(function _initBgPrefs(){
+  try {
+    var img=localStorage.getItem('g45_bg_img');
+    if(img) document.documentElement.style.setProperty('--bg-img', "url('"+img+"')");
+    var d=localStorage.getItem('g45_bg_dark');
+    if(d!==null) document.documentElement.style.setProperty('--scrim', _scrimFrom(parseInt(d,10)));
+    var ca=localStorage.getItem('g45_bg_cardalpha');
+    if(ca!==null) document.documentElement.style.setProperty('--card-alpha',(parseInt(ca,10)/100).toFixed(2));
+  } catch(e){}
+})();
+
+// Synchroniser les contrôles de l'onglet Outils avec les valeurs mémorisées
+function _syncBgControls(){
+  try {
+    var d=localStorage.getItem('g45_bg_dark'); var dv=(d!==null)?parseInt(d,10):60;
+    var r=$i('bg-dark-range'); if(r) r.value=dv; var dl=$i('bg-dark-val'); if(dl) dl.textContent='('+dv+'%)';
+    var ca=localStorage.getItem('g45_bg_cardalpha'); var cv=(ca!==null)?parseInt(ca,10):64;
+    var cr=$i('bg-card-range'); if(cr) cr.value=cv; var cl=$i('bg-card-val'); if(cl) cl.textContent='('+(100-cv)+'% transparent)';
+    var u=$i('bg-url-input'); var img=localStorage.getItem('g45_bg_img');
+    if(u && img && img.indexOf('data:')!==0) u.value=img;
+  } catch(e){}
+}
+if(document.readyState!=='loading') _syncBgControls();
+else document.addEventListener('DOMContentLoaded', _syncBgControls);
+
 var _pariEquipeFocus = '';
 var _tennisYear = '2026';
 

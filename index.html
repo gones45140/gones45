@@ -565,6 +565,31 @@
 
 <div id="t-outils" class="tab">
 
+  <!-- APPARENCE / FOND PERSO -->
+  <div class="sec">🎨 Apparence</div>
+  <div class="fc">
+    <label class="fl" style="color:var(--a);">🖼️ Photo de fond</label>
+    <div style="font-size:10px;color:var(--t3);margin:4px 0 9px;">Personnalise le fond de l'appli. Gardé sur cet appareil uniquement.</div>
+    <input type="file" id="bg-file-input" accept="image/*" style="display:none;" onchange="applyBgFromFile(this)">
+    <button class="btn btn-p" style="font-size:12px;" onclick="$i('bg-file-input').click()">📁 Choisir une photo</button>
+    <div style="margin-top:9px;">
+      <label class="fl" style="color:var(--t3);">…ou colle une URL d'image</label>
+      <div style="display:flex;gap:6px;margin-top:5px;">
+        <input id="bg-url-input" class="fi" placeholder="https://…/photo.jpg" style="flex:1;font-size:11px;">
+        <button class="btn btn-p" style="width:auto;margin:0;padding:9px 14px;font-size:11px;" onclick="applyBgFromUrl()">OK</button>
+      </div>
+    </div>
+    <button class="btn" style="margin-top:9px;background:rgba(255,69,69,.10);color:#ff6b6b;border:1px solid rgba(255,69,69,.25);font-size:11px;" onclick="resetBgDefault()">↩️ Remettre le fond par défaut</button>
+    <div id="bg-status" style="margin-top:7px;font-size:11px;font-weight:700;min-height:14px;"></div>
+    <div style="margin-top:12px;border-top:1px solid var(--b1);padding-top:11px;">
+      <label class="fl">🌗 Assombrir le fond <span id="bg-dark-val" style="color:var(--t3);font-weight:400;"></span></label>
+      <input type="range" id="bg-dark-range" min="0" max="100" value="60" oninput="setScrimDark(this.value)" style="width:100%;accent-color:var(--a);margin:4px 0 10px;">
+      <label class="fl">🟦 Transparence des cartes <span id="bg-card-val" style="color:var(--t3);font-weight:400;"></span></label>
+      <input type="range" id="bg-card-range" min="35" max="95" value="64" oninput="setCardAlpha(this.value)" style="width:100%;accent-color:var(--a);margin:4px 0 0;">
+    </div>
+  </div>
+
+
   <!-- ÉQUIPES / CRÉATION -->
   <div class="sec">Équipes / Unités</div>
   <div class="fc">

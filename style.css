@@ -6,7 +6,7 @@
   --t1:#eef1fb;--t2:#a6b2d8;--t3:#6f7ca8;
   --a:#4d84ff;--g:#1ed760;--r:#ff4545;--gold:#f0b020;
   --r8:10px;--r6:8px;--r4:6px;
-  --card-border:rgba(120,150,255,.13);--card-glow:0 3px 14px rgba(8,11,25,.35);
+  --card-border:rgba(120,150,255,.13);--card-glow:0 3px 14px rgba(8,11,25,.35);--card-alpha:.64;
   /* ── FOND PHOTO : remplace la valeur de --bg-img par url('https://...ton-image.jpg') pour mettre une photo ── */
   --bg-img:url('fond.jpg');
   /* Voile sombre par-dessus la photo (lisibilité). Monte les opacités (.55/.72 → .80/.90) pour assombrir, baisse-les pour voir plus la photo. */
@@ -41,7 +41,7 @@ input,select,textarea,button{font-family:inherit;color:var(--t1);}
 .sec::after{content:'';flex:1;height:1px;background:var(--b1);}
 .sec:first-child{margin-top:0;}
 
-.card{background:rgba(34,43,71,.64);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border:1px solid var(--card-border,var(--b1));border-radius:var(--r8);margin-bottom:10px;overflow:hidden;box-shadow:var(--card-glow,none);}
+.card{background:rgba(34,43,71,var(--card-alpha,.64));backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border:1px solid var(--card-border,var(--b1));border-radius:var(--r8);margin-bottom:10px;overflow:hidden;box-shadow:var(--card-glow,none);}
 .cp{padding:14px 16px;}
 
 .kpi2{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px;}
