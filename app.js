@@ -15648,6 +15648,8 @@ async function toggleWcMatchStats(eventId, rowId) {
       h += '</div>';
     }
 
+    h += _renderEspnMatchLineups(data, '#4d84ff', (typeof wcFr==='function'?wcFr:null));
+
     box.innerHTML = h;
   } catch(e) {
     box.innerHTML = '<div style="padding:8px;color:#ff4545;font-size:10px;text-align:center;">Erreur stats</div>';
@@ -18150,7 +18152,7 @@ function _renderEspnMatchStats(s, homeId, awayId, col){
   } catch(e){ return ''; }
 }
 
-function _renderEspnMatchLineups(s, col){
+function _renderEspnMatchLineups(s, col, nameFn){
   try {
     var rosters = s.rosters||[];
     if(!rosters.length) return '<div class="fc" style="padding:16px;text-align:center;color:var(--t3);font-size:11px;">👥 Compositions pas encore disponibles<br><span style="font-size:10px;">(publiées en général ~1h avant le coup d\'envoi)</span></div>';
@@ -18172,7 +18174,7 @@ function _renderEspnMatchLineups(s, col){
       if(subs.length){ h+='<div style="font-size:9px;font-weight:800;color:var(--t3);margin:8px 0 2px;letter-spacing:.5px;">REMPLAÇANTS</div>'+subs.map(pRow).join(''); }
       return h;
     }
-    function tName(r){ return (r&&r.team&&(r.team.displayName||r.team.shortDisplayName||r.team.name))||''; }
+    function tName(r){ var n=(r&&r.team&&(r.team.displayName||r.team.shortDisplayName||r.team.name))||''; return (typeof nameFn==='function')?(nameFn(n)||n):n; }
     return '<div class="fc" style="padding:14px;"><div style="font-size:11px;font-weight:800;letter-spacing:.5px;color:var(--t2);margin-bottom:12px;">👥 COMPOSITIONS</div><div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;"><div><div style="font-size:11px;font-weight:800;margin-bottom:6px;border-bottom:1px solid var(--b1);padding-bottom:4px;">'+tName(hR)+'</div>'+colHtml(hR)+'</div><div><div style="font-size:11px;font-weight:800;margin-bottom:6px;border-bottom:1px solid var(--b1);padding-bottom:4px;">'+tName(aR)+'</div>'+colHtml(aR)+'</div></div></div>';
   } catch(e){ return ''; }
 }
