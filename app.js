@@ -17137,23 +17137,35 @@ function _scorerTeamIsOurs(teamName, ourName){
 
 // Construit l'index {players:{nom:{g,a}}, byMatch:{eventId:{s:[buteurs],a:[passeurs]}}}
 // 1 fetch /summary par match terminé (concurrence limitée), mis en cache localStorage.
+function _scSleep(ms){ return new Promise(function(r){ setTimeout(r,ms); }); }
+async function _scFetchSummary(lg, eid){
+  for(var att=0; att<3; att++){
+    try{
+      var r=await fetch('https://site.api.espn.com/apis/site/v2/sports/soccer/'+lg+'/summary?event='+eid);
+      if(!r.ok) throw new Error('http '+r.status);
+      var d=await r.json();
+      if(d && (d.keyEvents || d.header || d.boxscore)) return d; // réponse plausible
+      throw new Error('empty');
+    }catch(_e){ if(att<2) await _scSleep(400*(att+1)); }
+  }
+  return null;
+}
 async function buildSaisonScorerIndex(teamId, saison, nom, matches, progressCb){
   var finished = matches.filter(function(m){ return m.status==='FINISHED' && m.espnId; });
-  var index = { builtAt: Date.now(), n: finished.length, players:{}, byMatch:{} };
+  var index = { builtAt: Date.now(), n:0, total: finished.length, players:{}, byMatch:{} };
   function pinc(name, key){ if(!index.players[name]) index.players[name]={g:0,a:0}; index.players[name][key]++; }
   function ourNameIn(m){ return (m.homeTeam&&m.homeTeam.id===teamId)?(m.homeTeam&&m.homeTeam.name):(m.awayTeam&&m.awayTeam.name); }
-  var qi=0, CONC=5, done=0;
+  var qi=0, CONC=3, done=0, ok=0;
   async function worker(){
     while(qi<finished.length){
       var m=finished[qi++]; var lg=(m.competition&&m.competition.code)||'eng.1';
       var ourName=ourNameIn(m)||nom; var sc=[], as=[];
-      try{
-        var r=await fetch('https://site.api.espn.com/apis/site/v2/sports/soccer/'+lg+'/summary?event='+m.espnId);
-        var d=await r.json();
+      var d=await _scFetchSummary(lg, m.espnId);
+      if(d){
+        ok++;
         (d.keyEvents||[]).forEach(function(e){
           var tt=((e.type&&e.type.text)||'').toLowerCase();
-          var isGoal = e.scoringPlay===true || tt.indexOf('goal')>=0;
-          if(!isGoal) return;
+          if(!(e.scoringPlay===true || tt.indexOf('goal')>=0)) return;
           if(tt.indexOf('own')>=0) return; // csc : non attribué à nos buteurs
           if(!_scorerTeamIsOurs((e.team&&e.team.displayName)||'', ourName)) return;
           var scorer=(e.participants&&e.participants[0]&&e.participants[0].athlete)?e.participants[0].athlete.displayName:'';
@@ -17161,14 +17173,18 @@ async function buildSaisonScorerIndex(teamId, saison, nom, matches, progressCb){
           if(scorer){ sc.push(scorer); pinc(scorer,'g'); }
           if(assist){ as.push(assist); pinc(assist,'a'); }
         });
-      }catch(_e){}
-      index.byMatch[m.espnId]={s:sc,a:as};
+        index.byMatch[m.espnId]={s:sc,a:as};
+      } else {
+        index.byMatch[m.espnId]={s:[],a:[],err:1};
+      }
       done++; if(progressCb) progressCb(done, finished.length);
+      await _scSleep(70);
     }
   }
   var ws=[]; for(var w=0; w<Math.min(CONC, finished.length||1); w++) ws.push(worker());
   await Promise.all(ws);
-  try{ localStorage.setItem('g45_scorers_'+teamId+'_'+saison, JSON.stringify(index)); }catch(_e){}
+  index.n = ok;
+  try{ localStorage.setItem('g45_scorers_v2_'+teamId+'_'+saison, JSON.stringify(index)); }catch(_e){}
   return index;
 }
 
@@ -17197,11 +17213,14 @@ function setScorerFilter(s, type, player){
 function clearScorerFilter(){ window._saisonScorerFilter=null; loadTeamSaisons(); }
 
 function _buildScorerBarHtml(teamId, s, nom, finCount, scIdx){
-  var has = scIdx && scIdx.players && (scIdx.n>0);
-  var partial = has && (scIdx.n||0) < finCount;
+  var has = scIdx && scIdx.players && Object.keys(scIdx.players).length>0;
+  var tot = (scIdx && scIdx.total) ? scIdx.total : finCount;
+  var analyzed = scIdx ? (scIdx.n||0) : 0;
+  var partial = !!scIdx && analyzed < tot;
   var h = '<div style="display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin:4px 0 10px;">';
   if(!has){
-    h += '<button id="scbtn-'+s+'" onclick="buildScorerIndexUI(\''+teamId+'\',\''+s+'\',\''+_scEscJs(nom)+'\')" style="padding:6px 12px;border-radius:10px;border:1px solid rgba(30,215,96,.4);background:rgba(30,215,96,.1);color:#1ed760;font-size:11px;font-weight:700;cursor:pointer;">⚽ Analyser buteurs / passeurs ('+finCount+' matchs)</button>';
+    var _lbl = scIdx ? ('↻ Réessayer l\'analyse ('+analyzed+'/'+tot+')') : ('⚽ Analyser buteurs / passeurs ('+finCount+' matchs)');
+    h += '<button id="scbtn-'+s+'" onclick="buildScorerIndexUI(\''+teamId+'\',\''+s+'\',\''+_scEscJs(nom)+'\')" style="padding:6px 12px;border-radius:10px;border:1px solid rgba(30,215,96,.4);background:rgba(30,215,96,.1);color:#1ed760;font-size:11px;font-weight:700;cursor:pointer;">'+_lbl+'</button>';
     h += '<span style="font-size:9px;color:var(--t3);">1 seule fois · mis en cache</span>';
     h += '</div>'; return h;
   }
@@ -17219,9 +17238,10 @@ function _buildScorerBarHtml(teamId, s, nom, finCount, scIdx){
   assisters.forEach(function(p){ h += '<option value="'+_scEsc(p)+'"'+(aA===p?' selected':'')+'>'+_scEsc(p)+' ('+scIdx.players[p].a+')</option>'; });
   h += '</select>';
   if(cur.s===s && cur.player) h += '<button onclick="clearScorerFilter()" style="padding:5px 10px;border-radius:10px;border:1px solid rgba(255,69,69,.4);background:rgba(255,69,69,.08);color:#ff7a7a;font-size:11px;font-weight:700;cursor:pointer;">✕</button>';
-  if(partial) h += '<button onclick="buildScorerIndexUI(\''+teamId+'\',\''+s+'\',\''+_scEscJs(nom)+'\')" style="padding:5px 8px;border-radius:8px;border:1px solid rgba(240,176,32,.4);background:rgba(240,176,32,.1);color:#f0b020;font-size:9px;font-weight:700;cursor:pointer;">↻ '+scIdx.n+'/'+finCount+'</button>';
+  if(partial) h += '<button onclick="buildScorerIndexUI(\''+teamId+'\',\''+s+'\',\''+_scEscJs(nom)+'\')" title="Certains matchs ont échoué, clique pour compléter" style="padding:5px 8px;border-radius:8px;border:1px solid rgba(240,176,32,.4);background:rgba(240,176,32,.1);color:#f0b020;font-size:9px;font-weight:700;cursor:pointer;">↻ '+analyzed+'/'+tot+'</button>';
   h += '</div>'; return h;
 }
+window._scFetchSummary=_scFetchSummary;
 window._scorerTeamIsOurs=_scorerTeamIsOurs;
 window.buildSaisonScorerIndex=buildSaisonScorerIndex;
 window.buildScorerIndexUI=buildScorerIndexUI;
@@ -17480,21 +17500,12 @@ function renderSaisonsChart(el, results, nom) {
     // ── Résultats complets de la saison ──
     var allMatchesSorted = filteredMatches.slice().sort(function(a,b){ return new Date(b.utcDate)-new Date(a.utcDate); });
     // ── Buteur / Passeur (index keyEvents) ──
-    var _scKey='g45_scorers_'+teamId+'_'+s, _scIdx=null; try{_scIdx=JSON.parse(localStorage.getItem(_scKey)||'null');}catch(_e){}
+    var _scKey='g45_scorers_v2_'+teamId+'_'+s, _scIdx=null; try{_scIdx=JSON.parse(localStorage.getItem(_scKey)||'null');}catch(_e){}
     var _finCount = allMatchesSorted.filter(function(m){ return m.status==='FINISHED' && m.espnId; }).length;
     var _scF = window._saisonScorerFilter;
     var _scActive = !!(_scF && _scF.s===s && _scF.player && _scIdx);
-    if(_scActive){
-      allMatchesSorted = allMatchesSorted.filter(function(m){
-        var bm=_scIdx.byMatch&&_scIdx.byMatch[m.espnId]; if(!bm) return false;
-        var arr=_scF.type==='g'?(bm.s||[]):(bm.a||[]); return arr.indexOf(_scF.player)>=0;
-      });
-    }
+    // La liste ne bouge PAS : on marque seulement (⚽/👟) les matchs où le joueur a marqué/passé.
     var _scoreBarHtml = (_finCount>0 && typeof _buildScorerBarHtml==='function') ? _buildScorerBarHtml(teamId,s,nom,_finCount,_scIdx) : '';
-    if(_scActive && !allMatchesSorted.length){
-      html += _scoreBarHtml;
-      html += '<div style="font-size:11px;color:var(--t3);text-align:center;padding:14px;background:rgba(255,255,255,.03);border-radius:8px;margin:8px 0;">Aucun match avec ce '+(_scF.type==='g'?'buteur':'passeur')+' dans ce filtre.</div>';
-    }
     if(allMatchesSorted.length) {
       // Calculer le compteur de matchs qui remplissent TOUTES les conditions cochées
       var qs0 = window._quickStats || ['O2.5','BTS'];
@@ -17532,6 +17543,14 @@ function renderSaisonsChart(el, results, nom) {
         var awayName = m.awayTeam&&m.awayTeam.name||'?';
         var isOurHome = isDom;
 
+        // Marquage buteur/passeur sur ce match (nb d'occurrences = nb de buts/passes)
+        var _scHit = 0;
+        if(_scActive){
+          var _bm = _scIdx.byMatch && _scIdx.byMatch[m.espnId];
+          if(_bm){ var _arr = _scF.type==='g' ? (_bm.s||[]) : (_bm.a||[]); _scHit = _arr.filter(function(x){ return x===_scF.player; }).length; }
+        }
+        var _scMark = _scHit ? '<span style="font-size:13px;vertical-align:middle;">'+(_scF.type==='g'?'⚽':'👟')+'</span>'+(_scHit>1?'<span style="font-size:8px;font-weight:800;color:var(--t2);vertical-align:middle;">×'+_scHit+'</span>':'')+' ' : '';
+
         var mid = m.id||'';
         // Barre combinée — vert si TOUTES les conditions cochées sont vraies
         var MATCH_CHECKS = {
@@ -17547,11 +17566,11 @@ function renderSaisonsChart(el, results, nom) {
         // Date
         html += '<div style="font-size:9px;color:var(--t3);text-align:center;">'+dateStr+'</div>';
         // Equipe dom
-        html += '<div style="font-size:10px;font-weight:'+(isOurHome?'800':'400')+';color:'+(isOurHome?'var(--t1)':'var(--t2)')+';text-align:right;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;">'+homeName+'</div>';
+        html += '<div style="font-size:10px;font-weight:'+(isOurHome?'800':'400')+';color:'+(isOurHome?'var(--t1)':'var(--t2)')+';text-align:right;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;">'+(isOurHome?_scMark:'')+homeName+'</div>';
         // Score
         html += '<div style="font-size:11px;font-weight:800;color:'+rc+';text-align:center;min-width:40px;">'+hg+' - '+ag+'</div>';
         // Equipe ext
-        html += '<div style="font-size:10px;font-weight:'+(!isOurHome?'800':'400')+';color:'+(!isOurHome?'var(--t1)':'var(--t2)')+';overflow:hidden;white-space:nowrap;text-overflow:ellipsis;">'+awayName+'</div>';
+        html += '<div style="font-size:10px;font-weight:'+(!isOurHome?'800':'400')+';color:'+(!isOurHome?'var(--t1)':'var(--t2)')+';overflow:hidden;white-space:nowrap;text-overflow:ellipsis;">'+(!isOurHome?_scMark:'')+awayName+'</div>';
         // Over/BTS
         var badges = '';
         var qs = window._quickStats || ['O2.5','BTS'];
@@ -17570,8 +17589,7 @@ function renderSaisonsChart(el, results, nom) {
         qs.forEach(function(k){
           if(MATCH_CHECKS[k]) badges += '<span style="color:'+BADGE_COLORS[k]+';">'+k+'</span> ';
         });
-        var _scTag = _scActive ? '<div style="font-size:8px;color:'+(_scF.type==='g'?'#1ed760':'#a78bfa')+';margin-top:1px;font-weight:700;">'+(_scF.type==='g'?'⚽':'👟')+'</div>' : '';
-        html += '<div style="font-size:8px;text-align:right;min-width:40px;">'+compIco+'<br>'+badges+_scTag+'</div>';
+        html += '<div style="font-size:8px;text-align:right;min-width:40px;">'+compIco+'<br>'+badges+'</div>';
         html += '</div>';
       });
       html += '</div>';
@@ -18319,7 +18337,23 @@ function _renderEspnMatchPitch(s, col, nameFn){
       var players=(r&&r.roster)||[];
       var starters=players.filter(function(p){return p.starter;});
       if(!starters.length) starters=players.slice(0,11);
-      starters.sort(function(a,b){ return (parseInt(a.formationPlace,10)||99)-(parseInt(b.formationPlace,10)||99); });
+      // Tri par POSTE réel (G→D→M→F) puis formationPlace : fiable même pour les sélections
+      function _posRank(p){
+        var pos=((p.position&&(p.position.abbreviation||p.position.name))||'').toUpperCase();
+        var c=pos.charAt(0);
+        if(c==='G') return 0;                                                   // gardien
+        if(c==='F'||pos.indexOf('W')>=0||pos.indexOf('ST')>=0||pos.indexOf('CF')>=0) return 3; // attaquant
+        if(c==='D'||pos.indexOf('B')>=0) return 1;                              // défenseur (B = back)
+        return 2;                                                               // milieu
+      }
+      starters.forEach(function(p,i){ p.__o=i; });
+      starters.sort(function(a,b){
+        var ra=_posRank(a), rb=_posRank(b);
+        if(ra!==rb) return ra-rb;
+        var fa=parseInt(a.formationPlace,10), fb=parseInt(b.formationPlace,10);
+        if(!isNaN(fa)&&!isNaN(fb)&&fa!==fb) return fa-fb;
+        return a.__o-b.__o;
+      });
       var counts=null;
       if(r&&r.formation){
         var parts=String(r.formation).split('-').map(function(x){return parseInt(x,10);}).filter(function(x){return x>0;});
