@@ -183,6 +183,7 @@ async function espnClubSchedule(nom, season, leagueSlug) {
         }
       } catch(oe){ odds=null; }
       return {
+        id: e.id,
         date: e.date,
         completed: completed,
         homeTeam: home.team ? home.team.displayName : '?',
@@ -261,7 +262,8 @@ function espnToFdMatch(m, ourName, ourFdId) {
       fullTime: { home: m.homeScore, away: m.awayScore },
       regularTime: { home: m.homeScore, away: m.awayScore }
     },
-    odds: m.odds || null
+    odds: m.odds || null,
+    espnId: m.id || ''
   };
 }
 
@@ -2605,7 +2607,7 @@ function smartRefresh() {
       try {
         var tid=null; for(var k in TEAM_IDS){ if(_currentTeam.toLowerCase().indexOf(k.toLowerCase())>=0||k.toLowerCase().indexOf(_currentTeam.toLowerCase())>=0){tid=TEAM_IDS[k];break;} }
         if(tid && typeof _saisonsCache!=='undefined' && _saisonsCache) delete _saisonsCache[tid];
-        if(tid) localStorage.removeItem('g45_saisons_cache_'+tid); // forcer un vrai refresh
+        if(tid) localStorage.removeItem('g45_saisons_cache_v2_'+tid); // forcer un vrai refresh
       } catch(e){}
       if(typeof loadTeamSaisons==='function') loadTeamSaisons();
     }
@@ -16686,7 +16688,7 @@ async function loadTeamSaisons() {
 
   // Cache localStorage (1h) — accélère les équipes déjà consultées
   try {
-    var lsCacheKey = 'g45_saisons_cache_'+teamId;
+    var lsCacheKey = 'g45_saisons_cache_v2_'+teamId;
     var lsRaw = localStorage.getItem(lsCacheKey);
     if(lsRaw){
       var lsObj = JSON.parse(lsRaw);
@@ -16768,7 +16770,7 @@ async function loadTeamSaisons() {
   if(espnOk && !skipFd) {
     // ESPN OK : afficher d'abord ESPN, compléter les coupes en arrière-plan (non bloquant)
     _saisonsCache[teamId] = results;
-    try { localStorage.setItem('g45_saisons_cache_'+teamId, JSON.stringify({ts:Date.now(), data:results})); } catch(e){}
+    try { localStorage.setItem('g45_saisons_cache_v2_'+teamId, JSON.stringify({ts:Date.now(), data:results})); } catch(e){}
     renderSaisonsChart(el, results, nom);
 
     // Compléter avec les coupes football-data SANS bloquer (years alignées sur ESPN)
@@ -16791,7 +16793,7 @@ async function loadTeamSaisons() {
             if(cups.length){
               results[yr] = (results[yr]||[]).concat(cups);
               _saisonsCache[teamId] = results;
-              try { localStorage.setItem('g45_saisons_cache_'+teamId, JSON.stringify({ts:Date.now(), data:results})); } catch(e){}
+              try { localStorage.setItem('g45_saisons_cache_v2_'+teamId, JSON.stringify({ts:Date.now(), data:results})); } catch(e){}
               renderSaisonsChart(el, results, nom); // re-render avec les coupes
             }
           }
@@ -16834,7 +16836,7 @@ async function loadTeamSaisons() {
   }
 
   _saisonsCache[teamId] = results;
-  try { localStorage.setItem('g45_saisons_cache_'+teamId, JSON.stringify({ts:Date.now(), data:results})); } catch(e){}
+  try { localStorage.setItem('g45_saisons_cache_v2_'+teamId, JSON.stringify({ts:Date.now(), data:results})); } catch(e){}
   renderSaisonsChart(el, results, nom);
 }
 
@@ -17120,6 +17122,113 @@ function renderStandingsTable(standData, teamId) {
 
   return html;
 }
+// ═══════════ Buteurs / Passeurs par saison (index keyEvents ESPN) ═══════════
+function _scEsc(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+function _scEscJs(s){ return String(s==null?'':s).replace(/\\/g,'\\\\').replace(/'/g,"\\'"); }
+
+function _scorerTeamIsOurs(teamName, ourName){
+  var a=(teamName||'').toLowerCase().trim(), b=(ourName||'').toLowerCase().trim();
+  if(!a||!b) return false;
+  if(a===b) return true;
+  if(a.indexOf(b)>=0 || b.indexOf(a)>=0) return true;
+  var bw=b.split(/\s+/).filter(function(w){return w.length>3;});
+  return bw.some(function(w){ return a.indexOf(w)>=0; });
+}
+
+// Construit l'index {players:{nom:{g,a}}, byMatch:{eventId:{s:[buteurs],a:[passeurs]}}}
+// 1 fetch /summary par match terminé (concurrence limitée), mis en cache localStorage.
+async function buildSaisonScorerIndex(teamId, saison, nom, matches, progressCb){
+  var finished = matches.filter(function(m){ return m.status==='FINISHED' && m.espnId; });
+  var index = { builtAt: Date.now(), n: finished.length, players:{}, byMatch:{} };
+  function pinc(name, key){ if(!index.players[name]) index.players[name]={g:0,a:0}; index.players[name][key]++; }
+  function ourNameIn(m){ return (m.homeTeam&&m.homeTeam.id===teamId)?(m.homeTeam&&m.homeTeam.name):(m.awayTeam&&m.awayTeam.name); }
+  var qi=0, CONC=5, done=0;
+  async function worker(){
+    while(qi<finished.length){
+      var m=finished[qi++]; var lg=(m.competition&&m.competition.code)||'eng.1';
+      var ourName=ourNameIn(m)||nom; var sc=[], as=[];
+      try{
+        var r=await fetch('https://site.api.espn.com/apis/site/v2/sports/soccer/'+lg+'/summary?event='+m.espnId);
+        var d=await r.json();
+        (d.keyEvents||[]).forEach(function(e){
+          var tt=((e.type&&e.type.text)||'').toLowerCase();
+          var isGoal = e.scoringPlay===true || tt.indexOf('goal')>=0;
+          if(!isGoal) return;
+          if(tt.indexOf('own')>=0) return; // csc : non attribué à nos buteurs
+          if(!_scorerTeamIsOurs((e.team&&e.team.displayName)||'', ourName)) return;
+          var scorer=(e.participants&&e.participants[0]&&e.participants[0].athlete)?e.participants[0].athlete.displayName:'';
+          var assist=(e.participants&&e.participants[1]&&e.participants[1].athlete)?e.participants[1].athlete.displayName:'';
+          if(scorer){ sc.push(scorer); pinc(scorer,'g'); }
+          if(assist){ as.push(assist); pinc(assist,'a'); }
+        });
+      }catch(_e){}
+      index.byMatch[m.espnId]={s:sc,a:as};
+      done++; if(progressCb) progressCb(done, finished.length);
+    }
+  }
+  var ws=[]; for(var w=0; w<Math.min(CONC, finished.length||1); w++) ws.push(worker());
+  await Promise.all(ws);
+  try{ localStorage.setItem('g45_scorers_'+teamId+'_'+saison, JSON.stringify(index)); }catch(_e){}
+  return index;
+}
+
+async function buildScorerIndexUI(teamId, s, nom){
+  var btn=document.getElementById('scbtn-'+s);
+  var matches = (_saisonsCache[teamId] && _saisonsCache[teamId][s]) ? _saisonsCache[teamId][s] : null;
+  if(!matches){ if(btn) btn.textContent='Erreur : matchs introuvables'; return; }
+  var tot = matches.filter(function(m){return m.status==='FINISHED'&&m.espnId;}).length;
+  if(btn){ btn.disabled=true; btn.style.opacity='.7'; btn.textContent='⏳ Analyse… 0/'+tot; }
+  try{
+    await buildSaisonScorerIndex(teamId, s, nom, matches, function(done,total){
+      if(btn) btn.textContent='⏳ Analyse… '+done+'/'+total;
+    });
+  }catch(_e){ if(btn) btn.textContent='Erreur analyse'; return; }
+  loadTeamSaisons();
+}
+
+function setScorerFilter(s, type, player){
+  if(!player){
+    if(window._saisonScorerFilter && window._saisonScorerFilter.s===s && window._saisonScorerFilter.type===type) window._saisonScorerFilter=null;
+    loadTeamSaisons(); return;
+  }
+  window._saisonScorerFilter = { s:s, type:type, player:player };
+  loadTeamSaisons();
+}
+function clearScorerFilter(){ window._saisonScorerFilter=null; loadTeamSaisons(); }
+
+function _buildScorerBarHtml(teamId, s, nom, finCount, scIdx){
+  var has = scIdx && scIdx.players && (scIdx.n>0);
+  var partial = has && (scIdx.n||0) < finCount;
+  var h = '<div style="display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin:4px 0 10px;">';
+  if(!has){
+    h += '<button id="scbtn-'+s+'" onclick="buildScorerIndexUI(\''+teamId+'\',\''+s+'\',\''+_scEscJs(nom)+'\')" style="padding:6px 12px;border-radius:10px;border:1px solid rgba(30,215,96,.4);background:rgba(30,215,96,.1);color:#1ed760;font-size:11px;font-weight:700;cursor:pointer;">⚽ Analyser buteurs / passeurs ('+finCount+' matchs)</button>';
+    h += '<span style="font-size:9px;color:var(--t3);">1 seule fois · mis en cache</span>';
+    h += '</div>'; return h;
+  }
+  var players = Object.keys(scIdx.players);
+  var scorers = players.filter(function(p){return scIdx.players[p].g>0;}).sort(function(a,b){return scIdx.players[b].g-scIdx.players[a].g;});
+  var assisters = players.filter(function(p){return scIdx.players[p].a>0;}).sort(function(a,b){return scIdx.players[b].a-scIdx.players[a].a;});
+  var cur = window._saisonScorerFilter||{};
+  var aS = (cur.s===s && cur.type==='g')?cur.player:'';
+  var aA = (cur.s===s && cur.type==='a')?cur.player:'';
+  var ss = 'padding:5px 8px;border-radius:10px;border:1px solid rgba(255,255,255,.12);background:var(--s1);color:var(--t1);font-size:11px;font-weight:600;cursor:pointer;max-width:170px;';
+  h += '<select onchange="setScorerFilter(\''+s+'\',\'g\',this.value)" style="'+ss+'border-color:rgba(30,215,96,.35);"><option value="">⚽ Buteur…</option>';
+  scorers.forEach(function(p){ h += '<option value="'+_scEsc(p)+'"'+(aS===p?' selected':'')+'>'+_scEsc(p)+' ('+scIdx.players[p].g+')</option>'; });
+  h += '</select>';
+  h += '<select onchange="setScorerFilter(\''+s+'\',\'a\',this.value)" style="'+ss+'border-color:rgba(167,139,250,.35);"><option value="">👟 Passeur…</option>';
+  assisters.forEach(function(p){ h += '<option value="'+_scEsc(p)+'"'+(aA===p?' selected':'')+'>'+_scEsc(p)+' ('+scIdx.players[p].a+')</option>'; });
+  h += '</select>';
+  if(cur.s===s && cur.player) h += '<button onclick="clearScorerFilter()" style="padding:5px 10px;border-radius:10px;border:1px solid rgba(255,69,69,.4);background:rgba(255,69,69,.08);color:#ff7a7a;font-size:11px;font-weight:700;cursor:pointer;">✕</button>';
+  if(partial) h += '<button onclick="buildScorerIndexUI(\''+teamId+'\',\''+s+'\',\''+_scEscJs(nom)+'\')" style="padding:5px 8px;border-radius:8px;border:1px solid rgba(240,176,32,.4);background:rgba(240,176,32,.1);color:#f0b020;font-size:9px;font-weight:700;cursor:pointer;">↻ '+scIdx.n+'/'+finCount+'</button>';
+  h += '</div>'; return h;
+}
+window._scorerTeamIsOurs=_scorerTeamIsOurs;
+window.buildSaisonScorerIndex=buildSaisonScorerIndex;
+window.buildScorerIndexUI=buildScorerIndexUI;
+window.setScorerFilter=setScorerFilter;
+window.clearScorerFilter=clearScorerFilter;
+window._buildScorerBarHtml=_buildScorerBarHtml;
+
 function renderSaisonsChart(el, results, nom) {
   var saisons = Object.keys(results).sort().reverse();
   var teamId = null;
@@ -17370,6 +17479,22 @@ function renderSaisonsChart(el, results, nom) {
 
     // ── Résultats complets de la saison ──
     var allMatchesSorted = filteredMatches.slice().sort(function(a,b){ return new Date(b.utcDate)-new Date(a.utcDate); });
+    // ── Buteur / Passeur (index keyEvents) ──
+    var _scKey='g45_scorers_'+teamId+'_'+s, _scIdx=null; try{_scIdx=JSON.parse(localStorage.getItem(_scKey)||'null');}catch(_e){}
+    var _finCount = allMatchesSorted.filter(function(m){ return m.status==='FINISHED' && m.espnId; }).length;
+    var _scF = window._saisonScorerFilter;
+    var _scActive = !!(_scF && _scF.s===s && _scF.player && _scIdx);
+    if(_scActive){
+      allMatchesSorted = allMatchesSorted.filter(function(m){
+        var bm=_scIdx.byMatch&&_scIdx.byMatch[m.espnId]; if(!bm) return false;
+        var arr=_scF.type==='g'?(bm.s||[]):(bm.a||[]); return arr.indexOf(_scF.player)>=0;
+      });
+    }
+    var _scoreBarHtml = (_finCount>0 && typeof _buildScorerBarHtml==='function') ? _buildScorerBarHtml(teamId,s,nom,_finCount,_scIdx) : '';
+    if(_scActive && !allMatchesSorted.length){
+      html += _scoreBarHtml;
+      html += '<div style="font-size:11px;color:var(--t3);text-align:center;padding:14px;background:rgba(255,255,255,.03);border-radius:8px;margin:8px 0;">Aucun match avec ce '+(_scF.type==='g'?'buteur':'passeur')+' dans ce filtre.</div>';
+    }
     if(allMatchesSorted.length) {
       // Calculer le compteur de matchs qui remplissent TOUTES les conditions cochées
       var qs0 = window._quickStats || ['O2.5','BTS'];
@@ -17388,6 +17513,7 @@ function renderSaisonsChart(el, results, nom) {
       html += '<div style="font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#4f5d88;">📅 Résultats ('+allMatchesSorted.length+' matchs)</div>';
       html += '<div style="font-size:10px;font-weight:800;color:'+(matchCount>0?'#1ed760':'#ff4545')+';">✅ '+matchCount+'/'+allMatchesSorted.length+' — '+condLabel+'</div>';
       html += '</div>';
+      html += _scoreBarHtml;
       html += '<div style="display:flex;flex-direction:column;gap:3px;">';
       allMatchesSorted.forEach(function(m){
         var hg = (m.score&&m.score.regularTime?m.score.regularTime.home:m.score&&m.score.fullTime?m.score.fullTime.home:0)||0;
@@ -17444,7 +17570,8 @@ function renderSaisonsChart(el, results, nom) {
         qs.forEach(function(k){
           if(MATCH_CHECKS[k]) badges += '<span style="color:'+BADGE_COLORS[k]+';">'+k+'</span> ';
         });
-        html += '<div style="font-size:8px;text-align:right;min-width:40px;">'+compIco+'<br>'+badges+'</div>';
+        var _scTag = _scActive ? '<div style="font-size:8px;color:'+(_scF.type==='g'?'#1ed760':'#a78bfa')+';margin-top:1px;font-weight:700;">'+(_scF.type==='g'?'⚽':'👟')+'</div>' : '';
+        html += '<div style="font-size:8px;text-align:right;min-width:40px;">'+compIco+'<br>'+badges+_scTag+'</div>';
         html += '</div>';
       });
       html += '</div>';
