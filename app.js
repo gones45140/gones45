@@ -15589,48 +15589,21 @@ function _extractEspnVideo(data){
   }catch(e){}
   return {type:null};
 }
-// Bascule auto vers la vignette cliquable si la lecture inline du clip ESPN échoue
-// (worker /vid non déployé, blocage géo/token côté ESPN, format non lisible…)
-window._vidErr = function(v){
-  try{
-    if(v.getAttribute('data-failed')==='1') return;
-    v.setAttribute('data-failed','1');
-    v.style.display='none';
-    var f = v.nextElementSibling;
-    if(f && f.getAttribute && f.getAttribute('data-vfb')==='1') f.style.display='block';
-  }catch(e){}
-};
-window._vidWatch = function(v){
-  setTimeout(function(){ try{ if(v.getAttribute('data-failed')!=='1' && v.readyState<1) _vidErr(v); }catch(e){} }, 10000);
-};
 function _videoBlock(data, teamA, teamB, qExtra){
   var vid = _extractEspnVideo(data);
   var q = encodeURIComponent((teamA||'')+' '+(teamB||'')+' '+(qExtra||'résumé highlights'));
   var ytSearch = 'https://www.youtube.com/results?search_query='+q;
-  var ytBtn = '<a href="'+ytSearch+'" target="_blank" rel="noopener" style="display:block;text-align:center;padding:10px;background:#ff0000;color:#fff;font-size:11px;font-weight:700;border-radius:8px;text-decoration:none;">🔎 Voir le résumé sur YouTube</a>';
-  var ytLink = '<a href="'+ytSearch+'" target="_blank" rel="noopener" style="display:block;text-align:center;margin-top:8px;font-size:10px;color:var(--t3);text-decoration:none;">🔎 Plus de vidéos sur YouTube →</a>';
   var h = '<div style="background:rgba(255,0,0,.04);border:1px solid rgba(255,255,255,.06);border-radius:8px;padding:10px;margin-bottom:8px;">';
   h += '<div style="font-size:9px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;color:#ff5a5a;margin-bottom:8px;">📺 Résumé vidéo</div>';
   if(vid.type==='youtube'){
-    // Lecteur intégré fiable
+    // Lien YouTube référencé par ESPN → lecteur intégré (fonctionne en France)
     h += '<div style="position:relative;padding-bottom:56.25%;height:0;border-radius:8px;overflow:hidden;"><iframe src="https://www.youtube.com/embed/'+vid.src+'?autoplay=0" style="position:absolute;top:0;left:0;width:100%;height:100%;border:0;" allow="accelerometer;encrypted-media;gyroscope;picture-in-picture" allowfullscreen></iframe></div>';
-    h += ytLink;
-  } else if(vid.type==='mp4'){
-    // On tente la lecture inline via le Worker (CORS + Range). Si ça échoue → bascule auto sur la vignette.
-    var _base = (typeof FD_PROXY!=='undefined' ? FD_PROXY : 'https://fd-proxy.touraine-antoine.workers.dev');
-    var prox = _base + '/vid?u=' + encodeURIComponent(vid.src);
-    var target = vid.web || vid.src;
-    var posterBg = vid.thumb ? ('background-image:url('+vid.thumb+');background-size:cover;background-position:center;') : 'background:#000;';
-    h += '<video controls playsinline preload="metadata" onerror="_vidErr(this)" onloadstart="_vidWatch(this)" '+(vid.thumb?('poster="'+vid.thumb+'" '):'')+'style="width:100%;border-radius:8px;background:#000;display:block;"><source src="'+prox+'" type="video/mp4"></video>';
-    h += '<a data-vfb="1" href="'+target+'" target="_blank" rel="noopener" style="display:none;position:relative;padding-bottom:56.25%;height:0;border-radius:8px;overflow:hidden;'+posterBg+'text-decoration:none;"><span style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,.3);"><span style="width:54px;height:54px;border-radius:50%;background:rgba(255,0,0,.92);display:flex;align-items:center;justify-content:center;font-size:20px;color:#fff;">▶</span></span><span style="position:absolute;left:8px;bottom:8px;font-size:9px;color:#fff;background:rgba(0,0,0,.55);padding:2px 6px;border-radius:4px;">Lecture inline indispo · ouvre le clip</span></a>';
-    h += '<div style="display:flex;gap:8px;margin-top:8px;">';
-    h += '<a href="'+target+'" target="_blank" rel="noopener" style="flex:1;text-align:center;padding:8px;background:rgba(255,255,255,.06);color:var(--t2);font-size:10px;font-weight:700;border-radius:8px;text-decoration:none;">↗ Ouvrir le clip</a>';
-    h += '<a href="'+ytSearch+'" target="_blank" rel="noopener" style="flex:1;text-align:center;padding:8px;background:#ff0000;color:#fff;font-size:10px;font-weight:700;border-radius:8px;text-decoration:none;">🔎 YouTube</a>';
-    h += '</div>';
+    h += '<a href="'+ytSearch+'" target="_blank" rel="noopener" style="display:block;text-align:center;margin-top:8px;font-size:10px;color:var(--t3);text-decoration:none;">🔎 Plus de vidéos sur YouTube →</a>';
   } else {
-    h += ytBtn;
+    // Les clips hébergés par ESPN sont géo-bloqués hors USA → on envoie direct sur YouTube
+    // (dispo en France, remonte les vrais résumés FIFA / Ligue 1).
+    h += '<a href="'+ytSearch+'" target="_blank" rel="noopener" style="display:block;text-align:center;padding:10px;background:#ff0000;color:#fff;font-size:11px;font-weight:700;border-radius:8px;text-decoration:none;">🔎 Voir le résumé sur YouTube</a>';
   }
-  if(vid.web && vid.type!=='mp4'){ h += '<a href="'+vid.web+'" target="_blank" rel="noopener" style="display:block;text-align:center;margin-top:6px;font-size:9px;color:var(--t3);text-decoration:none;">Voir sur ESPN →</a>'; }
   h += '</div>';
   return h;
 }
