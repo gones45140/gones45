@@ -17571,7 +17571,7 @@ function renderSaisonsChart(el, results, nom) {
         var qs = window._quickStats || ['O2.5','BTS'];
         var allOk = qs.every(function(k){ return MATCH_CHECKS[k]!==undefined ? MATCH_CHECKS[k] : true; });
         var barColor = allOk ? '#1ed760' : '#ff4545';
-        html += '<div onclick="ouvrirDetailMatch('+mid+')" style="display:grid;grid-template-columns:32px 1fr auto 1fr 36px;gap:4px;align-items:center;padding:5px 8px;background:'+(isOurHome?'rgba(255,255,255,.04)':'rgba(255,255,255,.02)')+';border-radius:6px;border-left:3px solid '+barColor+';cursor:pointer;" onmouseover="this.style.opacity=\'0.8\'" onmouseout="this.style.opacity=\'1\'">';
+        html += '<div onclick="toggleSaisonMatchDetail(this)" data-eid="'+(m.espnId||'')+'" data-lg="'+((m.competition&&m.competition.code)||'')+'" style="display:grid;grid-template-columns:32px 1fr auto 1fr 36px;gap:4px;align-items:center;padding:5px 8px;background:'+(isOurHome?'rgba(255,255,255,.04)':'rgba(255,255,255,.02)')+';border-radius:6px;border-left:3px solid '+barColor+';cursor:pointer;" onmouseover="this.style.opacity=\'0.8\'" onmouseout="this.style.opacity=\'1\'">';
         // Date
         html += '<div style="font-size:9px;color:var(--t3);text-align:center;">'+dateStr+'</div>';
         // Equipe dom
@@ -17600,6 +17600,7 @@ function renderSaisonsChart(el, results, nom) {
         });
         html += '<div style="font-size:8px;text-align:right;min-width:40px;">'+compIco+'<br>'+badges+'</div>';
         html += '</div>';
+        html += '<div class="smd-panel" style="display:none;"></div>';
       });
       html += '</div>';
     }
@@ -18827,3 +18828,36 @@ window.g45TestNotif=g45TestNotif;
   }
   if(document.readyState==='loading') document.addEventListener('DOMContentLoaded', _initNotif); else _initNotif();
 })();
+
+/* ═══════════ Résumé de match dépliable dans Saison (terrain + stats, façon Mondial) ═══════════ */
+async function toggleSaisonMatchDetail(rowEl){
+  var el = rowEl && rowEl.nextElementSibling;
+  if(!el || el.className!=='smd-panel') return;
+  var eventId = rowEl.getAttribute('data-eid')||'';
+  var league = rowEl.getAttribute('data-lg')||'';
+  if(el.getAttribute('data-open')==='1'){ el.style.display='none'; el.innerHTML=''; el.setAttribute('data-open','0'); return; }
+  try{ var others=document.querySelectorAll('.smd-panel'); for(var i=0;i<others.length;i++){ if(others[i]!==el){ others[i].style.display='none'; others[i].innerHTML=''; others[i].setAttribute('data-open','0'); } } }catch(e){}
+  el.style.display='block'; el.setAttribute('data-open','1');
+  el.innerHTML='<div style="padding:14px;text-align:center;color:var(--t3);font-size:11px;">⏳ Chargement du résumé…</div>';
+  if(!eventId){ el.innerHTML='<div style="padding:12px;color:var(--t3);font-size:11px;text-align:center;">Résumé indisponible pour ce match.</div>'; return; }
+  try{
+    var r=await fetch('https://site.api.espn.com/apis/site/v2/sports/soccer/'+(league||'eng.1')+'/summary?event='+eventId);
+    var data=await r.json();
+    var comp=(data.header&&data.header.competitions&&data.header.competitions[0])||{};
+    var cps=comp.competitors||[];
+    var home=cps.filter(function(c){return c.homeAway==='home';})[0]||cps[0]||{};
+    var away=cps.filter(function(c){return c.homeAway==='away';})[0]||cps[1]||{};
+    var homeId=(home.team&&home.team.id)||'', awayId=(away.team&&away.team.id)||'';
+    var hN=(home.team&&(home.team.displayName||home.team.shortDisplayName))||'', aN=(away.team&&(away.team.displayName||away.team.shortDisplayName))||'';
+    var hS=(home.score!=null?home.score:''), aS=(away.score!=null?away.score:'');
+    var h='<div style="margin:4px 0 8px;padding:10px;background:rgba(0,0,0,.18);border-radius:10px;">';
+    h+='<div style="display:flex;align-items:center;justify-content:center;gap:12px;font-size:13px;font-weight:800;color:var(--t1);margin-bottom:8px;"><span>'+hN+'</span><span style="color:var(--a);">'+hS+' - '+aS+'</span><span>'+aN+'</span></div>';
+    var added=false;
+    if(typeof _renderEspnMatchStats==='function'){ try{ var st=_renderEspnMatchStats(data, homeId, awayId, '#4d84ff'); if(st){ h+=st; added=true; } }catch(e){} }
+    if(typeof _renderEspnMatchPitch==='function'){ try{ var pi=_renderEspnMatchPitch(data, '#4d84ff', function(x){return x;}); if(pi){ h+=pi; added=true; } }catch(e){} }
+    if(!added) h+='<div style="font-size:11px;color:var(--t3);text-align:center;padding:6px;">Pas de détails (compo/stats) pour ce match.</div>';
+    h+='</div>';
+    el.innerHTML=h;
+  }catch(e){ el.innerHTML='<div style="padding:12px;color:#ff6b6b;font-size:11px;text-align:center;">Résumé indisponible.</div>'; }
+}
+window.toggleSaisonMatchDetail=toggleSaisonMatchDetail;
