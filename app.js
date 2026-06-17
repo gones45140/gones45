@@ -15591,28 +15591,48 @@ function _extractEspnVideo(data){
   }catch(e){}
   return {type:null, thumb:firstThumb};
 }
+// Si la lecture inline du clip ESPN échoue (clip géo-bloqué, worker /vid absent…) → on révèle
+// l'élément suivant marqué data-vfb (la belle vignette → YouTube) à la place du lecteur.
+window._vidErr = function(v){
+  try{
+    if(v.getAttribute('data-failed')==='1') return;
+    v.setAttribute('data-failed','1');
+    v.style.display='none';
+    var f = v.nextElementSibling;
+    if(f && f.getAttribute && f.getAttribute('data-vfb')==='1') f.style.display='block';
+  }catch(e){}
+};
+window._vidWatch = function(v){
+  setTimeout(function(){ try{ if(v.getAttribute('data-failed')!=='1' && v.readyState<1) _vidErr(v); }catch(e){} }, 10000);
+};
 function _videoBlock(data, teamA, teamB, qExtra){
   var vid = _extractEspnVideo(data);
   var q = encodeURIComponent((teamA||'')+' '+(teamB||'')+' '+(qExtra||'résumé highlights'));
   var ytSearch = 'https://www.youtube.com/results?search_query='+q;
   var h = '<div style="background:rgba(255,0,0,.04);border:1px solid rgba(255,255,255,.06);border-radius:8px;padding:10px;margin-bottom:8px;">';
   h += '<div style="font-size:9px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;color:#ff5a5a;margin-bottom:8px;">📺 Résumé vidéo</div>';
+  // Belle vignette → YouTube. Réutilisée soit en affichage principal, soit en repli caché (hidden=true).
+  function thumbCard(hidden){
+    var dn = hidden ? 'display:none;' : 'display:block;';
+    var attr = hidden ? 'data-vfb="1" ' : '';
+    if(!vid.thumb){
+      return '<a '+attr+'href="'+ytSearch+'" target="_blank" rel="noopener" style="'+dn+'text-align:center;padding:10px;background:#ff0000;color:#fff;font-size:11px;font-weight:700;border-radius:8px;text-decoration:none;">🔎 Voir le résumé sur YouTube</a>';
+    }
+    return '<a '+attr+'href="'+ytSearch+'" target="_blank" rel="noopener" style="'+dn+'position:relative;padding-bottom:56.25%;height:0;border-radius:8px;overflow:hidden;background-image:url('+vid.thumb+');background-size:cover;background-position:center;text-decoration:none;">'
+      +'<span style="position:absolute;left:0;right:0;bottom:0;display:flex;align-items:center;gap:5px;padding:7px 10px;background:linear-gradient(to top,rgba(0,0,0,.8),rgba(0,0,0,0));font-size:11px;font-weight:700;color:#fff;">▶ Voir le résumé sur YouTube</span>'
+      +'</a>';
+  }
   if(vid.type==='youtube'){
-    // Lien YouTube référencé par ESPN → lecteur intégré (fonctionne en France)
+    // Lien YouTube référencé par ESPN → lecteur intégré
     h += '<div style="position:relative;padding-bottom:56.25%;height:0;border-radius:8px;overflow:hidden;"><iframe src="https://www.youtube.com/embed/'+vid.src+'?autoplay=0" style="position:absolute;top:0;left:0;width:100%;height:100%;border:0;" allow="accelerometer;encrypted-media;gyroscope;picture-in-picture" allowfullscreen></iframe></div>';
     h += '<a href="'+ytSearch+'" target="_blank" rel="noopener" style="display:block;text-align:center;margin-top:8px;font-size:10px;color:var(--t3);text-decoration:none;">🔎 Plus de vidéos sur YouTube →</a>';
-  } else if(vid.thumb){
-    // La vignette n'est pas géo-bloquée (seul le flux ESPN l'est) → belle image cliquable
-    // avec ▶, mais le clic ouvre YouTube (dispo en France, vrais résumés FIFA / L1).
-    h += '<a href="'+ytSearch+'" target="_blank" rel="noopener" style="display:block;position:relative;padding-bottom:56.25%;height:0;border-radius:8px;overflow:hidden;background-image:url('+vid.thumb+');background-size:cover;background-position:center;text-decoration:none;">';
-    h += '<span style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,.22);">';
-    h += '<span style="width:46px;height:46px;border-radius:50%;background:rgba(255,0,0,.92);display:flex;align-items:center;justify-content:center;font-size:15px;color:#fff;padding-left:3px;box-shadow:0 2px 10px rgba(0,0,0,.45);">▶</span>';
-    h += '</span>';
-    h += '<span style="position:absolute;left:0;right:0;bottom:0;display:flex;align-items:center;gap:5px;padding:7px 10px;background:linear-gradient(to top,rgba(0,0,0,.8),rgba(0,0,0,0));font-size:11px;font-weight:700;color:#fff;">▶ Voir le résumé sur YouTube</span>';
-    h += '</a>';
+  } else if(vid.type==='mp4'){
+    // Lecture inline via le Worker (CORS + Range). Si le clip refuse → bascule auto sur la vignette.
+    var prox = (typeof FD_PROXY!=='undefined'?FD_PROXY:'https://fd-proxy.touraine-antoine.workers.dev')+'/vid?u='+encodeURIComponent(vid.src);
+    h += '<video controls playsinline preload="metadata" onerror="_vidErr(this)" onloadstart="_vidWatch(this)" '+(vid.thumb?('poster="'+vid.thumb+'" '):'')+'style="width:100%;border-radius:8px;background:#000;display:block;"><source src="'+prox+'" type="video/mp4"></video>';
+    h += thumbCard(true);   // repli caché, révélé en cas d'échec
   } else {
-    // Pas de visuel dispo → bouton rouge
-    h += '<a href="'+ytSearch+'" target="_blank" rel="noopener" style="display:block;text-align:center;padding:10px;background:#ff0000;color:#fff;font-size:11px;font-weight:700;border-radius:8px;text-decoration:none;">🔎 Voir le résumé sur YouTube</a>';
+    h += thumbCard(false);  // pas de clip lisible → vignette (ou bouton) directement
   }
   h += '</div>';
   return h;
