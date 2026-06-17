@@ -15605,10 +15605,11 @@ function _videoBlock(data, teamA, teamB, qExtra){
     // La vignette n'est pas géo-bloquée (seul le flux ESPN l'est) → belle image cliquable
     // avec ▶, mais le clic ouvre YouTube (dispo en France, vrais résumés FIFA / L1).
     h += '<a href="'+ytSearch+'" target="_blank" rel="noopener" style="display:block;position:relative;padding-bottom:56.25%;height:0;border-radius:8px;overflow:hidden;background-image:url('+vid.thumb+');background-size:cover;background-position:center;text-decoration:none;">';
-    h += '<span style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;background:linear-gradient(to bottom,rgba(0,0,0,.15),rgba(0,0,0,.45));">';
-    h += '<span style="width:58px;height:58px;border-radius:50%;background:rgba(255,0,0,.92);display:flex;align-items:center;justify-content:center;font-size:22px;color:#fff;box-shadow:0 3px 14px rgba(0,0,0,.5);">▶</span>';
-    h += '<span style="font-size:11px;font-weight:700;color:#fff;letter-spacing:.3px;text-shadow:0 1px 5px rgba(0,0,0,.7);">Voir le résumé sur YouTube</span>';
-    h += '</span></a>';
+    h += '<span style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,.22);">';
+    h += '<span style="width:46px;height:46px;border-radius:50%;background:rgba(255,0,0,.92);display:flex;align-items:center;justify-content:center;font-size:15px;color:#fff;padding-left:3px;box-shadow:0 2px 10px rgba(0,0,0,.45);">▶</span>';
+    h += '</span>';
+    h += '<span style="position:absolute;left:0;right:0;bottom:0;display:flex;align-items:center;gap:5px;padding:7px 10px;background:linear-gradient(to top,rgba(0,0,0,.8),rgba(0,0,0,0));font-size:11px;font-weight:700;color:#fff;">▶ Voir le résumé sur YouTube</span>';
+    h += '</a>';
   } else {
     // Pas de visuel dispo → bouton rouge
     h += '<a href="'+ytSearch+'" target="_blank" rel="noopener" style="display:block;text-align:center;padding:10px;background:#ff0000;color:#fff;font-size:11px;font-weight:700;border-radius:8px;text-decoration:none;">🔎 Voir le résumé sur YouTube</a>';
