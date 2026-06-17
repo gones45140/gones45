@@ -18426,16 +18426,23 @@ function _renderEspnMatchPitch(s, col, nameFn){
       return html;
     }
     function subsLine(r,c){
-      var players=(r&&r.roster)||[]; var subs=players.filter(function(p){return !p.starter;});
+      var players=(r&&r.roster)||[];
+      var subs=players.filter(function(p){ return !p.starter && !_starterIds[_aid(p)]; });
       if(!subs.length) return '';
-      var items=subs.map(function(p){
-        var num=(p.jersey!=null)?p.jersey:((p.athlete&&p.athlete.jersey)||'');
+      var changes=[], unused=[];
+      subs.forEach(function(p){
         var nm=lastName((p.athlete&&(p.athlete.displayName||p.athlete.shortName))||'');
-        var ev=_evOf(p), ex='';
-        if(ev){ if(ev.subIn) ex+=' <span style="color:#1ed760;">🔺'+(ev.subIn.min||'')+(ev.subIn.partner?(' '+ev.subIn.partner):'')+'</span>'; ex+=_icoStr(ev); }
-        return '<span style="white-space:nowrap;"><b style="color:'+c+';">'+num+'</b> '+nm+ex+'</span>';
-      }).join('<span style="color:var(--t3);"> · </span>');
-      return '<div style="font-size:10px;color:var(--t2);line-height:1.7;margin-top:6px;"><b style="color:'+c+';">'+tName(r)+'</b> — '+items+'</div>';
+        var ev=_evOf(p), ic=ev?_icoStr(ev):'';
+        if(ev && ev.subIn){
+          var out=ev.subIn.partner||'?', mn=ev.subIn.min||'';
+          changes.push('<span style="white-space:nowrap;">'+(mn?'<span style="color:var(--t3);">'+mn+' </span>':'')+'<span style="color:#ff8a8a;">'+out+'</span> <span style="color:var(--t3);">➜</span> <b style="color:#1ed760;">'+nm+'</b>'+(ic?(' '+ic):'')+'</span>');
+        } else { unused.push(nm); }
+      });
+      var h='<div style="font-size:10px;line-height:1.9;margin-top:8px;"><b style="color:'+c+';">'+tName(r)+'</b>';
+      if(changes.length) h+='<div style="margin-top:2px;color:var(--t2);">🔄 '+changes.join('<span style="color:var(--t3);">   ·   </span>')+'</div>';
+      if(unused.length) h+='<div style="margin-top:2px;color:var(--t3);font-size:9px;">Banc : '+unused.join(', ')+'</div>';
+      h+='</div>';
+      return h;
     }
     var homeCol=col||'#4d84ff', awayCol='#e0564f';
     var pitch='<div style="position:relative;width:100%;max-width:430px;margin:4px auto 2px;aspect-ratio:7/10;min-height:360px;background:linear-gradient(180deg,#1f7a3f 0%,#19682f 50%,#1f7a3f 100%);border-radius:10px;overflow:hidden;border:1px solid rgba(255,255,255,.12);">'
@@ -18450,6 +18457,7 @@ function _renderEspnMatchPitch(s, col, nameFn){
       +'<span style="color:'+homeCol+';overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">⬤ '+tName(hR)+(hR.formation?(' · '+hR.formation):'')+'</span>'
       +'<span style="color:'+awayCol+';overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-align:right;">'+tName(aR)+(aR.formation?(' · '+aR.formation):'')+' ⬤</span></div>';
     var subs=subsLine(hR,homeCol)+subsLine(aR,awayCol);
+    if(subs) subs='<div style="font-size:9px;color:var(--t3);margin-top:10px;border-top:1px solid rgba(255,255,255,.08);padding-top:8px;">Changements\u00a0: <span style="color:#ff8a8a;">sortant</span> \u279c <span style="color:#1ed760;">entrant</span></div>'+subs;
     return '<div class="fc" style="padding:14px;"><div style="font-size:11px;font-weight:800;letter-spacing:.5px;color:var(--t2);margin-bottom:10px;">👥 COMPOSITIONS</div>'+head+pitch+subs+'</div>';
   } catch(e){ return ''; }
 }
