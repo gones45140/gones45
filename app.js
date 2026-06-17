@@ -15749,90 +15749,6 @@ function _liveOddsBlock(data){
     return h;
   }catch(e){ return ''; }
 }
-function _liveBallBlock(data){
-  try{
-    if(!_isLive(data)) return '';
-    var sit = data.situation || {};
-    var lp = sit.lastPlay || (data.plays && data.plays.length ? data.plays[data.plays.length-1] : null);
-    var txt = (lp && lp.text) || '';
-    var fx=null, fy=null;
-    if(lp){
-      if(typeof lp.fieldPositionX==='number') fx=lp.fieldPositionX;
-      else if(typeof lp.fieldPosition==='number') fx=lp.fieldPosition;
-      if(typeof lp.fieldPositionY==='number') fy=lp.fieldPositionY;
-      if(lp.coordinate){ if(typeof lp.coordinate.x==='number') fx=lp.coordinate.x; if(typeof lp.coordinate.y==='number') fy=lp.coordinate.y; }
-    }
-    if(!txt && fx==null) return '';
-    var hasCoord = (fx!=null);
-    function clamp(v){ return Math.max(0,Math.min(100,v)); }
-    var X = hasCoord ? clamp(fx) : 50;
-    var Y = (fy!=null) ? clamp(fy) : 50;
-    var bx = 12 + (X/100)*276;
-    var by = 14 + (Y/100)*152;
-    var pitch = '<svg viewBox="0 0 300 180" style="width:100%;height:auto;display:block;border-radius:8px;">'
-      +'<rect x="0" y="0" width="300" height="180" fill="#2e8b3d"/>'
-      +'<rect x="6" y="8" width="288" height="164" fill="none" stroke="rgba(255,255,255,.7)" stroke-width="2"/>'
-      +'<line x1="150" y1="8" x2="150" y2="172" stroke="rgba(255,255,255,.7)" stroke-width="2"/>'
-      +'<circle cx="150" cy="90" r="26" fill="none" stroke="rgba(255,255,255,.7)" stroke-width="2"/>'
-      +'<rect x="6" y="50" width="40" height="80" fill="none" stroke="rgba(255,255,255,.6)" stroke-width="2"/>'
-      +'<rect x="254" y="50" width="40" height="80" fill="none" stroke="rgba(255,255,255,.6)" stroke-width="2"/>'
-      +'<circle cx="'+bx.toFixed(0)+'" cy="'+by.toFixed(0)+'" r="8" fill="rgba(255,255,255,.25)"/>'
-      +'<circle cx="'+bx.toFixed(0)+'" cy="'+by.toFixed(0)+'" r="6" fill="#fff" stroke="#111" stroke-width="1.5"/>'
-      +'</svg>';
-    var h='<div style="background:rgba(0,0,0,.18);border-radius:10px;padding:10px;margin:2px 0 8px;">';
-    h+='<div style="font-size:9px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;color:#7fd58a;margin-bottom:7px;">⚽ Ballon en jeu'+(hasCoord?'':' · position approx.')+'</div>';
-    h+=pitch;
-    if(txt) h+='<div style="font-size:10px;color:var(--t2);margin-top:7px;text-align:center;line-height:1.35;">'+txt+'</div>';
-    h+='</div>';
-    return h;
-  }catch(e){ return ''; }
-}
-function _liveScore(data){
-  try{
-    var comp=data&&data.header&&data.header.competitions&&data.header.competitions[0];
-    if(!comp) return null;
-    var cs=comp.competitors||[];
-    var home=cs.filter(function(c){return c.homeAway==='home';})[0]||cs[0]||{};
-    var away=cs.filter(function(c){return c.homeAway==='away';})[0]||cs[1]||{};
-    var hg=parseInt(home.score,10); if(isNaN(hg)) hg=0;
-    var ag=parseInt(away.score,10); if(isNaN(ag)) ag=0;
-    var ke=data.keyEvents||[];
-    var goals=ke.filter(function(e){return e.scoringPlay===true||(e.type&&e.type.text==='Goal');});
-    var lg=goals.length?goals[goals.length-1]:null;
-    var fr=(typeof wcFr==='function')?wcFr:function(x){return x;};
-    var lastGoal=null;
-    if(lg){
-      lastGoal={
-        scorer:(lg.participants&&lg.participants[0]&&lg.participants[0].athlete)?lg.participants[0].athlete.displayName:'',
-        team:(lg.team&&lg.team.displayName)?fr(lg.team.displayName):'',
-        min:(lg.clock&&lg.clock.displayValue)?lg.clock.displayValue:''
-      };
-    }
-    return {total:hg+ag,hg:hg,ag:ag,lastGoal:lastGoal};
-  }catch(e){ return null; }
-}
-function _goalBannerHtml(sc){
-  var g=sc.lastGoal||{};
-  var who=g.scorer?(g.scorer+(g.min?(' · '+g.min):'')):'';
-  var h='<div class="g45-goal-banner" style="text-align:center;background:linear-gradient(135deg,#1ed760,#0a9d4a);border-radius:12px;padding:14px;margin:2px 0 8px;overflow:hidden;">';
-  h+='<div class="g45-goal-title" style="font-size:26px;font-weight:900;letter-spacing:2px;color:#fff;text-shadow:0 2px 8px rgba(0,0,0,.35);">⚽ BUUUT !!!</div>';
-  if(who) h+='<div style="font-size:13px;font-weight:800;color:#fff;margin-top:4px;">'+who+'</div>';
-  if(g.team) h+='<div style="font-size:11px;font-weight:700;color:rgba(255,255,255,.85);margin-top:1px;">'+g.team+'</div>';
-  h+='<div style="font-size:14px;font-weight:900;color:#fff;margin-top:5px;letter-spacing:1px;">'+sc.hg+' – '+sc.ag+'</div>';
-  h+='</div>';
-  return h;
-}
-function _g45EnsureGoalCSS(){
-  try{
-    if(document.getElementById('g45-goal-css')) return;
-    var st=document.createElement('style'); st.id='g45-goal-css';
-    st.textContent='@keyframes g45GoalPop{0%{transform:scale(.6);opacity:0;max-height:0}10%{transform:scale(1.05);opacity:1;max-height:260px}18%{transform:scale(1)}82%{opacity:1;max-height:260px}100%{opacity:0;max-height:0;padding-top:0;padding-bottom:0;margin-top:0;margin-bottom:0}}'
-      +'@keyframes g45GoalShake{0%,100%{transform:translateX(0)}20%{transform:translateX(-4px)}40%{transform:translateX(4px)}60%{transform:translateX(-3px)}80%{transform:translateX(3px)}}'
-      +'.g45-goal-banner{animation:g45GoalPop 7s ease forwards}'
-      +'.g45-goal-title{animation:g45GoalShake .5s ease 2}';
-    document.head.appendChild(st);
-  }catch(e){}
-}
 function _wcLiveTimer(box, data, eventId, rowId){
   try{
     var live = _isLive(data);
@@ -15841,7 +15757,7 @@ function _wcLiveTimer(box, data, eventId, rowId){
         var b=document.getElementById(rowId);
         if(!b || b.getAttribute('data-open')!=='1'){ clearInterval(box._liveTimer); box._liveTimer=null; return; }
         _wcRenderMatch(eventId, rowId);
-      }, 30000);
+      }, 60000);
     } else if(!live && box._liveTimer){ clearInterval(box._liveTimer); box._liveTimer=null; }
   }catch(e){}
 }
@@ -15869,22 +15785,9 @@ async function _wcRenderMatch(eventId, rowId) {
     var _wcN = _wcMatchTeams(data);   // [équipe A, équipe B] — fiable même sans stats
     var live = _liveBettingBlock(data);  // panneau LIVE (vide si match pas en cours)
     var odds = _liveOddsBlock(data);
-    var ball = _liveBallBlock(data);
-    // ── Détection de but (le score a augmenté depuis le dernier rafraîchissement) → bannière BUUUT ──
-    var goalBanner = '';
-    try{
-      var _sc = _liveScore(data);
-      if(_sc){
-        if(_isLive(data) && box._lastScore!=null && _sc.total>box._lastScore){
-          _g45EnsureGoalCSS();
-          goalBanner = _goalBannerHtml(_sc);
-        }
-        box._lastScore = _sc.total;
-      }
-    }catch(e){}
     var box2 = data.boxscore;
     if(!box2 || !box2.teams || !box2.teams.length) {
-      box.innerHTML = goalBanner + live + ball + odds + '<div style="padding:8px;color:var(--t3);font-size:10px;text-align:center;margin-bottom:8px;">Stats indisponibles</div>' + _wcVideoBlock(data, _wcN[0], _wcN[1]);
+      box.innerHTML = live + odds + '<div style="padding:8px;color:var(--t3);font-size:10px;text-align:center;margin-bottom:8px;">Stats indisponibles</div>' + _wcVideoBlock(data, _wcN[0], _wcN[1]);
       _wcLiveTimer(box, data, eventId, rowId); return;
     }
 
@@ -15907,14 +15810,14 @@ async function _wcRenderMatch(eventId, rowId) {
 
     var hasAny = rows.some(function(r){ return s0[r[1]]!==undefined || s1[r[1]]!==undefined; });
     if(!hasAny) {
-      box.innerHTML = goalBanner + live + ball + odds + '<div style="padding:8px;color:var(--t3);font-size:10px;text-align:center;margin-bottom:8px;">Pas de stats détaillées pour ce match</div>' + _wcVideoBlock(data, _wcN[0], _wcN[1]);
+      box.innerHTML = live + odds + '<div style="padding:8px;color:var(--t3);font-size:10px;text-align:center;margin-bottom:8px;">Pas de stats détaillées pour ce match</div>' + _wcVideoBlock(data, _wcN[0], _wcN[1]);
       _wcLiveTimer(box, data, eventId, rowId); return;
     }
 
     var nameA = (t0.team && (t0.team.abbreviation||t0.team.displayName)) || '';
     var nameB = (t1.team && (t1.team.abbreviation||t1.team.displayName)) || '';
 
-    var h = goalBanner + live + ball + odds + '<div style="background:rgba(77,132,255,.05);border-radius:8px;padding:10px;margin:2px 0 8px;">';
+    var h = live + odds + '<div style="background:rgba(77,132,255,.05);border-radius:8px;padding:10px;margin:2px 0 8px;">';
     h += '<div style="display:flex;justify-content:space-between;font-size:9px;font-weight:800;color:var(--t2);margin-bottom:8px;"><span>'+nameA+'</span><span>'+nameB+'</span></div>';
     rows.forEach(function(r){
       var va = s0[r[1]]!==undefined ? s0[r[1]] : '—';
