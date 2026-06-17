@@ -15566,10 +15566,12 @@ function _ytId(u){
   }catch(e){ return null; }
 }
 function _extractEspnVideo(data){
+  var firstThumb = '';
   try{
     var vids = (data && data.videos) || [];
     for(var i=0;i<vids.length;i++){
       var v = vids[i]||{}, L = v.links||{}, src = L.source||{}, mob = L.mobile||{};
+      if(!firstThumb && v.thumbnail) firstThumb = v.thumbnail;
       // 1) un éventuel lien YouTube quelque part dans les liens
       var pool = [];
       [L.web, src, mob].forEach(function(o){
@@ -15581,13 +15583,13 @@ function _extractEspnVideo(data){
           else if(val && typeof val==='object'){ for(var k2 in val){ if(val[k2] && val[k2].href) pool.push(val[k2].href); } }
         }
       });
-      for(var p=0;p<pool.length;p++){ var yid=_ytId(pool[p]); if(yid) return {type:'youtube', src:yid, thumb:v.thumbnail||'', web:(L.web&&L.web.href)||''}; }
+      for(var p=0;p<pool.length;p++){ var yid=_ytId(pool[p]); if(yid) return {type:'youtube', src:yid, thumb:v.thumbnail||firstThumb, web:(L.web&&L.web.href)||''}; }
       // 2) sinon un mp4 directement lisible
       var cands = [src.HD&&src.HD.href, src.full&&src.full.href, src.href, mob.source&&mob.source.href, mob.progressiveDownload&&mob.progressiveDownload.href];
-      for(var c=0;c<cands.length;c++){ if(cands[c] && /\.mp4(\?|$)/i.test(cands[c])) return {type:'mp4', src:cands[c], thumb:v.thumbnail||'', web:(L.web&&L.web.href)||''}; }
+      for(var c=0;c<cands.length;c++){ if(cands[c] && /\.mp4(\?|$)/i.test(cands[c])) return {type:'mp4', src:cands[c], thumb:v.thumbnail||firstThumb, web:(L.web&&L.web.href)||''}; }
     }
   }catch(e){}
-  return {type:null};
+  return {type:null, thumb:firstThumb};
 }
 function _videoBlock(data, teamA, teamB, qExtra){
   var vid = _extractEspnVideo(data);
@@ -15599,9 +15601,16 @@ function _videoBlock(data, teamA, teamB, qExtra){
     // Lien YouTube référencé par ESPN → lecteur intégré (fonctionne en France)
     h += '<div style="position:relative;padding-bottom:56.25%;height:0;border-radius:8px;overflow:hidden;"><iframe src="https://www.youtube.com/embed/'+vid.src+'?autoplay=0" style="position:absolute;top:0;left:0;width:100%;height:100%;border:0;" allow="accelerometer;encrypted-media;gyroscope;picture-in-picture" allowfullscreen></iframe></div>';
     h += '<a href="'+ytSearch+'" target="_blank" rel="noopener" style="display:block;text-align:center;margin-top:8px;font-size:10px;color:var(--t3);text-decoration:none;">🔎 Plus de vidéos sur YouTube →</a>';
+  } else if(vid.thumb){
+    // La vignette n'est pas géo-bloquée (seul le flux ESPN l'est) → belle image cliquable
+    // avec ▶, mais le clic ouvre YouTube (dispo en France, vrais résumés FIFA / L1).
+    h += '<a href="'+ytSearch+'" target="_blank" rel="noopener" style="display:block;position:relative;padding-bottom:56.25%;height:0;border-radius:8px;overflow:hidden;background-image:url('+vid.thumb+');background-size:cover;background-position:center;text-decoration:none;">';
+    h += '<span style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;background:linear-gradient(to bottom,rgba(0,0,0,.15),rgba(0,0,0,.45));">';
+    h += '<span style="width:58px;height:58px;border-radius:50%;background:rgba(255,0,0,.92);display:flex;align-items:center;justify-content:center;font-size:22px;color:#fff;box-shadow:0 3px 14px rgba(0,0,0,.5);">▶</span>';
+    h += '<span style="font-size:11px;font-weight:700;color:#fff;letter-spacing:.3px;text-shadow:0 1px 5px rgba(0,0,0,.7);">Voir le résumé sur YouTube</span>';
+    h += '</span></a>';
   } else {
-    // Les clips hébergés par ESPN sont géo-bloqués hors USA → on envoie direct sur YouTube
-    // (dispo en France, remonte les vrais résumés FIFA / Ligue 1).
+    // Pas de visuel dispo → bouton rouge
     h += '<a href="'+ytSearch+'" target="_blank" rel="noopener" style="display:block;text-align:center;padding:10px;background:#ff0000;color:#fff;font-size:11px;font-weight:700;border-radius:8px;text-decoration:none;">🔎 Voir le résumé sur YouTube</a>';
   }
   h += '</div>';
