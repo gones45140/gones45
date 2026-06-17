@@ -17154,7 +17154,13 @@ async function buildSaisonScorerIndex(teamId, saison, nom, matches, progressCb){
   var finished = matches.filter(function(m){ return m.status==='FINISHED' && m.espnId; });
   var index = { builtAt: Date.now(), n:0, total: finished.length, players:{}, byMatch:{} };
   function pinc(name, key){ if(!index.players[name]) index.players[name]={g:0,a:0}; index.players[name][key]++; }
-  function ourNameIn(m){ return (m.homeTeam&&m.homeTeam.id===teamId)?(m.homeTeam&&m.homeTeam.name):(m.awayTeam&&m.awayTeam.name); }
+  function ourNameIn(m){
+    var hn=(m.homeTeam&&m.homeTeam.name)||'', an=(m.awayTeam&&m.awayTeam.name)||'', low=(nom||'').toLowerCase();
+    function sc(x){ x=(x||'').toLowerCase(); if(!x) return -1; if(x===low) return 3; if(x.indexOf(low)>=0||low.indexOf(x)>=0) return 2; return 0; }
+    return sc(hn)>=sc(an)?hn:an;
+  }
+  var ourEspnId='';
+  try{ var _rr=await espnResolveTeam(nom); if(_rr&&_rr.id) ourEspnId=String(_rr.id); }catch(_e){}
   var qi=0, CONC=3, done=0, ok=0;
   async function worker(){
     while(qi<finished.length){
@@ -17167,7 +17173,9 @@ async function buildSaisonScorerIndex(teamId, saison, nom, matches, progressCb){
           var tt=((e.type&&e.type.text)||'').toLowerCase();
           if(!(e.scoringPlay===true || tt.indexOf('goal')>=0)) return;
           if(tt.indexOf('own')>=0) return; // csc : non attribué à nos buteurs
-          if(!_scorerTeamIsOurs((e.team&&e.team.displayName)||'', ourName)) return;
+          var _etid=(e.team && e.team.id!=null)?String(e.team.id):'';
+          var _ours=(ourEspnId && _etid)?(_etid===ourEspnId):_scorerTeamIsOurs((e.team&&e.team.displayName)||'', ourName);
+          if(!_ours) return;
           var scorer=(e.participants&&e.participants[0]&&e.participants[0].athlete)?e.participants[0].athlete.displayName:'';
           var assist=(e.participants&&e.participants[1]&&e.participants[1].athlete)?e.participants[1].athlete.displayName:'';
           if(scorer){ sc.push(scorer); pinc(scorer,'g'); }
@@ -17184,7 +17192,7 @@ async function buildSaisonScorerIndex(teamId, saison, nom, matches, progressCb){
   var ws=[]; for(var w=0; w<Math.min(CONC, finished.length||1); w++) ws.push(worker());
   await Promise.all(ws);
   index.n = ok;
-  try{ localStorage.setItem('g45_scorers_v2_'+teamId+'_'+saison, JSON.stringify(index)); }catch(_e){}
+  try{ localStorage.setItem('g45_scorers_v3_'+teamId+'_'+saison, JSON.stringify(index)); }catch(_e){}
   return index;
 }
 
@@ -17500,7 +17508,7 @@ function renderSaisonsChart(el, results, nom) {
     // ── Résultats complets de la saison ──
     var allMatchesSorted = filteredMatches.slice().sort(function(a,b){ return new Date(b.utcDate)-new Date(a.utcDate); });
     // ── Buteur / Passeur (index keyEvents) ──
-    var _scKey='g45_scorers_v2_'+teamId+'_'+s, _scIdx=null; try{_scIdx=JSON.parse(localStorage.getItem(_scKey)||'null');}catch(_e){}
+    var _scKey='g45_scorers_v3_'+teamId+'_'+s, _scIdx=null; try{_scIdx=JSON.parse(localStorage.getItem(_scKey)||'null');}catch(_e){}
     var _finCount = allMatchesSorted.filter(function(m){ return m.status==='FINISHED' && m.espnId; }).length;
     var _scF = window._saisonScorerFilter;
     var _scActive = !!(_scF && _scF.s===s && _scF.player && _scIdx);
@@ -17539,6 +17547,7 @@ function renderSaisonsChart(el, results, nom) {
         var dateStr = d.toLocaleDateString('fr-FR',{day:'numeric',month:'short'});
         var comp = m.competition&&m.competition.name||'';
         var compIco = getCompIcon(comp);
+        if(compIco==='⚽') compIco='🏟️';
         var homeName = m.homeTeam&&m.homeTeam.name||'?';
         var awayName = m.awayTeam&&m.awayTeam.name||'?';
         var isOurHome = isDom;
