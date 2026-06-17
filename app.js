@@ -188,6 +188,8 @@ async function espnClubSchedule(nom, season, leagueSlug) {
         completed: completed,
         homeTeam: home.team ? home.team.displayName : '?',
         awayTeam: away.team ? away.team.displayName : '?',
+        homeId: home.team ? String(home.team.id) : null,
+        awayId: away.team ? String(away.team.id) : null,
         homeScore: hS, awayScore: aS,
         competition: (e.season && e.season.slug) ? e.season.slug : (leagueSlug||resolved.league),
         competitionName: (e.season && e.season.name) ? e.season.name : '',
@@ -15556,6 +15558,83 @@ async function fetchMondialLive(silent) {
 /* ══════════════════════════════════════
    SIMULATION COUPE DU MONDE 2026
 ══════════════════════════════════════ */
+// ── Résumé vidéo : extrait un clip embeddable du résumé ESPN, sinon lien recherche YouTube ──
+function _ytId(u){
+  try{
+    var m = String(u).match(/(?:youtube\.com\/(?:watch\?v=|embed\/)|youtu\.be\/)([A-Za-z0-9_-]{6,})/);
+    return m ? m[1] : null;
+  }catch(e){ return null; }
+}
+function _extractEspnVideo(data){
+  try{
+    var vids = (data && data.videos) || [];
+    for(var i=0;i<vids.length;i++){
+      var v = vids[i]||{}, L = v.links||{}, src = L.source||{}, mob = L.mobile||{};
+      // 1) un éventuel lien YouTube quelque part dans les liens
+      var pool = [];
+      [L.web, src, mob].forEach(function(o){
+        if(!o) return;
+        for(var k in o){
+          var val = o[k];
+          if(val && val.href) pool.push(val.href);
+          else if(typeof val==='string') pool.push(val);
+          else if(val && typeof val==='object'){ for(var k2 in val){ if(val[k2] && val[k2].href) pool.push(val[k2].href); } }
+        }
+      });
+      for(var p=0;p<pool.length;p++){ var yid=_ytId(pool[p]); if(yid) return {type:'youtube', src:yid, thumb:v.thumbnail||'', web:(L.web&&L.web.href)||''}; }
+      // 2) sinon un mp4 directement lisible
+      var cands = [src.HD&&src.HD.href, src.full&&src.full.href, src.href, mob.source&&mob.source.href, mob.progressiveDownload&&mob.progressiveDownload.href];
+      for(var c=0;c<cands.length;c++){ if(cands[c] && /\.mp4(\?|$)/i.test(cands[c])) return {type:'mp4', src:cands[c], thumb:v.thumbnail||'', web:(L.web&&L.web.href)||''}; }
+    }
+  }catch(e){}
+  return {type:null};
+}
+function _videoBlock(data, teamA, teamB, qExtra){
+  var vid = _extractEspnVideo(data);
+  var q = encodeURIComponent((teamA||'')+' '+(teamB||'')+' '+(qExtra||'résumé highlights'));
+  var ytSearch = 'https://www.youtube.com/results?search_query='+q;
+  var h = '<div style="background:rgba(255,0,0,.04);border:1px solid rgba(255,255,255,.06);border-radius:8px;padding:10px;margin-bottom:8px;">';
+  h += '<div style="font-size:9px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;color:#ff5a5a;margin-bottom:8px;">📺 Résumé vidéo</div>';
+  if(vid.type==='youtube'){
+    h += '<div style="position:relative;padding-bottom:56.25%;height:0;border-radius:8px;overflow:hidden;"><iframe src="https://www.youtube.com/embed/'+vid.src+'?autoplay=0" style="position:absolute;top:0;left:0;width:100%;height:100%;border:0;" allow="accelerometer;encrypted-media;gyroscope;picture-in-picture" allowfullscreen></iframe></div>';
+  } else if(vid.type==='mp4'){
+    h += '<video controls preload="none" '+(vid.thumb?('poster="'+vid.thumb+'" '):'')+'style="width:100%;border-radius:8px;background:#000;"><source src="'+vid.src+'" type="video/mp4"></video>';
+  }
+  if(vid.type){
+    h += '<a href="'+ytSearch+'" target="_blank" rel="noopener" style="display:block;text-align:center;margin-top:8px;font-size:10px;color:var(--t3);text-decoration:none;">🔎 Plus de vidéos sur YouTube →</a>';
+  } else {
+    h += '<a href="'+ytSearch+'" target="_blank" rel="noopener" style="display:block;text-align:center;padding:10px;background:#ff0000;color:#fff;font-size:11px;font-weight:700;border-radius:8px;text-decoration:none;">🔎 Voir le résumé sur YouTube</a>';
+  }
+  if(vid.web){ h += '<a href="'+vid.web+'" target="_blank" rel="noopener" style="display:block;text-align:center;margin-top:6px;font-size:9px;color:var(--t3);text-decoration:none;">Voir sur ESPN →</a>'; }
+  h += '</div>';
+  return h;
+}
+function _wcVideoBlock(data, teamA, teamB){ return _videoBlock(data, teamA, teamB, 'résumé coupe du monde 2026'); }
+window._wcVideoBlock = _wcVideoBlock;
+window._videoBlock = _videoBlock;
+// Noms des 2 équipes depuis le résumé ESPN, même si le boxscore est absent (header en secours)
+function _wcMatchTeams(data){
+  var a='', b='';
+  try{
+    var comp = data && data.header && data.header.competitions && data.header.competitions[0];
+    var cs = comp && comp.competitors;
+    if(cs && cs.length>=2){
+      var home = cs.filter(function(c){return c.homeAway==='home';})[0] || cs[0];
+      var away = cs.filter(function(c){return c.homeAway==='away';})[0] || cs[1];
+      a = (home.team && (home.team.displayName||home.team.name)) || '';
+      b = (away.team && (away.team.displayName||away.team.name)) || '';
+    }
+  }catch(e){}
+  if((!a||!b) && data && data.boxscore && data.boxscore.teams && data.boxscore.teams.length>=2){
+    try{
+      a = a || (data.boxscore.teams[0].team && data.boxscore.teams[0].team.displayName) || '';
+      b = b || (data.boxscore.teams[1].team && data.boxscore.teams[1].team.displayName) || '';
+    }catch(e){}
+  }
+  var fr = (typeof wcFr==='function') ? wcFr : function(x){return x;};
+  return [ fr(a)||a, fr(b)||b ];
+}
+
 async function toggleWcMatchStats(eventId, rowId) {
   var box = document.getElementById(rowId);
   if(!box) return;
@@ -15565,9 +15644,10 @@ async function toggleWcMatchStats(eventId, rowId) {
   try {
     var res = await fetch('https://site.api.espn.com/apis/site/v2/sports/soccer/fifa.world/summary?event='+eventId);
     var data = await res.json();
+    var _wcN = _wcMatchTeams(data);   // [équipe A, équipe B] — fiable même sans stats
     var box2 = data.boxscore;
     if(!box2 || !box2.teams || !box2.teams.length) {
-      box.innerHTML = '<div style="padding:8px;color:var(--t3);font-size:10px;text-align:center;">Stats indisponibles</div>';
+      box.innerHTML = '<div style="padding:8px;color:var(--t3);font-size:10px;text-align:center;margin-bottom:8px;">Stats indisponibles</div>' + _wcVideoBlock(data, _wcN[0], _wcN[1]);
       return;
     }
 
@@ -15590,7 +15670,7 @@ async function toggleWcMatchStats(eventId, rowId) {
 
     var hasAny = rows.some(function(r){ return s0[r[1]]!==undefined || s1[r[1]]!==undefined; });
     if(!hasAny) {
-      box.innerHTML = '<div style="padding:8px;color:var(--t3);font-size:10px;text-align:center;">Pas de stats détaillées pour ce match</div>';
+      box.innerHTML = '<div style="padding:8px;color:var(--t3);font-size:10px;text-align:center;margin-bottom:8px;">Pas de stats détaillées pour ce match</div>' + _wcVideoBlock(data, _wcN[0], _wcN[1]);
       return;
     }
 
@@ -15649,6 +15729,9 @@ async function toggleWcMatchStats(eventId, rowId) {
       });
       h += '</div>';
     }
+
+    // ── Résumé vidéo (lecteur intégré si dispo, sinon recherche YouTube) ──
+    h += _wcVideoBlock(data, _wcN[0], _wcN[1]);
 
     if(typeof _renderEspnMatchPitch==='function'){ var _cp=_renderEspnMatchPitch(data,'#4d84ff',(typeof wcFr==='function'?wcFr:null)); h += _cp || ((typeof _renderEspnMatchLineups==='function')?_renderEspnMatchLineups(data,'#4d84ff',(typeof wcFr==='function'?wcFr:null)):''); }
 
@@ -17968,57 +18051,108 @@ function toggleCpType(btn) {
 
 // ── CALENDRIER GLOBAL ──
 var _calCache = null;
+// Résolution football-data STRICTE (mots entiers) — évite les faux positifs type
+// 'OL' ⊂ 'carOLina hurricanes' qui faisait pointer Carolina Hurricanes vers Lyon.
+function fdTeamIdExact(name){
+  if(!name) return null;
+  var n = name.toLowerCase().trim();
+  // 1) Correspondance exacte d'un alias (Lyon, Olympique Lyonnais, OL...)
+  for(var k in TEAM_IDS){ if(k.toLowerCase()===n) return TEAM_IDS[k]; }
+  // 2) Correspondance par mots ENTIERS (jamais en sous-chaîne)
+  var nTok = n.split(/\s+/);
+  for(var k2 in TEAM_IDS){
+    var kTok = k2.toLowerCase().split(/\s+/);
+    // tous les mots de la clé présents comme mots entiers du nom (ex: 'Bayern Munich')
+    if(kTok.every(function(t){ return nTok.indexOf(t)>=0; })) return TEAM_IDS[k2];
+    // ou tous les mots du nom présents comme mots entiers de la clé (ex: 'Inter' -> 'Inter Milan')
+    if(nTok.every(function(t){ return kTok.indexOf(t)>=0; })) return TEAM_IDS[k2];
+  }
+  return null;
+}
+// Cache mémoire des plannings ESPN (par équipe), TTL 30 min — évite de re-fetcher à chaque ouverture
+var _calSchedCache = {};
+async function _calTeamSchedule(nom){
+  var key = nom.toLowerCase();
+  var hit = _calSchedCache[key];
+  if(hit && (Date.now()-hit.ts) < 30*60*1000) return hit.data;
+  // Saison courante + suivante (couvre la fin de saison et les compétitions d'été)
+  var now = new Date(), cy = now.getFullYear(), cm = now.getMonth()+1;
+  var seasonY = (cm>=8) ? cy : cy-1;
+  var seasons = [seasonY, seasonY+1];
+  var resolved = null, byId = {};
+  for(var s=0; s<seasons.length; s++){
+    try {
+      var sched = await espnClubSchedule(nom, seasons[s]);
+      if(sched){
+        if(!resolved) resolved = sched.team;
+        (sched.matches||[]).forEach(function(m){ if(m && m.id) byId[m.id] = m; });
+      }
+    } catch(e){}
+  }
+  var data = { team: resolved, matches: Object.keys(byId).map(function(k){ return byId[k]; }) };
+  _calSchedCache[key] = { ts: Date.now(), data: data };
+  return data;
+}
+
 async function loadCalendrier() {
   var el = document.getElementById('cal-content');
   var btn = document.getElementById('btn-refresh-cal');
   if(!el) return;
-  if(!getFdorgKey()) {
-    el.innerHTML = '<div class="fc" style="color:var(--t3);text-align:center;">Configure ta clé Football-Data dans Outils pour voir le calendrier.</div>';
-    return;
-  }
   el.innerHTML = '<div style="display:flex;align-items:center;gap:8px;padding:20px;color:var(--t3);"><div style="width:14px;height:14px;border:2px solid rgba(77,132,255,.2);border-top-color:#4d84ff;border-radius:50%;animation:spin .8s linear infinite;"></div>Chargement du calendrier...</div>';
   if(btn) btn.onclick = loadCalendrier;
 
-  // Équipes avec ID football-data
-  var teamsWithId = state.u.filter(function(u){
-    for(var k in TEAM_IDS){ if(k.toLowerCase()===u.n.toLowerCase()||u.n.toLowerCase().indexOf(k.toLowerCase())>=0||k.toLowerCase().indexOf(u.n.toLowerCase())>=0) return true; }
-    return false;
-  }).slice(0,6);
-
-  if(!teamsWithId.length) {
-    el.innerHTML = '<div class="fc" style="color:var(--t3);text-align:center;">Aucune de tes equipes reconnue dans football-data.<br><small>Bayern Munich, Inter Milan, PSG, Real Madrid, Lyon...</small></div>';
+  // Équipes football favorites (résolution ESPN, comme l'onglet Saisons)
+  var teams = state.u.filter(function(u){ return (u.sport||'⚽')==='⚽'; }).slice(0,8);
+  if(!teams.length) {
+    el.innerHTML = '<div class="fc" style="color:var(--t3);text-align:center;">Ajoute des équipes de foot en favori pour voir leur calendrier.</div>';
     return;
   }
 
+  var nowTs = Date.now() - 2*60*60*1000; // garde aussi les matchs commencés il y a <2h
   var allMatches = [];
-  for(var i=0; i<teamsWithId.length; i++) {
-    var u = teamsWithId[i];
-    var tid = null;
-    for(var k in TEAM_IDS){ if(k.toLowerCase()===u.n.toLowerCase()||u.n.toLowerCase().indexOf(k.toLowerCase())>=0||k.toLowerCase().indexOf(u.n.toLowerCase())>=0){tid=TEAM_IDS[k];break;} }
-    if(!tid) continue;
-    var data = await fdFetch('/v4/teams/'+tid+'/matches?status=SCHEDULED&limit=3');
-    if(data&&data.matches) {
-      data.matches.forEach(function(m){
-        m._teamName = u.n;
-        m._teamColor = u.color||'#4d84ff';
-        m._teamId = tid;
-        allMatches.push(m);
+  for(var i=0; i<teams.length; i++) {
+    var u = teams[i];
+    var sched;
+    try { sched = await _calTeamSchedule(u.n); } catch(e){ sched = null; }
+    if(!sched || !sched.matches || !sched.matches.length) continue;
+    var ourId = (sched.team && sched.team.id!=null) ? String(sched.team.id) : null;
+    var ourName = (sched.team && sched.team.name) ? sched.team.name : u.n;
+    sched.matches.forEach(function(m){
+      if(m.completed) return;                         // déjà joué → pas dans le calendrier
+      var t = new Date(m.date).getTime();
+      if(isNaN(t) || t < nowTs) return;               // passé → ignore
+      // Domicile/extérieur fiable via l'ID ESPN de notre équipe (fallback : nom)
+      var isDom;
+      if(ourId && (m.homeId || m.awayId)) isDom = (String(m.homeId)===ourId);
+      else isDom = ((m.homeTeam||'').toLowerCase().indexOf(ourName.toLowerCase())>=0);
+      var adv = isDom ? m.awayTeam : m.homeTeam;
+      allMatches.push({
+        date: m.date, isDom: isDom, adv: adv||'?',
+        ourName: u.n, color: u.color||'#4d84ff',
+        comp: m.competitionName || '',
+        compSlug: m.competition || '',
+        venue: m.venue || ''
       });
-    }
+    });
   }
 
-  // Trier par date
-  allMatches.sort(function(a,b){ return new Date(a.utcDate)-new Date(b.utcDate); });
+  // Dédoublonnage (un même match peut apparaître pour 2 favoris qui s'affrontent) + tri par date
+  var seen = {};
+  allMatches = allMatches.filter(function(m){
+    var k = m.date + '|' + [m.ourName, m.adv].sort().join('|');
+    if(seen[k]) return false; seen[k]=1; return true;
+  });
+  allMatches.sort(function(a,b){ return new Date(a.date)-new Date(b.date); });
 
   if(!allMatches.length) {
-    el.innerHTML = '<div class="fc" style="color:var(--t3);text-align:center;">Aucun match a venir trouve.</div>';
+    el.innerHTML = '<div class="fc" style="color:var(--t3);text-align:center;">Aucun match à venir trouvé pour tes équipes.<br><small>(saison terminée ou calendrier pas encore publié)</small></div>';
     return;
   }
 
   // Grouper par date
   var byDate = {};
   allMatches.forEach(function(m){
-    var d = new Date(m.utcDate);
+    var d = new Date(m.date);
     var key = d.toLocaleDateString('fr-FR',{weekday:'long',day:'numeric',month:'long'});
     if(!byDate[key]) byDate[key] = [];
     byDate[key].push(m);
@@ -18028,16 +18162,14 @@ async function loadCalendrier() {
   Object.keys(byDate).forEach(function(dateKey){
     html += '<div style="font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#4f5d88;margin:12px 0 6px;">'+dateKey+'</div>';
     byDate[dateKey].forEach(function(m){
-      var isDom = m.homeTeam&&m.homeTeam.id===m._teamId;
-      var adv = isDom?(m.awayTeam&&m.awayTeam.name||'?'):(m.homeTeam&&m.homeTeam.name||'?');
-      var d = new Date(m.utcDate);
+      var d = new Date(m.date);
       var time = d.toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'});
-      var comp = m.competition&&m.competition.name||'';
-      var compIco3 = getCompIcon(comp);
-      html += '<div style="display:flex;align-items:center;padding:10px 12px;background:var(--s1);border-radius:var(--r6);margin-bottom:6px;border-left:3px solid '+m._teamColor+';">';
+      var compIco3 = getCompIcon(m.comp || m.compSlug);
+      var compLabel = m.comp || m.compSlug || '';
+      html += '<div style="display:flex;align-items:center;padding:10px 12px;background:var(--s1);border-radius:var(--r6);margin-bottom:6px;border-left:3px solid '+m.color+';">';
       html += '<div style="flex:1;">';
-      html += '<div style="font-size:12px;font-weight:700;color:var(--t1);">'+m._teamName+' '+(isDom?'vs':'@')+' '+adv+'</div>';
-      html += '<div style="font-size:10px;color:var(--t3);margin-top:2px;">'+compIco3+' '+comp+'</div>';
+      html += '<div style="font-size:12px;font-weight:700;color:var(--t1);">'+m.ourName+' '+(m.isDom?'<span style="color:#3fb950;">vs</span>':'<span style="color:#f0883e;">@</span>')+' '+m.adv+'</div>';
+      html += '<div style="font-size:10px;color:var(--t3);margin-top:2px;">'+compIco3+' '+compLabel+(m.isDom?' · 🏠 Domicile':' · ✈️ Extérieur')+'</div>';
       html += '</div>';
       html += '<div style="text-align:right;"><div style="font-size:12px;font-weight:700;color:var(--a);">'+time+'</div></div>';
       html += '</div>';
@@ -18406,10 +18538,10 @@ function _renderEspnMatchPitch(s, col, nameFn){
       var nm=lastName((p.athlete&&(p.athlete.displayName||p.athlete.shortName))||'');
       var ev=_evOf(p), ic=_icoStr(ev);
       var subTag=(ev&&ev.subOut)?'<span style="color:#ff8a8a;">🔻'+(ev.subOut.min||'')+'</span>':'';
-      var row=(ic||subTag)?'<div style="font-size:9px;line-height:1.1;margin-top:1px;white-space:nowrap;">'+ic+subTag+'</div>':'';
+      var row=(ic||subTag)?'<div style="font-size:7.5px;line-height:1.05;margin-top:1px;white-space:nowrap;">'+ic+subTag+'</div>':'';
       return '<div style="display:flex;flex-direction:column;align-items:center;gap:1px;">'
-        +'<div style="width:25px;height:25px;border-radius:50%;background:'+c+';color:#fff;font-size:11px;font-weight:800;display:flex;align-items:center;justify-content:center;box-shadow:0 1px 4px rgba(0,0,0,.5);">'+num+'</div>'
-        +'<div style="font-size:9px;font-weight:700;color:#fff;text-shadow:0 1px 2px rgba(0,0,0,.95);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:64px;text-align:center;">'+nm+'</div>'+row+'</div>';
+        +'<div style="width:22px;height:22px;border-radius:50%;background:'+c+';color:#fff;font-size:10px;font-weight:800;display:flex;align-items:center;justify-content:center;box-shadow:0 1px 4px rgba(0,0,0,.5);">'+num+'</div>'
+        +'<div style="font-size:8px;font-weight:700;color:#fff;text-shadow:0 1px 2px rgba(0,0,0,.95);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:48px;text-align:center;">'+nm+'</div>'+row+'</div>';
     }
     function placeTeam(r,c,fromTop){
       var lines=getLines(r); if(!lines.length) return '';
@@ -18420,7 +18552,7 @@ function _renderEspnMatchPitch(s, col, nameFn){
         var n=line.length;
         line.forEach(function(p,i){
           var x=(i+1)/(n+1)*100;
-          html+='<div style="position:absolute;left:'+x+'%;top:'+y+'%;transform:translate(-50%,-50%);width:66px;z-index:2;">'+badge(p,c)+'</div>';
+          html+='<div style="position:absolute;left:'+x+'%;top:'+y+'%;transform:translate(-50%,-50%);width:52px;z-index:2;">'+badge(p,c)+'</div>';
         });
       });
       return html;
@@ -18864,6 +18996,9 @@ async function toggleSaisonMatchDetail(rowEl){
     if(typeof _renderEspnMatchStats==='function'){ try{ var st=_renderEspnMatchStats(data, homeId, awayId, '#4d84ff'); if(st){ h+=st; added=true; } }catch(e){} }
     if(typeof _renderEspnMatchPitch==='function'){ try{ var pi=_renderEspnMatchPitch(data, '#4d84ff', function(x){return x;}); if(pi){ h+=pi; added=true; } }catch(e){} }
     if(!added) h+='<div style="font-size:11px;color:var(--t3);text-align:center;padding:6px;">Pas de détails (compo/stats) pour ce match.</div>';
+    // ── Résumé vidéo (Championnat / Europe) ──
+    var _yr=''; try{ if(comp.date) _yr=new Date(comp.date).getFullYear()||''; }catch(e){}
+    try{ if(typeof _videoBlock==='function') h+=_videoBlock(data, hN, aN, ('résumé '+_yr).trim()); }catch(e){}
     h+='</div>';
     el.innerHTML=h;
   }catch(e){ el.innerHTML='<div style="padding:12px;color:#ff6b6b;font-size:11px;text-align:center;">Résumé indisponible.</div>'; }
