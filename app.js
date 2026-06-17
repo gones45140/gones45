@@ -15749,6 +15749,44 @@ function _liveOddsBlock(data){
     return h;
   }catch(e){ return ''; }
 }
+function _liveBallBlock(data){
+  try{
+    if(!_isLive(data)) return '';
+    var sit = data.situation || {};
+    var lp = sit.lastPlay || (data.plays && data.plays.length ? data.plays[data.plays.length-1] : null);
+    var txt = (lp && lp.text) || '';
+    var fx=null, fy=null;
+    if(lp){
+      if(typeof lp.fieldPositionX==='number') fx=lp.fieldPositionX;
+      else if(typeof lp.fieldPosition==='number') fx=lp.fieldPosition;
+      if(typeof lp.fieldPositionY==='number') fy=lp.fieldPositionY;
+      if(lp.coordinate){ if(typeof lp.coordinate.x==='number') fx=lp.coordinate.x; if(typeof lp.coordinate.y==='number') fy=lp.coordinate.y; }
+    }
+    if(!txt && fx==null) return '';
+    var hasCoord = (fx!=null);
+    function clamp(v){ return Math.max(0,Math.min(100,v)); }
+    var X = hasCoord ? clamp(fx) : 50;
+    var Y = (fy!=null) ? clamp(fy) : 50;
+    var bx = 12 + (X/100)*276;
+    var by = 14 + (Y/100)*152;
+    var pitch = '<svg viewBox="0 0 300 180" style="width:100%;height:auto;display:block;border-radius:8px;">'
+      +'<rect x="0" y="0" width="300" height="180" fill="#2e8b3d"/>'
+      +'<rect x="6" y="8" width="288" height="164" fill="none" stroke="rgba(255,255,255,.7)" stroke-width="2"/>'
+      +'<line x1="150" y1="8" x2="150" y2="172" stroke="rgba(255,255,255,.7)" stroke-width="2"/>'
+      +'<circle cx="150" cy="90" r="26" fill="none" stroke="rgba(255,255,255,.7)" stroke-width="2"/>'
+      +'<rect x="6" y="50" width="40" height="80" fill="none" stroke="rgba(255,255,255,.6)" stroke-width="2"/>'
+      +'<rect x="254" y="50" width="40" height="80" fill="none" stroke="rgba(255,255,255,.6)" stroke-width="2"/>'
+      +'<circle cx="'+bx.toFixed(0)+'" cy="'+by.toFixed(0)+'" r="8" fill="rgba(255,255,255,.25)"/>'
+      +'<circle cx="'+bx.toFixed(0)+'" cy="'+by.toFixed(0)+'" r="6" fill="#fff" stroke="#111" stroke-width="1.5"/>'
+      +'</svg>';
+    var h='<div style="background:rgba(0,0,0,.18);border-radius:10px;padding:10px;margin:2px 0 8px;">';
+    h+='<div style="font-size:9px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;color:#7fd58a;margin-bottom:7px;">⚽ Ballon en jeu'+(hasCoord?'':' · position approx.')+'</div>';
+    h+=pitch;
+    if(txt) h+='<div style="font-size:10px;color:var(--t2);margin-top:7px;text-align:center;line-height:1.35;">'+txt+'</div>';
+    h+='</div>';
+    return h;
+  }catch(e){ return ''; }
+}
 function _wcLiveTimer(box, data, eventId, rowId){
   try{
     var live = _isLive(data);
@@ -15785,9 +15823,10 @@ async function _wcRenderMatch(eventId, rowId) {
     var _wcN = _wcMatchTeams(data);   // [équipe A, équipe B] — fiable même sans stats
     var live = _liveBettingBlock(data);  // panneau LIVE (vide si match pas en cours)
     var odds = _liveOddsBlock(data);
+    var ball = _liveBallBlock(data);
     var box2 = data.boxscore;
     if(!box2 || !box2.teams || !box2.teams.length) {
-      box.innerHTML = live + odds + '<div style="padding:8px;color:var(--t3);font-size:10px;text-align:center;margin-bottom:8px;">Stats indisponibles</div>' + _wcVideoBlock(data, _wcN[0], _wcN[1]);
+      box.innerHTML = live + ball + odds + '<div style="padding:8px;color:var(--t3);font-size:10px;text-align:center;margin-bottom:8px;">Stats indisponibles</div>' + _wcVideoBlock(data, _wcN[0], _wcN[1]);
       _wcLiveTimer(box, data, eventId, rowId); return;
     }
 
@@ -15810,14 +15849,14 @@ async function _wcRenderMatch(eventId, rowId) {
 
     var hasAny = rows.some(function(r){ return s0[r[1]]!==undefined || s1[r[1]]!==undefined; });
     if(!hasAny) {
-      box.innerHTML = live + odds + '<div style="padding:8px;color:var(--t3);font-size:10px;text-align:center;margin-bottom:8px;">Pas de stats détaillées pour ce match</div>' + _wcVideoBlock(data, _wcN[0], _wcN[1]);
+      box.innerHTML = live + ball + odds + '<div style="padding:8px;color:var(--t3);font-size:10px;text-align:center;margin-bottom:8px;">Pas de stats détaillées pour ce match</div>' + _wcVideoBlock(data, _wcN[0], _wcN[1]);
       _wcLiveTimer(box, data, eventId, rowId); return;
     }
 
     var nameA = (t0.team && (t0.team.abbreviation||t0.team.displayName)) || '';
     var nameB = (t1.team && (t1.team.abbreviation||t1.team.displayName)) || '';
 
-    var h = live + odds + '<div style="background:rgba(77,132,255,.05);border-radius:8px;padding:10px;margin:2px 0 8px;">';
+    var h = live + ball + odds + '<div style="background:rgba(77,132,255,.05);border-radius:8px;padding:10px;margin:2px 0 8px;">';
     h += '<div style="display:flex;justify-content:space-between;font-size:9px;font-weight:800;color:var(--t2);margin-bottom:8px;"><span>'+nameA+'</span><span>'+nameB+'</span></div>';
     rows.forEach(function(r){
       var va = s0[r[1]]!==undefined ? s0[r[1]] : '—';
