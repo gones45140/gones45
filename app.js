@@ -18337,45 +18337,36 @@ function _renderEspnMatchPitch(s, col, nameFn){
       var players=(r&&r.roster)||[];
       var starters=players.filter(function(p){return p.starter;});
       if(!starters.length) starters=players.slice(0,11);
-      // Tri par POSTE réel (G→D→M→F) puis formationPlace : fiable même pour les sélections
-      function _posRank(p){
+      starters.forEach(function(p,i){ p.__o=i; });
+      // Catégorie de poste réelle (gardien / défenseur / milieu / attaquant)
+      function posCat(p){
         var pos=((p.position&&(p.position.abbreviation||p.position.name))||'').toUpperCase();
         var c=pos.charAt(0);
-        if(c==='G') return 0;                                                   // gardien
-        if(c==='F'||pos.indexOf('W')>=0||pos.indexOf('ST')>=0||pos.indexOf('CF')>=0) return 3; // attaquant
-        if(c==='D'||pos.indexOf('B')>=0) return 1;                              // défenseur (B = back)
-        return 2;                                                               // milieu
+        if(c==='G') return 'G';
+        if(c==='F'||pos.indexOf('W')>=0||pos.indexOf('ST')>=0||pos.indexOf('CF')>=0) return 'F';
+        if(c==='D'||pos.indexOf('B')>=0) return 'D';
+        return 'M';
       }
-      starters.forEach(function(p,i){ p.__o=i; });
-      starters.sort(function(a,b){
-        var ra=_posRank(a), rb=_posRank(b);
-        if(ra!==rb) return ra-rb;
-        var fa=parseInt(a.formationPlace,10), fb=parseInt(b.formationPlace,10);
-        if(!isNaN(fa)&&!isNaN(fb)&&fa!==fb) return fa-fb;
-        return a.__o-b.__o;
-      });
-      var counts=null;
+      function byPlace(a,b){ var fa=parseInt(a.formationPlace,10),fb=parseInt(b.formationPlace,10); if(!isNaN(fa)&&!isNaN(fb)&&fa!==fb) return fa-fb; return a.__o-b.__o; }
+      var gk=[],df=[],mf=[],fw=[];
+      starters.forEach(function(p){ var c=posCat(p); (c==='G'?gk:c==='D'?df:c==='F'?fw:mf).push(p); });
+      [gk,df,mf,fw].forEach(function(l){ l.sort(byPlace); });
+      if(!gk.length && starters.length){ gk=[df.length?df.shift():starters[0]]; }
+      // Le milieu n'est subdivisé selon la formation (ex. 4-2-3-1 → 2 puis 3) que si le compte tombe juste
+      var midLines=[mf];
       if(r&&r.formation){
         var parts=String(r.formation).split('-').map(function(x){return parseInt(x,10);}).filter(function(x){return x>0;});
-        if(parts.length) counts=[1].concat(parts);
+        if(parts.length>=3){
+          var middle=parts.slice(1, parts.length-1);
+          var sumMid=middle.reduce(function(a,b){return a+b;},0);
+          if(sumMid===mf.length){ midLines=[]; var mi=0; middle.forEach(function(c){ midLines.push(mf.slice(mi,mi+c)); mi+=c; }); }
+        }
       }
-      var tot=counts?counts.reduce(function(a,b){return a+b;},0):0;
-      if(counts && tot===starters.length){
-        var lines=[], idx=0;
-        counts.forEach(function(c){ lines.push(starters.slice(idx, idx+c)); idx+=c; });
-        return lines;
-      }
-      // fallback par poste
-      var gk=[],df=[],mf=[],fw=[];
-      starters.forEach(function(p){
-        var pos=((p.position&&(p.position.abbreviation||p.position.name))||'').toUpperCase();
-        if(pos.charAt(0)==='G') gk.push(p);
-        else if(pos.charAt(0)==='D'||pos.indexOf('B')>=0) df.push(p);
-        else if(pos.charAt(0)==='F'||pos.indexOf('W')>=0||pos.indexOf('ST')>=0||pos.indexOf('CF')>=0) fw.push(p);
-        else mf.push(p);
-      });
-      if(!gk.length && starters.length) gk=[starters[0]];
-      return [gk,df,mf,fw].filter(function(l){return l.length;});
+      var lines=[gk];
+      if(df.length) lines.push(df);
+      midLines.forEach(function(ml){ if(ml.length) lines.push(ml); });
+      if(fw.length) lines.push(fw);
+      return lines.filter(function(l){return l.length;});
     }
     var evMap={};
     function _aid(pt){ return pt&&pt.athlete&&(pt.athlete.id||pt.athlete.uid||pt.athlete.guid||pt.athlete.displayName); }
@@ -18665,3 +18656,165 @@ var _bcp=document.getElementById('btn-chat-params-pc');if(_bcp)_bcp.onclick=func
   });
   render();updMise();buildSbRows();setTimeout(initPariChips,100);buildDtRows();buildArjelRows();renderCrash();renderMmRows();renderMmRowsSimple();updateCompList();calcVb();calcLay();calcFreebet();renderArchive();updateBankTotal();setTimeout(initPariChips,200);_apStyle=localStorage.getItem('g45_ap_style')||'halo';_apIntensity=parseInt(localStorage.getItem('g45_ap_intensity')||'40');var _apInp=document.getElementById('ap-intensity');if(_apInp)_apInp.value=_apIntensity;setCardStyle(_apStyle);};
 
+
+/* ═══════════════════════ Notifications de match (Web Push) ═══════════════════════ */
+var G45_VAPID_PUBLIC = 'BDiHPmicEs4Quz-RUMuPGZHRRwILrqoJWNWTIrcZ4fch51Wyxc889Sbym8ZSG56YdNfCNLN56ykVfHhrOguqdF4';
+
+function g45NotifPrefs(){
+  var d={enabled:false, ev:{compo:true,start:true,goals:true,end:true}, teams:{}};
+  try{ var p=JSON.parse(localStorage.getItem('g45_notif')||'null'); if(p){ d.enabled=!!p.enabled; if(p.ev){ for(var k in p.ev) d.ev[k]=p.ev[k]; } if(p.teams) d.teams=p.teams; } }catch(e){}
+  return d;
+}
+function g45NotifPrefsSave(p){ try{ localStorage.setItem('g45_notif', JSON.stringify(p)); }catch(e){} }
+function _notifMsg(t,col){ var el=document.getElementById('notif-msg'); if(el){ el.textContent=t||''; el.style.color=col||'var(--g)'; } }
+function _urlB64ToU8(base64){
+  var pad='='.repeat((4-base64.length%4)%4);
+  var b=(base64+pad).replace(/-/g,'+').replace(/_/g,'/');
+  var raw=atob(b), arr=new Uint8Array(raw.length);
+  for(var i=0;i<raw.length;i++) arr[i]=raw.charCodeAt(i);
+  return arr;
+}
+
+function renderNotifPanel(){
+  var el=document.getElementById('notif-panel'); if(!el) return;
+  if(!('serviceWorker' in navigator) || !('PushManager' in window) || !('Notification' in window)){
+    el.innerHTML='<div style="font-size:11px;color:var(--t3);">Ton navigateur ne supporte pas les notifications push. (Sur iPhone : ajoute le site \u00e0 l\'\u00e9cran d\'accueil.)</div>';
+    return;
+  }
+  var p=g45NotifPrefs();
+  var favs=(typeof state!=='undefined'&&state.u?state.u:[]).filter(function(u){ return (u.sport||'\u26bd')==='\u26bd'; });
+  var h='';
+  if(p.enabled){
+    h+='<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:10px;">'
+      +'<span style="font-size:12px;font-weight:800;color:var(--g);">\u2705 Notifications activ\u00e9es</span>'
+      +'<button class="btn" style="width:auto;margin:0;padding:6px 12px;font-size:11px;" onclick="g45TestNotif()">\ud83d\udd14 Test</button>'
+      +'<button class="btn" style="width:auto;margin:0;padding:6px 12px;font-size:11px;background:rgba(255,69,69,.10);color:#ff6b6b;border:1px solid rgba(255,69,69,.25);" onclick="g45DisableNotifs()">D\u00e9sactiver</button>'
+      +'</div>';
+  } else {
+    h+='<div style="font-size:11px;color:var(--t3);margin-bottom:8px;">Re\u00e7ois une alerte sur ton t\u00e9l\u00e9phone, m\u00eame appli ferm\u00e9e : compo 30\u00a0min avant, coup d\'envoi, buts et fin de match.</div>'
+      +'<button class="btn btn-p" style="font-size:12px;" onclick="g45EnableNotifs()">\ud83d\udd14 Activer les notifications</button>';
+  }
+  h+='<div id="notif-msg" style="font-size:11px;font-weight:700;min-height:14px;margin-top:6px;"></div>';
+
+  var evDefs=[['compo','\ud83d\udccb Compo (30\u00a0min avant)'],['start','\ud83c\udfc1 Coup d\'envoi'],['goals','\u26bd Buts (min + buteur)'],['end','\u23f1\ufe0f Fin du match']];
+  h+='<div style="margin-top:12px;border-top:1px solid var(--b1);padding-top:11px;">'
+    +'<label class="fl" style="color:var(--t2);">Types d\'alertes</label>'
+    +'<div style="display:flex;flex-direction:column;gap:7px;margin-top:7px;">';
+  evDefs.forEach(function(d){
+    var on=p.ev[d[0]]!==false;
+    h+='<label style="display:flex;align-items:center;gap:9px;font-size:12px;color:var(--t1);cursor:pointer;">'
+      +'<input type="checkbox" '+(on?'checked':'')+' onchange="toggleNotifEvent(\''+d[0]+'\')" style="accent-color:var(--a);width:16px;height:16px;flex:none;">'+d[1]+'</label>';
+  });
+  h+='</div></div>';
+
+  h+='<div style="margin-top:12px;border-top:1px solid var(--b1);padding-top:11px;">'
+    +'<label class="fl" style="color:var(--t2);">\u00c9quipes suivies</label>'
+    +'<div style="font-size:10px;color:var(--t3);margin:3px 0 9px;">Active les \u00e9quipes pour lesquelles tu veux \u00eatre pr\u00e9venu.</div>';
+  if(!favs.length){
+    h+='<div style="font-size:11px;color:var(--t3);">Aucune \u00e9quipe de foot dans tes favoris.</div>';
+  } else {
+    h+='<div style="display:flex;flex-direction:column;gap:6px;">';
+    favs.forEach(function(u){
+      var on=!!p.teams[u.n];
+      var nEsc=String(u.n).replace(/\\/g,'\\\\').replace(/'/g,"\\'");
+      h+='<div style="display:flex;align-items:center;justify-content:space-between;gap:8px;padding:8px 10px;background:rgba(255,255,255,.04);border-radius:8px;">'
+        +'<span style="font-size:12px;font-weight:700;color:var(--t1);">\u26bd '+u.n+'</span>'
+        +'<button onclick="toggleNotifTeam(\''+nEsc+'\')" aria-label="toggle" style="width:46px;height:24px;border-radius:14px;border:none;cursor:pointer;position:relative;flex:none;background:'+(on?'var(--g)':'rgba(255,255,255,.18)')+';transition:background .15s;">'
+        +'<span style="position:absolute;top:2px;left:'+(on?'24px':'2px')+';width:20px;height:20px;border-radius:50%;background:#fff;transition:left .15s;box-shadow:0 1px 3px rgba(0,0,0,.4);"></span></button>'
+        +'</div>';
+    });
+    h+='</div>';
+  }
+  h+='</div>';
+  el.innerHTML=h;
+}
+
+async function _g45ResolveTeam(nom){
+  try{ var r=await espnResolveTeam(nom); if(r&&r.id) return {id:String(r.id), league:r.league||''}; }catch(e){}
+  if(typeof _espnLoadLeagueTeams==='function' && typeof _espnMatchTeam==='function'){
+    try{ var wt=await _espnLoadLeagueTeams('fifa.world'); var m=_espnMatchTeam(nom,wt,'fifa.world','exact')||_espnMatchTeam(nom,wt,'fifa.world','partial'); if(m&&m.id) return {id:String(m.id), league:'fifa.world'}; }catch(e){}
+  }
+  return null;
+}
+
+async function g45SyncNotifs(subOpt){
+  var reg=await navigator.serviceWorker.getRegistration();
+  var sub=subOpt||(reg&&await reg.pushManager.getSubscription());
+  if(!sub) return;
+  var p=g45NotifPrefs();
+  var favs=(typeof state!=='undefined'&&state.u?state.u:[]).filter(function(u){ return (u.sport||'\u26bd')==='\u26bd' && p.teams[u.n]; });
+  var teams=[];
+  for(var i=0;i<favs.length;i++){ var r=await _g45ResolveTeam(favs[i].n); if(r) teams.push({n:favs[i].n, id:r.id, league:r.league}); }
+  try{ await fetch(FD_PROXY+'/psub',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sub:sub,teams:teams,ev:p.ev})}); }catch(e){}
+}
+
+async function g45EnableNotifs(){
+  _notifMsg('Activation\u2026','var(--t3)');
+  try{
+    var reg=await navigator.serviceWorker.register('sw.js');
+    await navigator.serviceWorker.ready;
+    var perm=await Notification.requestPermission();
+    if(perm!=='granted'){ _notifMsg('Permission refus\u00e9e \u2014 autorise les notifications pour le site dans les r\u00e9glages du navigateur.','#ff6b6b'); return; }
+    var sub=await reg.pushManager.getSubscription();
+    if(!sub) sub=await reg.pushManager.subscribe({userVisibleOnly:true, applicationServerKey:_urlB64ToU8(G45_VAPID_PUBLIC)});
+    var p=g45NotifPrefs(); p.enabled=true;
+    var favs=(typeof state!=='undefined'&&state.u?state.u:[]).filter(function(u){ return (u.sport||'\u26bd')==='\u26bd'; });
+    var anyTeam=false; for(var k in p.teams){ if(p.teams[k]){ anyTeam=true; break; } }
+    if(!anyTeam) favs.forEach(function(u){ p.teams[u.n]=true; });
+    g45NotifPrefsSave(p);
+    renderNotifPanel();
+    _notifMsg('Enregistrement des \u00e9quipes\u2026','var(--t3)');
+    await g45SyncNotifs(sub);
+    renderNotifPanel();
+    _notifMsg('\u2705 Notifications activ\u00e9es !');
+  }catch(e){ _notifMsg('Erreur : '+((e&&e.message)||e),'#ff6b6b'); }
+}
+
+async function g45DisableNotifs(){
+  try{
+    var reg=await navigator.serviceWorker.getRegistration();
+    var sub=reg&&await reg.pushManager.getSubscription();
+    if(sub){ try{ await fetch(FD_PROXY+'/punsub',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({endpoint:sub.endpoint})}); }catch(e){} try{ await sub.unsubscribe(); }catch(e){} }
+  }catch(e){}
+  var p=g45NotifPrefs(); p.enabled=false; g45NotifPrefsSave(p);
+  renderNotifPanel(); _notifMsg('Notifications d\u00e9sactiv\u00e9es.','var(--t3)');
+}
+
+function toggleNotifEvent(type){
+  var p=g45NotifPrefs(); var on=(p.ev[type]!==false); p.ev[type]=!on; g45NotifPrefsSave(p);
+  if(p.enabled) g45SyncNotifs();
+  renderNotifPanel();
+}
+function toggleNotifTeam(nom){
+  var p=g45NotifPrefs(); p.teams[nom]=!p.teams[nom]; g45NotifPrefsSave(p);
+  renderNotifPanel();
+  if(p.enabled){ _notifMsg('Mise \u00e0 jour\u2026','var(--t3)'); g45SyncNotifs().then(function(){ _notifMsg('\u2705 \u00c9quipes mises \u00e0 jour'); }); }
+}
+
+async function g45TestNotif(){
+  try{
+    var reg=await navigator.serviceWorker.getRegistration(); var sub=reg&&await reg.pushManager.getSubscription();
+    if(!sub){ _notifMsg('Active d\'abord les notifications.','#ff6b6b'); return; }
+    await fetch(FD_PROXY+'/ptest?ep='+encodeURIComponent(sub.endpoint));
+    _notifMsg('Notif de test envoy\u00e9e \u2014 elle arrive dans quelques secondes \ud83d\udcf2');
+  }catch(e){ _notifMsg('Erreur test : '+((e&&e.message)||e),'#ff6b6b'); }
+}
+
+window.renderNotifPanel=renderNotifPanel;
+window.g45EnableNotifs=g45EnableNotifs;
+window.g45DisableNotifs=g45DisableNotifs;
+window.g45SyncNotifs=g45SyncNotifs;
+window.toggleNotifEvent=toggleNotifEvent;
+window.toggleNotifTeam=toggleNotifTeam;
+window.g45TestNotif=g45TestNotif;
+
+(function(){
+  function _initNotif(){
+    try{
+      if(document.getElementById('notif-panel')) renderNotifPanel();
+      var p=g45NotifPrefs();
+      if(p.enabled && 'serviceWorker' in navigator){ navigator.serviceWorker.register('sw.js').then(function(){ g45SyncNotifs(); }).catch(function(){}); }
+    }catch(e){}
+  }
+  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded', _initNotif); else _initNotif();
+})();
