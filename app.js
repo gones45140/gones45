@@ -15730,7 +15730,15 @@ function _liveOddsBlock(data){
     var pc = data.pickcenter || data.odds || [];
     if(!pc.length) return '';
     var o = pc[0]||{};
-    function ml(x){ if(!x) return null; if(x.moneyLine!=null) return (x.moneyLine>0?'+':'')+x.moneyLine; if(x.summary) return x.summary; return null; }
+    function ml(x){
+      if(!x) return null;
+      var m = x.moneyLine;
+      if(m==null && x.summary){ var mm=String(x.summary).match(/[-+]?\d+/); if(mm) m=parseInt(mm[0],10); }
+      if(m==null || isNaN(m)) return (x.summary||null);
+      m = parseInt(m,10);
+      var dec = m>0 ? (m/100+1) : (100/Math.abs(m)+1);   // moneyline US → cote décimale FR
+      return dec.toFixed(2);
+    }
     var hm=ml(o.homeTeamOdds), am=ml(o.awayTeamOdds), dr=ml(o.drawOdds);
     var line=(o.overUnder!=null)?o.overUnder:(o.total!=null?o.total:null);
     var prov=(o.provider&&o.provider.name)||'Cotes';
