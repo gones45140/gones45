@@ -15864,6 +15864,30 @@ async function toggleWcMatchStats(eventId, rowId) {
   await _wcRenderMatch(eventId, rowId);
 }
 
+async function _loadFrCommentary(eventId, rowId){
+  try{
+    var el = document.getElementById(rowId+'-comm');
+    if(!el) return;
+    var res = await fetch('https://site.api.espn.com/apis/site/v2/sports/soccer/fifa.world/summary?event='+eventId+'&lang=fr&region=fr');
+    var data = await res.json();
+    var com = data.commentary || [];
+    if(!com.length){ return; }
+    var items = com.slice().reverse().slice(0, 16);   // les plus récents d'abord
+    var h='<div style="background:rgba(255,255,255,.02);border-radius:8px;padding:10px;margin-bottom:8px;">';
+    h+='<div style="font-size:9px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;color:#8aa0ff;margin-bottom:8px;">💬 Commentaire</div>';
+    items.forEach(function(c){
+      var t = (c.time&&c.time.displayValue) || (c.clock&&c.clock.displayValue) || '';
+      var txt = c.text || (c.play&&c.play.text) || '';
+      if(!txt) return;
+      h+='<div style="display:flex;gap:8px;padding:5px 0;border-bottom:1px solid rgba(255,255,255,.04);font-size:10px;">';
+      if(t) h+='<span style="color:var(--a);font-weight:800;min-width:36px;flex-shrink:0;">'+t+'</span>';
+      h+='<span style="color:var(--t2);line-height:1.4;">'+txt+'</span>';
+      h+='</div>';
+    });
+    h+='</div>';
+    el.innerHTML = h;
+  }catch(e){}
+}
 async function _wcRenderMatch(eventId, rowId) {
   var box = document.getElementById(rowId);
   if(!box || box.getAttribute('data-open')!=='1') return;
@@ -15973,6 +15997,9 @@ async function _wcRenderMatch(eventId, rowId) {
       h += '</div>';
     }
 
+    // ── Commentaire en français (chargé en asynchrone via l'édition FR d'ESPN) ──
+    h += '<div id="'+rowId+'-comm"></div>';
+
     // ── Résumé vidéo (lecteur intégré si dispo, sinon recherche YouTube) ──
     h += _wcVideoBlock(data, _wcN[0], _wcN[1]);
 
@@ -15981,6 +16008,7 @@ async function _wcRenderMatch(eventId, rowId) {
 
     box.innerHTML = h;
     _wcStatsTimer(box, data, eventId, rowId);
+    _loadFrCommentary(eventId, rowId);   // remplit le commentaire FR sans bloquer le rendu
   } catch(e) {
     box.innerHTML = '<div style="padding:8px;color:#ff4545;font-size:10px;text-align:center;line-height:1.4;">Erreur stats <span style="opacity:.6;">[v3]</span><br><span style="color:var(--t3);font-size:9px;">'+((e&&e.message)?e.message:e)+'</span></div>';
   }
