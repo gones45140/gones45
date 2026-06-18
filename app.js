@@ -15949,10 +15949,6 @@ function _momentsTimeline(data){
         ico='🟥'; label='<span style="color:var(--t1);">'+(p0||'')+'</span>';
       } else if(/yellow card|carton jaune|booked/.test(tt)){
         ico='🟨'; label='<span style="color:var(--t1);">'+(p0||'')+'</span>';
-      } else if(/substitut|remplac/.test(tt)){
-        ico='🔄'; col='var(--t3)';
-        label = (p0?'<span style="color:#1ed760;">'+p0+'</span>':'')
-              + (p1?' ⬅ <span style="color:#ff8a8a;">'+p1+'</span>':'');
       } else if(/penalt/.test(tt)){
         ico='🎯'; label='<span style="color:var(--t1);">'+(p0||'Penalty')+'</span>';
       } else { return; }
