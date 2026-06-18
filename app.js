@@ -15766,14 +15766,16 @@ function _liveBettingBlock(data, rowId){
       h+='</div>';
     }
 
-    var xg=_teamStatPair(data,['expectedGoals','xG','xg','expectedGoalsFor']);
-    var sot=_teamStatPair(data,['shotsOnTarget']);
+    var poss=_teamStatPair(data,['possessionPct']);
     var sh=_teamStatPair(data,['totalShots']);
-    if(xg||sot||sh){
+    var sot=_teamStatPair(data,['shotsOnTarget']);
+    var cor=_teamStatPair(data,['wonCorners']);
+    if(poss||sh||sot||cor){
       h+='<div style="margin-top:9px;display:flex;flex-direction:column;gap:5px;border-top:1px solid rgba(255,255,255,.06);padding-top:8px;">';
-      if(xg) h+=_liveStatRow('xG',xg[0],xg[1]);
-      if(sot) h+=_liveStatRow('Tirs cadrés',sot[0],sot[1]);
+      if(poss) h+=_liveStatRow('Possession',poss[0],poss[1]);
       if(sh) h+=_liveStatRow('Tirs',sh[0],sh[1]);
+      if(sot) h+=_liveStatRow('Tirs cadrés',sot[0],sot[1]);
+      if(cor) h+=_liveStatRow('Corners',cor[0],cor[1]);
       h+='</div>';
     }
     h+='</div>';
@@ -15800,6 +15802,15 @@ function _evalBetLeg(t, ctx){
   var hg=ctx.hg, ag=ctx.ag, total=ctx.total, bts=ctx.bts, fin=ctx.fin;
   var numM = t.match(/([0-9]+(?:\.[0-9])?)/);
   var line = numM?parseFloat(numM[1]):null;
+  // ── HANDICAP (européen, 3-way) — AVANT l'Over sinon "+1" serait lu comme un Over ──
+  // "[équipe] -1", "handicap +1", "hc -1" : on applique H au score de l'équipe pariée, qui doit GAGNER après handicap.
+  var hcm = t.match(/([+-])\s*([0-9])(?!\s*\.\s*5)\b/);   // entier signé, pas une ligne en .5
+  if(hcm && ctx.betIsHome!=null){
+    var H = parseInt(hcm[1]+hcm[2],10);
+    var bs = ctx.betIsHome ? hg : ag, os = ctx.betIsHome ? ag : hg;
+    var adj = (bs + H) - os;                              // marge après handicap
+    return adj>0 ? {r:'win',locked:fin} : {r:'lose',locked:fin};   // 3-way "gagne" : push & défaite = perdu
+  }
   if(/(over|plus de|\bo[0-9]|\s\+\s|\s\+[0-9])/.test(t) && line!=null){
     if(total>line) return {r:'win',locked:true};
     return {r:'lose',locked:fin};
@@ -15865,7 +15876,7 @@ function _evalBetLeg(t, ctx){
 }
 // Évalue un pari (potentiellement combiné) → {status, locked}
 function _evalBetLive(bet, ctx){
-  var legs = String(bet.type||bet.target||'').split(/\s*\+\s*/).filter(function(x){return x.trim();});
+  var legs = String(bet.type||bet.target||'').split(/\s+\+\s+/).filter(function(x){return x.trim();});
   if(!legs.length) legs=[''];
   var res=[], nonEval=0;
   legs.forEach(function(l){ var r=_evalBetLeg(l, ctx); if(r==null) nonEval++; else res.push(r); });
