@@ -15829,7 +15829,7 @@ function _g45EnsureGoalCSS(){
     document.head.appendChild(st);
   }catch(e){}
 }
-function _wcLiveTimer(box, data, eventId, rowId){
+function _wcStatsTimer(box, data, eventId, rowId){
   try{
     var live = _isLive(data);
     if(live && !box._liveTimer){
@@ -15881,7 +15881,7 @@ async function _wcRenderMatch(eventId, rowId) {
     var box2 = data.boxscore;
     if(!box2 || !box2.teams || !box2.teams.length) {
       box.innerHTML = goalBanner + live + ball + odds + '<div style="padding:8px;color:var(--t3);font-size:10px;text-align:center;margin-bottom:8px;">Stats indisponibles</div>' + _wcVideoBlock(data, _wcN[0], _wcN[1]);
-      _wcLiveTimer(box, data, eventId, rowId); return;
+      _wcStatsTimer(box, data, eventId, rowId); return;
     }
 
     // box2.teams[].statistics[] : {name, displayValue, label}
@@ -15904,7 +15904,7 @@ async function _wcRenderMatch(eventId, rowId) {
     var hasAny = rows.some(function(r){ return s0[r[1]]!==undefined || s1[r[1]]!==undefined; });
     if(!hasAny) {
       box.innerHTML = goalBanner + live + ball + odds + '<div style="padding:8px;color:var(--t3);font-size:10px;text-align:center;margin-bottom:8px;">Pas de stats détaillées pour ce match</div>' + _wcVideoBlock(data, _wcN[0], _wcN[1]);
-      _wcLiveTimer(box, data, eventId, rowId); return;
+      _wcStatsTimer(box, data, eventId, rowId); return;
     }
 
     var nameA = (t0.team && (t0.team.abbreviation||t0.team.displayName)) || '';
@@ -15972,7 +15972,7 @@ async function _wcRenderMatch(eventId, rowId) {
     } catch(e2){ /* enrichissement (stats/compo/vidéo) en échec → on garde au moins le panneau live */ }
 
     box.innerHTML = h;
-    _wcLiveTimer(box, data, eventId, rowId);
+    _wcStatsTimer(box, data, eventId, rowId);
   } catch(e) {
     box.innerHTML = '<div style="padding:8px;color:#ff4545;font-size:10px;text-align:center;line-height:1.4;">Erreur stats <span style="opacity:.6;">[v3]</span><br><span style="color:var(--t3);font-size:9px;">'+((e&&e.message)?e.message:e)+'</span></div>';
   }
