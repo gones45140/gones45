@@ -15706,7 +15706,10 @@ function _liveBettingBlock(data){
     if(total>=3) o25={t:'✅ Validé ('+total+' buts)',c:'#1ed760'};
     else if(total===2) o25={t:'1 but suffit'+(rest?(' · '+rest+'′'):''),c:'#f0b020'};
     else o25={t:(3-total)+' buts manquants'+(rest?(' · '+rest+'′'):''),c:(mins>70?'#ff6b6b':'#f0b020')};
-    var btsV = bts?{t:'✅ Validé',c:'#1ed760'}:{t:'manque '+(hg===0?hN:aN),c:'#f0b020'};
+    var btsV;
+    if(bts) btsV={t:'✅ Validé',c:'#1ed760'};
+    else if(hg===0&&ag===0) btsV={t:'manque les 2',c:'#f0b020'};
+    else btsV={t:'manque '+(ag===0?aN:hN),c:'#f0b020'};
     h+='<div style="display:flex;gap:8px;">';
     h+='<div style="flex:1;background:rgba(0,0,0,.18);border-radius:8px;padding:8px;text-align:center;"><div style="font-size:8px;color:var(--t3);text-transform:uppercase;letter-spacing:.5px;margin-bottom:3px;">+2,5 buts</div><div style="font-size:10px;font-weight:800;color:'+o25.c+';">'+o25.t+'</div></div>';
     h+='<div style="flex:1;background:rgba(0,0,0,.18);border-radius:8px;padding:8px;text-align:center;"><div style="font-size:8px;color:var(--t3);text-transform:uppercase;letter-spacing:.5px;margin-bottom:3px;">Les 2 marquent</div><div style="font-size:10px;font-weight:800;color:'+btsV.c+';">'+btsV.t+'</div></div>';
