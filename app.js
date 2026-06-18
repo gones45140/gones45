@@ -15626,13 +15626,9 @@ function _videoBlock(data, teamA, teamB, qExtra){
     // Lien YouTube référencé par ESPN → lecteur intégré
     h += '<div style="position:relative;padding-bottom:56.25%;height:0;border-radius:8px;overflow:hidden;"><iframe src="https://www.youtube.com/embed/'+vid.src+'?autoplay=0" style="position:absolute;top:0;left:0;width:100%;height:100%;border:0;" allow="accelerometer;encrypted-media;gyroscope;picture-in-picture" allowfullscreen></iframe></div>';
     h += '<a href="'+ytSearch+'" target="_blank" rel="noopener" style="display:block;text-align:center;margin-top:8px;font-size:10px;color:var(--t3);text-decoration:none;">🔎 Plus de vidéos sur YouTube →</a>';
-  } else if(vid.type==='mp4'){
-    // Lecture inline via le Worker (CORS + Range). Si le clip refuse → bascule auto sur la vignette.
-    var prox = (typeof FD_PROXY!=='undefined'?FD_PROXY:'https://fd-proxy.touraine-antoine.workers.dev')+'/vid?u='+encodeURIComponent(vid.src);
-    h += '<video controls playsinline preload="metadata" onerror="_vidErr(this)" onloadstart="_vidWatch(this)" '+(vid.thumb?('poster="'+vid.thumb+'" '):'')+'style="width:100%;border-radius:8px;background:#000;display:block;"><source src="'+prox+'" type="video/mp4"></video>';
-    h += thumbCard(true);   // repli caché, révélé en cas d'échec
   } else {
-    h += thumbCard(false);  // pas de clip lisible → vignette (ou bouton) directement
+    // Clips ESPN : géo-bloqués hors USA + bloqués par la CSP du site → belle vignette qui ouvre YouTube.
+    h += thumbCard(false);
   }
   h += '</div>';
   return h;
@@ -15663,20 +15659,229 @@ function _wcMatchTeams(data){
   return [ fr(a)||a, fr(b)||b ];
 }
 
+// ===== Helpers LIVE (lecture paris, xG/tirs, cotes) — tout vient du même résumé ESPN =====
+function _isLive(data){
+  try{ var c=data&&data.header&&data.header.competitions&&data.header.competitions[0]; var st=c&&c.status&&c.status.type; return !!(st && st.state==='in'); }catch(e){ return false; }
+}
+function _teamStatPair(data, keys){
+  try{
+    var t = data && data.boxscore && data.boxscore.teams;
+    if(!t || t.length<2) return null;
+    function val(team){ var arr=(team&&team.statistics)||[]; for(var i=0;i<arr.length;i++){ for(var k=0;k<keys.length;k++){ if(arr[i].name===keys[k]) return arr[i].displayValue; } } return null; }
+    var a=val(t[0]), b=val(t[1]);
+    if(a==null && b==null) return null;
+    return [a!=null?a:'—', b!=null?b:'—'];
+  }catch(e){ return null; }
+}
+function _liveStatRow(label, a, b){
+  return '<div style="display:grid;grid-template-columns:46px 1fr 46px;gap:8px;align-items:center;">'
+    +'<div style="font-size:11px;font-weight:800;color:var(--t1);text-align:left;">'+a+'</div>'
+    +'<div style="font-size:8px;color:var(--t3);text-align:center;text-transform:uppercase;letter-spacing:.5px;">'+label+'</div>'
+    +'<div style="font-size:11px;font-weight:800;color:var(--t1);text-align:right;">'+b+'</div></div>';
+}
+function _liveBettingBlock(data){
+  try{
+    if(!_isLive(data)) return '';
+    var comp = data.header.competitions[0];
+    var st = (comp.status&&comp.status.type)||{};
+    var cs = comp.competitors||[];
+    var home = cs.filter(function(c){return c.homeAway==='home';})[0]||cs[0]||{};
+    var away = cs.filter(function(c){return c.homeAway==='away';})[0]||cs[1]||{};
+    var hg = parseInt(home.score,10); if(isNaN(hg)) hg=0;
+    var ag = parseInt(away.score,10); if(isNaN(ag)) ag=0;
+    var total = hg+ag, bts = (hg>0&&ag>0);
+    var fr = (typeof wcFr==='function')?wcFr:function(x){return x;};
+    var hN = fr((home.team&&(home.team.displayName||home.team.name))||'');
+    var aN = fr((away.team&&(away.team.displayName||away.team.name))||'');
+    var clock = (comp.status&&comp.status.displayClock)||st.shortDetail||st.detail||'';
+    var mm = String(clock).match(/(\d+)/); var mins = mm?parseInt(mm[1],10):0;
+    var rest = (mins&&mins<=90)?Math.max(0,90-mins):0;
+
+    var h='<div style="background:linear-gradient(135deg,rgba(255,60,60,.10),rgba(77,132,255,.06));border:1px solid rgba(255,60,60,.25);border-radius:10px;padding:11px;margin:2px 0 8px;">';
+    h+='<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:9px;flex-wrap:wrap;gap:6px;">';
+    h+='<span style="display:flex;align-items:center;gap:6px;font-size:10px;font-weight:800;color:#ff4545;letter-spacing:.5px;"><span style="width:7px;height:7px;border-radius:50%;background:#ff4545;"></span>EN DIRECT · '+clock+'</span>';
+    h+='<span style="font-size:13px;font-weight:900;color:var(--t1);">'+hN+' '+hg+' – '+ag+' '+aN+'</span>';
+    h+='</div>';
+    var o25;
+    if(total>=3) o25={t:'✅ Validé ('+total+' buts)',c:'#1ed760'};
+    else if(total===2) o25={t:'1 but suffit'+(rest?(' · '+rest+'′'):''),c:'#f0b020'};
+    else o25={t:(3-total)+' buts manquants'+(rest?(' · '+rest+'′'):''),c:(mins>70?'#ff6b6b':'#f0b020')};
+    var btsV = bts?{t:'✅ Validé',c:'#1ed760'}:{t:'manque '+(hg===0?hN:aN),c:'#f0b020'};
+    h+='<div style="display:flex;gap:8px;">';
+    h+='<div style="flex:1;background:rgba(0,0,0,.18);border-radius:8px;padding:8px;text-align:center;"><div style="font-size:8px;color:var(--t3);text-transform:uppercase;letter-spacing:.5px;margin-bottom:3px;">+2,5 buts</div><div style="font-size:10px;font-weight:800;color:'+o25.c+';">'+o25.t+'</div></div>';
+    h+='<div style="flex:1;background:rgba(0,0,0,.18);border-radius:8px;padding:8px;text-align:center;"><div style="font-size:8px;color:var(--t3);text-transform:uppercase;letter-spacing:.5px;margin-bottom:3px;">Les 2 marquent</div><div style="font-size:10px;font-weight:800;color:'+btsV.c+';">'+btsV.t+'</div></div>';
+    h+='</div>';
+    var xg=_teamStatPair(data,['expectedGoals','xG','xg','expectedGoalsFor']);
+    var sot=_teamStatPair(data,['shotsOnTarget']);
+    var sh=_teamStatPair(data,['totalShots']);
+    if(xg||sot||sh){
+      h+='<div style="margin-top:9px;display:flex;flex-direction:column;gap:5px;border-top:1px solid rgba(255,255,255,.06);padding-top:8px;">';
+      if(xg) h+=_liveStatRow('xG',xg[0],xg[1]);
+      if(sot) h+=_liveStatRow('Tirs cadrés',sot[0],sot[1]);
+      if(sh) h+=_liveStatRow('Tirs',sh[0],sh[1]);
+      h+='</div>';
+    }
+    h+='</div>';
+    return h;
+  }catch(e){ return ''; }
+}
+function _liveOddsBlock(data){
+  try{
+    var pc = data.pickcenter || data.odds || [];
+    if(!pc.length) return '';
+    var o = pc[0]||{};
+    function ml(x){ if(!x) return null; if(x.moneyLine!=null) return (x.moneyLine>0?'+':'')+x.moneyLine; if(x.summary) return x.summary; return null; }
+    var hm=ml(o.homeTeamOdds), am=ml(o.awayTeamOdds), dr=ml(o.drawOdds);
+    var line=(o.overUnder!=null)?o.overUnder:(o.total!=null?o.total:null);
+    var prov=(o.provider&&o.provider.name)||'Cotes';
+    if(hm==null&&am==null&&line==null) return '';
+    var h='<div style="background:rgba(255,255,255,.02);border-radius:8px;padding:9px;margin-bottom:8px;">';
+    h+='<div style="font-size:9px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;color:#8aa0ff;margin-bottom:7px;">💰 Cotes ('+prov+')</div>';
+    h+='<div style="display:flex;gap:6px;">';
+    function cell(lbl,v){ return '<div style="flex:1;text-align:center;background:rgba(0,0,0,.18);border-radius:6px;padding:6px;"><div style="font-size:8px;color:var(--t3);">'+lbl+'</div><div style="font-size:11px;font-weight:800;color:var(--t1);">'+(v!=null?v:'—')+'</div></div>'; }
+    if(hm!=null||dr!=null||am!=null){ h+=cell('1',hm); h+=cell('N',dr); h+=cell('2',am); }
+    if(line!=null) h+=cell('O/U',line);
+    h+='</div></div>';
+    return h;
+  }catch(e){ return ''; }
+}
+function _liveBallBlock(data){
+  try{
+    if(!_isLive(data)) return '';
+    var sit = data.situation || {};
+    var lp = sit.lastPlay || (data.plays && data.plays.length ? data.plays[data.plays.length-1] : null);
+    var txt = (lp && lp.text) || '';
+    var fx=null, fy=null;
+    if(lp){
+      if(typeof lp.fieldPositionX==='number') fx=lp.fieldPositionX;
+      else if(typeof lp.fieldPosition==='number') fx=lp.fieldPosition;
+      if(typeof lp.fieldPositionY==='number') fy=lp.fieldPositionY;
+      if(lp.coordinate){ if(typeof lp.coordinate.x==='number') fx=lp.coordinate.x; if(typeof lp.coordinate.y==='number') fy=lp.coordinate.y; }
+    }
+    if(!txt && fx==null) return '';
+    var hasCoord = (fx!=null);
+    function clamp(v){ return Math.max(0,Math.min(100,v)); }
+    var X = hasCoord ? clamp(fx) : 50;
+    var Y = (fy!=null) ? clamp(fy) : 50;
+    var bx = 12 + (X/100)*276;
+    var by = 14 + (Y/100)*152;
+    var pitch = '<svg viewBox="0 0 300 180" style="width:100%;height:auto;display:block;border-radius:8px;">'
+      +'<rect x="0" y="0" width="300" height="180" fill="#2e8b3d"/>'
+      +'<rect x="6" y="8" width="288" height="164" fill="none" stroke="rgba(255,255,255,.7)" stroke-width="2"/>'
+      +'<line x1="150" y1="8" x2="150" y2="172" stroke="rgba(255,255,255,.7)" stroke-width="2"/>'
+      +'<circle cx="150" cy="90" r="26" fill="none" stroke="rgba(255,255,255,.7)" stroke-width="2"/>'
+      +'<rect x="6" y="50" width="40" height="80" fill="none" stroke="rgba(255,255,255,.6)" stroke-width="2"/>'
+      +'<rect x="254" y="50" width="40" height="80" fill="none" stroke="rgba(255,255,255,.6)" stroke-width="2"/>'
+      +'<circle cx="'+bx.toFixed(0)+'" cy="'+by.toFixed(0)+'" r="8" fill="rgba(255,255,255,.25)"/>'
+      +'<circle cx="'+bx.toFixed(0)+'" cy="'+by.toFixed(0)+'" r="6" fill="#fff" stroke="#111" stroke-width="1.5"/>'
+      +'</svg>';
+    var h='<div style="background:rgba(0,0,0,.18);border-radius:10px;padding:10px;margin:2px 0 8px;">';
+    h+='<div style="font-size:9px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;color:#7fd58a;margin-bottom:7px;">⚽ Ballon en jeu'+(hasCoord?'':' · position approx.')+'</div>';
+    h+=pitch;
+    if(txt) h+='<div style="font-size:10px;color:var(--t2);margin-top:7px;text-align:center;line-height:1.35;">'+txt+'</div>';
+    h+='</div>';
+    return h;
+  }catch(e){ return ''; }
+}
+function _liveScore(data){
+  try{
+    var comp=data&&data.header&&data.header.competitions&&data.header.competitions[0];
+    if(!comp) return null;
+    var cs=comp.competitors||[];
+    var home=cs.filter(function(c){return c.homeAway==='home';})[0]||cs[0]||{};
+    var away=cs.filter(function(c){return c.homeAway==='away';})[0]||cs[1]||{};
+    var hg=parseInt(home.score,10); if(isNaN(hg)) hg=0;
+    var ag=parseInt(away.score,10); if(isNaN(ag)) ag=0;
+    var ke=data.keyEvents||[];
+    var goals=ke.filter(function(e){return e.scoringPlay===true||(e.type&&e.type.text==='Goal');});
+    var lg=goals.length?goals[goals.length-1]:null;
+    var fr=(typeof wcFr==='function')?wcFr:function(x){return x;};
+    var lastGoal=null;
+    if(lg){
+      lastGoal={
+        scorer:(lg.participants&&lg.participants[0]&&lg.participants[0].athlete)?lg.participants[0].athlete.displayName:'',
+        team:(lg.team&&lg.team.displayName)?fr(lg.team.displayName):'',
+        min:(lg.clock&&lg.clock.displayValue)?lg.clock.displayValue:''
+      };
+    }
+    return {total:hg+ag,hg:hg,ag:ag,lastGoal:lastGoal};
+  }catch(e){ return null; }
+}
+function _goalBannerHtml(sc){
+  var g=sc.lastGoal||{};
+  var who=g.scorer?(g.scorer+(g.min?(' · '+g.min):'')):'';
+  var h='<div class="g45-goal-banner" style="text-align:center;background:linear-gradient(135deg,#1ed760,#0a9d4a);border-radius:12px;padding:14px;margin:2px 0 8px;overflow:hidden;">';
+  h+='<div class="g45-goal-title" style="font-size:26px;font-weight:900;letter-spacing:2px;color:#fff;text-shadow:0 2px 8px rgba(0,0,0,.35);">⚽ BUUUT !!!</div>';
+  if(who) h+='<div style="font-size:13px;font-weight:800;color:#fff;margin-top:4px;">'+who+'</div>';
+  if(g.team) h+='<div style="font-size:11px;font-weight:700;color:rgba(255,255,255,.85);margin-top:1px;">'+g.team+'</div>';
+  h+='<div style="font-size:14px;font-weight:900;color:#fff;margin-top:5px;letter-spacing:1px;">'+sc.hg+' – '+sc.ag+'</div>';
+  h+='</div>';
+  return h;
+}
+function _g45EnsureGoalCSS(){
+  try{
+    if(document.getElementById('g45-goal-css')) return;
+    var st=document.createElement('style'); st.id='g45-goal-css';
+    st.textContent='@keyframes g45GoalPop{0%{transform:scale(.6);opacity:0;max-height:0}10%{transform:scale(1.05);opacity:1;max-height:260px}18%{transform:scale(1)}82%{opacity:1;max-height:260px}100%{opacity:0;max-height:0;padding-top:0;padding-bottom:0;margin-top:0;margin-bottom:0}}'
+      +'@keyframes g45GoalShake{0%,100%{transform:translateX(0)}20%{transform:translateX(-4px)}40%{transform:translateX(4px)}60%{transform:translateX(-3px)}80%{transform:translateX(3px)}}'
+      +'.g45-goal-banner{animation:g45GoalPop 7s ease forwards}'
+      +'.g45-goal-title{animation:g45GoalShake .5s ease 2}';
+    document.head.appendChild(st);
+  }catch(e){}
+}
+function _wcLiveTimer(box, data, eventId, rowId){
+  try{
+    var live = _isLive(data);
+    if(live && !box._liveTimer){
+      box._liveTimer = setInterval(function(){
+        var b=document.getElementById(rowId);
+        if(!b || b.getAttribute('data-open')!=='1'){ clearInterval(box._liveTimer); box._liveTimer=null; return; }
+        _wcRenderMatch(eventId, rowId);
+      }, 30000);
+    } else if(!live && box._liveTimer){ clearInterval(box._liveTimer); box._liveTimer=null; }
+  }catch(e){}
+}
+
 async function toggleWcMatchStats(eventId, rowId) {
   var box = document.getElementById(rowId);
   if(!box) return;
-  if(box.innerHTML.trim()) { box.innerHTML=''; return; } // toggle
-
+  if(box.getAttribute('data-open')==='1'){ // fermer
+    box.setAttribute('data-open','0');
+    if(box._liveTimer){ clearInterval(box._liveTimer); box._liveTimer=null; }
+    box.innerHTML='';
+    return;
+  }
+  box.setAttribute('data-open','1');
   box.innerHTML = '<div style="padding:8px;color:var(--t3);font-size:10px;text-align:center;">⏳ Stats du match…</div>';
+  await _wcRenderMatch(eventId, rowId);
+}
+
+async function _wcRenderMatch(eventId, rowId) {
+  var box = document.getElementById(rowId);
+  if(!box || box.getAttribute('data-open')!=='1') return;
   try {
     var res = await fetch('https://site.api.espn.com/apis/site/v2/sports/soccer/fifa.world/summary?event='+eventId);
     var data = await res.json();
     var _wcN = _wcMatchTeams(data);   // [équipe A, équipe B] — fiable même sans stats
+    var live = _liveBettingBlock(data);  // panneau LIVE (vide si match pas en cours)
+    var odds = _liveOddsBlock(data);
+    var ball = _liveBallBlock(data);
+    // ── Détection de but (le score a augmenté depuis le dernier rafraîchissement) → bannière BUUUT ──
+    var goalBanner = '';
+    try{
+      var _sc = _liveScore(data);
+      if(_sc){
+        if(_isLive(data) && box._lastScore!=null && _sc.total>box._lastScore){
+          _g45EnsureGoalCSS();
+          goalBanner = _goalBannerHtml(_sc);
+        }
+        box._lastScore = _sc.total;
+      }
+    }catch(e){}
     var box2 = data.boxscore;
     if(!box2 || !box2.teams || !box2.teams.length) {
-      box.innerHTML = '<div style="padding:8px;color:var(--t3);font-size:10px;text-align:center;margin-bottom:8px;">Stats indisponibles</div>' + _wcVideoBlock(data, _wcN[0], _wcN[1]);
-      return;
+      box.innerHTML = goalBanner + live + ball + odds + '<div style="padding:8px;color:var(--t3);font-size:10px;text-align:center;margin-bottom:8px;">Stats indisponibles</div>' + _wcVideoBlock(data, _wcN[0], _wcN[1]);
+      _wcLiveTimer(box, data, eventId, rowId); return;
     }
 
     // box2.teams[].statistics[] : {name, displayValue, label}
@@ -15698,14 +15903,16 @@ async function toggleWcMatchStats(eventId, rowId) {
 
     var hasAny = rows.some(function(r){ return s0[r[1]]!==undefined || s1[r[1]]!==undefined; });
     if(!hasAny) {
-      box.innerHTML = '<div style="padding:8px;color:var(--t3);font-size:10px;text-align:center;margin-bottom:8px;">Pas de stats détaillées pour ce match</div>' + _wcVideoBlock(data, _wcN[0], _wcN[1]);
-      return;
+      box.innerHTML = goalBanner + live + ball + odds + '<div style="padding:8px;color:var(--t3);font-size:10px;text-align:center;margin-bottom:8px;">Pas de stats détaillées pour ce match</div>' + _wcVideoBlock(data, _wcN[0], _wcN[1]);
+      _wcLiveTimer(box, data, eventId, rowId); return;
     }
 
     var nameA = (t0.team && (t0.team.abbreviation||t0.team.displayName)) || '';
     var nameB = (t1.team && (t1.team.abbreviation||t1.team.displayName)) || '';
 
-    var h = '<div style="background:rgba(77,132,255,.05);border-radius:8px;padding:10px;margin:2px 0 8px;">';
+    var h = goalBanner + live + ball + odds;
+    try {
+    h += '<div style="background:rgba(77,132,255,.05);border-radius:8px;padding:10px;margin:2px 0 8px;">';
     h += '<div style="display:flex;justify-content:space-between;font-size:9px;font-weight:800;color:var(--t2);margin-bottom:8px;"><span>'+nameA+'</span><span>'+nameB+'</span></div>';
     rows.forEach(function(r){
       var va = s0[r[1]]!==undefined ? s0[r[1]] : '—';
@@ -15762,8 +15969,10 @@ async function toggleWcMatchStats(eventId, rowId) {
     h += _wcVideoBlock(data, _wcN[0], _wcN[1]);
 
     if(typeof _renderEspnMatchPitch==='function'){ var _cp=_renderEspnMatchPitch(data,'#4d84ff',(typeof wcFr==='function'?wcFr:null)); h += _cp || ((typeof _renderEspnMatchLineups==='function')?_renderEspnMatchLineups(data,'#4d84ff',(typeof wcFr==='function'?wcFr:null)):''); }
+    } catch(e2){ /* enrichissement (stats/compo/vidéo) en échec → on garde au moins le panneau live */ }
 
     box.innerHTML = h;
+    _wcLiveTimer(box, data, eventId, rowId);
   } catch(e) {
     box.innerHTML = '<div style="padding:8px;color:#ff4545;font-size:10px;text-align:center;">Erreur stats</div>';
   }
@@ -18561,26 +18770,28 @@ function _renderEspnMatchPitch(s, col, nameFn){
     });
     function _evOf(p){ var id=_aid(p); return id?evMap[id]:null; }
     function _icoStr(ev){ if(!ev) return ''; var o='',i; for(i=0;i<Math.min(ev.g,4);i++) o+='⚽'; for(i=0;i<ev.og;i++) o+='🥅'; if(ev.a) o+='👟'; if(ev.yc) o+='🟨'; if(ev.rc) o+='🟥'; return o; }
-    function badge(p,c){
+    function badge(p,c,maxW){
       var num=(p.jersey!=null)?p.jersey:((p.athlete&&p.athlete.jersey)||'');
       var nm=lastName((p.athlete&&(p.athlete.displayName||p.athlete.shortName))||'');
       var ev=_evOf(p), ic=_icoStr(ev);
       var subTag=(ev&&ev.subOut)?'<span style="color:#ff8a8a;">🔻'+(ev.subOut.min||'')+'</span>':'';
-      var row=(ic||subTag)?'<div style="font-size:7.5px;line-height:1.05;margin-top:1px;white-space:nowrap;">'+ic+subTag+'</div>':'';
+      var row=(ic||subTag)?'<div style="font-size:7px;line-height:1.05;margin-top:1px;white-space:nowrap;">'+ic+subTag+'</div>':'';
       return '<div style="display:flex;flex-direction:column;align-items:center;gap:1px;">'
-        +'<div style="width:22px;height:22px;border-radius:50%;background:'+c+';color:#fff;font-size:10px;font-weight:800;display:flex;align-items:center;justify-content:center;box-shadow:0 1px 4px rgba(0,0,0,.5);">'+num+'</div>'
-        +'<div style="font-size:8px;font-weight:700;color:#fff;text-shadow:0 1px 2px rgba(0,0,0,.95);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:48px;text-align:center;">'+nm+'</div>'+row+'</div>';
+        +'<div style="width:20px;height:20px;border-radius:50%;background:'+c+';color:#fff;font-size:9px;font-weight:800;display:flex;align-items:center;justify-content:center;box-shadow:0 1px 4px rgba(0,0,0,.5);">'+num+'</div>'
+        +'<div style="font-size:7.5px;font-weight:700;color:#fff;text-shadow:0 1px 2px rgba(0,0,0,.95);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:'+(maxW||44)+'px;text-align:center;">'+nm+'</div>'+row+'</div>';
     }
     function placeTeam(r,c,fromTop){
       var lines=getLines(r); if(!lines.length) return '';
       var nL=lines.length, html='';
       lines.forEach(function(line,li){
         var frac = nL>1 ? li/(nL-1) : 0;
-        var y = fromTop ? (5+frac*41) : (95-frac*41);
+        var y = fromTop ? (4+frac*43) : (96-frac*43);
         var n=line.length;
+        var maxW = n>=6?34:(n===5?40:48);  // noms plus courts quand la ligne est chargée
+        var cw = maxW+6;
         line.forEach(function(p,i){
           var x=(i+1)/(n+1)*100;
-          html+='<div style="position:absolute;left:'+x+'%;top:'+y+'%;transform:translate(-50%,-50%);width:52px;z-index:2;">'+badge(p,c)+'</div>';
+          html+='<div style="position:absolute;left:'+x+'%;top:'+y+'%;transform:translate(-50%,-50%);width:'+cw+'px;z-index:2;">'+badge(p,c,maxW)+'</div>';
         });
       });
       return html;
@@ -18605,7 +18816,7 @@ function _renderEspnMatchPitch(s, col, nameFn){
       return h;
     }
     var homeCol=col||'#4d84ff', awayCol='#e0564f';
-    var pitch='<div style="position:relative;width:100%;max-width:430px;margin:4px auto 2px;aspect-ratio:7/10;min-height:360px;background:linear-gradient(180deg,#1f7a3f 0%,#19682f 50%,#1f7a3f 100%);border-radius:10px;overflow:hidden;border:1px solid rgba(255,255,255,.12);">'
+    var pitch='<div style="position:relative;width:100%;max-width:430px;margin:4px auto 2px;aspect-ratio:5/8;min-height:440px;background:linear-gradient(180deg,#1f7a3f 0%,#19682f 50%,#1f7a3f 100%);border-radius:10px;overflow:hidden;border:1px solid rgba(255,255,255,.12);">'
       +'<div style="position:absolute;inset:5px;border:2px solid rgba(255,255,255,.18);border-radius:6px;"></div>'
       +'<div style="position:absolute;top:50%;left:5px;right:5px;height:2px;background:rgba(255,255,255,.22);"></div>'
       +'<div style="position:absolute;top:50%;left:50%;width:72px;height:72px;border:2px solid rgba(255,255,255,.22);border-radius:50%;transform:translate(-50%,-50%);"></div>'
