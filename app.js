@@ -15864,6 +15864,32 @@ async function toggleWcMatchStats(eventId, rowId) {
   await _wcRenderMatch(eventId, rowId);
 }
 
+function _frMoment(t){
+  t = String(t).replace(/\s+at\s+\d+'?\.?$/i,'').trim();   // enlève "at 18'" (minute déjà affichée)
+  var reps = [
+    [/own goal/i,'But contre son camp ⚽'],
+    [/\bgoal\b!?/i,'BUT ⚽'],
+    [/penalty (saved|missed)/i,'Penalty manqué'],
+    [/penalt\w*/i,'Penalty'],
+    [/red card/i,'Carton rouge 🟥'],
+    [/yellow card|booked/i,'Carton jaune 🟨'],
+    [/(shot|attempt|header)\s*(on target)?\s*saved/i,'Tir arrêté 🧤'],
+    [/saved/i,'Arrêt 🧤'],
+    [/(shot|attempt|header).*(on target|on goal)/i,'Tir cadré'],
+    [/(shot|attempt|header).*(off target|missed|wide|high)/i,'Tir non cadré'],
+    [/(shot|attempt|header).*(blocked)/i,'Tir contré'],
+    [/blocked shot/i,'Tir contré'],
+    [/hits the (post|bar|woodwork)|woodwork/i,'Poteau ! 🪵'],
+    [/big chance/i,'Grosse occasion'],
+    [/free.?kick/i,'Coup franc'],
+    [/\bcorner\b/i,'Corner'],
+    [/substitution/i,'Changement 🔄'],
+    [/\bshot\b|\battempt\b/i,'Tir'],
+    [/\bheader\b/i,'Tête']
+  ];
+  for(var i=0;i<reps.length;i++){ if(reps[i][0].test(t)){ t=t.replace(reps[i][0], reps[i][1]); break; } }
+  return t;
+}
 async function _loadFrCommentary(eventId, rowId){
   try{
     var el = document.getElementById(rowId+'-comm');
@@ -15872,12 +15898,20 @@ async function _loadFrCommentary(eventId, rowId){
     var data = await res.json();
     var com = data.commentary || [];
     if(!com.length){ return; }
-    var items = com.slice().reverse().slice(0, 16);   // les plus récents d'abord
+    // On ne garde QUE les temps forts (buts, tirs, arrêts, occasions, penalties, cartons, poteaux)
+    var KEEP=/(goal|penalt|red card|yellow card|booked|saved|\bsave\b|\bshot\b|attempt|header|hits the (post|bar)|woodwork|big chance|own goal|\bVAR\b|disallow)/i;
+    var DROP=/(attempted tackle|\btackle\b|ball touch|throw|goal kick|\bpass\b|\bout\b|\bclear|\bcross\b|interception|recovery|offside|\bfoul\b|delay)/i;
+    var moments = com.filter(function(c){
+      var x = c.text || (c.play&&c.play.text) || '';
+      return KEEP.test(x) && !DROP.test(x);
+    });
+    if(!moments.length){ return; }   // pas de temps fort → on n'affiche rien
+    var items = moments.slice().reverse().slice(0, 14);
     var h='<div style="background:rgba(255,255,255,.02);border-radius:8px;padding:10px;margin-bottom:8px;">';
-    h+='<div style="font-size:9px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;color:#8aa0ff;margin-bottom:8px;">💬 Commentaire</div>';
+    h+='<div style="font-size:9px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;color:#8aa0ff;margin-bottom:8px;">✨ Moments forts</div>';
     items.forEach(function(c){
       var t = (c.time&&c.time.displayValue) || (c.clock&&c.clock.displayValue) || '';
-      var txt = c.text || (c.play&&c.play.text) || '';
+      var txt = _frMoment(c.text || (c.play&&c.play.text) || '');
       if(!txt) return;
       h+='<div style="display:flex;gap:8px;padding:5px 0;border-bottom:1px solid rgba(255,255,255,.04);font-size:10px;">';
       if(t) h+='<span style="color:var(--a);font-weight:800;min-width:36px;flex-shrink:0;">'+t+'</span>';
