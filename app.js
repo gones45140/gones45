@@ -18794,7 +18794,6 @@ function _renderEspnMatchPitch(s, col, nameFn){
       var starters=players.filter(function(p){return p.starter;});
       if(!starters.length) starters=players.slice(0,11);
       starters.forEach(function(p,i){ p.__o=i; });
-      // Catégorie de poste réelle (gardien / défenseur / milieu / attaquant)
       function posCat(p){
         var pos=((p.position&&(p.position.abbreviation||p.position.name))||'').toUpperCase();
         var c=pos.charAt(0);
@@ -18803,25 +18802,28 @@ function _renderEspnMatchPitch(s, col, nameFn){
         if(c==='D'||pos.indexOf('B')>=0) return 'D';
         return 'M';
       }
-      function byPlace(a,b){ var fa=parseInt(a.formationPlace,10),fb=parseInt(b.formationPlace,10); if(!isNaN(fa)&&!isNaN(fb)&&fa!==fb) return fa-fb; return a.__o-b.__o; }
-      var gk=[],df=[],mf=[],fw=[];
-      starters.forEach(function(p){ var c=posCat(p); (c==='G'?gk:c==='D'?df:c==='F'?fw:mf).push(p); });
-      [gk,df,mf,fw].forEach(function(l){ l.sort(byPlace); });
-      if(!gk.length && starters.length){ gk=[df.length?df.shift():starters[0]]; }
-      // Le milieu n'est subdivisé selon la formation (ex. 4-2-3-1 → 2 puis 3) que si le compte tombe juste
-      var midLines=[mf];
-      if(r&&r.formation){
-        var parts=String(r.formation).split('-').map(function(x){return parseInt(x,10);}).filter(function(x){return x>0;});
-        if(parts.length>=3){
-          var middle=parts.slice(1, parts.length-1);
-          var sumMid=middle.reduce(function(a,b){return a+b;},0);
-          if(sumMid===mf.length){ midLines=[]; var mi=0; middle.forEach(function(c){ midLines.push(mf.slice(mi,mi+c)); mi+=c; }); }
-        }
+      function fp(p){ var v=parseInt(p.formationPlace,10); return isNaN(v)?9999:v; }
+      // Gardien : formationPlace 1 en priorité, sinon poste G, sinon le 1er
+      var gk=null, outfield=[];
+      starters.forEach(function(p){ if(gk===null && fp(p)===1) gk=p; else outfield.push(p); });
+      if(gk===null){ outfield=[]; starters.forEach(function(p){ if(gk===null && posCat(p)==='G') gk=p; else outfield.push(p); }); }
+      if(gk===null){ gk=starters[0]; outfield=starters.slice(1); }
+      // Joueurs de champ triés défense → attaque (formationPlace si dispo, sinon ordre d'effectif)
+      outfield.sort(function(a,b){ var d=fp(a)-fp(b); return d!==0?d:a.__o-b.__o; });
+      // Découpe selon la formation réelle (ex. 4-2-3-1 → lignes de 4,2,3,1) si le compte tombe juste
+      var parts=(r&&r.formation)?String(r.formation).split('-').map(function(x){return parseInt(x,10);}).filter(function(x){return x>0;}):[];
+      var sumParts=parts.reduce(function(a,b){return a+b;},0);
+      var lines=[[gk]];
+      if(parts.length>=2 && sumParts===outfield.length){
+        var idx=0; parts.forEach(function(c){ lines.push(outfield.slice(idx,idx+c)); idx+=c; });
+      } else {
+        // Repli : catégories de poste (si pas de formation exploitable)
+        var df=[],mf=[],fw=[];
+        outfield.forEach(function(p){ var c=posCat(p); (c==='D'?df:c==='F'?fw:mf).push(p); });
+        if(df.length) lines.push(df);
+        if(mf.length) lines.push(mf);
+        if(fw.length) lines.push(fw);
       }
-      var lines=[gk];
-      if(df.length) lines.push(df);
-      midLines.forEach(function(ml){ if(ml.length) lines.push(ml); });
-      if(fw.length) lines.push(fw);
       return lines.filter(function(l){return l.length;});
     }
     var evMap={};
