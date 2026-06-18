@@ -308,7 +308,7 @@ function saisonKey(base) {
   if(toMigrate.length > 0) console.log('Migration saison: '+toMigrate.length+' clés → 2526_');
   localStorage.setItem('g45_saison_migrated', '1');
 })();
-var _CP_TYPES = ['Victoire','Nul','Défaite','Over 2.5','Under 2.5','BTS Oui','BTS Non','HC -1','HC +1','Mi-temps','1er buteur'];
+var _CP_TYPES = ['Victoire','Nul','Défaite','Domicile ou nul','Extérieur ou nul','Over 2.5','Under 2.5','BTS Oui','BTS Non','HC -1','HC +1','Mi-temps','1er buteur'];
 var _chatParams = { equipe:'', lieu:'domicile', types:['Victoire','Over 2.5','BTS Oui'], champOnly:false };
 
 var BK={
@@ -3452,7 +3452,7 @@ var mmRows=[
   {type:'Victoire',cote:1.80},
   {type:'BTS Oui',cote:1.70}
 ];
-var MM_TYPES=['Victoire','Nul','Défaite','BTS Oui','BTS Non','Over 1.5','Over 2.5','Under 2.5','HC -1','HC +1','Mi-temps'];
+var MM_TYPES=['Victoire','Nul','Défaite','Domicile ou nul','Extérieur ou nul','BTS Oui','BTS Non','Over 1.5','Over 2.5','Under 2.5','HC -1','HC +1','Mi-temps'];
 
 function renderMmRows(){
   var sel=$i('mm-sel');if(!sel)return;
@@ -9522,7 +9522,7 @@ var mmRows=[
   {type:'Victoire',cote:1.80},
   {type:'BTS Oui',cote:1.70}
 ];
-var MM_TYPES=['Victoire','Nul','Défaite','BTS Oui','BTS Non','Over 1.5','Over 2.5','Under 2.5','HC -1','HC +1','Mi-temps'];
+var MM_TYPES=['Victoire','Nul','Défaite','Domicile ou nul','Extérieur ou nul','BTS Oui','BTS Non','Over 1.5','Over 2.5','Under 2.5','HC -1','HC +1','Mi-temps'];
 
 function renderMmRows(){
   var sel=$i('mm-sel');if(!sel)return;
@@ -15728,6 +15728,118 @@ function _liveBettingBlock(data){
     return h;
   }catch(e){ return ''; }
 }
+/* ───── Suivi de paris EN DIRECT : relie tes paris en cours au match live ───── */
+function _normTeam(s){ return String(s||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9]/g,''); }
+// Évalue UNE jambe de pari → {r:'win'|'lose', locked:bool} ou null si non évaluable
+function _evalBetLeg(t, ctx){
+  t = ' '+String(t).toLowerCase().replace(/,/g,'.')+' ';
+  var hg=ctx.hg, ag=ctx.ag, total=ctx.total, bts=ctx.bts, fin=ctx.fin;
+  var numM = t.match(/([0-9]+(?:\.[0-9])?)/);
+  var line = numM?parseFloat(numM[1]):null;
+  if(/(over|plus de|\bo[0-9]|\s\+\s|\s\+[0-9])/.test(t) && line!=null){
+    if(total>line) return {r:'win',locked:true};
+    return {r:'lose',locked:fin};
+  }
+  if(/(under|moins de|\bu[0-9])/.test(t) && line!=null){
+    if(total>line) return {r:'lose',locked:true};
+    return {r:'win',locked:fin};
+  }
+  if(/(bts|2 marquent|deux marquent|both teams|btts)/.test(t)){
+    var non=/(non|no |pas)/.test(t);
+    if(non) return bts?{r:'lose',locked:true}:{r:'win',locked:fin};
+    return bts?{r:'win',locked:true}:{r:'lose',locked:fin};
+  }
+  // ── DOUBLE CHANCE ──
+  // Positionnelle : "domicile ou nul" / "1X" = dom ne perd pas ; "extérieur ou nul" / "X2" = ext ne perd pas
+  if(/(domicile|\bdom\b|home)\s+ou\s+(match\s+)?nul|\b1x\b/.test(t)) return (hg>=ag)?{r:'win',locked:fin}:{r:'lose',locked:fin};
+  if(/(exterieur|extérieur|\bext\b|away)\s+ou\s+(match\s+)?nul|\bx2\b/.test(t)) return (ag>=hg)?{r:'win',locked:fin}:{r:'lose',locked:fin};
+  if(/\b12\b|pas de nul|sans nul/.test(t)) return (hg!==ag)?{r:'win',locked:fin}:{r:'lose',locked:fin};
+  // Par équipe nommée : "[équipe] ou nul" / "double chance" → l'équipe pariée ne perd pas
+  if((/\bou\s+(match\s+)?nul\b|\bnul\s+ou\b|double\s*chance/.test(t)) && ctx.betIsHome!=null){
+    var nl = ctx.betIsHome ? (hg>=ag) : (ag>=hg);
+    return nl?{r:'win',locked:fin}:{r:'lose',locked:fin};
+  }
+  if(/(nul|match nul|draw)/.test(t)){
+    return (hg===ag)?{r:'win',locked:fin}:{r:'lose',locked:fin};
+  }
+  if(/(victoire|gagn|\bwin\b)/.test(t) && ctx.betIsHome!=null){
+    var lead = ctx.betIsHome ? (hg>ag) : (ag>hg);
+    return lead?{r:'win',locked:fin}:{r:'lose',locked:fin};
+  }
+  if(/(defaite|défaite|perd)/.test(t) && ctx.betIsHome!=null){
+    var ls = ctx.betIsHome ? (hg<ag) : (ag<hg);
+    return ls?{r:'win',locked:fin}:{r:'lose',locked:fin};
+  }
+  return null;
+}
+// Évalue un pari (potentiellement combiné) → {status, locked}
+function _evalBetLive(bet, ctx){
+  var legs = String(bet.type||bet.target||'').split(/\s*\+\s*/).filter(function(x){return x.trim();});
+  if(!legs.length) legs=[''];
+  var res=[], nonEval=0;
+  legs.forEach(function(l){ var r=_evalBetLeg(l, ctx); if(r==null) nonEval++; else res.push(r); });
+  if(!res.length) return {status:'pending', locked:false};
+  var anyLoseLocked = res.some(function(r){return r.r==='lose'&&r.locked;});
+  var anyLose = res.some(function(r){return r.r==='lose';});
+  var allWinLocked = nonEval===0 && res.every(function(r){return r.r==='win'&&r.locked;});
+  var allWin = nonEval===0 && res.every(function(r){return r.r==='win';});
+  if(anyLoseLocked) return {status:'lose', locked:true};
+  if(allWinLocked) return {status:'win', locked:true};
+  if(anyLose) return {status:'lose', locked:false};
+  if(allWin) return {status:'win', locked:false};
+  return {status:'pending', locked:false};
+}
+function _liveBetsBlock(data){
+  try{
+    if(typeof state==='undefined' || !state) return '';
+    var comp = data && data.header && data.header.competitions && data.header.competitions[0];
+    if(!comp) return '';
+    var cs=comp.competitors||[];
+    var home=cs.filter(function(c){return c.homeAway==='home';})[0]||cs[0]||{};
+    var away=cs.filter(function(c){return c.homeAway==='away';})[0]||cs[1]||{};
+    var hg=parseInt(home.score,10); if(isNaN(hg))hg=0;
+    var ag=parseInt(away.score,10); if(isNaN(ag))ag=0;
+    var st=(comp.status&&comp.status.type)||{};
+    var fr=(typeof wcFr==='function')?wcFr:function(x){return x;};
+    var hN=fr((home.team&&(home.team.displayName||home.team.name))||'');
+    var aN=fr((away.team&&(away.team.displayName||away.team.name))||'');
+    var nh=_normTeam(hN), na=_normTeam(aN);
+    var matchDate = comp.date ? new Date(comp.date) : null;
+    var ctxBase={hg:hg,ag:ag,total:hg+ag,bts:(hg>0&&ag>0),fin:(st.state==='post')};
+    var pend=[];
+    [].concat(state.p||[], state.h||[]).forEach(function(b){ if(b && b.win==null) pend.push(b); });
+    var mine=[];
+    pend.forEach(function(b){
+      var bn=_normTeam(b.n||b.nom||'');
+      if(!bn || bn.length<3) return;
+      var isHome = nh && (nh.indexOf(bn)>=0 || bn.indexOf(nh)>=0);
+      var isAway = na && (na.indexOf(bn)>=0 || bn.indexOf(na)>=0);
+      if(!isHome && !isAway) return;
+      if(matchDate && b.date){ var bd=new Date(b.date); if(!isNaN(bd.getTime())){ if(Math.abs(bd-matchDate)/86400000>3) return; } }
+      var ev=_evalBetLive(b, {hg:ctxBase.hg,ag:ctxBase.ag,total:ctxBase.total,bts:ctxBase.bts,fin:ctxBase.fin,betIsHome:(isHome?true:(isAway?false:null))});
+      mine.push({b:b, ev:ev});
+    });
+    if(!mine.length) return '';
+    var cmap={win:'#1ed760',lose:'#ff4545',pending:'#f0b020'}, lmap={win:'🟢',lose:'🔴',pending:'🟡'}, tmap={win:'gagnant',lose:'perdant',pending:'en cours'};
+    var h='<div style="background:rgba(77,132,255,.07);border:1px solid rgba(77,132,255,.25);border-radius:10px;padding:11px;margin:2px 0 8px;">';
+    h+='<div style="font-size:9px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;color:#8aa0ff;margin-bottom:8px;">🎟️ Tes paris sur ce match ('+mine.length+')</div>';
+    mine.forEach(function(o){
+      var c=cmap[o.ev.status];
+      var lab=tmap[o.ev.status]+(o.ev.locked?(o.ev.status==='win'?' ✅':' 🔒'):'');
+      var stake=(o.b.m!=null?o.b.m:(o.b.mise!=null?o.b.mise:''));
+      var potential=(o.b.cote&&stake!=='')?(' → '+(parseFloat(o.b.cote)*parseFloat(stake)).toFixed(2)+'€'):'';
+      h+='<div style="padding:6px 0;border-bottom:1px solid rgba(255,255,255,.05);">';
+      h+='<div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px;">';
+      h+='<span style="font-size:10px;font-weight:700;color:var(--t1);flex:1;line-height:1.3;">'+(o.b.type||o.b.target||o.b.n||'Pari')+'</span>';
+      h+='<span style="font-size:10px;font-weight:800;color:'+c+';white-space:nowrap;">'+lmap[o.ev.status]+' '+lab+'</span>';
+      h+='</div>';
+      h+='<div style="font-size:8.5px;color:var(--t3);margin-top:2px;">'+(o.b.n||'')+' · @'+(o.b.cote||'?')+(stake!==''?(' · '+stake+'€'):'')+potential+'</div>';
+      h+='</div>';
+    });
+    h+='</div>';
+    return h;
+  }catch(e){ return ''; }
+}
 function _liveOddsBlock(data){
   try{
     var pc = data.pickcenter || data.odds || [];
@@ -15983,6 +16095,7 @@ async function _wcRenderMatch(eventId, rowId) {
     var live = _liveBettingBlock(data);  // panneau LIVE (vide si match pas en cours)
     var odds = _liveOddsBlock(data);
     var ball = _liveBallBlock(data);
+    var bets = _liveBetsBlock(data);  // 🎟️ tes paris en cours sur ce match
     // ── Détection de but (le score a augmenté depuis le dernier rafraîchissement) → bannière BUUUT ──
     var goalBanner = '';
     try{
@@ -15997,7 +16110,7 @@ async function _wcRenderMatch(eventId, rowId) {
     }catch(e){}
     var box2 = data.boxscore;
     if(!box2 || !box2.teams || !box2.teams.length) {
-      box.innerHTML = goalBanner + live + ball + odds + '<div style="padding:8px;color:var(--t3);font-size:10px;text-align:center;margin-bottom:8px;">Stats indisponibles</div>' + _wcVideoBlock(data, _wcN[0], _wcN[1]);
+      box.innerHTML = goalBanner + live + bets + ball + odds + '<div style="padding:8px;color:var(--t3);font-size:10px;text-align:center;margin-bottom:8px;">Stats indisponibles</div>' + _wcVideoBlock(data, _wcN[0], _wcN[1]);
       _wcStatsTimer(box, data, eventId, rowId); return;
     }
 
@@ -16020,14 +16133,14 @@ async function _wcRenderMatch(eventId, rowId) {
 
     var hasAny = rows.some(function(r){ return s0[r[1]]!==undefined || s1[r[1]]!==undefined; });
     if(!hasAny) {
-      box.innerHTML = goalBanner + live + ball + odds + '<div style="padding:8px;color:var(--t3);font-size:10px;text-align:center;margin-bottom:8px;">Pas de stats détaillées pour ce match</div>' + _wcVideoBlock(data, _wcN[0], _wcN[1]);
+      box.innerHTML = goalBanner + live + bets + ball + odds + '<div style="padding:8px;color:var(--t3);font-size:10px;text-align:center;margin-bottom:8px;">Pas de stats détaillées pour ce match</div>' + _wcVideoBlock(data, _wcN[0], _wcN[1]);
       _wcStatsTimer(box, data, eventId, rowId); return;
     }
 
     var nameA = (t0.team && (t0.team.abbreviation||t0.team.displayName)) || '';
     var nameB = (t1.team && (t1.team.abbreviation||t1.team.displayName)) || '';
 
-    var h = goalBanner + live + ball + odds;
+    var h = goalBanner + live + bets + ball + odds;
     try {
     h += '<div style="background:rgba(77,132,255,.05);border-radius:8px;padding:10px;margin:2px 0 8px;">';
     h += '<div style="display:flex;justify-content:space-between;font-size:9px;font-weight:800;color:var(--t2);margin-bottom:8px;"><span>'+nameA+'</span><span>'+nameB+'</span></div>';
@@ -19317,6 +19430,7 @@ async function toggleSaisonMatchDetail(rowEl){
     if(typeof _renderEspnMatchStats==='function'){ try{ var st=_renderEspnMatchStats(data, homeId, awayId, '#4d84ff'); if(st){ h+=st; added=true; } }catch(e){} }
     if(typeof _renderEspnMatchPitch==='function'){ try{ var pi=_renderEspnMatchPitch(data, '#4d84ff', function(x){return x;}); if(pi){ h+=pi; added=true; } }catch(e){} }
     // ── Moments forts : timeline chronologique complète (buts, cartons, changements) ──
+    try{ if(typeof _liveBetsBlock==='function'){ var _lb=_liveBetsBlock(data); if(_lb){ h+=_lb; added=true; } } }catch(e){}
     try{ if(typeof _momentsTimeline==='function'){ var _mt=_momentsTimeline(data); if(_mt){ h+=_mt; added=true; } } }catch(e){}
     if(!added) h+='<div style="font-size:11px;color:var(--t3);text-align:center;padding:6px;">Pas de détails (compo/stats) pour ce match.</div>';
     // ── Résumé vidéo (Championnat / Europe) ──
