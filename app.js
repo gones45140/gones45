@@ -19587,3 +19587,112 @@ async function _renderSaisonDetail(el, eventId, league){
   }catch(e){ el.innerHTML='<div style="padding:12px;color:#ff6b6b;font-size:11px;text-align:center;">Résumé indisponible.</div>'; }
 }
 window.toggleSaisonMatchDetail=toggleSaisonMatchDetail;
+
+/* ───────────── ONGLET DIRECT : suivre n'importe quel match par compétition ───────────── */
+var G45_LEAGUE_GROUPS = [
+  {grp:'⭐ Grands championnats', leagues:[
+    {name:'Ligue 1', slug:'fra.1', ico:'🇫🇷'},
+    {name:'Premier League', slug:'eng.1', ico:'🏴󠁧󠁢󠁥󠁮󠁧󠁿'},
+    {name:'Liga', slug:'esp.1', ico:'🇪🇸'},
+    {name:'Serie A', slug:'ita.1', ico:'🇮🇹'},
+    {name:'Bundesliga', slug:'ger.1', ico:'🇩🇪'}
+  ]},
+  {grp:'🏆 Coupes d\'Europe', leagues:[
+    {name:'Champions L.', slug:'uefa.champions', ico:'🏆'},
+    {name:'Europa L.', slug:'uefa.europa', ico:'🥈'},
+    {name:'Conférence', slug:'uefa.europa.conf', ico:'🥉'},
+    {name:'Super Coupe', slug:'uefa.super_cup', ico:'🏅'}
+  ]},
+  {grp:'🌍 Autres championnats', leagues:[
+    {name:'Primeira', slug:'por.1', ico:'🇵🇹'},
+    {name:'Eredivisie', slug:'ned.1', ico:'🇳🇱'},
+    {name:'Pro League', slug:'bel.1', ico:'🇧🇪'},
+    {name:'Süper Lig', slug:'tur.1', ico:'🇹🇷'},
+    {name:'Premiership', slug:'sco.1', ico:'🏴󠁧󠁢󠁳󠁣󠁴󠁿'},
+    {name:'Super League', slug:'gre.1', ico:'🇬🇷'},
+    {name:'Ligue 2', slug:'fra.2', ico:'🇫🇷'},
+    {name:'Championship', slug:'eng.2', ico:'🏴󠁧󠁢󠁥󠁮󠁧󠁿'},
+    {name:'Serie B', slug:'ita.2', ico:'🇮🇹'},
+    {name:'Liga 2', slug:'esp.2', ico:'🇪🇸'},
+    {name:'2.Bundesliga', slug:'ger.2', ico:'🇩🇪'}
+  ]},
+  {grp:'🇫🇷 Coupes nationales', leagues:[
+    {name:'Coupe de France', slug:'fra.coupe_de_france', ico:'🇫🇷'},
+    {name:'FA Cup', slug:'eng.fa', ico:'🏴󠁧󠁢󠁥󠁮󠁧󠁿'},
+    {name:'EFL Cup', slug:'eng.league_cup', ico:'🏴󠁧󠁢󠁥󠁮󠁧󠁿'},
+    {name:'Copa del Rey', slug:'esp.copa_del_rey', ico:'🇪🇸'},
+    {name:'Coppa Italia', slug:'ita.coppa_italia', ico:'🇮🇹'},
+    {name:'DFB Pokal', slug:'ger.dfb_pokal', ico:'🇩🇪'}
+  ]},
+  {grp:'🌐 Sélections', leagues:[
+    {name:'Coupe du Monde', slug:'fifa.world', ico:'🌍'},
+    {name:'Euro', slug:'uefa.euro', ico:'🇪🇺'},
+    {name:'Nations League', slug:'uefa.nations', ico:'🇪🇺'},
+    {name:'Copa América', slug:'conmebol.america', ico:'🌎'},
+    {name:'Qualif. Monde (UEFA)', slug:'fifa.worldq.uefa', ico:'🌍'}
+  ]},
+  {grp:'🌎 Hors Europe', leagues:[
+    {name:'MLS', slug:'usa.1', ico:'🇺🇸'},
+    {name:'Liga MX', slug:'mex.1', ico:'🇲🇽'},
+    {name:'Brasileirão', slug:'bra.1', ico:'🇧🇷'},
+    {name:'Primera (ARG)', slug:'arg.1', ico:'🇦🇷'},
+    {name:'Saudi League', slug:'rsa.1', ico:'🇸🇦'},
+    {name:'Libertadores', slug:'conmebol.libertadores', ico:'🏆'}
+  ]}
+];
+function loadLiveTab(){
+  var el=document.getElementById('t-live'); if(!el) return;
+  var groupsHtml=G45_LEAGUE_GROUPS.map(function(g){
+    var chips=g.leagues.map(function(l){
+      return '<button class="g45lg-chip" data-slug="'+l.slug+'" onclick="g45LoadLeagueMatches(\''+l.slug+'\',this)" style="border:none;cursor:pointer;font-size:11px;font-weight:700;padding:7px 11px;border-radius:8px;background:rgba(255,255,255,.06);color:var(--t2);white-space:nowrap;flex-shrink:0;">'+l.ico+' '+l.name+'</button>';
+    }).join('');
+    return '<div style="margin-bottom:8px;"><div style="font-size:9px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;color:#4f5d88;margin-bottom:5px;">'+g.grp+'</div>'
+      +'<div style="display:flex;gap:6px;overflow-x:auto;padding-bottom:4px;-webkit-overflow-scrolling:touch;">'+chips+'</div></div>';
+  }).join('');
+  el.innerHTML='<div class="sec" style="margin-top:0;">📡 Matchs en direct</div>'
+    +'<div style="font-size:11px;color:var(--t3);margin-bottom:10px;">Choisis une compétition, puis ouvre un match pour le suivre en direct (lecteur de paris, compos, timeline, suivi de tes paris…).</div>'
+    +groupsHtml
+    +'<div id="g45-live-list" style="margin-top:8px;"><div style="text-align:center;color:var(--t3);font-size:11px;padding:24px;">👆 Sélectionne une compétition</div></div>';
+}
+async function g45LoadLeagueMatches(slug, btn){
+  try{ document.querySelectorAll('.g45lg-chip').forEach(function(b){ b.style.background='rgba(255,255,255,.06)'; b.style.color='var(--t2)'; }); if(btn){ btn.style.background='#4d84ff'; btn.style.color='#fff'; } }catch(e){}
+  var list=document.getElementById('g45-live-list'); if(!list) return;
+  list.innerHTML='<div style="text-align:center;color:var(--t3);font-size:11px;padding:24px;">⏳ Chargement des matchs…</div>';
+  try{
+    var r=await fetch('https://site.api.espn.com/apis/site/v2/sports/soccer/'+slug+'/scoreboard');
+    var data=await r.json();
+    var events=(data.events||[]);
+    if(!events.length){ list.innerHTML='<div style="text-align:center;color:var(--t3);font-size:11px;padding:24px;">Aucun match aujourd\'hui pour cette compétition<br><span style="font-size:9px;">(hors saison, journée vide, ou compétition non couverte)</span></div>'; return; }
+    function stOf(e){ return (e.status&&e.status.type&&e.status.type.state)||''; }
+    function rank(e){ var s=stOf(e); return s==='in'?0:(s==='pre'?1:2); }
+    events.sort(function(a,b){ var d=rank(a)-rank(b); if(d) return d; return new Date(a.date)-new Date(b.date); });
+    var liveN=events.filter(function(e){return stOf(e)==='in';}).length;
+    var h='';
+    if(liveN) h+='<div style="font-size:10px;font-weight:700;color:#ff4545;margin-bottom:6px;">🔴 '+liveN+' match'+(liveN>1?'s':'')+' en direct</div>';
+    events.forEach(function(e){
+      var comp=(e.competitions&&e.competitions[0])||{};
+      var cps=comp.competitors||[];
+      var home=cps.filter(function(c){return c.homeAway==='home';})[0]||cps[0]||{};
+      var away=cps.filter(function(c){return c.homeAway==='away';})[0]||cps[1]||{};
+      var hN=(home.team&&(home.team.shortDisplayName||home.team.displayName))||'?';
+      var aN=(away.team&&(away.team.shortDisplayName||away.team.displayName))||'?';
+      var hS=(home.score!=null?home.score:''), aS=(away.score!=null?away.score:'');
+      var s=stOf(e), live=s==='in', fin=s==='post';
+      var clock=(e.status&&e.status.displayClock)||'';
+      var badge = live?('<span style="color:#ff4545;font-weight:800;font-size:9px;white-space:nowrap;">🔴 '+(clock||'LIVE')+'</span>')
+                : fin?('<span style="color:var(--t3);font-size:9px;">Terminé</span>')
+                : ('<span style="color:#8aa0ff;font-size:9px;white-space:nowrap;">'+(new Date(e.date).toLocaleString('fr-FR',{weekday:'short',hour:'2-digit',minute:'2-digit'}))+'</span>');
+      var score=(hS!==''&&aS!=='')?(hS+' - '+aS):'vs';
+      h+='<div onclick="toggleSaisonMatchDetail(this)" data-eid="'+e.id+'" data-lg="'+slug+'" style="display:grid;grid-template-columns:1fr auto 1fr 64px;gap:6px;align-items:center;padding:9px 10px;background:'+(live?'rgba(255,69,69,.07)':'rgba(255,255,255,.03)')+';border-radius:8px;border-left:3px solid '+(live?'#ff4545':'rgba(255,255,255,.1)')+';cursor:pointer;margin-bottom:4px;">';
+      h+='<div style="font-size:11px;font-weight:700;color:var(--t1);text-align:right;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">'+hN+'</div>';
+      h+='<div style="font-size:12px;font-weight:900;color:'+(live?'#ff4545':'var(--a)')+';text-align:center;white-space:nowrap;min-width:42px;">'+score+'</div>';
+      h+='<div style="font-size:11px;font-weight:700;color:var(--t1);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">'+aN+'</div>';
+      h+='<div style="text-align:right;">'+badge+'</div>';
+      h+='</div>';
+      h+='<div class="smd-panel" style="display:none;"></div>';
+    });
+    list.innerHTML=h;
+  }catch(err){ list.innerHTML='<div style="text-align:center;color:#ff6b6b;font-size:11px;padding:24px;">Erreur de chargement des matchs.</div>'; }
+}
+window.loadLiveTab=loadLiveTab;
+window.g45LoadLeagueMatches=g45LoadLeagueMatches;
