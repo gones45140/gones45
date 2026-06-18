@@ -15974,7 +15974,7 @@ async function _wcRenderMatch(eventId, rowId) {
     box.innerHTML = h;
     _wcLiveTimer(box, data, eventId, rowId);
   } catch(e) {
-    box.innerHTML = '<div style="padding:8px;color:#ff4545;font-size:10px;text-align:center;">Erreur stats</div>';
+    box.innerHTML = '<div style="padding:8px;color:#ff4545;font-size:10px;text-align:center;line-height:1.4;">Erreur stats <span style="opacity:.6;">[v3]</span><br><span style="color:var(--t3);font-size:9px;">'+((e&&e.message)?e.message:e)+'</span></div>';
   }
 }
 
