@@ -19315,6 +19315,8 @@ async function toggleSaisonMatchDetail(rowEl){
     var added=false;
     if(typeof _renderEspnMatchStats==='function'){ try{ var st=_renderEspnMatchStats(data, homeId, awayId, '#4d84ff'); if(st){ h+=st; added=true; } }catch(e){} }
     if(typeof _renderEspnMatchPitch==='function'){ try{ var pi=_renderEspnMatchPitch(data, '#4d84ff', function(x){return x;}); if(pi){ h+=pi; added=true; } }catch(e){} }
+    // ── Moments forts : timeline chronologique complète (buts, cartons, changements) ──
+    try{ if(typeof _momentsTimeline==='function'){ var _mt=_momentsTimeline(data); if(_mt){ h+=_mt; added=true; } } }catch(e){}
     if(!added) h+='<div style="font-size:11px;color:var(--t3);text-align:center;padding:6px;">Pas de détails (compo/stats) pour ce match.</div>';
     // ── Résumé vidéo (Championnat / Europe) ──
     var _yr=''; try{ if(comp.date) _yr=new Date(comp.date).getFullYear()||''; }catch(e){}
