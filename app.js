@@ -15874,7 +15874,7 @@ function _frMoment(t){
     [/red card/i,'Carton rouge 🟥'],
     [/yellow card|booked/i,'Carton jaune 🟨'],
     [/(shot|attempt|header)\s*(on target)?\s*saved/i,'Tir arrêté 🧤'],
-    [/saved/i,'Arrêt 🧤'],
+    [/\bsaved?\b/i,'Arrêt 🧤'],
     [/(shot|attempt|header).*(on target|on goal)/i,'Tir cadré'],
     [/(shot|attempt|header).*(off target|missed|wide|high)/i,'Tir non cadré'],
     [/(shot|attempt|header).*(blocked)/i,'Tir contré'],
@@ -15888,6 +15888,7 @@ function _frMoment(t){
     [/\bheader\b/i,'Tête']
   ];
   for(var i=0;i<reps.length;i++){ if(reps[i][0].test(t)){ t=t.replace(reps[i][0], reps[i][1]); break; } }
+  t = t.replace(/\.?\s*assisted by\s*/i,' — passe de ').trim();
   return t;
 }
 async function _loadFrCommentary(eventId, rowId){
@@ -15900,7 +15901,7 @@ async function _loadFrCommentary(eventId, rowId){
     if(!com.length){ return; }
     // On ne garde QUE les temps forts (buts, tirs, arrêts, occasions, penalties, cartons, poteaux)
     var KEEP=/(goal|penalt|red card|yellow card|booked|saved|\bsave\b|\bshot\b|attempt|header|hits the (post|bar)|woodwork|big chance|own goal|\bVAR\b|disallow)/i;
-    var DROP=/(attempted tackle|\btackle\b|ball touch|throw|goal kick|\bpass\b|\bout\b|\bclear|\bcross\b|interception|recovery|offside|\bfoul\b|delay)/i;
+    var DROP=/(attempted tackle|\btackle\b|ball touch|throw|goal kick|\bpass\b|\bout\b|\bclear|\bcross\b|interception|recovery|offside|\bfoul\b|delay|\)\s*assists?\b|\)\s*save\b)/i;
     var moments = com.filter(function(c){
       var x = c.text || (c.play&&c.play.text) || '';
       return KEEP.test(x) && !DROP.test(x);
@@ -15921,6 +15922,57 @@ async function _loadFrCommentary(eventId, rowId){
     h+='</div>';
     el.innerHTML = h;
   }catch(e){}
+}
+// Timeline chronologique COMPLÈTE du match depuis keyEvents (buts, cartons, changements, penalties)
+function _momentsTimeline(data){
+  try{
+    var ke = data.keyEvents || [];
+    if(!ke.length) return '';
+    var fr = (typeof wcFr==='function') ? wcFr : function(x){return x;};
+    function nameAt(e,i){ return (e.participants && e.participants[i] && e.participants[i].athlete && e.participants[i].athlete.displayName) || ''; }
+    var items = [];
+    ke.forEach(function(e, idx){
+      var min = (e.clock && e.clock.displayValue) ? e.clock.displayValue : '';
+      var tt  = ((e.type && e.type.text) || '').toLowerCase();
+      var team = (e.team && e.team.displayName) ? fr(e.team.displayName) : '';
+      var p0 = nameAt(e,0), p1 = nameAt(e,1);
+      var ico='', label='', col='var(--t2)';
+      if(e.scoringPlay===true || /goal|\bbut\b/.test(tt)){
+        var own = /own/.test(tt) || /csc/.test(tt);
+        var pen = /penalt/.test(tt);
+        ico='⚽'; col='#1ed760';
+        label = '<b style="color:var(--t1);">'+(p0||'But')+'</b>'
+              + (own?' <span style="color:#ff8a8a;font-size:8.5px;">(csc)</span>':'')
+              + (pen?' <span style="color:var(--t3);font-size:8.5px;">(pen)</span>':'')
+              + (p1 && !own ? ' <span style="color:var(--t3);font-size:9px;">👟 '+p1+'</span>' : '');
+      } else if(/red card|carton rouge/.test(tt)){
+        ico='🟥'; label='<span style="color:var(--t1);">'+(p0||'')+'</span>';
+      } else if(/yellow card|carton jaune|booked/.test(tt)){
+        ico='🟨'; label='<span style="color:var(--t1);">'+(p0||'')+'</span>';
+      } else if(/substitut|remplac/.test(tt)){
+        ico='🔄'; col='var(--t3)';
+        label = (p0?'<span style="color:#1ed760;">'+p0+'</span>':'')
+              + (p1?' ⬅ <span style="color:#ff8a8a;">'+p1+'</span>':'');
+      } else if(/penalt/.test(tt)){
+        ico='🎯'; label='<span style="color:var(--t1);">'+(p0||'Penalty')+'</span>';
+      } else { return; }
+      items.push({min:min, ico:ico, label:label, team:team, col:col, order:idx});
+    });
+    if(!items.length) return '';
+    function mnum(m){ var x=String(m).match(/(\d+)(?:\s*\+\s*(\d+))?/); return x ? (parseInt(x[1],10) + (x[2]?parseInt(x[2],10)/100:0)) : 9999; }
+    items.sort(function(a,b){ var d=mnum(a.min)-mnum(b.min); return d!==0?d:a.order-b.order; });
+    var h = '<div style="background:rgba(255,255,255,.02);border-radius:8px;padding:10px;margin-bottom:8px;">';
+    h += '<div style="font-size:9px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;color:#8aa0ff;margin-bottom:8px;">✨ Moments forts</div>';
+    items.forEach(function(it){
+      h += '<div style="display:flex;gap:8px;align-items:flex-start;padding:5px 0;border-bottom:1px solid rgba(255,255,255,.04);font-size:10px;">';
+      h += '<span style="color:'+it.col+';font-weight:800;min-width:34px;flex-shrink:0;">'+(it.min||'')+'</span>';
+      h += '<span style="flex-shrink:0;">'+it.ico+'</span>';
+      h += '<div style="line-height:1.35;">'+it.label+(it.team?(' <span style="color:var(--t3);font-size:8.5px;">· '+it.team+'</span>'):'')+'</div>';
+      h += '</div>';
+    });
+    h += '</div>';
+    return h;
+  }catch(e){ return ''; }
 }
 async function _wcRenderMatch(eventId, rowId) {
   var box = document.getElementById(rowId);
@@ -15991,48 +16043,8 @@ async function _wcRenderMatch(eventId, rowId) {
     });
     h += '</div>';
 
-    // ── Buteurs & passeurs + cartons (keyEvents) ──
-    var ke = data.keyEvents || [];
-    var goals = ke.filter(function(e){ return e.scoringPlay===true || (e.type && e.type.text==='Goal'); });
-    if(goals.length) {
-      h += '<div style="background:rgba(30,215,96,.05);border-radius:8px;padding:10px;margin-bottom:8px;">';
-      h += '<div style="font-size:9px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;color:#1ed760;margin-bottom:8px;">⚽ Buts</div>';
-      goals.forEach(function(e){
-        var min = (e.clock && e.clock.displayValue) ? e.clock.displayValue : '';
-        var scorer = (e.participants && e.participants[0] && e.participants[0].athlete) ? e.participants[0].athlete.displayName : '?';
-        var assist = (e.participants && e.participants[1] && e.participants[1].athlete) ? e.participants[1].athlete.displayName : '';
-        var team = (e.team && e.team.displayName) ? wcFr(e.team.displayName) : '';
-        h += '<div style="display:flex;align-items:center;gap:8px;padding:4px 0;font-size:10px;">';
-        h += '<span style="font-size:11px;font-weight:800;color:#1ed760;min-width:30px;">'+min+'</span>';
-        h += '<span style="font-size:12px;">⚽</span>';
-        h += '<div style="flex:1;"><span style="color:var(--t1);font-weight:700;">'+scorer+'</span>';
-        if(assist) h += ' <span style="color:var(--t3);font-size:9px;">👟 '+assist+'</span>';
-        h += '<div style="font-size:8px;color:var(--t3);">'+team+'</div></div>';
-        h += '</div>';
-      });
-      h += '</div>';
-    }
-
-    // Cartons
-    var cards = ke.filter(function(e){ return e.type && (e.type.text==='Yellow Card'||e.type.text==='Red Card'); });
-    if(cards.length) {
-      h += '<div style="background:rgba(255,255,255,.02);border-radius:8px;padding:10px;">';
-      h += '<div style="font-size:9px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;color:#f0b020;margin-bottom:8px;">🟨 Cartons</div>';
-      cards.forEach(function(e){
-        var min = (e.clock && e.clock.displayValue) ? e.clock.displayValue : '';
-        var player = (e.participants && e.participants[0] && e.participants[0].athlete) ? e.participants[0].athlete.displayName : '?';
-        var isRed = e.type.text==='Red Card';
-        h += '<div style="display:flex;align-items:center;gap:8px;padding:3px 0;font-size:10px;">';
-        h += '<span style="font-size:11px;font-weight:800;color:var(--t2);min-width:30px;">'+min+'</span>';
-        h += '<span style="display:inline-block;width:9px;height:12px;border-radius:2px;background:'+(isRed?'#ff4545':'#f0b020')+';"></span>';
-        h += '<span style="color:var(--t1);">'+player+'</span>';
-        h += '</div>';
-      });
-      h += '</div>';
-    }
-
-    // ── Commentaire en français (chargé en asynchrone via l'édition FR d'ESPN) ──
-    h += '<div id="'+rowId+'-comm"></div>';
+    // ── Moments forts : timeline chronologique COMPLÈTE (buts, cartons, changements) ──
+    h += _momentsTimeline(data);
 
     // ── Résumé vidéo (lecteur intégré si dispo, sinon recherche YouTube) ──
     h += _wcVideoBlock(data, _wcN[0], _wcN[1]);
@@ -16042,7 +16054,6 @@ async function _wcRenderMatch(eventId, rowId) {
 
     box.innerHTML = h;
     _wcStatsTimer(box, data, eventId, rowId);
-    _loadFrCommentary(eventId, rowId);   // remplit le commentaire FR sans bloquer le rendu
   } catch(e) {
     box.innerHTML = '<div style="padding:8px;color:#ff4545;font-size:10px;text-align:center;line-height:1.4;">Erreur stats <span style="opacity:.6;">[v3]</span><br><span style="color:var(--t3);font-size:9px;">'+((e&&e.message)?e.message:e)+'</span></div>';
   }
