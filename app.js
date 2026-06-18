@@ -15970,6 +15970,53 @@ function _momentsTimeline(data){
     return h;
   }catch(e){ return ''; }
 }
+// Carte des buts : un point par but à sa position réelle (fieldPositionX/Y, 0-100, sens de l'attaque)
+function _goalMap(data){
+  try{
+    var ke = data.keyEvents || [];
+    var goals = ke.filter(function(e){
+      var hasC = (e.fieldPositionX!=null && e.fieldPositionY!=null);
+      var tt = ((e.type && e.type.text) || '').toLowerCase();
+      var isGoal = e.scoringPlay===true || /goal|\bbut\b/.test(tt) || /penalty\s*-?\s*scored/.test(tt);
+      return hasC && isGoal;
+    });
+    if(!goals.length) return '';
+    var fr = (typeof wcFr==='function') ? wcFr : function(x){return x;};
+    var teams = [];
+    goals.forEach(function(g){ var t=(g.team&&g.team.displayName)||'?'; if(teams.indexOf(t)<0) teams.push(t); });
+    var cols = ['#4d84ff','#ff7a45','#1ed760','#f0b020'];
+    function colOf(t){ var i=teams.indexOf(t); return cols[i]||'#bbbbbb'; }
+    function clamp(v,a,b){ return v<a?a:(v>b?b:v); }
+    var Wf=200, Hf=230, ox=10, oy=10;
+    function px(Y){ return ox + (clamp(Y,0,100)/100)*Wf; }
+    function py(X){ return oy + ((100 - clamp(X,50,100))/50)*Hf; }
+    var ln='rgba(255,255,255,.22)', txt='#aab4cc';
+    var svg='<svg viewBox="0 0 220 250" width="100%" style="max-width:300px;display:block;margin:4px auto;">';
+    svg+='<rect x="'+ox+'" y="'+oy+'" width="'+Wf+'" height="'+Hf+'" fill="rgba(30,215,96,.04)" stroke="'+ln+'" stroke-width="1.5"/>';
+    svg+='<rect x="92" y="6" width="36" height="5" fill="none" stroke="'+ln+'" stroke-width="2"/>';        // but
+    svg+='<rect x="50" y="'+oy+'" width="120" height="64" fill="none" stroke="'+ln+'" stroke-width="1.2"/>'; // surface
+    svg+='<rect x="82" y="'+oy+'" width="56" height="26" fill="none" stroke="'+ln+'" stroke-width="1.2"/>';  // 6 m
+    svg+='<circle cx="110" cy="'+py(88).toFixed(1)+'" r="1.8" fill="'+ln+'"/>';                              // point de penalty
+    svg+='<path d="M 86 74 A 28 28 0 0 0 134 74" fill="none" stroke="'+ln+'" stroke-width="1.2"/>';          // arc surface
+    svg+='<line x1="'+ox+'" y1="'+(oy+Hf)+'" x2="'+(ox+Wf)+'" y2="'+(oy+Hf)+'" stroke="'+ln+'" stroke-width="1.2"/>';
+    svg+='<path d="M 86 '+(oy+Hf)+' A 28 28 0 0 1 134 '+(oy+Hf)+'" fill="none" stroke="'+ln+'" stroke-width="1.2"/>';
+    goals.forEach(function(g){
+      var x=px(g.fieldPositionY), y=py(g.fieldPositionX);
+      var c=colOf((g.team&&g.team.displayName)||'?');
+      var min=(g.clock&&g.clock.displayValue)||'';
+      svg+='<circle cx="'+x.toFixed(1)+'" cy="'+y.toFixed(1)+'" r="5.5" fill="'+c+'" stroke="#0b1020" stroke-width="1.2"/>';
+      if(min) svg+='<text x="'+(x+8).toFixed(1)+'" y="'+(y+3).toFixed(1)+'" fill="'+txt+'" font-size="9" font-weight="700">'+min+'</text>';
+    });
+    svg+='</svg>';
+    var leg='<div style="display:flex;gap:12px;justify-content:center;flex-wrap:wrap;margin-top:2px;">';
+    teams.forEach(function(t){ leg+='<span style="display:inline-flex;align-items:center;gap:5px;font-size:9px;color:var(--t2);"><span style="width:9px;height:9px;border-radius:50%;background:'+colOf(t)+';display:inline-block;"></span>'+fr(t)+'</span>'; });
+    leg+='</div>';
+    var h='<div style="background:rgba(255,255,255,.02);border-radius:8px;padding:10px;margin-bottom:8px;">';
+    h+='<div style="font-size:9px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;color:#8aa0ff;margin-bottom:6px;">🎯 Carte des buts</div>';
+    h+=svg+leg+'</div>';
+    return h;
+  }catch(e){ return ''; }
+}
 async function _wcRenderMatch(eventId, rowId) {
   var box = document.getElementById(rowId);
   if(!box || box.getAttribute('data-open')!=='1') return;
@@ -16041,6 +16088,7 @@ async function _wcRenderMatch(eventId, rowId) {
 
     // ── Moments forts : timeline chronologique COMPLÈTE (buts, cartons, changements) ──
     h += _momentsTimeline(data);
+    h += _goalMap(data);
 
     // ── Résumé vidéo (lecteur intégré si dispo, sinon recherche YouTube) ──
     h += _wcVideoBlock(data, _wcN[0], _wcN[1]);
@@ -19313,6 +19361,7 @@ async function toggleSaisonMatchDetail(rowEl){
     if(typeof _renderEspnMatchPitch==='function'){ try{ var pi=_renderEspnMatchPitch(data, '#4d84ff', function(x){return x;}); if(pi){ h+=pi; added=true; } }catch(e){} }
     // ── Moments forts : timeline chronologique complète (buts, cartons, changements) ──
     try{ if(typeof _momentsTimeline==='function'){ var _mt=_momentsTimeline(data); if(_mt){ h+=_mt; added=true; } } }catch(e){}
+    try{ if(typeof _goalMap==='function'){ var _gm=_goalMap(data); if(_gm){ h+=_gm; added=true; } } }catch(e){}
     if(!added) h+='<div style="font-size:11px;color:var(--t3);text-align:center;padding:6px;">Pas de détails (compo/stats) pour ce match.</div>';
     // ── Résumé vidéo (Championnat / Europe) ──
     var _yr=''; try{ if(comp.date) _yr=new Date(comp.date).getFullYear()||''; }catch(e){}
