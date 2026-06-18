@@ -19529,14 +19529,24 @@ async function toggleSaisonMatchDetail(rowEl){
   if(!el || el.className!=='smd-panel') return;
   var eventId = rowEl.getAttribute('data-eid')||'';
   var league = rowEl.getAttribute('data-lg')||'';
-  if(el.getAttribute('data-open')==='1'){ el.style.display='none'; el.innerHTML=''; el.setAttribute('data-open','0'); return; }
-  try{ var others=document.querySelectorAll('.smd-panel'); for(var i=0;i<others.length;i++){ if(others[i]!==el){ others[i].style.display='none'; others[i].innerHTML=''; others[i].setAttribute('data-open','0'); } } }catch(e){}
+  if(el.getAttribute('data-open')==='1'){
+    el.style.display='none'; el.innerHTML=''; el.setAttribute('data-open','0');
+    if(el._refresh){ clearInterval(el._refresh); el._refresh=null; }
+    return;
+  }
+  try{ var others=document.querySelectorAll('.smd-panel'); for(var i=0;i<others.length;i++){ if(others[i]!==el){ others[i].style.display='none'; others[i].innerHTML=''; others[i].setAttribute('data-open','0'); if(others[i]._refresh){ clearInterval(others[i]._refresh); others[i]._refresh=null; } } } }catch(e){}
   el.style.display='block'; el.setAttribute('data-open','1');
+  if(!el.id) el.id='smd-'+eventId;
   el.innerHTML='<div style="padding:14px;text-align:center;color:var(--t3);font-size:11px;">⏳ Chargement du résumé…</div>';
   if(!eventId){ el.innerHTML='<div style="padding:12px;color:var(--t3);font-size:11px;text-align:center;">Résumé indisponible pour ce match.</div>'; return; }
+  await _renderSaisonDetail(el, eventId, league);
+}
+// Rendu du détail Saisons — même traitement live que la Coupe du Monde, re-jouable pour le rafraîchissement
+async function _renderSaisonDetail(el, eventId, league){
   try{
     var r=await fetch('https://site.api.espn.com/apis/site/v2/sports/soccer/'+(league||'eng.1')+'/summary?event='+eventId);
     var data=await r.json();
+    el._data=data;   // pour le sélecteur de marché (re-rendu sans re-fetch)
     var comp=(data.header&&data.header.competitions&&data.header.competitions[0])||{};
     var cps=comp.competitors||[];
     var home=cps.filter(function(c){return c.homeAway==='home';})[0]||cps[0]||{};
@@ -19544,20 +19554,36 @@ async function toggleSaisonMatchDetail(rowEl){
     var homeId=(home.team&&home.team.id)||'', awayId=(away.team&&away.team.id)||'';
     var hN=(home.team&&(home.team.displayName||home.team.shortDisplayName))||'', aN=(away.team&&(away.team.displayName||away.team.shortDisplayName))||'';
     var hS=(home.score!=null?home.score:''), aS=(away.score!=null?away.score:'');
+    var isLive=(typeof _isLive==='function')&&_isLive(data);
+
+    // ── Bannière BUT (score augmenté depuis le dernier refresh) ──
+    var goalBanner='';
+    try{ if(typeof _liveScore==='function'){ var _sc=_liveScore(data); if(_sc){ if(isLive && el._lastScore!=null && _sc.total>el._lastScore){ if(typeof _g45EnsureGoalCSS==='function')_g45EnsureGoalCSS(); goalBanner=(typeof _goalBannerHtml==='function')?_goalBannerHtml(_sc):''; } el._lastScore=_sc.total; } } }catch(e){}
+
     var h='<div style="margin:4px 0 8px;padding:10px;background:rgba(0,0,0,.18);border-radius:10px;">';
-    h+='<div style="display:flex;align-items:center;justify-content:center;gap:12px;font-size:13px;font-weight:800;color:var(--t1);margin-bottom:8px;"><span>'+hN+'</span><span style="color:var(--a);">'+hS+' - '+aS+'</span><span>'+aN+'</span></div>';
+    h+=goalBanner;
+    // En live : on laisse le lecteur live afficher le score. Hors live : en-tête de score.
+    if(!isLive) h+='<div style="display:flex;align-items:center;justify-content:center;gap:12px;font-size:13px;font-weight:800;color:var(--t1);margin-bottom:8px;"><span>'+hN+'</span><span style="color:var(--a);">'+hS+' - '+aS+'</span><span>'+aN+'</span></div>';
+    // ── Blocs LIVE (vides automatiquement si match pas en cours) ──
+    try{ if(typeof _liveBettingBlock==='function') h+=_liveBettingBlock(data, el.id); }catch(e){}
+    try{ if(typeof _liveBetsBlock==='function'){ var _lb=_liveBetsBlock(data); if(_lb) h+=_lb; } }catch(e){}
+    try{ if(typeof _liveBallBlock==='function') h+=_liveBallBlock(data); }catch(e){}
+    try{ if(typeof _liveOddsBlock==='function') h+=_liveOddsBlock(data); }catch(e){}
+
     var added=false;
     if(typeof _renderEspnMatchStats==='function'){ try{ var st=_renderEspnMatchStats(data, homeId, awayId, '#4d84ff'); if(st){ h+=st; added=true; } }catch(e){} }
     if(typeof _renderEspnMatchPitch==='function'){ try{ var pi=_renderEspnMatchPitch(data, '#4d84ff', function(x){return x;}); if(pi){ h+=pi; added=true; } }catch(e){} }
-    // ── Moments forts : timeline chronologique complète (buts, cartons, changements) ──
-    try{ if(typeof _liveBetsBlock==='function'){ var _lb=_liveBetsBlock(data); if(_lb){ h+=_lb; added=true; } } }catch(e){}
     try{ if(typeof _momentsTimeline==='function'){ var _mt=_momentsTimeline(data); if(_mt){ h+=_mt; added=true; } } }catch(e){}
-    if(!added) h+='<div style="font-size:11px;color:var(--t3);text-align:center;padding:6px;">Pas de détails (compo/stats) pour ce match.</div>';
-    // ── Résumé vidéo (Championnat / Europe) ──
+    if(!added && !isLive) h+='<div style="font-size:11px;color:var(--t3);text-align:center;padding:6px;">Pas de détails (compo/stats) pour ce match.</div>';
     var _yr=''; try{ if(comp.date) _yr=new Date(comp.date).getFullYear()||''; }catch(e){}
     try{ if(typeof _videoBlock==='function') h+=_videoBlock(data, hN, aN, ('résumé '+_yr).trim()); }catch(e){}
     h+='</div>';
     el.innerHTML=h;
+
+    // ── Rafraîchissement auto pendant le match (toutes les 30 s) ──
+    if(isLive){
+      if(!el._refresh){ el._refresh=setInterval(function(){ if(el.getAttribute('data-open')==='1'){ _renderSaisonDetail(el, eventId, league); } else { clearInterval(el._refresh); el._refresh=null; } }, 30000); }
+    } else if(el._refresh){ clearInterval(el._refresh); el._refresh=null; }
   }catch(e){ el.innerHTML='<div style="padding:12px;color:#ff6b6b;font-size:11px;text-align:center;">Résumé indisponible.</div>'; }
 }
 window.toggleSaisonMatchDetail=toggleSaisonMatchDetail;
