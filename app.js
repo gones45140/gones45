@@ -19646,19 +19646,32 @@ var G45_LEAGUE_GROUPS = [
 ];
 function loadLiveTab(){
   var el=document.getElementById('t-live'); if(!el) return;
+  var cards=G45_SPORTS.map(function(s){
+    return '<button onclick="g45DirectSport(\''+s.key+'\')" style="border:none;cursor:pointer;background:rgba(255,255,255,.05);border-radius:12px;padding:16px 8px;display:flex;flex-direction:column;align-items:center;gap:6px;color:var(--t1);"><span style="font-size:26px;">'+s.ico+'</span><span style="font-size:11px;font-weight:700;">'+s.name+'</span></button>';
+  }).join('');
+  el.innerHTML='<div class="sec" style="margin-top:0;">📡 En direct — tous sports</div>'
+    +'<div style="font-size:11px;color:var(--t3);margin-bottom:12px;">Choisis un sport, puis une compétition. Les matchs en direct 🔴 apparaissent en premier.</div>'
+    +'<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(88px,1fr));gap:10px;">'+cards+'</div>';
+}
+function g45DirectSport(sportKey){
+  var s=G45_SPORTS.filter(function(x){return x.key===sportKey;})[0]; if(!s) return;
+  var el=document.getElementById('t-live'); if(!el) return;
   window._g45ListId='g45-live-list';
-  var groupsHtml=G45_LEAGUE_GROUPS.map(function(g){
+  var groups=(sportKey==='soccer')?G45_LEAGUE_GROUPS:(s.groups||[]);
+  var groupsHtml=groups.map(function(g){
     var chips=g.leagues.map(function(l){
-      return '<button class="g45lg-chip" data-slug="'+l.slug+'" onclick="g45LoadLeagueMatches(\''+l.slug+'\',this)" style="border:none;cursor:pointer;font-size:11px;font-weight:700;padding:7px 11px;border-radius:8px;background:rgba(255,255,255,.06);color:var(--t2);white-space:nowrap;flex-shrink:0;">'+l.ico+' '+l.name+'</button>';
+      return '<button class="g45lg-chip" onclick="g45LoadLeagueMatches(\''+l.slug+'\',this,0,\''+sportKey+'\')" style="border:none;cursor:pointer;font-size:11px;font-weight:700;padding:7px 11px;border-radius:8px;background:rgba(255,255,255,.06);color:var(--t2);white-space:nowrap;flex-shrink:0;">'+l.ico+' '+l.name+'</button>';
     }).join('');
     return '<div style="margin-bottom:8px;"><div style="font-size:9px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;color:#4f5d88;margin-bottom:5px;">'+g.grp+'</div>'
       +'<div style="display:flex;gap:6px;overflow-x:auto;padding-bottom:4px;-webkit-overflow-scrolling:touch;">'+chips+'</div></div>';
   }).join('');
-  el.innerHTML='<div class="sec" style="margin-top:0;">📡 Matchs en direct</div>'
-    +'<div style="font-size:11px;color:var(--t3);margin-bottom:10px;">Choisis une compétition, puis ouvre un match pour le suivre en direct (lecteur de paris, compos, timeline, suivi de tes paris…).</div>'
+  el.innerHTML='<button onclick="loadLiveTab()" style="border:none;background:rgba(255,255,255,.06);color:var(--t2);border-radius:8px;padding:6px 12px;font-size:11px;font-weight:700;cursor:pointer;margin-bottom:10px;">← Sports</button>'
+    +'<div class="sec" style="margin-top:0;">'+s.ico+' '+s.name+' — en direct</div>'
+    +'<div style="font-size:11px;color:var(--t3);margin-bottom:10px;">Choisis une compétition, puis ouvre un match pour le suivre en direct.</div>'
     +groupsHtml
     +'<div id="g45-live-list" style="margin-top:8px;"><div style="text-align:center;color:var(--t3);font-size:11px;padding:24px;">👆 Sélectionne une compétition</div></div>';
 }
+window.g45DirectSport=g45DirectSport;
 function _g45ymd(d){ return ''+d.getFullYear()+String(d.getMonth()+1).padStart(2,'0')+String(d.getDate()).padStart(2,'0'); }
 function _g45MatchRow(e, slug, sportPath){
   sportPath = sportPath || 'soccer';
