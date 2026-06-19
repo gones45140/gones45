@@ -19858,7 +19858,28 @@ async function _g45ApplyMatchdays(slug, mb){
       if(cell) cell.innerHTML='<span style="font-size:11px;color:#4d84ff;font-weight:800;line-height:1;">J'+map[key]+'</span>';
     }
   });
+  // Sélecteur « aller à la journée »
+  try{
+    var seen={}, mds=[];
+    Object.keys(map).forEach(function(k){ var v=map[k]; if(!seen[v]){ seen[v]=1; mds.push(v); } });
+    mds.sort(function(a,b){ return a-b; });
+    var jump=document.getElementById('g45-md-jump');
+    if(jump && mds.length){
+      var opts='<option value="">⤵️ Aller à la journée…</option>'+mds.map(function(n){ return '<option value="'+n+'">Journée '+n+'</option>'; }).join('');
+      jump.innerHTML='<select onchange="g45JumpMatchday(this.value)" style="width:100%;background:var(--bg3,#0d1220);color:var(--t1);border:1px solid var(--card-border,rgba(77,132,255,.32));border-radius:8px;padding:8px 10px;font-size:12px;font-weight:700;cursor:pointer;">'+opts+'</select>';
+    }
+  }catch(e){}
 }
+function g45JumpMatchday(md){
+  md=+md; if(!md || !window._g45CalMd) return;
+  var dates=Object.keys(window._g45CalMd).filter(function(k){ return window._g45CalMd[k]===md; }).sort();
+  if(!dates.length) return;
+  var p=dates[0].split('-'), td=new Date(+p[0], +p[1]-1, +p[2]), now=new Date();
+  var off=(td.getFullYear()-now.getFullYear())*12+(td.getMonth()-now.getMonth());
+  window._g45CalOpenDay=+p[2];
+  g45LoadCalendar(window._g45CalSlug, null, off, window._g45CalSport);
+}
+window.g45JumpMatchday=g45JumpMatchday;
 function _g45MonthBounds(off){
   var base=new Date(); base.setDate(1); base.setHours(0,0,0,0); base.setMonth(base.getMonth()+(off||0));
   var y=base.getFullYear(), m=base.getMonth();
@@ -19888,6 +19909,7 @@ async function g45LoadCalendar(slug, btn, monthOffset, sportPath){
       +'<button onclick="g45CalNav(1)" style="border:none;background:rgba(255,255,255,.06);color:var(--t2);border-radius:8px;padding:7px 14px;font-weight:800;cursor:pointer;">▶</button>'
       +'</div>';
     var wd=['L','M','M','J','V','S','D'];
+    h+='<div id="g45-md-jump" style="margin-bottom:10px;"></div>';
     h+='<div style="display:grid;grid-template-columns:repeat(7,1fr);gap:3px;margin-bottom:3px;">';
     wd.forEach(function(w){ h+='<div style="text-align:center;font-size:11px;color:var(--t3);font-weight:700;">'+w+'</div>'; });
     h+='</div><div style="display:grid;grid-template-columns:repeat(7,1fr);gap:3px;">';
@@ -19911,6 +19933,7 @@ async function g45LoadCalendar(slug, btn, monthOffset, sportPath){
     h+='<div id="g45-cal-day" style="margin-top:12px;"></div>';
     list.innerHTML='<div style="background:var(--bg2);border:1px solid var(--card-border,rgba(77,132,255,.32));border-radius:14px;padding:14px;box-shadow:0 4px 18px rgba(0,0,0,.5);max-width:480px;margin:0 auto;">'+h+'</div>';
     if(sportPath==='soccer'){ try{ _g45ApplyMatchdays(slug, mb); }catch(e){} }
+    if(window._g45CalOpenDay){ var _od=window._g45CalOpenDay; window._g45CalOpenDay=null; setTimeout(function(){ try{ g45CalDay(_od); var bx=document.getElementById('g45-cal-day'); if(bx&&bx.scrollIntoView) bx.scrollIntoView({behavior:'smooth',block:'nearest'}); }catch(e){} }, 160); }
   }catch(err){ list.innerHTML='<div style="text-align:center;color:#ff6b6b;font-size:11px;padding:24px;">Erreur de chargement du calendrier.</div>'; }
 }
 function g45CalNav(delta){ if(window._g45CalSlug) g45LoadCalendar(window._g45CalSlug, null, (window._g45CalOffset||0)+delta, window._g45CalSport); }
