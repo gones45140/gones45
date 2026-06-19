@@ -19933,7 +19933,8 @@ async function _renderGenericDetail(el, sport, lg, eid){
     // Scores par période si dispo (linescores)
     try{
       var hl=home.linescores||[], al=away.linescores||[];
-      if(hl.length){
+      var hasVals=hl.some(function(p,i){ return (+(p.value||p.displayValue||0))>0 || (al[i]&&+(al[i].value||al[i].displayValue||0)>0); });
+      if(sport!=='rugby' && hl.length && hasVals){ // rugby = 2 mi-temps non remplies par ESPN → on masque ce tableau de périodes
         h+='<div style="margin-top:10px;display:flex;justify-content:center;gap:10px;font-size:10px;color:var(--t2);">';
         h+='<div><div style="color:var(--t3);font-size:8px;text-align:right;">&nbsp;</div><div style="font-weight:700;text-align:right;">'+hN.slice(0,3).toUpperCase()+'</div><div style="font-weight:700;text-align:right;">'+aN.slice(0,3).toUpperCase()+'</div></div>';
         h+='<div style="display:flex;gap:8px;">';
