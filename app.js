@@ -19751,6 +19751,41 @@ function _rugbyStat(stats, name){
   for(var i=0;i<cats.length;i++){ var st=cats[i].stats||[]; for(var j=0;j<st.length;j++){ if(st[j].name===name) return st[j].displayValue; } }
   return null;
 }
+function _rugbyScorers(data){
+  var BP=data&&data.boxscore&&data.boxscore.players; if(!BP||!BP.length) return '';
+  function val(a, nm){
+    var g=a.statistics||[];
+    for(var i=0;i<g.length;i++){ var st=g[i].stats||[]; for(var j=0;j<st.length;j++){ if(st[j].name===nm) return +st[j].value||0; } }
+    return 0;
+  }
+  var tries=[], cons=[], pens=[], drops=[];
+  BP.forEach(function(tm){
+    var ab=(tm.team&&(tm.team.abbreviation||tm.team.shortDisplayName))||'';
+    (tm.statistics||[]).forEach(function(grp){
+      (grp.athletes||[]).forEach(function(a){
+        var nm=(a.athlete&&(a.athlete.displayName||a.athlete.shortName))||'?';
+        var t=val(a,'tries'), c=val(a,'conversionGoals'), p=val(a,'penaltyGoals'), d=val(a,'dropGoalsConverted')||val(a,'dropGoals');
+        if(t>0) tries.push({n:nm,v:t,ab:ab});
+        if(c>0) cons.push({n:nm,v:c,ab:ab});
+        if(p>0) pens.push({n:nm,v:p,ab:ab});
+        if(d>0) drops.push({n:nm,v:d,ab:ab});
+      });
+    });
+  });
+  if(!tries.length && !cons.length && !pens.length && !drops.length) return '';
+  function line(label, arr){
+    if(!arr.length) return '';
+    var txt=arr.map(function(x){ return x.n+(x.v>1?' ×'+x.v:'')+' <span style="color:var(--t3);">('+x.ab+')</span>'; }).join(', ');
+    return '<div style="font-size:11px;color:var(--t2);padding:3px 0;line-height:1.45;"><span style="font-weight:800;color:var(--t1);">'+label+'</span> '+txt+'</div>';
+  }
+  return '<div style="margin-top:8px;background:rgba(77,132,255,.07);border-radius:10px;padding:10px;">'
+    +'<div style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:#8aa0ff;margin-bottom:4px;">Réalisations</div>'
+    +line('🏉 Essais :', tries)
+    +line('🎯 Transformations :', cons)
+    +line('➕ Pénalités :', pens)
+    +line('🦶 Drops :', drops)
+    +'</div>';
+}
 function _rugbyTeamStats(data){
   var T=data&&data.boxscore&&data.boxscore.teams; if(!T||T.length<2) return '';
   var comp=(data.header&&data.header.competitions&&data.header.competitions[0])||{};
@@ -19851,7 +19886,7 @@ async function _renderGenericDetail(el, sport, lg, eid){
         h+='</div>';
       }
     }catch(e){}
-    if(sport==='rugby'){ try{ h+=_rugbyTeamStats(data); }catch(e){} }
+    if(sport==='rugby'){ try{ h+=_rugbyScorers(data); }catch(e){} try{ h+=_rugbyTeamStats(data); }catch(e){} }
     try{ h+=_genericLineups(data); }catch(e){}
     h+='</div>';
     el.innerHTML=h;
