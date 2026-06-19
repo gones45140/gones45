@@ -19713,7 +19713,7 @@ async function g45LoadLeagueMatches(slug, btn, dayOffset, sportPath){
       byDay[key].sort(function(a,b){ var ra=stOf(a)==='in'?0:1, rb=stOf(b)==='in'?0:1; if(ra!==rb) return ra-rb; return new Date(a.date)-new Date(b.date); });
       byDay[key].forEach(function(e){ h+=_g45MatchRow(e, slug, sportPath); });
     });
-    list.innerHTML=h;
+    list.innerHTML='<div style="background:var(--bg2);border:1px solid var(--card-border,rgba(77,132,255,.32));border-radius:14px;padding:12px;box-shadow:0 4px 18px rgba(0,0,0,.5);">'+h+'</div>';
   }catch(err){ list.innerHTML='<div style="text-align:center;color:#ff6b6b;font-size:11px;padding:24px;">Erreur de chargement.</div>'; }
 }
 function g45LiveNav(delta){ if(window._g45LiveSlug) g45LoadLeagueMatches(window._g45LiveSlug, null, (window._g45LiveOffset||0)+delta, window._g45Sport); }
@@ -19875,7 +19875,7 @@ async function g45LoadCalendar(slug, btn, monthOffset, sportPath){
     if(!events.length){ h+='<div style="text-align:center;color:var(--t3);font-size:10px;margin-top:12px;">Aucun match ce mois-ci — navigue avec ◀ ▶.</div>'; }
     else { h+='<div style="text-align:center;color:var(--t3);font-size:9px;margin-top:8px;">👆 Tape un jour bleu pour voir les matchs</div>'; }
     h+='<div id="g45-cal-day" style="margin-top:12px;"></div>';
-    list.innerHTML=h;
+    list.innerHTML='<div style="background:var(--bg2);border:1px solid var(--card-border,rgba(77,132,255,.32));border-radius:14px;padding:14px;box-shadow:0 4px 18px rgba(0,0,0,.5);">'+h+'</div>';
   }catch(err){ list.innerHTML='<div style="text-align:center;color:#ff6b6b;font-size:11px;padding:24px;">Erreur de chargement du calendrier.</div>'; }
 }
 function g45CalNav(delta){ if(window._g45CalSlug) g45LoadCalendar(window._g45CalSlug, null, (window._g45CalOffset||0)+delta, window._g45CalSport); }
