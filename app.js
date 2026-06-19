@@ -19796,20 +19796,25 @@ function _rugbyTeamStats(data){
   var ROWS=[['tries','Essais'],['conversionGoals','Transformations'],['penaltyGoals','Pénalités (but)'],
     ['possession','Possession','pct'],['territory','Territoire','pct'],['metres','Mètres parcourus'],
     ['cleanBreaks','Franchissements'],['defendersBeaten','Défenseurs battus'],['offload','Offloads'],
-    ['passes','Passes'],['runs','Courses'],['tackles','Plaquages'],['missedTackles','Plaquages manqués'],
-    ['lineoutsWon','Touches gagnées'],['scrumsWon','Mêlées gagnées'],['penaltiesConceded','Pénalités concédées'],
-    ['turnoversConceded','Ballons perdus'],['yellowCards','🟨 Jaunes'],['redCards','🟥 Rouges']];
+    ['passes','Passes'],['runs','Courses'],['kicksFromHand','Coups de pied (jeu)'],['kickPercentSuccess','Réussite au pied','pct'],
+    ['tackles','Plaquages'],['missedTackles','Plaquages manqués'],
+    ['lineoutsWon','Touches gagnées','frac','totalLineouts'],['scrumsWon','Mêlées gagnées','frac','scrumsTotal'],
+    ['rucksWon','Rucks gagnés','frac','rucksTotal'],['maulsWon','Mauls gagnés','frac','maulsTotal'],
+    ['turnoverKnockOn','En-avant'],['penaltiesConceded','Pénalités concédées'],['turnoversConceded','Ballons perdus'],
+    ['yellowCards','🟨 Jaunes'],['redCards','🟥 Rouges']];
   var rows=ROWS.map(function(r){
     var hv=_rugbyStat(ht.statistics, r[0]), av=_rugbyStat(at.statistics, r[0]);
     if(hv==null && av==null) return '';
-    if(r[2]==='pct'){ hv=(hv!=null?Math.round(parseFloat(hv)*100)+'%':'-'); av=(av!=null?Math.round(parseFloat(av)*100)+'%':'-'); }
-    if(hv==null)hv='-'; if(av==null)av='-';
-    var hb=(parseFloat(hv)>parseFloat(av))?'color:#4d84ff;':'color:var(--t1);';
-    var ab=(parseFloat(av)>parseFloat(hv))?'color:#4d84ff;':'color:var(--t1);';
+    var hN=parseFloat(hv), aN=parseFloat(av), hd, ad;
+    if(r[2]==='pct'){ hd=(hv!=null?Math.round(parseFloat(hv)*100)+'%':'-'); ad=(av!=null?Math.round(parseFloat(av)*100)+'%':'-'); }
+    else if(r[2]==='frac'){ var ht2=_rugbyStat(ht.statistics,r[3]), at2=_rugbyStat(at.statistics,r[3]); hd=(hv!=null?hv+(ht2!=null?'/'+ht2:''):'-'); ad=(av!=null?av+(at2!=null?'/'+at2:''):'-'); }
+    else { hd=(hv!=null?hv:'-'); ad=(av!=null?av:'-'); }
+    var hb=(hN>aN)?'color:#4d84ff;':'color:var(--t1);';
+    var ab=(aN>hN)?'color:#4d84ff;':'color:var(--t1);';
     return '<div style="display:grid;grid-template-columns:1fr 1.5fr 1fr;gap:6px;align-items:center;padding:3px 0;border-bottom:1px solid rgba(255,255,255,.03);font-size:11px;">'
-      +'<div style="text-align:left;font-weight:800;'+hb+'">'+hv+'</div>'
+      +'<div style="text-align:left;font-weight:800;'+hb+'">'+hd+'</div>'
       +'<div style="text-align:center;color:var(--t3);font-size:9px;">'+r[1]+'</div>'
-      +'<div style="text-align:right;font-weight:800;'+ab+'">'+av+'</div></div>';
+      +'<div style="text-align:right;font-weight:800;'+ab+'">'+ad+'</div></div>';
   }).join('');
   if(!rows) return '';
   var hAb=(ht.team&&(ht.team.abbreviation||ht.team.displayName))||'';
@@ -19906,16 +19911,31 @@ var G45_SPORTS = [
   {key:'football', name:'Foot US', ico:'🏈', groups:[{grp:'Football américain', leagues:[
     {name:'NFL', slug:'nfl', ico:'🏈'},{name:'NCAA', slug:'college-football', ico:'🎓'}
   ]}]},
-  {key:'rugby', name:'Rugby', ico:'🏉', groups:[{grp:'Rugby', leagues:[
-    {name:'Top 14', slug:'270559', ico:'🇫🇷'},
-    {name:'Champions Cup', slug:'271937', ico:'🏆'},
-    {name:'URC', slug:'270557', ico:'🇪🇺'},
-    {name:'Premiership', slug:'267979', ico:'🏴󠁧󠁢󠁥󠁮󠁧󠁿'},
-    {name:'Super Rugby', slug:'242041', ico:'🌏'},
-    {name:'Rugby Champ.', slug:'244293', ico:'🌍'},
-    {name:'Six Nations', slug:'180659', ico:'6️⃣'},
-    {name:'Coupe du Monde', slug:'164205', ico:'🌍'}
-  ]}]}
+  {key:'rugby', name:'Rugby', ico:'🏉', groups:[
+    {grp:'Clubs', leagues:[
+      {name:'Top 14', slug:'270559', ico:'🇫🇷'},
+      {name:'Champions Cup', slug:'271937', ico:'🏆'},
+      {name:'Challenge Cup', slug:'272073', ico:'🥈'},
+      {name:'URC', slug:'270557', ico:'🇪🇺'},
+      {name:'Premiership', slug:'267979', ico:'🏴󠁧󠁢󠁥󠁮󠁧󠁿'},
+      {name:'Super Rugby', slug:'242041', ico:'🌏'},
+      {name:'Currie Cup', slug:'270555', ico:'🇿🇦'},
+      {name:'MLR (USA)', slug:'289262', ico:'🇺🇸'}
+    ]},
+    {grp:'Internationales', leagues:[
+      {name:'Six Nations', slug:'180659', ico:'6️⃣'},
+      {name:'Rugby Champ.', slug:'244293', ico:'🌍'},
+      {name:'Nations Champ.', slug:'17567', ico:'🌐'},
+      {name:'Test Matchs', slug:'289234', ico:'🆚'},
+      {name:'Tournée Lions', slug:'268565', ico:'🦁'},
+      {name:'Coupe du Monde', slug:'164205', ico:'🌍'},
+      {name:'CdM Féminine', slug:'289237', ico:'👩'}
+    ]},
+    {grp:'Sevens (JO)', leagues:[
+      {name:'JO 7s (H)', slug:'282', ico:'🥇'},
+      {name:'JO 7s (F)', slug:'283', ico:'🥇'}
+    ]}
+  ]}
 ];
 function loadResultatsTab(){
   var el=document.getElementById('t-resultats'); if(!el) return;
