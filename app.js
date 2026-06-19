@@ -15091,7 +15091,10 @@ function setupWcAutoRefresh() {
   if(hasLive) {
     window._wcLiveTimer = setInterval(function(){
       // Si on a quitté la page Mondial, stopper
-      if(!document.getElementById('ip-mondial')){ clearInterval(window._wcLiveTimer); window._wcLiveTimer=null; return; }
+      var _ip=document.getElementById('ip-mondial');
+      if(!_ip){ clearInterval(window._wcLiveTimer); window._wcLiveTimer=null; return; }
+      // Pause si écran éteint / appli en fond / onglet masqué
+      if(document.hidden || _ip.offsetParent===null) return;
       // Re-fetch silencieux
       fetchMondialLive(true);
     }, 45000); // 45 secondes
@@ -16078,6 +16081,7 @@ function _wcStatsTimer(box, data, eventId, rowId){
       box._liveTimer = setInterval(function(){
         var b=document.getElementById(rowId);
         if(!b || b.getAttribute('data-open')!=='1'){ clearInterval(box._liveTimer); box._liveTimer=null; return; }
+        if(document.hidden || b.offsetParent===null) return;
         _wcRenderMatch(eventId, rowId);
       }, 30000);
     } else if(!live && box._liveTimer){ clearInterval(box._liveTimer); box._liveTimer=null; }
@@ -19582,7 +19586,7 @@ async function _renderSaisonDetail(el, eventId, league){
 
     // ── Rafraîchissement auto pendant le match (toutes les 30 s) ──
     if(isLive){
-      if(!el._refresh){ el._refresh=setInterval(function(){ if(el.getAttribute('data-open')==='1'){ _renderSaisonDetail(el, eventId, league); } else { clearInterval(el._refresh); el._refresh=null; } }, 30000); }
+      if(!el._refresh){ el._refresh=setInterval(function(){ if(el.getAttribute('data-open')!=='1'){ clearInterval(el._refresh); el._refresh=null; return; } if(document.hidden||el.offsetParent===null) return; _renderSaisonDetail(el, eventId, league); }, 30000); }
     } else if(el._refresh){ clearInterval(el._refresh); el._refresh=null; }
   }catch(e){ el.innerHTML='<div style="padding:12px;color:#ff6b6b;font-size:11px;text-align:center;">Résumé indisponible.</div>'; }
 }
@@ -19642,6 +19646,7 @@ var G45_LEAGUE_GROUPS = [
 ];
 function loadLiveTab(){
   var el=document.getElementById('t-live'); if(!el) return;
+  window._g45ListId='g45-live-list';
   var groupsHtml=G45_LEAGUE_GROUPS.map(function(g){
     var chips=g.leagues.map(function(l){
       return '<button class="g45lg-chip" data-slug="'+l.slug+'" onclick="g45LoadLeagueMatches(\''+l.slug+'\',this)" style="border:none;cursor:pointer;font-size:11px;font-weight:700;padding:7px 11px;border-radius:8px;background:rgba(255,255,255,.06);color:var(--t2);white-space:nowrap;flex-shrink:0;">'+l.ico+' '+l.name+'</button>';
@@ -19654,45 +19659,239 @@ function loadLiveTab(){
     +groupsHtml
     +'<div id="g45-live-list" style="margin-top:8px;"><div style="text-align:center;color:var(--t3);font-size:11px;padding:24px;">👆 Sélectionne une compétition</div></div>';
 }
-async function g45LoadLeagueMatches(slug, btn){
-  try{ document.querySelectorAll('.g45lg-chip').forEach(function(b){ b.style.background='rgba(255,255,255,.06)'; b.style.color='var(--t2)'; }); if(btn){ btn.style.background='#4d84ff'; btn.style.color='#fff'; } }catch(e){}
-  var list=document.getElementById('g45-live-list'); if(!list) return;
-  list.innerHTML='<div style="text-align:center;color:var(--t3);font-size:11px;padding:24px;">⏳ Chargement des matchs…</div>';
+function _g45ymd(d){ return ''+d.getFullYear()+String(d.getMonth()+1).padStart(2,'0')+String(d.getDate()).padStart(2,'0'); }
+function _g45MatchRow(e, slug, sportPath){
+  sportPath = sportPath || 'soccer';
+  var comp=(e.competitions&&e.competitions[0])||{};
+  var cps=comp.competitors||[];
+  var home=cps.filter(function(c){return c.homeAway==='home';})[0]||cps[0]||{};
+  var away=cps.filter(function(c){return c.homeAway==='away';})[0]||cps[1]||{};
+  var hN=(home.team&&(home.team.shortDisplayName||home.team.displayName))||'?';
+  var aN=(away.team&&(away.team.shortDisplayName||away.team.displayName))||'?';
+  var hS=(home.score!=null?home.score:''), aS=(away.score!=null?away.score:'');
+  var s=((e.status&&e.status.type&&e.status.type.state)||''), live=s==='in', fin=s==='post';
+  var clock=(e.status&&e.status.displayClock)||'';
+  var hhmm=new Date(e.date).toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'});
+  var badge = live?('🔴 '+(clock||'LIVE')) : (fin?'Terminé':hhmm);
+  var badgeCol = live?'#ff4545':(fin?'var(--t3)':'#8aa0ff');
+  var score=((hS!==''&&aS!=='')&&(live||fin))?(hS+' - '+aS):'vs';
+  var onclick = (sportPath==='soccer') ? 'toggleSaisonMatchDetail(this)' : 'toggleGenericMatchDetail(this)';
+  return '<div onclick="'+onclick+'" data-eid="'+e.id+'" data-lg="'+slug+'" data-sport="'+sportPath+'" style="display:grid;grid-template-columns:1fr auto 1fr 62px;gap:6px;align-items:center;padding:9px 10px;background:'+(live?'rgba(255,69,69,.07)':'rgba(255,255,255,.03)')+';border-radius:8px;border-left:3px solid '+(live?'#ff4545':'rgba(255,255,255,.1)')+';cursor:pointer;margin-bottom:4px;">'
+    +'<div style="font-size:11px;font-weight:700;color:var(--t1);text-align:right;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">'+hN+'</div>'
+    +'<div style="font-size:12px;font-weight:900;color:'+(live?'#ff4545':'var(--a)')+';text-align:center;white-space:nowrap;min-width:42px;">'+score+'</div>'
+    +'<div style="font-size:11px;font-weight:700;color:var(--t1);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">'+aN+'</div>'
+    +'<div style="text-align:right;font-size:9px;font-weight:700;color:'+badgeCol+';white-space:nowrap;">'+badge+'</div>'
+    +'</div>'
+    +'<div class="smd-panel" style="display:none;"></div>';
+}
+async function g45LoadLeagueMatches(slug, btn, dayOffset, sportPath){
+  dayOffset = dayOffset||0; sportPath = sportPath || 'soccer';
+  if(btn){ try{ document.querySelectorAll('.g45lg-chip').forEach(function(b){ b.style.background='rgba(255,255,255,.06)'; b.style.color='var(--t2)'; }); btn.style.background='#4d84ff'; btn.style.color='#fff'; }catch(e){} dayOffset=0; }
+  window._g45LiveSlug=slug; window._g45LiveOffset=dayOffset; window._g45Sport=sportPath;
+  var list=document.getElementById(window._g45ListId||'g45-live-list'); if(!list) return;
+  list.innerHTML='<div style="text-align:center;color:var(--t3);font-size:11px;padding:24px;">⏳ Chargement…</div>';
   try{
-    var r=await fetch('https://site.api.espn.com/apis/site/v2/sports/soccer/'+slug+'/scoreboard');
+    var start=new Date(); start.setHours(0,0,0,0); start.setDate(start.getDate()+dayOffset);
+    var end=new Date(start); end.setDate(end.getDate()+13);
+    var r=await fetch('https://site.api.espn.com/apis/site/v2/sports/'+sportPath+'/'+slug+'/scoreboard?dates='+_g45ymd(start)+'-'+_g45ymd(end));
     var data=await r.json();
     var events=(data.events||[]);
-    if(!events.length){ list.innerHTML='<div style="text-align:center;color:var(--t3);font-size:11px;padding:24px;">Aucun match aujourd\'hui pour cette compétition<br><span style="font-size:9px;">(hors saison, journée vide, ou compétition non couverte)</span></div>'; return; }
+    function fmt(d){ return d.toLocaleDateString('fr-FR',{day:'numeric',month:'short'}); }
+    var nav='<div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:10px;">'
+      +'<button onclick="g45LiveNav(-14)" style="border:none;background:rgba(255,255,255,.06);color:var(--t2);border-radius:8px;padding:7px 13px;font-weight:800;cursor:pointer;">◀</button>'
+      +'<span style="font-size:10px;color:var(--t2);font-weight:700;text-align:center;">📅 '+fmt(start)+' → '+fmt(end)+(dayOffset!==0?'<br><a onclick="g45LiveNav('+(-dayOffset)+')" style="color:#4d84ff;cursor:pointer;font-size:9px;">⏎ revenir à aujourd\'hui</a>':'')+'</span>'
+      +'<button onclick="g45LiveNav(14)" style="border:none;background:rgba(255,255,255,.06);color:var(--t2);border-radius:8px;padding:7px 13px;font-weight:800;cursor:pointer;">▶</button>'
+      +'</div>';
+    if(!events.length){ list.innerHTML=nav+'<div style="text-align:center;color:var(--t3);font-size:11px;padding:20px;">Aucun match sur cette période.<br><span style="font-size:9px;">Navigue avec ◀ ▶ pour trouver d\'autres journées.</span></div>'; return; }
     function stOf(e){ return (e.status&&e.status.type&&e.status.type.state)||''; }
-    function rank(e){ var s=stOf(e); return s==='in'?0:(s==='pre'?1:2); }
-    events.sort(function(a,b){ var d=rank(a)-rank(b); if(d) return d; return new Date(a.date)-new Date(b.date); });
-    var liveN=events.filter(function(e){return stOf(e)==='in';}).length;
-    var h='';
-    if(liveN) h+='<div style="font-size:10px;font-weight:700;color:#ff4545;margin-bottom:6px;">🔴 '+liveN+' match'+(liveN>1?'s':'')+' en direct</div>';
-    events.forEach(function(e){
-      var comp=(e.competitions&&e.competitions[0])||{};
-      var cps=comp.competitors||[];
-      var home=cps.filter(function(c){return c.homeAway==='home';})[0]||cps[0]||{};
-      var away=cps.filter(function(c){return c.homeAway==='away';})[0]||cps[1]||{};
-      var hN=(home.team&&(home.team.shortDisplayName||home.team.displayName))||'?';
-      var aN=(away.team&&(away.team.shortDisplayName||away.team.displayName))||'?';
-      var hS=(home.score!=null?home.score:''), aS=(away.score!=null?away.score:'');
-      var s=stOf(e), live=s==='in', fin=s==='post';
-      var clock=(e.status&&e.status.displayClock)||'';
-      var badge = live?('<span style="color:#ff4545;font-weight:800;font-size:9px;white-space:nowrap;">🔴 '+(clock||'LIVE')+'</span>')
-                : fin?('<span style="color:var(--t3);font-size:9px;">Terminé</span>')
-                : ('<span style="color:#8aa0ff;font-size:9px;white-space:nowrap;">'+(new Date(e.date).toLocaleString('fr-FR',{weekday:'short',hour:'2-digit',minute:'2-digit'}))+'</span>');
-      var score=(hS!==''&&aS!=='')?(hS+' - '+aS):'vs';
-      h+='<div onclick="toggleSaisonMatchDetail(this)" data-eid="'+e.id+'" data-lg="'+slug+'" style="display:grid;grid-template-columns:1fr auto 1fr 64px;gap:6px;align-items:center;padding:9px 10px;background:'+(live?'rgba(255,69,69,.07)':'rgba(255,255,255,.03)')+';border-radius:8px;border-left:3px solid '+(live?'#ff4545':'rgba(255,255,255,.1)')+';cursor:pointer;margin-bottom:4px;">';
-      h+='<div style="font-size:11px;font-weight:700;color:var(--t1);text-align:right;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">'+hN+'</div>';
-      h+='<div style="font-size:12px;font-weight:900;color:'+(live?'#ff4545':'var(--a)')+';text-align:center;white-space:nowrap;min-width:42px;">'+score+'</div>';
-      h+='<div style="font-size:11px;font-weight:700;color:var(--t1);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">'+aN+'</div>';
-      h+='<div style="text-align:right;">'+badge+'</div>';
-      h+='</div>';
-      h+='<div class="smd-panel" style="display:none;"></div>';
+    events.sort(function(a,b){ return new Date(a.date)-new Date(b.date); });
+    var byDay={}, order=[];
+    events.forEach(function(e){ var d=new Date(e.date); var key=d.toLocaleDateString('fr-FR',{weekday:'long',day:'numeric',month:'long'}); if(!byDay[key]){ byDay[key]=[]; order.push(key); } byDay[key].push(e); });
+    var h=nav;
+    order.forEach(function(key){
+      h+='<div style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:#8aa0ff;margin:12px 0 6px;">'+key+'</div>';
+      byDay[key].sort(function(a,b){ var ra=stOf(a)==='in'?0:1, rb=stOf(b)==='in'?0:1; if(ra!==rb) return ra-rb; return new Date(a.date)-new Date(b.date); });
+      byDay[key].forEach(function(e){ h+=_g45MatchRow(e, slug, sportPath); });
     });
     list.innerHTML=h;
-  }catch(err){ list.innerHTML='<div style="text-align:center;color:#ff6b6b;font-size:11px;padding:24px;">Erreur de chargement des matchs.</div>'; }
+  }catch(err){ list.innerHTML='<div style="text-align:center;color:#ff6b6b;font-size:11px;padding:24px;">Erreur de chargement.</div>'; }
 }
+function g45LiveNav(delta){ if(window._g45LiveSlug) g45LoadLeagueMatches(window._g45LiveSlug, null, (window._g45LiveOffset||0)+delta, window._g45Sport); }
 window.loadLiveTab=loadLiveTab;
 window.g45LoadLeagueMatches=g45LoadLeagueMatches;
+window.g45LiveNav=g45LiveNav;
+
+/* ───────────── DÉTAIL GÉNÉRIQUE (sports non-foot : box score) ───────────── */
+async function toggleGenericMatchDetail(rowEl){
+  var el=rowEl && rowEl.nextElementSibling;
+  if(!el || el.className!=='smd-panel') return;
+  var eid=rowEl.getAttribute('data-eid')||'', lg=rowEl.getAttribute('data-lg')||'', sport=rowEl.getAttribute('data-sport')||'';
+  if(el.getAttribute('data-open')==='1'){ el.style.display='none'; el.innerHTML=''; el.setAttribute('data-open','0'); if(el._refresh){ clearInterval(el._refresh); el._refresh=null; } return; }
+  try{ var others=document.querySelectorAll('.smd-panel'); for(var i=0;i<others.length;i++){ if(others[i]!==el){ others[i].style.display='none'; others[i].innerHTML=''; others[i].setAttribute('data-open','0'); if(others[i]._refresh){ clearInterval(others[i]._refresh); others[i]._refresh=null; } } } }catch(e){}
+  el.style.display='block'; el.setAttribute('data-open','1');
+  el.innerHTML='<div style="padding:12px;text-align:center;color:var(--t3);font-size:11px;">⏳ Chargement…</div>';
+  if(!eid){ el.innerHTML='<div style="padding:12px;color:var(--t3);font-size:11px;text-align:center;">Détail indisponible.</div>'; return; }
+  await _renderGenericDetail(el, sport, lg, eid);
+}
+async function _renderGenericDetail(el, sport, lg, eid){
+  try{
+    var r=await fetch('https://site.api.espn.com/apis/site/v2/sports/'+sport+'/'+lg+'/summary?event='+eid);
+    var data=await r.json();
+    var comp=(data.header&&data.header.competitions&&data.header.competitions[0])||{};
+    var cps=comp.competitors||[];
+    var home=cps.filter(function(c){return c.homeAway==='home';})[0]||cps[0]||{};
+    var away=cps.filter(function(c){return c.homeAway==='away';})[0]||cps[1]||{};
+    var hN=(home.team&&(home.team.displayName||home.team.shortDisplayName))||'?';
+    var aN=(away.team&&(away.team.displayName||away.team.shortDisplayName))||'?';
+    var hS=(home.score!=null?home.score:''), aS=(away.score!=null?away.score:'');
+    var stT=(comp.status&&comp.status.type)||{};
+    var status=stT.detail||stT.shortDetail||'';
+    var isLive=stT.state==='in';
+    var h='<div style="margin:4px 0 8px;padding:12px;background:rgba(0,0,0,.18);border-radius:10px;">';
+    h+='<div style="display:flex;align-items:center;justify-content:center;gap:14px;font-size:15px;font-weight:900;color:var(--t1);"><span>'+hN+'</span><span style="color:'+(isLive?'#ff4545':'var(--a)')+';white-space:nowrap;">'+hS+' - '+aS+'</span><span>'+aN+'</span></div>';
+    if(status) h+='<div style="text-align:center;font-size:10px;color:'+(isLive?'#ff4545':'var(--t3)')+';margin-top:4px;font-weight:700;">'+(isLive?'🔴 ':'')+status+'</div>';
+    // Scores par période si dispo (linescores)
+    try{
+      var hl=home.linescores||[], al=away.linescores||[];
+      if(hl.length){
+        h+='<div style="margin-top:10px;display:flex;justify-content:center;gap:10px;font-size:10px;color:var(--t2);">';
+        h+='<div><div style="color:var(--t3);font-size:8px;text-align:right;">&nbsp;</div><div style="font-weight:700;text-align:right;">'+hN.slice(0,3).toUpperCase()+'</div><div style="font-weight:700;text-align:right;">'+aN.slice(0,3).toUpperCase()+'</div></div>';
+        h+='<div style="display:flex;gap:8px;">';
+        hl.forEach(function(p,i){ h+='<div style="text-align:center;"><div style="color:var(--t3);font-size:8px;">'+(i+1)+'</div><div>'+(p.displayValue||p.value||0)+'</div><div>'+((al[i]&&(al[i].displayValue||al[i].value))||0)+'</div></div>'; });
+        h+='</div></div>';
+      }
+    }catch(e){}
+    // Meilleurs joueurs
+    try{
+      var L=data.leaders||[];
+      if(L.length){
+        h+='<div style="margin-top:10px;border-top:1px solid rgba(255,255,255,.06);padding-top:8px;">';
+        h+='<div style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:#8aa0ff;margin-bottom:6px;">Meilleurs joueurs</div>';
+        L.slice(0,2).forEach(function(tl){
+          (tl.leaders||[]).slice(0,3).forEach(function(cat){
+            var ld=(cat.leaders&&cat.leaders[0])||null;
+            if(ld&&ld.athlete) h+='<div style="font-size:10px;color:var(--t2);padding:2px 0;">'+(cat.displayName||cat.shortDisplayName||'')+' : <b style="color:var(--t1);">'+(ld.athlete.displayName||'')+'</b> <span style="color:var(--t3);">('+(ld.displayValue||ld.value||'')+')</span></div>';
+          });
+        });
+        h+='</div>';
+      }
+    }catch(e){}
+    h+='</div>';
+    el.innerHTML=h;
+    if(isLive){ if(!el._refresh){ el._refresh=setInterval(function(){ if(el.getAttribute('data-open')!=='1'){ clearInterval(el._refresh); el._refresh=null; return; } if(document.hidden||el.offsetParent===null) return; _renderGenericDetail(el,sport,lg,eid); },30000); } } else if(el._refresh){ clearInterval(el._refresh); el._refresh=null; }
+  }catch(e){ el.innerHTML='<div style="padding:12px;color:#ff6b6b;font-size:11px;text-align:center;">Détail indisponible.</div>'; }
+}
+window.toggleGenericMatchDetail=toggleGenericMatchDetail;
+
+/* ───────────── ONGLET RÉSULTATS : multi-sports ───────────── */
+var G45_SPORTS = [
+  {key:'soccer', name:'Football', ico:'⚽'},
+  {key:'basketball', name:'Basket', ico:'🏀', groups:[{grp:'Basket', leagues:[
+    {name:'NBA', slug:'nba', ico:'🏀'},{name:'WNBA', slug:'wnba', ico:'🏀'},{name:'NCAA (H)', slug:'mens-college-basketball', ico:'🎓'}
+  ]}]},
+  {key:'hockey', name:'Hockey', ico:'🏒', groups:[{grp:'Hockey', leagues:[{name:'NHL', slug:'nhl', ico:'🏒'}]}]},
+  {key:'baseball', name:'Baseball', ico:'⚾', groups:[{grp:'Baseball', leagues:[{name:'MLB', slug:'mlb', ico:'⚾'}]}]},
+  {key:'football', name:'Foot US', ico:'🏈', groups:[{grp:'Football américain', leagues:[
+    {name:'NFL', slug:'nfl', ico:'🏈'},{name:'NCAA', slug:'college-football', ico:'🎓'}
+  ]}]}
+];
+function loadResultatsTab(){
+  var el=document.getElementById('t-resultats'); if(!el) return;
+  var cards=G45_SPORTS.map(function(s){
+    return '<button onclick="g45ShowSport(\''+s.key+'\')" style="border:none;cursor:pointer;background:rgba(255,255,255,.05);border-radius:12px;padding:16px 8px;display:flex;flex-direction:column;align-items:center;gap:6px;color:var(--t1);"><span style="font-size:26px;">'+s.ico+'</span><span style="font-size:11px;font-weight:700;">'+s.name+'</span></button>';
+  }).join('');
+  el.innerHTML='<div class="sec" style="margin-top:0;">🏆 Résultats — tous sports</div>'
+    +'<div style="font-size:11px;color:var(--t3);margin-bottom:12px;">Choisis un sport, puis une compétition, puis navigue dans les dates (◀ ▶) pour voir résultats et calendriers — passés comme à venir.</div>'
+    +'<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(88px,1fr));gap:10px;">'+cards+'</div>'
+    +'<div style="font-size:9px;color:var(--t3);margin-top:14px;text-align:center;">🏎️ F1 et 🎾 tennis arrivent (format spécial).</div>';
+}
+function g45ShowSport(sportKey){
+  var s=G45_SPORTS.filter(function(x){return x.key===sportKey;})[0]; if(!s) return;
+  var el=document.getElementById('t-resultats'); if(!el) return;
+  window._g45ListId='g45-res-list';
+  var groups = (sportKey==='soccer') ? G45_LEAGUE_GROUPS : (s.groups||[]);
+  var groupsHtml=groups.map(function(g){
+    var chips=g.leagues.map(function(l){
+      return '<button class="g45lg-chip" onclick="g45LoadCalendar(\''+l.slug+'\',this,0,\''+sportKey+'\')" style="border:none;cursor:pointer;font-size:11px;font-weight:700;padding:7px 11px;border-radius:8px;background:rgba(255,255,255,.06);color:var(--t2);white-space:nowrap;flex-shrink:0;">'+l.ico+' '+l.name+'</button>';
+    }).join('');
+    return '<div style="margin-bottom:8px;"><div style="font-size:9px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;color:#4f5d88;margin-bottom:5px;">'+g.grp+'</div><div style="display:flex;gap:6px;overflow-x:auto;padding-bottom:4px;-webkit-overflow-scrolling:touch;">'+chips+'</div></div>';
+  }).join('');
+  el.innerHTML='<button onclick="loadResultatsTab()" style="border:none;background:rgba(255,255,255,.06);color:var(--t2);border-radius:8px;padding:6px 12px;font-size:11px;font-weight:700;cursor:pointer;margin-bottom:10px;">← Sports</button>'
+    +'<div class="sec" style="margin-top:0;">'+s.ico+' '+s.name+'</div>'
+    +groupsHtml
+    +'<div id="g45-res-list" style="margin-top:8px;"><div style="text-align:center;color:var(--t3);font-size:11px;padding:24px;">👆 Choisis une compétition</div></div>';
+}
+window.loadResultatsTab=loadResultatsTab;
+window.g45ShowSport=g45ShowSport;
+
+/* ───────────── CALENDRIER MENSUEL par compétition (façon Sofascore) ───────────── */
+function _g45MonthBounds(off){
+  var base=new Date(); base.setDate(1); base.setHours(0,0,0,0); base.setMonth(base.getMonth()+(off||0));
+  var y=base.getFullYear(), m=base.getMonth();
+  return {y:y, m:m, first:new Date(y,m,1), last:new Date(y,m+1,0), base:base};
+}
+async function g45LoadCalendar(slug, btn, monthOffset, sportPath){
+  monthOffset = monthOffset||0; sportPath = sportPath || 'soccer';
+  if(btn){ try{ document.querySelectorAll('.g45lg-chip').forEach(function(b){ b.style.background='rgba(255,255,255,.06)'; b.style.color='var(--t2)'; }); btn.style.background='#4d84ff'; btn.style.color='#fff'; }catch(e){} monthOffset=0; }
+  window._g45CalSlug=slug; window._g45CalSport=sportPath; window._g45CalOffset=monthOffset;
+  var list=document.getElementById(window._g45ListId||'g45-res-list'); if(!list) return;
+  list.innerHTML='<div style="text-align:center;color:var(--t3);font-size:11px;padding:24px;">⏳ Chargement du calendrier…</div>';
+  try{
+    var mb=_g45MonthBounds(monthOffset);
+    var r=await fetch('https://site.api.espn.com/apis/site/v2/sports/'+sportPath+'/'+slug+'/scoreboard?dates='+_g45ymd(mb.first)+'-'+_g45ymd(mb.last));
+    var data=await r.json();
+    var events=(data.events||[]);
+    var lgLogo=''; try{ var lo=(data.leagues&&data.leagues[0]&&data.leagues[0].logos); if(lo){ lgLogo=Array.isArray(lo)?((lo[0]&&lo[0].href)||''):(lo.href||''); } }catch(e){}
+    var sportIco={soccer:'⚽',basketball:'🏀',hockey:'🏒',baseball:'⚾',football:'🏈'}[sportPath]||'⚽';
+    var marker = lgLogo ? ('<img src="'+lgLogo+'" style="width:15px;height:15px;object-fit:contain;" onerror="this.style.display=\'none\'">') : ('<span style="font-size:12px;">'+sportIco+'</span>');
+    var byDay={};
+    events.forEach(function(e){ var d=new Date(e.date); if(d.getFullYear()===mb.y && d.getMonth()===mb.m){ var day=d.getDate(); (byDay[day]=byDay[day]||[]).push(e); } });
+    window._g45CalByDay=byDay;
+    var monthName=mb.base.toLocaleDateString('fr-FR',{month:'long',year:'numeric'});
+    var h='<div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:12px;">'
+      +'<button onclick="g45CalNav(-1)" style="border:none;background:rgba(255,255,255,.06);color:var(--t2);border-radius:8px;padding:7px 14px;font-weight:800;cursor:pointer;">◀</button>'
+      +'<span style="font-size:12px;color:var(--t1);font-weight:800;text-transform:capitalize;text-align:center;">'+monthName+(monthOffset!==0?'<br><a onclick="g45CalNav('+(-monthOffset)+')" style="color:#4d84ff;cursor:pointer;font-size:9px;font-weight:700;text-transform:none;">⏎ aujourd\'hui</a>':'')+'</span>'
+      +'<button onclick="g45CalNav(1)" style="border:none;background:rgba(255,255,255,.06);color:var(--t2);border-radius:8px;padding:7px 14px;font-weight:800;cursor:pointer;">▶</button>'
+      +'</div>';
+    var wd=['L','M','M','J','V','S','D'];
+    h+='<div style="display:grid;grid-template-columns:repeat(7,1fr);gap:3px;margin-bottom:3px;">';
+    wd.forEach(function(w){ h+='<div style="text-align:center;font-size:8px;color:var(--t3);font-weight:700;">'+w+'</div>'; });
+    h+='</div><div style="display:grid;grid-template-columns:repeat(7,1fr);gap:3px;">';
+    var firstWd=(mb.first.getDay()+6)%7;
+    for(var i=0;i<firstWd;i++){ h+='<div></div>'; }
+    var today=new Date(), isThisMonth=(today.getFullYear()===mb.y&&today.getMonth()===mb.m);
+    for(var day=1; day<=mb.last.getDate(); day++){
+      var has=byDay[day]&&byDay[day].length, isToday=isThisMonth&&today.getDate()===day;
+      if(has){
+        h+='<div onclick="g45CalDay('+day+')" style="aspect-ratio:1;border-radius:8px;background:rgba(77,132,255,.13);border:1px solid '+(isToday?'#4d84ff':'rgba(77,132,255,.3)')+';cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;padding:2px;">'
+          +'<div style="font-size:10px;font-weight:800;color:var(--t1);line-height:1;">'+day+'</div>'
+          +'<div style="display:flex;align-items:center;gap:1px;line-height:1;">'+marker+(byDay[day].length>1?'<span style="font-size:8px;color:#8aa0ff;font-weight:700;">×'+byDay[day].length+'</span>':'')+'</div>'
+          +'</div>';
+      } else {
+        h+='<div style="aspect-ratio:1;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:10px;color:'+(isToday?'#4d84ff':'var(--t3)')+';font-weight:'+(isToday?'800':'400')+';'+(isToday?'border:1px solid #4d84ff;':'')+'">'+day+'</div>';
+      }
+    }
+    h+='</div>';
+    if(!events.length){ h+='<div style="text-align:center;color:var(--t3);font-size:10px;margin-top:12px;">Aucun match ce mois-ci — navigue avec ◀ ▶.</div>'; }
+    else { h+='<div style="text-align:center;color:var(--t3);font-size:9px;margin-top:8px;">👆 Tape un jour bleu pour voir les matchs</div>'; }
+    h+='<div id="g45-cal-day" style="margin-top:12px;"></div>';
+    list.innerHTML=h;
+  }catch(err){ list.innerHTML='<div style="text-align:center;color:#ff6b6b;font-size:11px;padding:24px;">Erreur de chargement du calendrier.</div>'; }
+}
+function g45CalNav(delta){ if(window._g45CalSlug) g45LoadCalendar(window._g45CalSlug, null, (window._g45CalOffset||0)+delta, window._g45CalSport); }
+function g45CalDay(day){
+  var box=document.getElementById('g45-cal-day'); if(!box) return;
+  var evs=(window._g45CalByDay&&window._g45CalByDay[day])||[];
+  if(!evs.length){ box.innerHTML=''; box.removeAttribute('data-day'); return; }
+  if(box.getAttribute('data-day')===String(day)){ box.innerHTML=''; box.removeAttribute('data-day'); return; }
+  box.setAttribute('data-day', String(day));
+  function stOf(e){ return (e.status&&e.status.type&&e.status.type.state)||''; }
+  evs=evs.slice().sort(function(a,b){ var ra=stOf(a)==='in'?0:1, rb=stOf(b)==='in'?0:1; if(ra!==rb) return ra-rb; return new Date(a.date)-new Date(b.date); });
+  var hdr=new Date(evs[0].date).toLocaleDateString('fr-FR',{weekday:'long',day:'numeric',month:'long'});
+  var h='<div style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:#8aa0ff;margin-bottom:6px;">'+hdr+'</div>';
+  evs.forEach(function(e){ h+=_g45MatchRow(e, window._g45CalSlug, window._g45CalSport); });
+  box.innerHTML=h;
+}
+window.g45LoadCalendar=g45LoadCalendar;
+window.g45CalNav=g45CalNav;
+window.g45CalDay=g45CalDay;

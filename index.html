@@ -838,6 +838,7 @@
 <div id="t-simu" class="tab"></div>
 <div id="t-social" class="tab"></div>
 <div id="t-live" class="tab"></div>
+<div id="t-resultats" class="tab"></div>
 <div id="t-comp" class="tab">
   <div class="sec" style="margin-top:0;">⚖️ Comparateur d'équipes</div>
   <div class="fc" style="margin-bottom:10px;">
@@ -967,6 +968,7 @@
   <button class="ni pc-only" onclick="showTab('t-comp',this);" data-action-comp="init"><span>⚖️</span>Vs</button>
   <button class="ni pc-only" onclick="showTab('t-simu',this);loadSimuTab();"><span>🎮</span>Simu</button>
   <button class="ni pc-only" onclick="showTab('t-live',this);loadLiveTab();"><span>📡</span>Direct</button>
+  <button class="ni pc-only" onclick="showTab('t-resultats',this);loadResultatsTab();"><span>🏆</span>Résultats</button>
   <button class="ni pc-only" onclick="showTab('t-social',this);loadSocialTab();"><span>🤝</span>Social</button>
 
   <div style="flex:1;display:flex;flex-direction:column;padding:0 8px 8px;min-height:0;" class="pc-note-area">
@@ -1003,6 +1005,9 @@
       </button>
       <button onclick="showTab('t-live',$i('btn-plus-menu'));togglePlusMenu();loadLiveTab();" style="display:flex;align-items:center;gap:12px;padding:14px 12px;background:var(--bg3);border:none;border-radius:8px;color:var(--t1);font-size:13px;font-weight:700;cursor:pointer;text-align:left;margin-top:4px;">
         <span>📡</span> Matchs en direct
+      </button>
+      <button onclick="showTab('t-resultats',$i('btn-plus-menu'));togglePlusMenu();loadResultatsTab();" style="display:flex;align-items:center;gap:12px;padding:14px 12px;background:var(--bg3);border:none;border-radius:8px;color:var(--t1);font-size:13px;font-weight:700;cursor:pointer;text-align:left;margin-top:4px;">
+        <span>🏆</span> Résultats (tous sports)
       </button>
       <button onclick="togglePlusMenu();" style="display:flex;align-items:center;gap:12px;padding:14px 12px;background:none;border:none;border-radius:8px;color:var(--t3);font-size:12px;font-weight:700;cursor:pointer;text-align:left;margin-top:4px;">
         <span>✕</span> Fermer
