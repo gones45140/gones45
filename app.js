@@ -19673,6 +19673,17 @@ function g45DirectSport(sportKey){
 }
 window.g45DirectSport=g45DirectSport;
 function _g45ymd(d){ return ''+d.getFullYear()+String(d.getMonth()+1).padStart(2,'0')+String(d.getDate()).padStart(2,'0'); }
+/* ESPN ne donne pas d'horloge rugby fiable (clock:0, displayClock figé) → on affiche la mi-temps via period */
+function _rugbyLiveLabel(status){
+  var st=status||{}; var tn=(st.type&&st.type.name)||'';
+  if(tn==='STATUS_HALFTIME') return 'Mi-temps';
+  if(tn==='STATUS_END_PERIOD') return 'Fin de période';
+  var per=st.period||(st.type&&st.type.period)||0;
+  if(per===1) return '1ʳᵉ MT';
+  if(per===2) return '2ᵉ MT';
+  if(per>=3) return 'Prolong.';
+  return st.displayPeriod||'LIVE';
+}
 function _g45MatchRow(e, slug, sportPath){
   sportPath = sportPath || 'soccer';
   var comp=(e.competitions&&e.competitions[0])||{};
@@ -19685,7 +19696,7 @@ function _g45MatchRow(e, slug, sportPath){
   var s=((e.status&&e.status.type&&e.status.type.state)||''), live=s==='in', fin=s==='post';
   var clock=(e.status&&e.status.displayClock)||'';
   var hhmm=new Date(e.date).toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'});
-  var badge = live?('🔴 '+(clock||'LIVE')) : (fin?'Terminé':hhmm);
+  var badge = live?('🔴 '+(sportPath==='rugby'?_rugbyLiveLabel(e.status):(clock||'LIVE'))) : (fin?'Terminé':hhmm);
   var badgeCol = live?'#ff4545':(fin?'var(--t3)':'#8aa0ff');
   var score=((hS!==''&&aS!=='')&&(live||fin))?(hS+' - '+aS):'vs';
   var onclick = (sportPath==='soccer') ? 'toggleSaisonMatchDetail(this)' : 'toggleGenericMatchDetail(this)';
@@ -19914,6 +19925,7 @@ async function _renderGenericDetail(el, sport, lg, eid){
     var stT=(comp.status&&comp.status.type)||{};
     var status=stT.detail||stT.shortDetail||'';
     var isLive=stT.state==='in';
+    if(sport==='rugby' && isLive) status=_rugbyLiveLabel(comp.status); // horloge ESPN morte → mi-temps
     var h='<div style="margin:4px 0 8px;padding:12px;background:rgba(0,0,0,.18);border-radius:10px;">';
     h+='<div style="display:flex;align-items:center;justify-content:center;gap:14px;font-size:15px;font-weight:900;color:var(--t1);"><span>'+hN+'</span><span style="color:'+(isLive?'#ff4545':'var(--a)')+';white-space:nowrap;">'+hS+' - '+aS+'</span><span>'+aN+'</span></div>';
     if(status) h+='<div style="text-align:center;font-size:10px;color:'+(isLive?'#ff4545':'var(--t3)')+';margin-top:4px;font-weight:700;">'+(isLive?'🔴 ':'')+status+'</div>';
