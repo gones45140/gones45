@@ -19806,6 +19806,16 @@ var G45_SPORTS = [
   {key:'baseball', name:'Baseball', ico:'⚾', groups:[{grp:'Baseball', leagues:[{name:'MLB', slug:'mlb', ico:'⚾'}]}]},
   {key:'football', name:'Foot US', ico:'🏈', groups:[{grp:'Football américain', leagues:[
     {name:'NFL', slug:'nfl', ico:'🏈'},{name:'NCAA', slug:'college-football', ico:'🎓'}
+  ]}]},
+  {key:'rugby', name:'Rugby', ico:'🏉', groups:[{grp:'Rugby', leagues:[
+    {name:'Top 14', slug:'270559', ico:'🇫🇷'},
+    {name:'Champions Cup', slug:'271937', ico:'🏆'},
+    {name:'URC', slug:'270557', ico:'🇪🇺'},
+    {name:'Premiership', slug:'267979', ico:'🏴󠁧󠁢󠁥󠁮󠁧󠁿'},
+    {name:'Super Rugby', slug:'242041', ico:'🌏'},
+    {name:'Rugby Champ.', slug:'244293', ico:'🌍'},
+    {name:'Six Nations', slug:'180659', ico:'6️⃣'},
+    {name:'Coupe du Monde', slug:'164205', ico:'🌍'}
   ]}]}
 ];
 function loadResultatsTab(){
@@ -19910,7 +19920,7 @@ async function g45LoadCalendar(slug, btn, monthOffset, sportPath){
     var data=await r.json();
     var events=(data.events||[]);
     var lgLogo=''; try{ var lo=(data.leagues&&data.leagues[0]&&data.leagues[0].logos); if(lo){ lgLogo=Array.isArray(lo)?((lo[0]&&lo[0].href)||''):(lo.href||''); } }catch(e){}
-    var sportIco={soccer:'⚽',basketball:'🏀',hockey:'🏒',baseball:'⚾',football:'🏈'}[sportPath]||'⚽';
+    var sportIco={soccer:'⚽',basketball:'🏀',hockey:'🏒',baseball:'⚾',football:'🏈',rugby:'🏉'}[sportPath]||'⚽';
     var marker = lgLogo ? ('<img src="'+lgLogo+'" style="width:18px;height:18px;object-fit:contain;" onerror="this.style.display=\'none\'">') : ('<span style="font-size:15px;">'+sportIco+'</span>');
     var byDay={};
     events.forEach(function(e){ var d=new Date(e.date); if(d.getFullYear()===mb.y && d.getMonth()===mb.m){ var day=d.getDate(); (byDay[day]=byDay[day]||[]).push(e); } });
