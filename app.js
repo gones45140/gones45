@@ -19843,7 +19843,7 @@ async function g45LoadCalendar(slug, btn, monthOffset, sportPath){
     var events=(data.events||[]);
     var lgLogo=''; try{ var lo=(data.leagues&&data.leagues[0]&&data.leagues[0].logos); if(lo){ lgLogo=Array.isArray(lo)?((lo[0]&&lo[0].href)||''):(lo.href||''); } }catch(e){}
     var sportIco={soccer:'⚽',basketball:'🏀',hockey:'🏒',baseball:'⚾',football:'🏈'}[sportPath]||'⚽';
-    var marker = lgLogo ? ('<img src="'+lgLogo+'" style="width:15px;height:15px;object-fit:contain;" onerror="this.style.display=\'none\'">') : ('<span style="font-size:12px;">'+sportIco+'</span>');
+    var marker = lgLogo ? ('<img src="'+lgLogo+'" style="width:18px;height:18px;object-fit:contain;" onerror="this.style.display=\'none\'">') : ('<span style="font-size:15px;">'+sportIco+'</span>');
     var byDay={};
     events.forEach(function(e){ var d=new Date(e.date); if(d.getFullYear()===mb.y && d.getMonth()===mb.m){ var day=d.getDate(); (byDay[day]=byDay[day]||[]).push(e); } });
     window._g45CalByDay=byDay;
@@ -19855,7 +19855,7 @@ async function g45LoadCalendar(slug, btn, monthOffset, sportPath){
       +'</div>';
     var wd=['L','M','M','J','V','S','D'];
     h+='<div style="display:grid;grid-template-columns:repeat(7,1fr);gap:3px;margin-bottom:3px;">';
-    wd.forEach(function(w){ h+='<div style="text-align:center;font-size:8px;color:var(--t3);font-weight:700;">'+w+'</div>'; });
+    wd.forEach(function(w){ h+='<div style="text-align:center;font-size:11px;color:var(--t3);font-weight:700;">'+w+'</div>'; });
     h+='</div><div style="display:grid;grid-template-columns:repeat(7,1fr);gap:3px;">';
     var firstWd=(mb.first.getDay()+6)%7;
     for(var i=0;i<firstWd;i++){ h+='<div></div>'; }
@@ -19864,18 +19864,18 @@ async function g45LoadCalendar(slug, btn, monthOffset, sportPath){
       var has=byDay[day]&&byDay[day].length, isToday=isThisMonth&&today.getDate()===day;
       if(has){
         h+='<div onclick="g45CalDay('+day+')" style="aspect-ratio:1;border-radius:8px;background:rgba(77,132,255,.13);border:1px solid '+(isToday?'#4d84ff':'rgba(77,132,255,.3)')+';cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;padding:2px;">'
-          +'<div style="font-size:10px;font-weight:800;color:var(--t1);line-height:1;">'+day+'</div>'
-          +'<div style="display:flex;align-items:center;gap:1px;line-height:1;">'+marker+(byDay[day].length>1?'<span style="font-size:8px;color:#8aa0ff;font-weight:700;">×'+byDay[day].length+'</span>':'')+'</div>'
+          +'<div style="font-size:13px;font-weight:800;color:var(--t1);line-height:1;">'+day+'</div>'
+          +'<div style="display:flex;align-items:center;gap:1px;line-height:1;">'+marker+(byDay[day].length>1?'<span style="font-size:10px;color:#8aa0ff;font-weight:700;">×'+byDay[day].length+'</span>':'')+'</div>'
           +'</div>';
       } else {
-        h+='<div style="aspect-ratio:1;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:10px;color:'+(isToday?'#4d84ff':'var(--t3)')+';font-weight:'+(isToday?'800':'400')+';'+(isToday?'border:1px solid #4d84ff;':'')+'">'+day+'</div>';
+        h+='<div style="aspect-ratio:1;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:13px;color:'+(isToday?'#4d84ff':'var(--t3)')+';font-weight:'+(isToday?'800':'400')+';'+(isToday?'border:1px solid #4d84ff;':'')+'">'+day+'</div>';
       }
     }
     h+='</div>';
     if(!events.length){ h+='<div style="text-align:center;color:var(--t3);font-size:10px;margin-top:12px;">Aucun match ce mois-ci — navigue avec ◀ ▶.</div>'; }
     else { h+='<div style="text-align:center;color:var(--t3);font-size:9px;margin-top:8px;">👆 Tape un jour bleu pour voir les matchs</div>'; }
     h+='<div id="g45-cal-day" style="margin-top:12px;"></div>';
-    list.innerHTML='<div style="background:var(--bg2);border:1px solid var(--card-border,rgba(77,132,255,.32));border-radius:14px;padding:14px;box-shadow:0 4px 18px rgba(0,0,0,.5);">'+h+'</div>';
+    list.innerHTML='<div style="background:var(--bg2);border:1px solid var(--card-border,rgba(77,132,255,.32));border-radius:14px;padding:14px;box-shadow:0 4px 18px rgba(0,0,0,.5);max-width:480px;margin:0 auto;">'+h+'</div>';
   }catch(err){ list.innerHTML='<div style="text-align:center;color:#ff6b6b;font-size:11px;padding:24px;">Erreur de chargement du calendrier.</div>'; }
 }
 function g45CalNav(delta){ if(window._g45CalSlug) g45LoadCalendar(window._g45CalSlug, null, (window._g45CalOffset||0)+delta, window._g45CalSport); }
