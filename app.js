@@ -20015,6 +20015,7 @@ async function _renderGenericDetail(el, sport, lg, eid){
       try{ h+=_rugbyTeamStats(data); }catch(e){}                                              // stats d'équipe : international uniquement (auto-masqué sinon)
     }
     try{ h+=_genericLineups(data); }catch(e){}
+    try{ if((stT.state==='in'||stT.state==='post') && typeof _videoBlock==='function'){ var _vyr=''; try{ if(comp.date)_vyr=new Date(comp.date).getFullYear()||''; }catch(_e){} h+=_videoBlock(data, hN, aN, ('résumé '+_vyr).trim()); } }catch(e){}
     h+='</div>';
     el.innerHTML=h;
     if(isLive){ if(!el._refresh){ el._refresh=setInterval(function(){ if(el.getAttribute('data-open')!=='1'){ clearInterval(el._refresh); el._refresh=null; return; } if(document.hidden||el.offsetParent===null) return; _renderGenericDetail(el,sport,lg,eid); },30000); } } else if(el._refresh){ clearInterval(el._refresh); el._refresh=null; }
