@@ -19746,6 +19746,68 @@ async function toggleGenericMatchDetail(rowEl){
   if(!eid){ el.innerHTML='<div style="padding:12px;color:var(--t3);font-size:11px;text-align:center;">Détail indisponible.</div>'; return; }
   await _renderGenericDetail(el, sport, lg, eid);
 }
+function _rugbyStat(stats, name){
+  var cats=stats||[];
+  for(var i=0;i<cats.length;i++){ var st=cats[i].stats||[]; for(var j=0;j<st.length;j++){ if(st[j].name===name) return st[j].displayValue; } }
+  return null;
+}
+function _rugbyTeamStats(data){
+  var T=data&&data.boxscore&&data.boxscore.teams; if(!T||T.length<2) return '';
+  var comp=(data.header&&data.header.competitions&&data.header.competitions[0])||{};
+  var cps=comp.competitors||[];
+  var homeId=(((cps.filter(function(c){return c.homeAway==='home';})[0]||cps[0]||{}).team)||{}).id;
+  var ht=T.filter(function(t){return t.team&&t.team.id===homeId;})[0]||T[0];
+  var at=T.filter(function(t){return t!==ht;})[0]||T[1];
+  var ROWS=[['tries','Essais'],['conversionGoals','Transformations'],['penaltyGoals','Pénalités (but)'],
+    ['possession','Possession','pct'],['territory','Territoire','pct'],['metres','Mètres parcourus'],
+    ['cleanBreaks','Franchissements'],['defendersBeaten','Défenseurs battus'],['offload','Offloads'],
+    ['passes','Passes'],['runs','Courses'],['tackles','Plaquages'],['missedTackles','Plaquages manqués'],
+    ['lineoutsWon','Touches gagnées'],['scrumsWon','Mêlées gagnées'],['penaltiesConceded','Pénalités concédées'],
+    ['turnoversConceded','Ballons perdus'],['yellowCards','🟨 Jaunes'],['redCards','🟥 Rouges']];
+  var rows=ROWS.map(function(r){
+    var hv=_rugbyStat(ht.statistics, r[0]), av=_rugbyStat(at.statistics, r[0]);
+    if(hv==null && av==null) return '';
+    if(r[2]==='pct'){ hv=(hv!=null?Math.round(parseFloat(hv)*100)+'%':'-'); av=(av!=null?Math.round(parseFloat(av)*100)+'%':'-'); }
+    if(hv==null)hv='-'; if(av==null)av='-';
+    var hb=(parseFloat(hv)>parseFloat(av))?'color:#4d84ff;':'color:var(--t1);';
+    var ab=(parseFloat(av)>parseFloat(hv))?'color:#4d84ff;':'color:var(--t1);';
+    return '<div style="display:grid;grid-template-columns:1fr 1.5fr 1fr;gap:6px;align-items:center;padding:3px 0;border-bottom:1px solid rgba(255,255,255,.03);font-size:11px;">'
+      +'<div style="text-align:left;font-weight:800;'+hb+'">'+hv+'</div>'
+      +'<div style="text-align:center;color:var(--t3);font-size:9px;">'+r[1]+'</div>'
+      +'<div style="text-align:right;font-weight:800;'+ab+'">'+av+'</div></div>';
+  }).join('');
+  if(!rows) return '';
+  var hAb=(ht.team&&(ht.team.abbreviation||ht.team.displayName))||'';
+  var aAb=(at.team&&(at.team.abbreviation||at.team.displayName))||'';
+  return '<div style="margin-top:10px;border-top:1px solid rgba(255,255,255,.06);padding-top:8px;">'
+    +'<div style="display:grid;grid-template-columns:1fr 1.5fr 1fr;gap:6px;font-weight:800;margin-bottom:4px;"><div style="text-align:left;color:var(--t1);font-size:11px;">'+hAb+'</div><div style="text-align:center;color:#8aa0ff;text-transform:uppercase;font-size:9px;letter-spacing:.5px;">Statistiques</div><div style="text-align:right;color:var(--t1);font-size:11px;">'+aAb+'</div></div>'
+    +rows+'</div>';
+}
+function _genericLineups(data){
+  var R=data && data.rosters; if(!R || !R.length) return '';
+  function nm(p){
+    var a=p.athlete||{};
+    var name=a.displayName||a.fullName||(((a.firstName?a.firstName+' ':'')+(a.lastName||'')).trim())||a.shortName||'?';
+    var pos=(p.position&&(p.position.abbreviation||p.position.name))||(a.position&&(a.position.abbreviation||a.position.name))||'';
+    var jersey=p.jersey?('<b style="color:var(--t3);">'+p.jersey+'</b> '):'';
+    return '<div style="font-size:10px;color:var(--t2);padding:1px 0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">'+jersey+name+(pos?' <span style="color:var(--t3);">'+pos+'</span>':'')+'</div>';
+  }
+  var cols='';
+  R.slice(0,2).forEach(function(rt){
+    var tname=(rt.team&&(rt.team.abbreviation||rt.team.shortDisplayName||rt.team.displayName))||'';
+    var players=rt.roster||[];
+    var starters=players.filter(function(p){return p.starter;});
+    var subs=players.filter(function(p){return !p.starter;});
+    if(!starters.length && players.length){ starters=players; subs=[]; }
+    var c='<div style="min-width:0;"><div style="font-size:11px;font-weight:800;color:var(--t1);margin-bottom:4px;">'+tname+'</div>'+starters.map(nm).join('');
+    if(subs.length) c+='<div style="font-size:8px;color:var(--t3);text-transform:uppercase;letter-spacing:.5px;margin:5px 0 2px;">Remplaçants</div>'+subs.map(nm).join('');
+    c+='</div>';
+    cols+=c;
+  });
+  return '<div style="margin-top:10px;border-top:1px solid rgba(255,255,255,.06);padding-top:8px;">'
+    +'<div style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:#8aa0ff;margin-bottom:6px;">Compositions</div>'
+    +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">'+cols+'</div></div>';
+}
 async function _renderGenericDetail(el, sport, lg, eid){
   try{
     var r=await fetch('https://site.api.espn.com/apis/site/v2/sports/'+sport+'/'+lg+'/summary?event='+eid);
@@ -19789,6 +19851,8 @@ async function _renderGenericDetail(el, sport, lg, eid){
         h+='</div>';
       }
     }catch(e){}
+    if(sport==='rugby'){ try{ h+=_rugbyTeamStats(data); }catch(e){} }
+    try{ h+=_genericLineups(data); }catch(e){}
     h+='</div>';
     el.innerHTML=h;
     if(isLive){ if(!el._refresh){ el._refresh=setInterval(function(){ if(el.getAttribute('data-open')!=='1'){ clearInterval(el._refresh); el._refresh=null; return; } if(document.hidden||el.offsetParent===null) return; _renderGenericDetail(el,sport,lg,eid); },30000); } } else if(el._refresh){ clearInterval(el._refresh); el._refresh=null; }
