@@ -19469,7 +19469,7 @@ function g45BetSelections(){
   var seen={}, out=[];
   function add(name, sportEmoji, comp){
     if(!name) return; name=String(name).trim(); if(!name||name==='SIMPLE'||name==='-') return;
-    var sp = sportEmoji==='\u26bd'?'soccer':(sportEmoji==='\ud83c\udfc9'?'rugby':null); if(!sp) return;
+    var sp = sportEmoji==='\u26bd'?'soccer':(sportEmoji==='\ud83c\udfc9\ud83c\udde6\ud83c\uddfa'?'nrl':(sportEmoji==='\ud83c\udfc9'?'rugby':null)); if(!sp) return;
     var k=sp+'|'+name.toLowerCase(); if(seen[k]) return; seen[k]=1;
     out.push({name:name, sport:sp, comp:comp||''});
   }
@@ -19483,13 +19483,13 @@ function g45BetSelections(){
 }
 var G45_RUGBY_LG = {'top 14':'270559','top14':'270559','champions cup':'271937','champions':'271937','challenge cup':'271938','challenge':'271938','urc':'270557','united rugby':'270557','premiership':'267979','six nations':'180659','rugby championship':'270563','super rugby':'242041'};
 function _g45RugbyLeagueId(comp){ var c=String(comp||'').toLowerCase(); for(var k in G45_RUGBY_LG){ if(c.indexOf(k)>=0) return G45_RUGBY_LG[k]; } return '270559'; /* défaut Top 14 */ }
-async function _g45ResolveRugbyTeam(name, comp){
-  var lg=_g45RugbyLeagueId(comp); if(!lg) return null;
-  var ck='g45rugteams_'+lg, teams=null;
+async function _g45ResolveEspnTeam(name, sportPath, league){
+  if(!league) return null;
+  var ck='g45esp_teams_'+sportPath+'_'+league, teams=null;
   try{ var c=localStorage.getItem(ck); if(c){ var o=JSON.parse(c); if(o&&o.ts&&(Date.now()-o.ts<7*864e5)) teams=o.list; } }catch(e){}
   if(!teams){
     try{
-      var r=await fetch(FD_PROXY+'/?host=espn&path=/apis/site/v2/sports/rugby/'+lg+'/teams'); if(!r.ok) return null;
+      var r=await fetch(FD_PROXY+'/?host=espn&path=/apis/site/v2/sports/'+sportPath+'/'+league+'/teams'); if(!r.ok) return null;
       var j=await r.json(); var s=j.sports||[]; var lst=((((s[0]||{}).leagues||[])[0]||{}).teams)||j.teams||[];
       teams=lst.map(function(t){ var tt=t.team||t; return {id:String(tt.id), n:String(tt.displayName||tt.name||'')}; });
       try{ localStorage.setItem(ck, JSON.stringify({ts:Date.now(), list:teams})); }catch(e){}
@@ -19497,13 +19497,18 @@ async function _g45ResolveRugbyTeam(name, comp){
   }
   var nm=String(name||'').toLowerCase().trim(); if(!nm) return null;
   var found=teams.find(function(t){ return t.n.toLowerCase()===nm; }) || teams.find(function(t){ var tn=t.n.toLowerCase(); return tn.indexOf(nm)>=0 || nm.indexOf(tn)>=0; });
-  return found?{id:found.id, league:lg}:null;
+  return found?{id:found.id, league:league}:null;
 }
+async function _g45ResolveRugbyTeam(name, comp){ return _g45ResolveEspnTeam(name, 'rugby', _g45RugbyLeagueId(comp)); }
 async function g45BetTeams(){
   var sels=g45BetSelections(), out=[], seen={};
   for(var i=0;i<sels.length;i++){
     var s=sels[i], res=null;
-    try{ if(s.sport==='soccer') res=await _g45ResolveTeam(s.name); else if(s.sport==='rugby') res=await _g45ResolveRugbyTeam(s.name, s.comp); }catch(e){}
+    try{
+      if(s.sport==='soccer') res=await _g45ResolveTeam(s.name);
+      else if(s.sport==='rugby') res=await _g45ResolveEspnTeam(s.name, 'rugby', _g45RugbyLeagueId(s.comp));
+      else if(s.sport==='nrl') res=await _g45ResolveEspnTeam(s.name, 'rugby-league', '3');
+    }catch(e){}
     if(res && res.id){ var k=s.sport+'|'+res.league+'|'+res.id; if(seen[k]) continue; seen[k]=1; out.push({n:s.name, id:String(res.id), league:res.league, sport:s.sport}); }
   }
   return out;
