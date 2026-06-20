@@ -20591,6 +20591,37 @@ function g45ToggleGithubBetSync(){
   alert('Synchro paris GitHub : '+(on?'DÉSACTIVÉE':'ACTIVÉE'));
   if(!on){ try{ _g45PushBetsGithub(true); }catch(e){} }
 }
+/* ── Chiffrement (AES-GCM) : tes paris sont brouillés avant d'aller sur GitHub ── */
+/* Clé de chiffrement : par défaut = ton TOKEN GITHUB (déjà présent sur tes appareils pour les stats).
+   → rien de plus à retenir. Tu peux quand même forcer un mot de passe séparé via g45SetBetsPass(). */
+function _g45BetsPass(){ return localStorage.getItem('g45_bets_pass') || localStorage.getItem('gones45_github_token') || null; }
+function g45SetBetsPass(){
+  var p=prompt('Mot de passe de chiffrement de tes paris (le MÊME sur tous tes appareils) :');
+  if(p===null) return;
+  if(!p){ alert('Mot de passe vide — annulé.'); return; }
+  localStorage.setItem('g45_bets_pass', p);
+  alert('Mot de passe enregistré sur cet appareil. Mets le MÊME sur ton autre appareil.');
+  try{ _g45PushBetsGithub(true); }catch(e){}
+}
+async function _g45CryptoKey(pass, salt){
+  var km=await crypto.subtle.importKey('raw', new TextEncoder().encode(pass), {name:'PBKDF2'}, false, ['deriveKey']);
+  return crypto.subtle.deriveKey({name:'PBKDF2', salt:salt, iterations:120000, hash:'SHA-256'}, km, {name:'AES-GCM', length:256}, false, ['encrypt','decrypt']);
+}
+function _g45b64(buf){ var b=new Uint8Array(buf),s=''; for(var i=0;i<b.length;i++) s+=String.fromCharCode(b[i]); return btoa(s); }
+function _g45unb64(str){ var bin=atob(str),a=new Uint8Array(bin.length); for(var i=0;i<bin.length;i++) a[i]=bin.charCodeAt(i); return a; }
+async function _g45EncryptState(obj, pass){
+  var salt=crypto.getRandomValues(new Uint8Array(16)), iv=crypto.getRandomValues(new Uint8Array(12));
+  var key=await _g45CryptoKey(pass, salt);
+  var ct=await crypto.subtle.encrypt({name:'AES-GCM', iv:iv}, key, new TextEncoder().encode(JSON.stringify(obj)));
+  var out=new Uint8Array(16+12+ct.byteLength); out.set(salt,0); out.set(iv,16); out.set(new Uint8Array(ct),28);
+  return _g45b64(out);
+}
+async function _g45DecryptState(b64, pass){
+  var buf=_g45unb64(b64), salt=buf.slice(0,16), iv=buf.slice(16,28), ct=buf.slice(28);
+  var key=await _g45CryptoKey(pass, salt);
+  var pt=await crypto.subtle.decrypt({name:'AES-GCM', iv:iv}, key, ct);
+  return JSON.parse(new TextDecoder().decode(pt));
+}
 async function _gh_getBets(){
   var token=localStorage.getItem('gones45_github_token'); if(!token) return null;
   try{
@@ -20619,11 +20650,14 @@ function _g45PushBetsGithub(immediate){
   if(_g45BetPushT) clearTimeout(_g45BetPushT);
   var run=async function(){
     try{
+      var pass=_g45BetsPass();
+      if(!pass){ console.warn('⚠️ Synchro paris : pas de clé. Mets ton token GitHub dans les réglages (ou g45SetBetsPass pour un mot de passe séparé).'); return; }
+      var enc=await _g45EncryptState(state, pass);
       var cur=await _gh_getBets();            // récupère le sha courant (évite les conflits)
       var sha=cur?cur.sha:null;
       var ts=Date.now();
-      var ok=await _gh_saveBets({ts:ts, state:state}, sha);
-      if(ok){ localStorage.setItem('g45_betsync_ts', String(ts)); console.log('✅ paris poussés sur GitHub'); }
+      var ok=await _gh_saveBets({ts:ts, enc:enc}, sha);
+      if(ok){ localStorage.setItem('g45_betsync_ts', String(ts)); console.log('✅ paris poussés (chiffrés) sur GitHub'); }
     }catch(e){ console.warn('push bets', e); }
   };
   if(immediate){ run(); } else { _g45BetPushT=setTimeout(run, 2500); }
@@ -20633,11 +20667,19 @@ async function _g45PullBetsGithub(){
   if(!_g45BetSyncOn()) return;
   try{
     var res=await _gh_getBets();
-    if(!res || !res.data || !res.data.state){ _g45PushBetsGithub(true); return; } // 1ère fois : on initialise le fichier
+    if(!res || !res.data || (!res.data.enc && !res.data.state)){ _g45PushBetsGithub(true); return; } // 1ère fois : on initialise le fichier
     var remoteTs=res.data.ts||0;
     var localTs=parseInt(localStorage.getItem('g45_betsync_ts')||'0',10);
     if(remoteTs>localTs){
-      var st=res.data.state; if(!st.bkColors) st.bkColors={};
+      var st=null;
+      if(res.data.enc){
+        var pass=_g45BetsPass();
+        if(!pass){ console.warn('⚠️ Paris chiffrés mais pas de clé sur cet appareil. Mets ton token GitHub (le même que sur ton autre appareil).'); return; }
+        try{ st=await _g45DecryptState(res.data.enc, pass); }
+        catch(e){ console.warn('⚠️ Déchiffrement échoué (mauvais mot de passe ?). Sync annulée pour ne rien écraser.'); return; }
+      } else { st=res.data.state; } // ancien format en clair (ne devrait pas exister)
+      if(!st) return;
+      if(!st.bkColors) st.bkColors={};
       localStorage.setItem('g45v5', JSON.stringify(st));
       localStorage.setItem('g45_betsync_ts', String(remoteTs));
       console.log('⬇️ paris chargés depuis GitHub (plus récents) — rechargement…');
