@@ -19437,10 +19437,10 @@ function renderNotifPanel(){
   h+='</div>';
   h+='<div style="margin-top:12px;border-top:1px solid var(--b1);padding-top:11px;">'
     +'<label style="display:flex;align-items:center;justify-content:space-between;gap:9px;font-size:12px;font-weight:700;color:var(--t1);cursor:pointer;">'
-    +'<span>\ud83c\udfaf Suivre mes paris foot en cours</span>'
+    +'<span>\ud83c\udfaf Suivre mes paris en cours</span>'
     +'<input type="checkbox" '+(p.bets!==false?'checked':'')+' onchange="toggleNotifBets()" style="accent-color:var(--a);width:16px;height:16px;flex:none;">'
     +'</label>'
-    +'<div style="font-size:10px;color:var(--t3);margin-top:4px;">Re\u00e7ois les alertes (compo, but, fin) sur les matchs de tes paris simples & combin\u00e9s, en plus de tes \u00e9quipes suivies.</div></div>';
+    +'<div style="font-size:10px;color:var(--t3);margin-top:4px;">Alertes 🎯 (coup d\'envoi, score, fin) sur les matchs de tes paris simples & combin\u00e9s \u2014 foot &amp; rugby.</div></div>';
   el.innerHTML=h;
 }
 
@@ -19458,13 +19458,55 @@ async function g45SyncNotifs(subOpt){
   if(!sub) return;
   var p=g45NotifPrefs();
   var favs=(typeof state!=='undefined'&&state.u?state.u:[]).filter(function(u){ return (u.sport||'\u26bd')==='\u26bd' && p.teams[u.n]; });
-  var teams=[], _seenN={};
-  for(var i=0;i<favs.length;i++){ var r=await _g45ResolveTeam(favs[i].n); if(r){ teams.push({n:favs[i].n, id:r.id, league:r.league}); _seenN[String(favs[i].n).toLowerCase()]=1; } }
-  if(p.bets!==false){ // équipes des paris foot en cours → surveillées comme les favoris (compo/but/fin)
-    var _bn=g45BetTeamNames();
-    for(var j=0;j<_bn.length;j++){ var _k=_bn[j].toLowerCase(); if(_seenN[_k]) continue; var rr=await _g45ResolveTeam(_bn[j]); if(rr){ teams.push({n:_bn[j], id:rr.id, league:rr.league}); _seenN[_k]=1; } }
+  var teams=[];
+  for(var i=0;i<favs.length;i++){ var r=await _g45ResolveTeam(favs[i].n); if(r) teams.push({n:favs[i].n, id:r.id, league:r.league}); }
+  var betTeams=[];
+  if(p.bets!==false){ try{ betTeams=await g45BetTeams(); }catch(e){} } // Phase 2 : matchs des paris (foot + rugby), surveillés à part, taggés 🎯
+  try{ await fetch(FD_PROXY+'/psub',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sub:sub,teams:teams,betTeams:betTeams,ev:p.ev})}); }catch(e){}
+}
+/* Sélections (foot ⚽ + rugby 🏉) des paris en cours → {name, sport, comp} */
+function g45BetSelections(){
+  var seen={}, out=[];
+  function add(name, sportEmoji, comp){
+    if(!name) return; name=String(name).trim(); if(!name||name==='SIMPLE'||name==='-') return;
+    var sp = sportEmoji==='\u26bd'?'soccer':(sportEmoji==='\ud83c\udfc9'?'rugby':null); if(!sp) return;
+    var k=sp+'|'+name.toLowerCase(); if(seen[k]) return; seen[k]=1;
+    out.push({name:name, sport:sp, comp:comp||''});
   }
-  try{ await fetch(FD_PROXY+'/psub',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sub:sub,teams:teams,ev:p.ev})}); }catch(e){}
+  function fromTarget(t, sp, comp){ if(!t) return; var m=String(t).split(/\s+vs\.?\s+/i); if(m.length>=2){ add(m[0],sp,comp); add(m[1],sp,comp); } }
+  var H=(typeof state!=='undefined'&&state.h)?state.h:[];
+  H.forEach(function(h){
+    if(h.isCombi){ (h.combiRows||[]).forEach(function(r){ add(r.team, r.sport||'\u26bd', r.comp||h.comp); add(r.adv, r.sport||'\u26bd', r.comp||h.comp); }); }
+    else { var sp=h.sport||'\u26bd'; if(h.n && h.n!=='SIMPLE') add(h.n, sp, h.comp); fromTarget(h.target, sp, h.comp); }
+  });
+  return out;
+}
+var G45_RUGBY_LG = {'top 14':'270559','top14':'270559','champions cup':'271937','champions':'271937','challenge cup':'271938','challenge':'271938','urc':'270557','united rugby':'270557','premiership':'267979','six nations':'180659','rugby championship':'270563','super rugby':'242041'};
+function _g45RugbyLeagueId(comp){ var c=String(comp||'').toLowerCase(); for(var k in G45_RUGBY_LG){ if(c.indexOf(k)>=0) return G45_RUGBY_LG[k]; } return '270559'; /* défaut Top 14 */ }
+async function _g45ResolveRugbyTeam(name, comp){
+  var lg=_g45RugbyLeagueId(comp); if(!lg) return null;
+  var ck='g45rugteams_'+lg, teams=null;
+  try{ var c=localStorage.getItem(ck); if(c){ var o=JSON.parse(c); if(o&&o.ts&&(Date.now()-o.ts<7*864e5)) teams=o.list; } }catch(e){}
+  if(!teams){
+    try{
+      var r=await fetch(FD_PROXY+'/?host=espn&path=/apis/site/v2/sports/rugby/'+lg+'/teams'); if(!r.ok) return null;
+      var j=await r.json(); var s=j.sports||[]; var lst=((((s[0]||{}).leagues||[])[0]||{}).teams)||j.teams||[];
+      teams=lst.map(function(t){ var tt=t.team||t; return {id:String(tt.id), n:String(tt.displayName||tt.name||'')}; });
+      try{ localStorage.setItem(ck, JSON.stringify({ts:Date.now(), list:teams})); }catch(e){}
+    }catch(e){ return null; }
+  }
+  var nm=String(name||'').toLowerCase().trim(); if(!nm) return null;
+  var found=teams.find(function(t){ return t.n.toLowerCase()===nm; }) || teams.find(function(t){ var tn=t.n.toLowerCase(); return tn.indexOf(nm)>=0 || nm.indexOf(tn)>=0; });
+  return found?{id:found.id, league:lg}:null;
+}
+async function g45BetTeams(){
+  var sels=g45BetSelections(), out=[], seen={};
+  for(var i=0;i<sels.length;i++){
+    var s=sels[i], res=null;
+    try{ if(s.sport==='soccer') res=await _g45ResolveTeam(s.name); else if(s.sport==='rugby') res=await _g45ResolveRugbyTeam(s.name, s.comp); }catch(e){}
+    if(res && res.id){ var k=s.sport+'|'+res.league+'|'+res.id; if(seen[k]) continue; seen[k]=1; out.push({n:s.name, id:String(res.id), league:res.league, sport:s.sport}); }
+  }
+  return out;
 }
 /* Équipes (foot) des paris en cours (state.h) : simple, combiné, unité → noms à résoudre */
 function g45BetTeamNames(){
