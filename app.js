@@ -20288,18 +20288,18 @@ async function g45LoadCalendar(slug, btn, monthOffset, sportPath){
       +'</div>';
     var wd=['L','M','M','J','V','S','D'];
     h+='<div id="g45-md-jump" style="margin-bottom:10px;"></div>';
-    h+='<div style="display:grid;grid-template-columns:repeat(7,1fr);gap:3px;margin-bottom:3px;">';
+    h+='<div style="display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:3px;margin-bottom:3px;">';
     wd.forEach(function(w){ h+='<div style="text-align:center;font-size:11px;color:var(--t3);font-weight:700;">'+w+'</div>'; });
-    h+='</div><div style="display:grid;grid-template-columns:repeat(7,1fr);gap:3px;">';
+    h+='</div><div style="display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:3px;">';
     var firstWd=(mb.first.getDay()+6)%7;
     for(var i=0;i<firstWd;i++){ h+='<div></div>'; }
     var today=new Date(), isThisMonth=(today.getFullYear()===mb.y&&today.getMonth()===mb.m);
     for(var day=1; day<=mb.last.getDate(); day++){
       var has=byDay[day]&&byDay[day].length, isToday=isThisMonth&&today.getDate()===day;
       if(has){
-        h+='<div onclick="g45CalDay('+day+')" style="aspect-ratio:1;border-radius:8px;background:rgba(77,132,255,.13);border:1px solid '+(isToday?'#4d84ff':'rgba(77,132,255,.3)')+';cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;padding:2px;">'
+        h+='<div onclick="g45CalDay('+day+')" style="aspect-ratio:1;border-radius:8px;background:rgba(77,132,255,.13);border:1px solid '+(isToday?'#4d84ff':'rgba(77,132,255,.3)')+';cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;padding:2px;overflow:hidden;min-width:0;">'
           +'<div style="font-size:13px;font-weight:800;color:var(--t1);line-height:1;">'+day+'</div>'
-          +'<div id="g45cdm-'+day+'" style="display:flex;align-items:center;gap:1px;line-height:1;">'+marker+(byDay[day].length>1?'<span style="font-size:10px;color:#8aa0ff;font-weight:700;">×'+byDay[day].length+'</span>':'')+'</div>'
+          +'<div id="g45cdm-'+day+'" style="display:flex;align-items:center;gap:1px;line-height:1;max-width:100%;overflow:hidden;">'+marker+(byDay[day].length>1?'<span style="font-size:9px;color:#8aa0ff;font-weight:700;">×'+byDay[day].length+'</span>':'')+'</div>'
           +'</div>';
       } else {
         h+='<div style="aspect-ratio:1;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:13px;color:'+(isToday?'#4d84ff':'var(--t3)')+';font-weight:'+(isToday?'800':'400')+';'+(isToday?'border:1px solid #4d84ff;':'')+'">'+day+'</div>';
