@@ -19370,8 +19370,8 @@ var _bcp=document.getElementById('btn-chat-params-pc');if(_bcp)_bcp.onclick=func
 var G45_VAPID_PUBLIC = 'BDiHPmicEs4Quz-RUMuPGZHRRwILrqoJWNWTIrcZ4fch51Wyxc889Sbym8ZSG56YdNfCNLN56ykVfHhrOguqdF4';
 
 function g45NotifPrefs(){
-  var d={enabled:false, ev:{compo:true,start:true,goals:true,end:true}, teams:{}};
-  try{ var p=JSON.parse(localStorage.getItem('g45_notif')||'null'); if(p){ d.enabled=!!p.enabled; if(p.ev){ for(var k in p.ev) d.ev[k]=p.ev[k]; } if(p.teams) d.teams=p.teams; } }catch(e){}
+  var d={enabled:false, ev:{compo:true,start:true,goals:true,end:true}, teams:{}, bets:true};
+  try{ var p=JSON.parse(localStorage.getItem('g45_notif')||'null'); if(p){ d.enabled=!!p.enabled; if(p.ev){ for(var k in p.ev) d.ev[k]=p.ev[k]; } if(p.teams) d.teams=p.teams; if(typeof p.bets==='boolean') d.bets=p.bets; } }catch(e){}
   return d;
 }
 function g45NotifPrefsSave(p){ try{ localStorage.setItem('g45_notif', JSON.stringify(p)); }catch(e){} }
@@ -19435,6 +19435,12 @@ function renderNotifPanel(){
     h+='</div>';
   }
   h+='</div>';
+  h+='<div style="margin-top:12px;border-top:1px solid var(--b1);padding-top:11px;">'
+    +'<label style="display:flex;align-items:center;justify-content:space-between;gap:9px;font-size:12px;font-weight:700;color:var(--t1);cursor:pointer;">'
+    +'<span>\ud83c\udfaf Suivre mes paris foot en cours</span>'
+    +'<input type="checkbox" '+(p.bets!==false?'checked':'')+' onchange="toggleNotifBets()" style="accent-color:var(--a);width:16px;height:16px;flex:none;">'
+    +'</label>'
+    +'<div style="font-size:10px;color:var(--t3);margin-top:4px;">Re\u00e7ois les alertes (compo, but, fin) sur les matchs de tes paris simples & combin\u00e9s, en plus de tes \u00e9quipes suivies.</div></div>';
   el.innerHTML=h;
 }
 
@@ -19452,10 +19458,27 @@ async function g45SyncNotifs(subOpt){
   if(!sub) return;
   var p=g45NotifPrefs();
   var favs=(typeof state!=='undefined'&&state.u?state.u:[]).filter(function(u){ return (u.sport||'\u26bd')==='\u26bd' && p.teams[u.n]; });
-  var teams=[];
-  for(var i=0;i<favs.length;i++){ var r=await _g45ResolveTeam(favs[i].n); if(r) teams.push({n:favs[i].n, id:r.id, league:r.league}); }
+  var teams=[], _seenN={};
+  for(var i=0;i<favs.length;i++){ var r=await _g45ResolveTeam(favs[i].n); if(r){ teams.push({n:favs[i].n, id:r.id, league:r.league}); _seenN[String(favs[i].n).toLowerCase()]=1; } }
+  if(p.bets!==false){ // équipes des paris foot en cours → surveillées comme les favoris (compo/but/fin)
+    var _bn=g45BetTeamNames();
+    for(var j=0;j<_bn.length;j++){ var _k=_bn[j].toLowerCase(); if(_seenN[_k]) continue; var rr=await _g45ResolveTeam(_bn[j]); if(rr){ teams.push({n:_bn[j], id:rr.id, league:rr.league}); _seenN[_k]=1; } }
+  }
   try{ await fetch(FD_PROXY+'/psub',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sub:sub,teams:teams,ev:p.ev})}); }catch(e){}
 }
+/* Équipes (foot) des paris en cours (state.h) : simple, combiné, unité → noms à résoudre */
+function g45BetTeamNames(){
+  var seen={}, out=[];
+  function add(nm){ if(!nm) return; nm=String(nm).trim(); if(!nm||nm==='SIMPLE'||nm==='-') return; var k=nm.toLowerCase(); if(seen[k]) return; seen[k]=1; out.push(nm); }
+  function fromTarget(t){ if(!t) return; var m=String(t).split(/\s+vs\.?\s+/i); if(m.length>=2){ add(m[0]); add(m[1]); } }
+  var H=(typeof state!=='undefined'&&state.h)?state.h:[];
+  H.forEach(function(h){
+    if(h.isCombi){ (h.combiRows||[]).forEach(function(r){ if((r.sport||'\u26bd')==='\u26bd'){ add(r.team); add(r.adv); } }); }
+    else if((h.sport||'\u26bd')==='\u26bd'){ if(h.n && h.n!=='SIMPLE') add(h.n); fromTarget(h.target); }
+  });
+  return out;
+}
+function toggleNotifBets(){ var p=g45NotifPrefs(); var cur=p.bets!==false; p.bets=!cur; g45NotifPrefsSave(p); renderNotifPanel(); if(p.enabled){ try{ g45SyncNotifs(); }catch(e){} } }
 
 async function g45EnableNotifs(){
   _notifMsg('Activation\u2026','var(--t3)');
@@ -20477,3 +20500,21 @@ async function _g45RefreshLiveScores(){
     if(!anyLive){ if(window._g45ListInterval){ clearInterval(window._g45ListInterval); window._g45ListInterval=null; } } // plus de live → on arrête de poller
   }catch(e){}
 }
+
+/* ───────────── Re-sync des notifs paris quand les paris changent (wrap de save) ───────────── */
+window.toggleNotifBets = (typeof toggleNotifBets!=='undefined') ? toggleNotifBets : window.toggleNotifBets;
+window.g45BetTeamNames = (typeof g45BetTeamNames!=='undefined') ? g45BetTeamNames : window.g45BetTeamNames;
+(function(){
+  var _bt=null;
+  window._g45DebouncedBetSync=function(){
+    if(_bt) clearTimeout(_bt);
+    _bt=setTimeout(function(){
+      try{ var p=g45NotifPrefs(); if(p.enabled && p.bets!==false && typeof g45SyncNotifs==='function') g45SyncNotifs(); }catch(e){}
+    }, 1500);
+  };
+  if(typeof save==='function' && !save._g45betw){
+    var _os=save;
+    save=function(){ var r=_os.apply(this,arguments); try{ window._g45DebouncedBetSync(); }catch(e){} return r; };
+    save._g45betw=true;
+  }
+})();
