@@ -19756,8 +19756,10 @@ function _rugbyLiveLabel(status){
   return st.displayPeriod||'LIVE';
 }
 /* Badge live commun (ligne, refresh, détail) : mi-temps détectée pour TOUS les sports */
+/* Famille rugby : à XV (rugby) + à XIII / NRL (rugby-league) — même rendu détail + horloge */
+function _isRugbyFamily(sp){ return sp==='rugby' || sp==='rugby-league'; }
 function _g45LiveBadge(status, sportPath){
-  if(sportPath==='rugby') return _rugbyLiveLabel(status);
+  if(_isRugbyFamily(sportPath)) return _rugbyLiveLabel(status);
   var st=status||{}, tn=(st.type&&st.type.name)||'';
   if(tn==='STATUS_HALFTIME') return 'Mi-temps';
   if(tn==='STATUS_END_PERIOD'||tn==='STATUS_END_OF_PERIOD') return 'Fin période';
@@ -19881,7 +19883,7 @@ function _rugbyScorers(data){
    mais la core API /plays contient chaque action (type + minute + score + joueur en $ref).
    On résout les noms via les rosters du summary (zéro requête en plus). */
 async function _rugbyScorersFromPlays(sport, lg, eid, data){
-  var r=await fetch('https://sports.core.api.espn.com/v2/sports/rugby/leagues/'+lg+'/events/'+eid+'/competitions/'+eid+'/plays?limit=400');
+  var r=await fetch('https://sports.core.api.espn.com/v2/sports/'+sport+'/leagues/'+lg+'/events/'+eid+'/competitions/'+eid+'/plays?limit=400');
   if(!r.ok) return '';
   var plays=await r.json();
   var items=(plays.items||[]); if(!items.length) return '';
@@ -19933,7 +19935,7 @@ async function _rugbyScorersFromPlays(sport, lg, eid, data){
    côté équipe déterminé par le score qui monte (fiable), icône + minute + score courant.
    Essai et transformation restent 2 lignes distinctes. Marche pour clubs ET internationaux. */
 async function _rugbyTimelineFromPlays(sport, lg, eid, data){
-  var r=await fetch('https://sports.core.api.espn.com/v2/sports/rugby/leagues/'+lg+'/events/'+eid+'/competitions/'+eid+'/plays?limit=400');
+  var r=await fetch('https://sports.core.api.espn.com/v2/sports/'+sport+'/leagues/'+lg+'/events/'+eid+'/competitions/'+eid+'/plays?limit=400');
   if(!r.ok) return '';
   var plays=await r.json();
   var items=(plays.items||[]); if(!items.length) return '';
@@ -20068,7 +20070,7 @@ async function _renderGenericDetail(el, sport, lg, eid){
     try{
       var hl=home.linescores||[], al=away.linescores||[];
       var hasVals=hl.some(function(p,i){ return (+(p.value||p.displayValue||0))>0 || (al[i]&&+(al[i].value||al[i].displayValue||0)>0); });
-      if(sport!=='rugby' && hl.length && hasVals){ // rugby = 2 mi-temps non remplies par ESPN → on masque ce tableau de périodes
+      if(!_isRugbyFamily(sport) && hl.length && hasVals){ // rugby = 2 mi-temps non remplies par ESPN → on masque ce tableau de périodes
         h+='<div style="margin-top:10px;display:flex;justify-content:center;gap:10px;font-size:10px;color:var(--t2);">';
         h+='<div><div style="color:var(--t3);font-size:8px;text-align:right;">&nbsp;</div><div style="font-weight:700;text-align:right;">'+hN.slice(0,3).toUpperCase()+'</div><div style="font-weight:700;text-align:right;">'+aN.slice(0,3).toUpperCase()+'</div></div>';
         h+='<div style="display:flex;gap:8px;">';
@@ -20092,7 +20094,7 @@ async function _renderGenericDetail(el, sport, lg, eid){
       }
     }catch(e){}
     var _rugbyBanner='';
-    if(sport==='rugby'){
+    if(_isRugbyFamily(sport)){
       var _rt=null; try{ _rt=await _rugbyTimelineFromPlays(sport, lg, eid, data); }catch(e){} // timeline chrono (clubs + internationaux)
       var _rs=(_rt&&_rt.html)?_rt.html:'';
       if(!_rs){ try{ _rs=_rugbyScorers(data); }catch(e){} }                                  // secours : boxscore groupé (international)
@@ -20153,7 +20155,10 @@ var G45_SPORTS = [
       {name:'JO 7s (H)', slug:'282', ico:'🥇'},
       {name:'JO 7s (F)', slug:'283', ico:'🥇'}
     ]}
-  ]}
+  ]},
+  {key:'rugby-league', name:'NRL', ico:'🏉', groups:[{grp:'Rugby à XIII', leagues:[
+    {name:'NRL', slug:'3', ico:'🇦🇺'}
+  ]}]}
 ];
 function loadResultatsTab(){
   var el=document.getElementById('t-resultats'); if(!el) return;
@@ -20257,14 +20262,14 @@ async function g45LoadCalendar(slug, btn, monthOffset, sportPath){
     var data=await r.json();
     var events=(data.events||[]);
     var lgLogo=''; try{ var lo=(data.leagues&&data.leagues[0]&&data.leagues[0].logos); if(lo){ lgLogo=Array.isArray(lo)?((lo[0]&&lo[0].href)||''):(lo.href||''); } }catch(e){}
-    var sportIco={soccer:'⚽',basketball:'🏀',hockey:'🏒',baseball:'⚾',football:'🏈',rugby:'🏉'}[sportPath]||'⚽';
+    var sportIco={soccer:'⚽',basketball:'🏀',hockey:'🏒',baseball:'⚾',football:'🏈',rugby:'🏉','rugby-league':'🏉'}[sportPath]||'⚽';
     var marker = lgLogo ? ('<img src="'+lgLogo+'" style="width:18px;height:18px;object-fit:contain;" onerror="this.style.display=\'none\'">') : ('<span style="font-size:15px;">'+sportIco+'</span>');
     var byDay={};
     events.forEach(function(e){ var d=new Date(e.date); if(d.getFullYear()===mb.y && d.getMonth()===mb.m){ var day=d.getDate(); (byDay[day]=byDay[day]||[]).push(e); } });
     window._g45CalByDay=byDay; window._g45CalY=mb.y; window._g45CalM=mb.m;
     var monthName=mb.base.toLocaleDateString('fr-FR',{month:'long',year:'numeric'});
     var _btns='';
-    if(sportPath==='soccer'||sportPath==='rugby'){
+    if(sportPath==='soccer'||sportPath==='rugby'||sportPath==='rugby-league'){
       _btns='<div style="display:flex;gap:8px;margin-bottom:10px;">'
         +'<button onclick="g45ToggleStandings(\''+slug+'\',\''+sportPath+'\',this)" id="g45-std-toggle" style="flex:1;border:1px solid rgba(240,176,32,.3);cursor:pointer;background:rgba(240,176,32,.1);border-radius:8px;color:#f0b020;padding:8px;font-size:12px;font-weight:700;">🏆 Classement</button>'
         +(sportPath==='soccer'?'<button onclick="g45ToggleScorers(\''+slug+'\',\''+sportPath+'\',this)" id="g45-sco-toggle" style="flex:1;border:1px solid rgba(77,132,255,.3);cursor:pointer;background:rgba(77,132,255,.1);border-radius:8px;color:#4d84ff;padding:8px;font-size:12px;font-weight:700;">⚽ Buteurs</button>':'')
