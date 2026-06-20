@@ -977,7 +977,7 @@
   </div>
 
   <!-- MENU PLUS MOBILE -->
-  <div id="plus-menu" style="display:none;position:fixed;bottom:68px;right:0;left:0;background:var(--s1);border-top:1px solid var(--b2);z-index:300;padding:8px 0;">
+  <div id="plus-menu" style="display:none;position:fixed;bottom:68px;right:0;left:0;background:var(--s1);border-top:1px solid var(--b2);z-index:300;padding:8px 0;max-height:calc(100vh - 88px);overflow-y:auto;-webkit-overflow-scrolling:touch;">
     <div style="display:flex;flex-direction:column;gap:2px;padding:0 12px;">
       <button onclick="showTab('t-bank',$i('btn-plus-menu'));togglePlusMenu();" style="display:flex;align-items:center;gap:12px;padding:14px 12px;background:var(--bg3);border:none;border-radius:8px;color:var(--t1);font-size:13px;font-weight:700;cursor:pointer;text-align:left;">
         <span>💳</span> Bank
