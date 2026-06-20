@@ -20571,7 +20571,84 @@ window.g45BetTeamNames = (typeof g45BetTeamNames!=='undefined') ? g45BetTeamName
   };
   if(typeof save==='function' && !save._g45betw){
     var _os=save;
-    save=function(){ var r=_os.apply(this,arguments); try{ window._g45DebouncedBetSync(); }catch(e){} return r; };
+    save=function(){ var r=_os.apply(this,arguments); try{ window._g45DebouncedBetSync(); }catch(e){} try{ if(typeof _g45PushBetsGithub==='function') _g45PushBetsGithub(); }catch(e){} return r; };
     save._g45betw=true;
   }
+})();
+
+/* ═══════════ SYNCHRO PARIS via GITHUB (Antoine uniquement — détecté par la présence du token GitHub) ═══════════
+   Remplace Dropbox POUR ANTOINE sans toucher au mode Dropbox (conservé pour Bruno/JP).
+   Écrit/lit données/bets_antoine.json directement via l'API GitHub (même mécanisme que les stats joueurs).
+   Réservé à Antoine car lui seul possède gones45_github_token en localStorage. */
+var G45_BETS_FILE='données/bets_antoine.json';
+function _g45BetSyncOn(){
+  if(!localStorage.getItem('gones45_github_token')) return false;       // seul Antoine a le token GitHub
+  return localStorage.getItem('g45_github_betsync')!=='0';              // ON par défaut, coupable via le flag
+}
+function g45ToggleGithubBetSync(){
+  var on=_g45BetSyncOn();
+  localStorage.setItem('g45_github_betsync', on?'0':'1');
+  alert('Synchro paris GitHub : '+(on?'DÉSACTIVÉE':'ACTIVÉE'));
+  if(!on){ try{ _g45PushBetsGithub(true); }catch(e){} }
+}
+async function _gh_getBets(){
+  var token=localStorage.getItem('gones45_github_token'); if(!token) return null;
+  try{
+    var r=await fetch('https://api.github.com/repos/'+GITHUB_OWNER+'/'+GITHUB_REPO+'/contents/'+G45_BETS_FILE,{headers:{'Authorization':'token '+token,'Accept':'application/vnd.github.v3+json'}});
+    if(r.status===404) return {data:null, sha:null};
+    if(!r.ok) return null;
+    var d=await r.json();
+    var json=decodeURIComponent(escape(atob((d.content||'').split('\n').join(''))));
+    return {data:JSON.parse(json), sha:d.sha};
+  }catch(e){ console.warn('gh getBets', e); return null; }
+}
+async function _gh_saveBets(payload, sha){
+  var token=localStorage.getItem('gones45_github_token'); if(!token) return false;
+  try{
+    var body={message:'Sync paris Antoine '+new Date().toISOString(), content:btoa(unescape(encodeURIComponent(JSON.stringify(payload))))};
+    if(sha) body.sha=sha;
+    var r=await fetch('https://api.github.com/repos/'+GITHUB_OWNER+'/'+GITHUB_REPO+'/contents/'+G45_BETS_FILE,{method:'PUT',headers:{'Authorization':'token '+token,'Content-Type':'application/json','Accept':'application/vnd.github.v3+json'},body:JSON.stringify(body)});
+    if(r.ok){ try{ var rd=await r.json(); return (rd.content&&rd.content.sha)||true; }catch(e){ return true; } }
+    return false;
+  }catch(e){ console.warn('gh saveBets', e); return false; }
+}
+/* PUSH (débounce) : écrit l'état complet des paris sur GitHub avec un timestamp */
+var _g45BetPushT=null;
+function _g45PushBetsGithub(immediate){
+  if(!_g45BetSyncOn()) return;
+  if(_g45BetPushT) clearTimeout(_g45BetPushT);
+  var run=async function(){
+    try{
+      var cur=await _gh_getBets();            // récupère le sha courant (évite les conflits)
+      var sha=cur?cur.sha:null;
+      var ts=Date.now();
+      var ok=await _gh_saveBets({ts:ts, state:state}, sha);
+      if(ok){ localStorage.setItem('g45_betsync_ts', String(ts)); console.log('✅ paris poussés sur GitHub'); }
+    }catch(e){ console.warn('push bets', e); }
+  };
+  if(immediate){ run(); } else { _g45BetPushT=setTimeout(run, 2500); }
+}
+/* PULL (au démarrage) : si GitHub est plus récent que le local, on charge et on recharge la page */
+async function _g45PullBetsGithub(){
+  if(!_g45BetSyncOn()) return;
+  try{
+    var res=await _gh_getBets();
+    if(!res || !res.data || !res.data.state){ _g45PushBetsGithub(true); return; } // 1ère fois : on initialise le fichier
+    var remoteTs=res.data.ts||0;
+    var localTs=parseInt(localStorage.getItem('g45_betsync_ts')||'0',10);
+    if(remoteTs>localTs){
+      var st=res.data.state; if(!st.bkColors) st.bkColors={};
+      localStorage.setItem('g45v5', JSON.stringify(st));
+      localStorage.setItem('g45_betsync_ts', String(remoteTs));
+      console.log('⬇️ paris chargés depuis GitHub (plus récents) — rechargement…');
+      location.reload();
+    } else if(remoteTs<localTs){
+      _g45PushBetsGithub(true); // local plus récent → on pousse
+    }
+  }catch(e){ console.warn('pull bets', e); }
+}
+/* Démarrage : pull une fois l'app initialisée */
+(function(){
+  function go(){ setTimeout(_g45PullBetsGithub, 1200); }
+  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded', go); else go();
 })();
