@@ -19897,9 +19897,22 @@ async function _rugbyTimelineFromPlays(sport, lg, eid, data){
     var right = (e.side==='away')?('<div style="text-align:left;min-width:0;">'+nameCell+'</div>'):'<div></div>';
     return '<div style="display:grid;grid-template-columns:1fr auto 1fr;gap:8px;align-items:center;padding:5px 2px;border-bottom:1px solid rgba(255,255,255,.04);">'+left+center+right+'</div>';
   }).join('');
-  return '<div style="margin-top:8px;background:rgba(77,132,255,.07);border-radius:10px;padding:10px;">'
+  var _html='<div style="margin-top:8px;background:rgba(77,132,255,.07);border-radius:10px;padding:10px;">'
     +'<div style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:#8aa0ff;margin-bottom:6px;">Réalisations</div>'
     +rows+'</div>';
+  return { html:_html, events:evs, total:(prevH+prevA), h:prevH, a:prevA };
+}
+function _rugbyTryBannerHtml(ev, h, a){
+  ev=ev||{};
+  var map={ 'Essai':{t:'🏉 ESSAI !!!',c1:'#1ed760',c2:'#0a9d4a'}, 'Transfo':{t:'🎯 TRANSFORMATION !',c1:'#f0b020',c2:'#c8881a'}, 'Pénalité':{t:'➕ PÉNALITÉ !',c1:'#4d84ff',c2:'#2a5bd0'}, 'Drop':{t:'🦶 DROP !',c1:'#9b6dff',c2:'#6c3fd0'} };
+  var m=map[ev.lbl]||map['Essai'];
+  var who=(ev.name&&ev.name!=='?')?(ev.name+(ev.min?(' · '+ev.min):'')):'';
+  var bh='<div class="g45-goal-banner" style="text-align:center;background:linear-gradient(135deg,'+m.c1+','+m.c2+');border-radius:12px;padding:14px;margin:2px 0 8px;overflow:hidden;">';
+  bh+='<div class="g45-goal-title" style="font-size:24px;font-weight:900;letter-spacing:2px;color:#fff;text-shadow:0 2px 8px rgba(0,0,0,.35);">'+m.t+'</div>';
+  if(who) bh+='<div style="font-size:13px;font-weight:800;color:#fff;margin-top:4px;">'+who+'</div>';
+  bh+='<div style="font-size:14px;font-weight:900;color:#fff;margin-top:5px;letter-spacing:1px;">'+h+' – '+a+'</div>';
+  bh+='</div>';
+  return bh;
 }
 function _rugbyTeamStats(data){
   var T=data&&data.boxscore&&data.boxscore.teams; if(!T||T.length<2) return '';
@@ -20008,16 +20021,28 @@ async function _renderGenericDetail(el, sport, lg, eid){
         h+='</div>';
       }
     }catch(e){}
+    var _rugbyBanner='';
     if(sport==='rugby'){
-      var _rs=''; try{ _rs=await _rugbyTimelineFromPlays(sport, lg, eid, data); }catch(e){} // timeline chrono (clubs + internationaux)
+      var _rt=null; try{ _rt=await _rugbyTimelineFromPlays(sport, lg, eid, data); }catch(e){} // timeline chrono (clubs + internationaux)
+      var _rs=(_rt&&_rt.html)?_rt.html:'';
       if(!_rs){ try{ _rs=_rugbyScorers(data); }catch(e){} }                                  // secours : boxscore groupé (international)
       if(_rs) h+=_rs;
       try{ h+=_rugbyTeamStats(data); }catch(e){}                                              // stats d'équipe : international uniquement (auto-masqué sinon)
+      // bannière animée « ESSAI ! » (ou Transfo/Pénalité/Drop) quand le score monte en live
+      try{
+        if(_rt && isLive){
+          if(el._lastScoreR!=null && _rt.total>el._lastScoreR){
+            if(typeof _g45EnsureGoalCSS==='function') _g45EnsureGoalCSS();
+            _rugbyBanner=_rugbyTryBannerHtml((_rt.events&&_rt.events[_rt.events.length-1])||null, _rt.h, _rt.a);
+          }
+          el._lastScoreR=_rt.total;
+        }
+      }catch(e){}
     }
     try{ h+=_genericLineups(data); }catch(e){}
     try{ if((stT.state==='in'||stT.state==='post') && typeof _videoBlock==='function'){ var _vyr=''; try{ if(comp.date)_vyr=new Date(comp.date).getFullYear()||''; }catch(_e){} h+=_videoBlock(data, hN, aN, ('résumé '+_vyr).trim()); } }catch(e){}
     h+='</div>';
-    el.innerHTML=h;
+    el.innerHTML=_rugbyBanner+h;
     if(isLive){ if(!el._refresh){ el._refresh=setInterval(function(){ if(el.getAttribute('data-open')!=='1'){ clearInterval(el._refresh); el._refresh=null; return; } if(document.hidden||el.offsetParent===null) return; _renderGenericDetail(el,sport,lg,eid); },30000); } } else if(el._refresh){ clearInterval(el._refresh); el._refresh=null; }
   }catch(e){ el.innerHTML='<div style="padding:12px;color:#ff6b6b;font-size:11px;text-align:center;">Détail indisponible.</div>'; }
 }
