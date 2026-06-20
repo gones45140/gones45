@@ -19469,7 +19469,12 @@ function g45BetSelections(){
   var seen={}, out=[];
   function add(name, sportEmoji, comp){
     if(!name) return; name=String(name).trim(); if(!name||name==='SIMPLE'||name==='-') return;
-    var sp = sportEmoji==='\u26bd'?'soccer':(sportEmoji==='\ud83c\udfc9\ud83c\udde6\ud83c\uddfa'?'nrl':(sportEmoji==='\ud83c\udfc9'?'rugby':null)); if(!sp) return;
+    var se=String(sportEmoji||''), cl=String(comp||'').toLowerCase();
+    var sp = se.indexOf('\u26bd')>=0 ? 'soccer'
+      : (se.indexOf('\ud83c\udfc9')>=0
+          ? ((se.indexOf('\ud83c\udde6\ud83c\uddfa')>=0 || /\bnrl\b|rugby.?league|treize|xiii/.test(cl)) ? 'nrl' : 'rugby')
+          : null);
+    if(!sp) return;
     var k=sp+'|'+name.toLowerCase(); if(seen[k]) return; seen[k]=1;
     out.push({name:name, sport:sp, comp:comp||''});
   }
