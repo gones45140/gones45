@@ -1904,10 +1904,12 @@ function toggleArchMonth(el){
 }
 var _archFilter = 'all';
 function renderArchive(){
+  // Source = archives (réglés) + paris EN COURS (state.h) injectés comme isPending
+  var _arSrc = (state.a||[]).concat((state.h||[]).map(function(_h){ return Object.assign({}, _h, {isPending:true}); }));
   // Mise à jour compteurs KPI
-  var wins = state.a.filter(function(x){return !x.isPending && x.win;}).length;
-  var loss = state.a.filter(function(x){return !x.isPending && !x.win;}).length;
-  var pend = state.a.filter(function(x){return x.isPending;}).length;
+  var wins = _arSrc.filter(function(x){return !x.isPending && x.win;}).length;
+  var loss = _arSrc.filter(function(x){return !x.isPending && !x.win;}).length;
+  var pend = _arSrc.filter(function(x){return x.isPending;}).length;
   var wEl = document.getElementById('arch-wins');
   var lEl = document.getElementById('arch-loss');
   var pEl = document.getElementById('arch-pending');
@@ -1916,7 +1918,7 @@ function renderArchive(){
   if(pEl) pEl.textContent = pend;
 
   var pm={};
-  state.a.forEach(function(h){
+  _arSrc.forEach(function(h){
     var dateRaw = h.date || h.t || '';
     var k = 'Inconnu';
     if(dateRaw) {
@@ -1952,7 +1954,7 @@ function renderArchive(){
   
   /* Grouper tous les paris par mois/semaine/jour */
   var allByDate={};
-  state.a.forEach(function(h){
+  _arSrc.forEach(function(h){
     var dateStr=h.date||'';
     if(!dateStr)dateStr=(h.t||'').substring(0,10);
     var key=dateStr||'Inconnu';
@@ -8114,10 +8116,12 @@ function toggleArchMonth(el){
 }
 var _archFilter = 'all';
 function renderArchive(){
+  // Source = archives (réglés) + paris EN COURS (state.h) injectés comme isPending
+  var _arSrc = (state.a||[]).concat((state.h||[]).map(function(_h){ return Object.assign({}, _h, {isPending:true}); }));
   // Mise à jour compteurs KPI
-  var wins = state.a.filter(function(x){return !x.isPending && x.win;}).length;
-  var loss = state.a.filter(function(x){return !x.isPending && !x.win;}).length;
-  var pend = state.a.filter(function(x){return x.isPending;}).length;
+  var wins = _arSrc.filter(function(x){return !x.isPending && x.win;}).length;
+  var loss = _arSrc.filter(function(x){return !x.isPending && !x.win;}).length;
+  var pend = _arSrc.filter(function(x){return x.isPending;}).length;
   var wEl = document.getElementById('arch-wins');
   var lEl = document.getElementById('arch-loss');
   var pEl = document.getElementById('arch-pending');
@@ -8126,7 +8130,7 @@ function renderArchive(){
   if(pEl) pEl.textContent = pend;
 
   var pm={};
-  state.a.forEach(function(h){
+  _arSrc.forEach(function(h){
     var dateRaw = h.date || h.t || '';
     var k = 'Inconnu';
     if(dateRaw) {
@@ -8162,7 +8166,7 @@ function renderArchive(){
   
   /* Grouper tous les paris par mois/semaine/jour */
   var allByDate={};
-  state.a.forEach(function(h){
+  _arSrc.forEach(function(h){
     var dateStr=h.date||'';
     if(!dateStr)dateStr=(h.t||'').substring(0,10);
     var key=dateStr||'Inconnu';
