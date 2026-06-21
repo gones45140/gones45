@@ -2674,15 +2674,16 @@ function pari(isS){
   }
   var isFlash=!isS&&$i('n-flashboost')&&$i('n-flashboost').checked;
   var isFreebet=!isS&&$i('n-freebet')&&$i('n-freebet').checked;
+  var notif=isS?true:(!$i('n-notif')||$i('n-notif').checked);
   if(!state.fb)state.fb={};
   var _fund=isFreebet?((parseFloat(state.fb[b])||0)>=m):((parseFloat(state.b[b])||0)>=m);
   if(m>0&&_fund){
     if(isFreebet){state.fb[b]=((parseFloat(state.fb[b])||0)-m).toFixed(2);}
     else{state.b[b]=(parseFloat(state.b[b])-m).toFixed(2);}
-    var domicile=($i('n-lieu')&&$i('n-lieu').value)||($i('p-domicile')?$i('p-domicile').value:'');state.h.unshift({id:Date.now().toString(),n:n,target:target,b:b,l:l,m:m,cote:c,isS:isS,isFlash:isFlash,isFreebet:isFreebet,t:t,sport:sport,type:type,comp:comp,heure:heure,date:date,notes:notes||'',domicile:domicile});
+    var domicile=($i('n-lieu')&&$i('n-lieu').value)||($i('p-domicile')?$i('p-domicile').value:'');state.h.unshift({id:Date.now().toString(),n:n,target:target,b:b,l:l,m:m,cote:c,isS:isS,isFlash:isFlash,isFreebet:isFreebet,t:t,sport:sport,type:type,comp:comp,heure:heure,date:date,notes:notes||'',domicile:domicile,notif:notif});
     save();
     if(isS){$i('c-target').value='';$i('c-comp').value='';if($i('c-notes'))$i('c-notes').value='';}
-    else{$i('n-comp').value='';$i('n-type').value='';$i('n-analysis').value='';if($i('n-notes'))$i('n-notes').value='';if($i('n-team'))$i('n-team').value='';if($i('n-flashboost'))$i('n-flashboost').checked=false;if($i('n-freebet'))$i('n-freebet').checked=false;mmRowsSimple=[{type:'',cote:1.50}];renderMmRowsSimple();}
+    else{$i('n-comp').value='';$i('n-type').value='';$i('n-analysis').value='';if($i('n-notes'))$i('n-notes').value='';if($i('n-team'))$i('n-team').value='';if($i('n-flashboost'))$i('n-flashboost').checked=false;if($i('n-freebet'))$i('n-freebet').checked=false;if($i('n-notif'))$i('n-notif').checked=true;mmRowsSimple=[{type:'',cote:1.50}];renderMmRowsSimple();}
   }else alert((isFreebet?'Cagnotte freebet insuffisante sur ':'Solde insuffisant sur ')+bki(b).n+' !');
 }
 function result(id,win){
@@ -2976,7 +2977,8 @@ function saveCombiPending(){
     type: 'Combiné ('+combiRows.length+' sél.)', isCombi: true,
     combiRows: combiRows.map(function(r){ return {team:r.team,adv:r.adv,type:r.type,cote:r.cote,sport:r.sport,comp:r.comp}; }),
     t: date, date: date, heure: heure, notes: notes, domicile: lieu,
-    isFlash: isFlash, isFreebet: isFreebet
+    isFlash: isFlash, isFreebet: isFreebet,
+    notif: (document.getElementById('combi-notif') ? document.getElementById('combi-notif').checked : true)
   };
   state.h.unshift(pari);
   save();
@@ -8808,15 +8810,16 @@ function pari(isS){
   }
   var isFlash=!isS&&$i('n-flashboost')&&$i('n-flashboost').checked;
   var isFreebet=!isS&&$i('n-freebet')&&$i('n-freebet').checked;
+  var notif=isS?true:(!$i('n-notif')||$i('n-notif').checked);
   if(!state.fb)state.fb={};
   var _fund=isFreebet?((parseFloat(state.fb[b])||0)>=m):((parseFloat(state.b[b])||0)>=m);
   if(m>0&&_fund){
     if(isFreebet){state.fb[b]=((parseFloat(state.fb[b])||0)-m).toFixed(2);}
     else{state.b[b]=(parseFloat(state.b[b])-m).toFixed(2);}
-    var domicile=($i('n-lieu')&&$i('n-lieu').value)||($i('p-domicile')?$i('p-domicile').value:'');state.h.unshift({id:Date.now().toString(),n:n,target:target,b:b,l:l,m:m,cote:c,isS:isS,isFlash:isFlash,isFreebet:isFreebet,t:t,sport:sport,type:type,comp:comp,heure:heure,date:date,notes:notes||'',domicile:domicile});
+    var domicile=($i('n-lieu')&&$i('n-lieu').value)||($i('p-domicile')?$i('p-domicile').value:'');state.h.unshift({id:Date.now().toString(),n:n,target:target,b:b,l:l,m:m,cote:c,isS:isS,isFlash:isFlash,isFreebet:isFreebet,t:t,sport:sport,type:type,comp:comp,heure:heure,date:date,notes:notes||'',domicile:domicile,notif:notif});
     save();
     if(isS){$i('c-target').value='';$i('c-comp').value='';if($i('c-notes'))$i('c-notes').value='';}
-    else{$i('n-comp').value='';$i('n-type').value='';$i('n-analysis').value='';if($i('n-notes'))$i('n-notes').value='';if($i('n-team'))$i('n-team').value='';if($i('n-flashboost'))$i('n-flashboost').checked=false;if($i('n-freebet'))$i('n-freebet').checked=false;mmRowsSimple=[{type:'',cote:1.50}];renderMmRowsSimple();}
+    else{$i('n-comp').value='';$i('n-type').value='';$i('n-analysis').value='';if($i('n-notes'))$i('n-notes').value='';if($i('n-team'))$i('n-team').value='';if($i('n-flashboost'))$i('n-flashboost').checked=false;if($i('n-freebet'))$i('n-freebet').checked=false;if($i('n-notif'))$i('n-notif').checked=true;mmRowsSimple=[{type:'',cote:1.50}];renderMmRowsSimple();}
   }else alert((isFreebet?'Cagnotte freebet insuffisante sur ':'Solde insuffisant sur ')+bki(b).n+' !');
 }
 function result(id,win){
@@ -9110,7 +9113,8 @@ function saveCombiPending(){
     type: 'Combiné ('+combiRows.length+' sél.)', isCombi: true,
     combiRows: combiRows.map(function(r){ return {team:r.team,adv:r.adv,type:r.type,cote:r.cote,sport:r.sport,comp:r.comp}; }),
     t: date, date: date, heure: heure, notes: notes, domicile: lieu,
-    isFlash: isFlash, isFreebet: isFreebet
+    isFlash: isFlash, isFreebet: isFreebet,
+    notif: (document.getElementById('combi-notif') ? document.getElementById('combi-notif').checked : true)
   };
   state.h.unshift(pari);
   save();
@@ -19678,6 +19682,7 @@ function g45BetSelections(){
   function fromTarget(t, sp, comp){ if(!t) return; var m=String(t).split(/\s+vs\.?\s+/i); if(m.length>=2){ add(m[0],sp,comp); add(m[1],sp,comp); } }
   var H=(typeof state!=='undefined'&&state.h)?state.h:[];
   H.forEach(function(h){
+    if(h.notif===false) return;
     if(h.isCombi){ (h.combiRows||[]).forEach(function(r){ add(r.team, r.sport||'\u26bd', r.comp||h.comp); add(r.adv, r.sport||'\u26bd', r.comp||h.comp); }); }
     else { var sp=h.sport||'\u26bd'; if(h.n && h.n!=='SIMPLE') add(h.n, sp, h.comp); fromTarget(h.target, sp, h.comp);
       if(String(sp).indexOf('\u26bd')>=0) _g45HarvestNations((h.n||'')+' '+(h.target||''), h.comp, add); }
@@ -19723,6 +19728,7 @@ function g45BetTeamNames(){
   function fromTarget(t){ if(!t) return; var m=String(t).split(/\s+vs\.?\s+/i); if(m.length>=2){ add(m[0]); add(m[1]); } }
   var H=(typeof state!=='undefined'&&state.h)?state.h:[];
   H.forEach(function(h){
+    if(h.notif===false) return;
     if(h.isCombi){ (h.combiRows||[]).forEach(function(r){ if((r.sport||'\u26bd')==='\u26bd'){ add(r.team); add(r.adv); } }); }
     else if((h.sport||'\u26bd')==='\u26bd'){ if(h.n && h.n!=='SIMPLE') add(h.n); fromTarget(h.target); }
   });
