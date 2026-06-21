@@ -1105,9 +1105,11 @@ var PRESETS=[
 
 /* ── STATE ── */
 var state=JSON.parse(localStorage.getItem('g45v5'))||{b:{},u:[],h:[],a:[],start_bk:0,goal:0,ugoals:{},notes:{},bkColors:{}};
+if(state&&!state.fb)state.fb={};
 if(!state.ugoals)state.ugoals={};
 if(!state.notes)state.notes={};
 DEF_BK.forEach(function(k){if(state.b[k]===undefined)state.b[k]=0;});
+(function(){function _num(x){var n=parseFloat(x);return isNaN(n)?0:n;}for(var _k in state.b){state.b[_k]=_num(state.b[_k]).toFixed(2);}if(state.fb)for(var _f in state.fb){state.fb[_f]=_num(state.fb[_f]).toFixed(2);}state.start_bk=_num(state.start_bk);})();
 PRESETS.forEach(function(pt){
   if(!state.u.find(function(u){return u.n===pt.n;}))
     state.u.push({n:pt.n,abbr:pt.abbr,color:pt.color,s:pt.s,l:1,sport:pt.sport,preset:true});
@@ -1218,7 +1220,7 @@ function renderCrash(){
   var s=String(u.s||1);
   var strat=STRATS[s]||STRATS["1"];
   var cote=getMmCote?getMmCote():1.5;
-  var total=Object.values(state.b).reduce(function(a,v){return a+parseFloat(v||0);},0);
+  var total=Object.values(state.b).reduce(function(a,v){var n=parseFloat(v);return a+(isNaN(n)?0:n);},0);
   var html='';
   var alertMsg='';
   for(var i=0;i<strat.length;i++){
@@ -1641,7 +1643,7 @@ function renderBilanTab(){
 
 /* ── RENDER PRINCIPAL ── */
 function render(){
-  var total=Object.values(state.b).reduce(function(a,v){return a+parseFloat(v||0);},0);
+  var total=Object.values(state.b).reduce(function(a,v){var n=parseFloat(v);return a+(isNaN(n)?0:n);},0);
   // Bénéfice = toujours calculé depuis les paris de l'archive
   var ben = 0;
   if(state.a && state.a.length > 0) {
@@ -1712,9 +1714,11 @@ function render(){
     return '<div class="btile" style="--bc:'+b.c+';">'
       +'<div class="btile-n" style="color:'+b.c+';display:flex;align-items:center;gap:5px;">'+bkFavicon(e[0],14)+b.n+'</div>'
       +'<div class="btile-v">'+parseFloat(e[1]).toFixed(2)+'€</div>'
+      +'<div class="btile-fb" style="font-size:11px;font-weight:700;color:var(--gold);margin-top:1px;">🎟 '+(parseFloat(state.fb&&state.fb[e[0]])||0).toFixed(2)+'€</div>'
       +'<div class="btile-acts" style="align-items:center;">'
       +'<input type="color" value="'+b.c+'" title="Couleur" data-bk="'+e[0]+'" onchange="changeBookColor(this)" style="width:20px;height:20px;border-radius:50%;border:none;padding:0;cursor:pointer;background:none;flex-shrink:0;">'
       +'<button class="ba" data-bk="'+e[0]+'" onclick="editBook(this.dataset.bk)">Modifier</button> '
+      +'<button class="ba" data-bk="'+e[0]+'" title="Cagnotte freebet" onclick="editFb(this.dataset.bk)" style="color:var(--gold);border-color:rgba(240,176,32,.4);">🎟</button> '
       +'<button class="ba del" data-bk="'+e[0]+'" onclick="delBook(this.dataset.bk)">✕</button>'
       +'</div></div>';
   }).join('');
@@ -2668,15 +2672,18 @@ function pari(isS){
     type=getMmLabelSimple()||$i('n-type').value||'-';b=$i('n-book').value;
     c=parseFloat($i('n-cote').value.replace(',','.'))||0;m=parseFloat($i('n-mise').value)||0;
   }
-  if(m>0&&(parseFloat(state.b[b])||0)>=m){
-    state.b[b]=(parseFloat(state.b[b])-m).toFixed(2);
-    var isFlash=!isS&&$i('n-flashboost')&&$i('n-flashboost').checked;
-    var isFreebet=!isS&&$i('n-freebet')&&$i('n-freebet').checked;
+  var isFlash=!isS&&$i('n-flashboost')&&$i('n-flashboost').checked;
+  var isFreebet=!isS&&$i('n-freebet')&&$i('n-freebet').checked;
+  if(!state.fb)state.fb={};
+  var _fund=isFreebet?((parseFloat(state.fb[b])||0)>=m):((parseFloat(state.b[b])||0)>=m);
+  if(m>0&&_fund){
+    if(isFreebet){state.fb[b]=((parseFloat(state.fb[b])||0)-m).toFixed(2);}
+    else{state.b[b]=(parseFloat(state.b[b])-m).toFixed(2);}
     var domicile=($i('n-lieu')&&$i('n-lieu').value)||($i('p-domicile')?$i('p-domicile').value:'');state.h.unshift({id:Date.now().toString(),n:n,target:target,b:b,l:l,m:m,cote:c,isS:isS,isFlash:isFlash,isFreebet:isFreebet,t:t,sport:sport,type:type,comp:comp,heure:heure,date:date,notes:notes||'',domicile:domicile});
     save();
     if(isS){$i('c-target').value='';$i('c-comp').value='';if($i('c-notes'))$i('c-notes').value='';}
     else{$i('n-comp').value='';$i('n-type').value='';$i('n-analysis').value='';if($i('n-notes'))$i('n-notes').value='';if($i('n-team'))$i('n-team').value='';if($i('n-flashboost'))$i('n-flashboost').checked=false;if($i('n-freebet'))$i('n-freebet').checked=false;mmRowsSimple=[{type:'',cote:1.50}];renderMmRowsSimple();}
-  }else alert('Solde insuffisant sur '+bki(b).n+' !');
+  }else alert((isFreebet?'Cagnotte freebet insuffisante sur ':'Solde insuffisant sur ')+bki(b).n+' !');
 }
 function result(id,win){
   var idx=state.h.findIndex(function(x){return x.id===id;});if(idx===-1)return;
@@ -2691,7 +2698,8 @@ function cancelBet(id){
   if(!confirm('Annuler ce pari et rembourser la mise ?'))return;
   var idx=state.h.findIndex(function(x){return x.id===id;});if(idx===-1)return;
   var bet=state.h[idx];
-  state.b[bet.b]=(parseFloat(state.b[bet.b]||0)+parseFloat(bet.m)).toFixed(2);
+  if(bet.isFreebet){if(!state.fb)state.fb={};state.fb[bet.b]=((parseFloat(state.fb[bet.b])||0)+parseFloat(bet.m)).toFixed(2);}
+  else{state.b[bet.b]=(parseFloat(state.b[bet.b]||0)+parseFloat(bet.m)).toFixed(2);}
   if(bet.isS&&bet.l){var u=state.u.find(function(x){return x.n===bet.n;});if(u)u.l=parseInt(bet.l)||1;}
   state.h.splice(idx,1);save();
 }
@@ -2699,7 +2707,10 @@ function deleteArchived(id){
   if(!confirm('Supprimer ce pari ?'))return;
   var idx=state.a.findIndex(function(x){return x.id===id;});if(idx===-1)return;
   var bet=state.a[idx];
-  if(bet.win)state.b[bet.b]=(parseFloat(state.b[bet.b]||0)-(bet.m*bet.cote)).toFixed(2);
+  if(bet.isFreebet){if(!state.fb)state.fb={};
+    if(bet.win)state.b[bet.b]=(parseFloat(state.b[bet.b]||0)-(bet.m*(bet.cote-1))).toFixed(2);
+    state.fb[bet.b]=((parseFloat(state.fb[bet.b])||0)+parseFloat(bet.m)).toFixed(2);
+  } else if(bet.win)state.b[bet.b]=(parseFloat(state.b[bet.b]||0)-(bet.m*bet.cote)).toFixed(2);
   else state.b[bet.b]=(parseFloat(state.b[bet.b]||0)+parseFloat(bet.m)).toFixed(2);
   state.a.splice(idx,1);save();
 }
@@ -2712,13 +2723,17 @@ function editArchived(id){
     bet.isPending=false;
     bet.win=choix;
     if(bet.b && state.b){
-      if(choix){state.b[bet.b]=(parseFloat(state.b[bet.b]||0)+(bet.m*bet.cote)-parseFloat(bet.m)).toFixed(2);}
+      if(bet.isFreebet){ if(choix){state.b[bet.b]=(parseFloat(state.b[bet.b]||0)+(bet.m*(bet.cote-1))).toFixed(2);} }
+      else if(choix){state.b[bet.b]=(parseFloat(state.b[bet.b]||0)+(bet.m*bet.cote)-parseFloat(bet.m)).toFixed(2);}
       else{state.b[bet.b]=(parseFloat(state.b[bet.b]||0)-parseFloat(bet.m)).toFixed(2);}
     }
     save();renderArchive();return;
   }
   if(!confirm('Inverser le résultat ? (actuellement '+(bet.win?'WIN':'LOSS')+')'))return;
-  if(bet.win){state.b[bet.b]=(parseFloat(state.b[bet.b]||0)-(bet.m*bet.cote)+parseFloat(bet.m)).toFixed(2);}
+  if(bet.isFreebet){
+    if(bet.win){state.b[bet.b]=(parseFloat(state.b[bet.b]||0)-(bet.m*(bet.cote-1))).toFixed(2);}
+    else{state.b[bet.b]=(parseFloat(state.b[bet.b]||0)+(bet.m*(bet.cote-1))).toFixed(2);}
+  } else if(bet.win){state.b[bet.b]=(parseFloat(state.b[bet.b]||0)-(bet.m*bet.cote)+parseFloat(bet.m)).toFixed(2);}
   else{state.b[bet.b]=(parseFloat(state.b[bet.b]||0)-parseFloat(bet.m)+(bet.m*bet.cote)).toFixed(2);}
   bet.win=!bet.win;save();
 }
@@ -2786,10 +2801,15 @@ function changeBookColor(el){
   state.bkColors[k]=col;
   save();
 }
-function delBook(k){if(confirm('Supprimer '+bki(k).n+' ?')){delete state.b[k];save();}}
+function delBook(k){if(confirm('Supprimer '+bki(k).n+' ?')){delete state.b[k];if(state.fb)delete state.fb[k];save();}}
 function editBook(k){
   var v=prompt('Nouveau solde pour '+bki(k).n+' ?',parseFloat(state.b[k]));
   if(v!=null){var nv=parseFloat(v);if(!isNaN(nv)){state.start_bk+=(nv-parseFloat(state.b[k]));state.b[k]=nv;save();}}
+}
+function editFb(k){
+  if(!state.fb)state.fb={};
+  var v=prompt('Cagnotte freebet pour '+bki(k).n+' (€) ?',parseFloat(state.fb[k])||0);
+  if(v!=null){var nv=parseFloat(v);if(!isNaN(nv)){state.fb[k]=nv.toFixed(2);save();}}
 }
 function addUnit(){
   var name=($i('u-name')&&$i('u-name').value||'').trim();if(!name)return;
@@ -2940,6 +2960,7 @@ function saveCombi(win) {
   var label = combiRows.map(function(r){ return (r.team||r.type||'Sél.')+(r.adv?' vs '+r.adv:''); }).join(' + ');
   var lieu = document.getElementById('combi-lieu') ? document.getElementById('combi-lieu').value : '';
   var isFreebet = document.getElementById('combi-freebet') ? document.getElementById('combi-freebet').checked : false;
+  var isFlash = document.getElementById('combi-flashboost') ? document.getElementById('combi-flashboost').checked : false;
 
   if(!mise || !book) { alert('Mise et bookmaker requis'); return; }
 
@@ -2961,7 +2982,7 @@ function saveCombi(win) {
     heure: heure,
     notes: notes,
     domicile: lieu,
-    isFlash: false,
+    isFlash: isFlash,
     isFreebet: isFreebet
   };
 
@@ -3368,7 +3389,7 @@ function renderGlobalCharts(){
 function renderBooksChart(){
   var ctx=$i('chart-books');if(!ctx)return;
   if(GC2.books){try{GC2.books.destroy();}catch(e){}}
-  var total=Object.values(state.b).reduce(function(a,v){return a+parseFloat(v||0);},0);
+  var total=Object.values(state.b).reduce(function(a,v){var n=parseFloat(v);return a+(isNaN(n)?0:n);},0);
   if(total<=0){ctx.parentElement.innerHTML='<div class="empty">Aucun solde</div>';return;}
   var labels=[],data=[],colors=[];
   Object.entries(state.b).forEach(function(e){
@@ -4734,7 +4755,7 @@ function buildContext(){
     return u.n+'('+(profit>=0?'+':'')+profit.toFixed(0)+'€)';
   }).join(',');
   var totalProfit=s.a.reduce(function(a,h){return a+(h.win?(h.m*h.cote)-h.m:-h.m);},0);
-  var cap=Object.values(s.b).reduce(function(a,v){return a+parseFloat(v||0);},0);
+  var cap=Object.values(s.b).reduce(function(a,v){var n=parseFloat(v);return a+(isNaN(n)?0:n);},0);
   var today=new Date();var dateStr=today.toLocaleDateString('fr-FR');
   var dayNames=['Dimanche','Lundi','Mardi','Mercredi','Jeudi','Vendredi','Samedi'];
   var dayName=dayNames[today.getDay()];
@@ -7228,9 +7249,11 @@ var PRESETS=[
 
 /* ── STATE ── */
 var state=JSON.parse(localStorage.getItem('g45v5'))||{b:{},u:[],h:[],a:[],start_bk:0,goal:0,ugoals:{},notes:{},bkColors:{}};
+if(state&&!state.fb)state.fb={};
 if(!state.ugoals)state.ugoals={};
 if(!state.notes)state.notes={};
 DEF_BK.forEach(function(k){if(state.b[k]===undefined)state.b[k]=0;});
+(function(){function _num(x){var n=parseFloat(x);return isNaN(n)?0:n;}for(var _k in state.b){state.b[_k]=_num(state.b[_k]).toFixed(2);}if(state.fb)for(var _f in state.fb){state.fb[_f]=_num(state.fb[_f]).toFixed(2);}state.start_bk=_num(state.start_bk);})();
 PRESETS.forEach(function(pt){
   if(!state.u.find(function(u){return u.n===pt.n;}))
     state.u.push({n:pt.n,abbr:pt.abbr,color:pt.color,s:pt.s,l:1,sport:pt.sport,preset:true});
@@ -7341,7 +7364,7 @@ function renderCrash(){
   var s=String(u.s||1);
   var strat=STRATS[s]||STRATS["1"];
   var cote=getMmCote?getMmCote():1.5;
-  var total=Object.values(state.b).reduce(function(a,v){return a+parseFloat(v||0);},0);
+  var total=Object.values(state.b).reduce(function(a,v){var n=parseFloat(v);return a+(isNaN(n)?0:n);},0);
   var html='';
   var alertMsg='';
   for(var i=0;i<strat.length;i++){
@@ -7764,7 +7787,7 @@ function renderBilanTab(){
 
 /* ── RENDER PRINCIPAL ── */
 function render(){
-  var total=Object.values(state.b).reduce(function(a,v){return a+parseFloat(v||0);},0);
+  var total=Object.values(state.b).reduce(function(a,v){var n=parseFloat(v);return a+(isNaN(n)?0:n);},0);
   // Bénéfice = toujours calculé depuis les paris de l'archive
   var ben = 0;
   if(state.a && state.a.length > 0) {
@@ -7835,9 +7858,11 @@ function render(){
     return '<div class="btile" style="--bc:'+b.c+';">'
       +'<div class="btile-n" style="color:'+b.c+';display:flex;align-items:center;gap:5px;">'+bkFavicon(e[0],14)+b.n+'</div>'
       +'<div class="btile-v">'+parseFloat(e[1]).toFixed(2)+'€</div>'
+      +'<div class="btile-fb" style="font-size:11px;font-weight:700;color:var(--gold);margin-top:1px;">🎟 '+(parseFloat(state.fb&&state.fb[e[0]])||0).toFixed(2)+'€</div>'
       +'<div class="btile-acts" style="align-items:center;">'
       +'<input type="color" value="'+b.c+'" title="Couleur" data-bk="'+e[0]+'" onchange="changeBookColor(this)" style="width:20px;height:20px;border-radius:50%;border:none;padding:0;cursor:pointer;background:none;flex-shrink:0;">'
       +'<button class="ba" data-bk="'+e[0]+'" onclick="editBook(this.dataset.bk)">Modifier</button> '
+      +'<button class="ba" data-bk="'+e[0]+'" title="Cagnotte freebet" onclick="editFb(this.dataset.bk)" style="color:var(--gold);border-color:rgba(240,176,32,.4);">🎟</button> '
       +'<button class="ba del" data-bk="'+e[0]+'" onclick="delBook(this.dataset.bk)">✕</button>'
       +'</div></div>';
   }).join('');
@@ -8738,15 +8763,18 @@ function pari(isS){
     type=getMmLabelSimple()||$i('n-type').value||'-';b=$i('n-book').value;
     c=parseFloat($i('n-cote').value.replace(',','.'))||0;m=parseFloat($i('n-mise').value)||0;
   }
-  if(m>0&&(parseFloat(state.b[b])||0)>=m){
-    state.b[b]=(parseFloat(state.b[b])-m).toFixed(2);
-    var isFlash=!isS&&$i('n-flashboost')&&$i('n-flashboost').checked;
-    var isFreebet=!isS&&$i('n-freebet')&&$i('n-freebet').checked;
+  var isFlash=!isS&&$i('n-flashboost')&&$i('n-flashboost').checked;
+  var isFreebet=!isS&&$i('n-freebet')&&$i('n-freebet').checked;
+  if(!state.fb)state.fb={};
+  var _fund=isFreebet?((parseFloat(state.fb[b])||0)>=m):((parseFloat(state.b[b])||0)>=m);
+  if(m>0&&_fund){
+    if(isFreebet){state.fb[b]=((parseFloat(state.fb[b])||0)-m).toFixed(2);}
+    else{state.b[b]=(parseFloat(state.b[b])-m).toFixed(2);}
     var domicile=($i('n-lieu')&&$i('n-lieu').value)||($i('p-domicile')?$i('p-domicile').value:'');state.h.unshift({id:Date.now().toString(),n:n,target:target,b:b,l:l,m:m,cote:c,isS:isS,isFlash:isFlash,isFreebet:isFreebet,t:t,sport:sport,type:type,comp:comp,heure:heure,date:date,notes:notes||'',domicile:domicile});
     save();
     if(isS){$i('c-target').value='';$i('c-comp').value='';if($i('c-notes'))$i('c-notes').value='';}
     else{$i('n-comp').value='';$i('n-type').value='';$i('n-analysis').value='';if($i('n-notes'))$i('n-notes').value='';if($i('n-team'))$i('n-team').value='';if($i('n-flashboost'))$i('n-flashboost').checked=false;if($i('n-freebet'))$i('n-freebet').checked=false;mmRowsSimple=[{type:'',cote:1.50}];renderMmRowsSimple();}
-  }else alert('Solde insuffisant sur '+bki(b).n+' !');
+  }else alert((isFreebet?'Cagnotte freebet insuffisante sur ':'Solde insuffisant sur ')+bki(b).n+' !');
 }
 function result(id,win){
   var idx=state.h.findIndex(function(x){return x.id===id;});if(idx===-1)return;
@@ -8761,7 +8789,8 @@ function cancelBet(id){
   if(!confirm('Annuler ce pari et rembourser la mise ?'))return;
   var idx=state.h.findIndex(function(x){return x.id===id;});if(idx===-1)return;
   var bet=state.h[idx];
-  state.b[bet.b]=(parseFloat(state.b[bet.b]||0)+parseFloat(bet.m)).toFixed(2);
+  if(bet.isFreebet){if(!state.fb)state.fb={};state.fb[bet.b]=((parseFloat(state.fb[bet.b])||0)+parseFloat(bet.m)).toFixed(2);}
+  else{state.b[bet.b]=(parseFloat(state.b[bet.b]||0)+parseFloat(bet.m)).toFixed(2);}
   if(bet.isS&&bet.l){var u=state.u.find(function(x){return x.n===bet.n;});if(u)u.l=parseInt(bet.l)||1;}
   state.h.splice(idx,1);save();
 }
@@ -8769,7 +8798,10 @@ function deleteArchived(id){
   if(!confirm('Supprimer ce pari ?'))return;
   var idx=state.a.findIndex(function(x){return x.id===id;});if(idx===-1)return;
   var bet=state.a[idx];
-  if(bet.win)state.b[bet.b]=(parseFloat(state.b[bet.b]||0)-(bet.m*bet.cote)).toFixed(2);
+  if(bet.isFreebet){if(!state.fb)state.fb={};
+    if(bet.win)state.b[bet.b]=(parseFloat(state.b[bet.b]||0)-(bet.m*(bet.cote-1))).toFixed(2);
+    state.fb[bet.b]=((parseFloat(state.fb[bet.b])||0)+parseFloat(bet.m)).toFixed(2);
+  } else if(bet.win)state.b[bet.b]=(parseFloat(state.b[bet.b]||0)-(bet.m*bet.cote)).toFixed(2);
   else state.b[bet.b]=(parseFloat(state.b[bet.b]||0)+parseFloat(bet.m)).toFixed(2);
   state.a.splice(idx,1);save();
 }
@@ -8782,13 +8814,17 @@ function editArchived(id){
     bet.isPending=false;
     bet.win=choix;
     if(bet.b && state.b){
-      if(choix){state.b[bet.b]=(parseFloat(state.b[bet.b]||0)+(bet.m*bet.cote)-parseFloat(bet.m)).toFixed(2);}
+      if(bet.isFreebet){ if(choix){state.b[bet.b]=(parseFloat(state.b[bet.b]||0)+(bet.m*(bet.cote-1))).toFixed(2);} }
+      else if(choix){state.b[bet.b]=(parseFloat(state.b[bet.b]||0)+(bet.m*bet.cote)-parseFloat(bet.m)).toFixed(2);}
       else{state.b[bet.b]=(parseFloat(state.b[bet.b]||0)-parseFloat(bet.m)).toFixed(2);}
     }
     save();renderArchive();return;
   }
   if(!confirm('Inverser le résultat ? (actuellement '+(bet.win?'WIN':'LOSS')+')'))return;
-  if(bet.win){state.b[bet.b]=(parseFloat(state.b[bet.b]||0)-(bet.m*bet.cote)+parseFloat(bet.m)).toFixed(2);}
+  if(bet.isFreebet){
+    if(bet.win){state.b[bet.b]=(parseFloat(state.b[bet.b]||0)-(bet.m*(bet.cote-1))).toFixed(2);}
+    else{state.b[bet.b]=(parseFloat(state.b[bet.b]||0)+(bet.m*(bet.cote-1))).toFixed(2);}
+  } else if(bet.win){state.b[bet.b]=(parseFloat(state.b[bet.b]||0)-(bet.m*bet.cote)+parseFloat(bet.m)).toFixed(2);}
   else{state.b[bet.b]=(parseFloat(state.b[bet.b]||0)-parseFloat(bet.m)+(bet.m*bet.cote)).toFixed(2);}
   bet.win=!bet.win;save();
 }
@@ -8856,10 +8892,15 @@ function changeBookColor(el){
   state.bkColors[k]=col;
   save();
 }
-function delBook(k){if(confirm('Supprimer '+bki(k).n+' ?')){delete state.b[k];save();}}
+function delBook(k){if(confirm('Supprimer '+bki(k).n+' ?')){delete state.b[k];if(state.fb)delete state.fb[k];save();}}
 function editBook(k){
   var v=prompt('Nouveau solde pour '+bki(k).n+' ?',parseFloat(state.b[k]));
   if(v!=null){var nv=parseFloat(v);if(!isNaN(nv)){state.start_bk+=(nv-parseFloat(state.b[k]));state.b[k]=nv;save();}}
+}
+function editFb(k){
+  if(!state.fb)state.fb={};
+  var v=prompt('Cagnotte freebet pour '+bki(k).n+' (€) ?',parseFloat(state.fb[k])||0);
+  if(v!=null){var nv=parseFloat(v);if(!isNaN(nv)){state.fb[k]=nv.toFixed(2);save();}}
 }
 function addUnit(){
   var name=($i('u-name')&&$i('u-name').value||'').trim();if(!name)return;
@@ -9010,6 +9051,7 @@ function saveCombi(win) {
   var label = combiRows.map(function(r){ return (r.team||r.type||'Sél.')+(r.adv?' vs '+r.adv:''); }).join(' + ');
   var lieu = document.getElementById('combi-lieu') ? document.getElementById('combi-lieu').value : '';
   var isFreebet = document.getElementById('combi-freebet') ? document.getElementById('combi-freebet').checked : false;
+  var isFlash = document.getElementById('combi-flashboost') ? document.getElementById('combi-flashboost').checked : false;
 
   if(!mise || !book) { alert('Mise et bookmaker requis'); return; }
 
@@ -9031,7 +9073,7 @@ function saveCombi(win) {
     heure: heure,
     notes: notes,
     domicile: lieu,
-    isFlash: false,
+    isFlash: isFlash,
     isFreebet: isFreebet
   };
 
@@ -9438,7 +9480,7 @@ function renderGlobalCharts(){
 function renderBooksChart(){
   var ctx=$i('chart-books');if(!ctx)return;
   if(GC2.books){try{GC2.books.destroy();}catch(e){}}
-  var total=Object.values(state.b).reduce(function(a,v){return a+parseFloat(v||0);},0);
+  var total=Object.values(state.b).reduce(function(a,v){var n=parseFloat(v);return a+(isNaN(n)?0:n);},0);
   if(total<=0){ctx.parentElement.innerHTML='<div class="empty">Aucun solde</div>';return;}
   var labels=[],data=[],colors=[];
   Object.entries(state.b).forEach(function(e){
@@ -10804,7 +10846,7 @@ function buildContext(){
     return u.n+'('+(profit>=0?'+':'')+profit.toFixed(0)+'€)';
   }).join(',');
   var totalProfit=s.a.reduce(function(a,h){return a+(h.win?(h.m*h.cote)-h.m:-h.m);},0);
-  var cap=Object.values(s.b).reduce(function(a,v){return a+parseFloat(v||0);},0);
+  var cap=Object.values(s.b).reduce(function(a,v){var n=parseFloat(v);return a+(isNaN(n)?0:n);},0);
   var today=new Date();var dateStr=today.toLocaleDateString('fr-FR');
   var dayNames=['Dimanche','Lundi','Mardi','Mercredi','Jeudi','Vendredi','Samedi'];
   var dayName=dayNames[today.getDay()];
@@ -16828,7 +16870,7 @@ function partagerProfil() {
   if(!prenom) return;
 
   // Données légères à partager
-  var total = Object.values(state.b||{}).reduce(function(a,v){return a+parseFloat(v||0);},0);
+  var total = Object.values(state.b||{}).reduce(function(a,v){var n=parseFloat(v);return a+(isNaN(n)?0:n);},0);
   var archive = (state.a||[]).slice(-100); // 100 derniers paris max
   var enCours = (state.p||[]).slice(0,20);
 
@@ -19444,7 +19486,76 @@ function renderNotifPanel(){
   el.innerHTML=h;
 }
 
+/* ─── Nations Coupe du Monde : nom FR (ou variantes) → id ESPN (fifa.world) ─── */
+function _g45norm(s){ return String(s||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/['\u2019\-\/]/g,' ').replace(/\s+/g,' ').trim(); }
+var G45_NATIONS=[
+{id:'624',fr:'Alg\u00e9rie',a:['algerie']},
+{id:'202',fr:'Argentine',a:['argentine']},
+{id:'628',fr:'Australie',a:['australie']},
+{id:'474',fr:'Autriche',a:['autriche']},
+{id:'459',fr:'Belgique',a:['belgique']},
+{id:'452',fr:'Bosnie',a:['bosnie','bosnie herzegovine']},
+{id:'205',fr:'Br\u00e9sil',a:['bresil']},
+{id:'206',fr:'Canada',a:['canada']},
+{id:'2597',fr:'Cap-Vert',a:['cap vert','cabo verde']},
+{id:'208',fr:'Colombie',a:['colombie']},
+{id:'2850',fr:'RD Congo',a:['rd congo','rdc','congo dr','republique democratique du congo']},
+{id:'477',fr:'Croatie',a:['croatie']},
+{id:'11678',fr:'Cura\u00e7ao',a:['curacao']},
+{id:'450',fr:'Tch\u00e9quie',a:['tchequie','republique tcheque']},
+{id:'209',fr:'\u00c9quateur',a:['equateur']},
+{id:'2620',fr:'\u00c9gypte',a:['egypte']},
+{id:'448',fr:'Angleterre',a:['angleterre']},
+{id:'478',fr:'France',a:['france']},
+{id:'481',fr:'Allemagne',a:['allemagne']},
+{id:'4469',fr:'Ghana',a:['ghana']},
+{id:'2654',fr:'Ha\u00efti',a:['haiti']},
+{id:'469',fr:'Iran',a:['iran']},
+{id:'4375',fr:'Irak',a:['irak','iraq']},
+{id:'4789',fr:"C\u00f4te d'Ivoire",a:['cote ivoire','cote d ivoire']},
+{id:'627',fr:'Japon',a:['japon']},
+{id:'2917',fr:'Jordanie',a:['jordanie']},
+{id:'203',fr:'Mexique',a:['mexique']},
+{id:'2869',fr:'Maroc',a:['maroc']},
+{id:'449',fr:'Pays-Bas',a:['pays bas','hollande']},
+{id:'2666',fr:'Nouvelle-Z\u00e9lande',a:['nouvelle zelande']},
+{id:'464',fr:'Norv\u00e8ge',a:['norvege']},
+{id:'2659',fr:'Panama',a:['panama']},
+{id:'210',fr:'Paraguay',a:['paraguay']},
+{id:'482',fr:'Portugal',a:['portugal']},
+{id:'4398',fr:'Qatar',a:['qatar']},
+{id:'655',fr:'Arabie Saoudite',a:['arabie saoudite','arabie']},
+{id:'580',fr:'\u00c9cosse',a:['ecosse']},
+{id:'654',fr:'S\u00e9n\u00e9gal',a:['senegal']},
+{id:'467',fr:'Afrique du Sud',a:['afrique du sud']},
+{id:'451',fr:'Cor\u00e9e du Sud',a:['coree du sud','coree']},
+{id:'164',fr:'Espagne',a:['espagne']},
+{id:'466',fr:'Su\u00e8de',a:['suede']},
+{id:'475',fr:'Suisse',a:['suisse']},
+{id:'659',fr:'Tunisie',a:['tunisie']},
+{id:'465',fr:'Turquie',a:['turquie','turkiye']},
+{id:'660',fr:'\u00c9tats-Unis',a:['etats unis','usa']},
+{id:'212',fr:'Uruguay',a:['uruguay']},
+{id:'2570',fr:'Ouzb\u00e9kistan',a:['ouzbekistan']}
+];
+var _g45NatByAlias=(function(){var m={};G45_NATIONS.forEach(function(n){m[_g45norm(n.fr)]=n;(n.a||[]).forEach(function(a){m[_g45norm(a)]=n;});});return m;})();
+function _g45NationId(nom){var n=_g45NatByAlias[_g45norm(nom)];return n?n.id:null;}
+var _G45_INTL_RE=/coupe du monde|mondial|world cup|fifa|euro|nations|qualif|amical|copa|afcon|\bcan\b/;
+/* Pêche TOUTES les nations citées dans un texte de pari international (n + target), même mal orthographiées/sans accents */
+function _g45HarvestNations(text,comp,addFn){
+  var hay=_g45norm((text||'')+' '+(comp||''));
+  if(!_G45_INTL_RE.test(hay)) return;
+  var nt=_g45norm(text);
+  G45_NATIONS.forEach(function(n){
+    var keys=[_g45norm(n.fr)].concat((n.a||[]).map(_g45norm));
+    for(var i=0;i<keys.length;i++){ var k=keys[i]; if(!k||k.length<3) continue;
+      var re=new RegExp('(^|[^a-z0-9])'+k.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')+'([^a-z0-9]|$)');
+      if(re.test(nt)){ addFn(n.fr,'\u26bd',comp); break; }
+    }
+  });
+}
 async function _g45ResolveTeam(nom){
+  var _nid=_g45NationId(nom); if(_nid) return {id:_nid, league:'fifa.world'};
   try{ var r=await espnResolveTeam(nom); if(r&&r.id) return {id:String(r.id), league:r.league||''}; }catch(e){}
   if(typeof _espnLoadLeagueTeams==='function' && typeof _espnMatchTeam==='function'){
     try{ var wt=await _espnLoadLeagueTeams('fifa.world'); var m=_espnMatchTeam(nom,wt,'fifa.world','exact')||_espnMatchTeam(nom,wt,'fifa.world','partial'); if(m&&m.id) return {id:String(m.id), league:'fifa.world'}; }catch(e){}
@@ -19482,7 +19593,8 @@ function g45BetSelections(){
   var H=(typeof state!=='undefined'&&state.h)?state.h:[];
   H.forEach(function(h){
     if(h.isCombi){ (h.combiRows||[]).forEach(function(r){ add(r.team, r.sport||'\u26bd', r.comp||h.comp); add(r.adv, r.sport||'\u26bd', r.comp||h.comp); }); }
-    else { var sp=h.sport||'\u26bd'; if(h.n && h.n!=='SIMPLE') add(h.n, sp, h.comp); fromTarget(h.target, sp, h.comp); }
+    else { var sp=h.sport||'\u26bd'; if(h.n && h.n!=='SIMPLE') add(h.n, sp, h.comp); fromTarget(h.target, sp, h.comp);
+      if(String(sp).indexOf('\u26bd')>=0) _g45HarvestNations((h.n||'')+' '+(h.target||''), h.comp, add); }
   });
   return out;
 }

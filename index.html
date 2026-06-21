@@ -142,12 +142,15 @@
         </div>
         <input type="hidden" id="combi-lieu" value="dom">
       </div>
-      <div class="fg" style="margin-bottom:9px;">
-        <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:12px;color:var(--t2);">
-          <input type="checkbox" id="combi-freebet" style="width:16px;height:16px;accent-color:var(--a);">
-          <span>🎁 Freebet</span>
-        </label>
-      </div>
+      <label style="display:flex;align-items:center;gap:8px;padding:9px;background:rgba(30,215,96,.07);border:1px solid rgba(30,215,96,.2);border-radius:var(--r6);cursor:pointer;margin-bottom:6px;">
+        <input type="checkbox" id="combi-freebet" style="accent-color:var(--g)">
+        <span style="font-size:11px;font-weight:700;color:var(--g)">🎟 Freebet</span>
+        <span style="font-size:10px;color:var(--t3);margin-left:auto;">Mise non engagée</span>
+      </label>
+      <label style="display:flex;align-items:center;gap:8px;padding:9px;background:rgba(240,176,32,.08);border:1px solid rgba(240,176,32,.2);border-radius:var(--r6);cursor:pointer;margin-bottom:9px;">
+        <input type="checkbox" id="combi-flashboost" style="accent-color:var(--gold)">
+        <span style="font-size:11px;font-weight:700;color:var(--gold)">⚡ FlashBoost</span>
+      </label>
       <div style="display:flex;gap:8px;">
         <button class="btn btn-p" style="flex:1;" onclick="saveCombi(true)">✅ Gagné</button>
         <button class="btn" style="flex:1;background:rgba(255,69,69,.15);border-color:rgba(255,69,69,.4);color:#ff4545;" onclick="saveCombi(false)">❌ Perdu</button>
