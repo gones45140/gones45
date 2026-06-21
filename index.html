@@ -151,9 +151,11 @@
         <input type="checkbox" id="combi-flashboost" style="accent-color:var(--gold)">
         <span style="font-size:11px;font-weight:700;color:var(--gold)">⚡ FlashBoost</span>
       </label>
+      <button class="btn btn-p" style="width:100%;margin-bottom:8px;" onclick="saveCombiPending()">⏳ Placer le pari combiné (en cours)</button>
+      <div style="font-size:10px;color:var(--t3);text-align:center;margin-bottom:6px;">— ou enregistrer un combiné déjà terminé —</div>
       <div style="display:flex;gap:8px;">
-        <button class="btn btn-p" style="flex:1;" onclick="saveCombi(true)">✅ Gagné</button>
-        <button class="btn" style="flex:1;background:rgba(255,69,69,.15);border-color:rgba(255,69,69,.4);color:#ff4545;" onclick="saveCombi(false)">❌ Perdu</button>
+        <button class="btn" style="flex:1;background:rgba(30,215,96,.12);border-color:rgba(30,215,96,.4);color:#1ed760;" onclick="saveCombi(true)">✅ Déjà gagné</button>
+        <button class="btn" style="flex:1;background:rgba(255,69,69,.15);border-color:rgba(255,69,69,.4);color:#ff4545;" onclick="saveCombi(false)">❌ Déjà perdu</button>
       </div>
     </div>
   </div>

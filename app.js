@@ -1679,7 +1679,7 @@ function render(){
   $i('live-norm').innerHTML=state.h.filter(function(x){return !x.isS;}).map(function(h){
     return '<tr>'
       +'<td><div style="font-size:10px;color:var(--t3);">'+(h.sport||'')+' '+(h.comp||'')+' '+(h.date?'📅 '+h.date:'')+' '+(h.heure?'⏰ '+h.heure:'')+'</div>'
-      +'<div style="font-weight:600;">'+(h.domicile==='dom'?'🏠 ':h.domicile==='ext'?'🚌 ':'')+h.target+'</div>'
+      +'<div style="font-weight:600;">'+(h.domicile==='dom'?'🏠 ':h.domicile==='ext'?'🚌 ':'')+(h.isCombi?h.n:h.target)+'</div>'
       +'<div style="font-size:10px;color:var(--t2);">'+(h.type||'—')+' · @'+h.cote+' · '+bbadge(h.b)+(h.isFreebet?' 🎟':'')+'</div></td>'
       +'<td style="color:var(--gold);font-weight:700;">'+h.m+'€</td>'
       +'<td style="text-align:right;white-space:nowrap"><a href="https://www.google.com/search?q='+encodeURIComponent(h.target+' sofascore résumé')+'" target="_blank" style="display:inline-flex;align-items:center;padding:5px 7px;background:rgba(77,132,255,.1);border:1px solid rgba(77,132,255,.25);border-radius:4px;color:#4d84ff;font-size:11px;font-weight:700;text-decoration:none;margin-right:3px;" title="Résumé">🔍</a><button class="sbtn sw" data-id="'+h.id+'" onclick="result(this.dataset.id,true)" style="margin-right:3px">✅</button><button class="sbtn sl" data-id="'+h.id+'" onclick="result(this.dataset.id,false)" style="margin-right:3px">❌</button><button data-id="'+h.id+'" onclick="editBet(this.dataset.id)" style="background:none;border:1px solid rgba(77,132,255,.25);color:var(--a);font-size:11px;font-weight:700;padding:5px 8px;border-radius:4px;cursor:pointer;margin-right:3px">✏️</button><button data-id="'+h.id+'" onclick="cancelBet(this.dataset.id)" style="background:none;border:1px solid rgba(255,69,69,.25);color:var(--r);font-size:11px;font-weight:700;padding:5px 8px;border-radius:4px;cursor:pointer">✕</button></td>'
@@ -2949,6 +2949,49 @@ function setCombiLieu(lieu) {
   });
 }
 
+function saveCombiPending(){
+  if(!combiRows.length){ alert('Ajoute au moins une sélection'); return; }
+  var coteTot = combiRows.reduce(function(acc,r){ return acc*(parseFloat(r.cote)||1); }, 1);
+  var mise = parseFloat(document.getElementById('combi-mise').value)||0;
+  var book = document.getElementById('combi-book').value;
+  var date = document.getElementById('combi-date').value || new Date().toISOString().split('T')[0];
+  var heure = document.getElementById('combi-heure').value || '';
+  var notes = document.getElementById('combi-notes').value || '';
+  var label = combiRows.map(function(r){ return (r.team||r.type||'Sél.')+(r.adv?' vs '+r.adv:''); }).join(' + ');
+  var lieu = document.getElementById('combi-lieu') ? document.getElementById('combi-lieu').value : '';
+  var isFreebet = document.getElementById('combi-freebet') ? document.getElementById('combi-freebet').checked : false;
+  var isFlash = document.getElementById('combi-flashboost') ? document.getElementById('combi-flashboost').checked : false;
+  if(!mise || !book){ alert('Mise et bookmaker requis'); return; }
+  if(!state.fb)state.fb={};
+  var fund = isFreebet ? ((parseFloat(state.fb[book])||0)>=mise) : ((parseFloat(state.b[book])||0)>=mise);
+  if(!fund){ alert(isFreebet?('Cagnotte freebet insuffisante sur '+bki(book).n+' !'):('Solde insuffisant sur '+bki(book).n+' !')); return; }
+  if(isFreebet){ state.fb[book]=((parseFloat(state.fb[book])||0)-mise).toFixed(2); }
+  else { state.b[book]=((parseFloat(state.b[book])||0)-mise).toFixed(2); }
+  var pari = {
+    id: Date.now().toString(), n: label,
+    target: combiRows[0]?(combiRows[0].team||combiRows[0].adv||label):label,
+    b: book, m: mise, cote: coteTot, win: null,
+    sport: combiRows[0]?combiRows[0].sport:'🎲',
+    comp: combiRows[0]?combiRows[0].comp:'',
+    type: 'Combiné ('+combiRows.length+' sél.)', isCombi: true,
+    combiRows: combiRows.map(function(r){ return {team:r.team,adv:r.adv,type:r.type,cote:r.cote,sport:r.sport,comp:r.comp}; }),
+    t: date, date: date, heure: heure, notes: notes, domicile: lieu,
+    isFlash: isFlash, isFreebet: isFreebet
+  };
+  state.h.unshift(pari);
+  save();
+  combiRows = [];
+  renderCombiRows();
+  document.getElementById('combi-mise').value = '10';
+  if(document.getElementById('combi-notes'))document.getElementById('combi-notes').value = '';
+  var ct=document.getElementById('combi-cote-total'); if(ct) ct.textContent='—';
+  var cg=document.getElementById('combi-gain'); if(cg) cg.textContent='—';
+  if(document.getElementById('combi-freebet'))document.getElementById('combi-freebet').checked=false;
+  if(document.getElementById('combi-flashboost'))document.getElementById('combi-flashboost').checked=false;
+  var btn = (typeof event!=='undefined'&&event)?event.target:null;
+  if(btn){ var _o=btn.textContent; btn.textContent='✓ Placé en cours !'; setTimeout(function(){ btn.textContent=_o; },2000); }
+  render();
+}
 function saveCombi(win) {
   if(!combiRows.length) { alert('Ajoute au moins une sélection'); return; }
   var coteTot = combiRows.reduce(function(acc,r){ return acc*(parseFloat(r.cote)||1); }, 1);
@@ -7823,7 +7866,7 @@ function render(){
   $i('live-norm').innerHTML=state.h.filter(function(x){return !x.isS;}).map(function(h){
     return '<tr>'
       +'<td><div style="font-size:10px;color:var(--t3);">'+(h.sport||'')+' '+(h.comp||'')+' '+(h.date?'📅 '+h.date:'')+' '+(h.heure?'⏰ '+h.heure:'')+'</div>'
-      +'<div style="font-weight:600;">'+(h.domicile==='dom'?'🏠 ':h.domicile==='ext'?'🚌 ':'')+h.target+'</div>'
+      +'<div style="font-weight:600;">'+(h.domicile==='dom'?'🏠 ':h.domicile==='ext'?'🚌 ':'')+(h.isCombi?h.n:h.target)+'</div>'
       +'<div style="font-size:10px;color:var(--t2);">'+(h.type||'—')+' · @'+h.cote+' · '+bbadge(h.b)+(h.isFreebet?' 🎟':'')+'</div></td>'
       +'<td style="color:var(--gold);font-weight:700;">'+h.m+'€</td>'
       +'<td style="text-align:right;white-space:nowrap"><a href="https://www.google.com/search?q='+encodeURIComponent(h.target+' sofascore résumé')+'" target="_blank" style="display:inline-flex;align-items:center;padding:5px 7px;background:rgba(77,132,255,.1);border:1px solid rgba(77,132,255,.25);border-radius:4px;color:#4d84ff;font-size:11px;font-weight:700;text-decoration:none;margin-right:3px;" title="Résumé">🔍</a><button class="sbtn sw" data-id="'+h.id+'" onclick="result(this.dataset.id,true)" style="margin-right:3px">✅</button><button class="sbtn sl" data-id="'+h.id+'" onclick="result(this.dataset.id,false)" style="margin-right:3px">❌</button><button data-id="'+h.id+'" onclick="editBet(this.dataset.id)" style="background:none;border:1px solid rgba(77,132,255,.25);color:var(--a);font-size:11px;font-weight:700;padding:5px 8px;border-radius:4px;cursor:pointer;margin-right:3px">✏️</button><button data-id="'+h.id+'" onclick="cancelBet(this.dataset.id)" style="background:none;border:1px solid rgba(255,69,69,.25);color:var(--r);font-size:11px;font-weight:700;padding:5px 8px;border-radius:4px;cursor:pointer">✕</button></td>'
@@ -9040,6 +9083,49 @@ function setCombiLieu(lieu) {
   });
 }
 
+function saveCombiPending(){
+  if(!combiRows.length){ alert('Ajoute au moins une sélection'); return; }
+  var coteTot = combiRows.reduce(function(acc,r){ return acc*(parseFloat(r.cote)||1); }, 1);
+  var mise = parseFloat(document.getElementById('combi-mise').value)||0;
+  var book = document.getElementById('combi-book').value;
+  var date = document.getElementById('combi-date').value || new Date().toISOString().split('T')[0];
+  var heure = document.getElementById('combi-heure').value || '';
+  var notes = document.getElementById('combi-notes').value || '';
+  var label = combiRows.map(function(r){ return (r.team||r.type||'Sél.')+(r.adv?' vs '+r.adv:''); }).join(' + ');
+  var lieu = document.getElementById('combi-lieu') ? document.getElementById('combi-lieu').value : '';
+  var isFreebet = document.getElementById('combi-freebet') ? document.getElementById('combi-freebet').checked : false;
+  var isFlash = document.getElementById('combi-flashboost') ? document.getElementById('combi-flashboost').checked : false;
+  if(!mise || !book){ alert('Mise et bookmaker requis'); return; }
+  if(!state.fb)state.fb={};
+  var fund = isFreebet ? ((parseFloat(state.fb[book])||0)>=mise) : ((parseFloat(state.b[book])||0)>=mise);
+  if(!fund){ alert(isFreebet?('Cagnotte freebet insuffisante sur '+bki(book).n+' !'):('Solde insuffisant sur '+bki(book).n+' !')); return; }
+  if(isFreebet){ state.fb[book]=((parseFloat(state.fb[book])||0)-mise).toFixed(2); }
+  else { state.b[book]=((parseFloat(state.b[book])||0)-mise).toFixed(2); }
+  var pari = {
+    id: Date.now().toString(), n: label,
+    target: combiRows[0]?(combiRows[0].team||combiRows[0].adv||label):label,
+    b: book, m: mise, cote: coteTot, win: null,
+    sport: combiRows[0]?combiRows[0].sport:'🎲',
+    comp: combiRows[0]?combiRows[0].comp:'',
+    type: 'Combiné ('+combiRows.length+' sél.)', isCombi: true,
+    combiRows: combiRows.map(function(r){ return {team:r.team,adv:r.adv,type:r.type,cote:r.cote,sport:r.sport,comp:r.comp}; }),
+    t: date, date: date, heure: heure, notes: notes, domicile: lieu,
+    isFlash: isFlash, isFreebet: isFreebet
+  };
+  state.h.unshift(pari);
+  save();
+  combiRows = [];
+  renderCombiRows();
+  document.getElementById('combi-mise').value = '10';
+  if(document.getElementById('combi-notes'))document.getElementById('combi-notes').value = '';
+  var ct=document.getElementById('combi-cote-total'); if(ct) ct.textContent='—';
+  var cg=document.getElementById('combi-gain'); if(cg) cg.textContent='—';
+  if(document.getElementById('combi-freebet'))document.getElementById('combi-freebet').checked=false;
+  if(document.getElementById('combi-flashboost'))document.getElementById('combi-flashboost').checked=false;
+  var btn = (typeof event!=='undefined'&&event)?event.target:null;
+  if(btn){ var _o=btn.textContent; btn.textContent='✓ Placé en cours !'; setTimeout(function(){ btn.textContent=_o; },2000); }
+  render();
+}
 function saveCombi(win) {
   if(!combiRows.length) { alert('Ajoute au moins une sélection'); return; }
   var coteTot = combiRows.reduce(function(acc,r){ return acc*(parseFloat(r.cote)||1); }, 1);
