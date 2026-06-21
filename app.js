@@ -2881,6 +2881,15 @@ function addCombiRow() {
   renderCombiRows();
 }
 
+function combiAddType(i, kw){
+  if(!combiRows[i]) return;
+  var inp=document.getElementById('combi-type-'+i);
+  var cur=inp?inp.value:(combiRows[i].type||'');
+  cur=String(cur).trim();
+  var nv=(cur?cur+' ':'')+kw+' ';
+  combiRows[i].type=nv;
+  if(inp){ inp.value=nv; inp.focus(); }
+}
 function renderCombiRows() {
   var el = document.getElementById('combi-rows');
   if(!el) return;
@@ -2907,8 +2916,11 @@ function renderCombiRows() {
     html += '</div>';
     // Type + Cote
     html += '<div style="display:grid;grid-template-columns:1fr 80px;gap:8px;margin-bottom:8px;">';
-    html += '<input class="fi" placeholder="Type de pari (ex: Victoire, O2.5…)" value="'+(row.type||'')+'" oninput="combiRows['+i+'].type=this.value" style="font-size:11px;">';
+    html += '<input id="combi-type-'+i+'" class="fi" placeholder="Type (ex: Victoire, O2.5, Décisif…)" value="'+(row.type||'')+'" oninput="combiRows['+i+'].type=this.value" style="font-size:11px;">';
     html += '<input class="fi" type="number" value="'+row.cote+'" min="1.01" step="0.01" oninput="combiRows['+i+'].cote=parseFloat(this.value)||1;updateCombiCote()" style="font-size:14px;font-weight:800;text-align:center;color:#f0b020;">';
+    html += '</div>';
+    html += '<div style="display:flex;gap:5px;flex-wrap:wrap;">';
+    ['Buteur','Passeur','Décisif'].forEach(function(kw){ html += '<button type="button" onclick="combiAddType('+i+',\''+kw+'\')" style="padding:4px 9px;border-radius:6px;border:1px solid rgba(167,139,250,.35);background:rgba(167,139,250,.1);color:#a78bfa;font-size:10px;font-weight:700;cursor:pointer;">'+kw+'</button>'; });
     html += '</div>';
     html += '</div>';
   });
@@ -3527,7 +3539,7 @@ var mmRows=[
   {type:'Victoire',cote:1.80},
   {type:'BTS Oui',cote:1.70}
 ];
-var MM_TYPES=['Victoire','Nul','Défaite','Domicile ou nul','Extérieur ou nul','BTS Oui','BTS Non','Over 1.5','Over 2.5','Under 2.5','HC -1','HC +1','Mi-temps'];
+var MM_TYPES=['Victoire','Nul','Défaite','Domicile ou nul','Extérieur ou nul','BTS Oui','BTS Non','Over 1.5','Over 2.5','Under 2.5','HC -1','HC +1','Mi-temps','Buteur','Passeur','Décisif'];
 
 function renderMmRows(){
   var sel=$i('mm-sel');if(!sel)return;
@@ -9026,6 +9038,15 @@ function addCombiRow() {
   renderCombiRows();
 }
 
+function combiAddType(i, kw){
+  if(!combiRows[i]) return;
+  var inp=document.getElementById('combi-type-'+i);
+  var cur=inp?inp.value:(combiRows[i].type||'');
+  cur=String(cur).trim();
+  var nv=(cur?cur+' ':'')+kw+' ';
+  combiRows[i].type=nv;
+  if(inp){ inp.value=nv; inp.focus(); }
+}
 function renderCombiRows() {
   var el = document.getElementById('combi-rows');
   if(!el) return;
@@ -9052,8 +9073,11 @@ function renderCombiRows() {
     html += '</div>';
     // Type + Cote
     html += '<div style="display:grid;grid-template-columns:1fr 80px;gap:8px;margin-bottom:8px;">';
-    html += '<input class="fi" placeholder="Type de pari (ex: Victoire, O2.5…)" value="'+(row.type||'')+'" oninput="combiRows['+i+'].type=this.value" style="font-size:11px;">';
+    html += '<input id="combi-type-'+i+'" class="fi" placeholder="Type (ex: Victoire, O2.5, Décisif…)" value="'+(row.type||'')+'" oninput="combiRows['+i+'].type=this.value" style="font-size:11px;">';
     html += '<input class="fi" type="number" value="'+row.cote+'" min="1.01" step="0.01" oninput="combiRows['+i+'].cote=parseFloat(this.value)||1;updateCombiCote()" style="font-size:14px;font-weight:800;text-align:center;color:#f0b020;">';
+    html += '</div>';
+    html += '<div style="display:flex;gap:5px;flex-wrap:wrap;">';
+    ['Buteur','Passeur','Décisif'].forEach(function(kw){ html += '<button type="button" onclick="combiAddType('+i+',\''+kw+'\')" style="padding:4px 9px;border-radius:6px;border:1px solid rgba(167,139,250,.35);background:rgba(167,139,250,.1);color:#a78bfa;font-size:10px;font-weight:700;cursor:pointer;">'+kw+'</button>'; });
     html += '</div>';
     html += '</div>';
   });
@@ -9672,7 +9696,7 @@ var mmRows=[
   {type:'Victoire',cote:1.80},
   {type:'BTS Oui',cote:1.70}
 ];
-var MM_TYPES=['Victoire','Nul','Défaite','Domicile ou nul','Extérieur ou nul','BTS Oui','BTS Non','Over 1.5','Over 2.5','Under 2.5','HC -1','HC +1','Mi-temps'];
+var MM_TYPES=['Victoire','Nul','Défaite','Domicile ou nul','Extérieur ou nul','BTS Oui','BTS Non','Over 1.5','Over 2.5','Under 2.5','HC -1','HC +1','Mi-temps','Buteur','Passeur','Décisif'];
 
 function renderMmRows(){
   var sel=$i('mm-sel');if(!sel)return;
