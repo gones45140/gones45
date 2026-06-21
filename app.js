@@ -1654,6 +1654,9 @@ function render(){
   var benC=ben>=0?'var(--g)':'var(--r)';
   txt('top-val',total.toFixed(2)+' €');
   txt('d-cap',total.toFixed(2)+' €');
+  var fbTotal=Object.values(state.fb||{}).reduce(function(a,v){var n=parseFloat(v);return a+(isNaN(n)?0:n);},0);
+  var _bfb=$i('bank-fb-total'); if(_bfb)_bfb.textContent=fbTotal.toFixed(2)+' €';
+  var _tfb=$i('top-fb'); if(_tfb){ _tfb.textContent='🎟 '+fbTotal.toFixed(2)+' €'; _tfb.style.display=fbTotal>0?'block':'none'; }
   var be=$i('d-ben');if(be){be.innerText=fmt(ben);be.style.color=benC;}
   renderGoal(total);
   renderBilanTab();
@@ -7843,6 +7846,9 @@ function render(){
   var benC=ben>=0?'var(--g)':'var(--r)';
   txt('top-val',total.toFixed(2)+' €');
   txt('d-cap',total.toFixed(2)+' €');
+  var fbTotal=Object.values(state.fb||{}).reduce(function(a,v){var n=parseFloat(v);return a+(isNaN(n)?0:n);},0);
+  var _bfb=$i('bank-fb-total'); if(_bfb)_bfb.textContent=fbTotal.toFixed(2)+' €';
+  var _tfb=$i('top-fb'); if(_tfb){ _tfb.textContent='🎟 '+fbTotal.toFixed(2)+' €'; _tfb.style.display=fbTotal>0?'block':'none'; }
   var be=$i('d-ben');if(be){be.innerText=fmt(ben);be.style.color=benC;}
   renderGoal(total);
   renderBilanTab();
