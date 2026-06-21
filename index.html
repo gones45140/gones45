@@ -114,15 +114,20 @@
       <div style="font-size:11px;color:var(--t3);margin-bottom:10px;">Ajoute plusieurs matchs — la cote se multiplie automatiquement</div>
       <div id="combi-rows"></div>
       <button onclick="addCombiRow()" style="width:100%;padding:9px;border-radius:var(--r6);border:1px dashed rgba(77,132,255,.4);background:rgba(77,132,255,.06);color:#4d84ff;font-size:12px;font-weight:700;cursor:pointer;margin-bottom:12px;">+ Ajouter une sélection</button>
-      <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 12px;background:rgba(255,255,255,.04);border-radius:var(--r6);margin-bottom:12px;">
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 12px;background:rgba(255,255,255,.04);border-radius:var(--r6);margin-bottom:8px;">
         <div>
-          <div style="font-size:10px;color:var(--t3);">Cote totale</div>
+          <div style="font-size:10px;color:var(--t3);">Cote auto (produit)</div>
           <div id="combi-cote-total" style="font-size:22px;font-weight:800;color:#f0b020;">—</div>
         </div>
-        <div>
+        <div style="text-align:right;">
           <div style="font-size:10px;color:var(--t3);">Gain potentiel</div>
           <div id="combi-gain" style="font-size:16px;font-weight:700;color:#1ed760;">—</div>
         </div>
+      </div>
+      <div class="fg" style="margin-bottom:12px;">
+        <label class="fl" style="color:#f0b020;">🎯 Cote du book (boostée) — optionnel</label>
+        <input type="number" step="0.01" id="combi-cote-book" class="fi" placeholder="vide = cote auto ci-dessus" oninput="updateCombiCote()">
+        <div style="font-size:9px;color:var(--t3);margin-top:3px;">Si remplie, c'est elle qui sert aux gains (boost / arrondi du bookmaker).</div>
       </div>
       <div class="g2" style="gap:9px;margin-bottom:9px;">
         <div class="fg"><label class="fl" style="color:var(--g);">Mise (€)</label><input type="number" id="combi-mise" class="fi" value="10" oninput="updateCombiCote()"></div>

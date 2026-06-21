@@ -2921,14 +2921,16 @@ function removeCombiRow(id) {
   renderCombiRows();
 }
 
+function _combiBookCote(){ var e=document.getElementById('combi-cote-book'); var v=e?(parseFloat(e.value)||0):0; return v>0?v:0; }
 function updateCombiCote() {
-  var coteTot = combiRows.reduce(function(acc,r){ return acc*(parseFloat(r.cote)||1); }, 1);
+  var coteAuto = combiRows.reduce(function(acc,r){ return acc*(parseFloat(r.cote)||1); }, 1);
+  var coteEff = _combiBookCote()||coteAuto;
   var mise = parseFloat(document.getElementById('combi-mise')&&document.getElementById('combi-mise').value||0);
-  var gain = mise * coteTot;
+  var gain = mise * coteEff;
   var ctEl = document.getElementById('combi-cote-total');
   var gEl = document.getElementById('combi-gain');
-  if(ctEl) ctEl.textContent = combiRows.length ? coteTot.toFixed(2) : '—';
-  if(gEl) gEl.textContent = (combiRows.length && mise) ? '+'+((gain-mise).toFixed(2))+'€' : '—';
+  if(ctEl) ctEl.textContent = combiRows.length ? coteAuto.toFixed(2) : '—';
+  if(gEl) gEl.textContent = (combiRows.length && mise) ? '+'+((gain-mise).toFixed(2))+'€ @'+coteEff.toFixed(2) : '—';
   // Fill bookmaker select
   var bkEl = document.getElementById('combi-book');
   if(bkEl && !bkEl.options.length) {
@@ -2974,7 +2976,7 @@ function saveCombiPending(){
   var pari = {
     id: Date.now().toString(), n: label,
     target: combiRows[0]?(combiRows[0].team||combiRows[0].adv||label):label,
-    b: book, m: mise, cote: coteTot, win: null,
+    b: book, m: mise, cote: (_combiBookCote()||coteTot), coteAuto: coteTot, win: null,
     sport: combiRows[0]?combiRows[0].sport:'🎲',
     comp: combiRows[0]?combiRows[0].comp:'',
     type: 'Combiné ('+combiRows.length+' sél.)', isCombi: true,
@@ -2993,6 +2995,7 @@ function saveCombiPending(){
   var cg=document.getElementById('combi-gain'); if(cg) cg.textContent='—';
   if(document.getElementById('combi-freebet'))document.getElementById('combi-freebet').checked=false;
   if(document.getElementById('combi-flashboost'))document.getElementById('combi-flashboost').checked=false;
+  var _cbk=document.getElementById('combi-cote-book'); if(_cbk)_cbk.value='';
   var btn = (typeof event!=='undefined'&&event)?event.target:null;
   if(btn){ var _o=btn.textContent; btn.textContent='✓ Placé en cours !'; setTimeout(function(){ btn.textContent=_o; },2000); }
   render();
@@ -3018,7 +3021,8 @@ function saveCombi(win) {
     target: combiRows[0]?(combiRows[0].team||combiRows[0].adv||label):label,
     b: book,
     m: mise,
-    cote: coteTot,
+    cote: (_combiBookCote()||coteTot),
+    coteAuto: coteTot,
     win: win,
     sport: combiRows[0]?combiRows[0].sport:'🎲',
     comp: combiRows[0]?combiRows[0].comp:'',
@@ -3044,10 +3048,12 @@ function saveCombi(win) {
   document.getElementById('combi-notes').value = '';
   document.getElementById('combi-cote-total').textContent = '—';
   document.getElementById('combi-gain').textContent = '—';
+  var _cbk2=document.getElementById('combi-cote-book'); if(_cbk2)_cbk2.value='';
 
   // Feedback
-  var profit = win ? (mise*coteTot - mise) : -mise;
-  alert((win ? '✅ Gagné !' : '❌ Perdu') + '\n' + label + '\nCote: @'+coteTot.toFixed(2) + '\n' + (win ? '+' : '') + profit.toFixed(2)+'€');
+  var _ce = _combiBookCote()||coteTot;
+  var profit = win ? (mise*_ce - mise) : -mise;
+  alert((win ? '✅ Gagné !' : '❌ Perdu') + '\n' + label + '\nCote: @'+_ce.toFixed(2) + '\n' + (win ? '+' : '') + profit.toFixed(2)+'€');
   render();
 }
 
@@ -9060,14 +9066,16 @@ function removeCombiRow(id) {
   renderCombiRows();
 }
 
+function _combiBookCote(){ var e=document.getElementById('combi-cote-book'); var v=e?(parseFloat(e.value)||0):0; return v>0?v:0; }
 function updateCombiCote() {
-  var coteTot = combiRows.reduce(function(acc,r){ return acc*(parseFloat(r.cote)||1); }, 1);
+  var coteAuto = combiRows.reduce(function(acc,r){ return acc*(parseFloat(r.cote)||1); }, 1);
+  var coteEff = _combiBookCote()||coteAuto;
   var mise = parseFloat(document.getElementById('combi-mise')&&document.getElementById('combi-mise').value||0);
-  var gain = mise * coteTot;
+  var gain = mise * coteEff;
   var ctEl = document.getElementById('combi-cote-total');
   var gEl = document.getElementById('combi-gain');
-  if(ctEl) ctEl.textContent = combiRows.length ? coteTot.toFixed(2) : '—';
-  if(gEl) gEl.textContent = (combiRows.length && mise) ? '+'+((gain-mise).toFixed(2))+'€' : '—';
+  if(ctEl) ctEl.textContent = combiRows.length ? coteAuto.toFixed(2) : '—';
+  if(gEl) gEl.textContent = (combiRows.length && mise) ? '+'+((gain-mise).toFixed(2))+'€ @'+coteEff.toFixed(2) : '—';
   // Fill bookmaker select
   var bkEl = document.getElementById('combi-book');
   if(bkEl && !bkEl.options.length) {
@@ -9113,7 +9121,7 @@ function saveCombiPending(){
   var pari = {
     id: Date.now().toString(), n: label,
     target: combiRows[0]?(combiRows[0].team||combiRows[0].adv||label):label,
-    b: book, m: mise, cote: coteTot, win: null,
+    b: book, m: mise, cote: (_combiBookCote()||coteTot), coteAuto: coteTot, win: null,
     sport: combiRows[0]?combiRows[0].sport:'🎲',
     comp: combiRows[0]?combiRows[0].comp:'',
     type: 'Combiné ('+combiRows.length+' sél.)', isCombi: true,
@@ -9132,6 +9140,7 @@ function saveCombiPending(){
   var cg=document.getElementById('combi-gain'); if(cg) cg.textContent='—';
   if(document.getElementById('combi-freebet'))document.getElementById('combi-freebet').checked=false;
   if(document.getElementById('combi-flashboost'))document.getElementById('combi-flashboost').checked=false;
+  var _cbk=document.getElementById('combi-cote-book'); if(_cbk)_cbk.value='';
   var btn = (typeof event!=='undefined'&&event)?event.target:null;
   if(btn){ var _o=btn.textContent; btn.textContent='✓ Placé en cours !'; setTimeout(function(){ btn.textContent=_o; },2000); }
   render();
@@ -9157,7 +9166,8 @@ function saveCombi(win) {
     target: combiRows[0]?(combiRows[0].team||combiRows[0].adv||label):label,
     b: book,
     m: mise,
-    cote: coteTot,
+    cote: (_combiBookCote()||coteTot),
+    coteAuto: coteTot,
     win: win,
     sport: combiRows[0]?combiRows[0].sport:'🎲',
     comp: combiRows[0]?combiRows[0].comp:'',
@@ -9183,10 +9193,12 @@ function saveCombi(win) {
   document.getElementById('combi-notes').value = '';
   document.getElementById('combi-cote-total').textContent = '—';
   document.getElementById('combi-gain').textContent = '—';
+  var _cbk2=document.getElementById('combi-cote-book'); if(_cbk2)_cbk2.value='';
 
   // Feedback
-  var profit = win ? (mise*coteTot - mise) : -mise;
-  alert((win ? '✅ Gagné !' : '❌ Perdu') + '\n' + label + '\nCote: @'+coteTot.toFixed(2) + '\n' + (win ? '+' : '') + profit.toFixed(2)+'€');
+  var _ce = _combiBookCote()||coteTot;
+  var profit = win ? (mise*_ce - mise) : -mise;
+  alert((win ? '✅ Gagné !' : '❌ Perdu') + '\n' + label + '\nCote: @'+_ce.toFixed(2) + '\n' + (win ? '+' : '') + profit.toFixed(2)+'€');
   render();
 }
 
