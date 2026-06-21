@@ -16083,13 +16083,31 @@ function _liveBetsBlock(data){
     [].concat(state.p||[], state.h||[]).forEach(function(b){ if(b && b.win==null) pend.push(b); });
     var mine=[];
     pend.forEach(function(b){
-      var bn=_normTeam(b.n||b.nom||'');
-      if(!bn || bn.length<3) return;
-      var isHome = nh && (nh.indexOf(bn)>=0 || bn.indexOf(nh)>=0);
-      var isAway = na && (na.indexOf(bn)>=0 || bn.indexOf(na)>=0);
-      if(!isHome && !isAway) return;
+      // Noms d'équipes candidats du pari : simple -> target ("X vs Y") car b.n vaut "SIMPLE" ; combiné -> lignes
+      var cand=[], primary='';
+      if(b.isCombi && b.combiRows && b.combiRows.length){
+        b.combiRows.forEach(function(r){ if(r.team)cand.push(r.team); if(r.adv)cand.push(r.adv); });
+        primary=(b.combiRows[0]&&b.combiRows[0].team)||'';
+      } else {
+        var tg=String(b.target||'');
+        var parts=(/\s+vs\.?\s+/i.test(tg))?tg.split(/\s+vs\.?\s+/i):[tg];
+        parts.forEach(function(x){ if(x)cand.push(x); });
+        if(b.n && b.n!=='SIMPLE') cand.push(b.n);
+        primary=parts[0]||((b.n&&b.n!=='SIMPLE')?b.n:'');
+      }
+      // Le pari concerne-t-il ce match live ? (au moins un nom candidat = une des 2 équipes)
+      var inHome=false, inAway=false;
+      cand.forEach(function(nm){ var bn=_normTeam(nm); if(!bn||bn.length<3) return; if(nh&&(nh.indexOf(bn)>=0||bn.indexOf(nh)>=0))inHome=true; if(na&&(na.indexOf(bn)>=0||bn.indexOf(na)>=0))inAway=true; });
+      if(!inHome && !inAway) return;
       if(matchDate && b.date){ var bd=new Date(b.date); if(!isNaN(bd.getTime())){ if(Math.abs(bd-matchDate)/86400000>3) return; } }
-      var ev=_evalBetLive(b, {hg:ctxBase.hg,ag:ctxBase.ag,total:ctxBase.total,bts:ctxBase.bts,fin:ctxBase.fin,betIsHome:(isHome?true:(isAway?false:null)),scorers:scorers,assisters:assisters,firstScorer:firstScorer});
+      // Équipe pariée (pour victoire / handicap) : déduite du nom primaire
+      var pn=_normTeam(primary), betIsHome=null;
+      if(pn && pn.length>=3){
+        if(nh && (nh.indexOf(pn)>=0||pn.indexOf(nh)>=0)) betIsHome=true;
+        else if(na && (na.indexOf(pn)>=0||pn.indexOf(na)>=0)) betIsHome=false;
+      }
+      if(betIsHome==null) betIsHome=(inHome?true:(inAway?false:null));
+      var ev=_evalBetLive(b, {hg:ctxBase.hg,ag:ctxBase.ag,total:ctxBase.total,bts:ctxBase.bts,fin:ctxBase.fin,betIsHome:betIsHome,scorers:scorers,assisters:assisters,firstScorer:firstScorer});
       mine.push({b:b, ev:ev});
     });
     if(!mine.length) return '';
