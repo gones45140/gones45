@@ -1675,7 +1675,7 @@ function render(){
       +'<td><div>'+h.target+'</div>'+(h.date||h.heure?'<div style="font-size:9px;color:var(--t2);">'+(h.date?'📅 '+h.date:'')+' '+(h.heure?'⏰ '+h.heure:'')+'</div>':'')+'</td>'
       +'<td style="color:var(--a);font-weight:700;">@'+h.cote+'</td>'
       +'<td style="color:var(--gold);font-weight:700;">'+h.m+'€</td>'
-      +'<td style="text-align:right;white-space:nowrap"><a href="https://www.google.com/search?q='+encodeURIComponent(h.target+' sofascore résumé')+'" target="_blank" style="display:inline-flex;align-items:center;padding:5px 7px;background:rgba(77,132,255,.1);border:1px solid rgba(77,132,255,.25);border-radius:4px;color:#4d84ff;font-size:11px;font-weight:700;text-decoration:none;margin-right:3px;" title="Résumé">🔍</a><button class="sbtn sw" data-id="'+h.id+'" onclick="result(this.dataset.id,true)" style="margin-right:3px">✅</button><button class="sbtn sl" data-id="'+h.id+'" onclick="result(this.dataset.id,false)" style="margin-right:3px">❌</button><button data-id="'+h.id+'" onclick="editBet(this.dataset.id)" style="background:none;border:1px solid rgba(77,132,255,.25);color:var(--a);font-size:11px;font-weight:700;padding:5px 8px;border-radius:4px;cursor:pointer;margin-right:3px">✏️</button><button data-id="'+h.id+'" onclick="cancelBet(this.dataset.id)" style="background:none;border:1px solid rgba(255,69,69,.25);color:var(--r);font-size:11px;font-weight:700;padding:5px 8px;border-radius:4px;cursor:pointer">✕</button></td>'
+      +'<td style="text-align:right;white-space:nowrap"><button data-id="'+h.id+'" onclick="openBetLive(this.dataset.id)" title="Voir le match live" style="display:inline-flex;align-items:center;padding:5px 7px;background:rgba(167,139,250,.12);border:1px solid rgba(167,139,250,.3);border-radius:4px;color:#a78bfa;font-size:11px;font-weight:700;cursor:pointer;margin-right:3px;">\ud83d\udce1</button><a href="https://www.google.com/search?q='+encodeURIComponent(h.target+' sofascore résumé')+'" target="_blank" style="display:inline-flex;align-items:center;padding:5px 7px;background:rgba(77,132,255,.1);border:1px solid rgba(77,132,255,.25);border-radius:4px;color:#4d84ff;font-size:11px;font-weight:700;text-decoration:none;margin-right:3px;" title="Résumé">🔍</a><button class="sbtn sw" data-id="'+h.id+'" onclick="result(this.dataset.id,true)" style="margin-right:3px">✅</button><button class="sbtn sl" data-id="'+h.id+'" onclick="result(this.dataset.id,false)" style="margin-right:3px">❌</button><button data-id="'+h.id+'" onclick="editBet(this.dataset.id)" style="background:none;border:1px solid rgba(77,132,255,.25);color:var(--a);font-size:11px;font-weight:700;padding:5px 8px;border-radius:4px;cursor:pointer;margin-right:3px">✏️</button><button data-id="'+h.id+'" onclick="cancelBet(this.dataset.id)" style="background:none;border:1px solid rgba(255,69,69,.25);color:var(--r);font-size:11px;font-weight:700;padding:5px 8px;border-radius:4px;cursor:pointer">✕</button></td>'
       +'</tr>';
   }).join('')||'<tr><td colspan="5" class="empty">Aucun pari en cours</td></tr>';
 
@@ -1685,7 +1685,7 @@ function render(){
       +'<div style="font-weight:600;">'+(h.domicile==='dom'?'🏠 ':h.domicile==='ext'?'🚌 ':'')+(h.isCombi?h.n:h.target)+'</div>'
       +'<div style="font-size:10px;color:var(--t2);">'+(h.type||'—')+' · @'+h.cote+' · '+bbadge(h.b)+(h.isFreebet?' 🎟':'')+'</div></td>'
       +'<td style="color:var(--gold);font-weight:700;">'+h.m+'€</td>'
-      +'<td style="text-align:right;white-space:nowrap"><a href="https://www.google.com/search?q='+encodeURIComponent(h.target+' sofascore résumé')+'" target="_blank" style="display:inline-flex;align-items:center;padding:5px 7px;background:rgba(77,132,255,.1);border:1px solid rgba(77,132,255,.25);border-radius:4px;color:#4d84ff;font-size:11px;font-weight:700;text-decoration:none;margin-right:3px;" title="Résumé">🔍</a><button class="sbtn sw" data-id="'+h.id+'" onclick="result(this.dataset.id,true)" style="margin-right:3px">✅</button><button class="sbtn sl" data-id="'+h.id+'" onclick="result(this.dataset.id,false)" style="margin-right:3px">❌</button><button data-id="'+h.id+'" onclick="editBet(this.dataset.id)" style="background:none;border:1px solid rgba(77,132,255,.25);color:var(--a);font-size:11px;font-weight:700;padding:5px 8px;border-radius:4px;cursor:pointer;margin-right:3px">✏️</button><button data-id="'+h.id+'" onclick="cancelBet(this.dataset.id)" style="background:none;border:1px solid rgba(255,69,69,.25);color:var(--r);font-size:11px;font-weight:700;padding:5px 8px;border-radius:4px;cursor:pointer">✕</button></td>'
+      +'<td style="text-align:right;white-space:nowrap"><button data-id="'+h.id+'" onclick="openBetLive(this.dataset.id)" title="Voir le match live" style="display:inline-flex;align-items:center;padding:5px 7px;background:rgba(167,139,250,.12);border:1px solid rgba(167,139,250,.3);border-radius:4px;color:#a78bfa;font-size:11px;font-weight:700;cursor:pointer;margin-right:3px;">\ud83d\udce1</button><a href="https://www.google.com/search?q='+encodeURIComponent(h.target+' sofascore résumé')+'" target="_blank" style="display:inline-flex;align-items:center;padding:5px 7px;background:rgba(77,132,255,.1);border:1px solid rgba(77,132,255,.25);border-radius:4px;color:#4d84ff;font-size:11px;font-weight:700;text-decoration:none;margin-right:3px;" title="Résumé">🔍</a><button class="sbtn sw" data-id="'+h.id+'" onclick="result(this.dataset.id,true)" style="margin-right:3px">✅</button><button class="sbtn sl" data-id="'+h.id+'" onclick="result(this.dataset.id,false)" style="margin-right:3px">❌</button><button data-id="'+h.id+'" onclick="editBet(this.dataset.id)" style="background:none;border:1px solid rgba(77,132,255,.25);color:var(--a);font-size:11px;font-weight:700;padding:5px 8px;border-radius:4px;cursor:pointer;margin-right:3px">✏️</button><button data-id="'+h.id+'" onclick="cancelBet(this.dataset.id)" style="background:none;border:1px solid rgba(255,69,69,.25);color:var(--r);font-size:11px;font-weight:700;padding:5px 8px;border-radius:4px;cursor:pointer">✕</button></td>'
       +'</tr>';
   }).join('')||'<tr><td colspan="3" class="empty">Aucun pari en cours</td></tr>';
 
@@ -7887,7 +7887,7 @@ function render(){
       +'<td><div>'+h.target+'</div>'+(h.date||h.heure?'<div style="font-size:9px;color:var(--t2);">'+(h.date?'📅 '+h.date:'')+' '+(h.heure?'⏰ '+h.heure:'')+'</div>':'')+'</td>'
       +'<td style="color:var(--a);font-weight:700;">@'+h.cote+'</td>'
       +'<td style="color:var(--gold);font-weight:700;">'+h.m+'€</td>'
-      +'<td style="text-align:right;white-space:nowrap"><a href="https://www.google.com/search?q='+encodeURIComponent(h.target+' sofascore résumé')+'" target="_blank" style="display:inline-flex;align-items:center;padding:5px 7px;background:rgba(77,132,255,.1);border:1px solid rgba(77,132,255,.25);border-radius:4px;color:#4d84ff;font-size:11px;font-weight:700;text-decoration:none;margin-right:3px;" title="Résumé">🔍</a><button class="sbtn sw" data-id="'+h.id+'" onclick="result(this.dataset.id,true)" style="margin-right:3px">✅</button><button class="sbtn sl" data-id="'+h.id+'" onclick="result(this.dataset.id,false)" style="margin-right:3px">❌</button><button data-id="'+h.id+'" onclick="editBet(this.dataset.id)" style="background:none;border:1px solid rgba(77,132,255,.25);color:var(--a);font-size:11px;font-weight:700;padding:5px 8px;border-radius:4px;cursor:pointer;margin-right:3px">✏️</button><button data-id="'+h.id+'" onclick="cancelBet(this.dataset.id)" style="background:none;border:1px solid rgba(255,69,69,.25);color:var(--r);font-size:11px;font-weight:700;padding:5px 8px;border-radius:4px;cursor:pointer">✕</button></td>'
+      +'<td style="text-align:right;white-space:nowrap"><button data-id="'+h.id+'" onclick="openBetLive(this.dataset.id)" title="Voir le match live" style="display:inline-flex;align-items:center;padding:5px 7px;background:rgba(167,139,250,.12);border:1px solid rgba(167,139,250,.3);border-radius:4px;color:#a78bfa;font-size:11px;font-weight:700;cursor:pointer;margin-right:3px;">\ud83d\udce1</button><a href="https://www.google.com/search?q='+encodeURIComponent(h.target+' sofascore résumé')+'" target="_blank" style="display:inline-flex;align-items:center;padding:5px 7px;background:rgba(77,132,255,.1);border:1px solid rgba(77,132,255,.25);border-radius:4px;color:#4d84ff;font-size:11px;font-weight:700;text-decoration:none;margin-right:3px;" title="Résumé">🔍</a><button class="sbtn sw" data-id="'+h.id+'" onclick="result(this.dataset.id,true)" style="margin-right:3px">✅</button><button class="sbtn sl" data-id="'+h.id+'" onclick="result(this.dataset.id,false)" style="margin-right:3px">❌</button><button data-id="'+h.id+'" onclick="editBet(this.dataset.id)" style="background:none;border:1px solid rgba(77,132,255,.25);color:var(--a);font-size:11px;font-weight:700;padding:5px 8px;border-radius:4px;cursor:pointer;margin-right:3px">✏️</button><button data-id="'+h.id+'" onclick="cancelBet(this.dataset.id)" style="background:none;border:1px solid rgba(255,69,69,.25);color:var(--r);font-size:11px;font-weight:700;padding:5px 8px;border-radius:4px;cursor:pointer">✕</button></td>'
       +'</tr>';
   }).join('')||'<tr><td colspan="5" class="empty">Aucun pari en cours</td></tr>';
 
@@ -7897,7 +7897,7 @@ function render(){
       +'<div style="font-weight:600;">'+(h.domicile==='dom'?'🏠 ':h.domicile==='ext'?'🚌 ':'')+(h.isCombi?h.n:h.target)+'</div>'
       +'<div style="font-size:10px;color:var(--t2);">'+(h.type||'—')+' · @'+h.cote+' · '+bbadge(h.b)+(h.isFreebet?' 🎟':'')+'</div></td>'
       +'<td style="color:var(--gold);font-weight:700;">'+h.m+'€</td>'
-      +'<td style="text-align:right;white-space:nowrap"><a href="https://www.google.com/search?q='+encodeURIComponent(h.target+' sofascore résumé')+'" target="_blank" style="display:inline-flex;align-items:center;padding:5px 7px;background:rgba(77,132,255,.1);border:1px solid rgba(77,132,255,.25);border-radius:4px;color:#4d84ff;font-size:11px;font-weight:700;text-decoration:none;margin-right:3px;" title="Résumé">🔍</a><button class="sbtn sw" data-id="'+h.id+'" onclick="result(this.dataset.id,true)" style="margin-right:3px">✅</button><button class="sbtn sl" data-id="'+h.id+'" onclick="result(this.dataset.id,false)" style="margin-right:3px">❌</button><button data-id="'+h.id+'" onclick="editBet(this.dataset.id)" style="background:none;border:1px solid rgba(77,132,255,.25);color:var(--a);font-size:11px;font-weight:700;padding:5px 8px;border-radius:4px;cursor:pointer;margin-right:3px">✏️</button><button data-id="'+h.id+'" onclick="cancelBet(this.dataset.id)" style="background:none;border:1px solid rgba(255,69,69,.25);color:var(--r);font-size:11px;font-weight:700;padding:5px 8px;border-radius:4px;cursor:pointer">✕</button></td>'
+      +'<td style="text-align:right;white-space:nowrap"><button data-id="'+h.id+'" onclick="openBetLive(this.dataset.id)" title="Voir le match live" style="display:inline-flex;align-items:center;padding:5px 7px;background:rgba(167,139,250,.12);border:1px solid rgba(167,139,250,.3);border-radius:4px;color:#a78bfa;font-size:11px;font-weight:700;cursor:pointer;margin-right:3px;">\ud83d\udce1</button><a href="https://www.google.com/search?q='+encodeURIComponent(h.target+' sofascore résumé')+'" target="_blank" style="display:inline-flex;align-items:center;padding:5px 7px;background:rgba(77,132,255,.1);border:1px solid rgba(77,132,255,.25);border-radius:4px;color:#4d84ff;font-size:11px;font-weight:700;text-decoration:none;margin-right:3px;" title="Résumé">🔍</a><button class="sbtn sw" data-id="'+h.id+'" onclick="result(this.dataset.id,true)" style="margin-right:3px">✅</button><button class="sbtn sl" data-id="'+h.id+'" onclick="result(this.dataset.id,false)" style="margin-right:3px">❌</button><button data-id="'+h.id+'" onclick="editBet(this.dataset.id)" style="background:none;border:1px solid rgba(77,132,255,.25);color:var(--a);font-size:11px;font-weight:700;padding:5px 8px;border-radius:4px;cursor:pointer;margin-right:3px">✏️</button><button data-id="'+h.id+'" onclick="cancelBet(this.dataset.id)" style="background:none;border:1px solid rgba(255,69,69,.25);color:var(--r);font-size:11px;font-weight:700;padding:5px 8px;border-radius:4px;cursor:pointer">✕</button></td>'
       +'</tr>';
   }).join('')||'<tr><td colspan="3" class="empty">Aucun pari en cours</td></tr>';
 
@@ -20397,6 +20397,110 @@ async function _renderGenericDetail(el, sport, lg, eid){
   }catch(e){ el.innerHTML='<div style="padding:12px;color:#ff6b6b;font-size:11px;text-align:center;">Détail indisponible.</div>'; }
 }
 window.toggleGenericMatchDetail=toggleGenericMatchDetail;
+/* ───── 📡 Ouvrir le match LIVE d'un pari en cours (modal réutilisant le détail Direct) ───── */
+function _g45BetLiveTargets(bet){
+  var out=[];
+  function sportOf(emoji, comp){
+    var se=String(emoji||''), cl=String(comp||'').toLowerCase();
+    if(se.indexOf('\u26bd')>=0) return 'soccer';
+    if(se.indexOf('\ud83c\udfc9')>=0) return ((se.indexOf('\ud83c\udde6\ud83c\uddfa')>=0)||/\bnrl\b|rugby.?league|treize|xiii/.test(cl))?'nrl':'rugby';
+    return 'soccer';
+  }
+  if(bet.isCombi && bet.combiRows && bet.combiRows.length){
+    bet.combiRows.forEach(function(r){ out.push({name:(r.team||'').trim(), adv:(r.adv||'').trim(), sport:sportOf(r.sport||'\u26bd', r.comp||bet.comp), comp:r.comp||bet.comp||''}); });
+  } else {
+    var tg=String(bet.target||''); var parts=(/\s+vs\.?\s+/i.test(tg))?tg.split(/\s+vs\.?\s+/i):[tg];
+    out.push({name:(parts[0]||'').trim(), adv:(parts[1]||'').trim(), sport:sportOf(bet.sport||'\u26bd', bet.comp), comp:bet.comp||''});
+  }
+  return out.filter(function(t){ return t.name; });
+}
+async function _g45ResolveBetEvent(target){
+  var sp=target.sport, slug=null, res=null;
+  try{
+    if(sp==='soccer'){ res=await _g45ResolveTeam(target.name); if(res){ slug=res.league; } }
+    else if(sp==='rugby'){ slug=_g45RugbyLeagueId(target.comp); res=await _g45ResolveEspnTeam(target.name,'rugby',slug); }
+    else if(sp==='nrl'){ slug='3'; res=await _g45ResolveEspnTeam(target.name,'rugby-league','3'); }
+  }catch(e){}
+  if(!slug) return null;
+  var sportPath=(sp==='nrl')?'rugby-league':(sp==='rugby'?'rugby':'soccer');
+  var teamId=res?String(res.id):'';
+  function ymd(d){ return d.getFullYear()+String(d.getMonth()+1).padStart(2,'0')+String(d.getDate()).padStart(2,'0'); }
+  var start=new Date(); start.setDate(start.getDate()-1);
+  var end=new Date(); end.setDate(end.getDate()+2);
+  var nrm=function(x){ return String(x||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9]/g,''); };
+  var tnorm=nrm(target.name);
+  try{
+    var r=await fetch('https://site.api.espn.com/apis/site/v2/sports/'+sportPath+'/'+slug+'/scoreboard?dates='+ymd(start)+'-'+ymd(end)+'&limit=200');
+    var data=await r.json();
+    var events=(data.events||[]); var match=null, matchLive=null;
+    events.forEach(function(e){
+      var comp=(e.competitions&&e.competitions[0])||{}; var cps=comp.competitors||[];
+      var hit=cps.some(function(c){ var t=c.team||{}; if(teamId && String(t.id)===teamId) return true; var nn=nrm(t.displayName||t.name||t.shortDisplayName||''); return tnorm && nn.length>=3 && (nn.indexOf(tnorm)>=0||tnorm.indexOf(nn)>=0); });
+      if(!hit) return;
+      var st=(e.status&&e.status.type&&e.status.type.state)||'';
+      if(st==='in' && !matchLive) matchLive=e;
+      if(!match) match=e;
+    });
+    var ev=matchLive||match;
+    return {sportPath:sportPath, slug:slug, eid:ev?String(ev.id):null};
+  }catch(e){ return {sportPath:sportPath, slug:slug, eid:null}; }
+}
+function _g45CloseBetLive(){ var m=document.getElementById('g45-betlive-modal'); if(m){ try{ var pn=m.querySelector('.smd-panel'); if(pn&&pn._refresh){clearInterval(pn._refresh);pn._refresh=null;} }catch(e){} m.remove(); } }
+function _g45BetLiveCard(){
+  _g45CloseBetLive();
+  if(!document.getElementById('g45-betlive-css')){
+    var st=document.createElement('style'); st.id='g45-betlive-css';
+    st.textContent='@media(max-width:600px){#g45-betlive-modal{padding:0!important}#g45-betlive-modal .g45-bl-card{width:100%!important;max-height:100vh!important;height:100vh!important;border-radius:0!important}}';
+    document.head.appendChild(st);
+  }
+  var ov=document.createElement('div'); ov.id='g45-betlive-modal';
+  ov.style.cssText='position:fixed;inset:0;z-index:99999;background:rgba(5,8,16,.78);display:flex;align-items:center;justify-content:center;padding:14px;';
+  ov.onclick=function(e){ if(e.target===ov) _g45CloseBetLive(); };
+  var card=document.createElement('div'); card.className='g45-bl-card';
+  card.style.cssText='background:var(--bg2,#0f1626);border:1px solid rgba(77,132,255,.32);border-radius:14px;width:min(680px,100%);max-height:92vh;overflow:auto;box-shadow:0 12px 40px rgba(0,0,0,.6);position:relative;';
+  card.onclick=function(e){ e.stopPropagation(); };
+  ov.appendChild(card); document.body.appendChild(ov);
+  return card;
+}
+function openBetLive(betId){
+  var bet=(state.h||[]).find(function(x){return String(x.id)===String(betId);}); if(!bet) return;
+  var targets=_g45BetLiveTargets(bet);
+  if(!targets.length){ alert('Aucune équipe identifiable pour ce pari.'); return; }
+  window._g45BetTargets=targets;
+  if(targets.length>1){
+    var card=_g45BetLiveCard();
+    var h='<button onclick="_g45CloseBetLive()" style="position:absolute;top:10px;right:12px;background:none;border:none;color:var(--t2);font-size:20px;cursor:pointer;z-index:2;">\u2715</button>';
+    h+='<div style="padding:18px 16px;">';
+    h+='<div style="font-size:13px;font-weight:800;color:var(--a);margin-bottom:12px;">\ud83d\udce1 Quel match ouvrir ?</div>';
+    targets.forEach(function(t,i){ h+='<button onclick="_g45OpenBetTarget('+i+')" style="display:block;width:100%;text-align:left;padding:11px 12px;margin-bottom:8px;border-radius:9px;border:1px solid rgba(77,132,255,.3);background:rgba(77,132,255,.08);color:var(--t1);font-size:12px;font-weight:700;cursor:pointer;">'+(t.name||'?')+(t.adv?(' vs '+t.adv):'')+'</button>'; });
+    h+='</div>'; card.innerHTML=h; return;
+  }
+  _g45OpenBetTarget(0);
+}
+async function _g45OpenBetTarget(i){
+  var t=(window._g45BetTargets||[])[i]; if(!t) return;
+  var card=_g45BetLiveCard();
+  card.innerHTML='<button onclick="_g45CloseBetLive()" style="position:absolute;top:10px;right:12px;background:none;border:none;color:var(--t2);font-size:20px;cursor:pointer;z-index:2;">\u2715</button><div style="padding:26px 18px;text-align:center;color:var(--t3);font-size:12px;">\u23f3 Recherche du match\u2026</div>';
+  var info=await _g45ResolveBetEvent(t);
+  if(!document.getElementById('g45-betlive-modal')) return;
+  if(!info || !info.eid){
+    card.innerHTML='<button onclick="_g45CloseBetLive()" style="position:absolute;top:10px;right:12px;background:none;border:none;color:var(--t2);font-size:20px;cursor:pointer;">\u2715</button><div style="padding:28px 18px;text-align:center;color:var(--t2);font-size:13px;">Aucun match live ou \u00e0 venir trouv\u00e9 pour <b>'+(t.name||'?')+'</b>.<br><span style="font-size:11px;color:var(--t3);">(match peut-\u00eatre termin\u00e9 ou hors p\u00e9riode)</span></div>';
+    return;
+  }
+  card.innerHTML='<button onclick="_g45CloseBetLive()" style="position:absolute;top:10px;right:12px;background:none;border:none;color:var(--t2);font-size:22px;cursor:pointer;z-index:3;">\u2715</button>'
+    +'<div id="g45-betlive-row" data-eid="'+info.eid+'" data-lg="'+info.slug+'" data-sport="'+info.sportPath+'" style="display:none;"></div>'
+    +'<div class="smd-panel" id="g45-betlive-panel" style="display:block;padding:6px;"></div>';
+  var row=document.getElementById('g45-betlive-row');
+  var panel=document.getElementById('g45-betlive-panel');
+  try{
+    panel.setAttribute('data-open','1');
+    if(info.sportPath==='soccer'){ if(typeof _renderSaisonDetail==='function') await _renderSaisonDetail(panel, info.eid, info.slug); }
+    else { if(typeof _renderGenericDetail==='function') await _renderGenericDetail(panel, info.sportPath, info.slug, info.eid); }
+  }catch(e){ panel.innerHTML='<div style="padding:16px;color:#ff6b6b;font-size:12px;text-align:center;">Erreur d\'ouverture du d\u00e9tail.</div>'; }
+}
+window.openBetLive=openBetLive;
+window._g45OpenBetTarget=_g45OpenBetTarget;
+window._g45CloseBetLive=_g45CloseBetLive;
 
 /* ───────────── ONGLET RÉSULTATS : multi-sports ───────────── */
 var G45_SPORTS = [
