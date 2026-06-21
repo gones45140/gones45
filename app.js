@@ -16000,9 +16000,10 @@ function _evalBetLeg(t, ctx){
     return ls?{r:'win',locked:fin}:{r:'lose',locked:fin};
   }
   // ── BUTEUR / PASSEUR (joueur) ──
+  var isDecisif=/d[e\u00e9]cisi[fv]e?/.test(t);   // "décisif" = a marqué OU passe décisive
   var isPasseur=/(passeur|passe decisive|passe d|\bassist)/.test(t);
   var isButeur=/(buteur|marqueur|\bmarque\b|scorer|anytime)/.test(t);
-  if(isPasseur || isButeur){
+  if(isDecisif || isPasseur || isButeur){
     var nrm=function(x){ return String(x||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z ]/g,' ').replace(/\s+/g,' ').trim(); };
     var nameMatch=function(cand, list){
       var nc=nrm(cand); if(!nc) return false;
@@ -16010,11 +16011,15 @@ function _evalBetLeg(t, ctx){
       if(!toks.length) return false;
       return (list||[]).some(function(p){ var np=nrm(p); return toks.some(function(w){ return np.indexOf(w)>=0; }); });
     };
-    var nameRaw = t.replace(/@\s*[0-9.,]+/g,' ')
+    var nameRaw = t.replace(/d[e\u00e9]cisi[fv]e?/g,' ').replace(/@\s*[0-9.,]+/g,' ')
       .replace(/\b(1er|premier|dernier|anytime|buteur|marqueur|marque|scorer|passeur|passe\s*decisive|passe|assist|exact|domicile|exterieur|extérieur|over|under|plus|moins|et|de|du|le|la|ou|nul)\b/g,' ')
       .replace(/[0-9.,]/g,' ').replace(/\s+/g,' ').trim();
     if(!nameRaw) return null;
     var premier=/\b(1er|premier)\b/.test(t);
+    if(isDecisif){
+      if(nameMatch(nameRaw, ctx.scorers) || nameMatch(nameRaw, ctx.assisters)) return {r:'win',locked:true};
+      return fin?{r:'lose',locked:true}:null;       // décisif pas encore réalisé → en cours
+    }
     if(isPasseur){
       if(nameMatch(nameRaw, ctx.assisters)) return {r:'win',locked:true};
       return fin?{r:'lose',locked:true}:null;       // pas encore de passe → en cours
