@@ -20731,12 +20731,30 @@ window.loadResultatsTab=loadResultatsTab;
 window.g45ShowSport=g45ShowSport;
 
 /* ───────────── TENNIS dans RÉSULTATS : navigateur par dates (ESPN — zéro quota RapidAPI) ───────────── */
-function _g45EspnTennisFlag(ath){
-  var f=ath&&ath.flag;
-  if(f&&f.href){ var alt=(f.alt||'').replace(/"/g,''); return '<img src="'+f.href+'" alt="'+alt+'" style="height:10px;width:15px;object-fit:cover;border-radius:1px;vertical-align:middle;opacity:.9;margin:0 2px;">'; }
+function _g45FlagImg(f){ if(!f||!f.href) return ''; var alt=(f.alt||'').replace(/"/g,''); return '<img src="'+f.href+'" alt="'+alt+'" style="height:10px;width:15px;object-fit:cover;border-radius:1px;vertical-align:middle;opacity:.9;margin:0 1px;">'; }
+function _g45EspnTennisFlag(comp){
+  var a=comp&&comp.athlete; if(a&&a.flag) return _g45FlagImg(a.flag);
+  var r=comp&&comp.roster; if(r&&r.athletes&&r.athletes.length) return r.athletes.map(function(x){return x.flag?_g45FlagImg(x.flag):'';}).join('');
   return '';
 }
-function _g45EspnTennisName(comp){ var a=comp&&comp.athlete; return (a&&(a.shortName||a.displayName))||'?'; }
+function _g45EspnTennisName(comp){
+  var a=comp&&comp.athlete; if(a&&(a.shortName||a.displayName)) return a.shortName||a.displayName;
+  var r=comp&&comp.roster; if(r&&(r.shortDisplayName||r.displayName)) return r.shortDisplayName||r.displayName;
+  return 'À déterminer';
+}
+function _g45GrpLabel(gn){
+  var g=(gn||'').toLowerCase();
+  var women=g.indexOf('women')>=0, mixed=g.indexOf('mixed')>=0, men=(g.indexOf('men')>=0&&!women), dbl=g.indexOf('double')>=0;
+  var who=mixed?'⚥ Mixte':women?'🚺 Dames':men?'🚹 Messieurs':'';
+  return who?(who+' · '+(dbl?'Double':'Simple')):(gn||'Matchs');
+}
+function g45TennisTglSec(id,hdr){
+  var sec=document.getElementById(id); if(!sec) return;
+  var open=sec.getAttribute('data-open')==='1';
+  sec.style.display=open?'none':'block'; sec.setAttribute('data-open',open?'0':'1');
+  var car=hdr&&hdr.querySelector&&hdr.querySelector('.g45-caret'); if(car) car.textContent=open?'▶':'▼';
+}
+window.g45TennisTglSec=g45TennisTglSec;
 function _g45EspnTennisRow(c){
   var cps=c.competitors||[];
   var home=null,away=null;
@@ -20752,9 +20770,9 @@ function _g45EspnTennisRow(c){
   var badgeCol=live?'#ff4545':(fin?'var(--t3)':'#8aa0ff');
   var rnd=(c.round&&c.round.displayName)||c.__grp||'';
   return '<div onclick="g45EspnTennisToggle(this)" data-cid="'+c.id+'" style="display:grid;grid-template-columns:1fr auto 1fr 58px;gap:6px;align-items:center;padding:9px 10px;background:'+(live?'rgba(255,69,69,.07)':'rgba(255,255,255,.03)')+';border-radius:8px;border-left:3px solid '+(live?'#ff4545':'rgba(255,255,255,.1)')+';cursor:pointer;margin-bottom:4px;">'
-    +'<div style="font-size:11px;font-weight:'+(home.winner?800:700)+';color:'+(home.winner?'var(--t1)':'var(--t2)')+';text-align:right;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">'+_g45EspnTennisName(home)+_g45EspnTennisFlag(home.athlete)+'</div>'
+    +'<div style="font-size:11px;font-weight:'+(home.winner?800:700)+';color:'+(home.winner?'var(--t1)':'var(--t2)')+';text-align:right;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">'+_g45EspnTennisName(home)+_g45EspnTennisFlag(home)+'</div>'
     +'<div style="font-size:13px;font-weight:900;color:'+(live?'#ff4545':'var(--a)')+';text-align:center;white-space:nowrap;min-width:34px;">'+score+'</div>'
-    +'<div style="font-size:11px;font-weight:'+(away.winner?800:700)+';color:'+(away.winner?'var(--t1)':'var(--t2)')+';overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">'+_g45EspnTennisFlag(away.athlete)+_g45EspnTennisName(away)+'</div>'
+    +'<div style="font-size:11px;font-weight:'+(away.winner?800:700)+';color:'+(away.winner?'var(--t1)':'var(--t2)')+';overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">'+_g45EspnTennisFlag(away)+_g45EspnTennisName(away)+'</div>'
     +'<div style="text-align:right;font-size:8px;font-weight:700;color:'+badgeCol+';white-space:nowrap;overflow:hidden;text-overflow:ellipsis;" title="'+rnd+'">'+badge+'</div>'
     +'</div>'
     +'<div class="smd-panel" style="display:none;"></div>';
@@ -20773,7 +20791,7 @@ function _g45EspnTennisDetail(c){
   }
   function row(x){
     var cellsHtml=''; for(var i=0;i<n;i++) cellsHtml+=cell(x.linescores,i);
-    return '<tr><td style="font-size:12px;font-weight:700;color:var(--t1);padding:3px 4px;white-space:nowrap;">'+_g45EspnTennisFlag(x.athlete)+' '+_g45EspnTennisName(x)+(x.winner?' ✓':'')+'</td>'+cellsHtml+'</tr>';
+    return '<tr><td style="font-size:12px;font-weight:700;color:var(--t1);padding:3px 4px;white-space:nowrap;">'+_g45EspnTennisFlag(x)+' '+_g45EspnTennisName(x)+(x.winner?' ✓':'')+'</td>'+cellsHtml+'</tr>';
   }
   var head='<tr><th></th>'; for(var i=0;i<n;i++) head+='<th style="font-size:8px;color:#4f5d88;font-weight:700;padding:0 6px;">S'+(i+1)+'</th>'; head+='</tr>';
   var rnd=(c.round&&c.round.displayName)||'';
@@ -20816,17 +20834,25 @@ async function g45TennisResults(offset){
   var cache=window._g45EspnTennisCache||(window._g45EspnTennisCache={});
   function rank(c){ var st=(c.status&&c.status.type)||{}; if(st.state==='in') return 0; if(st.state==='post'||st.completed) return 2; return 1; }
   var html='';
-  evs.forEach(function(ev){
-    var matches=[];
+  evs.forEach(function(ev,evi){
+    var groupings={}, gOrder=[], total=0;
     (ev.groupings||[]).forEach(function(g){
-      var gn=(g.grouping&&g.grouping.displayName)||'';
-      (g.competitions||[]).forEach(function(c){ c.__grp=gn; matches.push(c); });
+      var gn=(g.grouping&&g.grouping.displayName)||'Matchs';
+      (g.competitions||[]).forEach(function(c){ c.__grp=gn; if(c&&c.id) cache[c.id]=c; if(!groupings[gn]){groupings[gn]=[];gOrder.push(gn);} groupings[gn].push(c); total++; });
     });
-    if(!matches.length) return;
-    matches.sort(function(a,b){ return rank(a)-rank(b) || (new Date(a.date||a.startDate)-new Date(b.date||b.startDate)); });
-    matches.forEach(function(c){ if(c&&c.id) cache[c.id]=c; });
-    html+='<div style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:#4f5d88;margin:10px 0 5px;">'+(ev.name||ev.shortName||'Tournoi')+'</div>';
-    matches.forEach(function(c){ html+=_g45EspnTennisRow(c); });
+    if(!total) return;
+    var secId='g45tev'+evi;
+    html+='<div onclick="g45TennisTglSec(\''+secId+'\',this)" style="cursor:pointer;display:flex;justify-content:space-between;align-items:center;background:rgba(255,255,255,.05);border-radius:8px;padding:8px 10px;margin:11px 0 4px;">'
+      +'<span style="font-size:10px;font-weight:800;color:var(--t1);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">'+(ev.name||ev.shortName||'Tournoi')+'</span>'
+      +'<span style="font-size:9px;color:var(--t3);white-space:nowrap;margin-left:8px;">'+total+' <span class="g45-caret">▼</span></span>'
+      +'</div>'
+      +'<div id="'+secId+'" data-open="1">';
+    gOrder.forEach(function(gn){
+      groupings[gn].sort(function(a,b){ return rank(a)-rank(b) || (new Date(a.date||a.startDate)-new Date(b.date||b.startDate)); });
+      html+='<div style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:#8aa0ff;margin:8px 0 5px;">'+_g45GrpLabel(gn)+'</div>';
+      groupings[gn].forEach(function(c){ html+=_g45EspnTennisRow(c); });
+    });
+    html+='</div>';
   });
   var itfBtn='<div style="text-align:center;margin-top:14px;"><button onclick="g45TennisResultsItf('+offset+')" style="border:none;background:rgba(138,160,255,.12);color:#8aa0ff;border-radius:8px;padding:8px 14px;font-size:10px;font-weight:700;cursor:pointer;">➕ Voir ITF / Challenger (Sofascore · quota)</button></div><div id="g45-tennis-itf" style="margin-top:8px;"></div>';
   list.innerHTML=(html||'<div style="text-align:center;color:var(--t3);font-size:11px;padding:18px;">Aucun gros tournoi (ATP/WTA/Slam) ce jour-là.</div>')+itfBtn;
