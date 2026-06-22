@@ -1245,14 +1245,14 @@ function renderCrash(){
 
 /* ── SUREBET ── */
 var sbRows=[{c:2.10},{c:2.05}];
-function buildSbRows(){
-  var tot=parseFloat(($i('sb-tot')&&$i('sb-tot').value)||100);
+function buildSbRows(light){
+  var tot=parseFloat((($i('sb-tot')&&$i('sb-tot').value)||100).toString().replace(',','.'));
   var gorr=$i('sb-gorr')&&$i('sb-gorr').checked;
   var impl=sbRows.reduce(function(a,r){return a+1/(r.c||1);},0);
   var dr=$i('sb-rows');if(!dr)return;
-  dr.innerHTML=sbRows.map(function(r,i){
+  if(!light) dr.innerHTML=sbRows.map(function(r,i){
     return '<div class="dutch-row">'
-      +'<input type="number" class="fi" value="'+r.c+'" step="0.01" placeholder="Cote '+(i+1)+'" data-idx="'+i+'" oninput="sbRows[this.dataset.idx].c=parseFloat(this.value)||1;buildSbRows();">'
+      +'<input type="text" inputmode="decimal" class="fi" value="'+r.c+'" placeholder="Cote '+(i+1)+'" data-idx="'+i+'" oninput="sbRows[this.dataset.idx].c=parseFloat(this.value.replace(\',\',\'.\'))||1;buildSbRows(true);">'
       +(sbRows.length>2?'<button class="udel" data-idx="'+i+'" onclick="sbRows.splice(this.dataset.idx,1);buildSbRows();">✕</button>':'')
       +'</div>';
   }).join('');
@@ -1280,20 +1280,21 @@ function calcSb(){buildSbRows();}
 function addSbRow(){sbRows.push({c:2.0});buildSbRows();}
 
 /* ── DUTCHING (sans boucle) ── */
-function buildDtRows(){
-  var tot=parseFloat(($i('dt-tot')&&$i('dt-tot').value)||50);
+function buildDtRows(light){
+  var tot=parseFloat((($i('dt-tot')&&$i('dt-tot').value)||50).toString().replace(',','.'));
   var impl=dtRows.reduce(function(a,r){return a+1/(r.c||1);},0);
   var dr=$i('dt-rows');if(!dr)return;
   var html='';
   dtRows.forEach(function(r,i){
     var mise=impl>0?(tot*(1/(r.c||1))/impl).toFixed(2):'—';
     html+='<div class="dutch-row">'
-      +'<input type="number" class="fi" value="'+r.c+'" step="0.01" placeholder="Cote '+(i+1)+'" data-idx="'+i+'" oninput="dtRows[this.dataset.idx].c=parseFloat(this.value)||1;buildDtRows();">'
-      +'<div class="dutch-mise">'+mise+'€</div>'
+      +'<input type="text" inputmode="decimal" class="fi" value="'+r.c+'" placeholder="Cote '+(i+1)+'" data-idx="'+i+'" oninput="dtRows[this.dataset.idx].c=parseFloat(this.value.replace(\',\',\'.\'))||1;buildDtRows(true);">'
+      +'<div class="dutch-mise" id="dt-mise-'+i+'">'+mise+'€</div>'
       +(dtRows.length>2?'<button class="udel" data-idx="'+i+'" onclick="dtRows.splice(this.dataset.idx,1);buildDtRows();">✕</button>':'')
       +'</div>';
   });
-  dr.innerHTML=html;
+  if(!light) dr.innerHTML=html;
+  dtRows.forEach(function(r,i){var me=$i('dt-mise-'+i);if(me)me.innerText=(impl>0?(tot*(1/(r.c||1))/impl).toFixed(2):'—')+'€';});
   /* update result */
   var ret=impl>0?(tot/impl).toFixed(2):'—';
   var profit=impl>0?(tot/impl-tot).toFixed(2):'—';
@@ -2919,7 +2920,7 @@ function renderCombiRows() {
     // Type + Cote
     html += '<div style="display:grid;grid-template-columns:1fr 80px;gap:8px;margin-bottom:8px;">';
     html += '<input id="combi-type-'+i+'" class="fi" placeholder="Type (ex: Victoire, O2.5, Décisif…)" value="'+(row.type||'')+'" oninput="combiRows['+i+'].type=this.value" style="font-size:11px;">';
-    html += '<input class="fi" type="number" value="'+row.cote+'" min="1.01" step="0.01" oninput="combiRows['+i+'].cote=parseFloat(this.value)||1;updateCombiCote()" style="font-size:14px;font-weight:800;text-align:center;color:#f0b020;">';
+    html += '<input class="fi" type="text" inputmode="decimal" value="'+row.cote+'" min="1.01" oninput="combiRows['+i+'].cote=parseFloat(this.value.replace(\',\',\'.\'))||1;updateCombiCote()" style="font-size:14px;font-weight:800;text-align:center;color:#f0b020;">';
     html += '</div>';
     html += '<div style="display:flex;gap:5px;flex-wrap:wrap;">';
     ['Buteur','Passeur','Décisif'].forEach(function(kw){ html += '<button type="button" onclick="combiAddType('+i+',\''+kw+'\')" style="padding:4px 9px;border-radius:6px;border:1px solid rgba(167,139,250,.35);background:rgba(167,139,250,.1);color:#a78bfa;font-size:10px;font-weight:700;cursor:pointer;">'+kw+'</button>'; });
@@ -3548,7 +3549,7 @@ function renderMmRows(){
   sel.innerHTML=mmRows.map(function(r,i){
     return '<div class="mm-row">'
       +'<input class="fi mm-cote" value="'+r.type+'" placeholder="Type (Victoire…)" data-idx="'+i+'" oninput="mmRows[this.dataset.idx].type=this.value;renderMmCote();" style="flex:1;padding:6px 8px;font-size:12px;">'
-      +'<input type="number" class="fi mm-cote" value="'+r.cote+'" step="0.01" data-idx="'+i+'" oninput="mmRows[this.dataset.idx].cote=parseFloat(this.value)||1;renderMmCote();" style="width:72px;color:var(--a);font-weight:700;">'
+      +'<input type="text" inputmode="decimal" class="fi mm-cote" value="'+r.cote+'" data-idx="'+i+'" oninput="mmRows[this.dataset.idx].cote=parseFloat(this.value.replace(\',\',\'.\'))||1;renderMmCote();" style="width:72px;color:var(--a);font-weight:700;">'
       +(mmRows.length>1?'<button class="mm-del" data-idx="'+i+'" onclick="mmRows.splice(parseInt(this.dataset.idx),1);renderMmRows();">✕</button>':'')
       +'</div>';
   }).join('');
@@ -4586,18 +4587,18 @@ function toggleArjelFb(idx){
   else{arjelRows[idx].isFb=!arjelRows[idx].isFb;}
   buildArjelRows();
 }
-function buildArjelRows(){
+function buildArjelRows(light){
   var dr=$i('arjel-rows');if(!dr)return;
   if(arjelMode==='full'){
     var maxC=Math.max.apply(null,arjelRows.map(function(r){return r.c||0;}));
     arjelRows.forEach(function(r){r.isFb=(r.c===maxC);});
   }
-  dr.innerHTML=arjelRows.map(function(r,i){
+  if(!light) dr.innerHTML=arjelRows.map(function(r,i){
     var isFb=!!r.isFb;
     return '<div class="dutch-row" style="align-items:center;">'
       +'<button data-idx="'+i+'" onclick="toggleArjelFb(this.dataset.idx)" style="flex-shrink:0;padding:4px 8px;border-radius:4px;border:1px solid '+(isFb?'var(--gold)':'var(--b2)')+';background:'+(isFb?'rgba(240,176,32,.15)':'none')+';color:'+(isFb?'var(--gold)':'var(--t3)')+';font-size:10px;font-weight:700;cursor:pointer;">'+(isFb?'🎟':'💵')+'</button>'
       +'<input class="fi" value="'+r.book+'" placeholder="Bookmaker '+(i+1)+'" data-idx="'+i+'" oninput="arjelRows[this.dataset.idx].book=this.value;" style="flex:1;font-size:12px;">'
-      +'<input type="number" class="fi" value="'+r.c+'" step="0.01" data-idx="'+i+'" oninput="arjelRows[this.dataset.idx].c=parseFloat(this.value)||1;buildArjelRows();" style="width:72px;color:'+(isFb?'var(--gold)':'var(--a)')+';font-weight:700;">'
+      +'<input type="text" inputmode="decimal" class="fi" value="'+r.c+'" data-idx="'+i+'" oninput="arjelRows[this.dataset.idx].c=parseFloat(this.value.replace(\',\',\'.\'))||1;buildArjelRows(true);" style="width:72px;color:'+(isFb?'var(--gold)':'var(--a)')+';font-weight:700;">'
       +(arjelRows.length>2?'<button class="udel" data-idx="'+i+'" onclick="arjelRows.splice(parseInt(this.dataset.idx),1);buildArjelRows();">✕</button>':'')
       +'</div>';
   }).join('');
@@ -4649,7 +4650,7 @@ function renderMmRowsSimple(){
   sel.innerHTML=mmRowsSimple.map(function(r,i){
     return '<div class="mm-row">'
       +'<input class="fi" value="'+r.type+'" placeholder="Type (Victoire…)" data-idx="'+i+'" oninput="mmRowsSimple[this.dataset.idx].type=this.value;renderMmCoteSimple();" style="flex:1;padding:6px 8px;font-size:12px;">'
-      +'<input type="number" class="fi mm-cote" value="'+r.cote+'" step="0.01" data-idx="'+i+'" oninput="mmRowsSimple[this.dataset.idx].cote=parseFloat(this.value)||1;renderMmCoteSimple();" style="width:72px;color:var(--a);font-weight:700;">'
+      +'<input type="text" inputmode="decimal" class="fi mm-cote" value="'+r.cote+'" data-idx="'+i+'" oninput="mmRowsSimple[this.dataset.idx].cote=parseFloat(this.value.replace(\',\',\'.\'))||1;renderMmCoteSimple();" style="width:72px;color:var(--a);font-weight:700;">'
       +(mmRowsSimple.length>1?'<button class="mm-del" data-idx="'+i+'" onclick="mmRowsSimple.splice(parseInt(this.dataset.idx),1);renderMmRowsSimple();">✕</button>':'')
       +'</div>';
   }).join('');
@@ -7457,14 +7458,14 @@ function renderCrash(){
 
 /* ── SUREBET ── */
 var sbRows=[{c:2.10},{c:2.05}];
-function buildSbRows(){
-  var tot=parseFloat(($i('sb-tot')&&$i('sb-tot').value)||100);
+function buildSbRows(light){
+  var tot=parseFloat((($i('sb-tot')&&$i('sb-tot').value)||100).toString().replace(',','.'));
   var gorr=$i('sb-gorr')&&$i('sb-gorr').checked;
   var impl=sbRows.reduce(function(a,r){return a+1/(r.c||1);},0);
   var dr=$i('sb-rows');if(!dr)return;
-  dr.innerHTML=sbRows.map(function(r,i){
+  if(!light) dr.innerHTML=sbRows.map(function(r,i){
     return '<div class="dutch-row">'
-      +'<input type="number" class="fi" value="'+r.c+'" step="0.01" placeholder="Cote '+(i+1)+'" data-idx="'+i+'" oninput="sbRows[this.dataset.idx].c=parseFloat(this.value)||1;buildSbRows();">'
+      +'<input type="text" inputmode="decimal" class="fi" value="'+r.c+'" placeholder="Cote '+(i+1)+'" data-idx="'+i+'" oninput="sbRows[this.dataset.idx].c=parseFloat(this.value.replace(\',\',\'.\'))||1;buildSbRows(true);">'
       +(sbRows.length>2?'<button class="udel" data-idx="'+i+'" onclick="sbRows.splice(this.dataset.idx,1);buildSbRows();">✕</button>':'')
       +'</div>';
   }).join('');
@@ -7492,20 +7493,21 @@ function calcSb(){buildSbRows();}
 function addSbRow(){sbRows.push({c:2.0});buildSbRows();}
 
 /* ── DUTCHING (sans boucle) ── */
-function buildDtRows(){
-  var tot=parseFloat(($i('dt-tot')&&$i('dt-tot').value)||50);
+function buildDtRows(light){
+  var tot=parseFloat((($i('dt-tot')&&$i('dt-tot').value)||50).toString().replace(',','.'));
   var impl=dtRows.reduce(function(a,r){return a+1/(r.c||1);},0);
   var dr=$i('dt-rows');if(!dr)return;
   var html='';
   dtRows.forEach(function(r,i){
     var mise=impl>0?(tot*(1/(r.c||1))/impl).toFixed(2):'—';
     html+='<div class="dutch-row">'
-      +'<input type="number" class="fi" value="'+r.c+'" step="0.01" placeholder="Cote '+(i+1)+'" data-idx="'+i+'" oninput="dtRows[this.dataset.idx].c=parseFloat(this.value)||1;buildDtRows();">'
-      +'<div class="dutch-mise">'+mise+'€</div>'
+      +'<input type="text" inputmode="decimal" class="fi" value="'+r.c+'" placeholder="Cote '+(i+1)+'" data-idx="'+i+'" oninput="dtRows[this.dataset.idx].c=parseFloat(this.value.replace(\',\',\'.\'))||1;buildDtRows(true);">'
+      +'<div class="dutch-mise" id="dt-mise-'+i+'">'+mise+'€</div>'
       +(dtRows.length>2?'<button class="udel" data-idx="'+i+'" onclick="dtRows.splice(this.dataset.idx,1);buildDtRows();">✕</button>':'')
       +'</div>';
   });
-  dr.innerHTML=html;
+  if(!light) dr.innerHTML=html;
+  dtRows.forEach(function(r,i){var me=$i('dt-mise-'+i);if(me)me.innerText=(impl>0?(tot*(1/(r.c||1))/impl).toFixed(2):'—')+'€';});
   /* update result */
   var ret=impl>0?(tot/impl).toFixed(2):'—';
   var profit=impl>0?(tot/impl-tot).toFixed(2):'—';
@@ -9078,7 +9080,7 @@ function renderCombiRows() {
     // Type + Cote
     html += '<div style="display:grid;grid-template-columns:1fr 80px;gap:8px;margin-bottom:8px;">';
     html += '<input id="combi-type-'+i+'" class="fi" placeholder="Type (ex: Victoire, O2.5, Décisif…)" value="'+(row.type||'')+'" oninput="combiRows['+i+'].type=this.value" style="font-size:11px;">';
-    html += '<input class="fi" type="number" value="'+row.cote+'" min="1.01" step="0.01" oninput="combiRows['+i+'].cote=parseFloat(this.value)||1;updateCombiCote()" style="font-size:14px;font-weight:800;text-align:center;color:#f0b020;">';
+    html += '<input class="fi" type="text" inputmode="decimal" value="'+row.cote+'" min="1.01" oninput="combiRows['+i+'].cote=parseFloat(this.value.replace(\',\',\'.\'))||1;updateCombiCote()" style="font-size:14px;font-weight:800;text-align:center;color:#f0b020;">';
     html += '</div>';
     html += '<div style="display:flex;gap:5px;flex-wrap:wrap;">';
     ['Buteur','Passeur','Décisif'].forEach(function(kw){ html += '<button type="button" onclick="combiAddType('+i+',\''+kw+'\')" style="padding:4px 9px;border-radius:6px;border:1px solid rgba(167,139,250,.35);background:rgba(167,139,250,.1);color:#a78bfa;font-size:10px;font-weight:700;cursor:pointer;">'+kw+'</button>'; });
@@ -9707,7 +9709,7 @@ function renderMmRows(){
   sel.innerHTML=mmRows.map(function(r,i){
     return '<div class="mm-row">'
       +'<input class="fi mm-cote" value="'+r.type+'" placeholder="Type (Victoire…)" data-idx="'+i+'" oninput="mmRows[this.dataset.idx].type=this.value;renderMmCote();" style="flex:1;padding:6px 8px;font-size:12px;">'
-      +'<input type="number" class="fi mm-cote" value="'+r.cote+'" step="0.01" data-idx="'+i+'" oninput="mmRows[this.dataset.idx].cote=parseFloat(this.value)||1;renderMmCote();" style="width:72px;color:var(--a);font-weight:700;">'
+      +'<input type="text" inputmode="decimal" class="fi mm-cote" value="'+r.cote+'" data-idx="'+i+'" oninput="mmRows[this.dataset.idx].cote=parseFloat(this.value.replace(\',\',\'.\'))||1;renderMmCote();" style="width:72px;color:var(--a);font-weight:700;">'
       +(mmRows.length>1?'<button class="mm-del" data-idx="'+i+'" onclick="mmRows.splice(parseInt(this.dataset.idx),1);renderMmRows();">✕</button>':'')
       +'</div>';
   }).join('');
@@ -10745,18 +10747,18 @@ function toggleArjelFb(idx){
   else{arjelRows[idx].isFb=!arjelRows[idx].isFb;}
   buildArjelRows();
 }
-function buildArjelRows(){
+function buildArjelRows(light){
   var dr=$i('arjel-rows');if(!dr)return;
   if(arjelMode==='full'){
     var maxC=Math.max.apply(null,arjelRows.map(function(r){return r.c||0;}));
     arjelRows.forEach(function(r){r.isFb=(r.c===maxC);});
   }
-  dr.innerHTML=arjelRows.map(function(r,i){
+  if(!light) dr.innerHTML=arjelRows.map(function(r,i){
     var isFb=!!r.isFb;
     return '<div class="dutch-row" style="align-items:center;">'
       +'<button data-idx="'+i+'" onclick="toggleArjelFb(this.dataset.idx)" style="flex-shrink:0;padding:4px 8px;border-radius:4px;border:1px solid '+(isFb?'var(--gold)':'var(--b2)')+';background:'+(isFb?'rgba(240,176,32,.15)':'none')+';color:'+(isFb?'var(--gold)':'var(--t3)')+';font-size:10px;font-weight:700;cursor:pointer;">'+(isFb?'🎟':'💵')+'</button>'
       +'<input class="fi" value="'+r.book+'" placeholder="Bookmaker '+(i+1)+'" data-idx="'+i+'" oninput="arjelRows[this.dataset.idx].book=this.value;" style="flex:1;font-size:12px;">'
-      +'<input type="number" class="fi" value="'+r.c+'" step="0.01" data-idx="'+i+'" oninput="arjelRows[this.dataset.idx].c=parseFloat(this.value)||1;buildArjelRows();" style="width:72px;color:'+(isFb?'var(--gold)':'var(--a)')+';font-weight:700;">'
+      +'<input type="text" inputmode="decimal" class="fi" value="'+r.c+'" data-idx="'+i+'" oninput="arjelRows[this.dataset.idx].c=parseFloat(this.value.replace(\',\',\'.\'))||1;buildArjelRows(true);" style="width:72px;color:'+(isFb?'var(--gold)':'var(--a)')+';font-weight:700;">'
       +(arjelRows.length>2?'<button class="udel" data-idx="'+i+'" onclick="arjelRows.splice(parseInt(this.dataset.idx),1);buildArjelRows();">✕</button>':'')
       +'</div>';
   }).join('');
@@ -10808,7 +10810,7 @@ function renderMmRowsSimple(){
   sel.innerHTML=mmRowsSimple.map(function(r,i){
     return '<div class="mm-row">'
       +'<input class="fi" value="'+r.type+'" placeholder="Type (Victoire…)" data-idx="'+i+'" oninput="mmRowsSimple[this.dataset.idx].type=this.value;renderMmCoteSimple();" style="flex:1;padding:6px 8px;font-size:12px;">'
-      +'<input type="number" class="fi mm-cote" value="'+r.cote+'" step="0.01" data-idx="'+i+'" oninput="mmRowsSimple[this.dataset.idx].cote=parseFloat(this.value)||1;renderMmCoteSimple();" style="width:72px;color:var(--a);font-weight:700;">'
+      +'<input type="text" inputmode="decimal" class="fi mm-cote" value="'+r.cote+'" data-idx="'+i+'" oninput="mmRowsSimple[this.dataset.idx].cote=parseFloat(this.value.replace(\',\',\'.\'))||1;renderMmCoteSimple();" style="width:72px;color:var(--a);font-weight:700;">'
       +(mmRowsSimple.length>1?'<button class="mm-del" data-idx="'+i+'" onclick="mmRowsSimple.splice(parseInt(this.dataset.idx),1);renderMmRowsSimple();">✕</button>':'')
       +'</div>';
   }).join('');
@@ -20082,16 +20084,67 @@ async function g45TennisDirect(){
   if(!data.length){ list.innerHTML='<div style="text-align:center;color:var(--t3);font-size:11px;padding:24px;">Aucun match de tennis en direct pour le moment.</div>'; return; }
   var _tc=window._g45TennisCache||(window._g45TennisCache={m:{},s:{}});
   data.forEach(function(m){ if(m&&m.id) _tc.m[m.id]=m; }); // mémorise le score → ouverture d'un match = 0 appel "détails"
+  window._g45TennisLiveData=data;
+  _g45RenderTennisLive();
+}
+window.g45TennisDirect=g45TennisDirect;
+/* Filtres ATP/WTA/Double + tournois repliables + sous-sections H/F (Direct) — re-filtrage local, 0 quota */
+function _g45SofaClass(m){
+  var cat=((m.tournament&&m.tournament.category&&m.tournament.category.name)||'').toLowerCase();
+  var hname=(m.homeTeam&&m.homeTeam.name)||'';
+  var doubles=(m.homeTeam&&m.homeTeam.subTeams&&m.homeTeam.subTeams.length>=2)||/\//.test(hname)||cat.indexOf('double')>=0;
+  var women=cat.indexOf('wta')>=0||cat.indexOf('women')>=0;
+  var men=cat.indexOf('atp')>=0||cat.indexOf('men')>=0||cat.indexOf('challenger')>=0;
+  return {gender:women?'W':(men?'M':'?'), doubles:doubles};
+}
+function _g45SofaSubLabel(c){
+  var who=c.gender==='W'?'🚺 Dames':c.gender==='M'?'🚹 Messieurs':'🎾';
+  return who+' · '+(c.doubles?'Double':'Simple');
+}
+function _g45SofaPass(m,f){
+  if(f==='all') return true;
+  var c=_g45SofaClass(m);
+  if(f==='atp') return c.gender==='M'&&!c.doubles;
+  if(f==='wta') return c.gender==='W'&&!c.doubles;
+  if(f==='atpd') return c.gender==='M'&&c.doubles;
+  if(f==='wtad') return c.gender==='W'&&c.doubles;
+  return true;
+}
+function _g45TennisChips(active){
+  var defs=[['all','Tous'],['atp','ATP'],['wta','WTA'],['atpd','ATP Double'],['wtad','WTA Double']];
+  var out='<div style="display:flex;gap:5px;overflow-x:auto;padding-bottom:6px;margin-bottom:4px;-webkit-overflow-scrolling:touch;">';
+  defs.forEach(function(d){ var on=active===d[0]; out+='<button onclick="g45TennisFilter(\''+d[0]+'\')" style="flex-shrink:0;border:none;border-radius:7px;padding:6px 11px;font-size:10px;font-weight:700;cursor:pointer;background:'+(on?'#4d84ff':'rgba(255,255,255,.06)')+';color:'+(on?'#fff':'var(--t2)')+';">'+d[1]+'</button>'; });
+  return out+'</div>';
+}
+function g45TennisFilter(f){ window._g45TennisFilter=f; _g45RenderTennisLive(); }
+window.g45TennisFilter=g45TennisFilter;
+function _g45RenderTennisLive(){
+  var list=document.getElementById('g45-tennis-list'); if(!list) return;
+  var data=window._g45TennisLiveData||[];
+  var filter=window._g45TennisFilter||'all';
+  var chips=_g45TennisChips(filter);
+  var shown=data.filter(function(m){return _g45SofaPass(m,filter);});
+  if(!shown.length){ list.innerHTML=chips+'<div style="text-align:center;color:var(--t3);font-size:11px;padding:24px;">Aucun match pour ce filtre.</div>'; return; }
   var byT={}, order=[];
-  data.forEach(function(m){ var t=(m.tournament&&m.tournament.name)||'Autres'; if(!byT[t]){byT[t]=[];order.push(t);} byT[t].push(m); });
-  var html='';
-  order.forEach(function(t){
-    html+='<div style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:#4f5d88;margin:10px 0 5px;">'+t+'</div>';
-    byT[t].forEach(function(m){ html+=_g45TennisRow(m); });
+  shown.forEach(function(m){ var t=(m.tournament&&m.tournament.name)||'Autres'; if(!byT[t]){byT[t]=[];order.push(t);} byT[t].push(m); });
+  var html=chips;
+  order.forEach(function(t,ti){
+    var subs={}, sOrder=[];
+    byT[t].forEach(function(m){ var lbl=_g45SofaSubLabel(_g45SofaClass(m)); if(!subs[lbl]){subs[lbl]=[];sOrder.push(lbl);} subs[lbl].push(m); });
+    var secId='g45tlv'+ti;
+    html+='<div onclick="g45TennisTglSec(\''+secId+'\',this)" style="cursor:pointer;display:flex;justify-content:space-between;align-items:center;background:rgba(255,255,255,.05);border-radius:8px;padding:8px 10px;margin:10px 0 4px;">'
+      +'<span style="font-size:10px;font-weight:800;color:var(--t1);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">'+t+'</span>'
+      +'<span style="font-size:9px;color:var(--t3);white-space:nowrap;margin-left:8px;">'+byT[t].length+' <span class="g45-caret">▼</span></span>'
+      +'</div><div id="'+secId+'" data-open="1">';
+    sOrder.forEach(function(lbl){
+      html+='<div style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:#8aa0ff;margin:8px 0 5px;">'+lbl+'</div>';
+      subs[lbl].forEach(function(m){ html+=_g45TennisRow(m); });
+    });
+    html+='</div>';
   });
   list.innerHTML=html;
 }
-window.g45TennisDirect=g45TennisDirect;
+window._g45RenderTennisLive=_g45RenderTennisLive;
 function g45ToggleTennis(el){
   var panel=el.nextElementSibling; if(!panel||!panel.classList||!panel.classList.contains('smd-panel')) return;
   if(panel.getAttribute('data-open')==='1'){ panel.style.display='none'; panel.setAttribute('data-open','0'); return; }
