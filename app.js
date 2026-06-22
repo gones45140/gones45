@@ -2021,7 +2021,7 @@ function renderArchive(){
         return '<div style="display:flex;align-items:center;padding:8px 10px;background:var(--s1);border-radius:var(--r6);margin-bottom:4px;border-left:3px solid '+borderC+';gap:8px;">'
           +'<div style="font-size:10px;color:var(--t3);min-width:32px;flex-shrink:0;text-align:center;">'+(h.heure||'—')+'</div>'
           +bkBadge
-          +'<div style="flex:1;min-width:0;overflow:hidden;">'
+          +'<div data-aid="'+h.id+'" onclick="openBetEdit(this.dataset.aid)" style="flex:1;min-width:0;overflow:hidden;cursor:pointer;">'
           +'<div style="font-size:12px;font-weight:700;color:var(--t1);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">'+titre+'</div>'
           +'<div style="font-size:10px;color:var(--t3);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">'+sous+'</div>'
           +'</div>'
@@ -2033,7 +2033,7 @@ function renderArchive(){
           +'<div style="display:flex;flex-direction:column;gap:3px;flex-shrink:0;">'
           +'<a href="https://www.google.com/search?q='+encodeURIComponent(titre+' sofascore')+'" target="_blank" style="background:none;border:none;color:#ff7b54;font-size:13px;cursor:pointer;padding:0;text-decoration:none;" title="Sofascore">⚡</a>'
           +'<button data-titre="'+titre.replace(/"/g,'&quot;')+'" data-date="'+(h.date||'')+'" data-comp="'+(h.comp||'')+'" onclick="var d=this.dataset;ouvrirYouTubeAvecScore(d.titre,d.date,d.comp)" style="background:none;border:none;color:#ff0000;font-size:13px;cursor:pointer;padding:0;" title="YouTube highlights">▶️</button>'
-          +'<button data-aid="'+h.id+'" onclick="editArchived(this.dataset.aid)" style="background:none;border:none;color:var(--t3);font-size:14px;cursor:pointer;padding:0;">✏️</button>'
+          +'<button data-aid="'+h.id+'" onclick="openBetEdit(this.dataset.aid)" style="background:none;border:none;color:var(--t3);font-size:14px;cursor:pointer;padding:0;">✏️</button>'
           +'<button data-aid="'+h.id+'" onclick="deleteArchived(this.dataset.aid)" style="background:none;border:none;color:var(--r);font-size:14px;cursor:pointer;padding:0;">🗑</button>'
           +'</div>'
           +(h.sousParis && h.sousParis.length ? '<div style="margin:4px 10px 6px 42px;border-left:2px solid rgba(255,255,255,.08);padding-left:8px;">'
@@ -2144,7 +2144,7 @@ function renderChartTypeBen(){
   if(window._gcTypeBen){try{window._gcTypeBen.destroy();}catch(e){}}
   var types={};
   state.a.forEach(function(h){
-    var t=(h.type||'Autre').trim()||'Autre';
+    var t=_normType(h.type);
     if(!types[t])types[t]=0;
     types[t]+=(h.win?(h.m*h.cote)-h.m:-h.m);
   });
@@ -2176,7 +2176,7 @@ function renderChartTypeDonut(){
   if(window._gcTypeDonut){try{window._gcTypeDonut.destroy();}catch(e){}}
   var types={};var i=0;
   state.a.forEach(function(h){
-    var t=(h.type||'Autre').trim()||'Autre';
+    var t=_normType(h.type);
     if(!types[t]){types[t]={n:0,idx:i++};}
     types[t].n++;
   });
@@ -2451,7 +2451,7 @@ function openClub(nom,idx){
   // Types de paris (top 4)
   var tmG={};
   paris.forEach(function(h){
-    var t=(h.type||'Autre').trim().split(' ')[0];
+    var t=_normType(h.type);
     if(!tmG[t])tmG[t]={n:0,wins:0,profit:0};
     tmG[t].n++;if(h.win)tmG[t].wins++;
     tmG[t].profit+=(h.win?(h.m*h.cote)-h.m:-h.m);
@@ -2545,7 +2545,7 @@ function openClub(nom,idx){
   }
 
   /* types */
-  var tm={};paris.forEach(function(h){var t=(h.type||'Autre').trim();if(!tm[t])tm[t]={n:0,wins:0,profit:0};tm[t].n++;if(h.win)tm[t].wins++;tm[t].profit+=(h.win?(h.m*h.cote)-h.m:-h.m);});
+  var tm={};paris.forEach(function(h){var t=_normType(h.type);if(!tm[t])tm[t]={n:0,wins:0,profit:0};tm[t].n++;if(h.win)tm[t].wins++;tm[t].profit+=(h.win?(h.m*h.cote)-h.m:-h.m);});
   var ts=Object.entries(tm).sort(function(a,b){return b[1].n-a[1].n;});var maxN=ts.length?ts[0][1].n:1;
   $i('ip-types').innerHTML=ts.length
     ?'<div class="card cp">'+ts.map(function(e){
@@ -3509,7 +3509,7 @@ function renderRadarChart(){
   if(!state.a.length){ctx.parentElement.innerHTML='<div class="empty">Aucun historique</div>';return;}
   var typeMap={};
   state.a.forEach(function(h){
-    var t=(h.type||'Autre').trim()||'Autre';
+    var t=_normType(h.type);
     if(!typeMap[t])typeMap[t]={n:0,wins:0,profit:0,mise:0};
     typeMap[t].n++;
     if(h.win)typeMap[t].wins++;
@@ -8234,7 +8234,7 @@ function renderArchive(){
         return '<div style="display:flex;align-items:center;padding:8px 10px;background:var(--s1);border-radius:var(--r6);margin-bottom:4px;border-left:3px solid '+borderC+';gap:8px;">'
           +'<div style="font-size:10px;color:var(--t3);min-width:32px;flex-shrink:0;text-align:center;">'+(h.heure||'—')+'</div>'
           +bkBadge
-          +'<div style="flex:1;min-width:0;overflow:hidden;">'
+          +'<div data-aid="'+h.id+'" onclick="openBetEdit(this.dataset.aid)" style="flex:1;min-width:0;overflow:hidden;cursor:pointer;">'
           +'<div style="font-size:12px;font-weight:700;color:var(--t1);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">'+titre+'</div>'
           +'<div style="font-size:10px;color:var(--t3);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">'+sous+'</div>'
           +'</div>'
@@ -8246,7 +8246,7 @@ function renderArchive(){
           +'<div style="display:flex;flex-direction:column;gap:3px;flex-shrink:0;">'
           +'<a href="https://www.google.com/search?q='+encodeURIComponent(titre+' sofascore')+'" target="_blank" style="background:none;border:none;color:#ff7b54;font-size:13px;cursor:pointer;padding:0;text-decoration:none;" title="Sofascore">⚡</a>'
           +'<button data-titre="'+titre.replace(/"/g,'&quot;')+'" data-date="'+(h.date||'')+'" data-comp="'+(h.comp||'')+'" onclick="var d=this.dataset;ouvrirYouTubeAvecScore(d.titre,d.date,d.comp)" style="background:none;border:none;color:#ff0000;font-size:13px;cursor:pointer;padding:0;" title="YouTube highlights">▶️</button>'
-          +'<button data-aid="'+h.id+'" onclick="editArchived(this.dataset.aid)" style="background:none;border:none;color:var(--t3);font-size:14px;cursor:pointer;padding:0;">✏️</button>'
+          +'<button data-aid="'+h.id+'" onclick="openBetEdit(this.dataset.aid)" style="background:none;border:none;color:var(--t3);font-size:14px;cursor:pointer;padding:0;">✏️</button>'
           +'<button data-aid="'+h.id+'" onclick="deleteArchived(this.dataset.aid)" style="background:none;border:none;color:var(--r);font-size:14px;cursor:pointer;padding:0;">🗑</button>'
           +'</div>'
           +(h.sousParis && h.sousParis.length ? '<div style="margin:4px 10px 6px 42px;border-left:2px solid rgba(255,255,255,.08);padding-left:8px;">'
@@ -8357,7 +8357,7 @@ function renderChartTypeBen(){
   if(window._gcTypeBen){try{window._gcTypeBen.destroy();}catch(e){}}
   var types={};
   state.a.forEach(function(h){
-    var t=(h.type||'Autre').trim()||'Autre';
+    var t=_normType(h.type);
     if(!types[t])types[t]=0;
     types[t]+=(h.win?(h.m*h.cote)-h.m:-h.m);
   });
@@ -8389,7 +8389,7 @@ function renderChartTypeDonut(){
   if(window._gcTypeDonut){try{window._gcTypeDonut.destroy();}catch(e){}}
   var types={};var i=0;
   state.a.forEach(function(h){
-    var t=(h.type||'Autre').trim()||'Autre';
+    var t=_normType(h.type);
     if(!types[t]){types[t]={n:0,idx:i++};}
     types[t].n++;
   });
@@ -8664,7 +8664,7 @@ function openClub(nom,idx){
   // Types de paris (top 4)
   var tmG={};
   paris.forEach(function(h){
-    var t=(h.type||'Autre').trim().split(' ')[0];
+    var t=_normType(h.type);
     if(!tmG[t])tmG[t]={n:0,wins:0,profit:0};
     tmG[t].n++;if(h.win)tmG[t].wins++;
     tmG[t].profit+=(h.win?(h.m*h.cote)-h.m:-h.m);
@@ -8758,7 +8758,7 @@ function openClub(nom,idx){
   }
 
   /* types */
-  var tm={};paris.forEach(function(h){var t=(h.type||'Autre').trim();if(!tm[t])tm[t]={n:0,wins:0,profit:0};tm[t].n++;if(h.win)tm[t].wins++;tm[t].profit+=(h.win?(h.m*h.cote)-h.m:-h.m);});
+  var tm={};paris.forEach(function(h){var t=_normType(h.type);if(!tm[t])tm[t]={n:0,wins:0,profit:0};tm[t].n++;if(h.win)tm[t].wins++;tm[t].profit+=(h.win?(h.m*h.cote)-h.m:-h.m);});
   var ts=Object.entries(tm).sort(function(a,b){return b[1].n-a[1].n;});var maxN=ts.length?ts[0][1].n:1;
   $i('ip-types').innerHTML=ts.length
     ?'<div class="card cp">'+ts.map(function(e){
@@ -9669,7 +9669,7 @@ function renderRadarChart(){
   if(!state.a.length){ctx.parentElement.innerHTML='<div class="empty">Aucun historique</div>';return;}
   var typeMap={};
   state.a.forEach(function(h){
-    var t=(h.type||'Autre').trim()||'Autre';
+    var t=_normType(h.type);
     if(!typeMap[t])typeMap[t]={n:0,wins:0,profit:0,mise:0};
     typeMap[t].n++;
     if(h.win)typeMap[t].wins++;
@@ -20955,6 +20955,101 @@ function _g45FixNumberInputs(root){
 window._g45FixNumberInputs=_g45FixNumberInputs;
 if(document.readyState!=='loading') _g45FixNumberInputs(); else document.addEventListener('DOMContentLoaded',function(){ _g45FixNumberInputs(); });
 document.addEventListener('click',function(){ setTimeout(_g45FixNumberInputs,120); },true);
+/* ───────── ÉDITEUR DE PARI (archive) : lire la note + corriger horaire/cote/mise/résultat ───────── */
+function _betFind(id){
+  var idx=(state.a||[]).findIndex(function(x){return x.id===id;});
+  if(idx>=0) return {bet:state.a[idx], idx:idx, pending:false};
+  idx=(state.h||[]).findIndex(function(x){return x.id===id;});
+  if(idx>=0) return {bet:state.h[idx], idx:idx, pending:true};
+  return null;
+}
+function _betSettleEffect(bet){
+  var m=parseFloat(bet.m)||0, cote=parseFloat(bet.cote)||0;
+  if(bet.isFreebet) return bet.win ? m*(cote-1) : 0;
+  return bet.win ? (m*cote - m) : -m;
+}
+function openBetEdit(id){
+  var f=_betFind(id); if(!f){ alert('Pari introuvable'); return; }
+  var b=f.bet, books=Object.keys(state.b||{});
+  var ov=document.getElementById('bet-edit-ov'); if(ov) ov.remove();
+  ov=document.createElement('div'); ov.id='bet-edit-ov';
+  ov.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:99999;display:flex;align-items:flex-end;justify-content:center;';
+  var ins='width:100%;box-sizing:border-box;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);border-radius:8px;padding:9px 10px;color:var(--t1);font-size:13px;';
+  function fld(l,i){ return '<div style="margin-bottom:9px;"><div style="font-size:9px;color:var(--t3);font-weight:700;text-transform:uppercase;letter-spacing:.5px;margin-bottom:3px;">'+l+'</div>'+i+'</div>'; }
+  function esc(v){ return (v==null?'':(''+v)).replace(/"/g,'&quot;'); }
+  var resSel = f.pending
+    ? '<select id="be-res" style="'+ins+'"><option value="p">⏳ En cours</option><option value="w">✅ Gagné</option><option value="l">❌ Perdu</option></select>'
+    : '<select id="be-res" style="'+ins+'"><option value="w"'+(b.win?' selected':'')+'>✅ Gagné</option><option value="l"'+(!b.win?' selected':'')+'>❌ Perdu</option></select>';
+  ov.innerHTML='<div style="background:#141a2e;border-radius:16px 16px 0 0;width:100%;max-width:520px;max-height:88vh;overflow-y:auto;padding:16px 16px 26px;">'
+    +'<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;"><div style="font-size:14px;font-weight:800;color:var(--t1);">✏️ Modifier le pari</div><button onclick="var o=document.getElementById(\'bet-edit-ov\');if(o)o.remove();" style="background:none;border:none;color:var(--t3);font-size:20px;cursor:pointer;">✕</button></div>'
+    +'<div style="display:flex;gap:8px;"><div style="flex:1;">'+fld('Heure','<input id="be-heure" value="'+esc(b.heure)+'" placeholder="19:00" style="'+ins+'">')+'</div><div style="flex:1.3;">'+fld('Date','<input id="be-date" type="date" value="'+esc(b.date)+'" style="'+ins+'">')+'</div></div>'
+    +fld('Match / cible','<input id="be-target" value="'+esc(b.target)+'" style="'+ins+'">')
+    +fld('Type','<input id="be-n" value="'+esc(b.n)+'" style="'+ins+'">')
+    +'<div style="display:flex;gap:8px;"><div style="flex:1;">'+fld('Cote','<input id="be-cote" inputmode="decimal" value="'+esc(b.cote)+'" style="'+ins+'">')+'</div><div style="flex:1;">'+fld('Mise (€)','<input id="be-m" inputmode="decimal" value="'+esc(b.m)+'" style="'+ins+'">')+'</div></div>'
+    +fld('Compétition','<input id="be-comp" value="'+esc(b.comp)+'" style="'+ins+'">')
+    +fld('Bookmaker','<select id="be-b" style="'+ins+'">'+books.map(function(k){return '<option value="'+k+'"'+(b.b===k?' selected':'')+'>'+bki(k).n+'</option>';}).join('')+'</select>')
+    +fld('Résultat',resSel)
+    +fld('📝 Note','<textarea id="be-note" rows="4" placeholder="Tes notes sur ce pari…" style="'+ins+'resize:vertical;font-family:inherit;line-height:1.4;">'+((b.note==null?'':(''+b.note)).replace(/</g,'&lt;'))+'</textarea>')
+    +'<div style="display:flex;gap:8px;margin-top:6px;"><button onclick="saveBetEdit(\''+id+'\')" style="flex:2;background:#4d84ff;border:none;border-radius:10px;padding:12px;color:#fff;font-size:14px;font-weight:800;cursor:pointer;">💾 Enregistrer</button><button onclick="if(confirm(\'Supprimer ce pari ?\')){var o=document.getElementById(\'bet-edit-ov\');if(o)o.remove();deleteArchived(\''+id+'\');}" style="flex:1;background:rgba(255,69,69,.15);border:none;border-radius:10px;padding:12px;color:#ff6b6b;font-size:13px;font-weight:700;cursor:pointer;">🗑</button></div>'
+    +'</div>';
+  document.body.appendChild(ov);
+  ov.addEventListener('click',function(e){ if(e.target===ov) ov.remove(); });
+  setTimeout(_g45FixNumberInputs,50);
+}
+window.openBetEdit=openBetEdit;
+function saveBetEdit(id){
+  var f=_betFind(id); if(!f) return;
+  var b=f.bet;
+  function v(i){ var e=document.getElementById(i); return e?e.value:''; }
+  var res=v('be-res'), wasPending=f.pending;
+  // 1) annuler l'effet bankroll de l'ANCIEN pari réglé (avant de toucher aux champs)
+  if(!wasPending && b.b && state.b && state.b[b.b]!==undefined){
+    state.b[b.b]=(parseFloat(state.b[b.b]||0) - _betSettleEffect(b)).toFixed(2);
+  }
+  // 2) appliquer les modifs de champs
+  b.heure=v('be-heure').trim();
+  b.date=v('be-date')||b.date;
+  b.target=v('be-target').trim()||b.target;
+  b.n=v('be-n').trim()||b.n;
+  b.cote=parseFloat((v('be-cote')+'').replace(',','.'))||b.cote;
+  b.m=parseFloat((v('be-m')+'').replace(',','.'))||b.m;
+  b.comp=v('be-comp').trim();
+  b.note=v('be-note');
+  b.b=v('be-b')||b.b;
+  var nowPending=(res==='p'), win=(res==='w');
+  // 3) transitions état + bankroll
+  if(wasPending){
+    if(!nowPending){
+      b.win=win; b.isPending=false;
+      state.h.splice(f.idx,1); if(!state.a) state.a=[]; state.a.push(b);
+      if(b.b && state.b && state.b[b.b]!==undefined) state.b[b.b]=(parseFloat(state.b[b.b]||0) + _betSettleEffect(b)).toFixed(2);
+    }
+  } else {
+    if(nowPending){
+      b.isPending=true; delete b.win;
+      state.a.splice(f.idx,1); if(!state.h) state.h=[]; state.h.push(b);
+    } else {
+      b.win=win;
+      if(b.b && state.b && state.b[b.b]!==undefined) state.b[b.b]=(parseFloat(state.b[b.b]||0) + _betSettleEffect(b)).toFixed(2);
+    }
+  }
+  save();
+  var ov=document.getElementById('bet-edit-ov'); if(ov) ov.remove();
+  try{ renderArchive(); }catch(e){}
+  try{ if(typeof renderCrash==='function') renderCrash(); }catch(e){}
+}
+window.saveBetEdit=saveBetEdit;
+/* Normalise un type de pari : fusionne buteur/passeur/décisif (casse, accent, nom de joueur), garde les accents pour le reste. Sert de clé ET de libellé. */
+function _normType(t){
+  var raw=(t==null?'':(''+t)).trim();
+  if(!raw) return 'Autre';
+  var s=raw.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
+  if(s.indexOf('buteur')===0) return 'Buteur';
+  if(s.indexOf('passeur')===0) return 'Passeur';
+  if(s.indexOf('decisif')===0) return 'Décisif';
+  return raw.charAt(0).toUpperCase()+raw.slice(1);
+}
+window._normType=_normType;
 /* Complément ITF / Challenger via Sofascore (opt-in, quota) — avec cache local (dates passées = gratuit ensuite). */
 async function g45TennisResultsItf(offset){
   offset=offset|0;
