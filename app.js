@@ -20984,7 +20984,8 @@ function openBetEdit(id){
     +'<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;"><div style="font-size:14px;font-weight:800;color:var(--t1);">✏️ Modifier le pari</div><button onclick="var o=document.getElementById(\'bet-edit-ov\');if(o)o.remove();" style="background:none;border:none;color:var(--t3);font-size:20px;cursor:pointer;">✕</button></div>'
     +'<div style="display:flex;gap:8px;"><div style="flex:1;">'+fld('Heure','<input id="be-heure" value="'+esc(b.heure)+'" placeholder="19:00" style="'+ins+'">')+'</div><div style="flex:1.3;">'+fld('Date','<input id="be-date" type="date" value="'+esc(b.date)+'" style="'+ins+'">')+'</div></div>'
     +fld('Match / cible','<input id="be-target" value="'+esc(b.target)+'" style="'+ins+'">')
-    +fld('Type','<input id="be-n" value="'+esc(b.n)+'" style="'+ins+'">')
+    +fld('Format','<input id="be-n" value="'+esc(b.n)+'" placeholder="SIMPLE / Combiné / Cockpit" style="'+ins+'">')
+    +fld('Type de pari','<input id="be-type" value="'+esc(b.type)+'" list="be-type-list" placeholder="Buteur, Passeur, Over 1.5…" style="'+ins+'"><datalist id="be-type-list"><option>Buteur</option><option>Passeur</option><option>Décisif</option><option>Over 1.5</option><option>Over 2.5</option><option>Victoire</option><option>Double chance</option><option>Les deux marquent</option></datalist>')
     +'<div style="display:flex;gap:8px;"><div style="flex:1;">'+fld('Cote','<input id="be-cote" inputmode="decimal" value="'+esc(b.cote)+'" style="'+ins+'">')+'</div><div style="flex:1;">'+fld('Mise (€)','<input id="be-m" inputmode="decimal" value="'+esc(b.m)+'" style="'+ins+'">')+'</div></div>'
     +fld('Compétition','<input id="be-comp" value="'+esc(b.comp)+'" style="'+ins+'">')
     +fld('Bookmaker','<select id="be-b" style="'+ins+'">'+books.map(function(k){return '<option value="'+k+'"'+(b.b===k?' selected':'')+'>'+bki(k).n+'</option>';}).join('')+'</select>')
@@ -21011,6 +21012,7 @@ function saveBetEdit(id){
   b.date=v('be-date')||b.date;
   b.target=v('be-target').trim()||b.target;
   b.n=v('be-n').trim()||b.n;
+  b.type=v('be-type').trim();
   b.cote=parseFloat((v('be-cote')+'').replace(',','.'))||b.cote;
   b.m=parseFloat((v('be-m')+'').replace(',','.'))||b.m;
   b.comp=v('be-comp').trim();
