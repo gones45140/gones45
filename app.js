@@ -20000,7 +20000,9 @@ function loadLiveTab(){
   }).join('');
   el.innerHTML='<div class="sec" style="margin-top:0;">📡 En direct — tous sports</div>'
     +'<div style="font-size:11px;color:var(--t3);margin-bottom:12px;">Choisis un sport, puis une compétition. Les matchs en direct 🔴 apparaissent en premier.</div>'
-    +'<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(88px,1fr));gap:10px;">'+cards+'</div>';
+    +'<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(88px,1fr));gap:10px;">'+cards
+    +'<button onclick="g45TennisDirect()" style="border:none;cursor:pointer;background:rgba(255,255,255,.05);border-radius:12px;padding:16px 8px;display:flex;flex-direction:column;align-items:center;gap:6px;color:var(--t1);"><span style="font-size:26px;">🎾</span><span style="font-size:11px;font-weight:700;">Tennis</span></button>'
+    +'</div>';
 }
 function g45DirectSport(sportKey){
   var s=G45_SPORTS.filter(function(x){return x.key===sportKey;})[0]; if(!s) return;
@@ -20021,6 +20023,145 @@ function g45DirectSport(sportKey){
     +'<div id="g45-live-list" style="margin-top:8px;"><div style="text-align:center;color:var(--t3);font-size:11px;padding:24px;">👆 Sélectionne une compétition</div></div>';
 }
 window.g45DirectSport=g45DirectSport;
+
+/* ═══════════ TENNIS LIVE — Sofascore via RapidAPI (sofascore6) ═══════════
+   À la demande uniquement (pas d'auto-refresh) pour ménager le quota RapidAPI gratuit. */
+async function g45Sofa6(path){
+  var key=localStorage.getItem('gones45_rapidapi_key');
+  if(!key) return {__err:'nokey'};
+  try{
+    var r=await fetch('https://fd-proxy.touraine-antoine.workers.dev/?key='+encodeURIComponent(key)+'&host=rapidapi&rapidhost=sofascore6.p.rapidapi.com&path='+encodeURIComponent(path));
+    if(!r.ok) return {__err:r.status};
+    return await r.json();
+  }catch(e){ return {__err:'net'}; }
+}
+function _g45Flag(a2){
+  if(!a2||a2.length!==2) return '';
+  var cc=a2.toUpperCase(); if(!/^[A-Z]{2}$/.test(cc)) return '';
+  return String.fromCodePoint(0x1F1E6+cc.charCodeAt(0)-65, 0x1F1E6+cc.charCodeAt(1)-65);
+}
+function _g45TennisRow(m){
+  var h=m.homeTeam||{}, a=m.awayTeam||{};
+  var hN=h.shortName||h.name||'?', aN=a.shortName||a.name||'?';
+  var hF=_g45Flag(h.country&&h.country.alpha2), aF=_g45Flag(a.country&&a.country.alpha2);
+  var hs=m.homeScore||{}, as=m.awayScore||{};
+  var st=m.status||{}; var inprog=(st.type==='inprogress')||st.isInProgress;
+  var desc=st.description||m.live||'';
+  var hSet=(hs.current!=null?hs.current:''), aSet=(as.current!=null?as.current:'');
+  var score=(hSet!==''&&aSet!=='')?(hSet+'-'+aSet):'vs';
+  var hLead=(hSet!==''&&aSet!==''&&hSet>aSet), aLead=(aSet!==''&&hSet!==''&&aSet>hSet);
+  return '<div onclick="g45ToggleTennis(this)" data-mid="'+m.id+'" style="display:grid;grid-template-columns:1fr auto 1fr 58px;gap:6px;align-items:center;padding:9px 10px;background:'+(inprog?'rgba(255,69,69,.07)':'rgba(255,255,255,.03)')+';border-radius:8px;border-left:3px solid '+(inprog?'#ff4545':'rgba(255,255,255,.1)')+';cursor:pointer;margin-bottom:4px;">'
+    +'<div style="font-size:11px;font-weight:'+(hLead?800:700)+';color:var(--t1);text-align:right;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">'+hN+' '+hF+'</div>'
+    +'<div style="font-size:13px;font-weight:900;color:'+(inprog?'#ff4545':'var(--a)')+';text-align:center;white-space:nowrap;min-width:34px;">'+score+'</div>'
+    +'<div style="font-size:11px;font-weight:'+(aLead?800:700)+';color:var(--t1);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">'+aF+' '+aN+'</div>'
+    +'<div style="text-align:right;font-size:8px;font-weight:700;color:'+(inprog?'#ff4545':'var(--t3)')+';white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">'+(inprog?'🔴 ':'')+desc+'</div>'
+    +'</div>'
+    +'<div class="smd-panel" style="display:none;"></div>';
+}
+async function g45TennisDirect(){
+  var el=document.getElementById('t-live'); if(!el) return;
+  el.innerHTML='<button onclick="loadLiveTab()" style="border:none;background:rgba(255,255,255,.06);color:var(--t2);border-radius:8px;padding:6px 12px;font-size:11px;font-weight:700;cursor:pointer;margin-bottom:10px;">← Sports</button>'
+    +'<div class="sec" style="margin-top:0;">🎾 Tennis — en direct</div>'
+    +'<div style="font-size:11px;color:var(--t3);margin-bottom:8px;">ATP · WTA · Challenger · ITF. Ouvre un match pour le score détaillé + les stats.</div>'
+    +'<button onclick="g45TennisDirect()" style="border:none;background:rgba(255,255,255,.06);color:var(--t2);border-radius:8px;padding:5px 11px;font-size:10px;font-weight:700;cursor:pointer;margin-bottom:10px;">🔄 Rafraîchir</button>'
+    +'<div id="g45-tennis-list"><div style="text-align:center;color:var(--t3);font-size:11px;padding:24px;">⏳ Chargement…</div></div>';
+  var list=document.getElementById('g45-tennis-list');
+  if(!localStorage.getItem('gones45_rapidapi_key')){ list.innerHTML='<div style="text-align:center;color:var(--t3);font-size:11px;padding:24px;">🔑 Clé RapidAPI manquante.<br>Renseigne-la dans OUTILS.</div>'; return; }
+  var data=await g45Sofa6('/api/sofascore/v1/match/live?sport_slug=tennis');
+  if(!Array.isArray(data)){
+    var er=data&&data.__err;
+    var msg=(er===403)?'Pas d\'abonnement à l\'API Sofascore (RapidAPI). Abonne-toi au plan gratuit.':(er===429)?'Quota RapidAPI atteint — réessaie un peu plus tard.':(er==='nokey')?'Clé RapidAPI manquante (OUTILS).':'Service indisponible pour le moment.';
+    list.innerHTML='<div style="text-align:center;color:var(--t3);font-size:11px;padding:24px;">'+msg+'</div>'; return;
+  }
+  if(!data.length){ list.innerHTML='<div style="text-align:center;color:var(--t3);font-size:11px;padding:24px;">Aucun match de tennis en direct pour le moment.</div>'; return; }
+  var byT={}, order=[];
+  data.forEach(function(m){ var t=(m.tournament&&m.tournament.name)||'Autres'; if(!byT[t]){byT[t]=[];order.push(t);} byT[t].push(m); });
+  var html='';
+  order.forEach(function(t){
+    html+='<div style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:#4f5d88;margin:10px 0 5px;">'+t+'</div>';
+    byT[t].forEach(function(m){ html+=_g45TennisRow(m); });
+  });
+  list.innerHTML=html;
+}
+window.g45TennisDirect=g45TennisDirect;
+function g45ToggleTennis(el){
+  var panel=el.nextElementSibling; if(!panel||!panel.classList||!panel.classList.contains('smd-panel')) return;
+  if(panel.getAttribute('data-open')==='1'){ panel.style.display='none'; panel.setAttribute('data-open','0'); return; }
+  panel.style.display='block'; panel.setAttribute('data-open','1');
+  panel.innerHTML='<div style="text-align:center;color:var(--t3);font-size:11px;padding:14px;">⏳ Chargement…</div>';
+  g45RenderTennisDetail(panel, el.getAttribute('data-mid'));
+}
+window.g45ToggleTennis=g45ToggleTennis;
+function _g45TennisScoreBlock(m){
+  var h=m.homeTeam||{}, a=m.awayTeam||{};
+  var hs=m.homeScore||{}, as=m.awayScore||{};
+  var st=m.status||{}; var inprog=(st.type==='inprogress')||st.isInProgress;
+  var desc=st.description||m.live||'';
+  var hN=h.fullName||h.name||h.shortName||'?', aN=a.fullName||a.name||a.shortName||'?';
+  var hF=_g45Flag(h.country&&h.country.alpha2), aF=_g45Flag(a.country&&a.country.alpha2);
+  var tour=(m.tournament&&m.tournament.name)||'';
+  var rnd=(m.round&&m.round.name)||'';
+  var cols=[]; for(var i=1;i<=5;i++){ if(hs['period'+i]!=null||as['period'+i]!=null) cols.push(i); }
+  var curSet=cols.length;
+  function cell(sc,oc,i){
+    var v=sc['period'+i]; if(v==null) v='-';
+    var ov=oc['period'+i];
+    var tbv=sc['period'+i+'TieBreak'];
+    var showTb=(tbv!=null && v!=='-' && ov!=null && v<ov && tbv!=v); // exposant sur le perdant d'un set 7-6 (pas sur un super tie-break)
+    var won=(v!=='-'&&ov!=null&&v>ov);
+    var isCur=(i===curSet)&&inprog;
+    return '<td style="text-align:center;padding:2px 6px;font-size:13px;font-weight:'+(won?900:600)+';color:'+(won?'var(--t1)':'var(--t3)')+';'+(isCur?'background:rgba(255,69,69,.12);border-radius:4px;':'')+'">'+v+(showTb?'<sup style="font-size:7px;opacity:.75;">'+tbv+'</sup>':'')+'</td>';
+  }
+  function row(sc,oc,nm,fl){
+    return '<tr><td style="font-size:12px;font-weight:700;color:var(--t1);padding:3px 4px;white-space:nowrap;">'+fl+' '+nm+'</td>'
+      +'<td style="text-align:center;font-size:15px;font-weight:900;color:var(--a);padding:0 6px;">'+(sc.current!=null?sc.current:0)+'</td>'
+      +cols.map(function(i){return cell(sc,oc,i);}).join('')+'</tr>';
+  }
+  var head='<tr><th></th><th style="font-size:8px;color:#4f5d88;font-weight:700;">SETS</th>'+cols.map(function(i){return '<th style="font-size:8px;color:#4f5d88;font-weight:700;padding:0 6px;">S'+i+'</th>';}).join('')+'</tr>';
+  var point='';
+  if(inprog && (hs.point!=null||as.point!=null)){ point='<div style="text-align:center;margin-top:5px;font-size:12px;font-weight:800;color:#ff4545;">● '+(hs.point!=null?hs.point:'0')+' - '+(as.point!=null?as.point:'0')+'</div>'; }
+  return '<div style="background:rgba(255,255,255,.03);border-radius:10px;padding:10px 8px;margin-bottom:8px;">'
+    +(tour?'<div style="font-size:9px;color:#8aa0ff;font-weight:700;text-align:center;margin-bottom:2px;">🎾 '+tour+(rnd?(' · '+rnd):'')+'</div>':'')
+    +(desc?'<div style="font-size:9px;color:'+(inprog?'#ff4545':'var(--t3)')+';font-weight:700;text-align:center;margin-bottom:8px;">'+(inprog?'🔴 ':'')+desc+'</div>':'')
+    +'<table style="width:100%;border-collapse:collapse;">'+head+row(hs,as,hN,hF)+row(as,hs,aN,aF)+'</table>'
+    +point
+    +'</div>';
+}
+function _g45TennisStatsBlock(stats){
+  if(!Array.isArray(stats)||!stats.length) return '<div style="text-align:center;color:var(--t3);font-size:10px;padding:8px;">Stats indisponibles.</div>';
+  var all=stats.filter(function(p){return p.period==='ALL';})[0]||stats[0];
+  var groups=all.groups||[];
+  if(!groups.length) return '<div style="text-align:center;color:var(--t3);font-size:10px;padding:8px;">Stats indisponibles.</div>';
+  var out='';
+  groups.forEach(function(g){
+    out+='<div style="font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:.5px;color:#4f5d88;margin:10px 0 6px;">'+(g.groupName||'')+'</div>';
+    (g.statisticsItems||[]).forEach(function(it){
+      var hv=(typeof it.homeValue==='number')?it.homeValue:0, av=(typeof it.awayValue==='number')?it.awayValue:0;
+      var tot=hv+av; var hp=tot>0?Math.round(hv/tot*100):50; var ap=100-hp;
+      var hLead=it.compareCode===1, aLead=it.compareCode===2;
+      out+='<div style="margin-bottom:8px;">'
+        +'<div style="display:flex;justify-content:space-between;align-items:center;font-size:10px;margin-bottom:3px;">'
+          +'<span style="font-weight:'+(hLead?800:600)+';color:'+(hLead?'#4ade80':'var(--t2)')+';min-width:58px;">'+(it.home!=null?it.home:hv)+'</span>'
+          +'<span style="color:var(--t3);font-size:9px;text-align:center;flex:1;">'+(it.name||'')+'</span>'
+          +'<span style="font-weight:'+(aLead?800:600)+';color:'+(aLead?'#4ade80':'var(--t2)')+';min-width:58px;text-align:right;">'+(it.away!=null?it.away:av)+'</span>'
+        +'</div>'
+        +'<div style="display:flex;height:5px;border-radius:3px;overflow:hidden;background:rgba(255,255,255,.05);">'
+          +'<div style="width:50%;display:flex;justify-content:flex-end;"><div style="width:'+hp+'%;height:100%;background:'+(hLead?'#4ade80':'#4d84ff')+';border-radius:3px 0 0 3px;"></div></div>'
+          +'<div style="width:50%;"><div style="width:'+ap+'%;height:100%;background:'+(aLead?'#4ade80':'#6f86d6')+';border-radius:0 3px 3px 0;"></div></div>'
+        +'</div>'
+      +'</div>';
+    });
+  });
+  return out;
+}
+async function g45RenderTennisDetail(panel, matchId){
+  var det=await g45Sofa6('/api/sofascore/v1/match/details?match_id='+matchId);
+  if(!det || det.__err || !det.id){ panel.innerHTML='<div style="text-align:center;color:var(--t3);font-size:11px;padding:14px;">Détail indisponible'+((det&&det.__err===429)?' (quota RapidAPI)':'')+'.</div>'; return; }
+  panel.innerHTML=_g45TennisScoreBlock(det)+'<div style="text-align:center;color:var(--t3);font-size:10px;padding:6px;">⏳ Stats…</div>';
+  var stats=await g45Sofa6('/api/sofascore/v1/match/statistics?match_id='+matchId);
+  panel.innerHTML=_g45TennisScoreBlock(det)+_g45TennisStatsBlock(stats);
+}
+window.g45RenderTennisDetail=g45RenderTennisDetail;
 function _g45ymd(d){ return ''+d.getFullYear()+String(d.getMonth()+1).padStart(2,'0')+String(d.getDate()).padStart(2,'0'); }
 /* ESPN ne donne pas d'horloge rugby fiable (clock:0, displayClock figé) → on affiche la mi-temps via period */
 function _rugbyLiveLabel(status){
