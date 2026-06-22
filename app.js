@@ -20074,6 +20074,8 @@ async function g45TennisDirect(){
     list.innerHTML='<div style="text-align:center;color:var(--t3);font-size:11px;padding:24px;">'+msg+'</div>'; return;
   }
   if(!data.length){ list.innerHTML='<div style="text-align:center;color:var(--t3);font-size:11px;padding:24px;">Aucun match de tennis en direct pour le moment.</div>'; return; }
+  var _tc=window._g45TennisCache||(window._g45TennisCache={m:{},s:{}});
+  data.forEach(function(m){ if(m&&m.id) _tc.m[m.id]=m; }); // mémorise le score → ouverture d'un match = 0 appel "détails"
   var byT={}, order=[];
   data.forEach(function(m){ var t=(m.tournament&&m.tournament.name)||'Autres'; if(!byT[t]){byT[t]=[];order.push(t);} byT[t].push(m); });
   var html='';
@@ -20155,11 +20157,19 @@ function _g45TennisStatsBlock(stats){
   return out;
 }
 async function g45RenderTennisDetail(panel, matchId){
-  var det=await g45Sofa6('/api/sofascore/v1/match/details?match_id='+matchId);
-  if(!det || det.__err || !det.id){ panel.innerHTML='<div style="text-align:center;color:var(--t3);font-size:11px;padding:14px;">Détail indisponible'+((det&&det.__err===429)?' (quota RapidAPI)':'')+'.</div>'; return; }
-  panel.innerHTML=_g45TennisScoreBlock(det)+'<div style="text-align:center;color:var(--t3);font-size:10px;padding:6px;">⏳ Stats…</div>';
-  var stats=await g45Sofa6('/api/sofascore/v1/match/statistics?match_id='+matchId);
-  panel.innerHTML=_g45TennisScoreBlock(det)+_g45TennisStatsBlock(stats);
+  var cache=window._g45TennisCache||(window._g45TennisCache={m:{},s:{}});
+  var m=cache.m[matchId];
+  if(!m){ // pas dans le cache de la liste → on récupère le détail (1 appel)
+    var det=await g45Sofa6('/api/sofascore/v1/match/details?match_id='+matchId);
+    if(det && !det.__err && det.id){ m=det; cache.m[matchId]=det; }
+  }
+  if(!m){ panel.innerHTML='<div style="text-align:center;color:var(--t3);font-size:11px;padding:14px;">Détail indisponible.</div>'; return; }
+  panel.innerHTML=_g45TennisScoreBlock(m)+'<div style="text-align:center;color:var(--t3);font-size:10px;padding:6px;">⏳ Stats…</div>';
+  // stats : cache 45 s pour ne pas reconsommer le quota si on rouvre vite
+  var sc=cache.s[matchId], stats;
+  if(sc && (Date.now()-sc.t)<45000){ stats=sc.data; }
+  else { stats=await g45Sofa6('/api/sofascore/v1/match/statistics?match_id='+matchId); cache.s[matchId]={t:Date.now(), data:stats}; }
+  panel.innerHTML=_g45TennisScoreBlock(m)+_g45TennisStatsBlock(stats);
 }
 window.g45RenderTennisDetail=g45RenderTennisDetail;
 function _g45ymd(d){ return ''+d.getFullYear()+String(d.getMonth()+1).padStart(2,'0')+String(d.getDate()).padStart(2,'0'); }
