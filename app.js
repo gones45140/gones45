@@ -20883,7 +20883,36 @@ async function g45TennisResults(offset){
   async function f(lg){ try{ var r=await fetch('https://site.api.espn.com/apis/site/v2/sports/tennis/'+lg+'/scoreboard?dates='+ymd); if(!r.ok) return []; var j=await r.json(); return j.events||[]; }catch(e){ return []; } }
   var atp=await f('atp'); var wta=await f('wta');
   var evs=atp.concat(wta);
-  if(!evs.length){ list.innerHTML='<div style="text-align:center;color:var(--t3);font-size:11px;padding:24px;">Aucun match de tennis ce jour-là.<br><span style="font-size:9px;">Navigue avec ◀ ▶. (ESPN couvre ATP/WTA/Grands Chelems, pas les ITF/Challengers.)</span></div>'; return; }
+  window._g45TennisResData=evs;
+  window._g45TennisResOffset=offset;
+  _g45RenderTennisRes();
+}
+function _g45EspnTennisChips(active){
+  var defs=[['all','Tous'],['atp','ATP'],['wta','WTA'],['atpd','ATP Double'],['wtad','WTA Double']];
+  var out='<div style="display:flex;gap:5px;overflow-x:auto;padding-bottom:6px;margin-bottom:6px;-webkit-overflow-scrolling:touch;">';
+  defs.forEach(function(d){ var on=active===d[0]; out+='<button onclick="g45TennisResFilter(\''+d[0]+'\')" style="flex-shrink:0;border:none;border-radius:7px;padding:6px 11px;font-size:10px;font-weight:700;cursor:pointer;background:'+(on?'#4d84ff':'rgba(255,255,255,.06)')+';color:'+(on?'#fff':'var(--t2)')+';">'+d[1]+'</button>'; });
+  return out+'</div>';
+}
+function _g45EspnGrpPass(gn,f){
+  if(f==='all') return true;
+  var g=(gn||'').toLowerCase();
+  var women=g.indexOf('women')>=0, men=g.indexOf('men')>=0&&!women, dbl=g.indexOf('double')>=0;
+  if(f==='atp') return men&&!dbl;
+  if(f==='wta') return women&&!dbl;
+  if(f==='atpd') return men&&dbl;
+  if(f==='wtad') return women&&dbl;
+  return true;
+}
+function g45TennisResFilter(f){ window._g45TennisResFilter=f; _g45RenderTennisRes(); }
+window.g45TennisResFilter=g45TennisResFilter;
+function _g45RenderTennisRes(){
+  var list=document.getElementById('g45-tennis-res'); if(!list) return;
+  var evs=window._g45TennisResData||[];
+  var offset=window._g45TennisResOffset||0;
+  var filter=window._g45TennisResFilter||'all';
+  var chips=_g45EspnTennisChips(filter);
+  var itfBtn='<div style="text-align:center;margin-top:14px;"><button onclick="g45TennisResultsItf('+offset+')" style="border:none;background:rgba(138,160,255,.12);color:#8aa0ff;border-radius:8px;padding:8px 14px;font-size:10px;font-weight:700;cursor:pointer;">➕ Voir ITF / Challenger (Sofascore · quota)</button></div><div id="g45-tennis-itf" style="margin-top:8px;"></div>';
+  if(!evs.length){ list.innerHTML=chips+'<div style="text-align:center;color:var(--t3);font-size:11px;padding:24px;">Aucun match de tennis ce jour-là.<br><span style="font-size:9px;">Navigue avec ◀ ▶. (ESPN couvre ATP/WTA/Grands Chelems, pas les ITF/Challengers.)</span></div>'+itfBtn; return; }
   var cache=window._g45EspnTennisCache||(window._g45EspnTennisCache={});
   function rank(c){ var st=(c.status&&c.status.type)||{}; if(st.state==='in') return 0; if(st.state==='post'||st.completed) return 2; return 1; }
   var html='';
@@ -20891,6 +20920,7 @@ async function g45TennisResults(offset){
     var groupings={}, gOrder=[], total=0;
     (ev.groupings||[]).forEach(function(g){
       var gn=(g.grouping&&g.grouping.displayName)||'Matchs';
+      if(!_g45EspnGrpPass(gn,filter)) return;
       (g.competitions||[]).forEach(function(c){ c.__grp=gn; if(c&&c.id) cache[c.id]=c; if(!groupings[gn]){groupings[gn]=[];gOrder.push(gn);} groupings[gn].push(c); total++; });
     });
     if(!total) return;
@@ -20907,9 +20937,24 @@ async function g45TennisResults(offset){
     });
     html+='</div>';
   });
-  var itfBtn='<div style="text-align:center;margin-top:14px;"><button onclick="g45TennisResultsItf('+offset+')" style="border:none;background:rgba(138,160,255,.12);color:#8aa0ff;border-radius:8px;padding:8px 14px;font-size:10px;font-weight:700;cursor:pointer;">➕ Voir ITF / Challenger (Sofascore · quota)</button></div><div id="g45-tennis-itf" style="margin-top:8px;"></div>';
-  list.innerHTML=(html||'<div style="text-align:center;color:var(--t3);font-size:11px;padding:18px;">Aucun gros tournoi (ATP/WTA/Slam) ce jour-là.</div>')+itfBtn;
+  list.innerHTML=chips+(html||'<div style="text-align:center;color:var(--t3);font-size:11px;padding:18px;">Aucun match pour ce filtre.</div>')+itfBtn;
 }
+window._g45RenderTennisRes=_g45RenderTennisRes;
+/* Saisie mobile : tous les champs numériques acceptent la virgule (number -> text + inputmode decimal, virgule->point en direct). */
+function _g45FixNumberInputs(root){
+  try{
+    (root||document).querySelectorAll('input[type="number"]').forEach(function(inp){
+      if(inp._g45num) return; inp._g45num=1;
+      inp.type='text'; inp.setAttribute('inputmode','decimal');
+      inp.addEventListener('input',function(){
+        if(this.value.indexOf(',')>=0){ var p=this.selectionStart; this.value=this.value.replace(/,/g,'.'); try{ this.setSelectionRange(p,p); }catch(e){} }
+      });
+    });
+  }catch(e){}
+}
+window._g45FixNumberInputs=_g45FixNumberInputs;
+if(document.readyState!=='loading') _g45FixNumberInputs(); else document.addEventListener('DOMContentLoaded',function(){ _g45FixNumberInputs(); });
+document.addEventListener('click',function(){ setTimeout(_g45FixNumberInputs,120); },true);
 /* Complément ITF / Challenger via Sofascore (opt-in, quota) — avec cache local (dates passées = gratuit ensuite). */
 async function g45TennisResultsItf(offset){
   offset=offset|0;
