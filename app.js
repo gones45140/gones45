@@ -20236,8 +20236,8 @@ async function g45RenderTennisDetail(panel, matchId){
   else { stats=await g45Sofa6('/api/sofascore/v1/match/statistics?match_id='+matchId); cache.s[matchId]={t:Date.now(), data:stats}; }
   var hn=(m.homeTeam&&(m.homeTeam.shortName||m.homeTeam.name))||'', an=(m.awayTeam&&(m.awayTeam.shortName||m.awayTeam.name))||'';
   var rid='g45trad_dir_'+matchId;
-  panel.innerHTML=_g45TennisScoreBlock(m)+_g45TennisRadarHTML(stats,hn,an,rid)+_g45TennisStatsBlock(stats);
-  setTimeout(function(){ _g45DrawRadar(rid); },60);
+  panel.innerHTML=_g45TennisScoreBlock(m)+_g45TennisRadarHTML(stats,hn,an,rid)+_g45TennisDoughnuts(stats,hn,an,rid)+_g45TennisStatsBlock(stats);
+  setTimeout(function(){ _g45DrawRadar(rid); _g45DrawDough(rid+'_h'); _g45DrawDough(rid+'_a'); },60);
 }
 window.g45RenderTennisDetail=g45RenderTennisDetail;
 function _g45ymd(d){ return ''+d.getFullYear()+String(d.getMonth()+1).padStart(2,'0')+String(d.getDate()).padStart(2,'0'); }
@@ -20925,8 +20925,8 @@ async function g45EspnMatchStats(cid, btn){
   }
   var hn=(match.homeTeam&&(match.homeTeam.shortName||match.homeTeam.name))||'', an=(match.awayTeam&&(match.awayTeam.shortName||match.awayTeam.name))||'';
   var rid='g45trad_'+match.id;
-  box.innerHTML='<div style="font-size:9px;color:#8aa0ff;text-align:center;margin:6px 0;font-weight:700;">'+hn+' vs '+an+'</div>'+_g45TennisRadarHTML(stats,hn,an,rid)+_g45TennisStatsBlock(stats);
-  setTimeout(function(){ _g45DrawRadar(rid); },60);
+  box.innerHTML='<div style="font-size:9px;color:#8aa0ff;text-align:center;margin:6px 0;font-weight:700;">'+hn+' vs '+an+'</div>'+_g45TennisRadarHTML(stats,hn,an,rid)+_g45TennisDoughnuts(stats,hn,an,rid)+_g45TennisStatsBlock(stats);
+  setTimeout(function(){ _g45DrawRadar(rid); _g45DrawDough(rid+'_h'); _g45DrawDough(rid+'_a'); },60);
   btn.style.display='none';
 }
 window.g45EspnMatchStats=g45EspnMatchStats;
@@ -20982,6 +20982,49 @@ function _g45TFr(name){
   return M[k]||name;
 }
 window._g45TFr=_g45TFr;
+/* Camemberts PAR JOUEUR : répartition des points gagnés (Service vs Retour) */
+function _g45FindStat(stats, names){
+  var all=stats.filter(function(p){return p.period==='ALL';})[0]||stats[0]; if(!all) return null;
+  var found=null;
+  (all.groups||[]).forEach(function(g){ (g.statisticsItems||[]).forEach(function(it){
+    var nm=(it.name||'').toLowerCase().trim();
+    if(!found){ for(var i=0;i<names.length;i++){ if(nm===names[i]){ found=it; break; } } }
+  }); });
+  return found;
+}
+function _g45TennisDoughnuts(stats, hn, an, base){
+  if(!Array.isArray(stats)) return '';
+  var num=function(v){ var m=(''+(v==null?'':v)).match(/(\d+)/); return m?parseInt(m[1],10):0; };
+  var sp=_g45FindStat(stats,['service points won']);
+  var rp=_g45FindStat(stats,['receiver points won','return points won']);
+  var f1=_g45FindStat(stats,['first serve points won']), s2=_g45FindStat(stats,['second serve points won']);
+  function servWon(side){ if(sp) return num(sp[side]); var t=0; if(f1)t+=num(f1[side]); if(s2)t+=num(s2[side]); return t; }
+  function retWon(side){ return rp?num(rp[side]):0; }
+  var hS=servWon('home'), hR=retWon('home'), aS=servWon('away'), aR=retWon('away');
+  if((hS+hR)<=0 && (aS+aR)<=0) return '';
+  window._g45DoughData=window._g45DoughData||{};
+  window._g45DoughData[base+'_h']={serv:hS, ret:hR};
+  window._g45DoughData[base+'_a']={serv:aS, ret:aR};
+  return '<div style="font-size:9px;color:#8aa0ff;text-align:center;margin:12px 0 4px;font-weight:700;">🥧 Où chacun a gagné ses points</div>'
+    +'<div style="display:flex;gap:6px;">'
+    +'<div style="flex:1;text-align:center;"><div style="font-size:9px;color:var(--t2);font-weight:700;margin-bottom:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">'+hn+'</div><div style="height:140px;"><canvas id="'+base+'_h"></canvas></div></div>'
+    +'<div style="flex:1;text-align:center;"><div style="font-size:9px;color:var(--t2);font-weight:700;margin-bottom:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">'+an+'</div><div style="height:140px;"><canvas id="'+base+'_a"></canvas></div></div>'
+    +'</div>';
+}
+function _g45DrawDough(id){
+  var q=(window._g45DoughData||{})[id]; var ctx=document.getElementById(id);
+  if(!q||!ctx||typeof Chart==='undefined') return;
+  try{ if(ctx._g45c) ctx._g45c.destroy(); }catch(e){}
+  var tot=q.serv+q.ret;
+  ctx._g45c=new Chart(ctx.getContext('2d'),{
+    type:'doughnut',
+    data:{labels:['Service','Retour'],datasets:[{data:[q.serv,q.ret],backgroundColor:['#ef4444','#facc15'],borderColor:'rgba(10,14,28,.6)',borderWidth:2}]},
+    options:{responsive:true,maintainAspectRatio:false,cutout:'52%',
+      plugins:{legend:{position:'bottom',labels:{color:'#c7d0e8',font:{size:9},boxWidth:8,padding:5}},
+        tooltip:{callbacks:{label:function(c){var p=tot?Math.round(c.raw/tot*100):0;return c.label+' : '+c.raw+' pts ('+p+'%)';}}}}}
+  });
+}
+window._g45DrawDough=_g45DrawDough;
 async function g45TennisResults(offset){
   offset=offset|0;
   var el=document.getElementById('t-resultats'); if(!el) return;
