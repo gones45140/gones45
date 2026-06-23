@@ -21009,8 +21009,8 @@ function _g45TennisDoughnuts(stats, hn, an, base){
   window._g45DoughData[base+'_a']={serv:aS, ret:aR};
   return '<div style="font-size:9px;color:#8aa0ff;text-align:center;margin:12px 0 4px;font-weight:700;">🥧 Où chacun a gagné ses points</div>'
     +'<div style="display:flex;gap:6px;">'
-    +'<div style="flex:1;text-align:center;"><div style="font-size:9px;color:var(--t2);font-weight:700;margin-bottom:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">'+hn+'</div><div style="height:140px;"><canvas id="'+base+'_h"></canvas></div></div>'
-    +'<div style="flex:1;text-align:center;"><div style="font-size:9px;color:var(--t2);font-weight:700;margin-bottom:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">'+an+'</div><div style="height:140px;"><canvas id="'+base+'_a"></canvas></div></div>'
+    +'<div style="flex:1 1 0;min-width:0;text-align:center;"><div style="font-size:9px;color:var(--t2);font-weight:700;margin-bottom:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">'+hn+'</div><div style="position:relative;height:140px;"><canvas id="'+base+'_h"></canvas></div></div>'
+    +'<div style="flex:1 1 0;min-width:0;text-align:center;"><div style="font-size:9px;color:var(--t2);font-weight:700;margin-bottom:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">'+an+'</div><div style="position:relative;height:140px;"><canvas id="'+base+'_a"></canvas></div></div>'
     +'</div>';
 }
 function _g45DrawDough(id){
