@@ -20201,7 +20201,7 @@ function _g45TennisStatsBlock(stats){
   if(!groups.length) return '<div style="text-align:center;color:var(--t3);font-size:10px;padding:8px;">Stats indisponibles.</div>';
   var out='';
   groups.forEach(function(g){
-    out+='<div style="font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:.5px;color:#4f5d88;margin:10px 0 6px;">'+(g.groupName||'')+'</div>';
+    out+='<div style="font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:.5px;color:#4f5d88;margin:10px 0 6px;">'+_g45TFr(g.groupName)+'</div>';
     (g.statisticsItems||[]).forEach(function(it){
       var hv=(typeof it.homeValue==='number')?it.homeValue:0, av=(typeof it.awayValue==='number')?it.awayValue:0;
       var tot=hv+av; var hp=tot>0?Math.round(hv/tot*100):50; var ap=100-hp;
@@ -20209,7 +20209,7 @@ function _g45TennisStatsBlock(stats){
       out+='<div style="margin-bottom:8px;">'
         +'<div style="display:flex;justify-content:space-between;align-items:center;font-size:10px;margin-bottom:3px;">'
           +'<span style="font-weight:'+(hLead?800:600)+';color:'+(hLead?'#4ade80':'var(--t2)')+';min-width:58px;">'+(it.home!=null?it.home:hv)+'</span>'
-          +'<span style="color:var(--t3);font-size:9px;text-align:center;flex:1;">'+(it.name||'')+'</span>'
+          +'<span style="color:var(--t3);font-size:9px;text-align:center;flex:1;">'+_g45TFr(it.name)+'</span>'
           +'<span style="font-weight:'+(aLead?800:600)+';color:'+(aLead?'#4ade80':'var(--t2)')+';min-width:58px;text-align:right;">'+(it.away!=null?it.away:av)+'</span>'
         +'</div>'
         +'<div style="display:flex;height:5px;border-radius:3px;overflow:hidden;background:rgba(255,255,255,.05);">'
@@ -20234,7 +20234,10 @@ async function g45RenderTennisDetail(panel, matchId){
   var sc=cache.s[matchId], stats;
   if(sc && (Date.now()-sc.t)<45000){ stats=sc.data; }
   else { stats=await g45Sofa6('/api/sofascore/v1/match/statistics?match_id='+matchId); cache.s[matchId]={t:Date.now(), data:stats}; }
-  panel.innerHTML=_g45TennisScoreBlock(m)+_g45TennisStatsBlock(stats);
+  var hn=(m.homeTeam&&(m.homeTeam.shortName||m.homeTeam.name))||'', an=(m.awayTeam&&(m.awayTeam.shortName||m.awayTeam.name))||'';
+  var rid='g45trad_dir_'+matchId;
+  panel.innerHTML=_g45TennisScoreBlock(m)+_g45TennisRadarHTML(stats,hn,an,rid)+_g45TennisStatsBlock(stats);
+  setTimeout(function(){ _g45DrawRadar(rid); },60);
 }
 window.g45RenderTennisDetail=g45RenderTennisDetail;
 function _g45ymd(d){ return ''+d.getFullYear()+String(d.getMonth()+1).padStart(2,'0')+String(d.getDate()).padStart(2,'0'); }
@@ -20933,7 +20936,7 @@ function _g45TennisRadarHTML(stats, hn, an, rid){
   var all=stats.filter(function(p){return p.period==='ALL';})[0]||stats[0]; if(!all) return '';
   var pct=function(v){ var s=(v==null?'':(''+v)); var m=s.match(/(\d+)\s*%/); return m?parseInt(m[1],10):null; };
   var axes=[];
-  (all.groups||[]).forEach(function(g){ (g.statisticsItems||[]).forEach(function(it){ var h=pct(it.home), a=pct(it.away); if(h!=null&&a!=null&&axes.length<7) axes.push({n:it.name||'', h:h, a:a}); }); });
+  (all.groups||[]).forEach(function(g){ (g.statisticsItems||[]).forEach(function(it){ var h=pct(it.home), a=pct(it.away); if(h!=null&&a!=null&&axes.length<7) axes.push({n:_g45TFr(it.name), h:h, a:a}); }); });
   if(axes.length<3) return '';
   window._g45RadarData=window._g45RadarData||{};
   window._g45RadarData[rid]={labels:axes.map(function(x){return x.n;}), h:axes.map(function(x){return x.h;}), a:axes.map(function(x){return x.a;}), hn:hn, an:an};
@@ -20956,6 +20959,29 @@ function _g45DrawRadar(rid){
   });
 }
 window._g45DrawRadar=_g45DrawRadar;
+function _g45TFr(name){
+  if(!name) return '';
+  var k=(''+name).toLowerCase().trim();
+  var M={
+    'service':'Service','points':'Points','games':'Jeux','return':'Retour','games (set 1)':'Jeux (set 1)',
+    'aces':'Aces','double faults':'Doubles fautes',
+    'first serve':'1er service','second serve':'2e service',
+    'first serve points':'Points 1er service','second serve points':'Points 2e service',
+    'first serve points won':'Pts gagnés 1er serv.','second serve points won':'Pts gagnés 2e serv.',
+    'service games played':'Jeux de service joués','service games won':'Jeux de service gagnés',
+    'break points saved':'Balles de break sauvées','break points':'Balles de break',
+    'break points converted':'Balles de break converties','break points won':'Balles de break gagnées',
+    'first serve return points':'Pts retour 1er serv.','second serve return points':'Pts retour 2e serv.',
+    'first serve return points won':'Pts retour 1er serv. gagnés','second serve return points won':'Pts retour 2e serv. gagnés',
+    'total':'Total','service points won':'Points gagnés au service','receiver points won':'Points gagnés en retour',
+    'max points in a row':'Points d\'affilée (max)','games won':'Jeux gagnés','return games won':'Jeux de retour gagnés',
+    'return games played':'Jeux de retour joués','winners':'Coups gagnants','unforced errors':'Fautes directes',
+    'net points won':'Points gagnés au filet','service points':'Points au service','return points':'Points en retour',
+    'return points won':'Points retour gagnés','points won':'Points gagnés','tiebreaks':'Jeux décisifs'
+  };
+  return M[k]||name;
+}
+window._g45TFr=_g45TFr;
 async function g45TennisResults(offset){
   offset=offset|0;
   var el=document.getElementById('t-resultats'); if(!el) return;
