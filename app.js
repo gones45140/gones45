@@ -21821,31 +21821,40 @@ async function _g45PullBetsGithub(){
 })();
 
 /* ═════════ FICHE ÉQUIPE — Onglet 📰 News (Google News RSS via proxy, 0 quota, 0 D1/KV) ═════════ */
-function _g45NewsUrl(query){
-  var path='/api/v2/doc/doc?query='+encodeURIComponent(query)+'&mode=artlist&maxrecords=25&format=json&sort=datedesc';
-  return 'https://fd-proxy.touraine-antoine.workers.dev/?host=gdelt&path='+encodeURIComponent(path);
-}
-/* GDELT renvoie les dates au format 20260623T120000Z → timestamp ms */
-function _g45GdeltDate(s){
-  if(!s) return 0;
-  var m=(''+s).match(/^(\d{4})(\d{2})(\d{2})T(\d{2})(\d{2})(\d{2})/);
-  if(!m){ var t=Date.parse(s); return isNaN(t)?0:t; }
-  return Date.UTC(+m[1],+m[2]-1,+m[3],+m[4],+m[5],+m[6]);
-}
-async function _g45GdeltFetch(query){
-  var url=_g45NewsUrl(query);
-  var r=await fetch(url);
-  // GDELT limite à ~1 req / 5 s → si 429, on attend et on retente une fois.
-  if(r.status===429){ await new Promise(function(res){ setTimeout(res,5200); }); r=await fetch(url); }
-  if(!r.ok) throw new Error('HTTP '+r.status);
-  var txt=await r.text(); var data={};
-  try{ data=JSON.parse(txt); }catch(e){ data={}; }
-  var arts=(data&&data.articles)||[]; var out=[];
-  for(var i=0;i<arts.length && out.length<15;i++){
-    var a=arts[i]; var title=(a.title||'').trim(); if(!title) continue;
-    out.push({title:title, link:a.url||a.url_mobile||'', src:a.domain||'', ts:_g45GdeltDate(a.seendate)});
+var _G45_WORKER='https://fd-proxy.touraine-antoine.workers.dev/';
+function _g45HostOf(u){ try{ return new URL(u).hostname.replace(/^www\./,''); }catch(e){ return ''; } }
+function _g45Norm(s){ return (''+s).toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,''); }
+/* Parse un flux RSS générique → [{title, link, desc, ts, src}] */
+function _g45ParseRssItems(xml, limit){
+  var doc=new DOMParser().parseFromString(xml,'text/xml');
+  var nodes=doc.querySelectorAll('item'); var out=[];
+  for(var i=0;i<nodes.length && out.length<(limit||60);i++){
+    var it=nodes[i];
+    var title=((it.querySelector('title')&&it.querySelector('title').textContent)||'').trim();
+    var link=((it.querySelector('link')&&it.querySelector('link').textContent)||'').trim();
+    var pub=((it.querySelector('pubDate')&&it.querySelector('pubDate').textContent)||'').trim();
+    var desc=((it.querySelector('description')&&it.querySelector('description').textContent)||'');
+    if(!title) continue;
+    out.push({title:title, link:link, desc:desc, ts:(pub?Date.parse(pub)||0:0), src:_g45HostOf(link)});
   }
   return out;
+}
+/* Source 1 : Bing News (recherche par équipe, tous sports, FR) */
+async function _g45BingFetch(nom){
+  var path='/news/search?q='+encodeURIComponent('"'+nom+'"')+'&format=rss&setmkt=fr-FR&setlang=fr';
+  var r=await fetch(_G45_WORKER+'?host=bing&path='+encodeURIComponent(path));
+  if(!r.ok) throw new Error('HTTP '+r.status);
+  var items=_g45ParseRssItems(await r.text(),15);
+  return items.slice(0,15);
+}
+/* Source 2 (repli) : flux RSS L'Équipe filtré par nom d'équipe (fiable, surtout foot) */
+async function _g45LequipeFetch(nom){
+  var r=await fetch(_G45_WORKER+'?host=lequipe&path='+encodeURIComponent('/rss/actu_rss.xml'));
+  if(!r.ok) throw new Error('HTTP '+r.status);
+  var all=_g45ParseRssItems(await r.text(),80);
+  var key=_g45Norm(nom);
+  var hit=all.filter(function(n){ return _g45Norm(n.title+' '+n.desc).indexOf(key)>=0; });
+  return hit.slice(0,15);
 }
 function _g45NewsAgo(ts){
   if(!ts) return '';
@@ -21891,15 +21900,19 @@ async function loadTeamNews(nom, force){
   if(!items){
     el.innerHTML=header+'<div style="display:flex;align-items:center;gap:8px;color:#4f5d88;font-size:12px;padding:6px 2px;"><div style="width:12px;height:12px;border:2px solid rgba(77,132,255,.2);border-top-color:#4d84ff;border-radius:50%;animation:spin .8s linear infinite;flex-shrink:0;"></div>Recherche des news…</div>';
     try{
-      // UNE SEULE requête (pas de rafale → pas de 429). Langue française pour la pertinence.
-      items=await _g45GdeltFetch('"'+nom+'" sourcelang:french');
-      // On ne met en cache QUE de vrais résultats → un échec passager ne masque pas un correctif.
+      items=[]; var errMsg=null;
+      // 1) L'Équipe (fiable, foot surtout). 2) si vide → repli Bing (toutes équipes, FR).
+      try{ items=await _g45LequipeFetch(nom); }catch(eL){ errMsg='L\'Équipe '+(eL&&eL.message||''); items=[]; }
+      if(!items.length){ try{ items=await _g45BingFetch(nom); }catch(eB){ errMsg=(errMsg?errMsg+' · ':'')+'Bing '+(eB&&eB.message||''); } }
+      if(!items.length && errMsg){
+        el.innerHTML=header+'<div style="padding:12px;color:var(--t3);font-size:11px;">⚠️ News indisponibles ('+errMsg+'). Réessaie avec ↻.</div>';
+        return;
+      }
+      // On ne met en cache QUE de vrais résultats.
       if(items.length){ try{ localStorage.setItem(ck, JSON.stringify({t:Date.now(), items:items})); }catch(e){} }
       cachedTs=Date.now();
     }catch(e){
-      var em=(e&&e.message)||'erreur';
-      var msg=(em.indexOf('429')>=0)?'Trop de requêtes à la suite — patiente quelques secondes puis ↻.':'News indisponibles pour le moment ('+em+'). Réessaie avec ↻.';
-      el.innerHTML=header+'<div style="padding:12px;color:var(--t3);font-size:11px;">⚠️ '+msg+'</div>';
+      el.innerHTML=header+'<div style="padding:12px;color:var(--t3);font-size:11px;">⚠️ News indisponibles pour le moment. Réessaie avec ↻.</div>';
       return;
     }
   }
