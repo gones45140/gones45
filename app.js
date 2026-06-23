@@ -1466,6 +1466,7 @@ function filteredA(){
   else if(bilanMode==='flash')base=base.filter(function(h){return h.isFlash;});
   var filtered = bilanSport==='ALL'?base:base.filter(function(h){return h.sport===bilanSport;});
   if(window._bilanBkFilter) filtered=filtered.filter(function(h){return h.b===window._bilanBkFilter;});
+   if(window._bilanType&&window._bilanType!=='all') filtered=filtered.filter(function(h){return _normType(h.type)===window._bilanType;});
   return filtered;
 }
 
@@ -7681,6 +7682,7 @@ function filteredA(){
   else if(bilanMode==='flash')base=base.filter(function(h){return h.isFlash;});
   var filtered = bilanSport==='ALL'?base:base.filter(function(h){return h.sport===bilanSport;});
   if(window._bilanBkFilter) filtered=filtered.filter(function(h){return h.b===window._bilanBkFilter;});
+   if(window._bilanType&&window._bilanType!=='all') filtered=filtered.filter(function(h){return _normType(h.type)===window._bilanType;});
   return filtered;
 }
 
@@ -21058,9 +21060,7 @@ function _normType(t){
 window._normType=_normType;
 /* ───────── BILAN : filtre par type de pari ───────── */
 function _bilanSrc(){
-  var f=window._bilanType;
-  if(!f||f==='all') return state.a||[];
-  return (state.a||[]).filter(function(h){return _normType(h.type)===f;});
+  return (typeof filteredA==='function') ? filteredA() : (state.a||[]);
 }
 window._bilanSrc=_bilanSrc;
 function _bilanTypes(){
@@ -21080,7 +21080,7 @@ function renderBilanTypeFilter(){
   defs.forEach(function(d,i){ var on=cur===d[0]; html+='<button onclick="setBilanTypeIdx('+i+')" style="flex-shrink:0;border:none;border-radius:7px;padding:6px 11px;font-size:10px;font-weight:700;cursor:pointer;background:'+(on?'#4d84ff':'rgba(255,255,255,.06)')+';color:'+(on?'#fff':'var(--t2)')+';">'+d[1]+'</button>'; });
   fb.innerHTML=html+'</div>';
 }
-function setBilanTypeIdx(i){ window._bilanType=(window._bilanTypeList||[])[i]||'all'; renderBilanTypeFilter(); try{renderGlobalCharts();}catch(e){} }
+function setBilanTypeIdx(i){ window._bilanType=(window._bilanTypeList||[])[i]||'all'; renderBilanTypeFilter(); try{renderBilanTab();}catch(e){} try{renderGlobalCharts();}catch(e){} }
 window.setBilanTypeIdx=setBilanTypeIdx;
 window.renderBilanTypeFilter=renderBilanTypeFilter;
 /* Complément ITF / Challenger via Sofascore (opt-in, quota) — avec cache local (dates passées = gratuit ensuite). */
