@@ -20074,11 +20074,11 @@ function _g45TennisRow(m){
 }
 async function g45TennisDirect(){
   var el=document.getElementById('t-live'); if(!el) return;
-  el.innerHTML='<button onclick="loadLiveTab()" style="border:none;background:rgba(255,255,255,.06);color:var(--t2);border-radius:8px;padding:6px 12px;font-size:11px;font-weight:700;cursor:pointer;margin-bottom:10px;">← Sports</button>'
+  el.innerHTML='<div style="background:rgba(11,15,28,.93);border-radius:14px;padding:12px 12px 16px;box-shadow:0 4px 18px rgba(0,0,0,.35);">'+'<button onclick="loadLiveTab()" style="border:none;background:rgba(255,255,255,.06);color:var(--t2);border-radius:8px;padding:6px 12px;font-size:11px;font-weight:700;cursor:pointer;margin-bottom:10px;">← Sports</button>'
     +'<div class="sec" style="margin-top:0;">🎾 Tennis — en direct</div>'
     +'<div style="font-size:11px;color:var(--t3);margin-bottom:8px;">ATP · WTA · Challenger · ITF. Ouvre un match pour le score détaillé + les stats.</div>'
     +'<button onclick="g45TennisDirect()" style="border:none;background:rgba(255,255,255,.06);color:var(--t2);border-radius:8px;padding:5px 11px;font-size:10px;font-weight:700;cursor:pointer;margin-bottom:10px;">🔄 Rafraîchir</button>'
-    +'<div id="g45-tennis-list"><div style="text-align:center;color:var(--t3);font-size:11px;padding:24px;">⏳ Chargement…</div></div>';
+    +'<div id="g45-tennis-list"><div style="text-align:center;color:var(--t3);font-size:11px;padding:24px;">⏳ Chargement…</div></div>'+'</div>';
   var list=document.getElementById('g45-tennis-list');
   if(!localStorage.getItem('gones45_rapidapi_key')){ list.innerHTML='<div style="text-align:center;color:var(--t3);font-size:11px;padding:24px;">🔑 Clé RapidAPI manquante.<br>Renseigne-la dans OUTILS.</div>'; return; }
   var data=await g45Sofa6('/api/sofascore/v1/match/live?sport_slug=tennis');
@@ -20877,14 +20877,14 @@ async function g45TennisResults(offset){
   var d=new Date(); d.setHours(12,0,0,0); d.setDate(d.getDate()+offset);
   var ymd=_g45ymd(d);
   var human=d.toLocaleDateString('fr-FR',{weekday:'long',day:'numeric',month:'long'});
-  el.innerHTML='<button onclick="loadResultatsTab()" style="border:none;background:rgba(255,255,255,.06);color:var(--t2);border-radius:8px;padding:6px 12px;font-size:11px;font-weight:700;cursor:pointer;margin-bottom:10px;">← Sports</button>'
+  el.innerHTML='<div style="background:rgba(11,15,28,.93);border-radius:14px;padding:12px 12px 16px;box-shadow:0 4px 18px rgba(0,0,0,.35);">'+'<button onclick="loadResultatsTab()" style="border:none;background:rgba(255,255,255,.06);color:var(--t2);border-radius:8px;padding:6px 12px;font-size:11px;font-weight:700;cursor:pointer;margin-bottom:10px;">← Sports</button>'
     +'<div class="sec" style="margin-top:0;">🎾 Tennis — résultats &amp; calendrier</div>'
     +'<div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:10px;">'
       +'<button onclick="g45TennisResults('+(offset-1)+')" style="border:none;background:rgba(255,255,255,.06);color:var(--t2);border-radius:8px;padding:7px 13px;font-weight:800;cursor:pointer;">◀</button>'
       +'<span style="font-size:10px;color:var(--t2);font-weight:700;text-align:center;text-transform:capitalize;">📅 '+human+(offset!==0?('<br><a onclick="g45TennisResults(0)" style="color:#4d84ff;cursor:pointer;font-size:9px;">⏎ revenir à aujourd\'hui</a>'):'')+'</span>'
       +'<button onclick="g45TennisResults('+(offset+1)+')" style="border:none;background:rgba(255,255,255,.06);color:var(--t2);border-radius:8px;padding:7px 13px;font-weight:800;cursor:pointer;">▶</button>'
     +'</div>'
-    +'<div id="g45-tennis-res"><div style="text-align:center;color:var(--t3);font-size:11px;padding:24px;">⏳ Chargement…</div></div>';
+    +'<div id="g45-tennis-res"><div style="text-align:center;color:var(--t3);font-size:11px;padding:24px;">⏳ Chargement…</div></div>'+'</div>';
   var list=document.getElementById('g45-tennis-res');
   async function f(lg){ try{ var r=await fetch('https://site.api.espn.com/apis/site/v2/sports/tennis/'+lg+'/scoreboard?dates='+ymd); if(!r.ok) return []; var j=await r.json(); return j.events||[]; }catch(e){ return []; } }
   var atp=await f('atp'); var wta=await f('wta');
