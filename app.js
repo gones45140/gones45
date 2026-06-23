@@ -1456,7 +1456,7 @@ function renderSportFilter(){
   sf.innerHTML=sports.filter(function(s){return s==='ALL'||used.has(s);}).map(function(s){
     return '<button class="sfbtn'+(bilanSport===s?' on':'')+'" onclick="bilanSport=\''+s+'\';renderBilanTab()">'+s+' '+labels[s]+'</button>';
   }).join('');
-  try{renderBilanTypeFilter();}catch(e){}
+  try{renderBilanTypeFilter();}catch(e){} try{renderBilanCompFilter();}catch(e){}
 }
 function filteredA(){
   var base=state.a;
@@ -1467,6 +1467,7 @@ function filteredA(){
   var filtered = bilanSport==='ALL'?base:base.filter(function(h){return h.sport===bilanSport;});
   if(window._bilanBkFilter) filtered=filtered.filter(function(h){return h.b===window._bilanBkFilter;});
    if(window._bilanType&&window._bilanType!=='all') filtered=filtered.filter(function(h){return _normType(h.type)===window._bilanType;});
+   if(window._bilanComp&&window._bilanComp!=='all') filtered=filtered.filter(function(h){return ((h.comp||'').trim()||'(sans)')===window._bilanComp;});
   return filtered;
 }
 
@@ -3448,7 +3449,7 @@ function renderMultiCurveChart(){
   },80);
 }
 function renderGlobalCharts(){
-  try{renderBilanTypeFilter();}catch(e){}
+  try{renderBilanTypeFilter();}catch(e){} try{renderBilanCompFilter();}catch(e){}
   renderGlobalChart();
   setTimeout(function(){
     renderMultiCurveChart();
@@ -7672,7 +7673,7 @@ function renderSportFilter(){
   sf.innerHTML=sports.filter(function(s){return s==='ALL'||used.has(s);}).map(function(s){
     return '<button class="sfbtn'+(bilanSport===s?' on':'')+'" onclick="bilanSport=\''+s+'\';renderBilanTab()">'+s+' '+labels[s]+'</button>';
   }).join('');
-  try{renderBilanTypeFilter();}catch(e){}
+  try{renderBilanTypeFilter();}catch(e){} try{renderBilanCompFilter();}catch(e){}
 }
 function filteredA(){
   var base=state.a;
@@ -7683,6 +7684,7 @@ function filteredA(){
   var filtered = bilanSport==='ALL'?base:base.filter(function(h){return h.sport===bilanSport;});
   if(window._bilanBkFilter) filtered=filtered.filter(function(h){return h.b===window._bilanBkFilter;});
    if(window._bilanType&&window._bilanType!=='all') filtered=filtered.filter(function(h){return _normType(h.type)===window._bilanType;});
+   if(window._bilanComp&&window._bilanComp!=='all') filtered=filtered.filter(function(h){return ((h.comp||'').trim()||'(sans)')===window._bilanComp;});
   return filtered;
 }
 
@@ -9611,7 +9613,7 @@ function renderMultiCurveChart(){
   },80);
 }
 function renderGlobalCharts(){
-  try{renderBilanTypeFilter();}catch(e){}
+  try{renderBilanTypeFilter();}catch(e){} try{renderBilanCompFilter();}catch(e){}
   renderGlobalChart();
   setTimeout(function(){
     renderMultiCurveChart();
@@ -21240,9 +21242,44 @@ function renderBilanTypeFilter(){
   defs.forEach(function(d,i){ var on=cur===d[0]; html+='<button onclick="setBilanTypeIdx('+i+')" style="flex-shrink:0;border:none;border-radius:7px;padding:6px 11px;font-size:10px;font-weight:700;cursor:pointer;background:'+(on?'#4d84ff':'rgba(255,255,255,.06)')+';color:'+(on?'#fff':'var(--t2)')+';">'+d[1]+'</button>'; });
   fb.innerHTML=html+'</div>';
 }
-function setBilanTypeIdx(i){ window._bilanType=(window._bilanTypeList||[])[i]||'all'; renderBilanTypeFilter(); try{renderBilanTab();}catch(e){} try{renderGlobalCharts();}catch(e){} }
+function setBilanTypeIdx(i){ window._bilanType=(window._bilanTypeList||[])[i]||'all'; renderBilanTypeFilter(); try{renderBilanCompFilter();}catch(e){} try{renderBilanTab();}catch(e){} try{renderGlobalCharts();}catch(e){} }
 window.setBilanTypeIdx=setBilanTypeIdx;
 window.renderBilanTypeFilter=renderBilanTypeFilter;
+/* ───────── BILAN : filtre par compétition (auto, dépend du sport) ───────── */
+function _bilanComps(){
+  var base=(state.a||[]);
+  // limiter au sport courant pour garder la liste courte
+  if(typeof bilanSport!=='undefined' && bilanSport!=='ALL'){ base=base.filter(function(h){return h.sport===bilanSport;}); }
+  var set={};
+  base.forEach(function(h){ var c=((h.comp||'').trim())||'(sans)'; set[c]=1; });
+  return Object.keys(set).sort(function(a,b){
+    if(a==='(sans)') return 1; if(b==='(sans)') return -1;
+    return a.localeCompare(b,'fr');
+  });
+}
+function renderBilanCompFilter(){
+  var fbType=document.getElementById('bilan-type-filter');
+  var sf=document.getElementById('sport-filter');
+  var anchorEl=fbType||sf; if(!anchorEl||!anchorEl.parentNode) return;
+  var fb=document.getElementById('bilan-comp-filter');
+  if(!fb){ fb=document.createElement('div'); fb.id='bilan-comp-filter'; fb.style.cssText='padding:6px 2px 2px;';
+    anchorEl.parentNode.insertBefore(fb, anchorEl.nextSibling); }
+  var comps=_bilanComps();
+  // si la compétition sélectionnée n'existe plus (changement de sport), revenir à 'all'
+  if(window._bilanComp && window._bilanComp!=='all' && comps.indexOf(window._bilanComp)<0){ window._bilanComp='all'; }
+  // si une seule compétition (ou aucune), inutile d'afficher la barre
+  if(comps.length<=1){ fb.innerHTML=''; window._bilanCompList=['all']; return; }
+  var cur=window._bilanComp||'all';
+  var defs=[['all','Toutes']].concat(comps.map(function(c){return [c,c];}));
+  window._bilanCompList=defs.map(function(d){return d[0];});
+  var html='<div style="font-size:9px;color:var(--t3);font-weight:700;text-transform:uppercase;letter-spacing:.5px;margin-bottom:5px;">🏆 Filtrer par compétition</div><div style="display:flex;gap:5px;overflow-x:auto;padding-bottom:6px;-webkit-overflow-scrolling:touch;">';
+  defs.forEach(function(d,i){ var on=cur===d[0]; html+='<button onclick="setBilanCompIdx('+i+')" style="flex-shrink:0;border:none;border-radius:7px;padding:6px 11px;font-size:10px;font-weight:700;cursor:pointer;background:'+(on?'#4d84ff':'rgba(255,255,255,.06)')+';color:'+(on?'#fff':'var(--t2)')+';">'+d[1]+'</button>'; });
+  fb.innerHTML=html+'</div>';
+}
+function setBilanCompIdx(i){ window._bilanComp=(window._bilanCompList||[])[i]||'all'; renderBilanCompFilter(); try{renderBilanTab();}catch(e){} try{renderGlobalCharts();}catch(e){} }
+window.setBilanCompIdx=setBilanCompIdx;
+window.renderBilanCompFilter=renderBilanCompFilter;
+window._bilanComps=_bilanComps;
 /* Complément ITF / Challenger via Sofascore (opt-in, quota) — avec cache local (dates passées = gratuit ensuite). */
 async function g45TennisResultsItf(offset){
   offset=offset|0;
