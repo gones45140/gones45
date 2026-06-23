@@ -21821,9 +21821,28 @@ async function _g45PullBetsGithub(){
 })();
 
 /* ═════════ FICHE ÉQUIPE — Onglet 📰 News (Google News RSS via proxy, 0 quota, 0 D1/KV) ═════════ */
-function _g45NewsProxy(q){
-  var path='/rss/search?q='+encodeURIComponent(q)+'&hl=fr&gl=FR&ceid=FR:fr';
-  return 'https://fd-proxy.touraine-antoine.workers.dev/?host=gnews&path='+encodeURIComponent(path);
+function _g45NewsUrl(query){
+  var path='/api/v2/doc/doc?query='+encodeURIComponent(query)+'&mode=artlist&maxrecords=25&format=json&sort=datedesc';
+  return 'https://fd-proxy.touraine-antoine.workers.dev/?host=gdelt&path='+encodeURIComponent(path);
+}
+/* GDELT renvoie les dates au format 20260623T120000Z → timestamp ms */
+function _g45GdeltDate(s){
+  if(!s) return 0;
+  var m=(''+s).match(/^(\d{4})(\d{2})(\d{2})T(\d{2})(\d{2})(\d{2})/);
+  if(!m){ var t=Date.parse(s); return isNaN(t)?0:t; }
+  return Date.UTC(+m[1],+m[2]-1,+m[3],+m[4],+m[5],+m[6]);
+}
+async function _g45GdeltFetch(query){
+  var r=await fetch(_g45NewsUrl(query));
+  if(!r.ok) throw new Error('HTTP '+r.status);
+  var txt=await r.text(); var data={};
+  try{ data=JSON.parse(txt); }catch(e){ data={}; }
+  var arts=(data&&data.articles)||[]; var out=[];
+  for(var i=0;i<arts.length && out.length<15;i++){
+    var a=arts[i]; var title=(a.title||'').trim(); if(!title) continue;
+    out.push({title:title, link:a.url||a.url_mobile||'', src:a.domain||'', ts:_g45GdeltDate(a.seendate)});
+  }
+  return out;
 }
 function _g45NewsAgo(ts){
   if(!ts) return '';
@@ -21858,7 +21877,7 @@ window._g45OpenNewsTab=_g45OpenNewsTab;
 async function loadTeamNews(nom, force){
   var el=document.getElementById('ip-news'); if(!el) return;
   if(!nom){ el.innerHTML='<div style="padding:14px;color:var(--t3);font-size:11px;">Aucune équipe sélectionnée.</div>'; return; }
-  var ck='g45news_'+nom, items=null, cachedTs=0;
+  var ck='g45news2_'+nom, items=null, cachedTs=0;
   if(!force){
     try{ var raw=localStorage.getItem(ck); if(raw){ var o=JSON.parse(raw); if(o&&o.items&&(Date.now()-(o.t||0))<20*60000){ items=o.items; cachedTs=o.t; } } }catch(e){}
   }
@@ -21869,24 +21888,18 @@ async function loadTeamNews(nom, force){
   if(!items){
     el.innerHTML=header+'<div style="display:flex;align-items:center;gap:8px;color:#4f5d88;font-size:12px;padding:6px 2px;"><div style="width:12px;height:12px;border:2px solid rgba(77,132,255,.2);border-top-color:#4d84ff;border-radius:50%;animation:spin .8s linear infinite;flex-shrink:0;"></div>Recherche des news…</div>';
     try{
-      var r=await fetch(_g45NewsProxy(nom));
-      var txt=await r.text();
-      var doc=new DOMParser().parseFromString(txt,'text/xml');
-      var nodes=doc.querySelectorAll('item'); items=[];
-      for(var i=0;i<nodes.length && items.length<15;i++){
-        var it=nodes[i];
-        var title=(it.querySelector('title')&&it.querySelector('title').textContent)||'';
-        var link=(it.querySelector('link')&&it.querySelector('link').textContent)||'';
-        var pub=(it.querySelector('pubDate')&&it.querySelector('pubDate').textContent)||'';
-        var src=''; var srcEl=it.getElementsByTagName('source')[0]; if(srcEl) src=srcEl.textContent||'';
-        if(src && title.indexOf(' - '+src)>0){ title=title.slice(0, title.lastIndexOf(' - '+src)); }
-        if(!title) continue;
-        items.push({title:title, link:link, src:src, ts:(pub?Date.parse(pub):0)});
+      var qn='"'+nom+'"';
+      var queries=[qn+' sourcecountry:FR', qn+' sourcelang:french', qn];
+      items=[];
+      for(var qi=0; qi<queries.length; qi++){
+        items=await _g45GdeltFetch(queries[qi]);
+        if(items.length) break;
       }
-      try{ localStorage.setItem(ck, JSON.stringify({t:Date.now(), items:items})); }catch(e){}
+      // On ne met en cache QUE de vrais résultats → un échec passager ne masque pas un correctif.
+      if(items.length){ try{ localStorage.setItem(ck, JSON.stringify({t:Date.now(), items:items})); }catch(e){} }
       cachedTs=Date.now();
     }catch(e){
-      el.innerHTML=header+'<div style="padding:12px;color:var(--t3);font-size:11px;">⚠️ News indisponibles pour le moment. Réessaie avec ↻.</div>';
+      el.innerHTML=header+'<div style="padding:12px;color:var(--t3);font-size:11px;">⚠️ News indisponibles pour le moment ('+(e&&e.message||'erreur')+'). Réessaie avec ↻.</div>';
       return;
     }
   }
