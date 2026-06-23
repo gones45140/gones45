@@ -2084,7 +2084,7 @@ function renderChartMoisBar(){
   var moisNames=['','Jan','Fév','Mar','Avr','Mai','Jun','Jul','Aoû','Sep','Oct','Nov','Déc'];
   var year=new Date().getFullYear();
   var mois={};
-  state.a.forEach(function(h){
+  _bilanSrc().forEach(function(h){
     var d=h.date||h.t||'';
     var y=parseInt(d.substring(0,4));
     if(y!==year)return;
@@ -2112,7 +2112,7 @@ function renderChartSport(){
   if(window._gcSportBen){try{window._gcSportBen.destroy();}catch(e){}}
   if(window._gcSportWr){try{window._gcSportWr.destroy();}catch(e){}}
   var sports={};
-  state.a.forEach(function(h){
+  _bilanSrc().forEach(function(h){
     var s=h.sport||'Autre';
     if(!sports[s])sports[s]={profit:0,n:0,wins:0};
     sports[s].profit+=(h.win?(h.m*h.cote)-h.m:-h.m);
@@ -2221,7 +2221,7 @@ function changeTypeColor(type,color){
 /* ── STREAKS ── */
 function renderStreakPanel(){
   var el=$i('streak-panel');if(!el)return;
-  var paris=state.a.slice().sort(function(a,b){return (a.date+a.heure)<(b.date+b.heure)?-1:1;});
+  var paris=_bilanSrc().slice().sort(function(a,b){return (a.date+a.heure)<(b.date+b.heure)?-1:1;});
   if(!paris.length){el.innerHTML='<div class="empty" style="grid-column:1/-1;">Aucun pari archivé</div>';return;}
   /* Streak actuel */
   var cur=1,curW=paris[paris.length-1].win;
@@ -2258,7 +2258,7 @@ function renderStreakPanel(){
 
 function renderGlobalChart(){
   var gz=$i('global-zone');if(!gz)return;
-  var ap=state.a.slice().reverse();
+  var ap=_bilanSrc().slice().reverse();
   var startBk=state.start_bk||0;
   var cum=startBk;
   var glabels=['Départ'];
@@ -2271,9 +2271,9 @@ function renderGlobalChart(){
     glabels.push(lbl+'||'+(gain>=0?'+':'')+gain.toFixed(2)+'€');
   });
   var tot=cum-startBk;
-  var wins=state.a.filter(function(h){return h.win&&!h.isCashout;}).length,n=state.a.filter(function(h){return !h.isCashout;}).length;
+  var wins=_bilanSrc().filter(function(h){return h.win&&!h.isCashout;}).length,n=_bilanSrc().filter(function(h){return !h.isCashout;}).length;
   var wr=n?(wins/n*100).toFixed(1):0;
-  var mise=state.a.reduce(function(a,h){return a+parseFloat(h.m);},0);
+  var mise=_bilanSrc().reduce(function(a,h){return a+parseFloat(h.m);},0);
   var roi=mise?(tot/mise*100).toFixed(2):0;
   var bC=tot>=0?'#1ed760':'#ff4545',rC=+roi>=0?'#1ed760':'#ff4545';
   gz.innerHTML='<div class="sec" style="margin-top:0;">Évolution bankroll</div><div class="gchart"><div class="gchart-area"><canvas id="cg"></canvas></div><div class="chart-info-bar" id="cib-global"><span class="cib-main" id="cib-global-txt">Touche un point</span><span class="cib-val" id="cib-global-val"></span></div>'
@@ -3446,6 +3446,7 @@ function renderMultiCurveChart(){
   },80);
 }
 function renderGlobalCharts(){
+  try{renderBilanTypeFilter();}catch(e){}
   renderGlobalChart();
   setTimeout(function(){
     renderMultiCurveChart();
@@ -8297,7 +8298,7 @@ function renderChartMoisBar(){
   var moisNames=['','Jan','Fév','Mar','Avr','Mai','Jun','Jul','Aoû','Sep','Oct','Nov','Déc'];
   var year=new Date().getFullYear();
   var mois={};
-  state.a.forEach(function(h){
+  _bilanSrc().forEach(function(h){
     var d=h.date||h.t||'';
     var y=parseInt(d.substring(0,4));
     if(y!==year)return;
@@ -8325,7 +8326,7 @@ function renderChartSport(){
   if(window._gcSportBen){try{window._gcSportBen.destroy();}catch(e){}}
   if(window._gcSportWr){try{window._gcSportWr.destroy();}catch(e){}}
   var sports={};
-  state.a.forEach(function(h){
+  _bilanSrc().forEach(function(h){
     var s=h.sport||'Autre';
     if(!sports[s])sports[s]={profit:0,n:0,wins:0};
     sports[s].profit+=(h.win?(h.m*h.cote)-h.m:-h.m);
@@ -8434,7 +8435,7 @@ function changeTypeColor(type,color){
 /* ── STREAKS ── */
 function renderStreakPanel(){
   var el=$i('streak-panel');if(!el)return;
-  var paris=state.a.slice().sort(function(a,b){return (a.date+a.heure)<(b.date+b.heure)?-1:1;});
+  var paris=_bilanSrc().slice().sort(function(a,b){return (a.date+a.heure)<(b.date+b.heure)?-1:1;});
   if(!paris.length){el.innerHTML='<div class="empty" style="grid-column:1/-1;">Aucun pari archivé</div>';return;}
   /* Streak actuel */
   var cur=1,curW=paris[paris.length-1].win;
@@ -8471,7 +8472,7 @@ function renderStreakPanel(){
 
 function renderGlobalChart(){
   var gz=$i('global-zone');if(!gz)return;
-  var ap=state.a.slice().reverse();
+  var ap=_bilanSrc().slice().reverse();
   var startBk=state.start_bk||0;
   var cum=startBk;
   var glabels=['Départ'];
@@ -8484,9 +8485,9 @@ function renderGlobalChart(){
     glabels.push(lbl+'||'+(gain>=0?'+':'')+gain.toFixed(2)+'€');
   });
   var tot=cum-startBk;
-  var wins=state.a.filter(function(h){return h.win&&!h.isCashout;}).length,n=state.a.filter(function(h){return !h.isCashout;}).length;
+  var wins=_bilanSrc().filter(function(h){return h.win&&!h.isCashout;}).length,n=_bilanSrc().filter(function(h){return !h.isCashout;}).length;
   var wr=n?(wins/n*100).toFixed(1):0;
-  var mise=state.a.reduce(function(a,h){return a+parseFloat(h.m);},0);
+  var mise=_bilanSrc().reduce(function(a,h){return a+parseFloat(h.m);},0);
   var roi=mise?(tot/mise*100).toFixed(2):0;
   var bC=tot>=0?'#1ed760':'#ff4545',rC=+roi>=0?'#1ed760':'#ff4545';
   gz.innerHTML='<div class="sec" style="margin-top:0;">Évolution bankroll</div><div class="gchart"><div class="gchart-area"><canvas id="cg"></canvas></div><div class="chart-info-bar" id="cib-global"><span class="cib-main" id="cib-global-txt">Touche un point</span><span class="cib-val" id="cib-global-val"></span></div>'
@@ -9606,6 +9607,7 @@ function renderMultiCurveChart(){
   },80);
 }
 function renderGlobalCharts(){
+  try{renderBilanTypeFilter();}catch(e){}
   renderGlobalChart();
   setTimeout(function(){
     renderMultiCurveChart();
@@ -21052,6 +21054,31 @@ function _normType(t){
   return raw.charAt(0).toUpperCase()+raw.slice(1);
 }
 window._normType=_normType;
+/* ───────── BILAN : filtre par type de pari ───────── */
+function _bilanSrc(){
+  var f=window._bilanType;
+  if(!f||f==='all') return state.a||[];
+  return (state.a||[]).filter(function(h){return _normType(h.type)===f;});
+}
+window._bilanSrc=_bilanSrc;
+function _bilanTypes(){
+  var set={}; (state.a||[]).forEach(function(h){ var t=_normType(h.type); if(t) set[t]=1; });
+  return Object.keys(set).sort();
+}
+function renderBilanTypeFilter(){
+  var gg=document.getElementById('g-global'); if(!gg) return;
+  var fb=document.getElementById('bilan-type-filter');
+  if(!fb){ fb=document.createElement('div'); fb.id='bilan-type-filter'; fb.style.cssText='padding:8px 2px 2px;'; gg.insertBefore(fb, gg.firstChild); }
+  var cur=window._bilanType||'all';
+  var defs=[['all','Tous']].concat(_bilanTypes().map(function(t){return [t,t];}));
+  window._bilanTypeList=defs.map(function(d){return d[0];});
+  var html='<div style="font-size:9px;color:var(--t3);font-weight:700;text-transform:uppercase;letter-spacing:.5px;margin-bottom:5px;">📊 Filtrer par type de pari</div><div style="display:flex;gap:5px;overflow-x:auto;padding-bottom:6px;-webkit-overflow-scrolling:touch;">';
+  defs.forEach(function(d,i){ var on=cur===d[0]; html+='<button onclick="setBilanTypeIdx('+i+')" style="flex-shrink:0;border:none;border-radius:7px;padding:6px 11px;font-size:10px;font-weight:700;cursor:pointer;background:'+(on?'#4d84ff':'rgba(255,255,255,.06)')+';color:'+(on?'#fff':'var(--t2)')+';">'+d[1]+'</button>'; });
+  fb.innerHTML=html+'</div>';
+}
+function setBilanTypeIdx(i){ window._bilanType=(window._bilanTypeList||[])[i]||'all'; renderBilanTypeFilter(); try{renderGlobalCharts();}catch(e){} }
+window.setBilanTypeIdx=setBilanTypeIdx;
+window.renderBilanTypeFilter=renderBilanTypeFilter;
 /* Complément ITF / Challenger via Sofascore (opt-in, quota) — avec cache local (dates passées = gratuit ensuite). */
 async function g45TennisResultsItf(offset){
   offset=offset|0;
