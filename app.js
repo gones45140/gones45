@@ -20965,10 +20965,16 @@ function _g45EspnGrpPass(gn,f){
 }
 function g45TennisResFilter(f){ window._g45TennisResFilter=f; _g45RenderTennisRes(); }
 window.g45TennisResFilter=g45TennisResFilter;
+function _g45SameDay(iso, d){
+  if(!iso) return false;
+  var m=new Date(iso); if(isNaN(m.getTime())) return false;
+  return m.getFullYear()===d.getFullYear() && m.getMonth()===d.getMonth() && m.getDate()===d.getDate();
+}
 function _g45RenderTennisRes(){
   var list=document.getElementById('g45-tennis-res'); if(!list) return;
   var evs=window._g45TennisResData||[];
   var offset=window._g45TennisResOffset||0;
+  var selDate=new Date(); selDate.setHours(12,0,0,0); selDate.setDate(selDate.getDate()+offset);
   var filter=window._g45TennisResFilter||'all';
   var chips=_g45EspnTennisChips(filter);
   var itfBtn='<div style="text-align:center;margin-top:14px;"><button onclick="g45TennisResultsItf('+offset+')" style="border:none;background:rgba(138,160,255,.12);color:#8aa0ff;border-radius:8px;padding:8px 14px;font-size:10px;font-weight:700;cursor:pointer;">➕ Voir ITF / Challenger (Sofascore · quota)</button></div><div id="g45-tennis-itf" style="margin-top:8px;"></div>';
@@ -20981,7 +20987,7 @@ function _g45RenderTennisRes(){
     (ev.groupings||[]).forEach(function(g){
       var gn=(g.grouping&&g.grouping.displayName)||'Matchs';
       if(!_g45EspnGrpPass(gn,filter)) return;
-      (g.competitions||[]).forEach(function(c){ c.__grp=gn; if(c&&c.id) cache[c.id]=c; if(!groupings[gn]){groupings[gn]=[];gOrder.push(gn);} groupings[gn].push(c); total++; });
+      (g.competitions||[]).forEach(function(c){ if(!_g45SameDay(c.date||c.startDate, selDate)) return; c.__grp=gn; if(c&&c.id) cache[c.id]=c; if(!groupings[gn]){groupings[gn]=[];gOrder.push(gn);} groupings[gn].push(c); total++; });
     });
     if(!total) return;
     var secId='g45tev'+evi;
