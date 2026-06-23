@@ -20921,10 +20921,41 @@ async function g45EspnMatchStats(cid, btn){
     stats=sd; try{ localStorage.setItem(sk, JSON.stringify(stats)); }catch(e){}
   }
   var hn=(match.homeTeam&&(match.homeTeam.shortName||match.homeTeam.name))||'', an=(match.awayTeam&&(match.awayTeam.shortName||match.awayTeam.name))||'';
-  box.innerHTML='<div style="font-size:9px;color:#8aa0ff;text-align:center;margin:6px 0;font-weight:700;">'+hn+' vs '+an+'</div>'+_g45TennisStatsBlock(stats);
+  var rid='g45trad_'+match.id;
+  box.innerHTML='<div style="font-size:9px;color:#8aa0ff;text-align:center;margin:6px 0;font-weight:700;">'+hn+' vs '+an+'</div>'+_g45TennisRadarHTML(stats,hn,an,rid)+_g45TennisStatsBlock(stats);
+  setTimeout(function(){ _g45DrawRadar(rid); },60);
   btn.style.display='none';
 }
 window.g45EspnMatchStats=g45EspnMatchStats;
+/* Radar comparatif des 2 joueurs sur les stats en % (1er service, points gagnés, balles de break…) */
+function _g45TennisRadarHTML(stats, hn, an, rid){
+  if(!Array.isArray(stats)) return '';
+  var all=stats.filter(function(p){return p.period==='ALL';})[0]||stats[0]; if(!all) return '';
+  var pct=function(v){ var s=(v==null?'':(''+v)); var m=s.match(/(\d+)\s*%/); return m?parseInt(m[1],10):null; };
+  var axes=[];
+  (all.groups||[]).forEach(function(g){ (g.statisticsItems||[]).forEach(function(it){ var h=pct(it.home), a=pct(it.away); if(h!=null&&a!=null&&axes.length<7) axes.push({n:it.name||'', h:h, a:a}); }); });
+  if(axes.length<3) return '';
+  window._g45RadarData=window._g45RadarData||{};
+  window._g45RadarData[rid]={labels:axes.map(function(x){return x.n;}), h:axes.map(function(x){return x.h;}), a:axes.map(function(x){return x.a;}), hn:hn, an:an};
+  return '<div style="margin:8px 0 4px;height:240px;"><canvas id="'+rid+'"></canvas></div>';
+}
+function _g45DrawRadar(rid){
+  var q=(window._g45RadarData||{})[rid]; var ctx=document.getElementById(rid);
+  if(!q||!ctx||typeof Chart==='undefined') return;
+  try{ if(ctx._g45c) ctx._g45c.destroy(); }catch(e){}
+  ctx._g45c=new Chart(ctx.getContext('2d'),{
+    type:'radar',
+    data:{labels:q.labels,datasets:[
+      {label:q.hn,data:q.h,borderColor:'#4ade80',backgroundColor:'rgba(74,222,128,.15)',borderWidth:2,pointRadius:3,pointBackgroundColor:'#4ade80'},
+      {label:q.an,data:q.a,borderColor:'#4d84ff',backgroundColor:'rgba(77,132,255,.15)',borderWidth:2,pointRadius:3,pointBackgroundColor:'#4d84ff'}
+    ]},
+    options:{responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{labels:{color:'#c7d0e8',font:{size:10},boxWidth:10}},tooltip:{callbacks:{label:function(c){return c.dataset.label+': '+c.raw+'%';}}}},
+      scales:{r:{min:0,max:100,angleLines:{color:'rgba(255,255,255,.08)'},grid:{color:'rgba(255,255,255,.08)'},pointLabels:{color:'#8aa0ff',font:{size:8}},ticks:{display:false,stepSize:25}}}
+    }
+  });
+}
+window._g45DrawRadar=_g45DrawRadar;
 async function g45TennisResults(offset){
   offset=offset|0;
   var el=document.getElementById('t-resultats'); if(!el) return;
