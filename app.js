@@ -21819,3 +21819,95 @@ async function _g45PullBetsGithub(){
   function go(){ setTimeout(_g45PullBetsGithub, 1200); }
   if(document.readyState==='loading') document.addEventListener('DOMContentLoaded', go); else go();
 })();
+
+/* ═════════ FICHE ÉQUIPE — Onglet 📰 News (Google News RSS via proxy, 0 quota, 0 D1/KV) ═════════ */
+function _g45NewsProxy(q){
+  var path='/rss/search?q='+encodeURIComponent(q)+'&hl=fr&gl=FR&ceid=FR:fr';
+  return 'https://fd-proxy.touraine-antoine.workers.dev/?host=gnews&path='+encodeURIComponent(path);
+}
+function _g45NewsAgo(ts){
+  if(!ts) return '';
+  var s=Math.floor((Date.now()-ts)/1000); if(s<0)s=0;
+  if(s<60) return "à l'instant";
+  var m=Math.floor(s/60); if(m<60) return 'il y a '+m+' min';
+  var h=Math.floor(m/60); if(h<24) return 'il y a '+h+' h';
+  var j=Math.floor(h/24); return 'il y a '+j+' j';
+}
+/* Injecte (une seule fois) le bouton d'onglet + le panneau dans la fiche déjà ouverte */
+function _g45EnsureNewsTab(){
+  var anyTab=document.querySelector('.itab');
+  var anyPanel=document.getElementById('ip-bilan');
+  if(!anyTab||!anyTab.parentNode||!anyPanel||!anyPanel.parentNode) return;
+  if(!document.getElementById('ip-news')){
+    var pan=document.createElement('div'); pan.id='ip-news'; pan.className='ipanel'; pan.style.display='none';
+    anyPanel.parentNode.appendChild(pan);
+  }
+  if(!document.getElementById('itab-news')){
+    var btn=document.createElement('button'); btn.id='itab-news'; btn.className='itab';
+    btn.innerHTML='📰 News';
+    btn.setAttribute('onclick','_g45OpenNewsTab(this)');
+    anyTab.parentNode.appendChild(btn);
+  }
+}
+function _g45OpenNewsTab(btn){
+  try{ swInner('news', btn); }catch(e){}
+  window._currentInnerTab='news';
+  loadTeamNews(window._currentTeam);
+}
+window._g45OpenNewsTab=_g45OpenNewsTab;
+async function loadTeamNews(nom, force){
+  var el=document.getElementById('ip-news'); if(!el) return;
+  if(!nom){ el.innerHTML='<div style="padding:14px;color:var(--t3);font-size:11px;">Aucune équipe sélectionnée.</div>'; return; }
+  var ck='g45news_'+nom, items=null, cachedTs=0;
+  if(!force){
+    try{ var raw=localStorage.getItem(ck); if(raw){ var o=JSON.parse(raw); if(o&&o.items&&(Date.now()-(o.t||0))<20*60000){ items=o.items; cachedTs=o.t; } } }catch(e){}
+  }
+  var header='<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">'
+    +'<div style="font-size:10px;font-weight:700;color:#7aaaff;letter-spacing:.5px;text-transform:uppercase;">📰 Dernières infos — '+nom+'</div>'
+    +'<button onclick="loadTeamNews(window._currentTeam,true)" style="background:none;border:1px solid rgba(77,132,255,.3);border-radius:6px;color:#7aaaff;font-size:10px;font-weight:700;padding:3px 8px;cursor:pointer;">↻</button>'
+    +'</div>';
+  if(!items){
+    el.innerHTML=header+'<div style="display:flex;align-items:center;gap:8px;color:#4f5d88;font-size:12px;padding:6px 2px;"><div style="width:12px;height:12px;border:2px solid rgba(77,132,255,.2);border-top-color:#4d84ff;border-radius:50%;animation:spin .8s linear infinite;flex-shrink:0;"></div>Recherche des news…</div>';
+    try{
+      var r=await fetch(_g45NewsProxy(nom));
+      var txt=await r.text();
+      var doc=new DOMParser().parseFromString(txt,'text/xml');
+      var nodes=doc.querySelectorAll('item'); items=[];
+      for(var i=0;i<nodes.length && items.length<15;i++){
+        var it=nodes[i];
+        var title=(it.querySelector('title')&&it.querySelector('title').textContent)||'';
+        var link=(it.querySelector('link')&&it.querySelector('link').textContent)||'';
+        var pub=(it.querySelector('pubDate')&&it.querySelector('pubDate').textContent)||'';
+        var src=''; var srcEl=it.getElementsByTagName('source')[0]; if(srcEl) src=srcEl.textContent||'';
+        if(src && title.indexOf(' - '+src)>0){ title=title.slice(0, title.lastIndexOf(' - '+src)); }
+        if(!title) continue;
+        items.push({title:title, link:link, src:src, ts:(pub?Date.parse(pub):0)});
+      }
+      try{ localStorage.setItem(ck, JSON.stringify({t:Date.now(), items:items})); }catch(e){}
+      cachedTs=Date.now();
+    }catch(e){
+      el.innerHTML=header+'<div style="padding:12px;color:var(--t3);font-size:11px;">⚠️ News indisponibles pour le moment. Réessaie avec ↻.</div>';
+      return;
+    }
+  }
+  if(!items.length){ el.innerHTML=header+'<div style="padding:12px;color:var(--t3);font-size:11px;">Aucune actualité trouvée pour « '+nom+' ».</div>'; return; }
+  var html=header;
+  if(cachedTs) html+='<div style="font-size:9px;color:var(--t3);margin-bottom:8px;">Mis à jour '+_g45NewsAgo(cachedTs)+' · gratuit, 0 quota</div>';
+  items.forEach(function(n){
+    var when=_g45NewsAgo(n.ts);
+    html+='<a href="'+n.link+'" target="_blank" rel="noopener" style="display:block;text-decoration:none;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.06);border-radius:10px;padding:10px 12px;margin-bottom:8px;">'
+      +'<div style="font-size:12.5px;color:var(--t1);font-weight:600;line-height:1.4;">'+n.title+'</div>'
+      +'<div style="font-size:10px;color:var(--t3);margin-top:5px;display:flex;gap:8px;flex-wrap:wrap;">'+(n.src?'<span style="color:#7aaaff;font-weight:700;">'+n.src+'</span>':'')+(when?'<span>'+when+'</span>':'')+'</div>'
+      +'</a>';
+  });
+  el.innerHTML=html;
+}
+window.loadTeamNews=loadTeamNews;
+/* Greffe l'onglet News à chaque ouverture de fiche — sans toucher index.html ni les copies dupliquées */
+;(function(){
+  if(typeof openClub==='function'){
+    var _oc=openClub;
+    openClub=function(){ var r=_oc.apply(this,arguments); try{ _g45EnsureNewsTab(); }catch(e){} return r; };
+    window.openClub=openClub;
+  }
+})();
