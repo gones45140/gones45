@@ -21833,7 +21833,10 @@ function _g45GdeltDate(s){
   return Date.UTC(+m[1],+m[2]-1,+m[3],+m[4],+m[5],+m[6]);
 }
 async function _g45GdeltFetch(query){
-  var r=await fetch(_g45NewsUrl(query));
+  var url=_g45NewsUrl(query);
+  var r=await fetch(url);
+  // GDELT limite à ~1 req / 5 s → si 429, on attend et on retente une fois.
+  if(r.status===429){ await new Promise(function(res){ setTimeout(res,5200); }); r=await fetch(url); }
   if(!r.ok) throw new Error('HTTP '+r.status);
   var txt=await r.text(); var data={};
   try{ data=JSON.parse(txt); }catch(e){ data={}; }
@@ -21888,18 +21891,15 @@ async function loadTeamNews(nom, force){
   if(!items){
     el.innerHTML=header+'<div style="display:flex;align-items:center;gap:8px;color:#4f5d88;font-size:12px;padding:6px 2px;"><div style="width:12px;height:12px;border:2px solid rgba(77,132,255,.2);border-top-color:#4d84ff;border-radius:50%;animation:spin .8s linear infinite;flex-shrink:0;"></div>Recherche des news…</div>';
     try{
-      var qn='"'+nom+'"';
-      var queries=[qn+' sourcecountry:FR', qn+' sourcelang:french', qn];
-      items=[];
-      for(var qi=0; qi<queries.length; qi++){
-        items=await _g45GdeltFetch(queries[qi]);
-        if(items.length) break;
-      }
+      // UNE SEULE requête (pas de rafale → pas de 429). Langue française pour la pertinence.
+      items=await _g45GdeltFetch('"'+nom+'" sourcelang:french');
       // On ne met en cache QUE de vrais résultats → un échec passager ne masque pas un correctif.
       if(items.length){ try{ localStorage.setItem(ck, JSON.stringify({t:Date.now(), items:items})); }catch(e){} }
       cachedTs=Date.now();
     }catch(e){
-      el.innerHTML=header+'<div style="padding:12px;color:var(--t3);font-size:11px;">⚠️ News indisponibles pour le moment ('+(e&&e.message||'erreur')+'). Réessaie avec ↻.</div>';
+      var em=(e&&e.message)||'erreur';
+      var msg=(em.indexOf('429')>=0)?'Trop de requêtes à la suite — patiente quelques secondes puis ↻.':'News indisponibles pour le moment ('+em+'). Réessaie avec ↻.';
+      el.innerHTML=header+'<div style="padding:12px;color:var(--t3);font-size:11px;">⚠️ '+msg+'</div>';
       return;
     }
   }
