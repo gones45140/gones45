@@ -1456,6 +1456,7 @@ function renderSportFilter(){
   sf.innerHTML=sports.filter(function(s){return s==='ALL'||used.has(s);}).map(function(s){
     return '<button class="sfbtn'+(bilanSport===s?' on':'')+'" onclick="bilanSport=\''+s+'\';renderBilanTab()">'+s+' '+labels[s]+'</button>';
   }).join('');
+  try{renderBilanTypeFilter();}catch(e){}
 }
 function filteredA(){
   var base=state.a;
@@ -7670,6 +7671,7 @@ function renderSportFilter(){
   sf.innerHTML=sports.filter(function(s){return s==='ALL'||used.has(s);}).map(function(s){
     return '<button class="sfbtn'+(bilanSport===s?' on':'')+'" onclick="bilanSport=\''+s+'\';renderBilanTab()">'+s+' '+labels[s]+'</button>';
   }).join('');
+  try{renderBilanTypeFilter();}catch(e){}
 }
 function filteredA(){
   var base=state.a;
@@ -21066,9 +21068,11 @@ function _bilanTypes(){
   return Object.keys(set).sort();
 }
 function renderBilanTypeFilter(){
-  var gg=document.getElementById('g-global'); if(!gg) return;
+  var sf=document.getElementById('sport-filter');
+  var host=(sf&&sf.parentNode)?sf.parentNode:document.getElementById('g-global'); if(!host) return;
   var fb=document.getElementById('bilan-type-filter');
-  if(!fb){ fb=document.createElement('div'); fb.id='bilan-type-filter'; fb.style.cssText='padding:8px 2px 2px;'; gg.insertBefore(fb, gg.firstChild); }
+  if(!fb){ fb=document.createElement('div'); fb.id='bilan-type-filter'; fb.style.cssText='padding:6px 2px 2px;';
+    if(sf&&sf.parentNode){ sf.parentNode.insertBefore(fb, sf.nextSibling); } else { host.insertBefore(fb, host.firstChild); } }
   var cur=window._bilanType||'all';
   var defs=[['all','Tous']].concat(_bilanTypes().map(function(t){return [t,t];}));
   window._bilanTypeList=defs.map(function(d){return d[0];});
