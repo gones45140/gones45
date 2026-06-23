@@ -20861,6 +20861,7 @@ function _g45EspnTennisDetail(c){
     +'<table style="width:100%;border-collapse:collapse;">'+head+row(home)+row(away)+'</table>'
     +(notes?'<div style="font-size:9px;color:var(--t3);text-align:center;margin-top:8px;font-style:italic;">'+notes+'</div>':'')
     +((venue||court)?'<div style="font-size:9px;color:var(--t3);text-align:center;margin-top:3px;">📍 '+venue+court+'</div>':'')
+    +(((c.status&&c.status.type&&(c.status.type.state==='post'||c.status.type.completed))?true:false)?'<div style="text-align:center;margin-top:10px;"><button onclick="g45EspnMatchStats(\''+c.id+'\',this)" style="border:none;background:rgba(138,160,255,.14);color:#8aa0ff;border-radius:8px;padding:7px 13px;font-size:10px;font-weight:700;cursor:pointer;">📊 Voir les stats (Sofascore · quota)</button><div class="g45estats" style="margin-top:8px;"></div></div>':'')
     +'</div>';
 }
 function g45EspnTennisToggle(el){
@@ -20871,6 +20872,59 @@ function g45EspnTennisToggle(el){
   panel.innerHTML=_g45EspnTennisDetail(c);
 }
 window.g45EspnTennisToggle=g45EspnTennisToggle;
+/* Stats post-match À LA DEMANDE (Résultats ESPN → match Sofascore par date+nom → stats). Cache pour 0 re-quota. */
+function _g45TLast(name){
+  var s=(name||'').toString().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[.\-\/]/g,' ');
+  var parts=s.split(/\s+/).filter(function(w){return w.length>1;});
+  if(!parts.length) return s.replace(/[^a-z]/g,'');
+  return parts[parts.length-1].replace(/[^a-z]/g,'');
+}
+function _g45SofaErr(er){
+  var msg=(er===429)?'Quota Sofascore épuisé ce mois-ci.':(er===403)?'Pas d\'abonnement Sofascore.':(er==='nokey')?'Clé RapidAPI manquante (OUTILS).':'Service indisponible.';
+  return '<div style="text-align:center;color:var(--t3);font-size:10px;padding:8px;">'+msg+'</div>';
+}
+async function _g45SofaDay(ymd){
+  window._g45SofaDayCache=window._g45SofaDayCache||{};
+  if(window._g45SofaDayCache[ymd]) return window._g45SofaDayCache[ymd];
+  var data=await g45Sofa6('/api/sofascore/v1/match/list?sport_slug=tennis&date='+ymd);
+  if(data && data.__err) return {__err:data.__err};
+  var arr=Array.isArray(data)?data:((data&&(data.events||data.data||data.matches||data.result))||[]);
+  window._g45SofaDayCache[ymd]=arr;
+  return arr;
+}
+async function g45EspnMatchStats(cid, btn){
+  var c=(window._g45EspnTennisCache||{})[cid];
+  var box=btn.parentNode.querySelector('.g45estats');
+  if(!c||!box) return;
+  if(!localStorage.getItem('gones45_rapidapi_key')){ box.innerHTML=_g45SofaErr('nokey'); btn.style.display='none'; return; }
+  btn.disabled=true; btn.textContent='⏳ Recherche du match…';
+  var cps=c.competitors||[], home=null, away=null;
+  cps.forEach(function(x){ if(x.homeAway==='home') home=x; else if(x.homeAway==='away') away=x; });
+  home=home||cps[0]||{}; away=away||cps[1]||{};
+  var hL=_g45TLast(_g45EspnTennisName(home)), aL=_g45TLast(_g45EspnTennisName(away));
+  var d=new Date(c.date||c.startDate);
+  var ymd=d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+  var day=await _g45SofaDay(ymd);
+  if(day && day.__err){ box.innerHTML=_g45SofaErr(day.__err); btn.style.display='none'; return; }
+  var match=(day||[]).filter(function(m){
+    var mh=_g45TLast((m.homeTeam&&(m.homeTeam.shortName||m.homeTeam.name))||'');
+    var ma=_g45TLast((m.awayTeam&&(m.awayTeam.shortName||m.awayTeam.name))||'');
+    return (mh===hL&&ma===aL)||(mh===aL&&ma===hL);
+  })[0];
+  if(!match){ box.innerHTML='<div style="text-align:center;color:var(--t3);font-size:10px;padding:8px;">Stats introuvables (match non couvert par Sofascore).</div>'; btn.style.display='none'; return; }
+  btn.textContent='⏳ Stats…';
+  var sk='g45sofastats_'+match.id, stats=null;
+  try{ var raw=localStorage.getItem(sk); if(raw) stats=JSON.parse(raw); }catch(e){}
+  if(!stats){
+    var sd=await g45Sofa6('/api/sofascore/v1/match/statistics?match_id='+match.id);
+    if(sd && sd.__err){ box.innerHTML=_g45SofaErr(sd.__err); btn.style.display='none'; return; }
+    stats=sd; try{ localStorage.setItem(sk, JSON.stringify(stats)); }catch(e){}
+  }
+  var hn=(match.homeTeam&&(match.homeTeam.shortName||match.homeTeam.name))||'', an=(match.awayTeam&&(match.awayTeam.shortName||match.awayTeam.name))||'';
+  box.innerHTML='<div style="font-size:9px;color:#8aa0ff;text-align:center;margin:6px 0;font-weight:700;">'+hn+' vs '+an+'</div>'+_g45TennisStatsBlock(stats);
+  btn.style.display='none';
+}
+window.g45EspnMatchStats=g45EspnMatchStats;
 async function g45TennisResults(offset){
   offset=offset|0;
   var el=document.getElementById('t-resultats'); if(!el) return;
