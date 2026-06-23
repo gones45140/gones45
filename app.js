@@ -21839,22 +21839,48 @@ function _g45ParseRssItems(xml, limit){
   }
   return out;
 }
-/* Source 1 : Bing News (recherche par équipe, tous sports, FR) */
+/* Déduit un mot-clé de sport (français) à partir du sport de l'équipe → désambiguïse la recherche */
+function _g45SportWord(nom){
+  var u=(typeof state!=='undefined'&&state.u)?state.u.find(function(x){return x&&x.n===nom;}):null;
+  var s=_g45Norm((u&&u.sport)||'');
+  if(s.indexOf('foot')>=0) return 'football';
+  if(s.indexOf('rugby')>=0) return 'rugby';
+  if(s.indexOf('tennis')>=0) return 'tennis';
+  if(s.indexOf('hockey')>=0||s.indexOf('nhl')>=0) return 'hockey';
+  if(s.indexOf('baseball')>=0||s.indexOf('mlb')>=0) return 'baseball';
+  if(s.indexOf('basket')>=0||s.indexOf('nba')>=0) return 'basket';
+  if(s.indexOf('f1')>=0||s.indexOf('formule')>=0||s.indexOf('formula')>=0) return 'Formule 1';
+  return '';
+}
+/* Source 1 : Bing News (recherche par équipe + sport pour la pertinence, FR) */
 async function _g45BingFetch(nom){
-  var path='/news/search?q='+encodeURIComponent('"'+nom+'"')+'&format=rss&setmkt=fr-FR&setlang=fr';
+  var sw=_g45SportWord(nom);
+  var q='"'+nom+'"'+(sw?(' '+sw):'');
+  var path='/news/search?q='+encodeURIComponent(q)+'&format=rss&setmkt=fr-FR&setlang=fr';
   var r=await fetch(_G45_WORKER+'?host=bing&path='+encodeURIComponent(path));
   if(!r.ok) throw new Error('HTTP '+r.status);
   var items=_g45ParseRssItems(await r.text(),15);
   return items.slice(0,15);
 }
-/* Source 2 (repli) : flux RSS L'Équipe filtré par nom d'équipe (fiable, surtout foot) */
+/* Source 2 (repli) : flux RSS L'Équipe filtré par nom d'équipe (tente d'abord le flux du sport) */
 async function _g45LequipeFetch(nom){
-  var r=await fetch(_G45_WORKER+'?host=lequipe&path='+encodeURIComponent('/rss/actu_rss.xml'));
-  if(!r.ok) throw new Error('HTTP '+r.status);
-  var all=_g45ParseRssItems(await r.text(),80);
+  var sw=_g45SportWord(nom);
+  var cap={football:'Football',rugby:'Rugby',tennis:'Tennis',basket:'Basket'};
+  var feeds=[];
+  if(cap[sw]) feeds.push('/rss/actu_rss_'+cap[sw]+'.xml');
+  feeds.push('/rss/actu_rss.xml');
   var key=_g45Norm(nom);
-  var hit=all.filter(function(n){ return _g45Norm(n.title+' '+n.desc).indexOf(key)>=0; });
-  return hit.slice(0,15);
+  for(var f=0; f<feeds.length; f++){
+    try{
+      var r=await fetch(_G45_WORKER+'?host=lequipe&path='+encodeURIComponent(feeds[f]));
+      if(!r.ok) continue;
+      var all=_g45ParseRssItems(await r.text(),80);
+      if(!all.length) continue;
+      var hit=all.filter(function(n){ return _g45Norm(n.title+' '+n.desc).indexOf(key)>=0; });
+      if(hit.length) return hit.slice(0,15);
+    }catch(e){}
+  }
+  return [];
 }
 function _g45NewsAgo(ts){
   if(!ts) return '';
@@ -21889,7 +21915,7 @@ window._g45OpenNewsTab=_g45OpenNewsTab;
 async function loadTeamNews(nom, force){
   var el=document.getElementById('ip-news'); if(!el) return;
   if(!nom){ el.innerHTML='<div style="padding:14px;color:var(--t3);font-size:11px;">Aucune équipe sélectionnée.</div>'; return; }
-  var ck='g45news2_'+nom, items=null, cachedTs=0;
+  var ck='g45news3_'+nom, items=null, cachedTs=0;
   if(!force){
     try{ var raw=localStorage.getItem(ck); if(raw){ var o=JSON.parse(raw); if(o&&o.items&&(Date.now()-(o.t||0))<20*60000){ items=o.items; cachedTs=o.t; } } }catch(e){}
   }
