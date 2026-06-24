@@ -21824,6 +21824,11 @@ async function _g45PullBetsGithub(){
 var _G45_WORKER='https://fd-proxy.touraine-antoine.workers.dev/';
 function _g45HostOf(u){ try{ return new URL(u).hostname.replace(/^www\./,''); }catch(e){ return ''; } }
 function _g45Norm(s){ return (''+s).toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,''); }
+/* Les liens Bing News sont des redirections (bing.com/news/apiclick?url=...) → on extrait la vraie URL */
+function _g45Unwrap(link){
+  try{ var u=new URL(link); if(/(^|\.)bing\.com$/i.test(u.hostname)){ var real=u.searchParams.get('url'); if(real) return real; } }catch(e){}
+  return link;
+}
 /* Parse un flux RSS générique → [{title, link, desc, ts, src}] */
 function _g45ParseRssItems(xml, limit){
   var doc=new DOMParser().parseFromString(xml,'text/xml');
@@ -21831,7 +21836,7 @@ function _g45ParseRssItems(xml, limit){
   for(var i=0;i<nodes.length && out.length<(limit||60);i++){
     var it=nodes[i];
     var title=((it.querySelector('title')&&it.querySelector('title').textContent)||'').trim();
-    var link=((it.querySelector('link')&&it.querySelector('link').textContent)||'').trim();
+    var link=_g45Unwrap(((it.querySelector('link')&&it.querySelector('link').textContent)||'').trim());
     var pub=((it.querySelector('pubDate')&&it.querySelector('pubDate').textContent)||'').trim();
     var desc=((it.querySelector('description')&&it.querySelector('description').textContent)||'');
     if(!title) continue;
@@ -21851,12 +21856,13 @@ var _G45_TEAM_ALIAS={
   'france':'équipe de France football','inter':'"Inter Milan"','milan':'"Inter Milan"',
   'arsenal':'"Arsenal FC"','psv':'"PSV Eindhoven"','bayern':'"Bayern Munich"','madrid':'"Real Madrid"'
 };
-/* Construit la requête de recherche : nom officiel si connu, sinon nom + sport */
+/* Construit la requête de recherche : nom officiel si connu, sinon nom (+ sport si nom court ambigu) */
 function _g45TeamQuery(nom){
   var alias=_G45_TEAM_ALIAS[_g45Norm(nom)];
   if(alias) return alias;
   var sw=_g45SportWord(nom);
-  return '"'+nom+'"'+(sw?(' '+sw):'');
+  var multiWord=/\s/.test((nom||'').trim()); // nom déjà complet (≥2 mots) → pas besoin du mot sport
+  return '"'+nom+'"'+((sw && !multiWord)?(' '+sw):'');
 }
 /* Déduit un mot-clé de sport (français) à partir du sport de l'équipe → désambiguïse la recherche */
 function _g45SportWord(nom){
@@ -21880,20 +21886,43 @@ async function _g45BingFetch(nom){
   var items=_g45ParseRssItems(await r.text(),15);
   return items.slice(0,15);
 }
-/* Source 2 (repli) : flux RSS de médias sportifs FR, filtrés par nom d'équipe (RMC, L'Équipe…) */
+/* Mots-clés courts pour filtrer les flux RSS (les titres disent "Lyon", pas "Olympique Lyonnais") */
+var _G45_RSS_KW={
+  'olympique lyonnais':['lyon'],'lyon':['lyon'],'ol':['lyon'],
+  'paris saint-germain':['psg','paris saint'],'psg':['psg','paris saint'],'paris':['psg','paris saint'],
+  'olympique de marseille':['marseille'],'om':['marseille'],'marseille':['marseille'],
+  'as saint-etienne':['saint-etienne','asse'],'saint-etienne':['saint-etienne','asse'],
+  'losc lille':['lille'],'lille':['lille'],'stade rennais':['rennes'],'rennes':['rennes'],
+  'ogc nice':['nice'],'nice':['nice'],'fc nantes':['nantes'],'nantes':['nantes'],
+  'rc lens':['lens'],'lens':['lens'],'as monaco':['monaco'],'monaco':['monaco'],
+  'inter milan':['inter milan','inter'],'inter':['inter milan','inter'],
+  'real madrid':['real madrid','real'],'bayern munich':['bayern'],'bayern':['bayern'],
+  'arsenal fc':['arsenal'],'arsenal':['arsenal'],'psv eindhoven':['psv'],'psv':['psv'],
+  'equipe de france football':['equipe de france','bleus'],'france':['equipe de france','bleus'],
+  'palmeiras':['palmeiras']
+};
+function _g45RssKeywords(nom){
+  var n=_g45Norm(nom);
+  if(_G45_RSS_KW[n]) return _G45_RSS_KW[n];
+  var generic={olympique:1,real:1,inter:1,fc:1,ac:1,as:1,sc:1,rc:1,club:1,de:1,la:1,le:1,les:1,du:1,united:1,city:1,football:1,athletic:1,sporting:1,stade:1};
+  var words=n.split(/[^a-z0-9]+/).filter(function(w){return w.length>=4 && !generic[w];});
+  words.push(n);
+  return words;
+}
+/* Source 2 (repli) : flux RSS de médias sportifs FR, filtrés par mots-clés d'équipe */
 function _g45FeedList(sw){
-  var L=[];
+  var lm={football:'football',rugby:'rugby',tennis:'tennis'};
   var rmc={football:'football',rugby:'rugby',tennis:'tennis',basket:'basket'};
-  var leq={football:'Football',rugby:'Rugby',tennis:'Tennis',basket:'Basket'};
+  var L=[];
+  L.push({host:'www.lemonde.fr', path:'/'+(lm[sw]||'sport')+'/rss_full.xml'});
+  L.push({host:'www.francetvinfo.fr', path:'/sports.rss'});
   if(rmc[sw]) L.push({host:'rmcsport.bfmtv.com', path:'/rss/'+rmc[sw]+'/'});
-  if(leq[sw]) L.push({host:'www.lequipe.fr', path:'/rss/actu_rss_'+leq[sw]+'.xml'});
-  if(!L.length){ L.push({host:'rmcsport.bfmtv.com', path:'/rss/'}); L.push({host:'www.lequipe.fr', path:'/rss/actu_rss.xml'}); }
   return L;
 }
 async function _g45FeedFetch(nom){
   var sw=_g45SportWord(nom);
   var feeds=_g45FeedList(sw);
-  var key=_g45Norm(nom);
+  var kws=_g45RssKeywords(nom);
   for(var i=0;i<feeds.length;i++){
     try{
       var f=feeds[i];
@@ -21901,7 +21930,7 @@ async function _g45FeedFetch(nom){
       if(!r.ok) continue;
       var all=_g45ParseRssItems(await r.text(),80);
       if(!all.length) continue;
-      var hit=all.filter(function(n){ return _g45Norm(n.title+' '+n.desc).indexOf(key)>=0; });
+      var hit=all.filter(function(n){ var t=_g45Norm(n.title+' '+n.desc); return kws.some(function(k){ return k && t.indexOf(k)>=0; }); });
       if(hit.length) return hit.slice(0,15);
     }catch(e){}
   }
@@ -21940,7 +21969,7 @@ window._g45OpenNewsTab=_g45OpenNewsTab;
 async function loadTeamNews(nom, force){
   var el=document.getElementById('ip-news'); if(!el) return;
   if(!nom){ el.innerHTML='<div style="padding:14px;color:var(--t3);font-size:11px;">Aucune équipe sélectionnée.</div>'; return; }
-  var ck='g45news4_'+nom, items=null, cachedTs=0;
+  var ck='g45news7_'+nom, items=null, cachedTs=0;
   if(!force){
     try{ var raw=localStorage.getItem(ck); if(raw){ var o=JSON.parse(raw); if(o&&o.items&&(Date.now()-(o.t||0))<20*60000){ items=o.items; cachedTs=o.t; } } }catch(e){}
   }
