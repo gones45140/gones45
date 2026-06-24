@@ -16446,7 +16446,8 @@ async function _wcRenderMatch(eventId, rowId) {
     }catch(e){}
     var box2 = data.boxscore;
     if(!box2 || !box2.teams || !box2.teams.length) {
-      box.innerHTML = goalBanner + live + bets + ball + odds + '<div style="padding:8px;color:var(--t3);font-size:10px;text-align:center;margin-bottom:8px;">Stats indisponibles</div>' + _wcVideoBlock(data, _wcN[0], _wcN[1]);
+      var _pm0=''; try{ _pm0=_g45PreMatchBlock(data); }catch(e){}
+      box.innerHTML = goalBanner + live + bets + ball + odds + (_pm0 || '<div style="padding:8px;color:var(--t3);font-size:10px;text-align:center;margin-bottom:8px;">Stats indisponibles</div>') + _wcVideoBlock(data, _wcN[0], _wcN[1]);
       _wcStatsTimer(box, data, eventId, rowId); return;
     }
 
@@ -19934,6 +19935,9 @@ async function _renderSaisonDetail(el, eventId, league){
     try{ if(typeof _liveOddsBlock==='function') h+=_liveOddsBlock(data); }catch(e){}
 
     var added=false;
+    // ── AVANT-MATCH (forme, bilan, probabilité) — uniquement pour les matchs à venir ──
+    var _mstate=(comp.status&&comp.status.type&&comp.status.type.state)||'';
+    if(_mstate==='pre' && !isLive){ try{ var _pm=_g45PreMatchBlock(data); if(_pm){ h+=_pm; added=true; } }catch(e){} }
     if(typeof _renderEspnMatchStats==='function'){ try{ var st=_renderEspnMatchStats(data, homeId, awayId, '#4d84ff'); if(st){ h+=st; added=true; } }catch(e){} }
     if(typeof _renderEspnMatchPitch==='function'){ try{ var pi=_renderEspnMatchPitch(data, '#4d84ff', function(x){return x;}); if(pi){ h+=pi; added=true; } }catch(e){} }
     try{ if(typeof _momentsTimeline==='function'){ var _mt=_momentsTimeline(data); if(_mt){ h+=_mt; added=true; } } }catch(e){}
@@ -22075,3 +22079,59 @@ window._g45RenderFilteredArchive=_g45RenderFilteredArchive;
     window.renderBilanTab=renderBilanTab;
   }
 })();
+
+/* ═════════ Bloc AVANT-MATCH (forme, bilan, probabilité) pour les matchs à venir — données ESPN ═════════ */
+function _g45PreMatchBlock(data){
+  try{
+    var comp=(data.header&&data.header.competitions&&data.header.competitions[0])||{};
+    var cps=comp.competitors||[]; if(cps.length<2) return '';
+    var home=cps.filter(function(c){return c.homeAway==='home';})[0]||cps[0];
+    var away=cps.filter(function(c){return c.homeAway==='away';})[0]||cps[1];
+    var hN=(home.team&&(home.team.shortDisplayName||home.team.displayName))||'Dom';
+    var aN=(away.team&&(away.team.shortDisplayName||away.team.displayName))||'Ext';
+    function formStr(c){ return (c.form||(c.team&&c.team.form)||'').toString().toUpperCase(); }
+    function recStr(c){ return (c.records&&c.records[0]&&c.records[0].summary)||(typeof c.record==='string'?c.record:'')||''; }
+    function pills(f){
+      if(!f) return '<span style="font-size:9px;color:var(--t3);">—</span>';
+      return f.replace(/[^WDL]/g,'').slice(-5).split('').map(function(ch){
+        var col=ch==='W'?'#1ed760':ch==='L'?'#ff4545':'#f0b020';
+        var lbl=ch==='W'?'G':ch==='L'?'P':'N';
+        return '<span style="display:inline-block;width:16px;height:16px;line-height:16px;text-align:center;border-radius:4px;background:'+col+';color:#0b0f1a;font-size:9px;font-weight:800;margin-right:2px;">'+lbl+'</span>';
+      }).join('');
+    }
+    var hForm=formStr(home), aForm=formStr(away), hRec=recStr(home), aRec=recStr(away);
+    var probHtml='';
+    try{
+      var pr=data.predictor;
+      if(pr&&pr.homeTeam&&pr.awayTeam){
+        var hp=parseFloat(pr.homeTeam.gameProjection), ap=parseFloat(pr.awayTeam.gameProjection);
+        if(!isNaN(hp)&&!isNaN(ap)){
+          var dp=Math.max(0,100-hp-ap);
+          probHtml='<div style="margin-bottom:10px;">'
+            +'<div style="font-size:9px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;color:#8aa0ff;margin-bottom:6px;">🔮 Probabilité de victoire</div>'
+            +'<div style="display:flex;height:18px;border-radius:6px;overflow:hidden;font-size:9px;font-weight:800;">'
+            +'<div style="width:'+hp+'%;background:#1ed760;color:#0b0f1a;display:flex;align-items:center;justify-content:center;">'+(hp>=12?Math.round(hp)+'%':'')+'</div>'
+            +'<div style="width:'+dp+'%;background:#4f5d88;color:#fff;display:flex;align-items:center;justify-content:center;">'+(dp>=12?Math.round(dp)+'%':'')+'</div>'
+            +'<div style="width:'+ap+'%;background:#ff7b54;color:#0b0f1a;display:flex;align-items:center;justify-content:center;">'+(ap>=12?Math.round(ap)+'%':'')+'</div>'
+            +'</div>'
+            +'<div style="display:flex;justify-content:space-between;font-size:9px;color:var(--t3);margin-top:3px;"><span>'+hN+'</span><span>Nul</span><span>'+aN+'</span></div>'
+            +'</div>';
+        }
+      }
+    }catch(e){}
+    if(!hForm&&!aForm&&!hRec&&!aRec&&!probHtml) return '';
+    var h='<div style="background:rgba(255,255,255,.02);border-radius:8px;padding:10px;margin-bottom:8px;">';
+    h+='<div style="font-size:9px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;color:#8aa0ff;margin-bottom:8px;">📊 Avant-match</div>';
+    h+=probHtml;
+    if(hForm||aForm||hRec||aRec){
+      h+='<div style="display:grid;grid-template-columns:1fr auto 1fr;gap:8px;align-items:center;">';
+      h+='<div style="text-align:left;min-width:0;"><div style="font-weight:800;color:var(--t1);font-size:11px;margin-bottom:3px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">'+hN+'</div>'+(hRec?'<div style="color:var(--t3);font-size:9px;margin-bottom:4px;">'+hRec+'</div>':'')+'<div>'+pills(hForm)+'</div></div>';
+      h+='<div style="font-size:8px;color:var(--t3);text-transform:uppercase;letter-spacing:.5px;">Forme</div>';
+      h+='<div style="text-align:right;min-width:0;"><div style="font-weight:800;color:var(--t1);font-size:11px;margin-bottom:3px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">'+aN+'</div>'+(aRec?'<div style="color:var(--t3);font-size:9px;margin-bottom:4px;">'+aRec+'</div>':'')+'<div style="direction:rtl;">'+pills(aForm)+'</div></div>';
+      h+='</div>';
+    }
+    h+='</div>';
+    return h;
+  }catch(e){ return ''; }
+}
+window._g45PreMatchBlock=_g45PreMatchBlock;
