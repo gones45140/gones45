@@ -16448,7 +16448,7 @@ async function _wcRenderMatch(eventId, rowId) {
     if(!box2 || !box2.teams || !box2.teams.length) {
       var _pm0=''; try{ _pm0=_g45PreMatchBlock(data); }catch(e){}
       box.innerHTML = goalBanner + live + bets + ball + odds + (_pm0 || '<div style="padding:8px;color:var(--t3);font-size:10px;text-align:center;margin-bottom:8px;">Stats indisponibles</div>') + _wcVideoBlock(data, _wcN[0], _wcN[1]);
-      if(_pm0){ try{ _g45FillForm(box, 'fifa.world'); }catch(e){} }
+      if(_pm0){ try{ _g45FillForm(box, 'fifa.world'); _g45FillStandings(box, 'fifa.world'); }catch(e){} }
       _wcStatsTimer(box, data, eventId, rowId); return;
     }
 
@@ -19947,7 +19947,7 @@ async function _renderSaisonDetail(el, eventId, league){
     try{ if(typeof _videoBlock==='function') h+=_videoBlock(data, hN, aN, ('résumé '+_yr).trim()); }catch(e){}
     h+='</div>';
     el.innerHTML=h;
-    if(_mstate==='pre'){ try{ _g45FillForm(el, league); }catch(e){} }
+    if(_mstate==='pre'){ try{ _g45FillForm(el, league); _g45FillStandings(el, league); }catch(e){} }
 
     // ── Rafraîchissement auto pendant le match (toutes les 30 s) ──
     if(isLive){
@@ -22172,9 +22172,10 @@ function _g45PreMatchBlock(data){
         var rowsS='';
         entries.forEach(function(e){
           var isUs=String(e.team&&e.team.id)===hId||String(e.team&&e.team.id)===aId;
-          var t=e.team||{}; var nm=t.displayName||t.shortDisplayName||t.name||t.nickname||t.location||t.abbreviation||(e.note&&e.note.text)||'';
+          var t=e.team||{}; var tid=String(t.id||'');
+          var nm=t.displayName||t.shortDisplayName||t.name||t.nickname||t.location||t.abbreviation||(tid===hId?hN:tid===aId?aN:'');
           rowsS+='<tr style="'+(isUs?'background:rgba(77,132,255,.12);':'')+'">'
-            +'<td style="padding:3px 4px;font-size:10px;color:var(--t1);font-weight:'+(isUs?'800':'600')+';overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:96px;">'+nm+'</td>'
+            +'<td class="g45-sname" data-tid="'+tid+'" style="padding:3px 4px;font-size:10px;color:var(--t1);font-weight:'+(isUs?'800':'600')+';overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:96px;">'+nm+'</td>'
             +'<td style="padding:3px 4px;font-size:10px;text-align:center;color:var(--t2);">'+gs(e,['gamesPlayed','GP'])+'</td>'
             +'<td style="padding:3px 4px;font-size:10px;text-align:center;color:var(--t2);">'+gs(e,['wins','W'])+'</td>'
             +'<td style="padding:3px 4px;font-size:10px;text-align:center;color:var(--t2);">'+gs(e,['ties','draws','D'])+'</td>'
@@ -22212,6 +22213,9 @@ function _g45FillForm(box, league){
           if(!sj||!sj.events) return;
           var done=sj.events.filter(function(e){ var c=(e.competitions&&e.competitions[0])||{}; return c.status&&c.status.type&&c.status.type.completed; });
           done=done.slice(-5); if(!done.length) return;
+          // Garde la forme complète (string) si ce calendrier en a moins — ex: équipes nationales en Coupe du monde
+          var curN=node.getElementsByTagName('span').length||0;
+          if(curN && done.length<curN) return;
           var html=done.map(function(e){
             var c=e.competitions[0]; var cps=c.competitors||[];
             var us=cps.filter(function(x){return String(x.team&&x.team.id)===String(tid);})[0]||cps[0];
@@ -22234,3 +22238,25 @@ function _g45FillForm(box, league){
   }catch(e){}
 }
 window._g45FillForm=_g45FillForm;
+/* Remplit les noms manquants du classement via l'endpoint standings dédié (résout les équipes par id) */
+function _g45FillStandings(box, league){
+  try{
+    if(!box) return;
+    var cells=box.querySelectorAll('.g45-sname'); if(!cells.length) return;
+    var need=false; Array.prototype.forEach.call(cells,function(c){ if(!c.textContent.trim()) need=true; });
+    if(!need) return;
+    fetch('https://site.api.espn.com/apis/site/v2/sports/soccer/'+(league||'eng.1')+'/standings')
+      .then(function(r){ return r.ok?r.json():null; })
+      .then(function(sj){
+        if(!sj) return;
+        var map={};
+        (function walk(node,depth){
+          if(!node||typeof node!=='object'||depth>8) return;
+          if(node.team&&node.team.id&&(node.team.displayName||node.team.shortDisplayName)) map[String(node.team.id)]=node.team.displayName||node.team.shortDisplayName;
+          for(var k in node){ var v=node[k]; if(v&&typeof v==='object') walk(v,depth+1); }
+        })(sj,0);
+        Array.prototype.forEach.call(cells,function(c){ var id=c.getAttribute('data-tid'); if(id&&map[id]&&!c.textContent.trim()) c.textContent=map[id]; });
+      }).catch(function(){});
+  }catch(e){}
+}
+window._g45FillStandings=_g45FillStandings;
