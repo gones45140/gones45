@@ -16448,6 +16448,7 @@ async function _wcRenderMatch(eventId, rowId) {
     if(!box2 || !box2.teams || !box2.teams.length) {
       var _pm0=''; try{ _pm0=_g45PreMatchBlock(data); }catch(e){}
       box.innerHTML = goalBanner + live + bets + ball + odds + (_pm0 || '<div style="padding:8px;color:var(--t3);font-size:10px;text-align:center;margin-bottom:8px;">Stats indisponibles</div>') + _wcVideoBlock(data, _wcN[0], _wcN[1]);
+      if(_pm0){ try{ _g45FillForm(box, 'fifa.world'); }catch(e){} }
       _wcStatsTimer(box, data, eventId, rowId); return;
     }
 
@@ -19946,6 +19947,7 @@ async function _renderSaisonDetail(el, eventId, league){
     try{ if(typeof _videoBlock==='function') h+=_videoBlock(data, hN, aN, ('résumé '+_yr).trim()); }catch(e){}
     h+='</div>';
     el.innerHTML=h;
+    if(_mstate==='pre'){ try{ _g45FillForm(el, league); }catch(e){} }
 
     // ── Rafraîchissement auto pendant le match (toutes les 30 s) ──
     if(isLive){
@@ -22145,10 +22147,10 @@ function _g45PreMatchBlock(data){
     var hForm=formStr(home), aForm=formStr(away), hRec=recStr(home), aRec=recStr(away);
     var formHtml='';
     if(hForm||aForm||hRec||aRec){
-      formHtml='<div style="display:grid;grid-template-columns:1fr auto 1fr;gap:8px;align-items:center;margin-bottom:4px;">'
-        +'<div style="text-align:left;min-width:0;"><div style="font-weight:800;color:var(--t1);font-size:11px;margin-bottom:3px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">'+hN+'</div>'+(hRec?'<div style="color:var(--t3);font-size:9px;margin-bottom:4px;">'+hRec+'</div>':'')+'<div>'+pills(hForm)+'</div></div>'
-        +'<div style="font-size:8px;color:var(--t3);text-transform:uppercase;letter-spacing:.5px;">Forme</div>'
-        +'<div style="text-align:right;min-width:0;"><div style="font-weight:800;color:var(--t1);font-size:11px;margin-bottom:3px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">'+aN+'</div>'+(aRec?'<div style="color:var(--t3);font-size:9px;margin-bottom:4px;">'+aRec+'</div>':'')+'<div style="direction:rtl;">'+pills(aForm)+'</div></div>'
+      formHtml='<div style="display:grid;grid-template-columns:1fr auto 1fr;gap:8px;align-items:start;margin-bottom:4px;">'
+        +'<div style="text-align:left;min-width:0;"><div style="font-weight:800;color:var(--t1);font-size:11px;margin-bottom:3px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">'+hN+'</div>'+(hRec?'<div style="color:var(--t3);font-size:9px;margin-bottom:4px;">'+hRec+'</div>':'')+'<div class="g45-form" data-tid="'+hId+'">'+pills(hForm)+'</div></div>'
+        +'<div style="font-size:8px;color:var(--t3);text-transform:uppercase;letter-spacing:.5px;align-self:center;">Forme</div>'
+        +'<div style="text-align:right;min-width:0;"><div style="font-weight:800;color:var(--t1);font-size:11px;margin-bottom:3px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">'+aN+'</div>'+(aRec?'<div style="color:var(--t3);font-size:9px;margin-bottom:4px;">'+aRec+'</div>':'')+'<div class="g45-form" data-tid="'+aId+'" style="text-align:right;">'+pills(aForm)+'</div></div>'
         +'</div>';
     }
 
@@ -22159,10 +22161,10 @@ function _g45PreMatchBlock(data){
       if(st){
         if(st.groups&&st.groups.length){
           for(var gi=0;gi<st.groups.length;gi++){
-            var g=st.groups[gi]; var ents=(g.standings&&g.standings.entries)||g.entries||[];
+            var g=st.groups[gi]; var ents=(g.standings&&(g.standings.entries||(Array.isArray(g.standings)?g.standings:null)))||g.entries||[];
             if(ents.some(function(e){return String(e.team&&e.team.id)===hId||String(e.team&&e.team.id)===aId;})){ entries=ents; grpName=g.header||g.name||''; break; }
           }
-          if(!entries){ var g0=st.groups[0]; entries=(g0.standings&&g0.standings.entries)||g0.entries||[]; grpName=g0.header||g0.name||''; }
+          if(!entries){ var g0=st.groups[0]; entries=(g0.standings&&(g0.standings.entries||(Array.isArray(g0.standings)?g0.standings:null)))||g0.entries||[]; grpName=g0.header||g0.name||''; }
         } else if(st.entries){ entries=st.entries; }
       }
       if(entries&&entries.length){
@@ -22170,7 +22172,7 @@ function _g45PreMatchBlock(data){
         var rowsS='';
         entries.forEach(function(e){
           var isUs=String(e.team&&e.team.id)===hId||String(e.team&&e.team.id)===aId;
-          var nm=(e.team&&(e.team.shortDisplayName||e.team.displayName||e.team.abbreviation))||'';
+          var t=e.team||{}; var nm=t.displayName||t.shortDisplayName||t.name||t.nickname||t.location||t.abbreviation||(e.note&&e.note.text)||'';
           rowsS+='<tr style="'+(isUs?'background:rgba(77,132,255,.12);':'')+'">'
             +'<td style="padding:3px 4px;font-size:10px;color:var(--t1);font-weight:'+(isUs?'800':'600')+';overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:96px;">'+nm+'</td>'
             +'<td style="padding:3px 4px;font-size:10px;text-align:center;color:var(--t2);">'+gs(e,['gamesPlayed','GP'])+'</td>'
@@ -22195,3 +22197,40 @@ function _g45PreMatchBlock(data){
   }catch(e){ return ''; }
 }
 window._g45PreMatchBlock=_g45PreMatchBlock;
+/* Complète les pastilles de forme avec l'adversaire + score des 5 derniers matchs (calendrier ESPN) */
+function _g45FillForm(box, league){
+  try{
+    if(!box) return;
+    var nodes=box.querySelectorAll('.g45-form'); if(!nodes.length) return;
+    var lg=league||'eng.1';
+    function scoreOf(c){ var s=c&&c.score; if(s==null) return null; if(typeof s==='object') return s.displayValue!=null?s.displayValue:s.value; return s; }
+    Array.prototype.forEach.call(nodes, function(node){
+      var tid=node.getAttribute('data-tid'); if(!tid) return;
+      fetch('https://site.api.espn.com/apis/site/v2/sports/soccer/'+lg+'/teams/'+tid+'/schedule')
+        .then(function(r){ return r.ok?r.json():null; })
+        .then(function(sj){
+          if(!sj||!sj.events) return;
+          var done=sj.events.filter(function(e){ var c=(e.competitions&&e.competitions[0])||{}; return c.status&&c.status.type&&c.status.type.completed; });
+          done=done.slice(-5); if(!done.length) return;
+          var html=done.map(function(e){
+            var c=e.competitions[0]; var cps=c.competitors||[];
+            var us=cps.filter(function(x){return String(x.team&&x.team.id)===String(tid);})[0]||cps[0];
+            var opp=cps.filter(function(x){return String(x.team&&x.team.id)!==String(tid);})[0]||cps[1];
+            var oppN=(opp&&opp.team&&(opp.team.abbreviation||opp.team.shortDisplayName||opp.team.displayName))||'?';
+            var us_s=parseInt(scoreOf(us),10), op_s=parseInt(scoreOf(opp),10);
+            var res='N', col='#f0b020';
+            if(!isNaN(us_s)&&!isNaN(op_s)){ if(us_s>op_s){res='G';col='#1ed760';} else if(us_s<op_s){res='P';col='#ff4545';} }
+            var sc=(isNaN(us_s)?'':us_s)+'-'+(isNaN(op_s)?'':op_s);
+            return '<div style="display:inline-block;text-align:center;margin:0 2px 2px 0;vertical-align:top;" title="'+oppN+' '+sc+'">'
+              +'<span style="display:block;width:18px;height:18px;line-height:18px;border-radius:4px;background:'+col+';color:#0b0f1a;font-size:9px;font-weight:800;">'+res+'</span>'
+              +'<span style="font-size:7px;color:var(--t3);display:block;margin-top:1px;max-width:24px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">'+oppN+'</span>'
+              +'<span style="font-size:7px;color:var(--t3);display:block;">'+sc+'</span>'
+              +'</div>';
+          }).join('');
+          if(html) node.innerHTML=html;
+        })
+        .catch(function(){});
+    });
+  }catch(e){}
+}
+window._g45FillForm=_g45FillForm;
