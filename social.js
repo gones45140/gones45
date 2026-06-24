@@ -431,54 +431,60 @@ async function viewFriendBets(userId, pseudo) {
 /* ── Carte ticket de pari ── */
 function _renderBetTicket(p) {
   var win = p.statut === 'gagne';
-  var gain = win ? (p.mise * p.cote) : 0;
-  var statutLabel = win ? 'Gagné' : 'Perdu';
+  var mise = parseFloat(p.mise) || 0, cote = parseFloat(p.cote) || 0;
+  var profit = win ? (mise * cote - mise) : -mise;
+  var statutLabel = win ? '✅ Gagné' : '❌ Perdu';
   var statutColor = win ? '#1ed760' : '#ff4545';
   var statutBg = win ? 'rgba(30,215,96,.15)' : 'rgba(255,69,69,.15)';
-  var icon = win ? '✓' : '✗';
-  var sportIco = p.sport || '🎯';
+
   var dateStr = '';
   try {
     var d = new Date(p.created_at);
     var hh = String(d.getHours()).padStart(2,'0');
     var mm = String(d.getMinutes()).padStart(2,'0');
-    var jours = ['dim','lun','mar','mer','jeu','ven','sam'];
     var mois = ['jan','fév','mar','avr','mai','juin','juil','août','sep','oct','nov','déc'];
     dateStr = hh+'h'+mm+' · '+d.getDate()+' '+mois[d.getMonth()]+' '+d.getFullYear();
   } catch(e) {}
 
-  var h = '<div style="background:var(--bg2,#161b28);border:1px solid var(--b2);border-radius:12px;padding:0;margin-bottom:10px;overflow:hidden;">';
+  // Sélection = le match (on évite "SIMPLE"/"Pari" comme titre)
+  var titre = (p.match && p.match !== 'Pari' && p.match !== 'SIMPLE') ? p.match
+            : (p.pronostic && p.pronostic !== 'SIMPLE' ? p.pronostic : '—');
+  // Marché parié = type s'il est informatif (Victoire, Over 2.5…)
+  var marche = (p.type && p.type !== 'Simple' && p.type !== 'Combiné') ? p.type : '';
+  var categorie = (p.type === 'Combiné') ? 'Combiné' : 'Simple';
+  // Sous-ligne : marché + compétition (sans doublonner le titre)
+  var subBits = [];
+  if(marche) subBits.push(marche);
+  if(p.competition && p.competition !== titre) subBits.push(p.competition);
+  var book = p.bookmaker ? (p.bookmaker.charAt(0).toUpperCase()+p.bookmaker.slice(1)) : '';
 
-  // Header : badge statut + type
-  h += '<div style="display:flex;align-items:center;gap:8px;padding:10px 12px 6px;">';
-  h += '<span style="background:'+statutBg+';color:'+statutColor+';font-size:11px;font-weight:800;padding:2px 8px;border-radius:6px;">'+statutLabel+'</span>';
-  h += '<span style="font-size:13px;font-weight:800;color:var(--t1);">'+(p.type||'Simple')+'</span>';
+  var h = '<div style="background:var(--bg2,#161b28);border:1px solid var(--b2);border-left:3px solid '+statutColor+';border-radius:12px;margin-bottom:10px;overflow:hidden;">';
+
+  // Header : statut + catégorie + cote
+  h += '<div style="display:flex;align-items:center;gap:8px;padding:10px 12px 8px;">';
+  h += '<span style="background:'+statutBg+';color:'+statutColor+';font-size:11px;font-weight:800;padding:3px 9px;border-radius:6px;white-space:nowrap;">'+statutLabel+'</span>';
+  h += '<span style="font-size:10px;font-weight:700;color:var(--t3);border:1px solid var(--b2);padding:2px 7px;border-radius:5px;">'+categorie+'</span>';
+  h += '<span style="flex:1;"></span>';
+  h += '<span style="background:rgba(77,132,255,.15);border:1px solid rgba(77,132,255,.3);color:#4d84ff;font-size:14px;font-weight:800;padding:3px 10px;border-radius:8px;white-space:nowrap;">@'+cote.toFixed(2)+'</span>';
   h += '</div>';
 
-  // Corps : pronostic + cote
-  h += '<div style="padding:4px 12px 8px;">';
-  h += '<div style="display:flex;align-items:flex-start;justify-content:space-between;gap:10px;">';
-  h += '<div style="flex:1;min-width:0;">';
-  h += '<div style="font-size:14px;font-weight:800;color:'+statutColor+';line-height:1.3;">'+icon+' '+(p.pronostic||p.match||'—')+'</div>';
-  if(p.competition || p.match) {
-    h += '<div style="font-size:11px;color:var(--t3);margin-top:4px;">'+sportIco+' '+(p.competition?p.competition:(p.match||''))+'</div>';
-  }
-  h += '</div>';
-  h += '<div style="background:rgba(77,132,255,.15);border:1px solid rgba(77,132,255,.3);color:#4d84ff;font-size:14px;font-weight:800;padding:4px 10px;border-radius:8px;white-space:nowrap;">'+parseFloat(p.cote).toFixed(2)+'</div>';
-  h += '</div>';
+  // Corps : sélection en gros + marché/compétition en dessous
+  h += '<div style="padding:0 12px 10px;">';
+  h += '<div style="font-size:15px;font-weight:800;color:var(--t1);line-height:1.3;overflow:hidden;text-overflow:ellipsis;">'+titre+'</div>';
+  if(subBits.length) h += '<div style="font-size:11px;color:var(--t3);margin-top:3px;">'+subBits.join(' · ')+'</div>';
   h += '</div>';
 
-  // Footer : mise / gains
+  // Footer : mise / gain net
   h += '<div style="display:flex;align-items:center;justify-content:space-between;padding:8px 12px;background:rgba(255,255,255,.02);border-top:1px solid var(--b1);">';
-  h += '<div style="font-size:12px;color:var(--t3);">Mise <span style="color:var(--t1);font-weight:800;font-size:13px;">'+parseFloat(p.mise).toFixed(2)+' €</span></div>';
-  h += '<div style="font-size:12px;color:var(--t3);">Gains <span style="color:'+(win?statutColor:'var(--t1)')+';font-weight:800;font-size:13px;">'+gain.toFixed(2)+' €</span></div>';
+  h += '<div style="font-size:12px;color:var(--t3);">Mise <span style="color:var(--t1);font-weight:800;font-size:13px;">'+mise.toFixed(2)+' €</span></div>';
+  h += '<div style="font-size:12px;color:var(--t3);">Gain <span style="color:'+statutColor+';font-weight:800;font-size:13px;">'+(profit>=0?'+':'')+profit.toFixed(2)+' €</span></div>';
   h += '</div>';
 
-  // Réf + date
-  if(p.ref || dateStr || p.bookmaker) {
-    h += '<div style="display:flex;align-items:center;justify-content:space-between;padding:6px 12px;font-size:9px;color:var(--t3);">';
-    h += '<span>'+(p.bookmaker?p.bookmaker+(p.ref?' · ':''):'')+(p.ref?'Réf : '+p.ref:'')+'</span>';
-    h += '<span>'+dateStr+'</span>';
+  // Réf + date (discret)
+  if(p.ref || dateStr || book) {
+    h += '<div style="display:flex;align-items:center;justify-content:space-between;gap:8px;padding:6px 12px;font-size:9px;color:var(--t3);">';
+    h += '<span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">'+book+(book&&p.ref?' · ':'')+(p.ref?'Réf '+p.ref:'')+'</span>';
+    h += '<span style="white-space:nowrap;">'+dateStr+'</span>';
     h += '</div>';
   }
 
