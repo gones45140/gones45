@@ -21839,6 +21839,25 @@ function _g45ParseRssItems(xml, limit){
   }
   return out;
 }
+/* Nom court ambigu → requête officielle (lève l'ambiguïté ville/club pour Bing) */
+var _G45_TEAM_ALIAS={
+  'lyon':'"Olympique Lyonnais"','ol':'"Olympique Lyonnais"',
+  'psg':'"Paris Saint-Germain"','paris':'"Paris Saint-Germain"','paris sg':'"Paris Saint-Germain"',
+  'om':'"Olympique de Marseille"','marseille':'"Olympique de Marseille"',
+  'asse':'"AS Saint-Étienne"','saint-etienne':'"AS Saint-Étienne"','saint etienne':'"AS Saint-Étienne"',
+  'lille':'"LOSC Lille"','losc':'"LOSC Lille"',
+  'rennes':'"Stade Rennais"','nice':'"OGC Nice"','nantes':'"FC Nantes"','lens':'"RC Lens"',
+  'monaco':'"AS Monaco"','strasbourg':'"RC Strasbourg"','bordeaux':'"Girondins Bordeaux"',
+  'france':'équipe de France football','inter':'"Inter Milan"','milan':'"Inter Milan"',
+  'arsenal':'"Arsenal FC"','psv':'"PSV Eindhoven"','bayern':'"Bayern Munich"','madrid':'"Real Madrid"'
+};
+/* Construit la requête de recherche : nom officiel si connu, sinon nom + sport */
+function _g45TeamQuery(nom){
+  var alias=_G45_TEAM_ALIAS[_g45Norm(nom)];
+  if(alias) return alias;
+  var sw=_g45SportWord(nom);
+  return '"'+nom+'"'+(sw?(' '+sw):'');
+}
 /* Déduit un mot-clé de sport (français) à partir du sport de l'équipe → désambiguïse la recherche */
 function _g45SportWord(nom){
   var u=(typeof state!=='undefined'&&state.u)?state.u.find(function(x){return x&&x.n===nom;}):null;
@@ -21852,27 +21871,33 @@ function _g45SportWord(nom){
   if(s.indexOf('f1')>=0||s.indexOf('formule')>=0||s.indexOf('formula')>=0) return 'Formule 1';
   return '';
 }
-/* Source 1 : Bing News (recherche par équipe + sport pour la pertinence, FR) */
+/* Source 1 : Bing News (recherche par nom officiel + sport pour la pertinence, FR) */
 async function _g45BingFetch(nom){
-  var sw=_g45SportWord(nom);
-  var q='"'+nom+'"'+(sw?(' '+sw):'');
+  var q=_g45TeamQuery(nom);
   var path='/news/search?q='+encodeURIComponent(q)+'&format=rss&setmkt=fr-FR&setlang=fr';
   var r=await fetch(_G45_WORKER+'?host=bing&path='+encodeURIComponent(path));
   if(!r.ok) throw new Error('HTTP '+r.status);
   var items=_g45ParseRssItems(await r.text(),15);
   return items.slice(0,15);
 }
-/* Source 2 (repli) : flux RSS L'Équipe filtré par nom d'équipe (tente d'abord le flux du sport) */
-async function _g45LequipeFetch(nom){
+/* Source 2 (repli) : flux RSS de médias sportifs FR, filtrés par nom d'équipe (RMC, L'Équipe…) */
+function _g45FeedList(sw){
+  var L=[];
+  var rmc={football:'football',rugby:'rugby',tennis:'tennis',basket:'basket'};
+  var leq={football:'Football',rugby:'Rugby',tennis:'Tennis',basket:'Basket'};
+  if(rmc[sw]) L.push({host:'rmcsport.bfmtv.com', path:'/rss/'+rmc[sw]+'/'});
+  if(leq[sw]) L.push({host:'www.lequipe.fr', path:'/rss/actu_rss_'+leq[sw]+'.xml'});
+  if(!L.length){ L.push({host:'rmcsport.bfmtv.com', path:'/rss/'}); L.push({host:'www.lequipe.fr', path:'/rss/actu_rss.xml'}); }
+  return L;
+}
+async function _g45FeedFetch(nom){
   var sw=_g45SportWord(nom);
-  var cap={football:'Football',rugby:'Rugby',tennis:'Tennis',basket:'Basket'};
-  var feeds=[];
-  if(cap[sw]) feeds.push('/rss/actu_rss_'+cap[sw]+'.xml');
-  feeds.push('/rss/actu_rss.xml');
+  var feeds=_g45FeedList(sw);
   var key=_g45Norm(nom);
-  for(var f=0; f<feeds.length; f++){
+  for(var i=0;i<feeds.length;i++){
     try{
-      var r=await fetch(_G45_WORKER+'?host=lequipe&path='+encodeURIComponent(feeds[f]));
+      var f=feeds[i];
+      var r=await fetch(_G45_WORKER+'?host=rss&rsshost='+encodeURIComponent(f.host)+'&path='+encodeURIComponent(f.path));
       if(!r.ok) continue;
       var all=_g45ParseRssItems(await r.text(),80);
       if(!all.length) continue;
@@ -21915,7 +21940,7 @@ window._g45OpenNewsTab=_g45OpenNewsTab;
 async function loadTeamNews(nom, force){
   var el=document.getElementById('ip-news'); if(!el) return;
   if(!nom){ el.innerHTML='<div style="padding:14px;color:var(--t3);font-size:11px;">Aucune équipe sélectionnée.</div>'; return; }
-  var ck='g45news3_'+nom, items=null, cachedTs=0;
+  var ck='g45news4_'+nom, items=null, cachedTs=0;
   if(!force){
     try{ var raw=localStorage.getItem(ck); if(raw){ var o=JSON.parse(raw); if(o&&o.items&&(Date.now()-(o.t||0))<20*60000){ items=o.items; cachedTs=o.t; } } }catch(e){}
   }
@@ -21928,7 +21953,7 @@ async function loadTeamNews(nom, force){
     try{
       items=[]; var errMsg=null;
       // 1) L'Équipe (fiable, foot surtout). 2) si vide → repli Bing (toutes équipes, FR).
-      try{ items=await _g45LequipeFetch(nom); }catch(eL){ errMsg='L\'Équipe '+(eL&&eL.message||''); items=[]; }
+      try{ items=await _g45FeedFetch(nom); }catch(eL){ errMsg='Flux RSS '+(eL&&eL.message||''); items=[]; }
       if(!items.length){ try{ items=await _g45BingFetch(nom); }catch(eB){ errMsg=(errMsg?errMsg+' · ':'')+'Bing '+(eB&&eB.message||''); } }
       if(!items.length && errMsg){
         el.innerHTML=header+'<div style="padding:12px;color:var(--t3);font-size:11px;">⚠️ News indisponibles ('+errMsg+'). Réessaie avec ↻.</div>';
@@ -21961,5 +21986,63 @@ window.loadTeamNews=loadTeamNews;
     var _oc=openClub;
     openClub=function(){ var r=_oc.apply(this,arguments); try{ _g45EnsureNewsTab(); }catch(e){} return r; };
     window.openClub=openClub;
+  }
+})();
+
+/* ═════════ BILAN — Archive des paris filtrés (réagit aux filtres sport/compétition/type/bookmaker) ═════════ */
+function _g45BetRowMini(h){
+  var b2=(typeof bki==='function')?bki(h.b):{c:'#888',n:(h.b||'?')};
+  var cote=parseFloat(h.cote||0), mise=parseFloat(h.m||0);
+  var gain=h.win?(mise*cote-mise):-mise;
+  var gainC=gain>=0?'var(--g)':'var(--r)';
+  var borderC=h.win?'var(--g)':'var(--r)';
+  var titre=(h.target&&h.target!=='-'?h.target:(h.n||'—'));
+  var parts=[]; if(h.type) parts.push(h.type); parts.push('@'+cote.toFixed(2)); if(h.comp) parts.push(h.comp);
+  return '<div data-aid="'+h.id+'" onclick="try{openBetEdit(this.dataset.aid)}catch(e){}" style="display:flex;align-items:center;padding:8px 10px;background:var(--s1);border-radius:8px;margin-bottom:4px;border-left:3px solid '+borderC+';gap:8px;cursor:pointer;">'
+    +'<div style="font-size:10px;color:var(--t3);min-width:50px;flex-shrink:0;text-align:center;line-height:1.3;">'+(h.date||'')+(h.heure?'<br>'+h.heure:'')+'</div>'
+    +'<div style="width:22px;height:22px;border-radius:5px;background:'+b2.c+';color:#fff;font-size:9px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0;">'+((b2.n||'?').charAt(0).toUpperCase())+'</div>'
+    +'<div style="flex:1;min-width:0;overflow:hidden;">'
+    +'<div style="font-size:12px;font-weight:700;color:var(--t1);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">'+titre+'</div>'
+    +'<div style="font-size:10px;color:var(--t3);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">'+parts.join(' · ')+'</div>'
+    +'</div>'
+    +'<div style="text-align:right;flex-shrink:0;">'
+    +'<div style="font-size:11px;font-weight:800;">'+(h.win?'✅':'❌')+'</div>'
+    +'<div style="font-size:11px;font-weight:700;color:'+gainC+';">'+(gain>=0?'+':'')+gain.toFixed(2)+'€</div>'
+    +'<div style="font-size:9px;color:var(--t3);">'+mise.toFixed(2)+'€</div>'
+    +'</div>'
+    +'</div>';
+}
+function _g45ToggleFiltArch(){ window._g45FiltArchOpen=(window._g45FiltArchOpen===false); try{renderBilanTab();}catch(e){} }
+window._g45ToggleFiltArch=_g45ToggleFiltArch;
+function _g45RenderFilteredArchive(){
+  var anchor=document.getElementById('bk-stats'); if(!anchor||!anchor.parentNode) return;
+  var box=document.getElementById('bilan-filtered-list');
+  if(!box){ box=document.createElement('div'); box.id='bilan-filtered-list'; box.style.cssText='margin-top:14px;'; anchor.parentNode.insertBefore(box, anchor.nextSibling); }
+  var paris=(typeof filteredA==='function')?filteredA():[];
+  // tri date+heure décroissant
+  var sorted=paris.slice().sort(function(a,b){
+    var da=(a.date||'')+' '+(a.heure||''), db=(b.date||'')+' '+(b.heure||'');
+    return db<da?-1:(db>da?1:0);
+  });
+  var open=window._g45FiltArchOpen!==false;
+  var tot=sorted.reduce(function(s,h){var m=parseFloat(h.m||0);return s+(h.win?(m*parseFloat(h.cote||0)-m):-m);},0);
+  var totC=tot>=0?'var(--g)':'var(--r)';
+  var html='<div onclick="_g45ToggleFiltArch()" style="display:flex;align-items:center;justify-content:space-between;cursor:pointer;padding:10px 12px;background:var(--s1);border-radius:8px;border-left:3px solid #4d84ff;">'
+    +'<span style="font-size:12px;font-weight:800;color:var(--t1);">📋 Paris filtrés ('+sorted.length+')</span>'
+    +'<span style="display:flex;align-items:center;gap:8px;"><span style="font-size:12px;font-weight:800;color:'+totC+';">'+(tot>=0?'+':'')+tot.toFixed(2)+'€</span><span style="font-size:12px;color:var(--t3);">'+(open?'▾':'▸')+'</span></span>'
+    +'</div>';
+  if(open){
+    if(!sorted.length){ html+='<div style="padding:14px;color:var(--t3);font-size:11px;text-align:center;">Aucun pari pour ces filtres.</div>'; }
+    else { html+='<div style="max-height:62vh;overflow-y:auto;margin-top:8px;-webkit-overflow-scrolling:touch;">'+sorted.map(_g45BetRowMini).join('')+'</div>'; }
+  }
+  box.innerHTML=html;
+}
+window._g45RenderFilteredArchive=_g45RenderFilteredArchive;
+/* Greffe la liste filtrée à la fin de chaque rendu du BILAN (sans toucher index.html ni les copies dupliquées) */
+;(function(){
+  if(typeof renderBilanTab==='function'){
+    var _rb=renderBilanTab;
+    renderBilanTab=function(){ var r=_rb.apply(this,arguments); try{ _g45RenderFilteredArchive(); }catch(e){} return r; };
+    window.renderBilanTab=renderBilanTab;
   }
 })();
