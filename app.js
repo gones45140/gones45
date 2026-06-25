@@ -22155,13 +22155,39 @@ function _g45PreMatchBlock(data){
         return '<a href="'+href+'" target="_blank" rel="noopener" title="'+(team||'')+' · voir sur Sofascore" style="text-decoration:none;display:inline-block;width:16px;height:16px;line-height:16px;text-align:center;border-radius:4px;background:'+col+';color:#0b0f1a;font-size:9px;font-weight:800;margin-right:2px;cursor:pointer;">'+l+'</a>';
       }).join('');
     }
+    // Forme riche depuis data.lastFiveGames (déjà dans le résumé) : adversaire + score + lien ESPN par match
+    function lastFiveHTML(teamId){
+      try{
+        var lf=data.lastFiveGames||[]; if(!lf.length) return '';
+        var entry=null; for(var i=0;i<lf.length;i++){ if(String(lf[i].team&&lf[i].team.id)===String(teamId)){ entry=lf[i]; break; } }
+        if(!entry) return '';
+        var evs=entry.events||entry.games||[]; if(!evs.length) return ''; evs=evs.slice(-5);
+        return evs.map(function(e){
+          var gr=String(e.gameResult||e.result||'').toUpperCase();
+          var res=gr==='W'?'G':(gr==='L'?'P':'N'), col=res==='G'?'#1ed760':(res==='P'?'#ff4545':'#f0b020');
+          var opp=e.opponent||{}, oppN=opp.abbreviation||opp.shortDisplayName||opp.displayName||'?';
+          var sc=e.score||((e.homeTeamScore!=null&&e.awayTeamScore!=null)?(e.homeTeamScore+'-'+e.awayTeamScore):'');
+          var href=''; try{ var lks=e.links||(e.link?(e.link.href?[e.link]:[{href:e.link}]):[]); for(var k=0;k<lks.length;k++){ if(lks[k]&&lks[k].href){ href=lks[k].href; if(/(summary|gamecast|match|recap)/i.test(href)) break; } } }catch(_e){}
+          var wrap='display:inline-block;text-align:center;margin:0 2px 2px 0;vertical-align:top;'+(href?'text-decoration:none;cursor:pointer;':'');
+          var inner='<span style="display:block;width:18px;height:18px;line-height:18px;border-radius:4px;background:'+col+';color:#0b0f1a;font-size:9px;font-weight:800;'+(href?'box-shadow:0 0 0 1px rgba(255,255,255,.25);':'')+'">'+res+'</span>'
+            +'<span style="font-size:7px;color:var(--t3);display:block;margin-top:1px;max-width:30px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">'+oppN+'</span>'
+            +'<span style="font-size:7px;color:var(--t3);display:block;">'+sc+'</span>';
+          var tip=oppN+' '+sc+(href?' · voir sur ESPN':'');
+          return href ? '<a href="'+href+'" target="_blank" rel="noopener" title="'+tip+'" style="'+wrap+'">'+inner+'</a>'
+                      : '<div title="'+tip+'" style="'+wrap+'">'+inner+'</div>';
+        }).join('');
+      }catch(e){ return ''; }
+    }
     var hForm=formStr(home), aForm=formStr(away), hRec=recStr(home), aRec=recStr(away);
+    var hRich=lastFiveHTML(hId), aRich=lastFiveHTML(aId);
+    var hPills=hRich||pills(hForm,hN), aPills=aRich||pills(aForm,aN);
+    var hDone=hRich?' data-done="1"':'', aDone=aRich?' data-done="1"':'';
     var formHtml='';
     if(hForm||aForm||hRec||aRec||(hId&&aId)){
       formHtml='<div style="display:grid;grid-template-columns:1fr auto 1fr;gap:8px;align-items:start;margin-bottom:4px;">'
-        +'<div style="text-align:left;min-width:0;"><div style="font-weight:800;color:var(--t1);font-size:11px;margin-bottom:3px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">'+hN+'</div>'+(hRec?'<div style="color:var(--t3);font-size:9px;margin-bottom:4px;">'+hRec+'</div>':'')+'<div class="g45-form" data-tid="'+hId+'" data-team="'+(hN||'').replace(/"/g,'')+'">'+pills(hForm,hN)+'</div></div>'
+        +'<div style="text-align:left;min-width:0;"><div style="font-weight:800;color:var(--t1);font-size:11px;margin-bottom:3px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">'+hN+'</div>'+(hRec?'<div style="color:var(--t3);font-size:9px;margin-bottom:4px;">'+hRec+'</div>':'')+'<div class="g45-form" data-tid="'+hId+'" data-team="'+(hN||'').replace(/"/g,'')+'"'+hDone+'>'+hPills+'</div></div>'
         +'<div style="font-size:8px;color:var(--t3);text-transform:uppercase;letter-spacing:.5px;align-self:center;">Forme</div>'
-        +'<div style="text-align:right;min-width:0;"><div style="font-weight:800;color:var(--t1);font-size:11px;margin-bottom:3px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">'+aN+'</div>'+(aRec?'<div style="color:var(--t3);font-size:9px;margin-bottom:4px;">'+aRec+'</div>':'')+'<div class="g45-form" data-tid="'+aId+'" data-team="'+(aN||'').replace(/"/g,'')+'" style="text-align:right;">'+pills(aForm,aN)+'</div></div>'
+        +'<div style="text-align:right;min-width:0;"><div style="font-weight:800;color:var(--t1);font-size:11px;margin-bottom:3px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">'+aN+'</div>'+(aRec?'<div style="color:var(--t3);font-size:9px;margin-bottom:4px;">'+aRec+'</div>':'')+'<div class="g45-form" data-tid="'+aId+'" data-team="'+(aN||'').replace(/"/g,'')+'"'+aDone+' style="text-align:right;">'+aPills+'</div></div>'
         +'</div>';
     }
 
@@ -22232,6 +22258,7 @@ function _g45FillForm(box, league){
     var PX=(typeof FD_PROXY!=='undefined'&&FD_PROXY)?FD_PROXY:'https://fd-proxy.touraine-antoine.workers.dev';
     Array.prototype.forEach.call(nodes, function(node){
       var tid=node.getAttribute('data-tid'); if(!tid) return;
+      if(node.getAttribute('data-done')) return; // déjà rempli depuis le résumé (lastFiveGames) → pas de fetch
       function handle(sj){
         var evs=(sj&&(sj.events||(sj.team&&sj.team.events)))||[];
         var done=evs.filter(isDone).sort(function(a,b){ return new Date(a.date||0)-new Date(b.date||0); });
