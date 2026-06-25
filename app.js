@@ -22218,10 +22218,14 @@ function _g45FillForm(box, league){
           if(!sj||!sj.events) return;
           var done=sj.events.filter(function(e){ var c=(e.competitions&&e.competitions[0])||{}; return c.status&&c.status.type&&c.status.type.completed; });
           done=done.slice(-5); if(!done.length) return;
-          // Garde la forme complète (string) si ce calendrier en a moins — ex: équipes nationales en Coupe du monde
-          var curN=node.getElementsByTagName('span').length||0;
-          if(curN && done.length<curN) return;
-          var html=done.map(function(e){
+          // Résultats déjà affichés (chaîne de forme), pour ne pas en perdre quand le calendrier en a moins
+          var letters=[]; try{ Array.prototype.forEach.call(node.querySelectorAll('span'), function(s){ var t=(s.textContent||'').trim(); if(/^[GNP]$/.test(t)) letters.push(t); }); }catch(_e){}
+          function plainPill(letter){
+            var col=letter==='G'?'#1ed760':letter==='P'?'#ff4545':'#f0b020';
+            return '<div style="display:inline-block;text-align:center;margin:0 2px 2px 0;vertical-align:top;">'
+              +'<span style="display:block;width:18px;height:18px;line-height:18px;border-radius:4px;background:'+col+';color:#0b0f1a;font-size:9px;font-weight:800;">'+letter+'</span></div>';
+          }
+          function richPill(e){
             var c=e.competitions[0]; var cps=c.competitors||[];
             var us=cps.filter(function(x){return String(x.team&&x.team.id)===String(tid);})[0]||cps[0];
             var opp=cps.filter(function(x){return String(x.team&&x.team.id)!==String(tid);})[0]||cps[1];
@@ -22230,17 +22234,21 @@ function _g45FillForm(box, league){
             var res='N', col='#f0b020';
             if(!isNaN(us_s)&&!isNaN(op_s)){ if(us_s>op_s){res='G';col='#1ed760';} else if(us_s<op_s){res='P';col='#ff4545';} }
             var sc=(isNaN(us_s)?'':us_s)+'-'+(isNaN(op_s)?'':op_s);
-            // lien vers la page ESPN du match (sinon page d'événement par id)
             var href=''; try{ var lks=e.links||c.links||[]; for(var k=0;k<lks.length;k++){ if(lks[k]&&lks[k].href){ href=lks[k].href; if(/(summary|gamecast|match)/i.test(href)) break; } } }catch(_e){}
             var wrapStyle='display:inline-block;text-align:center;margin:0 2px 2px 0;vertical-align:top;'+(href?'text-decoration:none;cursor:pointer;':'');
-            var inner='<span style="display:block;width:18px;height:18px;line-height:18px;border-radius:4px;background:'+col+';color:#0b0f1a;font-size:9px;font-weight:800;">'+res+'</span>'
+            var inner='<span style="display:block;width:18px;height:18px;line-height:18px;border-radius:4px;background:'+col+';color:#0b0f1a;font-size:9px;font-weight:800;'+(href?'box-shadow:0 0 0 1px rgba(255,255,255,.25);':'')+'">'+res+'</span>'
               +'<span style="font-size:7px;color:var(--t3);display:block;margin-top:1px;max-width:26px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">'+oppN+'</span>'
               +'<span style="font-size:7px;color:var(--t3);display:block;">'+sc+'</span>';
             var tip=oppN+' '+sc+(href?' · voir sur ESPN':'');
             return href
               ? '<a href="'+href+'" target="_blank" rel="noopener" title="'+tip+'" style="'+wrapStyle+'">'+inner+'</a>'
               : '<div title="'+tip+'" style="'+wrapStyle+'">'+inner+'</div>';
-          }).join('');
+          }
+          var L=letters.length, D=done.length, N=Math.max(L,D), html='';
+          for(var i=0;i<N;i++){
+            if(i>=N-D){ html+=richPill(done[i-(N-D)]); }       // positions récentes → matchs cliquables du calendrier
+            else if(i<L){ html+=plainPill(letters[i]); }        // positions anciennes → résultat seul (pas de lien)
+          }
           if(html) node.innerHTML=html;
         })
         .catch(function(){});
