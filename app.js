@@ -22197,9 +22197,18 @@ function _g45PreMatchBlock(data){
     var standCont = (hId&&aId) ? '<div class="g45-standings" data-h="'+hId+'" data-a="'+aId+'" style="margin-top:9px;">'+standHtml+'</div>' : (standHtml?'<div style="margin-top:9px;">'+standHtml+'</div>':'');
 
     if(!probHtml&&!statsHtml&&!formHtml&&!standHtml&&!(hId&&aId)) return '';
+    var _dbgK=''; try{
+      var c0=cps[0]||{}, c0t=c0.team||{};
+      _dbgK='<div style="font-size:8px;color:#7cf;word-break:break-all;margin-top:8px;line-height:1.5;">'
+        +'<b>K:</b> '+Object.keys(data).join(',')
+        +'<br><b>BX:</b> '+Object.keys(data.boxscore||{}).join(',')
+        +'<br><b>C0:</b> '+Object.keys(c0).join(',')
+        +'<br><b>C0.team:</b> '+Object.keys(c0t).join(',')
+        +'</div>';
+    }catch(e){}
     return '<div style="background:rgba(255,255,255,.02);border-radius:8px;padding:10px;margin-bottom:8px;">'
       +'<div style="font-size:9px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;color:#8aa0ff;margin-bottom:8px;">📊 Avant-match</div>'
-      +probHtml+statsHtml+formHtml+standCont+'</div>';
+      +probHtml+statsHtml+formHtml+standCont+_dbgK+'</div>';
   }catch(e){ return ''; }
 }
 window._g45PreMatchBlock=_g45PreMatchBlock;
