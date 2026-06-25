@@ -16448,7 +16448,7 @@ async function _wcRenderMatch(eventId, rowId) {
     if(!box2 || !box2.teams || !box2.teams.length) {
       var _pm0=''; try{ _pm0=_g45PreMatchBlock(data); }catch(e){}
       box.innerHTML = goalBanner + live + bets + ball + odds + (_pm0 || '<div style="padding:8px;color:var(--t3);font-size:10px;text-align:center;margin-bottom:8px;">Stats indisponibles</div>') + _wcVideoBlock(data, _wcN[0], _wcN[1]);
-      if(_pm0){ try{ _g45FillForm(box, 'fifa.world'); _g45FillStandings(box, 'fifa.world'); }catch(e){} }
+      if(_pm0){ try{ _g45FillForm(box, 'soccer/fifa.world'); _g45FillStandings(box, 'soccer/fifa.world'); }catch(e){} }
       _wcStatsTimer(box, data, eventId, rowId); return;
     }
 
@@ -19947,7 +19947,7 @@ async function _renderSaisonDetail(el, eventId, league){
     try{ if(typeof _videoBlock==='function') h+=_videoBlock(data, hN, aN, ('résumé '+_yr).trim()); }catch(e){}
     h+='</div>';
     el.innerHTML=h;
-    if(_mstate==='pre'){ try{ _g45FillForm(el, league); _g45FillStandings(el, league); }catch(e){} }
+    if(_mstate==='pre'){ try{ _g45FillForm(el, 'soccer/'+league); _g45FillStandings(el, 'soccer/'+league); }catch(e){} }
 
     // ── Rafraîchissement auto pendant le match (toutes les 30 s) ──
     if(isLive){
@@ -20583,6 +20583,8 @@ async function _renderGenericDetail(el, sport, lg, eid){
         h+='</div></div>';
       }
     }catch(e){}
+    // Avant-match (proba, stats d'équipe, forme, classement) pour les matchs à venir — tous sports
+    if(stT.state==='pre'){ try{ var _pmG=_g45PreMatchBlock(data); if(_pmG) h+=_pmG; }catch(e){} }
     // Meilleurs joueurs
     try{
       var L=data.leaders||[];
@@ -20620,6 +20622,7 @@ async function _renderGenericDetail(el, sport, lg, eid){
     try{ if((stT.state==='in'||stT.state==='post') && typeof _videoBlock==='function'){ var _vyr=''; try{ if(comp.date)_vyr=new Date(comp.date).getFullYear()||''; }catch(_e){} h+=_videoBlock(data, hN, aN, ('résumé '+_vyr).trim()); } }catch(e){}
     h+='</div>';
     el.innerHTML=_rugbyBanner+h;
+    if(stT.state==='pre'){ try{ _g45FillForm(el, sport+'/'+lg); _g45FillStandings(el, sport+'/'+lg); }catch(e){} }
     if(isLive){ if(!el._refresh){ el._refresh=setInterval(function(){ if(el.getAttribute('data-open')!=='1'){ clearInterval(el._refresh); el._refresh=null; return; } if(document.hidden||el.offsetParent===null) return; _renderGenericDetail(el,sport,lg,eid); },30000); } } else if(el._refresh){ clearInterval(el._refresh); el._refresh=null; }
   }catch(e){ el.innerHTML='<div style="padding:12px;color:#ff6b6b;font-size:11px;text-align:center;">Détail indisponible.</div>'; }
 }
@@ -22203,11 +22206,11 @@ function _g45FillForm(box, league){
   try{
     if(!box) return;
     var nodes=box.querySelectorAll('.g45-form'); if(!nodes.length) return;
-    var lg=league||'eng.1';
+    var sp=league||'soccer/eng.1';
     function scoreOf(c){ var s=c&&c.score; if(s==null) return null; if(typeof s==='object') return s.displayValue!=null?s.displayValue:s.value; return s; }
     Array.prototype.forEach.call(nodes, function(node){
       var tid=node.getAttribute('data-tid'); if(!tid) return;
-      fetch('https://site.api.espn.com/apis/site/v2/sports/soccer/'+lg+'/teams/'+tid+'/schedule')
+      fetch('https://site.api.espn.com/apis/site/v2/sports/'+sp+'/teams/'+tid+'/schedule')
         .then(function(r){ return r.ok?r.json():null; })
         .then(function(sj){
           if(!sj||!sj.events) return;
@@ -22245,7 +22248,7 @@ function _g45FillStandings(box, league){
     var cells=box.querySelectorAll('.g45-sname'); if(!cells.length) return;
     var need=false; Array.prototype.forEach.call(cells,function(c){ if(!c.textContent.trim()) need=true; });
     if(!need) return;
-    fetch('https://site.api.espn.com/apis/site/v2/sports/soccer/'+(league||'eng.1')+'/standings')
+    fetch('https://site.api.espn.com/apis/site/v2/sports/'+(league||'soccer/eng.1')+'/standings')
       .then(function(r){ return r.ok?r.json():null; })
       .then(function(sj){
         if(!sj) return;
