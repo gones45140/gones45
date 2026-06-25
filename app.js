@@ -22224,50 +22224,64 @@ function _g45FillForm(box, league){
     var PX=(typeof FD_PROXY!=='undefined'&&FD_PROXY)?FD_PROXY:'https://fd-proxy.touraine-antoine.workers.dev';
     Array.prototype.forEach.call(nodes, function(node){
       var tid=node.getAttribute('data-tid'); if(!tid) return;
-      var path='/apis/site/v2/sports/'+sp+'/teams/'+tid+'/schedule?season='+_season;
       function dbg(msg,col){ try{ node.insertAdjacentHTML('beforeend','<span style="font-size:8px;color:'+(col||'#ff0')+';display:block;font-weight:700;">dbg: '+msg+'</span>'); }catch(_e){} }
-      fetch('https://site.api.espn.com'+path)
-        .then(function(r){ if(!r.ok) throw 0; return r.json(); })
-        .catch(function(){ return fetch(PX+'?host=espn&path='+encodeURIComponent(path)).then(function(r){ if(!r.ok) throw 0; return r.json(); }); })
-        .then(function(sj){
-          var evs=(sj&&(sj.events||(sj.team&&sj.team.events)))||[];
-          var done=evs.filter(isDone).sort(function(a,b){ return new Date(a.date||0)-new Date(b.date||0); });
-          done=done.slice(-5);
-          if(!done.length){ dbg('ev:'+evs.length+' joués:'+done.length+' (sp='+sp+')'); return; }
-          // Résultats déjà affichés (chaîne de forme), pour ne pas en perdre quand le calendrier en a moins
-          var letters=[]; try{ Array.prototype.forEach.call(node.querySelectorAll('span'), function(s){ var t=(s.textContent||'').trim(); if(/^[GNP]$/.test(t)) letters.push(t); }); }catch(_e){}
-          function plainPill(letter){
-            var col=letter==='G'?'#1ed760':letter==='P'?'#ff4545':'#f0b020';
-            return '<div style="display:inline-block;text-align:center;margin:0 2px 2px 0;vertical-align:top;">'
-              +'<span style="display:block;width:18px;height:18px;line-height:18px;border-radius:4px;background:'+col+';color:#0b0f1a;font-size:9px;font-weight:800;">'+letter+'</span></div>';
-          }
-          function richPill(e){
-            var c=e.competitions[0]; var cps=c.competitors||[];
-            var us=cps.filter(function(x){return String(x.team&&x.team.id)===String(tid);})[0]||cps[0];
-            var opp=cps.filter(function(x){return String(x.team&&x.team.id)!==String(tid);})[0]||cps[1];
-            var oppN=(opp&&opp.team&&(opp.team.abbreviation||opp.team.shortDisplayName||opp.team.displayName))||'?';
-            var us_s=parseInt(scoreOf(us),10), op_s=parseInt(scoreOf(opp),10);
-            var res='N', col='#f0b020';
-            if(!isNaN(us_s)&&!isNaN(op_s)){ if(us_s>op_s){res='G';col='#1ed760';} else if(us_s<op_s){res='P';col='#ff4545';} }
-            var sc=(isNaN(us_s)?'':us_s)+'-'+(isNaN(op_s)?'':op_s);
-            var href=''; try{ var lks=e.links||c.links||[]; for(var k=0;k<lks.length;k++){ if(lks[k]&&lks[k].href){ href=lks[k].href; if(/(summary|gamecast|match)/i.test(href)) break; } } }catch(_e){}
-            var wrapStyle='display:inline-block;text-align:center;margin:0 2px 2px 0;vertical-align:top;'+(href?'text-decoration:none;cursor:pointer;':'');
-            var inner='<span style="display:block;width:18px;height:18px;line-height:18px;border-radius:4px;background:'+col+';color:#0b0f1a;font-size:9px;font-weight:800;'+(href?'box-shadow:0 0 0 1px rgba(255,255,255,.25);':'')+'">'+res+'</span>'
-              +'<span style="font-size:7px;color:var(--t3);display:block;margin-top:1px;max-width:26px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">'+oppN+'</span>'
-              +'<span style="font-size:7px;color:var(--t3);display:block;">'+sc+'</span>';
-            var tip=oppN+' '+sc+(href?' · voir sur ESPN':'');
-            return href
-              ? '<a href="'+href+'" target="_blank" rel="noopener" title="'+tip+'" style="'+wrapStyle+'">'+inner+'</a>'
-              : '<div title="'+tip+'" style="'+wrapStyle+'">'+inner+'</div>';
-          }
-          var L=letters.length, D=done.length, N=Math.max(L,D), html='';
-          for(var i=0;i<N;i++){
-            if(i>=N-D){ html+=richPill(done[i-(N-D)]); }       // positions récentes → matchs cliquables du calendrier
-            else if(i<L){ html+=plainPill(letters[i]); }        // positions anciennes → résultat seul (pas de lien)
-          }
-          if(html) node.innerHTML=html;
-        })
-        .catch(function(){ dbg('fetch KO (direct+proxy)','#f55'); });
+      function handle(sj){
+        var evs=(sj&&(sj.events||(sj.team&&sj.team.events)))||[];
+        var done=evs.filter(isDone).sort(function(a,b){ return new Date(a.date||0)-new Date(b.date||0); });
+        done=done.slice(-5);
+        if(!done.length){ dbg('ev:'+evs.length+' joués:0','#ff0'); return; }
+        var letters=[]; try{ Array.prototype.forEach.call(node.querySelectorAll('span'), function(s){ var t=(s.textContent||'').trim(); if(/^[GNP]$/.test(t)) letters.push(t); }); }catch(_e){}
+        function plainPill(letter){
+          var col=letter==='G'?'#1ed760':letter==='P'?'#ff4545':'#f0b020';
+          return '<div style="display:inline-block;text-align:center;margin:0 2px 2px 0;vertical-align:top;">'
+            +'<span style="display:block;width:18px;height:18px;line-height:18px;border-radius:4px;background:'+col+';color:#0b0f1a;font-size:9px;font-weight:800;">'+letter+'</span></div>';
+        }
+        function richPill(e){
+          var c=e.competitions[0]; var cps=c.competitors||[];
+          var us=cps.filter(function(x){return String(x.team&&x.team.id)===String(tid);})[0]||cps[0];
+          var opp=cps.filter(function(x){return String(x.team&&x.team.id)!==String(tid);})[0]||cps[1];
+          var oppN=(opp&&opp.team&&(opp.team.abbreviation||opp.team.shortDisplayName||opp.team.displayName))||'?';
+          var us_s=parseInt(scoreOf(us),10), op_s=parseInt(scoreOf(opp),10);
+          var res='N', col='#f0b020';
+          if(!isNaN(us_s)&&!isNaN(op_s)){ if(us_s>op_s){res='G';col='#1ed760';} else if(us_s<op_s){res='P';col='#ff4545';} }
+          var sc=(isNaN(us_s)?'':us_s)+'-'+(isNaN(op_s)?'':op_s);
+          var href=''; try{ var lks=e.links||c.links||[]; for(var k=0;k<lks.length;k++){ if(lks[k]&&lks[k].href){ href=lks[k].href; if(/(summary|gamecast|match)/i.test(href)) break; } } }catch(_e){}
+          var wrapStyle='display:inline-block;text-align:center;margin:0 2px 2px 0;vertical-align:top;'+(href?'text-decoration:none;cursor:pointer;':'');
+          var inner='<span style="display:block;width:18px;height:18px;line-height:18px;border-radius:4px;background:'+col+';color:#0b0f1a;font-size:9px;font-weight:800;'+(href?'box-shadow:0 0 0 1px rgba(255,255,255,.25);':'')+'">'+res+'</span>'
+            +'<span style="font-size:7px;color:var(--t3);display:block;margin-top:1px;max-width:26px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">'+oppN+'</span>'
+            +'<span style="font-size:7px;color:var(--t3);display:block;">'+sc+'</span>';
+          var tip=oppN+' '+sc+(href?' · voir sur ESPN':'');
+          return href
+            ? '<a href="'+href+'" target="_blank" rel="noopener" title="'+tip+'" style="'+wrapStyle+'">'+inner+'</a>'
+            : '<div title="'+tip+'" style="'+wrapStyle+'">'+inner+'</div>';
+        }
+        var L=letters.length, D=done.length, N=Math.max(L,D), html='';
+        for(var i=0;i<N;i++){
+          if(i>=N-D){ html+=richPill(done[i-(N-D)]); }
+          else if(i<L){ html+=plainPill(letters[i]); }
+        }
+        if(html) node.innerHTML=html;
+      }
+      // On tente plusieurs URLs et on reporte le code HTTP de chacune
+      var cands=[
+        '/apis/site/v2/sports/'+sp+'/teams/'+tid+'/schedule?season='+_season,
+        '/apis/site/v2/sports/'+sp+'/teams/'+tid+'/schedule',
+        '/apis/v2/sports/'+sp+'/teams/'+tid+'/schedule?season='+_season
+      ];
+      var rep=[];
+      (function tryC(i){
+        if(i>=cands.length){
+          fetch(PX+'?host=espn&path='+encodeURIComponent(cands[0]))
+            .then(function(r){ rep.push('px:'+r.status); if(!r.ok) throw 0; return r.json(); })
+            .then(handle)
+            .catch(function(){ dbg('KO '+rep.join(' '),'#f55'); });
+          return;
+        }
+        fetch('https://site.api.espn.com'+cands[i])
+          .then(function(r){ rep.push(i+':'+r.status); if(!r.ok) throw 0; return r.json(); })
+          .then(handle)
+          .catch(function(){ tryC(i+1); });
+      })(0);
     });
   }catch(e){}
 }
