@@ -22225,14 +22225,15 @@ function _g45FillForm(box, league){
     Array.prototype.forEach.call(nodes, function(node){
       var tid=node.getAttribute('data-tid'); if(!tid) return;
       var path='/apis/site/v2/sports/'+sp+'/teams/'+tid+'/schedule?season='+_season;
+      function dbg(msg,col){ try{ node.insertAdjacentHTML('beforeend','<span style="font-size:8px;color:'+(col||'#ff0')+';display:block;font-weight:700;">dbg: '+msg+'</span>'); }catch(_e){} }
       fetch('https://site.api.espn.com'+path)
         .then(function(r){ if(!r.ok) throw 0; return r.json(); })
-        .catch(function(){ return fetch(PX+'?host=espn&path='+encodeURIComponent(path)).then(function(r){ return r.ok?r.json():null; }); })
+        .catch(function(){ return fetch(PX+'?host=espn&path='+encodeURIComponent(path)).then(function(r){ if(!r.ok) throw 0; return r.json(); }); })
         .then(function(sj){
           var evs=(sj&&(sj.events||(sj.team&&sj.team.events)))||[];
-          if(!evs.length) return;
           var done=evs.filter(isDone).sort(function(a,b){ return new Date(a.date||0)-new Date(b.date||0); });
-          done=done.slice(-5); if(!done.length) return;
+          done=done.slice(-5);
+          if(!done.length){ dbg('ev:'+evs.length+' joués:'+done.length+' (sp='+sp+')'); return; }
           // Résultats déjà affichés (chaîne de forme), pour ne pas en perdre quand le calendrier en a moins
           var letters=[]; try{ Array.prototype.forEach.call(node.querySelectorAll('span'), function(s){ var t=(s.textContent||'').trim(); if(/^[GNP]$/.test(t)) letters.push(t); }); }catch(_e){}
           function plainPill(letter){
@@ -22266,7 +22267,7 @@ function _g45FillForm(box, league){
           }
           if(html) node.innerHTML=html;
         })
-        .catch(function(){});
+        .catch(function(){ dbg('fetch KO (direct+proxy)','#f55'); });
     });
   }catch(e){}
 }
