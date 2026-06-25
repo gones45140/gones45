@@ -21711,10 +21711,11 @@ async function g45LoadBracket(slug, box){
     if(!document.getElementById('g45brk-css')){
       var stl=document.createElement('style'); stl.id='g45brk-css';
       stl.textContent='.g45brk-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch;padding-bottom:8px;}'
-        +'.g45brk{display:flex;min-width:max-content;padding:2px;}'
-        +'.g45brk-col{display:flex;flex-direction:column;justify-content:space-around;min-width:128px;padding:0 4px;}'
+        +'.g45brk{display:flex;align-items:stretch;padding:2px;gap:2px;}'
+        +'.g45brk-col{flex:1 1 0;min-width:118px;display:flex;flex-direction:column;padding:0 4px;}'
         +'.g45brk-h{font-size:9px;font-weight:800;text-transform:uppercase;color:#1ed760;text-align:center;letter-spacing:.5px;padding:2px 0 8px;}'
-        +'.g45brk-card{background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.09);border-radius:8px;overflow:hidden;cursor:pointer;margin:5px 0;}'
+        +'.g45brk-body{flex:1;display:flex;flex-direction:column;justify-content:center;gap:7px;}'
+        +'.g45brk-card{background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.09);border-radius:8px;overflow:hidden;cursor:pointer;}'
         +'.g45brk-card:hover{border-color:rgba(30,215,96,.5);}'
         +'.g45brk-r{display:flex;align-items:center;gap:5px;padding:4px 7px;font-size:11px;}'
         +'.g45brk-r+.g45brk-r{border-top:1px solid rgba(255,255,255,.06);}'
@@ -21723,7 +21724,8 @@ async function g45LoadBracket(slug, box){
         +'.g45brk-sc{font-weight:800;color:var(--t1);min-width:14px;text-align:right;}'
         +'.g45brk-win .g45brk-nm,.g45brk-win .g45brk-sc{color:#1ed760;font-weight:800;}'
         +'.g45brk-dt{font-size:8px;color:#8aa0ff;text-align:center;padding:2px 4px 3px;background:rgba(0,0,0,.18);white-space:nowrap;}'
-        +'.g45brk-live{border-left:3px solid #ff4545;}';
+        +'.g45brk-live{border-left:3px solid #ff4545;}'
+        +'.g45brk-empty{text-align:center;color:var(--t3);font-size:9px;opacity:.55;padding:12px 4px;border:1px dashed rgba(255,255,255,.12);border-radius:8px;}';
       document.head.appendChild(stl);
     }
     function card(e){
@@ -21742,19 +21744,19 @@ async function g45LoadBracket(slug, box){
       return '<div class="g45brk-card'+(live?' g45brk-live':'')+'" onclick="g45BrkOpen(\''+e.id+'\',\''+slug+'\')">'+row(home)+row(away)+'<div class="g45brk-dt">'+dlabel+'</div></div>';
     }
     function dedupeSort(items){ var seen={}; return items.filter(function(e){ if(seen[e.id])return false; seen[e.id]=1; return true; }).sort(function(a,b){return new Date(a.date)-new Date(b.date);}); }
-    var roundLbl={2:'16es',3:'8es',4:'Quarts',5:'Demies',7:'Finale'};
-    var order=[2,3,4,5,7], colsHtml='';
-    order.forEach(function(k){
-      if(!groups[k]) return;
-      var cards=dedupeSort(groups[k].items).map(card).join('');
-      var extra='';
-      if(k===7 && groups[6]){ extra='<div class="g45brk-h" style="margin-top:14px;">🥉 3e place</div>'+dedupeSort(groups[6].items).map(card).join(''); }
-      colsHtml+='<div class="g45brk-col"><div class="g45brk-h">'+(roundLbl[k]||'')+'</div>'+cards+extra+'</div>';
+    var roundDef=[{k:2,l:'16es'},{k:3,l:'8es'},{k:4,l:'Quarts'},{k:5,l:'Demies'},{k:7,l:'Finale'}];
+    var colsHtml='';
+    roundDef.forEach(function(rd){
+      var body=groups[rd.k] ? dedupeSort(groups[rd.k].items).map(card).join('') : '<div class="g45brk-empty">à venir</div>';
+      colsHtml+='<div class="g45brk-col"><div class="g45brk-h">'+rd.l+'</div><div class="g45brk-body">'+body+'</div></div>';
     });
+    var thirdHtml='';
+    if(groups[6]){ thirdHtml='<div style="margin-top:12px;max-width:240px;"><div class="g45brk-h" style="text-align:left;">🥉 Match pour la 3e place</div>'+dedupeSort(groups[6].items).map(card).join('')+'</div>'; }
     var html='<div style="display:flex;align-items:center;justify-content:space-between;margin:2px 0 6px;">'
       +'<span style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:#1ed760;">🏟 Phase finale</span>'
-      +'<span style="font-size:8px;color:var(--t3);">défile →</span></div>'
+      +'<span style="font-size:8px;color:var(--t3);">clique un match pour le détail</span></div>'
       +'<div class="g45brk-wrap"><div class="g45brk">'+colsHtml+'</div></div>'
+      +thirdHtml
       +'<div id="g45-brk-detail" style="margin-top:10px;"></div>';
     box.innerHTML=html;
   }catch(e){
