@@ -22187,17 +22187,19 @@ function _g45PreMatchBlock(data){
             +'<td style="padding:3px 4px;font-size:10px;text-align:center;color:var(--t1);font-weight:800;">'+gs(e,['points','PTS'])+'</td>'
             +'</tr>';
         });
-        standHtml='<div style="margin-top:9px;"><div style="font-size:9px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;color:#8aa0ff;margin-bottom:6px;">🏆 Classement'+(grpName?' · '+grpName:'')+'</div>'
+        standHtml='<div style="font-size:9px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;color:#8aa0ff;margin-bottom:6px;">🏆 Classement'+(grpName?' · '+grpName:'')+'</div>'
           +'<table style="width:100%;border-collapse:collapse;"><thead><tr style="color:var(--t3);font-size:8px;text-transform:uppercase;">'
           +'<th style="text-align:left;padding:2px 4px;">Équipe</th><th style="padding:2px 4px;">J</th><th style="padding:2px 4px;">G</th><th style="padding:2px 4px;">N</th><th style="padding:2px 4px;">P</th><th style="padding:2px 4px;">Diff</th><th style="padding:2px 4px;">Pts</th>'
-          +'</tr></thead><tbody>'+rowsS+'</tbody></table></div>';
+          +'</tr></thead><tbody>'+rowsS+'</tbody></table>';
       }
     }catch(e){}
+    // Conteneur classement : toujours émis si on a les 2 ids → rempli (ou reconstruit avec les noms) en async via l'endpoint dédié
+    var standCont = (hId&&aId) ? '<div class="g45-standings" data-h="'+hId+'" data-a="'+aId+'" style="margin-top:9px;">'+standHtml+'</div>' : (standHtml?'<div style="margin-top:9px;">'+standHtml+'</div>':'');
 
-    if(!probHtml&&!statsHtml&&!formHtml&&!standHtml) return '';
+    if(!probHtml&&!statsHtml&&!formHtml&&!standHtml&&!(hId&&aId)) return '';
     return '<div style="background:rgba(255,255,255,.02);border-radius:8px;padding:10px;margin-bottom:8px;">'
       +'<div style="font-size:9px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;color:#8aa0ff;margin-bottom:8px;">📊 Avant-match</div>'
-      +probHtml+statsHtml+formHtml+standHtml+'</div>';
+      +probHtml+statsHtml+formHtml+standCont+'</div>';
   }catch(e){ return ''; }
 }
 window._g45PreMatchBlock=_g45PreMatchBlock;
@@ -22228,11 +22230,16 @@ function _g45FillForm(box, league){
             var res='N', col='#f0b020';
             if(!isNaN(us_s)&&!isNaN(op_s)){ if(us_s>op_s){res='G';col='#1ed760';} else if(us_s<op_s){res='P';col='#ff4545';} }
             var sc=(isNaN(us_s)?'':us_s)+'-'+(isNaN(op_s)?'':op_s);
-            return '<div style="display:inline-block;text-align:center;margin:0 2px 2px 0;vertical-align:top;" title="'+oppN+' '+sc+'">'
-              +'<span style="display:block;width:18px;height:18px;line-height:18px;border-radius:4px;background:'+col+';color:#0b0f1a;font-size:9px;font-weight:800;">'+res+'</span>'
-              +'<span style="font-size:7px;color:var(--t3);display:block;margin-top:1px;max-width:24px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">'+oppN+'</span>'
-              +'<span style="font-size:7px;color:var(--t3);display:block;">'+sc+'</span>'
-              +'</div>';
+            // lien vers la page ESPN du match (sinon page d'événement par id)
+            var href=''; try{ var lks=e.links||c.links||[]; for(var k=0;k<lks.length;k++){ if(lks[k]&&lks[k].href){ href=lks[k].href; if(/(summary|gamecast|match)/i.test(href)) break; } } }catch(_e){}
+            var wrapStyle='display:inline-block;text-align:center;margin:0 2px 2px 0;vertical-align:top;'+(href?'text-decoration:none;cursor:pointer;':'');
+            var inner='<span style="display:block;width:18px;height:18px;line-height:18px;border-radius:4px;background:'+col+';color:#0b0f1a;font-size:9px;font-weight:800;">'+res+'</span>'
+              +'<span style="font-size:7px;color:var(--t3);display:block;margin-top:1px;max-width:26px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">'+oppN+'</span>'
+              +'<span style="font-size:7px;color:var(--t3);display:block;">'+sc+'</span>';
+            var tip=oppN+' '+sc+(href?' · voir sur ESPN':'');
+            return href
+              ? '<a href="'+href+'" target="_blank" rel="noopener" title="'+tip+'" style="'+wrapStyle+'">'+inner+'</a>'
+              : '<div title="'+tip+'" style="'+wrapStyle+'">'+inner+'</div>';
           }).join('');
           if(html) node.innerHTML=html;
         })
@@ -22241,24 +22248,49 @@ function _g45FillForm(box, league){
   }catch(e){}
 }
 window._g45FillForm=_g45FillForm;
-/* Remplit les noms manquants du classement via l'endpoint standings dédié (résout les équipes par id) */
-function _g45FillStandings(box, league){
+/* Reconstruit le classement du groupe (noms + stats) depuis l'endpoint standings dédié ESPN */
+function _g45FillStandings(box, sp){
   try{
     if(!box) return;
-    var cells=box.querySelectorAll('.g45-sname'); if(!cells.length) return;
-    var need=false; Array.prototype.forEach.call(cells,function(c){ if(!c.textContent.trim()) need=true; });
-    if(!need) return;
-    fetch('https://site.api.espn.com/apis/site/v2/sports/'+(league||'soccer/eng.1')+'/standings')
+    var cont=box.querySelector('.g45-standings'); if(!cont) return;
+    var hId=cont.getAttribute('data-h')||'', aId=cont.getAttribute('data-a')||'';
+    fetch('https://site.api.espn.com/apis/site/v2/sports/'+(sp||'soccer/eng.1')+'/standings')
       .then(function(r){ return r.ok?r.json():null; })
       .then(function(sj){
         if(!sj) return;
-        var map={};
+        var groups=[];
         (function walk(node,depth){
-          if(!node||typeof node!=='object'||depth>8) return;
-          if(node.team&&node.team.id&&(node.team.displayName||node.team.shortDisplayName)) map[String(node.team.id)]=node.team.displayName||node.team.shortDisplayName;
+          if(!node||typeof node!=='object'||depth>9) return;
+          var ents=node.standings&&node.standings.entries;
+          if(ents&&ents.length){ groups.push({name:node.name||node.displayName||node.header||'', entries:ents}); }
+          if(Array.isArray(node)){ node.forEach(function(v){ if(v&&typeof v==='object') walk(v,depth+1); }); return; }
           for(var k in node){ var v=node[k]; if(v&&typeof v==='object') walk(v,depth+1); }
         })(sj,0);
-        Array.prototype.forEach.call(cells,function(c){ var id=c.getAttribute('data-tid'); if(id&&map[id]&&!c.textContent.trim()) c.textContent=map[id]; });
+        if(!groups.length) return;
+        var grp=null;
+        for(var i=0;i<groups.length;i++){ if(groups[i].entries.some(function(e){return String(e.team&&e.team.id)===hId||String(e.team&&e.team.id)===aId;})){ grp=groups[i]; break; } }
+        if(!grp){ if(groups.length===1) grp=groups[0]; else return; }
+        function gs(e,names){ var ss=e.stats||[]; for(var a=0;a<ss.length;a++){ for(var b=0;b<names.length;b++){ if(ss[a].name===names[b]||ss[a].abbreviation===names[b]||ss[a].type===names[b]) return ss[a].displayValue; } } return ''; }
+        var rows='';
+        grp.entries.forEach(function(e){
+          var t=e.team||{}; var tid=String(t.id||'');
+          var isUs=tid===hId||tid===aId;
+          var nm=t.displayName||t.shortDisplayName||t.name||t.location||t.abbreviation||'';
+          rows+='<tr style="'+(isUs?'background:rgba(77,132,255,.12);':'')+'">'
+            +'<td style="padding:3px 4px;font-size:10px;color:var(--t1);font-weight:'+(isUs?'800':'600')+';overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:96px;">'+nm+'</td>'
+            +'<td style="padding:3px 4px;font-size:10px;text-align:center;color:var(--t2);">'+gs(e,['gamesPlayed','GP'])+'</td>'
+            +'<td style="padding:3px 4px;font-size:10px;text-align:center;color:var(--t2);">'+gs(e,['wins','W'])+'</td>'
+            +'<td style="padding:3px 4px;font-size:10px;text-align:center;color:var(--t2);">'+gs(e,['ties','draws','D'])+'</td>'
+            +'<td style="padding:3px 4px;font-size:10px;text-align:center;color:var(--t2);">'+gs(e,['losses','L'])+'</td>'
+            +'<td style="padding:3px 4px;font-size:10px;text-align:center;color:var(--t3);">'+gs(e,['pointDifferential','pointDiff','goalDifference','GD'])+'</td>'
+            +'<td style="padding:3px 4px;font-size:10px;text-align:center;color:var(--t1);font-weight:800;">'+gs(e,['points','PTS'])+'</td>'
+            +'</tr>';
+        });
+        if(!rows) return;
+        cont.innerHTML='<div style="font-size:9px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;color:#8aa0ff;margin-bottom:6px;">🏆 Classement'+(grp.name?' · '+grp.name:'')+'</div>'
+          +'<table style="width:100%;border-collapse:collapse;"><thead><tr style="color:var(--t3);font-size:8px;text-transform:uppercase;">'
+          +'<th style="text-align:left;padding:2px 4px;">Équipe</th><th style="padding:2px 4px;">J</th><th style="padding:2px 4px;">G</th><th style="padding:2px 4px;">N</th><th style="padding:2px 4px;">P</th><th style="padding:2px 4px;">Diff</th><th style="padding:2px 4px;">Pts</th>'
+          +'</tr></thead><tbody>'+rows+'</tbody></table>';
       }).catch(function(){});
   }catch(e){}
 }
