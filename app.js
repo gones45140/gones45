@@ -22209,14 +22209,20 @@ function _g45FillForm(box, league){
     if(!box) return;
     var nodes=box.querySelectorAll('.g45-form'); if(!nodes.length) return;
     var sp=league||'soccer/eng.1';
+    var _p=sp.split('/'), _sport=_p[0], _slug=_p.slice(1).join('/');
+    var _now=new Date(), _cy=_now.getFullYear(), _ay=(_now.getMonth()>=7)?_cy:_cy-1;
+    var _cal=['bra.1','usa.1','arg.1','mex.1','rsa.1','nor.1','swe.1','fin.1','irl.1','jpn.1','kor.1','conmebol.libertadores','conmebol.america','242041','fifa.world'];
+    var _season=(_sport==='rugby-league'||_sport==='baseball'||_cal.indexOf(_slug)>=0)?_cy:_ay;
     function scoreOf(c){ var s=c&&c.score; if(s==null) return null; if(typeof s==='object') return s.displayValue!=null?s.displayValue:s.value; return s; }
+    function isDone(e){ var c=(e.competitions&&e.competitions[0])||{}; var t=(c.status&&c.status.type)||(e.status&&e.status.type)||{}; return t.completed===true||t.state==='post'; }
     Array.prototype.forEach.call(nodes, function(node){
       var tid=node.getAttribute('data-tid'); if(!tid) return;
-      fetch('https://site.api.espn.com/apis/site/v2/sports/'+sp+'/teams/'+tid+'/schedule')
+      fetch('https://site.api.espn.com/apis/site/v2/sports/'+sp+'/teams/'+tid+'/schedule?season='+_season)
         .then(function(r){ return r.ok?r.json():null; })
         .then(function(sj){
-          if(!sj||!sj.events) return;
-          var done=sj.events.filter(function(e){ var c=(e.competitions&&e.competitions[0])||{}; return c.status&&c.status.type&&c.status.type.completed; });
+          var evs=(sj&&(sj.events||(sj.team&&sj.team.events)))||[];
+          if(!evs.length) return;
+          var done=evs.filter(isDone);
           done=done.slice(-5); if(!done.length) return;
           // Résultats déjà affichés (chaîne de forme), pour ne pas en perdre quand le calendrier en a moins
           var letters=[]; try{ Array.prototype.forEach.call(node.querySelectorAll('span'), function(s){ var t=(s.textContent||'').trim(); if(/^[GNP]$/.test(t)) letters.push(t); }); }catch(_e){}
@@ -22286,12 +22292,12 @@ function _g45FillStandings(box, sp){
             var nm=t.shortDisplayName||t.displayName||t.name||t.abbreviation||'?';
             return '<tr style="'+(isUs?'background:rgba(77,132,255,.12);':'')+'">'
               +'<td style="padding:3px 4px;font-size:10px;color:var(--t1);font-weight:'+(isUs?'800':'600')+';overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:104px;">'+nm+'</td>'
-              +'<td style="padding:3px 4px;font-size:10px;text-align:center;color:var(--t2);">'+(_g45Stat(st,['gamesPlayed'])||'-')+'</td>'
-              +'<td style="padding:3px 4px;font-size:10px;text-align:center;color:var(--t2);">'+(_g45Stat(st,['wins'])||'-')+'</td>'
-              +'<td style="padding:3px 4px;font-size:10px;text-align:center;color:var(--t2);">'+(_g45Stat(st,['ties','draws'])||'-')+'</td>'
-              +'<td style="padding:3px 4px;font-size:10px;text-align:center;color:var(--t2);">'+(_g45Stat(st,['losses'])||'-')+'</td>'
-              +'<td style="padding:3px 4px;font-size:10px;text-align:center;color:var(--t3);">'+(_g45Stat(st,['pointDifferential'])||'-')+'</td>'
-              +'<td style="padding:3px 4px;font-size:10px;text-align:center;color:var(--t1);font-weight:800;">'+(_g45Stat(st,['points'])||'-')+'</td>'
+              +'<td style="padding:3px 4px;font-size:10px;text-align:center;color:var(--t2);">'+(_g45Stat(st,['gamesPlayed','games','GP'])||'-')+'</td>'
+              +'<td style="padding:3px 4px;font-size:10px;text-align:center;color:var(--t2);">'+(_g45Stat(st,['wins','won','W'])||'-')+'</td>'
+              +'<td style="padding:3px 4px;font-size:10px;text-align:center;color:var(--t2);">'+(_g45Stat(st,['ties','draws','drawn','tied','D'])||'-')+'</td>'
+              +'<td style="padding:3px 4px;font-size:10px;text-align:center;color:var(--t2);">'+(_g45Stat(st,['losses','lost','L'])||'-')+'</td>'
+              +'<td style="padding:3px 4px;font-size:10px;text-align:center;color:var(--t3);">'+(_g45Stat(st,['pointDifferential','pointsDifference','differential','pointDiff','GD'])||'-')+'</td>'
+              +'<td style="padding:3px 4px;font-size:10px;text-align:center;color:var(--t1);font-weight:800;">'+(_g45Stat(st,['points','PTS'])||'-')+'</td>'
               +'</tr>';
           }).join('');
           if(!rows) return;
