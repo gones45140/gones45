@@ -22146,14 +22146,22 @@ function _g45PreMatchBlock(data){
     // ── Forme + bilan ──
     function formStr(c){ return (c.form||(c.team&&c.team.form)||'').toString().toUpperCase(); }
     function recStr(c){ return (c.records&&c.records[0]&&c.records[0].summary)||(typeof c.record==='string'?c.record:'')||''; }
-    function pills(f){ if(!f) return '<span style="font-size:9px;color:var(--t3);">—</span>'; return f.replace(/[^WDL]/g,'').slice(-5).split('').map(function(ch){ var col=ch==='W'?'#1ed760':ch==='L'?'#ff4545':'#f0b020'; var l=ch==='W'?'G':ch==='L'?'P':'N'; return '<span style="display:inline-block;width:16px;height:16px;line-height:16px;text-align:center;border-radius:4px;background:'+col+';color:#0b0f1a;font-size:9px;font-weight:800;margin-right:2px;">'+l+'</span>'; }).join(''); }
+    function sofaLink(team){ return 'https://www.sofascore.com/search#q='+encodeURIComponent(team||''); }
+    function pills(f, team){
+      if(!f) return '<span style="font-size:9px;color:var(--t3);">—</span>';
+      var href=sofaLink(team);
+      return f.replace(/[^WDL]/g,'').slice(-5).split('').map(function(ch){
+        var col=ch==='W'?'#1ed760':ch==='L'?'#ff4545':'#f0b020'; var l=ch==='W'?'G':ch==='L'?'P':'N';
+        return '<a href="'+href+'" target="_blank" rel="noopener" title="'+(team||'')+' · voir sur Sofascore" style="text-decoration:none;display:inline-block;width:16px;height:16px;line-height:16px;text-align:center;border-radius:4px;background:'+col+';color:#0b0f1a;font-size:9px;font-weight:800;margin-right:2px;cursor:pointer;">'+l+'</a>';
+      }).join('');
+    }
     var hForm=formStr(home), aForm=formStr(away), hRec=recStr(home), aRec=recStr(away);
     var formHtml='';
     if(hForm||aForm||hRec||aRec||(hId&&aId)){
       formHtml='<div style="display:grid;grid-template-columns:1fr auto 1fr;gap:8px;align-items:start;margin-bottom:4px;">'
-        +'<div style="text-align:left;min-width:0;"><div style="font-weight:800;color:var(--t1);font-size:11px;margin-bottom:3px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">'+hN+'</div>'+(hRec?'<div style="color:var(--t3);font-size:9px;margin-bottom:4px;">'+hRec+'</div>':'')+'<div class="g45-form" data-tid="'+hId+'">'+pills(hForm)+'</div></div>'
+        +'<div style="text-align:left;min-width:0;"><div style="font-weight:800;color:var(--t1);font-size:11px;margin-bottom:3px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">'+hN+'</div>'+(hRec?'<div style="color:var(--t3);font-size:9px;margin-bottom:4px;">'+hRec+'</div>':'')+'<div class="g45-form" data-tid="'+hId+'" data-team="'+(hN||'').replace(/"/g,'')+'">'+pills(hForm,hN)+'</div></div>'
         +'<div style="font-size:8px;color:var(--t3);text-transform:uppercase;letter-spacing:.5px;align-self:center;">Forme</div>'
-        +'<div style="text-align:right;min-width:0;"><div style="font-weight:800;color:var(--t1);font-size:11px;margin-bottom:3px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">'+aN+'</div>'+(aRec?'<div style="color:var(--t3);font-size:9px;margin-bottom:4px;">'+aRec+'</div>':'')+'<div class="g45-form" data-tid="'+aId+'" style="text-align:right;">'+pills(aForm)+'</div></div>'
+        +'<div style="text-align:right;min-width:0;"><div style="font-weight:800;color:var(--t1);font-size:11px;margin-bottom:3px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">'+aN+'</div>'+(aRec?'<div style="color:var(--t3);font-size:9px;margin-bottom:4px;">'+aRec+'</div>':'')+'<div class="g45-form" data-tid="'+aId+'" data-team="'+(aN||'').replace(/"/g,'')+'" style="text-align:right;">'+pills(aForm,aN)+'</div></div>'
         +'</div>';
     }
 
@@ -22197,18 +22205,9 @@ function _g45PreMatchBlock(data){
     var standCont = (hId&&aId) ? '<div class="g45-standings" data-h="'+hId+'" data-a="'+aId+'" style="margin-top:9px;">'+standHtml+'</div>' : (standHtml?'<div style="margin-top:9px;">'+standHtml+'</div>':'');
 
     if(!probHtml&&!statsHtml&&!formHtml&&!standHtml&&!(hId&&aId)) return '';
-    var _dbgK=''; try{
-      var c0=cps[0]||{}, c0t=c0.team||{};
-      _dbgK='<div style="font-size:8px;color:#7cf;word-break:break-all;margin-top:8px;line-height:1.5;">'
-        +'<b>K:</b> '+Object.keys(data).join(',')
-        +'<br><b>BX:</b> '+Object.keys(data.boxscore||{}).join(',')
-        +'<br><b>C0:</b> '+Object.keys(c0).join(',')
-        +'<br><b>C0.team:</b> '+Object.keys(c0t).join(',')
-        +'</div>';
-    }catch(e){}
     return '<div style="background:rgba(255,255,255,.02);border-radius:8px;padding:10px;margin-bottom:8px;">'
       +'<div style="font-size:9px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;color:#8aa0ff;margin-bottom:8px;">📊 Avant-match</div>'
-      +probHtml+statsHtml+formHtml+standCont+_dbgK+'</div>';
+      +probHtml+statsHtml+formHtml+standCont+'</div>';
   }catch(e){ return ''; }
 }
 window._g45PreMatchBlock=_g45PreMatchBlock;
@@ -22233,13 +22232,12 @@ function _g45FillForm(box, league){
     var PX=(typeof FD_PROXY!=='undefined'&&FD_PROXY)?FD_PROXY:'https://fd-proxy.touraine-antoine.workers.dev';
     Array.prototype.forEach.call(nodes, function(node){
       var tid=node.getAttribute('data-tid'); if(!tid) return;
-      function dbg(msg,col){ try{ node.insertAdjacentHTML('beforeend','<span style="font-size:8px;color:'+(col||'#ff0')+';display:block;font-weight:700;">dbg: '+msg+'</span>'); }catch(_e){} }
       function handle(sj){
         var evs=(sj&&(sj.events||(sj.team&&sj.team.events)))||[];
         var done=evs.filter(isDone).sort(function(a,b){ return new Date(a.date||0)-new Date(b.date||0); });
         done=done.slice(-5);
-        if(!done.length){ dbg('ev:'+evs.length+' joués:0','#ff0'); return; }
-        var letters=[]; try{ Array.prototype.forEach.call(node.querySelectorAll('span'), function(s){ var t=(s.textContent||'').trim(); if(/^[GNP]$/.test(t)) letters.push(t); }); }catch(_e){}
+        if(!done.length) return;
+        var letters=[]; try{ Array.prototype.forEach.call(node.querySelectorAll('a,span'), function(s){ var t=(s.textContent||'').trim(); if(/^[GNP]$/.test(t)) letters.push(t); }); }catch(_e){}
         function plainPill(letter){
           var col=letter==='G'?'#1ed760':letter==='P'?'#ff4545':'#f0b020';
           return '<div style="display:inline-block;text-align:center;margin:0 2px 2px 0;vertical-align:top;">'
@@ -22271,25 +22269,21 @@ function _g45FillForm(box, league){
         }
         if(html) node.innerHTML=html;
       }
-      // On tente plusieurs URLs et on reporte le code HTTP de chacune
+      // Calendrier ESPN : essaie direct puis proxy ; si l'API échoue (ex: rugby league = 500), on garde simplement les résultats
       var cands=[
         '/apis/site/v2/sports/'+sp+'/teams/'+tid+'/schedule?season='+_season,
-        '/apis/site/v2/sports/'+sp+'/teams/'+tid+'/schedule',
-        '/apis/v2/sports/'+sp+'/teams/'+tid+'/schedule?season='+_season
+        '/apis/site/v2/sports/'+sp+'/teams/'+tid+'/schedule'
       ];
-      var rep=[];
       (function tryC(i){
         if(i>=cands.length){
           fetch(PX+'?host=espn&path='+encodeURIComponent(cands[0]))
-            .then(function(r){ rep.push('px:'+r.status); if(!r.ok) throw 0; return r.json(); })
-            .then(handle)
-            .catch(function(){ dbg('KO '+rep.join(' '),'#f55'); });
+            .then(function(r){ if(!r.ok) throw 0; return r.json(); })
+            .then(handle).catch(function(){});
           return;
         }
         fetch('https://site.api.espn.com'+cands[i])
-          .then(function(r){ rep.push(i+':'+r.status); if(!r.ok) throw 0; return r.json(); })
-          .then(handle)
-          .catch(function(){ tryC(i+1); });
+          .then(function(r){ if(!r.ok) throw 0; return r.json(); })
+          .then(handle).catch(function(){ tryC(i+1); });
       })(0);
     });
   }catch(e){}
