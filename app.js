@@ -22149,7 +22149,7 @@ function _g45PreMatchBlock(data){
     function pills(f){ if(!f) return '<span style="font-size:9px;color:var(--t3);">—</span>'; return f.replace(/[^WDL]/g,'').slice(-5).split('').map(function(ch){ var col=ch==='W'?'#1ed760':ch==='L'?'#ff4545':'#f0b020'; var l=ch==='W'?'G':ch==='L'?'P':'N'; return '<span style="display:inline-block;width:16px;height:16px;line-height:16px;text-align:center;border-radius:4px;background:'+col+';color:#0b0f1a;font-size:9px;font-weight:800;margin-right:2px;">'+l+'</span>'; }).join(''); }
     var hForm=formStr(home), aForm=formStr(away), hRec=recStr(home), aRec=recStr(away);
     var formHtml='';
-    if(hForm||aForm||hRec||aRec){
+    if(hForm||aForm||hRec||aRec||(hId&&aId)){
       formHtml='<div style="display:grid;grid-template-columns:1fr auto 1fr;gap:8px;align-items:start;margin-bottom:4px;">'
         +'<div style="text-align:left;min-width:0;"><div style="font-weight:800;color:var(--t1);font-size:11px;margin-bottom:3px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">'+hN+'</div>'+(hRec?'<div style="color:var(--t3);font-size:9px;margin-bottom:4px;">'+hRec+'</div>':'')+'<div class="g45-form" data-tid="'+hId+'">'+pills(hForm)+'</div></div>'
         +'<div style="font-size:8px;color:var(--t3);text-transform:uppercase;letter-spacing:.5px;align-self:center;">Forme</div>'
@@ -22265,7 +22265,7 @@ function _g45FillStandings(box, sp){
     var parts=String(sp||'soccer/eng.1').split('/'); var sportPath=parts[0]||'soccer', slug=parts.slice(1).join('/')||'eng.1';
     var now=new Date(), curY=now.getFullYear(), augY=(now.getMonth()>=7)?curY:curY-1;
     var calYear=['bra.1','usa.1','arg.1','mex.1','rsa.1','nor.1','swe.1','fin.1','irl.1','jpn.1','kor.1','conmebol.libertadores','conmebol.america','242041','fifa.world'];
-    var primary=(calYear.indexOf(slug)>=0)?curY:augY;
+    var primary=(sportPath==='rugby-league'||sportPath==='baseball'||calYear.indexOf(slug)>=0)?curY:augY;
     var seen={}, seasons=[primary,curY,augY].filter(function(y){ if(seen[y])return false; seen[y]=1; return true; });
     (function tryS(i){
       if(i>=seasons.length) return;
