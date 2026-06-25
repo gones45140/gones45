@@ -21409,11 +21409,13 @@ async function g45LoadCalendar(slug, btn, monthOffset, sportPath){
     var monthName=mb.base.toLocaleDateString('fr-FR',{month:'long',year:'numeric'});
     var _btns='';
     if(sportPath==='soccer'||sportPath==='rugby'||sportPath==='rugby-league'){
-      _btns='<div style="display:flex;gap:8px;margin-bottom:10px;">'
-        +'<button onclick="g45ToggleStandings(\''+slug+'\',\''+sportPath+'\',this)" id="g45-std-toggle" style="flex:1;border:1px solid rgba(240,176,32,.3);cursor:pointer;background:rgba(240,176,32,.1);border-radius:8px;color:#f0b020;padding:8px;font-size:12px;font-weight:700;">🏆 Classement</button>'
-        +(sportPath==='soccer'?'<button onclick="g45ToggleScorers(\''+slug+'\',\''+sportPath+'\',this)" id="g45-sco-toggle" style="flex:1;border:1px solid rgba(77,132,255,.3);cursor:pointer;background:rgba(77,132,255,.1);border-radius:8px;color:#4d84ff;padding:8px;font-size:12px;font-weight:700;">⚽ Buteurs</button>':'')
+      var _isWC=(slug==='fifa.world'||slug==='uefa.euro'||slug==='conmebol.america'||slug==='uefa.nations'||slug==='fifa.worldq.uefa');
+      _btns='<div style="display:flex;gap:8px;margin-bottom:10px;flex-wrap:wrap;">'
+        +'<button onclick="g45ToggleStandings(\''+slug+'\',\''+sportPath+'\',this)" id="g45-std-toggle" style="flex:1;min-width:90px;border:1px solid rgba(240,176,32,.3);cursor:pointer;background:rgba(240,176,32,.1);border-radius:8px;color:#f0b020;padding:8px;font-size:12px;font-weight:700;">🏆 Classement</button>'
+        +(sportPath==='soccer'?'<button onclick="g45ToggleScorers(\''+slug+'\',\''+sportPath+'\',this)" id="g45-sco-toggle" style="flex:1;min-width:90px;border:1px solid rgba(77,132,255,.3);cursor:pointer;background:rgba(77,132,255,.1);border-radius:8px;color:#4d84ff;padding:8px;font-size:12px;font-weight:700;">⚽ Buteurs</button>':'')
+        +((sportPath==='soccer'&&_isWC)?'<button onclick="g45ToggleBracket(\''+slug+'\',\''+sportPath+'\',this)" id="g45-brk-toggle" style="flex:1;min-width:90px;border:1px solid rgba(30,215,96,.3);cursor:pointer;background:rgba(30,215,96,.1);border-radius:8px;color:#1ed760;padding:8px;font-size:12px;font-weight:700;">🏟 Phase finale</button>':'')
         +'</div>'
-        +'<div id="g45-standings" style="margin-bottom:4px;"></div><div id="g45-scorers" style="margin-bottom:4px;"></div>';
+        +'<div id="g45-standings" style="margin-bottom:4px;"></div><div id="g45-scorers" style="margin-bottom:4px;"></div><div id="g45-bracket" style="margin-bottom:4px;"></div>';
     }
     var h=_btns+'<div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:12px;">'
       +'<button onclick="g45CalNav(-1)" style="border:none;background:rgba(255,255,255,.06);color:var(--t2);border-radius:8px;padding:7px 14px;font-weight:800;cursor:pointer;">◀</button>'
@@ -21649,6 +21651,87 @@ async function g45LoadScorers(slug, sportPath, box){
 }
 window.g45ToggleScorers=g45ToggleScorers;
 window.g45LoadScorers=g45LoadScorers;
+/* ─────────── Phase finale (bracket) Coupe du Monde / tournois à élimination ─────────── */
+function g45ToggleBracket(slug, sportPath, btn){
+  var box=document.getElementById('g45-bracket'); if(!box) return;
+  if(box.getAttribute('data-open')==='1'){
+    box.innerHTML=''; box.removeAttribute('data-open');
+    if(btn){ btn.style.background='rgba(30,215,96,.1)'; btn.style.color='#1ed760'; }
+    return;
+  }
+  box.setAttribute('data-open','1'); if(btn){ btn.style.background='#1ed760'; btn.style.color='#06210f'; }
+  g45LoadBracket(slug, box);
+}
+async function g45LoadBracket(slug, box){
+  box.innerHTML='<div style="display:flex;align-items:center;gap:8px;padding:14px;color:var(--t3);font-size:11px;"><div style="width:12px;height:12px;border:2px solid rgba(30,215,96,.2);border-top-color:#1ed760;border-radius:50%;animation:spin .8s linear infinite;"></div>Chargement de la phase finale…</div>';
+  try{
+    var now=new Date(), y=now.getFullYear();
+    var r=await fetch('https://site.api.espn.com/apis/site/v2/sports/soccer/'+slug+'/scoreboard?dates='+y+'0601-'+y+'0731');
+    var data=r.ok?await r.json():null;
+    var evs=(data&&data.events)||[];
+    function roundOf(e){
+      var c=(e.competitions&&e.competitions[0])||{}, s='';
+      try{ (c.notes||[]).forEach(function(n){ s+=' '+(n.headline||n.text||''); }); }catch(_e){}
+      try{ s+=' '+((e.season&&(e.season.slug||e.season.name||(e.season.type&&e.season.type.name)))||''); }catch(_e){}
+      try{ s+=' '+((c.type&&(c.type.text||c.type.abbreviation))||''); }catch(_e){}
+      s=s.toLowerCase();
+      if(/third|3rd|petite final|place play/.test(s)) return {k:6,n:'🥉 Match pour la 3e place'};
+      if(/final/.test(s) && !/semi|quarter|round of|1\/|eighth|last \d/.test(s)) return {k:7,n:'🏆 Finale'};
+      if(/semi/.test(s)) return {k:5,n:'½ Demi-finales'};
+      if(/quarter|1\/4/.test(s)) return {k:4,n:'¼ Quarts de finale'};
+      if(/round of 16|1\/8|eighth|last 16/.test(s)) return {k:3,n:'8es de finale'};
+      if(/round of 32|1\/16|last 32/.test(s)) return {k:2,n:'16es de finale'};
+      return null;
+    }
+    var groups={};
+    evs.forEach(function(e){ var ro=roundOf(e); if(!ro) return; (groups[ro.k]=groups[ro.k]||{n:ro.n,items:[]}).items.push(e); });
+    var keys=Object.keys(groups).map(Number).sort(function(a,b){return a-b;});
+    if(!keys.length){
+      box.innerHTML='<div style="color:var(--t3);font-size:11px;text-align:center;padding:14px;line-height:1.6;">🏟 La phase finale n\'est pas encore programmée par ESPN.<br><span style="font-size:10px;">Les affiches (16es → finale) apparaîtront ici dès qu\'elles seront connues.</span></div>';
+      return;
+    }
+    function sc(c){ var s=c&&c.score; if(s==null) return ''; return (typeof s==='object')?(s.displayValue!=null?s.displayValue:s.value):s; }
+    function teamCell(c, align){
+      var t=(c&&c.team)||{}, nm=t.shortDisplayName||t.displayName||t.abbreviation||'À déterminer';
+      var logo=(t.logos&&t.logos[0]&&t.logos[0].href)||t.logo||'';
+      var win=c&&c.winner===true;
+      var img=logo?'<img src="'+logo+'" style="width:16px;height:16px;object-fit:contain;flex-shrink:0;" onerror="this.style.display=\'none\'">':'';
+      var nameHtml='<span style="font-weight:'+(win?'800':'600')+';color:'+(win?'#1ed760':'var(--t1)')+';overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:11px;">'+nm+'</span>';
+      return align==='r'
+        ? '<span style="display:flex;align-items:center;gap:5px;justify-content:flex-end;min-width:0;">'+nameHtml+img+'</span>'
+        : '<span style="display:flex;align-items:center;gap:5px;min-width:0;">'+img+nameHtml+'</span>';
+    }
+    var html='<div style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:#1ed760;margin:2px 0 8px;">🏟 Phase finale</div>';
+    keys.forEach(function(k){
+      var g=groups[k], seen={};
+      var items=g.items.filter(function(e){ if(seen[e.id])return false; seen[e.id]=1; return true; }).sort(function(a,b){return new Date(a.date)-new Date(b.date);});
+      html+='<div style="font-size:11px;font-weight:800;color:var(--t1);margin:10px 0 4px;">'+g.n+'</div>';
+      items.forEach(function(e){
+        var c=(e.competitions&&e.competitions[0])||{}, cps=c.competitors||[];
+        var home=cps.filter(function(x){return x.homeAway==='home';})[0]||cps[0]||{};
+        var away=cps.filter(function(x){return x.homeAway==='away';})[0]||cps[1]||{};
+        var st=(c.status&&c.status.type)||{}, done=st.completed, live=st.state==='in';
+        var mid=(done||live)?('<span style="font-weight:800;color:'+(live?'#ff4545':'var(--t1)')+';font-size:12px;white-space:nowrap;">'+sc(home)+' - '+sc(away)+'</span>'):('<span style="font-size:10px;color:#8aa0ff;white-space:nowrap;">'+(new Date(e.date).toLocaleDateString('fr-FR',{day:'2-digit',month:'2-digit'}))+'</span>');
+        html+='<div onclick="g45BrkOpen(this,\''+e.id+'\',\''+slug+'\')" style="display:grid;grid-template-columns:1fr auto 1fr;gap:8px;align-items:center;padding:7px 8px;background:rgba(255,255,255,.03);border-radius:8px;border-left:3px solid '+(live?'#ff4545':'rgba(30,215,96,.35)')+';cursor:pointer;margin-bottom:4px;">'
+          +teamCell(home,'r')+'<span style="text-align:center;">'+mid+'</span>'+teamCell(away,'l')
+          +'</div><div class="g45-brk-det" style="margin:-2px 0 6px;"></div>';
+      });
+    });
+    box.innerHTML=html;
+  }catch(e){
+    box.innerHTML='<div style="color:#ff6b6b;font-size:11px;text-align:center;padding:12px;">Erreur de chargement de la phase finale.</div>';
+  }
+}
+function g45BrkOpen(rowEl, eid, slug){
+  var det=rowEl.nextElementSibling;
+  if(!det||!det.classList||!det.classList.contains('g45-brk-det')) return;
+  if(det.getAttribute('data-open')==='1'){ det.innerHTML=''; det.removeAttribute('data-open'); return; }
+  det.setAttribute('data-open','1');
+  try{ _renderSaisonDetail(det, eid, slug||'fifa.world'); }catch(e){ det.innerHTML='<div style="color:var(--t3);font-size:11px;padding:8px;">Détail indisponible.</div>'; }
+}
+window.g45ToggleBracket=g45ToggleBracket;
+window.g45LoadBracket=g45LoadBracket;
+window.g45BrkOpen=g45BrkOpen;
 
 /* ───────────── AUTO-REFRESH des listes Direct/Résultats (scores live en place, sans recharger la page) ───────────── */
 function _g45RefreshCtx(){
