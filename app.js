@@ -21711,10 +21711,12 @@ async function g45LoadBracket(slug, box){
     if(!document.getElementById('g45brk-css')){
       var stl=document.createElement('style'); stl.id='g45brk-css';
       stl.textContent='.g45brk-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch;padding-bottom:8px;}'
-        +'.g45brk{display:flex;align-items:stretch;padding:2px;gap:2px;}'
-        +'.g45brk-col{flex:1 1 0;min-width:118px;display:flex;flex-direction:column;padding:0 4px;}'
+        +'.g45brk{display:flex;align-items:stretch;padding:2px;--brkline:rgba(120,150,220,.38);}'
+        +'.g45brk-col{flex:1 1 0;min-width:132px;display:flex;flex-direction:column;padding:0 8px;}'
         +'.g45brk-h{font-size:9px;font-weight:800;text-transform:uppercase;color:#1ed760;text-align:center;letter-spacing:.5px;padding:2px 0 8px;}'
-        +'.g45brk-body{flex:1;display:flex;flex-direction:column;justify-content:center;gap:7px;}'
+        +'.g45brk-body{flex:1;display:flex;flex-direction:column;}'
+        +'.g45brk-slot{flex:1;display:flex;align-items:center;position:relative;min-height:48px;}'
+        +'.g45brk-slot>.g45brk-card{width:100%;}'
         +'.g45brk-card{background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.09);border-radius:8px;overflow:hidden;cursor:pointer;}'
         +'.g45brk-card:hover{border-color:rgba(30,215,96,.5);}'
         +'.g45brk-r{display:flex;align-items:center;gap:5px;padding:4px 7px;font-size:11px;}'
@@ -21725,7 +21727,11 @@ async function g45LoadBracket(slug, box){
         +'.g45brk-win .g45brk-nm,.g45brk-win .g45brk-sc{color:#1ed760;font-weight:800;}'
         +'.g45brk-dt{font-size:8px;color:#8aa0ff;text-align:center;padding:2px 4px 3px;background:rgba(0,0,0,.18);white-space:nowrap;}'
         +'.g45brk-live{border-left:3px solid #ff4545;}'
-        +'.g45brk-empty{text-align:center;color:var(--t3);font-size:9px;opacity:.55;padding:12px 4px;border:1px dashed rgba(255,255,255,.12);border-radius:8px;}';
+        +'.g45brk-tbd{width:100%;height:22px;border:1px dashed rgba(255,255,255,.10);border-radius:6px;opacity:.5;}'
+        +'.g45brk-col:not(:last-child) .g45brk-slot::after{content:"";position:absolute;left:100%;width:13px;pointer-events:none;}'
+        +'.g45brk-col:not(:last-child) .g45brk-slot:nth-child(odd)::after{top:50%;bottom:0;border-right:2px solid var(--brkline);border-bottom:2px solid var(--brkline);}'
+        +'.g45brk-col:not(:last-child) .g45brk-slot:nth-child(even)::after{top:0;bottom:50%;border-right:2px solid var(--brkline);border-top:2px solid var(--brkline);}'
+        +'.g45brk-col:not(:first-child) .g45brk-slot::before{content:"";position:absolute;right:100%;width:13px;height:2px;top:50%;background:var(--brkline);pointer-events:none;}';
       document.head.appendChild(stl);
     }
     function card(e){
@@ -21745,10 +21751,14 @@ async function g45LoadBracket(slug, box){
     }
     function dedupeSort(items){ var seen={}; return items.filter(function(e){ if(seen[e.id])return false; seen[e.id]=1; return true; }).sort(function(a,b){return new Date(a.date)-new Date(b.date);}); }
     var roundDef=[{k:2,l:'16es'},{k:3,l:'8es'},{k:4,l:'Quarts'},{k:5,l:'Demies'},{k:7,l:'Finale'}];
+    var counts={2:16,3:8,4:4,5:2,7:1};
     var colsHtml='';
     roundDef.forEach(function(rd){
-      var body=groups[rd.k] ? dedupeSort(groups[rd.k].items).map(card).join('') : '<div class="g45brk-empty">à venir</div>';
-      colsHtml+='<div class="g45brk-col"><div class="g45brk-h">'+rd.l+'</div><div class="g45brk-body">'+body+'</div></div>';
+      var n=counts[rd.k]||1;
+      var ms=groups[rd.k]?dedupeSort(groups[rd.k].items):[];
+      var slots='';
+      for(var i=0;i<n;i++){ slots+='<div class="g45brk-slot">'+(ms[i]?card(ms[i]):'<div class="g45brk-tbd"></div>')+'</div>'; }
+      colsHtml+='<div class="g45brk-col"><div class="g45brk-h">'+rd.l+'</div><div class="g45brk-body">'+slots+'</div></div>';
     });
     var thirdHtml='';
     if(groups[6]){ thirdHtml='<div style="margin-top:12px;max-width:240px;"><div class="g45brk-h" style="text-align:left;">🥉 Match pour la 3e place</div>'+dedupeSort(groups[6].items).map(card).join('')+'</div>'; }
