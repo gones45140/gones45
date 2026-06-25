@@ -22214,15 +22214,24 @@ function _g45FillForm(box, league){
     var _cal=['bra.1','usa.1','arg.1','mex.1','rsa.1','nor.1','swe.1','fin.1','irl.1','jpn.1','kor.1','conmebol.libertadores','conmebol.america','242041','fifa.world'];
     var _season=(_sport==='rugby-league'||_sport==='baseball'||_cal.indexOf(_slug)>=0)?_cy:_ay;
     function scoreOf(c){ var s=c&&c.score; if(s==null) return null; if(typeof s==='object') return s.displayValue!=null?s.displayValue:s.value; return s; }
-    function isDone(e){ var c=(e.competitions&&e.competitions[0])||{}; var t=(c.status&&c.status.type)||(e.status&&e.status.type)||{}; return t.completed===true||t.state==='post'; }
+    function isDone(e){
+      var c=(e.competitions&&e.competitions[0])||{};
+      var t=(c.status&&c.status.type)||(e.status&&e.status.type)||{};
+      if(t.completed===true||t.state==='post') return true;
+      var d=e.date||c.date; if(d){ var dt=new Date(d); if(!isNaN(dt)&&dt<new Date()) return true; } // calendrier minimal → match passé = joué
+      return false;
+    }
+    var PX=(typeof FD_PROXY!=='undefined'&&FD_PROXY)?FD_PROXY:'https://fd-proxy.touraine-antoine.workers.dev';
     Array.prototype.forEach.call(nodes, function(node){
       var tid=node.getAttribute('data-tid'); if(!tid) return;
-      fetch('https://site.api.espn.com/apis/site/v2/sports/'+sp+'/teams/'+tid+'/schedule?season='+_season)
-        .then(function(r){ return r.ok?r.json():null; })
+      var path='/apis/site/v2/sports/'+sp+'/teams/'+tid+'/schedule?season='+_season;
+      fetch('https://site.api.espn.com'+path)
+        .then(function(r){ if(!r.ok) throw 0; return r.json(); })
+        .catch(function(){ return fetch(PX+'?host=espn&path='+encodeURIComponent(path)).then(function(r){ return r.ok?r.json():null; }); })
         .then(function(sj){
           var evs=(sj&&(sj.events||(sj.team&&sj.team.events)))||[];
           if(!evs.length) return;
-          var done=evs.filter(isDone);
+          var done=evs.filter(isDone).sort(function(a,b){ return new Date(a.date||0)-new Date(b.date||0); });
           done=done.slice(-5); if(!done.length) return;
           // Résultats déjà affichés (chaîne de forme), pour ne pas en perdre quand le calendrier en a moins
           var letters=[]; try{ Array.prototype.forEach.call(node.querySelectorAll('span'), function(s){ var t=(s.textContent||'').trim(); if(/^[GNP]$/.test(t)) letters.push(t); }); }catch(_e){}
