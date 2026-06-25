@@ -21450,7 +21450,7 @@ async function g45LoadCalendar(slug, btn, monthOffset, sportPath){
       cps.textContent='.g45-cal-panel{max-width:480px;}@media(min-width:900px){.g45-cal-panel{max-width:760px !important;}}@media(min-width:1280px){.g45-cal-panel{max-width:920px !important;}}';
       document.head.appendChild(cps);
     }
-    list.innerHTML='<div class="g45-cal-panel" style="background:var(--bg2);border:1px solid var(--card-border,rgba(77,132,255,.32));border-radius:14px;padding:14px;box-shadow:0 4px 18px rgba(0,0,0,.5);margin:0 auto;">'+h+'</div>';
+    list.innerHTML='<div class="g45-cal-panel" style="background:var(--bg2);border:1px solid var(--card-border,rgba(77,132,255,.32));border-radius:14px;padding:14px;box-shadow:0 4px 18px rgba(0,0,0,.5);width:100%;margin:0 auto;box-sizing:border-box;">'+h+'</div>';
     if(sportPath==='soccer'){ try{ _g45ApplyMatchdays(slug, mb); }catch(e){} }
     if(window._g45CalOpenDay){ var _od=window._g45CalOpenDay; window._g45CalOpenDay=null; setTimeout(function(){ try{ g45CalDay(_od); var bx=document.getElementById('g45-cal-day'); if(bx&&bx.scrollIntoView) bx.scrollIntoView({behavior:'smooth',block:'nearest'}); }catch(e){} }, 160); }
     _g45StartListRefresh();
