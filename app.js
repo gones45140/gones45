@@ -21445,7 +21445,12 @@ async function g45LoadCalendar(slug, btn, monthOffset, sportPath){
     if(!events.length){ h+='<div style="text-align:center;color:var(--t3);font-size:10px;margin-top:12px;">Aucun match ce mois-ci — navigue avec ◀ ▶.</div>'; }
     else { h+='<div style="text-align:center;color:var(--t3);font-size:9px;margin-top:8px;">👆 Tape un jour bleu pour voir les matchs</div>'; }
     h+='<div id="g45-cal-day" style="margin-top:12px;"></div>';
-    list.innerHTML='<div style="background:var(--bg2);border:1px solid var(--card-border,rgba(77,132,255,.32));border-radius:14px;padding:14px;box-shadow:0 4px 18px rgba(0,0,0,.5);max-width:480px;margin:0 auto;">'+h+'</div>';
+    if(!document.getElementById('g45-calpanel-css')){
+      var cps=document.createElement('style'); cps.id='g45-calpanel-css';
+      cps.textContent='.g45-cal-panel{max-width:480px;}@media(min-width:900px){.g45-cal-panel{max-width:760px !important;}}@media(min-width:1280px){.g45-cal-panel{max-width:920px !important;}}';
+      document.head.appendChild(cps);
+    }
+    list.innerHTML='<div class="g45-cal-panel" style="background:var(--bg2);border:1px solid var(--card-border,rgba(77,132,255,.32));border-radius:14px;padding:14px;box-shadow:0 4px 18px rgba(0,0,0,.5);margin:0 auto;">'+h+'</div>';
     if(sportPath==='soccer'){ try{ _g45ApplyMatchdays(slug, mb); }catch(e){} }
     if(window._g45CalOpenDay){ var _od=window._g45CalOpenDay; window._g45CalOpenDay=null; setTimeout(function(){ try{ g45CalDay(_od); var bx=document.getElementById('g45-cal-day'); if(bx&&bx.scrollIntoView) bx.scrollIntoView({behavior:'smooth',block:'nearest'}); }catch(e){} }, 160); }
     _g45StartListRefresh();
