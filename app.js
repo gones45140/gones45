@@ -18831,10 +18831,10 @@ function g45SuivisToggle(obj){
 }
 function _g45SuiviPaint(btn, on){
   if(!btn) return;
-  btn.textContent = on ? '\u2605 Suivi' : '\u2606 Suivre';
-  btn.style.background = on ? 'rgba(30,215,96,.16)' : 'rgba(255,255,255,.05)';
-  btn.style.color = on ? '#1ed760' : 'var(--t2)';
-  btn.style.borderColor = on ? 'rgba(30,215,96,.45)' : 'rgba(255,255,255,.16)';
+  btn.textContent = on ? '\u2605 Match suivi \u2014 dans ton calendrier' : '\u2606 Suivre ce match (ajouter au calendrier)';
+  btn.style.background = on ? 'rgba(30,215,96,.16)' : 'rgba(77,132,255,.12)';
+  btn.style.color = on ? '#1ed760' : '#7aa2ff';
+  btn.style.borderColor = on ? 'rgba(30,215,96,.55)' : 'rgba(77,132,255,.55)';
 }
 function g45SuiviBtn(btn){
   try{ var d=btn.dataset; var added=g45SuivisToggle({id:d.id,date:d.date,home:d.home,away:d.away,comp:d.comp,league:d.league,sport:d.sport||'soccer'}); _g45SuiviPaint(btn, added); }catch(e){}
@@ -18847,7 +18847,7 @@ function _g45SuiviStarHTML(id, date, home, away, comp, league, sport){
   function ea(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;'); }
   var on=g45SuivisHas(id);
   return '<button onclick="g45SuiviBtn(this)" data-id="'+ea(id)+'" data-date="'+ea(date)+'" data-home="'+ea(home)+'" data-away="'+ea(away)+'" data-comp="'+ea(comp)+'" data-league="'+ea(league)+'" data-sport="'+ea(sport||'soccer')+'" '
-    +'style="font-size:11px;font-weight:700;padding:5px 11px;border-radius:8px;cursor:pointer;border:1px solid '+(on?'rgba(30,215,96,.45)':'rgba(255,255,255,.16)')+';background:'+(on?'rgba(30,215,96,.16)':'rgba(255,255,255,.05)')+';color:'+(on?'#1ed760':'var(--t2)')+';">'+(on?'\u2605 Suivi':'\u2606 Suivre')+'</button>';
+    +'style="width:100%;box-sizing:border-box;font-size:12px;font-weight:800;padding:9px 12px;border-radius:9px;cursor:pointer;border:1.5px solid '+(on?'rgba(30,215,96,.55)':'rgba(77,132,255,.55)')+';background:'+(on?'rgba(30,215,96,.16)':'rgba(77,132,255,.12)')+';color:'+(on?'#1ed760':'#7aa2ff')+';">'+(on?'\u2605 Match suivi \u2014 dans ton calendrier':'\u2606 Suivre ce match (ajouter au calendrier)')+'</button>';
 }
 window.g45SuiviBtn=g45SuiviBtn; window.g45SuiviRemove=g45SuiviRemove;
 
@@ -19235,16 +19235,25 @@ function _renderEspnMatchStats(s, homeId, awayId, col){
     var aT = pick(awayId) || teams.find(function(t){return t.homeAway==='away';}) || teams[1];
     var hStats=(hT&&hT.statistics)||[], aStats=(aT&&aT.statistics)||[];
     if(!hStats.length && !aStats.length) return '';
-    var keys=[{n:'possessionPct',l:'Possession',suf:'%'},{n:'totalShots',l:'Tirs'},{n:'shotsOnTarget',l:'Tirs cadrés'},{n:'wonCorners',l:'Corners'},{n:'foulsCommitted',l:'Fautes'},{n:'yellowCards',l:'Cartons jaunes'},{n:'effectiveClearance',l:'Dégagements'},{n:'totalPasses',l:'Passes'},{n:'saves',l:'Arrêts'}];
-    function val(stats,name){ var f=stats.find(function(x){return x.name===name;}); return f?f.displayValue:null; }
+    function mk(stats){ var m={}; stats.forEach(function(x){ if(x&&x.name) m[x.name]={v:x.displayValue, l:(x.label||x.displayName||x.shortDisplayName||'')}; }); return m; }
+    var H=mk(hStats), A=mk(aStats);
+    // libellés FR de secours pour les stats sans label ESPN
+    var frMap={possessionPct:'Possession',expectedGoals:'Buts attendus (xG)',totalShots:'Tirs',shotsOnTarget:'Tirs cadrés',shotsOnGoal:'Tirs au but',ownGoals:'Buts contre son camp',blockedShots:'Tirs bloqués',shotsInsideBox:'Tirs dans la surface',shotsOutsideBox:'Tirs hors surface',hitWoodwork:'Poteaux / barres',wonCorners:'Corners',cornerKicks:'Corners',offsides:'Hors-jeu',foulsCommitted:'Fautes',yellowCards:'Cartons jaunes',redCards:'Cartons rouges',totalPasses:'Passes',accuratePasses:'Passes réussies',saves:'Arrêts',totalCrosses:'Centres',accurateCrosses:'Centres réussis',totalTackles:'Tacles',interceptions:'Interceptions',effectiveClearance:'Dégagements',totalLongBalls:'Longs ballons',penaltyKicksTaken:'Penaltys tirés'};
+    // ordre : les plus parlantes d'abord, puis tout le reste (rien n'est masqué)
+    var prio=['possessionPct','expectedGoals','totalShots','shotsOnGoal','shotsOnTarget','blockedShots','shotsInsideBox','shotsOutsideBox','hitWoodwork','wonCorners','cornerKicks','offsides','foulsCommitted','yellowCards','redCards','totalPasses','accuratePasses','totalCrosses','accurateCrosses','saves'];
+    var names=[], seen={};
+    prio.forEach(function(n){ if((H[n]||A[n]) && !seen[n]){ names.push(n); seen[n]=1; } });
+    Object.keys(H).forEach(function(n){ if(!seen[n]){ names.push(n); seen[n]=1; } });
+    Object.keys(A).forEach(function(n){ if(!seen[n]){ names.push(n); seen[n]=1; } });
     var rows='';
-    keys.forEach(function(k){
-      var hv=val(hStats,k.n), av=val(aStats,k.n);
+    names.forEach(function(n){
+      var hh=H[n], aa=A[n], hv=hh?hh.v:null, av=aa?aa.v:null;
       if(hv==null && av==null) return;
+      var lab=frMap[n]||(hh&&hh.l)||(aa&&aa.l)||n;
       hv=(hv!=null?hv:'0'); av=(av!=null?av:'0');
-      var hn=parseFloat(String(hv))||0, an=parseFloat(String(av))||0, tot=hn+an;
+      var hn=parseFloat(String(hv).replace(',','.'))||0, an=parseFloat(String(av).replace(',','.'))||0, tot=hn+an;
       var hp=tot>0?Math.round(hn/tot*100):50, ap=100-hp;
-      rows+='<div style="margin-bottom:9px;"><div style="display:flex;justify-content:space-between;align-items:center;font-size:11px;margin-bottom:3px;"><b style="color:var(--t1);min-width:34px;">'+hv+'</b><span style="color:var(--t3);">'+k.l+'</span><b style="color:var(--t1);min-width:34px;text-align:right;">'+av+'</b></div><div style="display:flex;height:5px;border-radius:3px;overflow:hidden;background:rgba(255,255,255,.06);"><div style="width:'+hp+'%;background:'+col+';"></div><div style="width:'+ap+'%;background:var(--t3);opacity:.55;"></div></div></div>';
+      rows+='<div style="margin-bottom:9px;"><div style="display:flex;justify-content:space-between;align-items:center;font-size:11px;margin-bottom:3px;"><b style="color:var(--t1);min-width:40px;">'+hv+'</b><span style="color:var(--t3);text-align:center;flex:1;padding:0 6px;">'+lab+'</span><b style="color:var(--t1);min-width:40px;text-align:right;">'+av+'</b></div><div style="display:flex;height:5px;border-radius:3px;overflow:hidden;background:rgba(255,255,255,.06);"><div style="width:'+hp+'%;background:'+col+';"></div><div style="width:'+ap+'%;background:var(--t3);opacity:.55;"></div></div></div>';
     });
     if(!rows) return '';
     return '<div class="fc" style="padding:14px;"><div style="font-size:11px;font-weight:800;letter-spacing:.5px;color:var(--t2);margin-bottom:12px;">📊 STATISTIQUES</div>'+rows+'</div>';
@@ -19974,7 +19983,7 @@ async function _renderSaisonDetail(el, eventId, league){
     // ── Bouton « Suivre ce match » → calendrier perso ──
     try{
       var _compName=''; try{ _compName=(data.header&&data.header.league&&(data.header.league.name||data.header.league.shortName))||''; }catch(_e){}
-      h+='<div style="display:flex;justify-content:flex-end;margin-bottom:6px;">'+_g45SuiviStarHTML(eventId, comp.date||'', hN, aN, _compName||league||'', league||'', 'soccer')+'</div>';
+      h+='<div style="margin-bottom:8px;">'+_g45SuiviStarHTML(eventId, comp.date||'', hN, aN, _compName||league||'', league||'', 'soccer')+'</div>';
     }catch(_e){}
     // En live : on laisse le lecteur live afficher le score. Hors live : en-tête de score.
     if(!isLive) h+='<div style="display:flex;align-items:center;justify-content:center;gap:12px;font-size:13px;font-weight:800;color:var(--t1);margin-bottom:8px;"><span>'+hN+'</span><span style="color:var(--a);">'+hS+' - '+aS+'</span><span>'+aN+'</span></div>';
@@ -20623,7 +20632,7 @@ async function _renderGenericDetail(el, sport, lg, eid){
     // ── Bouton « Suivre ce match » → calendrier perso ──
     try{
       var _cnG=''; try{ _cnG=(data.header&&data.header.league&&(data.header.league.name||data.header.league.shortName))||lg||''; }catch(_e){}
-      h+='<div style="display:flex;justify-content:flex-end;margin-top:8px;">'+_g45SuiviStarHTML(eid, comp.date||'', hN, aN, _cnG, lg||'', sport||'')+'</div>';
+      h+='<div style="margin-top:10px;">'+_g45SuiviStarHTML(eid, comp.date||'', hN, aN, _cnG, lg||'', sport||'')+'</div>';
     }catch(_e){}
     // Scores par période si dispo (linescores)
     try{
@@ -20924,7 +20933,11 @@ function _g45EspnTennisDetail(c){
   var rnd=(c.round&&c.round.displayName)||'';
   var venue=(c.venue&&c.venue.fullName)||''; var court=(c.venue&&c.venue.court)?(' · '+c.venue.court):'';
   var notes=(c.notes&&c.notes[0]&&c.notes[0].text)||'';
+  function _plTen(x){ return (x&&x.athlete&&(x.athlete.displayName||x.athlete.shortName))||(x&&x.team&&(x.team.displayName||x.team.shortDisplayName))||'?'; }
+  var _tHN=_plTen(home), _tAN=_plTen(away), _tCmp=(c.round&&c.round.displayName)||c.__grp||'Tennis';
+  var _tStar='<div style="margin-bottom:8px;">'+_g45SuiviStarHTML(c.id, c.date||c.startDate||'', _tHN, _tAN, _tCmp, '', 'tennis')+'</div>';
   return '<div style="background:rgba(255,255,255,.03);border-radius:10px;padding:10px 8px;margin-bottom:6px;">'
+    +_tStar
     +((c.__grp||rnd)?'<div style="font-size:9px;color:#8aa0ff;font-weight:700;text-align:center;margin-bottom:6px;">'+(c.__grp?c.__grp+(rnd?' · ':''):'')+rnd+'</div>':'')
     +'<table style="width:100%;border-collapse:collapse;">'+head+row(home)+row(away)+'</table>'
     +(notes?'<div style="font-size:9px;color:var(--t3);text-align:center;margin-top:8px;font-style:italic;">'+notes+'</div>':'')
@@ -21721,6 +21734,34 @@ function g45ToggleBracket(slug, sportPath, btn){
   box.setAttribute('data-open','1'); if(btn){ btn.style.background='#1ed760'; btn.style.color='#06210f'; }
   g45LoadBracket(slug, box);
 }
+// Reconstruit le vrai ordre de l'arbre à partir du câblage ESPN (placeholders "Round of 32 N Winner"…)
+function _g45BrkBracketOrder(groups){
+  try{
+    function feed(ev, re){
+      var c=(ev.competitions&&ev.competitions[0])||{}, out=[];
+      (c.competitors||[]).forEach(function(x){
+        var nm=(x.team&&(x.team.displayName||x.team.shortDisplayName||x.team.name))||'';
+        var m=nm.match(re); if(m) out.push(parseInt(m[1],10));
+      });
+      return out;
+    }
+    function byDate(arr){ return (arr||[]).slice().sort(function(a,b){return new Date(a.date)-new Date(b.date);}); }
+    function numMap(arr){ var m={}; byDate(arr).forEach(function(e,i){ m[i+1]=e; }); return m; }
+    var g2=groups[2]&&groups[2].items, g3=groups[3]&&groups[3].items, g4=groups[4]&&groups[4].items, g5=groups[5]&&groups[5].items, g7=groups[7]&&groups[7].items;
+    if(!g2||!g3||!g4||!g5||!g7) return null;
+    if(g2.length<16||g3.length<8||g4.length<4||g5.length<2||!g7.length) return null;
+    var r32=numMap(g2), r16=numMap(g3), qf=numMap(g4), sf=numMap(g5), finalEv=byDate(g7)[0];
+    var ord={2:[],3:[],4:[],5:[],7:[finalEv]}, ok=true;
+    function pushR16(n){ var e=r16[n]; if(!e){ok=false;return;} ord[3].push(e); var fs=feed(e,/Round of 32 (\d+)/i); if(fs.length<2){ok=false;return;} fs.forEach(function(g){ var ev=r32[g]; if(!ev){ok=false;return;} ord[2].push(ev); }); }
+    function pushQF(n){ var e=qf[n]; if(!e){ok=false;return;} ord[4].push(e); var fs=feed(e,/Round of 16 (\d+)/i); if(fs.length<2){ok=false;return;} fs.forEach(pushR16); }
+    function pushSF(n){ var e=sf[n]; if(!e){ok=false;return;} ord[5].push(e); var fs=feed(e,/Quarterfinal (\d+)/i); if(fs.length<2){ok=false;return;} fs.forEach(pushQF); }
+    var ffs=feed(finalEv,/Semifinal (\d+)/i); if(ffs.length<2) return null;
+    ffs.forEach(pushSF);
+    if(!ok) return null;
+    if(ord[2].length!==16||ord[3].length!==8||ord[4].length!==4||ord[5].length!==2) return null;
+    return ord;
+  }catch(e){ return null; }
+}
 async function g45LoadBracket(slug, box){
   box.innerHTML='<div style="display:flex;align-items:center;gap:8px;padding:14px;color:var(--t3);font-size:11px;"><div style="width:12px;height:12px;border:2px solid rgba(30,215,96,.2);border-top-color:#1ed760;border-radius:50%;animation:spin .8s linear infinite;"></div>Chargement de la phase finale…</div>';
   try{
@@ -21795,6 +21836,15 @@ async function g45LoadBracket(slug, box){
       var st=(c.status&&c.status.type)||{}, done=st.completed, live=st.state==='in';
       function row(cc){
         var t=(cc&&cc.team)||{}, nm=t.abbreviation||t.shortDisplayName||t.displayName||'—';
+        var dn=t.displayName||t.shortDisplayName||t.name||'', mm;
+        if((mm=dn.match(/Round of 32 (\d+) Winner/i))) nm='Vainq. 16e #'+mm[1];
+        else if((mm=dn.match(/Round of 16 (\d+) Winner/i))) nm='Vainq. 8e #'+mm[1];
+        else if((mm=dn.match(/Quarterfinal (\d+) Winner/i))) nm='Vainq. ¼ #'+mm[1];
+        else if((mm=dn.match(/Semifinal (\d+) Winner/i))) nm='Vainq. ½ #'+mm[1];
+        else if((mm=dn.match(/Semifinal (\d+) Loser/i))) nm='Perd. ½ #'+mm[1];
+        else if((mm=dn.match(/Third Place Group ([A-Z\/]+)/i))) nm='3e '+mm[1];
+        else if((mm=dn.match(/Group ([A-Z]) Winner/i))) nm='1er '+mm[1];
+        else if((mm=dn.match(/Group ([A-Z]) (\d)(?:st|nd|rd|th) Place/i))) nm=mm[2]+'e '+mm[1];
         var logo=(t.logos&&t.logos[0]&&t.logos[0].href)||t.logo||'';
         var win=cc&&cc.winner===true, scv=(done||live)?sc(cc):'';
         return '<div class="g45brk-r'+(win?' g45brk-win':'')+'">'+(logo?'<img src="'+logo+'" onerror="this.style.display=\'none\'">':'<span style="width:15px;display:inline-block;"></span>')+'<span class="g45brk-nm">'+nm+'</span><span class="g45brk-sc">'+scv+'</span></div>';
@@ -21806,10 +21856,11 @@ async function g45LoadBracket(slug, box){
     function dedupeSort(items){ var seen={}; return items.filter(function(e){ if(seen[e.id])return false; seen[e.id]=1; return true; }).sort(function(a,b){return new Date(a.date)-new Date(b.date);}); }
     var roundDef=[{k:2,l:'16es'},{k:3,l:'8es'},{k:4,l:'Quarts'},{k:5,l:'Demies'},{k:7,l:'Finale'}];
     var counts={2:16,3:8,4:4,5:2,7:1};
+    var ordered=_g45BrkBracketOrder(groups); // vrai arbre si tout le câblage est dispo, sinon null
     var colsHtml='';
     roundDef.forEach(function(rd){
       var n=counts[rd.k]||1;
-      var ms=groups[rd.k]?dedupeSort(groups[rd.k].items):[];
+      var ms=(ordered&&ordered[rd.k]) ? ordered[rd.k] : (groups[rd.k]?dedupeSort(groups[rd.k].items):[]);
       var slots='';
       for(var i=0;i<n;i++){ slots+='<div class="g45brk-slot">'+(ms[i]?card(ms[i]):'<div class="g45brk-tbd"></div>')+'</div>'; }
       colsHtml+='<div class="g45brk-col"><div class="g45brk-h">'+rd.l+'</div><div class="g45brk-body">'+slots+'</div></div>';
