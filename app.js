@@ -19237,6 +19237,17 @@ function _renderEspnMatchStats(s, homeId, awayId, col){
     if(!hStats.length && !aStats.length) return '';
     function mk(stats){ var m={}; stats.forEach(function(x){ if(x&&x.name) m[x.name]={v:x.displayValue, l:(x.label||x.displayName||x.shortDisplayName||'')}; }); return m; }
     var H=mk(hStats), A=mk(aStats);
+    // Tirs dans/hors surface : pas dans le boxscore ESPN → on les compte depuis le commentaire
+    try{
+      var hNm=(hT&&hT.team&&hT.team.displayName)||'', aNm=(aT&&aT.team&&aT.team.displayName)||'';
+      var z=_g45ShotZones(s, hNm, aNm);
+      if(z){
+        H['shotsInsideBox']={v:String(z[hNm]?z[hNm].in:0), l:'Tirs dans la surface'};
+        A['shotsInsideBox']={v:String(z[aNm]?z[aNm].in:0), l:'Tirs dans la surface'};
+        H['shotsOutsideBox']={v:String(z[hNm]?z[hNm].out:0), l:'Tirs hors surface'};
+        A['shotsOutsideBox']={v:String(z[aNm]?z[aNm].out:0), l:'Tirs hors surface'};
+      }
+    }catch(_e){}
     // libellés FR de secours pour les stats sans label ESPN
     var frMap={possessionPct:'Possession',expectedGoals:'Buts attendus (xG)',totalShots:'Tirs',shotsOnTarget:'Tirs cadrés',shotsOnGoal:'Tirs au but',ownGoals:'Buts contre son camp',blockedShots:'Tirs bloqués',shotsInsideBox:'Tirs dans la surface',shotsOutsideBox:'Tirs hors surface',hitWoodwork:'Poteaux / barres',wonCorners:'Corners',cornerKicks:'Corners',offsides:'Hors-jeu',foulsCommitted:'Fautes',yellowCards:'Cartons jaunes',redCards:'Cartons rouges',totalPasses:'Passes',accuratePasses:'Passes réussies',saves:'Arrêts',totalCrosses:'Centres',accurateCrosses:'Centres réussis',totalTackles:'Tacles',interceptions:'Interceptions',effectiveClearance:'Dégagements',totalLongBalls:'Longs ballons',penaltyKicksTaken:'Penaltys tirés'};
     // ordre : les plus parlantes d'abord, puis tout le reste (rien n'est masqué)
@@ -19256,17 +19267,28 @@ function _renderEspnMatchStats(s, homeId, awayId, col){
       rows+='<div style="margin-bottom:9px;"><div style="display:flex;justify-content:space-between;align-items:center;font-size:11px;margin-bottom:3px;"><b style="color:var(--t1);min-width:40px;">'+hv+'</b><span style="color:var(--t3);text-align:center;flex:1;padding:0 6px;">'+lab+'</span><b style="color:var(--t1);min-width:40px;text-align:right;">'+av+'</b></div><div style="display:flex;height:5px;border-radius:3px;overflow:hidden;background:rgba(255,255,255,.06);"><div style="width:'+hp+'%;background:'+col+';"></div><div style="width:'+ap+'%;background:var(--t3);opacity:.55;"></div></div></div>';
     });
     if(!rows) return '';
-    // --- DEBUG TEMPORAIRE : structure des données pour trouver la position des tirs ---
-    var allNames={}; hStats.forEach(function(x){ if(x&&x.name) allNames[x.name]=(x.label||x.displayName||''); }); aStats.forEach(function(x){ if(x&&x.name && !allNames[x.name]) allNames[x.name]=(x.label||x.displayName||''); });
-    function _smp(o){ var t; try{ t=JSON.stringify(o); }catch(_e){ t=String(o); } if(t&&t.length>700) t=t.slice(0,700)+' …'; return (t||'∅').replace(/</g,'&lt;'); }
-    var probe='<div><b style="color:#1ed760;">data keys:</b> '+Object.keys(s||{}).join(', ')+'</div>';
-    try{ if(s.keyEvents&&s.keyEvents.length){ probe+='<div style="margin-top:5px;"><b style="color:#1ed760;">keyEvents ('+s.keyEvents.length+') — clés du 1er:</b> '+Object.keys(s.keyEvents[0]||{}).join(', ')+'</div><div style="margin-top:3px;color:var(--t2);">ex: '+_smp(s.keyEvents[0])+'</div>'; } }catch(_e){}
-    try{ if(s.plays&&s.plays.length){ probe+='<div style="margin-top:5px;"><b style="color:#1ed760;">plays ('+s.plays.length+') — clés du 1er:</b> '+Object.keys(s.plays[0]||{}).join(', ')+'</div><div style="margin-top:3px;color:var(--t2);">ex: '+_smp(s.plays[0])+'</div>'; } }catch(_e){}
-    try{ if(s.commentary&&s.commentary.length){ probe+='<div style="margin-top:5px;"><b style="color:#1ed760;">commentary ('+s.commentary.length+') — clés du 1er:</b> '+Object.keys(s.commentary[0]||{}).join(', ')+'</div>'; } }catch(_e){}
-    var dbgList=Object.keys(allNames).map(function(n){ return '<div style="padding:1px 0;"><b style="color:#7aa2ff;">'+n+'</b> · '+(allNames[n]||'(sans libellé)')+'</div>'; }).join('');
-    var dbgHtml='<details style="margin-top:8px;font-size:9px;"><summary style="cursor:pointer;color:#8aa0ff;font-weight:700;">🔧 Debug structure tirs — ouvre et capture</summary><div style="max-height:320px;overflow:auto;margin-top:4px;background:rgba(0,0,0,.25);border-radius:6px;padding:6px;line-height:1.5;">'+probe+'<hr style="border-color:rgba(255,255,255,.1);margin:6px 0;"><b>Stats boxscore ('+Object.keys(allNames).length+') :</b>'+dbgList+'</div></details>';
-    return '<div class="fc" style="padding:14px;"><div style="font-size:11px;font-weight:800;letter-spacing:.5px;color:var(--t2);margin-bottom:12px;">📊 STATISTIQUES</div>'+rows+dbgHtml+'</div>';
+    return '<div class="fc" style="padding:14px;"><div style="font-size:11px;font-weight:800;letter-spacing:.5px;color:var(--t2);margin-bottom:12px;">📊 STATISTIQUES</div>'+rows+'</div>';
   } catch(e){ return ''; }
+}
+// Compte les tirs dans / hors surface à partir du commentaire ESPN (absent du boxscore)
+function _g45ShotZones(s, hName, aName){
+  try{
+    var com=s&&s.commentary; if(!com||!com.length||!hName||!aName) return null;
+    var res={}; res[hName]={in:0,out:0}; res[aName]={in:0,out:0}; var any=false;
+    com.forEach(function(c){
+      var p=c&&c.play; if(!p||!p.type) return;
+      var ty=p.type.text||'';
+      var isShot = ty==='Goal' || /^Shot\b/i.test(ty); // Shot On Target / Off Target / Blocked (exclut "Assists Shot")
+      if(!isShot) return;
+      var tm=(p.team&&p.team.displayName)||'';
+      var key = (tm===hName)?hName : (tm===aName)?aName : null;
+      if(!key) return;
+      var t=String(c.text||p.text||'').toLowerCase();
+      var zone = (/outside the box/.test(t) || /\b(3[0-9]|[4-9][0-9])\s*yard/.test(t)) ? 'out' : 'in';
+      res[key][zone]++; any=true;
+    });
+    return any?res:null;
+  }catch(e){ return null; }
 }
 
 function _renderEspnMatchLineups(s, col, nameFn){
