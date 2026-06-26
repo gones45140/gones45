@@ -19237,17 +19237,6 @@ function _renderEspnMatchStats(s, homeId, awayId, col){
     if(!hStats.length && !aStats.length) return '';
     function mk(stats){ var m={}; stats.forEach(function(x){ if(x&&x.name) m[x.name]={v:x.displayValue, l:(x.label||x.displayName||x.shortDisplayName||'')}; }); return m; }
     var H=mk(hStats), A=mk(aStats);
-    // Tirs dans/hors surface : pas dans le boxscore ESPN → on les compte depuis le commentaire
-    try{
-      var hNm=(hT&&hT.team&&hT.team.displayName)||'', aNm=(aT&&aT.team&&aT.team.displayName)||'';
-      var z=_g45ShotZones(s, hNm, aNm);
-      if(z){
-        H['shotsInsideBox']={v:String(z[hNm]?z[hNm].in:0), l:'Tirs dans la surface'};
-        A['shotsInsideBox']={v:String(z[aNm]?z[aNm].in:0), l:'Tirs dans la surface'};
-        H['shotsOutsideBox']={v:String(z[hNm]?z[hNm].out:0), l:'Tirs hors surface'};
-        A['shotsOutsideBox']={v:String(z[aNm]?z[aNm].out:0), l:'Tirs hors surface'};
-      }
-    }catch(_e){}
     // libellés FR de secours pour les stats sans label ESPN
     var frMap={possessionPct:'Possession',expectedGoals:'Buts attendus (xG)',totalShots:'Tirs',shotsOnTarget:'Tirs cadrés',shotsOnGoal:'Tirs au but',ownGoals:'Buts contre son camp',blockedShots:'Tirs bloqués',shotsInsideBox:'Tirs dans la surface',shotsOutsideBox:'Tirs hors surface',hitWoodwork:'Poteaux / barres',wonCorners:'Corners',cornerKicks:'Corners',offsides:'Hors-jeu',foulsCommitted:'Fautes',yellowCards:'Cartons jaunes',redCards:'Cartons rouges',totalPasses:'Passes',accuratePasses:'Passes réussies',saves:'Arrêts',totalCrosses:'Centres',accurateCrosses:'Centres réussis',totalTackles:'Tacles',interceptions:'Interceptions',effectiveClearance:'Dégagements',totalLongBalls:'Longs ballons',penaltyKicksTaken:'Penaltys tirés'};
     // ordre : les plus parlantes d'abord, puis tout le reste (rien n'est masqué)
@@ -19269,26 +19258,6 @@ function _renderEspnMatchStats(s, homeId, awayId, col){
     if(!rows) return '';
     return '<div class="fc" style="padding:14px;"><div style="font-size:11px;font-weight:800;letter-spacing:.5px;color:var(--t2);margin-bottom:12px;">📊 STATISTIQUES</div>'+rows+'</div>';
   } catch(e){ return ''; }
-}
-// Compte les tirs dans / hors surface à partir du commentaire ESPN (absent du boxscore)
-function _g45ShotZones(s, hName, aName){
-  try{
-    var com=s&&s.commentary; if(!com||!com.length||!hName||!aName) return null;
-    var res={}; res[hName]={in:0,out:0}; res[aName]={in:0,out:0}; var any=false;
-    com.forEach(function(c){
-      var p=c&&c.play; if(!p||!p.type) return;
-      var ty=p.type.text||'';
-      var isShot = ty==='Goal' || /^Shot\b/i.test(ty); // Shot On Target / Off Target / Blocked (exclut "Assists Shot")
-      if(!isShot) return;
-      var tm=(p.team&&p.team.displayName)||'';
-      var key = (tm===hName)?hName : (tm===aName)?aName : null;
-      if(!key) return;
-      var t=String(c.text||p.text||'').toLowerCase();
-      var zone = (/outside the box/.test(t) || /\b(3[0-9]|[4-9][0-9])\s*yard/.test(t)) ? 'out' : 'in';
-      res[key][zone]++; any=true;
-    });
-    return any?res:null;
-  }catch(e){ return null; }
 }
 
 function _renderEspnMatchLineups(s, col, nameFn){
