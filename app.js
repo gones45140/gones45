@@ -18817,6 +18817,40 @@ function toggleCpType(btn) {
 
 // ── GENERATEUR PARI DU JOUR ──
 
+/* ── Matchs suivis (sélection manuelle dans Résultats → calendrier perso) ── */
+function g45SuivisGet(){ try{ var a=JSON.parse(localStorage.getItem('g45_suivis')||'[]'); return Array.isArray(a)?a:[]; }catch(e){ return []; } }
+function g45SuivisSave(a){ try{ localStorage.setItem('g45_suivis', JSON.stringify(a)); }catch(e){} }
+function g45SuivisHas(id){ id=String(id); return g45SuivisGet().some(function(m){ return String(m.id)===id; }); }
+function g45SuivisToggle(obj){
+  var a=g45SuivisGet(), id=String(obj.id), i=-1, k;
+  for(k=0;k<a.length;k++){ if(String(a[k].id)===id){ i=k; break; } }
+  var added; if(i>=0){ a.splice(i,1); added=false; } else { a.push(obj); added=true; }
+  var cut=Date.now()-2*3600*1000; // purge des matchs finis depuis >2h
+  a=a.filter(function(m){ var t=new Date(m.date).getTime(); return isNaN(t)||t>cut; });
+  g45SuivisSave(a); return added;
+}
+function _g45SuiviPaint(btn, on){
+  if(!btn) return;
+  btn.textContent = on ? '\u2605 Suivi' : '\u2606 Suivre';
+  btn.style.background = on ? 'rgba(30,215,96,.16)' : 'rgba(255,255,255,.05)';
+  btn.style.color = on ? '#1ed760' : 'var(--t2)';
+  btn.style.borderColor = on ? 'rgba(30,215,96,.45)' : 'rgba(255,255,255,.16)';
+}
+function g45SuiviBtn(btn){
+  try{ var d=btn.dataset; var added=g45SuivisToggle({id:d.id,date:d.date,home:d.home,away:d.away,comp:d.comp,league:d.league,sport:d.sport||'soccer'}); _g45SuiviPaint(btn, added); }catch(e){}
+}
+function g45SuiviRemove(id){
+  g45SuivisSave(g45SuivisGet().filter(function(m){ return String(m.id)!==String(id); }));
+  if(typeof loadCalendrier==='function') loadCalendrier();
+}
+function _g45SuiviStarHTML(id, date, home, away, comp, league, sport){
+  function ea(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;'); }
+  var on=g45SuivisHas(id);
+  return '<button onclick="g45SuiviBtn(this)" data-id="'+ea(id)+'" data-date="'+ea(date)+'" data-home="'+ea(home)+'" data-away="'+ea(away)+'" data-comp="'+ea(comp)+'" data-league="'+ea(league)+'" data-sport="'+ea(sport||'soccer')+'" '
+    +'style="font-size:11px;font-weight:700;padding:5px 11px;border-radius:8px;cursor:pointer;border:1px solid '+(on?'rgba(30,215,96,.45)':'rgba(255,255,255,.16)')+';background:'+(on?'rgba(30,215,96,.16)':'rgba(255,255,255,.05)')+';color:'+(on?'#1ed760':'var(--t2)')+';">'+(on?'\u2605 Suivi':'\u2606 Suivre')+'</button>';
+}
+window.g45SuiviBtn=g45SuiviBtn; window.g45SuiviRemove=g45SuiviRemove;
+
 // ── CALENDRIER GLOBAL ──
 var _calCache = null;
 // Résolution football-data STRICTE (mots entiers) — évite les faux positifs type
@@ -18871,8 +18905,9 @@ async function loadCalendrier() {
 
   // Équipes football favorites (résolution ESPN, comme l'onglet Saisons)
   var teams = state.u.filter(function(u){ return (u.sport||'⚽')==='⚽'; }).slice(0,8);
-  if(!teams.length) {
-    el.innerHTML = '<div class="fc" style="color:var(--t3);text-align:center;">Ajoute des équipes de foot en favori pour voir leur calendrier.</div>';
+  var _suivis = g45SuivisGet();
+  if(!teams.length && !_suivis.length) {
+    el.innerHTML = '<div class="fc" style="color:var(--t3);text-align:center;">Ajoute des équipes de foot en favori, ou suis un match précis depuis l\'onglet Résultats (bouton ☆ Suivre).</div>';
     return;
   }
 
@@ -18903,6 +18938,13 @@ async function loadCalendrier() {
       });
     });
   }
+
+  // + matchs suivis manuellement (sélection dans Résultats), même hors favoris
+  _suivis.forEach(function(s){
+    var t=new Date(s.date).getTime();
+    if(isNaN(t) || t < nowTs) return;
+    allMatches.push({ date:s.date, isDom:true, adv:s.away||'?', ourName:s.home||'?', color:'#1ed760', comp:s.comp||'', compSlug:'', venue:'', suivi:true, id:s.id });
+  });
 
   // Dédoublonnage (un même match peut apparaître pour 2 favoris qui s'affrontent) + tri par date
   var seen = {};
@@ -18936,10 +18978,12 @@ async function loadCalendrier() {
       var compLabel = m.comp || m.compSlug || '';
       html += '<div style="display:flex;align-items:center;padding:10px 12px;background:var(--s1);border-radius:var(--r6);margin-bottom:6px;border-left:3px solid '+m.color+';">';
       html += '<div style="flex:1;">';
-      html += '<div style="font-size:12px;font-weight:700;color:var(--t1);">'+m.ourName+' '+(m.isDom?'<span style="color:#3fb950;">vs</span>':'<span style="color:#f0883e;">@</span>')+' '+m.adv+'</div>';
-      html += '<div style="font-size:10px;color:var(--t3);margin-top:2px;">'+compIco3+' '+compLabel+(m.isDom?' · 🏠 Domicile':' · ✈️ Extérieur')+'</div>';
+      html += '<div style="font-size:12px;font-weight:700;color:var(--t1);">'+m.ourName+' '+(m.suivi?'<span style="color:#1ed760;">vs</span>':(m.isDom?'<span style="color:#3fb950;">vs</span>':'<span style="color:#f0883e;">@</span>'))+' '+m.adv+'</div>';
+      html += '<div style="font-size:10px;color:var(--t3);margin-top:2px;">'+compIco3+' '+compLabel+(m.suivi?' · ⭐ Suivi':(m.isDom?' · 🏠 Domicile':' · ✈️ Extérieur'))+'</div>';
       html += '</div>';
-      html += '<div style="text-align:right;"><div style="font-size:12px;font-weight:700;color:var(--a);">'+time+'</div></div>';
+      html += '<div style="text-align:right;display:flex;align-items:center;gap:8px;flex:none;"><div style="font-size:12px;font-weight:700;color:var(--a);">'+time+'</div>';
+      if(m.suivi) html += '<button onclick="g45SuiviRemove(\''+String(m.id).replace(/'/g,'')+'\')" title="Retirer du calendrier" style="background:none;border:1px solid rgba(255,69,69,.3);color:#ff6b6b;border-radius:6px;font-size:12px;font-weight:700;padding:2px 7px;cursor:pointer;flex:none;">✕</button>';
+      html += '</div>';
       html += '</div>';
     });
   });
@@ -19927,6 +19971,11 @@ async function _renderSaisonDetail(el, eventId, league){
 
     var h='<div style="margin:4px 0 8px;padding:10px;background:rgba(0,0,0,.18);border-radius:10px;">';
     h+=goalBanner;
+    // ── Bouton « Suivre ce match » → calendrier perso ──
+    try{
+      var _compName=''; try{ _compName=(data.header&&data.header.league&&(data.header.league.name||data.header.league.shortName))||''; }catch(_e){}
+      h+='<div style="display:flex;justify-content:flex-end;margin-bottom:6px;">'+_g45SuiviStarHTML(eventId, comp.date||'', hN, aN, _compName||league||'', league||'', 'soccer')+'</div>';
+    }catch(_e){}
     // En live : on laisse le lecteur live afficher le score. Hors live : en-tête de score.
     if(!isLive) h+='<div style="display:flex;align-items:center;justify-content:center;gap:12px;font-size:13px;font-weight:800;color:var(--t1);margin-bottom:8px;"><span>'+hN+'</span><span style="color:var(--a);">'+hS+' - '+aS+'</span><span>'+aN+'</span></div>';
     // ── Blocs LIVE (vides automatiquement si match pas en cours) ──
@@ -20571,6 +20620,11 @@ async function _renderGenericDetail(el, sport, lg, eid){
     var h='<div style="margin:4px 0 8px;padding:12px;background:rgba(0,0,0,.18);border-radius:10px;">';
     h+='<div style="display:flex;align-items:center;justify-content:center;gap:14px;font-size:15px;font-weight:900;color:var(--t1);"><span>'+hN+'</span><span style="color:'+(isLive?'#ff4545':'var(--a)')+';white-space:nowrap;">'+hS+' - '+aS+'</span><span>'+aN+'</span></div>';
     if(status) h+='<div style="text-align:center;font-size:10px;color:'+(isLive?'#ff4545':'var(--t3)')+';margin-top:4px;font-weight:700;">'+(isLive?'🔴 ':'')+status+'</div>';
+    // ── Bouton « Suivre ce match » → calendrier perso ──
+    try{
+      var _cnG=''; try{ _cnG=(data.header&&data.header.league&&(data.header.league.name||data.header.league.shortName))||lg||''; }catch(_e){}
+      h+='<div style="display:flex;justify-content:flex-end;margin-top:8px;">'+_g45SuiviStarHTML(eid, comp.date||'', hN, aN, _cnG, lg||'', sport||'')+'</div>';
+    }catch(_e){}
     // Scores par période si dispo (linescores)
     try{
       var hl=home.linescores||[], al=away.linescores||[];
