@@ -21762,8 +21762,13 @@ async function g45LoadBracket(slug, box){
     });
     var thirdHtml='';
     if(groups[6]){ thirdHtml='<div style="margin-top:12px;max-width:240px;"><div class="g45brk-h" style="text-align:left;">🥉 Match pour la 3e place</div>'+dedupeSort(groups[6].items).map(card).join('')+'</div>'; }
-    // --- DEBUG TEMPORAIRE : ce qu'ESPN renvoie réellement ---
-    var dbg=evs.map(function(e){
+    // --- DEBUG TEMPORAIRE : phase finale uniquement (poules masquées) ---
+    var nGroup=0;
+    var dbg=evs.filter(function(e){
+      var seas=''; try{ seas=((e.season&&(e.season.slug||e.season.name||(e.season.type&&e.season.type.name)))||'').toLowerCase(); }catch(_e){}
+      if(seas.indexOf('group')>=0||seas.indexOf('poule')>=0){ nGroup++; return false; }
+      return true;
+    }).map(function(e){
       var c=(e.competitions&&e.competitions[0])||{};
       var nm=(c.competitors||[]).map(function(x){return (x.team&&(x.team.displayName||x.team.shortDisplayName||x.team.abbreviation))||'?';}).join(' vs ');
       var note=''; try{(c.notes||[]).forEach(function(n){note+=(n.headline||n.text||'')+' / ';});}catch(_e){}
@@ -21775,9 +21780,9 @@ async function g45LoadBracket(slug, box){
         +'<b style="color:'+(ro?'#1ed760':'#ff6b6b')+'">'+(ro?('k'+ro.k):'NON CLASSÉ')+'</b> · '+dstr+' · <b>'+nm+'</b>'
         +'<br><span style="color:var(--t3);font-size:9px;">note:['+note.trim()+'] · seas:['+seas+'] · type:['+ty+']</span></div>';
     }).join('');
-    var dbgHtml='<details style="margin-top:14px;font-size:10px;"><summary style="cursor:pointer;color:#8aa0ff;font-weight:700;">🔧 Debug ESPN ('+evs.length+' matchs reçus) — ouvre et capture</summary>'
-      +'<div style="margin:8px 0;"><button onclick="g45BrkSofaTest(this)" style="background:rgba(30,215,96,.12);border:1px solid rgba(30,215,96,.4);color:#1ed760;font-size:11px;font-weight:700;padding:6px 10px;border-radius:6px;cursor:pointer;">🔌 Tester Sofascore (direct navigateur)</button><div id="g45-sofatest" style="margin-top:6px;background:rgba(0,0,0,.25);border-radius:8px;padding:8px;line-height:1.5;"></div></div>'
-      +'<div style="max-height:340px;overflow:auto;margin-top:6px;background:rgba(0,0,0,.25);border-radius:8px;padding:8px;line-height:1.4;">'+(dbg||'<i>aucun match renvoyé</i>')+'</div></details>';
+    var dbgHtml='<details style="margin-top:14px;font-size:10px;" open><summary style="cursor:pointer;color:#8aa0ff;font-weight:700;">🔧 Debug — phase finale ESPN ('+(evs.length-nGroup)+' matchs, '+nGroup+' poules masquées)</summary>'
+      +'<div style="margin:8px 0;"><button onclick="g45BrkSofaTest(this)" style="background:rgba(30,215,96,.12);border:1px solid rgba(30,215,96,.4);color:#1ed760;font-size:11px;font-weight:700;padding:6px 10px;border-radius:6px;cursor:pointer;">🔌 Re-tester Sofascore</button><div id="g45-sofatest" style="margin-top:6px;background:rgba(0,0,0,.25);border-radius:8px;padding:8px;line-height:1.5;">⏳ test Sofascore au chargement…</div></div>'
+      +'<div style="max-height:340px;overflow:auto;margin-top:6px;background:rgba(0,0,0,.25);border-radius:8px;padding:8px;line-height:1.4;">'+(dbg||'<i>aucun match hors-poule renvoyé par ESPN</i>')+'</div></details>';
     var html='<div style="display:flex;align-items:center;justify-content:space-between;margin:2px 0 6px;">'
       +'<span style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:#1ed760;">🏟 Phase finale</span>'
       +'<span style="font-size:8px;color:var(--t3);">clique un match pour le détail</span></div>'
@@ -21786,6 +21791,7 @@ async function g45LoadBracket(slug, box){
       +dbgHtml
       +'<div id="g45-brk-detail" style="margin-top:10px;"></div>';
     box.innerHTML=html;
+    try{ g45BrkSofaTest(null); }catch(_e){}
   }catch(e){
     box.innerHTML='<div style="color:#ff6b6b;font-size:11px;text-align:center;padding:12px;">Erreur de chargement de la phase finale.</div>';
   }
