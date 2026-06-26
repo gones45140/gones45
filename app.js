@@ -21762,11 +21762,28 @@ async function g45LoadBracket(slug, box){
     });
     var thirdHtml='';
     if(groups[6]){ thirdHtml='<div style="margin-top:12px;max-width:240px;"><div class="g45brk-h" style="text-align:left;">🥉 Match pour la 3e place</div>'+dedupeSort(groups[6].items).map(card).join('')+'</div>'; }
+    // --- DEBUG TEMPORAIRE : ce qu'ESPN renvoie réellement ---
+    var dbg=evs.map(function(e){
+      var c=(e.competitions&&e.competitions[0])||{};
+      var nm=(c.competitors||[]).map(function(x){return (x.team&&(x.team.displayName||x.team.shortDisplayName||x.team.abbreviation))||'?';}).join(' vs ');
+      var note=''; try{(c.notes||[]).forEach(function(n){note+=(n.headline||n.text||'')+' / ';});}catch(_e){}
+      var seas=''; try{ seas=((e.season&&(e.season.slug||e.season.name||(e.season.type&&e.season.type.name)))||''); }catch(_e){}
+      var ty=''; try{ ty=((c.type&&(c.type.text||c.type.abbreviation))||''); }catch(_e){}
+      var ro=roundOf(e);
+      var dd=new Date(e.date); var dstr=isNaN(dd)?'':dd.toLocaleDateString('fr-FR',{day:'2-digit',month:'2-digit'});
+      return '<div style="padding:2px 0;border-bottom:1px solid rgba(255,255,255,.06);">'
+        +'<b style="color:'+(ro?'#1ed760':'#ff6b6b')+'">'+(ro?('k'+ro.k):'NON CLASSÉ')+'</b> · '+dstr+' · <b>'+nm+'</b>'
+        +'<br><span style="color:var(--t3);font-size:9px;">note:['+note.trim()+'] · seas:['+seas+'] · type:['+ty+']</span></div>';
+    }).join('');
+    var dbgHtml='<details style="margin-top:14px;font-size:10px;"><summary style="cursor:pointer;color:#8aa0ff;font-weight:700;">🔧 Debug ESPN ('+evs.length+' matchs reçus) — ouvre et capture</summary>'
+      +'<div style="margin:8px 0;"><button onclick="g45BrkSofaTest(this)" style="background:rgba(30,215,96,.12);border:1px solid rgba(30,215,96,.4);color:#1ed760;font-size:11px;font-weight:700;padding:6px 10px;border-radius:6px;cursor:pointer;">🔌 Tester Sofascore (direct navigateur)</button><div id="g45-sofatest" style="margin-top:6px;background:rgba(0,0,0,.25);border-radius:8px;padding:8px;line-height:1.5;"></div></div>'
+      +'<div style="max-height:340px;overflow:auto;margin-top:6px;background:rgba(0,0,0,.25);border-radius:8px;padding:8px;line-height:1.4;">'+(dbg||'<i>aucun match renvoyé</i>')+'</div></details>';
     var html='<div style="display:flex;align-items:center;justify-content:space-between;margin:2px 0 6px;">'
       +'<span style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:#1ed760;">🏟 Phase finale</span>'
       +'<span style="font-size:8px;color:var(--t3);">clique un match pour le détail</span></div>'
       +'<div class="g45brk-wrap"><div class="g45brk">'+colsHtml+'</div></div>'
       +thirdHtml
+      +dbgHtml
       +'<div id="g45-brk-detail" style="margin-top:10px;"></div>';
     box.innerHTML=html;
   }catch(e){
@@ -21780,6 +21797,42 @@ function g45BrkOpen(eid, slug){
   try{ _renderSaisonDetail(det, eid, slug||'fifa.world'); }catch(e){ det.innerHTML='<div style="color:var(--t3);font-size:11px;padding:8px;">Détail indisponible.</div>'; }
   try{ det.scrollIntoView({behavior:'smooth',block:'nearest'}); }catch(e){}
 }
+async function g45BrkSofaTest(btn){
+  var out=document.getElementById('g45-sofatest'); if(!out) return;
+  out.innerHTML='⏳ test en cours…'; if(btn) btn.disabled=true;
+  function dump(label,obj){ var s; try{ s=JSON.stringify(obj); }catch(_e){ s=String(obj); } if(s&&s.length>1400) s=s.slice(0,1400)+' …(tronqué)'; return '<div style="margin:4px 0;"><b style="color:#1ed760;">'+label+'</b><br><span style="word-break:break-all;color:var(--t2);">'+(s||'∅').replace(/</g,'&lt;')+'</span></div>'; }
+  var html='';
+  // 1) liste des saisons de la Coupe du monde (unique-tournament 16)
+  try{
+    var r1=await fetch('https://api.sofascore.com/api/v1/unique-tournament/16/seasons');
+    html+='<div>① /unique-tournament/16/seasons → HTTP '+r1.status+'</div>';
+    if(r1.ok){
+      var d1=await r1.json();
+      var seasons=(d1&&d1.seasons)||[];
+      html+=dump('saisons (5 premières)', seasons.slice(0,5));
+      // choisir la saison 2026
+      var s26=seasons.filter(function(s){return /2026|26\b/.test((s.year||'')+' '+(s.name||''));})[0]||seasons[0];
+      if(s26){
+        html+='<div style="margin-top:6px;">→ saison retenue : <b>'+(s26.name||s26.year)+'</b> (id '+s26.id+')</div>';
+        var r2=await fetch('https://api.sofascore.com/api/v1/unique-tournament/16/season/'+s26.id+'/cuptrees');
+        html+='<div>② /…/season/'+s26.id+'/cuptrees → HTTP '+r2.status+'</div>';
+        if(r2.ok){
+          var d2=await r2.json();
+          var trees=(d2&&d2.cupTrees)||[];
+          html+='<div>cupTrees: '+trees.length+'</div>';
+          if(trees[0]){
+            var rounds=trees[0].rounds||[];
+            html+=dump('1er arbre — rounds (noms+types)', rounds.map(function(rd){return {name:rd.name,type:rd.type,order:rd.order,blocks:(rd.blocks||[]).length};}));
+            var firstBlock=(rounds[0]&&rounds[0].blocks&&rounds[0].blocks[0])||null;
+            html+=dump('exemple de bloc (1er match du 1er tour)', firstBlock);
+          }
+        } else { html+='<div style="color:#ff6b6b;">cuptrees inaccessible (CORS ou 403 ?)</div>'; }
+      }
+    } else { html+='<div style="color:#ff6b6b;">seasons inaccessible (CORS ou 403 ?)</div>'; }
+  }catch(e){ html+='<div style="color:#ff6b6b;">❌ '+(e&&e.message||e)+' — ton navigateur ne peut pas joindre api.sofascore.com directement (CORS). On passera par RapidAPI.</div>'; }
+  out.innerHTML=html||'aucune sortie'; if(btn) btn.disabled=false;
+}
+window.g45BrkSofaTest=g45BrkSofaTest;
 window.g45ToggleBracket=g45ToggleBracket;
 window.g45LoadBracket=g45LoadBracket;
 window.g45BrkOpen=g45BrkOpen;
