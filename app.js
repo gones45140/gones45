@@ -19998,6 +19998,13 @@ async function _renderSaisonDetail(el, eventId, league){
     var _mstate=(comp.status&&comp.status.type&&comp.status.type.state)||'';
     if(_mstate==='pre' && !isLive){ try{ var _pm=_g45PreMatchBlock(data); if(_pm){ h+=_pm; added=true; } }catch(e){} }
     if(typeof _renderEspnMatchStats==='function'){ try{ var st=_renderEspnMatchStats(data, homeId, awayId, '#4d84ff'); if(st){ h+=st; added=true; } }catch(e){} }
+    // Bouton stats avancées Sofascore (xG, tirs dans/hors surface…) — à la demande via Worker→RapidAPI
+    try{
+      function _eaAdv(x){return String(x==null?'':x).replace(/&/g,'&amp;').replace(/"/g,'&quot;');}
+      var _advId='g45adv_'+(eventId||Math.random().toString(36).slice(2));
+      h+='<div style="margin-top:8px;"><button onclick="g45LoadAdvStats(this)" data-date="'+_eaAdv(comp.date||'')+'" data-h="'+_eaAdv(hN)+'" data-a="'+_eaAdv(aN)+'" data-box="'+_advId+'" style="width:100%;box-sizing:border-box;font-size:12px;font-weight:800;padding:9px 12px;border-radius:9px;cursor:pointer;border:1.5px solid rgba(255,165,60,.5);background:rgba(255,165,60,.10);color:#ffb13d;">📊 Stats avancées (xG, tirs surface…)</button><div id="'+_advId+'" style="margin-top:8px;"></div></div>';
+      added=true;
+    }catch(e){}
     if(typeof _renderEspnMatchPitch==='function'){ try{ var pi=_renderEspnMatchPitch(data, '#4d84ff', function(x){return x;}); if(pi){ h+=pi; added=true; } }catch(e){} }
     try{ if(typeof _momentsTimeline==='function'){ var _mt=_momentsTimeline(data); if(_mt){ h+=_mt; added=true; } } }catch(e){}
     if(!added && !isLive) h+='<div style="font-size:11px;color:var(--t3);text-align:center;padding:6px;">Pas de détails (compo/stats) pour ce match.</div>';
@@ -20109,6 +20116,74 @@ async function g45Sofa6(path){
     return await r.json();
   }catch(e){ return {__err:'net'}; }
 }
+function _g45SofaNorm(s){ return String(s||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9]/g,''); }
+function _g45SofaFindMatch(evs, hN, aN){
+  if(!Array.isArray(evs)) return null;
+  var H=_g45SofaNorm(hN), A=_g45SofaNorm(aN);
+  function eq(a,b){ if(!a||!b) return false; return a===b || (a.length>3&&b.length>3&&(a.indexOf(b)>=0||b.indexOf(a)>=0)); }
+  var exact=null, fuzzy=null;
+  evs.forEach(function(e){
+    var h=_g45SofaNorm(e.homeTeam&&e.homeTeam.name), a=_g45SofaNorm(e.awayTeam&&e.awayTeam.name);
+    if(!exact && ((h===H&&a===A)||(h===A&&a===H))) exact=e;
+    if(!fuzzy && ((eq(h,H)&&eq(a,A))||(eq(h,A)&&eq(a,H)))) fuzzy=e;
+  });
+  return exact||fuzzy;
+}
+var _G45_SOFA_FRMAP={ballPossession:'Possession',expectedGoals:'Buts attendus (xG)',bigChanceCreated:'Grosses occasions',bigChanceMissed:'Grosses occ. manquées',totalShotsOnGoal:'Tirs',shotsOnGoal:'Tirs cadrés',shotsOffGoal:'Tirs non cadrés',blockedScoringAttempt:'Tirs bloqués',hitWoodwork:'Poteaux / barres',shotsInsideBox:'Tirs dans la surface',shotsOutsideBox:'Tirs hors surface',goalkeeperSaves:'Arrêts du gardien',goalKicks:'Dégagements (6m)',cornerKicks:'Corners',offsides:'Hors-jeu',fouls:'Fautes',freeKicks:'Coups francs',throwIns:'Touches',yellowCards:'Cartons jaunes',redCards:'Cartons rouges',passes:'Passes',accuratePasses:'Passes réussies',totalTackle:'Tacles',interceptionWon:'Interceptions',ballRecovery:'Ballons récupérés',totalClearance:'Dégagements',duelWonPercent:'Duels gagnés %',aerialDuelsPercentage:'Duels aériens %',totalLongBalls:'Longs ballons',crosses:'Centres',dribbles:'Dribbles',touchesInOppBox:'Touches surface adverse',finalThirdEntries:'Entrées dernier tiers'};
+var _G45_SOFA_GRP={'Match overview':'Vue d\'ensemble','Shots':'Tirs','Attack':'Attaque','Passes':'Passes','Duels':'Duels','Defending':'Défense','Goalkeeping':'Gardien'};
+function _g45RenderSofaStats(st, match, hN, aN){
+  try{
+    var per=(st||[]).find(function(p){return p.period==='ALL';})||st[0];
+    if(!per||!per.groups) return '<div style="color:var(--t3);font-size:11px;padding:8px;">Pas de stats.</div>';
+    var swap=_g45SofaNorm(match.homeTeam&&match.homeTeam.name)!==_g45SofaNorm(hN);
+    var col='#ffb13d';
+    var out='<div class="fc" style="padding:14px;margin-top:8px;border:1px solid rgba(255,165,60,.25);"><div style="font-size:11px;font-weight:800;letter-spacing:.5px;color:#ffb13d;margin-bottom:4px;">📊 STATS AVANCÉES</div><div style="font-size:9px;color:var(--t3);margin-bottom:12px;">via Sofascore · '+(swap?aN:hN)+' (G) / '+(swap?hN:aN)+' (D)</div>';
+    // on remet hN à gauche / aN à droite quelle que soit l'orientation Sofascore
+    per.groups.forEach(function(g){
+      var items=(g.statisticsItems||[]).filter(function(it){ return it && (it.homeValue!=null||it.awayValue!=null); });
+      if(!items.length) return;
+      out+='<div style="font-size:10px;font-weight:800;color:#8aa0ff;text-transform:uppercase;letter-spacing:.5px;margin:10px 0 6px;">'+(_G45_SOFA_GRP[g.groupName]||g.groupName||'')+'</div>';
+      items.forEach(function(it){
+        var lv=swap?it.away:it.home, rv=swap?it.home:it.away;
+        var ln=swap?it.awayValue:it.homeValue, rn=swap?it.homeValue:it.awayValue;
+        ln=(typeof ln==='number')?ln:(parseFloat(String(ln).replace(',','.'))||0);
+        rn=(typeof rn==='number')?rn:(parseFloat(String(rn).replace(',','.'))||0);
+        var tot=ln+rn, lp=tot>0?Math.round(ln/tot*100):50, rp=100-lp;
+        var lab=_G45_SOFA_FRMAP[it.key]||it.name||it.key||'';
+        out+='<div style="margin-bottom:9px;"><div style="display:flex;justify-content:space-between;align-items:center;font-size:11px;margin-bottom:3px;"><b style="color:var(--t1);min-width:46px;">'+(lv!=null?lv:ln)+'</b><span style="color:var(--t3);text-align:center;flex:1;padding:0 6px;">'+lab+'</span><b style="color:var(--t1);min-width:46px;text-align:right;">'+(rv!=null?rv:rn)+'</b></div><div style="display:flex;height:5px;border-radius:3px;overflow:hidden;background:rgba(255,255,255,.06);"><div style="width:'+lp+'%;background:'+col+';"></div><div style="width:'+rp+'%;background:var(--t3);opacity:.55;"></div></div></div>';
+      });
+    });
+    out+='</div>';
+    return out;
+  }catch(e){ return '<div style="color:#ff6b6b;font-size:11px;padding:8px;">Erreur rendu stats.</div>'; }
+}
+async function g45LoadAdvStats(btn){
+  var box=document.getElementById(btn.dataset.box); if(!box) return;
+  if(box.getAttribute('data-loaded')==='1'){ box.style.display = (box.style.display==='none'?'':'none'); return; }
+  var key=localStorage.getItem('gones45_rapidapi_key');
+  if(!key){ box.innerHTML='<div style="color:#ff6b6b;font-size:11px;padding:8px;">Clé RapidAPI manquante (à mettre dans Outils).</div>'; return; }
+  box.innerHTML='<div style="color:var(--t3);font-size:11px;padding:10px;text-align:center;">⏳ Chargement Sofascore…</div>';
+  btn.disabled=true;
+  try{
+    var hN=btn.dataset.h, aN=btn.dataset.a, iso=btn.dataset.date, d=new Date(iso);
+    function ymd(dt){ return dt.getUTCFullYear()+'-'+String(dt.getUTCMonth()+1).padStart(2,'0')+'-'+String(dt.getUTCDate()).padStart(2,'0'); }
+    var dates=[ymd(d), ymd(new Date(d.getTime()+86400000)), ymd(new Date(d.getTime()-86400000))];
+    var match=null;
+    for(var i=0;i<dates.length && !match;i++){
+      var list=await g45Sofa6('/api/sofascore/v1/match/list?sport_slug=football&date='+dates[i]);
+      if(list&&list.__err) continue;
+      var evs=Array.isArray(list)?list:((list&&(list.events||list.data))||[]);
+      match=_g45SofaFindMatch(evs, hN, aN);
+    }
+    if(!match){ box.innerHTML='<div style="color:var(--t3);font-size:11px;padding:8px;">Match introuvable sur Sofascore.</div>'; btn.disabled=false; return; }
+    var stats=await g45Sofa6('/api/sofascore/v1/match/statistics?match_id='+match.id);
+    if(!stats || stats.__err || !Array.isArray(stats)){ box.innerHTML='<div style="color:var(--t3);font-size:11px;padding:8px;">Stats Sofascore indisponibles pour ce match.</div>'; btn.disabled=false; return; }
+    box.innerHTML=_g45RenderSofaStats(stats, match, hN, aN);
+    box.setAttribute('data-loaded','1');
+  }catch(e){ box.innerHTML='<div style="color:#ff6b6b;font-size:11px;padding:8px;">Erreur Sofascore.</div>'; }
+  btn.disabled=false;
+}
+window.g45LoadAdvStats=g45LoadAdvStats;
 function _g45Flag(a2){
   if(!a2||a2.length!==2) return '';
   var cc=a2.toUpperCase(); if(!/^[A-Z]{2}$/.test(cc)) return '';
