@@ -1,13 +1,35 @@
-/* GONES45 — Service Worker (notifications de match)
+/* GONES45 — Service Worker
    À placer À LA RACINE du repo (même dossier que index.html).
-   Reçoit un push "vide", récupère les événements en attente côté Worker,
-   et affiche une notif par événement (compo / coup d'envoi / but / fin). */
+   1) Notifications de match (push) — inchangé.
+   2) NOUVEAU : "network-first" sur app.js / social.js / style.css / la page,
+      pour que tes mises à jour s'appliquent TOUJOURS direct (fini le cache figé).
+   Version : 2026-06-27a  (changer ce commentaire force la mise à jour du SW) */
 
 const G45_PUSH_BASE = 'https://fd-proxy.touraine-antoine.workers.dev';
 
 self.addEventListener('install', function(e){ self.skipWaiting(); });
 self.addEventListener('activate', function(e){ e.waitUntil(self.clients.claim()); });
 
+/* ─────────── Anti-cache : toujours la dernière version des fichiers du site ───────────
+   On va chercher app.js (et la page, social.js, style.css) sur le réseau en priorité,
+   en ignorant le cache HTTP du navigateur. Si le réseau échoue (hors-ligne), on laisse
+   le navigateur tenter sa version habituelle. Tout le reste (API ESPN, images, Worker…)
+   n'est PAS intercepté → comportement normal, aucune incidence. */
+self.addEventListener('fetch', function(event){
+  try {
+    if (event.request.method !== 'GET') return;
+    var req = event.request;
+    var freshAsset = /\/(app\.js|social\.js|style\.css)(\?|$)/.test(req.url);
+    var isNav = (req.mode === 'navigate');
+    if (freshAsset || isNav) {
+      event.respondWith(
+        fetch(req, { cache: 'no-store' }).catch(function(){ return fetch(req); })
+      );
+    }
+  } catch (_e) { /* on laisse passer normalement */ }
+});
+
+/* ─────────── Notifications push (inchangé) ─────────── */
 self.addEventListener('push', function(event){
   event.waitUntil((async function(){
     var events = [];
