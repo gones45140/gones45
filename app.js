@@ -18837,10 +18837,13 @@ function _g45SuiviPaint(btn, on){
   btn.style.borderColor = on ? 'rgba(30,215,96,.55)' : 'rgba(77,132,255,.55)';
 }
 function g45SuiviBtn(btn){
-  try{ var d=btn.dataset; var added=g45SuivisToggle({id:d.id,date:d.date,home:d.home,away:d.away,comp:d.comp,league:d.league,sport:d.sport||'soccer'}); _g45SuiviPaint(btn, added); }catch(e){}
+  try{ var d=btn.dataset; var added=g45SuivisToggle({id:d.id,date:d.date,home:d.home,away:d.away,comp:d.comp,league:d.league,sport:d.sport||'soccer'}); _g45SuiviPaint(btn, added);
+    try{ if(typeof g45SyncNotifs==='function' && navigator.serviceWorker){ g45SyncNotifs(); } }catch(_e){}
+  }catch(e){}
 }
 function g45SuiviRemove(id){
   g45SuivisSave(g45SuivisGet().filter(function(m){ return String(m.id)!==String(id); }));
+  try{ if(typeof g45SyncNotifs==='function' && navigator.serviceWorker){ g45SyncNotifs(); } }catch(_e){}
   if(typeof loadCalendrier==='function') loadCalendrier();
 }
 function _g45SuiviStarHTML(id, date, home, away, comp, league, sport){
@@ -19797,7 +19800,9 @@ async function g45SyncNotifs(subOpt){
   for(var i=0;i<favs.length;i++){ var r=await _g45ResolveTeam(favs[i].n); if(r) teams.push({n:favs[i].n, id:r.id, league:r.league}); }
   var betTeams=[];
   if(p.bets!==false){ try{ betTeams=await g45BetTeams(); }catch(e){} } // Phase 2 : matchs des paris (foot + rugby), surveillés à part, taggés 🎯
-  try{ await fetch(FD_PROXY+'/psub',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sub:sub,teams:teams,betTeams:betTeams,ev:p.ev})}); }catch(e){}
+  // Phase 3 : matchs suivis manuellement (⭐) → notifs sur cet event précis, hors favoris
+  var suivis=[]; try{ suivis=g45SuivisGet().map(function(m){ return {id:String(m.id), sport:m.sport||'soccer', league:m.league||'', date:m.date||'', home:m.home||'', away:m.away||''}; }); }catch(e){}
+  try{ await fetch(FD_PROXY+'/psub',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sub:sub,teams:teams,betTeams:betTeams,matches:suivis,ev:p.ev})}); }catch(e){}
 }
 /* Sélections (foot ⚽ + rugby 🏉) des paris en cours → {name, sport, comp} */
 function g45BetSelections(){
