@@ -21846,6 +21846,33 @@ function _g45BrkBracketOrder(groups){
     return ord;
   }catch(e){ return null; }
 }
+/* Ordre officiel FIFA 2026 codé en dur (ESPN ne câble pas les 8es : "RD32 vs RD32").
+   On reconnaît chaque 16e par ses 2 abréviations d'équipe et on le place dans l'arbre réel.
+   Ordre construit en profondeur depuis la finale → connecteurs alignés (pas de croisement). */
+function _g45BrkOfficial2026(groups, slug){
+  try{
+    if(!/fifa\.world/i.test(slug||'')) return null;
+    var g2=groups[2]&&groups[2].items;
+    if(!g2||g2.length<16) return null;
+    function pairKey(e){
+      var c=(e.competitions&&e.competitions[0])||{}, ab=[];
+      (c.competitors||[]).forEach(function(x){ var a=(x.team&&(x.team.abbreviation||x.team.shortDisplayName||x.team.displayName))||''; if(a) ab.push(a.toUpperCase()); });
+      return ab.slice().sort().join('|');
+    }
+    // 16es dans l'ordre d'affichage officiel (chaque paire adjacente = un 8e), d'après le tirage réel (Flashscore)
+    var ORDER16=[['GER','PAR'],['FRA','SWE'],['RSA','CAN'],['NED','MAR'],['POR','CRO'],['ESP','AUT'],['USA','BIH'],['BEL','SEN'],['BRA','JPN'],['CIV','NOR'],['MEX','ECU'],['ENG','COD'],['ARG','CPV'],['AUS','EGY'],['SUI','ALG'],['COL','GHA']];
+    var byPair={}; g2.forEach(function(e){ byPair[pairKey(e)]=e; });
+    var ord2=[];
+    for(var i=0;i<ORDER16.length;i++){
+      var ev=byPair[ORDER16[i].slice().sort().join('|')];
+      if(!ev) return null; // une affiche ne matche pas (équipes pas encore connues) → logique générique
+      ord2.push(ev);
+    }
+    // On ne fournit que l'ordre des 16es : les tours suivants n'ont pas encore d'équipes côté ESPN
+    // ("RD32 vs RD32"), ils s'alignent positionnellement tout seuls (tri par date en repli).
+    return {2:ord2};
+  }catch(e){ return null; }
+}
 async function g45LoadBracket(slug, box){
   box.innerHTML='<div style="display:flex;align-items:center;gap:8px;padding:14px;color:var(--t3);font-size:11px;"><div style="width:12px;height:12px;border:2px solid rgba(30,215,96,.2);border-top-color:#1ed760;border-radius:50%;animation:spin .8s linear infinite;"></div>Chargement de la phase finale…</div>';
   try{
@@ -21940,7 +21967,7 @@ async function g45LoadBracket(slug, box){
     function dedupeSort(items){ var seen={}; return items.filter(function(e){ if(seen[e.id])return false; seen[e.id]=1; return true; }).sort(function(a,b){return new Date(a.date)-new Date(b.date);}); }
     var roundDef=[{k:2,l:'16es'},{k:3,l:'8es'},{k:4,l:'Quarts'},{k:5,l:'Demies'},{k:7,l:'Finale'}];
     var counts={2:16,3:8,4:4,5:2,7:1};
-    var ordered=_g45BrkBracketOrder(groups); // vrai arbre si tout le câblage est dispo, sinon null
+    var ordered=_g45BrkOfficial2026(groups, slug) || _g45BrkBracketOrder(groups); // Mondial : ordre officiel codé en dur ; sinon reconstruction générique
     var colsHtml='';
     roundDef.forEach(function(rd){
       var n=counts[rd.k]||1;
