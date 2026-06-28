@@ -20426,12 +20426,13 @@ function _g45RenderMoreOdds(ev, hN, aN, remain){
   var scBlock='';
   if(scBooks.length){
     var players={};
-    scBooks.forEach(function(b){ (b.markets||[]).forEach(function(m){ if(m.key!=='player_goal_scorer_anytime')return; (m.outcomes||[]).forEach(function(o){ if(!/^y|oui/i.test(o.name))return; var nm=o.description||o.name; if(!nm)return; if(!players[nm])players[nm]={}; var cur=players[nm][b.key]; if(cur==null||o.price>cur)players[nm][b.key]=o.price; }); }); });
-    var arr=Object.keys(players).map(function(nm){ var ps=scBooks.map(function(b){return players[nm][b.key];}).filter(function(x){return x!=null;}); return {nm:nm, fav:(ps.length?Math.min.apply(null,ps):999)}; }).sort(function(a,b){return a.fav-b.fav;}).slice(0,15);
-    var head='<tr style="font-size:9px;color:var(--t3);text-transform:uppercase;"><th style="text-align:left;padding:3px 4px;">Joueur</th>'+scBooks.map(function(b){return '<th style="padding:3px 4px;">'+ea(bookShort(b))+'</th>';}).join('')+'</tr>';
-    var body=arr.map(function(x){ var rowBest=mx(scBooks.map(function(b){return players[x.nm][b.key];}));
-      return '<tr><td style="padding:4px;font-size:11px;color:var(--t1);">'+ea(x.nm)+'</td>'+scBooks.map(function(b){ var pp=players[x.nm][b.key]; return cell(pp, pp&&pp===rowBest); }).join('')+'</tr>'; }).join('');
-    scBlock='<div style="font-size:10px;font-weight:800;color:#4d84ff;margin:10px 0 4px;">👟 BUTEUR À TOUT MOMENT</div>'
+    scBooks.forEach(function(b){ (b.markets||[]).forEach(function(m){ if(m.key!=='player_goal_scorer_anytime')return; (m.outcomes||[]).forEach(function(o){ var nm=o.description; if(!nm)return; if(!players[nm])players[nm]={}; if(!players[nm][b.key])players[nm][b.key]={y:null,n:null}; if(/^y|oui/i.test(o.name)){ if(players[nm][b.key].y==null||o.price>players[nm][b.key].y)players[nm][b.key].y=o.price; } else if(/^n|non/i.test(o.name)){ if(players[nm][b.key].n==null||o.price>players[nm][b.key].n)players[nm][b.key].n=o.price; } }); }); });
+    var anyNo=Object.keys(players).some(function(nm){ return scBooks.some(function(b){ return players[nm][b.key]&&players[nm][b.key].n!=null; }); });
+    var arr=Object.keys(players).map(function(nm){ var ys=scBooks.map(function(b){return players[nm][b.key]?players[nm][b.key].y:null;}).filter(function(x){return x!=null;}); return {nm:nm, fav:(ys.length?Math.min.apply(null,ys):999)}; }).filter(function(x){return x.fav<999;}).sort(function(a,b){return a.fav-b.fav;}).slice(0,15);
+    var head='<tr style="font-size:9px;color:var(--t3);text-transform:uppercase;"><th style="text-align:left;padding:3px 4px;">Joueur</th>'+scBooks.map(function(b){ return '<th style="padding:3px 4px;">'+ea(bookShort(b))+(anyNo?' Oui':'')+'</th>'+(anyNo?'<th style="padding:3px 4px;color:#ff9f3c;">Non</th>':''); }).join('')+'</tr>';
+    var body=arr.map(function(x){ var rowBest=mx(scBooks.map(function(b){return players[x.nm][b.key]?players[x.nm][b.key].y:null;}));
+      return '<tr><td style="padding:4px;font-size:11px;color:var(--t1);">'+ea(x.nm)+'</td>'+scBooks.map(function(b){ var pd=players[x.nm][b.key]||{}; var c=cell(pd.y, pd.y&&pd.y===rowBest); if(anyNo){ c+=(pd.n!=null?'<td style="text-align:center;padding:5px 4px;font-weight:600;color:#ff9f3c;">'+pd.n.toFixed(2)+'</td>':'<td style="text-align:center;padding:5px 4px;color:var(--t3);">—</td>'); } return c; }).join('')+'</tr>'; }).join('');
+    scBlock='<div style="font-size:10px;font-weight:800;color:#4d84ff;margin:10px 0 4px;">👟 BUTEUR À TOUT MOMENT'+(anyNo?' <span style="font-weight:600;color:var(--t3);">(Oui = marque · Non = ne marque pas)</span>':'')+'</div>'
       +'<table style="width:100%;border-collapse:collapse;">'+head+body+'</table>';
   }
 
