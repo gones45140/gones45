@@ -20296,9 +20296,13 @@ async function g45LoadOdds(btn){
   btn.disabled=false;
 }
 window.g45LoadOdds=g45LoadOdds;
+/* Books de l'utilisateur (préfixe de clé The Odds API → nom affiché) */
+var _G45_MYBOOKS={'winamax':'Winamax','betclic':'Betclic','unibet':'Unibet','pmu':'PMU','betsson':'Betsson','bet365':'Bet365','pinnacle':'Pinnacle'};
+function _g45MyBook(key){ var k=(key||'').toLowerCase(); for(var p in _G45_MYBOOKS){ if(k.indexOf(p)===0) return _G45_MYBOOKS[p]; } return null; }
+function _g45BookLabel(key,title){ var mine=_g45MyBook(key); return mine?(mine+' 🇫🇷'):(title||key||''); }
 function _g45RenderOdds(ev, hN, aN, remain){
   function ea(s){return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/"/g,'&quot;');}
-  var FRBK=[{k:'winamax_fr',n:'Winamax',d:'winamax.fr'},{k:'betclic_fr',n:'Betclic',d:'betclic.fr'},{k:'unibet_fr',n:'Unibet',d:'unibet.fr'},{k:'pmu_fr',n:'PMU',d:'pmu.fr'}];
+  var FRBK=[{k:'winamax_fr',n:'Winamax',d:'winamax.fr'},{k:'betclic_fr',n:'Betclic',d:'betclic.fr'},{k:'unibet_fr',n:'Unibet',d:'unibet.fr'},{k:'pmu_fr',n:'PMU',d:'pmu.fr'},{k:'betsson',n:'Betsson',d:'betsson.fr'},{k:'bet365',n:'Bet365',d:'bet365.fr'},{k:'pinnacle',n:'Pinnacle',d:'pinnacle.com'}];
   var evH=ev.home_team, evA=ev.away_team;
   var homeEv = _g45OddsTeamEq(hN, evH) ? evH : (_g45OddsTeamEq(hN, evA) ? evA : evH);
   var awayEv = (homeEv===evH) ? evA : evH;
@@ -20364,32 +20368,30 @@ async function g45LoadMoreOdds(btn){
 window.g45LoadMoreOdds=g45LoadMoreOdds;
 function _g45RenderMoreOdds(ev, hN, aN, remain){
   function ea(s){return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/"/g,'&quot;');}
-  var bks=(ev&&ev.bookmakers)||[];
-  function bestOU(side,point){ var best=null; bks.forEach(function(b){(b.markets||[]).forEach(function(m){ if(m.key!=='alternate_totals'&&m.key!=='totals')return; (m.outcomes||[]).forEach(function(o){ if(o.name===side && Math.abs((o.point||0)-point)<0.001){ if(!best||o.price>best.price)best={price:o.price,book:b.title}; } }); }); }); return best; }
-  function bestBTTS(yes){ var best=null; bks.forEach(function(b){(b.markets||[]).forEach(function(m){ if(m.key!=='btts')return; (m.outcomes||[]).forEach(function(o){ var y=/^y|oui/i.test(o.name); if(y===yes){ if(!best||o.price>best.price)best={price:o.price,book:b.title}; } }); }); }); return best; }
+  var bks=((ev&&ev.bookmakers)||[]).filter(function(b){ return !!_g45MyBook(b.key); }); // ← seulement TES books
+  function bestOU(side,point){ var best=null; bks.forEach(function(b){(b.markets||[]).forEach(function(m){ if(m.key!=='alternate_totals'&&m.key!=='totals')return; (m.outcomes||[]).forEach(function(o){ if(o.name===side && Math.abs((o.point||0)-point)<0.001){ if(!best||o.price>best.price)best={price:o.price,book:b.title,key:b.key}; } }); }); }); return best; }
+  function bestBTTS(yes){ var best=null; bks.forEach(function(b){(b.markets||[]).forEach(function(m){ if(m.key!=='btts')return; (m.outcomes||[]).forEach(function(o){ var y=/^y|oui/i.test(o.name); if(y===yes){ if(!best||o.price>best.price)best={price:o.price,book:b.title,key:b.key}; } }); }); }); return best; }
+  function site(b){ return b?('<div style="font-size:8px;color:'+(_g45MyBook(b.key)?'#2ecc71':'var(--t3)')+';white-space:nowrap;">'+ea(_g45BookLabel(b.key,b.book))+'</div>'):''; }
+  function ouCell(b,color){ if(!b) return '<td style="text-align:center;padding:4px;color:var(--t3);">—</td>'; return '<td style="text-align:center;padding:4px;"><div style="font-weight:700;color:'+color+';">'+b.price.toFixed(2)+'</div>'+site(b)+'</td>'; }
   var ouRows='';
   [1.5,2.5,3.5].forEach(function(p){ var ov=bestOU('Over',p), un=bestOU('Under',p); if(!ov&&!un) return;
-    ouRows+='<tr><td style="padding:4px;color:var(--t1);font-size:11px;">'+p+'</td>'
-      +'<td style="text-align:center;padding:4px;font-weight:700;color:#2ecc71;">'+(ov?ov.price.toFixed(2):'—')+'</td>'
-      +'<td style="text-align:center;padding:4px;font-weight:700;color:#ff7b54;">'+(un?un.price.toFixed(2):'—')+'</td></tr>';
+    ouRows+='<tr><td style="padding:4px;color:var(--t1);font-size:11px;vertical-align:middle;">'+p+'</td>'+ouCell(ov,'#2ecc71')+ouCell(un,'#ff7b54')+'</tr>';
   });
   var ouBlock = ouRows ? ('<div style="font-size:10px;font-weight:800;color:#4d84ff;margin:2px 0 4px;">⚽ TOTAL DE BUTS (Over / Under)</div><table style="width:100%;border-collapse:collapse;margin-bottom:10px;"><tr style="font-size:9px;color:var(--t3);"><th style="text-align:left;padding:3px 4px;">Ligne</th><th style="padding:3px 4px;">+ (Over)</th><th style="padding:3px 4px;">− (Under)</th></tr>'+ouRows+'</table>') : '';
   var by=bestBTTS(true), bn=bestBTTS(false);
-  var bttsBlock = (by||bn) ? ('<div style="font-size:10px;font-weight:800;color:#4d84ff;margin:2px 0 4px;">🥅 LES DEUX ÉQUIPES MARQUENT</div><div style="display:flex;gap:8px;margin-bottom:10px;">'
-    +'<div style="flex:1;text-align:center;background:rgba(46,204,113,.10);border-radius:8px;padding:7px;"><div style="font-size:9px;color:var(--t3);">OUI</div><div style="font-size:14px;font-weight:800;color:#2ecc71;">'+(by?by.price.toFixed(2):'—')+'</div></div>'
-    +'<div style="flex:1;text-align:center;background:rgba(255,123,84,.10);border-radius:8px;padding:7px;"><div style="font-size:9px;color:var(--t3);">NON</div><div style="font-size:14px;font-weight:800;color:#ff7b54;">'+(bn?bn.price.toFixed(2):'—')+'</div></div>'
-    +'</div>') : '';
-  var scorers={}; bks.forEach(function(b){(b.markets||[]).forEach(function(m){ if(m.key!=='player_goal_scorer_anytime')return; (m.outcomes||[]).forEach(function(o){ if(!/^y|oui/i.test(o.name))return; var nm=o.description||o.name; if(!nm)return; if(scorers[nm]==null||o.price>scorers[nm]) scorers[nm]=o.price; }); }); });
-  var arr=Object.keys(scorers).map(function(n){return {n:n,p:scorers[n]};}).sort(function(a,b){return a.p-b.p;}).slice(0,15);
-  var scRows=arr.map(function(x){ return '<tr><td style="padding:3px 4px;font-size:11px;color:var(--t1);">'+ea(x.n)+'</td><td style="text-align:right;padding:3px 4px;font-weight:700;color:#2ecc71;">'+x.p.toFixed(2)+'</td></tr>'; }).join('');
+  function bttsCard(lbl,b,color){ return '<div style="flex:1;text-align:center;background:'+color+'1a;border-radius:8px;padding:7px;"><div style="font-size:9px;color:var(--t3);">'+lbl+'</div><div style="font-size:14px;font-weight:800;color:'+color+';">'+(b?b.price.toFixed(2):'—')+'</div>'+site(b)+'</div>'; }
+  var bttsBlock = (by||bn) ? ('<div style="font-size:10px;font-weight:800;color:#4d84ff;margin:2px 0 4px;">🥅 LES DEUX ÉQUIPES MARQUENT</div><div style="display:flex;gap:8px;margin-bottom:10px;">'+bttsCard('OUI',by,'#2ecc71')+bttsCard('NON',bn,'#ff7b54')+'</div>') : '';
+  var scorers={}; bks.forEach(function(b){(b.markets||[]).forEach(function(m){ if(m.key!=='player_goal_scorer_anytime')return; (m.outcomes||[]).forEach(function(o){ if(!/^y|oui/i.test(o.name))return; var nm=o.description||o.name; if(!nm)return; if(scorers[nm]==null||o.price>scorers[nm].price) scorers[nm]={price:o.price,book:b.title,key:b.key}; }); }); });
+  var arr=Object.keys(scorers).map(function(n){return {n:n,p:scorers[n].price,book:scorers[n].book,key:scorers[n].key};}).sort(function(a,b){return a.p-b.p;}).slice(0,15);
+  var scRows=arr.map(function(x){ return '<tr><td style="padding:3px 4px;font-size:11px;color:var(--t1);">'+ea(x.n)+'</td><td style="text-align:right;padding:3px 4px;font-weight:700;color:#2ecc71;white-space:nowrap;">'+x.p.toFixed(2)+' <span style="font-size:8px;font-weight:600;color:'+(_g45MyBook(x.key)?'#2ecc71':'var(--t3)')+';">'+ea(_g45BookLabel(x.key,x.book))+'</span></td></tr>'; }).join('');
   var scBlock = scRows ? ('<div style="font-size:10px;font-weight:800;color:#4d84ff;margin:2px 0 4px;">👟 BUTEUR À TOUT MOMENT (meilleure cote)</div><table style="width:100%;border-collapse:collapse;">'+scRows+'</table>') : '';
   var inner = ouBlock+bttsBlock+scBlock;
-  if(!inner) inner='<div style="color:var(--t3);font-size:11px;padding:6px;">Aucun marché détaillé disponible pour ce match.</div>';
+  if(!inner) inner='<div style="color:var(--t3);font-size:11px;padding:6px;">Aucun de tes books ne propose ces marchés sur ce match.</div>';
   var rem=(remain!=null?'<span style="float:right;color:var(--t3);font-weight:600;font-size:9px;">'+ea(remain)+' req. restantes</span>':'');
   return '<div style="background:rgba(155,89,182,.06);border:1px solid rgba(155,89,182,.2);border-radius:10px;padding:10px;">'
     +'<div style="font-size:10px;font-weight:800;color:#b07cd6;margin-bottom:8px;">📋 PLUS DE MARCHÉS'+rem+'</div>'
     +inner
-    +'<div style="font-size:9px;color:var(--t3);text-align:center;margin-top:8px;font-style:italic;">Meilleures cotes du marché (souvent books étrangers). Source : The Odds API.</div>'
+    +'<div style="font-size:9px;color:var(--t3);text-align:center;margin-top:8px;font-style:italic;">Meilleure cote parmi TES books + le site. Source : The Odds API.</div>'
     +'</div>';
 }
 function _g45Flag(a2){
