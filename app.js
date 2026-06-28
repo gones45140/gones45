@@ -20997,6 +20997,46 @@ function _g45EspnTennisRow(c){
     +'</div>'
     +'<div class="smd-panel" style="display:none;"></div>';
 }
+/* Bloc AVANT-MATCH tennis : classements, pays, tour, lieu + liens fiche ESPN et H2H.
+   Données du scoreboard ESPN uniquement (pas de summary tennis : 400). */
+function _g45TennisPreMatch(c){
+  try{
+    var cps=c.competitors||[]; if(cps.length<2) return '';
+    var home=null,away=null; cps.forEach(function(x){ if(x.homeAway==='home') home=x; else if(x.homeAway==='away') away=x; });
+    home=home||cps[0]; away=away||cps[1];
+    function ea(s){return String(s==null?'':s).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;');}
+    function nm(x){var a=x.athlete||{}; return a.displayName||a.fullName||a.shortName||'?';}
+    function flag(x){var f=x.athlete&&x.athlete.flag; return f&&f.href?('<img src="'+ea(f.href)+'" alt="" style="width:18px;height:12px;border-radius:2px;vertical-align:middle;object-fit:cover;">'):'';}
+    function ctry(x){var f=x.athlete&&x.athlete.flag; return (f&&f.alt)||'';}
+    function rk(x){return (x.curatedRank&&x.curatedRank.current!=null)?x.curatedRank.current:null;}
+    function card(x){var l=x.athlete&&x.athlete.links&&x.athlete.links[0]; return l&&l.href?l.href:'';}
+    var hN=nm(home),aN=nm(away),hR=rk(home),aR=rk(away);
+    var rnd=(c.round&&c.round.displayName)||'';
+    var ven=(c.venue&&c.venue.fullName)||''; var crt=(c.venue&&c.venue.court)?(' · '+c.venue.court):'';
+    function side(x,al){
+      var r=rk(x); var rb=r!=null?('<span style="font-size:9px;color:#8aa0ff;font-weight:800;">N°'+r+'</span>'):'<span style="font-size:9px;color:var(--t3);">NC</span>';
+      return '<div style="flex:1;text-align:'+al+';">'
+        +'<div style="font-size:13px;font-weight:800;color:var(--t1);line-height:1.3;">'+flag(x)+' '+ea(nm(x))+'</div>'
+        +'<div style="margin-top:2px;">'+rb+' <span style="font-size:9px;color:var(--t3);">'+ea(ctry(x))+'</span></div></div>';
+    }
+    var cmp='';
+    if(hR!=null&&aR!=null){ var fav=hR<aR?hN:aN; cmp='<div style="text-align:center;font-size:9px;color:var(--t3);margin-top:6px;">Mieux classé : <b style="color:#8aa0ff;">'+ea(fav)+'</b></div>'; }
+    var ch=card(home),ca=card(away);
+    var h2h='https://www.google.com/search?q='+encodeURIComponent(hN+' vs '+aN+' head to head');
+    var links='<div style="display:flex;gap:6px;flex-wrap:wrap;justify-content:center;margin-top:9px;">'
+      +(ch?'<a href="'+ea(ch)+'" target="_blank" rel="noopener" style="font-size:9px;color:#8aa0ff;text-decoration:none;background:rgba(138,160,255,.12);padding:5px 9px;border-radius:7px;">📄 '+ea((home.athlete&&home.athlete.shortName)||hN)+'</a>':'')
+      +(ca?'<a href="'+ea(ca)+'" target="_blank" rel="noopener" style="font-size:9px;color:#8aa0ff;text-decoration:none;background:rgba(138,160,255,.12);padding:5px 9px;border-radius:7px;">📄 '+ea((away.athlete&&away.athlete.shortName)||aN)+'</a>':'')
+      +'<a href="'+ea(h2h)+'" target="_blank" rel="noopener" style="font-size:9px;color:#ffce54;text-decoration:none;background:rgba(255,206,84,.12);padding:5px 9px;border-radius:7px;">⚔️ H2H / historique</a>'
+      +'</div>';
+    return '<div style="background:rgba(77,132,255,.06);border:1px solid rgba(77,132,255,.18);border-radius:10px;padding:10px;margin-bottom:8px;">'
+      +'<div style="font-size:10px;font-weight:800;color:#8aa0ff;text-align:center;margin-bottom:8px;">🎾 AVANT-MATCH'+(rnd?(' · '+ea(rnd)):'')+'</div>'
+      +'<div style="display:flex;align-items:flex-start;gap:8px;">'+side(home,'left')+'<div style="font-size:11px;color:var(--t3);font-weight:800;padding-top:2px;">VS</div>'+side(away,'right')+'</div>'
+      +cmp
+      +(ven?'<div style="text-align:center;font-size:9px;color:var(--t3);margin-top:7px;">📍 '+ea(ven)+ea(crt)+'</div>':'')
+      +links
+      +'</div>';
+  }catch(e){ return ''; }
+}
 function _g45EspnTennisDetail(c){
   if(!c) return '<div style="text-align:center;color:var(--t3);font-size:11px;padding:14px;">Détail indisponible.</div>';
   var cps=c.competitors||[];
@@ -21020,8 +21060,11 @@ function _g45EspnTennisDetail(c){
   function _plTen(x){ return (x&&x.athlete&&(x.athlete.displayName||x.athlete.shortName))||(x&&x.team&&(x.team.displayName||x.team.shortDisplayName))||'?'; }
   var _tHN=_plTen(home), _tAN=_plTen(away), _tCmp=(c.round&&c.round.displayName)||c.__grp||'Tennis';
   var _tStar='<div style="margin-bottom:8px;">'+_g45SuiviStarHTML(c.id, c.date||c.startDate||'', _tHN, _tAN, _tCmp, '', 'tennis')+'</div>';
+  var _tState=(c.status&&c.status.type&&c.status.type.state)||'';
+  var _tPre=(_tState==='pre')?_g45TennisPreMatch(c):'';
   return '<div style="background:rgba(255,255,255,.03);border-radius:10px;padding:10px 8px;margin-bottom:6px;">'
     +_tStar
+    +_tPre
     +((c.__grp||rnd)?'<div style="font-size:9px;color:#8aa0ff;font-weight:700;text-align:center;margin-bottom:6px;">'+(c.__grp?c.__grp+(rnd?' · ':''):'')+rnd+'</div>':'')
     +'<table style="width:100%;border-collapse:collapse;">'+head+row(home)+row(away)+'</table>'
     +(notes?'<div style="font-size:9px;color:var(--t3);text-align:center;margin-top:8px;font-style:italic;">'+notes+'</div>':'')
