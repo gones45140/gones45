@@ -1070,7 +1070,7 @@ function logoHtml(name,color,abbr,sz){
   if(!sportEmoji){
     var uMatch=(typeof state!=='undefined'&&state.u)?state.u.find(function(u){return u.n===name;}):null;
     if(uMatch&&uMatch.sport){
-      var sportMap={'🏀':'🏀','🎾':'🎾','🏎':'🏎️','🏎️':'🏎️','🏉':'🏉','🏉🇦🇺':'🏉','🏒':'🏒','⚾':'⚾','🏈':'🏈','⚽':'⚽'};
+      var sportMap={'🏀':'🏀','🎾':'🎾','🏎':'🏎️','🏎️':'🏎️','🏉':'🏉','🏉🇦🇺':'🏉','🏒':'🏒','⚾':'⚾','🏈':'🏈','⚽':'⚽','🥊':'🥊','🚗':'🚗','🚴':'🚴'};
       sportEmoji=sportMap[uMatch.sport];
     }
   }
@@ -1449,8 +1449,8 @@ function calcFreebet(){
 }
 
 function renderSportFilter(){
-  var sports=['ALL','⚽','🏀','🎾','🏈','⚾','🏒'];
-  var labels={'ALL':'Tous','⚽':'Football','🏀':'Basket','🎾':'Tennis','🏈':'NFL','⚾':'Baseball','🏒':'Hockey'};
+  var sports=['ALL','⚽','🏀','🎾','🏈','⚾','🏒','🏉','🏉🇦🇺','🏎','🥊','🚗','🚴'];
+  var labels={'ALL':'Tous','⚽':'Football','🏀':'Basket','🎾':'Tennis','🏈':'NFL','⚾':'Baseball','🏒':'Hockey','🏉':'Rugby','🏉🇦🇺':'NRL','🏎':'F1','🥊':'MMA','🚗':'WRC','🚴':'Cyclisme'};
   var used=new Set(state.a.map(function(h){return h.sport||'';}));
   var sf=$i('sport-filter');if(!sf)return;
   sf.innerHTML=sports.filter(function(s){return s==='ALL'||used.has(s);}).map(function(s){
@@ -2900,7 +2900,7 @@ function renderCombiRows() {
   var el = document.getElementById('combi-rows');
   if(!el) return;
   if(!combiRows.length) { el.innerHTML=''; updateCombiCote(); return; }
-  var sports = ['⚽ Football','🏀 Basket','🎾 Tennis','🏈 NFL','🏒 Hockey','⚾ Baseball','🏉 Rugby','🏎 F1'];
+  var sports = ['⚽ Football','🏀 Basket','🎾 Tennis','🏈 NFL','🏒 Hockey','⚾ Baseball','🏉 Rugby','🏎 F1','🥊 MMA','🚗 WRC','🚴 Cyclisme'];
   var html = '';
   combiRows.forEach(function(row, i) {
     html += '<div style="background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.07);border-radius:10px;padding:12px;margin-bottom:10px;">';
@@ -7287,7 +7287,7 @@ function logoHtml(name,color,abbr,sz){
   if(!sportEmoji){
     var uMatch=(typeof state!=='undefined'&&state.u)?state.u.find(function(u){return u.n===name;}):null;
     if(uMatch&&uMatch.sport){
-      var sportMap={'🏀':'🏀','🎾':'🎾','🏎':'🏎️','🏎️':'🏎️','🏉':'🏉','🏉🇦🇺':'🏉','🏒':'🏒','⚾':'⚾','🏈':'🏈','⚽':'⚽'};
+      var sportMap={'🏀':'🏀','🎾':'🎾','🏎':'🏎️','🏎️':'🏎️','🏉':'🏉','🏉🇦🇺':'🏉','🏒':'🏒','⚾':'⚾','🏈':'🏈','⚽':'⚽','🥊':'🥊','🚗':'🚗','🚴':'🚴'};
       sportEmoji=sportMap[uMatch.sport];
     }
   }
@@ -7666,8 +7666,8 @@ function calcFreebet(){
 }
 
 function renderSportFilter(){
-  var sports=['ALL','⚽','🏀','🎾','🏈','⚾','🏒'];
-  var labels={'ALL':'Tous','⚽':'Football','🏀':'Basket','🎾':'Tennis','🏈':'NFL','⚾':'Baseball','🏒':'Hockey'};
+  var sports=['ALL','⚽','🏀','🎾','🏈','⚾','🏒','🏉','🏉🇦🇺','🏎','🥊','🚗','🚴'];
+  var labels={'ALL':'Tous','⚽':'Football','🏀':'Basket','🎾':'Tennis','🏈':'NFL','⚾':'Baseball','🏒':'Hockey','🏉':'Rugby','🏉🇦🇺':'NRL','🏎':'F1','🥊':'MMA','🚗':'WRC','🚴':'Cyclisme'};
   var used=new Set(state.a.map(function(h){return h.sport||'';}));
   var sf=$i('sport-filter');if(!sf)return;
   sf.innerHTML=sports.filter(function(s){return s==='ALL'||used.has(s);}).map(function(s){
@@ -9064,7 +9064,7 @@ function renderCombiRows() {
   var el = document.getElementById('combi-rows');
   if(!el) return;
   if(!combiRows.length) { el.innerHTML=''; updateCombiCote(); return; }
-  var sports = ['⚽ Football','🏀 Basket','🎾 Tennis','🏈 NFL','🏒 Hockey','⚾ Baseball','🏉 Rugby','🏎 F1'];
+  var sports = ['⚽ Football','🏀 Basket','🎾 Tennis','🏈 NFL','🏒 Hockey','⚾ Baseball','🏉 Rugby','🏎 F1','🥊 MMA','🚗 WRC','🚴 Cyclisme'];
   var html = '';
   combiRows.forEach(function(row, i) {
     html += '<div style="background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.07);border-radius:10px;padding:12px;margin-bottom:10px;">';
