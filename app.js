@@ -21843,7 +21843,7 @@ async function g45LoadCalendar(slug, btn, monthOffset, sportPath){
   list.innerHTML='<div style="text-align:center;color:var(--t3);font-size:11px;padding:24px;">⏳ Chargement du calendrier…</div>';
   try{
     var mb=_g45MonthBounds(monthOffset);
-    var r=await fetch('https://site.api.espn.com/apis/site/v2/sports/'+sportPath+'/'+slug+'/scoreboard?dates='+_g45ymd(mb.first)+'-'+_g45ymd(mb.last));
+    var r=await fetch('https://site.api.espn.com/apis/site/v2/sports/'+sportPath+'/'+slug+'/scoreboard?dates='+_g45ymd(mb.first)+'-'+_g45ymd(mb.last)+'&limit=1000');
     var data=await r.json();
     var events=(data.events||[]);
     var lgLogo=''; try{ var lo=(data.leagues&&data.leagues[0]&&data.leagues[0].logos); if(lo){ lgLogo=Array.isArray(lo)?((lo[0]&&lo[0].href)||''):(lo.href||''); } }catch(e){}
