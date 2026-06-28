@@ -20011,6 +20011,10 @@ async function _renderSaisonDetail(el, eventId, league){
       function _eaAdv(x){return String(x==null?'':x).replace(/&/g,'&amp;').replace(/"/g,'&quot;');}
       var _advId='g45adv_'+(eventId||Math.random().toString(36).slice(2));
       h+='<div style="margin-top:8px;"><button onclick="g45LoadAdvStats(this)" data-date="'+_eaAdv(comp.date||'')+'" data-h="'+_eaAdv(hN)+'" data-a="'+_eaAdv(aN)+'" data-box="'+_advId+'" style="width:100%;box-sizing:border-box;font-size:12px;font-weight:800;padding:9px 12px;border-radius:9px;cursor:pointer;border:1.5px solid rgba(255,165,60,.5);background:rgba(255,165,60,.10);color:#ffb13d;">📊 Stats avancées (xG, tirs surface…)</button><div id="'+_advId+'" style="margin-top:8px;"></div></div>';
+      var _tendId='g45tend_'+(eventId||Math.random().toString(36).slice(2));
+      h+='<div style="margin-top:8px;"><button onclick="g45LoadTendance(this)" data-date="'+_eaAdv(comp.date||'')+'" data-h="'+_eaAdv(hN)+'" data-a="'+_eaAdv(aN)+'" data-box="'+_tendId+'" style="width:100%;box-sizing:border-box;font-size:12px;font-weight:800;padding:9px 12px;border-radius:9px;cursor:pointer;border:1.5px solid rgba(120,162,255,.5);background:rgba(120,162,255,.10);color:#8aa2ff;">📈 Tendance du public (cotes implicites)</button><div id="'+_tendId+'" style="margin-top:8px;"></div></div>';
+      var _oddsId='g45odds_'+(eventId||Math.random().toString(36).slice(2));
+      h+='<div style="margin-top:8px;"><button onclick="g45LoadOdds(this)" data-h="'+_eaAdv(hN)+'" data-a="'+_eaAdv(aN)+'" data-comp="'+_eaAdv(_compName||league||'')+'" data-box="'+_oddsId+'" style="width:100%;box-sizing:border-box;font-size:12px;font-weight:800;padding:9px 12px;border-radius:9px;cursor:pointer;border:1.5px solid rgba(46,204,113,.5);background:rgba(46,204,113,.12);color:#2ecc71;">💰 Cotes réelles (bookmakers FR)</button><div id="'+_oddsId+'" style="margin-top:8px;"></div></div>';
       added=true;
     }catch(e){}
     if(typeof _renderEspnMatchPitch==='function'){ try{ var pi=_renderEspnMatchPitch(data, '#4d84ff', function(x){return x;}); if(pi){ h+=pi; added=true; } }catch(e){} }
@@ -20193,6 +20197,144 @@ async function g45LoadAdvStats(btn){
   btn.disabled=false;
 }
 window.g45LoadAdvStats=g45LoadAdvStats;
+async function g45LoadTendance(btn){
+  var box=document.getElementById(btn.dataset.box); if(!box) return;
+  if(box.getAttribute('data-loaded')==='1'){ box.style.display=(box.style.display==='none'?'':'none'); return; }
+  var key=localStorage.getItem('gones45_rapidapi_key');
+  if(!key){ box.innerHTML='<div style="color:#ff6b6b;font-size:11px;padding:8px;">Clé RapidAPI manquante (à mettre dans Outils).</div>'; return; }
+  box.innerHTML='<div style="color:var(--t3);font-size:11px;padding:10px;text-align:center;">⏳ Chargement tendance…</div>';
+  btn.disabled=true;
+  try{
+    var hN=btn.dataset.h, aN=btn.dataset.a, iso=btn.dataset.date, d=new Date(iso);
+    function ymd(dt){ return dt.getUTCFullYear()+'-'+String(dt.getUTCMonth()+1).padStart(2,'0')+'-'+String(dt.getUTCDate()).padStart(2,'0'); }
+    var dates=[ymd(d), ymd(new Date(d.getTime()+86400000)), ymd(new Date(d.getTime()-86400000))];
+    var match=null;
+    for(var i=0;i<dates.length && !match;i++){
+      var list=await g45Sofa6('/api/sofascore/v1/match/list?sport_slug=football&date='+dates[i]);
+      if(list&&list.__err) continue;
+      var evs=Array.isArray(list)?list:((list&&(list.events||list.data))||[]);
+      match=_g45SofaFindMatch(evs, hN, aN);
+    }
+    if(!match){ box.innerHTML='<div style="color:var(--t3);font-size:11px;padding:8px;">Match introuvable sur Sofascore.</div>'; btn.disabled=false; return; }
+    var v=await g45Sofa6('/api/sofascore/v1/match/votes?match_id='+match.id);
+    if(!v || v.__err || (v.vote1==null && v.vote2==null && v.voteX==null)){ box.innerHTML='<div style="color:var(--t3);font-size:11px;padding:8px;">Tendance indisponible pour ce match.</div>'; btn.disabled=false; return; }
+    box.innerHTML=_g45RenderTendance(v, hN, aN);
+    box.setAttribute('data-loaded','1');
+  }catch(e){ box.innerHTML='<div style="color:#ff6b6b;font-size:11px;padding:8px;">Erreur tendance.</div>'; }
+  btn.disabled=false;
+}
+window.g45LoadTendance=g45LoadTendance;
+function _g45RenderTendance(v, hN, aN){
+  function ea(s){return String(s==null?'':s).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;');}
+  var h1=Math.max(0,parseInt(v.vote1,10)||0), x=Math.max(0,parseInt(v.voteX,10)||0), a1=Math.max(0,parseInt(v.vote2,10)||0);
+  var tot=h1+x+a1; if(tot<=0) return '<div style="color:var(--t3);font-size:11px;padding:8px;">Aucun vote pour ce match.</div>';
+  function pct(n){ return Math.round(n/tot*100); }
+  function cote(n){ return n>0?(tot/n).toFixed(2):'—'; }
+  function bar(lbl,p,c,n){
+    return '<div style="margin-bottom:7px;">'
+      +'<div style="display:flex;justify-content:space-between;font-size:10px;margin-bottom:2px;"><span style="color:var(--t1);font-weight:700;">'+lbl+'</span><span style="color:var(--t3);">'+p+'% · ≈ <b style="color:'+c+';">'+cote(n)+'</b></span></div>'
+      +'<div style="height:7px;background:rgba(255,255,255,.07);border-radius:4px;overflow:hidden;"><div style="height:100%;width:'+p+'%;background:'+c+';"></div></div></div>';
+  }
+  return '<div style="background:rgba(120,162,255,.06);border:1px solid rgba(120,162,255,.18);border-radius:10px;padding:10px;">'
+    +'<div style="font-size:10px;font-weight:800;color:#8aa2ff;text-align:center;margin-bottom:9px;">📈 TENDANCE DU PUBLIC · '+tot.toLocaleString('fr-FR')+' votes</div>'
+    +bar(ea(hN)+' (1)', pct(h1), '#4d84ff', h1)
+    +bar('Match nul (X)', pct(x), '#9aa4b8', x)
+    +bar(ea(aN)+' (2)', pct(a1), '#ff7b54', a1)
+    +'<div style="font-size:9px;color:var(--t3);text-align:center;margin-top:6px;font-style:italic;">Cote implicite ≈ 100 ÷ % — c\'est la tendance des parieurs, pas une cote bookmaker.</div>'
+    +'</div>';
+}
+/* ───────── COTES RÉELLES (The Odds API via Worker, clé secrète) ───────── */
+function _g45OddsSportKey(comp){
+  var c=(comp||'').toLowerCase();
+  if(/coupe du monde|world cup|fifa|mondial/.test(c)) return 'soccer_fifa_world_cup';
+  if(/premier league|angleterre|\bepl\b/.test(c)) return 'soccer_epl';
+  if(/championship/.test(c)) return 'soccer_efl_champ';
+  if(/serie a|série a|italie|italy/.test(c)) return 'soccer_italy_serie_a';
+  if(/liga|espagne|spain/.test(c)) return 'soccer_spain_la_liga';
+  if(/ligue 1|ligue1|\bfrance\b|french/.test(c)) return 'soccer_france_ligue_one';
+  if(/bundesliga|allemagne|german/.test(c)) return 'soccer_germany_bundesliga';
+  if(/champions/.test(c)) return 'soccer_uefa_champs_league';
+  if(/europa/.test(c)) return 'soccer_uefa_europa_league';
+  if(/eredivisie|pays-bas|netherlands|dutch/.test(c)) return 'soccer_netherlands_eredivisie';
+  if(/primeira|portugal/.test(c)) return 'soccer_portugal_primeira_liga';
+  if(/brasil|brazil|brésil/.test(c)) return 'soccer_brazil_campeonato';
+  if(/\bmls\b/.test(c)) return 'soccer_usa_mls';
+  return null;
+}
+var _G45_FR2EN={'afriquedusud':'south africa','paysbas':'netherlands','cotedivoire':'ivory coast','rdcongo':'dr congo','republiquedemocratiqueducongo':'dr congo','capvert':'cape verde','coreedusud':'south korea','coreedunord':'north korea','etatsunis':'usa','allemagne':'germany','espagne':'spain','angleterre':'england','bresil':'brazil','japon':'japan','suede':'sweden','suisse':'switzerland','croatie':'croatia','algerie':'algeria','australie':'australia','egypte':'egypt','norvege':'norway','colombie':'colombia','mexique':'mexico','equateur':'ecuador','argentine':'argentina','belgique':'belgium','maroc':'morocco','autriche':'austria','senegal':'senegal','bosnie':'bosnia','bosnieherzegovine':'bosnia','danemark':'denmark','pologne':'poland','uruguay':'uruguay','tunisie':'tunisia','arabiesaoudite':'saudi arabia','nouvellezelande':'new zealand','jordanie':'jordan','hati':'haiti'};
+function _g45OddsNorm(s){ return (s||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9]/g,''); }
+function _g45OddsCanon(name){ var n=_g45OddsNorm(name); return _G45_FR2EN[n]||name; }
+function _g45OddsTeamEq(a,b){ var na=_g45OddsNorm(_g45OddsCanon(a)), nb=_g45OddsNorm(_g45OddsCanon(b)); if(!na||!nb) return false; return na===nb || na.indexOf(nb)>=0 || nb.indexOf(na)>=0; }
+function _g45OddsFindEvent(events, hN, aN){
+  if(!Array.isArray(events)) return null;
+  for(var i=0;i<events.length;i++){ var e=events[i];
+    if((_g45OddsTeamEq(hN,e.home_team)&&_g45OddsTeamEq(aN,e.away_team)) || (_g45OddsTeamEq(hN,e.away_team)&&_g45OddsTeamEq(aN,e.home_team))) return e;
+  }
+  return null;
+}
+async function g45LoadOdds(btn){
+  var box=document.getElementById(btn.dataset.box); if(!box) return;
+  if(box.getAttribute('data-loaded')==='1'){ box.style.display=(box.style.display==='none'?'':'none'); return; }
+  var hN=btn.dataset.h, aN=btn.dataset.a, comp=btn.dataset.comp||'';
+  var sport=_g45OddsSportKey(comp);
+  if(!sport){ box.innerHTML='<div style="color:var(--t3);font-size:11px;padding:8px;">Compétition non couverte par The Odds API (offre gratuite).</div>'; return; }
+  box.innerHTML='<div style="color:var(--t3);font-size:11px;padding:10px;text-align:center;">⏳ Chargement des cotes…</div>';
+  btn.disabled=true;
+  try{
+    var base=(typeof FD_PROXY!=='undefined'?FD_PROXY:'https://fd-proxy.touraine-antoine.workers.dev');
+    var r=await fetch(base+'/odds?sport='+encodeURIComponent(sport)+'&regions=eu&markets=h2h');
+    var remain=r.headers.get('X-Odds-Remaining');
+    var data=await r.json();
+    if(!r.ok || (data&&data.error)){ box.innerHTML='<div style="color:#ff6b6b;font-size:11px;padding:8px;">Cotes indisponibles ('+((data&&data.error)||r.status)+').</div>'; btn.disabled=false; return; }
+    var ev=_g45OddsFindEvent(data, hN, aN);
+    if(!ev){ box.innerHTML='<div style="color:var(--t3);font-size:11px;padding:8px;">Match introuvable chez The Odds API (pas encore coté, ou nom d\'équipe différent).</div>'; btn.disabled=false; return; }
+    box.innerHTML=_g45RenderOdds(ev, hN, aN, remain);
+    box.setAttribute('data-loaded','1');
+  }catch(e){ box.innerHTML='<div style="color:#ff6b6b;font-size:11px;padding:8px;">Erreur cotes.</div>'; }
+  btn.disabled=false;
+}
+window.g45LoadOdds=g45LoadOdds;
+function _g45RenderOdds(ev, hN, aN, remain){
+  function ea(s){return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/"/g,'&quot;');}
+  var FRBK=[{k:'winamax_fr',n:'Winamax',d:'winamax.fr'},{k:'betclic_fr',n:'Betclic',d:'betclic.fr'},{k:'unibet_fr',n:'Unibet',d:'unibet.fr'},{k:'pmu_fr',n:'PMU',d:'pmu.fr'}];
+  var evH=ev.home_team, evA=ev.away_team;
+  var homeEv = _g45OddsTeamEq(hN, evH) ? evH : (_g45OddsTeamEq(hN, evA) ? evA : evH);
+  var awayEv = (homeEv===evH) ? evA : evH;
+  function priceByName(bk, target){
+    if(!bk||!bk.markets) return null;
+    var m=null; for(var i=0;i<bk.markets.length;i++){ if(bk.markets[i].key==='h2h'){ m=bk.markets[i]; break; } }
+    if(!m||!m.outcomes) return null;
+    for(var j=0;j<m.outcomes.length;j++){ var o=m.outcomes[j];
+      if(target==='DRAW'){ if(/draw|nul/i.test(o.name)) return o.price; }
+      else if(o.name===target) return o.price;
+    }
+    return null;
+  }
+  var bksByKey={}; (ev.bookmakers||[]).forEach(function(b){ bksByKey[b.key]=b; });
+  var best={H:0,A:0,D:0};
+  (ev.bookmakers||[]).forEach(function(b){
+    var pH=priceByName(b,homeEv), pA=priceByName(b,awayEv), pD=priceByName(b,'DRAW');
+    if(pH&&pH>best.H)best.H=pH; if(pA&&pA>best.A)best.A=pA; if(pD&&pD>best.D)best.D=pD;
+  });
+  function cell(p,isB){ if(p==null) return '<td style="text-align:center;color:var(--t3);padding:5px 4px;">—</td>'; return '<td style="text-align:center;padding:5px 4px;font-weight:'+(isB?'800':'600')+';color:'+(isB?'#2ecc71':'var(--t1)')+';">'+p.toFixed(2)+'</td>'; }
+  var rows='';
+  FRBK.forEach(function(bk){ var b=bksByKey[bk.k]; if(!b) return;
+    var pH=priceByName(b,homeEv), pA=priceByName(b,awayEv), pD=priceByName(b,'DRAW');
+    rows+='<tr>'
+      +'<td style="padding:5px 4px;"><span style="display:inline-flex;align-items:center;gap:5px;"><img src="https://www.google.com/s2/favicons?domain='+bk.d+'&sz=32" style="width:14px;height:14px;border-radius:3px;" onerror="this.style.display=\'none\'"><span style="font-size:11px;color:var(--t1);">'+bk.n+'</span></span></td>'
+      +cell(pH,pH&&pH===best.H)+cell(pD,pD&&pD===best.D)+cell(pA,pA&&pA===best.A)+'</tr>';
+  });
+  if(!rows){ rows='<tr><td style="padding:5px 4px;font-size:11px;color:var(--t3);">Meilleures cotes (tous books)</td>'+cell(best.H,true)+cell(best.D,true)+cell(best.A,true)+'</tr>'; }
+  var rem=(remain!=null?'<span style="float:right;color:var(--t3);font-weight:600;">'+ea(remain)+' req. restantes</span>':'');
+  return '<div style="background:rgba(46,204,113,.06);border:1px solid rgba(46,204,113,.2);border-radius:10px;padding:10px;">'
+    +'<div style="font-size:10px;font-weight:800;color:#2ecc71;margin-bottom:8px;">💰 COTES RÉELLES (1X2)'+rem+'</div>'
+    +'<table style="width:100%;border-collapse:collapse;">'
+    +'<tr style="font-size:9px;color:var(--t3);text-transform:uppercase;"><th style="text-align:left;padding:3px 4px;">Bookmaker</th><th style="padding:3px 4px;">1 · '+ea(hN).slice(0,10)+'</th><th style="padding:3px 4px;">X</th><th style="padding:3px 4px;">2 · '+ea(aN).slice(0,10)+'</th></tr>'
+    +rows
+    +'</table>'
+    +'<div style="font-size:9px;color:var(--t3);text-align:center;margin-top:7px;font-style:italic;">En vert = meilleure cote du marché. Source : The Odds API.</div>'
+    +'</div>';
+}
 function _g45Flag(a2){
   if(!a2||a2.length!==2) return '';
   var cc=a2.toUpperCase(); if(!/^[A-Z]{2}$/.test(cc)) return '';
