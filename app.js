@@ -2018,12 +2018,12 @@ function renderArchive(){
         var gainC=h.isPending?'#f0a020':(gain>=0?'var(--g)':'var(--r)');
         var winC=h.isPending?'#f0a020':(h.win?'var(--g)':'var(--r)');
         var borderC=h.isPending?'#f0a020':(h.win?'var(--g)':'var(--r)');
-        var bkBadge='<div style="width:22px;height:22px;border-radius:5px;background:'+b2.c+';color:#fff;font-size:9px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0;">'+b2.n.charAt(0).toUpperCase()+'</div>';
+        var _bkHas=!!b2.d;var _bkImg=_bkHas?('<img src="https://www.google.com/s2/favicons?domain='+b2.d+'&sz=64" alt="" loading="lazy" onerror="logoErr(this)" style="width:18px;height:18px;object-fit:contain;background:#fff;border-radius:3px;">'):'';var bkBadge='<div style="width:22px;height:22px;border-radius:5px;background:'+b2.c+';display:flex;align-items:center;justify-content:center;flex-shrink:0;overflow:hidden;">'+_bkImg+'<span style="width:100%;height:100%;align-items:center;justify-content:center;color:#fff;font-size:9px;font-weight:800;display:'+(_bkHas?'none':'flex')+';">'+b2.n.charAt(0).toUpperCase()+'</span></div>'; var sportIco=(h.sport?'<span style="font-size:15px;flex-shrink:0;line-height:1;" title="Sport">'+h.sport+'</span>':'');
         var titre=(h.target&&h.target!=='-'?h.target:(h.n||'—'));
-        var sous=(h.n&&h.target&&h.target!=='-'?h.n+' · ':'')+('@'+parseFloat(h.cote).toFixed(2))+(h.comp?' · '+h.comp:'');
+        var sous='<span style="color:#7aa2ff;font-weight:800;font-size:11px;background:rgba(77,132,255,.16);padding:1px 7px;border-radius:5px;">@'+parseFloat(h.cote).toFixed(2)+'</span>'+(h.comp?' · '+h.comp:'')+((h.n&&h.target&&h.target!=='-')?' · '+h.n:'');
         return '<div style="display:flex;align-items:center;padding:8px 10px;background:var(--s1);border-radius:var(--r6);margin-bottom:4px;border-left:3px solid '+borderC+';gap:8px;">'
           +'<div style="font-size:10px;color:var(--t3);min-width:32px;flex-shrink:0;text-align:center;">'+(h.heure||'—')+'</div>'
-          +bkBadge
+          +bkBadge+sportIco
           +'<div data-aid="'+h.id+'" onclick="openBetEdit(this.dataset.aid)" style="flex:1;min-width:0;overflow:hidden;cursor:pointer;">'
           +'<div style="font-size:12px;font-weight:700;color:var(--t1);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">'+titre+'</div>'
           +'<div style="font-size:10px;color:var(--t3);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">'+sous+'</div>'
@@ -8235,12 +8235,12 @@ function renderArchive(){
         var gainC=h.isPending?'#f0a020':(gain>=0?'var(--g)':'var(--r)');
         var winC=h.isPending?'#f0a020':(h.win?'var(--g)':'var(--r)');
         var borderC=h.isPending?'#f0a020':(h.win?'var(--g)':'var(--r)');
-        var bkBadge='<div style="width:22px;height:22px;border-radius:5px;background:'+b2.c+';color:#fff;font-size:9px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0;">'+b2.n.charAt(0).toUpperCase()+'</div>';
+        var _bkHas=!!b2.d;var _bkImg=_bkHas?('<img src="https://www.google.com/s2/favicons?domain='+b2.d+'&sz=64" alt="" loading="lazy" onerror="logoErr(this)" style="width:18px;height:18px;object-fit:contain;background:#fff;border-radius:3px;">'):'';var bkBadge='<div style="width:22px;height:22px;border-radius:5px;background:'+b2.c+';display:flex;align-items:center;justify-content:center;flex-shrink:0;overflow:hidden;">'+_bkImg+'<span style="width:100%;height:100%;align-items:center;justify-content:center;color:#fff;font-size:9px;font-weight:800;display:'+(_bkHas?'none':'flex')+';">'+b2.n.charAt(0).toUpperCase()+'</span></div>'; var sportIco=(h.sport?'<span style="font-size:15px;flex-shrink:0;line-height:1;" title="Sport">'+h.sport+'</span>':'');
         var titre=(h.target&&h.target!=='-'?h.target:(h.n||'—'));
-        var sous=(h.n&&h.target&&h.target!=='-'?h.n+' · ':'')+('@'+parseFloat(h.cote).toFixed(2))+(h.comp?' · '+h.comp:'');
+        var sous='<span style="color:#7aa2ff;font-weight:800;font-size:11px;background:rgba(77,132,255,.16);padding:1px 7px;border-radius:5px;">@'+parseFloat(h.cote).toFixed(2)+'</span>'+(h.comp?' · '+h.comp:'')+((h.n&&h.target&&h.target!=='-')?' · '+h.n:'');
         return '<div style="display:flex;align-items:center;padding:8px 10px;background:var(--s1);border-radius:var(--r6);margin-bottom:4px;border-left:3px solid '+borderC+';gap:8px;">'
           +'<div style="font-size:10px;color:var(--t3);min-width:32px;flex-shrink:0;text-align:center;">'+(h.heure||'—')+'</div>'
-          +bkBadge
+          +bkBadge+sportIco
           +'<div data-aid="'+h.id+'" onclick="openBetEdit(this.dataset.aid)" style="flex:1;min-width:0;overflow:hidden;cursor:pointer;">'
           +'<div style="font-size:12px;font-weight:700;color:var(--t1);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">'+titre+'</div>'
           +'<div style="font-size:10px;color:var(--t3);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">'+sous+'</div>'
