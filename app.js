@@ -20015,6 +20015,8 @@ async function _renderSaisonDetail(el, eventId, league){
       h+='<div style="margin-top:8px;"><button onclick="g45LoadTendance(this)" data-date="'+_eaAdv(comp.date||'')+'" data-h="'+_eaAdv(hN)+'" data-a="'+_eaAdv(aN)+'" data-box="'+_tendId+'" style="width:100%;box-sizing:border-box;font-size:12px;font-weight:800;padding:9px 12px;border-radius:9px;cursor:pointer;border:1.5px solid rgba(120,162,255,.5);background:rgba(120,162,255,.10);color:#8aa2ff;">📈 Tendance du public (cotes implicites)</button><div id="'+_tendId+'" style="margin-top:8px;"></div></div>';
       var _oddsId='g45odds_'+(eventId||Math.random().toString(36).slice(2));
       h+='<div style="margin-top:8px;"><button onclick="g45LoadOdds(this)" data-h="'+_eaAdv(hN)+'" data-a="'+_eaAdv(aN)+'" data-comp="'+_eaAdv(_compName||league||'')+'" data-box="'+_oddsId+'" style="width:100%;box-sizing:border-box;font-size:12px;font-weight:800;padding:9px 12px;border-radius:9px;cursor:pointer;border:1.5px solid rgba(46,204,113,.5);background:rgba(46,204,113,.12);color:#2ecc71;">💰 Cotes réelles (bookmakers FR)</button><div id="'+_oddsId+'" style="margin-top:8px;"></div></div>';
+      var _moreId='g45more_'+(eventId||Math.random().toString(36).slice(2));
+      h+='<div style="margin-top:8px;"><button onclick="g45LoadMoreOdds(this)" data-h="'+_eaAdv(hN)+'" data-a="'+_eaAdv(aN)+'" data-comp="'+_eaAdv(_compName||league||'')+'" data-box="'+_moreId+'" style="width:100%;box-sizing:border-box;font-size:12px;font-weight:800;padding:9px 12px;border-radius:9px;cursor:pointer;border:1.5px solid rgba(155,89,182,.5);background:rgba(155,89,182,.12);color:#b07cd6;">📋 Plus de marchés (O/U · BTTS · buteur)</button><div id="'+_moreId+'" style="margin-top:8px;"></div></div>';
       added=true;
     }catch(e){}
     if(typeof _renderEspnMatchPitch==='function'){ try{ var pi=_renderEspnMatchPitch(data, '#4d84ff', function(x){return x;}); if(pi){ h+=pi; added=true; } }catch(e){} }
@@ -20333,6 +20335,61 @@ function _g45RenderOdds(ev, hN, aN, remain){
     +rows
     +'</table>'
     +'<div style="font-size:9px;color:var(--t3);text-align:center;margin-top:7px;font-style:italic;">En vert = meilleure cote du marché. Source : The Odds API.</div>'
+    +'</div>';
+}
+async function g45LoadMoreOdds(btn){
+  var box=document.getElementById(btn.dataset.box); if(!box) return;
+  if(box.getAttribute('data-loaded')==='1'){ box.style.display=(box.style.display==='none'?'':'none'); return; }
+  var hN=btn.dataset.h, aN=btn.dataset.a, comp=btn.dataset.comp||'';
+  var sport=_g45OddsSportKey(comp);
+  if(!sport){ box.innerHTML='<div style="color:var(--t3);font-size:11px;padding:8px;">Compétition non couverte par The Odds API.</div>'; return; }
+  box.innerHTML='<div style="color:var(--t3);font-size:11px;padding:10px;text-align:center;">⏳ Chargement des marchés…</div>';
+  btn.disabled=true;
+  try{
+    var base=(typeof FD_PROXY!=='undefined'?FD_PROXY:'https://fd-proxy.touraine-antoine.workers.dev');
+    var rl=await fetch(base+'/odds?sport='+encodeURIComponent(sport)+'&regions=eu&markets=h2h');
+    var list=await rl.json();
+    if(!rl.ok||(list&&list.error)){ box.innerHTML='<div style="color:#ff6b6b;font-size:11px;padding:8px;">Indisponible ('+((list&&list.error)||rl.status)+').</div>'; btn.disabled=false; return; }
+    var ev0=_g45OddsFindEvent(list, hN, aN);
+    if(!ev0||!ev0.id){ box.innerHTML='<div style="color:var(--t3);font-size:11px;padding:8px;">Match introuvable chez The Odds API.</div>'; btn.disabled=false; return; }
+    var rd=await fetch(base+'/odds?sport='+encodeURIComponent(sport)+'&event='+encodeURIComponent(ev0.id)+'&regions=eu&markets=alternate_totals,btts,player_goal_scorer_anytime');
+    var remain=rd.headers.get('X-Odds-Remaining');
+    var det=await rd.json();
+    if(!rd.ok||(det&&det.error)){ box.innerHTML='<div style="color:#ff6b6b;font-size:11px;padding:8px;">Marchés indisponibles ('+((det&&det.error)||rd.status)+').</div>'; btn.disabled=false; return; }
+    box.innerHTML=_g45RenderMoreOdds(det, hN, aN, remain);
+    box.setAttribute('data-loaded','1');
+  }catch(e){ box.innerHTML='<div style="color:#ff6b6b;font-size:11px;padding:8px;">Erreur marchés.</div>'; }
+  btn.disabled=false;
+}
+window.g45LoadMoreOdds=g45LoadMoreOdds;
+function _g45RenderMoreOdds(ev, hN, aN, remain){
+  function ea(s){return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/"/g,'&quot;');}
+  var bks=(ev&&ev.bookmakers)||[];
+  function bestOU(side,point){ var best=null; bks.forEach(function(b){(b.markets||[]).forEach(function(m){ if(m.key!=='alternate_totals'&&m.key!=='totals')return; (m.outcomes||[]).forEach(function(o){ if(o.name===side && Math.abs((o.point||0)-point)<0.001){ if(!best||o.price>best.price)best={price:o.price,book:b.title}; } }); }); }); return best; }
+  function bestBTTS(yes){ var best=null; bks.forEach(function(b){(b.markets||[]).forEach(function(m){ if(m.key!=='btts')return; (m.outcomes||[]).forEach(function(o){ var y=/^y|oui/i.test(o.name); if(y===yes){ if(!best||o.price>best.price)best={price:o.price,book:b.title}; } }); }); }); return best; }
+  var ouRows='';
+  [1.5,2.5,3.5].forEach(function(p){ var ov=bestOU('Over',p), un=bestOU('Under',p); if(!ov&&!un) return;
+    ouRows+='<tr><td style="padding:4px;color:var(--t1);font-size:11px;">'+p+'</td>'
+      +'<td style="text-align:center;padding:4px;font-weight:700;color:#2ecc71;">'+(ov?ov.price.toFixed(2):'—')+'</td>'
+      +'<td style="text-align:center;padding:4px;font-weight:700;color:#ff7b54;">'+(un?un.price.toFixed(2):'—')+'</td></tr>';
+  });
+  var ouBlock = ouRows ? ('<div style="font-size:10px;font-weight:800;color:#4d84ff;margin:2px 0 4px;">⚽ TOTAL DE BUTS (Over / Under)</div><table style="width:100%;border-collapse:collapse;margin-bottom:10px;"><tr style="font-size:9px;color:var(--t3);"><th style="text-align:left;padding:3px 4px;">Ligne</th><th style="padding:3px 4px;">+ (Over)</th><th style="padding:3px 4px;">− (Under)</th></tr>'+ouRows+'</table>') : '';
+  var by=bestBTTS(true), bn=bestBTTS(false);
+  var bttsBlock = (by||bn) ? ('<div style="font-size:10px;font-weight:800;color:#4d84ff;margin:2px 0 4px;">🥅 LES DEUX ÉQUIPES MARQUENT</div><div style="display:flex;gap:8px;margin-bottom:10px;">'
+    +'<div style="flex:1;text-align:center;background:rgba(46,204,113,.10);border-radius:8px;padding:7px;"><div style="font-size:9px;color:var(--t3);">OUI</div><div style="font-size:14px;font-weight:800;color:#2ecc71;">'+(by?by.price.toFixed(2):'—')+'</div></div>'
+    +'<div style="flex:1;text-align:center;background:rgba(255,123,84,.10);border-radius:8px;padding:7px;"><div style="font-size:9px;color:var(--t3);">NON</div><div style="font-size:14px;font-weight:800;color:#ff7b54;">'+(bn?bn.price.toFixed(2):'—')+'</div></div>'
+    +'</div>') : '';
+  var scorers={}; bks.forEach(function(b){(b.markets||[]).forEach(function(m){ if(m.key!=='player_goal_scorer_anytime')return; (m.outcomes||[]).forEach(function(o){ if(!/^y|oui/i.test(o.name))return; var nm=o.description||o.name; if(!nm)return; if(scorers[nm]==null||o.price>scorers[nm]) scorers[nm]=o.price; }); }); });
+  var arr=Object.keys(scorers).map(function(n){return {n:n,p:scorers[n]};}).sort(function(a,b){return a.p-b.p;}).slice(0,15);
+  var scRows=arr.map(function(x){ return '<tr><td style="padding:3px 4px;font-size:11px;color:var(--t1);">'+ea(x.n)+'</td><td style="text-align:right;padding:3px 4px;font-weight:700;color:#2ecc71;">'+x.p.toFixed(2)+'</td></tr>'; }).join('');
+  var scBlock = scRows ? ('<div style="font-size:10px;font-weight:800;color:#4d84ff;margin:2px 0 4px;">👟 BUTEUR À TOUT MOMENT (meilleure cote)</div><table style="width:100%;border-collapse:collapse;">'+scRows+'</table>') : '';
+  var inner = ouBlock+bttsBlock+scBlock;
+  if(!inner) inner='<div style="color:var(--t3);font-size:11px;padding:6px;">Aucun marché détaillé disponible pour ce match.</div>';
+  var rem=(remain!=null?'<span style="float:right;color:var(--t3);font-weight:600;font-size:9px;">'+ea(remain)+' req. restantes</span>':'');
+  return '<div style="background:rgba(155,89,182,.06);border:1px solid rgba(155,89,182,.2);border-radius:10px;padding:10px;">'
+    +'<div style="font-size:10px;font-weight:800;color:#b07cd6;margin-bottom:8px;">📋 PLUS DE MARCHÉS'+rem+'</div>'
+    +inner
+    +'<div style="font-size:9px;color:var(--t3);text-align:center;margin-top:8px;font-style:italic;">Meilleures cotes du marché (souvent books étrangers). Source : The Odds API.</div>'
     +'</div>';
 }
 function _g45Flag(a2){
