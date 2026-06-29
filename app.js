@@ -18949,6 +18949,7 @@ async function loadCalendrier() {
   if(!el) return;
   el.innerHTML = '<div style="display:flex;align-items:center;gap:8px;padding:20px;color:var(--t3);"><div style="width:14px;height:14px;border:2px solid rgba(77,132,255,.2);border-top-color:#4d84ff;border-radius:50%;animation:spin .8s linear infinite;"></div>Chargement du calendrier...</div>';
   if(btn) btn.onclick = loadCalendrier;
+  try{ if(typeof g45StatsLocal==='function' && !g45StatsLocal().length && typeof g45StatsLoadPublic==='function'){ await g45StatsLoadPublic(); } }catch(e){}
 
   // Équipes football favorites (résolution ESPN, comme l'onglet Saisons)
   var teams = state.u.filter(function(u){ return (u.sport||'⚽')==='⚽'; }).slice(0,8);
@@ -19016,6 +19017,7 @@ async function loadCalendrier() {
   });
 
   var html = '';
+  var _csn = 0;
   Object.keys(byDate).forEach(function(dateKey){
     html += '<div style="font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#4f5d88;margin:12px 0 6px;">'+dateKey+'</div>';
     byDate[dateKey].forEach(function(m){
@@ -19028,14 +19030,29 @@ async function loadCalendrier() {
       html += '<div style="font-size:12px;font-weight:700;color:var(--t1);">'+m.ourName+' '+(m.suivi?'<span style="color:#1ed760;">vs</span>':(m.isDom?'<span style="color:#3fb950;">vs</span>':'<span style="color:#f0883e;">@</span>'))+' '+m.adv+'</div>';
       html += '<div style="font-size:10px;color:var(--t3);margin-top:2px;">'+compIco3+' '+compLabel+(m.suivi?' · ⭐ Suivi':(m.isDom?' · 🏠 Domicile':' · ✈️ Extérieur'))+'</div>';
       html += '</div>';
+      var _stm = (typeof g45StatsForEvent==='function') ? g45StatsForEvent({sport:'⚽',teams:[m.ourName,m.adv],comp:(m.comp||m.compSlug||''),place:m.venue||''}) : [];
+      var _csId = 'calstat-'+(_csn++);
       html += '<div style="text-align:right;display:flex;align-items:center;gap:8px;flex:none;"><div style="font-size:12px;font-weight:700;color:var(--a);">'+time+'</div>';
+      if(_stm.length) html += '<button onclick="g45CalTglStat(\''+_csId+'\')" title="Stats du dico" style="background:rgba(240,200,40,.14);border:1px solid rgba(240,200,40,.5);color:#f0c828;border-radius:6px;font-size:11px;font-weight:800;padding:2px 7px;cursor:pointer;flex:none;">💡 '+_stm.length+'</button>';
       if(m.suivi) html += '<button onclick="g45SuiviRemove(\''+String(m.id).replace(/'/g,'')+'\')" title="Retirer du calendrier" style="background:none;border:1px solid rgba(255,69,69,.3);color:#ff6b6b;border-radius:6px;font-size:12px;font-weight:700;padding:2px 7px;cursor:pointer;flex:none;">✕</button>';
       html += '</div>';
       html += '</div>';
+      if(_stm.length){
+        html += '<div id="'+_csId+'" style="display:none;background:rgba(240,200,40,.06);border:1px solid rgba(240,200,40,.25);border-radius:8px;padding:9px 11px;margin:-2px 0 8px;">'
+          + _stm.map(function(st){
+              var ea=function(x){return String(x==null?'':x).replace(/&/g,'&amp;').replace(/</g,'&lt;');};
+              var tg=[]; if(st.place)tg.push('📍'+st.place); if(st.comp)tg.push('🏆'+st.comp); if(st.context)tg.push('🎯'+st.context);
+              return '<div style="font-size:11px;color:var(--t1);line-height:1.5;">💡 '+ea(st.text)+'</div>'+(tg.length?'<div style="font-size:9px;color:#caa83a;margin:2px 0 7px;">'+tg.map(ea).join(' · ')+'</div>':'<div style="height:5px;"></div>');
+            }).join('')
+          + '</div>';
+      }
     });
   });
   el.innerHTML = html;
 }
+
+function g45CalTglStat(id){ var x=document.getElementById(id); if(x) x.style.display=(x.style.display==='none'?'block':'none'); }
+window.g45CalTglStat=g45CalTglStat;
 
 // ── COMPARATEUR ──
 function initComparateur() {
