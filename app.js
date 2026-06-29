@@ -23204,20 +23204,50 @@ async function g45StatsSubmit(){
   var aist=document.getElementById('gms-ai-st'); if(aist)aist.textContent= ok?'✅ Enregistré et synchronisé (PC + mobile).':'✅ Enregistré en local (token GitHub manquant → pas de synchro).';
   g45StatsRenderList('');
 }
+function _g45StatCard(s){
+  function ea(v){return String(v==null?'':v).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/"/g,'&quot;');}
+  var tags=[]; if(s.sport)tags.push(s.sport); (s.targets||[]).forEach(function(t){tags.push(t);}); if(s.place)tags.push('📍'+s.place); if(s.comp)tags.push('🏆'+s.comp); if(s.context)tags.push('🎯'+s.context);
+  var chips=tags.map(function(t){return '<span style="font-size:9px;background:rgba(77,132,255,.14);color:#8aa2ff;padding:1px 6px;border-radius:5px;">'+ea(t)+'</span>';}).join(' ');
+  return '<div style="background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.08);border-radius:9px;padding:10px;margin-bottom:8px;">'
+    +'<div style="font-size:12px;color:var(--t1,#e8ecf5);line-height:1.5;margin-bottom:6px;">'+ea(s.text)+'</div>'
+    +'<div style="display:flex;flex-wrap:wrap;gap:4px;align-items:center;">'+chips
+    +'<button onclick="g45StatsEditUI(\''+s.id+'\')" style="margin-left:auto;background:none;border:none;color:#8aa2ff;font-size:13px;cursor:pointer;">✏️</button>'
+    +'<button onclick="g45StatsDeleteUI(\''+s.id+'\')" style="background:none;border:none;color:#ff6b6b;font-size:13px;cursor:pointer;">🗑</button></div></div>';
+}
+var _G45_SPORTN={'⚽':'Football','🏀':'Basket','🎾':'Tennis','🏈':'NFL','🏒':'Hockey','⚾':'Baseball','🏉':'Rugby','🏉🇦🇺':'NRL','🏎':'F1','🥊':'MMA','🚗':'WRC','🚴':'Cyclisme'};
+function g45StatsToggle(id){ var x=document.getElementById(id); if(!x) return; var open=x.style.display==='none'; x.style.display=open?'block':'none'; var c=document.getElementById(id+'-c'); if(c) c.textContent=open?'▾':'▸'; }
 function g45StatsRenderList(filter){
   var box=document.getElementById('gms-list'); if(!box) return;
-  function ea(s){return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/"/g,'&quot;');}
-  var f=_g45SNorm(filter||''), arr=g45StatsLocal();
-  if(f) arr=arr.filter(function(s){ return _g45SNorm(s.text+' '+(s.targets||[]).join(' ')+' '+(s.place||'')+' '+(s.comp||'')+' '+(s.context||'')).indexOf(f)>=0; });
-  if(!arr.length){ box.innerHTML='<div style="color:var(--t3);font-size:12px;text-align:center;padding:20px;">Aucune stat'+(filter?' pour cette recherche.':' encore. Ajoute ta première !')+'</div>'; return; }
-  box.innerHTML=arr.map(function(s){
-    var tags=[]; if(s.sport)tags.push(s.sport); (s.targets||[]).forEach(function(t){tags.push(t);}); if(s.place)tags.push('📍'+s.place); if(s.comp)tags.push('🏆'+s.comp); if(s.context)tags.push('🎯'+s.context);
-    var chips=tags.map(function(t){return '<span style="font-size:9px;background:rgba(77,132,255,.14);color:#8aa2ff;padding:1px 6px;border-radius:5px;">'+ea(t)+'</span>';}).join(' ');
-    return '<div style="background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.08);border-radius:9px;padding:10px;margin-bottom:8px;">'
-      +'<div style="font-size:12px;color:var(--t1,#e8ecf5);line-height:1.5;margin-bottom:6px;">'+ea(s.text)+'</div>'
-      +'<div style="display:flex;flex-wrap:wrap;gap:4px;align-items:center;">'+chips
-      +'<button onclick="g45StatsEditUI(\''+s.id+'\')" style="margin-left:auto;background:none;border:none;color:#8aa2ff;font-size:13px;cursor:pointer;">✏️</button>'
-      +'<button onclick="g45StatsDeleteUI(\''+s.id+'\')" style="background:none;border:none;color:#ff6b6b;font-size:13px;cursor:pointer;">🗑</button></div></div>';
+  function ea(v){return String(v==null?'':v).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/"/g,'&quot;');}
+  var all=g45StatsLocal();
+  var f=_g45SNorm(filter||'');
+  // Recherche libre -> liste à plat filtrée
+  if(f){
+    var arr=all.filter(function(s){ return _g45SNorm(s.text+' '+(s.targets||[]).join(' ')+' '+(s.place||'')+' '+(s.comp||'')+' '+(s.context||'')).indexOf(f)>=0; });
+    box.innerHTML= arr.length ? arr.map(_g45StatCard).join('') : '<div style="color:var(--t3);font-size:12px;text-align:center;padding:20px;">Aucune stat pour cette recherche.</div>';
+    return;
+  }
+  if(!all.length){ box.innerHTML='<div style="color:var(--t3);font-size:12px;text-align:center;padding:20px;">Aucune stat encore. Ajoute ta première !</div>'; return; }
+  // Vue groupée : Sport -> Compétition/Lieu -> stats (cliquable, façon Résultats)
+  var bySport={}, order=[];
+  all.forEach(function(s){ var k=s.sport||'❓'; if(!bySport[k]){bySport[k]=[];order.push(k);} bySport[k].push(s); });
+  box.innerHTML=order.map(function(sp){
+    var list=bySport[sp];
+    var byCat={}, catOrder=[];
+    list.forEach(function(s){ var c=(s.comp||s.place||'Divers'); if(!byCat[c]){byCat[c]=[];catOrder.push(c);} byCat[c].push(s); });
+    var sid='gms-sp-'+_g45SNorm(sp);
+    var inner=catOrder.map(function(c){
+      return '<div style="margin:8px 0 4px;font-size:10px;font-weight:700;color:#8aa2ff;text-transform:uppercase;letter-spacing:.3px;">'+ea(c)+' ('+byCat[c].length+')</div>'+byCat[c].map(_g45StatCard).join('');
+    }).join('');
+    return '<div style="margin-bottom:10px;">'
+      +'<div onclick="g45StatsToggle(\''+sid+'\')" style="display:flex;align-items:center;gap:8px;cursor:pointer;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:9px;padding:10px 12px;">'
+      +'<span id="'+sid+'-c" style="font-size:11px;color:#8b97c4;width:12px;display:inline-block;">▸</span>'
+      +'<span style="font-size:16px;">'+ea(sp)+'</span>'
+      +'<span style="font-size:13px;font-weight:800;color:#e8ecf5;">'+ea(_G45_SPORTN[sp]||'Autre')+'</span>'
+      +'<span style="margin-left:auto;font-size:11px;color:#8b97c4;">'+list.length+' stat'+(list.length>1?'s':'')+'</span>'
+      +'</div>'
+      +'<div id="'+sid+'" style="display:none;padding:6px 2px 0;">'+inner+'</div>'
+      +'</div>';
   }).join('');
 }
 async function g45StatsDeleteUI(id){ if(!confirm('Supprimer cette stat ?'))return; await g45StatsRemove(id); var s=document.getElementById('gms-search'); g45StatsRenderList(s?s.value:''); }
@@ -23266,4 +23296,5 @@ window.g45StatsRenderList=g45StatsRenderList;
 window.g45StatsDeleteUI=g45StatsDeleteUI;
 window.g45StatsForEvent=g45StatsForEvent;
 window.g45StatsEditUI=g45StatsEditUI;
+window.g45StatsToggle=g45StatsToggle;
 
