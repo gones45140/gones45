@@ -23218,7 +23218,6 @@ var _G45_SPORTN={'⚽':'Football','🏀':'Basket','🎾':'Tennis','🏈':'NFL','
 function g45StatsToggle(id){ var x=document.getElementById(id); if(!x) return; var open=x.style.display==='none'; x.style.display=open?'block':'none'; var c=document.getElementById(id+'-c'); if(c) c.textContent=open?'▾':'▸'; }
 function g45StatsRenderList(filter){
   var box=document.getElementById('gms-list'); if(!box) return;
-  function ea(v){return String(v==null?'':v).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/"/g,'&quot;');}
   var all=g45StatsLocal();
   var f=_g45SNorm(filter||'');
   // Recherche libre -> liste à plat filtrée
@@ -23228,27 +23227,55 @@ function g45StatsRenderList(filter){
     return;
   }
   if(!all.length){ box.innerHTML='<div style="color:var(--t3);font-size:12px;text-align:center;padding:20px;">Aucune stat encore. Ajoute ta première !</div>'; return; }
-  // Vue groupée : Sport -> Compétition/Lieu -> stats (cliquable, façon Résultats)
+  g45StatsViewSports();
+}
+// ── Navigateur façon Résultats : Sports -> Compétitions/GP -> Stats ──
+var _g45NavSports=[], _g45NavCats=[];
+function g45StatsViewSports(){
+  var box=document.getElementById('gms-list'); if(!box) return;
+  var all=g45StatsLocal();
   var bySport={}, order=[];
   all.forEach(function(s){ var k=s.sport||'❓'; if(!bySport[k]){bySport[k]=[];order.push(k);} bySport[k].push(s); });
-  box.innerHTML=order.map(function(sp){
-    var list=bySport[sp];
-    var byCat={}, catOrder=[];
-    list.forEach(function(s){ var c=(s.comp||s.place||'Divers'); if(!byCat[c]){byCat[c]=[];catOrder.push(c);} byCat[c].push(s); });
-    var sid='gms-sp-'+_g45SNorm(sp);
-    var inner=catOrder.map(function(c){
-      return '<div style="margin:8px 0 4px;font-size:10px;font-weight:700;color:#8aa2ff;text-transform:uppercase;letter-spacing:.3px;">'+ea(c)+' ('+byCat[c].length+')</div>'+byCat[c].map(_g45StatCard).join('');
-    }).join('');
-    return '<div style="margin-bottom:10px;">'
-      +'<div onclick="g45StatsToggle(\''+sid+'\')" style="display:flex;align-items:center;gap:8px;cursor:pointer;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:9px;padding:10px 12px;">'
-      +'<span id="'+sid+'-c" style="font-size:11px;color:#8b97c4;width:12px;display:inline-block;">▸</span>'
-      +'<span style="font-size:16px;">'+ea(sp)+'</span>'
-      +'<span style="font-size:13px;font-weight:800;color:#e8ecf5;">'+ea(_G45_SPORTN[sp]||'Autre')+'</span>'
-      +'<span style="margin-left:auto;font-size:11px;color:#8b97c4;">'+list.length+' stat'+(list.length>1?'s':'')+'</span>'
-      +'</div>'
-      +'<div id="'+sid+'" style="display:none;padding:6px 2px 0;">'+inner+'</div>'
-      +'</div>';
+  _g45NavSports=order;
+  var cards=order.map(function(sp,i){
+    var n=bySport[sp].length;
+    return '<button onclick="g45StatsOpenSport('+i+')" style="border:none;cursor:pointer;background:rgba(255,255,255,.05);border-radius:12px;padding:16px 8px;display:flex;flex-direction:column;align-items:center;gap:5px;color:var(--t1);">'
+      +'<span style="font-size:26px;">'+sp+'</span>'
+      +'<span style="font-size:11px;font-weight:700;">'+(_G45_SPORTN[sp]||'Autre')+'</span>'
+      +'<span style="font-size:9px;color:#8b97c4;">'+n+' stat'+(n>1?'s':'')+'</span></button>';
   }).join('');
+  box.innerHTML='<div style="font-size:10px;color:var(--t3);margin-bottom:10px;">Choisis un sport, puis une compétition / GP pour voir tes stats.</div>'
+    +'<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(86px,1fr));gap:10px;">'+cards+'</div>';
+}
+function g45StatsOpenSport(i){
+  var box=document.getElementById('gms-list'); if(!box) return;
+  var sp=_g45NavSports[i]; if(sp==null) return;
+  var all=g45StatsLocal().filter(function(s){ return (s.sport||'❓')===sp; });
+  var cats={}, order=[];
+  all.forEach(function(s){ var c=(s.comp||s.place||'Divers'); if(!cats[c]){cats[c]=0;order.push(c);} cats[c]++; });
+  _g45NavCats=order; window._g45NavSp=sp;
+  function ea(v){return String(v==null?'':v).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/"/g,'&quot;');}
+  var chips='<button onclick="g45StatsOpenComp(-1)" style="border:none;cursor:pointer;font-size:11px;font-weight:700;padding:7px 11px;border-radius:8px;background:rgba(77,132,255,.16);color:#8aa2ff;white-space:nowrap;">Toutes ('+all.length+')</button>'
+    +order.map(function(c,j){
+      return '<button onclick="g45StatsOpenComp('+j+')" style="border:none;cursor:pointer;font-size:11px;font-weight:700;padding:7px 11px;border-radius:8px;background:rgba(255,255,255,.06);color:var(--t2);white-space:nowrap;">'+ea(c)+' ('+cats[c]+')</button>';
+    }).join('');
+  box.innerHTML='<button onclick="g45StatsViewSports()" style="border:none;background:rgba(255,255,255,.06);color:var(--t2);border-radius:8px;padding:6px 12px;font-size:11px;font-weight:700;cursor:pointer;margin-bottom:10px;">← Sports</button>'
+    +'<div class="sec" style="margin-top:0;">'+sp+' '+(_G45_SPORTN[sp]||'')+'</div>'
+    +'<div style="display:flex;flex-wrap:wrap;gap:6px;">'+chips+'</div>';
+}
+function g45StatsOpenComp(j){
+  var box=document.getElementById('gms-list'); if(!box) return;
+  var sp=window._g45NavSp; if(sp==null) return;
+  var all=g45StatsLocal().filter(function(s){ return (s.sport||'❓')===sp; });
+  var cat= j<0 ? null : _g45NavCats[j];
+  var list= cat==null ? all : all.filter(function(s){ return (s.comp||s.place||'Divers')===cat; });
+  function ea(v){return String(v==null?'':v).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/"/g,'&quot;');}
+  var cards=list.length ? list.map(_g45StatCard).join('') : '<div style="color:var(--t3);font-size:12px;text-align:center;padding:20px;">Aucune stat.</div>';
+  // index du sport courant pour le retour
+  var spi=_g45NavSports.indexOf(sp);
+  box.innerHTML='<button onclick="g45StatsOpenSport('+spi+')" style="border:none;background:rgba(255,255,255,.06);color:var(--t2);border-radius:8px;padding:6px 12px;font-size:11px;font-weight:700;cursor:pointer;margin-bottom:10px;">← '+(_G45_SPORTN[sp]||'Sport')+'</button>'
+    +'<div class="sec" style="margin-top:0;">'+(cat==null?'Toutes les stats':ea(cat))+'</div>'
+    +cards;
 }
 async function g45StatsDeleteUI(id){ if(!confirm('Supprimer cette stat ?'))return; await g45StatsRemove(id); var s=document.getElementById('gms-search'); g45StatsRenderList(s?s.value:''); }
 function _g45StatsTabHTML(){
@@ -23296,5 +23323,7 @@ window.g45StatsRenderList=g45StatsRenderList;
 window.g45StatsDeleteUI=g45StatsDeleteUI;
 window.g45StatsForEvent=g45StatsForEvent;
 window.g45StatsEditUI=g45StatsEditUI;
-window.g45StatsToggle=g45StatsToggle;
+window.g45StatsViewSports=g45StatsViewSports;
+window.g45StatsOpenSport=g45StatsOpenSport;
+window.g45StatsOpenComp=g45StatsOpenComp;
 
