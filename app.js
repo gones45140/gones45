@@ -23231,6 +23231,36 @@ function g45StatsRenderList(filter){
 }
 // ── Navigateur façon Résultats : Sports -> Compétitions/GP -> Stats ──
 var _g45NavSports=[], _g45NavCats=[];
+function g45StatsBottomSearch(){
+  var q=((document.getElementById('gms-search')||{}).value||'');
+  if(q.trim()) g45StatsRenderList(q); else g45StatsSearchByFields();
+}
+function g45StatsSearchByFields(){
+  var box=document.getElementById('gms-list'); if(!box) return;
+  function v(id){ var e=document.getElementById(id); return e?(e.value||'').trim():''; }
+  var sport=v('gms-sport'), place=v('gms-place'), t1=v('gms-t1'), t2=v('gms-t2'), comp=v('gms-comp'), context=v('gms-context');
+  var teams=[t1,t2].filter(Boolean);
+  var hasCrit = !!(place||teams.length||comp||context);
+  function near(a,b){ a=_g45SNorm(a); b=_g45SNorm(b); return a&&b&&(a===b||a.indexOf(b)>=0||b.indexOf(a)>=0); }
+  var res=g45StatsLocal().filter(function(s){
+    if(sport && s.sport && s.sport!==sport) return false;            // pré-filtre sport
+    if(!hasCrit) return true;                                        // que le sport -> tout le sport
+    // souple : équipes
+    for(var i=0;i<teams.length;i++){ var tg=s.targets||[]; for(var j=0;j<tg.length;j++){ if(near(teams[i],tg[j])) return true; } }
+    // lieu / GP (ou une cible qui matche le lieu)
+    if(place && (near(place,s.place) || (s.targets||[]).some(function(t){return near(place,t);}))) return true;
+    // compétition (+ contexte si fourni)
+    if(comp && near(comp,s.comp) && (!context || near(context,s.context))) return true;
+    // contexte seul
+    if(context && !comp && !place && !teams.length && near(context,s.context)) return true;
+    return false;
+  });
+  function ea(x){return String(x==null?'':x).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/"/g,'&quot;');}
+  var crit=[]; if(sport)crit.push(sport); if(place)crit.push('📍'+place); teams.forEach(function(t){crit.push(t);}); if(comp)crit.push('🏆'+comp); if(context)crit.push('🎯'+context);
+  var head='<button onclick="g45StatsViewSports()" style="border:none;background:rgba(255,255,255,.06);color:var(--t2);border-radius:8px;padding:6px 12px;font-size:11px;font-weight:700;cursor:pointer;margin-bottom:10px;">← Retour</button>'
+    +'<div style="font-size:11px;color:var(--t3);margin-bottom:8px;">🔎 Recherche par champs : '+(crit.length?crit.map(ea).join(' · '):'(sport seul)')+' — '+res.length+' résultat'+(res.length>1?'s':'')+'</div>';
+  box.innerHTML=head+(res.length?res.map(_g45StatCard).join(''):'<div style="color:var(--t3);font-size:12px;text-align:center;padding:20px;">Aucune stat ne correspond à ces champs.</div>');
+}
 function g45StatsViewSports(){
   var box=document.getElementById('gms-list'); if(!box) return;
   var all=g45StatsLocal();
@@ -23298,10 +23328,11 @@ function _g45StatsTabHTML(){
     +fld('Contexte','<input id="gms-context" placeholder="élim directe, buteur…" style="'+fi+'">')
     +'</div>'
     +'<button id="gms-save" onclick="g45StatsSubmit()" style="width:100%;margin-top:12px;padding:10px;border-radius:9px;border:1px solid rgba(46,204,113,.5);background:rgba(46,204,113,.12);color:#2ecc71;font-size:13px;font-weight:800;cursor:pointer;">💾 Enregistrer la stat</button>'
+    +'<button onclick="g45StatsSearchByFields()" style="width:100%;margin-top:8px;padding:9px;border-radius:9px;border:1px solid rgba(77,132,255,.5);background:rgba(77,132,255,.12);color:#8aa2ff;font-size:12px;font-weight:700;cursor:pointer;">🔎 Rechercher avec ces champs</button>'
     +'</div>'
     +'<div style="display:flex;gap:7px;margin-bottom:10px;">'
     +'<input id="gms-search" oninput="g45StatsRenderList(this.value)" onkeydown="if(event.key===\'Enter\')g45StatsRenderList(this.value)" placeholder="🔍 Rechercher dans mes stats…" style="'+fi+'padding:8px;flex:1;">'
-    +'<button onclick="g45StatsRenderList(document.getElementById(\'gms-search\').value)" style="flex-shrink:0;padding:0 14px;border-radius:8px;border:1px solid rgba(77,132,255,.5);background:rgba(77,132,255,.14);color:#8aa2ff;font-size:12px;font-weight:700;cursor:pointer;">Rechercher</button>'
+    +'<button onclick="g45StatsBottomSearch()" style="flex-shrink:0;padding:0 14px;border-radius:8px;border:1px solid rgba(77,132,255,.5);background:rgba(77,132,255,.14);color:#8aa2ff;font-size:12px;font-weight:700;cursor:pointer;">Rechercher</button>'
     +'</div>'
     +'<div id="gms-list"></div>'
     +'</div>';
@@ -23324,6 +23355,8 @@ window.g45StatsDeleteUI=g45StatsDeleteUI;
 window.g45StatsForEvent=g45StatsForEvent;
 window.g45StatsEditUI=g45StatsEditUI;
 window.g45StatsViewSports=g45StatsViewSports;
+window.g45StatsSearchByFields=g45StatsSearchByFields;
+window.g45StatsBottomSearch=g45StatsBottomSearch;
 window.g45StatsOpenSport=g45StatsOpenSport;
 window.g45StatsOpenComp=g45StatsOpenComp;
 
