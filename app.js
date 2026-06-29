@@ -23199,17 +23199,14 @@ function g45StatsRenderList(filter){
   }).join('');
 }
 async function g45StatsDeleteUI(id){ if(!confirm('Supprimer cette stat ?'))return; await g45StatsRemove(id); var s=document.getElementById('gms-search'); g45StatsRenderList(s?s.value:''); }
-function g45CloseStatsMemory(){ var o=document.getElementById('gms-overlay'); if(o) o.remove(); }
-function g45OpenStatsMemory(){
-  g45CloseStatsMemory();
+function _g45StatsTabHTML(){
   var bg3='rgba(0,0,0,.22)', b2='rgba(255,255,255,.1)';
   var fi='width:100%;box-sizing:border-box;background:'+bg3+';border:1px solid '+b2+';border-radius:8px;color:#e8ecf5;font-size:12px;padding:7px;';
   var sportOpts='<option value="⚽">⚽ Football</option><option value="🏀">🏀 Basket</option><option value="🎾">🎾 Tennis</option><option value="🏈">🏈 NFL</option><option value="🏒">🏒 Hockey</option><option value="⚾">⚾ Baseball</option><option value="🏉">🏉 Rugby</option><option value="🏉🇦🇺">🏉🇦🇺 NRL</option><option value="🏎">🏎 F1</option><option value="🥊">🥊 MMA</option><option value="🚗">🚗 WRC</option><option value="🚴">🚴 Cyclisme</option>';
   function fld(lbl,inner){ return '<div><label style="font-size:9px;color:#8b97c4;text-transform:uppercase;">'+lbl+'</label>'+inner+'</div>'; }
-  var ov=document.createElement('div'); ov.id='gms-overlay';
-  ov.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.65);z-index:99999;display:flex;justify-content:center;align-items:flex-start;overflow-y:auto;padding:14px;';
-  ov.innerHTML='<div style="background:#141a2e;border:1px solid rgba(255,255,255,.1);border-radius:14px;max-width:560px;width:100%;padding:16px;margin:auto;">'
-    +'<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;"><div style="font-size:15px;font-weight:800;color:#e8ecf5;">🧠 Mémoire stats</div><button onclick="g45CloseStatsMemory()" style="background:none;border:none;color:#8b97c4;font-size:20px;cursor:pointer;">✕</button></div>'
+  return '<div style="max-width:600px;margin:0 auto;">'
+    +'<div style="font-size:16px;font-weight:800;color:#e8ecf5;margin-bottom:4px;">🧠 Mémoire stats</div>'
+    +'<div style="font-size:11px;color:#8b97c4;margin-bottom:14px;">Tes pépites taguées, synchro PC + mobile. Elles ressortiront sur les matchs/GP correspondants.</div>'
     +'<div style="background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.07);border-radius:10px;padding:12px;margin-bottom:14px;">'
     +'<textarea id="gms-text" placeholder="Colle la stat ici (ex: Le GP d Autriche ne reussit pas a Ferrari…)" style="'+fi+'height:64px;resize:vertical;margin-bottom:8px;"></textarea>'
     +'<div style="display:flex;gap:7px;align-items:center;margin-bottom:10px;"><button onclick="g45StatsAutoTag()" style="font-size:11px;font-weight:700;padding:7px 10px;border-radius:8px;border:1px solid rgba(155,89,182,.5);background:rgba(155,89,182,.12);color:#b07cd6;cursor:pointer;">🤖 Auto-tags (IA)</button><span id="gms-ai-st" style="font-size:10px;color:#8b97c4;"></span></div>'
@@ -23226,12 +23223,17 @@ function g45OpenStatsMemory(){
     +'<input id="gms-search" oninput="g45StatsRenderList(this.value)" placeholder="🔍 Rechercher dans mes stats…" style="'+fi+'margin-bottom:10px;padding:8px;">'
     +'<div id="gms-list"></div>'
     +'</div>';
-  ov.addEventListener('click', function(e){ if(e.target===ov) g45CloseStatsMemory(); });
-  document.body.appendChild(ov);
+}
+function loadStatsTab(){
+  var el=document.getElementById('t-stats'); if(!el) return;
+  el.innerHTML=_g45StatsTabHTML();
   g45StatsRenderList('');
   g45StatsLoadPublic().then(function(){ var s=document.getElementById('gms-search'); g45StatsRenderList(s?s.value:''); });
 }
+function g45OpenStatsMemory(){ if(typeof showTab==='function') showTab('t-stats', null); loadStatsTab(); }
+function g45CloseStatsMemory(){}
 window.g45OpenStatsMemory=g45OpenStatsMemory;
+window.loadStatsTab=loadStatsTab;
 window.g45CloseStatsMemory=g45CloseStatsMemory;
 window.g45StatsSubmit=g45StatsSubmit;
 window.g45StatsAutoTag=g45StatsAutoTag;
@@ -23239,237 +23241,3 @@ window.g45StatsRenderList=g45StatsRenderList;
 window.g45StatsDeleteUI=g45StatsDeleteUI;
 window.g45StatsForEvent=g45StatsForEvent;
 
-/* ════════════════════════ MÉMOIRE STATS (V1) ════════════════════════
-   Dico de pépites stats → stockées sur GitHub (données/stats.json, comme
-   joueurs.json) pour être accessibles PC ET mobile. Saisie type "pari"
-   + auto-tags via Groq. Restitution par match/GP = V2 (g45StatsForEvent).
-   ──────────────────────────────────────────────────────────────────── */
-var G45_STATS_FILE = 'données/stats.json';
-
-function g45StatsLocal(){ try{ return JSON.parse(localStorage.getItem('g45_stats_cache')||'[]'); }catch(e){ return []; } }
-function g45StatsSetLocal(arr){ try{ localStorage.setItem('g45_stats_cache', JSON.stringify(arr||[])); }catch(e){} }
-function _g45Esc(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
-
-/* ── Stockage GitHub (mirroir de la plomberie joueurs.json) ── */
-async function g45StatsGithubGet(){
-  var token=localStorage.getItem('gones45_github_token');
-  if(!token) return null;
-  try{
-    var r=await fetch('https://api.github.com/repos/'+GITHUB_OWNER+'/'+GITHUB_REPO+'/contents/'+G45_STATS_FILE,{
-      headers:{'Authorization':'token '+token,'Accept':'application/vnd.github.v3+json'}
-    });
-    if(r.status===404) return {data:[], sha:null};
-    if(!r.ok) return null;
-    var d=await r.json();
-    var arr=[]; try{ arr=JSON.parse(atob(d.content.split('\n').join(''))); }catch(e){ arr=[]; }
-    if(!Array.isArray(arr)) arr=[];
-    return {data:arr, sha:d.sha};
-  }catch(e){ console.warn('stats github read',e); return null; }
-}
-async function g45StatsGithubSave(arr, sha){
-  var token=localStorage.getItem('gones45_github_token');
-  if(!token) return false;
-  try{
-    var body={ message:'Update stats memory', content:btoa(unescape(encodeURIComponent(JSON.stringify(arr,null,2)))) };
-    if(sha) body.sha=sha;
-    var r=await fetch('https://api.github.com/repos/'+GITHUB_OWNER+'/'+GITHUB_REPO+'/contents/'+G45_STATS_FILE,{
-      method:'PUT',
-      headers:{'Authorization':'token '+token,'Content-Type':'application/json','Accept':'application/vnd.github.v3+json'},
-      body:JSON.stringify(body)
-    });
-    return r.ok;
-  }catch(e){ console.warn('stats github write',e); return false; }
-}
-/* Lecture publique (amis / sans token) via GitHub Pages */
-async function g45StatsLoadPublic(){
-  try{
-    var url=encodeURI(G45_STATS_FILE)+'?t='+Date.now();
-    var r=await fetch(url);
-    if(!r.ok) r=await fetch(encodeURI('https://gones45140.github.io/gones45/'+G45_STATS_FILE)+'?t='+Date.now());
-    if(!r.ok) return g45StatsLocal();
-    var arr=await r.json(); if(!Array.isArray(arr)) arr=[];
-    g45StatsSetLocal(arr); return arr;
-  }catch(e){ return g45StatsLocal(); }
-}
-/* Synchro : token → GitHub API ; sinon lecture publique */
-async function g45StatsSync(){
-  var res=await g45StatsGithubGet();
-  if(res){ g45StatsSetLocal(res.data); return res.data; }
-  return await g45StatsLoadPublic();
-}
-/* Ajout / suppression (re-lecture du sha pour éviter les conflits) */
-async function g45StatsAdd(stat){
-  var res=await g45StatsGithubGet();
-  var arr=(res?res.data.slice():g45StatsLocal().slice());
-  arr.unshift(stat);
-  var ok=false;
-  if(res!==null) ok=await g45StatsGithubSave(arr, res.sha);
-  g45StatsSetLocal(arr);
-  return ok;
-}
-async function g45StatsRemove(id){
-  var res=await g45StatsGithubGet();
-  var arr=(res?res.data:g45StatsLocal()).filter(function(s){ return s.id!==id; });
-  var ok=false;
-  if(res!==null) ok=await g45StatsGithubSave(arr, res.sha);
-  g45StatsSetLocal(arr);
-  return ok;
-}
-
-/* ── Moteur de matching (souple) : équipes/lieu OU (comp + contexte) ── */
-function _g45SNorm(s){ return (s==null?'':String(s)).toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9]+/g,''); }
-function _g45SArrNorm(a){ return (a||[]).map(_g45SNorm).filter(Boolean); }
-function _g45SNear(a,b){ return !!(a&&b&&(a===b||a.indexOf(b)>=0||b.indexOf(a)>=0)); }
-function g45StatMatch(stat, ev){
-  ev=ev||{};
-  if(stat.sport && ev.sport && stat.sport!==ev.sport) return false;
-  var evTeams=_g45SArrNorm(ev.teams), evPlace=_g45SNorm(ev.place), evComp=_g45SNorm(ev.comp);
-  var stT=_g45SArrNorm(stat.targets), stP=_g45SNorm(stat.place), stC=_g45SNorm(stat.comp), stX=_g45SNorm(stat.context);
-  var i,j;
-  for(i=0;i<stT.length;i++){ for(j=0;j<evTeams.length;j++){ if(_g45SNear(stT[i],evTeams[j])) return true; } }
-  if(stP && (_g45SNear(stP,evPlace) || evTeams.some(function(t){return _g45SNear(stP,t);}))) return true;
-  if(stC && evComp && _g45SNear(stC,evComp) && stX) return true;
-  return false;
-}
-function g45StatsForEvent(ev){ return g45StatsLocal().filter(function(s){ return g45StatMatch(s, ev); }); }
-
-/* ── Auto-tags via Groq (l'IA propose, l'utilisateur corrige) ── */
-async function g45StatsAutoTag(){
-  var ta=document.getElementById('gms-text'); var txt=ta?ta.value.trim():'';
-  if(!txt){ alert('Colle d\'abord le texte de la stat.'); return; }
-  var key=(typeof getGeminiKey==='function')?getGeminiKey():localStorage.getItem('gones45_gemini_key');
-  if(!key){ alert('Configure ta clé Groq dans Outils.'); return; }
-  var btn=document.getElementById('gms-ai-btn'); if(btn){ btn.disabled=true; btn.textContent='🤖 …'; }
-  try{
-    var sys='Tu extrais des tags d\'une stat de paris sportifs pour un dictionnaire. Reponds UNIQUEMENT par un JSON valide sans aucun texte autour, au format exact: {"sport":"<un seul emoji parmi ⚽ 🏀 🎾 🏈 🏒 ⚾ 🏉 🏎 🥊 🚗 🚴>","targets":["equipe/ecurie/joueur"],"place":"<lieu ou Grand Prix, sinon vide>","comp":"<competition, sinon vide>","context":"<contexte court: elimination directe, buteur, lay, domicile, exterieur... sinon vide>"}. Regles: targets = les equipes/ecuries/joueurs explicitement cites (tableau vide si stat generale sans equipe). place surtout pour F1/courses (le circuit ou pays du GP). Sois concis.';
-    var r=await fetch('https://api.groq.com/openai/v1/chat/completions',{
-      method:'POST',
-      headers:{'Content-Type':'application/json','Authorization':'Bearer '+key},
-      body:JSON.stringify({model:'llama-3.3-70b-versatile',messages:[{role:'system',content:sys},{role:'user',content:txt}],temperature:0,max_tokens:220})
-    });
-    var d=await r.json();
-    if(d.error) throw new Error(d.error.message);
-    var raw=((d.choices&&d.choices[0]&&d.choices[0].message.content)||'').replace(/```json|```/g,'').trim();
-    var obj={}; try{ obj=JSON.parse(raw); }catch(e){ var m=raw.match(/\{[\s\S]*\}/); if(m) obj=JSON.parse(m[0]); }
-    if(obj.sport){ var sel=document.getElementById('gms-sport'); if(sel) sel.value=obj.sport; }
-    var t=Array.isArray(obj.targets)?obj.targets:[];
-    var e1=document.getElementById('gms-t1'), e2=document.getElementById('gms-t2');
-    if(e1) e1.value=t[0]||''; if(e2) e2.value=t[1]||'';
-    var ep=document.getElementById('gms-place'); if(ep) ep.value=obj.place||'';
-    var ec=document.getElementById('gms-comp'); if(ec) ec.value=obj.comp||'';
-    var ex=document.getElementById('gms-context'); if(ex) ex.value=obj.context||'';
-    var note=document.getElementById('gms-note'); if(note){ note.textContent='🤖 Tags proposés — vérifie/corrige puis enregistre.'; note.style.color='#7aaaff'; }
-  }catch(e){ alert('Auto-tags : '+e.message); }
-  if(btn){ btn.disabled=false; btn.textContent='🤖 Auto-tags (IA)'; }
-}
-
-/* ── UI ── */
-var GMS_SPORTS='<option value="⚽">⚽ Football</option><option value="🏀">🏀 Basket</option><option value="🎾">🎾 Tennis</option><option value="🏈">🏈 NFL</option><option value="🏒">🏒 Hockey</option><option value="⚾">⚾ Baseball</option><option value="🏉">🏉 Rugby</option><option value="🏉🇦🇺">🏉🇦🇺 NRL</option><option value="🏎">🏎 F1</option><option value="🥊">🥊 MMA</option><option value="🚗">🚗 WRC</option><option value="🚴">🚴 Cyclisme</option>';
-
-function g45OpenStatsMemory(){
-  var ov=document.getElementById('gms-overlay');
-  if(!ov){ ov=document.createElement('div'); ov.id='gms-overlay'; document.body.appendChild(ov); }
-  ov.style.cssText='position:fixed;inset:0;z-index:99999;background:rgba(0,0,0,.6);display:flex;align-items:flex-start;justify-content:center;overflow:auto;padding:12px;';
-  var L='font-size:10px;font-weight:700;color:#8b97c4;text-transform:uppercase;letter-spacing:.4px;display:block;margin-bottom:4px;';
-  var I='width:100%;box-sizing:border-box;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.1);border-radius:8px;color:#e6e9f5;font-size:13px;padding:9px;';
-  var h='<div style="width:100%;max-width:560px;margin:auto;background:#10131c;border:1px solid #262b3a;border-radius:16px;padding:16px;">';
-  // header
-  h+='<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">'
-    +'<div style="font-size:15px;font-weight:900;color:#fff;">🧠 Mémoire stats</div>'
-    +'<button onclick="g45CloseStatsMemory()" style="background:none;border:1px solid rgba(255,255,255,.15);color:#aeb6cf;border-radius:8px;font-size:13px;padding:4px 10px;cursor:pointer;">✕</button>'
-    +'</div>';
-  // textarea stat
-  h+='<label style="'+L+'">La stat</label>'
-    +'<textarea id="gms-text" rows="3" placeholder="Ex : Ferrari sous-performe au GP d\'Autriche (0 podium sur les 4 dernières éditions)…" style="'+I+'resize:vertical;line-height:1.5;margin-bottom:8px;"></textarea>';
-  // bouton IA
-  h+='<button id="gms-ai-btn" onclick="g45StatsAutoTag()" style="width:100%;background:rgba(77,132,255,.12);border:1px solid rgba(77,132,255,.35);color:#7aaaff;font-size:12px;font-weight:700;border-radius:8px;padding:9px;cursor:pointer;margin-bottom:12px;">🤖 Auto-tags (IA)</button>';
-  // formulaire type pari
-  h+='<div style="display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-bottom:9px;">'
-    +'<div><label style="'+L+'">Sport</label><select id="gms-sport" style="'+I+'">'+GMS_SPORTS+'</select></div>'
-    +'<div><label style="'+L+'">Compétition</label><input id="gms-comp" placeholder="Coupe du Monde…" style="'+I+'"></div>'
-    +'</div>';
-  h+='<div style="display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-bottom:9px;">'
-    +'<div><label style="'+L+'">Équipe / Écurie / Joueur</label><input id="gms-t1" placeholder="France, Ferrari…" style="'+I+'"></div>'
-    +'<div><label style="'+L+'">Adversaire (si match)</label><input id="gms-t2" placeholder="Allemagne…" style="'+I+'"></div>'
-    +'</div>';
-  h+='<div style="display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-bottom:10px;">'
-    +'<div><label style="'+L+'">Lieu / GP (F1)</label><input id="gms-place" placeholder="Autriche, Spielberg…" style="'+I+'"></div>'
-    +'<div><label style="'+L+'">Contexte / Type</label><input id="gms-context" placeholder="élim. directe, buteur, lay…" style="'+I+'"></div>'
-    +'</div>';
-  h+='<button id="gms-save-btn" onclick="g45StatsSubmit()" style="width:100%;background:rgba(30,215,96,.12);border:1px solid rgba(30,215,96,.4);color:#1ed760;font-size:13px;font-weight:800;border-radius:9px;padding:11px;cursor:pointer;">💾 Enregistrer la stat</button>';
-  h+='<div id="gms-note" style="font-size:10px;color:#7a83a0;text-align:center;margin-top:7px;min-height:13px;"></div>';
-  // séparateur + recherche + liste
-  h+='<div style="border-top:1px solid rgba(255,255,255,.08);margin:12px 0;"></div>';
-  h+='<input id="gms-search" oninput="g45StatsRenderList(this.value)" placeholder="🔍 Rechercher dans le dico…" style="'+I+'margin-bottom:10px;">';
-  h+='<div id="gms-list"></div>';
-  h+='</div>';
-  ov.innerHTML=h;
-  var note=document.getElementById('gms-note');
-  if(note){ note.textContent='⏳ Chargement du dico…'; }
-  g45StatsSync().then(function(){ g45StatsRenderList(''); if(note) note.textContent=''; });
-}
-function g45CloseStatsMemory(){ var ov=document.getElementById('gms-overlay'); if(ov) ov.style.display='none'; }
-
-function g45StatsRenderList(filter){
-  var box=document.getElementById('gms-list'); if(!box) return;
-  var arr=g45StatsLocal();
-  var f=_g45SNorm(filter||'');
-  if(f){ arr=arr.filter(function(s){ return _g45SNorm((s.text||'')+' '+((s.targets||[]).join(' '))+' '+(s.place||'')+' '+(s.comp||'')+' '+(s.context||'')).indexOf(f)>=0; }); }
-  if(!arr.length){ box.innerHTML='<div style="text-align:center;color:#7a83a0;font-size:12px;padding:18px;">Aucune stat'+(f?' pour cette recherche':' enregistrée pour l\'instant')+'.</div>'; return; }
-  function chip(t,c){ return t?'<span style="display:inline-block;background:'+c+';color:#cdd6f4;font-size:9px;font-weight:700;padding:2px 6px;border-radius:6px;margin:2px 3px 0 0;">'+_g45Esc(t)+'</span>':''; }
-  box.innerHTML=arr.map(function(s){
-    var chips=(s.sport?chip(s.sport,'rgba(77,132,255,.2)'):'')
-      +(s.targets||[]).map(function(t){return chip(t,'rgba(46,204,113,.18)');}).join('')
-      +chip(s.place,'rgba(240,176,32,.18)')
-      +chip(s.comp,'rgba(155,89,182,.2)')
-      +chip(s.context,'rgba(255,123,84,.18)');
-    var dt=''; try{ dt=new Date(s.ts).toLocaleDateString('fr-FR'); }catch(e){}
-    return '<div style="background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.06);border-radius:10px;padding:10px;margin-bottom:8px;">'
-      +'<div style="font-size:12px;color:#e6e9f5;line-height:1.5;white-space:pre-wrap;">'+_g45Esc(s.text||'')+'</div>'
-      +(chips?'<div style="margin-top:6px;">'+chips+'</div>':'')
-      +'<div style="display:flex;justify-content:space-between;align-items:center;margin-top:7px;">'
-      +'<span style="font-size:9px;color:#5b647f;">'+dt+'</span>'
-      +'<button onclick="g45StatsDeleteUI(\''+s.id+'\')" style="background:none;border:1px solid rgba(255,69,69,.3);color:#ff6b6b;font-size:10px;border-radius:6px;padding:2px 9px;cursor:pointer;">🗑</button>'
-      +'</div></div>';
-  }).join('');
-}
-
-async function g45StatsSubmit(){
-  var txt=((document.getElementById('gms-text')||{}).value||'').trim();
-  if(!txt){ alert('Écris la stat.'); return; }
-  var targets=[((document.getElementById('gms-t1')||{}).value||'').trim(), ((document.getElementById('gms-t2')||{}).value||'').trim()].filter(Boolean);
-  var stat={
-    id:'st_'+Date.now()+'_'+Math.random().toString(36).slice(2,7),
-    ts:Date.now(),
-    text:txt,
-    sport:((document.getElementById('gms-sport')||{}).value||''),
-    targets:targets,
-    place:((document.getElementById('gms-place')||{}).value||'').trim(),
-    comp:((document.getElementById('gms-comp')||{}).value||'').trim(),
-    context:((document.getElementById('gms-context')||{}).value||'').trim()
-  };
-  var btn=document.getElementById('gms-save-btn'); if(btn){ btn.disabled=true; btn.textContent='💾 …'; }
-  var ok=await g45StatsAdd(stat);
-  if(btn){ btn.disabled=false; btn.textContent='💾 Enregistrer la stat'; }
-  ['gms-text','gms-t1','gms-t2','gms-place','gms-comp','gms-context'].forEach(function(id){ var e=document.getElementById(id); if(e) e.value=''; });
-  g45StatsRenderList(((document.getElementById('gms-search')||{}).value||''));
-  var note=document.getElementById('gms-note');
-  if(note){
-    note.textContent= ok ? '✅ Stat enregistrée et synchronisée (PC + mobile).' : '⚠️ Enregistrée sur cet appareil seulement (token GitHub manquant → pas de synchro).';
-    note.style.color= ok ? '#1ed760' : '#f0b020';
-  }
-}
-async function g45StatsDeleteUI(id){
-  if(!confirm('Supprimer cette stat ?')) return;
-  await g45StatsRemove(id);
-  g45StatsRenderList(((document.getElementById('gms-search')||{}).value||''));
-}
-
-window.g45OpenStatsMemory=g45OpenStatsMemory;
-window.g45CloseStatsMemory=g45CloseStatsMemory;
-window.g45StatsAutoTag=g45StatsAutoTag;
-window.g45StatsSubmit=g45StatsSubmit;
-window.g45StatsRenderList=g45StatsRenderList;
-window.g45StatsDeleteUI=g45StatsDeleteUI;
-window.g45StatsForEvent=g45StatsForEvent;
-window.g45StatsSync=g45StatsSync;

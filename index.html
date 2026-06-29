@@ -884,6 +884,7 @@
 <!-- COMPARATEUR -->
 <div id="t-simu" class="tab"></div>
 <div id="t-social" class="tab"></div>
+<div id="t-stats" class="tab"></div>
 <div id="t-live" class="tab"></div>
 <div id="t-resultats" class="tab"></div>
 <div id="t-comp" class="tab">
@@ -1017,6 +1018,7 @@
   <button class="ni pc-only" onclick="showTab('t-live',this);loadLiveTab();"><span>📡</span>Direct</button>
   <button class="ni pc-only" onclick="showTab('t-resultats',this);loadResultatsTab();"><span>🏆</span>Résultats</button>
   <button class="ni pc-only" onclick="showTab('t-social',this);loadSocialTab();"><span>🤝</span>Social</button>
+  <button class="ni pc-only" onclick="showTab('t-stats',this);loadStatsTab();"><span>🧠</span>Stats</button>
 
   <div style="flex:1;display:flex;flex-direction:column;padding:0 8px 8px;min-height:0;" class="pc-note-area">
     <div id="pc-note" contenteditable="true" style="flex:1;min-height:100px;background:var(--bg3);border:1px solid var(--b1);border-radius:var(--r6);color:var(--t1);font-size:11px;line-height:1.6;padding:10px;outline:none;font-family:inherit;overflow-y:auto;word-break:break-word;" data-placeholder="Notes, cotes, screenshots…" oninput="saveNote()"></div>
@@ -1055,6 +1057,9 @@
       </button>
       <button onclick="showTab('t-resultats',$i('btn-plus-menu'));togglePlusMenu();loadResultatsTab();" style="display:flex;align-items:center;gap:12px;padding:14px 12px;background:var(--bg3);border:none;border-radius:8px;color:var(--t1);font-size:13px;font-weight:700;cursor:pointer;text-align:left;margin-top:4px;">
         <span>🏆</span> Résultats (tous sports)
+      </button>
+      <button onclick="showTab('t-stats',$i('btn-plus-menu'));togglePlusMenu();loadStatsTab();" style="display:flex;align-items:center;gap:12px;padding:14px 12px;background:var(--bg3);border:none;border-radius:8px;color:var(--t1);font-size:13px;font-weight:700;cursor:pointer;text-align:left;margin-top:4px;">
+        <span>🧠</span> Mémoire stats
       </button>
       <button onclick="togglePlusMenu();" style="display:flex;align-items:center;gap:12px;padding:14px 12px;background:none;border:none;border-radius:8px;color:var(--t3);font-size:12px;font-weight:700;cursor:pointer;text-align:left;margin-top:4px;">
         <span>✕</span> Fermer
