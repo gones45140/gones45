@@ -23135,6 +23135,26 @@ async function g45StatsRemove(id){
   if(gh) await g45StatsGithubSave(arr, gh.sha);
   return arr;
 }
+var _g45EditId=null;
+async function g45StatsUpdate(stat){
+  var gh=await g45StatsGithubGet();
+  var arr=(gh?gh.arr:g45StatsLocal()).map(function(s){ return s.id===stat.id ? stat : s; });
+  g45StatsSetLocal(arr);
+  if(gh!==null) return await g45StatsGithubSave(arr, gh?gh.sha:null);
+  return false;
+}
+function g45StatsEditUI(id){
+  var s=g45StatsLocal().filter(function(x){return x.id===id;})[0]; if(!s) return;
+  _g45EditId=id;
+  var set=function(i,v){ var e=document.getElementById(i); if(e) e.value=(v||''); };
+  set('gms-text', s.text);
+  var sel=document.getElementById('gms-sport'); if(sel&&s.sport) sel.value=s.sport;
+  set('gms-t1',(s.targets||[])[0]); set('gms-t2',(s.targets||[])[1]);
+  set('gms-place',s.place); set('gms-comp',s.comp); set('gms-context',s.context);
+  var btn=document.getElementById('gms-save'); if(btn) btn.textContent='✏️ Mettre à jour la stat';
+  var aist=document.getElementById('gms-ai-st'); if(aist) aist.textContent='✏️ Modification en cours — change ce que tu veux puis enregistre.';
+  var t=document.getElementById('gms-text'); if(t){ try{t.scrollIntoView({behavior:'smooth',block:'center'});}catch(e){} t.focus(); }
+}
 function _g45SNorm(s){ return (s||'').toString().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9]/g,''); }
 function g45StatMatch(stat, ev){
   if(stat.sport && ev.sport && stat.sport!==ev.sport) return false;
@@ -23170,14 +23190,15 @@ async function g45StatsAutoTag(){
 async function g45StatsSubmit(){
   var txt=(document.getElementById('gms-text').value||'').trim();
   if(!txt){ alert('Écris la stat.'); return; }
-  var stat={ id:'s'+Date.now()+Math.random().toString(36).slice(2,6), ts:Date.now(), text:txt,
+  var stat={ id:(_g45EditId||('s'+Date.now()+Math.random().toString(36).slice(2,6))), ts:Date.now(), text:txt,
     sport:document.getElementById('gms-sport').value||'',
     targets:[document.getElementById('gms-t1').value, document.getElementById('gms-t2').value].map(function(x){return (x||'').trim();}).filter(Boolean),
     place:(document.getElementById('gms-place').value||'').trim(),
     comp:(document.getElementById('gms-comp').value||'').trim(),
     context:(document.getElementById('gms-context').value||'').trim() };
   var btn=document.getElementById('gms-save'); if(btn){btn.disabled=true;btn.textContent='⏳ Enregistrement…';}
-  var ok=await g45StatsAdd(stat);
+  var ok= _g45EditId ? await g45StatsUpdate(stat) : await g45StatsAdd(stat);
+  _g45EditId=null;
   if(btn){btn.disabled=false;btn.textContent='💾 Enregistrer la stat';}
   ['gms-text','gms-t1','gms-t2','gms-place','gms-comp','gms-context'].forEach(function(id){var e=document.getElementById(id);if(e)e.value='';});
   var aist=document.getElementById('gms-ai-st'); if(aist)aist.textContent= ok?'✅ Enregistré et synchronisé (PC + mobile).':'✅ Enregistré en local (token GitHub manquant → pas de synchro).';
@@ -23195,7 +23216,8 @@ function g45StatsRenderList(filter){
     return '<div style="background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.08);border-radius:9px;padding:10px;margin-bottom:8px;">'
       +'<div style="font-size:12px;color:var(--t1,#e8ecf5);line-height:1.5;margin-bottom:6px;">'+ea(s.text)+'</div>'
       +'<div style="display:flex;flex-wrap:wrap;gap:4px;align-items:center;">'+chips
-      +'<button onclick="g45StatsDeleteUI(\''+s.id+'\')" style="margin-left:auto;background:none;border:none;color:#ff6b6b;font-size:12px;cursor:pointer;">🗑</button></div></div>';
+      +'<button onclick="g45StatsEditUI(\''+s.id+'\')" style="margin-left:auto;background:none;border:none;color:#8aa2ff;font-size:13px;cursor:pointer;">✏️</button>'
+      +'<button onclick="g45StatsDeleteUI(\''+s.id+'\')" style="background:none;border:none;color:#ff6b6b;font-size:13px;cursor:pointer;">🗑</button></div></div>';
   }).join('');
 }
 async function g45StatsDeleteUI(id){ if(!confirm('Supprimer cette stat ?'))return; await g45StatsRemove(id); var s=document.getElementById('gms-search'); g45StatsRenderList(s?s.value:''); }
@@ -23204,7 +23226,7 @@ function _g45StatsTabHTML(){
   var fi='width:100%;box-sizing:border-box;background:'+bg3+';border:1px solid '+b2+';border-radius:8px;color:#e8ecf5;font-size:12px;padding:7px;';
   var sportOpts='<option value="⚽">⚽ Football</option><option value="🏀">🏀 Basket</option><option value="🎾">🎾 Tennis</option><option value="🏈">🏈 NFL</option><option value="🏒">🏒 Hockey</option><option value="⚾">⚾ Baseball</option><option value="🏉">🏉 Rugby</option><option value="🏉🇦🇺">🏉🇦🇺 NRL</option><option value="🏎">🏎 F1</option><option value="🥊">🥊 MMA</option><option value="🚗">🚗 WRC</option><option value="🚴">🚴 Cyclisme</option>';
   function fld(lbl,inner){ return '<div><label style="font-size:9px;color:#8b97c4;text-transform:uppercase;">'+lbl+'</label>'+inner+'</div>'; }
-  return '<div style="max-width:600px;margin:0 auto;">'
+  return '<div style="max-width:600px;margin:0 auto;background:rgba(13,17,28,.9);border:1px solid rgba(255,255,255,.08);border-radius:14px;padding:18px;">'
     +'<div style="font-size:16px;font-weight:800;color:#e8ecf5;margin-bottom:4px;">🧠 Mémoire stats</div>'
     +'<div style="font-size:11px;color:#8b97c4;margin-bottom:14px;">Tes pépites taguées, synchro PC + mobile. Elles ressortiront sur les matchs/GP correspondants.</div>'
     +'<div style="background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.07);border-radius:10px;padding:12px;margin-bottom:14px;">'
@@ -23220,7 +23242,10 @@ function _g45StatsTabHTML(){
     +'</div>'
     +'<button id="gms-save" onclick="g45StatsSubmit()" style="width:100%;margin-top:12px;padding:10px;border-radius:9px;border:1px solid rgba(46,204,113,.5);background:rgba(46,204,113,.12);color:#2ecc71;font-size:13px;font-weight:800;cursor:pointer;">💾 Enregistrer la stat</button>'
     +'</div>'
-    +'<input id="gms-search" oninput="g45StatsRenderList(this.value)" placeholder="🔍 Rechercher dans mes stats…" style="'+fi+'margin-bottom:10px;padding:8px;">'
+    +'<div style="display:flex;gap:7px;margin-bottom:10px;">'
+    +'<input id="gms-search" oninput="g45StatsRenderList(this.value)" onkeydown="if(event.key===\'Enter\')g45StatsRenderList(this.value)" placeholder="🔍 Rechercher dans mes stats…" style="'+fi+'padding:8px;flex:1;">'
+    +'<button onclick="g45StatsRenderList(document.getElementById(\'gms-search\').value)" style="flex-shrink:0;padding:0 14px;border-radius:8px;border:1px solid rgba(77,132,255,.5);background:rgba(77,132,255,.14);color:#8aa2ff;font-size:12px;font-weight:700;cursor:pointer;">Rechercher</button>'
+    +'</div>'
     +'<div id="gms-list"></div>'
     +'</div>';
 }
@@ -23240,4 +23265,5 @@ window.g45StatsAutoTag=g45StatsAutoTag;
 window.g45StatsRenderList=g45StatsRenderList;
 window.g45StatsDeleteUI=g45StatsDeleteUI;
 window.g45StatsForEvent=g45StatsForEvent;
+window.g45StatsEditUI=g45StatsEditUI;
 
