@@ -23655,6 +23655,61 @@ async function g45F1Tyres(){
     }).join('')
     +'</div>';
 }
+function _g45F1TrRC(m){
+  m=String(m||'');
+  var R=[
+    [/FIA STEWARDS:\s*/gi,'Commissaires : '],
+    [/(\d+)\s*SECOND TIME PENALTY FOR CAR (\d+)/gi,'pénalité de $1 s pour la voiture $2'],
+    [/(\d+)\s*SECOND TIME PENALTY/gi,'pénalité de $1 s'],
+    [/PENALTY SERVED/gi,'pénalité purgée'],
+    [/DRIVE THROUGH PENALTY/gi,'pénalité drive-through'],
+    [/STOP AND GO/gi,'stop&go'],
+    [/SPEEDING IN THE PIT LANE/gi,'excès de vitesse dans la pit lane'],
+    [/UNSAFE RELEASE/gi,'relâche dangereuse'],
+    [/CAUSING A COLLISION/gi,'collision provoquée'],
+    [/WAVED BLUE FLAG FOR CAR (\d+)/gi,'drapeau bleu agité pour la voiture $1'],
+    [/BLACK AND WHITE FLAG FOR CAR (\d+)/gi,'drapeau noir et blanc pour la voiture $1'],
+    [/CHEQUERED FLAG/gi,'drapeau à damier'],
+    [/RED FLAG/gi,'drapeau rouge'],
+    [/DOUBLE YELLOW/gi,'double jaune'],
+    [/YELLOW FLAG/gi,'drapeau jaune'],
+    [/GREEN FLAG/gi,'drapeau vert'],
+    [/TRACK CLEAR/gi,'piste dégagée'],
+    [/SAFETY CAR DEPLOYED/gi,'voiture de sécurité en piste'],
+    [/SAFETY CAR IN THIS LAP/gi,'la voiture de sécurité rentre ce tour'],
+    [/VIRTUAL SAFETY CAR/gi,'VSC'],
+    [/SAFETY CAR/gi,'voiture de sécurité'],
+    [/DRS ENABLED/gi,'DRS activé'],
+    [/DRS DISABLED/gi,'DRS désactivé'],
+    [/PIT LANE ENTRY CLOSED/gi,'entrée des stands fermée'],
+    [/PIT LANE ENTRY OPEN(ED)?/gi,'entrée des stands ouverte'],
+    [/PIT EXIT CLOSED/gi,'sortie des stands fermée'],
+    [/PIT EXIT OPEN(ED)?/gi,'sortie des stands ouverte'],
+    [/ALL PASS HOLDERS MAY ACCESS THE PIT LANE/gi,'accès à la pit lane ouvert à tous'],
+    [/SESSION FINISHED/gi,'séance terminée'],
+    [/SESSION SUSPENDED/gi,'séance interrompue'],
+    [/SESSION RESUMED/gi,'reprise de la séance'],
+    [/SESSION STARTED/gi,'départ de la séance'],
+    [/RISK OF RAIN FOR F1 RACE IS (\d+)%/gi,'risque de pluie course : $1 %'],
+    [/RISK OF RAIN/gi,'risque de pluie'],
+    [/TIME (\d+:\d+\.\d+) DELETED/gi,'temps $1 supprimé'],
+    [/LAP TIME DELETED/gi,'temps au tour supprimé'],
+    [/TRACK LIMITS/gi,'limites de piste'],
+    [/AT TURN (\d+)/gi,'au virage $1'],
+    [/TURN (\d+)/gi,'virage $1'],
+    [/\bLAP (\d+)/gi,'tour $1'],
+    [/TIMED AT (\d+:\d+:\d+)/gi,'à $1'],
+    [/UNDER INVESTIGATION/gi,"en cours d'enquête"],
+    [/WILL BE INVESTIGATED AFTER THE (RACE|SESSION)/gi,'sera examiné après la course'],
+    [/NO FURTHER (ACTION|INVESTIGATION)/gi,'classé sans suite'],
+    [/INCIDENT INVOLVING CARS?/gi,'incident impliquant les voitures'],
+    [/NEXT LAP/gi,'tour suivant'],
+    [/\bCAR (\d+)/gi,'voiture $1'],
+    [/NOTED/gi,'noté']
+  ];
+  for(var i=0;i<R.length;i++){ m=m.replace(R[i][0],R[i][1]); }
+  return m;
+}
 async function g45F1Flags(){
   var out=document.getElementById('f1-xtra'); if(!out||!window._g45F1Cur) return;
   out.innerHTML=_g45F1XtraLoad('Chargement drapeaux & pénalités…');
@@ -23678,7 +23733,7 @@ async function g45F1Flags(){
     var sect=(String(m.scope||'').toLowerCase()==='sector'&&m.sector!=null)?' <span style="background:rgba(240,200,40,.15);color:#f0c828;font-size:8px;font-weight:800;padding:1px 5px;border-radius:4px;">S'+ea(m.sector)+'</span>':'';
     var lap=m.lap_number!=null?('T'+ea(m.lap_number)):(function(){ try{ return new Date(m.date).toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'}); }catch(e){ return ''; } })();
     return '<div style="font-size:9px;color:var(--t2);padding:3px 0;border-bottom:1px solid rgba(255,255,255,.04);'+(isPen?'background:rgba(240,176,32,.08);border-left:2px solid #f0b020;padding-left:6px;':'')+'">'
-      +_g45F1FlagIco2(m.flag,m.category)+' <span style="color:var(--t3);">'+lap+'</span>'+who+sect+' — '+ea(String(m.message||'').slice(0,120))+'</div>';
+      +_g45F1FlagIco2(m.flag,m.category)+' <span style="color:var(--t3);">'+lap+'</span>'+who+sect+' — '+ea(_g45F1TrRC(String(m.message||'')).slice(0,140))+'</div>';
   }
   out.innerHTML='<div style="background:rgba(240,176,32,.05);border:1px solid rgba(240,176,32,.25);border-radius:10px;padding:10px 12px;margin-top:8px;">'
     +'<div style="font-size:10px;font-weight:800;color:#f0b020;margin-bottom:7px;">🚩 DRAPEAUX & PÉNALITÉS <span style="color:var(--t3);font-weight:400;">('+rc.length+' messages'+(pen.length?(' · '+pen.length+' pénalité'+(pen.length>1?'s':'')):'')+')</span></div>'
