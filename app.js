@@ -23474,10 +23474,96 @@ function g45F1Detail(eid){
     var t=(c.type&&(c.type.abbreviation||c.type.text))||('S'+(i+1));
     return '<button onclick="g45F1Session('+i+')" id="f1s-'+i+'" style="border:none;cursor:pointer;font-size:11px;font-weight:700;padding:7px 11px;border-radius:8px;background:'+(i===defIdx?'rgba(232,0,45,.18);color:#ff6b81':'rgba(255,255,255,.06);color:var(--t2)')+';white-space:nowrap;">'+ea(t)+'</button>';
   }).join('');
-  html+='<div style="display:flex;gap:6px;overflow-x:auto;padding-bottom:4px;-webkit-overflow-scrolling:touch;margin-bottom:8px;">'+chips+'</div>'
+  html+='<div id="f1-map"></div>'
+    +'<div style="display:flex;gap:6px;overflow-x:auto;padding-bottom:4px;-webkit-overflow-scrolling:touch;margin-bottom:8px;">'+chips+'</div>'
     +'<div id="f1-session"></div>';
   el.innerHTML=html;
   g45F1Session(defIdx);
+  _g45F1Map(ev);
+}
+async function _g45F1Map(ev){
+  var box=document.getElementById('f1-map'); if(!box) return;
+  try{
+    var rd=await _g45F1JolRound(ev); if(!rd||!_g45F1Jol.sched) return;
+    var race=_g45F1Jol.sched.filter(function(rc){ return String(rc.round)===String(rd.round); })[0];
+    var url=race&&race.Circuit&&race.Circuit.url; if(!url) return;
+    var title=url.split('/wiki/')[1]; if(!title) return;
+    if(!_g45F1Jol.wiki) _g45F1Jol.wiki={};
+    var img=_g45F1Jol.wiki[title];
+    if(img===undefined){
+      var r=await fetch('https://en.wikipedia.org/api/rest_v1/page/summary/'+title);
+      if(!r.ok){ _g45F1Jol.wiki[title]=null; return; }
+      var j=await r.json();
+      img=(j.originalimage&&j.originalimage.source)||(j.thumbnail&&j.thumbnail.source)||null;
+      _g45F1Jol.wiki[title]=img;
+    }
+    if(!img) return;
+    box.innerHTML='<div style="background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:10px;padding:10px;margin-bottom:10px;text-align:center;">'
+      +'<img src="'+String(img).replace(/"/g,'&quot;')+'" style="max-width:100%;max-height:220px;border-radius:8px;" onerror="this.parentNode.style.display=\'none\'">'
+      +'<div style="font-size:9px;color:var(--t3);margin-top:5px;">Tracé du circuit · Wikipédia</div></div>';
+  }catch(e){}
+}
+var _g45F1Jol={schedYear:null, sched:null, res:{}, qual:{}};
+async function _g45F1JolRound(ev){
+  try{
+    var year=new Date(ev.date).getFullYear();
+    if(_g45F1Jol.schedYear!==year || !_g45F1Jol.sched){
+      var r=await fetch('https://api.jolpi.ca/ergast/f1/'+year+'.json');
+      if(!r.ok) return null;
+      var j=await r.json();
+      _g45F1Jol.sched=(j.MRData&&j.MRData.RaceTable&&j.MRData.RaceTable.Races)||[];
+      _g45F1Jol.schedYear=year;
+    }
+    var cir=_g45SNorm((ev.circuit&&ev.circuit.fullName)||'');
+    var t0=new Date(ev.date).getTime()-3*86400000;
+    var t1=new Date(ev.endDate||ev.date).getTime()+3*86400000;
+    var m=_g45F1Jol.sched.filter(function(rc){
+      var rd=new Date(rc.date+'T12:00:00Z').getTime();
+      var cn=_g45SNorm((rc.Circuit&&rc.Circuit.circuitName)||'');
+      var cirOk=cir&&cn&&(cn.indexOf(cir)>=0||cir.indexOf(cn)>=0);
+      return cirOk || (!isNaN(rd)&&rd>=t0&&rd<=t1);
+    })[0];
+    return m?{year:year, round:m.round}:null;
+  }catch(e){ return null; }
+}
+function _g45F1Key(n){ var p=_g45SNorm(n).split(''); return _g45SNorm(String(n||'').trim().split(/\s+/).pop()); }
+async function _g45F1JolResults(year, round){
+  var key=year+':'+round;
+  if(_g45F1Jol.res[key]) return _g45F1Jol.res[key];
+  try{
+    var r=await fetch('https://api.jolpi.ca/ergast/f1/'+year+'/'+round+'/results.json');
+    if(!r.ok) return null;
+    var j=await r.json();
+    var rows=(((j.MRData||{}).RaceTable||{}).Races||[])[0]; rows=(rows&&rows.Results)||[];
+    var map={};
+    rows.forEach(function(x){
+      var k=_g45F1Key((x.Driver&&x.Driver.familyName)||'');
+      map[k]={ cons:(x.Constructor&&x.Constructor.name)||'', time:(x.Time&&x.Time.time)||'', status:x.status||'', points:x.points||'0', grid:x.grid||'' };
+    });
+    _g45F1Jol.res[key]=map; return map;
+  }catch(e){ return null; }
+}
+async function _g45F1JolQual(year, round){
+  var key=year+':'+round;
+  if(_g45F1Jol.qual[key]) return _g45F1Jol.qual[key];
+  try{
+    var r=await fetch('https://api.jolpi.ca/ergast/f1/'+year+'/'+round+'/qualifying.json');
+    if(!r.ok) return null;
+    var j=await r.json();
+    var rows=(((j.MRData||{}).RaceTable||{}).Races||[])[0]; rows=(rows&&rows.QualifyingResults)||[];
+    var map={};
+    rows.forEach(function(x){
+      var k=_g45F1Key((x.Driver&&x.Driver.familyName)||'');
+      map[k]={ cons:(x.Constructor&&x.Constructor.name)||'', q1:x.Q1||'', q2:x.Q2||'', q3:x.Q3||'' };
+    });
+    _g45F1Jol.qual[key]=map; return map;
+  }catch(e){ return null; }
+}
+function _g45F1Status(st){
+  var m={'Finished':'','Lapped':'+1 tour ou plus','Retired':'Abandon','Accident':'Accident','Collision':'Collision','Engine':'Moteur','Gearbox':'Boîte','Hydraulics':'Hydraulique','Brakes':'Freins','Disqualified':'Disqualifié','Did not start':'Non partant','Withdrew':'Retrait'};
+  if(m[st]!=null) return m[st];
+  if(/^\+\d+ Laps?$/.test(st)) return st.replace('Laps','tours').replace('Lap','tour');
+  return st||'';
 }
 function g45F1Session(idx){
   var box=document.getElementById('f1-session'); if(!box) return;
@@ -23493,17 +23579,71 @@ function g45F1Session(idx){
     box.innerHTML='<div class="fc" style="color:var(--t3);text-align:center;">Séance pas encore courue.'+(isNaN(d)?'':'<br><small>📅 '+d.toLocaleDateString('fr-FR',{weekday:'long',day:'numeric',month:'long'})+' '+d.toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'})+'</small>')+'</div>';
     return;
   }
-  box.innerHTML=rows.map(function(r){
-    var a=r.athlete||{};
-    var flag=a.flag&&a.flag.href?'<img src="'+ea(a.flag.href)+'" style="width:16px;height:11px;border-radius:2px;" onerror="this.style.display=\'none\'">':'';
-    var pos=r.order||'—';
-    var gold=r.winner?'color:#f0c828;':'';
-    return '<div style="display:flex;align-items:center;gap:10px;padding:7px 12px;background:var(--s1);border-radius:var(--r6);margin-bottom:4px;">'
-      +'<div style="width:24px;text-align:center;font-size:12px;font-weight:800;'+gold+'color:'+(r.winner?'#f0c828':'var(--t2)')+';">'+(r.winner?'🏆':pos)+'</div>'
-      +flag
-      +'<div style="flex:1;font-size:12px;font-weight:'+(r.winner?'800':'600')+';'+gold+'color:var(--t1);">'+ea(a.displayName||a.fullName||'?')+'</div>'
-      +'</div>';
-  }).join('');
+  var t=(c.type&&(c.type.abbreviation||c.type.text))||'';
+  var isRace=/race/i.test(t)&&!/sprint/i.test(t);
+  var isQual=/qual/i.test(t);
+  function renderRows(extra){
+    var _chart='';
+    if(isQual && extra){
+      var toSec=function(t){ if(!t) return null; var p=String(t).split(':'); return p.length===2?(parseInt(p[0],10)*60+parseFloat(p[1])):parseFloat(t); };
+      var fm=function(t){ var m=Math.floor(t/60), sec=t-60*m; return m>0? m+':'+(sec<10?'0':'')+sec.toFixed(3) : t.toFixed(3); };
+      var gaps=[];
+      rows.forEach(function(r){ var a=r.athlete||{}; var x=extra[_g45F1Key(a.displayName||a.fullName||'')]; if(!x) return; var tt=toSec(x.q3||x.q2||x.q1); if(tt==null||isNaN(tt)) return; gaps.push({n:a.shortName||a.displayName||'?', t:tt}); });
+      if(gaps.length>2){
+        gaps.sort(function(a,b){ return a.t-b.t; });
+        var pole=gaps[0].t;
+        var maxG=(gaps[gaps.length-1].t-pole)||1;
+        _chart='<div style="background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:10px;padding:10px 12px;margin-bottom:8px;">'
+          +'<div style="font-size:10px;font-weight:800;color:#e8002d;margin-bottom:7px;">📊 ÉCART À LA POLE <span style="color:var(--t3);font-weight:400;">(meilleur tour de qualif)</span></div>'
+          +gaps.map(function(g){
+            var gap=g.t-pole;
+            var w=Math.max(2, gap/maxG*100);
+            return '<div style="display:flex;align-items:center;gap:6px;margin-bottom:3px;">'
+              +'<div style="width:76px;flex:none;font-size:9px;color:var(--t2);text-align:right;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">'+ea(g.n)+'</div>'
+              +'<div style="flex:1;"><div style="height:10px;width:'+w.toFixed(1)+'%;background:'+(gap===0?'#f0c828':'rgba(232,0,45,.75)')+';border-radius:3px;"></div></div>'
+              +'<div style="width:56px;flex:none;font-size:9px;font-weight:700;color:'+(gap===0?'#f0c828':'var(--t3)')+';">'+(gap===0?ea(fm(g.t)):'+'+gap.toFixed(3))+'</div>'
+              +'</div>';
+          }).join('')
+          +'</div>';
+      }
+    }
+    box.innerHTML=_chart+rows.map(function(r){
+      var a=r.athlete||{};
+      var flag=a.flag&&a.flag.href?'<img src="'+ea(a.flag.href)+'" style="width:16px;height:11px;border-radius:2px;" onerror="this.style.display=\'none\'">':'';
+      var pos=r.order||'—';
+      var gold=r.winner?'color:#f0c828;':'';
+      var x=extra?extra[_g45F1Key(a.displayName||a.fullName||'')]:null;
+      var right='';
+      if(x){
+        if(isRace){
+          var tm=x.time?ea(x.time):_g45F1Status(x.status);
+          right='<div style="flex:none;text-align:right;">'
+            +(tm?'<div style="font-size:11px;font-weight:700;color:'+(x.time?'var(--t1)':'#ff7b54')+';">'+tm+'</div>':'')
+            +(x.points&&x.points!=='0'?'<div style="font-size:9px;color:#3fb950;">+'+ea(x.points)+' pts</div>':'')
+            +'</div>';
+        } else if(isQual){
+          var best=x.q3||x.q2||x.q1;
+          right=best?'<div style="flex:none;font-size:11px;font-weight:700;color:var(--t1);">'+ea(best)+(x.q3?' <span style="font-size:8px;color:#8b97c4;">Q3</span>':(x.q2?' <span style="font-size:8px;color:#8b97c4;">Q2</span>':' <span style="font-size:8px;color:#8b97c4;">Q1</span>'))+'</div>':'';
+        }
+      }
+      var cons=(x&&x.cons)?'<div style="font-size:9px;color:var(--t3);margin-top:1px;">'+ea(x.cons)+'</div>':'';
+      return '<div style="display:flex;align-items:center;gap:10px;padding:7px 12px;background:var(--s1);border-radius:var(--r6);margin-bottom:4px;">'
+        +'<div style="width:24px;text-align:center;font-size:12px;font-weight:800;'+gold+'color:'+(r.winner?'#f0c828':'var(--t2)')+';">'+(r.winner?'🏆':pos)+'</div>'
+        +flag
+        +'<div style="flex:1;"><div style="font-size:12px;font-weight:'+(r.winner?'800':'600')+';'+gold+'color:var(--t1);">'+ea(a.displayName||a.fullName||'?')+'</div>'+cons+'</div>'
+        +right
+        +'</div>';
+    }).join('');
+  }
+  renderRows(null);
+  // Enrichissement chrono/écurie via Jolpica (course + qualifs), silencieux si indispo
+  if(state==='post' && (isRace||isQual)){
+    _g45F1JolRound(ev).then(function(rd){
+      if(!rd) return;
+      var pr=isRace?_g45F1JolResults(rd.year,rd.round):_g45F1JolQual(rd.year,rd.round);
+      pr.then(function(map){ if(map) renderRows(map); });
+    });
+  }
 }
 window.g45F1Open=g45F1Open;
 window.g45F1Detail=g45F1Detail;
