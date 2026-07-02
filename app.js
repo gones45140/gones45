@@ -23408,6 +23408,7 @@ async function g45F1Open(){
   function ea(x){return String(x==null?'':x).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/"/g,'&quot;');}
   var html='<button onclick="loadResultatsTab()" style="border:none;background:rgba(255,255,255,.06);color:var(--t2);border-radius:8px;padding:6px 12px;font-size:11px;font-weight:700;cursor:pointer;margin-bottom:10px;">← Sports</button>'
     +'<div class="sec" style="margin-top:0;">🏎️ Formule 1 — Saison '+year+' ('+evs.length+' GP)</div>';
+  html+='<button onclick="g45F1Standings(\'d\')" style="border:none;cursor:pointer;font-size:11px;font-weight:700;padding:8px 12px;border-radius:8px;background:rgba(240,200,40,.12);border:1px solid rgba(240,200,40,.4);color:#f0c828;margin-bottom:10px;">🏆 Classements du championnat</button>';
   var _fsn=0;
   html+=evs.map(function(ev){
     var st=(ev.status&&ev.status.type)||{}; var state=st.state||'pre';
@@ -23508,20 +23509,43 @@ async function _g45F1LiveTick(sess){
       if(!rows.length){ box.innerHTML='<div class="fc" style="color:var(--t3);font-size:11px;">🔴 En attente du premier tour chronométré…</div>'; return; }
     }
   }catch(e){ return; }
+  // Extras live : météo, drapeaux, pits, pneus (chacun optionnel/silencieux)
+  var xw=null, xrc=[], xpit=[], xty={};
+  try{ var rw=await fetch('https://api.openf1.org/v1/weather?session_key='+sk); if(rw.ok){ var wa=await rw.json(); xw=wa[wa.length-1]||null; } }catch(e){}
+  try{ var rr=await fetch('https://api.openf1.org/v1/race_control?session_key='+sk); if(rr.ok){ var ra=await rr.json(); xrc=ra.slice(-3).reverse(); } }catch(e){}
+  try{ var rp=await fetch('https://api.openf1.org/v1/pit?session_key='+sk); if(rp.ok){ var pa=await rp.json(); xpit=pa.slice(-3).reverse(); } }catch(e){}
+  try{ var rs=await fetch('https://api.openf1.org/v1/stints?session_key='+sk); if(rs.ok){ (await rs.json()).forEach(function(st){ if(st.compound) xty[st.driver_number]=st.compound; }); } }catch(e){}
+  function tyre(c){ if(!c) return ''; var m={SOFT:['S','#ff2d2d'],MEDIUM:['M','#f0c828'],HARD:['H','#e8ecf5'],INTERMEDIATE:['I','#3fb950'],WET:['W','#4d84ff']}; var t=m[String(c).toUpperCase()]; if(!t) return ''; return '<span style="display:inline-block;width:14px;height:14px;line-height:13px;text-align:center;border-radius:50%;border:1.5px solid '+t[1]+';color:'+t[1]+';font-size:8px;font-weight:900;margin-left:5px;flex:none;">'+t[0]+'</span>'; }
+  function flagIco(f,cat){ f=String(f||'').toUpperCase(); cat=String(cat||'').toUpperCase(); if(/SAFETY|VIRTUAL/.test(cat)||/SAFETY/.test(f)) return '🚨'; if(/RED/.test(f)) return '🟥'; if(/YELLOW/.test(f)) return '🟨'; if(/GREEN|CLEAR/.test(f)) return '🟩'; if(/BLUE/.test(f)) return '🟦'; if(/CHEQUERED/.test(f)) return '🏁'; return '📢'; }
   var upd=new Date().toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
-  box.innerHTML='<div style="background:rgba(232,0,45,.07);border:1px solid rgba(232,0,45,.35);border-radius:10px;padding:10px 12px;margin-bottom:10px;">'
-    +'<div style="display:flex;align-items:center;gap:7px;margin-bottom:7px;"><span style="width:8px;height:8px;border-radius:50%;background:#e8002d;display:inline-block;animation:pulse 1.2s infinite;"></span><span style="font-size:10px;font-weight:800;color:#ff6b81;">LIVE — '+ea(sess.session_name)+'</span><span style="margin-left:auto;font-size:9px;color:var(--t3);">maj '+upd+'</span></div>'
-    +rows.map(function(x,i){
-      var d=drv[x.num]||{n:'#'+x.num,ac:'',team:'',col:'#8b97c4'};
-      return '<div style="display:flex;align-items:center;gap:8px;padding:4px 0;border-bottom:1px solid rgba(255,255,255,.04);">'
-        +'<div style="width:20px;text-align:center;font-size:11px;font-weight:800;color:'+(i===0?'#f0c828':'var(--t2)')+';">'+(i+1)+'</div>'
-        +'<div style="width:4px;height:14px;border-radius:2px;background:'+ea(d.col)+';flex:none;"></div>'
-        +'<div style="flex:1;font-size:11px;font-weight:700;color:var(--t1);">'+ea(d.ac||d.n)+' <span style="font-size:9px;color:var(--t3);font-weight:400;">'+ea(d.team)+'</span></div>'
-        +'<div style="flex:none;font-size:10px;font-weight:700;color:'+(i===0?'#f0c828':'var(--t1)')+';">'+ea(x.gap)+'</div>'
-        +(x.itv?'<div style="flex:none;width:52px;text-align:right;font-size:9px;color:var(--t3);">'+ea(x.itv)+'</div>':'')
-        +'</div>';
-    }).join('')
-    +'</div>';
+  var html='<div style="background:rgba(232,0,45,.07);border:1px solid rgba(232,0,45,.35);border-radius:10px;padding:10px 12px;margin-bottom:10px;">'
+    +'<div style="display:flex;align-items:center;gap:7px;margin-bottom:6px;"><span style="width:8px;height:8px;border-radius:50%;background:#e8002d;display:inline-block;animation:pulse 1.2s infinite;"></span><span style="font-size:10px;font-weight:800;color:#ff6b81;">LIVE — '+ea(sess.session_name)+'</span><span style="margin-left:auto;font-size:9px;color:var(--t3);">maj '+upd+'</span></div>';
+  if(xw){
+    html+='<div style="font-size:10px;color:var(--t2);margin-bottom:6px;">🌡️ Piste '+(xw.track_temperature!=null?ea(xw.track_temperature)+'°':'—')+' · Air '+(xw.air_temperature!=null?ea(xw.air_temperature)+'°':'—')+' · 💨 '+(xw.wind_speed!=null?ea(xw.wind_speed)+' m/s':'—')+' · '+(xw.rainfall?'<b style="color:#4d84ff;">🌧️ PLUIE</b>':'☀️ Sec')+'</div>';
+  }
+  if(xrc.length){
+    html+=xrc.map(function(m){
+      var t=''; try{ t=new Date(m.date).toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'}); }catch(e){}
+      var msg=String(m.message||'').slice(0,80);
+      return '<div style="font-size:9px;color:var(--t3);margin-bottom:2px;">'+flagIco(m.flag,m.category)+' <span style="color:var(--t2);">'+t+'</span> — '+ea(msg)+'</div>';
+    }).join('');
+    html+='<div style="height:4px;"></div>';
+  }
+  html+=rows.map(function(x,i){
+    var d=drv[x.num]||{n:'#'+x.num,ac:'',team:'',col:'#8b97c4'};
+    return '<div style="display:flex;align-items:center;gap:8px;padding:4px 0;border-bottom:1px solid rgba(255,255,255,.04);">'
+      +'<div style="width:20px;text-align:center;font-size:11px;font-weight:800;color:'+(i===0?'#f0c828':'var(--t2)')+';">'+(i+1)+'</div>'
+      +'<div style="width:4px;height:14px;border-radius:2px;background:'+ea(d.col)+';flex:none;"></div>'
+      +'<div style="flex:1;display:flex;align-items:center;font-size:11px;font-weight:700;color:var(--t1);">'+ea(d.ac||d.n)+tyre(xty[x.num])+' <span style="font-size:9px;color:var(--t3);font-weight:400;margin-left:5px;">'+ea(d.team)+'</span></div>'
+      +'<div style="flex:none;font-size:10px;font-weight:700;color:'+(i===0?'#f0c828':'var(--t1)')+';">'+ea(x.gap)+'</div>'
+      +(x.itv?'<div style="flex:none;width:52px;text-align:right;font-size:9px;color:var(--t3);">'+ea(x.itv)+'</div>':'')
+      +'</div>';
+  }).join('');
+  if(xpit.length){
+    html+='<div style="font-size:9px;color:var(--t3);margin-top:6px;">🔧 Derniers pits : '+xpit.map(function(pp){ var dd=drv[pp.driver_number]; return (dd?dd.ac:('#'+pp.driver_number))+' T'+ea(pp.lap_number)+(pp.pit_duration!=null?' ('+ea(pp.pit_duration)+'s)':''); }).join(' · ')+'</div>';
+  }
+  html+='</div>';
+  box.innerHTML=html;
 }
 async function _g45F1LiveStart(ev){
   _g45F1LiveStop();
@@ -23774,6 +23798,50 @@ function g45F1Session(idx){
     });
   }
 }
+async function g45F1Standings(tab){
+  _g45F1LiveStop();
+  var el=document.getElementById('t-resultats'); if(!el) return;
+  tab=tab||'d';
+  var year=new Date().getFullYear();
+  function ea(x){return String(x==null?'':x).replace(/&/g,'&amp;').replace(/</g,'&lt;');}
+  function chip(id,lbl,on){ return '<button onclick="g45F1Standings(\''+id+'\')" style="border:none;cursor:pointer;font-size:11px;font-weight:700;padding:7px 11px;border-radius:8px;background:'+(on?'rgba(232,0,45,.18);color:#ff6b81':'rgba(255,255,255,.06);color:var(--t2)')+';">'+lbl+'</button>'; }
+  el.innerHTML='<button onclick="g45F1Open()" style="border:none;background:rgba(255,255,255,.06);color:var(--t2);border-radius:8px;padding:6px 12px;font-size:11px;font-weight:700;cursor:pointer;margin-bottom:10px;">← Saison F1</button>'
+    +'<div class="sec" style="margin-top:0;">🏆 Championnat '+year+'</div>'
+    +'<div style="display:flex;gap:6px;margin-bottom:10px;">'+chip('d','👤 Pilotes',tab==='d')+chip('c','🏗️ Constructeurs',tab==='c')+'</div>'
+    +'<div id="f1-stand"><div style="display:flex;align-items:center;gap:8px;padding:16px;color:var(--t3);"><div style="width:14px;height:14px;border:2px solid rgba(77,132,255,.2);border-top-color:#e8002d;border-radius:50%;animation:spin .8s linear infinite;"></div>Chargement…</div></div>';
+  if(!_g45F1Jol.stand) _g45F1Jol.stand={};
+  var key=year+':'+tab, data=_g45F1Jol.stand[key];
+  var box;
+  try{
+    if(!data){
+      var r=await fetch('https://api.jolpi.ca/ergast/f1/'+year+'/'+(tab==='d'?'driverStandings':'constructorStandings')+'.json');
+      if(!r.ok) throw new Error('HTTP '+r.status);
+      var j=await r.json();
+      data=((((j.MRData||{}).StandingsTable||{}).StandingsLists||[])[0])||{};
+      _g45F1Jol.stand[key]=data;
+    }
+  }catch(e){
+    box=document.getElementById('f1-stand');
+    if(box) box.innerHTML='<div class="fc" style="color:var(--t3);text-align:center;">Classement indisponible.<br><small>'+ea(e.message||e)+'</small></div>';
+    return;
+  }
+  box=document.getElementById('f1-stand'); if(!box) return;
+  var rows= tab==='d'?(data.DriverStandings||[]):(data.ConstructorStandings||[]);
+  if(!rows.length){ box.innerHTML='<div class="fc" style="color:var(--t3);text-align:center;">Pas encore de classement pour '+year+'.</div>'; return; }
+  box.innerHTML=rows.map(function(x,i){
+    var name, sub='';
+    if(tab==='d'){ var D=x.Driver||{}; name=(D.givenName||'')+' '+(D.familyName||''); sub=(x.Constructors&&x.Constructors[0]&&x.Constructors[0].name)||''; }
+    else { name=(x.Constructor||{}).name||'?'; }
+    var top=i===0;
+    return '<div style="display:flex;align-items:center;gap:10px;padding:8px 12px;background:var(--s1);border-radius:var(--r6);margin-bottom:4px;'+(top?'border:1px solid rgba(240,200,40,.4);':'')+'">'
+      +'<div style="width:24px;text-align:center;font-size:12px;font-weight:800;color:'+(top?'#f0c828':'var(--t2)')+';">'+ea(x.position||i+1)+'</div>'
+      +'<div style="flex:1;"><div style="font-size:12px;font-weight:'+(top?'800':'600')+';color:'+(top?'#f0c828':'var(--t1)')+';">'+ea(name)+'</div>'+(sub?'<div style="font-size:9px;color:var(--t3);">'+ea(sub)+'</div>':'')+'</div>'
+      +(parseInt(x.wins||'0',10)>0?'<div style="flex:none;font-size:10px;color:var(--t3);">🏆 '+ea(x.wins)+'</div>':'')
+      +'<div style="flex:none;font-size:13px;font-weight:800;color:var(--t1);">'+ea(x.points||'0')+' <span style="font-size:9px;color:var(--t3);font-weight:400;">pts</span></div>'
+      +'</div>';
+  }).join('');
+}
+window.g45F1Standings=g45F1Standings;
 window.g45F1Open=g45F1Open;
 window.g45F1Detail=g45F1Detail;
 window.g45F1Session=g45F1Session;
