@@ -16389,7 +16389,7 @@ async function _loadFrCommentary(eventId, rowId){
   try{
     var el = document.getElementById(rowId+'-comm');
     if(!el) return;
-    var res = await fetch('https://site.api.espn.com/apis/site/v2/sports/soccer/fifa.world/summary?event='+eventId+'&lang=fr&region=fr');
+    var res = await fetch('https://site.api.espn.com/apis/site/v2/sports/soccer/fifa.world/summary?event='+eventId+'&lang=fr&region=fr&_t='+Date.now(), {cache:'no-store'});
     var data = await res.json();
     var com = data.commentary || [];
     if(!com.length){ return; }
@@ -16468,7 +16468,7 @@ async function _wcRenderMatch(eventId, rowId) {
   var box = document.getElementById(rowId);
   if(!box || box.getAttribute('data-open')!=='1') return;
   try {
-    var res = await fetch('https://site.api.espn.com/apis/site/v2/sports/soccer/fifa.world/summary?event='+eventId);
+    var res = await fetch('https://site.api.espn.com/apis/site/v2/sports/soccer/fifa.world/summary?event='+eventId+'&_t='+Date.now(), {cache:'no-store'});
     var data = await res.json();
     box._data = data;   // pour re-rendu du sélecteur de marché sans re-fetch
     var _wcN = _wcMatchTeams(data);   // [équipe A, équipe B] — fiable même sans stats
@@ -23558,6 +23558,137 @@ async function _g45F1LiveStart(ev){
     _g45F1LiveTick(sess);
   }, 20000);
 }
+async function _g45OF1FindSessionByDate(ev, compDate){
+  try{
+    var year=new Date(ev.date).getFullYear();
+    var country=(ev.circuit&&ev.circuit.address&&ev.circuit.address.country)||'';
+    if(!country) return null;
+    var r=await fetch('https://api.openf1.org/v1/sessions?year='+year+'&country_name='+encodeURIComponent(country));
+    if(!r.ok) return null;
+    var ss=await r.json();
+    var t=new Date(compDate).getTime(); if(isNaN(t)) return null;
+    var best=null, bd=1e15;
+    ss.forEach(function(x){ var d=Math.abs(new Date(x.date_start).getTime()-t); if(d<bd){ bd=d; best=x; } });
+    return (best && bd<4*3600000)?best:null;
+  }catch(e){ return null; }
+}
+function _g45F1XtraLoad(msg){ return '<div style="display:flex;align-items:center;gap:8px;padding:12px;color:var(--t3);font-size:11px;"><div style="width:12px;height:12px;border:2px solid rgba(77,132,255,.2);border-top-color:#e8002d;border-radius:50%;animation:spin .8s linear infinite;"></div>'+msg+'</div>'; }
+function _g45F1FlagIco2(f,cat){ f=String(f||'').toUpperCase(); cat=String(cat||'').toUpperCase(); if(/SAFETY|VIRTUAL/.test(cat)||/SAFETY/.test(f)) return '🚨'; if(/RED/.test(f)) return '🟥'; if(/YELLOW/.test(f)) return '🟨'; if(/GREEN|CLEAR/.test(f)) return '🟩'; if(/BLUE/.test(f)) return '🟦'; if(/CHEQUERED/.test(f)) return '🏁'; return '📢'; }
+async function g45F1Sectors(){
+  var out=document.getElementById('f1-xtra'); if(!out||!window._g45F1Cur) return;
+  out.innerHTML=_g45F1XtraLoad('Chargement des secteurs…');
+  var cur=window._g45F1Cur;
+  var sess=await _g45OF1FindSessionByDate(cur.ev, cur.date);
+  if(!sess){ out.innerHTML='<div class="fc" style="color:var(--t3);font-size:11px;">Séance introuvable côté OpenF1.</div>'; return; }
+  var sk=sess.session_key;
+  var drv=await _g45OF1Drivers(sk)||{};
+  var lp;
+  try{
+    var r=await fetch('https://api.openf1.org/v1/laps?session_key='+sk);
+    if(!r.ok) throw new Error('HTTP '+r.status);
+    lp=await r.json();
+  }catch(e){ out.innerHTML='<div class="fc" style="color:var(--t3);font-size:11px;">Secteurs indisponibles ('+String(e.message||e)+').</div>'; return; }
+  var best={};
+  lp.forEach(function(l){ if(l.lap_duration && (!best[l.driver_number]||l.lap_duration<best[l.driver_number].lap_duration)) best[l.driver_number]=l; });
+  var nums=Object.keys(best).sort(function(a,b){ return best[a].lap_duration-best[b].lap_duration; });
+  if(!nums.length){ out.innerHTML='<div class="fc" style="color:var(--t3);font-size:11px;">Pas encore de tour chronométré.</div>'; return; }
+  var bs=[null,null,null];
+  nums.forEach(function(k){ var l=best[k]; ['duration_sector_1','duration_sector_2','duration_sector_3'].forEach(function(f,i){ if(l[f]!=null && (bs[i]==null||l[f]<bs[i])) bs[i]=l[f]; }); });
+  function fmt(v){ if(v==null) return '—'; if(v>=60){ var m=Math.floor(v/60), sec=v-60*m; return m+':'+(sec<10?'0':'')+sec.toFixed(3); } return v.toFixed(3); }
+  var cm={2048:'#f0c828',2049:'#3fb950',2051:'#b07cd6',2064:'#4d84ff'};
+  function segdots(l){
+    var segs=[].concat(l.segments_sector_1||[],l.segments_sector_2||[],l.segments_sector_3||[]);
+    if(!segs.length) return '';
+    return '<div style="display:flex;gap:2px;flex-wrap:wrap;padding:0 8px 5px;">'+segs.map(function(c){ return '<span style="width:5px;height:5px;border-radius:50%;background:'+(cm[c]||'rgba(255,255,255,.14)')+';display:inline-block;"></span>'; }).join('')+'</div>';
+  }
+  var head='<div style="display:grid;grid-template-columns:64px 1fr 1fr 1fr 72px;gap:4px;font-size:8px;color:var(--t3);text-transform:uppercase;letter-spacing:.4px;padding:0 8px 4px;"><span>Pilote</span><span style="text-align:right;">S1</span><span style="text-align:right;">S2</span><span style="text-align:right;">S3</span><span style="text-align:right;">Tour</span></div>';
+  out.innerHTML='<div style="background:rgba(176,124,214,.05);border:1px solid rgba(176,124,214,.25);border-radius:10px;padding:10px 4px;margin-top:8px;">'
+    +'<div style="font-size:10px;font-weight:800;color:#b07cd6;margin:0 8px 7px;">⏱️ MEILLEUR TOUR — SECTEURS <span style="color:var(--t3);font-weight:400;">(violet = meilleur secteur · pastilles = mini-secteurs)</span></div>'
+    +head
+    +nums.map(function(k,i){
+      var l=best[k], d=drv[k]||{ac:('#'+k),col:'#8b97c4'};
+      function cell(f,bi){ var v=l[f]; var isB=(v!=null && bs[bi]!=null && Math.abs(v-bs[bi])<0.0005); return '<span style="text-align:right;font-size:10px;font-weight:'+(isB?'800':'600')+';color:'+(isB?'#b07cd6':'var(--t1)')+';">'+fmt(v)+'</span>'; }
+      return '<div style="display:grid;grid-template-columns:64px 1fr 1fr 1fr 72px;gap:4px;align-items:center;padding:5px 8px;background:var(--s1);border-radius:6px;margin:0 4px 2px;">'
+        +'<span style="display:flex;align-items:center;gap:5px;font-size:10px;font-weight:700;color:'+(i===0?'#f0c828':'var(--t1)')+';"><span style="width:3px;height:12px;border-radius:2px;background:'+(d.col||'#8b97c4')+';flex:none;"></span>'+(d.ac||('#'+k))+'</span>'
+        +cell('duration_sector_1',0)+cell('duration_sector_2',1)+cell('duration_sector_3',2)
+        +'<span style="text-align:right;font-size:10px;font-weight:800;color:'+(i===0?'#f0c828':'var(--t1)')+';">'+fmt(l.lap_duration)+'</span>'
+        +'</div>'
+        +segdots(l);
+    }).join('')
+    +'</div>';
+}
+async function g45F1Tyres(){
+  var out=document.getElementById('f1-xtra'); if(!out||!window._g45F1Cur) return;
+  out.innerHTML=_g45F1XtraLoad('Chargement pneus & arrêts…');
+  var cur=window._g45F1Cur;
+  var sess=await _g45OF1FindSessionByDate(cur.ev, cur.date);
+  if(!sess){ out.innerHTML='<div class="fc" style="color:var(--t3);font-size:11px;">Séance introuvable côté OpenF1.</div>'; return; }
+  var sk=sess.session_key;
+  var drv=await _g45OF1Drivers(sk)||{};
+  var stints=[], pits=[];
+  try{
+    var r1=await fetch('https://api.openf1.org/v1/stints?session_key='+sk); if(r1.ok) stints=await r1.json();
+    var r2=await fetch('https://api.openf1.org/v1/pit?session_key='+sk); if(r2.ok) pits=await r2.json();
+  }catch(e){}
+  if(!stints.length){ out.innerHTML='<div class="fc" style="color:var(--t3);font-size:11px;">Données pneus indisponibles.</div>'; return; }
+  var byD={}, pByD={};
+  stints.forEach(function(st){ (byD[st.driver_number]=byD[st.driver_number]||[]).push(st); });
+  pits.forEach(function(pp){ (pByD[pp.driver_number]=pByD[pp.driver_number]||[]).push(pp); });
+  var tm={SOFT:['S','#ff2d2d'],MEDIUM:['M','#f0c828'],HARD:['H','#e8ecf5'],INTERMEDIATE:['I','#3fb950'],WET:['W','#4d84ff']};
+  var nums=Object.keys(byD).sort(function(a,b){ var da=drv[a]?drv[a].ac:'zz', db=drv[b]?drv[b].ac:'zz'; return da<db?-1:1; });
+  out.innerHTML='<div style="background:rgba(63,185,80,.05);border:1px solid rgba(63,185,80,.25);border-radius:10px;padding:10px 12px;margin-top:8px;">'
+    +'<div style="font-size:10px;font-weight:800;color:#3fb950;margin-bottom:7px;">🛞 STRATÉGIE PNEUS & ARRÊTS</div>'
+    +nums.map(function(k){
+      var d=drv[k]||{ac:('#'+k),col:'#8b97c4'};
+      var line=(byD[k]||[]).sort(function(a,b){ return (a.stint_number||0)-(b.stint_number||0); }).map(function(st){
+        var t=tm[String(st.compound||'').toUpperCase()];
+        var lab=t?('<b style="color:'+t[1]+';">'+t[0]+'</b>'):'?';
+        return lab+'<span style="color:var(--t3);font-size:9px;"> T'+(st.lap_start||'?')+'-'+(st.lap_end||'?')+'</span>';
+      }).join(' <span style="color:var(--t3);">→</span> ');
+      var pp=pByD[k]||[];
+      var pinfo=pp.length?('<span style="flex:none;font-size:9px;color:var(--t3);">'+pp.length+' arrêt'+(pp.length>1?'s':'')+(pp.some(function(x){return x.pit_duration!=null;})?(' ('+pp.map(function(x){return x.pit_duration!=null?x.pit_duration+'s':'?';}).join(', ')+')'):'')+'</span>'):'<span style="flex:none;font-size:9px;color:var(--t3);">0 arrêt</span>';
+      return '<div style="display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:1px solid rgba(255,255,255,.04);">'
+        +'<span style="display:flex;align-items:center;gap:5px;width:56px;flex:none;font-size:10px;font-weight:700;color:var(--t1);"><span style="width:3px;height:12px;border-radius:2px;background:'+(d.col||'#8b97c4')+';flex:none;"></span>'+(d.ac||('#'+k))+'</span>'
+        +'<span style="flex:1;font-size:10px;">'+line+'</span>'
+        +pinfo
+        +'</div>';
+    }).join('')
+    +'</div>';
+}
+async function g45F1Flags(){
+  var out=document.getElementById('f1-xtra'); if(!out||!window._g45F1Cur) return;
+  out.innerHTML=_g45F1XtraLoad('Chargement drapeaux & pénalités…');
+  var cur=window._g45F1Cur;
+  var sess=await _g45OF1FindSessionByDate(cur.ev, cur.date);
+  if(!sess){ out.innerHTML='<div class="fc" style="color:var(--t3);font-size:11px;">Séance introuvable côté OpenF1.</div>'; return; }
+  var sk=sess.session_key;
+  var drv=await _g45OF1Drivers(sk)||{};
+  var rc=[];
+  try{
+    var r=await fetch('https://api.openf1.org/v1/race_control?session_key='+sk);
+    if(!r.ok) throw new Error('HTTP '+r.status);
+    rc=await r.json();
+  }catch(e){ out.innerHTML='<div class="fc" style="color:var(--t3);font-size:11px;">Indisponible ('+String(e.message||e)+').</div>'; return; }
+  if(!rc.length){ out.innerHTML='<div class="fc" style="color:var(--t3);font-size:11px;">Aucun message de la direction de course.</div>'; return; }
+  var pen=rc.filter(function(m){ return /PENALT/i.test(m.message||''); });
+  function ea(x){return String(x==null?'':x).replace(/&/g,'&amp;').replace(/</g,'&lt;');}
+  function row(m){
+    var isPen=/PENALT/i.test(m.message||'');
+    var who=(m.driver_number&&drv[m.driver_number])?(' <b>'+drv[m.driver_number].ac+'</b>'):'';
+    var sect=(String(m.scope||'').toLowerCase()==='sector'&&m.sector!=null)?' <span style="background:rgba(240,200,40,.15);color:#f0c828;font-size:8px;font-weight:800;padding:1px 5px;border-radius:4px;">S'+ea(m.sector)+'</span>':'';
+    var lap=m.lap_number!=null?('T'+ea(m.lap_number)):(function(){ try{ return new Date(m.date).toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'}); }catch(e){ return ''; } })();
+    return '<div style="font-size:9px;color:var(--t2);padding:3px 0;border-bottom:1px solid rgba(255,255,255,.04);'+(isPen?'background:rgba(240,176,32,.08);border-left:2px solid #f0b020;padding-left:6px;':'')+'">'
+      +_g45F1FlagIco2(m.flag,m.category)+' <span style="color:var(--t3);">'+lap+'</span>'+who+sect+' — '+ea(String(m.message||'').slice(0,120))+'</div>';
+  }
+  out.innerHTML='<div style="background:rgba(240,176,32,.05);border:1px solid rgba(240,176,32,.25);border-radius:10px;padding:10px 12px;margin-top:8px;">'
+    +'<div style="font-size:10px;font-weight:800;color:#f0b020;margin-bottom:7px;">🚩 DRAPEAUX & PÉNALITÉS <span style="color:var(--t3);font-weight:400;">('+rc.length+' messages'+(pen.length?(' · '+pen.length+' pénalité'+(pen.length>1?'s':'')):'')+')</span></div>'
+    +(pen.length?('<div style="margin-bottom:7px;">'+pen.map(row).join('')+'</div><div style="font-size:8px;color:var(--t3);text-transform:uppercase;letter-spacing:.4px;margin-bottom:4px;">Tous les messages</div>'):'')
+    +'<div style="max-height:240px;overflow-y:auto;">'+rc.slice().reverse().map(row).join('')+'</div>'
+    +'</div>';
+}
+window.g45F1Sectors=g45F1Sectors;
+window.g45F1Tyres=g45F1Tyres;
+window.g45F1Flags=g45F1Flags;
 function g45F1Detail(eid){
   var el=document.getElementById('t-resultats'); if(!el) return;
   var ev=_g45F1Cache.events.filter(function(e){return String(e.id)===String(eid);})[0];
@@ -23715,8 +23846,14 @@ function g45F1Session(idx){
   var isRace=/race/i.test(t)&&!/sprint/i.test(t);
   var isQual=/qual/i.test(t);
   var isSprint=/sprint/i.test(t)&&!/qual|shootout/i.test(t);
+  window._g45F1Cur={ev:ev, date:(c.date||c.startDate||ev.date), label:t};
   function renderRows(extra){
     var _chart='';
+    var _pen={};
+    if((isRace||isSprint)&&extra){
+      var _mg=-1;
+      rows.forEach(function(r){ var a=r.athlete||{}; var k=_g45F1Key(a.displayName||a.fullName||''); var x=extra[k]; if(!x||!x.time) return; var tt=String(x.time).trim(); var gg=(tt[0]!=='+')?0:(function(u){var p=u.split(':');return p.length===2?(parseInt(p[0],10)*60+parseFloat(p[1])):parseFloat(u);})(tt.slice(1)); if(gg==null||isNaN(gg)) return; if(gg<_mg) _pen[k]=1; if(gg>_mg) _mg=gg; });
+    }
     if(isQual && extra){
       var toSec=function(t){ if(!t) return null; var p=String(t).split(':'); return p.length===2?(parseInt(p[0],10)*60+parseFloat(p[1])):parseFloat(t); };
       var fm=function(t){ var m=Math.floor(t/60), sec=t-60*m; return m>0? m+':'+(sec<10?'0':'')+sec.toFixed(3) : t.toFixed(3); };
@@ -23745,10 +23882,9 @@ function g45F1Session(idx){
       var g2=[];
       rows.forEach(function(r){ var a=r.athlete||{}; var x=extra[_g45F1Key(a.displayName||a.fullName||'')]; if(!x||!x.time) return; var gg=toGap(x.time); if(gg==null||isNaN(gg)) return; g2.push({n:a.shortName||a.displayName||'?', g:gg, t:x.time}); });
       if(g2.length>2){
-        g2.sort(function(a,b){ return a.g-b.g; });
-        var mx2=g2[g2.length-1].g||1;
+        var mx2=Math.max.apply(null,g2.map(function(x){return x.g;}))||1;
         _chart+='<div style="background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:10px;padding:10px 12px;margin-bottom:8px;">'
-          +'<div style="font-size:10px;font-weight:800;color:#e8002d;margin-bottom:7px;">📊 ÉCART AU VAINQUEUR <span style="color:var(--t3);font-weight:400;">('+(isSprint?'sprint':'course')+' · hors abandons)</span></div>'
+          +'<div style="font-size:10px;font-weight:800;color:#e8002d;margin-bottom:7px;">📊 ÉCART AU VAINQUEUR <span style="color:var(--t3);font-weight:400;">('+(isSprint?'sprint':'course')+' · ordre officiel, pénalités comprises)</span></div>'
           +g2.map(function(g){
             var w=Math.max(2, g.g/mx2*100);
             return '<div style="display:flex;align-items:center;gap:6px;margin-bottom:3px;">'
@@ -23760,16 +23896,18 @@ function g45F1Session(idx){
           +'</div>';
       }
     }
-    box.innerHTML=_chart+rows.map(function(r){
+    var _keep=(document.getElementById('f1-xtra')||{}).innerHTML||'';
+    var _list=rows.map(function(r){
       var a=r.athlete||{};
       var flag=a.flag&&a.flag.href?'<img src="'+ea(a.flag.href)+'" style="width:16px;height:11px;border-radius:2px;" onerror="this.style.display=\'none\'">':'';
       var pos=r.order||'—';
       var gold=r.winner?'color:#f0c828;':'';
-      var x=extra?extra[_g45F1Key(a.displayName||a.fullName||'')]:null;
+      var kk=_g45F1Key(a.displayName||a.fullName||'');
+      var x=extra?extra[kk]:null;
       var right='';
       if(x){
         if(isRace||isSprint){
-          var tm=x.time?ea(x.time):_g45F1Status(x.status);
+          var tm=x.time?(ea(x.time)+(_pen[kk]?' <span style="font-size:8px;color:#f0b020;font-weight:700;">pén.</span>':'')):_g45F1Status(x.status);
           right='<div style="flex:none;text-align:right;">'
             +(tm?'<div style="font-size:11px;font-weight:700;color:'+(x.time?'var(--t1)':'#ff7b54')+';">'+tm+'</div>':'')
             +(x.points&&x.points!=='0'?'<div style="font-size:9px;color:#3fb950;">+'+ea(x.points)+' pts</div>':'')
@@ -23787,6 +23925,17 @@ function g45F1Session(idx){
         +right
         +'</div>';
     }).join('');
+    var _tools='';
+    if(state!=='pre'){
+      var _tb='border:none;cursor:pointer;font-size:10px;font-weight:700;padding:6px 10px;border-radius:8px;';
+      _tools='<div style="display:flex;gap:6px;flex-wrap:wrap;margin:8px 0 4px;">'
+        +'<button onclick="g45F1Sectors()" style="'+_tb+'background:rgba(176,124,214,.12);border:1px solid rgba(176,124,214,.4);color:#b07cd6;">⏱️ Secteurs</button>'
+        +((isRace||isSprint)?'<button onclick="g45F1Tyres()" style="'+_tb+'background:rgba(63,185,80,.12);border:1px solid rgba(63,185,80,.4);color:#3fb950;">🛞 Pneus &amp; arrêts</button>':'')
+        +'<button onclick="g45F1Flags()" style="'+_tb+'background:rgba(240,176,32,.12);border:1px solid rgba(240,176,32,.4);color:#f0b020;">🚩 Drapeaux &amp; pénalités</button>'
+        +'</div><div id="f1-xtra"></div>';
+    }
+    box.innerHTML=_chart+_list+_tools;
+    if(_keep){ var _xx=document.getElementById('f1-xtra'); if(_xx) _xx.innerHTML=_keep; }
   }
   renderRows(null);
   // Enrichissement chrono/écurie via Jolpica (course + qualifs), silencieux si indispo
