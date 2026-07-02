@@ -23499,7 +23499,7 @@ async function _g45F1Map(ev){
     }
     if(!img) return;
     box.innerHTML='<div style="background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:10px;padding:10px;margin-bottom:10px;text-align:center;">'
-      +'<img src="'+String(img).replace(/"/g,'&quot;')+'" style="max-width:100%;max-height:220px;border-radius:8px;" onerror="this.parentNode.style.display=\'none\'">'
+      +'<img src="'+String(img).replace(/"/g,'&quot;')+'" style="max-width:100%;max-height:220px;border-radius:8px;background:#fff;padding:8px;box-sizing:border-box;" onerror="this.parentNode.style.display=\'none\'">'
       +'<div style="font-size:9px;color:var(--t3);margin-top:5px;">Tracé du circuit · Wikipédia</div></div>';
   }catch(e){}
 }
