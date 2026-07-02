@@ -23602,7 +23602,7 @@ async function g45F1Sectors(){
     return '<div style="display:flex;gap:2px;flex-wrap:wrap;padding:0 8px 5px;">'+segs.map(function(c){ return '<span style="width:5px;height:5px;border-radius:50%;background:'+(cm[c]||'rgba(255,255,255,.14)')+';display:inline-block;"></span>'; }).join('')+'</div>';
   }
   var head='<div style="display:grid;grid-template-columns:64px 1fr 1fr 1fr 72px;gap:4px;font-size:8px;color:var(--t3);text-transform:uppercase;letter-spacing:.4px;padding:0 8px 4px;"><span>Pilote</span><span style="text-align:right;">S1</span><span style="text-align:right;">S2</span><span style="text-align:right;">S3</span><span style="text-align:right;">Tour</span></div>';
-  out.innerHTML='<div style="background:rgba(176,124,214,.05);border:1px solid rgba(176,124,214,.25);border-radius:10px;padding:10px 4px;margin-top:8px;">'
+  out.innerHTML='<div style="background:rgba(10,14,24,.93);border:1px solid rgba(176,124,214,.35);border-radius:10px;padding:10px 4px;margin-top:8px;">'
     +'<div style="font-size:10px;font-weight:800;color:#b07cd6;margin:0 8px 7px;">⏱️ MEILLEUR TOUR — SECTEURS <span style="color:var(--t3);font-weight:400;">(violet = meilleur secteur · pastilles = mini-secteurs)</span></div>'
     +head
     +nums.map(function(k,i){
@@ -23636,17 +23636,17 @@ async function g45F1Tyres(){
   pits.forEach(function(pp){ (pByD[pp.driver_number]=pByD[pp.driver_number]||[]).push(pp); });
   var tm={SOFT:['S','#ff2d2d'],MEDIUM:['M','#f0c828'],HARD:['H','#e8ecf5'],INTERMEDIATE:['I','#3fb950'],WET:['W','#4d84ff']};
   var nums=Object.keys(byD).sort(function(a,b){ var da=drv[a]?drv[a].ac:'zz', db=drv[b]?drv[b].ac:'zz'; return da<db?-1:1; });
-  out.innerHTML='<div style="background:rgba(63,185,80,.05);border:1px solid rgba(63,185,80,.25);border-radius:10px;padding:10px 12px;margin-top:8px;">'
+  out.innerHTML='<div style="background:rgba(10,14,24,.93);border:1px solid rgba(63,185,80,.35);border-radius:10px;padding:10px 12px;margin-top:8px;">'
     +'<div style="font-size:10px;font-weight:800;color:#3fb950;margin-bottom:7px;">🛞 STRATÉGIE PNEUS & ARRÊTS</div>'
     +nums.map(function(k){
       var d=drv[k]||{ac:('#'+k),col:'#8b97c4'};
       var line=(byD[k]||[]).sort(function(a,b){ return (a.stint_number||0)-(b.stint_number||0); }).map(function(st){
         var t=tm[String(st.compound||'').toUpperCase()];
         var lab=t?('<b style="color:'+t[1]+';">'+t[0]+'</b>'):'?';
-        return lab+'<span style="color:var(--t3);font-size:9px;"> T'+(st.lap_start||'?')+'-'+(st.lap_end||'?')+'</span>';
+        return lab+'<span style="color:#c9d2ea;font-size:9px;"> T'+(st.lap_start||'?')+'-'+(st.lap_end||'?')+'</span>';
       }).join(' <span style="color:var(--t3);">→</span> ');
       var pp=pByD[k]||[];
-      var pinfo=pp.length?('<span style="flex:none;font-size:9px;color:var(--t3);">'+pp.length+' arrêt'+(pp.length>1?'s':'')+(pp.some(function(x){return x.pit_duration!=null;})?(' ('+pp.map(function(x){return x.pit_duration!=null?x.pit_duration+'s':'?';}).join(', ')+')'):'')+'</span>'):'<span style="flex:none;font-size:9px;color:var(--t3);">0 arrêt</span>';
+      var pinfo=pp.length?('<span style="flex:none;font-size:9px;color:#c9d2ea;">'+pp.length+' arrêt'+(pp.length>1?'s':'')+(pp.some(function(x){return x.pit_duration!=null;})?(' ('+pp.map(function(x){return x.pit_duration!=null?x.pit_duration+'s':'?';}).join(', ')+')'):'')+'</span>'):'<span style="flex:none;font-size:9px;color:#c9d2ea;">0 arrêt</span>';
       return '<div style="display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:1px solid rgba(255,255,255,.04);">'
         +'<span style="display:flex;align-items:center;gap:5px;width:56px;flex:none;font-size:10px;font-weight:700;color:var(--t1);"><span style="width:3px;height:12px;border-radius:2px;background:'+(d.col||'#8b97c4')+';flex:none;"></span>'+(d.ac||('#'+k))+'</span>'
         +'<span style="flex:1;font-size:10px;">'+line+'</span>'
@@ -23735,7 +23735,7 @@ async function g45F1Flags(){
     return '<div style="font-size:9px;color:var(--t2);padding:3px 0;border-bottom:1px solid rgba(255,255,255,.04);'+(isPen?'background:rgba(240,176,32,.08);border-left:2px solid #f0b020;padding-left:6px;':'')+'">'
       +_g45F1FlagIco2(m.flag,m.category)+' <span style="color:var(--t3);">'+lap+'</span>'+who+sect+' — '+ea(_g45F1TrRC(String(m.message||'')).slice(0,140))+'</div>';
   }
-  out.innerHTML='<div style="background:rgba(240,176,32,.05);border:1px solid rgba(240,176,32,.25);border-radius:10px;padding:10px 12px;margin-top:8px;">'
+  out.innerHTML='<div style="background:rgba(10,14,24,.93);border:1px solid rgba(240,176,32,.35);border-radius:10px;padding:10px 12px;margin-top:8px;">'
     +'<div style="font-size:10px;font-weight:800;color:#f0b020;margin-bottom:7px;">🚩 DRAPEAUX & PÉNALITÉS <span style="color:var(--t3);font-weight:400;">('+rc.length+' messages'+(pen.length?(' · '+pen.length+' pénalité'+(pen.length>1?'s':'')):'')+')</span></div>'
     +(pen.length?('<div style="margin-bottom:7px;">'+pen.map(row).join('')+'</div><div style="font-size:8px;color:var(--t3);text-transform:uppercase;letter-spacing:.4px;margin-bottom:4px;">Tous les messages</div>'):'')
     +'<div style="max-height:240px;overflow-y:auto;">'+rc.slice().reverse().map(row).join('')+'</div>'
