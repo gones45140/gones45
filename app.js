@@ -23559,6 +23559,24 @@ async function _g45F1JolQual(year, round){
     _g45F1Jol.qual[key]=map; return map;
   }catch(e){ return null; }
 }
+async function _g45F1JolSprint(year, round){
+  if(!_g45F1Jol.spr) _g45F1Jol.spr={};
+  var key=year+':'+round;
+  if(_g45F1Jol.spr[key]) return _g45F1Jol.spr[key];
+  try{
+    var r=await fetch('https://api.jolpi.ca/ergast/f1/'+year+'/'+round+'/sprint.json');
+    if(!r.ok) return null;
+    var j=await r.json();
+    var rows=(((j.MRData||{}).RaceTable||{}).Races||[])[0]; rows=(rows&&rows.SprintResults)||[];
+    if(!rows.length) return null;
+    var map={};
+    rows.forEach(function(x){
+      var k=_g45F1Key((x.Driver&&x.Driver.familyName)||'');
+      map[k]={ cons:(x.Constructor&&x.Constructor.name)||'', time:(x.Time&&x.Time.time)||'', status:x.status||'', points:x.points||'0' };
+    });
+    _g45F1Jol.spr[key]=map; return map;
+  }catch(e){ return null; }
+}
 function _g45F1Status(st){
   var m={'Finished':'','Lapped':'+1 tour ou plus','Retired':'Abandon','Accident':'Accident','Collision':'Collision','Engine':'Moteur','Gearbox':'Boîte','Hydraulics':'Hydraulique','Brakes':'Freins','Disqualified':'Disqualifié','Did not start':'Non partant','Withdrew':'Retrait'};
   if(m[st]!=null) return m[st];
@@ -23582,6 +23600,7 @@ function g45F1Session(idx){
   var t=(c.type&&(c.type.abbreviation||c.type.text))||'';
   var isRace=/race/i.test(t)&&!/sprint/i.test(t);
   var isQual=/qual/i.test(t);
+  var isSprint=/sprint/i.test(t)&&!/qual|shootout/i.test(t);
   function renderRows(extra){
     var _chart='';
     if(isQual && extra){
@@ -23607,6 +23626,26 @@ function g45F1Session(idx){
           +'</div>';
       }
     }
+    if((isRace||isSprint) && extra){
+      var toGap=function(tt){ if(!tt) return null; tt=String(tt).trim(); if(tt[0]!=='+') return 0; tt=tt.slice(1); var p=tt.split(':'); return p.length===2?(parseInt(p[0],10)*60+parseFloat(p[1])):parseFloat(tt); };
+      var g2=[];
+      rows.forEach(function(r){ var a=r.athlete||{}; var x=extra[_g45F1Key(a.displayName||a.fullName||'')]; if(!x||!x.time) return; var gg=toGap(x.time); if(gg==null||isNaN(gg)) return; g2.push({n:a.shortName||a.displayName||'?', g:gg, t:x.time}); });
+      if(g2.length>2){
+        g2.sort(function(a,b){ return a.g-b.g; });
+        var mx2=g2[g2.length-1].g||1;
+        _chart+='<div style="background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:10px;padding:10px 12px;margin-bottom:8px;">'
+          +'<div style="font-size:10px;font-weight:800;color:#e8002d;margin-bottom:7px;">📊 ÉCART AU VAINQUEUR <span style="color:var(--t3);font-weight:400;">('+(isSprint?'sprint':'course')+' · hors abandons)</span></div>'
+          +g2.map(function(g){
+            var w=Math.max(2, g.g/mx2*100);
+            return '<div style="display:flex;align-items:center;gap:6px;margin-bottom:3px;">'
+              +'<div style="width:76px;flex:none;font-size:9px;color:var(--t2);text-align:right;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">'+ea(g.n)+'</div>'
+              +'<div style="flex:1;"><div style="height:10px;width:'+w.toFixed(1)+'%;background:'+(g.g===0?'#f0c828':'rgba(232,0,45,.75)')+';border-radius:3px;"></div></div>'
+              +'<div style="width:64px;flex:none;font-size:9px;font-weight:700;color:'+(g.g===0?'#f0c828':'var(--t3)')+';">'+(g.g===0?'🏆 '+ea(g.t):'+'+g.g.toFixed(3))+'</div>'
+              +'</div>';
+          }).join('')
+          +'</div>';
+      }
+    }
     box.innerHTML=_chart+rows.map(function(r){
       var a=r.athlete||{};
       var flag=a.flag&&a.flag.href?'<img src="'+ea(a.flag.href)+'" style="width:16px;height:11px;border-radius:2px;" onerror="this.style.display=\'none\'">':'';
@@ -23615,7 +23654,7 @@ function g45F1Session(idx){
       var x=extra?extra[_g45F1Key(a.displayName||a.fullName||'')]:null;
       var right='';
       if(x){
-        if(isRace){
+        if(isRace||isSprint){
           var tm=x.time?ea(x.time):_g45F1Status(x.status);
           right='<div style="flex:none;text-align:right;">'
             +(tm?'<div style="font-size:11px;font-weight:700;color:'+(x.time?'var(--t1)':'#ff7b54')+';">'+tm+'</div>':'')
@@ -23637,10 +23676,10 @@ function g45F1Session(idx){
   }
   renderRows(null);
   // Enrichissement chrono/écurie via Jolpica (course + qualifs), silencieux si indispo
-  if(state==='post' && (isRace||isQual)){
+  if(state==='post' && (isRace||isQual||isSprint)){
     _g45F1JolRound(ev).then(function(rd){
       if(!rd) return;
-      var pr=isRace?_g45F1JolResults(rd.year,rd.round):_g45F1JolQual(rd.year,rd.round);
+      var pr=isRace?_g45F1JolResults(rd.year,rd.round):(isSprint?_g45F1JolSprint(rd.year,rd.round):_g45F1JolQual(rd.year,rd.round));
       pr.then(function(map){ if(map) renderRows(map); });
     });
   }
