@@ -23387,6 +23387,7 @@ function _g45F1Ev(ev){
   return {sport:'🏎', teams:[], place:[country,_g45F1CountryFR(country),city,ev.name||''].filter(Boolean).join(' '), comp:'F1 Formule 1'};
 }
 async function g45F1Open(){
+  _g45F1LiveStop();
   var el=document.getElementById('t-resultats'); if(!el) return;
   el.innerHTML='<button onclick="loadResultatsTab()" style="border:none;background:rgba(255,255,255,.06);color:var(--t2);border-radius:8px;padding:6px 12px;font-size:11px;font-weight:700;cursor:pointer;margin-bottom:10px;">← Sports</button>'
     +'<div class="sec" style="margin-top:0;">🏎️ Formule 1</div>'
@@ -23446,6 +23447,93 @@ async function g45F1Open(){
   // charge le dico en arrière-plan si vide puis re-render (pour les ampoules)
   try{ if(typeof g45StatsLocal==='function' && !g45StatsLocal().length && typeof g45StatsLoadPublic==='function'){ g45StatsLoadPublic().then(function(a){ if(a&&a.length) g45F1Open(); }); } }catch(e){}
 }
+var _g45OF1={drv:{}, timer:null};
+function _g45F1LiveStop(){ if(_g45OF1.timer){ clearInterval(_g45OF1.timer); _g45OF1.timer=null; } }
+async function _g45OF1Drivers(sk){
+  if(_g45OF1.drv[sk]) return _g45OF1.drv[sk];
+  try{
+    var r=await fetch('https://api.openf1.org/v1/drivers?session_key='+sk);
+    if(!r.ok) return null;
+    var a=await r.json(); var m={};
+    a.forEach(function(d){ m[d.driver_number]={n:d.last_name||d.broadcast_name||('#'+d.driver_number), ac:d.name_acronym||'', team:d.team_name||'', col:(d.team_colour?('#'+d.team_colour):'#8b97c4')}; });
+    _g45OF1.drv[sk]=m; return m;
+  }catch(e){ return null; }
+}
+async function _g45OF1LiveSession(ev){
+  try{
+    var year=new Date(ev.date).getFullYear();
+    var country=(ev.circuit&&ev.circuit.address&&ev.circuit.address.country)||'';
+    if(!country) return null;
+    var r=await fetch('https://api.openf1.org/v1/sessions?year='+year+'&country_name='+encodeURIComponent(country));
+    if(!r.ok) return null;
+    var ss=await r.json(); var now=Date.now();
+    return ss.filter(function(x){ var t0=new Date(x.date_start).getTime(), t1=new Date(x.date_end).getTime(); return !isNaN(t0)&&!isNaN(t1)&&now>=t0-5*60000&&now<=t1+15*60000; })[0]||null;
+  }catch(e){ return null; }
+}
+async function _g45F1LiveTick(sess){
+  var box=document.getElementById('f1-live'); if(!box) return;
+  if(document.hidden || box.offsetParent===null) return; // batterie
+  var sk=sess.session_key;
+  var drv=await _g45OF1Drivers(sk); if(!drv) return;
+  function ea(x){return String(x==null?'':x).replace(/&/g,'&amp;').replace(/</g,'&lt;');}
+  var isRace=/race|sprint/i.test(sess.session_name||'');
+  var rows=[];
+  try{
+    if(isRace){
+      var since=new Date(Date.now()-3*60000).toISOString();
+      var r=await fetch('https://api.openf1.org/v1/intervals?session_key='+sk+'&date>'+since);
+      if(!r.ok){ box.innerHTML='<div class="fc" style="color:var(--t3);font-size:11px;">🔴 Live indisponible ('+r.status+').</div>'; return; }
+      var iv=await r.json();
+      var last={};
+      iv.forEach(function(x){ last[x.driver_number]=x; });
+      rows=Object.keys(last).map(function(k){
+        var x=last[k]; var g=x.gap_to_leader;
+        var ord=(g==null||g===''||g===0)?0:(typeof g==='string'&&/lap/i.test(g)?(9e9+(parseInt(g)||1)):parseFloat(g));
+        return {num:k, ord:isNaN(ord)?9e9:ord, gap:(g==null||g===''||g===0)?'Leader':String(g), itv:(x.interval!=null?('+'+x.interval):'')};
+      }).sort(function(a,b){ return a.ord-b.ord; });
+      if(!rows.length){ box.innerHTML='<div class="fc" style="color:var(--t3);font-size:11px;">🔴 En attente de données live…</div>'; return; }
+    } else {
+      var r2=await fetch('https://api.openf1.org/v1/laps?session_key='+sk);
+      if(!r2.ok){ box.innerHTML='<div class="fc" style="color:var(--t3);font-size:11px;">🔴 Live indisponible ('+r2.status+').</div>'; return; }
+      var lp=await r2.json();
+      var best={};
+      lp.forEach(function(l){ if(l.lap_duration && (!best[l.driver_number]||l.lap_duration<best[l.driver_number])) best[l.driver_number]=l.lap_duration; });
+      var nums=Object.keys(best).sort(function(a,b){ return best[a]-best[b]; });
+      var pole=best[nums[0]];
+      rows=nums.map(function(k){
+        var d=best[k]; var m=Math.floor(d/60), sec=d-60*m;
+        var tm=m>0?(m+':'+(sec<10?'0':'')+sec.toFixed(3)):d.toFixed(3);
+        return {num:k, gap:(d===pole?tm:'+'+(d-pole).toFixed(3)), itv:''};
+      });
+      if(!rows.length){ box.innerHTML='<div class="fc" style="color:var(--t3);font-size:11px;">🔴 En attente du premier tour chronométré…</div>'; return; }
+    }
+  }catch(e){ return; }
+  var upd=new Date().toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
+  box.innerHTML='<div style="background:rgba(232,0,45,.07);border:1px solid rgba(232,0,45,.35);border-radius:10px;padding:10px 12px;margin-bottom:10px;">'
+    +'<div style="display:flex;align-items:center;gap:7px;margin-bottom:7px;"><span style="width:8px;height:8px;border-radius:50%;background:#e8002d;display:inline-block;animation:pulse 1.2s infinite;"></span><span style="font-size:10px;font-weight:800;color:#ff6b81;">LIVE — '+ea(sess.session_name)+'</span><span style="margin-left:auto;font-size:9px;color:var(--t3);">maj '+upd+'</span></div>'
+    +rows.map(function(x,i){
+      var d=drv[x.num]||{n:'#'+x.num,ac:'',team:'',col:'#8b97c4'};
+      return '<div style="display:flex;align-items:center;gap:8px;padding:4px 0;border-bottom:1px solid rgba(255,255,255,.04);">'
+        +'<div style="width:20px;text-align:center;font-size:11px;font-weight:800;color:'+(i===0?'#f0c828':'var(--t2)')+';">'+(i+1)+'</div>'
+        +'<div style="width:4px;height:14px;border-radius:2px;background:'+ea(d.col)+';flex:none;"></div>'
+        +'<div style="flex:1;font-size:11px;font-weight:700;color:var(--t1);">'+ea(d.ac||d.n)+' <span style="font-size:9px;color:var(--t3);font-weight:400;">'+ea(d.team)+'</span></div>'
+        +'<div style="flex:none;font-size:10px;font-weight:700;color:'+(i===0?'#f0c828':'var(--t1)')+';">'+ea(x.gap)+'</div>'
+        +(x.itv?'<div style="flex:none;width:52px;text-align:right;font-size:9px;color:var(--t3);">'+ea(x.itv)+'</div>':'')
+        +'</div>';
+    }).join('')
+    +'</div>';
+}
+async function _g45F1LiveStart(ev){
+  _g45F1LiveStop();
+  var box=document.getElementById('f1-live'); if(!box) return;
+  var sess=await _g45OF1LiveSession(ev);
+  if(!sess){ box.innerHTML=''; return; }
+  _g45F1LiveTick(sess);
+  _g45OF1.timer=setInterval(function(){
+    if(!document.getElementById('f1-live')){ _g45F1LiveStop(); return; }
+    _g45F1LiveTick(sess);
+  }, 20000);
+}
 function g45F1Detail(eid){
   var el=document.getElementById('t-resultats'); if(!el) return;
   var ev=_g45F1Cache.events.filter(function(e){return String(e.id)===String(eid);})[0];
@@ -23474,12 +23562,14 @@ function g45F1Detail(eid){
     var t=(c.type&&(c.type.abbreviation||c.type.text))||('S'+(i+1));
     return '<button onclick="g45F1Session('+i+')" id="f1s-'+i+'" style="border:none;cursor:pointer;font-size:11px;font-weight:700;padding:7px 11px;border-radius:8px;background:'+(i===defIdx?'rgba(232,0,45,.18);color:#ff6b81':'rgba(255,255,255,.06);color:var(--t2)')+';white-space:nowrap;">'+ea(t)+'</button>';
   }).join('');
-  html+='<div id="f1-map"></div>'
+  html+='<div id="f1-live"></div>'
+    +'<div id="f1-map"></div>'
     +'<div style="display:flex;gap:6px;overflow-x:auto;padding-bottom:4px;-webkit-overflow-scrolling:touch;margin-bottom:8px;">'+chips+'</div>'
     +'<div id="f1-session"></div>';
   el.innerHTML=html;
   g45F1Session(defIdx);
   _g45F1Map(ev);
+  _g45F1LiveStart(ev);
 }
 async function _g45F1Map(ev){
   var box=document.getElementById('f1-map'); if(!box) return;
