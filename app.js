@@ -21275,8 +21275,8 @@ function loadResultatsTab(){
     +'<div style="font-size:11px;color:var(--t3);margin-bottom:12px;">Choisis un sport, puis une compétition, puis navigue dans les dates (◀ ▶) pour voir résultats et calendriers — passés comme à venir.</div>'
     +'<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(88px,1fr));gap:10px;">'+cards
     +'<button onclick="g45TennisResults(0)" style="border:none;cursor:pointer;background:rgba(255,255,255,.05);border-radius:12px;padding:16px 8px;display:flex;flex-direction:column;align-items:center;gap:6px;color:var(--t1);"><span style="font-size:26px;">🎾</span><span style="font-size:11px;font-weight:700;">Tennis</span></button>'
-    +'</div>'
-    +'<div style="font-size:9px;color:var(--t3);margin-top:14px;text-align:center;">🏎️ F1 arrive (format spécial).</div>';
+    +'<button onclick="g45F1Open()" style="border:none;cursor:pointer;background:rgba(255,255,255,.05);border-radius:12px;padding:16px 8px;display:flex;flex-direction:column;align-items:center;gap:6px;color:var(--t1);"><span style="font-size:26px;">🏎️</span><span style="font-size:11px;font-weight:700;">F1</span></button>'
+    +'</div>';
 }
 function g45ShowSport(sportKey){
   var s=G45_SPORTS.filter(function(x){return x.key===sportKey;})[0]; if(!s) return;
@@ -23377,3 +23377,134 @@ window.g45StatsBottomSearch=g45StatsBottomSearch;
 window.g45StatsOpenSport=g45StatsOpenSport;
 window.g45StatsOpenComp=g45StatsOpenComp;
 
+/* ════════════ F1 dans RÉSULTATS : calendrier GP + séances (ESPN, gratuit) + ampoule stats ════════════ */
+var _G45_F1_FR={'australia':'Australie','china':'Chine','japan':'Japon','bahrain':'Bahreïn','saudi arabia':'Arabie Saoudite','united states':'États-Unis','usa':'États-Unis','italy':'Italie','monaco':'Monaco','spain':'Espagne','canada':'Canada','austria':'Autriche','britain':'Grande-Bretagne Angleterre','great britain':'Grande-Bretagne Angleterre','england':'Angleterre','belgium':'Belgique','hungary':'Hongrie','netherlands':'Pays-Bas','azerbaijan':'Azerbaïdjan','singapore':'Singapour','mexico':'Mexique','brazil':'Brésil','qatar':'Qatar','united arab emirates':'Abou Dabi Émirats','uae':'Abou Dabi Émirats','france':'France','germany':'Allemagne'};
+var _g45F1Cache={year:null, events:[]};
+function _g45F1CountryFR(c){ return _G45_F1_FR[String(c||'').toLowerCase()]||''; }
+function _g45F1Ev(ev){
+  var cir=ev.circuit||{}, ad=cir.address||{};
+  var country=ad.country||'', city=ad.city||'';
+  return {sport:'🏎', teams:[], place:[country,_g45F1CountryFR(country),city,ev.name||''].filter(Boolean).join(' '), comp:'F1 Formule 1'};
+}
+async function g45F1Open(){
+  var el=document.getElementById('t-resultats'); if(!el) return;
+  el.innerHTML='<button onclick="loadResultatsTab()" style="border:none;background:rgba(255,255,255,.06);color:var(--t2);border-radius:8px;padding:6px 12px;font-size:11px;font-weight:700;cursor:pointer;margin-bottom:10px;">← Sports</button>'
+    +'<div class="sec" style="margin-top:0;">🏎️ Formule 1</div>'
+    +'<div style="display:flex;align-items:center;gap:8px;padding:20px;color:var(--t3);"><div style="width:14px;height:14px;border:2px solid rgba(77,132,255,.2);border-top-color:#e8002d;border-radius:50%;animation:spin .8s linear infinite;"></div>Chargement du calendrier F1...</div>';
+  var year=new Date().getFullYear();
+  try{
+    if(_g45F1Cache.year!==year || !_g45F1Cache.events.length){
+      var r=await fetch('https://site.api.espn.com/apis/site/v2/sports/racing/f1/scoreboard?dates='+year);
+      if(!r.ok) throw new Error('ESPN F1 '+r.status);
+      var j=await r.json();
+      _g45F1Cache={year:year, events:(j.events||[])};
+    }
+  }catch(e){
+    el.innerHTML='<button onclick="loadResultatsTab()" style="border:none;background:rgba(255,255,255,.06);color:var(--t2);border-radius:8px;padding:6px 12px;font-size:11px;font-weight:700;cursor:pointer;margin-bottom:10px;">← Sports</button><div class="fc" style="color:var(--t3);text-align:center;">Impossible de charger le calendrier F1.<br><small>'+String(e.message||e)+'</small></div>';
+    return;
+  }
+  var evs=_g45F1Cache.events.slice().sort(function(a,b){ return new Date(a.date)-new Date(b.date); });
+  function ea(x){return String(x==null?'':x).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/"/g,'&quot;');}
+  var html='<button onclick="loadResultatsTab()" style="border:none;background:rgba(255,255,255,.06);color:var(--t2);border-radius:8px;padding:6px 12px;font-size:11px;font-weight:700;cursor:pointer;margin-bottom:10px;">← Sports</button>'
+    +'<div class="sec" style="margin-top:0;">🏎️ Formule 1 — Saison '+year+' ('+evs.length+' GP)</div>';
+  var _fsn=0;
+  html+=evs.map(function(ev){
+    var st=(ev.status&&ev.status.type)||{}; var state=st.state||'pre';
+    var d=new Date(ev.date);
+    var dt=isNaN(d)?'':d.toLocaleDateString('fr-FR',{day:'numeric',month:'short'})+' '+d.toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'});
+    var cir=ev.circuit||{}, ad=cir.address||{};
+    var countryFR=(_g45F1CountryFR(ad.country)||ad.country||'').split(' ')[0];
+    var badge = state==='post' ? '<span style="color:#3fb950;font-weight:800;">✅</span>' : (state==='in' ? '<span style="color:#e8002d;font-weight:800;">🔴 LIVE</span>' : '<span style="color:var(--a);font-weight:700;font-size:11px;">'+dt+'</span>');
+    // vainqueur si la course est finie
+    var winTxt='';
+    if(state==='post'){
+      try{
+        var race=(ev.competitions||[]).filter(function(c){ var t=(c.type&&(c.type.abbreviation||c.type.text))||''; return /race/i.test(t)&&!/sprint/i.test(t); }).pop();
+        var w=race&&(race.competitors||[]).filter(function(c){return c.winner;})[0];
+        if(w&&w.athlete) winTxt='<div style="font-size:10px;color:#f0c828;margin-top:2px;">🏆 '+ea(w.athlete.displayName||w.athlete.fullName)+'</div>';
+      }catch(e){}
+    }
+    // ampoule stats du dico
+    var stats=(typeof g45StatsForEvent==='function')?g45StatsForEvent(_g45F1Ev(ev)):[];
+    var sid='f1stat-'+(_fsn++);
+    var bulb=stats.length?'<button onclick="event.stopPropagation();g45CalTglStat(\''+sid+'\')" style="background:rgba(240,200,40,.14);border:1px solid rgba(240,200,40,.5);color:#f0c828;border-radius:6px;font-size:11px;font-weight:800;padding:2px 7px;cursor:pointer;flex:none;">💡 '+stats.length+'</button>':'';
+    var row='<div onclick="g45F1Detail(\''+ea(ev.id)+'\')" style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:var(--s1);border-radius:var(--r6);margin-bottom:6px;border-left:3px solid #e8002d;cursor:pointer;">'
+      +'<div style="flex:1;">'
+      +'<div style="font-size:12px;font-weight:700;color:var(--t1);">🏁 GP '+(countryFR?'· '+ea(countryFR):'')+(ad.city?' <span style="color:var(--t3);font-weight:400;">('+ea(ad.city)+')</span>':'')+'</div>'
+      +'<div style="font-size:10px;color:var(--t3);margin-top:2px;">'+ea(ev.name||'')+'</div>'
+      +winTxt
+      +'</div>'+bulb+'<div style="flex:none;text-align:right;">'+badge+'</div></div>';
+    if(stats.length){
+      row+='<div id="'+sid+'" style="display:none;background:rgba(240,200,40,.06);border:1px solid rgba(240,200,40,.25);border-radius:8px;padding:9px 11px;margin:-2px 0 8px;">'
+        +stats.map(function(s){ var tg=[]; if(s.place)tg.push('📍'+s.place); if(s.comp)tg.push('🏆'+s.comp); if(s.context)tg.push('🎯'+s.context);
+          return '<div style="font-size:11px;color:var(--t1);line-height:1.5;">💡 '+ea(s.text)+'</div>'+(tg.length?'<div style="font-size:9px;color:#caa83a;margin:2px 0 7px;">'+tg.map(ea).join(' · ')+'</div>':'<div style="height:5px;"></div>'); }).join('')
+        +'</div>';
+    }
+    return row;
+  }).join('');
+  el.innerHTML=html;
+  // charge le dico en arrière-plan si vide puis re-render (pour les ampoules)
+  try{ if(typeof g45StatsLocal==='function' && !g45StatsLocal().length && typeof g45StatsLoadPublic==='function'){ g45StatsLoadPublic().then(function(a){ if(a&&a.length) g45F1Open(); }); } }catch(e){}
+}
+function g45F1Detail(eid){
+  var el=document.getElementById('t-resultats'); if(!el) return;
+  var ev=_g45F1Cache.events.filter(function(e){return String(e.id)===String(eid);})[0];
+  if(!ev){ g45F1Open(); return; }
+  function ea(x){return String(x==null?'':x).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/"/g,'&quot;');}
+  var cir=ev.circuit||{}, ad=cir.address||{};
+  var comps=(ev.competitions||[]).slice();
+  // ordre logique des séances telles qu'ESPN les fournit
+  var defIdx=-1;
+  comps.forEach(function(c,i){ var t=(c.type&&(c.type.abbreviation||c.type.text))||''; if(/race/i.test(t)&&!/sprint/i.test(t)) defIdx=i; });
+  if(defIdx<0) defIdx=comps.length-1;
+  window._g45F1Eid=eid;
+  var d=new Date(ev.date);
+  var stats=(typeof g45StatsForEvent==='function')?g45StatsForEvent(_g45F1Ev(ev)):[];
+  var html='<button onclick="g45F1Open()" style="border:none;background:rgba(255,255,255,.06);color:var(--t2);border-radius:8px;padding:6px 12px;font-size:11px;font-weight:700;cursor:pointer;margin-bottom:10px;">← Saison F1</button>'
+    +'<div class="sec" style="margin-top:0;">🏁 '+ea(ev.name||'GP')+'</div>'
+    +'<div style="font-size:11px;color:var(--t3);margin-bottom:8px;">📍 '+ea((cir.fullName||'')+(ad.city?' · '+ad.city:'')+(ad.country?' · '+(_g45F1CountryFR(ad.country).split(' ')[0]||ad.country):''))+(isNaN(d)?'':' · 📅 '+d.toLocaleDateString('fr-FR',{weekday:'long',day:'numeric',month:'long'}))+'</div>';
+  if(stats.length){
+    html+='<div style="background:rgba(240,200,40,.06);border:1px solid rgba(240,200,40,.25);border-radius:8px;padding:9px 11px;margin-bottom:10px;">'
+      +'<div style="font-size:10px;font-weight:800;color:#f0c828;margin-bottom:5px;">💡 STATS DU DICO ('+stats.length+')</div>'
+      +stats.map(function(s){ var tg=[]; if(s.place)tg.push('📍'+s.place); if(s.comp)tg.push('🏆'+s.comp); if(s.context)tg.push('🎯'+s.context);
+        return '<div style="font-size:11px;color:var(--t1);line-height:1.5;">• '+ea(s.text)+'</div>'+(tg.length?'<div style="font-size:9px;color:#caa83a;margin:2px 0 6px;">'+tg.map(ea).join(' · ')+'</div>':'<div style="height:4px;"></div>'); }).join('')
+      +'</div>';
+  }
+  var chips=comps.map(function(c,i){
+    var t=(c.type&&(c.type.abbreviation||c.type.text))||('S'+(i+1));
+    return '<button onclick="g45F1Session('+i+')" id="f1s-'+i+'" style="border:none;cursor:pointer;font-size:11px;font-weight:700;padding:7px 11px;border-radius:8px;background:'+(i===defIdx?'rgba(232,0,45,.18);color:#ff6b81':'rgba(255,255,255,.06);color:var(--t2)')+';white-space:nowrap;">'+ea(t)+'</button>';
+  }).join('');
+  html+='<div style="display:flex;gap:6px;overflow-x:auto;padding-bottom:4px;-webkit-overflow-scrolling:touch;margin-bottom:8px;">'+chips+'</div>'
+    +'<div id="f1-session"></div>';
+  el.innerHTML=html;
+  g45F1Session(defIdx);
+}
+function g45F1Session(idx){
+  var box=document.getElementById('f1-session'); if(!box) return;
+  var ev=_g45F1Cache.events.filter(function(e){return String(e.id)===String(window._g45F1Eid);})[0]; if(!ev) return;
+  var comps=ev.competitions||[]; var c=comps[idx]; if(!c) return;
+  function ea(x){return String(x==null?'':x).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/"/g,'&quot;');}
+  // surligner le chip actif
+  comps.forEach(function(_,i){ var b=document.getElementById('f1s-'+i); if(b){ b.style.background=(i===idx)?'rgba(232,0,45,.18)':'rgba(255,255,255,.06)'; b.style.color=(i===idx)?'#ff6b81':'var(--t2)'; } });
+  var st=(c.status&&c.status.type)||{}; var state=st.state||'pre';
+  var rows=(c.competitors||[]).slice().sort(function(a,b){ return (a.order||99)-(b.order||99); });
+  if(!rows.length || state==='pre'){
+    var d=new Date(c.date||c.startDate||ev.date);
+    box.innerHTML='<div class="fc" style="color:var(--t3);text-align:center;">Séance pas encore courue.'+(isNaN(d)?'':'<br><small>📅 '+d.toLocaleDateString('fr-FR',{weekday:'long',day:'numeric',month:'long'})+' '+d.toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'})+'</small>')+'</div>';
+    return;
+  }
+  box.innerHTML=rows.map(function(r){
+    var a=r.athlete||{};
+    var flag=a.flag&&a.flag.href?'<img src="'+ea(a.flag.href)+'" style="width:16px;height:11px;border-radius:2px;" onerror="this.style.display=\'none\'">':'';
+    var pos=r.order||'—';
+    var gold=r.winner?'color:#f0c828;':'';
+    return '<div style="display:flex;align-items:center;gap:10px;padding:7px 12px;background:var(--s1);border-radius:var(--r6);margin-bottom:4px;">'
+      +'<div style="width:24px;text-align:center;font-size:12px;font-weight:800;'+gold+'color:'+(r.winner?'#f0c828':'var(--t2)')+';">'+(r.winner?'🏆':pos)+'</div>'
+      +flag
+      +'<div style="flex:1;font-size:12px;font-weight:'+(r.winner?'800':'600')+';'+gold+'color:var(--t1);">'+ea(a.displayName||a.fullName||'?')+'</div>'
+      +'</div>';
+  }).join('');
+}
+window.g45F1Open=g45F1Open;
+window.g45F1Detail=g45F1Detail;
+window.g45F1Session=g45F1Session;
