@@ -237,6 +237,11 @@
         <span style="font-size:11px;font-weight:700;color:var(--g)">🎟 Freebet</span>
         <span style="font-size:10px;color:var(--t3);margin-left:auto;">Mise non engagée</span>
       </label>
+      <label style="display:flex;align-items:center;gap:8px;padding:9px;background:rgba(122,140,255,.07);border:1px solid rgba(122,140,255,.25);border-radius:var(--r6);cursor:pointer;margin-bottom:6px;">
+        <input type="checkbox" id="n-lay" style="accent-color:#8aa2ff">
+        <span style="font-size:11px;font-weight:700;color:#8aa2ff">↩️ Lay (parier contre)</span>
+        <span style="font-size:10px;color:var(--t3);margin-left:auto;">Saisis mise lay + cote lay — conversion auto</span>
+      </label>
       <label style="display:flex;align-items:center;gap:8px;padding:9px;background:rgba(240,176,32,.08);border:1px solid rgba(240,176,32,.2);border-radius:var(--r6);cursor:pointer;margin-bottom:9px;">
         <input type="checkbox" id="n-flashboost" style="accent-color:var(--gold)">
         <span style="font-size:11px;font-weight:700;color:var(--gold)">⚡ FlashBoost</span>
@@ -305,6 +310,7 @@
   <!-- Filtre sport -->
   <div class="sec" style="margin-top:0;">Filtre sport</div>
   <div class="sfrow" id="sport-filter"></div>
+  <div class="sfrow" id="month-filter"></div>
   <!-- KPIs -->
   <div class="sec">Performance</div>
   <div class="bili2">
@@ -1033,7 +1039,7 @@
   <button class="ni pc-only" onclick="showTab('t-cal',this);loadCalendrier()"><span>📅</span>Agenda</button>
   <button class="ni pc-only" onclick="showTab('t-comp',this);" data-action-comp="init"><span>⚖️</span>Vs</button>
   <button class="ni pc-only" onclick="showTab('t-simu',this);loadSimuTab();"><span>🎮</span>Simu</button>
-  <button class="ni pc-only" onclick="showTab('t-live',this);loadLiveTab();"><span>📡</span>Direct</button>
+  <button class="ni pc-only" onclick="showTab('t-live',this);loadLiveTab();_g45F1LiveCard();"><span>📡</span>Direct</button>
   <button class="ni pc-only" onclick="showTab('t-resultats',this);loadResultatsTab();"><span>🏆</span>Résultats</button>
   <button class="ni pc-only" onclick="showTab('t-social',this);loadSocialTab();"><span>🤝</span>Social</button>
   <button class="ni pc-only" onclick="showTab('t-stats',this);loadStatsTab();"><span>🧠</span>Stats</button>
@@ -1070,7 +1076,7 @@
       <button onclick="showTab('t-social',$i('btn-plus-menu'));togglePlusMenu();loadSocialTab();" style="display:flex;align-items:center;gap:12px;padding:14px 12px;background:var(--bg3);border:none;border-radius:8px;color:var(--t1);font-size:13px;font-weight:700;cursor:pointer;text-align:left;margin-top:4px;">
         <span>🤝</span> Social
       </button>
-      <button onclick="showTab('t-live',$i('btn-plus-menu'));togglePlusMenu();loadLiveTab();" style="display:flex;align-items:center;gap:12px;padding:14px 12px;background:var(--bg3);border:none;border-radius:8px;color:var(--t1);font-size:13px;font-weight:700;cursor:pointer;text-align:left;margin-top:4px;">
+      <button onclick="showTab('t-live',$i('btn-plus-menu'));togglePlusMenu();loadLiveTab();_g45F1LiveCard();" style="display:flex;align-items:center;gap:12px;padding:14px 12px;background:var(--bg3);border:none;border-radius:8px;color:var(--t1);font-size:13px;font-weight:700;cursor:pointer;text-align:left;margin-top:4px;">
         <span>📡</span> Matchs en direct
       </button>
       <button onclick="showTab('t-resultats',$i('btn-plus-menu'));togglePlusMenu();loadResultatsTab();" style="display:flex;align-items:center;gap:12px;padding:14px 12px;background:var(--bg3);border:none;border-radius:8px;color:var(--t1);font-size:13px;font-weight:700;cursor:pointer;text-align:left;margin-top:4px;">
