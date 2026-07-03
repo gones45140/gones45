@@ -20270,11 +20270,12 @@ async function g45LoadTendance(btn){
   btn.disabled=true;
   try{
     var hN=btn.dataset.h, aN=btn.dataset.a, iso=btn.dataset.date, d=new Date(iso);
+    var slug=btn.dataset.slug||'football';
     function ymd(dt){ return dt.getUTCFullYear()+'-'+String(dt.getUTCMonth()+1).padStart(2,'0')+'-'+String(dt.getUTCDate()).padStart(2,'0'); }
     var dates=[ymd(d), ymd(new Date(d.getTime()+86400000)), ymd(new Date(d.getTime()-86400000))];
     var match=null;
     for(var i=0;i<dates.length && !match;i++){
-      var list=await g45Sofa6('/api/sofascore/v1/match/list?sport_slug=football&date='+dates[i]);
+      var list=await g45Sofa6('/api/sofascore/v1/match/list?sport_slug='+slug+'&date='+dates[i]);
       if(list&&list.__err) continue;
       var evs=Array.isArray(list)?list:((list&&(list.events||list.data))||[]);
       match=_g45SofaFindMatch(evs, hN, aN);
@@ -20484,29 +20485,36 @@ async function g45LoadMatchAI(btn){
       ds.slice(0,4).forEach(function(st){ facts.push('Note perso de l\'utilisateur: '+st.text); });
     }
   }catch(e){}
+  var sys='Tu es un analyste paris sportifs francophone, concis et prudent. Reponds STRICTEMENT dans ce format, sans rien avant ni apres:\n🎯 PRONOSTIC : <1, X ou 2> — score probable <x-y>\n💎 VALEUR : <compare ton estimation aux cotes fournies ; indique ou serait la valeur, ou dis "pas de value claire">\n🔑 POINTS CLES :\n- <point 1>\n- <point 2>\n- <point 3>\n⚠️ <principale incertitude en 1 phrase>\nAppuie-toi sur les faits fournis (cotes, votes, notes perso) et tes connaissances generales des equipes. N\'invente pas de blessures ou compositions recentes.';
+  await _g45MultiAI(box, btn.dataset.box, sys, facts, hN+' vs '+aN);
+  btn.disabled=false;
+}
+window.g45LoadMatchAI=g45LoadMatchAI;
+function g45YT(q){ window.open('https://www.youtube.com/results?search_query='+encodeURIComponent(q),'_blank'); }
+window.g45YT=g45YT;
+async function _g45MultiAI(box, boxId, sys, facts, title){
+  var key=(typeof getGeminiKey==='function')?getGeminiKey():localStorage.getItem('gones45_gemini_key');
+  var eaf=function(x){return String(x).replace(/&/g,'&amp;').replace(/</g,'&lt;');};
   try{
-    var sys='Tu es un analyste paris sportifs francophone, concis et prudent. Reponds STRICTEMENT dans ce format, sans rien avant ni apres:\n🎯 PRONOSTIC : <1, X ou 2> — score probable <x-y>\n💎 VALEUR : <compare ton estimation aux cotes fournies ; indique ou serait la valeur, ou dis "pas de value claire">\n🔑 POINTS CLES :\n- <point 1>\n- <point 2>\n- <point 3>\n⚠️ <principale incertitude en 1 phrase>\nAppuie-toi sur les faits fournis (cotes, votes, notes perso) et tes connaissances generales des equipes. N\'invente pas de blessures ou compositions recentes.';
     var r2=await fetch('https://api.groq.com/openai/v1/chat/completions',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+key},body:JSON.stringify({model:'llama-3.3-70b-versatile',messages:[{role:'system',content:sys},{role:'user',content:facts.join('\n')}],temperature:0.4,max_tokens:450})});
     var d2=await r2.json();
     if(d2.error) throw new Error(d2.error.message);
     var txt=((d2.choices&&d2.choices[0]&&d2.choices[0].message.content)||'').trim();
     if(!txt) throw new Error('réponse vide');
-    var eaf=function(x){return String(x).replace(/&/g,'&amp;').replace(/</g,'&lt;');};
     box.innerHTML='<div style="background:rgba(10,14,24,.93);border:1px solid rgba(176,124,214,.4);border-radius:10px;padding:12px;">'
-      +'<div style="font-size:10px;font-weight:800;color:#b07cd6;margin-bottom:8px;">🧠 GROQ (Llama 3.3) — '+eaf(hN)+' vs '+eaf(aN)+'</div>'
+      +'<div style="font-size:10px;font-weight:800;color:#b07cd6;margin-bottom:8px;">🧠 GROQ (Llama 3.3) — '+eaf(title)+'</div>'
       +'<div style="font-size:12px;color:var(--t1);line-height:1.65;">'+eaf(txt).replace(/\n/g,'<br>')+'</div>'
-      +'<div style="font-size:9px;color:var(--t3);text-align:center;margin-top:8px;font-style:italic;">Estimation IA (Groq), pas une prédiction fiable — les cotes intègrent déjà l\'essentiel de l\'info.</div>'
+      +'<div style="font-size:9px;color:var(--t3);text-align:center;margin-top:8px;font-style:italic;">Estimations IA, pas des prédictions fiables — les cotes intègrent déjà l\'essentiel de l\'info.</div>'
       +'</div>';
     box.setAttribute('data-loaded','1');
-    // 2e avis : Google Gemini (si clé configurée dans Outils)
     var gk=localStorage.getItem('gones45_google_key');
     if(gk){
-      box.innerHTML+='<div id="'+btn.dataset.box+'-gm" style="font-size:10px;color:var(--t3);padding:6px;text-align:center;">🔷 Gemini réfléchit…</div>';
+      box.innerHTML+='<div id="'+boxId+'-gm" style="font-size:10px;color:var(--t3);padding:6px;text-align:center;">🔷 Gemini réfléchit…</div>';
       try{
         var rg=await fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key='+encodeURIComponent(gk),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({contents:[{parts:[{text:sys+'\n\nFAITS :\n'+facts.join('\n')}]}]})});
         var dg=await rg.json();
         var gt=(dg.candidates&&dg.candidates[0]&&dg.candidates[0].content&&dg.candidates[0].content.parts&&dg.candidates[0].content.parts.map(function(pp){return pp.text||'';}).join(''))||'';
-        var gmBox=document.getElementById(btn.dataset.box+'-gm');
+        var gmBox=document.getElementById(boxId+'-gm');
         if(gt && gmBox){
           gmBox.outerHTML='<div style="background:rgba(10,14,24,.93);border:1px solid rgba(77,132,255,.4);border-radius:10px;padding:12px;margin-top:8px;">'
             +'<div style="font-size:10px;font-weight:800;color:#4d84ff;margin-bottom:8px;">🔷 GEMINI (Google) — 2ᵉ avis</div>'
@@ -20515,12 +20523,154 @@ async function g45LoadMatchAI(btn){
         } else if(gmBox){
           gmBox.textContent='🔷 Gemini indisponible'+((dg&&dg.error&&dg.error.message)?(' : '+String(dg.error.message).slice(0,60)):'')+'.';
         }
-      }catch(e2){ var gb=document.getElementById(btn.dataset.box+'-gm'); if(gb) gb.textContent='🔷 Gemini injoignable.'; }
+      }catch(e2){ var gb=document.getElementById(boxId+'-gm'); if(gb) gb.textContent='🔷 Gemini injoignable.'; }
+    }
+    try{
+      box.innerHTML+='<div id="'+boxId+'-ds" style="font-size:10px;color:var(--t3);padding:6px;text-align:center;">🐋 DeepSeek réfléchit…</div>';
+      var rd=await fetch('https://api.groq.com/openai/v1/chat/completions',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+key},body:JSON.stringify({model:'deepseek-r1-distill-llama-70b',messages:[{role:'system',content:sys},{role:'user',content:facts.join('\n')}],temperature:0.4,max_tokens:800})});
+      var dd=await rd.json();
+      var dt=((dd.choices&&dd.choices[0]&&dd.choices[0].message&&dd.choices[0].message.content)||'').replace(/<think>[\s\S]*?<\/think>/g,'').trim();
+      var dsBox=document.getElementById(boxId+'-ds');
+      if(dt && dsBox){
+        dsBox.outerHTML='<div style="background:rgba(10,14,24,.93);border:1px solid rgba(45,212,191,.4);border-radius:10px;padding:12px;margin-top:8px;">'
+          +'<div style="font-size:10px;font-weight:800;color:#2dd4bf;margin-bottom:8px;">🐋 DEEPSEEK R1 — 3ᵉ avis</div>'
+          +'<div style="font-size:12px;color:var(--t1);line-height:1.65;">'+eaf(dt).replace(/\n/g,'<br>')+'</div>'
+          +'</div>';
+      } else if(dsBox){ dsBox.textContent='🐋 DeepSeek indisponible'+((dd&&dd.error)?(' : '+String(dd.error.message||'').slice(0,60)):'')+'.'; }
+    }catch(e3){ var db3=document.getElementById(boxId+'-ds'); if(db3) db3.textContent='🐋 DeepSeek injoignable.'; }
+    var mk=localStorage.getItem('gones45_mistral_key');
+    if(mk){
+      box.innerHTML+='<div id="'+boxId+'-ms" style="font-size:10px;color:var(--t3);padding:6px;text-align:center;">🇫🇷 Mistral réfléchit…</div>';
+      try{
+        var rm=await fetch('https://api.mistral.ai/v1/chat/completions',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+mk},body:JSON.stringify({model:'mistral-small-latest',messages:[{role:'system',content:sys},{role:'user',content:facts.join('\n')}],temperature:0.4,max_tokens:450})});
+        var dm=await rm.json();
+        var mt=((dm.choices&&dm.choices[0]&&dm.choices[0].message&&dm.choices[0].message.content)||'').trim();
+        var msBox=document.getElementById(boxId+'-ms');
+        if(mt && msBox){
+          msBox.outerHTML='<div style="background:rgba(10,14,24,.93);border:1px solid rgba(249,115,22,.4);border-radius:10px;padding:12px;margin-top:8px;">'
+            +'<div style="font-size:10px;font-weight:800;color:#f97316;margin-bottom:8px;">🇫🇷 MISTRAL — 4ᵉ avis</div>'
+            +'<div style="font-size:12px;color:var(--t1);line-height:1.65;">'+eaf(mt).replace(/\n/g,'<br>')+'</div>'
+            +'</div>';
+        } else if(msBox){ msBox.textContent='🇫🇷 Mistral indisponible'+((dm&&(dm.error||dm.message))?(' : '+String((dm.error&&dm.error.message)||dm.message||'').slice(0,60)):'')+'.'; }
+      }catch(e4){ var mb4=document.getElementById(boxId+'-ms'); if(mb4) mb4.textContent='🇫🇷 Mistral injoignable (si ça persiste, on le routera par le Worker).'; }
     }
   }catch(e){ box.innerHTML='<div style="color:#ff6b6b;font-size:11px;padding:8px;">Erreur analyse IA : '+String(e.message||e).slice(0,90)+'</div>'; }
+}
+async function g45TennisOdds(btn){
+  var box=document.getElementById(btn.dataset.box); if(!box) return;
+  if(box.getAttribute('data-loaded')==='1'){ box.style.display=(box.style.display==='none'?'':'none'); return; }
+  var hN=btn.dataset.h, aN=btn.dataset.a, t=String(btn.dataset.t||'').toLowerCase();
+  var fem=/wom|ladies|wta|dames|f\u00e9minin|feminin/.test(t);
+  var base= /wimbledon/.test(t)?'wimbledon' : /us open/.test(t)?'us_open' : /french|roland/.test(t)?'french_open' : /australian|aus open/.test(t)?'aus_open_singles' : null;
+  if(!base){ box.innerHTML='<div style="color:var(--t3);font-size:11px;padding:8px;text-align:center;">Cotes tennis dispo sur les Grands Chelems uniquement (V1) — tournoi non reconnu : '+(t||'?')+'</div>'; return; }
+  var slug='tennis_'+(fem?'wta':'atp')+'_'+base;
+  box.innerHTML='<div style="color:var(--t3);font-size:11px;padding:10px;text-align:center;">\u23f3 Chargement des cotes\u2026</div>';
+  btn.disabled=true;
+  try{
+    var pbase=(typeof FD_PROXY!=='undefined'?FD_PROXY:'https://fd-proxy.touraine-antoine.workers.dev');
+    var r=await fetch(pbase+'/odds?sport='+slug+'&regions=eu&markets=h2h');
+    var data=await r.json();
+    if(!r.ok||!Array.isArray(data)) throw new Error((data&&data.error)||('HTTP '+r.status));
+    var ev=_g45OddsFindEvent(data,hN,aN);
+    if(!ev){ box.innerHTML='<div style="color:var(--t3);font-size:11px;padding:8px;text-align:center;">Match introuvable dans les cotes ('+slug+') \u2014 souvent dispo seulement \u00e0 J-1/J0.</div>'; btn.disabled=false; return; }
+    var books=(ev.bookmakers||[]).filter(function(b){ return (typeof _g45MyBook==='function')?_g45MyBook(b.key):true; });
+    if(!books.length) books=(ev.bookmakers||[]).slice(0,6);
+    var p1=ev.home_team, p2=ev.away_team;
+    function pr(b,name){ var m=(b.markets||[]).filter(function(x){return x.key==='h2h';})[0]; if(!m||!m.outcomes) return null; for(var j=0;j<m.outcomes.length;j++){ if(m.outcomes[j].name===name) return m.outcomes[j].price; } return null; }
+    var b1=null,b2=null;
+    books.forEach(function(b){ var a=pr(b,p1),c2=pr(b,p2); if(a!=null&&(b1==null||a>b1)) b1=a; if(c2!=null&&(b2==null||c2>b2)) b2=c2; });
+    function ea(x){return String(x==null?'':x).replace(/&/g,'&amp;').replace(/</g,'&lt;');}
+    var rows=books.map(function(b){
+      var a=pr(b,p1), c2=pr(b,p2);
+      function cell(v,best){ return '<td style="text-align:center;padding:5px;font-size:12px;font-weight:800;color:'+((v!=null&&v===best)?'#2ecc71':'var(--t1)')+';">'+(v!=null?v.toFixed(2):'\u2014')+'</td>'; }
+      var nm=(typeof _g45MyBook==='function'&&_g45MyBook(b.key))||b.title||b.key;
+      return '<tr><td style="font-size:11px;color:var(--t2);padding:5px;">'+ea(nm)+'</td>'+cell(a,b1)+cell(c2,b2)+'</tr>';
+    }).join('');
+    box.innerHTML='<div style="background:rgba(10,14,24,.93);border:1px solid rgba(46,204,113,.35);border-radius:10px;padding:10px 12px;">'
+      +'<div style="font-size:10px;font-weight:800;color:#2ecc71;margin-bottom:6px;">\ud83d\udcb0 COTES \u2014 '+ea(p1)+' vs '+ea(p2)+'</div>'
+      +'<table style="width:100%;border-collapse:collapse;"><tr><th></th><th style="font-size:9px;color:var(--t3);font-weight:700;">'+ea(p1.split(' ').pop())+'</th><th style="font-size:9px;color:var(--t3);font-weight:700;">'+ea(p2.split(' ').pop())+'</th></tr>'+rows+'</table>'
+      +'<div style="font-size:9px;color:var(--t3);text-align:center;margin-top:6px;font-style:italic;">Meilleure cote en vert \u00b7 The Odds API (cache 15 min).</div>'
+      +'</div>';
+    box.setAttribute('data-loaded','1');
+  }catch(e){ box.innerHTML='<div style="color:#ff6b6b;font-size:11px;padding:8px;">Erreur cotes : '+String(e.message||e).slice(0,80)+'</div>'; }
   btn.disabled=false;
 }
-window.g45LoadMatchAI=g45LoadMatchAI;
+window.g45TennisOdds=g45TennisOdds;
+async function g45LoadUsAI(btn){
+  var box=document.getElementById(btn.dataset.box); if(!box) return;
+  if(box.getAttribute('data-loaded')==='1'){ box.style.display=(box.style.display==='none'?'':'none'); return; }
+  var kk=(typeof getGeminiKey==='function')?getGeminiKey():localStorage.getItem('gones45_gemini_key');
+  if(!kk){ box.innerHTML='<div style="color:#ff6b6b;font-size:11px;padding:8px;">Clé Groq manquante (à mettre dans Outils).</div>'; return; }
+  var hN=btn.dataset.h, aN=btn.dataset.a, lg=btn.dataset.lg||'', iso=btn.dataset.date||'', eid=btn.dataset.eid||'';
+  box.innerHTML='<div style="color:var(--t3);font-size:11px;padding:10px;text-align:center;">🧠 Analyse en cours…</div>';
+  btn.disabled=true;
+  var sp=btn.dataset.sport||'';
+  var LG={mlb:'MLB (baseball)',nba:'NBA (basket)',nfl:'NFL (football américain)',nhl:'NHL (hockey)',wnba:'WNBA'};
+  var LGS={rugby:'Rugby','rugby-league':'Rugby à XIII (NRL)',tennis:'Tennis'};
+  var facts=[];
+  facts.push('Match '+(LG[lg]||LGS[sp]||lg.toUpperCase())+' : '+hN+(sp==='tennis'?' vs ':' (domicile) vs ')+aN+(sp==='tennis'?'':' (extérieur)')+(iso?(' — le '+String(iso).slice(0,10)):''));
+  try{
+    var od=window._g45LastUsOdds;
+    if(od && String(od.eid)===String(eid)){
+      var seg=[];
+      if(od.favName) seg.push('favori '+od.favName+(od.favDec?(' @'+od.favDec.toFixed(2)):''));
+      if(od.over||od.under) seg.push('total '+od.line+' (over '+(od.over?od.over.toFixed(2):'?')+' / under '+(od.under?od.under.toFixed(2):'?')+')');
+      if(seg.length) facts.push('Cotes ('+(od.prov||'ESPN')+') : '+seg.join(' · '));
+    }
+  }catch(e){}
+  try{
+    var EMO={mlb:'⚾',nba:'🏀',nfl:'🏈',nhl:'🏒'};
+    var EMOS={rugby:'🏉','rugby-league':'🏉🇦🇺',tennis:'🎾'};
+    if(typeof g45StatsForEvent==='function'){
+      g45StatsForEvent({sport:EMO[lg]||EMOS[sp]||'',teams:[hN,aN],comp:(LG[lg]||LGS[sp]||lg||'').toUpperCase(),place:''}).slice(0,4).forEach(function(st){ facts.push('Note perso de l\'utilisateur : '+st.text); });
+    }
+  }catch(e){}
+  var sys='Tu es un analyste paris sportifs francophone, concis et prudent. Reponds STRICTEMENT dans ce format, sans rien avant ni apres:\n🎯 PRONOSTIC : <vainqueur> — score probable <x-y>\n💎 VALEUR : <compare ton estimation aux cotes fournies, ou dis "pas de value claire">\n🔑 POINTS CLES :\n- <point 1>\n- <point 2>\n- <point 3>\n⚠️ <principale incertitude en 1 phrase>\nAppuie-toi sur les faits fournis et tes connaissances des equipes. N\'invente pas de blessures recentes.';
+  await _g45MultiAI(box, btn.dataset.box, sys, facts, hN+' vs '+aN);
+  btn.disabled=false;
+}
+async function g45F1AI(btn){
+  var box=document.getElementById(btn.dataset.box); if(!box) return;
+  if(box.getAttribute('data-loaded')==='1'){ box.style.display=(box.style.display==='none'?'':'none'); return; }
+  var kk=(typeof getGeminiKey==='function')?getGeminiKey():localStorage.getItem('gones45_gemini_key');
+  if(!kk){ box.innerHTML='<div style="color:#ff6b6b;font-size:11px;padding:8px;">Clé Groq manquante (à mettre dans Outils).</div>'; return; }
+  var ev=_g45F1Cache.events.filter(function(e){ return String(e.id)===String(btn.dataset.eid); })[0];
+  if(!ev) return;
+  box.innerHTML='<div style="color:var(--t3);font-size:11px;padding:10px;text-align:center;">🧠 Analyse du GP en cours…</div>';
+  btn.disabled=true;
+  var cir=ev.circuit||{}, ad=cir.address||{};
+  var facts=[];
+  facts.push('Grand Prix F1 : '+(ev.name||'')+' — circuit '+(cir.fullName||'')+' ('+(ad.city||'')+', '+(ad.country||'')+'), date '+String(ev.date||'').slice(0,10));
+  try{
+    var past=_g45F1Cache.events.filter(function(e){ var st=(e.status&&e.status.type)||{}; return st.state==='post'; });
+    var wins=[];
+    past.slice(-3).forEach(function(e){
+      try{
+        var race=(e.competitions||[]).filter(function(c){ var t=(c.type&&(c.type.abbreviation||c.type.text))||''; return /race/i.test(t)&&!/sprint/i.test(t); }).pop();
+        var w=race&&(race.competitors||[]).filter(function(c){return c.winner;})[0];
+        if(w&&w.athlete) wins.push(((e.circuit&&e.circuit.address&&e.circuit.address.country)||'')+': '+(w.athlete.displayName||''));
+      }catch(x){}
+    });
+    if(wins.length) facts.push('Vainqueurs des derniers GP de la saison : '+wins.join(' · '));
+  }catch(e){}
+  try{
+    var year=new Date(ev.date).getFullYear();
+    if(!_g45F1Jol.stand) _g45F1Jol.stand={};
+    var data=_g45F1Jol.stand[year+':d'];
+    if(!data){
+      var r=await fetch('https://api.jolpi.ca/ergast/f1/'+year+'/driverStandings.json');
+      if(r.ok){ var j=await r.json(); data=((((j.MRData||{}).StandingsTable||{}).StandingsLists||[])[0])||{}; _g45F1Jol.stand[year+':d']=data; }
+    }
+    var rows=(data&&data.DriverStandings)||[];
+    if(rows.length) facts.push('Classement championnat : '+rows.slice(0,8).map(function(x){ var D=x.Driver||{}; return x.position+'. '+(D.familyName||'')+' ('+(x.points||0)+' pts)'; }).join(' · '));
+  }catch(e){}
+  try{ if(typeof g45StatsForEvent==='function'){ g45StatsForEvent(_g45F1Ev(ev)).slice(0,4).forEach(function(st){ facts.push('Note perso de l\'utilisateur : '+st.text); }); } }catch(e){}
+  var sys='Tu es un analyste paris F1 francophone, concis et prudent. Reponds STRICTEMENT dans ce format, sans rien avant ni apres:\n🎯 FAVORI : <pilote> — podium probable <P1, P2, P3>\n💎 OUTSIDER / VALUE : <pilote(s) potentiellement sous-cotes et pourquoi>\n🔑 POINTS CLES :\n- <point 1>\n- <point 2>\n- <point 3>\n⚠️ <principale incertitude en 1 phrase>\nAppuie-toi sur les faits fournis (forme, championnat, notes, circuit) et tes connaissances des circuits. N\'invente pas de resultats de seances non fournis.';
+  await _g45MultiAI(box, btn.dataset.box, sys, facts, ev.name||'GP');
+  btn.disabled=false;
+}
+window.g45LoadUsAI=g45LoadUsAI;
+window.g45F1AI=g45F1AI;
 function g45SaveGoogleKey(btn){
   var i=document.getElementById('google-key-input'); if(!i) return;
   var v=(i.value||'').trim();
@@ -20529,6 +20679,14 @@ function g45SaveGoogleKey(btn){
   setTimeout(function(){ btn.textContent='💾'; },1200);
 }
 window.g45SaveGoogleKey=g45SaveGoogleKey;
+function g45SaveMistralKey(btn){
+  var i=document.getElementById('mistral-key-input'); if(!i) return;
+  var v=(i.value||'').trim();
+  if(v){ localStorage.setItem('gones45_mistral_key',v); btn.textContent='✅'; }
+  else { localStorage.removeItem('gones45_mistral_key'); btn.textContent='🗑️'; }
+  setTimeout(function(){ btn.textContent='💾'; },1200);
+}
+window.g45SaveMistralKey=g45SaveMistralKey;
 async function g45LoadMoreOdds(btn){
   var box=document.getElementById(btn.dataset.box); if(!box) return;
   if(box.getAttribute('data-loaded')==='1'){ box.style.display=(box.style.display==='none'?'':'none'); return; }
@@ -21143,6 +21301,7 @@ async function _g45EspnUsOdds(sport, lg, eid, dateISO, hN, aN){
     if(od.details){ var mm=String(od.details).match(/([+-]?\d+(?:\.\d+)?)\s*$/); if(mm){ favAm=mm[1]; favDec=amToDec(favAm); } }
     var prov=(od.provider&&od.provider.name)||'ESPN';
     if(!over&&!under&&!favName) return '';
+    try{ window._g45LastUsOdds={eid:String(eid), prov:prov, favName:favName, favDec:favDec, line:line, over:over, under:under}; }catch(e){}
     var rows='';
     if(favName){ rows+='<div style="display:flex;justify-content:space-between;align-items:center;font-size:11px;padding:3px 0;"><span style="color:var(--t2);">🏆 Favori vainqueur</span><span style="color:var(--t1);font-weight:700;">'+ea(favName)+(favDec?(' <b style="color:#2ecc71;">@'+favDec.toFixed(2)+'</b>'):(favAm?(' ('+ea(favAm)+')'):''))+'</span></div>'; }
     if(over||under){ rows+='<div style="display:flex;justify-content:space-between;align-items:center;font-size:11px;padding:3px 0;"><span style="color:var(--t2);">📊 Total '+ea(String(line))+'</span><span style="color:var(--t1);font-weight:700;">Plus <b style="color:#2ecc71;">'+(over?over.toFixed(2):'—')+'</b> · Moins <b style="color:#ff7b54;">'+(under?under.toFixed(2):'—')+'</b></span></div>'; }
@@ -21188,6 +21347,10 @@ async function _renderGenericDetail(el, sport, lg, eid){
     if(stT.state==='pre'){ try{ var _pmG=_g45PreMatchBlock(data); if(_pmG) h+=_pmG; }catch(e){} }
     // Cotes ESPN (sports US : favori moneyline + total), en décimal — gratuit, sans quota
     try{ var _usOdds=await _g45EspnUsOdds(sport, lg, eid, comp.date||'', hN, aN); if(_usOdds) h+=_usOdds; }catch(e){}
+    h+='<div style="margin-top:8px;"><button onclick="g45LoadUsAI(this)" data-lg="'+lg+'" data-sport="'+sport+'" data-eid="'+eid+'" data-h="'+String(hN).replace(/"/g,'&quot;')+'" data-a="'+String(aN).replace(/"/g,'&quot;')+'" data-date="'+(comp.date||'')+'" data-box="usai-'+eid+'" style="width:100%;box-sizing:border-box;font-size:12px;font-weight:800;padding:9px 12px;border-radius:9px;cursor:pointer;border:1.5px solid rgba(176,124,214,.5);background:rgba(176,124,214,.10);color:#b07cd6;">🧠 Analyse IA du match</button><div id="usai-'+eid+'" style="margin-top:8px;"></div></div>';
+    var _tSlug=({mlb:'baseball',nba:'basketball',nfl:'american-football',nhl:'ice-hockey',wnba:'basketball'})[lg]||({rugby:'rugby','rugby-league':'rugby'})[sport]||'';
+    if(_tSlug){ h+='<div style="margin-top:8px;"><button onclick="g45LoadTendance(this)" data-slug="'+_tSlug+'" data-h="'+String(hN).replace(/"/g,'&quot;')+'" data-a="'+String(aN).replace(/"/g,'&quot;')+'" data-date="'+(comp.date||'')+'" data-box="ustend-'+eid+'" style="width:100%;box-sizing:border-box;font-size:12px;font-weight:800;padding:9px 12px;border-radius:9px;cursor:pointer;border:1.5px solid rgba(122,140,255,.5);background:rgba(122,140,255,.08);color:#8aa2ff;">📈 Tendance du public</button><div id="ustend-'+eid+'" style="margin-top:8px;"></div></div>'; }
+    h+='<div style="margin-top:8px;"><button onclick="g45YT(this.dataset.q)" data-q="'+String(hN+' '+aN+' highlights').replace(/"/g,'&quot;')+'" style="width:100%;box-sizing:border-box;font-size:12px;font-weight:800;padding:9px 12px;border-radius:9px;cursor:pointer;border:1.5px solid rgba(255,69,58,.5);background:rgba(255,69,58,.10);color:#ff6b5e;">📺 Résumé sur YouTube</button></div>';
     // Meilleurs joueurs
     try{
       var L=data.leaders||[];
@@ -21526,6 +21689,10 @@ function _g45EspnTennisDetail(c){
     +(notes?'<div style="font-size:9px;color:var(--t3);text-align:center;margin-top:8px;font-style:italic;">'+notes+'</div>':'')
     +((venue||court)?'<div style="font-size:9px;color:var(--t3);text-align:center;margin-top:3px;">📍 '+venue+court+'</div>':'')
     +(((c.status&&c.status.type&&(c.status.type.state==='post'||c.status.type.completed))?true:false)?'<div style="text-align:center;margin-top:10px;"><button onclick="g45EspnMatchStats(\''+c.id+'\',this)" style="border:none;background:rgba(138,160,255,.14);color:#8aa0ff;border-radius:8px;padding:7px 13px;font-size:10px;font-weight:700;cursor:pointer;">📊 Voir les stats (Sofascore · quota)</button><div class="g45estats" style="margin-top:8px;"></div></div>':'')
+    +'<div style="margin-top:8px;"><button onclick="g45TennisOdds(this)" data-t="'+String(c.__grp||'').replace(/"/g,'&quot;')+'" data-h="'+String(_tHN).replace(/"/g,'&quot;')+'" data-a="'+String(_tAN).replace(/"/g,'&quot;')+'" data-box="usodd-'+c.id+'" style="width:100%;box-sizing:border-box;font-size:12px;font-weight:800;padding:9px 12px;border-radius:9px;cursor:pointer;border:1.5px solid rgba(46,204,113,.5);background:rgba(46,204,113,.08);color:#2ecc71;">💰 Cotes du match (Pinnacle & co)</button><div id="usodd-'+c.id+'" style="margin-top:8px;"></div></div>'
+    +'<div style="margin-top:8px;"><button onclick="g45LoadUsAI(this)" data-lg="tennis" data-sport="tennis" data-eid="'+c.id+'" data-h="'+String(_tHN).replace(/"/g,'&quot;')+'" data-a="'+String(_tAN).replace(/"/g,'&quot;')+'" data-date="'+(c.date||'')+'" data-box="usai-'+c.id+'" style="width:100%;box-sizing:border-box;font-size:12px;font-weight:800;padding:9px 12px;border-radius:9px;cursor:pointer;border:1.5px solid rgba(176,124,214,.5);background:rgba(176,124,214,.10);color:#b07cd6;">🧠 Analyse IA du match</button><div id="usai-'+c.id+'" style="margin-top:8px;"></div></div>'
+    +'<div style="margin-top:8px;"><button onclick="g45LoadTendance(this)" data-slug="tennis" data-h="'+String(_tHN).replace(/"/g,'&quot;')+'" data-a="'+String(_tAN).replace(/"/g,'&quot;')+'" data-date="'+(c.date||'')+'" data-box="ustend-'+c.id+'" style="width:100%;box-sizing:border-box;font-size:12px;font-weight:800;padding:9px 12px;border-radius:9px;cursor:pointer;border:1.5px solid rgba(122,140,255,.5);background:rgba(122,140,255,.08);color:#8aa2ff;">📈 Tendance du public</button><div id="ustend-'+c.id+'" style="margin-top:8px;"></div></div>'
+    +'<div style="margin-top:8px;"><button onclick="g45YT(this.dataset.q)" data-q="'+String(_tHN+' '+_tAN+' highlights').replace(/"/g,'&quot;')+'" style="width:100%;box-sizing:border-box;font-size:12px;font-weight:800;padding:9px 12px;border-radius:9px;cursor:pointer;border:1.5px solid rgba(255,69,58,.5);background:rgba(255,69,58,.10);color:#ff6b5e;">📺 Résumé sur YouTube</button></div>'
     +'</div>';
 }
 function g45EspnTennisToggle(el){
@@ -23883,6 +24050,8 @@ function g45F1Detail(eid){
   }).join('');
   html+='<div id="f1-live"></div>'
     +'<div id="f1-map"></div>'
+    +'<div style="margin:0 0 8px;"><button onclick="g45F1AI(this)" data-eid="'+ea(ev.id)+'" data-box="f1ai-'+ea(ev.id)+'" style="width:100%;box-sizing:border-box;font-size:12px;font-weight:800;padding:9px 12px;border-radius:9px;cursor:pointer;border:1.5px solid rgba(176,124,214,.5);background:rgba(176,124,214,.10);color:#b07cd6;">🧠 Analyse IA du GP</button><div id="f1ai-'+ea(ev.id)+'" style="margin-top:8px;"></div></div>'
+    +'<div style="margin:0 0 8px;"><button onclick="g45YT(this.dataset.q)" data-q="'+ea((ev.name||'GP F1')+' highlights')+'" style="width:100%;box-sizing:border-box;font-size:12px;font-weight:800;padding:9px 12px;border-radius:9px;cursor:pointer;border:1.5px solid rgba(255,69,58,.5);background:rgba(255,69,58,.10);color:#ff6b5e;">📺 Résumé du GP sur YouTube</button></div>'
     +'<div style="display:flex;gap:6px;overflow-x:auto;padding-bottom:4px;-webkit-overflow-scrolling:touch;margin-bottom:8px;">'+chips+'</div>'
     +'<div id="f1-session"></div>';
   el.innerHTML=html;
