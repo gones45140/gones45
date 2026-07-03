@@ -23930,18 +23930,33 @@ async function _g45F1LiveStart(ev){
     _g45F1LiveTick(sess);
   }, 20000);
 }
-async function _g45OF1FindSessionByDate(ev, compDate){
+function _g45OF1SessName(label){
+  var t=String(label||'').toLowerCase();
+  if(/sprint.*qual|shootout|\bsq\b|\bss\b/.test(t)) return 'sprint qualifying';
+  if(/sprint.*race|\bsr\b|\bsprint\b/.test(t)) return 'sprint';
+  if(/qual/.test(t)) return 'qualifying';
+  if(/fp ?1|practice 1/.test(t)) return 'practice 1';
+  if(/fp ?2|practice 2/.test(t)) return 'practice 2';
+  if(/fp ?3|practice 3/.test(t)) return 'practice 3';
+  if(/race|course/.test(t)) return 'race';
+  return '';
+}
+async function _g45OF1Sessions(ev){
+  var year=new Date(ev.date).getFullYear();
+  var country=(ev.circuit&&ev.circuit.address&&ev.circuit.address.country)||'';
+  var MAP={'Britain':'United Kingdom','Great Britain':'United Kingdom','USA':'United States','UAE':'United Arab Emirates','Abu Dhabi':'United Arab Emirates'};
+  country=MAP[country]||country; if(!country) return [];
+  try{ var r=await fetch('https://api.openf1.org/v1/sessions?year='+year+'&country_name='+encodeURIComponent(country)); if(!r.ok) return []; var j=await r.json(); return Array.isArray(j)?j:[]; }catch(e){ return []; }
+}
+async function _g45OF1FindSessionByDate(ev, compDate, label){
   try{
-    var year=new Date(ev.date).getFullYear();
-    var country=(ev.circuit&&ev.circuit.address&&ev.circuit.address.country)||'';
-    if(!country) return null;
-    var r=await fetch('https://api.openf1.org/v1/sessions?year='+year+'&country_name='+encodeURIComponent(country));
-    if(!r.ok) return null;
-    var ss=await r.json();
-    var t=new Date(compDate).getTime(); if(isNaN(t)) return null;
+    var ss=await _g45OF1Sessions(ev); if(!ss.length) return null;
+    var want=_g45OF1SessName(label);
+    if(want){ var byType=ss.filter(function(x){ return _g45SNorm(x.session_name)===_g45SNorm(want); })[0]; if(byType) return byType; }
+    var t=new Date(compDate).getTime(); if(isNaN(t)) return ss[0]||null;
     var best=null, bd=1e15;
     ss.forEach(function(x){ var d=Math.abs(new Date(x.date_start).getTime()-t); if(d<bd){ bd=d; best=x; } });
-    return (best && bd<4*3600000)?best:null;
+    return best;
   }catch(e){ return null; }
 }
 function _g45F1XtraLoad(msg){ return '<div style="display:flex;align-items:center;gap:8px;padding:12px;color:var(--t3);font-size:11px;"><div style="width:12px;height:12px;border:2px solid rgba(77,132,255,.2);border-top-color:#e8002d;border-radius:50%;animation:spin .8s linear infinite;"></div>'+msg+'</div>'; }
@@ -23950,7 +23965,7 @@ async function g45F1Sectors(){
   var out=document.getElementById('f1-xtra'); if(!out||!window._g45F1Cur) return;
   out.innerHTML=_g45F1XtraLoad('Chargement des secteurs…');
   var cur=window._g45F1Cur;
-  var sess=await _g45OF1FindSessionByDate(cur.ev, cur.date);
+  var sess=await _g45OF1FindSessionByDate(cur.ev, cur.date, cur.label);
   if(!sess){ out.innerHTML='<div class="fc" style="color:var(--t3);font-size:11px;">Séance introuvable côté OpenF1.</div>'; return; }
   var sk=sess.session_key;
   var drv=await _g45OF1Drivers(sk)||{};
@@ -23993,7 +24008,7 @@ async function g45F1Tyres(){
   var out=document.getElementById('f1-xtra'); if(!out||!window._g45F1Cur) return;
   out.innerHTML=_g45F1XtraLoad('Chargement pneus & arrêts…');
   var cur=window._g45F1Cur;
-  var sess=await _g45OF1FindSessionByDate(cur.ev, cur.date);
+  var sess=await _g45OF1FindSessionByDate(cur.ev, cur.date, cur.label);
   if(!sess){ out.innerHTML='<div class="fc" style="color:var(--t3);font-size:11px;">Séance introuvable côté OpenF1.</div>'; return; }
   var sk=sess.session_key;
   var drv=await _g45OF1Drivers(sk)||{};
@@ -24086,7 +24101,7 @@ async function g45F1Flags(){
   var out=document.getElementById('f1-xtra'); if(!out||!window._g45F1Cur) return;
   out.innerHTML=_g45F1XtraLoad('Chargement drapeaux & pénalités…');
   var cur=window._g45F1Cur;
-  var sess=await _g45OF1FindSessionByDate(cur.ev, cur.date);
+  var sess=await _g45OF1FindSessionByDate(cur.ev, cur.date, cur.label);
   if(!sess){ out.innerHTML='<div class="fc" style="color:var(--t3);font-size:11px;">Séance introuvable côté OpenF1.</div>'; return; }
   var sk=sess.session_key;
   var drv=await _g45OF1Drivers(sk)||{};
