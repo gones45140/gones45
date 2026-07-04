@@ -23982,19 +23982,31 @@ async function _g45F1SessOF1(ev, comp, o){
       }
     }catch(e){}
 
-    // Temps au tour : meilleur tour de CHAQUE pilote (fiable en live et terminé)
-    var xtm={};
+    // Temps : ÉCART entre voitures en course/sprint · MEILLEUR TOUR en qualif/essai
+    var isR=o.isRace||o.isSprint, xkind=isR?'gap':'lap', xtm={};
     try{
-      var rl=await fetch('https://api.openf1.org/v1/laps?session_key='+sk);
-      if(rl.ok){ var lp=await rl.json(); var best={};
-        (lp||[]).forEach(function(l){ if(l.lap_duration && (!best[l.driver_number]||l.lap_duration<best[l.driver_number])) best[l.driver_number]=l.lap_duration; });
-        Object.keys(best).forEach(function(k){ var d=best[k], mn=Math.floor(d/60), sc=d-60*mn; xtm[k]=(mn>0?(mn+':'+(sc<10?'0':'')+sc.toFixed(3)):d.toFixed(3)); });
+      if(isR){
+        var r=await fetch('https://api.openf1.org/v1/intervals?session_key='+sk);
+        if(r.ok){ var iv=await r.json(); var last={};
+          (iv||[]).forEach(function(x){ var p=last[x.driver_number]; if(!p || new Date(x.date)>new Date(p.date)) last[x.driver_number]=x; });
+          Object.keys(last).forEach(function(k){ var g=last[k].gap_to_leader;
+            if(g==null||g===''||g===0) xtm[k]='Leader';
+            else if(typeof g==='string') xtm[k]=(/lap/i.test(g)?g:('+'+g));
+            else xtm[k]='+'+Number(g).toFixed(3);
+          });
+        }
+      } else {
+        var rl=await fetch('https://api.openf1.org/v1/laps?session_key='+sk);
+        if(rl.ok){ var lp=await rl.json(); var best={};
+          (lp||[]).forEach(function(l){ if(l.lap_duration && (!best[l.driver_number]||l.lap_duration<best[l.driver_number])) best[l.driver_number]=l.lap_duration; });
+          Object.keys(best).forEach(function(k){ var d=best[k], mn=Math.floor(d/60), sc=d-60*mn; xtm[k]=(mn>0?(mn+':'+(sc<10?'0':'')+sc.toFixed(3)):d.toFixed(3)); });
+        }
       }
     }catch(e){}
 
     // Map par clé nom (nom de famille normalisé) — même clé que Jolpica/ESPN
     var map={}, n=0;
-    Object.keys(drv).forEach(function(num){ var k=_g45F1Key(drv[num].n||''); if(!k) return; map[k]={ tyre:xty[num]||'', time:xtm[num]||'', team:drv[num].team||'', col:drv[num].col||'' }; if(xty[num]||xtm[num]||drv[num].team) n++; });
+    Object.keys(drv).forEach(function(num){ var k=_g45F1Key(drv[num].n||''); if(!k) return; map[k]={ tyre:xty[num]||'', time:xtm[num]||'', kind:xkind, team:drv[num].team||'', col:drv[num].col||'' }; if(xty[num]||xtm[num]||drv[num].team) n++; });
     return n?map:null;
   }catch(e){ return null; }
 }
@@ -24520,9 +24532,14 @@ function g45F1Session(idx){
           right=best?'<div style="flex:none;font-size:11px;font-weight:700;color:var(--t1);">'+ea(best)+(x.q3?' <span style="font-size:8px;color:#8b97c4;">Q3</span>':(x.q2?' <span style="font-size:8px;color:#8b97c4;">Q2</span>':' <span style="font-size:8px;color:#8b97c4;">Q1</span>'))+'</div>':'';
         }
       }
-      // Secours OpenF1 : meilleur tour du pilote quand le chrono Jolpica manque (séance live)
+      // Secours OpenF1 quand le chrono Jolpica manque (séance live) : écart (course) ou meilleur tour (qualif/essai)
       if(!right && ofx && ofx.time){
-        right='<div style="flex:none;font-size:11px;font-weight:700;color:var(--t1);">'+ea(ofx.time)+'<span style="font-size:8px;color:#8b97c4;font-weight:600;"> tour</span></div>';
+        if(ofx.kind==='gap'){
+          var _lead=/leader/i.test(ofx.time);
+          right='<div style="flex:none;font-size:11px;font-weight:700;color:'+(_lead?'#f0c828':'var(--t1)')+';">'+ea(ofx.time)+'</div>';
+        } else {
+          right='<div style="flex:none;font-size:11px;font-weight:700;color:var(--t1);">'+ea(ofx.time)+'<span style="font-size:8px;color:#8b97c4;font-weight:600;"> tour</span></div>';
+        }
       }
       var cons=(x&&x.cons)?'<div style="font-size:9px;color:var(--t3);margin-top:1px;">'+ea(x.cons)+'</div>'
               :((ofx&&ofx.team)?'<div style="font-size:9px;color:'+(ofx.col?ea(ofx.col):'var(--t3)')+';margin-top:1px;font-weight:600;">'+ea(ofx.team)+'</div>':'');
