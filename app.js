@@ -18962,7 +18962,7 @@ function _g45SuiviStarHTML(id, date, home, away, comp, league, sport){
   return '<button onclick="g45SuiviBtn(this)" data-id="'+ea(id)+'" data-date="'+ea(date)+'" data-home="'+ea(home)+'" data-away="'+ea(away)+'" data-comp="'+ea(comp)+'" data-league="'+ea(league)+'" data-sport="'+ea(sport||'soccer')+'" '
     +'style="width:100%;box-sizing:border-box;font-size:12px;font-weight:800;padding:9px 12px;border-radius:9px;cursor:pointer;border:1.5px solid '+(on?'rgba(30,215,96,.55)':'rgba(77,132,255,.55)')+';background:'+(on?'rgba(30,215,96,.16)':'rgba(77,132,255,.12)')+';color:'+(on?'#1ed760':'#7aa2ff')+';">'+(on?'\u2605 Match suivi \u2014 dans ton calendrier':'\u2606 Suivre ce match (ajouter au calendrier)')+'</button>';
 }
-window.g45SuiviBtn=g45SuiviBtn; window.g45SuiviRemove=g45SuiviRemove;
+window.g45SuiviBtn=g45SuiviBtn; window.g45SuiviRemove=g45SuiviRemove; window._g45SuiviStarHTML=_g45SuiviStarHTML;
 
 // ── CALENDRIER GLOBAL ──
 var _calCache = null;
@@ -21790,7 +21790,7 @@ function _g45EspnTennisDetail(c){
   var notes=(c.notes&&c.notes[0]&&c.notes[0].text)||'';
   function _plTen(x){ return (x&&x.athlete&&(x.athlete.displayName||x.athlete.shortName))||(x&&x.team&&(x.team.displayName||x.team.shortDisplayName))||'?'; }
   var _tHN=_plTen(home), _tAN=_plTen(away), _tCmp=(c.round&&c.round.displayName)||c.__grp||'Tennis';
-  var _tStar='<div style="margin-bottom:8px;">'+_g45SuiviStarHTML(c.id, c.date||c.startDate||'', _tHN, _tAN, _tCmp, '', 'tennis')+'</div>';
+  var _tStar=''; try{ var _sfn=(typeof _g45SuiviStarHTML==='function')?_g45SuiviStarHTML:(window._g45SuiviStarHTML||null); if(_sfn) _tStar='<div style="margin-bottom:8px;">'+_sfn(c.id, c.date||c.startDate||'', _tHN, _tAN, _tCmp, '', 'tennis')+'</div>'; }catch(e){}
   var _tState=(c.status&&c.status.type&&c.status.type.state)||'';
   var _tPre=(_tState==='pre')?_g45TennisPreMatch(c):'';
   return '<div style="background:rgba(255,255,255,.03);border-radius:10px;padding:10px 8px;margin-bottom:6px;">'
@@ -23961,9 +23961,9 @@ async function _g45F1SessOF1(ev, comp, o){
     var sessions=await _g45OF1AllSessions(ev); if(!sessions.length) return null;
     var tt=String(o.type||'').toLowerCase();
     var targets;
-    if(o.isRace) targets=['Race'];
+    if(o.sprintQual) targets=['Sprint Qualifying','Sprint Shootout'];
     else if(o.isSprint) targets=['Sprint'];
-    else if((/sprint/.test(tt)&&/qual|shoot/.test(tt))||/shoot/.test(tt)||/\bsq\b/.test(tt)) targets=['Sprint Qualifying','Sprint Shootout'];
+    else if(o.isRace) targets=['Race'];
     else if(o.isQual) targets=['Qualifying'];
     else { var mm=tt.match(/([123])/); if(mm) targets=['Practice '+mm[1]]; else if(/practice|essai|libre|fp/.test(tt)) targets=['Practice 1','Practice 2','Practice 3']; else targets=[]; }
     if(!targets.length) return null;
@@ -24454,9 +24454,11 @@ function g45F1Session(idx){
     return;
   }
   var t=(c.type&&(c.type.abbreviation||c.type.text))||'';
-  var isRace=/race/i.test(t)&&!/sprint/i.test(t);
-  var isQual=/qual/i.test(t);
-  var isSprint=/sprint/i.test(t)&&!/qual|shootout/i.test(t);
+  var _tt=String(t).toLowerCase();
+  var isSprintQual=/sprint\s*(qual|shoot)/.test(_tt)||/shootout/.test(_tt)||_tt==='ss'||_tt==='sq';
+  var isSprint=(/sprint/.test(_tt)&&!isSprintQual)||_tt==='sr';           // SPRINT (course) → écart
+  var isRace=((/race/.test(_tt)&&!/sprint/.test(_tt)))||_tt==='race';     // Course → écart
+  var isQual=(/qual/.test(_tt))||_tt==='qual'||_tt==='q'||isSprintQual;   // Qualif + Sprint Qualif → meilleur tour
   window._g45F1Cur={ev:ev, date:(c.date||c.startDate||ev.date), label:t};
   var _ofMap=null, _lastJol=null;
   function _f1tyPill(cc){ if(!cc) return ''; var m={SOFT:['S','#ff2d2d'],MEDIUM:['M','#f0c828'],HARD:['H','#e8ecf5'],INTERMEDIATE:['I','#3fb950'],WET:['W','#4d84ff']}; var tt=m[String(cc).toUpperCase()]; if(!tt) return ''; return '<span title="'+ea(cc)+'" style="display:inline-block;width:15px;height:15px;line-height:14px;text-align:center;border-radius:50%;border:1.5px solid '+tt[1]+';color:'+tt[1]+';font-size:8px;font-weight:900;margin-left:6px;flex:none;vertical-align:middle;">'+tt[0]+'</span>'; }
@@ -24564,7 +24566,7 @@ function g45F1Session(idx){
   }
   renderRows(null);
   // Enrichissement chrono/écurie via Jolpica (course + qualifs), silencieux si indispo
-  if(state==='post' && (isRace||isQual||isSprint)){
+  if(state==='post' && (isRace||isSprint||(isQual&&!isSprintQual))){
     _g45F1JolRound(ev).then(function(rd){
       if(!rd) return;
       var pr=isRace?_g45F1JolResults(rd.year,rd.round):(isSprint?_g45F1JolSprint(rd.year,rd.round):_g45F1JolQual(rd.year,rd.round));
@@ -24573,7 +24575,7 @@ function g45F1Session(idx){
   }
   // Enrichissement PNEUS + TEMPS via OpenF1 (live ou terminé), silencieux si indispo
   if(state==='in' || state==='post'){
-    _g45F1SessOF1(ev, c, {isRace:isRace, isQual:isQual, isSprint:isSprint, type:t, state:state}).then(function(m){
+    _g45F1SessOF1(ev, c, {isRace:isRace, isQual:isQual, isSprint:isSprint, sprintQual:isSprintQual, type:t, state:state}).then(function(m){
       if(m){ _ofMap=m; renderRows(_lastJol); }
     });
   }
