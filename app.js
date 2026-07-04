@@ -21808,11 +21808,20 @@ function _g45EspnTennisDetail(c){
     +'</div>';
 }
 function g45EspnTennisToggle(el){
-  var panel=el.nextElementSibling; if(!panel||!panel.classList||!panel.classList.contains('smd-panel')) return;
-  if(panel.getAttribute('data-open')==='1'){ panel.style.display='none'; panel.setAttribute('data-open','0'); return; }
-  panel.style.display='block'; panel.setAttribute('data-open','1');
-  var c=(window._g45EspnTennisCache||{})[el.getAttribute('data-cid')];
-  panel.innerHTML=_g45EspnTennisDetail(c);
+  try{
+    var panel=el.nextElementSibling;
+    if(!panel||!(panel.classList&&panel.classList.contains('smd-panel'))){
+      var sib=el; panel=null;
+      while((sib=sib.nextElementSibling)){ if(sib.classList&&sib.classList.contains('smd-panel')){ panel=sib; break; } if(sib.getAttribute&&sib.getAttribute('data-cid')) break; }
+    }
+    if(!panel){ panel=document.createElement('div'); panel.className='smd-panel'; panel.style.display='none'; if(el.parentNode) el.parentNode.insertBefore(panel, el.nextSibling); }
+    if(panel.getAttribute('data-open')==='1'){ panel.style.display='none'; panel.setAttribute('data-open','0'); return; }
+    panel.style.display='block'; panel.setAttribute('data-open','1');
+    var c=(window._g45EspnTennisCache||{})[el.getAttribute('data-cid')];
+    if(!c){ panel.innerHTML='<div style="text-align:center;color:var(--t3);font-size:11px;padding:14px;">Détail indisponible (match absent du cache).</div>'; return; }
+    try{ panel.innerHTML=_g45EspnTennisDetail(c); }
+    catch(err){ panel.innerHTML='<div style="text-align:center;color:#ff6b6b;font-size:11px;padding:14px;">Erreur détail : '+String((err&&err.message)||err)+'</div>'; }
+  }catch(e){}
 }
 window.g45EspnTennisToggle=g45EspnTennisToggle;
 /* Stats post-match À LA DEMANDE (Résultats ESPN → match Sofascore par date+nom → stats). Cache pour 0 re-quota. */
@@ -23973,25 +23982,13 @@ async function _g45F1SessOF1(ev, comp, o){
       }
     }catch(e){}
 
-    // Temps
+    // Temps au tour : meilleur tour de CHAQUE pilote (fiable en live et terminé)
     var xtm={};
-    var isR=o.isRace||o.isSprint;
     try{
-      if(isR){
-        var q=(o.state==='in')?('&date>'+new Date(Date.now()-5*60000).toISOString()):'';
-        var r=await fetch('https://api.openf1.org/v1/intervals?session_key='+sk+q);
-        if(r.ok){ var iv=await r.json(); var last={}; (iv||[]).forEach(function(x){ last[x.driver_number]=x; });
-          Object.keys(last).forEach(function(k){ var g=last[k].gap_to_leader; xtm[k]=(g==null||g===''||g===0)?'Leader':((typeof g==='string'&&/lap/i.test(g))?g:('+'+g)); });
-        }
-      } else {
-        var r2=await fetch('https://api.openf1.org/v1/laps?session_key='+sk);
-        if(r2.ok){ var lp=await r2.json(); var best={};
-          (lp||[]).forEach(function(l){ if(l.lap_duration && (!best[l.driver_number]||l.lap_duration<best[l.driver_number])) best[l.driver_number]=l.lap_duration; });
-          var nums=Object.keys(best).sort(function(a,b){ return best[a]-best[b]; });
-          if(nums.length){ var pole=best[nums[0]];
-            nums.forEach(function(k){ var d=best[k]; if(d===pole){ var mn=Math.floor(d/60), sc=d-60*mn; xtm[k]=mn>0?(mn+':'+(sc<10?'0':'')+sc.toFixed(3)):d.toFixed(3); } else xtm[k]='+'+(d-pole).toFixed(3); });
-          }
-        }
+      var rl=await fetch('https://api.openf1.org/v1/laps?session_key='+sk);
+      if(rl.ok){ var lp=await rl.json(); var best={};
+        (lp||[]).forEach(function(l){ if(l.lap_duration && (!best[l.driver_number]||l.lap_duration<best[l.driver_number])) best[l.driver_number]=l.lap_duration; });
+        Object.keys(best).forEach(function(k){ var d=best[k], mn=Math.floor(d/60), sc=d-60*mn; xtm[k]=(mn>0?(mn+':'+(sc<10?'0':'')+sc.toFixed(3)):d.toFixed(3)); });
       }
     }catch(e){}
 
@@ -24523,10 +24520,9 @@ function g45F1Session(idx){
           right=best?'<div style="flex:none;font-size:11px;font-weight:700;color:var(--t1);">'+ea(best)+(x.q3?' <span style="font-size:8px;color:#8b97c4;">Q3</span>':(x.q2?' <span style="font-size:8px;color:#8b97c4;">Q2</span>':' <span style="font-size:8px;color:#8b97c4;">Q1</span>'))+'</div>':'';
         }
       }
-      // Secours OpenF1 (séance live/sans chrono Jolpica) : affiche le TEMPS s'il manque à droite
+      // Secours OpenF1 : meilleur tour du pilote quand le chrono Jolpica manque (séance live)
       if(!right && ofx && ofx.time){
-        var _lead=/leader/i.test(ofx.time);
-        right='<div style="flex:none;font-size:11px;font-weight:700;color:'+(_lead?'#f0c828':'var(--t1)')+';">'+ea(ofx.time)+'</div>';
+        right='<div style="flex:none;font-size:11px;font-weight:700;color:var(--t1);">'+ea(ofx.time)+'<span style="font-size:8px;color:#8b97c4;font-weight:600;"> tour</span></div>';
       }
       var cons=(x&&x.cons)?'<div style="font-size:9px;color:var(--t3);margin-top:1px;">'+ea(x.cons)+'</div>'
               :((ofx&&ofx.team)?'<div style="font-size:9px;color:'+(ofx.col?ea(ofx.col):'var(--t3)')+';margin-top:1px;font-weight:600;">'+ea(ofx.team)+'</div>':'');
