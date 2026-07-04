@@ -21898,7 +21898,7 @@ async function g45TennisH2H(btn){
       return (mh===hL&&ma===aL)||(mh===aL&&ma===hL);
     })[0];
     if(!match){ box.innerHTML='<div style="text-align:center;color:var(--t3);font-size:10px;padding:8px;">Match non couvert par Sofascore.</div>'; btn.disabled=false; return; }
-    var mid=match.id, ck='g45tenh2h2_'+mid, bundle=null;
+    var mid=match.id, ck='g45tenh2h3_'+mid, bundle=null;
     try{ var raw=localStorage.getItem(ck); if(raw) bundle=JSON.parse(raw); }catch(e){}
     if(!bundle){
       var det=await _g45SofaTry(['/api/sofascore/v1/match/details?match_id='+mid]);
@@ -21919,33 +21919,36 @@ function _g45RenderTennisH2H(bundle, match, hN, aN){
   var swap=_g45TLast((match.homeTeam&&(match.homeTeam.shortName||match.homeTeam.name))||'')!==_g45TLast(hN);
   var out='<div style="background:rgba(255,206,84,.05);border:1px solid rgba(255,206,84,.2);border-radius:10px;padding:10px;">'
     +'<div style="font-size:10px;font-weight:800;color:#ffce54;text-align:center;margin-bottom:8px;">⚔️ H2H &amp; FORME</div>';
-  var any=false;
+  var any=false, h2hOk=false, formOk=false;
   // Contexte
   var tour=(det.tournament&&(det.tournament.name||(det.tournament.uniqueTournament&&det.tournament.uniqueTournament.name)))||'';
   var round=(det.roundInfo&&det.roundInfo.name)||''; var ground=det.groundType||'';
   if(tour||ground){ out+='<div style="font-size:10px;color:var(--t2);margin-bottom:7px;text-align:center;">'+(tour?'🏆 '+ea(tour)+(round?(' · '+ea(round)):''):'')+(ground?'  🎾 '+ea(ground):'')+'</div>'; any=true; }
-  // H2H
-  var duel=H.teamDuel||H.h2h||H.duel||H;
+  // H2H (cherche dans h2h ET dans details)
+  var duel=H.teamDuel||H.h2h||H.duel||det.teamDuel||det.h2h||H;
   var hw=(duel&&(duel.homeWins!=null?duel.homeWins:duel.home)), aw=(duel&&(duel.awayWins!=null?duel.awayWins:duel.away));
   if(hw!=null && aw!=null){
     var lw=swap?aw:hw, rw=swap?hw:aw, tot=(+lw||0)+(+rw||0), lp=tot>0?Math.round((+lw)/tot*100):50;
     out+='<div style="margin-top:2px;"><div style="display:flex;justify-content:space-between;font-size:11px;font-weight:800;color:var(--t1);margin-bottom:3px;"><span>'+ea(hN)+' '+lw+'</span><span style="color:var(--t3);font-size:9px;align-self:center;">'+tot+' confront.</span><span>'+rw+' '+ea(aN)+'</span></div>'
       +'<div style="display:flex;height:8px;border-radius:4px;overflow:hidden;background:rgba(255,255,255,.06);"><div style="width:'+lp+'%;background:#4d84ff;"></div><div style="width:'+(100-lp)+'%;background:#ff7b54;"></div></div></div>';
-    any=true;
+    any=true; h2hOk=true;
   }
   // Forme récente (5 derniers)
   function pills(arr){ if(!Array.isArray(arr)||!arr.length) return '<span style="font-size:9px;color:var(--t3);">—</span>'; return arr.slice(-5).map(function(x){ var s=String((x&&x.type)||x).toUpperCase().charAt(0); var col=(s==='W')?'#1ed760':(s==='L'?'#ff4545':'#8b97c4'); var lbl=(s==='W')?'V':(s==='L'?'D':(s==='D'?'N':(s||'?'))); return '<span style="display:inline-block;width:14px;height:14px;line-height:14px;text-align:center;border-radius:3px;font-size:8px;font-weight:800;background:'+col+';color:#0b0f1a;margin-left:2px;">'+lbl+'</span>'; }).join(''); }
-  var fh=F.homeTeam||F.home||{}, fa=F.awayTeam||F.away||{};
+  var fh=F.homeTeam||F.home||det.homeTeam||{}, fa=F.awayTeam||F.away||det.awayTeam||{};
   var formH=fh.form||fh.results||null, formA=fa.form||fa.results||null;
   var lH=swap?formA:formH, lA=swap?formH:formA;
   if((lH&&lH.length)||(lA&&lA.length)){
     out+='<div style="margin-top:9px;font-size:9px;color:var(--t3);margin-bottom:3px;">Forme récente (V/D/N)</div>'
       +'<div style="display:flex;justify-content:space-between;align-items:center;font-size:10px;color:var(--t2);"><span style="max-width:48%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">'+ea(hN)+'</span><span style="flex:none;">'+pills(lH)+'</span></div>'
       +'<div style="display:flex;justify-content:space-between;align-items:center;font-size:10px;color:var(--t2);margin-top:4px;"><span style="max-width:48%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">'+ea(aN)+'</span><span style="flex:none;">'+pills(lA)+'</span></div>';
-    any=true;
+    any=true; formOk=true;
   }
-  if(!any){
-    out+='<div style="font-size:9px;color:var(--t3);line-height:1.5;">Sofascore n\'a pas renvoyé H2H/forme sur ton offre RapidAPI.<br>Clés reçues → details : <span style="color:#8aa0ff;">'+ea(Object.keys(det).join(', ')||'∅')+'</span><br>h2h : <span style="color:#8aa0ff;">'+ea(Object.keys(H).join(', ')||'∅')+'</span> · forme : <span style="color:#8aa0ff;">'+ea(Object.keys(F).join(', ')||'∅')+'</span><br><i>Screenshot-moi ça et j\'ajuste les endpoints exacts.</i></div>';
+  if(!h2hOk || !formOk){
+    out+='<div style="font-size:8px;color:var(--t3);line-height:1.5;margin-top:9px;border-top:1px solid rgba(255,255,255,.07);padding-top:6px;">'
+      +(!h2hOk?'H2H introuvable · ':'')+(!formOk?'forme introuvable · ':'')+'<br>'
+      +'diag → details:['+ea(Object.keys(det).slice(0,20).join(','))+']<br>h2h:['+ea(Object.keys(H).join(','))+'] · form:['+ea(Object.keys(F).join(','))+']'
+      +'<br><i>Screenshot-moi ces clés et je verrouille les bons champs.</i></div>';
   }
   out+='</div>';
   return out;
