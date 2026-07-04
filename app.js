@@ -3577,7 +3577,7 @@ function renderRadarChart(){
     options:{
       responsive:true,maintainAspectRatio:false,
       plugins:{legend:{display:true,labels:{color:'#8b97c4',font:{size:10},boxWidth:10}}},
-      scales:{r:{ticks:{color:'#4f5d88',font:{size:9},backdropColor:'transparent'},grid:{color:'rgba(255,255,255,.07)'},pointLabels:{color:'#8b97c4',font:{size:9}}}}
+      scales:{r:{ticks:{color:'#aab4d4',font:{size:9},backdropColor:'rgba(10,14,26,.75)',showLabelBackdrop:true},grid:{color:'rgba(255,255,255,.22)'},angleLines:{color:'rgba(255,255,255,.22)'},pointLabels:{color:'#c3cce6',font:{size:10}}}}
     }
   });
 }
@@ -9788,7 +9788,7 @@ function renderRadarChart(){
     options:{
       responsive:true,maintainAspectRatio:false,
       plugins:{legend:{display:true,labels:{color:'#8b97c4',font:{size:10},boxWidth:10}}},
-      scales:{r:{ticks:{color:'#4f5d88',font:{size:9},backdropColor:'transparent'},grid:{color:'rgba(255,255,255,.07)'},pointLabels:{color:'#8b97c4',font:{size:9}}}}
+      scales:{r:{ticks:{color:'#aab4d4',font:{size:9},backdropColor:'rgba(10,14,26,.75)',showLabelBackdrop:true},grid:{color:'rgba(255,255,255,.22)'},angleLines:{color:'rgba(255,255,255,.22)'},pointLabels:{color:'#c3cce6',font:{size:10}}}}
     }
   });
 }
@@ -23929,18 +23929,26 @@ function _g45OF1CountryEN(c){
 async function _g45OF1YearSessions(year){
   if(!_g45OF1.year) _g45OF1.year={};
   if(_g45OF1.year[year]) return _g45OF1.year[year];
-  try{ var r=await fetch('https://api.openf1.org/v1/sessions?year='+year); if(!r.ok) return []; var a=await r.json(); a=Array.isArray(a)?a:[]; if(a.length) _g45OF1.year[year]=a; return a; }catch(e){ return []; }
+  try{
+    var r=await fetch('https://api.openf1.org/v1/sessions?year='+year);
+    if(!r.ok){ _g45OF1.diag='OpenF1 HTTP '+r.status+(r.status===401||r.status===403?' (auth requise)':(r.status===429?' (quota atteint)':''))+' · sessions '+year; return []; }
+    var a=await r.json(); a=Array.isArray(a)?a:[];
+    if(a.length){ _g45OF1.year[year]=a; } else { _g45OF1.diag='OpenF1 a répondu 200 mais 0 séance '+year; }
+    return a;
+  }catch(e){ _g45OF1.diag='OpenF1 injoignable : '+String((e&&e.message)||e).slice(0,50); return []; }
 }
 /* Séances OpenF1 du GP courant : match pays (FR→EN) sur le même week-end, sinon repli par date (±3 j). */
 async function _g45OF1EventSessions(ev){
   var year=new Date(ev.date).getFullYear();
-  var all=await _g45OF1YearSessions(year); if(!all.length) return [];
+  var all=await _g45OF1YearSessions(year); if(!all.length){ _g45OF1.diag=_g45OF1.diag||('0 séance OpenF1 pour '+year); return []; }
   var eng=_g45OF1CountryEN((ev.circuit&&ev.circuit.address&&ev.circuit.address.country)||'').toLowerCase();
   var evT=new Date(ev.date).getTime();
   var W4=4*24*3600000, W3=3*24*3600000;
   var byC = eng ? all.filter(function(s){ return String(s.country_name||'').toLowerCase()===eng && Math.abs(new Date(s.date_start).getTime()-evT)<W4; }) : [];
-  if(byC.length) return byC;
-  return all.filter(function(s){ return Math.abs(new Date(s.date_start).getTime()-evT)<W3; });
+  if(byC.length){ _g45OF1.diag=all.length+' séances '+year+' · '+byC.length+' pour ce GP (pays '+eng+')'; return byC; }
+  var byD = all.filter(function(s){ return Math.abs(new Date(s.date_start).getTime()-evT)<W3; });
+  _g45OF1.diag=all.length+' séances '+year+' · pays="'+eng+'" (0 match) · repli date : '+byD.length;
+  return byD;
 }
 async function _g45OF1LiveSession(ev){
   function inWin(x){ var now=Date.now(); var t0=new Date(x.date_start).getTime(), t1=new Date(x.date_end).getTime(); return !isNaN(t0)&&!isNaN(t1)&&now>=t0-5*60000&&now<=t1+15*60000; }
@@ -24204,7 +24212,7 @@ async function g45F1Sectors(){
   out.innerHTML=_g45F1XtraLoad('Chargement des secteurs…');
   var cur=window._g45F1Cur;
   var sess=await _g45OF1FindSessionByDate(cur.ev, cur.date, cur.label);
-  if(!sess){ out.innerHTML='<div class="fc" style="color:var(--t3);font-size:11px;">Séance introuvable côté OpenF1.</div>'; return; }
+  if(!sess){ out.innerHTML='<div class="fc" style="color:var(--t3);font-size:11px;">Séance introuvable côté OpenF1.<br><span style="font-size:9px;color:#8b97c4;">'+(_g45OF1.diag||'')+'</span></div>'; return; }
   var sk=sess.session_key;
   var drv=await _g45OF1Drivers(sk)||{};
   var lp;
@@ -24247,7 +24255,7 @@ async function g45F1Tyres(){
   out.innerHTML=_g45F1XtraLoad('Chargement pneus & arrêts…');
   var cur=window._g45F1Cur;
   var sess=await _g45OF1FindSessionByDate(cur.ev, cur.date, cur.label);
-  if(!sess){ out.innerHTML='<div class="fc" style="color:var(--t3);font-size:11px;">Séance introuvable côté OpenF1.</div>'; return; }
+  if(!sess){ out.innerHTML='<div class="fc" style="color:var(--t3);font-size:11px;">Séance introuvable côté OpenF1.<br><span style="font-size:9px;color:#8b97c4;">'+(_g45OF1.diag||'')+'</span></div>'; return; }
   var sk=sess.session_key;
   var drv=await _g45OF1Drivers(sk)||{};
   var stints=[], pits=[];
@@ -24340,7 +24348,7 @@ async function g45F1Flags(){
   out.innerHTML=_g45F1XtraLoad('Chargement drapeaux & pénalités…');
   var cur=window._g45F1Cur;
   var sess=await _g45OF1FindSessionByDate(cur.ev, cur.date, cur.label);
-  if(!sess){ out.innerHTML='<div class="fc" style="color:var(--t3);font-size:11px;">Séance introuvable côté OpenF1.</div>'; return; }
+  if(!sess){ out.innerHTML='<div class="fc" style="color:var(--t3);font-size:11px;">Séance introuvable côté OpenF1.<br><span style="font-size:9px;color:#8b97c4;">'+(_g45OF1.diag||'')+'</span></div>'; return; }
   var sk=sess.session_key;
   var drv=await _g45OF1Drivers(sk)||{};
   var rc=[];
