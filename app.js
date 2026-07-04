@@ -21746,9 +21746,6 @@ function _g45TennisPreMatch(c){
     var _tn=c.__grp||(c.tournament&&c.tournament.name)||'';
     function _surf(t){ t=(t||'').toLowerCase(); if(/wimbledon|queen|halle|eastbourne|newport|gazon|grass/.test(t)) return '🌱 Gazon'; if(/roland|french open|terre|clay|monte.?carlo|madrid|rome|hamburg|kitzbuhel|bastad|umag/.test(t)) return '🟠 Terre battue'; if(/us open|australian open|indian wells|miami|shanghai|cincinnati|dubai|acapulco|bercy|paris|masters|finals|dur|hard/.test(t)) return '🔵 Dur'; return ''; }
     var _sf=_surf(_tn), _ctxLine=(_tn||_sf)?'<div style="text-align:center;font-size:9px;color:var(--t3);margin-top:7px;">'+(_tn?'🏆 '+ea(_tn):'')+(_tn&&_sf?' · ':'')+(_sf||'')+'</div>':'';
-    // Bouton H2H & forme (Sofascore, à la demande)
-    var _hid='tenh2h-'+ea(c.id), _hdate=(c.date||c.startDate||'');
-    var _h2hBtn='<div style="margin-top:9px;"><button onclick="g45TennisH2H(this)" data-h="'+ea(hN)+'" data-a="'+ea(aN)+'" data-date="'+ea(_hdate)+'" data-box="'+_hid+'" style="width:100%;box-sizing:border-box;font-size:11px;font-weight:800;padding:8px 10px;border-radius:8px;cursor:pointer;border:1.5px solid rgba(255,206,84,.45);background:rgba(255,206,84,.10);color:#ffce54;">⚔️ H2H &amp; forme récente</button><div id="'+_hid+'" style="margin-top:7px;"></div></div>';
     var ch=card(home),ca=card(away);
     var h2h='https://www.google.com/search?q='+encodeURIComponent(hN+' vs '+aN+' head to head');
     var links='<div style="display:flex;gap:6px;flex-wrap:wrap;justify-content:center;margin-top:9px;">'
@@ -21764,7 +21761,6 @@ function _g45TennisPreMatch(c){
       +_ctxLine
       +(ven?'<div style="text-align:center;font-size:9px;color:var(--t3);margin-top:7px;">📍 '+ea(ven)+ea(crt)+'</div>':'')
       +links
-      +_h2hBtn
       +'</div>';
   }catch(e){ return ''; }
 }
