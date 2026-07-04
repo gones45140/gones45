@@ -24439,6 +24439,29 @@ function _g45F1Status(st){
   if(/^\+\d+ Laps?$/.test(st)) return st.replace('Laps','tours').replace('Lap','tour');
   return st||'';
 }
+function _g45F1GridHTML(grid, subtitle){
+  if(!grid||!grid.length) return '';
+  function ea(s){return String(s==null?'':s).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;');}
+  function car(g){
+    var col=g.col||'#4d84ff';
+    return '<div style="display:flex;flex-direction:column;align-items:center;gap:2px;margin-bottom:16px;">'
+      +'<div style="display:flex;align-items:center;gap:5px;">'
+        +'<span style="width:19px;height:19px;border-radius:50%;background:'+col+';color:#0b0f1a;font-size:10px;font-weight:900;display:flex;align-items:center;justify-content:center;flex:none;">'+(g.pos||'?')+'</span>'
+        +'<span style="font-size:17px;line-height:1;filter:drop-shadow(0 0 3px '+col+');">🏎️</span>'
+      +'</div>'
+      +'<div style="font-size:10px;font-weight:700;color:var(--t1);text-align:center;line-height:1.15;">'+(g.flag||'')+' '+ea(g.name)+'</div>'
+      +(g.team?'<div style="font-size:8px;color:'+col+';font-weight:600;">'+ea(g.team)+'</div>':'')
+      +'</div>';
+  }
+  var left='',right='';
+  grid.forEach(function(g,i){ if(i%2===0) left+=car(g); else right+=car(g); });
+  return '<div style="background:linear-gradient(180deg,rgba(24,24,28,.55),rgba(10,10,14,.55));border:1px solid rgba(255,255,255,.06);border-radius:12px;padding:14px 10px 6px;margin-bottom:10px;">'
+    +'<div style="text-align:center;font-size:11px;font-weight:800;color:#f0c828;letter-spacing:.5px;margin-bottom:2px;">🏁 GRILLE DE DÉPART</div>'
+    +(subtitle?'<div style="text-align:center;font-size:9px;color:var(--t3);margin-bottom:12px;">'+ea(subtitle)+'</div>':'<div style="height:8px;"></div>')
+    +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:0 12px;">'
+      +'<div>'+left+'</div><div style="margin-top:28px;">'+right+'</div>'
+    +'</div></div>';
+}
 function g45F1Session(idx){
   var box=document.getElementById('f1-session'); if(!box) return;
   var ev=_g45F1Cache.events.filter(function(e){return String(e.id)===String(window._g45F1Eid);})[0]; if(!ev) return;
@@ -24446,19 +24469,35 @@ function g45F1Session(idx){
   function ea(x){return String(x==null?'':x).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/"/g,'&quot;');}
   // surligner le chip actif
   comps.forEach(function(_,i){ var b=document.getElementById('f1s-'+i); if(b){ b.style.background=(i===idx)?'rgba(232,0,45,.18)':'rgba(255,255,255,.06)'; b.style.color=(i===idx)?'#ff6b81':'var(--t2)'; } });
-  var st=(c.status&&c.status.type)||{}; var state=st.state||'pre';
-  var rows=(c.competitors||[]).slice().sort(function(a,b){ return (a.order||99)-(b.order||99); });
-  if(!rows.length || state==='pre'){
-    var d=new Date(c.date||c.startDate||ev.date);
-    box.innerHTML='<div class="fc" style="color:var(--t3);text-align:center;">Séance pas encore courue.'+(isNaN(d)?'':'<br><small>📅 '+d.toLocaleDateString('fr-FR',{weekday:'long',day:'numeric',month:'long'})+' '+d.toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'})+'</small>')+'</div>';
-    return;
-  }
   var t=(c.type&&(c.type.abbreviation||c.type.text))||'';
   var _tt=String(t).toLowerCase();
   var isSprintQual=/sprint\s*(qual|shoot)/.test(_tt)||/shootout/.test(_tt)||_tt==='ss'||_tt==='sq';
   var isSprint=(/sprint/.test(_tt)&&!isSprintQual)||_tt==='sr';           // SPRINT (course) → écart
   var isRace=((/race/.test(_tt)&&!/sprint/.test(_tt)))||_tt==='race';     // Course → écart
   var isQual=(/qual/.test(_tt))||_tt==='qual'||_tt==='q'||isSprintQual;   // Qualif + Sprint Qualif → meilleur tour
+  var st=(c.status&&c.status.type)||{}; var state=st.state||'pre';
+  var rows=(c.competitors||[]).slice().sort(function(a,b){ return (a.order||99)-(b.order||99); });
+  if(!rows.length || state==='pre'){
+    var d=new Date(c.date||c.startDate||ev.date);
+    var _note='<div class="fc" style="color:var(--t3);text-align:center;">Séance pas encore courue.'+(isNaN(d)?'':'<br><small>📅 '+d.toLocaleDateString('fr-FR',{weekday:'long',day:'numeric',month:'long'})+' '+d.toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'})+'</small>')+'</div>';
+    // Grille de départ connue : Course ← Qualif · Sprint (SR) ← Sprint Qualif (SS)
+    if(isRace||isSprint){
+      var _src=(ev.competitions||[]).filter(function(cc){ var a=String((cc.type&&(cc.type.abbreviation||cc.type.text))||'').toLowerCase(); return isSprint?(a==='ss'||a==='sq'||/sprint\s*(qual|shoot)/.test(a)||/shootout/.test(a)):(a==='qual'||a==='q'||(/qual/.test(a)&&!/sprint/.test(a))); })[0];
+      var _srcRows=_src?((_src.competitors||[]).slice().filter(function(r){return (r.order||0)>0;}).sort(function(a,b){return (a.order||99)-(b.order||99);})):[];
+      if(_srcRows.length){
+        var _mkGrid=function(colors){
+          var grid=_srcRows.map(function(r){ var a=r.athlete||{}; var k=(typeof _g45F1Key==='function')?_g45F1Key(a.displayName||a.fullName||''):''; var cm=colors&&colors[k]; var fh=a.flag&&a.flag.href; var fl=fh?('<img src="'+String(fh).replace(/"/g,'&quot;')+'" style="width:16px;height:11px;border-radius:2px;object-fit:cover;vertical-align:middle;">'):''; return {pos:(r.order||0), name:(a.displayName||a.fullName||'?'), flag:fl, team:(cm&&cm.team)||'', col:(cm&&cm.col)||''}; });
+          return _g45F1GridHTML(grid, isSprint?"D'après la Sprint Qualif (SS)":"D'après les Qualifications");
+        };
+        box.innerHTML=_mkGrid(null)+_note;
+        // Couleurs d'écurie via OpenF1 (séance source déjà courue), silencieux si indispo
+        try{ _g45F1SessOF1(ev, _src, {isRace:false,isQual:!isSprint,isSprint:false,sprintQual:isSprint,type:(_src.type&&(_src.type.abbreviation||_src.type.text))||'',state:'post'}).then(function(m){ if(m) box.innerHTML=_mkGrid(m)+_note; }); }catch(e){}
+        return;
+      }
+    }
+    box.innerHTML=_note;
+    return;
+  }
   window._g45F1Cur={ev:ev, date:(c.date||c.startDate||ev.date), label:t};
   var _ofMap=null, _lastJol=null;
   function _f1tyPill(cc){ if(!cc) return ''; var m={SOFT:['S','#ff2d2d'],MEDIUM:['M','#f0c828'],HARD:['H','#e8ecf5'],INTERMEDIATE:['I','#3fb950'],WET:['W','#4d84ff']}; var tt=m[String(cc).toUpperCase()]; if(!tt) return ''; return '<span title="'+ea(cc)+'" style="display:inline-block;width:15px;height:15px;line-height:14px;text-align:center;border-radius:50%;border:1.5px solid '+tt[1]+';color:'+tt[1]+';font-size:8px;font-weight:900;margin-left:6px;flex:none;vertical-align:middle;">'+tt[0]+'</span>'; }
