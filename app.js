@@ -20458,6 +20458,43 @@ window.g45CheckOddsQuota=g45CheckOddsQuota;
 var _G45_MYBOOKS={'winamax':'Winamax','betclic':'Betclic','unibet':'Unibet','pmu':'PMU','betsson':'Betsson','bet365':'Bet365','pinnacle':'Pinnacle'};
 function _g45MyBook(key){ var k=(key||'').toLowerCase(); for(var p in _G45_MYBOOKS){ if(k.indexOf(p)===0) return _G45_MYBOOKS[p]; } return null; }
 function _g45BookLabel(key,title){ var mine=_g45MyBook(key); return mine?(mine+' 🇫🇷'):(title||key||''); }
+/* Détecteur de value : cote juste = no-vig (Pinnacle si présent, sinon consensus marché) */
+function _g45ValueBlock(ref, hN, aN, srcLabel){
+  if(!ref || (!ref.H && !ref.A)) return '';
+  var iH=ref.H?1/ref.H:0, iD=ref.D?1/ref.D:0, iA=ref.A?1/ref.A:0;
+  var sum=iH+iD+iA; if(sum<=0) return '';
+  var fH=iH/sum, fD=iD/sum, fA=iA/sum;
+  function ea(s){return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/"/g,'&quot;');}
+  function row(lbl, prob, pinPrice){
+    if(!prob) return '';
+    return '<tr>'
+      +'<td style="padding:5px 4px;font-size:11px;color:var(--t1);font-weight:700;">'+ea(lbl)+'</td>'
+      +'<td style="text-align:center;font-size:11px;color:var(--t2);">'+(pinPrice?pinPrice.toFixed(2):'—')+'</td>'
+      +'<td style="text-align:center;font-size:11px;color:#8aa0ff;font-weight:800;">'+(1/prob).toFixed(2)+'</td>'
+      +'<td style="text-align:center;"><input type="text" inputmode="decimal" data-fp="'+prob.toFixed(5)+'" oninput="g45ValueCalc(this)" placeholder="cote" style="width:54px;padding:4px 5px;font-size:11px;text-align:center;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.14);border-radius:6px;color:var(--t1);"></td>'
+      +'<td style="text-align:center;min-width:58px;"><span class="g45val-out" style="font-size:11px;font-weight:800;color:var(--t3);">—</span></td>'
+      +'</tr>';
+  }
+  return '<div style="background:rgba(138,160,255,.06);border:1px solid rgba(138,160,255,.22);border-radius:10px;padding:10px;margin-top:8px;">'
+    +'<div style="font-size:10px;font-weight:800;color:#8aa0ff;margin-bottom:3px;">🎯 DÉTECTEUR DE VALUE — no-vig '+ea(srcLabel||'Pinnacle')+'</div>'
+    +'<div style="font-size:9px;color:var(--t3);margin-bottom:7px;">« Juste » = cote sans marge. Entre ta cote : si elle bat la juste, c\'est du +value (edge &gt; 0).</div>'
+    +'<table style="width:100%;border-collapse:collapse;">'
+    +'<tr style="font-size:9px;color:var(--t3);text-transform:uppercase;"><th style="text-align:left;padding:3px 4px;">Issue</th><th style="padding:3px 4px;">'+ea(srcLabel||'Pin')+'</th><th style="padding:3px 4px;">Juste</th><th style="padding:3px 4px;">Ta cote</th><th style="padding:3px 4px;">Value</th></tr>'
+    +row('1 · '+String(hN).slice(0,10), fH, ref.H)
+    +(ref.D?row('X', fD, ref.D):'')
+    +row('2 · '+String(aN).slice(0,10), fA, ref.A)
+    +'</table></div>';
+}
+function g45ValueCalc(inp){
+  var fp=parseFloat(inp.getAttribute('data-fp'))||0;
+  var c=parseFloat(String(inp.value).replace(',','.'));
+  var tr=inp.parentNode&&inp.parentNode.parentNode; var out=tr&&tr.querySelector('.g45val-out'); if(!out) return;
+  if(!c||c<=1||!fp){ out.textContent='—'; out.style.color='var(--t3)'; return; }
+  var edge=(c*fp-1)*100;
+  out.textContent=(edge>=0?'+':'')+edge.toFixed(1)+'%';
+  out.style.color=edge>=0.5?'#2ecc71':(edge>-0.5?'#f0b020':'#ff6b6b');
+}
+window.g45ValueCalc=g45ValueCalc;
 function _g45RenderOdds(ev, hN, aN, remain){
   function ea(s){return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/"/g,'&quot;');}
   var FRBK=[{k:'winamax_fr',n:'Winamax',d:'winamax.fr'},{k:'betclic_fr',n:'Betclic',d:'betclic.fr'},{k:'unibet_fr',n:'Unibet',d:'unibet.fr'},{k:'pmu_fr',n:'PMU',d:'pmu.fr'},{k:'betsson',n:'Betsson',d:'betsson.fr'},{k:'bet365',n:'Bet365',d:'bet365.fr'},{k:'pinnacle',n:'Pinnacle',d:'pinnacle.com'}];
@@ -20490,6 +20527,15 @@ function _g45RenderOdds(ev, hN, aN, remain){
   });
   if(!rows){ rows='<tr><td style="padding:5px 4px;font-size:11px;color:var(--t3);">Meilleures cotes (tous books)</td>'+cell(best.H,true)+cell(best.D,true)+cell(best.A,true)+'</tr>'; }
   var rem=(remain!=null?'<span style="float:right;color:var(--t3);font-weight:600;">'+ea(remain)+' req. restantes</span>':'');
+  // Détecteur de value : Pinnacle si présent, sinon consensus (moyenne des books)
+  var _pin=bksByKey['pinnacle'], _ref, _srcLbl;
+  if(_pin){ _ref={H:priceByName(_pin,homeEv),D:priceByName(_pin,'DRAW'),A:priceByName(_pin,awayEv)}; _srcLbl='Pinnacle'; }
+  else {
+    var sH=0,nH=0,sD=0,nD=0,sA=0,nA=0;
+    (ev.bookmakers||[]).forEach(function(b){ var pH=priceByName(b,homeEv),pD=priceByName(b,'DRAW'),pA=priceByName(b,awayEv); if(pH){sH+=1/pH;nH++;} if(pD){sD+=1/pD;nD++;} if(pA){sA+=1/pA;nA++;} });
+    _ref={H:nH?1/(sH/nH):null,D:nD?1/(sD/nD):null,A:nA?1/(sA/nA):null}; _srcLbl='consensus';
+  }
+  var _valueBlock=_g45ValueBlock(_ref, hN, aN, _srcLbl);
   return '<div style="background:rgba(46,204,113,.06);border:1px solid rgba(46,204,113,.2);border-radius:10px;padding:10px;">'
     +'<div style="font-size:10px;font-weight:800;color:#2ecc71;margin-bottom:8px;">💰 COTES RÉELLES (1X2)'+rem+'</div>'
     +'<table style="width:100%;border-collapse:collapse;">'
@@ -20497,6 +20543,7 @@ function _g45RenderOdds(ev, hN, aN, remain){
     +rows
     +'</table>'
     +'<div style="font-size:9px;color:var(--t3);text-align:center;margin-top:7px;font-style:italic;">En vert = meilleure cote du marché. Source : The Odds API.</div>'
+    +_valueBlock
     +'</div>';
 }
 async function g45LoadMatchAI(btn){
@@ -20676,10 +20723,15 @@ async function g45TennisOdds(btn){
       var nm=(typeof _g45MyBook==='function'&&_g45MyBook(b.key))||b.title||b.key;
       return '<tr><td style="font-size:11px;color:var(--t2);padding:5px;">'+ea(nm)+'</td>'+cell(a,b1)+cell(c2,b2)+'</tr>';
     }).join('');
+    var _tpin=(ev.bookmakers||[]).filter(function(b){return b.key==='pinnacle';})[0], _tref, _tsrc;
+    if(_tpin){ _tref={H:pr(_tpin,p1),D:null,A:pr(_tpin,p2)}; _tsrc='Pinnacle'; }
+    else { var s1=0,n1=0,s2=0,n2=0; (ev.bookmakers||[]).forEach(function(b){ var a=pr(b,p1),c=pr(b,p2); if(a){s1+=1/a;n1++;} if(c){s2+=1/c;n2++;} }); _tref={H:n1?1/(s1/n1):null,D:null,A:n2?1/(s2/n2):null}; _tsrc='consensus'; }
+    var _tval=(typeof _g45ValueBlock==='function')?_g45ValueBlock(_tref, p1.split(' ').pop(), p2.split(' ').pop(), _tsrc):'';
     box.innerHTML='<div style="background:rgba(10,14,24,.93);border:1px solid rgba(46,204,113,.35);border-radius:10px;padding:10px 12px;">'
       +'<div style="font-size:10px;font-weight:800;color:#2ecc71;margin-bottom:6px;">\ud83d\udcb0 COTES \u2014 '+ea(p1)+' vs '+ea(p2)+'</div>'
       +'<table style="width:100%;border-collapse:collapse;"><tr><th></th><th style="font-size:9px;color:var(--t3);font-weight:700;">'+ea(p1.split(' ').pop())+'</th><th style="font-size:9px;color:var(--t3);font-weight:700;">'+ea(p2.split(' ').pop())+'</th></tr>'+rows+'</table>'
       +'<div style="font-size:9px;color:var(--t3);text-align:center;margin-top:6px;font-style:italic;">Meilleure cote en vert \u00b7 The Odds API (cache 15 min).</div>'
+      +_tval
       +'</div>';
     box.setAttribute('data-loaded','1');
   }catch(e){ box.innerHTML='<div style="color:#ff6b6b;font-size:11px;padding:8px;">Erreur cotes : '+String(e.message||e).slice(0,80)+'</div>'; }
