@@ -3577,7 +3577,7 @@ function renderRadarChart(){
     options:{
       responsive:true,maintainAspectRatio:false,
       plugins:{legend:{display:true,labels:{color:'#8b97c4',font:{size:10},boxWidth:10}}},
-      scales:{r:{ticks:{color:'#aab4d4',font:{size:9},backdropColor:'rgba(10,14,26,.75)',showLabelBackdrop:true},grid:{color:'rgba(255,255,255,.22)'},angleLines:{color:'rgba(255,255,255,.22)'},pointLabels:{color:'#c3cce6',font:{size:10}}}}
+      scales:{r:{ticks:{color:'#4f5d88',font:{size:9},backdropColor:'transparent'},grid:{color:'rgba(255,255,255,.07)'},pointLabels:{color:'#8b97c4',font:{size:9}}}}
     }
   });
 }
@@ -9788,7 +9788,7 @@ function renderRadarChart(){
     options:{
       responsive:true,maintainAspectRatio:false,
       plugins:{legend:{display:true,labels:{color:'#8b97c4',font:{size:10},boxWidth:10}}},
-      scales:{r:{ticks:{color:'#aab4d4',font:{size:9},backdropColor:'rgba(10,14,26,.75)',showLabelBackdrop:true},grid:{color:'rgba(255,255,255,.22)'},angleLines:{color:'rgba(255,255,255,.22)'},pointLabels:{color:'#c3cce6',font:{size:10}}}}
+      scales:{r:{ticks:{color:'#4f5d88',font:{size:9},backdropColor:'transparent'},grid:{color:'rgba(255,255,255,.07)'},pointLabels:{color:'#8b97c4',font:{size:9}}}}
     }
   });
 }
@@ -21880,6 +21880,7 @@ async function g45EspnMatchStats(cid, btn){
 }
 window.g45EspnMatchStats=g45EspnMatchStats;
 /* H2H & forme tennis À LA DEMANDE : match Sofascore par date+nom → /match/details (endpoint prouvé), rendu défensif. */
+async function _g45SofaTry(paths){ for(var i=0;i<paths.length;i++){ try{ var r=await g45Sofa6(paths[i]); if(r && !r.__err) return r; }catch(e){} } return null; }
 async function g45TennisH2H(btn){
   var box=document.getElementById(btn.dataset.box); if(!box) return;
   if(box.getAttribute('data-loaded')==='1'){ box.style.display=(box.style.display==='none'?'':'none'); return; }
@@ -21897,47 +21898,54 @@ async function g45TennisH2H(btn){
       return (mh===hL&&ma===aL)||(mh===aL&&ma===hL);
     })[0];
     if(!match){ box.innerHTML='<div style="text-align:center;color:var(--t3);font-size:10px;padding:8px;">Match non couvert par Sofascore.</div>'; btn.disabled=false; return; }
-    var sk='g45tenh2h_'+match.id, det=null;
-    try{ var raw=localStorage.getItem(sk); if(raw) det=JSON.parse(raw); }catch(e){}
-    if(!det){
-      det=await g45Sofa6('/api/sofascore/v1/match/details?match_id='+match.id);
-      if(det && det.__err){ box.innerHTML=_g45SofaErr(det.__err); btn.disabled=false; return; }
-      try{ localStorage.setItem(sk, JSON.stringify(det)); }catch(e){}
+    var mid=match.id, ck='g45tenh2h2_'+mid, bundle=null;
+    try{ var raw=localStorage.getItem(ck); if(raw) bundle=JSON.parse(raw); }catch(e){}
+    if(!bundle){
+      var det=await _g45SofaTry(['/api/sofascore/v1/match/details?match_id='+mid]);
+      var h2h=await _g45SofaTry(['/api/sofascore/v1/match/h2h?match_id='+mid,'/api/sofascore/v1/match/head2head?match_id='+mid,'/api/sofascore/v1/match/duel?match_id='+mid,'/api/sofascore/v1/match/h2h-events?match_id='+mid]);
+      var form=await _g45SofaTry(['/api/sofascore/v1/match/pregame-form?match_id='+mid,'/api/sofascore/v1/match/pregame_form?match_id='+mid,'/api/sofascore/v1/match/form?match_id='+mid]);
+      bundle={det:det||{}, h2h:h2h||{}, form:form||{}};
+      try{ localStorage.setItem(ck, JSON.stringify(bundle)); }catch(e){}
     }
-    box.innerHTML=_g45RenderTennisH2H(det, match, hN, aN);
+    box.innerHTML=_g45RenderTennisH2H(bundle, match, hN, aN);
     box.setAttribute('data-loaded','1');
   }catch(e){ box.innerHTML='<div style="color:#ff6b6b;font-size:10px;padding:8px;">Erreur H2H.</div>'; }
   btn.disabled=false;
 }
 window.g45TennisH2H=g45TennisH2H;
-function _g45RenderTennisH2H(det, match, hN, aN){
+function _g45RenderTennisH2H(bundle, match, hN, aN){
   function ea(s){return String(s==null?'':s).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;');}
-  det=det||{};
+  bundle=bundle||{}; var det=bundle.det||{}, H=bundle.h2h||{}, F=bundle.form||{};
+  var swap=_g45TLast((match.homeTeam&&(match.homeTeam.shortName||match.homeTeam.name))||'')!==_g45TLast(hN);
   var out='<div style="background:rgba(255,206,84,.05);border:1px solid rgba(255,206,84,.2);border-radius:10px;padding:10px;">'
-    +'<div style="font-size:10px;font-weight:800;color:#ffce54;text-align:center;margin-bottom:8px;">⚔️ H2H &amp; CONTEXTE</div>';
+    +'<div style="font-size:10px;font-weight:800;color:#ffce54;text-align:center;margin-bottom:8px;">⚔️ H2H &amp; FORME</div>';
   var any=false;
-  // Contexte (tournoi / tour / surface) — champs les plus probables
-  var tour=(det.tournament&&(det.tournament.name||(det.tournament.uniqueTournament&&det.tournament.uniqueTournament.name)))||det.seasonName||'';
-  var round=(det.roundInfo&&det.roundInfo.name)||det.round||'';
-  var ground=det.groundType||det.surface||(det.venue&&det.venue.stadium&&det.venue.stadium.name)||'';
-  if(tour){ out+='<div style="font-size:10px;color:var(--t2);margin-bottom:3px;">🏆 '+ea(tour)+(round?(' · '+ea(round)):'')+'</div>'; any=true; }
-  if(ground){ out+='<div style="font-size:10px;color:var(--t2);margin-bottom:3px;">🎾 '+ea(ground)+'</div>'; any=true; }
-  // H2H : plusieurs formes possibles selon le wrapper Sofascore
-  var duel=det.h2h||det.headToHead||det.teamDuel||det.h2hDuel||null;
-  var hw=null,aw=null;
-  if(duel){
-    hw=(duel.homeWins!=null?duel.homeWins:(duel.home!=null?duel.home:(duel.teamDuel&&duel.teamDuel.homeWins)));
-    aw=(duel.awayWins!=null?duel.awayWins:(duel.away!=null?duel.away:(duel.teamDuel&&duel.teamDuel.awayWins)));
-  }
+  // Contexte
+  var tour=(det.tournament&&(det.tournament.name||(det.tournament.uniqueTournament&&det.tournament.uniqueTournament.name)))||'';
+  var round=(det.roundInfo&&det.roundInfo.name)||''; var ground=det.groundType||'';
+  if(tour||ground){ out+='<div style="font-size:10px;color:var(--t2);margin-bottom:7px;text-align:center;">'+(tour?'🏆 '+ea(tour)+(round?(' · '+ea(round)):''):'')+(ground?'  🎾 '+ea(ground):'')+'</div>'; any=true; }
+  // H2H
+  var duel=H.teamDuel||H.h2h||H.duel||H;
+  var hw=(duel&&(duel.homeWins!=null?duel.homeWins:duel.home)), aw=(duel&&(duel.awayWins!=null?duel.awayWins:duel.away));
   if(hw!=null && aw!=null){
-    var swap=_g45TLast((match.homeTeam&&(match.homeTeam.shortName||match.homeTeam.name))||'')!==_g45TLast(hN);
-    var lw=swap?aw:hw, rw=swap?hw:aw, tot=(lw||0)+(rw||0), lp=tot>0?Math.round(lw/tot*100):50;
-    out+='<div style="margin-top:8px;"><div style="display:flex;justify-content:space-between;font-size:11px;font-weight:800;color:var(--t1);margin-bottom:3px;"><span>'+ea(hN)+' '+lw+'</span><span style="color:var(--t3);font-size:9px;">H2H</span><span>'+rw+' '+ea(aN)+'</span></div>'
-      +'<div style="display:flex;height:7px;border-radius:4px;overflow:hidden;background:rgba(255,255,255,.06);"><div style="width:'+lp+'%;background:#4d84ff;"></div><div style="width:'+(100-lp)+'%;background:#ff7b54;"></div></div></div>';
+    var lw=swap?aw:hw, rw=swap?hw:aw, tot=(+lw||0)+(+rw||0), lp=tot>0?Math.round((+lw)/tot*100):50;
+    out+='<div style="margin-top:2px;"><div style="display:flex;justify-content:space-between;font-size:11px;font-weight:800;color:var(--t1);margin-bottom:3px;"><span>'+ea(hN)+' '+lw+'</span><span style="color:var(--t3);font-size:9px;align-self:center;">'+tot+' confront.</span><span>'+rw+' '+ea(aN)+'</span></div>'
+      +'<div style="display:flex;height:8px;border-radius:4px;overflow:hidden;background:rgba(255,255,255,.06);"><div style="width:'+lp+'%;background:#4d84ff;"></div><div style="width:'+(100-lp)+'%;background:#ff7b54;"></div></div></div>';
+    any=true;
+  }
+  // Forme récente (5 derniers)
+  function pills(arr){ if(!Array.isArray(arr)||!arr.length) return '<span style="font-size:9px;color:var(--t3);">—</span>'; return arr.slice(-5).map(function(x){ var s=String((x&&x.type)||x).toUpperCase().charAt(0); var col=(s==='W')?'#1ed760':(s==='L'?'#ff4545':'#8b97c4'); var lbl=(s==='W')?'V':(s==='L'?'D':(s==='D'?'N':(s||'?'))); return '<span style="display:inline-block;width:14px;height:14px;line-height:14px;text-align:center;border-radius:3px;font-size:8px;font-weight:800;background:'+col+';color:#0b0f1a;margin-left:2px;">'+lbl+'</span>'; }).join(''); }
+  var fh=F.homeTeam||F.home||{}, fa=F.awayTeam||F.away||{};
+  var formH=fh.form||fh.results||null, formA=fa.form||fa.results||null;
+  var lH=swap?formA:formH, lA=swap?formH:formA;
+  if((lH&&lH.length)||(lA&&lA.length)){
+    out+='<div style="margin-top:9px;font-size:9px;color:var(--t3);margin-bottom:3px;">Forme récente (V/D/N)</div>'
+      +'<div style="display:flex;justify-content:space-between;align-items:center;font-size:10px;color:var(--t2);"><span style="max-width:48%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">'+ea(hN)+'</span><span style="flex:none;">'+pills(lH)+'</span></div>'
+      +'<div style="display:flex;justify-content:space-between;align-items:center;font-size:10px;color:var(--t2);margin-top:4px;"><span style="max-width:48%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">'+ea(aN)+'</span><span style="flex:none;">'+pills(lA)+'</span></div>';
     any=true;
   }
   if(!any){
-    out+='<div style="font-size:9px;color:var(--t3);line-height:1.5;">Sofascore n\'a pas renvoyé le H2H/la forme pour ce match dans <code>/match/details</code>.<br>Champs reçus :<br><span style="color:#8aa0ff;word-break:break-word;">'+ea(Object.keys(det).join(', ')||'(vide)')+'</span><br><i>Screenshot-moi ça et je branche le H2H exact.</i></div>';
+    out+='<div style="font-size:9px;color:var(--t3);line-height:1.5;">Sofascore n\'a pas renvoyé H2H/forme sur ton offre RapidAPI.<br>Clés reçues → details : <span style="color:#8aa0ff;">'+ea(Object.keys(det).join(', ')||'∅')+'</span><br>h2h : <span style="color:#8aa0ff;">'+ea(Object.keys(H).join(', ')||'∅')+'</span> · forme : <span style="color:#8aa0ff;">'+ea(Object.keys(F).join(', ')||'∅')+'</span><br><i>Screenshot-moi ça et j\'ajuste les endpoints exacts.</i></div>';
   }
   out+='</div>';
   return out;
@@ -23909,7 +23917,7 @@ async function g45F1Open(){
   try{ if(typeof g45StatsLocal==='function' && !g45StatsLocal().length && typeof g45StatsLoadPublic==='function'){ g45StatsLoadPublic().then(function(a){ if(a&&a.length) g45F1Open(); }); } }catch(e){}
 }
 var _g45OF1={drv:{}, timer:null};
-function _g45F1LiveStop(){ if(_g45OF1.timer){ clearInterval(_g45OF1.timer); _g45OF1.timer=null; } if(_g45OF1.mapTimer){ clearInterval(_g45OF1.mapTimer); _g45OF1.mapTimer=null; } }
+function _g45F1LiveStop(){ if(_g45OF1.timer){ clearInterval(_g45OF1.timer); _g45OF1.timer=null; } if(_g45OF1.mapTimer){ clearInterval(_g45OF1.mapTimer); _g45OF1.mapTimer=null; } if(typeof _g45F1SessRefreshStop==='function') _g45F1SessRefreshStop(); }
 async function _g45OF1Drivers(sk){
   if(_g45OF1.drv[sk]) return _g45OF1.drv[sk];
   try{
@@ -23929,26 +23937,18 @@ function _g45OF1CountryEN(c){
 async function _g45OF1YearSessions(year){
   if(!_g45OF1.year) _g45OF1.year={};
   if(_g45OF1.year[year]) return _g45OF1.year[year];
-  try{
-    var r=await fetch('https://api.openf1.org/v1/sessions?year='+year);
-    if(!r.ok){ _g45OF1.diag='OpenF1 HTTP '+r.status+(r.status===401||r.status===403?' (auth requise)':(r.status===429?' (quota atteint)':''))+' · sessions '+year; return []; }
-    var a=await r.json(); a=Array.isArray(a)?a:[];
-    if(a.length){ _g45OF1.year[year]=a; } else { _g45OF1.diag='OpenF1 a répondu 200 mais 0 séance '+year; }
-    return a;
-  }catch(e){ _g45OF1.diag='OpenF1 injoignable : '+String((e&&e.message)||e).slice(0,50); return []; }
+  try{ var r=await fetch('https://api.openf1.org/v1/sessions?year='+year); if(!r.ok) return []; var a=await r.json(); a=Array.isArray(a)?a:[]; if(a.length) _g45OF1.year[year]=a; return a; }catch(e){ return []; }
 }
 /* Séances OpenF1 du GP courant : match pays (FR→EN) sur le même week-end, sinon repli par date (±3 j). */
 async function _g45OF1EventSessions(ev){
   var year=new Date(ev.date).getFullYear();
-  var all=await _g45OF1YearSessions(year); if(!all.length){ _g45OF1.diag=_g45OF1.diag||('0 séance OpenF1 pour '+year); return []; }
+  var all=await _g45OF1YearSessions(year); if(!all.length) return [];
   var eng=_g45OF1CountryEN((ev.circuit&&ev.circuit.address&&ev.circuit.address.country)||'').toLowerCase();
   var evT=new Date(ev.date).getTime();
   var W4=4*24*3600000, W3=3*24*3600000;
   var byC = eng ? all.filter(function(s){ return String(s.country_name||'').toLowerCase()===eng && Math.abs(new Date(s.date_start).getTime()-evT)<W4; }) : [];
-  if(byC.length){ _g45OF1.diag=all.length+' séances '+year+' · '+byC.length+' pour ce GP (pays '+eng+')'; return byC; }
-  var byD = all.filter(function(s){ return Math.abs(new Date(s.date_start).getTime()-evT)<W3; });
-  _g45OF1.diag=all.length+' séances '+year+' · pays="'+eng+'" (0 match) · repli date : '+byD.length;
-  return byD;
+  if(byC.length) return byC;
+  return all.filter(function(s){ return Math.abs(new Date(s.date_start).getTime()-evT)<W3; });
 }
 async function _g45OF1LiveSession(ev){
   function inWin(x){ var now=Date.now(); var t0=new Date(x.date_start).getTime(), t1=new Date(x.date_end).getTime(); return !isNaN(t0)&&!isNaN(t1)&&now>=t0-5*60000&&now<=t1+15*60000; }
@@ -24212,7 +24212,7 @@ async function g45F1Sectors(){
   out.innerHTML=_g45F1XtraLoad('Chargement des secteurs…');
   var cur=window._g45F1Cur;
   var sess=await _g45OF1FindSessionByDate(cur.ev, cur.date, cur.label);
-  if(!sess){ out.innerHTML='<div class="fc" style="color:var(--t3);font-size:11px;">Séance introuvable côté OpenF1.<br><span style="font-size:9px;color:#8b97c4;">'+(_g45OF1.diag||'')+'</span></div>'; return; }
+  if(!sess){ out.innerHTML='<div class="fc" style="color:var(--t3);font-size:11px;">Séance introuvable côté OpenF1.</div>'; return; }
   var sk=sess.session_key;
   var drv=await _g45OF1Drivers(sk)||{};
   var lp;
@@ -24255,7 +24255,7 @@ async function g45F1Tyres(){
   out.innerHTML=_g45F1XtraLoad('Chargement pneus & arrêts…');
   var cur=window._g45F1Cur;
   var sess=await _g45OF1FindSessionByDate(cur.ev, cur.date, cur.label);
-  if(!sess){ out.innerHTML='<div class="fc" style="color:var(--t3);font-size:11px;">Séance introuvable côté OpenF1.<br><span style="font-size:9px;color:#8b97c4;">'+(_g45OF1.diag||'')+'</span></div>'; return; }
+  if(!sess){ out.innerHTML='<div class="fc" style="color:var(--t3);font-size:11px;">Séance introuvable côté OpenF1.</div>'; return; }
   var sk=sess.session_key;
   var drv=await _g45OF1Drivers(sk)||{};
   var stints=[], pits=[];
@@ -24348,7 +24348,7 @@ async function g45F1Flags(){
   out.innerHTML=_g45F1XtraLoad('Chargement drapeaux & pénalités…');
   var cur=window._g45F1Cur;
   var sess=await _g45OF1FindSessionByDate(cur.ev, cur.date, cur.label);
-  if(!sess){ out.innerHTML='<div class="fc" style="color:var(--t3);font-size:11px;">Séance introuvable côté OpenF1.<br><span style="font-size:9px;color:#8b97c4;">'+(_g45OF1.diag||'')+'</span></div>'; return; }
+  if(!sess){ out.innerHTML='<div class="fc" style="color:var(--t3);font-size:11px;">Séance introuvable côté OpenF1.</div>'; return; }
   var sk=sess.session_key;
   var drv=await _g45OF1Drivers(sk)||{};
   var rc=[];
@@ -24542,8 +24542,33 @@ function _g45F1GridHTML(grid, subtitle){
       +'<div>'+left+'</div><div style="margin-top:28px;">'+right+'</div>'
     +'</div></div>';
 }
+/* Auto-refresh du classement pendant une séance EN DIRECT (ESPN, 60 s, pause batterie). */
+var _g45F1SessTimer=null, _g45F1SessIdx=null;
+function _g45F1SessRefreshStop(){ if(_g45F1SessTimer){ clearInterval(_g45F1SessTimer); _g45F1SessTimer=null; } }
+async function _g45F1SessRefreshTick(){
+  var box=document.getElementById('f1-session');
+  if(!box || _g45F1SessIdx==null){ _g45F1SessRefreshStop(); return; }
+  if(document.hidden || box.offsetParent===null) return; // batterie : on ne fetch pas si masqué
+  var ev=_g45F1Cache.events.filter(function(e){return String(e.id)===String(window._g45F1Eid);})[0]; if(!ev) return;
+  var c=(ev.competitions||[])[_g45F1SessIdx]; if(!c) return;
+  var st=(c.status&&c.status.type)||{}; if((st.state||'')!=='in'){ _g45F1SessRefreshStop(); return; } // séance finie → stop
+  try{
+    var d=new Date(ev.date); if(isNaN(d)) return;
+    function ymd(x){ return ''+x.getFullYear()+String(x.getMonth()+1).padStart(2,'0')+String(x.getDate()).padStart(2,'0'); }
+    var a=new Date(d.getTime()-2*864e5), b=new Date(d.getTime()+2*864e5);
+    var r=await fetch('https://site.api.espn.com/apis/site/v2/sports/racing/f1/scoreboard?dates='+ymd(a)+'-'+ymd(b));
+    if(!r.ok) return;
+    var j=await r.json();
+    var fresh=(j.events||[]).filter(function(e){return String(e.id)===String(window._g45F1Eid);})[0];
+    if(!fresh) return;
+    for(var k=0;k<_g45F1Cache.events.length;k++){ if(String(_g45F1Cache.events[k].id)===String(window._g45F1Eid)){ _g45F1Cache.events[k]=fresh; break; } }
+    if(document.getElementById('f1-session')) g45F1Session(_g45F1SessIdx);
+  }catch(e){}
+}
+function _g45F1SessRefreshStart(idx){ _g45F1SessRefreshStop(); _g45F1SessIdx=idx; _g45F1SessTimer=setInterval(_g45F1SessRefreshTick, 60000); }
 function g45F1Session(idx){
   var box=document.getElementById('f1-session'); if(!box) return;
+  _g45F1SessRefreshStop();
   var ev=_g45F1Cache.events.filter(function(e){return String(e.id)===String(window._g45F1Eid);})[0]; if(!ev) return;
   var comps=ev.competitions||[]; var c=comps[idx]; if(!c) return;
   function ea(x){return String(x==null?'':x).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/"/g,'&quot;');}
@@ -24698,6 +24723,8 @@ function g45F1Session(idx){
       if(m){ _ofMap=m; renderRows(_lastJol); }
     });
   }
+  // Auto-refresh live : positions qui bougent seules pendant la séance
+  if(state==='in') _g45F1SessRefreshStart(idx);
 }
 async function g45F1Standings(tab){
   _g45F1LiveStop();
