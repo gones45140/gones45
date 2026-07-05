@@ -22855,18 +22855,42 @@ async function g45LoadStandings(slug, sportPath, box){
       if(tot>0){ data=j; used=seasons[i]; break; }
     }
     if(!data){ box.innerHTML='<div style="color:var(--t3);font-size:11px;text-align:center;padding:12px;">Classement indisponible pour cette compétition.</div>'; return; }
-    box.innerHTML=g45RenderStandings(data, used, sportPath);
+    box.innerHTML=g45RenderStandings(data, used, sportPath, slug);
   }catch(e){
     box.innerHTML='<div style="color:#ff6b6b;font-size:11px;text-align:center;padding:12px;">Erreur de chargement du classement.</div>';
   }
 }
-function g45RenderStandings(data, season, sportPath){
+/* Zone de qualification → couleur+libellé, d'après la note ESPN (description). */
+function _g45ZoneFromNote(desc){
+  var d=String(desc||'').toLowerCase(); if(!d) return null;
+  if(/relegation.*(play|round)|releg.*barrag|barrag.*releg|relegation\/promotion/.test(d)) return {color:'#f0b020',label:'Barrage relégation'};
+  if(/releg/.test(d)) return {color:'#ff4545',label:'Relégation'};
+  if(/conference/.test(d)) return {color:'#20c997',label:'Conference League'};
+  if(/europa/.test(d)) return {color:'#f0862c',label:'Europa League'};
+  if(/champions.*(qualif|play|round)|qualif.*champions/.test(d)) return {color:'#5aa0ff',label:'Barrage LDC'};
+  if(/champions/.test(d)) return {color:'#1f6fff',label:'Ligue des Champions'};
+  return null; // note non reconnue → pas de couleur (on ne veut pas induire en erreur)
+}
+/* Repli par position pour les grands championnats (quand ESPN ne fournit pas de note). */
+function _g45ZoneByPos(slug, pos, n){
+  var C={ldc:'#1f6fff',bldc:'#5aa0ff',el:'#f0862c',ecl:'#20c997',barr:'#f0b020',rel:'#ff4545'};
+  var maps={
+    'fra.1':function(p){ if(p<=3) return[C.ldc,'Ligue des Champions']; if(p===4) return[C.bldc,'Barrage LDC']; if(p===5) return[C.el,'Europa League']; if(p===6) return[C.ecl,'Conference League']; if(p===n-2) return[C.barr,'Barrage relégation']; if(p>=n-1) return[C.rel,'Relégation']; return null; },
+    'ger.1':function(p){ if(p<=4) return[C.ldc,'Ligue des Champions']; if(p===5) return[C.el,'Europa League']; if(p===6) return[C.ecl,'Conference League']; if(p===n-2) return[C.barr,'Barrage relégation']; if(p>=n-1) return[C.rel,'Relégation']; return null; },
+    'eng.1':function(p){ if(p<=4) return[C.ldc,'Ligue des Champions']; if(p===5) return[C.el,'Europa League']; if(p===6) return[C.ecl,'Conference League']; if(p>=n-2) return[C.rel,'Relégation']; return null; },
+    'esp.1':function(p){ if(p<=4) return[C.ldc,'Ligue des Champions']; if(p<=6) return[C.el,'Europa League']; if(p===7) return[C.ecl,'Conference League']; if(p>=n-2) return[C.rel,'Relégation']; return null; },
+    'ita.1':function(p){ if(p<=4) return[C.ldc,'Ligue des Champions']; if(p<=6) return[C.el,'Europa League']; if(p===7) return[C.ecl,'Conference League']; if(p>=n-2) return[C.rel,'Relégation']; return null; }
+  };
+  var f=maps[slug]; if(!f) return null; var z=f(pos); return z?{color:z[0],label:z[1]}:null;
+}
+function g45RenderStandings(data, season, sportPath, slug){
   var groups=data.children||(data.standings?[data]:[]);
   if(!groups.length) return '<div style="color:var(--t3);font-size:11px;text-align:center;padding:12px;">Classement indisponible.</div>';
   var multi=groups.length>1;
   var usePct=(sportPath==='baseball'||sportPath==='basketball'||sportPath==='football'); // MLB/NBA/NFL = % victoires (NHL garde ses points)
   var seasLbl = season ? ((sportPath==='rugby-league'||sportPath==='baseball') ? String(season) : (season+'-'+String(season+1).slice(-2))) : '';
   var out='<div style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:#8aa0ff;margin:2px 0 8px;">Classement'+(seasLbl?' · '+seasLbl:'')+'</div>';
+  var legend={};
   groups.forEach(function(g){
     var entries=(g.standings&&g.standings.entries)||g.entries||[];
     if(!entries.length) return;
@@ -22885,6 +22909,9 @@ function g45RenderStandings(data, season, sportPath){
       +'<th style="padding:4px 3px;color:var(--t1);">'+(usePct?'% V':'Pts')+'</th></tr></thead><tbody>';
     entries.forEach(function(e,idx){
       var t=e.team||{}, st=e.stats||[];
+      var _z=(e.note && _g45ZoneFromNote(e.note.description)) || _g45ZoneByPos(slug, idx+1, entries.length);
+      if(_z) legend[_z.label]=_z.color;
+      var _bd=_z?('border-left:3px solid '+_z.color+';'):'border-left:3px solid transparent;';
       var logo=''; try{ logo=(t.logos&&t.logos[0]&&t.logos[0].href)||''; }catch(_){ }
       var nm=t.shortDisplayName||t.displayName||t.name||t.abbreviation||'?';
       var J=_g45Stat(st,['gamesPlayed']), V=_g45Stat(st,['wins','gamesWon']), N=_g45Stat(st,['ties','draws','gamesDrawn']), D=_g45Stat(st,['losses','gamesLost']);
@@ -22897,7 +22924,7 @@ function g45RenderStandings(data, season, sportPath){
         else { var vv=parseFloat(V)||0, dd=parseFloat(D)||0; lastCol=(vv+dd>0)?((vv/(vv+dd)*100).toFixed(1)+'%'):'-'; }
       }
       out+='<tr style="border-top:1px solid rgba(255,255,255,.05);">'
-        +'<td style="padding:5px 3px;color:var(--t3);font-weight:700;">'+(idx+1)+'</td>'
+        +'<td style="padding:5px 3px 5px 7px;'+_bd+'color:var(--t3);font-weight:700;">'+(idx+1)+'</td>'
         +'<td style="padding:5px 3px;"><div style="display:flex;align-items:center;gap:6px;">'+(logo?'<img src="'+logo+'" style="width:16px;height:16px;object-fit:contain;" onerror="this.style.display=\'none\'">':'')+'<span style="color:var(--t1);font-weight:600;white-space:nowrap;">'+nm+'</span></div></td>'
         +'<td style="padding:5px 3px;text-align:center;color:var(--t2);">'+(J!==''?J:'-')+'</td>'
         +'<td style="padding:5px 3px;text-align:center;color:var(--t2);">'+(V!==''?V:'-')+'</td>'
@@ -22910,6 +22937,12 @@ function g45RenderStandings(data, season, sportPath){
     });
     out+='</tbody></table></div>';
   });
+  var legKeys=Object.keys(legend);
+  if(legKeys.length){
+    out+='<div style="display:flex;flex-wrap:wrap;gap:8px 12px;margin-top:8px;padding-top:7px;border-top:1px solid rgba(255,255,255,.06);">';
+    legKeys.forEach(function(k){ out+='<span style="display:flex;align-items:center;gap:5px;font-size:9px;color:var(--t3);"><span style="display:inline-block;width:9px;height:9px;border-radius:2px;background:'+legend[k]+';"></span>'+k+'</span>'; });
+    out+='</div>';
+  }
   return out;
 }
 window.g45ToggleStandings=g45ToggleStandings;
