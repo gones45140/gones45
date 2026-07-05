@@ -21461,7 +21461,6 @@ function _genericLineups(data, sport){
   });
   return '<div style="margin-top:10px;border-top:1px solid rgba(255,255,255,.06);padding-top:8px;">'
     +'<div style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:#8aa0ff;margin-bottom:6px;">Compositions</div>'
-    +((window._g45ScorerDiag)?'<div style="font-size:8px;color:var(--t3);margin-bottom:5px;word-break:break-word;">diag runs → '+String(window._g45ScorerDiag).replace(/</g,'&lt;')+'</div>':'')
     +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">'+cols+'</div></div>';
 }
 /* H2H rugby (XV + XIII) : forme récente des 2 équipes + confrontations directes, via calendriers ESPN. */
@@ -21573,20 +21572,78 @@ async function _g45EspnUsOdds(sport, lg, eid, dateISO, hN, aN){
   }catch(e){ return ''; }
 }
 /* Résumé baseball : déroulé des points marqués (manche par manche) via ESPN scoringPlays. */
+/* Traduction FR (heuristique) des actions de score baseball d'ESPN. */
+function _g45TransBB(t){
+  if(!t) return '';
+  var s=t;
+  var rep=[
+    [/grand slam/gi,'grand chelem'],
+    [/homered to left center/gi,'coup de circuit au centre-gauche'],
+    [/homered to right center/gi,'coup de circuit au centre-droit'],
+    [/homered to left/gi,'coup de circuit à gauche'],
+    [/homered to right/gi,'coup de circuit à droite'],
+    [/homered to center/gi,'coup de circuit au centre'],
+    [/homered/gi,'coup de circuit'],
+    [/doubled to left center/gi,'double au centre-gauche'],
+    [/doubled to right center/gi,'double au centre-droit'],
+    [/doubled to left/gi,'double à gauche'],
+    [/doubled to right/gi,'double à droite'],
+    [/doubled to center/gi,'double au centre'],
+    [/doubled/gi,'double'],
+    [/tripled to left/gi,'triple à gauche'],
+    [/tripled to right/gi,'triple à droite'],
+    [/tripled to center/gi,'triple au centre'],
+    [/tripled/gi,'triple'],
+    [/infield single to \w+/gi,'simple dans le champ intérieur'],
+    [/singled to left center/gi,'simple au centre-gauche'],
+    [/singled to right center/gi,'simple au centre-droit'],
+    [/singled to left/gi,'simple à gauche'],
+    [/singled to right/gi,'simple à droite'],
+    [/singled to center/gi,'simple au centre'],
+    [/singled/gi,'simple'],
+    [/sacrifice fly to \w+/gi,'ballon-sacrifice'],
+    [/sacrifice fly/gi,'ballon-sacrifice'],
+    [/grounded into (?:a )?double play/gi,'double-jeu'],
+    [/grounded out/gi,'retiré au sol'],
+    [/hit by pitch/gi,'atteint par un lancer'],
+    [/reached on (?:an? )?error/gi,'atteint la base sur erreur'],
+    [/reached on/gi,'atteint la base sur'],
+    [/wild pitch by (\w+)/gi,'lancer sauvage de $1'],
+    [/on (\w+(?: \w+\.?)?) wild pitch/gi,'sur un lancer sauvage de $1'],
+    [/wild pitch/gi,'lancer sauvage'],
+    [/on a passed ball/gi,'sur une balle passée'],
+    [/passed ball/gi,'balle passée'],
+    [/on a fielder's choice/gi,'sur un choix du défenseur'],
+    [/fielder's choice/gi,'choix du défenseur'],
+    [/walked/gi,'passe gratuite'],
+    [/intentionally walked/gi,'passe intentionnelle'],
+    [/scored/gi,'a marqué'],
+    [/ to third\b/gi,' en troisième'],
+    [/ to second\b/gi,' en deuxième'],
+    [/ to first\b/gi,' en première'],
+    [/ feet\)/gi,' pieds)'],
+    [/ steal(?:s|ed)? (\w+)/gi,' vol du $1']
+  ];
+  rep.forEach(function(r){ s=s.replace(r[0],r[1]); });
+  return s;
+}
 function _g45BaseballRecap(data){
   var sp=(data&&data.scoringPlays)||[];
   if(!sp.length){ sp=((data&&data.plays)||[]).filter(function(p){ return p&&p.scoringPlay===true; }); }
   if(!sp.length) return '';
   function ea(s){return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;');}
   var teams={}; try{ ((data.header&&data.header.competitions&&data.header.competitions[0]&&data.header.competitions[0].competitors)||[]).forEach(function(c){ if(c.team&&c.team.id) teams[String(c.team.id)]=c.team.abbreviation||c.team.shortDisplayName||''; }); }catch(e){}
-  var rows='', lastP='';
+  var rows='', lastP='', lastTxt='';
   sp.forEach(function(p){
+    var raw=String(p.text||'');
+    if(raw && raw===lastTxt) return; // dédoublonnage des actions identiques consécutives
+    lastTxt=raw;
     var per=(p.period&&(p.period.displayValue||((p.period.number!=null)?('Manche '+p.period.number):'')))||'';
     if(per!==lastP){ rows+='<div style="font-size:9px;font-weight:800;color:#8aa0ff;text-transform:uppercase;letter-spacing:.5px;margin:8px 0 3px;">'+ea(per)+'</div>'; lastP=per; }
     var ab=(p.team&&p.team.id&&teams[String(p.team.id)])||'';
     var sc=(p.awayScore!=null&&p.homeScore!=null)?(p.awayScore+'-'+p.homeScore):'';
     rows+='<div style="display:flex;justify-content:space-between;gap:8px;font-size:10px;padding:2px 0;border-bottom:1px solid rgba(255,255,255,.03);">'
-      +'<span style="color:var(--t2);flex:1;">'+(ab?'<b style="color:var(--t1);">'+ea(ab)+'</b> ':'')+ea(p.text||'')+'</span>'
+      +'<span style="color:var(--t2);flex:1;">'+(ab?'<b style="color:var(--t1);">'+ea(ab)+'</b> ':'')+ea(_g45TransBB(raw))+'</span>'
       +(sc?'<span style="color:#1ed760;font-weight:800;flex:none;">'+ea(sc)+'</span>':'')+'</div>';
   });
   if(!rows) return '';
@@ -22175,7 +22232,7 @@ function _g45DrawRadar(rid){
     ]},
     options:{responsive:true,maintainAspectRatio:false,
       plugins:{legend:{labels:{color:'#c7d0e8',font:{size:10},boxWidth:10}},tooltip:{callbacks:{label:function(c){return c.dataset.label+': '+c.raw+'%';}}}},
-      scales:{r:{min:0,max:100,angleLines:{color:'rgba(255,255,255,.08)'},grid:{color:'rgba(255,255,255,.08)'},pointLabels:{color:'#8aa0ff',font:{size:8}},ticks:{display:false,stepSize:25}}}
+      scales:{r:{min:0,max:100,angleLines:{color:'rgba(255,255,255,.22)'},grid:{color:'rgba(255,255,255,.22)'},pointLabels:{color:'#c3cce6',font:{size:9}},ticks:{display:false,stepSize:25}}}
     }
   });
 }
