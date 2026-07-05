@@ -21392,14 +21392,29 @@ function _rugbyTeamStats(data){
     +'<div style="display:grid;grid-template-columns:1fr 1.5fr 1fr;gap:6px;font-weight:800;margin-bottom:4px;"><div style="text-align:left;color:var(--t1);font-size:11px;">'+hAb+'</div><div style="text-align:center;color:#8aa0ff;text-transform:uppercase;font-size:9px;letter-spacing:.5px;">Statistiques</div><div style="text-align:right;color:var(--t1);font-size:11px;">'+aAb+'</div></div>'
     +rows+'</div>';
 }
+/* Extraire les IDs des joueurs qui ont marqué (scoringPlays), avec repli par nom sur le texte des actions. */
+function _g45ScorerIds(data){
+  var out={}; var plays=(data&&data.scoringPlays)||[];
+  plays.forEach(function(p){
+    (p.participants||[]).forEach(function(pt){ var a=(pt&&pt.athlete)||pt; var id=a&&a.id; if(!id&&a&&a.$ref){ var m=String(a.$ref).match(/athletes\/(\d+)/); if(m) id=m[1]; } if(id) out[String(id)]=1; });
+  });
+  if(!Object.keys(out).length && plays.length){
+    var texts=plays.map(function(p){ return String(p.text||'').toLowerCase(); });
+    ((data&&data.rosters)||[]).forEach(function(rt){ (rt.roster||[]).forEach(function(p){ var a=p.athlete||{}; var ln=(a.lastName||((a.displayName||a.fullName||'').split(' ').pop())||'').toLowerCase(); if(a.id && ln.length>2 && texts.some(function(t){ return t.indexOf(ln)>=0; })) out[String(a.id)]=1; }); });
+  }
+  return out;
+}
 function _genericLineups(data, sport){
   var R=data && data.rosters; if(!R || !R.length) return '';
+  var scorers=_g45ScorerIds(data);
+  var scIco=({baseball:'⚾',rugby:'🏉','rugby-league':'🏉',hockey:'🏒',football:'🏈'})[sport]||'🟢';
   function nm(p){
     var a=p.athlete||{};
     var name=a.displayName||a.fullName||(((a.firstName?a.firstName+' ':'')+(a.lastName||'')).trim())||a.shortName||'?';
     var pos=(p.position&&(p.position.abbreviation||p.position.name))||(a.position&&(a.position.abbreviation||a.position.name))||'';
     var jersey=p.jersey?('<b style="color:#8aa0ff;">'+p.jersey+'</b> '):'';
-    return '<div style="font-size:11px;color:var(--t1);padding:1px 0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">'+jersey+name+(pos?' <span style="color:var(--t3);font-size:9px;">'+pos+'</span>':'')+'</div>';
+    var mark=(a.id&&scorers[String(a.id)])?(' <span title="A marqué" style="font-size:9px;">'+scIco+'</span>'):'';
+    return '<div style="font-size:11px;color:var(--t1);padding:1px 0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">'+jersey+name+mark+(pos?' <span style="color:var(--t3);font-size:9px;">'+pos+'</span>':'')+'</div>';
   }
   function byJ(a,b){ return (parseInt(a.jersey,10)||99)-(parseInt(b.jersey,10)||99); }
   var cut=(sport==='rugby-league')?13:(sport==='rugby'?15:0);
@@ -21963,7 +21978,7 @@ function _g45EspnTennisDetail(c){
     +'<table style="width:100%;border-collapse:collapse;">'+head+row(home)+row(away)+'</table>'
     +(notes?'<div style="font-size:9px;color:var(--t3);text-align:center;margin-top:8px;font-style:italic;">'+notes+'</div>':'')
     +((venue||court)?'<div style="font-size:9px;color:var(--t3);text-align:center;margin-top:3px;">📍 '+venue+court+'</div>':'')
-    +(((c.status&&c.status.type&&(c.status.type.state==='post'||c.status.type.completed))?true:false)?'<div style="text-align:center;margin-top:10px;"><button onclick="g45EspnMatchStats(\''+c.id+'\',this)" style="border:none;background:rgba(138,160,255,.14);color:#8aa0ff;border-radius:8px;padding:7px 13px;font-size:10px;font-weight:700;cursor:pointer;">📊 Voir les stats (Sofascore · quota)</button><div class="g45estats" style="margin-top:8px;"></div></div>':'')
+    +((function(){ var _ts=(c.status&&c.status.type)||{}; var _on=(_ts.state==='in'||_ts.state==='post'||_ts.completed); if(!_on) return ''; var _lbl=(_ts.state==='in')?'📊 Stats live (Sofascore · quota)':'📊 Voir les stats (Sofascore · quota)'; return '<div style="text-align:center;margin-top:10px;"><button onclick="g45EspnMatchStats(\''+c.id+'\',this)" style="border:none;background:rgba(138,160,255,.14);color:#8aa0ff;border-radius:8px;padding:7px 13px;font-size:10px;font-weight:700;cursor:pointer;">'+_lbl+'</button><div class="g45estats" style="margin-top:8px;"></div></div>'; })())
     +'<div style="margin-top:8px;"><button onclick="g45TennisOdds(this)" data-t="'+String(c.__grp||'').replace(/"/g,'&quot;')+'" data-h="'+String(_tHN).replace(/"/g,'&quot;')+'" data-a="'+String(_tAN).replace(/"/g,'&quot;')+'" data-box="usodd-'+c.id+'" style="width:100%;box-sizing:border-box;font-size:12px;font-weight:800;padding:9px 12px;border-radius:9px;cursor:pointer;border:1.5px solid rgba(46,204,113,.5);background:rgba(46,204,113,.08);color:#2ecc71;">💰 Cotes du match (Pinnacle & co)</button><div id="usodd-'+c.id+'" style="margin-top:8px;"></div></div>'
     +'<div style="margin-top:8px;"><button onclick="g45LoadUsAI(this)" data-lg="tennis" data-sport="tennis" data-eid="'+c.id+'" data-h="'+String(_tHN).replace(/"/g,'&quot;')+'" data-a="'+String(_tAN).replace(/"/g,'&quot;')+'" data-date="'+(c.date||'')+'" data-box="usai-'+c.id+'" style="width:100%;box-sizing:border-box;font-size:12px;font-weight:800;padding:9px 12px;border-radius:9px;cursor:pointer;border:1.5px solid rgba(176,124,214,.5);background:rgba(176,124,214,.10);color:#b07cd6;">🧠 Analyse IA du match</button><div id="usai-'+c.id+'" style="margin-top:8px;"></div></div>'
     +'<div style="margin-top:8px;"><button onclick="g45LoadTendance(this)" data-slug="tennis" data-h="'+String(_tHN).replace(/"/g,'&quot;')+'" data-a="'+String(_tAN).replace(/"/g,'&quot;')+'" data-date="'+(c.date||'')+'" data-box="ustend-'+c.id+'" style="width:100%;box-sizing:border-box;font-size:12px;font-weight:800;padding:9px 12px;border-radius:9px;cursor:pointer;border:1.5px solid rgba(122,140,255,.5);background:rgba(122,140,255,.08);color:#8aa2ff;">📈 Tendance du public</button><div id="ustend-'+c.id+'" style="margin-top:8px;"></div></div>'
@@ -22232,6 +22247,37 @@ async function g45TennisResults(offset){
   window._g45TennisResData=evs;
   window._g45TennisResOffset=offset;
   _g45RenderTennisRes();
+  _g45TennisResRefreshStart();
+}
+/* Auto-refresh de la liste tennis quand il y a du live (ESPN gratuit, pause batterie, re-render sur changement). */
+var _g45TennisResTimer=null;
+function _g45TennisResStop(){ if(_g45TennisResTimer){ clearInterval(_g45TennisResTimer); _g45TennisResTimer=null; } }
+function _g45TennisLiveSig(evs){
+  return (evs||[]).map(function(e){ var c=(e.competitions&&e.competitions[0])||{}; var st=(c.status&&c.status.type)||{}; if(st.state!=='in') return ''; var cps=c.competitors||[]; return e.id+':'+(st.shortDetail||st.detail||'')+':'+cps.map(function(x){ return (x.linescores||[]).map(function(l){return l.value;}).join('-'); }).join('|'); }).filter(Boolean).join(';');
+}
+function _g45TennisHasLive(evs){
+  return (evs||[]).some(function(e){ var c=(e.competitions&&e.competitions[0])||{}; var st=(c.status&&c.status.type)||{}; return st.state==='in'; });
+}
+async function _g45TennisResTick(){
+  var list=document.getElementById('g45-tennis-res');
+  if(!list){ _g45TennisResStop(); return; }
+  if(document.hidden || list.offsetParent===null) return; // batterie
+  if(!_g45TennisHasLive(window._g45TennisResData)){ _g45TennisResStop(); return; }
+  var offset=window._g45TennisResOffset||0;
+  var d=new Date(); d.setHours(12,0,0,0); d.setDate(d.getDate()+offset);
+  var ymd=_g45ymd(d);
+  async function f(lg){ try{ var r=await fetch('https://site.api.espn.com/apis/site/v2/sports/tennis/'+lg+'/scoreboard?dates='+ymd); if(!r.ok) return []; var j=await r.json(); return j.events||[]; }catch(e){ return []; } }
+  var atp=await f('atp'), wta=await f('wta');
+  var fresh=atp.concat(wta);
+  var newSig=_g45TennisLiveSig(fresh);
+  window._g45TennisResData=fresh; // maj cache/données quoi qu'il arrive
+  if(newSig!==window._g45TennisResSig){ window._g45TennisResSig=newSig; _g45RenderTennisRes(); } // re-render seulement si un score a bougé
+  if(!_g45TennisHasLive(fresh)) _g45TennisResStop();
+}
+function _g45TennisResRefreshStart(){
+  _g45TennisResStop();
+  window._g45TennisResSig=_g45TennisLiveSig(window._g45TennisResData);
+  if(_g45TennisHasLive(window._g45TennisResData)) _g45TennisResTimer=setInterval(_g45TennisResTick, 60000);
 }
 function _g45EspnTennisChips(active){
   var defs=[['all','Tous'],['atp','ATP'],['wta','WTA'],['atpd','ATP Double'],['wtad','WTA Double']];
@@ -22705,6 +22751,7 @@ function g45RenderStandings(data, season, sportPath){
   var groups=data.children||(data.standings?[data]:[]);
   if(!groups.length) return '<div style="color:var(--t3);font-size:11px;text-align:center;padding:12px;">Classement indisponible.</div>';
   var multi=groups.length>1;
+  var usePct=(sportPath==='baseball'||sportPath==='basketball'||sportPath==='football'); // MLB/NBA/NFL = % victoires (NHL garde ses points)
   var seasLbl = season ? ((sportPath==='rugby-league'||sportPath==='baseball') ? String(season) : (season+'-'+String(season+1).slice(-2))) : '';
   var out='<div style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:#8aa0ff;margin:2px 0 8px;">Classement'+(seasLbl?' · '+seasLbl:'')+'</div>';
   groups.forEach(function(g){
@@ -22722,7 +22769,7 @@ function g45RenderStandings(data, season, sportPath){
       +'<th style="text-align:left;padding:4px 3px;">Équipe</th>'
       +'<th style="padding:4px 3px;">J</th><th style="padding:4px 3px;">V</th><th style="padding:4px 3px;">N</th><th style="padding:4px 3px;">D</th>'
       +'<th style="padding:4px 3px;">BP</th><th style="padding:4px 3px;">BC</th><th style="padding:4px 3px;">Diff</th>'
-      +'<th style="padding:4px 3px;color:var(--t1);">Pts</th></tr></thead><tbody>';
+      +'<th style="padding:4px 3px;color:var(--t1);">'+(usePct?'% V':'Pts')+'</th></tr></thead><tbody>';
     entries.forEach(function(e,idx){
       var t=e.team||{}, st=e.stats||[];
       var logo=''; try{ logo=(t.logos&&t.logos[0]&&t.logos[0].href)||''; }catch(_){ }
@@ -22730,6 +22777,12 @@ function g45RenderStandings(data, season, sportPath){
       var J=_g45Stat(st,['gamesPlayed']), V=_g45Stat(st,['wins','gamesWon']), N=_g45Stat(st,['ties','draws','gamesDrawn']), D=_g45Stat(st,['losses','gamesLost']);
       var BP=_g45Stat(st,['pointsFor']), BC=_g45Stat(st,['pointsAgainst']);
       var DF=_g45Stat(st,['pointDifferential']), PT=_g45Stat(st,['points']);
+      var lastCol=PT!==''?PT:'-';
+      if(usePct){
+        var WP=parseFloat(_g45Stat(st,['winPercent']));
+        if(!isNaN(WP)){ lastCol=(WP<=1?WP*100:WP).toFixed(1)+'%'; }
+        else { var vv=parseFloat(V)||0, dd=parseFloat(D)||0; lastCol=(vv+dd>0)?((vv/(vv+dd)*100).toFixed(1)+'%'):'-'; }
+      }
       out+='<tr style="border-top:1px solid rgba(255,255,255,.05);">'
         +'<td style="padding:5px 3px;color:var(--t3);font-weight:700;">'+(idx+1)+'</td>'
         +'<td style="padding:5px 3px;"><div style="display:flex;align-items:center;gap:6px;">'+(logo?'<img src="'+logo+'" style="width:16px;height:16px;object-fit:contain;" onerror="this.style.display=\'none\'">':'')+'<span style="color:var(--t1);font-weight:600;white-space:nowrap;">'+nm+'</span></div></td>'
@@ -22740,7 +22793,7 @@ function g45RenderStandings(data, season, sportPath){
         +'<td style="padding:5px 3px;text-align:center;color:var(--t3);">'+(BP!==''?BP:'-')+'</td>'
         +'<td style="padding:5px 3px;text-align:center;color:var(--t3);">'+(BC!==''?BC:'-')+'</td>'
         +'<td style="padding:5px 3px;text-align:center;color:var(--t2);">'+(DF!==''?DF:'-')+'</td>'
-        +'<td style="padding:5px 3px;text-align:center;color:var(--t1);font-weight:800;">'+(PT!==''?PT:'-')+'</td></tr>';
+        +'<td style="padding:5px 3px;text-align:center;color:var(--t1);font-weight:800;">'+lastCol+'</td></tr>';
     });
     out+='</tbody></table></div>';
   });
