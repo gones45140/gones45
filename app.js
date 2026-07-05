@@ -21378,8 +21378,8 @@ function _rugbyTeamStats(data){
     if(r[2]==='pct'){ hd=(hv!=null?Math.round(parseFloat(hv)*100)+'%':'-'); ad=(av!=null?Math.round(parseFloat(av)*100)+'%':'-'); }
     else if(r[2]==='frac'){ var ht2=_rugbyStat(ht.statistics,r[3]), at2=_rugbyStat(at.statistics,r[3]); hd=(hv!=null?hv+(ht2!=null?'/'+ht2:''):'-'); ad=(av!=null?av+(at2!=null?'/'+at2:''):'-'); }
     else { hd=(hv!=null?hv:'-'); ad=(av!=null?av:'-'); }
-    var hb=(hN>aN)?'color:#4d84ff;':'color:var(--t1);';
-    var ab=(aN>hN)?'color:#4d84ff;':'color:var(--t1);';
+    var hb='color:var(--t1);';
+    var ab='color:var(--t1);';
     return '<div style="display:grid;grid-template-columns:1fr 1.5fr 1fr;gap:6px;align-items:center;padding:3px 0;border-bottom:1px solid rgba(255,255,255,.03);font-size:11px;">'
       +'<div style="text-align:left;font-weight:800;'+hb+'">'+hd+'</div>'
       +'<div style="text-align:center;color:var(--t3);font-size:9px;">'+r[1]+'</div>'
@@ -22568,7 +22568,8 @@ async function g45LoadStandings(slug, sportPath, box){
   var augY=(now.getMonth()>=7)?curY:curY-1; // saison européenne (août)
   var calYear=['bra.1','usa.1','arg.1','mex.1','rsa.1','nor.1','swe.1','fin.1','irl.1','jpn.1','kor.1','conmebol.libertadores','conmebol.america','242041'];
   var primary=(calYear.indexOf(slug)>=0)?curY:augY;
-  var seen={}, seasons=[primary,augY,curY].filter(function(y){ if(seen[y])return false; seen[y]=1; return true; });
+  if(sportPath==='rugby-league'){ primary=curY; } // NRL / Super League = saison en année civile (mars→octobre)
+  var seen={}, seasons=[primary,augY,curY,curY-1].filter(function(y){ if(seen[y])return false; seen[y]=1; return true; });
   try{
     var data=null, used=null;
     for(var i=0;i<seasons.length;i++){
@@ -22589,7 +22590,7 @@ function g45RenderStandings(data, season, sportPath){
   var groups=data.children||(data.standings?[data]:[]);
   if(!groups.length) return '<div style="color:var(--t3);font-size:11px;text-align:center;padding:12px;">Classement indisponible.</div>';
   var multi=groups.length>1;
-  var seasLbl = season ? (season+'-'+String(season+1).slice(-2)) : '';
+  var seasLbl = season ? ((sportPath==='rugby-league') ? String(season) : (season+'-'+String(season+1).slice(-2))) : '';
   var out='<div style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:#8aa0ff;margin:2px 0 8px;">Classement'+(seasLbl?' · '+seasLbl:'')+'</div>';
   groups.forEach(function(g){
     var entries=(g.standings&&g.standings.entries)||g.entries||[];
@@ -22611,7 +22612,7 @@ function g45RenderStandings(data, season, sportPath){
       var t=e.team||{}, st=e.stats||[];
       var logo=''; try{ logo=(t.logos&&t.logos[0]&&t.logos[0].href)||''; }catch(_){ }
       var nm=t.shortDisplayName||t.displayName||t.name||t.abbreviation||'?';
-      var J=_g45Stat(st,['gamesPlayed']), V=_g45Stat(st,['wins']), N=_g45Stat(st,['ties','draws']), D=_g45Stat(st,['losses']);
+      var J=_g45Stat(st,['gamesPlayed']), V=_g45Stat(st,['wins','gamesWon']), N=_g45Stat(st,['ties','draws','gamesDrawn']), D=_g45Stat(st,['losses','gamesLost']);
       var BP=_g45Stat(st,['pointsFor']), BC=_g45Stat(st,['pointsAgainst']);
       var DF=_g45Stat(st,['pointDifferential']), PT=_g45Stat(st,['points']);
       out+='<tr style="border-top:1px solid rgba(255,255,255,.05);">'
