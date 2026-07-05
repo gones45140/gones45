@@ -21472,11 +21472,15 @@ async function g45RugbyH2H(btn){
   try{
     var base='https://site.api.espn.com/apis/site/v2/sports/'+sport+'/'+lg+'/teams/';
     var res=await Promise.all([
-      fetch(base+hid+'/schedule').then(function(r){return r.ok?r.json():null;}).catch(function(){return null;}),
-      fetch(base+aid+'/schedule').then(function(r){return r.ok?r.json():null;}).catch(function(){return null;})
+      fetch(base+hid+'/schedule').then(function(r){return r.ok?r.json():{__http:r.status};}).catch(function(e){return {__err:String((e&&e.message)||e).slice(0,30)};}),
+      fetch(base+aid+'/schedule').then(function(r){return r.ok?r.json():{__http:r.status};}).catch(function(e){return {__err:String((e&&e.message)||e).slice(0,30)};})
     ]);
     var html=_g45RenderRugbyH2H(res[0], res[1], hid, aid, hN, aN);
-    box.innerHTML=html||'<div style="text-align:center;color:var(--t3);font-size:10px;padding:8px;">Historique indisponible pour ces équipes.</div>';
+    if(!html){
+      function _d(x){ if(!x) return 'null'; if(x.__http) return 'HTTP '+x.__http; if(x.__err) return x.__err; return ((x.events||[]).length)+'ev'; }
+      html='<div style="text-align:center;color:var(--t3);font-size:10px;padding:8px;">Historique indisponible.<br><span style="font-size:8px;color:#8aa0ff;">diag → sport='+sport+' lg='+lg+' · H:'+_d(res[0])+' A:'+_d(res[1])+'</span></div>';
+    }
+    box.innerHTML=html;
     box.setAttribute('data-loaded','1');
   }catch(e){ box.innerHTML='<div style="color:#ff6b6b;font-size:10px;padding:8px;">Erreur historique.</div>'; }
   btn.disabled=false;
@@ -22706,7 +22710,7 @@ async function g45LoadCalendar(slug, btn, monthOffset, sportPath){
     window._g45CalByDay=byDay; window._g45CalY=mb.y; window._g45CalM=mb.m;
     var monthName=mb.base.toLocaleDateString('fr-FR',{month:'long',year:'numeric'});
     var _btns='';
-    if(sportPath==='soccer'||sportPath==='rugby'||sportPath==='rugby-league'){
+    if(sportPath==='soccer'||sportPath==='rugby'||sportPath==='rugby-league'||sportPath==='baseball'||sportPath==='hockey'||sportPath==='basketball'||sportPath==='football'){
       var _isWC=(slug==='fifa.world'||slug==='uefa.euro'||slug==='conmebol.america'||slug==='uefa.nations'||slug==='fifa.worldq.uefa');
       _btns='<div style="display:flex;gap:8px;margin-bottom:10px;flex-wrap:wrap;">'
         +'<button onclick="g45ToggleStandings(\''+slug+'\',\''+sportPath+'\',this)" id="g45-std-toggle" style="flex:1;min-width:90px;border:1px solid rgba(240,176,32,.3);cursor:pointer;background:rgba(240,176,32,.1);border-radius:8px;color:#f0b020;padding:8px;font-size:12px;font-weight:700;">🏆 Classement</button>'
