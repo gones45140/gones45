@@ -21464,6 +21464,20 @@ function _genericLineups(data, sport){
     +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">'+cols+'</div></div>';
 }
 /* H2H rugby (XV + XIII) : forme récente des 2 équipes + confrontations directes, via calendriers ESPN. */
+/* Repli H2H via le scoreboard (fenêtre de dates) quand /teams/{id}/schedule échoue (ex. rugby-league = HTTP 500). */
+async function _g45H2HFromScoreboard(sport, lg, hid, aid, matchDate){
+  try{
+    var d=new Date(matchDate); if(isNaN(d)) d=new Date();
+    function ymd(x){ return ''+x.getFullYear()+String(x.getMonth()+1).padStart(2,'0')+String(x.getDate()).padStart(2,'0'); }
+    var from=new Date(d.getTime()-110*864e5), to=new Date(d.getTime()+2*864e5);
+    var r=await fetch('https://site.api.espn.com/apis/site/v2/sports/'+sport+'/'+lg+'/scoreboard?dates='+ymd(from)+'-'+ymd(to)+'&limit=1000');
+    if(!r.ok) return null;
+    var j=await r.json(); var events=j.events||[];
+    if(!events.length) return null;
+    function schedFor(teamId){ return {events: events.filter(function(e){ var c=(e.competitions&&e.competitions[0])||{}; return (c.competitors||[]).some(function(x){ return String((x.team&&x.team.id)||x.id)===String(teamId); }); })}; }
+    return {h:schedFor(hid), a:schedFor(aid)};
+  }catch(e){ return null; }
+}
 async function g45RugbyH2H(btn){
   var box=document.getElementById(btn.dataset.box); if(!box) return;
   if(box.getAttribute('data-loaded')==='1'){ box.style.display=(box.style.display==='none'?'':'none'); return; }
@@ -21480,6 +21494,11 @@ async function g45RugbyH2H(btn){
       fetch(base+aid+'/schedule'+qs).then(function(r){return r.ok?r.json():{__http:r.status};}).catch(function(e){return {__err:String((e&&e.message)||e).slice(0,30)};})
     ]);
     var html=_g45RenderRugbyH2H(res[0], res[1], hid, aid, hN, aN, sport, lg);
+    if(!html){
+      // Repli scoreboard (rugby-league /schedule = 500, ou saison vide)
+      var sb=await _g45H2HFromScoreboard(sport, lg, hid, aid, dISO);
+      if(sb){ html=_g45RenderRugbyH2H(sb.h, sb.a, hid, aid, hN, aN, sport, lg); }
+    }
     if(!html){
       function _dd(x){ if(!x) return 'null'; if(x.__http) return 'HTTP '+x.__http; if(x.__err) return x.__err; return ((x.events||[]).length)+'ev'; }
       html='<div style="text-align:center;color:var(--t3);font-size:10px;padding:8px;">Historique indisponible.<br><span style="font-size:8px;color:#8aa0ff;">diag → sport='+sport+' lg='+lg+' saison='+seas+' · H:'+_dd(res[0])+' A:'+_dd(res[1])+'</span></div>';
