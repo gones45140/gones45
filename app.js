@@ -21392,15 +21392,27 @@ function _rugbyTeamStats(data){
     +'<div style="display:grid;grid-template-columns:1fr 1.5fr 1fr;gap:6px;font-weight:800;margin-bottom:4px;"><div style="text-align:left;color:var(--t1);font-size:11px;">'+hAb+'</div><div style="text-align:center;color:#8aa0ff;text-transform:uppercase;font-size:9px;letter-spacing:.5px;">Statistiques</div><div style="text-align:right;color:var(--t1);font-size:11px;">'+aAb+'</div></div>'
     +rows+'</div>';
 }
-/* Extraire les IDs des joueurs qui ont marqué (scoringPlays), avec repli par nom sur le texte des actions. */
+/* Extraire les IDs des joueurs qui ont marqué : scoringPlays / plays / boxscore (runs, HR) + repli par nom. */
 function _g45ScorerIds(data){
-  var out={}; var plays=(data&&data.scoringPlays)||[];
-  plays.forEach(function(p){
-    (p.participants||[]).forEach(function(pt){ var a=(pt&&pt.athlete)||pt; var id=a&&a.id; if(!id&&a&&a.$ref){ var m=String(a.$ref).match(/athletes\/(\d+)/); if(m) id=m[1]; } if(id) out[String(id)]=1; });
-  });
-  if(!Object.keys(out).length && plays.length){
-    var texts=plays.map(function(p){ return String(p.text||'').toLowerCase(); });
-    ((data&&data.rosters)||[]).forEach(function(rt){ (rt.roster||[]).forEach(function(p){ var a=p.athlete||{}; var ln=(a.lastName||((a.displayName||a.fullName||'').split(' ').pop())||'').toLowerCase(); if(a.id && ln.length>2 && texts.some(function(t){ return t.indexOf(ln)>=0; })) out[String(a.id)]=1; }); });
+  var out={};
+  function grab(arr){ (arr||[]).forEach(function(p){ (p.participants||[]).forEach(function(pt){ var a=(pt&&pt.athlete)||pt; var id=a&&a.id; if(!id&&a&&a.$ref){ var m=String(a.$ref).match(/athletes\/(\d+)/); if(m) id=m[1]; } if(id) out[String(id)]=1; }); }); }
+  grab(data&&data.scoringPlays);
+  grab(((data&&data.plays)||[]).filter(function(p){ return p&&p.scoringPlay===true; }));
+  // Boxscore : baseball (runs / home runs), hockey (goals)…
+  try{
+    ((data&&data.boxscore&&data.boxscore.players)||[]).forEach(function(tp){
+      (tp.statistics||[]).forEach(function(stx){
+        var keys=stx.keys||stx.labels||[]; var idxR=-1,idxHR=-1,idxG=-1;
+        keys.forEach(function(k,i){ var kk=String(k).toLowerCase(); if(idxR<0&&(kk==='runs'||kk==='r')) idxR=i; if(idxHR<0&&(kk==='homeruns'||kk==='hr')) idxHR=i; if(idxG<0&&(kk==='goals'||kk==='g')) idxG=i; });
+        (stx.athletes||[]).forEach(function(at){ var a=at.athlete||{}; if(!a.id) return; var s=at.stats||[]; var r=idxR>=0?parseInt(s[idxR],10):0, hr=idxHR>=0?parseInt(s[idxHR],10):0, g=idxG>=0?parseInt(s[idxG],10):0; if(r>0||hr>0||g>0) out[String(a.id)]=1; });
+      });
+    });
+  }catch(e){}
+  // Repli par nom : matcher les rosters au texte des actions
+  if(!Object.keys(out).length){
+    var plays=[].concat((data&&data.scoringPlays)||[], ((data&&data.plays)||[]).filter(function(p){return p&&p.scoringPlay===true;}));
+    var texts=plays.map(function(p){ return String(p.text||'').toLowerCase(); }).filter(Boolean);
+    if(texts.length){ ((data&&data.rosters)||[]).forEach(function(rt){ (rt.roster||[]).forEach(function(p){ var a=p.athlete||{}; var ln=(a.lastName||((a.displayName||a.fullName||'').split(' ').pop())||'').toLowerCase(); if(a.id&&ln.length>2&&texts.some(function(t){ return t.indexOf(ln)>=0; })) out[String(a.id)]=1; }); }); }
   }
   return out;
 }
@@ -21556,6 +21568,7 @@ async function _g45EspnUsOdds(sport, lg, eid, dateISO, hN, aN){
 /* Résumé baseball : déroulé des points marqués (manche par manche) via ESPN scoringPlays. */
 function _g45BaseballRecap(data){
   var sp=(data&&data.scoringPlays)||[];
+  if(!sp.length){ sp=((data&&data.plays)||[]).filter(function(p){ return p&&p.scoringPlay===true; }); }
   if(!sp.length) return '';
   function ea(s){return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;');}
   var teams={}; try{ ((data.header&&data.header.competitions&&data.header.competitions[0]&&data.header.competitions[0].competitors)||[]).forEach(function(c){ if(c.team&&c.team.id) teams[String(c.team.id)]=c.team.abbreviation||c.team.shortDisplayName||''; }); }catch(e){}
