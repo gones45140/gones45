@@ -21467,18 +21467,22 @@ function _genericLineups(data, sport){
 async function g45RugbyH2H(btn){
   var box=document.getElementById(btn.dataset.box); if(!box) return;
   if(box.getAttribute('data-loaded')==='1'){ box.style.display=(box.style.display==='none'?'':'none'); return; }
-  var sport=btn.dataset.sport, lg=btn.dataset.lg, hid=btn.dataset.hid, aid=btn.dataset.aid, hN=btn.dataset.h, aN=btn.dataset.a;
+  var sport=btn.dataset.sport, lg=btn.dataset.lg, hid=btn.dataset.hid, aid=btn.dataset.aid, hN=btn.dataset.h, aN=btn.dataset.a, dISO=btn.dataset.date||'';
   box.innerHTML='<div style="color:var(--t3);font-size:11px;padding:10px;text-align:center;">⏳ Confrontations &amp; forme…</div>'; btn.disabled=true;
   try{
+    // Saison du match : année civile (baseball/rugby-league) sinon année de départ (hockey/basket/NFL)
+    var _d=new Date(dISO); var _y=isNaN(_d)?new Date().getFullYear():_d.getFullYear(), _m=isNaN(_d)?6:_d.getMonth();
+    var seas=(sport==='baseball'||sport==='rugby-league')?_y:((_m>=7)?_y:_y-1);
     var base='https://site.api.espn.com/apis/site/v2/sports/'+sport+'/'+lg+'/teams/';
+    var qs='?season='+seas;
     var res=await Promise.all([
-      fetch(base+hid+'/schedule').then(function(r){return r.ok?r.json():{__http:r.status};}).catch(function(e){return {__err:String((e&&e.message)||e).slice(0,30)};}),
-      fetch(base+aid+'/schedule').then(function(r){return r.ok?r.json():{__http:r.status};}).catch(function(e){return {__err:String((e&&e.message)||e).slice(0,30)};})
+      fetch(base+hid+'/schedule'+qs).then(function(r){return r.ok?r.json():{__http:r.status};}).catch(function(e){return {__err:String((e&&e.message)||e).slice(0,30)};}),
+      fetch(base+aid+'/schedule'+qs).then(function(r){return r.ok?r.json():{__http:r.status};}).catch(function(e){return {__err:String((e&&e.message)||e).slice(0,30)};})
     ]);
-    var html=_g45RenderRugbyH2H(res[0], res[1], hid, aid, hN, aN);
+    var html=_g45RenderRugbyH2H(res[0], res[1], hid, aid, hN, aN, sport, lg);
     if(!html){
-      function _d(x){ if(!x) return 'null'; if(x.__http) return 'HTTP '+x.__http; if(x.__err) return x.__err; return ((x.events||[]).length)+'ev'; }
-      html='<div style="text-align:center;color:var(--t3);font-size:10px;padding:8px;">Historique indisponible.<br><span style="font-size:8px;color:#8aa0ff;">diag → sport='+sport+' lg='+lg+' · H:'+_d(res[0])+' A:'+_d(res[1])+'</span></div>';
+      function _dd(x){ if(!x) return 'null'; if(x.__http) return 'HTTP '+x.__http; if(x.__err) return x.__err; return ((x.events||[]).length)+'ev'; }
+      html='<div style="text-align:center;color:var(--t3);font-size:10px;padding:8px;">Historique indisponible.<br><span style="font-size:8px;color:#8aa0ff;">diag → sport='+sport+' lg='+lg+' saison='+seas+' · H:'+_dd(res[0])+' A:'+_dd(res[1])+'</span></div>';
     }
     box.innerHTML=html;
     box.setAttribute('data-loaded','1');
@@ -21486,6 +21490,14 @@ async function g45RugbyH2H(btn){
   btn.disabled=false;
 }
 window.g45RugbyH2H=g45RugbyH2H;
+async function g45H2HOpenMatch(el){
+  var sport=el.getAttribute('data-sport'), lg=el.getAttribute('data-lg'), eid=el.getAttribute('data-eid'); if(!eid) return;
+  var box=(el.closest && el.closest('[id^="rh2h-"]')) || el.parentNode; if(!box) return;
+  box.innerHTML='<div style="color:var(--t3);font-size:11px;padding:10px;text-align:center;">⏳ Ouverture du match…</div>';
+  box.setAttribute('data-loaded','0');
+  try{ await _renderGenericDetail(box, sport, lg, eid); }catch(e){ box.innerHTML='<div style="color:#ff6b6b;font-size:10px;padding:8px;">Impossible d\'ouvrir ce match.</div>'; }
+}
+window.g45H2HOpenMatch=g45H2HOpenMatch;
 function g45DetailStandings(btn){
   var box=document.getElementById(btn.dataset.box); if(!box) return;
   if(box.getAttribute('data-open')==='1'){ box.style.display=(box.style.display==='none'?'':'none'); return; }
@@ -21494,7 +21506,7 @@ function g45DetailStandings(btn){
   else box.style.display='';
 }
 window.g45DetailStandings=g45DetailStandings;
-function _g45RenderRugbyH2H(hsched, asched, hid, aid, hN, aN){
+function _g45RenderRugbyH2H(hsched, asched, hid, aid, hN, aN, sport, lg){
   function ea(s){return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/"/g,'&quot;');}
   function games(sched, myId){
     var out=[];
@@ -21507,7 +21519,7 @@ function _g45RenderRugbyH2H(hsched, asched, hid, aid, hN, aN){
       if(!me||!opp) return;
       function sc(x){ var s=x.score; if(s&&typeof s==='object') return parseInt(s.value!=null?s.value:s.displayValue,10)||0; return parseInt(s,10)||0; }
       var ms=sc(me), os=sc(opp);
-      out.push({date:ev.date, opp:(opp.team&&(opp.team.abbreviation||opp.team.shortDisplayName||opp.team.displayName))||'?', oppId:String((opp.team&&opp.team.id)||opp.id||''), ms:ms, os:os, won:(me.winner===true)||(me.winner==null&&ms>os), draw:ms===os, home:me.homeAway==='home'});
+      out.push({id:String(ev.id||''), date:ev.date, opp:(opp.team&&(opp.team.abbreviation||opp.team.shortDisplayName||opp.team.displayName))||'?', oppId:String((opp.team&&opp.team.id)||opp.id||''), ms:ms, os:os, won:(me.winner===true)||(me.winner==null&&ms>os), draw:ms===os, home:me.homeAway==='home'});
     });
     out.sort(function(a,b){return new Date(b.date)-new Date(a.date);});
     return out;
@@ -21522,7 +21534,8 @@ function _g45RenderRugbyH2H(hsched, asched, hid, aid, hN, aN){
   function resultLine(g){
     var d=new Date(g.date); var dd=isNaN(d)?'':(String(d.getDate()).padStart(2,'0')+'/'+String(d.getMonth()+1).padStart(2,'0'));
     var col=g.draw?'#8b97c4':(g.won?'#1ed760':'#ff4545');
-    return '<div style="display:flex;justify-content:space-between;align-items:center;font-size:10px;padding:2px 0;"><span style="color:var(--t3);width:36px;flex:none;">'+dd+'</span><span style="color:var(--t2);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">'+(g.home?'vs ':'@ ')+ea(g.opp)+'</span><span style="color:'+col+';font-weight:800;flex:none;">'+g.ms+'-'+g.os+'</span></div>';
+    var clk=(g.id&&sport&&lg)?(' onclick="g45H2HOpenMatch(this)" data-sport="'+sport+'" data-lg="'+lg+'" data-eid="'+g.id+'" style="cursor:pointer;"'):' ';
+    return '<div'+clk+' style="display:flex;justify-content:space-between;align-items:center;font-size:10px;padding:3px 4px;border-radius:5px;'+((g.id&&sport&&lg)?'cursor:pointer;background:rgba(255,255,255,.02);margin-bottom:1px;':'')+'"><span style="color:var(--t3);width:36px;flex:none;">'+dd+'</span><span style="color:var(--t2);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">'+(g.home?'vs ':'@ ')+ea(g.opp)+'</span><span style="color:'+col+';font-weight:800;flex:none;">'+g.ms+'-'+g.os+((g.id&&sport&&lg)?' <span style="color:var(--t3);font-size:9px;">›</span>':'')+'</span></div>';
   }
   var out='<div style="background:rgba(138,160,255,.06);border:1px solid rgba(138,160,255,.22);border-radius:10px;padding:10px;margin-top:8px;">'
     +'<div style="font-size:10px;font-weight:800;color:#8aa0ff;text-align:center;margin-bottom:8px;">⚔️ CONFRONTATIONS &amp; FORME</div>'
@@ -21702,7 +21715,7 @@ async function _renderGenericDetail(el, sport, lg, eid){
     h+='<div style="margin-top:8px;"><button onclick="g45YT(this.dataset.q)" data-q="'+String(hN+' '+aN+' highlights').replace(/"/g,'&quot;')+'" style="width:100%;box-sizing:border-box;font-size:12px;font-weight:800;padding:9px 12px;border-radius:9px;cursor:pointer;border:1.5px solid rgba(255,69,58,.5);background:rgba(255,69,58,.10);color:#ff6b5e;">📺 Résumé sur YouTube</button></div>';
     // H2H + Classement (génériques : rugby, baseball, basket, hockey, NFL…)
     var _hid=(home.team&&home.team.id)||'', _aid=(away.team&&away.team.id)||'';
-    if(_hid&&_aid) h+='<div style="margin-top:8px;"><button onclick="g45RugbyH2H(this)" data-sport="'+sport+'" data-lg="'+lg+'" data-hid="'+_hid+'" data-aid="'+_aid+'" data-h="'+String(hN).replace(/"/g,'&quot;')+'" data-a="'+String(aN).replace(/"/g,'&quot;')+'" data-box="rh2h-'+eid+'" style="width:100%;box-sizing:border-box;font-size:12px;font-weight:800;padding:9px 12px;border-radius:9px;cursor:pointer;border:1.5px solid rgba(138,160,255,.5);background:rgba(138,160,255,.10);color:#8aa0ff;">⚔️ Confrontations &amp; forme</button><div id="rh2h-'+eid+'" style="margin-top:8px;"></div></div>';
+    if(_hid&&_aid) h+='<div style="margin-top:8px;"><button onclick="g45RugbyH2H(this)" data-sport="'+sport+'" data-lg="'+lg+'" data-hid="'+_hid+'" data-aid="'+_aid+'" data-date="'+(comp.date||'')+'" data-h="'+String(hN).replace(/"/g,'&quot;')+'" data-a="'+String(aN).replace(/"/g,'&quot;')+'" data-box="rh2h-'+eid+'" style="width:100%;box-sizing:border-box;font-size:12px;font-weight:800;padding:9px 12px;border-radius:9px;cursor:pointer;border:1.5px solid rgba(138,160,255,.5);background:rgba(138,160,255,.10);color:#8aa0ff;">⚔️ Confrontations &amp; forme</button><div id="rh2h-'+eid+'" style="margin-top:8px;"></div></div>';
     if(lg) h+='<div style="margin-top:8px;"><button onclick="g45DetailStandings(this)" data-lg="'+lg+'" data-sport="'+sport+'" data-box="rstd-'+eid+'" style="width:100%;box-sizing:border-box;font-size:12px;font-weight:800;padding:9px 12px;border-radius:9px;cursor:pointer;border:1.5px solid rgba(240,176,32,.4);background:rgba(240,176,32,.10);color:#f0b020;">🏆 Classement</button><div id="rstd-'+eid+'" style="margin-top:8px;"></div></div>';
     // Meilleurs joueurs
     try{
