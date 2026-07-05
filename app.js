@@ -21430,6 +21430,81 @@ function _genericLineups(data, sport){
     +'<div style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:#8aa0ff;margin-bottom:6px;">Compositions</div>'
     +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">'+cols+'</div></div>';
 }
+/* H2H rugby (XV + XIII) : forme récente des 2 équipes + confrontations directes, via calendriers ESPN. */
+async function g45RugbyH2H(btn){
+  var box=document.getElementById(btn.dataset.box); if(!box) return;
+  if(box.getAttribute('data-loaded')==='1'){ box.style.display=(box.style.display==='none'?'':'none'); return; }
+  var sport=btn.dataset.sport, lg=btn.dataset.lg, hid=btn.dataset.hid, aid=btn.dataset.aid, hN=btn.dataset.h, aN=btn.dataset.a;
+  box.innerHTML='<div style="color:var(--t3);font-size:11px;padding:10px;text-align:center;">⏳ Confrontations &amp; forme…</div>'; btn.disabled=true;
+  try{
+    var base='https://site.api.espn.com/apis/site/v2/sports/'+sport+'/'+lg+'/teams/';
+    var res=await Promise.all([
+      fetch(base+hid+'/schedule').then(function(r){return r.ok?r.json():null;}).catch(function(){return null;}),
+      fetch(base+aid+'/schedule').then(function(r){return r.ok?r.json():null;}).catch(function(){return null;})
+    ]);
+    var html=_g45RenderRugbyH2H(res[0], res[1], hid, aid, hN, aN);
+    box.innerHTML=html||'<div style="text-align:center;color:var(--t3);font-size:10px;padding:8px;">Historique indisponible pour ces équipes.</div>';
+    box.setAttribute('data-loaded','1');
+  }catch(e){ box.innerHTML='<div style="color:#ff6b6b;font-size:10px;padding:8px;">Erreur historique.</div>'; }
+  btn.disabled=false;
+}
+window.g45RugbyH2H=g45RugbyH2H;
+function g45DetailStandings(btn){
+  var box=document.getElementById(btn.dataset.box); if(!box) return;
+  if(box.getAttribute('data-open')==='1'){ box.style.display=(box.style.display==='none'?'':'none'); return; }
+  box.setAttribute('data-open','1');
+  if(box.getAttribute('data-loaded')!=='1'){ g45LoadStandings(btn.dataset.lg, btn.dataset.sport, box); box.setAttribute('data-loaded','1'); }
+  else box.style.display='';
+}
+window.g45DetailStandings=g45DetailStandings;
+function _g45RenderRugbyH2H(hsched, asched, hid, aid, hN, aN){
+  function ea(s){return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/"/g,'&quot;');}
+  function games(sched, myId){
+    var out=[];
+    ((sched&&sched.events)||[]).forEach(function(ev){
+      var c=(ev.competitions&&ev.competitions[0])||{}; var st=(c.status&&c.status.type)||{};
+      if(!(st.completed===true || st.state==='post')) return;
+      var cps=c.competitors||[];
+      var me=cps.filter(function(x){return String((x.team&&x.team.id)||x.id)===String(myId);})[0];
+      var opp=cps.filter(function(x){return String((x.team&&x.team.id)||x.id)!==String(myId);})[0];
+      if(!me||!opp) return;
+      function sc(x){ var s=x.score; if(s&&typeof s==='object') return parseInt(s.value!=null?s.value:s.displayValue,10)||0; return parseInt(s,10)||0; }
+      var ms=sc(me), os=sc(opp);
+      out.push({date:ev.date, opp:(opp.team&&(opp.team.abbreviation||opp.team.shortDisplayName||opp.team.displayName))||'?', oppId:String((opp.team&&opp.team.id)||opp.id||''), ms:ms, os:os, won:(me.winner===true)||(me.winner==null&&ms>os), draw:ms===os, home:me.homeAway==='home'});
+    });
+    out.sort(function(a,b){return new Date(b.date)-new Date(a.date);});
+    return out;
+  }
+  var gh=games(hsched,hid), ga=games(asched,aid);
+  if(!gh.length && !ga.length) return '';
+  function badge(g){ var v=g.draw?'N':(g.won?'V':'D'); var col=g.draw?'#8b97c4':(g.won?'#1ed760':'#ff4545'); return '<span style="display:inline-block;width:15px;height:15px;line-height:15px;text-align:center;border-radius:3px;font-size:8px;font-weight:800;background:'+col+';color:#0b0f1a;margin-left:2px;">'+v+'</span>'; }
+  function formRow(name, gs){
+    var pills=gs.slice(0,6).map(badge).join('');
+    return '<div style="display:flex;justify-content:space-between;align-items:center;margin:3px 0;"><span style="font-size:11px;color:var(--t1);font-weight:700;max-width:55%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">'+ea(name)+'</span><span style="flex:none;">'+(pills||'<span style="font-size:9px;color:var(--t3);">—</span>')+'</span></div>';
+  }
+  function resultLine(g){
+    var d=new Date(g.date); var dd=isNaN(d)?'':(String(d.getDate()).padStart(2,'0')+'/'+String(d.getMonth()+1).padStart(2,'0'));
+    var col=g.draw?'#8b97c4':(g.won?'#1ed760':'#ff4545');
+    return '<div style="display:flex;justify-content:space-between;align-items:center;font-size:10px;padding:2px 0;"><span style="color:var(--t3);width:36px;flex:none;">'+dd+'</span><span style="color:var(--t2);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">'+(g.home?'vs ':'@ ')+ea(g.opp)+'</span><span style="color:'+col+';font-weight:800;flex:none;">'+g.ms+'-'+g.os+'</span></div>';
+  }
+  var out='<div style="background:rgba(138,160,255,.06);border:1px solid rgba(138,160,255,.22);border-radius:10px;padding:10px;margin-top:8px;">'
+    +'<div style="font-size:10px;font-weight:800;color:#8aa0ff;text-align:center;margin-bottom:8px;">⚔️ CONFRONTATIONS &amp; FORME</div>'
+    +'<div style="font-size:9px;color:var(--t3);text-transform:uppercase;letter-spacing:.5px;margin-bottom:2px;">Forme récente</div>'
+    +formRow(hN,gh)+formRow(aN,ga);
+  var direct=gh.filter(function(g){return g.oppId===String(aid);});
+  if(direct.length){
+    var hw=direct.filter(function(g){return g.won&&!g.draw;}).length;
+    var aw=direct.filter(function(g){return !g.won&&!g.draw;}).length;
+    var dr=direct.filter(function(g){return g.draw;}).length;
+    var tot=direct.length, lp=tot>0?Math.round(hw/tot*100):50;
+    out+='<div style="font-size:9px;color:var(--t3);text-transform:uppercase;letter-spacing:.5px;margin:9px 0 3px;">Confrontations directes ('+tot+')</div>'
+      +'<div style="display:flex;justify-content:space-between;font-size:11px;font-weight:800;color:var(--t1);margin-bottom:3px;"><span>'+ea(hN)+' '+hw+'</span>'+(dr?'<span style="color:var(--t3);font-size:9px;align-self:center;">'+dr+' nul'+(dr>1?'s':'')+'</span>':'')+'<span>'+aw+' '+ea(aN)+'</span></div>'
+      +'<div style="display:flex;height:7px;border-radius:4px;overflow:hidden;background:rgba(255,255,255,.06);margin-bottom:5px;"><div style="width:'+lp+'%;background:#4d84ff;"></div><div style="width:'+(100-lp)+'%;background:#ff7b54;"></div></div>';
+    direct.slice(0,5).forEach(function(g){ out+=resultLine(g); });
+  }
+  out+='</div>';
+  return out;
+}
 async function _g45EspnUsOdds(sport, lg, eid, dateISO, hN, aN){
   function ea(s){return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/"/g,'&quot;');}
   try{
@@ -21462,6 +21537,27 @@ async function _g45EspnUsOdds(sport, lg, eid, dateISO, hN, aN){
     if(over||under){ rows+='<div style="display:flex;justify-content:space-between;align-items:center;font-size:11px;padding:3px 0;"><span style="color:var(--t2);">📊 Total '+ea(String(line))+'</span><span style="color:var(--t1);font-weight:700;">Plus <b style="color:#2ecc71;">'+(over?over.toFixed(2):'—')+'</b> · Moins <b style="color:#ff7b54;">'+(under?under.toFixed(2):'—')+'</b></span></div>'; }
     return '<div style="margin-top:10px;background:rgba(46,204,113,.06);border:1px solid rgba(46,204,113,.2);border-radius:10px;padding:10px;"><div style="font-size:10px;font-weight:800;color:#2ecc71;margin-bottom:6px;">💰 COTES ('+ea(prov)+')</div>'+rows+'<div style="font-size:9px;color:var(--t3);text-align:center;margin-top:6px;font-style:italic;">Cotes décimales · réf. '+ea(prov)+', via ESPN (gratuit).</div></div>';
   }catch(e){ return ''; }
+}
+/* Résumé baseball : déroulé des points marqués (manche par manche) via ESPN scoringPlays. */
+function _g45BaseballRecap(data){
+  var sp=(data&&data.scoringPlays)||[];
+  if(!sp.length) return '';
+  function ea(s){return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;');}
+  var teams={}; try{ ((data.header&&data.header.competitions&&data.header.competitions[0]&&data.header.competitions[0].competitors)||[]).forEach(function(c){ if(c.team&&c.team.id) teams[String(c.team.id)]=c.team.abbreviation||c.team.shortDisplayName||''; }); }catch(e){}
+  var rows='', lastP='';
+  sp.forEach(function(p){
+    var per=(p.period&&(p.period.displayValue||((p.period.number!=null)?('Manche '+p.period.number):'')))||'';
+    if(per!==lastP){ rows+='<div style="font-size:9px;font-weight:800;color:#8aa0ff;text-transform:uppercase;letter-spacing:.5px;margin:8px 0 3px;">'+ea(per)+'</div>'; lastP=per; }
+    var ab=(p.team&&p.team.id&&teams[String(p.team.id)])||'';
+    var sc=(p.awayScore!=null&&p.homeScore!=null)?(p.awayScore+'-'+p.homeScore):'';
+    rows+='<div style="display:flex;justify-content:space-between;gap:8px;font-size:10px;padding:2px 0;border-bottom:1px solid rgba(255,255,255,.03);">'
+      +'<span style="color:var(--t2);flex:1;">'+(ab?'<b style="color:var(--t1);">'+ea(ab)+'</b> ':'')+ea(p.text||'')+'</span>'
+      +(sc?'<span style="color:#1ed760;font-weight:800;flex:none;">'+ea(sc)+'</span>':'')+'</div>';
+  });
+  if(!rows) return '';
+  return '<div style="margin-top:10px;border-top:1px solid rgba(255,255,255,.06);padding-top:8px;">'
+    +'<div style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:#8aa0ff;margin-bottom:4px;">⚾ Résumé — les points marqués</div>'
+    +rows+'</div>';
 }
 async function _renderGenericDetail(el, sport, lg, eid){
   try{
@@ -21498,6 +21594,8 @@ async function _renderGenericDetail(el, sport, lg, eid){
         h+='</div></div>';
       }
     }catch(e){}
+    // Résumé baseball : déroulé des points (manche par manche)
+    if(sport==='baseball'){ try{ var _bbr=_g45BaseballRecap(data); if(_bbr) h+=_bbr; }catch(e){} }
     // Avant-match (proba, stats d'équipe, forme, classement) pour les matchs à venir — tous sports
     if(stT.state==='pre'){ try{ var _pmG=_g45PreMatchBlock(data); if(_pmG) h+=_pmG; }catch(e){} }
     // Cotes ESPN (sports US : favori moneyline + total), en décimal — gratuit, sans quota
@@ -21506,6 +21604,10 @@ async function _renderGenericDetail(el, sport, lg, eid){
     var _tSlug=({mlb:'baseball',nba:'basketball',nfl:'american-football',nhl:'ice-hockey',wnba:'basketball'})[lg]||({rugby:'rugby','rugby-league':'rugby'})[sport]||'';
     if(_tSlug){ h+='<div style="margin-top:8px;"><button onclick="g45LoadTendance(this)" data-slug="'+_tSlug+'" data-h="'+String(hN).replace(/"/g,'&quot;')+'" data-a="'+String(aN).replace(/"/g,'&quot;')+'" data-date="'+(comp.date||'')+'" data-box="ustend-'+eid+'" style="width:100%;box-sizing:border-box;font-size:12px;font-weight:800;padding:9px 12px;border-radius:9px;cursor:pointer;border:1.5px solid rgba(122,140,255,.5);background:rgba(122,140,255,.08);color:#8aa2ff;">📈 Tendance du public</button><div id="ustend-'+eid+'" style="margin-top:8px;"></div></div>'; }
     h+='<div style="margin-top:8px;"><button onclick="g45YT(this.dataset.q)" data-q="'+String(hN+' '+aN+' highlights').replace(/"/g,'&quot;')+'" style="width:100%;box-sizing:border-box;font-size:12px;font-weight:800;padding:9px 12px;border-radius:9px;cursor:pointer;border:1.5px solid rgba(255,69,58,.5);background:rgba(255,69,58,.10);color:#ff6b5e;">📺 Résumé sur YouTube</button></div>';
+    // H2H + Classement (génériques : rugby, baseball, basket, hockey, NFL…)
+    var _hid=(home.team&&home.team.id)||'', _aid=(away.team&&away.team.id)||'';
+    if(_hid&&_aid) h+='<div style="margin-top:8px;"><button onclick="g45RugbyH2H(this)" data-sport="'+sport+'" data-lg="'+lg+'" data-hid="'+_hid+'" data-aid="'+_aid+'" data-h="'+String(hN).replace(/"/g,'&quot;')+'" data-a="'+String(aN).replace(/"/g,'&quot;')+'" data-box="rh2h-'+eid+'" style="width:100%;box-sizing:border-box;font-size:12px;font-weight:800;padding:9px 12px;border-radius:9px;cursor:pointer;border:1.5px solid rgba(138,160,255,.5);background:rgba(138,160,255,.10);color:#8aa0ff;">⚔️ Confrontations &amp; forme</button><div id="rh2h-'+eid+'" style="margin-top:8px;"></div></div>';
+    if(lg) h+='<div style="margin-top:8px;"><button onclick="g45DetailStandings(this)" data-lg="'+lg+'" data-sport="'+sport+'" data-box="rstd-'+eid+'" style="width:100%;box-sizing:border-box;font-size:12px;font-weight:800;padding:9px 12px;border-radius:9px;cursor:pointer;border:1.5px solid rgba(240,176,32,.4);background:rgba(240,176,32,.10);color:#f0b020;">🏆 Classement</button><div id="rstd-'+eid+'" style="margin-top:8px;"></div></div>';
     // Meilleurs joueurs
     try{
       var L=data.leaders||[];
@@ -22581,7 +22683,7 @@ async function g45LoadStandings(slug, sportPath, box){
   var augY=(now.getMonth()>=7)?curY:curY-1; // saison européenne (août)
   var calYear=['bra.1','usa.1','arg.1','mex.1','rsa.1','nor.1','swe.1','fin.1','irl.1','jpn.1','kor.1','conmebol.libertadores','conmebol.america','242041'];
   var primary=(calYear.indexOf(slug)>=0)?curY:augY;
-  if(sportPath==='rugby-league'){ primary=curY; } // NRL / Super League = saison en année civile (mars→octobre)
+  if(sportPath==='rugby-league'||sportPath==='baseball'){ primary=curY; } // NRL / MLB = saison en année civile
   var seen={}, seasons=[primary,augY,curY,curY-1].filter(function(y){ if(seen[y])return false; seen[y]=1; return true; });
   try{
     var data=null, used=null;
@@ -22603,7 +22705,7 @@ function g45RenderStandings(data, season, sportPath){
   var groups=data.children||(data.standings?[data]:[]);
   if(!groups.length) return '<div style="color:var(--t3);font-size:11px;text-align:center;padding:12px;">Classement indisponible.</div>';
   var multi=groups.length>1;
-  var seasLbl = season ? ((sportPath==='rugby-league') ? String(season) : (season+'-'+String(season+1).slice(-2))) : '';
+  var seasLbl = season ? ((sportPath==='rugby-league'||sportPath==='baseball') ? String(season) : (season+'-'+String(season+1).slice(-2))) : '';
   var out='<div style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:#8aa0ff;margin:2px 0 8px;">Classement'+(seasLbl?' · '+seasLbl:'')+'</div>';
   groups.forEach(function(g){
     var entries=(g.standings&&g.standings.entries)||g.entries||[];
