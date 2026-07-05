@@ -22748,6 +22748,7 @@ async function g45LoadCalendar(slug, btn, monthOffset, sportPath){
         +'<button onclick="g45ToggleStandings(\''+slug+'\',\''+sportPath+'\',this)" id="g45-std-toggle" style="flex:1;min-width:90px;border:1px solid rgba(240,176,32,.3);cursor:pointer;background:rgba(240,176,32,.1);border-radius:8px;color:#f0b020;padding:8px;font-size:12px;font-weight:700;">🏆 Classement</button>'
         +(sportPath==='soccer'?'<button onclick="g45ToggleScorers(\''+slug+'\',\''+sportPath+'\',this)" id="g45-sco-toggle" style="flex:1;min-width:90px;border:1px solid rgba(77,132,255,.3);cursor:pointer;background:rgba(77,132,255,.1);border-radius:8px;color:#4d84ff;padding:8px;font-size:12px;font-weight:700;">⚽ Buteurs</button>':'')
         +((sportPath==='soccer'&&_isWC)?'<button onclick="g45ToggleBracket(\''+slug+'\',\''+sportPath+'\',this)" id="g45-brk-toggle" style="flex:1;min-width:90px;border:1px solid rgba(30,215,96,.3);cursor:pointer;background:rgba(30,215,96,.1);border-radius:8px;color:#1ed760;padding:8px;font-size:12px;font-weight:700;">🏟 Phase finale</button>':'')
+        +((sportPath==='basketball'||sportPath==='hockey'||sportPath==='baseball'||sportPath==='football'||sportPath==='rugby-league')?'<button onclick="g45ToggleBracket(\''+slug+'\',\''+sportPath+'\',this)" id="g45-brk-toggle" style="flex:1;min-width:90px;border:1px solid rgba(30,215,96,.3);cursor:pointer;background:rgba(30,215,96,.1);border-radius:8px;color:#1ed760;padding:8px;font-size:12px;font-weight:700;">🏟 Playoffs</button>':'')
         +'</div>'
         +'<div id="g45-standings" style="margin-bottom:4px;"></div><div id="g45-scorers" style="margin-bottom:4px;"></div><div id="g45-bracket" style="margin-bottom:4px;"></div>';
     }
@@ -23055,7 +23056,59 @@ function g45ToggleBracket(slug, sportPath, btn){
     return;
   }
   box.setAttribute('data-open','1'); if(btn){ btn.style.background='#1ed760'; btn.style.color='#06210f'; }
-  g45LoadBracket(slug, box);
+  if(sportPath==='soccer') g45LoadBracket(slug, box);
+  else _g45LoadUsBracket(slug, sportPath, box);
+}
+/* Bracket playoffs US (séries best-of-7) : regroupe les matchs en séries, classe par tour. */
+async function _g45LoadUsBracket(slug, sportPath, box){
+  box.innerHTML='<div style="display:flex;align-items:center;gap:8px;padding:14px;color:var(--t3);font-size:11px;"><div style="width:12px;height:12px;border:2px solid rgba(30,215,96,.2);border-top-color:#1ed760;border-radius:50%;animation:spin .8s linear infinite;"></div>Chargement des playoffs…</div>';
+  function ea(s){return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/"/g,'&quot;');}
+  try{
+    var now=new Date(), y=now.getFullYear();
+    var W={basketball:['0412','0701'],hockey:['0412','0701'],baseball:['0928','1120'],football:['0108','0216'],'rugby-league':['0820','1015']}[sportPath]||['0401','0701'];
+    async function fetchWin(yr){ try{ var r=await fetch('https://site.api.espn.com/apis/site/v2/sports/'+sportPath+'/'+slug+'/scoreboard?dates='+yr+W[0]+'-'+yr+W[1]+'&limit=1000&seasontype=3'); return r.ok?(await r.json()):null; }catch(e){ return null; } }
+    var data=await fetchWin(y), evs=(data&&data.events)||[];
+    if(!evs.length){ data=await fetchWin(y-1); evs=(data&&data.events)||[]; }
+    evs=evs.filter(function(e){ var st=(e.season&&e.season.type); return st==null||st===3||st==='3'; });
+    function roundOf(e){
+      var c=(e.competitions&&e.competitions[0])||{}, s='';
+      try{ (c.notes||[]).forEach(function(n){ s+=' '+(n.headline||n.text||''); }); }catch(_){}
+      try{ s+=' '+((e.season&&e.season.name)||''); }catch(_){}
+      s=s.toLowerCase();
+      if(/conference final|conference championship/.test(s)) return {k:3,n:'Finale de conférence'};
+      if(/conference semi|second round|semifinal|division series|divisional|quarter/.test(s)) return {k:2,n:'2e tour'};
+      if(/first round|1st round|wild ?card/.test(s)) return {k:1,n:'1er tour'};
+      if(/stanley cup final|nba finals|world series|super bowl|grand final|final/.test(s)) return {k:4,n:'🏆 Finale'};
+      return {k:1,n:'Playoffs'};
+    }
+    var series={};
+    evs.forEach(function(e){
+      var c=(e.competitions&&e.competitions[0])||{}, cps=c.competitors||[]; if(cps.length<2) return;
+      var ids=cps.map(function(x){return String((x.team&&x.team.id)||'');}).filter(Boolean); if(ids.length<2) return;
+      var ro=roundOf(e), sk=ids.slice().sort().join('-')+'|'+ro.k;
+      if(!series[sk]) series[sk]={round:ro, teams:{}, order:[], date:e.date};
+      var s=series[sk], stx=(c.status&&c.status.type)||{};
+      cps.forEach(function(x){ var id=String((x.team&&x.team.id)||''); if(!id) return; if(!s.teams[id]){ s.teams[id]={t:x.team, wins:0}; s.order.push(id); } if((stx.completed||stx.state==='post') && x.winner===true) s.teams[id].wins++; });
+      if(new Date(e.date)>new Date(s.date)) s.date=e.date;
+    });
+    var byRound={};
+    Object.keys(series).forEach(function(sk){ var s=series[sk]; (byRound[s.round.k]=byRound[s.round.k]||{n:s.round.n,items:[]}).items.push(s); });
+    var rks=Object.keys(byRound).map(Number).sort(function(a,b){return a-b;});
+    if(!rks.length){ box.innerHTML='<div style="color:var(--t3);font-size:11px;text-align:center;padding:14px;">🏟 Playoffs indisponibles.<br><span style="font-size:9px;color:#8aa0ff;">diag → '+evs.length+' matchs playoffs trouvés (sport='+sportPath+' lg='+slug+')</span></div>'; return; }
+    if(!document.getElementById('g45brk-css')){
+      var stl=document.createElement('style'); stl.id='g45brk-css';
+      stl.textContent='.g45brk-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch;padding-bottom:8px;}.g45brk{display:flex;align-items:stretch;padding:2px;}.g45brk-col{flex:1 1 0;min-width:150px;display:flex;flex-direction:column;padding:0 8px;}.g45brk-h{font-size:9px;font-weight:800;text-transform:uppercase;color:#1ed760;text-align:center;letter-spacing:.5px;padding:2px 0 8px;}.g45brk-body{flex:1;display:flex;flex-direction:column;justify-content:space-around;gap:8px;}.g45brk-card{background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.09);border-radius:8px;overflow:hidden;}.g45brk-r{display:flex;align-items:center;gap:5px;padding:5px 8px;font-size:11px;}.g45brk-r+.g45brk-r{border-top:1px solid rgba(255,255,255,.06);}.g45brk-r img{width:16px;height:16px;object-fit:contain;flex-shrink:0;}.g45brk-nm{flex:1;font-weight:600;color:var(--t1);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}.g45brk-sc{font-weight:800;color:var(--t1);min-width:14px;text-align:right;font-size:13px;}.g45brk-win .g45brk-nm,.g45brk-win .g45brk-sc{color:#1ed760;font-weight:800;}';
+      document.head.appendChild(stl);
+    }
+    function card(s){
+      function row(id){ var tm=s.teams[id], t=tm.t||{}; var logo=''; try{logo=(t.logos&&t.logos[0]&&t.logos[0].href)||t.logo||'';}catch(_){} var nm=t.shortDisplayName||t.abbreviation||t.displayName||'?'; var win=tm.wins>=4; return '<div class="g45brk-r'+(win?' g45brk-win':'')+'">'+(logo?'<img src="'+ea(logo)+'" onerror="this.style.display=\'none\'">':'')+'<span class="g45brk-nm">'+ea(nm)+'</span><span class="g45brk-sc">'+tm.wins+'</span></div>'; }
+      return '<div class="g45brk-card">'+s.order.map(row).join('')+'</div>';
+    }
+    var html='<div style="font-size:9px;color:#8aa0ff;text-align:center;margin:2px 0 8px;font-weight:700;">🏟 PLAYOFFS (séries)</div><div class="g45brk-wrap"><div class="g45brk">';
+    rks.forEach(function(k){ var col=byRound[k]; col.items.sort(function(a,b){return new Date(a.date)-new Date(b.date);}); html+='<div class="g45brk-col"><div class="g45brk-h">'+ea(col.n)+'</div><div class="g45brk-body">'+col.items.map(card).join('')+'</div></div>'; });
+    html+='</div></div>';
+    box.innerHTML=html;
+  }catch(e){ box.innerHTML='<div style="color:#ff6b6b;font-size:11px;text-align:center;padding:12px;">Erreur playoffs.</div>'; }
 }
 // Reconstruit le vrai ordre de l'arbre à partir du câblage ESPN (placeholders "Round of 32 N Winner"…)
 function _g45BrkBracketOrder(groups){
