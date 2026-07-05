@@ -21392,13 +21392,9 @@ function _rugbyTeamStats(data){
     +'<div style="display:grid;grid-template-columns:1fr 1.5fr 1fr;gap:6px;font-weight:800;margin-bottom:4px;"><div style="text-align:left;color:var(--t1);font-size:11px;">'+hAb+'</div><div style="text-align:center;color:#8aa0ff;text-transform:uppercase;font-size:9px;letter-spacing:.5px;">Statistiques</div><div style="text-align:right;color:var(--t1);font-size:11px;">'+aAb+'</div></div>'
     +rows+'</div>';
 }
-/* Extraire les IDs des joueurs qui ont marqué : scoringPlays / plays / boxscore (runs, HR) + repli par nom. */
+/* Marqueurs = joueurs avec R (runs) > 0 dans le boxscore batting. Repli sur les actions de score si pas de boxscore (live). */
 function _g45ScorerIds(data){
-  var out={};
-  function grab(arr){ (arr||[]).forEach(function(p){ (p.participants||[]).forEach(function(pt){ var a=(pt&&pt.athlete)||pt; var id=a&&a.id; if(!id&&a&&a.$ref){ var m=String(a.$ref).match(/athletes\/(\d+)/); if(m) id=m[1]; } if(id) out[String(id)]=1; }); }); }
-  grab(data&&data.scoringPlays);
-  grab(((data&&data.plays)||[]).filter(function(p){ return p&&p.scoringPlay===true; }));
-  // Boxscore : baseball (runs marqués). On se limite au batting (le pitching a 'runs' = runs alloués).
+  var out={}, hadBox=false;
   try{
     window._g45ScorerDiag='';
     ((data&&data.boxscore&&data.boxscore.players)||[]).forEach(function(tp){
@@ -21410,11 +21406,16 @@ function _g45ScorerIds(data){
         var idxR=-1;
         keys.forEach(function(k,i){ var kk=String(k).toLowerCase(); if(idxR<0&&(kk==='runs'||kk==='r'||kk==='run')) idxR=i; });
         if(idxR<0) return;
+        hadBox=true;
         (stx.athletes||[]).forEach(function(at){ var a=at.athlete||{}; if(!a.id) return; var s=at.stats||[]; if((parseInt(s[idxR],10)||0)>0) out[String(a.id)]=1; });
       });
     });
   }catch(e){}
-  // Repli par nom : matcher les rosters au texte des actions
+  if(hadBox) return out; // boxscore fiable → exactement les marqueurs, on s'arrête
+  // Pas de boxscore (live) : participants des actions de score
+  function grab(arr){ (arr||[]).forEach(function(p){ (p.participants||[]).forEach(function(pt){ var a=(pt&&pt.athlete)||pt; var id=a&&a.id; if(!id&&a&&a.$ref){ var m=String(a.$ref).match(/athletes\/(\d+)/); if(m) id=m[1]; } if(id) out[String(id)]=1; }); }); }
+  grab(data&&data.scoringPlays);
+  grab(((data&&data.plays)||[]).filter(function(p){ return p&&p.scoringPlay===true; }));
   if(!Object.keys(out).length){
     var plays=[].concat((data&&data.scoringPlays)||[], ((data&&data.plays)||[]).filter(function(p){return p&&p.scoringPlay===true;}));
     var texts=plays.map(function(p){ return String(p.text||'').toLowerCase(); }).filter(Boolean);
