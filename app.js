@@ -22860,20 +22860,34 @@ async function g45LoadStandings(slug, sportPath, box){
     box.innerHTML='<div style="color:#ff6b6b;font-size:11px;text-align:center;padding:12px;">Erreur de chargement du classement.</div>';
   }
 }
+function _g45Hex2rgba(hex, a){ try{ hex=String(hex).replace('#',''); if(hex.length===3) hex=hex.split('').map(function(c){return c+c;}).join(''); var r=parseInt(hex.slice(0,2),16), g=parseInt(hex.slice(2,4),16), b=parseInt(hex.slice(4,6),16); return 'rgba('+r+','+g+','+b+','+a+')'; }catch(e){ return 'transparent'; } }
 /* Zone de qualification → couleur+libellé, d'après la note ESPN (description). */
 function _g45ZoneFromNote(desc){
   var d=String(desc||'').toLowerCase(); if(!d) return null;
+  if(/eliminat/.test(d)) return null;
   if(/relegation.*(play|round)|releg.*barrag|barrag.*releg|relegation\/promotion/.test(d)) return {color:'#f0b020',label:'Barrage relégation'};
   if(/releg/.test(d)) return {color:'#ff4545',label:'Relégation'};
-  if(/conference/.test(d)) return {color:'#20c997',label:'Conference League'};
+  if(/conference league/.test(d)) return {color:'#20c997',label:'Conference League'};
   if(/europa/.test(d)) return {color:'#f0862c',label:'Europa League'};
   if(/champions.*(qualif|play|round)|qualif.*champions/.test(d)) return {color:'#5aa0ff',label:'Barrage LDC'};
   if(/champions/.test(d)) return {color:'#1f6fff',label:'Ligue des Champions'};
-  return null; // note non reconnue → pas de couleur (on ne veut pas induire en erreur)
+  if(/wild ?card/.test(d)) return {color:'#5ad6a0',label:'Wild Card'};
+  if(/clinch|playoff|postseason|division/.test(d)) return {color:'#1ed760',label:'Playoffs'};
+  if(/play-?in/.test(d)) return {color:'#f0b020',label:'Play-in'};
+  return null;
 }
-/* Repli par position pour les grands championnats (quand ESPN ne fournit pas de note). */
-function _g45ZoneByPos(slug, pos, n){
+/* Repli par position : sports US (playoffs), rugby (finales), grands championnats de foot. */
+function _g45ZoneByPos(slug, sportPath, pos, n){
   var C={ldc:'#1f6fff',bldc:'#5aa0ff',el:'#f0862c',ecl:'#20c997',barr:'#f0b020',rel:'#ff4545'};
+  var us={
+    basketball:function(p){ if(p<=6) return['#1ed760','Playoffs']; if(p<=10) return['#f0b020','Play-in']; return null; },
+    hockey:function(p){ if(p<=8) return['#1ed760','Playoffs']; return null; },
+    baseball:function(p){ if(p<=3) return['#1ed760','Playoffs']; return null; },
+    football:function(p){ if(p<=7) return['#1ed760','Playoffs']; return null; }
+  };
+  if(us[sportPath]){ var zu=us[sportPath](pos); return zu?{color:zu[0],label:zu[1]}:null; }
+  if(sportPath==='rugby-league'){ return pos<=8?{color:'#1ed760',label:'Finales (Top 8)'}:null; }
+  if(sportPath==='rugby'){ return pos<=6?{color:'#1ed760',label:'Phase finale'}:null; }
   var maps={
     'fra.1':function(p){ if(p<=3) return[C.ldc,'Ligue des Champions']; if(p===4) return[C.bldc,'Barrage LDC']; if(p===5) return[C.el,'Europa League']; if(p===6) return[C.ecl,'Conference League']; if(p===n-2) return[C.barr,'Barrage relégation']; if(p>=n-1) return[C.rel,'Relégation']; return null; },
     'ger.1':function(p){ if(p<=4) return[C.ldc,'Ligue des Champions']; if(p===5) return[C.el,'Europa League']; if(p===6) return[C.ecl,'Conference League']; if(p===n-2) return[C.barr,'Barrage relégation']; if(p>=n-1) return[C.rel,'Relégation']; return null; },
@@ -22909,9 +22923,10 @@ function g45RenderStandings(data, season, sportPath, slug){
       +'<th style="padding:4px 3px;color:var(--t1);">'+(usePct?'% V':'Pts')+'</th></tr></thead><tbody>';
     entries.forEach(function(e,idx){
       var t=e.team||{}, st=e.stats||[];
-      var _z=(e.note && _g45ZoneFromNote(e.note.description)) || _g45ZoneByPos(slug, idx+1, entries.length);
+      var _z=(e.note && _g45ZoneFromNote(e.note.description)) || _g45ZoneByPos(slug, sportPath, idx+1, entries.length);
       if(_z) legend[_z.label]=_z.color;
       var _bd=_z?('border-left:3px solid '+_z.color+';'):'border-left:3px solid transparent;';
+      var _rowbg=_z?('background:'+_g45Hex2rgba(_z.color,.13)+';'):'';
       var logo=''; try{ logo=(t.logos&&t.logos[0]&&t.logos[0].href)||''; }catch(_){ }
       var nm=t.shortDisplayName||t.displayName||t.name||t.abbreviation||'?';
       var J=_g45Stat(st,['gamesPlayed']), V=_g45Stat(st,['wins','gamesWon']), N=_g45Stat(st,['ties','draws','gamesDrawn']), D=_g45Stat(st,['losses','gamesLost']);
@@ -22923,7 +22938,7 @@ function g45RenderStandings(data, season, sportPath, slug){
         if(!isNaN(WP)){ lastCol=(WP<=1?WP*100:WP).toFixed(1)+'%'; }
         else { var vv=parseFloat(V)||0, dd=parseFloat(D)||0; lastCol=(vv+dd>0)?((vv/(vv+dd)*100).toFixed(1)+'%'):'-'; }
       }
-      out+='<tr style="border-top:1px solid rgba(255,255,255,.05);">'
+      out+='<tr style="border-top:1px solid rgba(255,255,255,.05);'+_rowbg+'">'
         +'<td style="padding:5px 3px 5px 7px;'+_bd+'color:var(--t3);font-weight:700;">'+(idx+1)+'</td>'
         +'<td style="padding:5px 3px;"><div style="display:flex;align-items:center;gap:6px;">'+(logo?'<img src="'+logo+'" style="width:16px;height:16px;object-fit:contain;" onerror="this.style.display=\'none\'">':'')+'<span style="color:var(--t1);font-weight:600;white-space:nowrap;">'+nm+'</span></div></td>'
         +'<td style="padding:5px 3px;text-align:center;color:var(--t2);">'+(J!==''?J:'-')+'</td>'
