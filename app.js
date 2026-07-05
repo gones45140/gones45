@@ -21398,13 +21398,19 @@ function _g45ScorerIds(data){
   function grab(arr){ (arr||[]).forEach(function(p){ (p.participants||[]).forEach(function(pt){ var a=(pt&&pt.athlete)||pt; var id=a&&a.id; if(!id&&a&&a.$ref){ var m=String(a.$ref).match(/athletes\/(\d+)/); if(m) id=m[1]; } if(id) out[String(id)]=1; }); }); }
   grab(data&&data.scoringPlays);
   grab(((data&&data.plays)||[]).filter(function(p){ return p&&p.scoringPlay===true; }));
-  // Boxscore : baseball (runs / home runs), hockey (goals)…
+  // Boxscore : baseball (runs marqués). On se limite au batting (le pitching a 'runs' = runs alloués).
   try{
+    window._g45ScorerDiag='';
     ((data&&data.boxscore&&data.boxscore.players)||[]).forEach(function(tp){
       (tp.statistics||[]).forEach(function(stx){
-        var keys=stx.keys||stx.labels||[]; var idxR=-1,idxHR=-1,idxG=-1;
-        keys.forEach(function(k,i){ var kk=String(k).toLowerCase(); if(idxR<0&&(kk==='runs'||kk==='r')) idxR=i; if(idxHR<0&&(kk==='homeruns'||kk==='hr')) idxHR=i; if(idxG<0&&(kk==='goals'||kk==='g')) idxG=i; });
-        (stx.athletes||[]).forEach(function(at){ var a=at.athlete||{}; if(!a.id) return; var s=at.stats||[]; var r=idxR>=0?parseInt(s[idxR],10):0, hr=idxHR>=0?parseInt(s[idxHR],10):0, g=idxG>=0?parseInt(s[idxG],10):0; if(r>0||hr>0||g>0) out[String(a.id)]=1; });
+        var cat=String(stx.name||stx.type||stx.text||'').toLowerCase();
+        if(cat && !/bat|hit/.test(cat)) return; // batting uniquement
+        var keys=stx.keys||stx.labels||stx.names||[];
+        if(!window._g45ScorerDiag && keys.length) window._g45ScorerDiag=(stx.name||stx.type||'?')+' → ['+keys.join(', ')+']';
+        var idxR=-1;
+        keys.forEach(function(k,i){ var kk=String(k).toLowerCase(); if(idxR<0&&(kk==='runs'||kk==='r'||kk==='run')) idxR=i; });
+        if(idxR<0) return;
+        (stx.athletes||[]).forEach(function(at){ var a=at.athlete||{}; if(!a.id) return; var s=at.stats||[]; if((parseInt(s[idxR],10)||0)>0) out[String(a.id)]=1; });
       });
     });
   }catch(e){}
@@ -21419,13 +21425,12 @@ function _g45ScorerIds(data){
 function _genericLineups(data, sport){
   var R=data && data.rosters; if(!R || !R.length) return '';
   var scorers=_g45ScorerIds(data);
-  var scIco=({baseball:'⚾',rugby:'🏉','rugby-league':'🏉',hockey:'🏒',football:'🏈'})[sport]||'🟢';
   function nm(p){
     var a=p.athlete||{};
     var name=a.displayName||a.fullName||(((a.firstName?a.firstName+' ':'')+(a.lastName||'')).trim())||a.shortName||'?';
     var pos=(p.position&&(p.position.abbreviation||p.position.name))||(a.position&&(a.position.abbreviation||a.position.name))||'';
     var jersey=p.jersey?('<b style="color:#8aa0ff;">'+p.jersey+'</b> '):'';
-    var mark=(a.id&&scorers[String(a.id)])?(' <span title="A marqué" style="font-size:9px;">'+scIco+'</span>'):'';
+    var mark=(a.id&&scorers[String(a.id)])?' <span title="A marqué" style="display:inline-block;width:7px;height:7px;border-radius:50%;background:#1ed760;box-shadow:0 0 4px rgba(30,215,96,.55);vertical-align:middle;margin-left:3px;"></span>':'';
     return '<div style="font-size:11px;color:var(--t1);padding:1px 0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">'+jersey+name+mark+(pos?' <span style="color:var(--t3);font-size:9px;">'+pos+'</span>':'')+'</div>';
   }
   function byJ(a,b){ return (parseInt(a.jersey,10)||99)-(parseInt(b.jersey,10)||99); }
@@ -21455,6 +21460,7 @@ function _genericLineups(data, sport){
   });
   return '<div style="margin-top:10px;border-top:1px solid rgba(255,255,255,.06);padding-top:8px;">'
     +'<div style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:#8aa0ff;margin-bottom:6px;">Compositions</div>'
+    +((window._g45ScorerDiag)?'<div style="font-size:8px;color:var(--t3);margin-bottom:5px;word-break:break-word;">diag runs → '+String(window._g45ScorerDiag).replace(/</g,'&lt;')+'</div>':'')
     +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">'+cols+'</div></div>';
 }
 /* H2H rugby (XV + XIII) : forme récente des 2 équipes + confrontations directes, via calendriers ESPN. */
