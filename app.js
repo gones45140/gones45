@@ -20371,7 +20371,7 @@ function _g45RenderTendance(v, hN, aN, comp){
   var h1=Math.max(0,parseInt(v.vote1,10)||0), x=Math.max(0,parseInt(v.voteX,10)||0), a1=Math.max(0,parseInt(v.vote2,10)||0);
   var tot=h1+x+a1; if(tot<=0) return '<div style="color:var(--t3);font-size:11px;padding:8px;">Aucun vote pour ce match.</div>';
   // Match à élimination directe : Sofascore ne propose pas de voter le nul → le résiduel est un artefact, on l'exclut.
-  var _ko=/coupe du monde|world cup|mondial|euro\b|copa am|can\b|coupe d'afrique|gold cup|olymp|club world cup|super cup|supercoupe|final|finale|1\/8|1\/4|1\/2|huitieme|huitième|quart|demi|barrage|playoff/i.test(comp||'');
+  var _ko=/ufc|mma|coupe du monde|world cup|mondial|euro\b|copa am|can\b|coupe d'afrique|gold cup|olymp|club world cup|super cup|supercoupe|final|finale|1\/8|1\/4|1\/2|huitieme|huitième|quart|demi|barrage|playoff/i.test(comp||'');
   var _drawArtefact=_ko && (x/tot)<0.15;
   if(_drawArtefact){ tot=h1+a1; if(tot<=0) return '<div style="color:var(--t3);font-size:11px;padding:8px;">Aucun vote pour ce match.</div>'; }
   function pct(n){ return Math.round(n/tot*100); }
@@ -20392,6 +20392,7 @@ function _g45RenderTendance(v, hN, aN, comp){
 /* ───────── COTES RÉELLES (The Odds API via Worker, clé secrète) ───────── */
 function _g45OddsSportKey(comp){
   var c=(comp||'').toLowerCase();
+  if(/ufc|mma/.test(c)) return 'mma_mixed_martial_arts';
   if(/coupe du monde|world cup|fifa|mondial/.test(c)) return 'soccer_fifa_world_cup';
   if(/premier league|angleterre|\bepl\b/.test(c)) return 'soccer_epl';
   if(/championship/.test(c)) return 'soccer_efl_champ';
@@ -20759,11 +20760,17 @@ async function g45LoadUsAI(btn){
   btn.disabled=true;
   var sp=btn.dataset.sport||'';
   var LG={mlb:'MLB (baseball)',nba:'NBA (basket)',nfl:'NFL (football américain)',nhl:'NHL (hockey)',wnba:'WNBA'};
-  var LGS={rugby:'Rugby','rugby-league':'Rugby à XIII (NRL)',tennis:'Tennis'};
+  var LGS={rugby:'Rugby','rugby-league':'Rugby à XIII (NRL)',tennis:'Tennis',mma:'MMA — UFC'};
   var facts=[];
-  var _neutU=(sp!=='tennis') && /coupe du monde|world cup|super bowl|final four|all-?star|neutral/i.test((btn.dataset.tour||'')+' '+lg);
-  facts.push('Match '+(LG[lg]||LGS[sp]||lg.toUpperCase())+' : '+hN+((sp==='tennis'||_neutU)?' vs ':' (domicile) vs ')+aN+((sp==='tennis'||_neutU)?'':' (extérieur)')+(iso?(' — le '+String(iso).slice(0,10)):''));
+  var _neutU=(sp!=='tennis'&&sp!=='mma') && /coupe du monde|world cup|super bowl|final four|all-?star|neutral/i.test((btn.dataset.tour||'')+' '+lg);
+  facts.push('Match '+(LG[lg]||LGS[sp]||lg.toUpperCase())+' : '+hN+((sp==='tennis'||sp==='mma'||_neutU)?' vs ':' (domicile) vs ')+aN+((sp==='tennis'||sp==='mma'||_neutU)?'':' (extérieur)')+(iso?(' — le '+String(iso).slice(0,10)):''));
   if(_neutU) facts.push('TERRAIN NEUTRE : aucune des deux équipes ne reçoit, il n\'y a PAS d\'avantage du terrain.');
+  if(sp==='mma'){
+    var _wc=btn.dataset.wc||'', _rds=btn.dataset.rounds||'';
+    if(_wc) facts.push('Catégorie de poids : '+_wc);
+    facts.push('FORMAT : combat de MMA en '+(_rds||'3')+' rounds de 5 minutes. Issues possibles : KO/TKO, soumission, décision (unanime/partagée/majoritaire), nul ou sans décision.');
+    if(btn.dataset.bio) facts.push('Bilans et données : '+btn.dataset.bio);
+  }
   var _bo3=false;
   if(sp==='tennis'){
     try{
@@ -20797,6 +20804,9 @@ async function g45LoadUsAI(btn){
   var sys='Tu es un analyste paris sportifs francophone, concis et prudent. Reponds STRICTEMENT dans ce format, sans rien avant ni apres:\n🎯 PRONOSTIC : <vainqueur> — score probable <x-y>\n💎 VALEUR : <compare ton estimation aux cotes fournies, ou dis "pas de value claire">\n🔑 POINTS CLES :\n- <point 1>\n- <point 2>\n- <point 3>\n⚠️ <principale incertitude en 1 phrase>\nAppuie-toi sur les faits fournis et tes connaissances des equipes. REGLE ABSOLUE : ne cite JAMAIS une forme recente, une serie, un historique de confrontations, un score passe, une blessure ou un classement qui ne figure PAS dans les FAITS fournis. Si une info te manque, raisonne au conditionnel ou dis que la donnee manque, sans l\'inventer.';
   if(sp==='tennis'){
     sys+='\nTENNIS — REGLE ABSOLUE SUR LE SCORE : le "score probable" doit etre exprime EN SETS (ex. 3-1 ou 2-0), jamais en jeux (pas de "6-4 6-4"). Respecte IMPERATIVEMENT le FORMAT DU MATCH indique dans les FAITS : en best of 5, le vainqueur a TOUJOURS 3 sets (3-0, 3-1 ou 3-2) ; en best of 3, le vainqueur a TOUJOURS 2 sets (2-0 ou 2-1). Un score comme 2-1 est INTERDIT en best of 5.\nNe parle JAMAIS d\'avantage du terrain ni de "domicile/exterieur" : au tennis, aucun joueur ne recoit.';
+  } else if(sp==='mma'){
+    sys=sys.replace('score probable <x-y>','méthode probable <KO/TKO, soumission ou décision> au round <n>');
+    sys+='\nMMA — REGLES : il n\'y a PAS de score ni de domicile/exterieur. Le "PRONOSTIC" doit nommer le vainqueur probable, puis la METHODE (KO/TKO, soumission, decision) et le round estime. Respecte le nombre de rounds indique dans les FAITS. N\'invente aucun palmares, aucune serie ni aucune blessure absente des FAITS.';
   } else if(_neutU){
     sys+='\nREGLE ABSOLUE : ce match se joue sur TERRAIN NEUTRE. Ne parle JAMAIS d\'avantage du terrain, de "victoire domicile" ni de "jouer a domicile/exterieur". Nomme les equipes par leur nom.';
   }
@@ -22024,13 +22034,44 @@ async function g45MmaFight(cid, el){
     var od=(c.odds||[])[0];
     if(od){ var det=od.details||'', ou=(od.overUnder!=null?(' · total '+od.overUnder):''); if(det) h+='<div style="text-align:center;font-size:10px;color:#2ecc71;margin-bottom:5px;">💰 '+_g45MmaEa(det)+_g45MmaEa(ou)+'</div>'; }
   }catch(e){}
-  h+='<div style="text-align:center;color:var(--t3);font-size:10px;padding:4px;" id="mmast-'+_g45MmaEa(cid)+'">⏳ Détails…</div></div>';
+  h+='<div style="text-align:center;color:var(--t3);font-size:10px;padding:4px;" id="mmast-'+_g45MmaEa(cid)+'">⏳ Détails…</div>';
+  // Boutons : cotes réelles, analyse IA, tendance du public
+  var _wc2=''; try{ _wc2=_g45MmaWeight((c.type&&(c.type.text||c.type.abbreviation))||''); }catch(e){}
+  var _rd2=''; try{ _rd2=(c.format&&c.format.regulation&&c.format.regulation.periods)||''; }catch(e){}
+  var _bio='Bilan '+n0+' : '+(r0||'inconnu')+' · Bilan '+n1+' : '+(r1||'inconnu');
+  var _dt=c.date||'';
+  var eaA=function(x){return String(x==null?'':x).replace(/"/g,'&quot;');};
+  h+='<div style="margin-top:7px;display:flex;flex-direction:column;gap:5px;">'
+    +'<button onclick="event.stopPropagation();g45LoadOdds(this)" data-h="'+eaA(n0)+'" data-a="'+eaA(n1)+'" data-comp="UFC MMA" data-box="mmao-'+_g45MmaEa(cid)+'" style="width:100%;box-sizing:border-box;font-size:11px;font-weight:800;padding:7px 10px;border-radius:8px;cursor:pointer;border:1.5px solid rgba(46,204,113,.45);background:rgba(46,204,113,.10);color:#2ecc71;">💰 Cotes du combat</button><div id="mmao-'+_g45MmaEa(cid)+'"></div>'
+    +'<button onclick="event.stopPropagation();g45LoadUsAI(this)" data-lg="ufc" data-sport="mma" data-eid="'+_g45MmaEa(cid)+'" data-wc="'+eaA(_wc2)+'" data-rounds="'+eaA(_rd2)+'" data-bio="'+eaA(_bio)+'" data-h="'+eaA(n0)+'" data-a="'+eaA(n1)+'" data-date="'+eaA(_dt)+'" data-box="mmai-'+_g45MmaEa(cid)+'" style="width:100%;box-sizing:border-box;font-size:11px;font-weight:800;padding:7px 10px;border-radius:8px;cursor:pointer;border:1.5px solid rgba(176,124,214,.5);background:rgba(176,124,214,.10);color:#b07cd6;">🧠 Analyse IA du combat</button><div id="mmai-'+_g45MmaEa(cid)+'"></div>'
+    +'<button onclick="event.stopPropagation();g45LoadTendance(this)" data-h="'+eaA(n0)+'" data-a="'+eaA(n1)+'" data-slug="mma" data-comp="UFC" data-date="'+eaA(_dt)+'" data-box="mmat-'+_g45MmaEa(cid)+'" style="width:100%;box-sizing:border-box;font-size:11px;font-weight:800;padding:7px 10px;border-radius:8px;cursor:pointer;border:1.5px solid rgba(120,162,255,.45);background:rgba(120,162,255,.10);color:#8aa2ff;">📈 Tendance du public (quota)</button><div id="mmat-'+_g45MmaEa(cid)+'"></div>'
+    +'</div>';
+  h+='</div>';
   box.innerHTML=h;
   // Détail du combat via le core API ESPN (chemin documenté pour le MMA)
   var sb=document.getElementById('mmast-'+cid); if(!sb) return;
   var evId=c.__ev||'';
   if(!evId){ sb.style.display='none'; return; }
   async function gj(u){ try{ var r=await fetch(u); return r.ok?(await r.json()):null; }catch(e){ return null; } }
+  var _stt=(c.status&&c.status.type)||{}, _done=(_stt.completed===true||_stt.state==='post');
+  // ── AVANT-MATCH : bio comparée des combattants (gratuit, core API) ──
+  if(!_done){
+    try{
+      var aid0=(a0&&a0.id)||'', aid1=(a1&&a1.id)||'';
+      if(!aid0||!aid1){ sb.style.display='none'; return; }
+      var B='https://sports.core.api.espn.com/v2/sports/mma/leagues/ufc/athletes/';
+      var b0=await gj(B+encodeURIComponent(aid0)), b1=await gj(B+encodeURIComponent(aid1));
+      if(!b0&&!b1){ sb.style.display='none'; return; }
+      function fv(b,k){ try{ if(!b) return ''; if(k==='age') return b.age!=null?(b.age+' ans'):''; if(k==='height') return b.displayHeight||''; if(k==='reach') return b.displayReach||b.reach||''; if(k==='weight') return b.displayWeight||''; if(k==='stance') return (b.stance&&(b.stance.text||b.stance.displayName))||''; if(k==='from') return (b.citizenship||(b.birthPlace&&(b.birthPlace.country||b.birthPlace.city)))||''; }catch(e){} return ''; }
+      var L=[['age','Âge'],['height','Taille'],['reach','Allonge'],['weight','Poids'],['stance','Garde'],['from','Pays']];
+      var rows2='';
+      L.forEach(function(p){ var v0=fv(b0,p[0]), v1=fv(b1,p[0]); if(!v0&&!v1) return; rows2+='<div style="display:flex;justify-content:space-between;font-size:10px;padding:2px 0;"><span style="color:var(--t1);font-weight:700;width:60px;text-align:left;">'+_g45MmaEa(v0||'—')+'</span><span style="color:#c3cce6;flex:1;text-align:center;">'+p[1]+'</span><span style="color:var(--t1);font-weight:700;width:60px;text-align:right;">'+_g45MmaEa(v1||'—')+'</span></div>'; });
+      if(rows2){ sb.innerHTML='<div style="font-size:8px;font-weight:800;color:#8aa0ff;text-transform:uppercase;letter-spacing:.5px;margin-bottom:3px;">Avant-combat</div>'+rows2; sb.style.color='var(--t1)'; }
+      else sb.style.display='none';
+    }catch(e){ sb.style.display='none'; }
+    return;
+  }
+  // ── COMBAT TERMINÉ : méthode + stats ──
   try{
     var comp=await gj('https://sports.core.api.espn.com/v2/sports/mma/leagues/ufc/events/'+encodeURIComponent(evId)+'/competitions/'+encodeURIComponent(cid));
     if(!comp){ sb.style.display='none'; return; } // CORS/404 → on n'encombre pas
