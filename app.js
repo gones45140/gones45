@@ -21974,6 +21974,7 @@ function _g45MmaMethod(c){
 }
 function _g45MmaFightRow(c, evId){
   var cps=(c.competitors||[]); if(cps.length<2) return '';
+  try{ if(c&&c.id){ c.__ev=evId; _g45MmaCache[c.id]=c; } }catch(e){}
   var st=(c.status&&c.status.type)||{};
   var done=(st.completed===true||st.state==='post'), live=(st.state==='in');
   function side(cp, right){
@@ -21992,12 +21993,56 @@ function _g45MmaFightRow(c, evId){
   var meth=done?_g45MmaMethod(c):'';
   var wc=''; try{ wc=(c.type&&(c.type.text||c.type.abbreviation))||''; }catch(e){}
   var note=''; try{ (c.notes||[]).forEach(function(n){ var t=(n.headline||n.text||''); if(/main event|co-main|title/i.test(t)) note=t; }); }catch(e){}
-  return '<div style="background:var(--s1);border-radius:8px;padding:8px 10px;margin-bottom:5px;'+(live?'border-left:3px solid #ff4545;':'')+'">'
+  return '<div onclick="g45MmaFight(\''+_g45MmaEa(c.id)+'\',this)" style="cursor:pointer;background:var(--s1);border-radius:8px;padding:8px 10px;margin-bottom:5px;'+(live?'border-left:3px solid #ff4545;':'')+'">'
     +(note?'<div style="font-size:8px;font-weight:800;color:#f0b020;text-transform:uppercase;letter-spacing:.5px;margin-bottom:3px;">'+_g45MmaEa(note)+'</div>':'')
     +'<div style="display:flex;align-items:center;">'+side(cps[0],false)+mid+side(cps[1],true)+'</div>'
     +((meth||wc)?'<div style="font-size:9px;color:var(--t3);text-align:center;margin-top:3px;">'+(wc?_g45MmaEa(wc):'')+(wc&&meth?' · ':'')+(meth?_g45MmaEa(meth):'')+'</div>':'')
-    +'</div>';
+    +'</div>'
+    +'<div id="mmaf-'+_g45MmaEa(c.id)+'" style="display:none;margin:-2px 0 6px;"></div>';
 }
+/* Détail d'un combat : records, cotes, méthode + stats (summary ESPN, défensif). */
+async function g45MmaFight(cid, el){
+  var box=document.getElementById('mmaf-'+cid); if(!box) return;
+  if(box.getAttribute('data-open')==='1'){ box.style.display='none'; box.setAttribute('data-open','0'); return; }
+  box.style.display=''; box.setAttribute('data-open','1');
+  var c=_g45MmaCache[cid]; if(!c){ box.innerHTML='<div style="color:var(--t3);font-size:10px;padding:8px;text-align:center;">Détail indisponible.</div>'; return; }
+  var cps=c.competitors||[], a0=(cps[0]&&cps[0].athlete)||{}, a1=(cps[1]&&cps[1].athlete)||{};
+  var n0=a0.displayName||a0.shortName||'?', n1=a1.displayName||a1.shortName||'?';
+  function rec(cp){ try{ var r=(cp.records||[])[0]; return (r&&(r.summary||r.displayValue))||''; }catch(e){ return ''; } }
+  var h='<div style="background:rgba(240,176,32,.05);border:1px solid rgba(240,176,32,.2);border-radius:9px;padding:9px 11px;">';
+  var r0=rec(cps[0]), r1=rec(cps[1]);
+  if(r0||r1) h+='<div style="display:flex;justify-content:space-between;font-size:10px;margin-bottom:5px;"><span style="color:var(--t2);">'+_g45MmaEa(n0)+' <b style="color:var(--t1);">'+_g45MmaEa(r0||'—')+'</b></span><span style="color:var(--t3);font-size:8px;align-self:center;">BILAN</span><span style="color:var(--t2);"><b style="color:var(--t1);">'+_g45MmaEa(r1||'—')+'</b> '+_g45MmaEa(n1)+'</span></div>';
+  var m=_g45MmaMethod(c);
+  if(m) h+='<div style="text-align:center;font-size:10px;color:#1ed760;font-weight:700;margin-bottom:5px;">🏁 '+_g45MmaEa(m)+'</div>';
+  // Cotes si ESPN les fournit
+  try{
+    var od=(c.odds||[])[0];
+    if(od){ var det=od.details||'', ou=(od.overUnder!=null?(' · total '+od.overUnder):''); if(det) h+='<div style="text-align:center;font-size:10px;color:#2ecc71;margin-bottom:5px;">💰 '+_g45MmaEa(det)+_g45MmaEa(ou)+'</div>'; }
+  }catch(e){}
+  h+='<div style="text-align:center;color:var(--t3);font-size:10px;padding:4px;" id="mmast-'+_g45MmaEa(cid)+'">⏳ Stats…</div></div>';
+  box.innerHTML=h;
+  // Stats du combat via le summary de la soirée (endpoint variable → défensif)
+  var sb=document.getElementById('mmast-'+cid); if(!sb) return;
+  try{
+    var evId=c.__ev||'';
+    var r=await fetch('https://site.web.api.espn.com/apis/site/v2/sports/mma/ufc/summary?event='+encodeURIComponent(cid));
+    if(!r.ok) r=await fetch('https://site.api.espn.com/apis/site/v2/sports/mma/ufc/summary?event='+encodeURIComponent(evId));
+    if(!r.ok){ sb.innerHTML='<span style="font-size:9px;">Stats non fournies par ESPN (HTTP '+r.status+').</span>'; return; }
+    var j=await r.json();
+    var rows='';
+    try{
+      var bx=(j.boxscore&&(j.boxscore.players||j.boxscore.teams))||j.statistics||null;
+      if(Array.isArray(bx)&&bx.length){
+        var keys={};
+        bx.slice(0,2).forEach(function(tp,i){ (tp.statistics||[]).forEach(function(sx){ (sx.stats||sx.athletes||[]).forEach(function(s){ var lbl=s.label||s.name||s.displayName; var v=(s.displayValue!=null?s.displayValue:s.value); if(lbl&&v!=null){ if(!keys[lbl]) keys[lbl]=['','']; keys[lbl][i]=v; } }); }); });
+        Object.keys(keys).slice(0,10).forEach(function(k){ rows+='<div style="display:flex;justify-content:space-between;font-size:10px;padding:2px 0;"><span style="color:var(--t1);font-weight:700;width:44px;text-align:left;">'+_g45MmaEa(keys[k][0]||'—')+'</span><span style="color:var(--t3);flex:1;text-align:center;">'+_g45MmaEa(k)+'</span><span style="color:var(--t1);font-weight:700;width:44px;text-align:right;">'+_g45MmaEa(keys[k][1]||'—')+'</span></div>'; });
+      }
+    }catch(e){}
+    sb.innerHTML=rows||'<span style="font-size:9px;">Pas de stats détaillées pour ce combat.</span>';
+    if(rows) sb.style.color='var(--t1)';
+  }catch(e){ sb.innerHTML='<span style="font-size:9px;">Stats indisponibles.</span>'; }
+}
+window.g45MmaFight=g45MmaFight;
 async function g45MmaOpen(off){
   var el=document.getElementById('t-resultats'); if(!el) return;
   off=parseInt(off,10)||0;
