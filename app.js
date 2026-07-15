@@ -18721,7 +18721,7 @@ if(!localStorage.getItem('gones45_github_token')){ try { loadPublicStats(); } ca
   var saved=localStorage.getItem('g45_dbx');
   /* token chargé via getValidToken() */
   var inp=$i('dbx-key-input');var saved=localStorage.getItem('gones45_dbx_token');if(inp)inp.value=saved?'(token enregistré)':'';
-  var gk=localStorage.getItem('gones45_gemini_key');var gki=$i('gemini-key-input');if(gki&&gk)gki.value=gk;var fdk=localStorage.getItem('gones45_fdorg_key');var fdki=$i('fdorg-key-input');if(fdki&&fdk)fdki.value='(clé enregistrée)';var afk=localStorage.getItem('gones45_apifootball_key');var afki=$i('apifootball-key-input');if(afki&&afk)afki.value='(clé enregistrée)';var rapk=localStorage.getItem('gones45_rapidapi_key');var rapki=$i('rapidapi-key-input');if(rapki&&rapk)rapki.value='(clé enregistrée)';var ghk=localStorage.getItem('gones45_github_token');var ghki=$i('github-token-input');if(ghki&&ghk)ghki.value='(token enregistré)';
+  var gk=localStorage.getItem('gones45_gemini_key');var gki=$i('gemini-key-input');if(gki&&gk)gki.value=gk;var fdk=localStorage.getItem('gones45_fdorg_key');var fdki=$i('fdorg-key-input');if(fdki&&fdk)fdki.value='(clé enregistrée)';var afk=localStorage.getItem('gones45_apifootball_key');var afki=$i('apifootball-key-input');if(afki&&afk)afki.value='(clé enregistrée)';var rapk=localStorage.getItem('gones45_rapidapi_key');var rapki=$i('rapidapi-key-input');if(rapki&&rapk)rapki.value='(clé enregistrée)';var ghk=localStorage.getItem('gones45_github_token');var ghki=$i('github-token-input');if(ghki&&ghk)ghki.value='(token enregistré)';var mk=localStorage.getItem('gones45_mistral_key');var mki=$i('mistral-key-input');if(mki&&mk)mki.value='(clé enregistrée)';var gok=localStorage.getItem('gones45_google_key');var goki=$i('google-key-input');if(goki&&gok)goki.value='(clé enregistrée)';
 
 // ── APPARENCE — halo cartes ──
 var _apStyle = 'halo';
@@ -20848,16 +20848,18 @@ window.g45F1AI=g45F1AI;
 function g45SaveGoogleKey(btn){
   var i=document.getElementById('google-key-input'); if(!i) return;
   var v=(i.value||'').trim();
-  if(v){ localStorage.setItem('gones45_google_key',v); btn.textContent='✅'; }
-  else { localStorage.removeItem('gones45_google_key'); btn.textContent='🗑️'; }
+  if(v==='(clé enregistrée)'){ btn.textContent='✅'; setTimeout(function(){ btn.textContent='💾'; },1200); return; } // rien tapé → on garde
+  if(v){ localStorage.setItem('gones45_google_key',v); i.value='(clé enregistrée)'; btn.textContent='✅'; }
+  else if(localStorage.getItem('gones45_google_key')){ if(confirm('Effacer la clé Google enregistrée ?')){ localStorage.removeItem('gones45_google_key'); btn.textContent='🗑️'; } else { i.value='(clé enregistrée)'; btn.textContent='💾'; } }
   setTimeout(function(){ btn.textContent='💾'; },1200);
 }
 window.g45SaveGoogleKey=g45SaveGoogleKey;
 function g45SaveMistralKey(btn){
   var i=document.getElementById('mistral-key-input'); if(!i) return;
   var v=(i.value||'').trim();
-  if(v){ localStorage.setItem('gones45_mistral_key',v); btn.textContent='✅'; }
-  else { localStorage.removeItem('gones45_mistral_key'); btn.textContent='🗑️'; }
+  if(v==='(clé enregistrée)'){ btn.textContent='✅'; setTimeout(function(){ btn.textContent='💾'; },1200); return; } // rien tapé → on garde
+  if(v){ localStorage.setItem('gones45_mistral_key',v); i.value='(clé enregistrée)'; btn.textContent='✅'; }
+  else if(localStorage.getItem('gones45_mistral_key')){ if(confirm('Effacer la clé Mistral enregistrée ?')){ localStorage.removeItem('gones45_mistral_key'); btn.textContent='🗑️'; } else { i.value='(clé enregistrée)'; btn.textContent='💾'; } }
   setTimeout(function(){ btn.textContent='💾'; },1200);
 }
 window.g45SaveMistralKey=g45SaveMistralKey;
