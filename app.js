@@ -20360,16 +20360,20 @@ async function g45LoadTendance(btn){
     if(!match){ box.innerHTML='<div style="color:var(--t3);font-size:11px;padding:8px;">Match introuvable sur Sofascore.</div>'; btn.disabled=false; return; }
     var v=await g45Sofa6('/api/sofascore/v1/match/votes?match_id='+match.id);
     if(!v || v.__err || (v.vote1==null && v.vote2==null && v.voteX==null)){ box.innerHTML='<div style="color:var(--t3);font-size:11px;padding:8px;">Tendance indisponible pour ce match.</div>'; btn.disabled=false; return; }
-    box.innerHTML=_g45RenderTendance(v, hN, aN);
+    box.innerHTML=_g45RenderTendance(v, hN, aN, (btn.dataset.comp||''));
     box.setAttribute('data-loaded','1');
   }catch(e){ box.innerHTML='<div style="color:#ff6b6b;font-size:11px;padding:8px;">Erreur tendance.</div>'; }
   btn.disabled=false;
 }
 window.g45LoadTendance=g45LoadTendance;
-function _g45RenderTendance(v, hN, aN){
+function _g45RenderTendance(v, hN, aN, comp){
   function ea(s){return String(s==null?'':s).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;');}
   var h1=Math.max(0,parseInt(v.vote1,10)||0), x=Math.max(0,parseInt(v.voteX,10)||0), a1=Math.max(0,parseInt(v.vote2,10)||0);
   var tot=h1+x+a1; if(tot<=0) return '<div style="color:var(--t3);font-size:11px;padding:8px;">Aucun vote pour ce match.</div>';
+  // Match à élimination directe : Sofascore ne propose pas de voter le nul → le résiduel est un artefact, on l'exclut.
+  var _ko=/coupe du monde|world cup|mondial|euro\b|copa am|can\b|coupe d'afrique|gold cup|olymp|club world cup|super cup|supercoupe|final|finale|1\/8|1\/4|1\/2|huitieme|huitième|quart|demi|barrage|playoff/i.test(comp||'');
+  var _drawArtefact=_ko && (x/tot)<0.15;
+  if(_drawArtefact){ tot=h1+a1; if(tot<=0) return '<div style="color:var(--t3);font-size:11px;padding:8px;">Aucun vote pour ce match.</div>'; }
   function pct(n){ return Math.round(n/tot*100); }
   function cote(n){ return n>0?(tot/n).toFixed(2):'—'; }
   function bar(lbl,p,c,n){
@@ -20380,9 +20384,9 @@ function _g45RenderTendance(v, hN, aN){
   return '<div style="background:rgba(120,162,255,.06);border:1px solid rgba(120,162,255,.18);border-radius:10px;padding:10px;">'
     +'<div style="font-size:10px;font-weight:800;color:#8aa2ff;text-align:center;margin-bottom:9px;">📈 TENDANCE DU PUBLIC · '+tot.toLocaleString('fr-FR')+' votes</div>'
     +bar(ea(hN)+' (1)', pct(h1), '#4d84ff', h1)
-    +bar('Match nul (X)', pct(x), '#9aa4b8', x)
+    +(_drawArtefact?'':bar('Match nul (X)', pct(x), '#9aa4b8', x))
     +bar(ea(aN)+' (2)', pct(a1), '#ff7b54', a1)
-    +'<div style="font-size:9px;color:var(--t3);text-align:center;margin-top:6px;font-style:italic;">Cote implicite ≈ 100 ÷ % — c\'est la tendance des parieurs, pas une cote bookmaker.</div>'
+    +'<div style="font-size:9px;color:var(--t3);text-align:center;margin-top:6px;font-style:italic;">Cote implicite ≈ 100 ÷ % — c\'est la tendance des parieurs, pas une cote bookmaker.'+(_drawArtefact?'<br>Nul non votable sur ce match (élimination directe) — votes ramenés à 100 %.':'')+'</div>'
     +'</div>';
 }
 /* ───────── COTES RÉELLES (The Odds API via Worker, clé secrète) ───────── */
@@ -20555,7 +20559,9 @@ async function g45LoadMatchAI(btn){
   box.innerHTML='<div style="color:var(--t3);font-size:11px;padding:10px;text-align:center;">🧠 Je rassemble cotes, tendance et tes notes, puis j\'analyse…</div>';
   btn.disabled=true;
   var facts=[];
-  facts.push('Match: '+hN+' (domicile) vs '+aN+' (extérieur)'+(comp?(' — '+comp):'')+(iso?(' — le '+iso.slice(0,10)):''));
+  var _neutral=/coupe du monde|world cup|mondial|euro\b|championnat d'europe|copa am|copa america|can\b|coupe d'afrique|africa cup|gold cup|nations league finals|olymp|jeux olympiques|club world cup|supercoupe|super cup|finale/i.test(comp||'');
+  facts.push('Match: '+hN+(_neutral?' vs ':' (domicile) vs ')+aN+(_neutral?'':' (extérieur)')+(comp?(' — '+comp):'')+(iso?(' — le '+iso.slice(0,10)):''));
+  if(_neutral) facts.push('TERRAIN NEUTRE : ce match se joue sur terrain neutre (aucune des deux équipes ne reçoit). Il n\'y a PAS d\'avantage du terrain. Les libellés "1"/"2" désignent seulement la 1re et la 2e équipe, pas domicile/extérieur.');
   // Cotes réelles (Worker, cache 15 min → souvent zéro quota)
   try{
     var sport=_g45OddsSportKey(comp);
@@ -20597,7 +20603,11 @@ async function g45LoadMatchAI(btn){
         var v=await g45Sofa6('/api/sofascore/v1/match/votes?match_id='+match.id);
         if(v && !v.__err){
           var t1=+v.vote1||0, tx=+v.voteX||0, t2=+v.vote2||0, tt=t1+tx+t2;
-          if(tt>0) facts.push('Votes du public ('+tt+' votes): '+Math.round(t1/tt*100)+'% victoire domicile / '+Math.round(tx/tt*100)+'% nul / '+Math.round(t2/tt*100)+'% victoire extérieur');
+          var _koF=/coupe du monde|world cup|mondial|euro\b|copa am|can\b|gold cup|olymp|club world cup|super cup|supercoupe|final|finale|1\/8|1\/4|1\/2|huitieme|huitième|quart|demi|barrage|playoff/i.test(comp||'');
+          var _artF=(tt>0)&&_koF&&((tx/tt)<0.15);
+          if(_artF){ tt=t1+t2; }
+          if(tt>0) facts.push('Votes du public ('+tt+' votes): '+Math.round(t1/tt*100)+'% '+(_neutral?('victoire '+hN):'victoire domicile')+(_artF?'':(' / '+Math.round(tx/tt*100)+'% nul'))+' / '+Math.round(t2/tt*100)+'% '+(_neutral?('victoire '+aN):'victoire extérieur'));
+          if(_artF) facts.push('ATTENTION : sur ce match a elimination directe, le nul n\'est PAS votable chez le public. L\'absence de votes sur le nul ne signifie donc PAS que le public sous-evalue le nul : n\'en deduis AUCUNE value sur le X a partir des votes.');
         }
       }
     }
@@ -20610,6 +20620,7 @@ async function g45LoadMatchAI(btn){
     }
   }catch(e){}
   var sys='Tu es un analyste paris sportifs francophone, concis et prudent. Reponds STRICTEMENT dans ce format, sans rien avant ni apres:\n🎯 PRONOSTIC : <1, X ou 2> — score probable <x-y>\n💎 VALEUR : <compare ton estimation aux cotes fournies ; indique ou serait la valeur, ou dis "pas de value claire">\n🔑 POINTS CLES :\n- <point 1>\n- <point 2>\n- <point 3>\n⚠️ <principale incertitude en 1 phrase>\nAppuie-toi sur les faits fournis (cotes, votes, notes perso) et tes connaissances generales des equipes. REGLE ABSOLUE : ne cite JAMAIS une forme recente, une serie, un historique de confrontations, un score passe, une blessure ou un classement qui ne figure PAS dans les FAITS fournis. Si une info te manque, raisonne au conditionnel ou dis que la donnee manque, sans l\'inventer.';
+  if(_neutral) sys+='\nREGLE ABSOLUE : ce match se joue sur TERRAIN NEUTRE. Ne parle JAMAIS d\'avantage du terrain, de "victoire domicile", de "jouer a domicile/exterieur", ni de public acquis a une equipe. Nomme les equipes par leur nom.';
   await _g45MultiAI(box, btn.dataset.box, sys, facts, hN+' vs '+aN);
   btn.disabled=false;
 }
@@ -20750,7 +20761,23 @@ async function g45LoadUsAI(btn){
   var LG={mlb:'MLB (baseball)',nba:'NBA (basket)',nfl:'NFL (football américain)',nhl:'NHL (hockey)',wnba:'WNBA'};
   var LGS={rugby:'Rugby','rugby-league':'Rugby à XIII (NRL)',tennis:'Tennis'};
   var facts=[];
-  facts.push('Match '+(LG[lg]||LGS[sp]||lg.toUpperCase())+' : '+hN+(sp==='tennis'?' vs ':' (domicile) vs ')+aN+(sp==='tennis'?'':' (extérieur)')+(iso?(' — le '+String(iso).slice(0,10)):''));
+  var _neutU=(sp!=='tennis') && /coupe du monde|world cup|super bowl|final four|all-?star|neutral/i.test((btn.dataset.tour||'')+' '+lg);
+  facts.push('Match '+(LG[lg]||LGS[sp]||lg.toUpperCase())+' : '+hN+((sp==='tennis'||_neutU)?' vs ':' (domicile) vs ')+aN+((sp==='tennis'||_neutU)?'':' (extérieur)')+(iso?(' — le '+String(iso).slice(0,10)):''));
+  if(_neutU) facts.push('TERRAIN NEUTRE : aucune des deux équipes ne reçoit, il n\'y a PAS d\'avantage du terrain.');
+  var _bo3=false;
+  if(sp==='tennis'){
+    try{
+      var _tour=btn.dataset.tour||'', _gd=String(btn.dataset.gender||'').toLowerCase(), _tl=_tour.toLowerCase();
+      var _isGS=/wimbledon|roland|french open|us open|australian open/.test(_tl);
+      var _isWomen=/women|dame|wta|féminin|feminin/.test(_gd);
+      var _isDouble=/double/.test(_gd);
+      var _bo5=(_isGS && !_isWomen && !_isDouble);
+      _bo3=!_bo5;
+      var _sf=/wimbledon|queen|halle|eastbourne|newport/.test(_tl)?'gazon':(/roland|french open|monte.?carlo|madrid|rome|hamburg|bastad|umag/.test(_tl)?'terre battue':(/us open|australian open|indian wells|miami|shanghai|cincinnati|dubai|bercy|paris|finals/.test(_tl)?'dur':''));
+      if(_tour) facts.push('Tournoi : '+_tour+(_sf?(' — surface : '+_sf):''));
+      facts.push('FORMAT DU MATCH : '+(_bo5?'best of 5 (3 sets gagnants, scores possibles 3-0, 3-1, 3-2)':'best of 3 (2 sets gagnants, scores possibles 2-0, 2-1)')+'. Le score probable DOIT respecter ce format.');
+    }catch(e){}
+  }
   try{
     var od=window._g45LastUsOdds;
     if(od && String(od.eid)===String(eid)){
@@ -20768,6 +20795,11 @@ async function g45LoadUsAI(btn){
     }
   }catch(e){}
   var sys='Tu es un analyste paris sportifs francophone, concis et prudent. Reponds STRICTEMENT dans ce format, sans rien avant ni apres:\n🎯 PRONOSTIC : <vainqueur> — score probable <x-y>\n💎 VALEUR : <compare ton estimation aux cotes fournies, ou dis "pas de value claire">\n🔑 POINTS CLES :\n- <point 1>\n- <point 2>\n- <point 3>\n⚠️ <principale incertitude en 1 phrase>\nAppuie-toi sur les faits fournis et tes connaissances des equipes. REGLE ABSOLUE : ne cite JAMAIS une forme recente, une serie, un historique de confrontations, un score passe, une blessure ou un classement qui ne figure PAS dans les FAITS fournis. Si une info te manque, raisonne au conditionnel ou dis que la donnee manque, sans l\'inventer.';
+  if(sp==='tennis'){
+    sys+='\nTENNIS — REGLE ABSOLUE SUR LE SCORE : le "score probable" doit etre exprime EN SETS (ex. 3-1 ou 2-0), jamais en jeux (pas de "6-4 6-4"). Respecte IMPERATIVEMENT le FORMAT DU MATCH indique dans les FAITS : en best of 5, le vainqueur a TOUJOURS 3 sets (3-0, 3-1 ou 3-2) ; en best of 3, le vainqueur a TOUJOURS 2 sets (2-0 ou 2-1). Un score comme 2-1 est INTERDIT en best of 5.\nNe parle JAMAIS d\'avantage du terrain ni de "domicile/exterieur" : au tennis, aucun joueur ne recoit.';
+  } else if(_neutU){
+    sys+='\nREGLE ABSOLUE : ce match se joue sur TERRAIN NEUTRE. Ne parle JAMAIS d\'avantage du terrain, de "victoire domicile" ni de "jouer a domicile/exterieur". Nomme les equipes par leur nom.';
+  }
   await _g45MultiAI(box, btn.dataset.box, sys, facts, hN+' vs '+aN);
   btn.disabled=false;
 }
@@ -22093,7 +22125,7 @@ function _g45EspnTennisDetail(c){
     +((venue||court)?'<div style="font-size:9px;color:var(--t3);text-align:center;margin-top:3px;">📍 '+venue+court+'</div>':'')
     +((function(){ var _ts=(c.status&&c.status.type)||{}; var _on=(_ts.state==='in'||_ts.state==='post'||_ts.completed); if(!_on) return ''; var _lbl=(_ts.state==='in')?'📊 Stats live (Sofascore · quota)':'📊 Voir les stats (Sofascore · quota)'; return '<div style="text-align:center;margin-top:10px;"><button onclick="g45EspnMatchStats(\''+c.id+'\',this)" style="border:none;background:rgba(138,160,255,.14);color:#8aa0ff;border-radius:8px;padding:7px 13px;font-size:10px;font-weight:700;cursor:pointer;">'+_lbl+'</button><div class="g45estats" style="margin-top:8px;"></div></div>'; })())
     +'<div style="margin-top:8px;"><button onclick="g45TennisOdds(this)" data-t="'+String(c.__grp||'').replace(/"/g,'&quot;')+'" data-h="'+String(_tHN).replace(/"/g,'&quot;')+'" data-a="'+String(_tAN).replace(/"/g,'&quot;')+'" data-box="usodd-'+c.id+'" style="width:100%;box-sizing:border-box;font-size:12px;font-weight:800;padding:9px 12px;border-radius:9px;cursor:pointer;border:1.5px solid rgba(46,204,113,.5);background:rgba(46,204,113,.08);color:#2ecc71;">💰 Cotes du match (Pinnacle & co)</button><div id="usodd-'+c.id+'" style="margin-top:8px;"></div></div>'
-    +'<div style="margin-top:8px;"><button onclick="g45LoadUsAI(this)" data-lg="tennis" data-sport="tennis" data-eid="'+c.id+'" data-h="'+String(_tHN).replace(/"/g,'&quot;')+'" data-a="'+String(_tAN).replace(/"/g,'&quot;')+'" data-date="'+(c.date||'')+'" data-box="usai-'+c.id+'" style="width:100%;box-sizing:border-box;font-size:12px;font-weight:800;padding:9px 12px;border-radius:9px;cursor:pointer;border:1.5px solid rgba(176,124,214,.5);background:rgba(176,124,214,.10);color:#b07cd6;">🧠 Analyse IA du match</button><div id="usai-'+c.id+'" style="margin-top:8px;"></div></div>'
+    +'<div style="margin-top:8px;"><button onclick="g45LoadUsAI(this)" data-lg="tennis" data-sport="tennis" data-eid="'+c.id+'" data-tour="'+String(c.__tour||c.__grp||'').replace(/"/g,'&quot;')+'" data-gender="'+String(c.__grp||'').replace(/"/g,'&quot;')+'" data-h="'+String(_tHN).replace(/"/g,'&quot;')+'" data-a="'+String(_tAN).replace(/"/g,'&quot;')+'" data-date="'+(c.date||'')+'" data-box="usai-'+c.id+'" style="width:100%;box-sizing:border-box;font-size:12px;font-weight:800;padding:9px 12px;border-radius:9px;cursor:pointer;border:1.5px solid rgba(176,124,214,.5);background:rgba(176,124,214,.10);color:#b07cd6;">🧠 Analyse IA du match</button><div id="usai-'+c.id+'" style="margin-top:8px;"></div></div>'
     +'<div style="margin-top:8px;"><button onclick="g45LoadTendance(this)" data-slug="tennis" data-h="'+String(_tHN).replace(/"/g,'&quot;')+'" data-a="'+String(_tAN).replace(/"/g,'&quot;')+'" data-date="'+(c.date||'')+'" data-box="ustend-'+c.id+'" style="width:100%;box-sizing:border-box;font-size:12px;font-weight:800;padding:9px 12px;border-radius:9px;cursor:pointer;border:1.5px solid rgba(122,140,255,.5);background:rgba(122,140,255,.08);color:#8aa2ff;">📈 Tendance du public</button><div id="ustend-'+c.id+'" style="margin-top:8px;"></div></div>'
     +'<div style="margin-top:8px;"><button onclick="g45YT(this.dataset.q)" data-q="'+String(_tHN+' '+_tAN+' highlights').replace(/"/g,'&quot;')+'" style="width:100%;box-sizing:border-box;font-size:12px;font-weight:800;padding:9px 12px;border-radius:9px;cursor:pointer;border:1.5px solid rgba(255,69,58,.5);background:rgba(255,69,58,.10);color:#ff6b5e;">📺 Résumé sur YouTube</button></div>'
     +'</div>';
@@ -22432,7 +22464,7 @@ function _g45RenderTennisRes(){
     (ev.groupings||[]).forEach(function(g){
       var gn=(g.grouping&&g.grouping.displayName)||'Matchs';
       if(!_g45EspnGrpPass(gn,filter)) return;
-      (g.competitions||[]).forEach(function(c){ if(!_g45SameDay(c.date||c.startDate, selDate)) return; c.__grp=gn; if(c&&c.id) cache[c.id]=c; if(!groupings[gn]){groupings[gn]=[];gOrder.push(gn);} groupings[gn].push(c); total++; });
+      (g.competitions||[]).forEach(function(c){ if(!_g45SameDay(c.date||c.startDate, selDate)) return; c.__grp=gn; c.__tour=(ev.name||ev.shortName||''); if(c&&c.id) cache[c.id]=c; if(!groupings[gn]){groupings[gn]=[];gOrder.push(gn);} groupings[gn].push(c); total++; });
     });
     if(!total) return;
     var secId='g45tev'+evi;
