@@ -21957,6 +21957,91 @@ var G45_SPORTS = [
     {name:'NRL', slug:'3', ico:'🇦🇺'}
   ]}]}
 ];
+/* ═══════════ MMA / UFC — ESPN (gratuit, sans clé, sans quota) ═══════════ */
+var _g45MmaCache={};
+function _g45MmaYmd(d){ return ''+d.getFullYear()+String(d.getMonth()+1).padStart(2,'0')+String(d.getDate()).padStart(2,'0'); }
+function _g45MmaEa(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/"/g,'&quot;'); }
+/* Méthode de victoire : cherchée à plusieurs endroits (ESPN varie), sinon rien. */
+function _g45MmaMethod(c){
+  var r=(c&&(c.status&&c.status.result))||c.result||null;
+  var m=r&&(r.displayName||r.name||r.shortDisplayName)||'';
+  var rd=r&&(r.round!=null?r.round:null), ck=r&&(r.clock&&(r.clock.displayValue||r.clock))||'';
+  if(!m){ try{ (c.notes||[]).forEach(function(n){ var t=(n.headline||n.text||''); if(/ko|tko|submission|decision|dq/i.test(t)&&!m) m=t; }); }catch(e){} }
+  if(!m) return '';
+  var TR={'KO/TKO':'KO/TKO','Submission':'Soumission','Decision - Unanimous':'Décision unanime','Decision - Split':'Décision partagée','Decision - Majority':'Décision majoritaire','DQ':'Disqualification','Draw':'Nul','No Contest':'Sans décision'};
+  var fr=TR[m]||m.replace(/Decision - /i,'Décision ').replace(/Unanimous/i,'unanime').replace(/Split/i,'partagée').replace(/Majority/i,'majoritaire').replace(/Submission/i,'Soumission');
+  return fr+(rd?(' · R'+rd+(ck?(' '+ck):'')):'');
+}
+function _g45MmaFightRow(c, evId){
+  var cps=(c.competitors||[]); if(cps.length<2) return '';
+  var st=(c.status&&c.status.type)||{};
+  var done=(st.completed===true||st.state==='post'), live=(st.state==='in');
+  function side(cp, right){
+    var a=cp.athlete||{};
+    var nm=a.displayName||a.fullName||a.shortName||'?';
+    var fl=(a.flag&&a.flag.href)?('<img src="'+_g45MmaEa(a.flag.href)+'" style="width:15px;height:10px;border-radius:2px;object-fit:cover;flex:none;">'):'';
+    var win=(cp.winner===true);
+    var col=done?(win?'#1ed760':'var(--t3)'):'var(--t1)';
+    var wgt=win?'800':'600';
+    return '<div style="flex:1;min-width:0;display:flex;align-items:center;gap:5px;'+(right?'justify-content:flex-end;':'')+'">'
+      +(right?'':fl)
+      +'<span style="font-size:12px;font-weight:'+wgt+';color:'+col+';overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">'+_g45MmaEa(nm)+'</span>'
+      +(right?fl:'')+'</div>';
+  }
+  var mid='<div style="flex:none;font-size:10px;font-weight:800;color:'+(live?'#ff4545':'var(--t3)')+';padding:0 8px;">'+(live?'● LIVE':'VS')+'</div>';
+  var meth=done?_g45MmaMethod(c):'';
+  var wc=''; try{ wc=(c.type&&(c.type.text||c.type.abbreviation))||''; }catch(e){}
+  var note=''; try{ (c.notes||[]).forEach(function(n){ var t=(n.headline||n.text||''); if(/main event|co-main|title/i.test(t)) note=t; }); }catch(e){}
+  return '<div style="background:var(--s1);border-radius:8px;padding:8px 10px;margin-bottom:5px;'+(live?'border-left:3px solid #ff4545;':'')+'">'
+    +(note?'<div style="font-size:8px;font-weight:800;color:#f0b020;text-transform:uppercase;letter-spacing:.5px;margin-bottom:3px;">'+_g45MmaEa(note)+'</div>':'')
+    +'<div style="display:flex;align-items:center;">'+side(cps[0],false)+mid+side(cps[1],true)+'</div>'
+    +((meth||wc)?'<div style="font-size:9px;color:var(--t3);text-align:center;margin-top:3px;">'+(wc?_g45MmaEa(wc):'')+(wc&&meth?' · ':'')+(meth?_g45MmaEa(meth):'')+'</div>':'')
+    +'</div>';
+}
+async function g45MmaOpen(off){
+  var el=document.getElementById('t-resultats'); if(!el) return;
+  off=parseInt(off,10)||0;
+  var back='<button onclick="loadResultatsTab()" style="border:none;cursor:pointer;background:rgba(255,255,255,.06);border-radius:8px;color:var(--t2);padding:7px 12px;font-size:11px;font-weight:700;margin-bottom:10px;">← Sports</button>';
+  el.innerHTML=back+'<div style="color:var(--t3);font-size:11px;padding:16px;text-align:center;">⏳ Chargement des combats…</div>';
+  var base=new Date(); base.setDate(base.getDate()+off*100);
+  var from=new Date(base.getTime()-40*864e5), to=new Date(base.getTime()+60*864e5);
+  var evs=[];
+  try{
+    var r=await fetch('https://site.api.espn.com/apis/site/v2/sports/mma/ufc/scoreboard?dates='+_g45MmaYmd(from)+'-'+_g45MmaYmd(to)+'&limit=200');
+    if(r.ok){ var j=await r.json(); evs=j.events||[]; }
+    else { el.innerHTML=back+'<div style="color:#ff6b6b;font-size:11px;padding:16px;text-align:center;">ESPN a répondu HTTP '+r.status+'.</div>'; return; }
+  }catch(e){ el.innerHTML=back+'<div style="color:#ff6b6b;font-size:11px;padding:16px;text-align:center;">MMA injoignable.</div>'; return; }
+  var nav='<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:10px;">'
+    +'<button onclick="g45MmaOpen('+(off-1)+')" style="border:none;cursor:pointer;background:rgba(255,255,255,.06);border-radius:8px;color:var(--t1);padding:7px 14px;font-size:13px;">◀</button>'
+    +'<span style="font-size:11px;font-weight:700;color:var(--t2);">'+from.toLocaleDateString('fr-FR',{day:'numeric',month:'short'})+' → '+to.toLocaleDateString('fr-FR',{day:'numeric',month:'short',year:'numeric'})+'</span>'
+    +'<button onclick="g45MmaOpen('+(off+1)+')" style="border:none;cursor:pointer;background:rgba(255,255,255,.06);border-radius:8px;color:var(--t1);padding:7px 14px;font-size:13px;">▶</button></div>';
+  if(!evs.length){ el.innerHTML=back+'<div class="sec" style="margin-top:0;">🥊 MMA — UFC</div>'+nav+'<div style="text-align:center;color:var(--t3);font-size:11px;padding:20px;">Aucun événement sur cette période.</div>'; return; }
+  evs.sort(function(a,b){ return new Date(b.date)-new Date(a.date); });
+  var html='';
+  evs.forEach(function(ev,i){
+    var d=new Date(ev.date);
+    var comps=(ev.competitions||[]).slice();
+    comps.sort(function(a,b){ return (b.__ord||0)-(a.__ord||0) || (new Date(b.date||ev.date)-new Date(a.date||ev.date)); });
+    var st=(ev.status&&ev.status.type)||{}, live=(st.state==='in');
+    var sid='g45mma'+i;
+    html+='<div onclick="g45MmaTgl(\''+sid+'\',this)" style="cursor:pointer;display:flex;justify-content:space-between;align-items:center;background:rgba(255,255,255,.05);border-radius:8px;padding:9px 11px;margin:11px 0 5px;">'
+      +'<div style="min-width:0;"><div style="font-size:11px;font-weight:800;color:var(--t1);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">'+(live?'<span style="color:#ff4545;">● </span>':'')+_g45MmaEa(ev.name||ev.shortName||'UFC')+'</div>'
+      +'<div style="font-size:9px;color:var(--t3);margin-top:2px;">📅 '+(isNaN(d)?'':d.toLocaleDateString('fr-FR',{weekday:'short',day:'numeric',month:'long'}))+'</div></div>'
+      +'<span style="font-size:9px;color:var(--t3);white-space:nowrap;margin-left:8px;">'+comps.length+' <span class="g45-caret">▼</span></span></div>'
+      +'<div id="'+sid+'" data-open="1">';
+    comps.forEach(function(c){ html+=_g45MmaFightRow(c, ev.id); });
+    html+='</div>';
+  });
+  el.innerHTML=back+'<div class="sec" style="margin-top:0;">🥊 MMA — UFC</div>'+nav+html;
+}
+window.g45MmaOpen=g45MmaOpen;
+function g45MmaTgl(id, el){
+  var b=document.getElementById(id); if(!b) return;
+  var open=b.getAttribute('data-open')==='1';
+  b.style.display=open?'none':''; b.setAttribute('data-open',open?'0':'1');
+  var c=el.querySelector('.g45-caret'); if(c) c.textContent=open?'▶':'▼';
+}
+window.g45MmaTgl=g45MmaTgl;
 function loadResultatsTab(){
   var el=document.getElementById('t-resultats'); if(!el) return;
   var cards=G45_SPORTS.map(function(s){
@@ -21967,6 +22052,7 @@ function loadResultatsTab(){
     +'<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(88px,1fr));gap:10px;">'+cards
     +'<button onclick="g45TennisResults(0)" style="border:none;cursor:pointer;background:rgba(255,255,255,.05);border-radius:12px;padding:16px 8px;display:flex;flex-direction:column;align-items:center;gap:6px;color:var(--t1);"><span style="font-size:26px;">🎾</span><span style="font-size:11px;font-weight:700;">Tennis</span></button>'
     +'<button onclick="g45F1Open()" style="border:none;cursor:pointer;background:rgba(255,255,255,.05);border-radius:12px;padding:16px 8px;display:flex;flex-direction:column;align-items:center;gap:6px;color:var(--t1);"><span style="font-size:26px;">🏎️</span><span style="font-size:11px;font-weight:700;">F1</span></button>'
+    +'<button onclick="g45MmaOpen(0)" style="border:none;cursor:pointer;background:rgba(255,255,255,.05);border-radius:12px;padding:16px 8px;display:flex;flex-direction:column;align-items:center;gap:6px;color:var(--t1);"><span style="font-size:26px;">🥊</span><span style="font-size:11px;font-weight:700;">MMA / UFC</span></button>'
     +'</div>';
 }
 function g45ShowSport(sportKey){
