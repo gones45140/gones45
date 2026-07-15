@@ -22060,17 +22060,19 @@ async function g45MmaFight(cid, el){
   if(!_done){
     try{
       var aid0=(a0&&a0.id)||'', aid1=(a1&&a1.id)||'';
-      if(!aid0||!aid1){ sb.style.display='none'; return; }
+      if(!aid0&&!aid1){ sb.innerHTML='<span style="font-size:9px;color:#8aa0ff;">diag bio → pas d\'athlete.id dans le scoreboard (clés athlète : '+_g45MmaEa(Object.keys(a0||{}).slice(0,12).join(','))+')</span>'; return; }
       var B='https://sports.core.api.espn.com/v2/sports/mma/leagues/ufc/athletes/';
-      var b0=await gj(B+encodeURIComponent(aid0)), b1=await gj(B+encodeURIComponent(aid1));
-      if(!b0&&!b1){ sb.style.display='none'; return; }
-      function fv(b,k){ try{ if(!b) return ''; if(k==='age') return b.age!=null?(b.age+' ans'):''; if(k==='height') return b.displayHeight||''; if(k==='reach') return b.displayReach||b.reach||''; if(k==='weight') return b.displayWeight||''; if(k==='stance') return (b.stance&&(b.stance.text||b.stance.displayName))||''; if(k==='from') return (b.citizenship||(b.birthPlace&&(b.birthPlace.country||b.birthPlace.city)))||''; }catch(e){} return ''; }
+      async function gjs(u){ try{ var r=await fetch(u); if(!r.ok) return {__http:r.status}; return await r.json(); }catch(e){ return {__err:String((e&&e.message)||e).slice(0,40)}; } }
+      var b0=await gjs(B+encodeURIComponent(aid0||aid1)), b1=aid1?await gjs(B+encodeURIComponent(aid1)):null;
+      function dd(x){ if(!x) return 'null'; if(x.__http) return 'HTTP '+x.__http; if(x.__err) return x.__err; return 'ok'; }
+      if((b0&&(b0.__http||b0.__err))&&(!b1||b1.__http||b1.__err)){ sb.innerHTML='<span style="font-size:9px;color:#8aa0ff;">diag bio → id0='+_g45MmaEa(aid0)+' ('+dd(b0)+') · id1='+_g45MmaEa(aid1)+' ('+dd(b1)+')</span>'; return; }
+      function fv(b,k){ try{ if(!b||b.__http||b.__err) return ''; if(k==='age') return b.age!=null?(b.age+' ans'):''; if(k==='height') return b.displayHeight||''; if(k==='reach') return b.displayReach||b.reach||''; if(k==='weight') return b.displayWeight||''; if(k==='stance') return (b.stance&&(b.stance.text||b.stance.displayName))||''; if(k==='from') return (b.citizenship||(b.birthPlace&&(b.birthPlace.country||b.birthPlace.city)))||''; }catch(e){} return ''; }
       var L=[['age','Âge'],['height','Taille'],['reach','Allonge'],['weight','Poids'],['stance','Garde'],['from','Pays']];
       var rows2='';
       L.forEach(function(p){ var v0=fv(b0,p[0]), v1=fv(b1,p[0]); if(!v0&&!v1) return; rows2+='<div style="display:flex;justify-content:space-between;font-size:10px;padding:2px 0;"><span style="color:var(--t1);font-weight:700;width:60px;text-align:left;">'+_g45MmaEa(v0||'—')+'</span><span style="color:#c3cce6;flex:1;text-align:center;">'+p[1]+'</span><span style="color:var(--t1);font-weight:700;width:60px;text-align:right;">'+_g45MmaEa(v1||'—')+'</span></div>'; });
       if(rows2){ sb.innerHTML='<div style="font-size:8px;font-weight:800;color:#8aa0ff;text-transform:uppercase;letter-spacing:.5px;margin-bottom:3px;">Avant-combat</div>'+rows2; sb.style.color='var(--t1)'; }
-      else sb.style.display='none';
-    }catch(e){ sb.style.display='none'; }
+      else sb.innerHTML='<span style="font-size:9px;color:#8aa0ff;word-break:break-word;">diag bio → réponse ok mais champs vides.<br>clés reçues : '+_g45MmaEa(Object.keys(b0||{}).slice(0,22).join(', '))+'</span>';
+    }catch(e){ sb.innerHTML='<span style="font-size:9px;color:#ff6b6b;">diag bio → erreur : '+_g45MmaEa(String((e&&e.message)||e).slice(0,60))+'</span>'; }
     return;
   }
   // ── COMBAT TERMINÉ : méthode + stats ──
