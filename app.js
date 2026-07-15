@@ -22019,28 +22019,46 @@ async function g45MmaFight(cid, el){
     var od=(c.odds||[])[0];
     if(od){ var det=od.details||'', ou=(od.overUnder!=null?(' · total '+od.overUnder):''); if(det) h+='<div style="text-align:center;font-size:10px;color:#2ecc71;margin-bottom:5px;">💰 '+_g45MmaEa(det)+_g45MmaEa(ou)+'</div>'; }
   }catch(e){}
-  h+='<div style="text-align:center;color:var(--t3);font-size:10px;padding:4px;" id="mmast-'+_g45MmaEa(cid)+'">⏳ Stats…</div></div>';
+  h+='<div style="text-align:center;color:var(--t3);font-size:10px;padding:4px;" id="mmast-'+_g45MmaEa(cid)+'">⏳ Détails…</div></div>';
   box.innerHTML=h;
-  // Stats du combat via le summary de la soirée (endpoint variable → défensif)
+  // Détail du combat via le core API ESPN (chemin documenté pour le MMA)
   var sb=document.getElementById('mmast-'+cid); if(!sb) return;
+  var evId=c.__ev||'';
+  if(!evId){ sb.style.display='none'; return; }
+  async function gj(u){ try{ var r=await fetch(u); return r.ok?(await r.json()):null; }catch(e){ return null; } }
   try{
-    var evId=c.__ev||'';
-    var r=await fetch('https://site.web.api.espn.com/apis/site/v2/sports/mma/ufc/summary?event='+encodeURIComponent(cid));
-    if(!r.ok) r=await fetch('https://site.api.espn.com/apis/site/v2/sports/mma/ufc/summary?event='+encodeURIComponent(evId));
-    if(!r.ok){ sb.innerHTML='<span style="font-size:9px;">Stats non fournies par ESPN (HTTP '+r.status+').</span>'; return; }
-    var j=await r.json();
+    var comp=await gj('https://sports.core.api.espn.com/v2/sports/mma/leagues/ufc/events/'+encodeURIComponent(evId)+'/competitions/'+encodeURIComponent(cid));
+    if(!comp){ sb.style.display='none'; return; } // CORS/404 → on n'encombre pas
+    // Méthode : inline ou via $ref (status)
+    var res=comp.result||null;
+    if(!res && comp.status){ var stj=comp.status.$ref?await gj(String(comp.status.$ref).replace(/^http:/,'https:')):comp.status; if(stj) res=stj.result||null; }
+    var txt='';
+    if(res){
+      var mm=res.displayName||res.name||res.shortDisplayName||(res.type&&(res.type.displayName||res.type.text))||'';
+      var rd=(res.round!=null?res.round:null), ck=(res.clock&&(res.clock.displayValue||res.clock))||res.target||'';
+      if(mm){
+        var TR2={'KO/TKO':'KO/TKO','TKO':'TKO','KO':'KO','Submission':'Soumission','Decision':'Décision','Unanimous Decision':'Décision unanime','Split Decision':'Décision partagée','Majority Decision':'Décision majoritaire','Disqualification':'Disqualification','Draw':'Nul','No Contest':'Sans décision'};
+        var fr=TR2[mm]||String(mm).replace(/Unanimous/i,'unanime').replace(/Split/i,'partagée').replace(/Majority/i,'majoritaire').replace(/Decision/i,'Décision').replace(/Submission/i,'Soumission');
+        txt='🏁 '+fr+(rd?(' · Round '+rd+(ck?(' — '+ck):'')):'');
+      }
+    }
+    // Stats des 2 combattants (core API)
     var rows='';
     try{
-      var bx=(j.boxscore&&(j.boxscore.players||j.boxscore.teams))||j.statistics||null;
-      if(Array.isArray(bx)&&bx.length){
-        var keys={};
-        bx.slice(0,2).forEach(function(tp,i){ (tp.statistics||[]).forEach(function(sx){ (sx.stats||sx.athletes||[]).forEach(function(s){ var lbl=s.label||s.name||s.displayName; var v=(s.displayValue!=null?s.displayValue:s.value); if(lbl&&v!=null){ if(!keys[lbl]) keys[lbl]=['','']; keys[lbl][i]=v; } }); }); });
-        Object.keys(keys).slice(0,10).forEach(function(k){ rows+='<div style="display:flex;justify-content:space-between;font-size:10px;padding:2px 0;"><span style="color:var(--t1);font-weight:700;width:44px;text-align:left;">'+_g45MmaEa(keys[k][0]||'—')+'</span><span style="color:var(--t3);flex:1;text-align:center;">'+_g45MmaEa(k)+'</span><span style="color:var(--t1);font-weight:700;width:44px;text-align:right;">'+_g45MmaEa(keys[k][1]||'—')+'</span></div>'; });
+      var ids=[(cps[0]&&cps[0].id)||(a0.id||''), (cps[1]&&cps[1].id)||(a1.id||'')];
+      if(ids[0]&&ids[1]){
+        var s0=await gj('https://sports.core.api.espn.com/v2/sports/mma/leagues/ufc/events/'+encodeURIComponent(evId)+'/competitions/'+encodeURIComponent(cid)+'/competitors/'+encodeURIComponent(ids[0])+'/statistics');
+        var s1=await gj('https://sports.core.api.espn.com/v2/sports/mma/leagues/ufc/events/'+encodeURIComponent(evId)+'/competitions/'+encodeURIComponent(cid)+'/competitors/'+encodeURIComponent(ids[1])+'/statistics');
+        function flat(j){ var o={}; try{ ((j&&j.splits&&j.splits.categories)||(j&&j.categories)||[]).forEach(function(cat){ (cat.stats||[]).forEach(function(s){ var l=s.displayName||s.name; var v=(s.displayValue!=null?s.displayValue:s.value); if(l&&v!=null) o[l]=v; }); }); }catch(e){} return o; }
+        var f0=flat(s0), f1=flat(s1);
+        var KEEP=['Total Strikes Landed','Significant Strikes Landed','Takedowns Landed','Submission Attempts','Knockdowns','Strike Accuracy','Control Time'];
+        var TRS={'Total Strikes Landed':'Frappes réussies','Significant Strikes Landed':'Frappes significatives','Takedowns Landed':'Takedowns','Submission Attempts':'Tentatives de soumission','Knockdowns':'Knockdowns','Strike Accuracy':'Précision frappes','Control Time':'Temps de contrôle'};
+        KEEP.forEach(function(k){ if(f0[k]!=null||f1[k]!=null){ rows+='<div style="display:flex;justify-content:space-between;font-size:10px;padding:2px 0;"><span style="color:var(--t1);font-weight:700;width:46px;text-align:left;">'+_g45MmaEa(f0[k]!=null?f0[k]:'—')+'</span><span style="color:var(--t3);flex:1;text-align:center;">'+_g45MmaEa(TRS[k]||k)+'</span><span style="color:var(--t1);font-weight:700;width:46px;text-align:right;">'+_g45MmaEa(f1[k]!=null?f1[k]:'—')+'</span></div>'; } });
       }
     }catch(e){}
-    sb.innerHTML=rows||'<span style="font-size:9px;">Pas de stats détaillées pour ce combat.</span>';
-    if(rows) sb.style.color='var(--t1)';
-  }catch(e){ sb.innerHTML='<span style="font-size:9px;">Stats indisponibles.</span>'; }
+    if(txt||rows){ sb.innerHTML=(txt?'<div style="color:#1ed760;font-weight:700;font-size:10px;margin-bottom:'+(rows?'5px':'0')+';">'+_g45MmaEa(txt)+'</div>':'')+rows; sb.style.color='var(--t1)'; }
+    else sb.style.display='none';
+  }catch(e){ sb.style.display='none'; }
 }
 window.g45MmaFight=g45MmaFight;
 async function g45MmaOpen(off){
