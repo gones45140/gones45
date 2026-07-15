@@ -22036,6 +22036,7 @@ async function g45MmaFight(cid, el){
   var c=_g45MmaCache[cid]; if(!c){ box.innerHTML='<div style="color:var(--t3);font-size:10px;padding:8px;text-align:center;">Détail indisponible.</div>'; return; }
   var cps=c.competitors||[], a0=(cps[0]&&cps[0].athlete)||{}, a1=(cps[1]&&cps[1].athlete)||{};
   var n0=a0.displayName||a0.shortName||'?', n1=a1.displayName||a1.shortName||'?';
+  var _stt=(c.status&&c.status.type)||{}, _done=(_stt.completed===true||_stt.state==='post');
   function rec(cp){ try{ var r=(cp.records||[])[0]; return (r&&(r.summary||r.displayValue))||''; }catch(e){ return ''; } }
   var h='<div style="background:rgba(12,16,28,.96);border:1px solid rgba(240,176,32,.25);border-radius:9px;padding:9px 11px;">';
   var r0=rec(cps[0]), r1=rec(cps[1]);
@@ -22057,6 +22058,7 @@ async function g45MmaFight(cid, el){
   h+='<div style="margin-top:7px;display:flex;flex-direction:column;gap:5px;">'
     +'<button onclick="event.stopPropagation();g45LoadOdds(this)" data-h="'+eaA(n0)+'" data-a="'+eaA(n1)+'" data-comp="UFC MMA" data-box="mmao-'+_g45MmaEa(cid)+'" style="width:100%;box-sizing:border-box;font-size:11px;font-weight:800;padding:7px 10px;border-radius:8px;cursor:pointer;border:1.5px solid rgba(46,204,113,.45);background:rgba(46,204,113,.10);color:#2ecc71;">💰 Cotes du combat</button><div id="mmao-'+_g45MmaEa(cid)+'"></div>'
     +'<button onclick="event.stopPropagation();g45LoadUsAI(this)" data-lg="ufc" data-sport="mma" data-eid="'+_g45MmaEa(cid)+'" data-wc="'+eaA(_wc2)+'" data-rounds="'+eaA(_rd2)+'" data-bio="'+eaA(_bio)+'" data-h="'+eaA(n0)+'" data-a="'+eaA(n1)+'" data-date="'+eaA(_dt)+'" data-box="mmai-'+_g45MmaEa(cid)+'" style="width:100%;box-sizing:border-box;font-size:11px;font-weight:800;padding:7px 10px;border-radius:8px;cursor:pointer;border:1.5px solid rgba(176,124,214,.5);background:rgba(176,124,214,.10);color:#b07cd6;">🧠 Analyse IA du combat</button><div id="mmai-'+_g45MmaEa(cid)+'"></div>'
+    +'<button onclick="event.stopPropagation();g45YT(this.dataset.q)" data-q="'+eaA(_done?(n0+' vs '+n1+' UFC full fight highlights'):(n0+' vs '+n1+' UFC preview'))+'" style="width:100%;box-sizing:border-box;font-size:11px;font-weight:800;padding:7px 10px;border-radius:8px;cursor:pointer;border:1.5px solid rgba(255,69,58,.5);background:rgba(255,69,58,.10);color:#ff6b5e;">📺 '+(_done?'Résumé sur YouTube':'Avant-combat sur YouTube')+'</button>'
         +'</div>';
   h+='</div>';
   box.innerHTML=h;
@@ -22065,7 +22067,6 @@ async function g45MmaFight(cid, el){
   var evId=c.__ev||'';
   if(!evId){ sb.style.display='none'; return; }
   async function gj(u){ try{ var r=await fetch(u); return r.ok?(await r.json()):null; }catch(e){ return null; } }
-  var _stt=(c.status&&c.status.type)||{}, _done=(_stt.completed===true||_stt.state==='post');
   // ── AVANT-MATCH : bio comparée des combattants (gratuit, core API) ──
   if(!_done){
     try{
