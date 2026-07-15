@@ -22206,7 +22206,9 @@ window.g45MmaTgl=g45MmaTgl;
 /* ═══════════ MOTOGP — API officielle motogp.com (gratuite, sans clé) ═══════════ */
 var _g45Moto={ev:{},cat:null,season:null};
 async function _g45MotoJ(path){
-  try{ var r=await fetch('https://api.motogp.pulselive.com/motogp/v1'+path); if(!r.ok) return {__http:r.status}; return await r.json(); }
+  var base=(typeof FD_PROXY!=='undefined'?FD_PROXY:'https://fd-proxy.touraine-antoine.workers.dev');
+  var url=base+'?host=motogp&path='+encodeURIComponent('/motogp/v1'+path);
+  try{ var r=await fetch(url); if(!r.ok) return {__http:r.status}; return await r.json(); }
   catch(e){ return {__err:String((e&&e.message)||e).slice(0,40)}; }
 }
 function _g45MotoEa(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/"/g,'&quot;'); }
