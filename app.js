@@ -20270,6 +20270,31 @@ async function g45Sofa6(path){
   }catch(e){ return {__err:'net'}; }
 }
 function _g45SofaNorm(s){ return String(s||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9]/g,''); }
+/* Teste quels sports le wrapper Sofascore couvre réellement (1 requête par slug). */
+async function g45SofaProbe(btn){
+  var box=document.getElementById('g45-sofa-probe'); if(!box) return;
+  if(!localStorage.getItem('gones45_rapidapi_key')){ box.innerHTML='<div style="color:#ff6b6b;font-size:11px;">Clé RapidAPI manquante.</div>'; return; }
+  var SL=[['cycling','🚴 Cyclisme'],['motorsport','🏁 Motorsport'],['motogp','🏍️ MotoGP'],['mma','🥊 MMA'],['football','⚽ Football (témoin)'],['tennis','🎾 Tennis']];
+  if(!confirm('Ce test consomme '+SL.length+' requêtes de ton quota RapidAPI. Continuer ?')) return;
+  btn.disabled=true;
+  box.innerHTML='<div style="color:var(--t3);font-size:11px;padding:6px;">⏳ Test en cours…</div>';
+  var d=new Date(), ymd=d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+  var out='';
+  for(var i=0;i<SL.length;i++){
+    var r=null;
+    try{ r=await g45Sofa6('/api/sofascore/v1/match/list?sport_slug='+SL[i][0]+'&date='+ymd); }catch(e){}
+    var ok=false, info='';
+    if(r&&r.__err){ info='erreur : '+r.__err; }
+    else if(r){ var arr=Array.isArray(r)?r:((r.events||r.data)||[]); if(Array.isArray(arr)){ ok=arr.length>0; info=arr.length+' événement(s) aujourd\'hui'; } else info='réponse inattendue : '+Object.keys(r).slice(0,5).join(','); }
+    else info='pas de réponse';
+    out+='<div style="display:flex;justify-content:space-between;gap:8px;font-size:11px;padding:3px 0;border-bottom:1px solid rgba(255,255,255,.05);"><span style="color:var(--t1);font-weight:700;">'+(ok?'✅':'❌')+' '+SL[i][1]+'</span><span style="color:var(--t3);font-size:10px;">'+String(info).replace(/</g,'&lt;')+'</span></div>';
+    box.innerHTML='<div style="background:rgba(138,160,255,.06);border:1px solid rgba(138,160,255,.2);border-radius:9px;padding:9px;">'+out+'</div>';
+  }
+  box.innerHTML='<div style="background:rgba(138,160,255,.06);border:1px solid rgba(138,160,255,.2);border-radius:9px;padding:9px;">'+out+'<div style="font-size:9px;color:var(--t3);margin-top:6px;font-style:italic;">✅ = couvert · ❌ = non couvert (ou aucun événement aujourd\'hui). Le football sert de témoin : s\'il est ❌, c\'est la clé ou le quota.</div></div>';
+  btn.disabled=false;
+}
+window.g45SofaProbe=g45SofaProbe;
+async function g45SofaProbe_end(){}
 function _g45SofaFindMatch(evs, hN, aN){
   if(!Array.isArray(evs)) return null;
   var H=_g45SofaNorm(hN), A=_g45SofaNorm(aN);

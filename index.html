@@ -732,9 +732,11 @@
       <input id="rapidapi-key-input" class="fi" type="password" placeholder="Clé RapidAPI…" style="font-size:11px;flex:1;">
       <button onclick="var i=$i('rapidapi-key-input');i.type=i.type==='password'?'text':'password';" style="flex-shrink:0;padding:0 10px;height:38px;background:var(--bg3);border:1px solid var(--b2);border-radius:var(--r6);color:var(--t3);font-size:14px;cursor:pointer;">👁</button>
     </div>
-    <div style="display:flex;gap:7px;">
+    <div style="display:flex;gap:7px;flex-wrap:wrap;">
       <button class="btn btn-p" style="font-size:11px;" onclick="saveRapidApiKey()">💾 Enregistrer</button>
+      <button class="btn" style="font-size:11px;background:rgba(138,160,255,.12);color:#8aa0ff;border:1px solid rgba(138,160,255,.35);" onclick="g45SofaProbe(this)">🔎 Quels sports sont couverts ?</button>
     </div>
+    <div id="g45-sofa-probe" style="margin-top:7px;"></div>
     <div id="rapidapi-key-status" style="margin-top:7px;font-size:11px;font-weight:700;"></div>
   </div>
 
