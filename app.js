@@ -20809,7 +20809,7 @@ async function g45LoadUsAI(btn){
     sys+='\nTENNIS — REGLE ABSOLUE SUR LE SCORE : le "score probable" doit etre exprime EN SETS (ex. 3-1 ou 2-0), jamais en jeux (pas de "6-4 6-4"). Respecte IMPERATIVEMENT le FORMAT DU MATCH indique dans les FAITS : en best of 5, le vainqueur a TOUJOURS 3 sets (3-0, 3-1 ou 3-2) ; en best of 3, le vainqueur a TOUJOURS 2 sets (2-0 ou 2-1). Un score comme 2-1 est INTERDIT en best of 5.\nNe parle JAMAIS d\'avantage du terrain ni de "domicile/exterieur" : au tennis, aucun joueur ne recoit.';
   } else if(sp==='mma'){
     sys=sys.replace('score probable <x-y>','méthode probable <KO/TKO, soumission ou décision> au round <n>');
-    sys+='\nMMA — REGLES : il n\'y a PAS de score ni de domicile/exterieur. Le "PRONOSTIC" doit nommer le vainqueur probable, puis la METHODE (KO/TKO, soumission, decision) et le round estime. Respecte le nombre de rounds indique dans les FAITS. N\'invente aucun palmares, aucune serie ni aucune blessure absente des FAITS.';
+    sys+='\nMMA — REGLES : il n\'y a PAS de score ni de domicile/exterieur. Le "PRONOSTIC" doit nommer le vainqueur probable, puis la METHODE (KO/TKO, soumission, decision) et le round estime. Respecte le nombre de rounds indique dans les FAITS.\nINTERDICTION ABSOLUE : ne cite JAMAIS le nom d\'un adversaire passe, un resultat anterieur, un classement, une serie de victoires, un style de combat, une blessure ou un camp d\'entrainement qui ne figure PAS mot pour mot dans les FAITS. Tu ne disposes QUE des bilans et des cotes fournis : raisonne uniquement dessus. Si tu manques d\'information, ecris-le explicitement au lieu de combler avec tes souvenirs.';
   } else if(_neutU){
     sys+='\nREGLE ABSOLUE : ce match se joue sur TERRAIN NEUTRE. Ne parle JAMAIS d\'avantage du terrain, de "victoire domicile" ni de "jouer a domicile/exterieur". Nomme les equipes par leur nom.';
   }
@@ -22047,8 +22047,7 @@ async function g45MmaFight(cid, el){
   h+='<div style="margin-top:7px;display:flex;flex-direction:column;gap:5px;">'
     +'<button onclick="event.stopPropagation();g45LoadOdds(this)" data-h="'+eaA(n0)+'" data-a="'+eaA(n1)+'" data-comp="UFC MMA" data-box="mmao-'+_g45MmaEa(cid)+'" style="width:100%;box-sizing:border-box;font-size:11px;font-weight:800;padding:7px 10px;border-radius:8px;cursor:pointer;border:1.5px solid rgba(46,204,113,.45);background:rgba(46,204,113,.10);color:#2ecc71;">💰 Cotes du combat</button><div id="mmao-'+_g45MmaEa(cid)+'"></div>'
     +'<button onclick="event.stopPropagation();g45LoadUsAI(this)" data-lg="ufc" data-sport="mma" data-eid="'+_g45MmaEa(cid)+'" data-wc="'+eaA(_wc2)+'" data-rounds="'+eaA(_rd2)+'" data-bio="'+eaA(_bio)+'" data-h="'+eaA(n0)+'" data-a="'+eaA(n1)+'" data-date="'+eaA(_dt)+'" data-box="mmai-'+_g45MmaEa(cid)+'" style="width:100%;box-sizing:border-box;font-size:11px;font-weight:800;padding:7px 10px;border-radius:8px;cursor:pointer;border:1.5px solid rgba(176,124,214,.5);background:rgba(176,124,214,.10);color:#b07cd6;">🧠 Analyse IA du combat</button><div id="mmai-'+_g45MmaEa(cid)+'"></div>'
-    +'<button onclick="event.stopPropagation();g45LoadTendance(this)" data-h="'+eaA(n0)+'" data-a="'+eaA(n1)+'" data-slug="mma" data-comp="UFC" data-date="'+eaA(_dt)+'" data-box="mmat-'+_g45MmaEa(cid)+'" style="width:100%;box-sizing:border-box;font-size:11px;font-weight:800;padding:7px 10px;border-radius:8px;cursor:pointer;border:1.5px solid rgba(120,162,255,.45);background:rgba(120,162,255,.10);color:#8aa2ff;">📈 Tendance du public (quota)</button><div id="mmat-'+_g45MmaEa(cid)+'"></div>'
-    +'</div>';
+        +'</div>';
   h+='</div>';
   box.innerHTML=h;
   // Détail du combat via le core API ESPN (chemin documenté pour le MMA)
