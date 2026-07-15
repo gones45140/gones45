@@ -21989,16 +21989,21 @@ function _g45MmaFightRow(c, evId){
       +'<span style="font-size:12px;font-weight:'+wgt+';color:'+col+';overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">'+_g45MmaEa(nm)+'</span>'
       +(right?fl:'')+'</div>';
   }
-  var mid='<div style="flex:none;font-size:10px;font-weight:800;color:'+(live?'#ff4545':'var(--t3)')+';padding:0 8px;">'+(live?'● LIVE':'VS')+'</div>';
+  var mid='<div style="flex:none;font-size:10px;font-weight:800;color:'+(live?'#ff4545':'var(--t2)')+';padding:0 8px;">'+(live?'● LIVE':'VS')+'</div>';
   var meth=done?_g45MmaMethod(c):'';
   var wc=''; try{ wc=(c.type&&(c.type.text||c.type.abbreviation))||''; }catch(e){}
   var note=''; try{ (c.notes||[]).forEach(function(n){ var t=(n.headline||n.text||''); if(/main event|co-main|title/i.test(t)) note=t; }); }catch(e){}
   return '<div onclick="g45MmaFight(\''+_g45MmaEa(c.id)+'\',this)" style="cursor:pointer;background:var(--s1);border-radius:8px;padding:8px 10px;margin-bottom:5px;'+(live?'border-left:3px solid #ff4545;':'')+'">'
     +(note?'<div style="font-size:8px;font-weight:800;color:#f0b020;text-transform:uppercase;letter-spacing:.5px;margin-bottom:3px;">'+_g45MmaEa(note)+'</div>':'')
     +'<div style="display:flex;align-items:center;">'+side(cps[0],false)+mid+side(cps[1],true)+'</div>'
-    +((meth||wc)?'<div style="font-size:9px;color:var(--t3);text-align:center;margin-top:3px;">'+(wc?_g45MmaEa(wc):'')+(wc&&meth?' · ':'')+(meth?_g45MmaEa(meth):'')+'</div>':'')
+    +((meth||wc)?'<div style="font-size:9px;color:var(--t2);text-align:center;margin-top:3px;">'+(wc?_g45MmaEa(_g45MmaWeight(wc)):'')+(wc&&meth?' · ':'')+(meth?_g45MmaEa(meth):'')+'</div>':'')
     +'</div>'
     +'<div id="mmaf-'+_g45MmaEa(c.id)+'" style="display:none;margin:-2px 0 6px;"></div>';
+}
+/* Catégories de poids en français */
+function _g45MmaWeight(w){
+  var T={'Flyweight':'Poids mouche','Bantamweight':'Poids coq','Featherweight':'Poids plume','Lightweight':'Poids léger','Welterweight':'Poids mi-moyen','Middleweight':'Poids moyen','Light Heavyweight':'Mi-lourd','Heavyweight':'Poids lourd','W Strawweight':'Paille (F)','W Flyweight':'Mouche (F)','W Bantamweight':'Coq (F)','W Featherweight':'Plume (F)','Catchweight':'Poids convenu','Women\'s Strawweight':'Paille (F)','Women\'s Flyweight':'Mouche (F)','Women\'s Bantamweight':'Coq (F)','Women\'s Featherweight':'Plume (F)'};
+  return T[w]||w;
 }
 /* Détail d'un combat : records, cotes, méthode + stats (summary ESPN, défensif). */
 async function g45MmaFight(cid, el){
@@ -22009,9 +22014,9 @@ async function g45MmaFight(cid, el){
   var cps=c.competitors||[], a0=(cps[0]&&cps[0].athlete)||{}, a1=(cps[1]&&cps[1].athlete)||{};
   var n0=a0.displayName||a0.shortName||'?', n1=a1.displayName||a1.shortName||'?';
   function rec(cp){ try{ var r=(cp.records||[])[0]; return (r&&(r.summary||r.displayValue))||''; }catch(e){ return ''; } }
-  var h='<div style="background:rgba(240,176,32,.05);border:1px solid rgba(240,176,32,.2);border-radius:9px;padding:9px 11px;">';
+  var h='<div style="background:rgba(12,16,28,.96);border:1px solid rgba(240,176,32,.25);border-radius:9px;padding:9px 11px;">';
   var r0=rec(cps[0]), r1=rec(cps[1]);
-  if(r0||r1) h+='<div style="display:flex;justify-content:space-between;font-size:10px;margin-bottom:5px;"><span style="color:var(--t2);">'+_g45MmaEa(n0)+' <b style="color:var(--t1);">'+_g45MmaEa(r0||'—')+'</b></span><span style="color:var(--t3);font-size:8px;align-self:center;">BILAN</span><span style="color:var(--t2);"><b style="color:var(--t1);">'+_g45MmaEa(r1||'—')+'</b> '+_g45MmaEa(n1)+'</span></div>';
+  if(r0||r1) h+='<div style="display:flex;justify-content:space-between;font-size:10px;margin-bottom:5px;"><span style="color:var(--t2);">'+_g45MmaEa(n0)+' <b style="color:var(--t1);">'+_g45MmaEa(r0||'—')+'</b></span><span style="color:var(--t2);font-size:8px;align-self:center;font-weight:700;">BILAN</span><span style="color:var(--t2);"><b style="color:var(--t1);">'+_g45MmaEa(r1||'—')+'</b> '+_g45MmaEa(n1)+'</span></div>';
   var m=_g45MmaMethod(c);
   if(m) h+='<div style="text-align:center;font-size:10px;color:#1ed760;font-weight:700;margin-bottom:5px;">🏁 '+_g45MmaEa(m)+'</div>';
   // Cotes si ESPN les fournit
@@ -22053,7 +22058,7 @@ async function g45MmaFight(cid, el){
         var f0=flat(s0), f1=flat(s1);
         var KEEP=['Total Strikes Landed','Significant Strikes Landed','Takedowns Landed','Submission Attempts','Knockdowns','Strike Accuracy','Control Time'];
         var TRS={'Total Strikes Landed':'Frappes réussies','Significant Strikes Landed':'Frappes significatives','Takedowns Landed':'Takedowns','Submission Attempts':'Tentatives de soumission','Knockdowns':'Knockdowns','Strike Accuracy':'Précision frappes','Control Time':'Temps de contrôle'};
-        KEEP.forEach(function(k){ if(f0[k]!=null||f1[k]!=null){ rows+='<div style="display:flex;justify-content:space-between;font-size:10px;padding:2px 0;"><span style="color:var(--t1);font-weight:700;width:46px;text-align:left;">'+_g45MmaEa(f0[k]!=null?f0[k]:'—')+'</span><span style="color:var(--t3);flex:1;text-align:center;">'+_g45MmaEa(TRS[k]||k)+'</span><span style="color:var(--t1);font-weight:700;width:46px;text-align:right;">'+_g45MmaEa(f1[k]!=null?f1[k]:'—')+'</span></div>'; } });
+        KEEP.forEach(function(k){ if(f0[k]!=null||f1[k]!=null){ rows+='<div style="display:flex;justify-content:space-between;font-size:10px;padding:2px 0;"><span style="color:var(--t1);font-weight:700;width:46px;text-align:left;">'+_g45MmaEa(f0[k]!=null?f0[k]:'—')+'</span><span style="color:#c3cce6;flex:1;text-align:center;">'+_g45MmaEa(TRS[k]||k)+'</span><span style="color:var(--t1);font-weight:700;width:46px;text-align:right;">'+_g45MmaEa(f1[k]!=null?f1[k]:'—')+'</span></div>'; } });
       }
     }catch(e){}
     if(txt||rows){ sb.innerHTML=(txt?'<div style="color:#1ed760;font-weight:700;font-size:10px;margin-bottom:'+(rows?'5px':'0')+';">'+_g45MmaEa(txt)+'</div>':'')+rows; sb.style.color='var(--t1)'; }
