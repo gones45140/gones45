@@ -22013,6 +22013,16 @@ function _g45MmaFightRow(c, evId){
     +'</div>'
     +'<div id="mmaf-'+_g45MmaEa(c.id)+'" style="display:none;margin:-2px 0 6px;"></div>';
 }
+/* L'ID du combattant n'est pas dans le scoreboard → on l'extrait de ses liens ESPN (/id/12345/). */
+function _g45MmaAthId(a){
+  try{
+    if(a&&a.id) return String(a.id);
+    var ls=(a&&a.links)||[];
+    for(var i=0;i<ls.length;i++){ var m=String(ls[i].href||'').match(/\/id\/(\d+)/); if(m) return m[1]; }
+    if(a&&a.$ref){ var m2=String(a.$ref).match(/athletes\/(\d+)/); if(m2) return m2[1]; }
+  }catch(e){}
+  return '';
+}
 /* Catégories de poids en français */
 function _g45MmaWeight(w){
   var T={'Flyweight':'Poids mouche','Bantamweight':'Poids coq','Featherweight':'Poids plume','Lightweight':'Poids léger','Welterweight':'Poids mi-moyen','Middleweight':'Poids moyen','Light Heavyweight':'Mi-lourd','Heavyweight':'Poids lourd','W Strawweight':'Paille (F)','W Flyweight':'Mouche (F)','W Bantamweight':'Coq (F)','W Featherweight':'Plume (F)','Catchweight':'Poids convenu','Women\'s Strawweight':'Paille (F)','Women\'s Flyweight':'Mouche (F)','Women\'s Bantamweight':'Coq (F)','Women\'s Featherweight':'Plume (F)'};
@@ -22059,7 +22069,7 @@ async function g45MmaFight(cid, el){
   // ── AVANT-MATCH : bio comparée des combattants (gratuit, core API) ──
   if(!_done){
     try{
-      var aid0=(a0&&a0.id)||'', aid1=(a1&&a1.id)||'';
+      var aid0=_g45MmaAthId(a0), aid1=_g45MmaAthId(a1);
       if(!aid0&&!aid1){ sb.innerHTML='<span style="font-size:9px;color:#8aa0ff;">diag bio → pas d\'athlete.id dans le scoreboard (clés athlète : '+_g45MmaEa(Object.keys(a0||{}).slice(0,12).join(','))+')</span>'; return; }
       var B='https://sports.core.api.espn.com/v2/sports/mma/leagues/ufc/athletes/';
       async function gjs(u){ try{ var r=await fetch(u); if(!r.ok) return {__http:r.status}; return await r.json(); }catch(e){ return {__err:String((e&&e.message)||e).slice(0,40)}; } }
@@ -22139,7 +22149,7 @@ async function g45MmaOpen(off){
     var sid='g45mma'+i;
     html+='<div onclick="g45MmaTgl(\''+sid+'\',this)" style="cursor:pointer;display:flex;justify-content:space-between;align-items:center;background:rgba(255,255,255,.05);border-radius:8px;padding:9px 11px;margin:11px 0 5px;">'
       +'<div style="min-width:0;"><div style="font-size:11px;font-weight:800;color:var(--t1);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">'+(live?'<span style="color:#ff4545;">● </span>':'')+_g45MmaEa(ev.name||ev.shortName||'UFC')+'</div>'
-      +'<div style="font-size:9px;color:var(--t3);margin-top:2px;">📅 '+(isNaN(d)?'':d.toLocaleDateString('fr-FR',{weekday:'short',day:'numeric',month:'long'}))+'</div></div>'
+      +'<div style="font-size:9px;color:var(--t2);margin-top:2px;">📅 '+(isNaN(d)?'':d.toLocaleDateString('fr-FR',{weekday:'short',day:'numeric',month:'long'}))+'</div></div>'
       +'<span style="font-size:9px;color:var(--t3);white-space:nowrap;margin-left:8px;">'+comps.length+' <span class="g45-caret">▼</span></span></div>'
       +'<div id="'+sid+'" data-open="1">';
     comps.forEach(function(c){ html+=_g45MmaFightRow(c, ev.id); });
