@@ -20352,10 +20352,13 @@ async function g45LoadTendance(btn){
     var dates=[ymd(d), ymd(new Date(d.getTime()+86400000)), ymd(new Date(d.getTime()-86400000))];
     var match=null;
     for(var i=0;i<dates.length && !match;i++){
-      var list=await g45Sofa6('/api/sofascore/v1/match/list?sport_slug='+slug+'&date='+dates[i]);
-      if(list&&list.__err) continue;
-      var evs=Array.isArray(list)?list:((list&&(list.events||list.data))||[]);
-      match=_g45SofaFindMatch(evs, hN, aN);
+      var _slugs=(slug==='mma')?['mma','mixed-martial-arts','ufc']:[slug];
+      for(var _si=0;_si<_slugs.length && !match;_si++){
+        var list=await g45Sofa6('/api/sofascore/v1/match/list?sport_slug='+_slugs[_si]+'&date='+dates[i]);
+        if(list&&list.__err) continue;
+        var evs=Array.isArray(list)?list:((list&&(list.events||list.data))||[]);
+        match=_g45SofaFindMatch(evs, hN, aN);
+      }
     }
     if(!match){ box.innerHTML='<div style="color:var(--t3);font-size:11px;padding:8px;">Match introuvable sur Sofascore.</div>'; btn.disabled=false; return; }
     var v=await g45Sofa6('/api/sofascore/v1/match/votes?match_id='+match.id);
@@ -20528,9 +20531,9 @@ function _g45RenderOdds(ev, hN, aN, remain){
     var pH=priceByName(b,homeEv), pA=priceByName(b,awayEv), pD=priceByName(b,'DRAW');
     rows+='<tr>'
       +'<td style="padding:5px 4px;"><span style="display:inline-flex;align-items:center;gap:5px;"><img src="https://www.google.com/s2/favicons?domain='+bk.d+'&sz=32" style="width:14px;height:14px;border-radius:3px;" onerror="this.style.display=\'none\'"><span style="font-size:11px;color:var(--t1);">'+bk.n+'</span></span></td>'
-      +cell(pH,pH&&pH===best.H)+cell(pD,pD&&pD===best.D)+cell(pA,pA&&pA===best.A)+'</tr>';
+      +cell(pH,pH&&pH===best.H)+(best.D?cell(pD,pD&&pD===best.D):'')+cell(pA,pA&&pA===best.A)+'</tr>';
   });
-  if(!rows){ rows='<tr><td style="padding:5px 4px;font-size:11px;color:var(--t3);">Meilleures cotes (tous books)</td>'+cell(best.H,true)+cell(best.D,true)+cell(best.A,true)+'</tr>'; }
+  if(!rows){ rows='<tr><td style="padding:5px 4px;font-size:11px;color:var(--t3);">Meilleures cotes (tous books)</td>'+cell(best.H,true)+(best.D?cell(best.D,true):'')+cell(best.A,true)+'</tr>'; }
   var rem=(remain!=null?'<span style="float:right;color:var(--t3);font-weight:600;">'+ea(remain)+' req. restantes</span>':'');
   // Détecteur de value : Pinnacle si présent, sinon consensus (moyenne des books)
   var _pin=bksByKey['pinnacle'], _ref, _srcLbl;
@@ -20542,9 +20545,9 @@ function _g45RenderOdds(ev, hN, aN, remain){
   }
   var _valueBlock=_g45ValueBlock(_ref, hN, aN, _srcLbl);
   return '<div style="background:rgba(46,204,113,.06);border:1px solid rgba(46,204,113,.2);border-radius:10px;padding:10px;">'
-    +'<div style="font-size:10px;font-weight:800;color:#2ecc71;margin-bottom:8px;">💰 COTES RÉELLES (1X2)'+rem+'</div>'
+    +'<div style="font-size:10px;font-weight:800;color:#2ecc71;margin-bottom:8px;">💰 COTES RÉELLES'+(best.D?' (1X2)':'')+rem+'</div>'
     +'<table style="width:100%;border-collapse:collapse;">'
-    +'<tr style="font-size:9px;color:var(--t3);text-transform:uppercase;"><th style="text-align:left;padding:3px 4px;">Bookmaker</th><th style="padding:3px 4px;">1 · '+ea(hN).slice(0,10)+'</th><th style="padding:3px 4px;">X</th><th style="padding:3px 4px;">2 · '+ea(aN).slice(0,10)+'</th></tr>'
+    +'<tr style="font-size:9px;color:var(--t2);text-transform:uppercase;"><th style="text-align:left;padding:3px 4px;">Bookmaker</th><th style="padding:3px 4px;">1 · '+ea(hN).slice(0,10)+'</th>'+(best.D?'<th style="padding:3px 4px;">X</th>':'')+'<th style="padding:3px 4px;">2 · '+ea(aN).slice(0,10)+'</th></tr>'
     +rows
     +'</table>'
     +'<div style="font-size:9px;color:var(--t3);text-align:center;margin-top:7px;font-style:italic;">En vert = meilleure cote du marché. Source : The Odds API.</div>'
