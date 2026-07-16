@@ -22239,12 +22239,21 @@ function _g45CyParse(html){
   var out=[];
   try{
     var doc=new DOMParser().parseFromString(html,'text/html');
-    // diagnostic : ce que la page contient vraiment
+    // diagnostic : ce que la page contient vraiment (DOM + HTML brut)
     try{
-      window._g45CyDiag='tables='+doc.querySelectorAll('table').length
-        +' · rows='+doc.querySelectorAll('tr.rankingTables__row').length
-        +' · sel=['+Array.prototype.slice.call(doc.querySelectorAll('select')).map(function(sl){ return (sl.id||sl.name||sl.className||'?')+':'+sl.options.length+'opt'; }).slice(0,4).join(' | ')
-        +'] · tabs=['+Array.prototype.slice.call(doc.querySelectorAll('[class*=tab],[data-tab]')).map(function(t){ return (t.textContent||'').trim().slice(0,18); }).filter(Boolean).slice(0,8).join(' | ')+']';
+      var rawRows=(html.match(/rankingTables__row/g)||[]).length;
+      var rawTables=(html.match(/<table/gi)||[]).length;
+      // attributs data-* qui pointent vers d'autres contenus
+      var durls={}; var reD=/data-(?:url|href|ajax|src|endpoint|load)="([^"]{5,120})"/g, mD;
+      while((mD=reD.exec(html))&&Object.keys(durls).length<6){ if(!/\.(png|jpe?g|svg|webp|css|woff)/i.test(mD[1])) durls[mD[1]]=1; }
+      // scripts inline contenant des données de classement
+      var scr=0, scrUrls={};
+      try{ doc.querySelectorAll('script:not([src])').forEach(function(sc){ var t=sc.textContent||''; if(/rankingTables|classement|"rankings?"|general/i.test(t)&&t.length>500){ scr++; var reU=/https?:\/\/[a-z0-9.\/-]{8,90}/gi, mU, c=0; while((mU=reU.exec(t))&&c<3){ scrUrls[mU[0]]=1; c++; } } }); }catch(e){}
+      window._g45CyDiag='tablesDOM='+doc.querySelectorAll('table').length+' · rawTables='+rawTables
+        +' · rowsDOM='+doc.querySelectorAll('tr.rankingTables__row').length+' · rawRows='+rawRows
+        +' · bigScripts='+scr
+        +' · dataUrls=['+Object.keys(durls).join(' | ')+']'
+        +' · scriptUrls=['+Object.keys(scrUrls).join(' | ')+']';
     }catch(e){}
     var tables=doc.querySelectorAll('table');
     tables.forEach(function(tb){
@@ -22282,7 +22291,7 @@ async function g45CyclingOpen(raceId){
   var chips='<div style="display:flex;gap:6px;margin-bottom:9px;">'+_G45_CY_RACES.map(function(r){ var on=r.id===race.id; return '<button onclick="g45CyclingOpen(\''+r.id+'\')" style="border:none;border-radius:7px;padding:6px 11px;font-size:10px;font-weight:700;cursor:pointer;background:'+(on?'#f0c828':'rgba(255,255,255,.06)')+';color:'+(on?'#221b00':'var(--t2)')+';">'+r.flag+' '+r.n+'</button>'; }).join('')+'</div>';
   el.innerHTML=back+'<div class="sec" style="margin-top:0;">🚴 Cyclisme — '+_g45CyEa(race.n)+'</div>'+chips+'<div style="color:var(--t3);font-size:11px;padding:16px;text-align:center;">⏳ Chargement des classements…</div>';
   // Cache 30 min (les classements changent 1×/jour)
-  var ck='g45cy2_'+race.id, cached=null;
+  var ck='g45cy3_'+race.id, cached=null;
   try{ var raw=localStorage.getItem(ck); if(raw){ var o=JSON.parse(raw); if(Date.now()-o.t<30*60000) cached=o.d; } }catch(e){}
   var groups=cached;
   if(!groups){
