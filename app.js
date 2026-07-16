@@ -22239,12 +22239,21 @@ function _g45CyParse(html){
   var out=[];
   try{
     var doc=new DOMParser().parseFromString(html,'text/html');
+    // diagnostic : ce que la page contient vraiment
+    try{
+      window._g45CyDiag='tables='+doc.querySelectorAll('table').length
+        +' · rows='+doc.querySelectorAll('tr.rankingTables__row').length
+        +' · sel=['+Array.prototype.slice.call(doc.querySelectorAll('select')).map(function(sl){ return (sl.id||sl.name||sl.className||'?')+':'+sl.options.length+'opt'; }).slice(0,4).join(' | ')
+        +'] · tabs=['+Array.prototype.slice.call(doc.querySelectorAll('[class*=tab],[data-tab]')).map(function(t){ return (t.textContent||'').trim().slice(0,18); }).filter(Boolean).slice(0,8).join(' | ')+']';
+    }catch(e){}
     var tables=doc.querySelectorAll('table');
     tables.forEach(function(tb){
       var rows=tb.querySelectorAll('tr.rankingTables__row'); if(!rows.length) return;
-      // titre du tableau : caption, ou heading précédent
+      // titre du tableau : caption, heading précédent, ou attributs data
       var title=''; try{ var cap=tb.querySelector('caption'); if(cap) title=cap.textContent.trim(); }catch(e){}
-      if(!title){ try{ var pv=tb.closest('[class*=ranking]'); var hd=pv?pv.querySelector('h2,h3,.rankingTables__title'):null; if(hd) title=hd.textContent.trim(); }catch(e){} }
+      if(!title){ try{ title=tb.getAttribute('data-title')||tb.getAttribute('aria-label')||''; }catch(e){} }
+      if(!title){ try{ var pv=tb.closest('[class*=ranking],[class*=tab],section,article'); var hd=pv?pv.querySelector('h2,h3,h4,.rankingTables__title,[class*=title]'):null; if(hd) title=hd.textContent.trim().slice(0,40); }catch(e){} }
+      if(!title){ try{ var prev=tb.previousElementSibling; for(var k=0;k<3&&prev&&!title;k++){ if(/H[2-4]/.test(prev.tagName)||/title/i.test(prev.className)) title=prev.textContent.trim().slice(0,40); prev=prev.previousElementSibling; } }catch(e){} }
       var items=[];
       rows.forEach(function(tr){
         var pos=''; try{ var p=tr.querySelector('.rankingTables__row__position span, .rankingTables__row__position'); pos=p?p.textContent.trim():''; }catch(e){}
@@ -22273,7 +22282,7 @@ async function g45CyclingOpen(raceId){
   var chips='<div style="display:flex;gap:6px;margin-bottom:9px;">'+_G45_CY_RACES.map(function(r){ var on=r.id===race.id; return '<button onclick="g45CyclingOpen(\''+r.id+'\')" style="border:none;border-radius:7px;padding:6px 11px;font-size:10px;font-weight:700;cursor:pointer;background:'+(on?'#f0c828':'rgba(255,255,255,.06)')+';color:'+(on?'#221b00':'var(--t2)')+';">'+r.flag+' '+r.n+'</button>'; }).join('')+'</div>';
   el.innerHTML=back+'<div class="sec" style="margin-top:0;">🚴 Cyclisme — '+_g45CyEa(race.n)+'</div>'+chips+'<div style="color:var(--t3);font-size:11px;padding:16px;text-align:center;">⏳ Chargement des classements…</div>';
   // Cache 30 min (les classements changent 1×/jour)
-  var ck='g45cy_'+race.id, cached=null;
+  var ck='g45cy2_'+race.id, cached=null;
   try{ var raw=localStorage.getItem(ck); if(raw){ var o=JSON.parse(raw); if(Date.now()-o.t<30*60000) cached=o.d; } }catch(e){}
   var groups=cached;
   if(!groups){
@@ -22315,7 +22324,7 @@ async function g45CyclingOpen(raceId){
     html+='</div></div>';
   });
   el.innerHTML=back+'<div class="sec" style="margin-top:0;">🚴 Cyclisme — '+_g45CyEa(race.n)+'</div>'+chips+html
-    +'<div style="font-size:8px;color:var(--t3);text-align:center;margin-top:7px;font-style:italic;">Source : site officiel · mis en cache 30 min</div>';
+    +'<div style="font-size:8px;color:var(--t3);text-align:center;margin-top:7px;font-style:italic;">Source : site officiel · mis en cache 30 min'+(window._g45CyDiag?('<br><span style="color:#8aa0ff;">diag → '+_g45CyEa(window._g45CyDiag)+'</span>'):'')+'</div>';
 }
 window.g45CyclingOpen=g45CyclingOpen;
 async function g45MotoOpen(){
