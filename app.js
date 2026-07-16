@@ -22220,6 +22220,104 @@ function _g45MotoStatus(st){ var k=String(st||'').toLowerCase().trim(); var T={'
 /* Météo et état de piste en français */
 function _g45MotoWeather(w){ if(!w) return ''; var k=String(w).toLowerCase().replace(/[-_]/g,' ').trim(); var T={'sunny':'☀️ Ensoleillé','clear':'☀️ Dégagé','partly cloudy':'⛅ Partiellement nuageux','mostly cloudy':'🌥️ Très nuageux','cloudy':'☁️ Nuageux','overcast':'☁️ Couvert','rainy':'🌧️ Pluie','rain':'🌧️ Pluie','light rain':'🌦️ Pluie faible','heavy rain':'⛈️ Forte pluie','showers':'🌦️ Averses','drizzle':'🌦️ Bruine','windy':'💨 Venteux','foggy':'🌫️ Brouillard','fog':'🌫️ Brouillard','storm':'⛈️ Orage'}; return T[k]||w; }
 function _g45MotoTrack(t){ if(!t) return ''; var k=String(t).toLowerCase().trim(); var T={'dry':'piste sèche','wet':'piste mouillée','damp':'piste humide','drying':'piste séchante','mixed':'piste mixte'}; return T[k]||t; }
+/* ═══════════ 🚴 CYCLISME — Grands Tours ASO (letour.fr / lavuelta.es via Worker, HTML parsé) ═══════════ */
+var _G45_CY_RACES=[
+  {id:'tdf', n:'Tour de France', host:'letour', flag:'🇫🇷'},
+  {id:'vuelta', n:'La Vuelta', host:'vuelta', flag:'🇪🇸'}
+];
+function _g45CyEa(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/"/g,'&quot;'); }
+async function _g45CyFetch(host, path){
+  var base=(typeof FD_PROXY!=='undefined'?FD_PROXY:'https://fd-proxy.touraine-antoine.workers.dev');
+  try{
+    var r=await fetch(base+'?host='+host+'&path='+encodeURIComponent(path));
+    if(!r.ok) return {__http:r.status};
+    return {html:await r.text()};
+  }catch(e){ return {__err:String((e&&e.message)||e).slice(0,40)}; }
+}
+/* Parse les tableaux de classement ASO (rankingTables__row). */
+function _g45CyParse(html){
+  var out=[];
+  try{
+    var doc=new DOMParser().parseFromString(html,'text/html');
+    var tables=doc.querySelectorAll('table');
+    tables.forEach(function(tb){
+      var rows=tb.querySelectorAll('tr.rankingTables__row'); if(!rows.length) return;
+      // titre du tableau : caption, ou heading précédent
+      var title=''; try{ var cap=tb.querySelector('caption'); if(cap) title=cap.textContent.trim(); }catch(e){}
+      if(!title){ try{ var pv=tb.closest('[class*=ranking]'); var hd=pv?pv.querySelector('h2,h3,.rankingTables__title'):null; if(hd) title=hd.textContent.trim(); }catch(e){} }
+      var items=[];
+      rows.forEach(function(tr){
+        var pos=''; try{ var p=tr.querySelector('.rankingTables__row__position span, .rankingTables__row__position'); pos=p?p.textContent.trim():''; }catch(e){}
+        var nameA=tr.querySelector('a.rankingTables__row__profile--name, .rankingTables__row__profile--name');
+        var name=nameA?nameA.textContent.trim().replace(/\s+/g,' '):'';
+        if(!name) return;
+        var team=''; try{ var href=nameA.getAttribute('href')||''; var mm=href.match(/\/(?:fr|es|en)\/(?:coureur|rider|corredor)\/\d+\/([^\/]+)\//); if(mm) team=mm[1].replace(/-/g,' ').replace(/\b\w/g,function(c){return c.toUpperCase();}); }catch(e){}
+        var iso=''; try{ var fl=tr.querySelector('[data-class*="flag--"]'); if(fl){ var dc=fl.getAttribute('data-class')||''; var m2=dc.match(/flag--([a-z]{2,3})/); if(m2) iso=m2[1]; } }catch(e){}
+        var bib=''; try{ var bb=tr.querySelector('[data-bib]'); if(bb) bib=(bb.getAttribute('data-bib')||'').replace('#',''); }catch(e){}
+        // temps/écart : les td restants (hors position/profil), on garde les 2 derniers non vides
+        var extras=[];
+        tr.querySelectorAll('td').forEach(function(td){ if(td.className.indexOf('position')>=0||td.className.indexOf('profile')>=0) return; var t=td.textContent.trim().replace(/\s+/g,' '); if(t) extras.push(t); });
+        items.push({pos:pos, name:name, team:team, iso:iso, bib:bib, t1:extras.length?extras[extras.length-2]||'':'', t2:extras.length?extras[extras.length-1]||'':''});
+      });
+      if(items.length) out.push({title:title, items:items});
+    });
+  }catch(e){}
+  return out;
+}
+var _G45_CY_ISO2={slo:'si',fra:'fr',bel:'be',ned:'nl',esp:'es',ita:'it',ger:'de',den:'dk',gbr:'gb',usa:'us',aus:'au',sui:'ch',aut:'at',por:'pt',col:'co',ecu:'ec',pol:'pl',nor:'no',irl:'ie',can:'ca',kaz:'kz',eri:'er',rsa:'za',cze:'cz',svk:'sk',lux:'lu',lat:'lv',est:'ee',hun:'hu',cro:'hr',mex:'mx',arg:'ar',bra:'br',jpn:'jp',nzl:'nz',uae:'ae',bah:'bh',rou:'ro',ukr:'ua'};
+function _g45CyFlag(iso){ if(!iso) return ''; var i2=_G45_CY_ISO2[iso]||iso.slice(0,2); return '<img src="https://flagcdn.com/16x12/'+_g45CyEa(i2)+'.png" style="width:15px;height:11px;border-radius:2px;flex:none;" onerror="this.style.display=\'none\'">'; }
+async function g45CyclingOpen(raceId){
+  var el=document.getElementById('t-resultats'); if(!el) return;
+  var race=_G45_CY_RACES.filter(function(r){return r.id===raceId;})[0]||_G45_CY_RACES[0];
+  var back='<button onclick="loadResultatsTab()" style="border:none;cursor:pointer;background:rgba(255,255,255,.06);border-radius:8px;color:var(--t2);padding:7px 12px;font-size:11px;font-weight:700;margin-bottom:10px;">← Sports</button>';
+  var chips='<div style="display:flex;gap:6px;margin-bottom:9px;">'+_G45_CY_RACES.map(function(r){ var on=r.id===race.id; return '<button onclick="g45CyclingOpen(\''+r.id+'\')" style="border:none;border-radius:7px;padding:6px 11px;font-size:10px;font-weight:700;cursor:pointer;background:'+(on?'#f0c828':'rgba(255,255,255,.06)')+';color:'+(on?'#221b00':'var(--t2)')+';">'+r.flag+' '+r.n+'</button>'; }).join('')+'</div>';
+  el.innerHTML=back+'<div class="sec" style="margin-top:0;">🚴 Cyclisme — '+_g45CyEa(race.n)+'</div>'+chips+'<div style="color:var(--t3);font-size:11px;padding:16px;text-align:center;">⏳ Chargement des classements…</div>';
+  // Cache 30 min (les classements changent 1×/jour)
+  var ck='g45cy_'+race.id, cached=null;
+  try{ var raw=localStorage.getItem(ck); if(raw){ var o=JSON.parse(raw); if(Date.now()-o.t<30*60000) cached=o.d; } }catch(e){}
+  var groups=cached;
+  if(!groups){
+    var res=await _g45CyFetch(race.host, race.id==='tdf'?'/fr/classements':'/fr/');
+    if(res.__http||res.__err){
+      el.innerHTML=back+'<div class="sec" style="margin-top:0;">🚴 Cyclisme — '+_g45CyEa(race.n)+'</div>'+chips
+        +'<div style="color:#ff6b6b;font-size:11px;padding:14px;text-align:center;">Classements indisponibles.<br><span style="font-size:9px;color:#8aa0ff;">diag → '+(res.__http?('HTTP '+res.__http):res.__err)+' (host='+race.host+' — le Worker connaît-il ce host ?)</span></div>';
+      return;
+    }
+    groups=_g45CyParse(res.html);
+    if(groups.length){ try{ localStorage.setItem(ck, JSON.stringify({t:Date.now(), d:groups})); }catch(e){} }
+  }
+  if(!groups||!groups.length){
+    el.innerHTML=back+'<div class="sec" style="margin-top:0;">🚴 Cyclisme — '+_g45CyEa(race.n)+'</div>'+chips
+      +'<div style="color:var(--t3);font-size:11px;padding:14px;text-align:center;">Aucun classement trouvé sur la page.<br><span style="font-size:9px;color:#8aa0ff;">diag → page reçue mais 0 ligne rankingTables__row (hors période de course, ou structure changée)</span></div>';
+    return;
+  }
+  var html='';
+  groups.forEach(function(g,gi){
+    var gid='g45cyg'+gi, first=(gi===0);
+    html+='<div onclick="g45MmaTgl(\''+gid+'\',this)" style="cursor:pointer;display:flex;justify-content:space-between;align-items:center;background:rgba(240,200,40,.08);border:1px solid rgba(240,200,40,.25);border-radius:8px;padding:8px 11px;margin:9px 0 5px;">'
+      +'<span style="font-size:11px;font-weight:800;color:#f0c828;">'+(g.title?_g45CyEa(g.title):('Classement '+(gi+1)))+'</span>'
+      +'<span style="font-size:9px;color:var(--t3);">'+g.items.length+' <span class="g45-caret">'+(first?'▼':'▶')+'</span></span></div>'
+      +'<div id="'+gid+'" data-open="'+(first?'1':'0')+'"'+(first?'':' style="display:none;"')+'>';
+    html+='<div style="background:rgba(12,16,28,.96);border:1px solid rgba(255,255,255,.08);border-radius:8px;padding:7px 9px;">';
+    g.items.forEach(function(it){
+      var p=parseInt(it.pos,10);
+      var col=p===1?'#f0c828':(p<=3?'#c3cce6':'var(--t1)');
+      html+='<div style="display:flex;align-items:center;gap:7px;padding:4px 0;border-bottom:1px solid rgba(255,255,255,.04);">'
+        +'<span style="width:22px;text-align:center;font-size:11px;font-weight:800;color:'+col+';flex:none;">'+(p===1?'🏆':_g45CyEa(it.pos||'-'))+'</span>'
+        +_g45CyFlag(it.iso)
+        +'<div style="flex:1;min-width:0;"><div style="font-size:11px;font-weight:700;color:var(--t1);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">'+(it.bib?('<span style="color:#8aa0ff;">'+_g45CyEa(it.bib)+'</span> '):'')+_g45CyEa(it.name)+'</div>'
+        +(it.team?('<div style="font-size:8px;color:var(--t2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">'+_g45CyEa(it.team)+'</div>'):'')+'</div>'
+        +'<div style="flex:none;text-align:right;">'
+        +(it.t1?('<div style="font-size:10px;font-weight:700;color:var(--t1);">'+_g45CyEa(it.t1)+'</div>'):'')
+        +(it.t2&&it.t2!==it.t1?('<div style="font-size:9px;color:var(--t3);">'+_g45CyEa(it.t2)+'</div>'):'')
+        +'</div></div>';
+    });
+    html+='</div></div>';
+  });
+  el.innerHTML=back+'<div class="sec" style="margin-top:0;">🚴 Cyclisme — '+_g45CyEa(race.n)+'</div>'+chips+html
+    +'<div style="font-size:8px;color:var(--t3);text-align:center;margin-top:7px;font-style:italic;">Source : site officiel · mis en cache 30 min</div>';
+}
+window.g45CyclingOpen=g45CyclingOpen;
 async function g45MotoOpen(){
   var el=document.getElementById('t-resultats'); if(!el) return;
   var back='<button onclick="loadResultatsTab()" style="border:none;cursor:pointer;background:rgba(255,255,255,.06);border-radius:8px;color:var(--t2);padding:7px 12px;font-size:11px;font-weight:700;margin-bottom:10px;">← Sports</button>';
@@ -22519,6 +22617,7 @@ function loadResultatsTab(){
     +'<button onclick="g45F1Open()" style="border:none;cursor:pointer;background:rgba(255,255,255,.05);border-radius:12px;padding:16px 8px;display:flex;flex-direction:column;align-items:center;gap:6px;color:var(--t1);"><span style="font-size:26px;">🏎️</span><span style="font-size:11px;font-weight:700;">F1</span></button>'
     +'<button onclick="g45MmaOpen(0)" style="border:none;cursor:pointer;background:rgba(255,255,255,.05);border-radius:12px;padding:16px 8px;display:flex;flex-direction:column;align-items:center;gap:6px;color:var(--t1);"><span style="font-size:26px;">🥊</span><span style="font-size:11px;font-weight:700;">MMA / UFC</span></button>'
     +'<button onclick="g45MotoOpen()" style="border:none;cursor:pointer;background:rgba(255,255,255,.05);border-radius:12px;padding:16px 8px;display:flex;flex-direction:column;align-items:center;gap:6px;color:var(--t1);"><span style="font-size:26px;">🏍️</span><span style="font-size:11px;font-weight:700;">MotoGP</span></button>'
+    +'<button onclick="g45CyclingOpen(\'tdf\')" style="border:none;cursor:pointer;background:rgba(255,255,255,.05);border-radius:12px;padding:16px 8px;display:flex;flex-direction:column;align-items:center;gap:6px;color:var(--t1);"><span style="font-size:26px;">🚴</span><span style="font-size:11px;font-weight:700;">Cyclisme</span></button>'
     +'</div>';
 }
 function g45ShowSport(sportKey){
