@@ -22225,7 +22225,8 @@ var _G45_CY_RACES=[
   {id:'tdf', n:'Tour de France', host:'letour', flag:'🇫🇷', rc:'racecenter.letour.fr'},
   {id:'tdff', n:'Tour Femmes', flag:'🇫🇷', rc:'racecenter.letourfemmes.fr'},
   {id:'pn', n:'Paris-Nice', flag:'🇫🇷', rc:'racecenter.paris-nice.fr'},
-  {id:'dauphine', n:'Dauphiné', flag:'🇫🇷', rc:'racecenter.criterium-du-dauphine.fr'},
+  {id:'dauphine', n:'Dauphiné', flag:'🇫🇷', rc:'racecenter.tour-auvergne-rhone-alpes.fr'},
+  {id:'roubaix', n:'Paris-Roubaix', flag:'🇫🇷', rc:'racecenter.paris-roubaix.fr'},
   {id:'vuelta', n:'La Vuelta', host:'vuelta', flag:'🇪🇸', rc:'racecenter.lavuelta.es'}
 ];
 function _g45CyEa(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/"/g,'&quot;'); }
@@ -22774,11 +22775,14 @@ async function g45RcOpen(raceId, stage){
   }).join('');
   var dd=cur?Date.parse(cur.date||''):NaN;
   var info='<div style="background:rgba(240,200,40,.07);border:1px solid rgba(240,200,40,.2);border-radius:9px;padding:9px 11px;margin-bottom:9px;">'
-    +'<select onchange="g45RcOpen(\''+race.id+'\',parseInt(this.value,10))" style="width:100%;box-sizing:border-box;background:rgba(8,10,16,.8);color:var(--t1);border:1px solid rgba(255,255,255,.12);border-radius:7px;padding:7px;font-size:11px;font-weight:700;">'+opts+'</select>'
+    +((stages.length>1)
+      ?('<select onchange="g45RcOpen(\''+race.id+'\',parseInt(this.value,10))" style="width:100%;box-sizing:border-box;background:rgba(8,10,16,.8);color:var(--t1);border:1px solid rgba(255,255,255,.12);border-radius:7px;padding:7px;font-size:11px;font-weight:700;">'+opts+'</select>')
+      :('<div style="font-size:12px;font-weight:800;color:var(--t1);">'+_g45CyEa(((cur&&cur.departureCity&&cur.departureCity.label)||'')+' \u203a '+((cur&&cur.arrivalCity&&cur.arrivalCity.label)||''))+'</div>'))
     +(cur?('<div style="font-size:9px;color:var(--t2);margin-top:6px;">'
         +(isNaN(dd)?'':('📅 '+new Date(dd).toLocaleDateString('fr-FR',{weekday:'long',day:'numeric',month:'long'})))
         +((cur.lengthDisplay||cur.length)?(' · 📏 '+_g45CyEa((cur.lengthDisplay||cur.length)+' km')):'')+'</div>'):'')
     +'<button onclick="g45RcPhotos()" style="margin-top:7px;border:none;cursor:pointer;font-size:9px;font-weight:800;padding:5px 10px;border-radius:7px;background:'+(_g45RcPhotosOn()?'rgba(46,204,113,.14);color:#2ecc71':'rgba(255,255,255,.06);color:var(--t3)')+';">\uD83D\uDCF7 Photos '+(_g45RcPhotosOn()?'ON':'OFF')+'</button>'
+    +'<button onclick="g45RcRidersView(\''+race.id+'\')" style="margin-top:7px;margin-left:5px;border:none;cursor:pointer;font-size:9px;font-weight:800;padding:5px 10px;border-radius:7px;background:rgba(138,160,255,.15);color:#8aa0ff;">\uD83D\uDC64 Coureurs</button>'
     +'</div>';
   el.innerHTML=head+info+'<div id="g45rc-disc" style="color:#8aa0ff;font-size:10px;padding:6px;text-align:center;"></div>'
     +'<div style="color:var(--t3);font-size:11px;padding:16px;text-align:center;">⏳ Classements de l\'étape '+stage+'…</div>';
@@ -22814,6 +22818,149 @@ async function g45RcOpen(raceId, stage){
 window.g45RcOpen=g45RcOpen;
 function g45TdfOpen(stage){ return g45RcOpen('tdf', stage); }
 window.g45TdfOpen=g45TdfOpen;
+/* ── 👤 COUREURS — profils déduits des résultats, pas devinés ──
+   Deux sources croisées :
+     1. les classements annexes finaux (itg/ipg/img/ijg) = 1 requête
+     2. l'analyse par terrain : résultat d'étape (ite) croisé avec le type d'étape
+        (PLN plaine, VAL vallonnée, HMG haute montagne, PAS chrono, EQU chrono équipes)
+   Aucun pronostic : on affiche des faits (places réelles), les étiquettes en découlent. */
+var _G45_RC_TERRAIN={
+  PLN:{n:'Plaine',            ico:'\uD83D\uDEE3\uFE0F'},
+  VAL:{n:'Vallonnée',         ico:'\u26F0\uFE0F'},
+  MMG:{n:'Moyenne montagne',  ico:'\uD83C\uDFDE\uFE0F'},
+  HMG:{n:'Haute montagne',    ico:'\uD83C\uDFD4\uFE0F'},
+  PAS:{n:'Contre-la-montre',  ico:'\u23F1\uFE0F'},
+  EQU:{n:'CLM par équipes',   ico:'\uD83D\uDC65'}
+};
+async function _g45RcAnalyse(race, y, stages, onStep){
+  var ck='g45rcA_'+race.id+'|'+y;
+  try{ var raw=localStorage.getItem(ck); if(raw){ var o=JSON.parse(raw); if(o.d&&(Date.now()-o.t)<12*3600000) return o.d; } }catch(e){}
+  var A={};
+  for(var i=0;i<stages.length;i++){
+    var st=stages[i].stage, ty=stages[i].type||'?';
+    if(onStep) onStep(i, stages.length);
+    var rw=null;
+    try{ rw=await _g45RcGet(race, 'rankingType-'+y+'-'+st, 6*3600000); }catch(e){}
+    if(!rw) continue;
+    var e=_g45RcPick(rw).ite;
+    if(!e) continue;
+    (e.rankings||[]).forEach(function(r){
+      var id=String(r.$rider||'').split(':')[1]; if(!id) return;
+      var p=r.position||999;
+      if(!A[id]) A[id]={};
+      if(!A[id][ty]) A[id][ty]={n:0,best:999,t10:0};
+      var b=A[id][ty]; b.n++; if(p<b.best) b.best=p; if(p<=10) b.t10++;
+    });
+  }
+  try{ localStorage.setItem(ck, JSON.stringify({t:Date.now(), d:A})); }catch(e){}
+  return A;
+}
+function _g45RcTags(f, a){
+  var T=[];
+  var t10m=((a&&a.HMG&&a.HMG.t10)||0)+((a&&a.MMG&&a.MMG.t10)||0);
+  var t10p=((a&&a.PLN&&a.PLN.t10)||0);
+  var bClm=(a&&a.PAS&&a.PAS.best)||999;
+  if(f.gc&&f.gc<=15)                                   T.push(['gc','\uD83C\uDFAF','Favori GC','#f0c828']);
+  if(t10m>=2||(f.mtn&&f.mtn<=15))                      T.push(['mtn','\uD83C\uDFD4\uFE0F','Grimpeur','#ff8a8a']);
+  if(t10p>=2||(f.pts&&f.pts<=15&&(!f.gc||f.gc>40)))    T.push(['spr','\u26A1','Sprinteur','#7ee2a8']);
+  if(bClm<=15)                                         T.push(['clm','\u23F1\uFE0F','Rouleur','#8aa0ff']);
+  if(f.jeune&&f.jeune<=15)                             T.push(['jeu','\uD83C\uDF31','Jeune','#c3cce6']);
+  return T;
+}
+function g45RcRvSet(k,v){ _g45Rc.rv=_g45Rc.rv||{}; _g45Rc.rv[k]=v; g45RcRidersView(_g45Rc.rv.race); }
+window.g45RcRvSet=g45RcRvSet;
+async function g45RcRidersView(raceId, deep){
+  var el=document.getElementById('t-resultats'); if(!el) return;
+  var race=_g45RcRace(raceId);
+  _g45Rc.rv=_g45Rc.rv||{}; _g45Rc.rv.race=race.id;
+  var srt=_g45Rc.rv.sort||'gc', flt=_g45Rc.rv.filter||'';
+  var head='<button onclick="g45CyclingOpen(\''+race.id+'\')" style="border:none;cursor:pointer;background:rgba(255,255,255,.06);border-radius:8px;color:var(--t2);padding:7px 12px;font-size:11px;font-weight:700;margin-bottom:10px;">← Étapes</button>'
+    +'<div class="sec" style="margin-top:0;">\uD83D\uDC64 '+_g45CyEa(race.n)+' — coureurs</div>';
+  el.innerHTML=head+'<div id="g45rc-disc" style="color:#8aa0ff;font-size:10px;padding:6px;text-align:center;">⏳ Chargement…</div>';
+
+  var y=await _g45RcYear(race); if(!y){ el.innerHTML=head+'<div style="color:#ff6b6b;font-size:11px;padding:14px;text-align:center;">Données indisponibles.</div>'; return; }
+  var stages=await _g45RcStages(race, y);
+  var riders=await _g45RcRiders(race, y);
+
+  /* dernier classement disponible */
+  var fin=null;
+  for(var i=stages.length-1;i>=0&&!fin;i--){
+    var rw=null; try{ rw=await _g45RcGet(race,'rankingType-'+y+'-'+stages[i].stage, 60*60000); }catch(e){}
+    if(rw){ var b=_g45RcPick(rw); if(b.itg||b.ipg||b.img) fin=b; }
+  }
+  if(!fin){ el.innerHTML=head+'<div style="color:var(--t3);font-size:11px;padding:14px;text-align:center;">Pas encore de classement sur cette course.</div>'; return; }
+
+  var F={};
+  var put=function(e,key){ if(!e) return; (e.rankings||[]).forEach(function(r){
+    var id=String(r.$rider||'').split(':')[1]; if(!id) return;
+    if(!F[id]) F[id]={};
+    F[id][key]=r.position||999; F[id][key+'v']=r.absolute;
+  }); };
+  put(fin.itg,'gc'); put(fin.ipg,'pts'); put(fin.img,'mtn'); put(fin.ijg,'jeune');
+
+  var A=null;
+  if(deep){
+    A=await _g45RcAnalyse(race, y, stages, function(d,t){
+      var b=document.getElementById('g45rc-disc');
+      if(b) b.innerHTML='\uD83D\uDD2C Analyse par terrain… étape '+(d+1)+'/'+t;
+    });
+  } else {
+    try{ var rawA=localStorage.getItem('g45rcA_'+race.id+'|'+y); if(rawA) A=JSON.parse(rawA).d; }catch(e){}
+  }
+
+  var list=Object.keys(F).map(function(id){
+    var o=riders[id]||{}, f=F[id], a=A?A[id]:null;
+    return {id:id, o:o, f:f, a:a, tags:_g45RcTags(f,a)};
+  });
+  var SK={gc:'gc', pts:'pts', mtn:'mtn'};
+  if(SK[srt]) list.sort(function(x,z){ return (x.f[SK[srt]]||999)-(z.f[SK[srt]]||999); });
+  else list.sort(function(x,z){ return String(x.o.nom||'').localeCompare(String(z.o.nom||'')); });
+  if(flt) list=list.filter(function(r){ return r.tags.some(function(t){ return t[0]===flt; }); });
+
+  var chip=function(k,lbl,cur,fn){ return '<button onclick="'+fn+'" style="border:none;cursor:pointer;border-radius:7px;padding:5px 9px;font-size:9px;font-weight:800;background:'+(cur?'#f0c828':'rgba(255,255,255,.06)')+';color:'+(cur?'#221b00':'var(--t2)')+';">'+lbl+'</button>'; };
+  var bar='<div style="display:flex;gap:5px;flex-wrap:wrap;margin-bottom:6px;">'
+    +chip('','Tous',!flt,"g45RcRvSet('filter','')")
+    +chip('gc','\uD83C\uDFAF GC',flt==='gc',"g45RcRvSet('filter','gc')")
+    +chip('spr','\u26A1 Sprint',flt==='spr',"g45RcRvSet('filter','spr')")
+    +chip('mtn','\uD83C\uDFD4\uFE0F Montagne',flt==='mtn',"g45RcRvSet('filter','mtn')")
+    +chip('clm','\u23F1\uFE0F Chrono',flt==='clm',"g45RcRvSet('filter','clm')")
+    +chip('jeu','\uD83C\uDF31 Jeunes',flt==='jeu',"g45RcRvSet('filter','jeu')")
+    +'</div><div style="display:flex;gap:5px;flex-wrap:wrap;margin-bottom:8px;align-items:center;">'
+    +'<span style="font-size:9px;color:var(--t3);">Trier :</span>'
+    +chip('','Général',srt==='gc',"g45RcRvSet('sort','gc')")
+    +chip('','Points',srt==='pts',"g45RcRvSet('sort','pts')")
+    +chip('','Montagne',srt==='mtn',"g45RcRvSet('sort','mtn')")
+    +chip('','Nom',srt==='nom',"g45RcRvSet('sort','nom')")
+    +'</div>'
+    +(A?'':'<button onclick="g45RcRidersView(\''+race.id+'\',1)" style="width:100%;border:none;cursor:pointer;border-radius:8px;padding:8px;font-size:10px;font-weight:800;background:rgba(138,160,255,.15);color:#8aa0ff;margin-bottom:8px;">\uD83D\uDD2C Lancer l\u2019analyse par terrain ('+stages.length+' étapes)</button>');
+
+  var rows='';
+  list.forEach(function(r){
+    var o=r.o, f=r.f, a=r.a;
+    var cell=function(v,lbl,col){ return '<div style="flex:none;width:38px;text-align:center;"><div style="font-size:10px;font-weight:800;color:'+(v&&v<999?col:'var(--t3)')+';">'+(v&&v<999?v:'—')+'</div><div style="font-size:7px;color:var(--t3);">'+lbl+'</div></div>'; };
+    var tg=r.tags.map(function(t){ return '<span style="font-size:7.5px;font-weight:800;color:'+t[3]+';background:rgba(255,255,255,.05);border-radius:3px;padding:1px 4px;margin-right:3px;">'+t[1]+' '+t[2]+'</span>'; }).join('');
+    var det='';
+    if(a){
+      det=Object.keys(_G45_RC_TERRAIN).filter(function(k){ return a[k]&&a[k].best<999; })
+        .map(function(k){ return _G45_RC_TERRAIN[k].ico+(a[k].best)+(a[k].t10?('\u00b7'+a[k].t10+'top10'):''); }).join('  ');
+    }
+    rows+='<div style="display:flex;align-items:center;gap:7px;padding:5px 0;border-bottom:1px solid rgba(255,255,255,.04);">'
+      +((_g45RcPhotosOn()&&o.photo)?('<img src="'+_g45CyEa(o.photo)+'" loading="lazy" style="width:26px;height:26px;border-radius:50%;object-fit:cover;background:rgba(255,255,255,.07);flex:none;">'):'')
+      +_g45CyFlag(o.nat)
+      +'<div style="flex:1;min-width:0;">'
+        +'<div style="font-size:11px;font-weight:700;color:var(--t1);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;"><span style="color:#8aa0ff;">'+_g45CyEa(o.bib||'')+'</span> '+_g45CyEa(o.nom||'?')+'</div>'
+        +'<div style="font-size:8px;color:var(--t2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">'+_g45CyEa(o.team||'')+'</div>'
+        +(tg?('<div style="margin-top:2px;">'+tg+'</div>'):'')
+        +(det?('<div style="font-size:7.5px;color:var(--t3);margin-top:2px;">'+_g45CyEa(det)+'</div>'):'')
+      +'</div>'
+      +cell(f.gc,'GC','#f0c828')+cell(f.pts,'PTS','#7ee2a8')+cell(f.mtn,'MTN','#ff8a8a')
+      +'</div>';
+  });
+  el.innerHTML=head+bar
+    +'<div style="background:rgba(12,16,28,.96);border:1px solid rgba(255,255,255,.08);border-radius:9px;padding:7px 9px;">'+(rows||'<div style="font-size:10px;color:var(--t3);text-align:center;padding:10px;">Aucun coureur pour ce filtre.</div>')+'</div>'
+    +'<div style="font-size:8px;color:var(--t3);text-align:center;margin-top:7px;font-style:italic;">'+list.length+' coureurs · profils déduits des résultats réels, pas de pronostic</div>';
+}
+window.g45RcRidersView=g45RcRidersView;
 /* Dispatcher : racecenter si la course en a un, sinon ancien parsing HTML */
 async function g45CyclingOpen(raceId){
   var race=_g45RcRace(raceId);
