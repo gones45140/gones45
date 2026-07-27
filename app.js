@@ -22229,7 +22229,7 @@ var _G45_CY_RACES=[
   {id:'dauphine', n:'Dauphiné', flag:'🇫🇷', rc:'racecenter.tour-auvergne-rhone-alpes.fr'},
   {id:'roubaix', n:'Paris-Roubaix', flag:'🇫🇷', rc:'racecenter.paris-roubaix.fr'},
   {id:'liege', n:'Liège-B.-Liège', flag:'🇧🇪', rc:'racecenter.liege-bastogne-liege.be'},
-  {id:'fleche', n:'Flèche Wallonne', flag:'🇧🇪', rc:'racecenter.flechewallonne.be'},
+  {id:'fleche', n:'Flèche Wallonne', flag:'🇧🇪', rc:'racecenter.la-fleche-wallonne.be'},
   {id:'ptours', n:'Paris-Tours', flag:'🇫🇷', rc:'racecenter.paris-tours.fr'}
 ];
 function _g45CyEa(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/"/g,'&quot;'); }
