@@ -22373,8 +22373,9 @@ function _g45RcRace(id){ return _G45_CY_RACES.filter(function(r){ return r.id===
 /* ── Réseau : direct d'abord, Worker en repli (le mode qui marche est mémorisé) ── */
 async function _g45RcFetch(rcHost, path){
   var base=(typeof FD_PROXY!=='undefined'?FD_PROXY:'https://fd-proxy.touraine-antoine.workers.dev');
-  var direct=async function(){ var r=await fetch('https://'+rcHost+path); if(!r.ok) throw new Error('HTTP '+r.status); return await r.json(); };
-  var viaw  =async function(){ var r=await fetch(base+'?host=asorc&rchost='+encodeURIComponent(rcHost)+'&path='+encodeURIComponent(path)); if(!r.ok) throw new Error('HTTP '+r.status); return await r.json(); };
+  var pj=async function(r){ if(!r.ok) throw new Error('HTTP '+r.status); var t=await r.text(); if(!t||!t.trim()) throw new Error('vide'); return JSON.parse(t); };
+  var direct=async function(){ return pj(await fetch('https://'+rcHost+path)); };
+  var viaw  =async function(){ return pj(await fetch(base+'?host=asorc&rchost='+encodeURIComponent(rcHost)+'&path='+encodeURIComponent(path))); };
   var mode=localStorage.getItem('g45_rc_mode')||'';
   var order=(mode==='worker')?[['worker',viaw],['direct',direct]]:[['direct',direct],['worker',viaw]];
   var errs=[];
@@ -22489,6 +22490,23 @@ function _g45RcRow(r, riders, unit, isTeam){
 /* ── Profil d'étape dessiné à partir du CSV ASO ──
    /profils/{annee}/profile-{NN}.csv (variante -tiny plus légère si dispo)
    Colonnes : latitude;longitude;altitude;azimuth;slope;dvdone;dvrest;kmdone;kmto;cpnumero;cptype;sumcategory */
+/* Les chemins de profils portent un hash de contenu, non calculable : ASO les stocke
+   dans ses chunks webpack. On les fige par course+annee. Un hash de contenu ne change
+   que si ASO regenere un profil, donc en pratique jamais une fois le parcours publie.
+   Pour les relever sur une nouvelle course, voir le snippet d'extraction des bundles. */
+var _G45_RC_PROFILES={
+  'tdff|2026':[
+    'profile-01-tiny-e35dda8fd47c3f132ec218e7aac2bc16.csv',
+    'profile-02-tiny-0449ce391c849057c7d73284fbeb68f8.csv',
+    'profile-03-tiny-3ec1903d91a8e17eefb2fbaf654f043b.csv',
+    'profile-04-tiny-344adfa450a18fb6e7cd6a8b39aed9bd.csv',
+    'profile-05-tiny-77186995d3e21ed6c65f7ece3d1360d4.csv',
+    'profile-06-tiny-5d93c7869448ec12a5261f20ce606e17.csv',
+    'profile-07-tiny-ebb9fe6d6c62358fc062b52f211c9801.csv',
+    'profile-08-tiny-a4a6c68e16668aebd0eeccebbecf40d9.csv',
+    'profile-09-tiny-34b7cac992721de9e9a561dd7d9b934b.csv'
+  ]
+};
 async function _g45RcText(rcHost, path){
   var base=(typeof FD_PROXY!=='undefined'?FD_PROXY:'https://fd-proxy.touraine-antoine.workers.dev');
   var direct=async function(){ var r=await fetch('https://'+rcHost+path); if(!r.ok) throw new Error('HTTP '+r.status); return await r.text(); };
@@ -22517,7 +22535,10 @@ async function _g45RcCsv(race, y, stage){
   var ck='g45rcP_'+mk;
   try{ var raw=localStorage.getItem(ck); if(raw){ var o=JSON.parse(raw); _g45Rc.cache[mk]=o.d; return o.d; } }catch(e){}
   var nn=(stage<10?'0':'')+stage, pts=null;
-  var cands=['/profils/'+y+'/profile-'+nn+'-tiny.csv','/profils/'+y+'/profile-'+nn+'.csv'];
+  var cands=[];
+  var tab=_G45_RC_PROFILES[race.id+'|'+y];
+  if(tab && tab[stage-1]) cands.push('/profils/'+y+'/'+tab[stage-1]);
+  cands.push('/profils/'+y+'/profile-'+nn+'-tiny.csv','/profils/'+y+'/profile-'+nn+'.csv');
   for(var i=0;i<cands.length&&!pts;i++){ pts=_g45RcParseCsv(await _g45RcText(race.rc, cands[i])); }
   _g45Rc.cache[mk]=pts;
   if(pts){ try{ localStorage.setItem(ck, JSON.stringify({t:Date.now(), d:pts})); }catch(e){} }
