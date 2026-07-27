@@ -22495,6 +22495,29 @@ function _g45RcRow(r, riders, unit, isTeam){
    que si ASO regenere un profil, donc en pratique jamais une fois le parcours publie.
    Pour les relever sur une nouvelle course, voir le snippet d'extraction des bundles. */
 var _G45_RC_PROFILES={
+  'tdf|2026':[
+    ['profile-01-tiny-c6a4ae8c5b058cee4b68da732db155ef.csv','profile-01-tiny-1f110e9da9da950eb4d13f927989a0ce.csv'],
+    ['profile-02-tiny-eba5a8c47068c6ef7d3dd19f72d46abc.csv','profile-02-tiny-5849319f37c2cf75ce2397a71a0e1216.csv'],
+    ['profile-03-tiny-533476436ec8db191dc0d006d4fa2d81.csv','profile-03-tiny-04a184fa9e73bf6bbb0795e1996f914c.csv'],
+    ['profile-04-tiny-cc6f6ad220e1b561e919ed04a00d771e.csv','profile-04-tiny-f5e7495543aac33366c6fda9cae6fb92.csv'],
+    ['profile-05-tiny-14827d3e9a289362f68e5e3d29e55f6f.csv','profile-05-tiny-5f7050b88d435799d7cc049c620154b4.csv'],
+    ['profile-06-tiny-f64972a7fe4dd00b7d81ffd94387588f.csv','profile-06-tiny-726638a58e275b9a6b4ba8e40b328bc3.csv'],
+    ['profile-07-tiny-f3393e660da4b146dab54dc42d59bbc9.csv','profile-07-tiny-61a91abe831c978a1f55f97d45bf0611.csv'],
+    ['profile-08-tiny-9113b5dc57e46e42cbe6fa6b96cfc7d0.csv','profile-08-tiny-8388a159804ff71015b8d85a262884bb.csv'],
+    ['profile-09-tiny-d8e2da8c0266c41fbc9368804616a93e.csv','profile-09-tiny-3af5f3ae90898925bce80daa98ac7aac.csv'],
+    ['profile-10-tiny-1a065effbe480d9b2741fd5593346ea5.csv','profile-10-tiny-08643c4464cef910f6d87349e9bd2497.csv'],
+    ['profile-11-tiny-a88818e9bad1aeea099df0904c608f59.csv','profile-11-tiny-07e3182e299335530fea1e876101040e.csv'],
+    ['profile-12-tiny-58fd31828b2f2c1c78b9b9370a99d754.csv','profile-12-tiny-e1e18ddcf0c489db2cd7d8b32430fcb4.csv'],
+    ['profile-13-tiny-ef04c1f36b2cfc79444edace0364901e.csv','profile-13-tiny-83ad04f192719e5306cd51e84738c1e4.csv'],
+    ['profile-14-tiny-795262d6d9e67e35d33e705dad76e742.csv','profile-14-tiny-834ffcff770e3aca72553d1778212efa.csv'],
+    ['profile-15-tiny-7e1e4e6a7b96e70e693e64ff2a2518eb.csv','profile-15-tiny-54b7914e99a730bd711ee25d9403278b.csv'],
+    ['profile-16-tiny-660a986438cf2aa288ce46dffe042d44.csv','profile-16-tiny-de43e337419c02980c4756c5584626dc.csv'],
+    ['profile-17-tiny-c2b92263f156ee5389214f55f4eff0f3.csv','profile-17-tiny-af44cbfd05520574646f7de8ec4de99f.csv'],
+    ['profile-18-tiny-22af80a3462359efd7d4b37729c26b46.csv','profile-18-tiny-55b73cf46c81de3465334b7ab0fcc1fe.csv'],
+    ['profile-19-tiny-13c90abc046e85966df8f69c02c7d68c.csv','profile-19-tiny-2741edbc69061a6ff764e0351e83b3d6.csv'],
+    ['profile-20-tiny-08f4997c5761e24545663827f6e6684f.csv','profile-20-tiny-72b592232b304a20d16b9bc92f4d5526.csv'],
+    ['profile-21-tiny-24fa93270f789cd28925c98196373cad.csv','profile-21-tiny-c039761a4e729cd2c42426cebe111b52.csv']
+  ],
   'tdff|2026':[
     'profile-01-tiny-e35dda8fd47c3f132ec218e7aac2bc16.csv',
     'profile-02-tiny-0449ce391c849057c7d73284fbeb68f8.csv',
@@ -22537,7 +22560,8 @@ async function _g45RcCsv(race, y, stage){
   var nn=(stage<10?'0':'')+stage, pts=null;
   var cands=[];
   var tab=_G45_RC_PROFILES[race.id+'|'+y];
-  if(tab && tab[stage-1]) cands.push('/profils/'+y+'/'+tab[stage-1]);
+  var ent=tab?tab[stage-1]:null;
+  if(ent){ (Array.isArray(ent)?ent:[ent]).forEach(function(f){ cands.push('/profils/'+y+'/'+f); }); }
   cands.push('/profils/'+y+'/profile-'+nn+'-tiny.csv','/profils/'+y+'/profile-'+nn+'.csv');
   for(var i=0;i<cands.length&&!pts;i++){ pts=_g45RcParseCsv(await _g45RcText(race.rc, cands[i])); }
   _g45Rc.cache[mk]=pts;
