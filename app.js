@@ -22362,6 +22362,12 @@ var _G45_RC_TYPES={
   etg:{n:'Équipes',             ico:'👥', u:'t', c:'#8aa0ff'}
 };
 var _G45_RC_ORDER=['ite','itg','ipg','img','ijg','etg'];
+function _g45RcPhotosOn(){ return localStorage.getItem('g45_rc_photos')!=='0'; }
+function g45RcPhotos(){
+  localStorage.setItem('g45_rc_photos', _g45RcPhotosOn()?'0':'1');
+  var c=_g45Rc.cur||{}; if(c.id) g45RcOpen(c.id, c.stage||0);
+}
+window.g45RcPhotos=g45RcPhotos;
 function _g45RcRace(id){ return _G45_CY_RACES.filter(function(r){ return r.id===id; })[0]||_G45_CY_RACES[0]; }
 
 /* ── Réseau : direct d'abord, Worker en repli (le mode qui marche est mémorisé) ── */
@@ -22469,6 +22475,7 @@ function _g45RcRow(r, riders, unit, isTeam){
   if(r.penality) bon+='<span style="color:#ff6b6b;font-size:8px;"> P+'+_g45RcT(r.penality)+'</span>';
   return '<div style="display:flex;align-items:center;gap:7px;padding:4px 0;border-bottom:1px solid rgba(255,255,255,.04);">'
     +'<span style="width:22px;text-align:center;font-size:11px;font-weight:800;color:'+col+';flex:none;">'+(p===1?'🏆':_g45CyEa(p||'-'))+'</span>'
+    +((isTeam||!_g45RcPhotosOn()||!o.photo)?'':('<img src="'+_g45CyEa(o.photo)+'" loading="lazy" style="width:24px;height:24px;border-radius:50%;object-fit:cover;background:rgba(255,255,255,.07);flex:none;" onerror="this.style.display=\'none\'">'))
     +(isTeam?'':_g45CyFlag(o.nat))
     +'<div style="flex:1;min-width:0;"><div style="font-size:11px;font-weight:700;color:var(--t1);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">'
       +(isTeam?'':'<span style="color:#8aa0ff;">'+_g45CyEa(r.bib||'')+'</span> ')+_g45CyEa(lbl)+'</div>'
@@ -22506,6 +22513,7 @@ async function g45RcOpen(raceId, stage){
     stage=last;
   }
   _g45Rc.stage[race.id]=stage;
+  _g45Rc.cur={id:race.id, stage:stage};
   var cur=stages.filter(function(s){ return s.stage===stage; })[0]||stages[stages.length-1];
 
   var opts=stages.map(function(s){
@@ -22518,6 +22526,7 @@ async function g45RcOpen(raceId, stage){
     +(cur?('<div style="font-size:9px;color:var(--t2);margin-top:6px;">'
         +(isNaN(dd)?'':('📅 '+new Date(dd).toLocaleDateString('fr-FR',{weekday:'long',day:'numeric',month:'long'})))
         +((cur.lengthDisplay||cur.length)?(' · 📏 '+_g45CyEa((cur.lengthDisplay||cur.length)+' km')):'')+'</div>'):'')
+    +'<button onclick="g45RcPhotos()" style="margin-top:7px;border:none;cursor:pointer;font-size:9px;font-weight:800;padding:5px 10px;border-radius:7px;background:'+(_g45RcPhotosOn()?'rgba(46,204,113,.14);color:#2ecc71':'rgba(255,255,255,.06);color:var(--t3)')+';">\uD83D\uDCF7 Photos '+(_g45RcPhotosOn()?'ON':'OFF')+'</button>'
     +'</div>';
   el.innerHTML=head+info+'<div style="color:var(--t3);font-size:11px;padding:16px;text-align:center;">⏳ Classements de l\'étape '+stage+'…</div>';
 
