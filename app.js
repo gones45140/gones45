@@ -22552,6 +22552,71 @@ function _g45RcParseCsv(txt){
   out.sort(function(a,b){ return a.km-b.km; });
   return out.length>5?out:null;
 }
+/* ── Découverte automatique des chemins de profils ──
+   Reproduit côté app ce qu'on faisait à la main en console :
+   page d'accueil → bundle principal → table de hash webpack → balayage des chunks.
+   Le filtre porte sur /profils/{annee}/, donc aucune confusion entre éditions.
+   Résultat mémorisé définitivement en localStorage (une seule fois par course+année). */
+function _g45RcDiscStep(done, total, found){
+  var b=document.getElementById('g45rc-disc'); if(!b) return;
+  b.innerHTML='🔍 Première visite : recherche des profils d’étapes… '
+    +Math.min(100,Math.round(100*done/(total||1)))+'%'+(found?(' · '+found+' trouvés'):'');
+}
+async function _g45RcDiscover(race, y, onStep){
+  var ck='g45rcD_'+race.id+'|'+y;
+  try{ var raw=localStorage.getItem(ck); if(raw){ var o=JSON.parse(raw);
+    if(o.d && (o.ok || (Date.now()-o.t)<24*3600000)) return o.d; } }catch(e){}
+  var out={};
+  try{
+    var html=await _g45RcText(race.rc, '/');
+    var srcs=[];
+    (html.match(/src="([^"]+\.js)"/g)||[]).forEach(function(x){
+      var p=x.slice(5,-1);
+      try{ if(/^https?:/i.test(p)){ var u=new URL(p); if(u.hostname!==race.rc) return; p=u.pathname; } }catch(e){ return; }
+      if(p.charAt(0)!=='/') p='/'+p;
+      srcs.push(p);
+    });
+    var map=null, dir=null;
+    for(var i=0;i<srcs.length && !map;i++){
+      var t=await _g45RcText(race.rc, srcs[i]);
+      if(!t) continue;
+      var best=null;
+      (t.match(/\{(?:"?\d+"?:"[0-9a-f]{6,10}",){8,}[^{}]*\}/g)||[]).forEach(function(c){ if(!best||c.length>best.length) best=c; });
+      if(best){ try{ map=JSON.parse(best.replace(/([{,])(\d+):/g,'$1"$2":')); dir=srcs[i].replace(/[^/]+$/,''); }catch(e){ map=null; } }
+    }
+    if(!map) throw new Error('table de hash introuvable');
+    var ids=Object.keys(map);
+    var re=new RegExp('profils/'+y+'/[A-Za-z0-9\\-]+\\.csv','g');
+    var need=((_g45Rc.stages[race.id]||[]).length)||21;
+    var B=6;
+    for(var k=0;k<ids.length;k+=B){
+      if(onStep) onStep(k, ids.length, Object.keys(out).length);
+      var batch=ids.slice(k,k+B);
+      var texts=await Promise.all(batch.map(function(id){
+        return _g45RcText(race.rc, dir+id+'.'+map[id]+'.js').catch(function(){ return ''; });
+      }));
+      texts.forEach(function(tj){
+        (String(tj||'').match(re)||[]).forEach(function(pp){
+          var f=pp.split('/').pop(), m=f.match(/profile-(\d+)/);
+          if(!m) return;
+          var st=parseInt(m[1],10);
+          if(!out[st]) out[st]=[];
+          if(out[st].indexOf(f)<0) out[st].push(f);
+        });
+      });
+      if(Object.keys(out).length>=need) break;
+    }
+  }catch(e){ window._g45RcDiag='découverte profils → '+String((e&&e.message)||e).slice(0,50); }
+  var ok=Object.keys(out).length>0;
+  try{ localStorage.setItem(ck, JSON.stringify({t:Date.now(), ok:ok, d:out})); }catch(e){}
+  return out;
+}
+function g45RcResetProfils(){
+  var n=0;
+  try{ Object.keys(localStorage).forEach(function(k){ if(k.indexOf('g45rcD_')===0||k.indexOf('g45rcP_')===0){ localStorage.removeItem(k); n++; } }); }catch(e){}
+  alert('Cache des profils vidé ('+n+' entrées). Rouvre une étape pour relancer la recherche.');
+}
+window.g45RcResetProfils=g45RcResetProfils;
 async function _g45RcCsv(race, y, stage){
   var mk=race.id+'|csv-'+y+'-'+stage;
   if(_g45Rc.cache[mk]!==undefined) return _g45Rc.cache[mk];
@@ -22562,6 +22627,10 @@ async function _g45RcCsv(race, y, stage){
   var tab=_G45_RC_PROFILES[race.id+'|'+y];
   var ent=tab?tab[stage-1]:null;
   if(ent){ (Array.isArray(ent)?ent:[ent]).forEach(function(f){ cands.push('/profils/'+y+'/'+f); }); }
+  else {
+    var disc=await _g45RcDiscover(race, y, _g45RcDiscStep);
+    if(disc && disc[stage]) disc[stage].forEach(function(f){ cands.push('/profils/'+y+'/'+f); });
+  }
   cands.push('/profils/'+y+'/profile-'+nn+'-tiny.csv','/profils/'+y+'/profile-'+nn+'.csv');
   for(var i=0;i<cands.length&&!pts;i++){ pts=_g45RcParseCsv(await _g45RcText(race.rc, cands[i])); }
   _g45Rc.cache[mk]=pts;
@@ -22709,7 +22778,8 @@ async function g45RcOpen(raceId, stage){
         +((cur.lengthDisplay||cur.length)?(' · 📏 '+_g45CyEa((cur.lengthDisplay||cur.length)+' km')):'')+'</div>'):'')
     +'<button onclick="g45RcPhotos()" style="margin-top:7px;border:none;cursor:pointer;font-size:9px;font-weight:800;padding:5px 10px;border-radius:7px;background:'+(_g45RcPhotosOn()?'rgba(46,204,113,.14);color:#2ecc71':'rgba(255,255,255,.06);color:var(--t3)')+';">\uD83D\uDCF7 Photos '+(_g45RcPhotosOn()?'ON':'OFF')+'</button>'
     +'</div>';
-  el.innerHTML=head+info+'<div style="color:var(--t3);font-size:11px;padding:16px;text-align:center;">⏳ Classements de l\'étape '+stage+'…</div>';
+  el.innerHTML=head+info+'<div id="g45rc-disc" style="color:#8aa0ff;font-size:10px;padding:6px;text-align:center;"></div>'
+    +'<div style="color:var(--t3);font-size:11px;padding:16px;text-align:center;">⏳ Classements de l\'étape '+stage+'…</div>';
 
   var _cp=await _g45RcCheckpoints(race, y, stage);
   var _pts=null; try{ _pts=await _g45RcCsv(race, y, stage); }catch(e){}
