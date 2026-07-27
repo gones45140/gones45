@@ -22486,6 +22486,142 @@ function _g45RcRow(r, riders, unit, isTeam){
     +'</div></div>';
 }
 /* ── Vue principale ── */
+/* ── Profil d'étape dessiné à partir du CSV ASO ──
+   /profils/{annee}/profile-{NN}.csv (variante -tiny plus légère si dispo)
+   Colonnes : latitude;longitude;altitude;azimuth;slope;dvdone;dvrest;kmdone;kmto;cpnumero;cptype;sumcategory */
+async function _g45RcText(rcHost, path){
+  var base=(typeof FD_PROXY!=='undefined'?FD_PROXY:'https://fd-proxy.touraine-antoine.workers.dev');
+  var direct=async function(){ var r=await fetch('https://'+rcHost+path); if(!r.ok) throw new Error('HTTP '+r.status); return await r.text(); };
+  var viaw  =async function(){ var r=await fetch(base+'?host=asorc&rchost='+encodeURIComponent(rcHost)+'&path='+encodeURIComponent(path)); if(!r.ok) throw new Error('HTTP '+r.status); return await r.text(); };
+  var mode=localStorage.getItem('g45_rc_mode')||'';
+  var order=(mode==='worker')?[viaw,direct]:[direct,viaw];
+  for(var i=0;i<order.length;i++){ try{ var t=await order[i](); if(t) return t; }catch(e){} }
+  return '';
+}
+function _g45RcParseCsv(txt){
+  if(!txt) return null;
+  if(!/^\s*latitude;longitude;altitude/i.test(txt.slice(0,60))) return null;   // pas du CSV → repli SPA
+  var lines=txt.split('\n'), out=[];
+  for(var i=1;i<lines.length;i++){
+    var p=lines[i].split(';'); if(p.length<8) continue;
+    var alt=parseFloat(p[2]), sl=parseFloat(p[4]), km=parseFloat(p[7]);
+    if(isNaN(alt)||isNaN(km)) continue;
+    out.push({km:km, alt:alt, sl:(isNaN(sl)?0:sl)});
+  }
+  out.sort(function(a,b){ return a.km-b.km; });
+  return out.length>5?out:null;
+}
+async function _g45RcCsv(race, y, stage){
+  var mk=race.id+'|csv-'+y+'-'+stage;
+  if(_g45Rc.cache[mk]!==undefined) return _g45Rc.cache[mk];
+  var ck='g45rcP_'+mk;
+  try{ var raw=localStorage.getItem(ck); if(raw){ var o=JSON.parse(raw); _g45Rc.cache[mk]=o.d; return o.d; } }catch(e){}
+  var nn=(stage<10?'0':'')+stage, pts=null;
+  var cands=['/profils/'+y+'/profile-'+nn+'-tiny.csv','/profils/'+y+'/profile-'+nn+'.csv'];
+  for(var i=0;i<cands.length&&!pts;i++){ pts=_g45RcParseCsv(await _g45RcText(race.rc, cands[i])); }
+  _g45Rc.cache[mk]=pts;
+  if(pts){ try{ localStorage.setItem(ck, JSON.stringify({t:Date.now(), d:pts})); }catch(e){} }
+  return pts;
+}
+function _g45RcSlopeCol(s){
+  if(s>=8)  return '#e0202a';
+  if(s>=5)  return '#ff8c42';
+  if(s>=2)  return '#f0c828';
+  if(s>-2)  return '#8aa0ff';
+  return '#2ecc71';
+}
+function _g45RcSVG(pts, cps){
+  var W=320,H=124,padL=3,padR=3,padT=16,padB=15;
+  var kmMax=pts[pts.length-1].km||1;
+  var aMin=1e9,aMax=-1e9;
+  pts.forEach(function(p){ if(p.alt<aMin)aMin=p.alt; if(p.alt>aMax)aMax=p.alt; });
+  var sp=Math.max(1,aMax-aMin); aMin-=sp*0.18; aMax+=sp*0.08; sp=aMax-aMin;
+  var X=function(km){ return padL+(km/kmMax)*(W-padL-padR); };
+  var Y=function(a){ return padT+(1-(a-aMin)/sp)*(H-padT-padB); };
+  var step=Math.max(1,Math.ceil(pts.length/240)), P=[];
+  for(var i=0;i<pts.length;i+=step) P.push(pts[i]);
+  if(P[P.length-1]!==pts[pts.length-1]) P.push(pts[pts.length-1]);
+  var d='M'+X(P[0].km).toFixed(1)+' '+Y(P[0].alt).toFixed(1);
+  for(var j=1;j<P.length;j++) d+=' L'+X(P[j].km).toFixed(1)+' '+Y(P[j].alt).toFixed(1);
+  var base=(H-padB).toFixed(1);
+  var area=d+' L'+X(P[P.length-1].km).toFixed(1)+' '+base+' L'+X(P[0].km).toFixed(1)+' '+base+' Z';
+  var segs='';
+  for(var k=1;k<P.length;k++){
+    segs+='<line x1="'+X(P[k-1].km).toFixed(1)+'" y1="'+Y(P[k-1].alt).toFixed(1)+'" x2="'+X(P[k].km).toFixed(1)+'" y2="'+Y(P[k].alt).toFixed(1)+'" stroke="'+_g45RcSlopeCol(P[k].sl)+'" stroke-width="2" stroke-linecap="round"/>';
+  }
+  var altAt=function(km){ var b=pts[0], bd=1e9; pts.forEach(function(p){ var dd=Math.abs(p.km-km); if(dd<bd){ bd=dd; b=p; } }); return b.alt; };
+  var marks='';
+  (cps||[]).forEach(function(c){
+    if(!c.km && c.km!==0) return;
+    if(c.km>kmMax) return;
+    var x=X(c.km), yv=Y(altAt(c.km));
+    var isArr=c.ty.some(function(t){ return t.code==='A'; });
+    var lbl='', col='#22a45d';
+    if(c.su.length){ lbl=String(c.su[0].code||''); col='#e0202a'; }
+    else if(isArr){ lbl=''; col='#f0c828'; }
+    else { lbl='S'; col='#22a45d'; }
+    marks+='<line x1="'+x.toFixed(1)+'" y1="'+(yv-2).toFixed(1)+'" x2="'+x.toFixed(1)+'" y2="'+(padT-3).toFixed(1)+'" stroke="'+col+'" stroke-width="1" stroke-dasharray="2 2" opacity=".75"/>';
+    if(lbl){
+      marks+='<rect x="'+(x-5).toFixed(1)+'" y="'+(padT-13).toFixed(1)+'" width="10" height="10" rx="2" fill="'+col+'"/>'
+        +'<text x="'+x.toFixed(1)+'" y="'+(padT-5).toFixed(1)+'" font-size="7.5" font-weight="800" fill="#fff" text-anchor="middle">'+_g45CyEa(lbl)+'</text>';
+    } else {
+      marks+='<text x="'+x.toFixed(1)+'" y="'+(padT-4).toFixed(1)+'" font-size="9" text-anchor="middle">\uD83C\uDFC1</text>';
+    }
+  });
+  var axis='<text x="'+padL+'" y="'+(H-4)+'" font-size="7" fill="#7d89a8">0 km</text>'
+    +'<text x="'+(W-padR)+'" y="'+(H-4)+'" font-size="7" fill="#7d89a8" text-anchor="end">'+kmMax.toFixed(0)+' km</text>'
+    +'<text x="'+(padL+2)+'" y="'+(padT+7)+'" font-size="7" fill="#7d89a8">'+Math.round(aMax)+' m</text>';
+  return '<svg viewBox="0 0 '+W+' '+H+'" style="width:100%;height:auto;display:block;">'
+    +'<path d="'+area+'" fill="rgba(240,200,40,.13)"/>'+segs+marks+axis+'</svg>';
+}
+function _g45RcSlopeLegend(){
+  var L=[['#2ecc71','descente'],['#8aa0ff','plat'],['#f0c828','2-5%'],['#ff8c42','5-8%'],['#e0202a','8%+']];
+  return '<div style="display:flex;gap:8px;flex-wrap:wrap;justify-content:center;margin-top:5px;">'
+    +L.map(function(x){ return '<span style="font-size:7.5px;color:var(--t3);display:inline-flex;align-items:center;gap:3px;"><span style="width:8px;height:3px;border-radius:2px;background:'+x[0]+';display:inline-block;"></span>'+x[1]+'</span>'; }).join('')
+    +'</div>';
+}
+async function _g45RcCheckpoints(race, y, stage){
+  var arr=await _g45RcGet(race, 'checkpointList-'+y+'-'+stage, 24*3600000);
+  var out=[];
+  (Array.isArray(arr)?arr:[]).forEach(function(c){
+    var su=(c.checkpointSummits||[]);
+    var ty=(c.checkpointTypes||[]).filter(function(x){ return x.code==='N'||x.code==='A'; });
+    if(!su.length && !ty.length) return;
+    out.push({km:(c.length||0), place:(c.place||c.road||''), su:su, ty:ty, h:(c.middleSchedule||c.highSchedule||'')});
+  });
+  out.sort(function(a,b){ return a.km-b.km; });
+  return out;
+}
+function _g45RcProfileHTML(cps, pts){
+  if((!cps||!cps.length) && !pts) return '';
+  cps=cps||[];
+  var h='<div style="background:rgba(12,16,28,.96);border:1px solid rgba(255,255,255,.08);border-radius:9px;padding:8px 10px;margin-bottom:9px;">'
+   +'<div style="font-size:10px;font-weight:800;color:var(--t2);margin-bottom:6px;">\uD83D\uDCC8 Profil de l\u2019\u00e9tape</div>'
+   +(pts?(_g45RcSVG(pts, cps)+_g45RcSlopeLegend()+'<div style="height:7px;"></div>'):'');
+  cps.forEach(function(c){
+    var isArr=c.ty.some(function(x){ return x.code==='A'; });
+    var ico='', det='', col='var(--t1)';
+    if(c.su.length){
+      var s=c.su[0], sm=s.summit||{};
+      ico='<span style="background:#e0202a;color:#fff;font-size:9px;font-weight:900;border-radius:3px;padding:1px 5px;flex:none;">'+_g45CyEa(s.code||'?')+'</span>';
+      col='#ff8a8a';
+      det=(sm.altitude?(sm.altitude+' m'):'')
+        +(s.length?(' \u00b7 '+(s.length/1000).toFixed(1)+' km'):'')
+        +(s.state?(' \u00e0 '+s.state+'%'):'');
+      if(isArr) det+=' \u00b7 arriv\u00e9e';
+    } else if(isArr){
+      ico='<span style="font-size:12px;flex:none;">\uD83C\uDFC1</span>'; col='#f0c828'; det='Arriv\u00e9e';
+    } else {
+      ico='<span style="background:#22a45d;color:#fff;font-size:9px;font-weight:900;border-radius:3px;padding:1px 5px;flex:none;">S</span>'; col='#7ee2a8'; det='Sprint interm\u00e9diaire';
+    }
+    h+='<div style="display:flex;align-items:center;gap:7px;padding:3px 0;border-bottom:1px solid rgba(255,255,255,.04);">'+ico
+      +'<div style="flex:1;min-width:0;"><div style="font-size:10px;font-weight:700;color:'+col+';overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">'+_g45CyEa(c.place)+'</div>'
+      +(det?('<div style="font-size:8px;color:var(--t3);">'+_g45CyEa(det)+'</div>'):'')+'</div>'
+      +'<div style="flex:none;text-align:right;"><div style="font-size:10px;font-weight:700;color:var(--t2);">km '+_g45CyEa(c.km)+'</div>'
+      +(c.h?('<div style="font-size:8px;color:var(--t3);">'+_g45CyEa(c.h)+'</div>'):'')+'</div></div>';
+  });
+  return h+'</div>';
+}
 async function g45RcOpen(raceId, stage){
   var el=document.getElementById('t-resultats'); if(!el) return;
   var race=_g45RcRace(raceId);
@@ -22530,12 +22666,15 @@ async function g45RcOpen(raceId, stage){
     +'</div>';
   el.innerHTML=head+info+'<div style="color:var(--t3);font-size:11px;padding:16px;text-align:center;">⏳ Classements de l\'étape '+stage+'…</div>';
 
+  var _cp=await _g45RcCheckpoints(race, y, stage);
+  var _pts=null; try{ _pts=await _g45RcCsv(race, y, stage); }catch(e){}
+  var prof=_g45RcProfileHTML(_cp, _pts);
   var riders=await _g45RcRiders(race, y);
   var raw=await _g45RcGet(race, 'rankingType-'+y+'-'+stage, 60*60000);
   var best=_g45RcPick(raw);
   var found=_G45_RC_ORDER.filter(function(t){ return best[t]; });
   if(!found.length){
-    el.innerHTML=head+info+'<div style="color:var(--t3);font-size:11px;padding:14px;text-align:center;">Pas encore de classement pour cette étape.'
+    el.innerHTML=head+info+prof+'<div style="color:var(--t3);font-size:11px;padding:14px;text-align:center;">Pas encore de classement pour cette étape.'
       +(window._g45RcDiag?('<br><span style="font-size:9px;color:#8aa0ff;">diag → '+_g45CyEa(window._g45RcDiag)+'</span>'):'')+'</div>';
     return;
   }
@@ -22551,7 +22690,7 @@ async function g45RcOpen(raceId, stage){
     rows.forEach(function(r){ html+=_g45RcRow(r, riders, meta.u, t==='etg'); });
     html+='</div></div>';
   });
-  el.innerHTML=head+info+html
+  el.innerHTML=head+info+prof+html
     +'<div style="font-size:8px;color:var(--t3);text-align:center;margin-top:8px;font-style:italic;">Source : '+_g45CyEa(race.rc)+' · accès '+(localStorage.getItem('g45_rc_mode')||'?')+' · cache 1 h'
     +(window._g45RcDiag?('<br><span style="color:#8aa0ff;">diag → '+_g45CyEa(window._g45RcDiag)+'</span>'):'')+'</div>';
 }
