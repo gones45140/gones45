@@ -22494,7 +22494,7 @@ async function g45TdfOpen(stage){
     +'<select onchange="g45TdfOpen(parseInt(this.value,10))" style="width:100%;box-sizing:border-box;background:rgba(8,10,16,.8);color:var(--t1);border:1px solid rgba(255,255,255,.12);border-radius:7px;padding:7px;font-size:11px;font-weight:700;">'+opts+'</select>'
     +(cur?('<div style="font-size:9px;color:var(--t2);margin-top:6px;">'
         +(isNaN(d)?'':('📅 '+new Date(d).toLocaleDateString('fr-FR',{weekday:'long',day:'numeric',month:'long'})))
-        +(cur.lengthDisplay||cur.length?(' · 📏 '+_g45CyEa(cur.lengthDisplay||(cur.length+' km'))):'')+'</div>'):'')
+        +((cur.lengthDisplay||cur.length)?(' · 📏 '+_g45CyEa((cur.lengthDisplay||cur.length)+' km')):'')+'</div>'):'')
     +'</div>';
 
   el.innerHTML=head+info+'<div style="color:var(--t3);font-size:11px;padding:16px;text-align:center;">⏳ Classements de l\'étape '+stage+'…</div>';
