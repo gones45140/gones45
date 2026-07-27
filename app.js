@@ -22284,7 +22284,7 @@ function _g45CyParse(html){
 }
 var _G45_CY_ISO2={slo:'si',fra:'fr',bel:'be',ned:'nl',esp:'es',ita:'it',ger:'de',den:'dk',gbr:'gb',usa:'us',aus:'au',sui:'ch',aut:'at',por:'pt',col:'co',ecu:'ec',pol:'pl',nor:'no',irl:'ie',can:'ca',kaz:'kz',eri:'er',rsa:'za',cze:'cz',svk:'sk',lux:'lu',lat:'lv',est:'ee',hun:'hu',cro:'hr',mex:'mx',arg:'ar',bra:'br',jpn:'jp',nzl:'nz',uae:'ae',bah:'bh',rou:'ro',ukr:'ua'};
 function _g45CyFlag(iso){ if(!iso) return ''; var i2=_G45_CY_ISO2[iso]||iso.slice(0,2); return '<img src="https://flagcdn.com/16x12/'+_g45CyEa(i2)+'.png" style="width:15px;height:11px;border-radius:2px;flex:none;" onerror="this.style.display=\'none\'">'; }
-async function g45CyclingOpen(raceId){
+async function _g45CyOpenHtml(raceId){
   var el=document.getElementById('t-resultats'); if(!el) return;
   var race=_G45_CY_RACES.filter(function(r){return r.id===raceId;})[0]||_G45_CY_RACES[0];
   var back='<button onclick="loadResultatsTab()" style="border:none;cursor:pointer;background:rgba(255,255,255,.06);border-radius:8px;color:var(--t2);padding:7px 12px;font-size:11px;font-weight:700;margin-bottom:10px;">← Sports</button>';
@@ -22334,6 +22334,201 @@ async function g45CyclingOpen(raceId){
   });
   el.innerHTML=back+'<div class="sec" style="margin-top:0;">🚴 Cyclisme — '+_g45CyEa(race.n)+'</div>'+chips+html
     +'<div style="font-size:8px;color:var(--t3);text-align:center;margin-top:7px;font-style:italic;">Source : site officiel · mis en cache 30 min'+(window._g45CyDiag?('<br><span style="color:#8aa0ff;">diag → '+_g45CyEa(window._g45CyDiag)+'</span>'):'')+'</div>';
+}
+window._g45CyOpenHtml=_g45CyOpenHtml;
+/* ═══════════ 🚴 TOUR DE FRANCE — API racecenter.letour.fr (JSON, gratuit, sans clé) ═══════════
+   Endpoints (le paramètre ?xdt=... du site est DÉCORATIF : testé, non vérifié côté serveur) :
+     /api/stage-{Y}             → les 21 étapes (villes, dates, distances)
+     /api/allCompetitors-{Y}    → coureurs (nom, dossard, nationalité, $team)
+     /api/team-{Y}              → équipes
+     /api/rankingType-{Y}-{n}   → TOUS les classements après l'étape n
+   Un même "type" existe à plusieurs checkpoints → on garde le plus élevé (= l'arrivée).
+   absolute/relative/bonus/penality sont en MILLISECONDES pour les classements au temps,
+   et en POINTS pour ipg (vert) et img (pois).
+   Accès : tentative directe, repli automatique sur le Worker (host=letourrc). */
+var _G45_RC_HOST='racecenter.letour.fr';
+var _G45_RC_YEAR=2026;
+var _g45Rc={cache:{}, riders:null, teams:null, stages:null, stage:0};
+var _G45_RC_TYPES={
+  ite:{n:"Résultat de l'étape", ico:'🏁', u:'t', c:'#e8e8e8'},
+  itg:{n:'Classement général',  ico:'💛', u:'t', c:'#f0c828'},
+  ipg:{n:'Points',              ico:'💚', u:'p', c:'#2ecc71'},
+  img:{n:'Montagne',            ico:'🔴', u:'p', c:'#ff6b6b'},
+  ijg:{n:'Jeunes',              ico:'🤍', u:'t', c:'#dfe6f5'},
+  etg:{n:'Équipes',             ico:'👥', u:'t', c:'#8aa0ff'}
+};
+var _G45_RC_ORDER=['ite','itg','ipg','img','ijg','etg'];
+
+/* ── Accès réseau : direct d'abord, Worker en repli (le mode qui marche est mémorisé) ── */
+async function _g45RcFetch(path){
+  var base=(typeof FD_PROXY!=='undefined'?FD_PROXY:'https://fd-proxy.touraine-antoine.workers.dev');
+  var direct=async function(){ var r=await fetch('https://'+_G45_RC_HOST+path); if(!r.ok) throw new Error('HTTP '+r.status); return await r.json(); };
+  var viaw  =async function(){ var r=await fetch(base+'?host=letourrc&path='+encodeURIComponent(path)); if(!r.ok) throw new Error('HTTP '+r.status); return await r.json(); };
+  var mode=localStorage.getItem('g45_rc_mode')||'';
+  var order=(mode==='worker')?[['worker',viaw],['direct',direct]]:[['direct',direct],['worker',viaw]];
+  var errs=[];
+  for(var i=0;i<order.length;i++){
+    try{ var j=await order[i][1](); localStorage.setItem('g45_rc_mode', order[i][0]); return j; }
+    catch(e){ errs.push(order[i][0]+':'+String((e&&e.message)||e).slice(0,30)); }
+  }
+  window._g45RcDiag=path+' → '+errs.join(' | ');
+  return null;
+}
+/* Cache localStorage 6 h (les classements ne bougent qu'une fois par jour) */
+async function _g45RcGet(name, ttl){
+  if(_g45Rc.cache[name]!==undefined && _g45Rc.cache[name]!==null) return _g45Rc.cache[name];
+  var ck='g45rc_'+name;
+  try{ var raw=localStorage.getItem(ck); if(raw){ var o=JSON.parse(raw); if(Date.now()-o.t<(ttl||6*3600000)){ _g45Rc.cache[name]=o.d; return o.d; } } }catch(e){}
+  var j=await _g45RcFetch('/api/'+name);
+  if(j){ _g45Rc.cache[name]=j; try{ localStorage.setItem(ck, JSON.stringify({t:Date.now(), d:j})); }catch(e){} }
+  return j;
+}
+async function _g45RcTeams(){
+  if(_g45Rc.teams) return _g45Rc.teams;
+  var arr=await _g45RcGet('team-'+_G45_RC_YEAR)||[];
+  var m={};
+  (Array.isArray(arr)?arr:[]).forEach(function(t){
+    if(!t||!t._id) return;
+    m[t._id]=t.name||t.label||t.displayName||t.shortname||t.code||'';
+  });
+  _g45Rc.teams=m; return m;
+}
+async function _g45RcRiders(){
+  if(_g45Rc.riders) return _g45Rc.riders;
+  var arr=await _g45RcGet('allCompetitors-'+_G45_RC_YEAR)||[];
+  var teams=await _g45RcTeams();
+  var m={};
+  (Array.isArray(arr)?arr:[]).forEach(function(c){
+    if(!c||!c._id) return;
+    var tid=String(c.$team||'').split(':')[1]||'';
+    var nom=(c.lastname||c.lastnameshort||'');
+    if(c.firstname) nom=c.firstname.charAt(0).toUpperCase()+'. '+nom;
+    m[c._id]={nom:nom, bib:c.bib, nat:(c.nationality||''), team:(teams[tid]||'')};
+  });
+  _g45Rc.riders=m; return m;
+}
+async function _g45RcStages(){
+  if(_g45Rc.stages) return _g45Rc.stages;
+  var arr=await _g45RcGet('stage-'+_G45_RC_YEAR, 24*3600000)||[];
+  var s=(Array.isArray(arr)?arr:[]).filter(function(e){ return e&&e.stage; });
+  s.sort(function(a,b){ return (a.stage||0)-(b.stage||0); });
+  _g45Rc.stages=s; return s;
+}
+/* ── Formatage temps / écarts ── */
+function _g45RcT(ms){
+  var s=Math.round((ms||0)/1000);
+  var h=Math.floor(s/3600), m=Math.floor((s%3600)/60), x=s%60;
+  var p2=function(v){ return (v<10?'0':'')+v; };
+  return h? (h+'h'+p2(m)+"'"+p2(x)+'"') : (m+"'"+p2(x)+'"');
+}
+function _g45RcVal(r, unit){ return unit==='p' ? (String(r.absolute||0)+' pts') : _g45RcT(r.absolute); }
+function _g45RcGap(r, unit){
+  if(!r.relative) return '';
+  return unit==='p' ? ('-'+r.relative) : ('+'+_g45RcT(r.relative));
+}
+/* Garde, pour chaque type, l'entrée au checkpoint le plus avancé */
+function _g45RcPick(arr){
+  var best={};
+  (Array.isArray(arr)?arr:[]).forEach(function(e){
+    if(!e||!e.type||!_G45_RC_TYPES[e.type]) return;
+    if(!(e.rankings&&e.rankings.length)) return;
+    var cp=(e.checkpoint==null?-1:e.checkpoint);
+    if(!best[e.type] || cp>best[e.type]._cp){ e._cp=cp; best[e.type]=e; }
+  });
+  return best;
+}
+function _g45RcRow(r, riders, unit, isTeam){
+  var o=riders[String(r.$rider||'').split(':')[1]]||{};
+  var lbl = isTeam ? (o.team||o.nom||('#'+r.bib)) : (o.nom||('#'+r.bib));
+  var sub  = isTeam ? '' : (o.team||'');
+  var p=r.position||0;
+  var col=p===1?'#f0c828':(p<=3?'#c3cce6':'var(--t1)');
+  var val=_g45RcVal(r, unit), gap=_g45RcGap(r, unit);
+  var bon='';
+  if(r.bonus) bon='<span style="color:#2ecc71;font-size:8px;"> B−'+_g45RcT(r.bonus)+'</span>';
+  if(r.penality) bon+='<span style="color:#ff6b6b;font-size:8px;"> P+'+_g45RcT(r.penality)+'</span>';
+  return '<div style="display:flex;align-items:center;gap:7px;padding:4px 0;border-bottom:1px solid rgba(255,255,255,.04);">'
+    +'<span style="width:22px;text-align:center;font-size:11px;font-weight:800;color:'+col+';flex:none;">'+(p===1?'🏆':_g45CyEa(p||'-'))+'</span>'
+    +(isTeam?'':_g45CyFlag(o.nat))
+    +'<div style="flex:1;min-width:0;"><div style="font-size:11px;font-weight:700;color:var(--t1);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">'
+      +(isTeam?'':'<span style="color:#8aa0ff;">'+_g45CyEa(r.bib||'')+'</span> ')+_g45CyEa(lbl)+'</div>'
+    +(sub?('<div style="font-size:8px;color:var(--t2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">'+_g45CyEa(sub)+'</div>'):'')+'</div>'
+    +'<div style="flex:none;text-align:right;">'
+      +'<div style="font-size:10px;font-weight:700;color:var(--t1);">'+_g45CyEa(val)+bon+'</div>'
+      +(gap?('<div style="font-size:9px;color:var(--t3);">'+_g45CyEa(gap)+'</div>'):'')
+    +'</div></div>';
+}
+/* ── Vue principale ── */
+async function g45TdfOpen(stage){
+  var el=document.getElementById('t-resultats'); if(!el) return;
+  var back='<button onclick="loadResultatsTab()" style="border:none;cursor:pointer;background:rgba(255,255,255,.06);border-radius:8px;color:var(--t2);padding:7px 12px;font-size:11px;font-weight:700;margin-bottom:10px;">← Sports</button>';
+  var chips='<div style="display:flex;gap:6px;margin-bottom:9px;">'+_G45_CY_RACES.map(function(r){
+      var on=(r.id==='tdf');
+      return '<button onclick="g45CyclingOpen(\''+r.id+'\')" style="border:none;border-radius:7px;padding:6px 11px;font-size:10px;font-weight:700;cursor:pointer;background:'+(on?'#f0c828':'rgba(255,255,255,.06)')+';color:'+(on?'#221b00':'var(--t2)')+';">'+r.flag+' '+r.n+'</button>';
+    }).join('')+'</div>';
+  var head=back+'<div class="sec" style="margin-top:0;">🚴 Tour de France '+_G45_RC_YEAR+'</div>'+chips;
+  el.innerHTML=head+'<div style="color:var(--t3);font-size:11px;padding:16px;text-align:center;">⏳ Chargement…</div>';
+
+  var stages=await _g45RcStages();
+  if(!stages.length){
+    el.innerHTML=head+'<div style="color:#ff6b6b;font-size:11px;padding:14px;text-align:center;">Données indisponibles.'
+      +(window._g45RcDiag?('<br><span style="font-size:9px;color:#8aa0ff;">diag → '+_g45CyEa(window._g45RcDiag)+'</span>'):'')+'</div>';
+    return;
+  }
+  /* étape par défaut : la dernière déjà courue */
+  if(!stage){
+    var now=Date.now(), last=stages[0].stage;
+    stages.forEach(function(s){ var d=Date.parse(s.date||s.startTime||''); if(!isNaN(d)&&d<=now) last=s.stage; });
+    stage=last;
+  }
+  _g45Rc.stage=stage;
+  var cur=stages.filter(function(s){ return s.stage===stage; })[0]||stages[stages.length-1];
+
+  /* sélecteur d'étape */
+  var opts=stages.map(function(s){
+    var dep=(s.departureCity&&s.departureCity.label)||'', arr=(s.arrivalCity&&s.arrivalCity.label)||'';
+    return '<option value="'+s.stage+'"'+(s.stage===stage?' selected':'')+'>É'+s.stage+' — '+_g45CyEa(dep)+' › '+_g45CyEa(arr)+'</option>';
+  }).join('');
+  var d=cur?Date.parse(cur.date||cur.startTime||''):NaN;
+  var info='<div style="background:rgba(240,200,40,.07);border:1px solid rgba(240,200,40,.2);border-radius:9px;padding:9px 11px;margin-bottom:9px;">'
+    +'<select onchange="g45TdfOpen(parseInt(this.value,10))" style="width:100%;box-sizing:border-box;background:rgba(8,10,16,.8);color:var(--t1);border:1px solid rgba(255,255,255,.12);border-radius:7px;padding:7px;font-size:11px;font-weight:700;">'+opts+'</select>'
+    +(cur?('<div style="font-size:9px;color:var(--t2);margin-top:6px;">'
+        +(isNaN(d)?'':('📅 '+new Date(d).toLocaleDateString('fr-FR',{weekday:'long',day:'numeric',month:'long'})))
+        +(cur.lengthDisplay||cur.length?(' · 📏 '+_g45CyEa(cur.lengthDisplay||(cur.length+' km'))):'')+'</div>'):'')
+    +'</div>';
+
+  el.innerHTML=head+info+'<div style="color:var(--t3);font-size:11px;padding:16px;text-align:center;">⏳ Classements de l\'étape '+stage+'…</div>';
+
+  var riders=await _g45RcRiders();
+  var raw=await _g45RcGet('rankingType-'+_G45_RC_YEAR+'-'+stage, 60*60000);
+  var best=_g45RcPick(raw);
+  var found=_G45_RC_ORDER.filter(function(t){ return best[t]; });
+  if(!found.length){
+    el.innerHTML=head+info+'<div style="color:var(--t3);font-size:11px;padding:14px;text-align:center;">Pas encore de classement pour cette étape.'
+      +(window._g45RcDiag?('<br><span style="font-size:9px;color:#8aa0ff;">diag → '+_g45CyEa(window._g45RcDiag)+'</span>'):'')+'</div>';
+    return;
+  }
+  var html='';
+  found.forEach(function(t,i){
+    var meta=_G45_RC_TYPES[t], e=best[t], gid='g45tdf'+t, open=(i===0);
+    var rows=(e.rankings||[]).slice().sort(function(a,b){ return (a.position||999)-(b.position||999); });
+    html+='<div onclick="g45MmaTgl(\''+gid+'\',this)" style="cursor:pointer;display:flex;justify-content:space-between;align-items:center;background:rgba(240,200,40,.08);border:1px solid rgba(240,200,40,.22);border-radius:8px;padding:8px 11px;margin:9px 0 5px;">'
+      +'<span style="font-size:11px;font-weight:800;color:'+meta.c+';">'+meta.ico+' '+meta.n+'</span>'
+      +'<span style="font-size:9px;color:var(--t3);">'+rows.length+' <span class="g45-caret">'+(open?'▼':'▶')+'</span></span></div>'
+      +'<div id="'+gid+'" data-open="'+(open?'1':'0')+'"'+(open?'':' style="display:none;"')+'>'
+      +'<div style="background:rgba(12,16,28,.96);border:1px solid rgba(255,255,255,.08);border-radius:8px;padding:7px 9px;">';
+    rows.forEach(function(r){ html+=_g45RcRow(r, riders, meta.u, t==='etg'); });
+    html+='</div></div>';
+  });
+  el.innerHTML=head+info+html
+    +'<div style="font-size:8px;color:var(--t3);text-align:center;margin-top:8px;font-style:italic;">Source : racecenter.letour.fr · accès '+(localStorage.getItem('g45_rc_mode')||'?')+' · cache 1 h'
+    +(window._g45RcDiag?('<br><span style="color:#8aa0ff;">diag → '+_g45CyEa(window._g45RcDiag)+'</span>'):'')+'</div>';
+}
+window.g45TdfOpen=g45TdfOpen;
+/* Dispatcher : le Tour passe par l'API racecenter, la Vuelta reste sur l'ancien parsing HTML */
+async function g45CyclingOpen(raceId){
+  if(!raceId||raceId==='tdf') return g45TdfOpen(0);
+  return _g45CyOpenHtml(raceId);
 }
 window.g45CyclingOpen=g45CyclingOpen;
 async function g45MotoOpen(){
