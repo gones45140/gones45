@@ -22223,6 +22223,7 @@ function _g45MotoTrack(t){ if(!t) return ''; var k=String(t).toLowerCase().trim(
 /* ═══════════ 🚴 CYCLISME — Grands Tours ASO (letour.fr / lavuelta.es via Worker, HTML parsé) ═══════════ */
 var _G45_CY_RACES=[
   {id:'tdf', n:'Tour de France', host:'letour', flag:'🇫🇷', rc:'racecenter.letour.fr'},
+  {id:'tdff', n:'Tour Femmes', flag:'🇫🇷', rc:'racecenter.letourfemmes.fr'},
   {id:'vuelta', n:'La Vuelta', host:'vuelta', flag:'🇪🇸', rc:'racecenter.lavuelta.es'}
 ];
 function _g45CyEa(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/"/g,'&quot;'); }
