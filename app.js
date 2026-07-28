@@ -20514,22 +20514,28 @@ window._g45TrBuild=_g45TrBuild;
 var _G45_BUT=[
   {n:'Harry Kane',      lg:'ger.1', team:/bayern/i,          who:/kane/i},
   {n:'Kylian Mbappé',   lg:'esp.1', team:/real madrid/i,     who:/mbapp/i},
-  {n:'Erling Haaland',  lg:'eng.1', team:/manchester city/i, who:/haaland/i}
+  {n:'Erling Haaland',  lg:'eng.1', team:/manchester city/i, who:/haaland/i},
+  {n:'Luis Suárez',     lg:'por.1', team:/sporting/i,        who:/su[aá]rez/i},
+  {n:'Ayase Ueda',      lg:'ned.1', team:/feyenoord/i,       who:/ueda/i},
+  {n:'Paul Onuachu',    lg:'tur.1', team:/trabzon/i,         who:/onuachu/i}
 ];
 async function _g45ButId(p){
   var ck='g45but_id_'+p.lg+'_'+p.n;
   try{ var c=JSON.parse(localStorage.getItem(ck)||'null'); if(c&&c.aid) return c; }catch(e){}
   var tj=await _g45TrEspn('/apis/site/v2/sports/soccer/'+p.lg+'/teams');
   var lst=((((tj.sports||[])[0]||{}).leagues||[])[0]||{}).teams||[];
-  var tm=null;
-  lst.forEach(function(x){ var t=x.team||x; if(!tm&&p.team.test(t.displayName||'')) tm=t; });
-  if(!tm) return null;
-  var rj=await _g45TrEspn('/apis/site/v2/sports/soccer/'+p.lg+'/teams/'+tm.id+'/roster');
-  var ath=[];
-  (rj.athletes||[]).forEach(function(g){ (g.items||[g]).forEach(function(a){ if(a&&a.id) ath.push(a); }); });
-  var pl=null;
-  ath.forEach(function(a){ if(!pl&&p.who.test((a.displayName||'')+' '+(a.fullName||''))) pl=a; });
-  if(!pl) return null;
+  var cands=[];
+  lst.forEach(function(x){ var t=x.team||x; if(t&&p.team.test(t.displayName||'')) cands.push(t); });
+  if(!cands.length) return null;
+  var tm=null, pl=null;
+  for(var ci=0; ci<cands.length && !pl; ci++){
+    var rj=null;
+    try{ rj=await _g45TrEspn('/apis/site/v2/sports/soccer/'+p.lg+'/teams/'+cands[ci].id+'/roster'); }catch(e){ continue; }
+    var ath=[];
+    ((rj&&rj.athletes)||[]).forEach(function(g){ (g.items||[g]).forEach(function(a){ if(a&&a.id) ath.push(a); }); });
+    ath.forEach(function(a){ if(!pl&&p.who.test((a.displayName||'')+' '+(a.fullName||''))){ pl=a; tm=cands[ci]; } });
+  }
+  if(!pl||!tm) return null;
   var r={aid:pl.id, tid:tm.id, tname:(tm.displayName||''), pname:(pl.displayName||p.n)};
   try{ localStorage.setItem(ck, JSON.stringify(r)); }catch(e){}
   return r;
@@ -20570,11 +20576,16 @@ async function g45ButeursView(){
   el.innerHTML=head+'<div style="font-size:10px;color:#8aa0ff;text-align:center;padding:10px;">⏳ Chargement…</div>';
   var y=_g45TrSeason();
   var cotes={}; try{ cotes=JSON.parse(localStorage.getItem('g45but_cotes')||'{}'); }catch(e){}
-  var h='';
+  var h='', items=[];
   for(var i=0;i<_G45_BUT.length;i++){
-    var p=_G45_BUT[i], id=null, d=null;
-    try{ id=await _g45ButId(p); }catch(e){}
-    if(id){ try{ d=await _g45ButStats(p, id, y); }catch(e){} }
+    var pp=_G45_BUT[i], ii=null, dd=null;
+    try{ ii=await _g45ButId(pp); }catch(e){}
+    if(ii){ try{ dd=await _g45ButStats(pp, ii, y); }catch(e){} }
+    items.push({p:pp, id:ii, d:dd, npg:(dd&&dd.app)?((dd.g-dd.pg)/dd.app):-1});
+  }
+  items.sort(function(a,b){ return b.npg-a.npg; });
+  for(var i=0;i<items.length;i++){
+    var p=items[i].p, id=items[i].id, d=items[i].d;
     if(!id||!d){
       h+='<div style="background:rgba(12,16,28,.96);border:1px solid rgba(255,255,255,.08);border-radius:9px;padding:10px;margin-bottom:8px;font-size:10px;color:var(--t3);">'+_g45CyEa(p.n)+' — données indisponibles pour la saison '+y+'.</div>';
       continue;
@@ -20611,7 +20622,7 @@ async function g45ButeursView(){
       +'</div></div>';
   }
   el.innerHTML=head+h
-    +'<div style="font-size:8px;color:var(--t3);text-align:center;margin-top:8px;font-style:italic;line-height:1.6;">λ = buts par match joué ; p = 1 − e<sup>−λ</sup>. L\'écart se calcule sur le taux <b>hors penalty</b>, plus représentatif du jeu.<br>La cote saisie n\'est pas dévigorisée (marché à deux issues non disponible) : l\'écart réel est donc un peu plus faible qu\'affiché.</div>';
+    +'<div style="font-size:8px;color:var(--t3);text-align:center;margin-top:8px;font-style:italic;line-height:1.6;">Statistiques de <b>championnat uniquement</b> (hors coupes) — vérifié : adversaires homogènes, ce qui convient pour parier sur les matchs de championnat.<br>Classement par buts hors penalty. λ = buts par match joué ; p = 1 − e<sup>−λ</sup>.<br>La cote saisie n\'est pas dévigorisée (marché à deux issues non disponible) : l\'écart réel est donc un peu plus faible qu\'affiché.</div>';
 }
 window.g45ButeursView=g45ButeursView;
 
