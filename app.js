@@ -20233,6 +20233,22 @@ async function _g45TrEspn(path){
   if(!r.ok) throw new Error('HTTP '+r.status);
   return await r.json();
 }
+/* ESPN indexe une saison par son année de début : season=2025 => saison 2025-26.
+   Sans paramètre, ESPN sert la saison à venir, vide avant sa reprise (vérifié en juillet). */
+function _g45TrSeason(){
+  var d=new Date();
+  return (d.getMonth()>=7)?d.getFullYear():(d.getFullYear()-1);
+}
+/* Championnat national déduit du lien ESPN de l'équipe (.../league/cro.1) : indispensable
+   en coupe d'Europe, où le calendrier de la compétition ne contient que 2 à 4 matchs. */
+function _g45TrDomLeague(cp){
+  var lk=(cp&&cp.team&&cp.team.links)||[];
+  for(var i=0;i<lk.length;i++){
+    var m=String(lk[i].href||'').match(/\/league\/([a-z0-9._-]+)/i);
+    if(m&&m[1]) return m[1].toLowerCase();
+  }
+  return '';
+}
 function _g45TrYmd(d){ return d.getFullYear()+String(d.getMonth()+1).padStart(2,'0')+String(d.getDate()).padStart(2,'0'); }
 function _g45TrAcc(){ return {n:0,sc:0,cc:0,btts:0,o15:0,o25:0,o35:0,cs:0,w:0,d:0,l:0,gf:0,ga:0}; }
 function _g45TrAdd(a,gf,ga){
@@ -20253,7 +20269,7 @@ function _g45TrRate(spec, all, k){
   return ra;
 }
 async function _g45TrTeam(league, tid){
-  var ck='g45tr_'+league+'_'+tid;
+  var ck='g45trv2_'+league+'_'+tid;
   try{ var c=JSON.parse(localStorage.getItem(ck)||'null'); if(c&&(Date.now()-c.t)<6*3600000) return c.d; }catch(e){}
   var all=_g45TrAcc(), home=_g45TrAcc(), away=_g45TrAcc(), evs=[];
   var pull=async function(season){
@@ -20261,9 +20277,10 @@ async function _g45TrTeam(league, tid){
     var j=null; try{ j=await _g45TrEspn(p); }catch(e){ return; }
     (j&&j.events||[]).forEach(function(e){ evs.push(e); });
   };
-  await pull(0);
+  var sy=_g45TrSeason();
+  await pull(sy);
   var done=evs.filter(function(e){ var c=(e.competitions&&e.competitions[0])||{}; var st=(c.status&&c.status.type)||(e.status&&e.status.type)||{}; return st.completed===true; });
-  if(done.length<8){ var y=new Date().getFullYear(); await pull(y-1); }
+  if(done.length<12) await pull(sy-1);
   var seen={};
   evs.forEach(function(e){
     if(seen[e.id]) return; seen[e.id]=1;
@@ -20434,8 +20451,11 @@ async function g45TrRun(){
       var hN=(ho.team&&(ho.team.shortDisplayName||ho.team.displayName))||'?';
       var aN=(aw.team&&(aw.team.shortDisplayName||aw.team.displayName))||'?';
       if(!hid||!aid) continue;
+      var hLg=_g45TrDomLeague(ho)||f.slug, aLg=_g45TrDomLeague(aw)||f.slug;
       var H=null,A=null;
-      try{ H=await _g45TrTeam(f.slug,hid); A=await _g45TrTeam(f.slug,aid); }catch(e){ continue; }
+      try{ H=await _g45TrTeam(hLg,hid); A=await _g45TrTeam(aLg,aid); }catch(e){ continue; }
+      if((!H||H.all.n<4)&&hLg!==f.slug){ try{ H=await _g45TrTeam(f.slug,hid); }catch(e){} }
+      if((!A||A.all.n<4)&&aLg!==f.slug){ try{ A=await _g45TrTeam(f.slug,aid); }catch(e){} }
       if(!H||!A||!H.all.n||!A.all.n) continue;
       var mk=_g45TrBuild(f.ev,H,A,hN,aN);
       var when='';
@@ -20456,8 +20476,8 @@ window.g45TrRun=g45TrRun;
 
 function _g45TrRender(){
   var R=_G45_TR.res||[];
-  var avec=R.filter(function(x){ return x.m.gap!=null&&x.m.gap>=0.05&&x.m.n>=10; });
-  var sans=R.filter(function(x){ return x.m.gap==null&&x.m.p>=0.62&&x.m.n>=10; }).slice(0,12);
+  var avec=R.filter(function(x){ return x.m.gap!=null&&x.m.gap>=0.05&&x.m.n>=6; });
+  var sans=R.filter(function(x){ return x.m.gap==null&&x.m.p>=0.62&&x.m.n>=6; }).slice(0,15);
   var h='<button onclick="_G45_TR.res=null;loadTendancesTab();" style="border:none;cursor:pointer;background:rgba(255,255,255,.06);border-radius:8px;color:var(--t2);padding:6px 11px;font-size:10px;font-weight:700;margin-bottom:9px;">↺ Relancer</button>';
   var card=function(x,showGap){
     var m=x.m;
@@ -20476,14 +20496,15 @@ function _g45TrRender(){
       +'</div></div>';
     if(m.fair!=null) s+='<div style="font-size:8px;color:var(--t3);margin-top:4px;">Bookmaker (marge retirée) : '+_g45TrPct(m.fair)+'</div>';
     if(m.faits&&m.faits.length) s+='<ul style="margin:6px 0 0 0;padding-left:15px;">'+m.faits.slice(0,4).map(function(f){ return '<li style="font-size:9px;color:var(--t2);line-height:1.55;">'+_g45CyEa(f)+'</li>'; }).join('')+'</ul>';
-    if(m.n<14) s+='<div style="font-size:8px;color:#ff8c42;margin-top:4px;">⚠️ Échantillon réduit ('+m.n+' matchs) — à prendre avec prudence.</div>';
+    if(m.n<9) s+='<div style="font-size:8px;color:#ff6b6b;margin-top:4px;">⛔ Échantillon très réduit ('+m.n+' matchs) — statistiquement peu fiable, à titre indicatif seulement.</div>';
+    else if(m.n<14) s+='<div style="font-size:8px;color:#ff8c42;margin-top:4px;">⚠️ Échantillon réduit ('+m.n+' matchs) — à prendre avec prudence.</div>';
     return s+'</div>';
   };
   if(avec.length){
     h+='<div style="font-size:10px;font-weight:800;color:#2ecc71;margin:8px 0 6px;">💎 Écart favorable ('+avec.length+')</div>';
     avec.slice(0,25).forEach(function(x){ h+=card(x,true); });
   } else {
-    h+='<div style="font-size:10px;color:var(--t3);text-align:center;padding:12px;line-height:1.6;">Aucun écart significatif détecté aujourd\'hui.<br><span style="font-size:9px;">C\'est le résultat le plus fréquent, et c\'est normal : le marché est efficace la plupart du temps.</span></div>';
+    h+='<div style="font-size:10px;color:var(--t3);text-align:center;padding:12px;line-height:1.6;">Aucun écart significatif détecté aujourd\'hui.<br><span style="font-size:9px;">C\'est le résultat le plus fréquent, et c\'est normal : le marché est efficace la plupart du temps.<br>En juillet, seules les qualifications tournent : les équipes ont peu de matchs joués dans ces compétitions, donc peu de données exploitables.</span></div>';
   }
   if(sans.length){
     h+='<div style="font-size:10px;font-weight:800;color:#8aa0ff;margin:14px 0 6px;">📊 Taux élevés sans cote disponible</div>'
@@ -25740,7 +25761,10 @@ async function _g45Leg1Fill(slotId, league, hId, aId, evId, evDate){
   for(var t=0;t<12&&!el;t++){ el=document.getElementById(slotId); if(!el) await new Promise(function(r){ setTimeout(r,200); }); }
   if(!el) return;
   var j=null;
-  try{ j=await _g45TrEspn('/apis/site/v2/sports/soccer/'+league+'/teams/'+hId+'/schedule'); }catch(e){ return; }
+  var sy=(typeof _g45TrSeason==='function')?_g45TrSeason():new Date().getFullYear();
+  try{ j=await _g45TrEspn('/apis/site/v2/sports/soccer/'+league+'/teams/'+hId+'/schedule?season='+sy); }catch(e){}
+  if(!j||!(j.events||[]).length){ try{ j=await _g45TrEspn('/apis/site/v2/sports/soccer/'+league+'/teams/'+hId+'/schedule?season='+(sy+1)); }catch(e){ return; } }
+  if(!j) return;
   var evD=Date.parse(evDate); if(isNaN(evD)) evD=Date.now();
   var best=null;
   ((j&&j.events)||[]).forEach(function(e){
