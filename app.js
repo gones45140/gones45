@@ -20296,23 +20296,43 @@ async function _g45TrTeam(league, tid){
   try{ localStorage.setItem(ck, JSON.stringify({t:Date.now(), d:d})); }catch(e){}
   return d;
 }
-/* Cotes ESPN : moneyline américaine → décimale */
+/* Cotes ESPN. Deux formats coexistent :
+   - ancien : homeTeamOdds/drawOdds/awayTeamOdds avec un champ moneyLine américain
+   - récent : moneyline.{home,away,draw}.{close,current,open}.odds
+   Vérifié sur DraftKings : en qualifications, seul le format récent est rempli,
+   l'ancien renvoie null pour le domicile et l'extérieur. On lit donc les deux. */
+function _g45TrDec(v){
+  if(v==null) return 0;
+  var t=String(v).trim().replace(/^\+/,'').replace(',','.');
+  var m=parseFloat(t);
+  if(isNaN(m)) return 0;
+  if(Math.abs(m)>=100&&Math.abs(m)%1===0) return m>0?(m/100+1):(100/Math.abs(m)+1); // américaine
+  return (m>1)?m:0;                                                                 // déjà décimale
+}
+function _g45TrPickOdd(node){
+  if(!node) return 0;
+  var c=[node.close&&node.close.odds, node.current&&node.current.odds, node.open&&node.open.odds,
+         node.odds, node.moneyLine, node.value, node.summary];
+  for(var i=0;i<c.length;i++){ var d=_g45TrDec(c[i]); if(d>1) return d; }
+  return 0;
+}
 function _g45TrOddsEv(ev){
   var c=(ev.competitions&&ev.competitions[0])||{};
   var pc=c.odds||ev.odds||[];
   if(!pc.length) return null;
-  var o=pc[0]||{};
-  var ml=function(x){
-    if(!x) return 0;
-    var m=x.moneyLine;
-    if(m==null&&x.summary){ var mm=String(x.summary).match(/[-+]?\d+/); if(mm) m=parseInt(mm[0],10); }
-    if(m==null||isNaN(m)) return 0;
-    m=parseInt(m,10);
-    return m>0?(m/100+1):(100/Math.abs(m)+1);
-  };
-  return {h:ml(o.homeTeamOdds), d:ml(o.drawOdds), a:ml(o.awayTeamOdds),
-          line:(o.overUnder!=null?o.overUnder:(o.total!=null?o.total:null)),
-          prov:((o.provider&&o.provider.name)||'')};
+  var best=null;
+  for(var i=0;i<pc.length;i++){
+    var o=pc[i]||{}, mlo=o.moneyline||{};
+    var h=_g45TrPickOdd(mlo.home)||_g45TrPickOdd(o.homeTeamOdds);
+    var d=_g45TrPickOdd(mlo.draw)||_g45TrPickOdd(o.drawOdds);
+    var a=_g45TrPickOdd(mlo.away)||_g45TrPickOdd(o.awayTeamOdds);
+    var r={h:h, d:d, a:a,
+           line:(o.overUnder!=null?o.overUnder:(o.total!=null?o.total:null)),
+           prov:((o.provider&&o.provider.name)||'')};
+    if(h>1&&d>1&&a>1) return r;   // triplet complet : on s'arrête là
+    if(!best) best=r;             // sinon on garde le premier, sans écart calculable
+  }
+  return best;
 }
 /* Retrait de la marge : on normalise pour que les probabilités somment à 1 */
 function _g45TrDevig(cotes){
