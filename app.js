@@ -17700,8 +17700,10 @@ async function loadTeamSaisons() {
       var espNameB = (espB && espB.team && espB.team.name) ? espB.team.name : nom;
       // Clé de résultat = année de la saison récente / précédente
       var keyA = String(yA), keyB = String(yB);
-      if(espA && espA.matches && espA.matches.length) { results[keyA] = espA.matches.map(function(mm){ return espnToFdMatch(mm, espNameA, teamId); }); espnOk = true; }
-      if(espB && espB.matches && espB.matches.length) { results[keyB] = espB.matches.map(function(mm){ return espnToFdMatch(mm, espNameB, teamId); }); espnOk = true; }
+      var _finA = (espA && espA.matches) ? espA.matches.filter(function(mm){ return mm.completed; }) : [];
+      if(_finA.length) { results[keyA] = _finA.map(function(mm){ return espnToFdMatch(mm, espNameA, teamId); }); espnOk = true; }
+      var _finB = (espB && espB.matches) ? espB.matches.filter(function(mm){ return mm.completed; }) : [];
+      if(_finB.length) { results[keyB] = _finB.map(function(mm){ return espnToFdMatch(mm, espNameB, teamId); }); espnOk = true; }
 
       // ── 1b) ESPN : Europe d'abord (C1 → Europa → Conference, auto-détectée par année) ──
       var _euroSlugs = ['uefa.champions','uefa.europa','uefa.europa.conf','uefa.champions_qual','uefa.europa_qual','uefa.europa.conf_qual'];
@@ -17710,9 +17712,10 @@ async function loadTeamSaisons() {
         for(var _es=0; _es<_euroSlugs.length; _es++){
           try {
             var _euro = await espnClubSchedule(nom, _yr, _euroSlugs[_es]);
-            if(_euro && _euro.matches && _euro.matches.length){
+            var _finE = (_euro && _euro.matches) ? _euro.matches.filter(function(mm){ return mm.completed; }) : [];
+            if(_finE.length){
               var _nm = (_euro.team && _euro.team.name) ? _euro.team.name : nom;
-              results[_key] = (results[_key]||[]).concat(_euro.matches.map(function(mm){ return espnToFdMatch(mm, _nm, teamId); }));
+              results[_key] = (results[_key]||[]).concat(_finE.map(function(mm){ return espnToFdMatch(mm, _nm, teamId); }));
               espnEuroYears[_key] = true; espnOk = true;
               break; // coupe d'Europe trouvée pour cette année
             }
