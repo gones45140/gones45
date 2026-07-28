@@ -20541,7 +20541,7 @@ async function _g45ButId(p){
   return r;
 }
 async function _g45ButStats(p, id, y){
-  var ck='g45but_st_'+id.aid+'_'+y;
+  var ck='g45but_st_'+id.aid+'_'+p.lg+'_'+y;
   try{ var c=JSON.parse(localStorage.getItem(ck)||'null'); if(c&&(Date.now()-c.t)<12*3600000) return c.d; }catch(e){}
   var url='https://sports.core.api.espn.com/v2/sports/soccer/leagues/'+p.lg+'/seasons/'+y+'/types/0/athletes/'+id.aid+'/statistics';
   var j=null;
@@ -20608,6 +20608,8 @@ async function _g45ButAth(lg, y, aid){
   try{ localStorage.setItem(ck, JSON.stringify(res)); }catch(e){}
   return res;
 }
+function g45ButComp(c){ try{ localStorage.setItem('g45but_comp', c); }catch(e){} g45ButeursView(); }
+window.g45ButComp=g45ButComp;
 function g45ButMode(m){ try{ localStorage.setItem('g45but_mode', m); }catch(e){} g45ButeursView(); }
 function g45ButLg(sl){
   var L={}; try{ L=JSON.parse(localStorage.getItem('g45but_lg')||'null')||{}; }catch(e){}
@@ -20619,6 +20621,8 @@ window.g45ButMode=g45ButMode; window.g45ButLg=g45ButLg;
 async function g45ButeursView(){
   var el=document.getElementById('t-tend'); if(!el) return;
   var mode=localStorage.getItem('g45but_mode')||'fav';
+  var comp=localStorage.getItem('g45but_comp')||'lg';
+  var UCL='uefa.champions';
   var L={}; try{ L=JSON.parse(localStorage.getItem('g45but_lg')||'null')||{}; }catch(e){}
   if(!Object.keys(L).length) L={'fra.1':1,'eng.1':1,'esp.1':1,'ita.1':1,'ger.1':1};
   var chip=function(lbl,on,fn){ return '<button onclick="'+fn+'" style="border:none;cursor:pointer;border-radius:7px;padding:5px 10px;font-size:9.5px;font-weight:800;background:'+(on?'#f0c828':'rgba(255,255,255,.06)')+';color:'+(on?'#221b00':'var(--t2)')+';">'+lbl+'</button>'; };
@@ -20628,7 +20632,11 @@ async function g45ButeursView(){
       +chip('⭐ Mes joueurs', mode==='fav', "g45ButMode('fav')")
       +chip('🏆 Meilleurs buteurs', mode==='top', "g45ButMode('top')")
     +'</div>'
-    +(mode==='top'?('<div style="display:flex;gap:4px;flex-wrap:wrap;margin-bottom:9px;">'
+    +'<div style="display:flex;gap:5px;flex-wrap:wrap;margin-bottom:7px;">'
+      +chip('Championnat', comp==='lg', "g45ButComp('lg')")
+      +chip('🏆 Ligue des Champions', comp==='ucl', "g45ButComp('ucl')")
+    +'</div>'
+    +((mode==='top'&&comp==='lg')?('<div style="display:flex;gap:4px;flex-wrap:wrap;margin-bottom:9px;">'
       +_G45_BUT_LG.map(function(x){ return chip(x.n, !!L[x.s], "g45ButLg('"+x.s+"')"); }).join('')+'</div>'):'');
   el.innerHTML=head+'<div id="g45but-prog" style="font-size:10px;color:#8aa0ff;text-align:center;padding:10px;">⏳ Chargement…</div>';
   var pg=function(t){ var b=document.getElementById('g45but-prog'); if(b) b.innerHTML=t; };
@@ -20641,11 +20649,11 @@ async function g45ButeursView(){
       var pp=_G45_BUT[i], ii=null, dd=null;
       pg('⏳ '+(i+1)+'/'+_G45_BUT.length);
       try{ ii=await _g45ButId(pp); }catch(e){}
-      if(ii){ try{ dd=await _g45ButStats(pp, ii, y); }catch(e){} }
+      if(ii){ try{ dd=await _g45ButStats((comp==='ucl'?{lg:UCL}:pp), ii, y); }catch(e){} }
       items.push({p:pp, id:ii, d:dd, npg:(dd&&dd.app)?((dd.g-dd.pg)/dd.app):-1});
     }
   } else {
-    var slugs=_G45_BUT_LG.filter(function(x){ return L[x.s]; });
+    var slugs=(comp==='ucl')?[{s:UCL,n:'Ligue des Champions'}]:_G45_BUT_LG.filter(function(x){ return L[x.s]; });
     for(var k=0;k<slugs.length;k++){
       pg('🏆 '+slugs[k].n+' ('+(k+1)+'/'+slugs.length+')');
       var lead=[];
@@ -20666,7 +20674,7 @@ async function g45ButeursView(){
   for(var i2=0;i2<items.length;i2++){
     var p=items[i2].p, id=items[i2].id, d=items[i2].d;
     if(!id||!d){
-      h+='<div style="background:rgba(12,16,28,.96);border:1px solid rgba(255,255,255,.08);border-radius:9px;padding:10px;margin-bottom:8px;font-size:10px;color:var(--t3);">'+_g45CyEa(p.n)+' — données indisponibles pour la saison '+y+'.</div>';
+      h+='<div style="background:rgba(12,16,28,.96);border:1px solid rgba(255,255,255,.08);border-radius:9px;padding:10px;margin-bottom:8px;font-size:10px;color:var(--t3);">'+_g45CyEa(p.n)+(comp==='ucl'?' — n\'a pas disputé la Ligue des Champions en '+y+'/'+(y+1)+'.':' — données indisponibles pour la saison '+y+'.')+'</div>';
       continue;
     }
     var gpm=d.g/d.app, npg=(d.g-d.pg)/d.app;
@@ -20700,7 +20708,7 @@ async function g45ButeursView(){
       +'</div></div>';
   }
   el.innerHTML=head+(h||'<div style="font-size:10px;color:var(--t3);text-align:center;padding:14px;">Aucun buteur trouvé — sélectionne au moins un championnat.</div>')
-    +'<div style="font-size:8px;color:var(--t3);text-align:center;margin-top:8px;font-style:italic;line-height:1.6;">Statistiques de <b>championnat uniquement</b> (hors coupes) — adversaires homogènes, ce qui convient pour parier sur les matchs de championnat.<br>Classement par buts hors penalty. λ = buts par match joué ; p = 1 − e<sup>−λ</sup>.<br>La cote saisie n\'est pas dévigorisée (marché à deux issues non disponible) : l\'écart réel est donc un peu plus faible qu\'affiché.</div>';
+    +'<div style="font-size:8px;color:var(--t3);text-align:center;margin-top:8px;font-style:italic;line-height:1.6;">'+(comp==='ucl'?'Statistiques de <b>Ligue des Champions uniquement</b> — échantillon plus petit, mais face à des défenses du même niveau que celles du prochain match européen.':'Statistiques de <b>championnat uniquement</b> (hors coupes) — adversaires homogènes, ce qui convient pour parier sur les matchs de championnat.')+'<br>Classement par buts hors penalty. λ = buts par match joué ; p = 1 − e<sup>−λ</sup>.<br>La cote saisie n\'est pas dévigorisée (marché à deux issues non disponible) : l\'écart réel est donc un peu plus faible qu\'affiché.</div>';
 }
 window.g45ButeursView=g45ButeursView;
 
