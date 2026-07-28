@@ -12957,7 +12957,7 @@ async function autoEspnFillSquad(uid, nom) {
     // Championnat à interroger pour les stats. En Europe : auto-détection de la coupe.
     var statsLeague = resolved.league;
     if (comp === 'euro') {
-      var euroSlugs = ['uefa.champions', 'uefa.europa', 'uefa.europa.conf'];
+      var euroSlugs = ['uefa.champions', 'uefa.europa', 'uefa.europa.conf', 'uefa.champions_qual','uefa.europa_qual','uefa.europa.conf_qual'];
       var foundEuro = null;
       for (var pi = 0; pi < pairs.length && pi < 8 && !foundEuro; pi++) {
         for (var si = 0; si < euroSlugs.length && !foundEuro; si++) {
@@ -17704,7 +17704,7 @@ async function loadTeamSaisons() {
       if(espB && espB.matches && espB.matches.length) { results[keyB] = espB.matches.map(function(mm){ return espnToFdMatch(mm, espNameB, teamId); }); espnOk = true; }
 
       // ── 1b) ESPN : Europe d'abord (C1 → Europa → Conference, auto-détectée par année) ──
-      var _euroSlugs = ['uefa.champions','uefa.europa','uefa.europa.conf'];
+      var _euroSlugs = ['uefa.champions','uefa.europa','uefa.europa.conf','uefa.champions_qual','uefa.europa_qual','uefa.europa.conf_qual'];
       for(var _yi=0; _yi<2; _yi++){
         var _yr = (_yi===0)?yA:yB; var _key = String(_yr);
         for(var _es=0; _es<_euroSlugs.length; _es++){
@@ -19163,7 +19163,7 @@ async function runComparateur() {
           var nm=(sched.team&&sched.team.name)||nom;
           acc=acc.concat(sched.matches.map(function(mm){return espnToFdMatch(mm,nm,id);}));
         }
-        var euroSlugs=['uefa.champions','uefa.europa','uefa.europa.conf'];
+        var euroSlugs=['uefa.champions','uefa.europa','uefa.europa.conf','uefa.champions_qual','uefa.europa_qual','uefa.europa.conf_qual'];
         for(var i=0;i<euroSlugs.length;i++){
           try {
             var e=await espnClubSchedule(nom, year, euroSlugs[i]);
@@ -20177,7 +20177,10 @@ var G45_LEAGUE_GROUPS = [
     {name:'Champions L.', slug:'uefa.champions', ico:'🏆'},
     {name:'Europa L.', slug:'uefa.europa', ico:'🥈'},
     {name:'Conférence', slug:'uefa.europa.conf', ico:'🥉'},
-    {name:'Super Coupe', slug:'uefa.super_cup', ico:'🏅'}
+    {name:'Super Coupe', slug:'uefa.super_cup', ico:'🏅'},
+    {name:'Qualif. C1', slug:'uefa.champions_qual', ico:'🏆'},
+    {name:'Qualif. C3', slug:'uefa.europa_qual', ico:'🥈'},
+    {name:'Qualif. C4', slug:'uefa.europa.conf_qual', ico:'🥉'}
   ]},
   {grp:'🌍 Autres championnats', leagues:[
     {name:'Primeira', slug:'por.1', ico:'🇵🇹'},
