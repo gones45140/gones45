@@ -20407,6 +20407,116 @@ function _g45TrBuild(ev, H, A, hN, aN, cross){
 }
 window._g45TrBuild=_g45TrBuild;
 
+/* ═══════════ ⚽ BUTEURS ═══════════
+   Statistiques de saison via l'API core d'ESPN : UNE requête par joueur, gratuite.
+   Les identifiants sont résolus une fois (liste des clubs → effectif) puis mémorisés.
+   Probabilité « buteur à tout moment » : loi de Poisson, p = 1 - exp(-λ) où λ est le
+   nombre de buts attendus sur le match. On affiche λ AVEC et SANS penalties, parce que
+   les penalties gonflent fortement le taux de certains joueurs (Kane : 10 buts sur 36). */
+var _G45_BUT=[
+  {n:'Harry Kane',      lg:'ger.1', team:/bayern/i,          who:/kane/i},
+  {n:'Kylian Mbappé',   lg:'esp.1', team:/real madrid/i,     who:/mbapp/i},
+  {n:'Erling Haaland',  lg:'eng.1', team:/manchester city/i, who:/haaland/i}
+];
+async function _g45ButId(p){
+  var ck='g45but_id_'+p.lg+'_'+p.n;
+  try{ var c=JSON.parse(localStorage.getItem(ck)||'null'); if(c&&c.aid) return c; }catch(e){}
+  var tj=await _g45TrEspn('/apis/site/v2/sports/soccer/'+p.lg+'/teams');
+  var lst=((((tj.sports||[])[0]||{}).leagues||[])[0]||{}).teams||[];
+  var tm=null;
+  lst.forEach(function(x){ var t=x.team||x; if(!tm&&p.team.test(t.displayName||'')) tm=t; });
+  if(!tm) return null;
+  var rj=await _g45TrEspn('/apis/site/v2/sports/soccer/'+p.lg+'/teams/'+tm.id+'/roster');
+  var ath=[];
+  (rj.athletes||[]).forEach(function(g){ (g.items||[g]).forEach(function(a){ if(a&&a.id) ath.push(a); }); });
+  var pl=null;
+  ath.forEach(function(a){ if(!pl&&p.who.test((a.displayName||'')+' '+(a.fullName||''))) pl=a; });
+  if(!pl) return null;
+  var r={aid:pl.id, tid:tm.id, tname:(tm.displayName||''), pname:(pl.displayName||p.n)};
+  try{ localStorage.setItem(ck, JSON.stringify(r)); }catch(e){}
+  return r;
+}
+async function _g45ButStats(p, id, y){
+  var ck='g45but_st_'+id.aid+'_'+y;
+  try{ var c=JSON.parse(localStorage.getItem(ck)||'null'); if(c&&(Date.now()-c.t)<12*3600000) return c.d; }catch(e){}
+  var url='https://sports.core.api.espn.com/v2/sports/soccer/leagues/'+p.lg+'/seasons/'+y+'/types/0/athletes/'+id.aid+'/statistics';
+  var j=null;
+  try{ var r=await fetch(url); if(!r.ok) throw new Error('HTTP '+r.status); j=await r.json(); }catch(e){ return null; }
+  var v={};
+  (((j.splits&&j.splits.categories)||[])).forEach(function(c){
+    (c.stats||[]).forEach(function(s){ if(s&&s.name!=null) v[s.name]=(s.value!=null?s.value:parseFloat(s.displayValue)); });
+  });
+  var d={
+    app:+v.appearances||0, st:+v.starts||0, min:+v.minutes||0,
+    g:+v.totalGoals||0, pg:+v.penaltyKickGoals||0, ps:+v.penaltyKickShots||0,
+    sh:+v.totalShots||0, sot:+v.shotsOnTarget||0, ast:+v.goalAssists||0,
+    head:+v.headedGoals||0, fk:+v.freeKickGoals||0
+  };
+  if(!d.app) return null;
+  try{ localStorage.setItem(ck, JSON.stringify({t:Date.now(), d:d})); }catch(e){}
+  return d;
+}
+function _g45ButCote(id,v){
+  var o={};
+  try{ o=JSON.parse(localStorage.getItem('g45but_cotes')||'{}'); }catch(e){}
+  var n=parseFloat(String(v).replace(',','.'));
+  if(isNaN(n)||n<=1) delete o[id]; else o[id]=n;
+  try{ localStorage.setItem('g45but_cotes', JSON.stringify(o)); }catch(e){}
+  g45ButeursView();
+}
+window._g45ButCote=_g45ButCote;
+async function g45ButeursView(){
+  var el=document.getElementById('t-tend'); if(!el) return;
+  var back='<button onclick="loadTendancesTab()" style="border:none;cursor:pointer;background:rgba(255,255,255,.06);border-radius:8px;color:var(--t2);padding:7px 12px;font-size:11px;font-weight:700;margin-bottom:10px;">← Tendances</button>';
+  var head=back+'<div class="sec" style="margin-top:0;">⚽ Buteurs</div>';
+  el.innerHTML=head+'<div style="font-size:10px;color:#8aa0ff;text-align:center;padding:10px;">⏳ Chargement…</div>';
+  var y=_g45TrSeason();
+  var cotes={}; try{ cotes=JSON.parse(localStorage.getItem('g45but_cotes')||'{}'); }catch(e){}
+  var h='';
+  for(var i=0;i<_G45_BUT.length;i++){
+    var p=_G45_BUT[i], id=null, d=null;
+    try{ id=await _g45ButId(p); }catch(e){}
+    if(id){ try{ d=await _g45ButStats(p, id, y); }catch(e){} }
+    if(!id||!d){
+      h+='<div style="background:rgba(12,16,28,.96);border:1px solid rgba(255,255,255,.08);border-radius:9px;padding:10px;margin-bottom:8px;font-size:10px;color:var(--t3);">'+_g45CyEa(p.n)+' — données indisponibles pour la saison '+y+'.</div>';
+      continue;
+    }
+    var gpm=d.g/d.app, npg=(d.g-d.pg)/d.app;
+    var lam=gpm, lamN=npg;
+    var pAny=1-Math.exp(-lam), pAnyN=1-Math.exp(-lamN);
+    var conv=d.sh?(d.g/d.sh):0, sotpm=d.sot/d.app, stpc=d.app?(d.st/d.app):0;
+    var cote=cotes[id.aid]||'', imp=cote?(1/cote):0;
+    var gap=imp?(pAnyN-imp):null;
+    var col=(gap!=null&&gap>=0.05)?'#2ecc71':(gap!=null&&gap<=-0.05)?'#ff6b6b':'#8aa0ff';
+    var cell=function(v,l,c){ return '<div style="flex:1;min-width:70px;text-align:center;background:rgba(0,0,0,.20);border-radius:7px;padding:6px 4px;"><div style="font-size:13px;font-weight:800;color:'+(c||'var(--t1)')+';">'+v+'</div><div style="font-size:7.5px;color:var(--t3);margin-top:1px;">'+l+'</div></div>'; };
+    h+='<div style="background:rgba(12,16,28,.96);border:1px solid rgba(255,255,255,.08);border-left:3px solid '+col+';border-radius:10px;padding:10px 11px;margin-bottom:9px;">'
+      +'<div style="display:flex;align-items:center;gap:9px;margin-bottom:8px;">'
+        +'<img src="https://a.espncdn.com/i/headshots/soccer/players/full/'+id.aid+'.png" loading="lazy" onerror="this.style.display=\'none\'" style="width:40px;height:40px;border-radius:50%;object-fit:cover;background:rgba(255,255,255,.07);flex:none;">'
+        +'<div style="flex:1;min-width:0;"><div style="font-size:12px;font-weight:800;color:var(--t1);">'+_g45CyEa(id.pname)+'</div>'
+        +'<div style="font-size:8.5px;color:var(--t2);">'+_g45CyEa(id.tname)+' · saison '+y+'/'+(y+1)+'</div></div>'
+      +'</div>'
+      +'<div style="display:flex;gap:5px;flex-wrap:wrap;margin-bottom:7px;">'
+        +cell(d.g,'buts','#f0c828')+cell(d.app,'matchs')+cell(gpm.toFixed(2),'buts/match','#f0c828')
+        +cell(npg.toFixed(2),'hors penalty','#2ecc71')+cell(sotpm.toFixed(1),'tirs cadrés/m')
+        +cell(Math.round(conv*100)+'%','conversion')+cell(Math.round(stpc*100)+'%','titulaire')
+      +'</div>'
+      +'<div style="font-size:9px;color:var(--t2);line-height:1.6;margin-bottom:7px;">'
+        +'⚠️ <b>'+d.pg+'</b> de ses '+d.g+' buts sur penalty ('+Math.round(d.g?100*d.pg/d.g:0)+'%)'
+        +(d.head?(' · '+d.head+' de la tête'):'')+(d.fk?(' · '+d.fk+' sur coup franc'):'')
+        +' · '+Math.round(d.min/(d.app||1))+' min par match'
+      +'</div>'
+      +'<div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;background:rgba(0,0,0,.18);border-radius:8px;padding:7px 9px;">'
+        +'<div style="flex:1;min-width:130px;"><div style="font-size:8px;color:var(--t3);">Probabilité de marquer (Poisson)</div>'
+        +'<div style="font-size:11px;font-weight:800;color:var(--t1);">'+Math.round(pAny*100)+'% <span style="font-size:9px;color:var(--t3);font-weight:600;">tout compris</span> · <span style="color:#2ecc71;">'+Math.round(pAnyN*100)+'%</span> <span style="font-size:9px;color:var(--t3);font-weight:600;">hors penalty</span></div></div>'
+        +'<input type="text" inputmode="decimal" value="'+_g45CyEa(cote)+'" placeholder="cote" onchange="_g45ButCote(\''+id.aid+'\',this.value)" style="flex:none;width:56px;text-align:center;background:rgba(8,10,16,.85);color:var(--t1);border:1px solid rgba(255,255,255,.14);border-radius:6px;padding:5px 3px;font-size:11px;font-weight:700;">'
+        +(cote?('<div style="flex:none;text-align:right;min-width:74px;"><div style="font-size:11px;font-weight:800;color:'+col+';">'+(gap>=0?'+':'')+Math.round(gap*100)+' pts</div><div style="font-size:7.5px;color:var(--t3);">book '+Math.round(imp*100)+'%</div></div>'):'')
+      +'</div></div>';
+  }
+  el.innerHTML=head+h
+    +'<div style="font-size:8px;color:var(--t3);text-align:center;margin-top:8px;font-style:italic;line-height:1.6;">λ = buts par match joué ; p = 1 − e<sup>−λ</sup>. L\'écart se calcule sur le taux <b>hors penalty</b>, plus représentatif du jeu.<br>La cote saisie n\'est pas dévigorisée (marché à deux issues non disponible) : l\'écart réel est donc un peu plus faible qu\'affiché.</div>';
+}
+window.g45ButeursView=g45ButeursView;
+
 /* ── Onglet 🔥 Tendances : sélection, balayage, rendu ── */
 function _g45TrGroups(){
   var G=(typeof G45_LEAGUE_GROUPS!=='undefined')?G45_LEAGUE_GROUPS:[];
@@ -20432,6 +20542,7 @@ function loadTendancesTab(){
     +'<div style="display:flex;gap:5px;flex-wrap:wrap;margin-bottom:9px;align-items:center;">'
     +'<span style="font-size:9px;color:var(--t3);">Jour :</span>'
     +chip("Aujourd'hui", _G45_TR.day===0, "g45TrDay(0)")+chip('Demain', _G45_TR.day===1, "g45TrDay(1)")
+    +'<button onclick="g45ButeursView()" style="border:none;cursor:pointer;border-radius:8px;padding:6px 11px;font-size:10px;font-weight:800;background:rgba(240,200,40,.16);color:#f0c828;margin-left:4px;">⚽ Buteurs</button>'
     +'</div>';
   if(!_G45_TR.res){
     h+='<button onclick="g45TrRun()" style="width:100%;border:none;cursor:pointer;border-radius:9px;padding:11px;font-size:11px;font-weight:800;background:rgba(240,200,40,.16);color:#f0c828;">⚡ Analyser les matchs</button>'
