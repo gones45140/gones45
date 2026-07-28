@@ -20346,7 +20346,12 @@ function _g45TrDevig(cotes){
 }
 function _g45TrPct(x){ return Math.round(x*100)+'%'; }
 /* Construction des marchés — partie spécifique au football */
-function _g45TrBuild(ev, H, A, hN, aN){
+/* cross = confrontation inter-championnats (coupe d'Europe, qualifs...). Les taux de base
+   de deux équipes issues de championnats différents ne sont PAS comparables : une équipe
+   qui gagne 75% de ses déplacements dans un championnat faible n'a pas 75% de chances
+   ailleurs. Le bookmaker, lui, intègre le niveau relatif des championnats. On refuse donc
+   de calculer un écart 1N2 dans ce cas — c'est une limite du modèle, pas une prudence. */
+function _g45TrBuild(ev, H, A, hN, aN, cross){
   var out=[];
   var mn=Math.min(H.all.n, A.all.n);
   var od=_g45TrOddsEv(ev);
@@ -20393,7 +20398,11 @@ function _g45TrBuild(ev, H, A, hN, aN){
       faits:[aN+' invaincu lors de '+(A.away.w+A.away.d)+' de ses '+A.away.n+' matchs à l\'extérieur ('+_g45TrPct(A.away.n?(A.away.w+A.away.d)/A.away.n:0)+')']});
     out.push({m:'Pas de nul', p:p1+p2, fair:f1+f2, cote:0, n:mn, faits:[]});
   }
-  out.forEach(function(x){ x.gap=(x.fair!=null)?(x.p-x.fair):null; x.line=od?od.line:null; x.prov=od?od.prov:''; });
+  out.forEach(function(x){
+    if(cross&&x.fair!=null){ x.cross=true; x.note='Comparaison inter-championnats : les taux des deux équipes ne sont pas sur la même échelle, aucun écart fiable n\'est calculable.'; }
+    x.gap=(x.fair!=null&&!x.cross)?(x.p-x.fair):null;
+    x.line=od?od.line:null; x.prov=od?od.prov:'';
+  });
   return out;
 }
 window._g45TrBuild=_g45TrBuild;
@@ -20473,7 +20482,8 @@ async function g45TrRun(){
       var H=null,A=null;
       try{ H=await _g45TrTeam(f.slug,hid); A=await _g45TrTeam(f.slug,aid); }catch(e){ continue; }
       if(!H||!A||!H.all.n||!A.all.n) continue;
-      var mk=_g45TrBuild(f.ev,H,A,hN,aN);
+      var cross=/^(uefa|fifa|concacaf|conmebol|caf|afc)\./i.test(f.slug);
+      var mk=_g45TrBuild(f.ev,H,A,hN,aN,cross);
       var when='';
       try{ when=new Date(f.ev.date).toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'}); }catch(e){}
       mk.forEach(function(m){ res.push({m:m, hN:hN, aN:aN, when:when, slug:f.slug, id:f.ev.id}); });
@@ -20492,8 +20502,8 @@ window.g45TrRun=g45TrRun;
 
 function _g45TrRender(){
   var R=_G45_TR.res||[];
-  var avec=R.filter(function(x){ return x.m.gap!=null&&x.m.fair>0.02&&x.m.gap>=0.05&&x.m.n>=6; });
-  var sans=R.filter(function(x){ return (x.m.gap==null||!(x.m.fair>0.02))&&x.m.p>=0.62&&x.m.n>=6; }).slice(0,15);
+  var avec=R.filter(function(x){ return x.m.gap!=null&&x.m.fair>0.02&&x.m.gap>=0.05&&x.m.n>=12; });
+  var sans=R.filter(function(x){ return (x.m.gap==null||!(x.m.fair>0.02))&&x.m.p>=0.62&&x.m.n>=6; }).slice(0,18);
   var h='<button onclick="_G45_TR.res=null;loadTendancesTab();" style="border:none;cursor:pointer;background:rgba(255,255,255,.06);border-radius:8px;color:var(--t2);padding:6px 11px;font-size:10px;font-weight:700;margin-bottom:9px;">↺ Relancer</button>';
   var card=function(x,showGap){
     var m=x.m;
@@ -20511,6 +20521,7 @@ function _g45TrRender(){
         +(x.when?('<div style="font-size:8px;color:var(--t3);">'+_g45CyEa(x.when)+'</div>'):'')
       +'</div></div>';
     if(m.fair!=null) s+='<div style="font-size:8px;color:var(--t3);margin-top:4px;">Bookmaker (marge retirée) : '+_g45TrPct(m.fair)+'</div>';
+    if(m.note) s+='<div style="font-size:8px;color:#8aa0ff;margin-top:4px;line-height:1.5;">ℹ️ '+_g45CyEa(m.note)+'</div>';
     if(m.faits&&m.faits.length) s+='<ul style="margin:6px 0 0 0;padding-left:15px;">'+m.faits.slice(0,4).map(function(f){ return '<li style="font-size:9px;color:var(--t2);line-height:1.55;">'+_g45CyEa(f)+'</li>'; }).join('')+'</ul>';
     if(m.n<9) s+='<div style="font-size:8px;color:#ff6b6b;margin-top:4px;">⛔ Échantillon très réduit ('+m.n+' matchs) — statistiquement peu fiable, à titre indicatif seulement.</div>';
     else if(m.n<14) s+='<div style="font-size:8px;color:#ff8c42;margin-top:4px;">⚠️ Échantillon réduit ('+m.n+' matchs) — à prendre avec prudence.</div>';
