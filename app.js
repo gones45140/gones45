@@ -22419,16 +22419,18 @@ async function _g45RcYear(race){
   return 0;
 }
 async function _g45RcTeams(race, y){
-  if(_g45Rc.teams[race.id]) return _g45Rc.teams[race.id];
+  var _k=race.id+'|'+y;
+  if(_g45Rc.teams[_k]) return _g45Rc.teams[_k];
   var arr=await _g45RcGet(race, 'team-'+y)||[];
   var m={};
   (Array.isArray(arr)?arr:[]).forEach(function(t){
     if(t&&t._id) m[t._id]=t.name||t.label||t.displayName||t.shortname||t.code||'';
   });
-  _g45Rc.teams[race.id]=m; return m;
+  _g45Rc.teams[_k]=m; return m;
 }
 async function _g45RcRiders(race, y){
-  if(_g45Rc.riders[race.id]) return _g45Rc.riders[race.id];
+  var _k=race.id+'|'+y;
+  if(_g45Rc.riders[_k]) return _g45Rc.riders[_k];
   var arr=await _g45RcGet(race, 'allCompetitors-'+y)||[];
   var teams=await _g45RcTeams(race, y);
   var m={};
@@ -22437,16 +22439,17 @@ async function _g45RcRiders(race, y){
     var tid=String(c.$team||'').split(':')[1]||'';
     var nom=(c.lastname||c.lastnameshort||'');
     if(c.firstname) nom=c.firstname.charAt(0).toUpperCase()+'. '+nom;
-    m[c._id]={nom:nom, bib:c.bib, nat:(c.nationality||''), team:(teams[tid]||''), photo:(c.profile_sm||c.profile||'')};
+    m[c._id]={nom:nom, bib:c.bib, nat:(c.nationality||''), uci:(c.idUCI||''), team:(teams[tid]||''), photo:(c.profile_sm||c.profile||'')};
   });
-  _g45Rc.riders[race.id]=m; return m;
+  _g45Rc.riders[_k]=m; return m;
 }
 async function _g45RcStages(race, y){
-  if(_g45Rc.stages[race.id]) return _g45Rc.stages[race.id];
+  var _k=race.id+'|'+y;
+  if(_g45Rc.stages[_k]) return _g45Rc.stages[_k];
   var arr=await _g45RcGet(race, 'stage-'+y, 24*3600000)||[];
   var s=(Array.isArray(arr)?arr:[]).filter(function(e){ return e&&e.stage; });
   s.sort(function(a,b){ return (a.stage||0)-(b.stage||0); });
-  _g45Rc.stages[race.id]=s; return s;
+  _g45Rc.stages[_k]=s; return s;
 }
 /* ── Formatage ── */
 function _g45RcT(ms){
@@ -22593,7 +22596,7 @@ async function _g45RcDiscover(race, y, onStep){
     if(!map) throw new Error('table de hash introuvable');
     var ids=Object.keys(map);
     var re=new RegExp('profils/'+y+'/[A-Za-z0-9\\-]+\\.csv','g');
-    var need=((_g45Rc.stages[race.id]||[]).length)||21;
+    var need=((_g45Rc.stages[race.id+'|'+y]||[]).length)||21;
     var B=6;
     for(var k=0;k<ids.length;k+=B){
       if(onStep) onStep(k, ids.length, Object.keys(out).length);
@@ -22856,7 +22859,7 @@ async function _g45RcAnalyse(race, y, stages, onStep){
       var b=A[id][ty]; b.n++; if(p<b.best) b.best=p; if(p<=10) b.t10++;
     });
   }
-  try{ localStorage.setItem(ck, JSON.stringify({t:Date.now(), d:A})); }catch(e){}
+  if(Object.keys(A).length){ try{ localStorage.setItem(ck, JSON.stringify({t:Date.now(), d:A})); }catch(e){} }
   return A;
 }
 function _g45RcTags(f, a){
@@ -22910,6 +22913,7 @@ async function g45RcRidersView(raceId, deep){
     });
   } else {
     try{ var rawA=localStorage.getItem('g45rcA_'+race.id+'|'+y); if(rawA) A=JSON.parse(rawA).d; }catch(e){}
+    if(A&&!Object.keys(A).length) A=null;
   }
 
   var list=Object.keys(F).map(function(id){
@@ -22965,6 +22969,40 @@ async function g45RcRidersView(raceId, deep){
     +'<div style="font-size:8px;color:var(--t3);text-align:center;margin-top:7px;font-style:italic;">'+list.length+' coureurs · profils déduits des résultats réels, pas de pronostic</div>';
 }
 window.g45RcRidersView=g45RcRidersView;
+/* ── 📚 ÉDITION PRÉCÉDENTE ──
+   Avant le départ d'une course, l'édition en cours n'a ni coureurs ni résultats.
+   On rapatrie alors l'édition N-1 et on relie les coureurs par idUCI (pays + date de
+   naissance), stable d'une année sur l'autre. Les nouveaux venus n'ont pas d'historique :
+   on l'affiche tel quel plutôt que d'inventer un score. */
+async function _g45RcHist(race, y, onStep){
+  var py=y-1;
+  var st=await _g45RcStages(race, py);
+  if(!st.length) return null;
+  var rd=await _g45RcRiders(race, py);
+  var A=await _g45RcAnalyse(race, py, st, onStep);
+  var fin=null;
+  for(var i=st.length-1;i>=0&&!fin;i--){
+    var rw=null; try{ rw=await _g45RcGet(race,'rankingType-'+py+'-'+st[i].stage, 24*3600000); }catch(e){}
+    if(rw){ var b=_g45RcPick(rw); if(b.itg||b.ipg||b.img) fin=b; }
+  }
+  var F={};
+  var put=function(e,key){ if(!e) return; (e.rankings||[]).forEach(function(r){
+    var id=String(r.$rider||'').split(':')[1]; if(!id) return; if(!F[id]) F[id]={}; F[id][key]=r.position||999; }); };
+  if(fin){ put(fin.itg,'gc'); put(fin.ipg,'pts'); put(fin.img,'mtn'); put(fin.ijg,'jeune'); }
+  return {y:py, riders:rd, A:(A||{}), F:F};
+}
+function _g45RcRemap(riders, hist){
+  var byUci={};
+  Object.keys(hist.riders).forEach(function(hid){ var u=hist.riders[hid].uci; if(u) byUci[u]=hid; });
+  var A={}, F={}, n=0;
+  Object.keys(riders).forEach(function(id){
+    var u=riders[id].uci; if(!u) return;
+    var hid=byUci[u]; if(!hid) return;
+    if(hist.A[hid]){ A[id]=hist.A[hid]; n++; }
+    if(hist.F[hid]) F[id]=hist.F[hid];
+  });
+  return {A:A, F:F, n:n};
+}
 /* ── 🎯 FAVORIS DE L'ÉTAPE ──
    Classement mécanique : palmarès du coureur sur CE type de terrain + classement annexe
    pertinent. Aucun pronostic, aucune probabilité inventée. La colonne Cote se saisit à la
@@ -23015,11 +23053,7 @@ async function g45RcFavoris(raceId, stage, deep){
 
   var A=null;
   try{ var rA=localStorage.getItem('g45rcA_'+race.id+'|'+y); if(rA) A=JSON.parse(rA).d; }catch(e){}
-  if(deep&&!A){
-    A=await _g45RcAnalyse(race, y, stages, function(d,t){
-      var b=document.getElementById('g45rc-disc'); if(b) b.innerHTML='\uD83D\uDD2C Analyse par terrain… étape '+(d+1)+'/'+t;
-    });
-  }
+  if(A&&!Object.keys(A).length) A=null;
   /* classements annexes finaux */
   var F={}, fin=null;
   for(var k=stages.length-1;k>=0&&!fin;k--){
@@ -23029,6 +23063,25 @@ async function g45RcFavoris(raceId, stage, deep){
   var put=function(e,key){ if(!e) return; (e.rankings||[]).forEach(function(r){
     var id=String(r.$rider||'').split(':')[1]; if(!id) return; if(!F[id]) F[id]={}; F[id][key]=r.position||999; }); };
   if(fin){ put(fin.itg,'gc'); put(fin.ipg,'pts'); put(fin.img,'mtn'); put(fin.ijg,'jeune'); }
+
+  var histY=0, histN=0;
+  var hasCur=(Object.keys(F).length>0)||(A&&Object.keys(A).length>0);
+  if(!hasCur){
+    if(deep){
+      var H=await _g45RcHist(race, y, function(d,t){
+        var b=document.getElementById('g45rc-disc'); if(b) b.innerHTML='\uD83D\uDCDA Édition '+(y-1)+'\u2026 étape '+(d+1)+'/'+t;
+      });
+      if(H){
+        histY=H.y;
+        if(!Object.keys(riders).length){ riders=H.riders; A=H.A; F=H.F; histN=Object.keys(H.A).length; }
+        else { var R=_g45RcRemap(riders, H); A=R.A; F=R.F; histN=R.n; }
+      }
+    }
+  } else if(deep&&!A){
+    A=await _g45RcAnalyse(race, y, stages, function(d,t){
+      var b=document.getElementById('g45rc-disc'); if(b) b.innerHTML='\uD83D\uDD2C Analyse par terrain\u2026 étape '+(d+1)+'/'+t;
+    });
+  }
 
   var clef=_g45RcClefTerrain(ty);
   var ids={}; Object.keys(F).forEach(function(i){ ids[i]=1; }); if(A) Object.keys(A).forEach(function(i){ ids[i]=1; });
@@ -23059,12 +23112,21 @@ async function g45RcFavoris(raceId, stage, deep){
       +(ncotes?(' \u00b7 '+ncotes+' cote'+(ncotes>1?'s':'')):'')
       +(arrCote?' \u00b7 \uD83D\uDD3A arrivée en côte':'')+'</div></div>';
 
-  if(!A){
-    el.innerHTML=head+ctx+'<button onclick="g45RcFavoris(\''+race.id+'\','+stage+',1)" style="width:100%;border:none;cursor:pointer;border-radius:8px;padding:10px;font-size:11px;font-weight:800;background:rgba(138,160,255,.15);color:#8aa0ff;">\uD83D\uDD2C Lancer l\u2019analyse par terrain ('+stages.length+' étapes)</button>'
-      +'<div style="font-size:9px;color:var(--t3);text-align:center;margin-top:8px;">Nécessaire une seule fois : elle croise chaque résultat d\u2019étape avec son type de terrain.</div>';
+  if(!A||!Object.keys(A).length){
+    var noData=(deep&&!histY);
+    var lblB = noData ? 'Aucune donn\u00e9e disponible'
+             : (hasCur ? ('\uD83D\uDD2C Lancer l\u2019analyse par terrain ('+stages.length+' \u00e9tapes)')
+                       : ('\uD83D\uDCDA Charger l\u2019\u00e9dition '+(y-1)));
+    var lblT = noData ? ('Ni cette \u00e9dition ni celle de '+(y-1)+' ne renvoient de r\u00e9sultats exploitables.')
+             : (hasCur ? 'N\u00e9cessaire une seule fois : elle croise chaque r\u00e9sultat d\u2019\u00e9tape avec son type de terrain.'
+                       : ('Cette \u00e9dition n\u2019a pas encore de r\u00e9sultats. On peut s\u2019appuyer sur '+(y-1)+' : les coureurs sont reli\u00e9s d\u2019une ann\u00e9e \u00e0 l\u2019autre par leur identifiant UCI.'));
+    el.innerHTML=head+ctx
+      +(noData?'':'<button onclick="g45RcFavoris(\''+race.id+'\','+stage+',1)" style="width:100%;border:none;cursor:pointer;border-radius:8px;padding:10px;font-size:11px;font-weight:800;background:rgba(138,160,255,.15);color:#8aa0ff;">'+lblB+'</button>')
+      +'<div style="font-size:9px;color:var(--t3);text-align:center;margin-top:8px;line-height:1.6;">'+lblT+'</div>';
     return;
   }
 
+  var bandeau = histY ? ('<div style="background:rgba(138,160,255,.12);border:1px solid rgba(138,160,255,.28);border-radius:8px;padding:7px 10px;margin-bottom:8px;font-size:9px;color:#8aa0ff;line-height:1.5;">\uD83D\uDCDA Bas\u00e9 sur l\u2019\u00e9dition '+histY+' \u2014 cette \u00e9dition n\u2019a pas encore de r\u00e9sultats.'+(histN?(' '+histN+' coureurs appari\u00e9s par identifiant UCI ; les nouveaux venus n\u2019apparaissent pas.'):'')+'</div>') : '';
   var rows='';
   list.forEach(function(r,i){
     var c=cotes[r.id]||'', ro=rkOdds[r.id]||0, ecart=ro?(ro-(i+1)):0;
@@ -23086,8 +23148,9 @@ async function g45RcFavoris(raceId, stage, deep){
         +'style="flex:none;width:46px;text-align:center;background:rgba(8,10,16,.8);color:var(--t1);border:1px solid rgba(255,255,255,.14);border-radius:6px;padding:4px 2px;font-size:10px;font-weight:700;">'
       +'</div>';
   });
-  el.innerHTML=head+ctx
-    +'<div style="background:rgba(12,16,28,.96);border:1px solid rgba(255,255,255,.08);border-radius:9px;padding:7px 9px;">'+rows+'</div>'
+  el.innerHTML=head+ctx+bandeau
+    +'<div style="background:rgba(12,16,28,.96);border:1px solid rgba(255,255,255,.08);border-radius:9px;padding:7px 9px;">'
+      +(rows||'<div style="font-size:10px;color:var(--t3);text-align:center;padding:14px;line-height:1.6;">Aucun r\u00e9sultat sur cette \u00e9dition pour l\'instant.<br><span style="font-size:9px;">Le classement se construit \u00e0 partir des \u00e9tapes d\u00e9j\u00e0 courues.</span></div>')+'</div>'
     +'<button onclick="g45RcFavAI(\''+race.id+'\','+stage+')" style="width:100%;border:none;cursor:pointer;border-radius:8px;padding:9px;font-size:10px;font-weight:800;background:rgba(176,124,214,.16);color:#b07cd6;margin-top:9px;">\uD83E\uDDE0 Contexte IA (Tavily + Groq/Gemini/Mistral)</button>'
     +'<div id="g45rc-ai" style="margin-top:9px;"></div>'
     +'<div style="font-size:8px;color:var(--t3);text-align:center;margin-top:8px;font-style:italic;">Ordre calculé sur les résultats passés par terrain. ▲ = le bookmaker le classe plus bas que moi. Les cotes intègrent déjà l\u2019essentiel de l\u2019information.</div>';
