@@ -17906,7 +17906,7 @@ function calcSaisonStats(matchesRaw, teamId) {
     domW:0, domD:0, domL:0, domN:0, extW:0, extD:0, extL:0, extN:0,
     butsM:0, butsE:0,
     cleanSheet:0, failedToScore:0, scoredFirst:0,
-    btsFH:0, over15FH:0,
+    btsFH:0, over15FH:0, fhN:0,
     last5:[], serie:0, serieType:'',
     byComp:{}
   };
@@ -17914,8 +17914,9 @@ function calcSaisonStats(matchesRaw, teamId) {
   matches.forEach(function(m) {
     var hg = (m.score&&m.score.regularTime?m.score.regularTime.home:m.score&&m.score.fullTime?m.score.fullTime.home:0)||0;
     var ag = (m.score&&m.score.regularTime?m.score.regularTime.away:m.score&&m.score.fullTime?m.score.fullTime.away:0)||0;
-    var hh = m.score&&m.score.halfTime ? (m.score.halfTime.home||0) : 0;
-    var ah = m.score&&m.score.halfTime ? (m.score.halfTime.away||0) : 0;
+    var _fh = m.score && m.score.halfTime && (m.score.halfTime.home!=null || m.score.halfTime.away!=null);
+    var hh = _fh ? (m.score.halfTime.home||0) : 0;
+    var ah = _fh ? (m.score.halfTime.away||0) : 0;
     var total = hg+ag;
     var isDom = m.homeTeam && m.homeTeam.id === teamId;
     var teamGoals = isDom ? hg : ag;
@@ -17932,14 +17933,19 @@ function calcSaisonStats(matchesRaw, teamId) {
     if(hg>0&&ag>0) stats.bts++;
     if(oppGoals===0) stats.cleanSheet++;
     if(teamGoals===0) stats.failedToScore++;
-    if(hh>0&&ah>0) stats.btsFH++;
-    if(hh+ah>1.5) stats.over15FH++;
+    if(_fh){
+      stats.fhN++;
+      if(hh>0&&ah>0) stats.btsFH++;
+      if(hh+ah>1.5) stats.over15FH++;
+    }
     stats.butsM += teamGoals;
     stats.butsE += oppGoals;
 
-    // Score en premier
-    if(isDom && hh>0 && hh>ah) stats.scoredFirst++;
-    else if(!isDom && ah>0 && ah>hh) stats.scoredFirst++;
+    // Menait à la pause (approximation de « a marqué en premier »)
+    if(_fh){
+      if(isDom && hh>0 && hh>ah) stats.scoredFirst++;
+      else if(!isDom && ah>0 && ah>hh) stats.scoredFirst++;
+    }
 
     var won = teamGoals>oppGoals, draw = teamGoals===oppGoals;
     if(isDom) {
@@ -18433,12 +18439,13 @@ function renderSaisonsChart(el, results, nom) {
     html += '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-bottom:12px;">';
     var statCards = [
       {l:'Clean Sheets', v:st.cleanSheet, t:st.n, c:'#1ed760'},
-      {l:'Marque 1er', v:st.scoredFirst, t:st.n, c:'#4d84ff'},
+      {l:'Mène à la pause', v:st.scoredFirst, t:st.fhN, c:'#4d84ff', skip:!st.fhN},
       {l:'Sans marquer', v:st.failedToScore, t:st.n, c:'#ff4545'},
-      {l:'BTS 1ère MT', v:st.btsFH, t:st.n, c:'#a78bfa'},
-      {l:'Over 1.5 MT', v:st.over15FH, t:st.n, c:'#f0b020'},
+      {l:'BTS 1ère MT', v:st.btsFH, t:st.fhN, c:'#a78bfa', skip:!st.fhN},
+      {l:'Over 1.5 MT', v:st.over15FH, t:st.fhN, c:'#f0b020', skip:!st.fhN},
       {l:'Moy buts/match', v:(st.butsM/st.n).toFixed(1), t:null, c:'#22d3ee'},
     ];
+    statCards = statCards.filter(function(sc){ return !sc.skip; });
     statCards.forEach(function(sc){
       html += '<div style="background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:8px;padding:8px;text-align:center;">';
       html += '<div style="font-size:17px;font-weight:800;color:'+sc.c+';">'+(sc.t?pct(sc.v,sc.t)+'%':sc.v)+'</div>';
