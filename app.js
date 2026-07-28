@@ -20345,13 +20345,106 @@ function _g45TrDevig(cotes){
   return q.map(function(x){ return x/s; });
 }
 function _g45TrPct(x){ return Math.round(x*100)+'%'; }
+/* ── 💰 COTES BUTS via The Odds API ──
+   ESPN ne fournit que le 1N2. Pour les marchés de buts (over/under, BTTS) on passe par
+   The Odds API, qui couvre le football, via la route /odds du Worker (clé côté serveur,
+   cache D1 de 15 min). Une requête par championnat ayant des matchs, pas par match.
+   Le prix retenu est la MÉDIANE des bookmakers, plus robuste qu'un maximum isolé. */
+var _G45_TR_ODDSKEY={
+  'eng.1':'soccer_epl', 'eng.2':'soccer_efl_champ',
+  'esp.1':'soccer_spain_la_liga', 'esp.2':'soccer_spain_segunda_division',
+  'ita.1':'soccer_italy_serie_a', 'ita.2':'soccer_italy_serie_b',
+  'ger.1':'soccer_germany_bundesliga', 'ger.2':'soccer_germany_bundesliga2',
+  'fra.1':'soccer_france_ligue_one', 'fra.2':'soccer_france_ligue_two',
+  'por.1':'soccer_portugal_primeira_liga', 'ned.1':'soccer_netherlands_eredivisie',
+  'bel.1':'soccer_belgium_first_div', 'tur.1':'soccer_turkey_super_league',
+  'sco.1':'soccer_spl', 'gre.1':'soccer_greece_super_league',
+  'aut.1':'soccer_austria_bundesliga', 'swi.1':'soccer_switzerland_superleague',
+  'den.1':'soccer_denmark_superliga', 'nor.1':'soccer_norway_eliteserien',
+  'swe.1':'soccer_sweden_allsvenskan', 'pol.1':'soccer_poland_ekstraklasa',
+  'bra.1':'soccer_brazil_campeonato', 'arg.1':'soccer_argentina_primera_division',
+  'mex.1':'soccer_mexico_ligamx', 'usa.1':'soccer_usa_mls',
+  'jpn.1':'soccer_japan_j_league', 'kor.1':'soccer_korea_kleague1',
+  'aus.1':'soccer_australia_aleague',
+  'uefa.champions':'soccer_uefa_champs_league',
+  'uefa.europa':'soccer_uefa_europa_league',
+  'uefa.europa.conf':'soccer_uefa_europa_conference_league',
+  'uefa.champions_qual':'soccer_uefa_champs_league_qualification',
+  'uefa.europa_qual':'soccer_uefa_europa_league_qualification',
+  'uefa.europa.conf_qual':'soccer_uefa_europa_conference_league_qualification'
+};
+var _g45TrOddsCache={};
+window._g45TrQuota=null;
+async function _g45TrOddsApi(slug){
+  var key=_G45_TR_ODDSKEY[slug];
+  if(!key) return null;
+  var c=_g45TrOddsCache[key];
+  if(c&&(Date.now()-c.t)<15*60000) return c.d;
+  try{ var raw=localStorage.getItem('g45trOdds_'+key); if(raw){ var o=JSON.parse(raw);
+    if((Date.now()-o.t)<15*60000){ _g45TrOddsCache[key]={t:o.t,d:o.d}; return o.d; } } }catch(e){}
+  var base=(typeof FD_PROXY!=='undefined'?FD_PROXY:'https://fd-proxy.touraine-antoine.workers.dev').replace(/\/+$/,'');
+  var url=base+'/odds?sport='+encodeURIComponent(key)+'&regions=eu&markets=h2h,totals,btts';
+  var d=null;
+  try{
+    var r=await fetch(url);
+    var rem=r.headers.get('X-Odds-Remaining'); if(rem!=null) window._g45TrQuota=rem;
+    var j=await r.json();
+    d=Array.isArray(j)?j:null;
+    if(!d && j && j.error){ window._g45TrOddsErr=key+' → '+j.error+(j.status?(' '+j.status):''); }
+  }catch(e){ window._g45TrOddsErr=key+' → '+String((e&&e.message)||e).slice(0,40); }
+  if(d){
+    _g45TrOddsCache[key]={t:Date.now(), d:d};
+    try{ localStorage.setItem('g45trOdds_'+key, JSON.stringify({t:Date.now(), d:d})); }catch(e){}
+  }
+  return d;
+}
+function _g45TrNz(s){ return String(s||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9]/g,''); }
+function _g45TrFindEv(list, hN, aN){
+  var h=_g45TrNz(hN), a=_g45TrNz(aN);
+  var eq=function(x,y){ if(!x||!y) return false; if(x===y) return true;
+    return (x.length>=5&&y.length>=5)&&(x.indexOf(y)>=0||y.indexOf(x)>=0); };
+  var found=null;
+  (list||[]).forEach(function(e){
+    if(found) return;
+    if(eq(_g45TrNz(e.home_team),h)&&eq(_g45TrNz(e.away_team),a)) found=e;
+  });
+  return found;
+}
+/* Médiane des prix par issue, tous bookmakers confondus */
+function _g45TrPrices(ev){
+  var acc={};
+  (ev&&ev.bookmakers||[]).forEach(function(b){
+    (b.markets||[]).forEach(function(m){
+      (m.outcomes||[]).forEach(function(oc){
+        if(!oc||!(oc.price>1)) return;
+        var k=null, nm=String(oc.name||'').toLowerCase();
+        if(m.key==='totals'&&oc.point!=null) k=(nm.indexOf('over')>=0?'o':'u')+oc.point;
+        else if(m.key==='btts') k=(nm.indexOf('yes')>=0||nm.indexOf('oui')>=0)?'bttsY':'bttsN';
+        if(!k) return;
+        (acc[k]=acc[k]||[]).push(oc.price);
+      });
+    });
+  });
+  var med={};
+  Object.keys(acc).forEach(function(k){
+    var a=acc[k].slice().sort(function(x,z){ return x-z; });
+    med[k]=a[Math.floor(a.length/2)];
+  });
+  return med;
+}
+/* Probabilité dévigorisée d'une paire (over/under, oui/non) */
+function _g45TrFair2(a,b){
+  var f=_g45TrDevig([a,b]);
+  return f?f[0]:null;
+}
+
 /* Construction des marchés — partie spécifique au football */
 /* cross = confrontation inter-championnats (coupe d'Europe, qualifs...). Les taux de base
    de deux équipes issues de championnats différents ne sont PAS comparables : une équipe
    qui gagne 75% de ses déplacements dans un championnat faible n'a pas 75% de chances
    ailleurs. Le bookmaker, lui, intègre le niveau relatif des championnats. On refuse donc
    de calculer un écart 1N2 dans ce cas — c'est une limite du modèle, pas une prudence. */
-function _g45TrBuild(ev, H, A, hN, aN, cross){
+function _g45TrBuild(ev, H, A, hN, aN, cross, pr){
   var out=[];
   var mn=Math.min(H.all.n, A.all.n);
   var od=_g45TrOddsEv(ev);
@@ -20366,14 +20459,19 @@ function _g45TrBuild(ev, H, A, hN, aN, cross){
   var fait=function(nom,acc,k,lbl){ return nom+' : '+lbl+' lors de '+acc[k]+' de ses '+acc.n+' derniers matchs ('+_g45TrPct(acc.n?acc[k]/acc.n:0)+')'; };
   var faitInv=function(nom,acc,k,lbl){ var v=acc.n-acc[k]; return nom+' : '+lbl+' lors de '+v+' de ses '+acc.n+' derniers matchs ('+_g45TrPct(acc.n?v/acc.n:0)+')'; };
 
-  out.push({m:'Les deux marquent', p:(bttsH+bttsA)/2, fair:null, cote:0, n:mn,
+  pr=pr||{};
+  var fBtts=(pr.bttsY&&pr.bttsN)?_g45TrFair2(pr.bttsY,pr.bttsN):null;
+  var fO15 =(pr['o1.5']&&pr['u1.5'])?_g45TrFair2(pr['o1.5'],pr['u1.5']):null;
+  var fO25 =(pr['o2.5']&&pr['u2.5'])?_g45TrFair2(pr['o2.5'],pr['u2.5']):null;
+  var fU35 =(pr['u3.5']&&pr['o3.5'])?_g45TrFair2(pr['u3.5'],pr['o3.5']):null;
+  out.push({m:'Les deux marquent', p:(bttsH+bttsA)/2, fair:fBtts, cote:(pr.bttsY||0), n:mn,
     faits:[fait(hN,H.home,'btts','les deux équipes ont marqué à domicile'), fait(aN,A.away,'btts','les deux équipes ont marqué à l\'extérieur'),
            fait(hN,H.all,'sc','a marqué'), fait(aN,A.all,'sc','a marqué')]});
-  out.push({m:'+ de 2,5 buts', p:(o25H+o25A)/2, fair:null, cote:0, n:mn,
+  out.push({m:'+ de 2,5 buts', p:(o25H+o25A)/2, fair:fO25, cote:(pr['o2.5']||0), n:mn,
     faits:[fait(hN,H.home,'o25','+2,5 buts à domicile'), fait(aN,A.away,'o25','+2,5 buts à l\'extérieur')]});
-  out.push({m:'+ de 1,5 but', p:(o15H+o15A)/2, fair:null, cote:0, n:mn,
+  out.push({m:'+ de 1,5 but', p:(o15H+o15A)/2, fair:fO15, cote:(pr['o1.5']||0), n:mn,
     faits:[fait(hN,H.home,'o15','+1,5 but à domicile'), fait(aN,A.away,'o15','+1,5 but à l\'extérieur')]});
-  out.push({m:'- de 3,5 buts', p:1-((o35H+o35A)/2), fair:null, cote:0, n:mn,
+  out.push({m:'- de 3,5 buts', p:1-((o35H+o35A)/2), fair:fU35, cote:(pr['u3.5']||0), n:mn,
     faits:[faitInv(hN,H.home,'o35','moins de 3,5 buts à domicile'), faitInv(aN,A.away,'o35','moins de 3,5 buts à l\'extérieur')]});
 
   /* 1N2 : force relative dom/ext, normalisée */
@@ -20594,7 +20692,12 @@ async function g45TrRun(){
       try{ H=await _g45TrTeam(f.slug,hid); A=await _g45TrTeam(f.slug,aid); }catch(e){ continue; }
       if(!H||!A||!H.all.n||!A.all.n) continue;
       var cross=/^(uefa|fifa|concacaf|conmebol|caf|afc)\./i.test(f.slug);
-      var mk=_g45TrBuild(f.ev,H,A,hN,aN,cross);
+      var pr={};
+      try{
+        var oaList=await _g45TrOddsApi(f.slug);
+        if(oaList){ var oaEv=_g45TrFindEv(oaList,hN,aN); if(oaEv) pr=_g45TrPrices(oaEv); }
+      }catch(e){}
+      var mk=_g45TrBuild(f.ev,H,A,hN,aN,cross,pr);
       var when='';
       try{ when=new Date(f.ev.date).toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'}); }catch(e){}
       mk.forEach(function(m){ res.push({m:m, hN:hN, aN:aN, when:when, slug:f.slug, id:f.ev.id}); });
@@ -20645,11 +20748,13 @@ function _g45TrRender(){
     h+='<div style="font-size:10px;color:var(--t3);text-align:center;padding:12px;line-height:1.6;">Aucun écart significatif détecté aujourd\'hui.<br><span style="font-size:9px;">C\'est le résultat le plus fréquent, et c\'est normal : le marché est efficace la plupart du temps.<br>En juillet, seules les qualifications tournent : les équipes ont peu de matchs joués dans ces compétitions, donc peu de données exploitables.</span></div>';
   }
   if(sans.length){
-    h+='<div style="font-size:10px;font-weight:800;color:#8aa0ff;margin:14px 0 6px;">📊 Taux élevés sans cote disponible</div>'
-      +'<div style="font-size:8px;color:var(--t3);margin-bottom:6px;font-style:italic;">Aucun écart calculable ici : ESPN ne fournit pas la cote de ces marchés. À vérifier chez ton bookmaker.</div>';
+    h+='<div style="font-size:10px;font-weight:800;color:#8aa0ff;margin:14px 0 6px;">📊 Taux élevés sans écart calculable</div>'
+      +'<div style="font-size:8px;color:var(--t3);margin-bottom:6px;font-style:italic;">Soit la cote n\'est pas disponible, soit la comparaison n\'est pas fiable (rencontre inter-championnats). À vérifier chez ton bookmaker.</div>';
     sans.forEach(function(x){ h+=card(x,false); });
   }
-  return h+'<div style="font-size:8px;color:var(--t3);text-align:center;margin-top:10px;font-style:italic;">Probabilités estimées sur les taux de base réels des deux équipes (dom/ext pondéré). Ce ne sont pas des prédictions : les cotes intègrent déjà l\'essentiel de l\'information.</div>';
+  var q=(window._g45TrQuota!=null)?('<br>The Odds API : '+_g45CyEa(window._g45TrQuota)+' requêtes restantes ce mois'):'';
+  var er=(window._g45TrOddsErr)?('<br><span style="color:#ff8c42;">cotes : '+_g45CyEa(window._g45TrOddsErr)+'</span>'):'';
+  return h+'<div style="font-size:8px;color:var(--t3);text-align:center;margin-top:10px;font-style:italic;">'+q+er+'Probabilités estimées sur les taux de base réels des deux équipes (dom/ext pondéré). Ce ne sont pas des prédictions : les cotes intègrent déjà l\'essentiel de l\'information.</div>';
 }
 
 function loadLiveTab(){
