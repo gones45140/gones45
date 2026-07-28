@@ -20321,9 +20321,12 @@ function _g45TrOddsEv(ev){
 }
 /* Retrait de la marge : on normalise pour que les probabilités somment à 1 */
 function _g45TrDevig(cotes){
-  var q=cotes.map(function(c){ return (c&&c>1)?(1/c):0; });
+  /* Toutes les cotes doivent être présentes et > 1. Une seule manquante et la
+     normalisation attribuerait 0% aux autres issues, donc un écart fictif. */
+  for(var i=0;i<cotes.length;i++){ var c=cotes[i]; if(!c||!(c>1)||isNaN(c)) return null; }
+  var q=cotes.map(function(c){ return 1/c; });
   var s=q.reduce(function(a,b){ return a+b; },0);
-  if(s<=0) return null;
+  if(!(s>0)) return null;
   return q.map(function(x){ return x/s; });
 }
 function _g45TrPct(x){ return Math.round(x*100)+'%'; }
@@ -20341,6 +20344,7 @@ function _g45TrBuild(ev, H, A, hN, aN){
   var o35H=r(H,H.home,'o35'),  o35A=r(A,A.away,'o35');
 
   var fait=function(nom,acc,k,lbl){ return nom+' : '+lbl+' lors de '+acc[k]+' de ses '+acc.n+' derniers matchs ('+_g45TrPct(acc.n?acc[k]/acc.n:0)+')'; };
+  var faitInv=function(nom,acc,k,lbl){ var v=acc.n-acc[k]; return nom+' : '+lbl+' lors de '+v+' de ses '+acc.n+' derniers matchs ('+_g45TrPct(acc.n?v/acc.n:0)+')'; };
 
   out.push({m:'Les deux marquent', p:(bttsH+bttsA)/2, fair:null, cote:0, n:mn,
     faits:[fait(hN,H.home,'btts','les deux équipes ont marqué à domicile'), fait(aN,A.away,'btts','les deux équipes ont marqué à l\'extérieur'),
@@ -20350,7 +20354,7 @@ function _g45TrBuild(ev, H, A, hN, aN){
   out.push({m:'+ de 1,5 but', p:(o15H+o15A)/2, fair:null, cote:0, n:mn,
     faits:[fait(hN,H.home,'o15','+1,5 but à domicile'), fait(aN,A.away,'o15','+1,5 but à l\'extérieur')]});
   out.push({m:'- de 3,5 buts', p:1-((o35H+o35A)/2), fair:null, cote:0, n:mn,
-    faits:[fait(hN,H.home,'o35','+3,5 buts à domicile'), fait(aN,A.away,'o35','+3,5 buts à l\'extérieur')]});
+    faits:[faitInv(hN,H.home,'o35','moins de 3,5 buts à domicile'), faitInv(aN,A.away,'o35','moins de 3,5 buts à l\'extérieur')]});
 
   /* 1N2 : force relative dom/ext, normalisée */
   var pw=r(H,H.home,'w'), pl=r(A,A.away,'l'), p1=(pw+pl)/2;
@@ -20476,8 +20480,8 @@ window.g45TrRun=g45TrRun;
 
 function _g45TrRender(){
   var R=_G45_TR.res||[];
-  var avec=R.filter(function(x){ return x.m.gap!=null&&x.m.gap>=0.05&&x.m.n>=6; });
-  var sans=R.filter(function(x){ return x.m.gap==null&&x.m.p>=0.62&&x.m.n>=6; }).slice(0,15);
+  var avec=R.filter(function(x){ return x.m.gap!=null&&x.m.fair>0.02&&x.m.gap>=0.05&&x.m.n>=6; });
+  var sans=R.filter(function(x){ return (x.m.gap==null||!(x.m.fair>0.02))&&x.m.p>=0.62&&x.m.n>=6; }).slice(0,15);
   var h='<button onclick="_G45_TR.res=null;loadTendancesTab();" style="border:none;cursor:pointer;background:rgba(255,255,255,.06);border-radius:8px;color:var(--t2);padding:6px 11px;font-size:10px;font-weight:700;margin-bottom:9px;">↺ Relancer</button>';
   var card=function(x,showGap){
     var m=x.m;
