@@ -20219,6 +20219,280 @@ var G45_LEAGUE_GROUPS = [
     {name:'Libertadores', slug:'conmebol.libertadores', ico:'🏆'}
   ]}
 ];
+/* ═══════════ 🔥 TENDANCES DU JOUR ═══════════
+   Principe : on calcule une probabilité à partir des taux de base réels des deux équipes,
+   puis on la compare à la probabilité DÉVIGORISÉE du bookmaker. C'est l'ÉCART qui est
+   classé, jamais le pourcentage brut — une série à 100% sur 8 matchs ne vaut rien si la
+   cote l'intègre déjà. Les petits échantillons sont signalés, pas masqués.
+   Structure prévue pour d'autres sports : seul _g45TrBuild est spécifique au football. */
+var _G45_TR={grp:null, day:0, res:null, run:false};
+
+async function _g45TrEspn(path){
+  var base=(typeof FD_PROXY!=='undefined'?FD_PROXY:'https://fd-proxy.touraine-antoine.workers.dev');
+  var r=await fetch(base+'?host=espn&path='+encodeURIComponent(path));
+  if(!r.ok) throw new Error('HTTP '+r.status);
+  return await r.json();
+}
+function _g45TrYmd(d){ return d.getFullYear()+String(d.getMonth()+1).padStart(2,'0')+String(d.getDate()).padStart(2,'0'); }
+function _g45TrAcc(){ return {n:0,sc:0,cc:0,btts:0,o15:0,o25:0,o35:0,cs:0,w:0,d:0,l:0,gf:0,ga:0}; }
+function _g45TrAdd(a,gf,ga){
+  a.n++; a.gf+=gf; a.ga+=ga;
+  if(gf>0) a.sc++;
+  if(ga>0) a.cc++; else a.cs++;
+  if(gf>0&&ga>0) a.btts++;
+  var t=gf+ga;
+  if(t>1.5) a.o15++;
+  if(t>2.5) a.o25++;
+  if(t>3.5) a.o35++;
+  if(gf>ga) a.w++; else if(gf===ga) a.d++; else a.l++;
+}
+/* Taux mélangé : on privilégie le contexte (dom/ext) dès que l'échantillon le permet */
+function _g45TrRate(spec, all, k){
+  var ra=all.n?(all[k]/all.n):0;
+  if(spec.n>=6) return 0.6*(spec[k]/spec.n)+0.4*ra;
+  return ra;
+}
+async function _g45TrTeam(league, tid){
+  var ck='g45tr_'+league+'_'+tid;
+  try{ var c=JSON.parse(localStorage.getItem(ck)||'null'); if(c&&(Date.now()-c.t)<6*3600000) return c.d; }catch(e){}
+  var all=_g45TrAcc(), home=_g45TrAcc(), away=_g45TrAcc(), evs=[];
+  var pull=async function(season){
+    var p='/apis/site/v2/sports/soccer/'+league+'/teams/'+tid+'/schedule'+(season?('?season='+season):'');
+    var j=null; try{ j=await _g45TrEspn(p); }catch(e){ return; }
+    (j&&j.events||[]).forEach(function(e){ evs.push(e); });
+  };
+  await pull(0);
+  var done=evs.filter(function(e){ var c=(e.competitions&&e.competitions[0])||{}; var st=(c.status&&c.status.type)||(e.status&&e.status.type)||{}; return st.completed===true; });
+  if(done.length<8){ var y=new Date().getFullYear(); await pull(y-1); }
+  var seen={};
+  evs.forEach(function(e){
+    if(seen[e.id]) return; seen[e.id]=1;
+    var c=(e.competitions&&e.competitions[0])||{};
+    var st=(c.status&&c.status.type)||(e.status&&e.status.type)||{};
+    if(st.completed!==true) return;
+    var cs=c.competitors||[]; if(cs.length<2) return;
+    var me=null, op=null;
+    cs.forEach(function(x){ if(String((x.team&&x.team.id)||x.id)===String(tid)) me=x; else op=x; });
+    if(!me||!op) return;
+    var sv=function(x){ var v=x.score; if(v&&typeof v==='object') v=(v.value!=null?v.value:v.displayValue); return parseInt(v,10); };
+    var gf=sv(me), ga=sv(op);
+    if(isNaN(gf)||isNaN(ga)) return;
+    _g45TrAdd(all,gf,ga);
+    if(me.homeAway==='home') _g45TrAdd(home,gf,ga); else _g45TrAdd(away,gf,ga);
+  });
+  var d={all:all, home:home, away:away};
+  try{ localStorage.setItem(ck, JSON.stringify({t:Date.now(), d:d})); }catch(e){}
+  return d;
+}
+/* Cotes ESPN : moneyline américaine → décimale */
+function _g45TrOddsEv(ev){
+  var c=(ev.competitions&&ev.competitions[0])||{};
+  var pc=c.odds||ev.odds||[];
+  if(!pc.length) return null;
+  var o=pc[0]||{};
+  var ml=function(x){
+    if(!x) return 0;
+    var m=x.moneyLine;
+    if(m==null&&x.summary){ var mm=String(x.summary).match(/[-+]?\d+/); if(mm) m=parseInt(mm[0],10); }
+    if(m==null||isNaN(m)) return 0;
+    m=parseInt(m,10);
+    return m>0?(m/100+1):(100/Math.abs(m)+1);
+  };
+  return {h:ml(o.homeTeamOdds), d:ml(o.drawOdds), a:ml(o.awayTeamOdds),
+          line:(o.overUnder!=null?o.overUnder:(o.total!=null?o.total:null)),
+          prov:((o.provider&&o.provider.name)||'')};
+}
+/* Retrait de la marge : on normalise pour que les probabilités somment à 1 */
+function _g45TrDevig(cotes){
+  var q=cotes.map(function(c){ return (c&&c>1)?(1/c):0; });
+  var s=q.reduce(function(a,b){ return a+b; },0);
+  if(s<=0) return null;
+  return q.map(function(x){ return x/s; });
+}
+function _g45TrPct(x){ return Math.round(x*100)+'%'; }
+/* Construction des marchés — partie spécifique au football */
+function _g45TrBuild(ev, H, A, hN, aN){
+  var out=[];
+  var mn=Math.min(H.all.n, A.all.n);
+  var od=_g45TrOddsEv(ev);
+  var fair3=od?_g45TrDevig([od.h,od.d,od.a]):null;
+
+  var r=function(T,spec,k){ return _g45TrRate(spec,T.all,k); };
+  var bttsH=r(H,H.home,'btts'), bttsA=r(A,A.away,'btts');
+  var o25H=r(H,H.home,'o25'),  o25A=r(A,A.away,'o25');
+  var o15H=r(H,H.home,'o15'),  o15A=r(A,A.away,'o15');
+  var o35H=r(H,H.home,'o35'),  o35A=r(A,A.away,'o35');
+
+  var fait=function(nom,acc,k,lbl){ return nom+' : '+lbl+' lors de '+acc[k]+' de ses '+acc.n+' derniers matchs ('+_g45TrPct(acc.n?acc[k]/acc.n:0)+')'; };
+
+  out.push({m:'Les deux marquent', p:(bttsH+bttsA)/2, fair:null, cote:0, n:mn,
+    faits:[fait(hN,H.home,'btts','les deux équipes ont marqué à domicile'), fait(aN,A.away,'btts','les deux équipes ont marqué à l\'extérieur'),
+           fait(hN,H.all,'sc','a marqué'), fait(aN,A.all,'sc','a marqué')]});
+  out.push({m:'+ de 2,5 buts', p:(o25H+o25A)/2, fair:null, cote:0, n:mn,
+    faits:[fait(hN,H.home,'o25','+2,5 buts à domicile'), fait(aN,A.away,'o25','+2,5 buts à l\'extérieur')]});
+  out.push({m:'+ de 1,5 but', p:(o15H+o15A)/2, fair:null, cote:0, n:mn,
+    faits:[fait(hN,H.home,'o15','+1,5 but à domicile'), fait(aN,A.away,'o15','+1,5 but à l\'extérieur')]});
+  out.push({m:'- de 3,5 buts', p:1-((o35H+o35A)/2), fair:null, cote:0, n:mn,
+    faits:[fait(hN,H.home,'o35','+3,5 buts à domicile'), fait(aN,A.away,'o35','+3,5 buts à l\'extérieur')]});
+
+  /* 1N2 : force relative dom/ext, normalisée */
+  var pw=r(H,H.home,'w'), pl=r(A,A.away,'l'), p1=(pw+pl)/2;
+  var pw2=r(A,A.away,'w'), pl2=r(H,H.home,'l'), p2=(pw2+pl2)/2;
+  var pd=(r(H,H.home,'d')+r(A,A.away,'d'))/2;
+  var st=p1+pd+p2; if(st>0){ p1/=st; pd/=st; p2/=st; }
+  var f1=fair3?fair3[0]:null, fN=fair3?fair3[1]:null, f2=fair3?fair3[2]:null;
+  var fW=function(acc,k){ return acc.n?(acc[k]/acc.n):0; };
+  out.push({m:'Victoire '+hN, p:p1, fair:f1, cote:od?od.h:0, n:mn,
+    faits:[hN+' : '+H.home.w+' victoires en '+H.home.n+' matchs à domicile ('+_g45TrPct(fW(H.home,'w'))+')',
+           aN+' : '+A.away.l+' défaites en '+A.away.n+' matchs à l\'extérieur ('+_g45TrPct(fW(A.away,'l'))+')']});
+  out.push({m:'Victoire '+aN, p:p2, fair:f2, cote:od?od.a:0, n:mn,
+    faits:[aN+' : '+A.away.w+' victoires en '+A.away.n+' matchs à l\'extérieur ('+_g45TrPct(fW(A.away,'w'))+')',
+           hN+' : '+H.home.l+' défaites en '+H.home.n+' matchs à domicile ('+_g45TrPct(fW(H.home,'l'))+')']});
+  out.push({m:'Match nul', p:pd, fair:fN, cote:od?od.d:0, n:mn,
+    faits:[hN+' : '+H.home.d+' nuls en '+H.home.n+' à domicile', aN+' : '+A.away.d+' nuls en '+A.away.n+' à l\'extérieur']});
+  if(fair3){
+    out.push({m:hN+' ou nul', p:p1+pd, fair:f1+fN, cote:0, n:mn,
+      faits:[hN+' invaincu lors de '+(H.home.w+H.home.d)+' de ses '+H.home.n+' matchs à domicile ('+_g45TrPct(H.home.n?(H.home.w+H.home.d)/H.home.n:0)+')']});
+    out.push({m:aN+' ou nul', p:p2+pd, fair:f2+fN, cote:0, n:mn,
+      faits:[aN+' invaincu lors de '+(A.away.w+A.away.d)+' de ses '+A.away.n+' matchs à l\'extérieur ('+_g45TrPct(A.away.n?(A.away.w+A.away.d)/A.away.n:0)+')']});
+    out.push({m:'Pas de nul', p:p1+p2, fair:f1+f2, cote:0, n:mn, faits:[]});
+  }
+  out.forEach(function(x){ x.gap=(x.fair!=null)?(x.p-x.fair):null; x.line=od?od.line:null; x.prov=od?od.prov:''; });
+  return out;
+}
+window._g45TrBuild=_g45TrBuild;
+
+/* ── Onglet 🔥 Tendances : sélection, balayage, rendu ── */
+function _g45TrGroups(){
+  var G=(typeof G45_LEAGUE_GROUPS!=='undefined')?G45_LEAGUE_GROUPS:[];
+  return G.filter(function(g){ return g&&g.leagues&&g.leagues.length; });
+}
+function g45TrSel(i){
+  var s=_G45_TR.sel||{};
+  s[i]=!s[i]; _G45_TR.sel=s; _G45_TR.res=null;
+  loadTendancesTab();
+}
+function g45TrDay(d){ _G45_TR.day=d; _G45_TR.res=null; loadTendancesTab(); }
+window.g45TrSel=g45TrSel; window.g45TrDay=g45TrDay;
+
+function loadTendancesTab(){
+  var el=document.getElementById('t-tend'); if(!el) return;
+  var G=_g45TrGroups();
+  if(!_G45_TR.sel){ _G45_TR.sel={}; G.forEach(function(g,i){ if(/Grands championnats|Coupes d/i.test(g.grp)) _G45_TR.sel[i]=true; }); }
+  var chip=function(lbl,on,fn){ return '<button onclick="'+fn+'" style="border:none;cursor:pointer;border-radius:8px;padding:6px 11px;font-size:10px;font-weight:800;background:'+(on?'#f0c828':'rgba(255,255,255,.06)')+';color:'+(on?'#221b00':'var(--t2)')+';">'+lbl+'</button>'; };
+  var h='<div class="sec" style="margin-top:0;">🔥 Tendances du jour</div>'
+    +'<div style="font-size:9px;color:var(--t3);line-height:1.6;margin-bottom:9px;">Les tendances sont classées par <b>écart avec la cote</b>, pas par pourcentage brut : une série à 100% ne vaut rien si le bookmaker l\'a déjà intégrée. Les cotes sont dévigorisées avant comparaison.</div>'
+    +'<div style="display:flex;gap:5px;flex-wrap:wrap;margin-bottom:7px;">'
+    +G.map(function(g,i){ return chip(g.grp, !!_G45_TR.sel[i], "g45TrSel("+i+")"); }).join('')+'</div>'
+    +'<div style="display:flex;gap:5px;flex-wrap:wrap;margin-bottom:9px;align-items:center;">'
+    +'<span style="font-size:9px;color:var(--t3);">Jour :</span>'
+    +chip("Aujourd'hui", _G45_TR.day===0, "g45TrDay(0)")+chip('Demain', _G45_TR.day===1, "g45TrDay(1)")
+    +'</div>';
+  if(!_G45_TR.res){
+    h+='<button onclick="g45TrRun()" style="width:100%;border:none;cursor:pointer;border-radius:9px;padding:11px;font-size:11px;font-weight:800;background:rgba(240,200,40,.16);color:#f0c828;">⚡ Analyser les matchs</button>'
+      +'<div id="g45tr-prog" style="font-size:10px;color:#8aa0ff;text-align:center;padding:9px;"></div>';
+  } else {
+    h+=_g45TrRender();
+  }
+  el.innerHTML=h;
+}
+window.loadTendancesTab=loadTendancesTab;
+
+async function g45TrRun(){
+  if(_G45_TR.run) return;
+  _G45_TR.run=true;
+  var pg=function(t){ var b=document.getElementById('g45tr-prog'); if(b) b.innerHTML=t; };
+  try{
+    var G=_g45TrGroups(), slugs=[];
+    G.forEach(function(g,i){ if(_G45_TR.sel[i]) g.leagues.forEach(function(l){ if(slugs.indexOf(l.slug)<0) slugs.push(l.slug); }); });
+    if(!slugs.length){ pg('Sélectionne au moins un groupe.'); _G45_TR.run=false; return; }
+    var d=new Date(); if(_G45_TR.day) d=new Date(+d+864e5);
+    var ymd=_g45TrYmd(d);
+    var fixtures=[];
+    for(var i=0;i<slugs.length;i++){
+      pg('📅 Matchs du jour… '+(i+1)+'/'+slugs.length);
+      try{
+        var j=await _g45TrEspn('/apis/site/v2/sports/soccer/'+slugs[i]+'/scoreboard?dates='+ymd);
+        (j.events||[]).forEach(function(e){
+          var c=(e.competitions&&e.competitions[0])||{};
+          var st=(c.status&&c.status.type)||{};
+          if(st.state==='post') return;
+          fixtures.push({ev:e, slug:slugs[i]});
+        });
+      }catch(e){}
+    }
+    if(!fixtures.length){ pg('Aucun match à venir sur ce jour et ces compétitions.'); _G45_TR.run=false; return; }
+    fixtures=fixtures.slice(0,30);
+    var res=[];
+    for(var k=0;k<fixtures.length;k++){
+      pg('📊 Analyse… '+(k+1)+'/'+fixtures.length+' matchs');
+      var f=fixtures[k], c=(f.ev.competitions&&f.ev.competitions[0])||{};
+      var cs=c.competitors||[]; if(cs.length<2) continue;
+      var ho=cs.filter(function(x){ return x.homeAway==='home'; })[0]||cs[0];
+      var aw=cs.filter(function(x){ return x.homeAway==='away'; })[0]||cs[1];
+      var hid=(ho.team&&ho.team.id)||ho.id, aid=(aw.team&&aw.team.id)||aw.id;
+      var hN=(ho.team&&(ho.team.shortDisplayName||ho.team.displayName))||'?';
+      var aN=(aw.team&&(aw.team.shortDisplayName||aw.team.displayName))||'?';
+      if(!hid||!aid) continue;
+      var H=null,A=null;
+      try{ H=await _g45TrTeam(f.slug,hid); A=await _g45TrTeam(f.slug,aid); }catch(e){ continue; }
+      if(!H||!A||!H.all.n||!A.all.n) continue;
+      var mk=_g45TrBuild(f.ev,H,A,hN,aN);
+      var when='';
+      try{ when=new Date(f.ev.date).toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'}); }catch(e){}
+      mk.forEach(function(m){ res.push({m:m, hN:hN, aN:aN, when:when, slug:f.slug, id:f.ev.id}); });
+    }
+    res.sort(function(x,z){
+      var gx=(x.m.gap==null)?-9:x.m.gap, gz=(z.m.gap==null)?-9:z.m.gap;
+      if(gz!==gx) return gz-gx;
+      return z.m.p-x.m.p;
+    });
+    _G45_TR.res=res;
+  }catch(e){ pg('Erreur : '+String((e&&e.message)||e)); }
+  _G45_TR.run=false;
+  loadTendancesTab();
+}
+window.g45TrRun=g45TrRun;
+
+function _g45TrRender(){
+  var R=_G45_TR.res||[];
+  var avec=R.filter(function(x){ return x.m.gap!=null&&x.m.gap>=0.05&&x.m.n>=10; });
+  var sans=R.filter(function(x){ return x.m.gap==null&&x.m.p>=0.62&&x.m.n>=10; }).slice(0,12);
+  var h='<button onclick="_G45_TR.res=null;loadTendancesTab();" style="border:none;cursor:pointer;background:rgba(255,255,255,.06);border-radius:8px;color:var(--t2);padding:6px 11px;font-size:10px;font-weight:700;margin-bottom:9px;">↺ Relancer</button>';
+  var card=function(x,showGap){
+    var m=x.m;
+    var col=(m.gap!=null&&m.gap>=0.10)?'#2ecc71':(m.gap!=null&&m.gap>=0.05)?'#f0c828':'#8aa0ff';
+    var s='<div style="background:rgba(12,16,28,.96);border:1px solid rgba(255,255,255,.08);border-left:3px solid '+col+';border-radius:9px;padding:9px 11px;margin-bottom:7px;">'
+      +'<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;">'
+      +'<div style="flex:1;min-width:0;">'
+        +'<div style="font-size:11px;font-weight:800;color:var(--t1);">'+_g45CyEa(x.hN)+' – '+_g45CyEa(x.aN)+'</div>'
+        +'<div style="font-size:11px;font-weight:700;color:'+col+';margin-top:2px;">'+_g45CyEa(m.m)+'</div>'
+      +'</div>'
+      +'<div style="flex:none;text-align:right;">'
+        +'<div style="font-size:13px;font-weight:800;color:'+col+';">'+_g45TrPct(m.p)+'</div>'
+        +(showGap&&m.gap!=null?('<div style="font-size:8px;color:'+col+';">écart +'+Math.round(m.gap*100)+' pts</div>'):'')
+        +(m.cote?('<div style="font-size:9px;color:var(--t3);">cote '+m.cote.toFixed(2)+'</div>'):'')
+        +(x.when?('<div style="font-size:8px;color:var(--t3);">'+_g45CyEa(x.when)+'</div>'):'')
+      +'</div></div>';
+    if(m.fair!=null) s+='<div style="font-size:8px;color:var(--t3);margin-top:4px;">Bookmaker (marge retirée) : '+_g45TrPct(m.fair)+'</div>';
+    if(m.faits&&m.faits.length) s+='<ul style="margin:6px 0 0 0;padding-left:15px;">'+m.faits.slice(0,4).map(function(f){ return '<li style="font-size:9px;color:var(--t2);line-height:1.55;">'+_g45CyEa(f)+'</li>'; }).join('')+'</ul>';
+    if(m.n<14) s+='<div style="font-size:8px;color:#ff8c42;margin-top:4px;">⚠️ Échantillon réduit ('+m.n+' matchs) — à prendre avec prudence.</div>';
+    return s+'</div>';
+  };
+  if(avec.length){
+    h+='<div style="font-size:10px;font-weight:800;color:#2ecc71;margin:8px 0 6px;">💎 Écart favorable ('+avec.length+')</div>';
+    avec.slice(0,25).forEach(function(x){ h+=card(x,true); });
+  } else {
+    h+='<div style="font-size:10px;color:var(--t3);text-align:center;padding:12px;line-height:1.6;">Aucun écart significatif détecté aujourd\'hui.<br><span style="font-size:9px;">C\'est le résultat le plus fréquent, et c\'est normal : le marché est efficace la plupart du temps.</span></div>';
+  }
+  if(sans.length){
+    h+='<div style="font-size:10px;font-weight:800;color:#8aa0ff;margin:14px 0 6px;">📊 Taux élevés sans cote disponible</div>'
+      +'<div style="font-size:8px;color:var(--t3);margin-bottom:6px;font-style:italic;">Aucun écart calculable ici : ESPN ne fournit pas la cote de ces marchés. À vérifier chez ton bookmaker.</div>';
+    sans.forEach(function(x){ h+=card(x,false); });
+  }
+  return h+'<div style="font-size:8px;color:var(--t3);text-align:center;margin-top:10px;font-style:italic;">Probabilités estimées sur les taux de base réels des deux équipes (dom/ext pondéré). Ce ne sont pas des prédictions : les cotes intègrent déjà l\'essentiel de l\'information.</div>';
+}
+
 function loadLiveTab(){
   var el=document.getElementById('t-live'); if(!el) return;
   setTimeout(function(){
@@ -25447,6 +25721,89 @@ function _g45PreMatchBlock(data){
       +probHtml+statsHtml+formHtml+standCont+'</div>';
   }catch(e){ return ''; }
 }
+/* ── 🔁 SCORE DU MATCH ALLER (confrontations aller-retour) ──
+   ESPN n'expose pas la notion de manche de façon fiable. On retrouve donc l'aller en
+   cherchant, dans le calendrier de l'équipe, une rencontre TERMINÉE contre le même
+   adversaire, dans la même compétition, moins de 90 jours avant — ce qui exclut la
+   saison précédente. Injection différée : le bloc avant-match est synchrone. */
+function _g45Leg1League(data){
+  var H=data&&data.header;
+  if(!H) return '';
+  var c=[(H.league&&H.league.slug), (H.league&&H.league.id),
+         (H.leagues&&H.leagues[0]&&H.leagues[0].slug),
+         (H.competitions&&H.competitions[0]&&H.competitions[0].league&&H.competitions[0].league.slug)];
+  for(var i=0;i<c.length;i++){ if(c[i]&&/[a-z]/i.test(String(c[i]))) return String(c[i]); }
+  return '';
+}
+async function _g45Leg1Fill(slotId, league, hId, aId, evId, evDate){
+  var el=null;
+  for(var t=0;t<12&&!el;t++){ el=document.getElementById(slotId); if(!el) await new Promise(function(r){ setTimeout(r,200); }); }
+  if(!el) return;
+  var j=null;
+  try{ j=await _g45TrEspn('/apis/site/v2/sports/soccer/'+league+'/teams/'+hId+'/schedule'); }catch(e){ return; }
+  var evD=Date.parse(evDate); if(isNaN(evD)) evD=Date.now();
+  var best=null;
+  ((j&&j.events)||[]).forEach(function(e){
+    if(String(e.id)===String(evId)) return;
+    var c=(e.competitions&&e.competitions[0])||{};
+    var st=(c.status&&c.status.type)||(e.status&&e.status.type)||{};
+    if(st.completed!==true) return;
+    var cs=c.competitors||[]; if(cs.length<2) return;
+    var ids=cs.map(function(x){ return String((x.team&&x.team.id)||x.id||''); });
+    if(ids.indexOf(String(aId))<0) return;
+    var d=Date.parse(e.date);
+    if(isNaN(d)||d>=evD||(evD-d)>90*864e5) return;
+    if(!best||d>best.d) best={d:d, cs:cs};
+  });
+  if(!best) return;
+  var sv=function(x){ var v=x.score; if(v&&typeof v==='object') v=(v.value!=null?v.value:v.displayValue); return parseInt(v,10); };
+  var nm=function(x){ return (x.team&&(x.team.shortDisplayName||x.team.displayName))||'?'; };
+  var lh=best.cs.filter(function(x){ return x.homeAway==='home'; })[0]||best.cs[0];
+  var la=best.cs.filter(function(x){ return x.homeAway==='away'; })[0]||best.cs[1];
+  var gh=sv(lh), ga=sv(la);
+  if(isNaN(gh)||isNaN(ga)) return;
+  /* qui est devant, exprimé du point de vue de l'équipe qui reçoit aujourd'hui */
+  var chezMoi = String((lh.team&&lh.team.id)||'')===String(hId);
+  var pourMoi = chezMoi?gh:ga, contreMoi = chezMoi?ga:gh;
+  var etat, col;
+  if(pourMoi>contreMoi){ etat='avantage acquis à l\'aller'; col='#2ecc71'; }
+  else if(pourMoi<contreMoi){ etat='retard à combler'; col='#ff6b6b'; }
+  else { etat='tout reste à faire'; col='#f0c828'; }
+  var dt=''; try{ dt=new Date(best.d).toLocaleDateString('fr-FR',{day:'numeric',month:'short'}); }catch(e){}
+  el.innerHTML='<div style="background:rgba(138,160,255,.10);border:1px solid rgba(138,160,255,.28);border-left:3px solid '+col+';border-radius:9px;padding:9px 11px;margin-bottom:10px;">'
+    +'<div style="font-size:9px;font-weight:800;letter-spacing:.5px;text-transform:uppercase;color:#8aa0ff;margin-bottom:5px;">🔁 Match aller'+(dt?(' · '+_g45CyEa(dt)):'')+'</div>'
+    +'<div style="display:flex;align-items:center;justify-content:center;gap:10px;font-size:12px;font-weight:800;color:var(--t1);">'
+      +'<span>'+_g45CyEa(nm(lh))+'</span>'
+      +'<span style="background:rgba(0,0,0,.30);border-radius:6px;padding:2px 9px;">'+gh+' – '+ga+'</span>'
+      +'<span>'+_g45CyEa(nm(la))+'</span>'
+    +'</div>'
+    +'<div style="font-size:9px;color:'+col+';text-align:center;margin-top:4px;font-weight:700;">'+_g45CyEa(etat)+'</div></div>';
+}
+window._g45Leg1Fill=_g45Leg1Fill;
+
+/* Enveloppe : on garde la logique d'origine et on prefixe le bloc "match aller" */
+var _g45PreMatchBase=_g45PreMatchBlock;
+_g45PreMatchBlock=function(data){
+  var h='';
+  try{ h=_g45PreMatchBase(data); }catch(e){ return ''; }
+  if(!h) return h;
+  try{
+    var comp=(data.header&&data.header.competitions&&data.header.competitions[0])||{};
+    var cps=comp.competitors||[];
+    var home=cps.filter(function(c){return c.homeAway==='home';})[0]||cps[0];
+    var away=cps.filter(function(c){return c.homeAway==='away';})[0]||cps[1];
+    var hId=String((home&&home.team&&home.team.id)||''), aId=String((away&&away.team&&away.team.id)||'');
+    var lg=_g45Leg1League(data);
+    var evId=String((data.header&&data.header.id)||comp.id||'');
+    var evDate=(comp.date||(data.header&&data.header.date)||'');
+    if(hId&&aId&&lg&&evId){
+      var slot='g45leg1-'+evId;
+      _g45Leg1Fill(slot, lg, hId, aId, evId, evDate);
+      return '<div id="'+slot+'"></div>'+h;
+    }
+  }catch(e){}
+  return h;
+};
 window._g45PreMatchBlock=_g45PreMatchBlock;
 /* Complète les pastilles de forme avec l'adversaire + score des 5 derniers matchs (calendrier ESPN) */
 function _g45FillForm(box, league){
