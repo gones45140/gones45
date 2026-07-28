@@ -20239,16 +20239,11 @@ function _g45TrSeason(){
   var d=new Date();
   return (d.getMonth()>=7)?d.getFullYear():(d.getFullYear()-1);
 }
-/* Championnat national déduit du lien ESPN de l'équipe (.../league/cro.1) : indispensable
-   en coupe d'Europe, où le calendrier de la compétition ne contient que 2 à 4 matchs. */
-function _g45TrDomLeague(cp){
-  var lk=(cp&&cp.team&&cp.team.links)||[];
-  for(var i=0;i<lk.length;i++){
-    var m=String(lk[i].href||'').match(/\/league\/([a-z0-9._-]+)/i);
-    if(m&&m[1]) return m[1].toLowerCase();
-  }
-  return '';
-}
+/* ESPN accepte le slug générique "all" : le calendrier renvoyé couvre TOUTES les
+   compétitions de l'équipe. Indispensable en coupe, où le calendrier de la seule
+   compétition en cours ne contient que 2 à 4 matchs. Vérifié : l'objet team n'expose
+   aucune ligue (uid = s:600~t:8169), la déduction par les liens était impossible. */
+var _G45_TR_ALL='all';
 function _g45TrYmd(d){ return d.getFullYear()+String(d.getMonth()+1).padStart(2,'0')+String(d.getDate()).padStart(2,'0'); }
 function _g45TrAcc(){ return {n:0,sc:0,cc:0,btts:0,o15:0,o25:0,o35:0,cs:0,w:0,d:0,l:0,gf:0,ga:0}; }
 function _g45TrAdd(a,gf,ga){
@@ -20269,11 +20264,11 @@ function _g45TrRate(spec, all, k){
   return ra;
 }
 async function _g45TrTeam(league, tid){
-  var ck='g45trv2_'+league+'_'+tid;
+  var ck='g45trv3_'+tid;
   try{ var c=JSON.parse(localStorage.getItem(ck)||'null'); if(c&&(Date.now()-c.t)<6*3600000) return c.d; }catch(e){}
   var all=_g45TrAcc(), home=_g45TrAcc(), away=_g45TrAcc(), evs=[];
   var pull=async function(season){
-    var p='/apis/site/v2/sports/soccer/'+league+'/teams/'+tid+'/schedule'+(season?('?season='+season):'');
+    var p='/apis/site/v2/sports/soccer/'+_G45_TR_ALL+'/teams/'+tid+'/schedule'+(season?('?season='+season):'');
     var j=null; try{ j=await _g45TrEspn(p); }catch(e){ return; }
     (j&&j.events||[]).forEach(function(e){ evs.push(e); });
   };
@@ -20455,11 +20450,8 @@ async function g45TrRun(){
       var hN=(ho.team&&(ho.team.shortDisplayName||ho.team.displayName))||'?';
       var aN=(aw.team&&(aw.team.shortDisplayName||aw.team.displayName))||'?';
       if(!hid||!aid) continue;
-      var hLg=_g45TrDomLeague(ho)||f.slug, aLg=_g45TrDomLeague(aw)||f.slug;
       var H=null,A=null;
-      try{ H=await _g45TrTeam(hLg,hid); A=await _g45TrTeam(aLg,aid); }catch(e){ continue; }
-      if((!H||H.all.n<4)&&hLg!==f.slug){ try{ H=await _g45TrTeam(f.slug,hid); }catch(e){} }
-      if((!A||A.all.n<4)&&aLg!==f.slug){ try{ A=await _g45TrTeam(f.slug,aid); }catch(e){} }
+      try{ H=await _g45TrTeam(f.slug,hid); A=await _g45TrTeam(f.slug,aid); }catch(e){ continue; }
       if(!H||!A||!H.all.n||!A.all.n) continue;
       var mk=_g45TrBuild(f.ev,H,A,hN,aN);
       var when='';
@@ -25767,7 +25759,9 @@ async function _g45Leg1Fill(slotId, league, hId, aId, evId, evDate){
   var j=null;
   var sy=(typeof _g45TrSeason==='function')?_g45TrSeason():new Date().getFullYear();
   try{ j=await _g45TrEspn('/apis/site/v2/sports/soccer/'+league+'/teams/'+hId+'/schedule?season='+sy); }catch(e){}
-  if(!j||!(j.events||[]).length){ try{ j=await _g45TrEspn('/apis/site/v2/sports/soccer/'+league+'/teams/'+hId+'/schedule?season='+(sy+1)); }catch(e){ return; } }
+  if(!j||!(j.events||[]).length){ try{ j=await _g45TrEspn('/apis/site/v2/sports/soccer/'+league+'/teams/'+hId+'/schedule?season='+(sy+1)); }catch(e){} }
+  if(!j||!(j.events||[]).length){ try{ j=await _g45TrEspn('/apis/site/v2/sports/soccer/all/teams/'+hId+'/schedule?season='+sy); }catch(e){} }
+  if(!j||!(j.events||[]).length){ try{ j=await _g45TrEspn('/apis/site/v2/sports/soccer/all/teams/'+hId+'/schedule?season='+(sy+1)); }catch(e){ return; } }
   if(!j) return;
   var evD=Date.parse(evDate); if(isNaN(evD)) evD=Date.now();
   var best=null;
