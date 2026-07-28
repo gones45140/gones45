@@ -17734,6 +17734,18 @@ async function loadTeamSaisons() {
     try { localStorage.setItem('g45_saisons_cache_v2_'+teamId, JSON.stringify({ts:Date.now(), data:results})); } catch(e){}
     renderSaisonsChart(el, results, nom);
 
+    // Mi-temps football-data en arrière-plan (ESPN ne la fournit pas)
+    (async function(){
+      try{
+        var _nHT=await _g45FdHalfTime(teamId, results);
+        if(_nHT>0){
+          _saisonsCache[teamId]=results;
+          try{ localStorage.setItem('g45_saisons_cache_v2_'+teamId, JSON.stringify({ts:Date.now(), data:results})); }catch(e){}
+          renderSaisonsChart(el, results, nom);
+        }
+      }catch(e){}
+    })();
+
     // Compléter avec les coupes football-data SANS bloquer (years alignées sur ESPN)
     var keys = Object.keys(results);
     (async function(){
@@ -17898,6 +17910,43 @@ function filterMatchesByComp(matches, filters) {
   });
 }
 
+/* ── ⏱️ MI-TEMPS via football-data.org ──
+   ESPN ne fournit pas les scores à la pause : ni dans le calendrier d'équipe, ni via
+   linescores (vérifié : toujours null). football-data.org, lui, expose score.halfTime.
+   On apparie par DATE civile — une équipe ne joue jamais deux fois le même jour.
+   Le palier gratuit ne couvre qu'une dizaine de compétitions : les matchs non couverts
+   restent sans mi-temps, et les tuiles concernées se calculent sur l'échantillon réel. */
+async function _g45FdHalfTime(teamId, results){
+  var jour=function(d){ try{ return new Date(d).toISOString().slice(0,10); }catch(e){ return ''; } };
+  var total=0;
+  var saisons=Object.keys(results||{});
+  for(var i=0;i<saisons.length;i++){
+    var y=saisons[i];
+    var manque=(results[y]||[]).some(function(m){ return !(m.score&&m.score.halfTime); });
+    if(!manque) continue;
+    var data=null;
+    try{ data=await fdFetch('/v4/teams/'+teamId+'/matches?status=FINISHED&season='+y); }catch(e){ continue; }
+    var parJour={};
+    ((data&&data.matches)||[]).forEach(function(fm){
+      var ht=fm.score&&fm.score.halfTime;
+      if(!ht||(ht.home==null&&ht.away==null)) return;
+      var k=jour(fm.utcDate); if(!k) return;
+      parJour[k]={home:ht.home, away:ht.away, h:(fm.homeTeam&&fm.homeTeam.id)};
+    });
+    (results[y]||[]).forEach(function(m){
+      if(m.score&&m.score.halfTime) return;
+      var e=parJour[jour(m.utcDate)];
+      if(!e) return;
+      /* football-data et ESPN peuvent orienter le match différemment : on se cale sur
+         l'équipe à domicile côté football-data pour ne pas inverser les scores. */
+      var memeSens=(e.h!=null && m.homeTeam && m.homeTeam.id!=null) ? (String(e.h)===String(m.homeTeam.id)) : true;
+      if(!m.score) m.score={};
+      m.score.halfTime = memeSens ? {home:e.home, away:e.away} : {home:e.away, away:e.home};
+      total++;
+    });
+  }
+  return total;
+}
 function calcSaisonStats(matchesRaw, teamId) {
   // Trier du plus récent au plus ancien
   var matches = matchesRaw.slice().sort(function(a,b){ return new Date(b.utcDate)-new Date(a.utcDate); });
