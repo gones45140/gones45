@@ -23091,7 +23091,7 @@ async function g45RcFavoris(raceId, stage, deep){
     var sc=0, why=[];
     if(st){
       if(st.t10){ sc+=st.t10*12; why.push(st.t10+' top10 '+tinfo.ico); }
-      if(st.best<30){ sc+=(30-st.best); why.push('meilleure '+st.best+'e'); }
+      if(st.best>0&&st.best<30){ sc+=(30-st.best); why.push('meilleure '+st.best+'e'); }
     }
     var rk = (clef==='val') ? Math.min(f.pts||999, f.mtn||999) : (f[clef]||999);
     if(rk<25){ sc+=(25-rk)*1.5; why.push((clef==='gc'?'GC':clef==='mtn'?'montagne':clef==='pts'?'points':'annexe')+' '+rk+'e'); }
@@ -23126,6 +23126,8 @@ async function g45RcFavoris(raceId, stage, deep){
     return;
   }
 
+  _g45Rc.fav.list=list.map(function(r){ return {id:r.id, nom:(r.o.nom||'?'), team:(r.o.team||''), why:r.why.slice(0)}; });
+  _g45Rc.fav.histY=histY;
   var bandeau = histY ? ('<div style="background:rgba(138,160,255,.12);border:1px solid rgba(138,160,255,.28);border-radius:8px;padding:7px 10px;margin-bottom:8px;font-size:9px;color:#8aa0ff;line-height:1.5;">\uD83D\uDCDA Bas\u00e9 sur l\u2019\u00e9dition '+histY+' \u2014 cette \u00e9dition n\u2019a pas encore de r\u00e9sultats.'+(histN?(' '+histN+' coureurs appari\u00e9s par identifiant UCI ; les nouveaux venus n\u2019apparaissent pas.'):'')+'</div>') : '';
   var rows='';
   list.forEach(function(r,i){
@@ -23159,34 +23161,36 @@ window.g45RcFavoris=g45RcFavoris;
 async function g45RcFavAI(raceId, stage){
   var box=document.getElementById('g45rc-ai'); if(!box) return;
   var c=_g45Rc.fav; if(!c) return;
-  var race=c.race, y=c.y;
-  box.innerHTML='<div style="font-size:10px;color:var(--t3);text-align:center;padding:8px;">\uD83D\uDD0E Recherche du contexte…</div>';
+  var race=c.race, y=c.y, L=c.list||[];
+  box.innerHTML='<div style="font-size:10px;color:var(--t3);text-align:center;padding:8px;">\uD83D\uDD0E Recherche du contexte\u2026</div>';
   var stages=await _g45RcStages(race, y);
   var cur=stages.filter(function(s){ return s.stage===stage; })[0]||{};
-  var noms=[];
-  var el=document.getElementById('t-resultats');
-  if(el) Array.prototype.slice.call(el.querySelectorAll('input[onchange^="g45RcSetCote"]')).forEach(function(inp){
-    var row=inp.parentNode, n=row.querySelector('div > div');
-    if(n) noms.push(n.textContent.replace(/[▲▼=+\-\d]+$/,'').trim());
-  });
-  noms=noms.slice(0,8);
+  var cotes=_g45RcCotes(race, y, stage);
   var web='';
-  if(typeof searchTavily==='function'){
-    try{ web=await searchTavily(race.n+' '+y+' étape '+stage+' favoris forme coureurs '+noms.slice(0,5).join(' '))||''; }catch(e){}
+  if(typeof searchTavily==='function' && L.length){
+    try{ web=await searchTavily(race.n+' '+y+' \u00e9tape '+stage+' favoris forme '+L.slice(0,5).map(function(r){return r.nom;}).join(' '))||''; }catch(e){}
   }
-  var facts='COURSE : '+race.n+' '+y+' — étape '+stage+'\n'
-    +'PARCOURS : '+(((cur.departureCity&&cur.departureCity.label)||'')+' > '+((cur.arrivalCity&&cur.arrivalCity.label)||''))
-    +' — type '+((_G45_RC_TERRAIN[cur.type]||{}).n||cur.type||'?')+((cur.lengthDisplay||cur.length)?(' — '+(cur.lengthDisplay||cur.length)+' km'):'')+'\n'
-    +'SHORTLIST CALCULEE (sur resultats passes par terrain) : '+noms.join(', ')+'\n'
-    +(web?('CONTEXTE WEB RECUPERE :\n'+web):'CONTEXTE WEB : non disponible (pas de cle Tavily ou aucun resultat)');
+  var facts=[];
+  facts.push('COURSE : '+race.n+' '+y+' \u2014 \u00e9tape '+stage);
+  facts.push('PARCOURS : '+(((cur.departureCity&&cur.departureCity.label)||'?')+' > '+((cur.arrivalCity&&cur.arrivalCity.label)||'?'))
+    +' \u2014 type '+((_G45_RC_TERRAIN[cur.type]||{}).n||cur.type||'?')
+    +((cur.lengthDisplay||cur.length)?(' \u2014 '+(cur.lengthDisplay||cur.length)+' km'):''));
+  if(c.histY) facts.push('ATTENTION : les statistiques ci-dessous viennent de l\'\u00e9dition '+c.histY+', pas de celle en cours.');
+  facts.push('SHORTLIST CALCULEE sur les resultats passes par terrain (place, nom, equipe, faits, cote saisie) :');
+  L.forEach(function(r,i){
+    facts.push('  '+(i+1)+'. '+r.nom+(r.team?(' ['+r.team+']'):'')
+      +' \u2014 '+(r.why.join(' ; ')||'aucun fait')
+      +(cotes[r.id]?(' \u2014 cote saisie : '+cotes[r.id]):''));
+  });
+  facts.push(web?('CONTEXTE WEB RECUPERE :\n'+web):'CONTEXTE WEB : non disponible.');
   var sys='Tu commentes une etape cycliste pour un parieur. Regles STRICTES : '
-    +'utilise UNIQUEMENT les faits fournis ci-dessous. '
-    +'N\'invente aucun nom, aucun resultat, aucune cote. '
-    +'Si le contexte web est absent ou muet sur un point, ecris "non renseigne" plutot que de combler. '
-    +'Dis clairement ce que le profil de l\'etape favorise (sprinteur, grimpeur, puncheur, rouleur) et pourquoi. '
+    +'utilise UNIQUEMENT les faits fournis. N\'invente aucun nom, aucun resultat, aucune cote. '
+    +'Si un point n\'est pas renseigne, ecris "non renseigne" plutot que de combler. '
+    +'Dis ce que le profil de l\'etape favorise (sprinteuse, grimpeuse, puncheuse, rouleuse) et pourquoi, '
+    +'puis signale les coureuses dont la cote saisie parait en decalage avec leur place dans la shortlist. '
     +'Termine en rappelant que les cotes integrent deja l\'essentiel de l\'information. '
     +'Reponds en francais, 8 lignes maximum.';
-  if(typeof _g45MultiAI==='function') _g45MultiAI(box, 'g45rc-ai', sys, facts, 'Étape '+stage+' — '+race.n);
+  if(typeof _g45MultiAI==='function') _g45MultiAI(box, 'g45rc-ai', sys, facts, '\u00c9tape '+stage+' \u2014 '+race.n);
   else box.innerHTML='<div style="font-size:10px;color:#ff6b6b;text-align:center;padding:8px;">Assistant IA indisponible.</div>';
 }
 window.g45RcFavAI=g45RcFavAI;
