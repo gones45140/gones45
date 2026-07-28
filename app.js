@@ -20497,13 +20497,268 @@ function _g45TrFair2(a,b){
   return f?f[0]:null;
 }
 
+/* ═══════════ 📐 MODÈLE DIXON-COLES ═══════════
+   Remplace les taux de base par un vrai modèle de buts. Principe :
+     force d'attaque d'une équipe = ses buts marqués par match ÷ moyenne du championnat
+     force défensive              = ses buts encaissés par match ÷ moyenne du championnat
+     λ domicile = attaque(reçoit) × faiblesse défensive(visiteur) × moyenne × avantage terrain
+   On en tire une matrice de scores exacts (loi de Poisson), corrigée par le facteur tau de
+   Dixon-Coles sur les quatre scores faibles (0-0, 1-0, 0-1, 1-1), que la loi de Poisson
+   sous-estime systématiquement au football. De cette matrice on déduit TOUS les marchés :
+   1N2, over/under, BTTS — cohérents entre eux, contrairement à des taux calculés séparément.
+
+   HONNÊTETÉ SUR LES LIMITES :
+   - l'avantage du terrain (1,10 / 0,89) et rho (−0,10) sont des constantes de la littérature,
+     non ajustées sur tes données ;
+   - le modèle est RELATIF à un championnat : il ne permet toujours pas de comparer deux
+     équipes de championnats différents (la suppression inter-championnats reste en place) ;
+   - il ignore la forme récente, les absents et la motivation. */
+var _G45_DC_HFA=1.10, _G45_DC_AFA=0.89, _G45_DC_RHO=-0.10;
+/* Régularisation : les modèles multiplicatifs exagèrent les gros déséquilibres (un PSG
+   contre un promu ressortait à 93% là où le marché dit ~85%). On ramène les forces vers
+   1, ce qui revient à admettre qu'une saison de 34 matchs ne suffit pas à mesurer une
+   force aussi extrême. 0,85 est un compromis, non ajusté sur des données. */
+var _G45_DC_SHRINK=0.85;
+function _g45DcShrink(v){ return 1+(v-1)*_G45_DC_SHRINK; }
+var _g45DcCache={};
+
+async function _g45DcStandings(slug, y){
+  var ck='g45dc_'+slug+'_'+y;
+  if(_g45DcCache[ck]) return _g45DcCache[ck];
+  try{ var c=JSON.parse(localStorage.getItem(ck)||'null'); if(c&&(Date.now()-c.t)<12*3600000){ _g45DcCache[ck]=c.d; return c.d; } }catch(e){}
+  var j=null;
+  try{
+    var r=await fetch('https://site.api.espn.com/apis/v2/sports/soccer/'+slug+'/standings?season='+y);
+    if(!r.ok) throw new Error('HTTP '+r.status);
+    j=await r.json();
+  }catch(e){ return null; }
+  var entries=[];
+  var push=function(arr){ (arr||[]).forEach(function(e){ entries.push(e); }); };
+  if(j.children&&j.children.length) j.children.forEach(function(ch){ push(ch.standings&&ch.standings.entries); });
+  else push(j.standings&&j.standings.entries);
+  var teams={}, sGF=0, sGP=0;
+  entries.forEach(function(e){
+    var id=String((e.team&&e.team.id)||''); if(!id) return;
+    var st=e.stats||[];
+    var gf=parseFloat(_g45Stat(st,['pointsFor','goalsFor']));
+    var ga=parseFloat(_g45Stat(st,['pointsAgainst','goalsAgainst']));
+    var gp=parseFloat(_g45Stat(st,['gamesPlayed','games']));
+    if(isNaN(gf)||isNaN(ga)||isNaN(gp)||gp<1) return;
+    teams[id]={gf:gf, ga:ga, gp:gp};
+    sGF+=gf; sGP+=gp;
+  });
+  var n=Object.keys(teams).length;
+  if(n<6||sGP<40) return null;              // championnat trop peu avancé pour être fiable
+  var mu=sGF/sGP;                            // buts marqués par équipe et par match
+  var d={mu:mu, n:n, teams:teams};
+  _g45DcCache[ck]=d;
+  try{ localStorage.setItem(ck, JSON.stringify({t:Date.now(), d:d})); }catch(e){}
+  return d;
+}
+function _g45DcLambdas(std, hid, aid){
+  if(!std) return null;
+  var H=std.teams[String(hid)], A=std.teams[String(aid)];
+  if(!H||!A||!std.mu) return null;
+  var attH=_g45DcShrink((H.gf/H.gp)/std.mu), defH=_g45DcShrink((H.ga/H.gp)/std.mu);
+  var attA=_g45DcShrink((A.gf/A.gp)/std.mu), defA=_g45DcShrink((A.ga/A.gp)/std.mu);
+  var lh=attH*defA*std.mu*_G45_DC_HFA;
+  var la=attA*defH*std.mu*_G45_DC_AFA;
+  /* garde-fous : au-delà de ces bornes on sort du domaine de validité du modèle */
+  lh=Math.min(5, Math.max(0.15, lh));
+  la=Math.min(5, Math.max(0.15, la));
+  return {lh:lh, la:la, attH:attH, defH:defH, attA:attA, defA:defA};
+}
+function _g45DcPois(k, lam){
+  var p=Math.exp(-lam), s=p;
+  for(var i=1;i<=k;i++){ p=p*lam/i; s=p; }
+  return s;
+}
+/* Correction Dixon-Coles : la loi de Poisson sous-estime les scores serrés à faible total */
+function _g45DcTau(x, y, lh, la, rho){
+  if(x===0&&y===0) return 1-lh*la*rho;
+  if(x===0&&y===1) return 1+lh*rho;
+  if(x===1&&y===0) return 1+la*rho;
+  if(x===1&&y===1) return 1-rho;
+  return 1;
+}
+function _g45DcMatrix(lh, la, rho){
+  if(rho==null||isNaN(rho)) rho=_G45_DC_RHO;
+  var MAX=9, M=[], tot=0;
+  for(var x=0;x<=MAX;x++){
+    M[x]=[];
+    for(var y=0;y<=MAX;y++){
+      var p=_g45DcPois(x,lh)*_g45DcPois(y,la)*_g45DcTau(x,y,lh,la,rho);
+      if(p<0) p=0;
+      M[x][y]=p; tot+=p;
+    }
+  }
+  if(tot>0) for(var i=0;i<=MAX;i++) for(var k=0;k<=MAX;k++) M[i][k]/=tot;
+  return M;
+}
+function _g45DcMarkets(M){
+  var r={p1:0,pN:0,p2:0,o05:0,o15:0,o25:0,o35:0,btts:0,cs:''};
+  var best=0;
+  for(var x=0;x<M.length;x++){
+    for(var y=0;y<M[x].length;y++){
+      var p=M[x][y], t=x+y;
+      if(x>y) r.p1+=p; else if(x===y) r.pN+=p; else r.p2+=p;
+      if(t>0.5) r.o05+=p;
+      if(t>1.5) r.o15+=p;
+      if(t>2.5) r.o25+=p;
+      if(t>3.5) r.o35+=p;
+      if(x>0&&y>0) r.btts+=p;
+      if(p>best){ best=p; r.cs=x+'-'+y; }
+    }
+  }
+  r.csP=best;
+  return r;
+}
+/* ═══════════ 📐 DIXON-COLES AJUSTÉ (maximum de vraisemblance) ═══════════
+   Contrairement à la version dérivée du classement, celle-ci ajuste les paramètres
+   MATCH PAR MATCH. Trois gains :
+     1. la force d'un adversaire est prise en compte — une équipe qui a affronté tous les
+        gros n'est plus pénalisée par ses totaux bruts ;
+     2. pondération temporelle exponentielle : un match récent pèse plus qu'un ancien ;
+     3. l'avantage du terrain est estimé sur le championnat, pas imposé.
+   Méthode : mise à l'échelle itérative (le maximum de vraisemblance du modèle de Poisson
+   multiplicatif a une forme fermée par itération), puis rho cherché sur une grille.
+   Repli automatique sur la version « classement » si les matchs ne sont pas récupérables. */
+var _G45_DC_XI=Math.LN2/180;   // demi-vie de 180 jours
+var _G45_DC_FITSHRINK=0.90;    // régularisation résiduelle, plus douce que sans ajustement
+
+async function _g45DcLeagueMatches(slug, y, ids){
+  var ck='g45dcm_'+slug+'_'+y;
+  try{ var c=JSON.parse(localStorage.getItem(ck)||'null'); if(c&&(Date.now()-c.t)<12*3600000) return c.d; }catch(e){}
+  var vus={}, ms=[];
+  for(var i=0;i<ids.length;i++){
+    var j=null;
+    try{ j=await _g45TrEspn('/apis/site/v2/sports/soccer/'+slug+'/teams/'+ids[i]+'/schedule?season='+y); }catch(e){ continue; }
+    ((j&&j.events)||[]).forEach(function(e){
+      if(vus[e.id]) return;
+      var c2=(e.competitions&&e.competitions[0])||{};
+      var st=(c2.status&&c2.status.type)||(e.status&&e.status.type)||{};
+      if(st.completed!==true) return;
+      var cs=c2.competitors||[]; if(cs.length<2) return;
+      var ho=cs.filter(function(x){ return x.homeAway==='home'; })[0];
+      var aw=cs.filter(function(x){ return x.homeAway==='away'; })[0];
+      if(!ho||!aw) return;
+      var sv=function(x){ var v=x.score; if(v&&typeof v==='object') v=(v.value!=null?v.value:v.displayValue); return parseInt(v,10); };
+      var hg=sv(ho), ag=sv(aw);
+      var hid=String((ho.team&&ho.team.id)||''), aid=String((aw.team&&aw.team.id)||'');
+      var t=Date.parse(e.date);
+      if(isNaN(hg)||isNaN(ag)||!hid||!aid||isNaN(t)) return;
+      vus[e.id]=1;
+      ms.push({h:hid, a:aid, hg:hg, ag:ag, t:t});
+    });
+  }
+  if(ms.length<40) return null;
+  try{ localStorage.setItem(ck, JSON.stringify({t:Date.now(), d:ms})); }catch(e){}
+  return ms;
+}
+function _g45DcFit(ms, ids){
+  var now=Date.now();
+  ms.forEach(function(m){ m.w=Math.exp(-_G45_DC_XI*Math.max(0,(now-m.t)/86400000)); });
+  var att={}, def={}, gamma=1.30;
+  ids.forEach(function(id){ att[id]=1; def[id]=1; });
+  /* Amortissement géométrique : évite l'emballement quand l'échantillon est mince. */
+  var mix=function(o,t){ if(!(o>0)||!(t>0)) return o; return Math.exp(0.2*Math.log(o)+0.8*Math.log(t)); };
+  for(var it=0; it<150; it++){
+    var nA={}, dA={}, nD={}, dD={};
+    ids.forEach(function(id){ nA[id]=0; dA[id]=0; nD[id]=0; dD[id]=0; });
+    ms.forEach(function(m){
+      if(att[m.h]==null||att[m.a]==null) return;
+      var w=m.w;
+      nA[m.h]+=w*m.hg;  dA[m.h]+=w*def[m.a]*gamma;
+      nA[m.a]+=w*m.ag;  dA[m.a]+=w*def[m.h];
+      nD[m.a]+=w*m.hg;  dD[m.a]+=w*att[m.h]*gamma;
+      nD[m.h]+=w*m.ag;  dD[m.h]+=w*att[m.a];
+    });
+    ids.forEach(function(id){
+      if(dA[id]>0&&nA[id]>0) att[id]=mix(att[id], nA[id]/dA[id]);
+      if(dD[id]>0&&nD[id]>0) def[id]=mix(def[id], nD[id]/dD[id]);
+    });
+    /* L'avantage du terrain se recalcule APRÈS, avec les forces à jour : en le mettant à
+       jour simultanément, le système oscille et diverge (vérifié — gamma partait à 0). */
+    var nG=0, dG=0;
+    ms.forEach(function(m){
+      if(att[m.h]==null||def[m.a]==null) return;
+      nG+=m.w*m.hg; dG+=m.w*att[m.h]*def[m.a];
+    });
+    if(dG>0&&nG>0) gamma=mix(gamma, nG/dG);
+    /* normalisation : attaque moyenne = 1, la moyenne de buts passe dans la défense */
+    var s=0, n=0;
+    ids.forEach(function(id){ if(isFinite(att[id])){ s+=att[id]; n++; } });
+    if(n>0&&s>0){ s/=n; ids.forEach(function(id){ att[id]/=s; def[id]*=s; }); }
+  }
+  return {att:att, def:def, gamma:gamma};
+}
+function _g45DcLogLik(ms, F, rho){
+  var L=0;
+  for(var i=0;i<ms.length;i++){
+    var m=ms[i];
+    var lh=F.att[m.h]*F.def[m.a]*F.gamma, la=F.att[m.a]*F.def[m.h];
+    if(!(lh>0)||!(la>0)) continue;
+    var p=_g45DcPois(m.hg,lh)*_g45DcPois(m.ag,la)*_g45DcTau(m.hg,m.ag,lh,la,rho);
+    if(p>0) L+=m.w*Math.log(p);
+  }
+  return L;
+}
+function _g45DcRho(ms, F){
+  var best=-0.10, bl=-Infinity;
+  for(var r=-0.20; r<=0.001; r+=0.01){
+    var l=_g45DcLogLik(ms, F, r);
+    if(isFinite(l)&&l>bl){ bl=l; best=r; }
+  }
+  return Math.round(best*100)/100;
+}
+async function _g45DcModel(slug, y){
+  var ck='g45dcf_'+slug+'_'+y;
+  if(_g45DcCache[ck]) return _g45DcCache[ck];
+  try{ var c=JSON.parse(localStorage.getItem(ck)||'null'); if(c&&(Date.now()-c.t)<12*3600000){ _g45DcCache[ck]=c.d; return c.d; } }catch(e){}
+  var std=await _g45DcStandings(slug, y);
+  if(!std) return null;
+  var ids=Object.keys(std.teams);
+  var ms=await _g45DcLeagueMatches(slug, y, ids);
+  if(!ms) return null;
+  var F=_g45DcFit(ms, ids);
+  F.rho=_g45DcRho(ms, F);
+  F.n=ms.length;
+  _g45DcCache[ck]=F;
+  try{ localStorage.setItem(ck, JSON.stringify({t:Date.now(), d:F})); }catch(e){}
+  return F;
+}
+
+async function _g45DcCompute(slug, y, hid, aid){
+  var H=String(hid), A=String(aid);
+  /* 1) modèle ajusté par maximum de vraisemblance */
+  var F=null;
+  try{ F=await _g45DcModel(slug, y); }catch(e){}
+  if(F&&F.att&&F.att[H]!=null&&F.att[A]!=null&&F.def[H]!=null&&F.def[A]!=null){
+    var sh=function(v){ return 1+(v-1)*_G45_DC_FITSHRINK; };
+    var lh=sh(F.att[H])*sh(F.def[A])*F.gamma;
+    var la=sh(F.att[A])*sh(F.def[H]);
+    lh=Math.min(5,Math.max(0.15,lh)); la=Math.min(5,Math.max(0.15,la));
+    var mkF=_g45DcMarkets(_g45DcMatrix(lh, la, F.rho));
+    mkF.lh=lh; mkF.la=la; mkF.fit=true; mkF.nm=F.n; mkF.gamma=F.gamma; mkF.rho=F.rho;
+    return mkF;
+  }
+  /* 2) repli : forces dérivées du classement */
+  var std=await _g45DcStandings(slug, y);
+  var L=_g45DcLambdas(std, hid, aid);
+  if(!L) return null;
+  var mk=_g45DcMarkets(_g45DcMatrix(L.lh, L.la));
+  mk.lh=L.lh; mk.la=L.la; mk.fit=false;
+  return mk;
+}
+window._g45DcCompute=_g45DcCompute;
+
 /* Construction des marchés — partie spécifique au football */
 /* cross = confrontation inter-championnats (coupe d'Europe, qualifs...). Les taux de base
    de deux équipes issues de championnats différents ne sont PAS comparables : une équipe
    qui gagne 75% de ses déplacements dans un championnat faible n'a pas 75% de chances
    ailleurs. Le bookmaker, lui, intègre le niveau relatif des championnats. On refuse donc
    de calculer un écart 1N2 dans ce cas — c'est une limite du modèle, pas une prudence. */
-function _g45TrBuild(ev, H, A, hN, aN, cross, pr){
+function _g45TrBuild(ev, H, A, hN, aN, cross, pr, dc){
   var out=[];
   var mn=Math.min(H.all.n, A.all.n);
   var od=_g45TrOddsEv(ev);
@@ -20554,6 +20809,26 @@ function _g45TrBuild(ev, H, A, hN, aN, cross, pr){
     out.push({m:aN+' ou nul', p:p2+pd, fair:f2+fN, cote:0, n:mn,
       faits:[aN+' invaincu lors de '+(A.away.w+A.away.d)+' de ses '+A.away.n+' matchs à l\'extérieur ('+_g45TrPct(A.away.n?(A.away.w+A.away.d)/A.away.n:0)+')']});
     out.push({m:'Pas de nul', p:p1+p2, fair:f1+f2, cote:0, n:mn, faits:[]});
+  }
+  if(dc){
+    var repl={};
+    repl['Les deux marquent']=dc.btts;
+    repl['+ de 2,5 buts']=dc.o25;
+    repl['+ de 1,5 but']=dc.o15;
+    repl['- de 3,5 buts']=1-dc.o35;
+    repl['Victoire '+hN]=dc.p1;
+    repl['Victoire '+aN]=dc.p2;
+    repl['Match nul']=dc.pN;
+    repl[hN+' ou nul']=dc.p1+dc.pN;
+    repl[aN+' ou nul']=dc.p2+dc.pN;
+    repl['Pas de nul']=dc.p1+dc.p2;
+    out.forEach(function(x){
+      if(repl[x.m]!=null){ x.p=repl[x.m]; x.dc=true; x.dcFit=!!dc.fit; }
+    });
+    out.push({m:'Score exact le plus probable', p:dc.csP, fair:null, cote:0, n:mn, info:dc.cs,
+      faits:['Buts attendus : '+_g45CyEa(hN)+' '+dc.lh.toFixed(2)+' — '+_g45CyEa(aN)+' '+dc.la.toFixed(2),
+             'Score le plus probable : '+dc.cs+' ('+Math.round(dc.csP*100)+'%)']
+             .concat(dc.fit?['Modèle ajusté sur '+dc.nm+' matchs · avantage terrain '+dc.gamma.toFixed(2)+' · rho '+dc.rho]:[])});
   }
   out.forEach(function(x){
     if(cross&&x.fair!=null){ x.cross=true; x.note='Comparaison inter-championnats : les taux des deux équipes ne sont pas sur la même échelle, aucun écart fiable n\'est calculable.'; }
@@ -20853,7 +21128,9 @@ async function g45TrRun(){
         var oaList=await _g45TrOddsApi(f.slug);
         if(oaList){ var oaEv=_g45TrFindEv(oaList,hN,aN); if(oaEv) pr=_g45TrPrices(oaEv); }
       }catch(e){}
-      var mk=_g45TrBuild(f.ev,H,A,hN,aN,cross,pr);
+      var dc=null;
+      if(!cross){ try{ dc=await _g45DcCompute(f.slug, _g45TrSeason(), hid, aid); }catch(e){} }
+      var mk=_g45TrBuild(f.ev,H,A,hN,aN,cross,pr,dc);
       var when='';
       try{ when=new Date(f.ev.date).toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'}); }catch(e){}
       mk.forEach(function(m){ res.push({m:m, hN:hN, aN:aN, when:when, slug:f.slug, id:f.ev.id}); });
@@ -20892,6 +21169,9 @@ function _g45TrRender(){
       +'</div></div>';
     if(m.fair!=null) s+='<div style="font-size:8px;color:var(--t3);margin-top:4px;">Bookmaker (marge retirée) : '+_g45TrPct(m.fair)+'</div>';
     if(m.note) s+='<div style="font-size:8px;color:#8aa0ff;margin-top:4px;line-height:1.5;">ℹ️ '+_g45CyEa(m.note)+'</div>';
+    if(m.dc) s+='<div style="font-size:7.5px;color:#2ecc71;margin-top:3px;">📐 Dixon-Coles '
+      +(m.dcFit?'ajusté par maximum de vraisemblance — force de l\'adversaire et pondération temporelle prises en compte'
+               :'dérivé du classement — repli, les matchs du championnat n\'ont pas pu être récupérés')+'</div>';
     if(m.faits&&m.faits.length) s+='<ul style="margin:6px 0 0 0;padding-left:15px;">'+m.faits.slice(0,4).map(function(f){ return '<li style="font-size:9px;color:var(--t2);line-height:1.55;">'+_g45CyEa(f)+'</li>'; }).join('')+'</ul>';
     if(m.n<9) s+='<div style="font-size:8px;color:#ff6b6b;margin-top:4px;">⛔ Échantillon très réduit ('+m.n+' matchs) — statistiquement peu fiable, à titre indicatif seulement.</div>';
     else if(m.n<14) s+='<div style="font-size:8px;color:#ff8c42;margin-top:4px;">⚠️ Échantillon réduit ('+m.n+' matchs) — à prendre avec prudence.</div>';
