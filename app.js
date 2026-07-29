@@ -2412,6 +2412,7 @@ function openClub(nom,idx){
   _currentTeam=nom;
   Object.values(AC).forEach(function(c){try{c.destroy();}catch(e){}});AC={};
   showOngletMondialIfNational(nom);
+  _g45MurJoueurUI(nom);
   var u=state.u.find(function(x){return x.n===nom;});
   var p=gp(u||{color:PCOLS[0]});
   var paris=state.a.filter(function(h){return h.n===nom;});
@@ -8676,6 +8677,7 @@ function openClub(nom,idx){
   _currentTeam=nom;
   Object.values(AC).forEach(function(c){try{c.destroy();}catch(e){}});AC={};
   showOngletMondialIfNational(nom);
+  _g45MurJoueurUI(nom);
   var u=state.u.find(function(x){return x.n===nom;});
   var p=gp(u||{color:PCOLS[0]});
   var paris=state.a.filter(function(h){return h.n===nom;});
@@ -15219,6 +15221,80 @@ async function loadRugbySaisons(el, nom) {
   el.innerHTML = html;
 }
 
+
+/* ── 👤 ENTRÉE DE TYPE JOUEUR DANS LE MUR ──
+   Le mur est bâti pour des clubs : Live, Compo et Saisons reposent sur des identifiants
+   d'équipe et n'ont rien à afficher pour un joueur (« Equipe non trouvee dans la base »).
+   On masque donc ces onglets et on en ouvre un dédié, alimenté par la même mécanique que
+   la vue Buteurs. Les onglets Bilan / Graphs / Archive / Types restent utiles : ils
+   portent sur les paris, pas sur les données du club. */
+function _g45MurEstJoueur(nom){
+  var U=(typeof state!=='undefined'&&state&&state.u)?state.u:[];
+  var u=U.filter(function(x){ return x&&x.n===nom; })[0];
+  return !!(u&&u.type==='joueur');
+}
+function _g45MurJoueurUI(nom){
+  var j=_g45MurEstJoueur(nom);
+  ['itab-compo','itab-saisons'].forEach(function(i){
+    var b=document.getElementById(i); if(b) b.style.display=j?'none':'';
+  });
+  try{
+    Array.prototype.forEach.call(document.querySelectorAll('.itabs .itab'), function(b){
+      if(String(b.getAttribute('onclick')||'').indexOf("'live'")>=0) b.style.display=j?'none':'';
+    });
+  }catch(e){}
+  var bj=document.getElementById('itab-joueur');
+  if(bj) bj.style.display=j?'':'none';
+  if(j) setTimeout(function(){ var x=document.getElementById('itab-joueur'); if(x) x.click(); }, 60);
+}
+async function g45MurJoueurPanel(){
+  var el=document.getElementById('ip-joueur'); if(!el) return;
+  var nom=(typeof _currentTeam!=='undefined'&&_currentTeam)?_currentTeam:'';
+  if(!nom){ el.innerHTML=''; return; }
+  var U=(typeof state!=='undefined'&&state&&state.u)?state.u:[];
+  var u=U.filter(function(x){ return x&&x.n===nom; })[0]||{};
+  el.innerHTML='<div style="font-size:10px;color:#8aa0ff;text-align:center;padding:14px;">⏳ Recherche du joueur…</div>';
+  var id=null;
+  try{ id=await _g45ButIdMur({n:nom, club:(u.note||'').trim(), mur:true}); }catch(e){}
+  if(!id){
+    el.innerHTML='<div style="font-size:10.5px;color:var(--t3);text-align:center;padding:16px;line-height:1.7;">Joueur introuvable chez ESPN.<br>'
+      +'<span style="font-size:9.5px;">Ajoute son club au mur, ou saisis-le dans la note de cette entrée (Outils → Équipes / Unités).</span></div>';
+    return;
+  }
+  var y=_g45TrSeason(), an=y, d=null;
+  try{ d=await _g45ButStats({lg:id.lg}, id, y); }catch(e){}
+  if(!d){ try{ d=await _g45ButStats({lg:id.lg}, id, y-1); }catch(e){} if(d) an=y-1; }
+  var dC=null;
+  try{ dC=await _g45ButStats({lg:'uefa.champions'}, id, an); }catch(e){}
+  if(!d){
+    el.innerHTML='<div style="font-size:10.5px;color:var(--t3);text-align:center;padding:16px;">Aucune statistique disponible pour '+_g45CyEa(id.pname)+'.</div>';
+    return;
+  }
+  var carte=function(st, titre, coul){
+    var gpm=st.g/st.app, npg=(st.g-st.pg)/st.app;
+    var pA=1-Math.exp(-gpm), pN=1-Math.exp(-npg);
+    var cell=function(v,l,c){ return '<div style="flex:1;min-width:62px;text-align:center;background:rgba(0,0,0,.20);border-radius:7px;padding:6px 4px;"><div style="font-size:13px;font-weight:800;color:'+(c||'var(--t1)')+';">'+v+'</div><div style="font-size:7.5px;color:var(--t3);margin-top:1px;">'+l+'</div></div>'; };
+    return '<div style="background:rgba(12,16,28,.96);border:1px solid rgba(255,255,255,.08);border-left:3px solid '+coul+';border-radius:10px;padding:10px 11px;margin-bottom:9px;">'
+      +'<div style="font-size:10px;font-weight:800;color:'+coul+';margin-bottom:7px;">'+titre+'</div>'
+      +'<div style="display:flex;gap:5px;flex-wrap:wrap;margin-bottom:7px;">'
+        +cell(st.g,'buts','#f0c828')+cell(st.app,'matchs')+cell(gpm.toFixed(2),'buts/match','#f0c828')
+        +cell(npg.toFixed(2),'hors penalty','#2ecc71')+cell((st.sot/st.app).toFixed(1),'tirs cadrés/m')
+        +cell(Math.round((st.sh?st.g/st.sh:0)*100)+'%','conversion')+cell(Math.round((st.app?st.st/st.app:0)*100)+'%','titulaire')
+      +'</div>'
+      +'<div style="font-size:9px;color:var(--t2);line-height:1.6;">⚠️ <b>'+st.pg+'</b> de ses '+st.g+' buts sur penalty ('+Math.round(st.g?100*st.pg/st.g:0)+'%)'
+      +(st.head?(' · '+st.head+' de la tête'):'')+' · '+Math.round(st.min/(st.app||1))+' min par match</div>'
+      +'<div style="font-size:10px;font-weight:800;color:var(--t1);margin-top:6px;">Probabilité de marquer : '+Math.round(pA*100)+'% <span style="font-size:8.5px;color:var(--t3);font-weight:600;">tout compris</span> · <span style="color:#2ecc71;">'+Math.round(pN*100)+'%</span> <span style="font-size:8.5px;color:var(--t3);font-weight:600;">hors penalty</span></div>'
+      +'</div>';
+  };
+  el.innerHTML='<div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;">'
+      +'<img src="https://a.espncdn.com/i/headshots/soccer/players/full/'+id.aid+'.png" loading="lazy" onerror="this.style.display=\'none\'" style="width:46px;height:46px;border-radius:50%;object-fit:cover;background:rgba(255,255,255,.07);flex:none;">'
+      +'<div><div style="font-size:13px;font-weight:800;color:var(--t1);">'+_g45CyEa(id.pname)+'</div>'
+      +'<div style="font-size:9px;color:var(--t2);">'+_g45CyEa(id.tname||'')+' · saison '+an+'/'+(an+1)+'</div></div></div>'
+    +carte(d,'🏆 Championnat','#f0c828')
+    +(dC?carte(dC,'⭐ Ligue des Champions','#8aa0ff'):'')
+    +'<div style="font-size:8px;color:var(--t3);text-align:center;margin-top:6px;font-style:italic;line-height:1.6;">λ = buts par match joué ; p = 1 − e<sup>−λ</sup>. Statistiques ESPN, championnat et C1 séparés.<br>Pour comparer à une cote buteur, passe par Tendances → ⚽ Buteurs.</div>';
+}
+window.g45MurJoueurPanel=g45MurJoueurPanel;
 
 /* ── NATIONS : afficher/cacher onglet Mondial ── */
 var NATIONS_MONDIALES = ['France','Espagne','Allemagne','Angleterre','Brésil','Argentine','Portugal','Pays-Bas','Belgique','Italie','Croatie','Maroc','Sénégal','Colombie','Uruguay','Japon','Suisse','Norvège','Danemark','Mexique','Canada','États-Unis','Australie','Iran','Corée du Sud','Équateur','Autriche','Algérie','Égypte','Qatar','Tunisie','Côte d\'Ivoire','Ouzbékistan','Écosse','Paraguay','Haïti','Afrique du Sud','Cap-Vert','Ghana','Arabie saoudite','Jordanie','Curaçao','Nouvelle-Zélande','Panama','RD Congo','Suède','Ukraine','Turquie','Irak','Bolivie','Suriname'];
