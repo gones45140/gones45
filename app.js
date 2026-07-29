@@ -21109,18 +21109,15 @@ function _g45ButMur(){
   return U.filter(function(u){ return u&&u.type==='joueur'&&u.n; })
           .map(function(u){ return {n:u.n, club:(u.note||'').trim(), mur:true}; });
 }
-async function _g45ButIdMur(p){
-  var ck='g45but_mur_'+_g45ClvNz(p.n);
-  try{ var c=JSON.parse(localStorage.getItem(ck)||'null'); if(c&&c.aid) return c; }catch(e){}
-  if(!p.club) return null;
+async function _g45ButChercheDans(nom, club){
   var tm=null;
-  try{ tm=await espnResolveTeam(p.club); }catch(e){}
+  try{ tm=await espnResolveTeam(club); }catch(e){}
   if(!tm||!tm.id||!tm.league) return null;
   var rj=null;
   try{ rj=await _g45TrEspn('/apis/site/v2/sports/soccer/'+tm.league+'/teams/'+tm.id+'/roster'); }catch(e){ return null; }
   var ath=[];
   ((rj&&rj.athletes)||[]).forEach(function(g){ (g.items||[g]).forEach(function(a){ if(a&&a.id) ath.push(a); }); });
-  var cible=_g45ClvNz(p.n), pl=null;
+  var cible=_g45ClvNz(nom), pl=null;
   ath.forEach(function(a){
     if(pl) return;
     var z=_g45ClvNz((a.displayName||'')+' '+(a.fullName||''));
@@ -21128,7 +21125,24 @@ async function _g45ButIdMur(p){
     if(z.indexOf(cible)>=0||(z2&&cible.indexOf(z2)>=0&&z2.length>3)) pl=a;
   });
   if(!pl) return null;
-  var r={aid:pl.id, tid:tm.id, lg:tm.league, tname:(tm.name||p.club), pname:(pl.displayName||p.n)};
+  return {aid:pl.id, tid:tm.id, lg:tm.league, tname:(tm.name||club), pname:(pl.displayName||nom)};
+}
+async function _g45ButIdMur(p){
+  var ck='g45but_mur_'+_g45ClvNz(p.n);
+  try{ var c=JSON.parse(localStorage.getItem(ck)||'null'); if(c&&c.aid) return c; }catch(e){}
+  var r=null;
+  /* 1) club saisi dans la note de l'entrée */
+  if(p.club){ r=await _g45ButChercheDans(p.n, p.club); }
+  /* 2) sinon on cherche dans les CLUBS déjà présents dans le mur : inutile de saisir
+        « Real Madrid » quand l'entrée Real Madrid existe déjà juste à côté. */
+  if(!r){
+    var U=(typeof state!=='undefined'&&state&&state.u)?state.u:[];
+    var clubs=U.filter(function(u){ return u&&u.n&&u.type!=='joueur'&&(!u.sport||u.sport==='\u26bd'); });
+    for(var i=0;i<clubs.length&&!r;i++){
+      try{ r=await _g45ButChercheDans(p.n, clubs[i].n); }catch(e){}
+    }
+  }
+  if(!r) return null;
   try{ localStorage.setItem(ck, JSON.stringify(r)); }catch(e){}
   return r;
 }
@@ -21202,7 +21216,7 @@ async function g45ButeursView(){
   for(var i2=0;i2<items.length;i2++){
     var p=items[i2].p, id=items[i2].id, d=items[i2].d, an=(items[i2].an||y);
     if(!id||!d){
-      h+='<div style="background:rgba(12,16,28,.96);border:1px solid rgba(255,255,255,.08);border-radius:9px;padding:10px;margin-bottom:8px;font-size:10px;color:var(--t3);">'+_g45CyEa(p.n)+((p.mur&&!p.club)?' — ajoute son club dans la note de l\'entrée du mur pour l\'identifier.':(comp==='ucl'?' — n\'a pas disputé la Ligue des Champions en '+an+'/'+(an+1)+'.':' — données indisponibles pour la saison '+an+'.'))+'</div>';
+      h+='<div style="background:rgba(12,16,28,.96);border:1px solid rgba(255,255,255,.08);border-radius:9px;padding:10px;margin-bottom:8px;font-size:10px;color:var(--t3);">'+_g45CyEa(p.n)+((p.mur)?' — introuvable. Ajoute son club au mur, ou saisis-le dans la note de l\'entrée.':(comp==='ucl'?' — n\'a pas disputé la Ligue des Champions en '+an+'/'+(an+1)+'.':' — données indisponibles pour la saison '+an+'.'))+'</div>';
       continue;
     }
     var gpm=d.g/d.app, npg=(d.g-d.pg)/d.app;
