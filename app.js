@@ -17645,7 +17645,7 @@ async function loadTeamSaisons() {
   }
 
   // Cache mémoire (session courante)
-  if(_saisonsCache[teamId]) { renderSaisonsChart(el, _saisonsCache[teamId], nom); return; }
+  if(_saisonsCache[teamId]) { renderSaisonsChart(el, _saisonsCache[teamId], nom); _g45AVenirLancer(el, _saisonsCache[teamId], nom); return; }
 
   // Cache localStorage (1h) — accélère les équipes déjà consultées
   try {
@@ -17656,6 +17656,7 @@ async function loadTeamSaisons() {
       if(lsObj && lsObj.ts && (Date.now()-lsObj.ts < 3600000) && lsObj.data){ // < 1h
         _saisonsCache[teamId] = lsObj.data;
         renderSaisonsChart(el, lsObj.data, nom);
+        _g45AVenirLancer(el, lsObj.data, nom);
         return;
       }
     }
@@ -18369,6 +18370,27 @@ function _g45CollecteAVenir(sources, deja, espnId, espnNom){
   });
   out.sort(function(a,b){ return Date.parse(a.date)-Date.parse(b.date); });
   return out.slice(0,8);
+}
+/* Le mur sert les saisons depuis un cache (mémoire, puis localStorage 1 h) et sort avant
+   d'atteindre le bloc ESPN — la collecte des matchs à venir était donc court-circuitée sur
+   toute équipe déjà consultée. Ce lanceur est appelé depuis les DEUX sorties de cache. */
+var _g45AVenirEnCours={};
+async function _g45AVenirLancer(el, results, nom){
+  if(!nom||_g45AVenirEnCours[nom]) return;
+  if(_g45AVenir[nom]&&_g45AVenir[nom].length) return;
+  _g45AVenirEnCours[nom]=1;
+  try{
+    var t=null;
+    try{ t=await espnResolveTeam(nom); }catch(e){}
+    if(t){
+      var sup=await _g45AVenirLigue(t.league, t.id, t.name||nom);
+      if(sup&&sup.length){
+        _g45AVenir[nom]=_g45CollecteAVenir([{matches:sup}], _g45AVenir[nom], t.id, t.name||nom);
+        renderSaisonsChart(el, results, nom);
+      }
+    }
+  }catch(e){}
+  _g45AVenirEnCours[nom]=0;
 }
 function _g45BlocAVenir(nom){
   var L=_g45AVenir[nom]||[];
