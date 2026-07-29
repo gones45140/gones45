@@ -17707,6 +17707,19 @@ async function loadTeamSaisons() {
       /* Les matchs à venir sont déjà dans la réponse ESPN : on les met de côté pour les
          afficher, au lieu de les jeter comme depuis le filtre `completed`. */
       _g45AVenir[teamId]=_g45CollecteAVenir([espA, espB], _g45AVenir[teamId]);
+      (function(){
+        var _t=(espA&&espA.team)||(espB&&espB.team)||null;
+        if(!_t) return;
+        (async function(){
+          try{
+            var sup=await _g45AVenirLigue(_t.league, _t.id, espNameA);
+            if(sup&&sup.length){
+              _g45AVenir[teamId]=_g45CollecteAVenir([{matches:sup}], _g45AVenir[teamId]);
+              renderSaisonsChart(el, results, nom);
+            }
+          }catch(e){}
+        })();
+      })();
 
       // ── 1b) ESPN : Europe d'abord (C1 → Europa → Conference, auto-détectée par année) ──
       var _euroSlugs = ['uefa.champions','uefa.europa','uefa.europa.conf','uefa.champions_qual','uefa.europa_qual','uefa.europa.conf_qual'];
@@ -18280,6 +18293,36 @@ window.setScorerFilter=setScorerFilter;
 window.clearScorerFilter=clearScorerFilter;
 window._buildScorerBarHtml=_buildScorerBarHtml;
 
+/* L'endpoint calendrier d'ÉQUIPE d'ESPN reste vide pour la saison à venir (vérifié : 0 match
+   pour le PSG en season=2026 alors que le championnat en affichait 9). On passe donc par le
+   calendrier du CHAMPIONNAT sur les 60 prochains jours, filtré sur l'équipe. */
+async function _g45AVenirLigue(slug, espnId, espnNom){
+  if(!slug) return [];
+  var f=function(d){ return d.getFullYear()+String(d.getMonth()+1).padStart(2,'0')+String(d.getDate()).padStart(2,'0'); };
+  var j=null;
+  try{ j=await _g45TrEspn('/apis/site/v2/sports/soccer/'+slug+'/scoreboard?dates='+f(new Date())+'-'+f(new Date(Date.now()+60*86400000))); }catch(e){ return []; }
+  var nz=function(x){ return String(x||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,''); };
+  var cible=nz(espnNom), out=[];
+  ((j&&j.events)||[]).forEach(function(e){
+    var c=(e.competitions&&e.competitions[0])||{};
+    var st=(c.status&&c.status.type)||{};
+    if(st.completed===true) return;
+    var cs=c.competitors||[];
+    var ho=cs.filter(function(x){ return x.homeAway==='home'; })[0];
+    var aw=cs.filter(function(x){ return x.homeAway==='away'; })[0];
+    if(!ho||!aw) return;
+    var hid=String((ho.team&&ho.team.id)||''), aid=String((aw.team&&aw.team.id)||'');
+    var hn=(ho.team&&(ho.team.displayName||ho.team.shortDisplayName))||'?';
+    var an=(aw.team&&(aw.team.displayName||aw.team.shortDisplayName))||'?';
+    var moi=(espnId&&(hid===String(espnId)||aid===String(espnId)))
+         || (cible&&(nz(hn).indexOf(cible)>=0||cible.indexOf(nz(hn))>=0||nz(an).indexOf(cible)>=0||cible.indexOf(nz(an))>=0));
+    if(!moi) return;
+    out.push({id:e.id, date:e.date, completed:false, homeTeam:hn, awayTeam:an,
+              homeId:hid, awayId:aid, homeScore:null, awayScore:null,
+              competition:slug, competitionName:((e.season&&e.season.name)||''), odds:null});
+  });
+  return out;
+}
 var _g45AVenir={};
 function _g45CollecteAVenir(sources, deja){
   var out=(deja||[]).slice(), vus={};
