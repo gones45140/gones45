@@ -17706,20 +17706,20 @@ async function loadTeamSaisons() {
       if(_finB.length) { results[keyB] = _finB.map(function(mm){ return espnToFdMatch(mm, espNameB, teamId); }); espnOk = true; }
       /* Les matchs à venir sont déjà dans la réponse ESPN : on les met de côté pour les
          afficher, au lieu de les jeter comme depuis le filtre `completed`. */
-      _g45AVenir[teamId]=_g45CollecteAVenir([espA, espB], _g45AVenir[teamId]);
-      (function(){
-        var _t=(espA&&espA.team)||(espB&&espB.team)||null;
-        if(!_t) return;
+      var _espnT=(espA&&espA.team)||(espB&&espB.team)||null;
+      var _eId=_espnT?_espnT.id:null;
+      _g45AVenir[nom]=_g45CollecteAVenir([espA, espB], _g45AVenir[nom], _eId, espNameA);
+      if(_espnT){
         (async function(){
           try{
-            var sup=await _g45AVenirLigue(_t.league, _t.id, espNameA);
+            var sup=await _g45AVenirLigue(_espnT.league, _espnT.id, espNameA);
             if(sup&&sup.length){
-              _g45AVenir[teamId]=_g45CollecteAVenir([{matches:sup}], _g45AVenir[teamId]);
+              _g45AVenir[nom]=_g45CollecteAVenir([{matches:sup}], _g45AVenir[nom], _eId, espNameA);
               renderSaisonsChart(el, results, nom);
             }
           }catch(e){}
         })();
-      })();
+      }
 
       // ── 1b) ESPN : Europe d'abord (C1 → Europa → Conference, auto-détectée par année) ──
       var _euroSlugs = ['uefa.champions','uefa.europa','uefa.europa.conf','uefa.champions_qual','uefa.europa_qual','uefa.europa.conf_qual'];
@@ -17728,7 +17728,7 @@ async function loadTeamSaisons() {
         for(var _es=0; _es<_euroSlugs.length; _es++){
           try {
             var _euro = await espnClubSchedule(nom, _yr, _euroSlugs[_es]);
-            _g45AVenir[teamId]=_g45CollecteAVenir([_euro], _g45AVenir[teamId]);
+            _g45AVenir[nom]=_g45CollecteAVenir([_euro], _g45AVenir[nom], (_euro&&_euro.team?_euro.team.id:null), (_euro&&_euro.team?_euro.team.name:nom));
             var _finE = (_euro && _euro.matches) ? _euro.matches.filter(function(mm){ return mm.completed; }) : [];
             if(_finE.length){
               var _nm = (_euro.team && _euro.team.name) ? _euro.team.name : nom;
@@ -18342,28 +18342,41 @@ async function _g45AVenirLigue(slug, espnId, espnNom){
   return out;
 }
 var _g45AVenir={};
-function _g45CollecteAVenir(sources, deja){
+function _g45CollecteAVenir(sources, deja, espnId, espnNom){
   var out=(deja||[]).slice(), vus={};
   out.forEach(function(m){ vus[m.id]=1; });
+  var nz=function(x){ return String(x||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9]/g,''); };
+  var cible=nz(espnNom);
   var limite=Date.now()-3*3600000;   // un match en cours reste affiché
   (sources||[]).forEach(function(sc){
     ((sc&&sc.matches)||[]).forEach(function(m){
       if(!m||m.completed||vus[m.id]) return;
       var t=Date.parse(m.date);
       if(isNaN(t)||t<limite) return;
+      /* Le domicile se détermine ICI, tant qu'on dispose de l'identité ESPN : plus tard
+         on n'a que l'identifiant football-data, qui ne correspond à rien côté ESPN. */
+      var d=null;
+      if(espnId!=null&&m.homeId!=null&&String(m.homeId)===String(espnId)) d=true;
+      else if(espnId!=null&&m.awayId!=null&&String(m.awayId)===String(espnId)) d=false;
+      else if(cible){
+        var h=nz(m.homeTeam), a=nz(m.awayTeam);
+        if(h&&(h===cible||h.indexOf(cible)>=0||cible.indexOf(h)>=0)) d=true;
+        else if(a&&(a===cible||a.indexOf(cible)>=0||cible.indexOf(a)>=0)) d=false;
+      }
+      if(d!=null) m._dom=d;
       vus[m.id]=1; out.push(m);
     });
   });
   out.sort(function(a,b){ return Date.parse(a.date)-Date.parse(b.date); });
   return out.slice(0,8);
 }
-function _g45BlocAVenir(teamId, nom){
-  var L=_g45AVenir[teamId]||[];
+function _g45BlocAVenir(nom){
+  var L=_g45AVenir[nom]||[];
   if(!L.length) return '';
   var h='<div style="background:rgba(77,132,255,.08);border:1px solid rgba(77,132,255,.25);border-radius:10px;padding:10px 12px;margin-bottom:12px;">'
     +'<div style="font-size:9px;font-weight:800;letter-spacing:1px;text-transform:uppercase;color:#4d84ff;margin-bottom:8px;">📅 Prochains matchs</div>';
   L.forEach(function(m){
-    var dom=(String(m.homeId)===String(teamId))||(m.homeTeam===nom);
+    var dom=(m._dom!=null)?m._dom:(m.homeTeam===nom);
     var adv=dom?m.awayTeam:m.homeTeam;
     var d=''; try{ d=new Date(m.date).toLocaleDateString('fr-FR',{weekday:'short',day:'numeric',month:'short'}); }catch(e){}
     var hr=''; try{ hr=new Date(m.date).toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'}); }catch(e){}
@@ -18430,7 +18443,7 @@ function renderSaisonsChart(el, results, nom) {
   var _saisonFilters = JSON.parse(localStorage.getItem('g45_saison_filters')||'null') || {all:true};
 
   var html = '<div style="padding:4px 0;">';
-  html += _g45BlocAVenir(teamId, nom);
+  html += _g45BlocAVenir(nom);
 
   // Barre de filtres
   html += '<div class="cwrap" style="margin-bottom:10px;">';
