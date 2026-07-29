@@ -17704,6 +17704,9 @@ async function loadTeamSaisons() {
       if(_finA.length) { results[keyA] = _finA.map(function(mm){ return espnToFdMatch(mm, espNameA, teamId); }); espnOk = true; }
       var _finB = (espB && espB.matches) ? espB.matches.filter(function(mm){ return mm.completed; }) : [];
       if(_finB.length) { results[keyB] = _finB.map(function(mm){ return espnToFdMatch(mm, espNameB, teamId); }); espnOk = true; }
+      /* Les matchs à venir sont déjà dans la réponse ESPN : on les met de côté pour les
+         afficher, au lieu de les jeter comme depuis le filtre `completed`. */
+      _g45AVenir[teamId]=_g45CollecteAVenir([espA, espB], _g45AVenir[teamId]);
 
       // ── 1b) ESPN : Europe d'abord (C1 → Europa → Conference, auto-détectée par année) ──
       var _euroSlugs = ['uefa.champions','uefa.europa','uefa.europa.conf','uefa.champions_qual','uefa.europa_qual','uefa.europa.conf_qual'];
@@ -17712,6 +17715,7 @@ async function loadTeamSaisons() {
         for(var _es=0; _es<_euroSlugs.length; _es++){
           try {
             var _euro = await espnClubSchedule(nom, _yr, _euroSlugs[_es]);
+            _g45AVenir[teamId]=_g45CollecteAVenir([_euro], _g45AVenir[teamId]);
             var _finE = (_euro && _euro.matches) ? _euro.matches.filter(function(mm){ return mm.completed; }) : [];
             if(_finE.length){
               var _nm = (_euro.team && _euro.team.name) ? _euro.team.name : nom;
@@ -18276,6 +18280,48 @@ window.setScorerFilter=setScorerFilter;
 window.clearScorerFilter=clearScorerFilter;
 window._buildScorerBarHtml=_buildScorerBarHtml;
 
+var _g45AVenir={};
+function _g45CollecteAVenir(sources, deja){
+  var out=(deja||[]).slice(), vus={};
+  out.forEach(function(m){ vus[m.id]=1; });
+  var limite=Date.now()-3*3600000;   // un match en cours reste affiché
+  (sources||[]).forEach(function(sc){
+    ((sc&&sc.matches)||[]).forEach(function(m){
+      if(!m||m.completed||vus[m.id]) return;
+      var t=Date.parse(m.date);
+      if(isNaN(t)||t<limite) return;
+      vus[m.id]=1; out.push(m);
+    });
+  });
+  out.sort(function(a,b){ return Date.parse(a.date)-Date.parse(b.date); });
+  return out.slice(0,8);
+}
+function _g45BlocAVenir(teamId, nom){
+  var L=_g45AVenir[teamId]||[];
+  if(!L.length) return '';
+  var h='<div style="background:rgba(77,132,255,.08);border:1px solid rgba(77,132,255,.25);border-radius:10px;padding:10px 12px;margin-bottom:12px;">'
+    +'<div style="font-size:9px;font-weight:800;letter-spacing:1px;text-transform:uppercase;color:#4d84ff;margin-bottom:8px;">📅 Prochains matchs</div>';
+  L.forEach(function(m){
+    var dom=(String(m.homeId)===String(teamId))||(m.homeTeam===nom);
+    var adv=dom?m.awayTeam:m.homeTeam;
+    var d=''; try{ d=new Date(m.date).toLocaleDateString('fr-FR',{weekday:'short',day:'numeric',month:'short'}); }catch(e){}
+    var hr=''; try{ hr=new Date(m.date).toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'}); }catch(e){}
+    var c=m.competitionName||m.competition||'';
+    var cote='';
+    if(m.odds){
+      var mien=dom?m.odds.home:m.odds.away;
+      if(mien&&mien>1) cote='<span style="font-size:9px;font-weight:800;color:#f0c828;">'+mien.toFixed(2)+'</span>';
+    }
+    h+='<div style="display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:1px solid rgba(255,255,255,.05);">'
+      +'<div style="flex:none;width:64px;"><div style="font-size:10px;font-weight:700;color:var(--t1);">'+_g45CyEa(d)+'</div>'
+      +'<div style="font-size:8px;color:var(--t3);">'+_g45CyEa(hr)+'</div></div>'
+      +'<div style="flex:none;font-size:11px;">'+(dom?'🏠':'✈️')+'</div>'
+      +'<div style="flex:1;min-width:0;"><div style="font-size:11px;font-weight:700;color:var(--t1);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">'+_g45CyEa(adv)+'</div>'
+      +(c?('<div style="font-size:8px;color:var(--t3);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">'+_g45CyEa(c)+'</div>'):'')+'</div>'
+      +'<div style="flex:none;text-align:right;">'+cote+'</div></div>';
+  });
+  return h+'</div>';
+}
 function renderSaisonsChart(el, results, nom) {
   var saisons = Object.keys(results).sort().reverse();
   var teamId = null;
@@ -18323,6 +18369,7 @@ function renderSaisonsChart(el, results, nom) {
   var _saisonFilters = JSON.parse(localStorage.getItem('g45_saison_filters')||'null') || {all:true};
 
   var html = '<div style="padding:4px 0;">';
+  html += _g45BlocAVenir(teamId, nom);
 
   // Barre de filtres
   html += '<div class="cwrap" style="margin-bottom:10px;">';
