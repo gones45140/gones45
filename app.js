@@ -20508,7 +20508,7 @@ var G45_LEAGUE_GROUPS = [
    classé, jamais le pourcentage brut — une série à 100% sur 8 matchs ne vaut rien si la
    cote l'intègre déjà. Les petits échantillons sont signalés, pas masqués.
    Structure prévue pour d'autres sports : seul _g45TrBuild est spécifique au football. */
-var _G45_TR={grp:null, day:0, res:null, run:false};
+var _G45_TR={grp:null, day:0, res:null, run:false, min:1.5};
 
 async function _g45TrEspn(path){
   var base=(typeof FD_PROXY!=='undefined'?FD_PROXY:'https://fd-proxy.touraine-antoine.workers.dev');
@@ -21057,6 +21057,10 @@ function _g45TrBuild(ev, H, A, hN, aN, cross, pr, dc){
   out.forEach(function(x){
     if(cross&&x.fair!=null){ x.cross=true; x.note='Comparaison inter-championnats : les taux des deux équipes ne sont pas sur la même échelle, aucun écart fiable n\'est calculable.'; }
     x.gap=(x.fair!=null&&!x.cross)?(x.p-x.fair):null;
+    /* Espérance = probabilité × cote − 1, calculée sur la cote RÉELLE et non sur la cote
+       dévigorisée : c'est ce qu'Antoine touchera vraiment, donc le seul critère honnête.
+       Exiger EV > 0 revient à exiger p > 1/cote, plus strict que « p > probabilité juste ». */
+    x.ev=(!x.cross&&x.cote>1&&x.p>0)?(x.p*x.cote-1):null;
     x.line=od?od.line:null; x.prov=od?od.prov:'';
   });
   return out;
@@ -21585,6 +21589,11 @@ function g45TrSel(i){
   loadTendancesTab();
 }
 function g45TrDay(d){ _G45_TR.day=d; _G45_TR.res=null; loadTendancesTab(); }
+/* Une probabilité de 67% équivaut à une cote de 1.50 : au-delà, aucune tendance ne peut
+   atteindre ce seuil, quel que soit le bookmaker. Le filtre écarte donc ce qui est
+   mécaniquement injouable pour qui exige une cote minimale. */
+function g45TrMin(v){ _G45_TR.min=v; loadTendancesTab(); }
+window.g45TrMin=g45TrMin;
 window.g45TrSel=g45TrSel; window.g45TrDay=g45TrDay;
 
 function loadTendancesTab(){
@@ -21599,6 +21608,8 @@ function loadTendancesTab(){
     +'<div style="display:flex;gap:5px;flex-wrap:wrap;margin-bottom:9px;align-items:center;">'
     +'<span style="font-size:9px;color:var(--t3);">Jour :</span>'
     +chip("Aujourd'hui", _G45_TR.day===0, "g45TrDay(0)")+chip('Demain', _G45_TR.day===1, "g45TrDay(1)")
+    +'<span style="font-size:9px;color:var(--t3);margin-left:6px;">Cote mini :</span>'
+    +chip('Toutes', !_G45_TR.min, "g45TrMin(0)")+chip('1.30', _G45_TR.min===1.3, "g45TrMin(1.3)")+chip('1.50', _G45_TR.min===1.5, "g45TrMin(1.5)")
     +'<button onclick="g45ButeursView()" style="border:none;cursor:pointer;border-radius:8px;padding:6px 11px;font-size:10px;font-weight:800;background:rgba(240,200,40,.16);color:#f0c828;margin-left:4px;">⚽ Buteurs</button>'
     +'<button onclick="g45ClvView()" style="border:none;cursor:pointer;border-radius:8px;padding:6px 11px;font-size:10px;font-weight:800;background:rgba(46,204,113,.16);color:#2ecc71;margin-left:4px;">📏 CLV</button>'
     +'</div>';
@@ -21678,12 +21689,16 @@ window.g45TrRun=g45TrRun;
 
 function _g45TrRender(){
   var R=_G45_TR.res||[];
-  var avec=R.filter(function(x){ return x.m.gap!=null&&x.m.fair>0.02&&x.m.gap>=0.05&&x.m.n>=12; });
-  var sans=R.filter(function(x){ return (x.m.gap==null||!(x.m.fair>0.02))&&x.m.p>=0.62&&x.m.n>=6; }).slice(0,18);
+  var mini=_G45_TR.min||0;
+  var jouable=function(x){ return !mini || (x.m.p>0 && (1/x.m.p)>=mini); };
+  /* Une value = cote réelle disponible, au-dessus du seuil, et espérance positive. */
+  var avec=R.filter(function(x){ return x.m.ev!=null&&x.m.ev>=0.03&&x.m.cote>=mini&&x.m.n>=12; });
+  avec.sort(function(a,b){ return b.m.ev-a.m.ev; });
+  var sans=R.filter(function(x){ return (x.m.gap==null||!(x.m.fair>0.02))&&x.m.p>=0.50&&x.m.n>=6&&jouable(x); }).slice(0,18);
   var h='<button onclick="_G45_TR.res=null;loadTendancesTab();" style="border:none;cursor:pointer;background:rgba(255,255,255,.06);border-radius:8px;color:var(--t2);padding:6px 11px;font-size:10px;font-weight:700;margin-bottom:9px;">↺ Relancer</button>';
   var card=function(x,showGap){
     var m=x.m;
-    var col=(m.gap!=null&&m.gap>=0.10)?'#2ecc71':(m.gap!=null&&m.gap>=0.05)?'#f0c828':'#8aa0ff';
+    var col=(m.ev!=null&&m.ev>=0.08)?'#2ecc71':(m.ev!=null&&m.ev>=0.03)?'#f0c828':'#8aa0ff';
     var s='<div style="background:rgba(12,16,28,.96);border:1px solid rgba(255,255,255,.08);border-left:3px solid '+col+';border-radius:9px;padding:9px 11px;margin-bottom:7px;">'
       +'<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;">'
       +'<div style="flex:1;min-width:0;">'
@@ -21692,8 +21707,9 @@ function _g45TrRender(){
       +'</div>'
       +'<div style="flex:none;text-align:right;">'
         +'<div style="font-size:13px;font-weight:800;color:'+col+';">'+_g45TrPct(m.p)+'</div>'
-        +(showGap&&m.gap!=null?('<div style="font-size:8px;color:'+col+';">écart +'+Math.round(m.gap*100)+' pts</div>'):'')
-        +(m.cote?('<div style="font-size:9px;color:var(--t3);">cote '+m.cote.toFixed(2)+'</div>'):'')
+        +(showGap&&m.ev!=null?('<div style="font-size:9px;font-weight:800;color:'+col+';">espérance '+(m.ev>=0?'+':'')+Math.round(m.ev*1000)/10+'%</div>'):'')
+        +((m.p>0)?('<div style="font-size:10px;font-weight:800;color:'+((1/m.p)>=1.5?'#2ecc71':((1/m.p)>=1.3?'#f0c828':'#ff6b6b'))+';">≈ '+(1/m.p).toFixed(2)+'</div>'):'')
+        +(m.cote?('<div style="font-size:9px;color:var(--t3);">book '+m.cote.toFixed(2)+'</div>'):'')
         +(x.when?('<div style="font-size:8px;color:var(--t3);">'+_g45CyEa(x.when)+'</div>'):'')
       +'</div></div>';
     if(m.fair!=null) s+='<div style="font-size:8px;color:var(--t3);margin-top:4px;">Bookmaker (marge retirée) : '+_g45TrPct(m.fair)+'</div>';
@@ -21707,10 +21723,11 @@ function _g45TrRender(){
     return s+'</div>';
   };
   if(avec.length){
-    h+='<div style="font-size:10px;font-weight:800;color:#2ecc71;margin:8px 0 6px;">💎 Écart favorable ('+avec.length+')</div>';
+    h+='<div style="font-size:10px;font-weight:800;color:#2ecc71;margin:8px 0 6px;">💎 Values du jour ('+avec.length+')</div>'
+      +'<div style="font-size:8px;color:var(--t3);margin-bottom:6px;font-style:italic;">Cote réelle ≥ '+mini.toFixed(2)+' et espérance positive. Classées par espérance : probabilité × cote − 1.</div>';
     avec.slice(0,25).forEach(function(x){ h+=card(x,true); });
   } else {
-    h+='<div style="font-size:10px;color:var(--t3);text-align:center;padding:12px;line-height:1.6;">Aucun écart significatif détecté aujourd\'hui.<br><span style="font-size:9px;">C\'est le résultat le plus fréquent, et c\'est normal : le marché est efficace la plupart du temps.<br>En juillet, seules les qualifications tournent : les équipes ont peu de matchs joués dans ces compétitions, donc peu de données exploitables.</span></div>';
+    h+='<div style="font-size:10px;color:var(--t3);text-align:center;padding:12px;line-height:1.6;">Aucune value détectée aujourd\'hui au-dessus de '+mini.toFixed(2)+'.<br><span style="font-size:9px;">C\'est le résultat le plus fréquent, et c\'est normal : le marché est efficace la plupart du temps.<br>En juillet, seules les qualifications tournent : les équipes ont peu de matchs joués dans ces compétitions, donc peu de données exploitables.</span></div>';
   }
   if(sans.length){
     h+='<div style="font-size:10px;font-weight:800;color:#8aa0ff;margin:14px 0 6px;">📊 Taux élevés sans écart calculable</div>'
@@ -21719,7 +21736,7 @@ function _g45TrRender(){
   }
   var q=(window._g45TrQuota!=null)?('<br>The Odds API : '+_g45CyEa(window._g45TrQuota)+' requêtes restantes ce mois'):'';
   var er=(window._g45TrOddsErr)?('<br><span style="color:#ff8c42;">cotes : '+_g45CyEa(window._g45TrOddsErr)+'</span>'):'';
-  return h+'<div style="font-size:8px;color:var(--t3);text-align:center;margin-top:10px;font-style:italic;">'+q+er+'Probabilités estimées sur les taux de base réels des deux équipes (dom/ext pondéré). Ce ne sont pas des prédictions : les cotes intègrent déjà l\'essentiel de l\'information.</div>';
+  return h+'<div style="font-size:8px;color:var(--t3);text-align:center;margin-top:10px;font-style:italic;">'+q+er+'« ≈ » est la cote équitable (1 ÷ probabilité), avant marge du bookmaker : la cote réelle sera un peu plus basse. Une tendance au-dessus de 67% ne peut pas atteindre 1.50.<br>Probabilités estimées sur les taux de base réels des deux équipes (dom/ext pondéré). Ce ne sont pas des prédictions : les cotes intègrent déjà l\'essentiel de l\'information.</div>';
 }
 
 function loadLiveTab(){
