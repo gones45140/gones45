@@ -18298,12 +18298,26 @@ window._buildScorerBarHtml=_buildScorerBarHtml;
    calendrier du CHAMPIONNAT sur les 60 prochains jours, filtré sur l'équipe. */
 async function _g45AVenirLigue(slug, espnId, espnNom){
   if(!slug) return [];
+  /* Le championnat ne suffit pas : Supercoupe d'UEFA, supercoupe nationale et amicaux
+     vivent sous d'autres slugs (vérifié : uefa.super_cup, fra.super_cup, club.friendly
+     contenaient bien les matchs d'août du PSG). Le préfixe pays se déduit du championnat,
+     ce qui rend la règle valable pour n'importe quelle équipe. */
+  var pays=String(slug).split('.')[0];
+  var slugs=[slug, 'club.friendly', 'uefa.super_cup'];
+  if(pays&&pays!=='uefa'&&pays!=='club') slugs.push(pays+'.super_cup');
   var f=function(d){ return d.getFullYear()+String(d.getMonth()+1).padStart(2,'0')+String(d.getDate()).padStart(2,'0'); };
-  var j=null;
-  try{ j=await _g45TrEspn('/apis/site/v2/sports/soccer/'+slug+'/scoreboard?dates='+f(new Date())+'-'+f(new Date(Date.now()+60*86400000))); }catch(e){ return []; }
+  var plage=f(new Date())+'-'+f(new Date(Date.now()+60*86400000));
+  var reps=await Promise.all(slugs.map(function(sl){
+    return _g45TrEspn('/apis/site/v2/sports/soccer/'+sl+'/scoreboard?dates='+plage)
+      .then(function(r){ return {sl:sl, j:r}; })
+      .catch(function(){ return {sl:sl, j:null}; });
+  }));
   var nz=function(x){ return String(x||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,''); };
-  var cible=nz(espnNom), out=[];
+  var cible=nz(espnNom), out=[], vus={};
+  reps.forEach(function(rep){
+  var slug=rep.sl, j=rep.j;
   ((j&&j.events)||[]).forEach(function(e){
+    if(vus[e.id]) return;
     var c=(e.competitions&&e.competitions[0])||{};
     var st=(c.status&&c.status.type)||{};
     if(st.completed===true) return;
@@ -18317,9 +18331,11 @@ async function _g45AVenirLigue(slug, espnId, espnNom){
     var moi=(espnId&&(hid===String(espnId)||aid===String(espnId)))
          || (cible&&(nz(hn).indexOf(cible)>=0||cible.indexOf(nz(hn))>=0||nz(an).indexOf(cible)>=0||cible.indexOf(nz(an))>=0));
     if(!moi) return;
+    vus[e.id]=1;
     out.push({id:e.id, date:e.date, completed:false, homeTeam:hn, awayTeam:an,
               homeId:hid, awayId:aid, homeScore:null, awayScore:null,
               competition:slug, competitionName:((e.season&&e.season.name)||''), odds:null});
+  });
   });
   return out;
 }
