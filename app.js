@@ -18386,13 +18386,18 @@ function _g45BlocAVenir(nom){
       var mien=dom?m.odds.home:m.odds.away;
       if(mien&&mien>1) cote='<span style="font-size:9px;font-weight:800;color:#f0c828;">'+mien.toFixed(2)+'</span>';
     }
-    h+='<div style="display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:1px solid rgba(255,255,255,.05);">'
+    /* Même mécanique que les lignes de résultats : clic → fiche avant-match ESPN
+       (forme, classement, cotes). Le panneau frère est obligatoire, la fonction le cherche
+       via nextElementSibling. */
+    var clic=(m.id&&m.competition)?(' onclick="toggleSaisonMatchDetail(this)" data-eid="'+_g45CyEa(m.id)+'" data-lg="'+_g45CyEa(m.competition)+'"'):'';
+    h+='<div'+clic+' style="display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:1px solid rgba(255,255,255,.05);'+(clic?'cursor:pointer;':'')+'">'
       +'<div style="flex:none;width:64px;"><div style="font-size:10px;font-weight:700;color:var(--t1);">'+_g45CyEa(d)+'</div>'
       +'<div style="font-size:8px;color:var(--t3);">'+_g45CyEa(hr)+'</div></div>'
       +'<div style="flex:none;font-size:11px;">'+(dom?'🏠':'✈️')+'</div>'
       +'<div style="flex:1;min-width:0;"><div style="font-size:11px;font-weight:700;color:var(--t1);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">'+_g45CyEa(adv)+'</div>'
       +(c?('<div style="font-size:8px;color:var(--t3);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">'+_g45CyEa(c)+'</div>'):'')+'</div>'
-      +'<div style="flex:none;text-align:right;">'+cote+'</div></div>';
+      +'<div style="flex:none;text-align:right;">'+cote+(clic?'<span style="font-size:9px;color:var(--t3);margin-left:5px;">›</span>':'')+'</div></div>'
+      +(clic?'<div class="smd-panel" data-open="0" style="display:none;"></div>':'');
   });
   return h+'</div>';
 }
