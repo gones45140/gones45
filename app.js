@@ -18302,9 +18302,11 @@ async function _g45AVenirLigue(slug, espnId, espnNom){
      vivent sous d'autres slugs (vérifié : uefa.super_cup, fra.super_cup, club.friendly
      contenaient bien les matchs d'août du PSG). Le préfixe pays se déduit du championnat,
      ce qui rend la règle valable pour n'importe quelle équipe. */
+  /* Supercoupes nationales réellement présentes chez ESPN (testé) : seules fra, ita, ger
+     et esp répondent ; ned, bra, arg, eng, por, tur, bel renvoient HTTP 400. */
   var pays=String(slug).split('.')[0];
   var slugs=[slug, 'club.friendly', 'uefa.super_cup'];
-  if(pays&&pays!=='uefa'&&pays!=='club') slugs.push(pays+'.super_cup');
+  if(['fra','ita','ger','esp'].indexOf(pays)>=0) slugs.push(pays+'.super_cup');
   var f=function(d){ return d.getFullYear()+String(d.getMonth()+1).padStart(2,'0')+String(d.getDate()).padStart(2,'0'); };
   var plage=f(new Date())+'-'+f(new Date(Date.now()+60*86400000));
   var reps=await Promise.all(slugs.map(function(sl){
