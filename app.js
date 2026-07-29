@@ -21410,6 +21410,28 @@ async function g45ClvView(){
       +'<div style="flex:1;text-align:center;background:rgba(0,0,0,.22);border-radius:8px;padding:8px;"><div style="font-size:16px;font-weight:800;color:var(--t1);">'+Math.round(100*pos/mes.length)+'%</div><div style="font-size:7.5px;color:var(--t3);">paris battant la clôture</div></div>'
       +'<div style="flex:1;text-align:center;background:rgba(0,0,0,.22);border-radius:8px;padding:8px;"><div style="font-size:16px;font-weight:800;color:var(--t1);">'+mes.length+'</div><div style="font-size:7.5px;color:var(--t3);">paris mesurés</div></div>'
       +'</div>';
+    /* Ventilation par équipe : chacune a sa propre montante, donc une moyenne globale
+       masquerait une équipe sur laquelle il subit systématiquement la clôture. */
+    var parEq={};
+    mes.forEach(function(x){ var e=x.s.eq; (parEq[e]=parEq[e]||[]).push(x.r); });
+    var eqs=Object.keys(parEq).sort(function(a,b){
+      var ma=parEq[a].reduce(function(u,v){return u+v;},0)/parEq[a].length;
+      var mb=parEq[b].reduce(function(u,v){return u+v;},0)/parEq[b].length;
+      return mb-ma;
+    });
+    if(eqs.length>1){
+      h+='<div style="background:rgba(12,16,28,.96);border:1px solid rgba(255,255,255,.08);border-radius:9px;padding:8px 10px;margin-bottom:8px;">'
+        +'<div style="font-size:9px;font-weight:800;color:var(--t2);margin-bottom:5px;">Par équipe</div>';
+      eqs.forEach(function(e){
+        var L=parEq[e], m2=L.reduce(function(u,v){return u+v;},0)/L.length, p2=(m2-1)*100;
+        var c3=p2>=2?'#2ecc71':(p2>=-1?'#f0c828':'#ff6b6b');
+        h+='<div style="display:flex;align-items:center;gap:8px;padding:3px 0;">'
+          +'<div style="flex:1;font-size:10px;font-weight:700;color:var(--t1);">'+_g45CyEa(e)+'</div>'
+          +'<div style="flex:none;font-size:8px;color:var(--t3);">'+L.length+' pari'+(L.length>1?'s':'')+'</div>'
+          +'<div style="flex:none;width:52px;text-align:right;font-size:11px;font-weight:800;color:'+c3+';">'+(p2>=0?'+':'')+Math.round(p2*10)/10+'%</div></div>';
+      });
+      h+='</div>';
+    }
     mes.forEach(function(x){
       var pc=(x.r-1)*100, c2=pc>=2?'#2ecc71':(pc>=-1?'#f0c828':'#ff6b6b');
       var d=''; try{ d=new Date(x.s.ko).toLocaleDateString('fr-FR',{day:'numeric',month:'short'}); }catch(e){}
