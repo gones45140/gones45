@@ -21205,6 +21205,227 @@ async function g45ButeursView(){
 }
 window.g45ButeursView=g45ButeursView;
 
+/* ═══════════ 📏 CLV — CLOSING LINE VALUE ═══════════
+   Mesure si Antoine bat la cote de clôture. Sur une montante ou sur un petit nombre de
+   paris, le ROI ne dit presque rien ; le CLV, lui, se calcule par pari, sur la cote,
+   indépendamment de la mise — c'est la seule mesure de compétence disponible à court terme.
+
+   MÉTHODE : Antoine joue « Victoire de l'équipe + total de buts » sur les matchs de
+   championnat de quelques équipes. On relève donc, pour chaque match à venir de ces
+   équipes, la cote 1N2 de l'équipe et la cote du total configuré, et on garde le DERNIER
+   relevé avant le coup d'envoi comme référence.
+
+   LIMITE ASSUMÉE : ESPN ne conserve aucune cote après un match (vérifié sur 3 matchs du
+   Bayern), donc aucun calcul rétroactif n'est possible — la mesure démarre aujourd'hui.
+   Et comme le relevé se fait à l'ouverture de l'app, ce n'est pas la clôture exacte mais
+   la dernière cote vue : l'écart horaire est affiché sans le maquiller. */
+var _G45_CLV_MIN=1.50;   /* en dessous, Antoine ajoute le total pour atteindre son seuil */
+var _G45_CLV_DEF=[
+  {n:'Bayern',  sl:'ger.1', side:'over',  line:2.5, al:['bayern','bayernmunich','bayernmunchen','fcbayern']},
+  {n:'Real',    sl:'esp.1', side:'over',  line:2.5, al:['realmadrid','real']},
+  {n:'PSV',     sl:'ned.1', side:'over',  line:2.5, al:['psv','psveindhoven']},
+  {n:'Inter',   sl:'ita.1', side:'under', line:2.5, al:['inter','intermilan','internazionale']}
+];
+function _g45ClvCfg(){
+  try{ var c=JSON.parse(localStorage.getItem('g45clv_cfg')||'null'); if(c&&c.length) return c; }catch(e){}
+  return _G45_CLV_DEF;
+}
+function _g45ClvSaveCfg(c){ try{ localStorage.setItem('g45clv_cfg', JSON.stringify(c)); }catch(e){} }
+function g45ClvSide(i){
+  var c=_g45ClvCfg(); if(!c[i]) return;
+  c[i].side=(c[i].side==='over')?'under':'over';
+  _g45ClvSaveCfg(c); g45ClvView();
+}
+function g45ClvLine(i){
+  var c=_g45ClvCfg(); if(!c[i]) return;
+  var L=[1.5,2.5,3.5], k=L.indexOf(c[i].line);
+  c[i].line=L[(k+1)%L.length];
+  _g45ClvSaveCfg(c); g45ClvView();
+}
+window.g45ClvSide=g45ClvSide; window.g45ClvLine=g45ClvLine;
+
+function _g45ClvNz(x){ return String(x||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9]/g,''); }
+function _g45ClvEst(nom, cfg){
+  var z=_g45ClvNz(nom);
+  if(!z) return false;
+  return (cfg.al||[]).some(function(a){ return z===a||z.indexOf(a)>=0||a.indexOf(z)>=0; });
+}
+/* Médiane du prix 1N2 d'une équipe donnée, tous bookmakers confondus */
+function _g45ClvH2H(ev, cfg){
+  var px=[];
+  ((ev&&ev.bookmakers)||[]).forEach(function(b){
+    (b.markets||[]).forEach(function(m){
+      if(m.key!=='h2h') return;
+      (m.outcomes||[]).forEach(function(oc){
+        if(oc&&oc.price>1&&_g45ClvEst(oc.name, cfg)) px.push(oc.price);
+      });
+    });
+  });
+  if(!px.length) return 0;
+  px.sort(function(a,b){ return a-b; });
+  return px[Math.floor(px.length/2)];
+}
+function _g45ClvSnaps(){
+  try{ return JSON.parse(localStorage.getItem('g45clv_snaps')||'{}'); }catch(e){ return {}; }
+}
+function _g45ClvSaveSnaps(o){ try{ localStorage.setItem('g45clv_snaps', JSON.stringify(o)); }catch(e){} }
+
+/* Relève les cotes des prochains matchs des équipes suivies. Appelé à l'ouverture de la
+   vue : chaque passage écrase le relevé précédent tant que le match n'a pas commencé. */
+async function _g45ClvReleve(onStep){
+  var cfg=_g45ClvCfg(), S=_g45ClvSnaps(), now=Date.now(), n=0;
+  var f=function(d){ return d.getFullYear()+String(d.getMonth()+1).padStart(2,'0')+String(d.getDate()).padStart(2,'0'); };
+  var plage=f(new Date())+'-'+f(new Date(now+21*86400000));
+  for(var i=0;i<cfg.length;i++){
+    var c=cfg[i];
+    if(onStep) onStep(c.n, i+1, cfg.length);
+    var j=null;
+    try{ j=await _g45TrEspn('/apis/site/v2/sports/soccer/'+c.sl+'/scoreboard?dates='+plage); }catch(e){ continue; }
+    var evs=((j&&j.events)||[]).filter(function(e){
+      var comp=(e.competitions&&e.competitions[0])||{};
+      var st=(comp.status&&comp.status.type)||{};
+      if(st.completed===true) return false;
+      var cs=comp.competitors||[];
+      return cs.some(function(x){ return _g45ClvEst((x.team&&(x.team.displayName||x.team.shortDisplayName))||'', c); });
+    }).sort(function(a,b){ return Date.parse(a.date)-Date.parse(b.date); });
+    if(!evs.length) continue;
+    var e=evs[0];
+    var comp=(e.competitions&&e.competitions[0])||{};
+    var cs=comp.competitors||[];
+    var ho=cs.filter(function(x){ return x.homeAway==='home'; })[0]||cs[0];
+    var aw=cs.filter(function(x){ return x.homeAway==='away'; })[0]||cs[1];
+    var hn=(ho&&ho.team&&(ho.team.displayName||ho.team.shortDisplayName))||'?';
+    var an=(aw&&aw.team&&(aw.team.displayName||aw.team.shortDisplayName))||'?';
+    var ko=Date.parse(e.date);
+    if(isNaN(ko)||ko<now-3*3600000) continue;
+    /* cotes du marché */
+    var liste=null;
+    try{ liste=await _g45TrOddsApi(c.sl); }catch(err){}
+    var oaEv=liste?_g45TrFindEv(liste, hn, an):null;
+    if(!oaEv) continue;
+    var o1=_g45ClvH2H(oaEv, c);
+    var pr=_g45TrPrices(oaEv);
+    var oT=pr[(c.side==='over'?'o':'u')+c.line]||0;
+    if(!(o1>1)&&!(oT>1)) continue;
+    var k='ev'+e.id;
+    var prec=S[k]||{};
+    S[k]={id:e.id, eq:c.n, sl:c.sl, hn:hn, an:an, ko:ko, side:c.side, line:c.line,
+          o1:o1||prec.o1||0, oT:oT||prec.oT||0, ts:now, prem:(prec.prem||now)};
+    n++;
+  }
+  _g45ClvSaveSnaps(S);
+  return n;
+}
+/* Rapproche un relevé d'un pari enregistré : même équipe, même jour */
+function _g45ClvPari(snap){
+  var H=(typeof state!=='undefined'&&state&&state.h)?state.h:[];
+  var jour=function(t){ try{ return new Date(t).toISOString().slice(0,10); }catch(e){ return ''; } };
+  var jk=jour(snap.ko);
+  var cfg=_g45ClvCfg().filter(function(c){ return c.n===snap.eq; })[0]||{al:[]};
+  var trouve=null;
+  H.forEach(function(h){
+    if(trouve) return;
+    if(!h||!h.cote) return;
+    var d=String(h.date||'').slice(0,10);
+    if(d!==jk) return;
+    if(!_g45ClvEst(h.n||'', cfg)) return;
+    trouve=h;
+  });
+  return trouve;
+}
+
+/* ── Vue 📏 CLV ── */
+async function g45ClvView(){
+  var el=document.getElementById('t-tend'); if(!el) return;
+  var cfg=_g45ClvCfg();
+  var head='<button onclick="loadTendancesTab()" style="border:none;cursor:pointer;background:rgba(255,255,255,.06);border-radius:8px;color:var(--t2);padding:7px 12px;font-size:11px;font-weight:700;margin-bottom:10px;">← Tendances</button>'
+    +'<div class="sec" style="margin-top:0;">📏 CLV — cote de clôture</div>'
+    +'<div style="font-size:9px;color:var(--t3);line-height:1.6;margin-bottom:9px;">Compare la cote que tu as prise à celle du marché juste avant le coup d\'envoi. Au-dessus de 100%, tu bats la clôture. Sur peu de paris, c\'est bien plus fiable que le ROI.</div>'
+    +'<div style="display:flex;gap:5px;flex-wrap:wrap;margin-bottom:9px;">'
+    +cfg.map(function(c,i){
+      return '<span style="display:inline-flex;align-items:center;gap:4px;background:rgba(255,255,255,.05);border-radius:8px;padding:4px 7px;">'
+        +'<span style="font-size:10px;font-weight:800;color:var(--t1);">'+_g45CyEa(c.n)+'</span>'
+        +'<button onclick="g45ClvSide('+i+')" style="border:none;cursor:pointer;border-radius:5px;padding:2px 6px;font-size:9px;font-weight:800;background:'+(c.side==='over'?'rgba(46,204,113,.18);color:#2ecc71':'rgba(138,160,255,.18);color:#8aa0ff')+';">'+(c.side==='over'?'Over':'Under')+'</button>'
+        +'<button onclick="g45ClvLine('+i+')" style="border:none;cursor:pointer;border-radius:5px;padding:2px 6px;font-size:9px;font-weight:800;background:rgba(255,255,255,.08);color:var(--t2);">'+c.line+'</button></span>';
+    }).join('')+'</div>';
+  el.innerHTML=head+'<div id="g45clv-prog" style="font-size:10px;color:#8aa0ff;text-align:center;padding:10px;">⏳ Relevé des cotes…</div>';
+  try{
+    await _g45ClvReleve(function(nom,i,n){
+      var b=document.getElementById('g45clv-prog'); if(b) b.innerHTML='⏳ '+_g45CyEa(nom)+' ('+i+'/'+n+')';
+    });
+  }catch(e){}
+
+  var S=_g45ClvSnaps(), now=Date.now();
+  var cles=Object.keys(S).sort(function(a,b){ return S[a].ko-S[b].ko; });
+  var futurs=cles.filter(function(k){ return S[k].ko>now-3*3600000; });
+  var passes=cles.filter(function(k){ return S[k].ko<=now-3*3600000; }).reverse();
+
+  var h='';
+  /* ── à venir ── */
+  h+='<div style="font-size:10px;font-weight:800;color:#8aa0ff;margin:6px 0;">🎯 Matchs suivis à venir</div>';
+  if(!futurs.length) h+='<div style="font-size:10px;color:var(--t3);text-align:center;padding:12px;">Aucun match à venir sur les équipes suivies dans les 3 prochaines semaines.</div>';
+  futurs.forEach(function(k){
+    var s=S[k], comb=(s.o1>1&&s.oT>1)?(s.o1*s.oT):0;
+    var seul=(s.o1>=_G45_CLV_MIN);
+    var ref=seul?s.o1:comb;
+    var d=''; try{ d=new Date(s.ko).toLocaleDateString('fr-FR',{weekday:'short',day:'numeric',month:'short'})+' '+new Date(s.ko).toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'}); }catch(e){}
+    var hAv=Math.max(0,Math.round((s.ko-s.ts)/3600000));
+    h+='<div style="background:rgba(12,16,28,.96);border:1px solid rgba(255,255,255,.08);border-radius:9px;padding:9px 11px;margin-bottom:7px;">'
+      +'<div style="display:flex;justify-content:space-between;gap:8px;">'
+        +'<div style="flex:1;min-width:0;"><div style="font-size:11px;font-weight:800;color:var(--t1);">'+_g45CyEa(s.hn)+' – '+_g45CyEa(s.an)+'</div>'
+        +'<div style="font-size:8.5px;color:var(--t3);">'+_g45CyEa(d)+'</div></div>'
+        +'<div style="flex:none;text-align:right;"><div style="font-size:13px;font-weight:800;color:'+(seul?'#2ecc71':'#f0c828')+';">'+(ref?ref.toFixed(2):'—')+'</div>'
+        +'<div style="font-size:7.5px;color:var(--t3);">'+(seul?'équipe seule':'combiné nécessaire')+'</div></div>'
+      +'</div>'
+      +'<div style="font-size:9px;color:'+(seul?'#2ecc71':'var(--t2)')+';margin-top:4px;font-weight:700;">'
+        +(seul?('✅ La victoire seule passe le seuil de '+_G45_CLV_MIN.toFixed(2)+' — pas besoin du total.')
+              :('➕ Victoire à '+(s.o1>1?s.o1.toFixed(2):'—')+', sous '+_G45_CLV_MIN.toFixed(2)+' : le total est nécessaire.'))+'</div>'
+      +'<div style="font-size:9px;color:var(--t2);margin-top:5px;">Victoire '+_g45CyEa(s.eq)+' : <b>'+(s.o1>1?s.o1.toFixed(2):'—')+'</b>'
+      +' · '+(s.side==='over'?'Over ':'Under ')+s.line+' : <b>'+(s.oT>1?s.oT.toFixed(2):'—')+'</b></div>'
+      +'<div style="font-size:8px;color:var(--t3);margin-top:3px;">Dernier relevé à H−'+hAv+' — rouvre cette vue le jour du match pour un relevé plus proche du coup d\'envoi.</div>'
+      +'</div>';
+  });
+
+  /* ── mesurés ── */
+  var mes=[];
+  passes.forEach(function(k){
+    var s=S[k], p=_g45ClvPari(s);
+    if(!p) return;
+    /* Structure réelle du pari : s'il n'a qu'une sélection, la référence est la cote 1N2
+       seule ; s'il est combiné, c'est le produit des deux jambes. */
+    var estComb=!!(p.combiRows&&p.combiRows.length>1);
+    var clot=estComb?((s.o1>1&&s.oT>1)?(s.o1*s.oT):0):(s.o1>1?s.o1:0);
+    if(!clot) return;
+    mes.push({s:s, p:p, clot:clot, r:(p.cote/clot), comb:estComb});
+  });
+  h+='<div style="font-size:10px;font-weight:800;color:#2ecc71;margin:14px 0 6px;">📊 CLV mesuré</div>';
+  if(!mes.length){
+    h+='<div style="font-size:10px;color:var(--t3);text-align:center;padding:12px;line-height:1.6;">Aucun pari mesuré pour l\'instant.<br><span style="font-size:9px;">Un pari apparaît ici quand un relevé existe et qu\'un pari enregistré correspond (même équipe, même jour).</span></div>';
+  } else {
+    var moy=mes.reduce(function(a,x){ return a+x.r; },0)/mes.length;
+    var pos=mes.filter(function(x){ return x.r>1; }).length;
+    var col=moy>=1.02?'#2ecc71':(moy>=0.99?'#f0c828':'#ff6b6b');
+    h+='<div style="display:flex;gap:6px;margin-bottom:8px;">'
+      +'<div style="flex:1;text-align:center;background:rgba(0,0,0,.22);border-radius:8px;padding:8px;"><div style="font-size:16px;font-weight:800;color:'+col+';">'+Math.round((moy-1)*1000)/10+'%</div><div style="font-size:7.5px;color:var(--t3);">CLV moyen</div></div>'
+      +'<div style="flex:1;text-align:center;background:rgba(0,0,0,.22);border-radius:8px;padding:8px;"><div style="font-size:16px;font-weight:800;color:var(--t1);">'+Math.round(100*pos/mes.length)+'%</div><div style="font-size:7.5px;color:var(--t3);">paris battant la clôture</div></div>'
+      +'<div style="flex:1;text-align:center;background:rgba(0,0,0,.22);border-radius:8px;padding:8px;"><div style="font-size:16px;font-weight:800;color:var(--t1);">'+mes.length+'</div><div style="font-size:7.5px;color:var(--t3);">paris mesurés</div></div>'
+      +'</div>';
+    mes.forEach(function(x){
+      var pc=(x.r-1)*100, c2=pc>=2?'#2ecc71':(pc>=-1?'#f0c828':'#ff6b6b');
+      var d=''; try{ d=new Date(x.s.ko).toLocaleDateString('fr-FR',{day:'numeric',month:'short'}); }catch(e){}
+      h+='<div style="display:flex;align-items:center;gap:8px;background:rgba(12,16,28,.96);border:1px solid rgba(255,255,255,.08);border-left:3px solid '+c2+';border-radius:8px;padding:7px 10px;margin-bottom:5px;">'
+        +'<div style="flex:none;width:52px;font-size:9px;color:var(--t3);">'+_g45CyEa(d)+'</div>'
+        +'<div style="flex:1;min-width:0;"><div style="font-size:10.5px;font-weight:700;color:var(--t1);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">'+_g45CyEa(x.s.hn)+' – '+_g45CyEa(x.s.an)+'</div>'
+        +'<div style="font-size:8px;color:var(--t3);">'+(x.comb?'combiné':'équipe seule')+' · prise '+x.p.cote+' · clôture '+x.clot.toFixed(2)+'</div></div>'
+        +'<div style="flex:none;font-size:12px;font-weight:800;color:'+c2+';">'+(pc>=0?'+':'')+Math.round(pc*10)/10+'%</div></div>';
+    });
+    if(mes.length<20) h+='<div style="font-size:8px;color:#ff8c42;text-align:center;margin-top:6px;">⚠️ '+mes.length+' paris seulement — il en faut une trentaine avant que la moyenne signifie quelque chose.</div>';
+  }
+  el.innerHTML=head+h
+    +'<div style="font-size:8px;color:var(--t3);text-align:center;margin-top:10px;font-style:italic;line-height:1.6;">Cotes médianes des bookmakers européens via The Odds API, relevées à chaque ouverture de cette vue. ESPN ne conservant aucune cote après un match, aucun calcul rétroactif n\'est possible : la mesure démarre aujourd\'hui.</div>';
+}
+window.g45ClvView=g45ClvView;
+
 /* ── Onglet 🔥 Tendances : sélection, balayage, rendu ── */
 function _g45TrGroups(){
   var G=(typeof G45_LEAGUE_GROUPS!=='undefined')?G45_LEAGUE_GROUPS:[];
@@ -21231,6 +21452,7 @@ function loadTendancesTab(){
     +'<span style="font-size:9px;color:var(--t3);">Jour :</span>'
     +chip("Aujourd'hui", _G45_TR.day===0, "g45TrDay(0)")+chip('Demain', _G45_TR.day===1, "g45TrDay(1)")
     +'<button onclick="g45ButeursView()" style="border:none;cursor:pointer;border-radius:8px;padding:6px 11px;font-size:10px;font-weight:800;background:rgba(240,200,40,.16);color:#f0c828;margin-left:4px;">⚽ Buteurs</button>'
+    +'<button onclick="g45ClvView()" style="border:none;cursor:pointer;border-radius:8px;padding:6px 11px;font-size:10px;font-weight:800;background:rgba(46,204,113,.16);color:#2ecc71;margin-left:4px;">📏 CLV</button>'
     +'</div>';
   if(!_G45_TR.res){
     h+='<button onclick="g45TrRun()" style="width:100%;border:none;cursor:pointer;border-radius:9px;padding:11px;font-size:11px;font-weight:800;background:rgba(240,200,40,.16);color:#f0c828;">⚡ Analyser les matchs</button>'
