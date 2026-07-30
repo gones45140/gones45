@@ -2945,7 +2945,7 @@ function saveEditUnit(){
   try{ if(typeof _g45PushBetsGithub==='function') _g45PushBetsGithub(true); }catch(err){}
   closeEditUnit();
 }
-function rmUnit(i){var u=state.u[parseInt(i)];if(u&&confirm('Supprimer '+u.n+' ?')){state.u.splice(parseInt(i),1);save();}}
+function rmUnit(i){var u=state.u[parseInt(i)];if(u&&confirm('Supprimer '+u.n+' ?')){state.u.splice(parseInt(i),1);save();try{ if(typeof _g45PushBetsGithub==='function') _g45PushBetsGithub(true); }catch(e){}}}
 
 /* ── NAV ── */
 function showTab(id,btn){
@@ -9197,7 +9197,7 @@ function saveEditUnit(){
   try{ if(typeof _g45PushBetsGithub==='function') _g45PushBetsGithub(true); }catch(err){}
   closeEditUnit();
 }
-function rmUnit(i){var u=state.u[parseInt(i)];if(u&&confirm('Supprimer '+u.n+' ?')){state.u.splice(parseInt(i),1);save();}}
+function rmUnit(i){var u=state.u[parseInt(i)];if(u&&confirm('Supprimer '+u.n+' ?')){state.u.splice(parseInt(i),1);save();try{ if(typeof _g45PushBetsGithub==='function') _g45PushBetsGithub(true); }catch(e){}}}
 
 /* ── NAV ── */
 function showTab(id,btn){
@@ -26604,8 +26604,29 @@ function _g45PushBetsGithub(immediate){
       if(ok){ localStorage.setItem('g45_betsync_ts', String(ts)); console.log('✅ paris poussés (chiffrés) sur GitHub'); }
     }catch(e){ console.warn('push bets', e); }
   };
-  if(immediate){ run(); } else { _g45BetPushT=setTimeout(run, 2500); }
+  if(immediate){ run(); } else { _g45BetPushT=setTimeout(run, 800); }
 }
+/* FILET DE SÉCURITÉ : l'envoi vers GitHub est différé de 2,5 s. Si la page est rechargée,
+   fermée ou mise en arrière-plan avant l'échéance, la modification n'est jamais poussée —
+   et au chargement suivant, la version distante, plus ancienne, écrase tout l'état local.
+   On force donc l'envoi dès que la page s'apprête à disparaître. */
+function _g45FlushBetSync(){
+  try{
+    if(typeof _g45BetPushT!=='undefined' && _g45BetPushT){
+      clearTimeout(_g45BetPushT); _g45BetPushT=null;
+      if(typeof _g45PushBetsGithub==='function') _g45PushBetsGithub(true);
+    }
+  }catch(e){}
+}
+window._g45FlushBetSync=_g45FlushBetSync;
+try{
+  document.addEventListener('visibilitychange', function(){
+    if(document.visibilityState==='hidden') _g45FlushBetSync();
+  });
+  window.addEventListener('pagehide', _g45FlushBetSync);
+  window.addEventListener('beforeunload', _g45FlushBetSync);
+}catch(e){}
+
 /* PULL (au démarrage) : si GitHub est plus récent que le local, on charge et on recharge la page */
 async function _g45PullBetsGithub(){
   if(!_g45BetSyncOn()) return;
