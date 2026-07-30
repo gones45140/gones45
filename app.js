@@ -1,3 +1,24 @@
+/* ═══════════ 🔎 TRACEUR TEMPORAIRE — à retirer une fois le coupable identifié ═══════════
+   Journalise chaque écriture de g45v5 avec le nombre d'entrées du mur et la pile d'appels,
+   pour identifier ce qui supprime des entrées au chargement. */
+(function(){
+  try{
+    var _set=localStorage.setItem.bind(localStorage);
+    localStorage.setItem=function(k,v){
+      if(k==='g45v5'){
+        try{
+          var u=(JSON.parse(v).u)||[];
+          console.warn('✍️ ÉCRITURE g45v5 → '+u.length+' entrées : '+u.map(function(x){return x&&x.n;}).join(' · '));
+          console.trace('   ↑ appelé depuis');
+        }catch(e){}
+      }
+      return _set(k,v);
+    };
+    var _d=localStorage.getItem('g45v5');
+    var _u0=[]; try{ _u0=(JSON.parse(_d||'{}').u)||[]; }catch(e){}
+    console.log('🔎 AU DÉMARRAGE, localStorage contient '+_u0.length+' entrées : '+_u0.map(function(x){return x&&x.n;}).join(' · '));
+  }catch(e){}
+})();
 var TEAM_IDS = {
     'Bayern Munich':5,'Bayern München':5,'FC Bayern':5,
     'Borussia Dortmund':4,'BVB':4,
