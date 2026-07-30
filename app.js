@@ -21303,6 +21303,17 @@ async function _g45ButIdMur(p){
   }
   if(!r) return null;
   try{ localStorage.setItem(ck, JSON.stringify(r)); }catch(e){}
+  /* Une fois l'identifiant ESPN connu, on pose sa photo comme logo de l'entrée du mur :
+     elle n'a pas de blason, donc elle affichait le ballon par défaut. */
+  try{
+    var U=(typeof state!=='undefined'&&state&&state.u)?state.u:[];
+    var ent=U.filter(function(x){ return x&&x.n===p.n; })[0];
+    if(ent&&!ent.logoUrl){
+      ent.logoUrl='https://a.espncdn.com/i/headshots/soccer/players/full/'+r.aid+'.png';
+      if(typeof LOGOS!=='undefined') LOGOS[ent.n]=ent.logoUrl;
+      if(typeof save==='function') save();
+    }
+  }catch(e){}
   return r;
 }
 async function g45ButeursView(){
