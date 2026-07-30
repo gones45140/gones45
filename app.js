@@ -26685,6 +26685,23 @@ async function _g45PullBetsGithub(){
       } else { st=res.data.state; } // ancien format en clair (ne devrait pas exister)
       if(!st) return;
       if(!st.bkColors) st.bkColors={};
+      /* LE MUR EST ADDITIF : une entrée présente en local mais absente de la version
+         distante est CONSERVÉE. Sans ça, un ajout non encore poussé disparaissait au
+         chargement suivant (symptôme vécu trois fois avec les joueurs du mur). On accepte
+         qu'une suppression puisse ainsi revenir : perdre une entrée coûte plus cher. */
+      try{
+        var _loc=JSON.parse(localStorage.getItem('g45v5')||'null');
+        if(_loc&&_loc.u&&_loc.u.length){
+          if(!Array.isArray(st.u)) st.u=[];
+          var _vus={};
+          st.u.forEach(function(x){ if(x&&x.n) _vus[String(x.n).toLowerCase()]=1; });
+          var _gardes=[];
+          _loc.u.forEach(function(x){
+            if(x&&x.n&&!_vus[String(x.n).toLowerCase()]){ st.u.push(x); _gardes.push(x.n); }
+          });
+          if(_gardes.length) console.warn('🛟 entrées locales conservées malgré la synchro : '+_gardes.join(', '));
+        }
+      }catch(e){}
       localStorage.setItem('g45v5', JSON.stringify(st));
       localStorage.setItem('g45_betsync_ts', String(remoteTs));
       console.log('⬇️ paris chargés depuis GitHub (plus récents) — rechargement…');
