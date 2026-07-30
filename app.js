@@ -8912,6 +8912,7 @@ function openClub(nom,idx){
 function setUG(nom){var v=prompt('Objectif profit pour '+nom+' (€) :',state.ugoals[nom]||0);if(v!=null&&!isNaN(+v)){state.ugoals[nom]=+v;save();}}
 function closeClub(){Object.values(AC).forEach(function(c){try{c.destroy();}catch(e){}});AC={};$i('detail').style.display='none';$i('t-bilan').style.display='block';}
 function swInner(id,btn){
+  window._currentInnerTab = id; // mémoriser pour le refresh
   if(id==='saisons') setTimeout(loadTeamSaisons, 50);document.querySelectorAll('.itab').forEach(function(t){t.classList.remove('on');});document.querySelectorAll('.ipanel').forEach(function(c){c.classList.remove('on');c.style.display='';});if(btn)btn.classList.add('on');$i('ip-'+id).classList.add('on');}
 
 /* ── PARIS ── */
