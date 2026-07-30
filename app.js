@@ -15342,6 +15342,40 @@ function _g45MurJoueurUI(nom){
   if(bj) bj.style.display=j?'':'none';
   if(j) setTimeout(function(){ var x=document.getElementById('itab-joueur'); if(x) x.click(); }, 60);
 }
+/* ── 🌍 SÉLECTION ──
+   Contrairement à un club, une sélection joue sous PLUSIEURS compétitions distinctes.
+   Vérifié sur Mbappé : fifa.world 2026 (10 buts / 8 matchs), fifa.worldq.uefa 2025
+   (5 / 4), fifa.friendly 2026 (1 / 4). uefa.nations et uefa.euro renvoient 404 quand la
+   sélection n'y a pas joué sur la fenêtre — ce n'est pas une erreur, on ignore. */
+var _G45_INTER=[
+  {s:'fifa.world',          n:'Coupe du monde'},
+  {s:'fifa.worldq.uefa',    n:'Qualif. Mondial'},
+  {s:'fifa.worldq.conmebol',n:'Qualif. Mondial'},
+  {s:'uefa.nations',        n:'Ligue des Nations'},
+  {s:'uefa.euro',           n:'Euro'},
+  {s:'copa.america',        n:'Copa América'},
+  {s:'fifa.friendly',       n:'Amicaux'}
+];
+async function _g45ButInter(aid, y){
+  var ck='g45but_int_'+aid+'_'+y;
+  try{ var c=JSON.parse(localStorage.getItem(ck)||'null'); if(c&&(Date.now()-c.t)<12*3600000) return c.d; }catch(e){}
+  var tot={app:0,st:0,min:0,g:0,pg:0,ps:0,sh:0,sot:0,ast:0,head:0,fk:0,comps:[]};
+  var champs=['app','st','min','g','pg','ps','sh','sot','ast','head','fk'];
+  for(var i=0;i<_G45_INTER.length;i++){
+    for(var k=0;k<2;k++){
+      var an=y-k, d=null;
+      try{ d=await _g45ButStats({lg:_G45_INTER[i].s}, {aid:aid}, an); }catch(e){}
+      if(d&&d.app){
+        champs.forEach(function(f){ tot[f]+=(d[f]||0); });
+        tot.comps.push(_G45_INTER[i].n+' '+an+' ('+d.g+'b/'+d.app+'m)');
+        break;                       // une seule saison par compétition
+      }
+    }
+  }
+  if(!tot.app) return null;
+  try{ localStorage.setItem(ck, JSON.stringify({t:Date.now(), d:tot})); }catch(e){}
+  return tot;
+}
 async function g45MurJoueurPanel(){
   var el=document.getElementById('ip-joueur'); if(!el) return;
   var nom=(typeof _currentTeam!=='undefined'&&_currentTeam)?_currentTeam:'';
@@ -15361,6 +15395,8 @@ async function g45MurJoueurPanel(){
   if(!d){ try{ d=await _g45ButStats({lg:id.lg}, id, y-1); }catch(e){} if(d) an=y-1; }
   var dC=null;
   try{ dC=await _g45ButStats({lg:'uefa.champions'}, id, an); }catch(e){}
+  var dI=null;
+  try{ dI=await _g45ButInter(id.aid, y); }catch(e){}
   if(!d){
     el.innerHTML='<div style="font-size:10.5px;color:var(--t3);text-align:center;padding:16px;">Aucune statistique disponible pour '+_g45CyEa(id.pname)+'.</div>';
     return;
@@ -15387,6 +15423,8 @@ async function g45MurJoueurPanel(){
       +'<div style="font-size:9px;color:var(--t2);">'+_g45CyEa(id.tname||'')+' · saison '+an+'/'+(an+1)+'</div></div></div>'
     +carte(d,'🏆 Championnat','#f0c828')
     +(dC?carte(dC,'⭐ Ligue des Champions','#8aa0ff'):'')
+    +(dI?(carte(dI,'🌍 Sélection','#2ecc71')
+        +'<div style="font-size:8px;color:var(--t3);margin:-4px 0 9px 2px;">'+_g45CyEa(dI.comps.join(' · '))+'</div>'):'')
     +'<div style="font-size:8px;color:var(--t3);text-align:center;margin-top:6px;font-style:italic;line-height:1.6;">λ = buts par match joué ; p = 1 − e<sup>−λ</sup>. Statistiques ESPN, championnat et C1 séparés.<br>Pour comparer à une cote buteur, passe par Tendances → ⚽ Buteurs.</div>';
 }
 window.g45MurJoueurPanel=g45MurJoueurPanel;
