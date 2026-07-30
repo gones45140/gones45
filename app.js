@@ -2925,17 +2925,25 @@ function editUnit(i){
 }
 function closeEditUnit(){var m=$i('edit-unit-modal');if(m)m.style.display='none';}
 function saveEditUnit(){
-  var i=parseInt($i('edit-unit-idx').value);
-  var u=state.u[i];if(!u)return;
-  var newName=($i('edit-unit-name').value||u.n).trim().toUpperCase();
-  // Si le nom change, on garde le logo existant
-  u.n=newName;
-  u.s=$i('edit-unit-stars').value||u.s;
-  u.note=$i('edit-unit-note').value.trim();
-  u.color=$i('edit-unit-color').value||u.color;
-  // Conserver le logoUrl existant — ne pas l'effacer
-  // u.logoUrl reste intact
-  save();render();closeEditUnit();
+  var e=$i('edit-unit-idx');
+  var i=parseInt(e?e.value:'');
+  var u=(!isNaN(i))?state.u[i]:null;
+  if(!u){ console.warn('saveEditUnit : entrée introuvable (index '+(e?e.value:'?')+')'); closeEditUnit(); return; }
+  var vn=$i('edit-unit-name'), vs=$i('edit-unit-stars'), vt=$i('edit-unit-note'), vc=$i('edit-unit-color');
+  /* Le nom n'est plus forcé en majuscules : « Haaland » restait lisible, « HAALAND » non,
+     et un renommage casse le lien avec les paris déjà enregistrés sous l'ancien nom. */
+  var newName=((vn&&vn.value)||u.n||'').trim();
+  if(newName) u.n=newName;
+  if(vs&&vs.value) u.s=vs.value;
+  if(vt) u.note=(vt.value||'').trim();
+  if(vc&&vc.value) u.color=vc.value;
+  /* Le rendu ne doit jamais empêcher la fermeture du modal : une exception ici donnait
+     l'impression que le bouton Enregistrer ne faisait rien, alors que la sauvegarde
+     avait bien eu lieu. */
+  try{ save(); }catch(err){ console.warn('saveEditUnit / save', err); }
+  try{ render(); }catch(err){ console.warn('saveEditUnit / render', err); }
+  try{ if(typeof _g45PushBetsGithub==='function') _g45PushBetsGithub(true); }catch(err){}
+  closeEditUnit();
 }
 function rmUnit(i){var u=state.u[parseInt(i)];if(u&&confirm('Supprimer '+u.n+' ?')){state.u.splice(parseInt(i),1);save();}}
 
@@ -9169,17 +9177,25 @@ function editUnit(i){
 }
 function closeEditUnit(){var m=$i('edit-unit-modal');if(m)m.style.display='none';}
 function saveEditUnit(){
-  var i=parseInt($i('edit-unit-idx').value);
-  var u=state.u[i];if(!u)return;
-  var newName=($i('edit-unit-name').value||u.n).trim().toUpperCase();
-  // Si le nom change, on garde le logo existant
-  u.n=newName;
-  u.s=$i('edit-unit-stars').value||u.s;
-  u.note=$i('edit-unit-note').value.trim();
-  u.color=$i('edit-unit-color').value||u.color;
-  // Conserver le logoUrl existant — ne pas l'effacer
-  // u.logoUrl reste intact
-  save();render();closeEditUnit();
+  var e=$i('edit-unit-idx');
+  var i=parseInt(e?e.value:'');
+  var u=(!isNaN(i))?state.u[i]:null;
+  if(!u){ console.warn('saveEditUnit : entrée introuvable (index '+(e?e.value:'?')+')'); closeEditUnit(); return; }
+  var vn=$i('edit-unit-name'), vs=$i('edit-unit-stars'), vt=$i('edit-unit-note'), vc=$i('edit-unit-color');
+  /* Le nom n'est plus forcé en majuscules : « Haaland » restait lisible, « HAALAND » non,
+     et un renommage casse le lien avec les paris déjà enregistrés sous l'ancien nom. */
+  var newName=((vn&&vn.value)||u.n||'').trim();
+  if(newName) u.n=newName;
+  if(vs&&vs.value) u.s=vs.value;
+  if(vt) u.note=(vt.value||'').trim();
+  if(vc&&vc.value) u.color=vc.value;
+  /* Le rendu ne doit jamais empêcher la fermeture du modal : une exception ici donnait
+     l'impression que le bouton Enregistrer ne faisait rien, alors que la sauvegarde
+     avait bien eu lieu. */
+  try{ save(); }catch(err){ console.warn('saveEditUnit / save', err); }
+  try{ render(); }catch(err){ console.warn('saveEditUnit / render', err); }
+  try{ if(typeof _g45PushBetsGithub==='function') _g45PushBetsGithub(true); }catch(err){}
+  closeEditUnit();
 }
 function rmUnit(i){var u=state.u[parseInt(i)];if(u&&confirm('Supprimer '+u.n+' ?')){state.u.splice(parseInt(i),1);save();}}
 
