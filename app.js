@@ -1,24 +1,3 @@
-/* ═══════════ 🔎 TRACEUR TEMPORAIRE — à retirer une fois le coupable identifié ═══════════
-   Journalise chaque écriture de g45v5 avec le nombre d'entrées du mur et la pile d'appels,
-   pour identifier ce qui supprime des entrées au chargement. */
-(function(){
-  try{
-    var _set=localStorage.setItem.bind(localStorage);
-    localStorage.setItem=function(k,v){
-      if(k==='g45v5'){
-        try{
-          var u=(JSON.parse(v).u)||[];
-          console.warn('✍️ ÉCRITURE g45v5 → '+u.length+' entrées : '+u.map(function(x){return x&&x.n;}).join(' · '));
-          console.trace('   ↑ appelé depuis');
-        }catch(e){}
-      }
-      return _set(k,v);
-    };
-    var _d=localStorage.getItem('g45v5');
-    var _u0=[]; try{ _u0=(JSON.parse(_d||'{}').u)||[]; }catch(e){}
-    console.log('🔎 AU DÉMARRAGE, localStorage contient '+_u0.length+' entrées : '+_u0.map(function(x){return x&&x.n;}).join(' · '));
-  }catch(e){}
-})();
 var TEAM_IDS = {
     'Bayern Munich':5,'Bayern München':5,'FC Bayern':5,
     'Borussia Dortmund':4,'BVB':4,
@@ -28626,3 +28605,64 @@ window._g45F1LiveCard=_g45F1LiveCard;
 window.g45F1Open=g45F1Open;
 window.g45F1Detail=g45F1Detail;
 window.g45F1Session=g45F1Session;
+
+
+/* ═══════════ 🧹 PROTECTION DU STOCKAGE ═══════════
+   CAUSE RÉELLE d'une perte de données constatée le 30/07/2026 : les caches de l'app
+   (profils cyclistes CSV, calendriers d'équipes, matchs de championnat du Dixon-Coles,
+   cotes, classements) avaient saturé localStorage. `save()` levait alors QuotaExceededError
+   et les données utilisateur n'étaient JAMAIS écrites — l'ajout apparaissait à l'écran puis
+   disparaissait au rechargement. Ce n'était ni la synchro GitHub, ni Dropbox, ni le cache
+   du navigateur. Tous ces caches sont reconstructibles : ils cèdent la place aux données. */
+var _G45_CACHE_PREFIXES=['g45rcP_','g45rcD_','g45rcY_','g45rc_','g45dcm_','g45dcf_','g45dc_',
+  'g45trv3_','g45trv2_','g45trOdds_','g45tr_','g45but_st_','g45butL_','g45butA_','g45but_mur_',
+  '_g45clv','g45clv_snaps','g45_saisons_cache_v2_'];
+function _g45CachePoids(){
+  var t={}, tot=0;
+  try{
+    Object.keys(localStorage).forEach(function(k){
+      var v=(localStorage.getItem(k)||'').length; tot+=v;
+      var p=_G45_CACHE_PREFIXES.filter(function(x){ return k.indexOf(x)===0; })[0]||'(données)';
+      t[p]=(t[p]||0)+v;
+    });
+  }catch(e){}
+  console.log('📦 stockage utilisé : '+Math.round(tot/1024)+' Ko');
+  Object.keys(t).sort(function(a,b){ return t[b]-t[a]; }).forEach(function(k){
+    console.log('   '+String(Math.round(t[k]/1024)+' Ko').padStart(8)+'  '+k);
+  });
+  return tot;
+}
+function _g45FreeSpace(){
+  var n=0, oct=0;
+  try{
+    Object.keys(localStorage).forEach(function(k){
+      if(k==='g45v5') return;                       // jamais les données utilisateur
+      if(_G45_CACHE_PREFIXES.some(function(p){ return k.indexOf(p)===0; })){
+        try{ oct+=(localStorage.getItem(k)||'').length; localStorage.removeItem(k); n++; }catch(e){}
+      }
+    });
+  }catch(e){}
+  console.warn('🧹 '+n+' caches purgés, '+Math.round(oct/1024)+' Ko libérés');
+  return n;
+}
+window._g45FreeSpace=_g45FreeSpace; window._g45CachePoids=_g45CachePoids;
+/* Enveloppe la plus externe : si la sauvegarde échoue faute de place, on purge et on réessaie. */
+(function(){
+  if(typeof save!=='function'||save._g45quota) return;
+  var _orig=save;
+  save=function(){
+    try{ return _orig.apply(this,arguments); }
+    catch(e){
+      var q=(e&&(e.name==='QuotaExceededError'||e.code===22))||/quota/i.test(String(e&&e.message));
+      if(!q) throw e;
+      console.warn('⚠️ stockage saturé — purge des caches puis nouvelle tentative');
+      _g45FreeSpace();
+      try{ return _orig.apply(this,arguments); }
+      catch(e2){
+        console.error('❌ sauvegarde impossible même après purge', e2);
+        try{ alert('Stockage saturé : impossible d\'enregistrer. Tape _g45FreeSpace() dans la console.'); }catch(_){}
+      }
+    }
+  };
+  save._g45quota=1;
+})();
