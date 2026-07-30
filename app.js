@@ -26526,7 +26526,7 @@ window.g45BetTeamNames = (typeof g45BetTeamNames!=='undefined') ? g45BetTeamName
   };
   if(typeof save==='function' && !save._g45betw){
     var _os=save;
-    save=function(){ var r=_os.apply(this,arguments); try{ window._g45DebouncedBetSync(); }catch(e){} try{ if(typeof _g45PushBetsGithub==='function') _g45PushBetsGithub(); }catch(e){} return r; };
+    save=function(){ var r=_os.apply(this,arguments); try{ localStorage.setItem('g45_dirty','1'); }catch(e){} try{ window._g45DebouncedBetSync(); }catch(e){} try{ if(typeof _g45PushBetsGithub==='function') _g45PushBetsGithub(); }catch(e){} return r; };
     save._g45betw=true;
   }
 })();
@@ -26612,7 +26612,7 @@ function _g45PushBetsGithub(immediate){
       var sha=cur?cur.sha:null;
       var ts=Date.now();
       var ok=await _gh_saveBets({ts:ts, enc:enc}, sha);
-      if(ok){ localStorage.setItem('g45_betsync_ts', String(ts)); console.log('✅ paris poussés (chiffrés) sur GitHub'); }
+      if(ok){ localStorage.setItem('g45_betsync_ts', String(ts)); try{ localStorage.removeItem('g45_dirty'); }catch(e){} console.log('✅ paris poussés (chiffrés) sur GitHub'); }
     }catch(e){ console.warn('push bets', e); }
   };
   if(immediate){ run(); } else { _g45BetPushT=setTimeout(run, 800); }
@@ -26646,6 +26646,16 @@ async function _g45PullBetsGithub(){
     if(!res || !res.data || (!res.data.enc && !res.data.state)){ _g45PushBetsGithub(true); return; } // 1ère fois : on initialise le fichier
     var remoteTs=res.data.ts||0;
     var localTs=parseInt(localStorage.getItem('g45_betsync_ts')||'0',10);
+    /* GARDE-FOU : si des modifications locales n'ont pas encore été envoyées, on ne les
+       écrase JAMAIS avec la version distante — on pousse le local à la place. Sans ça,
+       un ajout au mur suivi d'un rechargement disparaissait au profit d'une version
+       antérieure (symptôme vécu : trois joueurs perdus deux fois de suite). */
+    var sale=false; try{ sale=(localStorage.getItem('g45_dirty')==='1'); }catch(e){}
+    if(sale){
+      console.warn('⚠️ modifications locales non synchronisées — la version GitHub n\'est PAS appliquée, on pousse le local.');
+      _g45PushBetsGithub(true);
+      return;
+    }
     if(remoteTs>localTs){
       var st=null;
       if(res.data.enc){
