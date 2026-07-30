@@ -28646,6 +28646,32 @@ function _g45FreeSpace(){
   return n;
 }
 window._g45FreeSpace=_g45FreeSpace; window._g45CachePoids=_g45CachePoids;
+/* PLAFOND PAR ENTRÉE : certains caches sont énormes (un classement cycliste ≈ 65 Ko, un
+   profil d'étape 1 382 points). Au-delà de la limite on ne persiste pas — le cache mémoire
+   du même module continue de servir pour la session, et la donnée se recharge ensuite.
+   Empêche la saturation qui bloquait la sauvegarde des données utilisateur. */
+var _G45_CACHE_MAX=60*1024;
+(function(){
+  try{
+    if(localStorage.setItem._g45cap) return;
+    var _set=localStorage.setItem.bind(localStorage);
+    var prevenu={};
+    var wrap=function(k,v){
+      try{
+        if(k!=='g45v5' && _G45_CACHE_PREFIXES.some(function(p){ return k.indexOf(p)===0; })){
+          var taille=String(v||'').length;
+          if(taille>_G45_CACHE_MAX){
+            if(!prevenu[k]){ prevenu[k]=1; console.info('↩️ cache non persisté (trop volumineux : '+Math.round(taille/1024)+' Ko) — '+k); }
+            return;
+          }
+        }
+      }catch(e){}
+      return _set(k,v);
+    };
+    wrap._g45cap=1;
+    localStorage.setItem=wrap;
+  }catch(e){}
+})();
 /* Enveloppe la plus externe : si la sauvegarde échoue faute de place, on purge et on réessaie. */
 (function(){
   if(typeof save!=='function'||save._g45quota) return;
