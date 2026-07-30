@@ -1058,6 +1058,14 @@ function logoHtml(name,color,abbr,sz){
 
   // 2. Logo URL si disponible
   var logo=LOGOS[name];
+  /* LOGOS n'est pas reconstruit au chargement : on retombe sur le logoUrl mémorisé
+     dans l'entrée du mur, sinon la photo d'un joueur disparaîtrait à chaque rechargement. */
+  if(!logo){
+    try{
+      var _u=((typeof state!=='undefined'&&state&&state.u)||[]).filter(function(x){ return x&&x.n===name; })[0];
+      if(_u&&_u.logoUrl){ logo=_u.logoUrl; LOGOS[name]=logo; }
+    }catch(e){}
+  }
   if(logo){
     return '<div style="'+baseStyle+'background:rgba('+rgb+',.07);border:1px solid rgba('+rgb+',.18);display:flex;align-items:center;justify-content:center;">'
       +'<img src="'+logo+'" style="width:'+(s-10)+'px;height:'+(s-10)+'px;object-fit:contain;" loading="lazy" onerror="logoErr(this)">'
@@ -7378,6 +7386,14 @@ function logoHtml(name,color,abbr,sz){
 
   // 2. Logo URL si disponible
   var logo=LOGOS[name];
+  /* LOGOS n'est pas reconstruit au chargement : on retombe sur le logoUrl mémorisé
+     dans l'entrée du mur, sinon la photo d'un joueur disparaîtrait à chaque rechargement. */
+  if(!logo){
+    try{
+      var _u=((typeof state!=='undefined'&&state&&state.u)||[]).filter(function(x){ return x&&x.n===name; })[0];
+      if(_u&&_u.logoUrl){ logo=_u.logoUrl; LOGOS[name]=logo; }
+    }catch(e){}
+  }
   if(logo){
     return '<div style="'+baseStyle+'background:rgba('+rgb+',.07);border:1px solid rgba('+rgb+',.18);display:flex;align-items:center;justify-content:center;">'
       +'<img src="'+logo+'" style="width:'+(s-10)+'px;height:'+(s-10)+'px;object-fit:contain;" loading="lazy" onerror="logoErr(this)">'
@@ -21286,9 +21302,22 @@ async function _g45ButChercheDans(nom, club){
   if(!pl) return null;
   return {aid:pl.id, tid:tm.id, lg:tm.league, tname:(tm.name||club), pname:(pl.displayName||nom)};
 }
+/* Pose la photo ESPN comme logo de l'entrée du mur. Appelée sur les DEUX chemins :
+   résolution fraîche ET sortie sur cache — sinon un joueur déjà résolu n'en aurait jamais. */
+function _g45ButPhoto(nom, aid){
+  if(!nom||!aid) return;
+  try{
+    var U=(typeof state!=='undefined'&&state&&state.u)?state.u:[];
+    var ent=U.filter(function(x){ return x&&x.n===nom; })[0];
+    if(!ent) return;
+    var url='https://a.espncdn.com/i/headshots/soccer/players/full/'+aid+'.png';
+    if(typeof LOGOS!=='undefined') LOGOS[ent.n]=url;
+    if(ent.logoUrl!==url){ ent.logoUrl=url; if(typeof save==='function') save(); }
+  }catch(e){}
+}
 async function _g45ButIdMur(p){
   var ck='g45but_mur_'+_g45ClvNz(p.n);
-  try{ var c=JSON.parse(localStorage.getItem(ck)||'null'); if(c&&c.aid) return c; }catch(e){}
+  try{ var c=JSON.parse(localStorage.getItem(ck)||'null'); if(c&&c.aid){ _g45ButPhoto(p.n, c.aid); return c; } }catch(e){}
   var r=null;
   /* 1) club saisi dans la note de l'entrée */
   if(p.club){ r=await _g45ButChercheDans(p.n, p.club); }
@@ -21303,17 +21332,7 @@ async function _g45ButIdMur(p){
   }
   if(!r) return null;
   try{ localStorage.setItem(ck, JSON.stringify(r)); }catch(e){}
-  /* Une fois l'identifiant ESPN connu, on pose sa photo comme logo de l'entrée du mur :
-     elle n'a pas de blason, donc elle affichait le ballon par défaut. */
-  try{
-    var U=(typeof state!=='undefined'&&state&&state.u)?state.u:[];
-    var ent=U.filter(function(x){ return x&&x.n===p.n; })[0];
-    if(ent&&!ent.logoUrl){
-      ent.logoUrl='https://a.espncdn.com/i/headshots/soccer/players/full/'+r.aid+'.png';
-      if(typeof LOGOS!=='undefined') LOGOS[ent.n]=ent.logoUrl;
-      if(typeof save==='function') save();
-    }
-  }catch(e){}
+  _g45ButPhoto(p.n, r.aid);
   return r;
 }
 async function g45ButeursView(){
