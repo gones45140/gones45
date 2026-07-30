@@ -2908,6 +2908,10 @@ function addUnit(){
   $i('search-results').innerHTML='';
   window._pendingLogo=null;
   save();
+  /* La synchro GitHub écrase TOUT l'état local (mur compris) quand la version distante est
+     plus récente, et `save()` ne déclenche qu'un envoi différé de 2,5 s. Un ajout au mur
+     suivi d'un rechargement partait donc à la poubelle. On force l'envoi immédiat. */
+  try{ if(typeof _g45PushBetsGithub==='function') _g45PushBetsGithub(true); }catch(e){}
 }
 function editUnit(i){
   var u=state.u[parseInt(i)];if(!u)return;
@@ -9148,6 +9152,10 @@ function addUnit(){
   $i('search-results').innerHTML='';
   window._pendingLogo=null;
   save();
+  /* La synchro GitHub écrase TOUT l'état local (mur compris) quand la version distante est
+     plus récente, et `save()` ne déclenche qu'un envoi différé de 2,5 s. Un ajout au mur
+     suivi d'un rechargement partait donc à la poubelle. On force l'envoi immédiat. */
+  try{ if(typeof _g45PushBetsGithub==='function') _g45PushBetsGithub(true); }catch(e){}
 }
 function editUnit(i){
   var u=state.u[parseInt(i)];if(!u)return;
