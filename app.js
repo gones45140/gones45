@@ -2442,6 +2442,44 @@ function renderEquipes(){
   },100);
 }
 
+/* ── 🔎 FILTRE PAR COMPÉTITION DU MUR ──
+   Les paris portent un champ `comp` libre (« ligue des champions », « Liga »…). On en
+   déduit les chips, et le filtre s'applique en amont de tous les onglets qui dérivent
+   de la liste des paris. Mémorisé par unité pour survivre à un aller-retour. */
+var _g45CompF={};
+function _g45CompNz(x){ return String(x||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9]/g,''); }
+function _g45CompFiltre(liste, nom){
+  var f=_g45CompF[nom]||'';
+  if(!f) return liste;
+  return liste.filter(function(h){ return _g45CompNz(h.comp)===f; });
+}
+function g45SetCompF(nom, v){
+  _g45CompF[nom]=v||'';
+  if(typeof openClub==='function') openClub(nom);
+}
+window.g45SetCompF=g45SetCompF;
+function _g45RendCompChips(liste, nom){
+  var el=document.getElementById('d-compf'); if(!el) return;
+  var vus={}, ordre=[];
+  (liste||[]).forEach(function(h){
+    var k=_g45CompNz(h.comp);
+    if(!k) return;
+    if(!vus[k]){ vus[k]={lbl:(h.comp||'').trim(), n:0}; ordre.push(k); }
+    vus[k].n++;
+  });
+  if(ordre.length<2){ el.innerHTML=''; return; }   // inutile s'il n'y a qu'une compétition
+  var f=_g45CompF[nom]||'';
+  var chip=function(k,lbl,n,on){
+    return '<button onclick="g45SetCompF(\''+String(nom).replace(/'/g,"\\'")+'\',\''+k+'\')" '
+      +'style="border:none;cursor:pointer;border-radius:7px;padding:4px 9px;font-size:9.5px;font-weight:800;margin:0 4px 4px 0;'
+      +'background:'+(on?'#f0c828':'rgba(255,255,255,.06)')+';color:'+(on?'#221b00':'var(--t2)')+';">'+lbl+(n!=null?(' <span style="opacity:.65;">'+n+'</span>'):'')+'</button>';
+  };
+  var h2='<div style="display:flex;flex-wrap:wrap;align-items:center;">'
+    +'<span style="font-size:9px;color:var(--t3);margin-right:6px;">Compétition :</span>'
+    +chip('','Toutes',(liste||[]).length,!f);
+  ordre.forEach(function(k){ h2+=chip(k, vus[k].lbl, vus[k].n, f===k); });
+  el.innerHTML=h2+'</div>';
+}
 /* ── DÉTAIL CLUB ── */
 function openClub(nom,idx){
   _currentTeam=nom;
@@ -2450,7 +2488,12 @@ function openClub(nom,idx){
   _g45MurJoueurUI(nom);
   var u=state.u.find(function(x){return x.n===nom;});
   var p=gp(u||{color:PCOLS[0]});
-  var paris=state.a.filter(function(h){return h.n===nom;});
+  /* Filtre par compétition : Antoine distingue LDC / championnat / sélection par le champ
+     COMPÉTITION du pari, pas par des entrées séparées. Tous les onglets qui dérivent de
+     `paris` (Bilan, Graphs, Archive, Types) en héritent automatiquement. */
+  var _tous=state.a.filter(function(h){return h.n===nom;});
+  var paris=_g45CompFiltre(_tous, nom);
+  _g45RendCompChips(_tous, nom);
   var profit=paris.reduce(function(a,h){return a+(h.win?(h.m*h.cote)-h.m:-h.m);},0);
   var wins=paris.filter(function(h){return h.win&&!h.isCashout;}).length;
   var losses=paris.filter(function(h){return !h.win;}).length;
@@ -8762,7 +8805,12 @@ function openClub(nom,idx){
   _g45MurJoueurUI(nom);
   var u=state.u.find(function(x){return x.n===nom;});
   var p=gp(u||{color:PCOLS[0]});
-  var paris=state.a.filter(function(h){return h.n===nom;});
+  /* Filtre par compétition : Antoine distingue LDC / championnat / sélection par le champ
+     COMPÉTITION du pari, pas par des entrées séparées. Tous les onglets qui dérivent de
+     `paris` (Bilan, Graphs, Archive, Types) en héritent automatiquement. */
+  var _tous=state.a.filter(function(h){return h.n===nom;});
+  var paris=_g45CompFiltre(_tous, nom);
+  _g45RendCompChips(_tous, nom);
   var profit=paris.reduce(function(a,h){return a+(h.win?(h.m*h.cote)-h.m:-h.m);},0);
   var wins=paris.filter(function(h){return h.win&&!h.isCashout;}).length;
   var losses=paris.filter(function(h){return !h.win;}).length;
@@ -15376,6 +15424,83 @@ async function _g45ButInter(aid, y){
   try{ localStorage.setItem(ck, JSON.stringify({t:Date.now(), d:tot})); }catch(e){}
   return tot;
 }
+/* ── 📋 JOURNAL DES MATCHS D'UN JOUEUR ──
+   L'eventlog donne la liste des matchs ; chaque entrée porte deux références à résoudre
+   (statistiques du joueur, et le match lui-même). ATTENTION : ESPN renvoie ces références
+   en http://, que la politique de sécurité de l'app refuse — il faut les réécrire en https.
+   Un match terminé ne bouge plus : on le met en cache définitivement. */
+function _g45Https(u){ return String(u||'').replace(/^http:/,'https:'); }
+async function _g45ButMatch(aid, item){
+  var idm=String(_g45Https((item.event&&item.event.$ref)||'')).match(/events\/(\d+)/);
+  var eid=idm?idm[1]:null;
+  if(!eid) return null;
+  var ck='g45but_m_'+aid+'_'+eid;
+  try{ var c=JSON.parse(localStorage.getItem(ck)||'null'); if(c&&c.d) return c; }catch(e){}
+  var st=null, ev=null;
+  try{ st=await (await fetch(_g45Https(item.statistics&&item.statistics.$ref))).json(); }catch(e){}
+  try{ ev=await (await fetch(_g45Https(item.event&&item.event.$ref))).json(); }catch(e){}
+  if(!st||!ev) return null;
+  var cats=(st.splits&&st.splits.categories)||[];
+  var g=function(c,n){ var x=((cats.filter(function(z){return z.name===c;})[0]||{}).stats||[]).filter(function(z){return z.name===n;})[0]; return x?(x.value||0):0; };
+  var r={d:String(ev.date||'').slice(0,10), nom:(ev.shortName||ev.name||''),
+         min:g('general','minutes'), g:g('offensive','totalGoals'), pg:g('offensive','penaltyKickGoals'),
+         a:g('offensive','goalAssists'), sot:g('offensive','shotsOnTarget'), sh:g('offensive','totalShots')};
+  try{ localStorage.setItem(ck, JSON.stringify(r)); }catch(e){}
+  return r;
+}
+async function _g45ButMatchs(lgs, aid, y, max){
+  var out=[];
+  for(var i=0;i<lgs.length;i++){
+    var el=null;
+    try{ el=await (await fetch('https://sports.core.api.espn.com/v2/sports/soccer/leagues/'+lgs[i]+'/seasons/'+y+'/athletes/'+aid+'/eventlog')).json(); }catch(e){ continue; }
+    var it=((el&&el.events&&el.events.items)||[]).filter(function(x){ return x&&x.played; });
+    it=it.slice(-(max||10));
+    for(var k=0;k<it.length;k++){
+      var m=null;
+      try{ m=await _g45ButMatch(aid, it[k]); }catch(e){}
+      if(m) out.push(m);
+    }
+  }
+  out.sort(function(a,b){ return (b.d||'').localeCompare(a.d||''); });
+  return out.slice(0, max||10);
+}
+async function g45ButToggleMatchs(cible, lgs, aid, y){
+  var el=document.getElementById(cible); if(!el) return;
+  if(el.getAttribute('data-open')==='1'){ el.style.display='none'; el.setAttribute('data-open','0'); return; }
+  el.style.display=''; el.setAttribute('data-open','1');
+  if(el.getAttribute('data-fait')==='1') return;
+  el.innerHTML='<div style="font-size:10px;color:#8aa0ff;text-align:center;padding:9px;">⏳ Chargement des matchs…</div>';
+  var L=[];
+  try{ L=await _g45ButMatchs(String(lgs).split(','), aid, y, 10); }catch(e){}
+  el.setAttribute('data-fait','1');
+  if(!L.length){ el.innerHTML='<div style="font-size:10px;color:var(--t3);text-align:center;padding:12px;">Aucun match joué pour l\'instant sur cette compétition.</div>'; return; }
+  var h='<div style="background:rgba(0,0,0,.22);border-radius:8px;padding:6px 8px;margin-bottom:9px;">';
+  L.forEach(function(m){
+    var dt=''; try{ dt=new Date(m.d).toLocaleDateString('fr-FR',{day:'numeric',month:'short'}); }catch(e){}
+    var but=m.g?('<span style="color:#f0c828;font-weight:800;">'+m.g+(m.pg?(' ('+m.pg+'p)'):'')+'</span>'):'<span style="color:var(--t3);">0</span>';
+    h+='<div style="display:flex;align-items:center;gap:7px;padding:4px 0;border-bottom:1px solid rgba(255,255,255,.04);">'
+      +'<div style="flex:none;width:46px;font-size:9px;color:var(--t3);">'+_g45CyEa(dt)+'</div>'
+      +'<div style="flex:1;min-width:0;font-size:10px;font-weight:700;color:var(--t1);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">'+_g45CyEa(m.nom)+'</div>'
+      +'<div style="flex:none;width:34px;text-align:center;font-size:10px;">'+but+'<div style="font-size:7px;color:var(--t3);">buts</div></div>'
+      +'<div style="flex:none;width:30px;text-align:center;font-size:10px;color:var(--t2);">'+m.a+'<div style="font-size:7px;color:var(--t3);">pd</div></div>'
+      +'<div style="flex:none;width:36px;text-align:center;font-size:10px;color:var(--t2);">'+m.sot+'/'+m.sh+'<div style="font-size:7px;color:var(--t3);">cadrés</div></div>'
+      +'<div style="flex:none;width:34px;text-align:right;font-size:10px;color:var(--t2);">'+m.min+"'"+'</div>'
+      +'</div>';
+  });
+  el.innerHTML=h+'</div>';
+}
+window.g45ButToggleMatchs=g45ButToggleMatchs;
+/* Une entrée peut cibler UNE compétition précise, pour qu'Antoine tienne une montante
+   séparée par contexte : « Mbappé LDC », « Mbappé Championnat », « Mbappé Sélection ».
+   Le suffixe du nom décide de la carte affichée ; sans suffixe, les trois sont montrées.
+   La reconnaissance du joueur passe par le nom de famille, donc le suffixe ne la gêne pas. */
+function _g45ButPortee(nom){
+  var z=_g45ClvNz(nom);
+  if(/ldc|c1|championsleague|liguedeschampions|ucl/.test(z)) return 'ucl';
+  if(/selection|equipenationale|international|nation/.test(z)) return 'int';
+  if(/championnat|liga|premierleague|bundesliga|ligue1|seriea|eredivisie/.test(z)) return 'lg';
+  return 'tout';
+}
 async function g45MurJoueurPanel(){
   var el=document.getElementById('ip-joueur'); if(!el) return;
   var nom=(typeof _currentTeam!=='undefined'&&_currentTeam)?_currentTeam:'';
@@ -15401,12 +15526,16 @@ async function g45MurJoueurPanel(){
     el.innerHTML='<div style="font-size:10.5px;color:var(--t3);text-align:center;padding:16px;">Aucune statistique disponible pour '+_g45CyEa(id.pname)+'.</div>';
     return;
   }
-  var carte=function(st, titre, coul){
+  var nCarte=0;
+  var _p=_g45ButPortee(nom);
+  var carte=function(st, titre, coul, lgs){
     var gpm=st.g/st.app, npg=(st.g-st.pg)/st.app;
     var pA=1-Math.exp(-gpm), pN=1-Math.exp(-npg);
     var cell=function(v,l,c){ return '<div style="flex:1;min-width:62px;text-align:center;background:rgba(0,0,0,.20);border-radius:7px;padding:6px 4px;"><div style="font-size:13px;font-weight:800;color:'+(c||'var(--t1)')+';">'+v+'</div><div style="font-size:7.5px;color:var(--t3);margin-top:1px;">'+l+'</div></div>'; };
+    var pid='g45ml'+(++nCarte);
+    var clic=lgs?(' onclick="g45ButToggleMatchs(\''+pid+'\',\''+lgs+'\','+id.aid+','+an+')" style="cursor:pointer;"'):'';
     return '<div style="background:rgba(12,16,28,.96);border:1px solid rgba(255,255,255,.08);border-left:3px solid '+coul+';border-radius:10px;padding:10px 11px;margin-bottom:9px;">'
-      +'<div style="font-size:10px;font-weight:800;color:'+coul+';margin-bottom:7px;">'+titre+'</div>'
+      +'<div'+clic+'><div style="font-size:10px;font-weight:800;color:'+coul+';margin-bottom:7px;">'+titre+(lgs?' <span style="font-size:8px;color:var(--t3);font-weight:600;">— voir les matchs ›</span>':'')+'</div></div>'
       +'<div style="display:flex;gap:5px;flex-wrap:wrap;margin-bottom:7px;">'
         +cell(st.g,'buts','#f0c828')+cell(st.app,'matchs')+cell(gpm.toFixed(2),'buts/match','#f0c828')
         +cell(npg.toFixed(2),'hors penalty','#2ecc71')+cell((st.sot/st.app).toFixed(1),'tirs cadrés/m')
@@ -15415,15 +15544,19 @@ async function g45MurJoueurPanel(){
       +'<div style="font-size:9px;color:var(--t2);line-height:1.6;">⚠️ <b>'+st.pg+'</b> de ses '+st.g+' buts sur penalty ('+Math.round(st.g?100*st.pg/st.g:0)+'%)'
       +(st.head?(' · '+st.head+' de la tête'):'')+' · '+Math.round(st.min/(st.app||1))+' min par match</div>'
       +'<div style="font-size:10px;font-weight:800;color:var(--t1);margin-top:6px;">Probabilité de marquer : '+Math.round(pA*100)+'% <span style="font-size:8.5px;color:var(--t3);font-weight:600;">tout compris</span> · <span style="color:#2ecc71;">'+Math.round(pN*100)+'%</span> <span style="font-size:8.5px;color:var(--t3);font-weight:600;">hors penalty</span></div>'
+      +(lgs?('<div id="'+pid+'" data-open="0" style="display:none;margin-top:8px;"></div>'):'')
       +'</div>';
   };
   el.innerHTML='<div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;">'
       +'<img src="https://a.espncdn.com/i/headshots/soccer/players/full/'+id.aid+'.png" loading="lazy" onerror="this.style.display=\'none\'" style="width:46px;height:46px;border-radius:50%;object-fit:cover;background:rgba(255,255,255,.07);flex:none;">'
       +'<div><div style="font-size:13px;font-weight:800;color:var(--t1);">'+_g45CyEa(id.pname)+'</div>'
-      +'<div style="font-size:9px;color:var(--t2);">'+_g45CyEa(id.tname||'')+' · saison '+an+'/'+(an+1)+'</div></div></div>'
-    +carte(d,'🏆 Championnat','#f0c828')
-    +(dC?carte(dC,'⭐ Ligue des Champions','#8aa0ff'):'')
-    +(dI?(carte(dI,'🌍 Sélection','#2ecc71')
+      +'<div style="font-size:9px;color:var(--t2);">'+_g45CyEa(id.tname||'')+' · saison '+an+'/'+(an+1)
+        +(_p!=='tout'?(' · <span style="color:'+(_p==='ucl'?'#8aa0ff':(_p==='int'?'#2ecc71':'#f0c828'))+';font-weight:800;">'
+          +(_p==='ucl'?'Ligue des Champions':(_p==='int'?'Sélection':'Championnat'))+' uniquement</span>'):'')
+        +'</div></div></div>'
+    +((_p==='tout'||_p==='lg')?carte(d,'🏆 Championnat','#f0c828', id.lg):'')
+    +((dC&&(_p==='tout'||_p==='ucl'))?carte(dC,'⭐ Ligue des Champions','#8aa0ff','uefa.champions'):'')
+    +((dI&&(_p==='tout'||_p==='int'))?(carte(dI,'🌍 Sélection','#2ecc71', _G45_INTER.map(function(x){return x.s;}).join(','))
         +'<div style="font-size:8px;color:var(--t3);margin:-4px 0 9px 2px;">'+_g45CyEa(dI.comps.join(' · '))+'</div>'):'')
     +'<div style="font-size:8px;color:var(--t3);text-align:center;margin-top:6px;font-style:italic;line-height:1.6;">λ = buts par match joué ; p = 1 − e<sup>−λ</sup>. Statistiques ESPN, championnat et C1 séparés.<br>Pour comparer à une cote buteur, passe par Tendances → ⚽ Buteurs.</div>';
 }
