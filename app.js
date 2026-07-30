@@ -1273,6 +1273,15 @@ function buildSbRows(light){
     var retour=gorr?(tot/impl+tot).toFixed(2):(tot/impl).toFixed(2);
     profit=gorr?(parseFloat(retour)-tot-tot).toFixed(2):(parseFloat(retour)-tot).toFixed(2);
   }
+  /* Cote équivalente : ce que devient la mise totale, exprimé comme une cote unique.
+     1/impl, soit exactement l'inverse de la somme des probabilités implicites. */
+  var pc=$i('sb-cote');
+  if(pc){
+    if(impl>0){ var ce=1/impl; pc.innerText='@'+ce.toFixed(3); pc.style.color=isSure?'var(--g)':'var(--r)'; }
+    else { pc.innerText='—'; }
+  }
+  var pr=$i('sb-retour');
+  if(pr){ pr.innerText=(impl>0)?((tot/impl).toFixed(2)+'€'):'—'; }
   var pm=$i('sb-mises');if(pm)pm.innerHTML=misesHtml;
   var pp=$i('sb-profit');
   if(pp){pp.innerText=profit?(isSure||gorr?fmt(parseFloat(profit)):'—'):'—';if(pp.innerText!=='—')pp.style.color=parseFloat(profit)>=0?'var(--g)':'var(--r)';}
@@ -7554,6 +7563,15 @@ function buildSbRows(light){
     var retour=gorr?(tot/impl+tot).toFixed(2):(tot/impl).toFixed(2);
     profit=gorr?(parseFloat(retour)-tot-tot).toFixed(2):(parseFloat(retour)-tot).toFixed(2);
   }
+  /* Cote équivalente : ce que devient la mise totale, exprimé comme une cote unique.
+     1/impl, soit exactement l'inverse de la somme des probabilités implicites. */
+  var pc=$i('sb-cote');
+  if(pc){
+    if(impl>0){ var ce=1/impl; pc.innerText='@'+ce.toFixed(3); pc.style.color=isSure?'var(--g)':'var(--r)'; }
+    else { pc.innerText='—'; }
+  }
+  var pr=$i('sb-retour');
+  if(pr){ pr.innerText=(impl>0)?((tot/impl).toFixed(2)+'€'):'—'; }
   var pm=$i('sb-mises');if(pm)pm.innerHTML=misesHtml;
   var pp=$i('sb-profit');
   if(pp){pp.innerText=profit?(isSure||gorr?fmt(parseFloat(profit)):'—'):'—';if(pp.innerText!=='—')pp.style.color=parseFloat(profit)>=0?'var(--g)':'var(--r)';}
