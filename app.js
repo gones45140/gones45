@@ -1261,30 +1261,48 @@ function buildSbRows(light){
   var marge=((1-impl)*100).toFixed(2);
   var pe=$i('sb-marge');
   if(pe){pe.innerText=(isSure?'✅ ':'')+Math.abs(marge)+'%'+(isSure?' (arb!)':'');pe.style.color=isSure?'var(--g)':'var(--t1)';}
+  /* Gagner ou Rembourser : la promo porte sur la SÉLECTION 1 (la plus haute cote).
+     Si elle perd, la mise est remboursée, valorisée au taux v (freebet ~70%, cash 100%).
+     On égalise les retours : s1·c1 = sj·cj + v·s1, d'où sj = s1(c1−v)/cj et
+     s1 = T / [1 + (c1−v)·Σ(1/cj)]. À v=0 on retombe exactement sur le surebet classique. */
   var misesHtml='';
-  var profit=0;
-  if(impl>0){
-    var totEff=gorr?tot*(impl):tot;
+  var profit=0, retour=0, mises=[];
+  if(impl>0&&sbRows.length){
+    if(gorr&&sbRows.length>=2){
+      var v=parseFloat((($i('sb-gorr-val')&&$i('sb-gorr-val').value)||70).toString().replace(',','.'))/100;
+      if(!(v>0)||v>1) v=0.7;
+      var c1=sbRows[0].c||1;
+      var reste=sbRows.slice(1).reduce(function(a,r){ return a+1/(r.c||1); },0);
+      var den=1+(c1-v)*reste;
+      if(den>0&&c1>v){
+        var s1=tot/den;
+        mises=[s1].concat(sbRows.slice(1).map(function(r){ return s1*(c1-v)/(r.c||1); }));
+        retour=s1*c1;
+      }
+    }
+    if(!mises.length){
+      mises=sbRows.map(function(r){ return tot/impl*(1/(r.c||1)); });
+      retour=tot/impl;
+    }
+    profit=retour-tot;
     sbRows.forEach(function(r,i){
-      var mise=gorr?(tot/impl*(1/(r.c||1))).toFixed(2):(tot/impl*(1/(r.c||1))).toFixed(2);
-      var ret=(parseFloat(mise)*(r.c||1)).toFixed(2);
-      misesHtml+='<div class="cres-row"><span class="cres-l">Mise '+(i+1)+' (@'+(r.c||1)+')</span><span class="cres-v" style="color:var(--a)">'+mise+'€</span></div>';
+      misesHtml+='<div class="cres-row"><span class="cres-l">Mise '+(i+1)+' (@'+(r.c||1)+')'+((gorr&&i===0)?' 🎁':'')+'</span><span class="cres-v" style="color:var(--a)">'+mises[i].toFixed(2)+'€</span></div>';
     });
-    var retour=gorr?(tot/impl+tot).toFixed(2):(tot/impl).toFixed(2);
-    profit=gorr?(parseFloat(retour)-tot-tot).toFixed(2):(parseFloat(retour)-tot).toFixed(2);
+    if(gorr&&sbRows.length>=2) misesHtml+='<div style="font-size:9px;color:var(--gold);padding:4px 0;line-height:1.5;">🎁 Si la sélection 1 perd, une partie du retour arrive en freebet, pas en cash.</div>';
   }
   /* Cote équivalente : ce que devient la mise totale, exprimé comme une cote unique.
      1/impl, soit exactement l'inverse de la somme des probabilités implicites. */
+  var gagnant=(profit>0.005);
   var pc=$i('sb-cote');
   if(pc){
-    if(impl>0){ var ce=1/impl; pc.innerText='@'+ce.toFixed(3); pc.style.color=isSure?'var(--g)':'var(--r)'; }
+    if(retour>0&&tot>0){ pc.innerText='@'+(retour/tot).toFixed(3); pc.style.color=gagnant?'var(--g)':'var(--r)'; }
     else { pc.innerText='—'; }
   }
   var pr=$i('sb-retour');
-  if(pr){ pr.innerText=(impl>0)?((tot/impl).toFixed(2)+'€'):'—'; }
+  if(pr){ pr.innerText=(retour>0)?(retour.toFixed(2)+'€'):'—'; }
   var pm=$i('sb-mises');if(pm)pm.innerHTML=misesHtml;
   var pp=$i('sb-profit');
-  if(pp){pp.innerText=profit?(isSure||gorr?fmt(parseFloat(profit)):'—'):'—';if(pp.innerText!=='—')pp.style.color=parseFloat(profit)>=0?'var(--g)':'var(--r)';}
+  if(pp){pp.innerText=(retour>0)?fmt(profit):'—';if(pp.innerText!=='—')pp.style.color=profit>=0?'var(--g)':'var(--r)';}
 }
 function calcSb(){buildSbRows();}
 function addSbRow(){sbRows.push({c:2.0});buildSbRows();}
@@ -7551,30 +7569,48 @@ function buildSbRows(light){
   var marge=((1-impl)*100).toFixed(2);
   var pe=$i('sb-marge');
   if(pe){pe.innerText=(isSure?'✅ ':'')+Math.abs(marge)+'%'+(isSure?' (arb!)':'');pe.style.color=isSure?'var(--g)':'var(--t1)';}
+  /* Gagner ou Rembourser : la promo porte sur la SÉLECTION 1 (la plus haute cote).
+     Si elle perd, la mise est remboursée, valorisée au taux v (freebet ~70%, cash 100%).
+     On égalise les retours : s1·c1 = sj·cj + v·s1, d'où sj = s1(c1−v)/cj et
+     s1 = T / [1 + (c1−v)·Σ(1/cj)]. À v=0 on retombe exactement sur le surebet classique. */
   var misesHtml='';
-  var profit=0;
-  if(impl>0){
-    var totEff=gorr?tot*(impl):tot;
+  var profit=0, retour=0, mises=[];
+  if(impl>0&&sbRows.length){
+    if(gorr&&sbRows.length>=2){
+      var v=parseFloat((($i('sb-gorr-val')&&$i('sb-gorr-val').value)||70).toString().replace(',','.'))/100;
+      if(!(v>0)||v>1) v=0.7;
+      var c1=sbRows[0].c||1;
+      var reste=sbRows.slice(1).reduce(function(a,r){ return a+1/(r.c||1); },0);
+      var den=1+(c1-v)*reste;
+      if(den>0&&c1>v){
+        var s1=tot/den;
+        mises=[s1].concat(sbRows.slice(1).map(function(r){ return s1*(c1-v)/(r.c||1); }));
+        retour=s1*c1;
+      }
+    }
+    if(!mises.length){
+      mises=sbRows.map(function(r){ return tot/impl*(1/(r.c||1)); });
+      retour=tot/impl;
+    }
+    profit=retour-tot;
     sbRows.forEach(function(r,i){
-      var mise=gorr?(tot/impl*(1/(r.c||1))).toFixed(2):(tot/impl*(1/(r.c||1))).toFixed(2);
-      var ret=(parseFloat(mise)*(r.c||1)).toFixed(2);
-      misesHtml+='<div class="cres-row"><span class="cres-l">Mise '+(i+1)+' (@'+(r.c||1)+')</span><span class="cres-v" style="color:var(--a)">'+mise+'€</span></div>';
+      misesHtml+='<div class="cres-row"><span class="cres-l">Mise '+(i+1)+' (@'+(r.c||1)+')'+((gorr&&i===0)?' 🎁':'')+'</span><span class="cres-v" style="color:var(--a)">'+mises[i].toFixed(2)+'€</span></div>';
     });
-    var retour=gorr?(tot/impl+tot).toFixed(2):(tot/impl).toFixed(2);
-    profit=gorr?(parseFloat(retour)-tot-tot).toFixed(2):(parseFloat(retour)-tot).toFixed(2);
+    if(gorr&&sbRows.length>=2) misesHtml+='<div style="font-size:9px;color:var(--gold);padding:4px 0;line-height:1.5;">🎁 Si la sélection 1 perd, une partie du retour arrive en freebet, pas en cash.</div>';
   }
   /* Cote équivalente : ce que devient la mise totale, exprimé comme une cote unique.
      1/impl, soit exactement l'inverse de la somme des probabilités implicites. */
+  var gagnant=(profit>0.005);
   var pc=$i('sb-cote');
   if(pc){
-    if(impl>0){ var ce=1/impl; pc.innerText='@'+ce.toFixed(3); pc.style.color=isSure?'var(--g)':'var(--r)'; }
+    if(retour>0&&tot>0){ pc.innerText='@'+(retour/tot).toFixed(3); pc.style.color=gagnant?'var(--g)':'var(--r)'; }
     else { pc.innerText='—'; }
   }
   var pr=$i('sb-retour');
-  if(pr){ pr.innerText=(impl>0)?((tot/impl).toFixed(2)+'€'):'—'; }
+  if(pr){ pr.innerText=(retour>0)?(retour.toFixed(2)+'€'):'—'; }
   var pm=$i('sb-mises');if(pm)pm.innerHTML=misesHtml;
   var pp=$i('sb-profit');
-  if(pp){pp.innerText=profit?(isSure||gorr?fmt(parseFloat(profit)):'—'):'—';if(pp.innerText!=='—')pp.style.color=parseFloat(profit)>=0?'var(--g)':'var(--r)';}
+  if(pp){pp.innerText=(retour>0)?fmt(profit):'—';if(pp.innerText!=='—')pp.style.color=profit>=0?'var(--g)':'var(--r)';}
 }
 function calcSb(){buildSbRows();}
 function addSbRow(){sbRows.push({c:2.0});buildSbRows();}
