@@ -1237,7 +1237,7 @@ function renderCrash(){
     var gain=(mise*cote-mise).toFixed(2);
     var pct=total>0?(mise/total*100):0;
     var cls=pct>15?'danger':pct>8?'warning':'safe';
-    var active=(i===u.l-1);
+    var active=(i===_g45Pal(u,($i('c-comp')&&$i('c-comp').value)||'')-1);
     if(active&&pct>15){alertMsg='⚠ Palier P'+(i+1)+' : '+mise+'€ = '+pct.toFixed(1)+'% du capital — risque élevé !';}
     html+='<div class="cc '+cls+'"'+(active?' style="outline:2px solid var(--a);outline-offset:2px;"':'')+''
       +'><div class="cc-l">P'+(i+1)+(active?' ◀':'')+''+'</div>'
@@ -2442,6 +2442,28 @@ function renderEquipes(){
   },100);
 }
 
+/* ── 🎚️ PALIER DE MONTANTE PAR COMPÉTITION ──
+   Antoine veut une progression INDÉPENDANTE par compétition sur une même entrée :
+   une perte en Ligue des Champions ne doit pas faire monter le palier du championnat.
+   Le palier historique `u.l` reste la valeur par défaut ; les paliers par compétition
+   vivent dans `u.lc` (clé = compétition normalisée). Rétro-compatible : une entrée sans
+   `u.lc` se comporte exactement comme avant. */
+function _g45PalKey(comp){ return _g45CompNz(comp); }
+function _g45Pal(u, comp){
+  if(!u) return 1;
+  var k=_g45PalKey(comp);
+  if(k && u.lc && u.lc[k]) return parseInt(u.lc[k],10)||1;
+  return parseInt(u.l,10)||1;
+}
+function _g45SetPal(u, comp, v){
+  if(!u) return;
+  v=Math.max(1, Math.min(8, parseInt(v,10)||1));
+  var k=_g45PalKey(comp);
+  if(k){ if(!u.lc) u.lc={}; u.lc[k]=v; }
+  u.l=v;                      // conserve l'affichage historique et le repli
+}
+window._g45Pal=_g45Pal;
+
 /* ── 🔎 FILTRE PAR COMPÉTITION DU MUR ──
    Les paris portent un champ `comp` libre (« ligue des champions », « Liga »…). On en
    déduit les chips, et le filtre s'applique en amont de tous les onglets qui dérivent
@@ -2819,8 +2841,8 @@ function result(id,win){
   var idx=state.h.findIndex(function(x){return x.id===id;});if(idx===-1)return;
   var bet=state.h[idx];
   var debrief=prompt('Débrief ('+(win?'WIN ✅':'LOSS ❌')+') :','')||'';
-  if(win){var _g=bet.isFreebet?(bet.m*(bet.cote-1)):(bet.m*bet.cote);state.b[bet.b]=(parseFloat(state.b[bet.b])+_g).toFixed(2);if(bet.isS){var u=state.u.find(function(x){return x.n===bet.n;});if(u)u.l=1;}}
-  else if(bet.isS){var u2=state.u.find(function(x){return x.n===bet.n;});if(u2&&u2.l<8)u2.l++;}
+  if(win){var _g=bet.isFreebet?(bet.m*(bet.cote-1)):(bet.m*bet.cote);state.b[bet.b]=(parseFloat(state.b[bet.b])+_g).toFixed(2);if(bet.isS){var u=state.u.find(function(x){return x.n===bet.n;});if(u)_g45SetPal(u,bet.comp,1);}}
+  else if(bet.isS){var u2=state.u.find(function(x){return x.n===bet.n;});if(u2){var _p=_g45Pal(u2,bet.comp);if(_p<8)_g45SetPal(u2,bet.comp,_p+1);}}
   var archived=Object.assign({},bet,{win:win,debrief:debrief});
   state.a.unshift(archived);state.h.splice(idx,1);save();updMise();
 }
@@ -2830,7 +2852,7 @@ function cancelBet(id){
   var bet=state.h[idx];
   if(bet.isFreebet){if(!state.fb)state.fb={};state.fb[bet.b]=((parseFloat(state.fb[bet.b])||0)+parseFloat(bet.m)).toFixed(2);}
   else{state.b[bet.b]=(parseFloat(state.b[bet.b]||0)+parseFloat(bet.m)).toFixed(2);}
-  if(bet.isS&&bet.l){var u=state.u.find(function(x){return x.n===bet.n;});if(u)u.l=parseInt(bet.l)||1;}
+  if(bet.isS&&bet.l){var u=state.u.find(function(x){return x.n===bet.n;});if(u)_g45SetPal(u,bet.comp,parseInt(bet.l)||1);}
   state.h.splice(idx,1);save();
 }
 function deleteArchived(id){
@@ -2870,7 +2892,7 @@ function editArchived(id){
 function updMise(){
   var u=state.u.find(function(x){return x.n===$i('c-unit').value;});
   if(!u)return;
-  if($i('c-mise'))$i('c-mise').value=STRATS[u.s][u.l-1]||0;
+  if($i('c-mise'))$i('c-mise').value=STRATS[u.s][_g45Pal(u,($i('c-comp')&&$i('c-comp').value)||'')-1]||0;
   /* Auto-fill sport */
   if(u.sport&&$i('c-sport'))$i('c-sport').value=u.sport;
   /* Auto-fill competition from CLUB_DB */
@@ -7608,7 +7630,7 @@ function renderCrash(){
     var gain=(mise*cote-mise).toFixed(2);
     var pct=total>0?(mise/total*100):0;
     var cls=pct>15?'danger':pct>8?'warning':'safe';
-    var active=(i===u.l-1);
+    var active=(i===_g45Pal(u,($i('c-comp')&&$i('c-comp').value)||'')-1);
     if(active&&pct>15){alertMsg='⚠ Palier P'+(i+1)+' : '+mise+'€ = '+pct.toFixed(1)+'% du capital — risque élevé !';}
     html+='<div class="cc '+cls+'"'+(active?' style="outline:2px solid var(--a);outline-offset:2px;"':'')+''
       +'><div class="cc-l">P'+(i+1)+(active?' ◀':'')+''+'</div>'
@@ -9084,8 +9106,8 @@ function result(id,win){
   var idx=state.h.findIndex(function(x){return x.id===id;});if(idx===-1)return;
   var bet=state.h[idx];
   var debrief=prompt('Débrief ('+(win?'WIN ✅':'LOSS ❌')+') :','')||'';
-  if(win){var _g=bet.isFreebet?(bet.m*(bet.cote-1)):(bet.m*bet.cote);state.b[bet.b]=(parseFloat(state.b[bet.b])+_g).toFixed(2);if(bet.isS){var u=state.u.find(function(x){return x.n===bet.n;});if(u)u.l=1;}}
-  else if(bet.isS){var u2=state.u.find(function(x){return x.n===bet.n;});if(u2&&u2.l<8)u2.l++;}
+  if(win){var _g=bet.isFreebet?(bet.m*(bet.cote-1)):(bet.m*bet.cote);state.b[bet.b]=(parseFloat(state.b[bet.b])+_g).toFixed(2);if(bet.isS){var u=state.u.find(function(x){return x.n===bet.n;});if(u)_g45SetPal(u,bet.comp,1);}}
+  else if(bet.isS){var u2=state.u.find(function(x){return x.n===bet.n;});if(u2){var _p=_g45Pal(u2,bet.comp);if(_p<8)_g45SetPal(u2,bet.comp,_p+1);}}
   var archived=Object.assign({},bet,{win:win,debrief:debrief});
   state.a.unshift(archived);state.h.splice(idx,1);save();updMise();
 }
@@ -9095,7 +9117,7 @@ function cancelBet(id){
   var bet=state.h[idx];
   if(bet.isFreebet){if(!state.fb)state.fb={};state.fb[bet.b]=((parseFloat(state.fb[bet.b])||0)+parseFloat(bet.m)).toFixed(2);}
   else{state.b[bet.b]=(parseFloat(state.b[bet.b]||0)+parseFloat(bet.m)).toFixed(2);}
-  if(bet.isS&&bet.l){var u=state.u.find(function(x){return x.n===bet.n;});if(u)u.l=parseInt(bet.l)||1;}
+  if(bet.isS&&bet.l){var u=state.u.find(function(x){return x.n===bet.n;});if(u)_g45SetPal(u,bet.comp,parseInt(bet.l)||1);}
   state.h.splice(idx,1);save();
 }
 function deleteArchived(id){
@@ -9135,7 +9157,7 @@ function editArchived(id){
 function updMise(){
   var u=state.u.find(function(x){return x.n===$i('c-unit').value;});
   if(!u)return;
-  if($i('c-mise'))$i('c-mise').value=STRATS[u.s][u.l-1]||0;
+  if($i('c-mise'))$i('c-mise').value=STRATS[u.s][_g45Pal(u,($i('c-comp')&&$i('c-comp').value)||'')-1]||0;
   /* Auto-fill sport */
   if(u.sport&&$i('c-sport'))$i('c-sport').value=u.sport;
   /* Auto-fill competition from CLUB_DB */
@@ -21967,12 +21989,24 @@ async function g45TrRun(){
 }
 window.g45TrRun=g45TrRun;
 
+function _g45TrCompLbl(slug){
+  var map={};
+  (typeof G45_LEAGUE_GROUPS!=='undefined'?G45_LEAGUE_GROUPS:[]).forEach(function(g){
+    (g.leagues||[]).forEach(function(l){ map[l.slug]=(l.ico?(l.ico+' '):'')+l.name; });
+  });
+  if(map[slug]) return map[slug];
+  var s=String(slug||''), c={
+    'uefa.champions_qual':'🏆 Qualif. Champions','uefa.europa_qual':'🥈 Qualif. Europa','uefa.europa.conf_qual':'🥉 Qualif. Conference',
+    'uefa.super_cup':'🏆 Supercoupe UEFA','club.friendly':'⚽ Amical'
+  };
+  return c[s]||s;
+}
 function _g45TrRender(){
   var R=_G45_TR.res||[];
   var mini=_G45_TR.min||0;
   var jouable=function(x){ return !mini || (x.m.p>0 && (1/x.m.p)>=mini); };
   /* Une value = cote réelle disponible, au-dessus du seuil, et espérance positive. */
-  var avec=R.filter(function(x){ return x.m.ev!=null&&x.m.ev>=0.03&&x.m.cote>=mini&&x.m.n>=12; });
+  var avec=R.filter(function(x){ return x.m.ev!=null&&x.m.ev>=0.03&&x.m.cote>=mini&&x.m.n>=12&&x.m.cote>0; });
   avec.sort(function(a,b){ return b.m.ev-a.m.ev; });
   var sans=R.filter(function(x){ return (x.m.gap==null||!(x.m.fair>0.02))&&x.m.p>=0.50&&x.m.n>=6&&jouable(x); }).slice(0,18);
   var h='<button onclick="_G45_TR.res=null;loadTendancesTab();" style="border:none;cursor:pointer;background:rgba(255,255,255,.06);border-radius:8px;color:var(--t2);padding:6px 11px;font-size:10px;font-weight:700;margin-bottom:9px;">↺ Relancer</button>';
@@ -21982,14 +22016,16 @@ function _g45TrRender(){
     var s='<div style="background:rgba(12,16,28,.96);border:1px solid rgba(255,255,255,.08);border-left:3px solid '+col+';border-radius:9px;padding:9px 11px;margin-bottom:7px;">'
       +'<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;">'
       +'<div style="flex:1;min-width:0;">'
+        +'<div style="font-size:8.5px;font-weight:800;color:#8aa0ff;letter-spacing:.4px;text-transform:uppercase;margin-bottom:2px;">'+_g45CyEa(_g45TrCompLbl(x.slug))+'</div>'
         +'<div style="font-size:11px;font-weight:800;color:var(--t1);">'+_g45CyEa(x.hN)+' – '+_g45CyEa(x.aN)+'</div>'
         +'<div style="font-size:11px;font-weight:700;color:'+col+';margin-top:2px;">'+_g45CyEa(m.m)+'</div>'
       +'</div>'
       +'<div style="flex:none;text-align:right;">'
-        +'<div style="font-size:13px;font-weight:800;color:'+col+';">'+_g45TrPct(m.p)+'</div>'
-        +(showGap&&m.ev!=null?('<div style="font-size:9px;font-weight:800;color:'+col+';">espérance '+(m.ev>=0?'+':'')+Math.round(m.ev*1000)/10+'%</div>'):'')
-        +((m.p>0)?('<div style="font-size:10px;font-weight:800;color:'+((1/m.p)>=1.5?'#2ecc71':((1/m.p)>=1.3?'#f0c828':'#ff6b6b'))+';">≈ '+(1/m.p).toFixed(2)+'</div>'):'')
-        +(m.cote?('<div style="font-size:9px;color:var(--t3);">book '+m.cote.toFixed(2)+'</div>'):'')
+        +(m.cote?('<div style="font-size:16px;font-weight:800;color:#f0c828;line-height:1;">@'+m.cote.toFixed(2)+'</div>'
+                 +'<div style="font-size:7.5px;color:var(--t3);letter-spacing:.4px;">COTE MARCHÉ</div>')
+                :('<div style="font-size:12px;font-weight:800;color:var(--t3);">cote à vérifier</div>'))
+        +'<div style="font-size:10px;color:var(--t1);margin-top:4px;">'+_g45TrPct(m.p)+' <span style="font-size:8px;color:var(--t3);">estimée</span></div>'
+        +(showGap&&m.ev!=null&&m.cote?('<div style="font-size:10px;font-weight:800;color:'+col+';">espérance '+(m.ev>=0?'+':'')+Math.round(m.ev*1000)/10+'%</div>'):'')
         +(x.when?('<div style="font-size:8px;color:var(--t3);">'+_g45CyEa(x.when)+'</div>'):'')
       +'</div></div>';
     if(m.fair!=null) s+='<div style="font-size:8px;color:var(--t3);margin-top:4px;">Bookmaker (marge retirée) : '+_g45TrPct(m.fair)+'</div>';
