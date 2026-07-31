@@ -18833,7 +18833,11 @@ function _g45BlocAVenir(nom){
     var adv=dom?m.awayTeam:m.homeTeam;
     var d=''; try{ d=new Date(m.date).toLocaleDateString('fr-FR',{weekday:'short',day:'numeric',month:'short'}); }catch(e){}
     var hr=''; try{ hr=new Date(m.date).toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'}); }catch(e){}
-    var c=m.competitionName||m.competition||'';
+    /* Étiquette de compétition lisible : « esp.1 » devient « Liga », « club.friendly »
+       devient « Amical ». `_g45TrCompLbl` couvre déjà tous les championnats et coupes ; on
+       ne retombe sur le slug brut que si aucune correspondance n'est trouvée. */
+    var _slug=m.competition||m.competitionName||'';
+    var c=(typeof _g45TrCompLbl==='function')?_g45TrCompLbl(_slug):_slug;
     var cote='';
     if(m.odds){
       var mien=dom?m.odds.home:m.odds.away;
@@ -18852,11 +18856,11 @@ function _g45BlocAVenir(nom){
       clic=' onclick="window.open(\''+_g45CyEa(m._espnUrl)+'\',\'_blank\')"'; chev='↗';
     }
     h+='<div'+clic+' style="display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:1px solid rgba(255,255,255,.05);'+(clic?'cursor:pointer;':'')+'">'
-      +'<div style="flex:none;width:64px;"><div style="font-size:10px;font-weight:700;color:var(--t1);">'+_g45CyEa(d)+'</div>'
-      +'<div style="font-size:8px;color:var(--t3);">'+_g45CyEa(hr)+'</div></div>'
+      +'<div style="flex:none;width:64px;"><div style="font-size:10.5px;font-weight:700;color:var(--t1);">'+_g45CyEa(d)+'</div>'
+      +'<div style="font-size:10px;font-weight:700;color:var(--t2);margin-top:1px;">'+_g45CyEa(hr)+'</div></div>'
       +'<div style="flex:none;font-size:11px;">'+(dom?'🏠':'✈️')+'</div>'
       +'<div style="flex:1;min-width:0;"><div style="font-size:11px;font-weight:700;color:var(--t1);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">'+_g45CyEa(adv)+'</div>'
-      +(c?('<div style="font-size:8px;color:var(--t3);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">'+_g45CyEa(c)+'</div>'):'')+'</div>'
+      +(c?('<div style="font-size:9.5px;color:#8aa0ff;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-top:1px;">'+_g45CyEa(c)+'</div>'):'')+'</div>'
       +'<div style="flex:none;text-align:right;">'+cote+(chev?('<span style="font-size:9px;color:var(--t3);margin-left:5px;">'+chev+'</span>'):'')+'</div></div>'
       /* Panneau frère UNIQUEMENT pour le foot : `toggleSaisonMatchDetail` en dépend, mais
          il n'aurait aucun sens pour un match ouvert dans un onglet externe. */
@@ -22074,7 +22078,7 @@ function _g45TrCompLbl(slug){
   if(map[slug]) return map[slug];
   var s=String(slug||''), c={
     'uefa.champions_qual':'🏆 Qualif. Champions','uefa.europa_qual':'🥈 Qualif. Europa','uefa.europa.conf_qual':'🥉 Qualif. Conference',
-    'uefa.super_cup':'🏆 Supercoupe UEFA','club.friendly':'⚽ Amical'
+    'uefa.super_cup':'🏆 Supercoupe UEFA','club.friendly':'⚽ Amical','fra.super_cup':'🇫🇷 Trophée des Champions','ita.super_cup':'🇮🇹 Supercoppa','ger.super_cup':'🇩🇪 Supercup','esp.super_cup':'🇪🇸 Supercopa'
   };
   return c[s]||s;
 }
