@@ -14225,6 +14225,7 @@ async function loadNhlSaisons(el, nom) {
 
     html += '</div>';
     el.innerHTML = html;
+    _g45AjouterAvenirNonFoot(el, nom, 'hockey/nhl', teamInfo);
   } catch(e) {
     el.innerHTML = '<div style="color:#ff4545;text-align:center;padding:20px;">Erreur NHL<br><small>'+e.message+'</small></div>';
   }
@@ -14412,6 +14413,7 @@ async function loadMlbSaisons(el, nom) {
 
     html += '</div>';
     el.innerHTML = html;
+    _g45AjouterAvenirNonFoot(el, nom, 'baseball/mlb', teamInfo);
   } catch(e) {
     el.innerHTML = '<div style="color:#ff4545;text-align:center;padding:20px;">Erreur MLB</div>';
   }
@@ -15023,6 +15025,7 @@ async function loadNbaSaisons(el, nom) {
     html += '</div>';
 
     el.innerHTML = html;
+    _g45AjouterAvenirNonFoot(el, nom, 'basketball/nba', teamInfo);
   } catch(e) {
     el.innerHTML = '<div style="color:#ff4545;text-align:center;padding:20px;">Erreur NBA : '+e.message+'<br><small>Vérifier la connexion</small></div>';
   }
@@ -18756,6 +18759,52 @@ async function _g45AVenirLancer(el, results, nom){
   }catch(e){}
   _g45AVenirEnCours[nom]=0;
 }
+/* Récupérateur générique de prochains matchs pour les sports non-foot (MLB/NHL/NBA/NFL).
+   Interroge le scoreboard du sport sur 30 jours et filtre par abréviation ESPN. Le format
+   renvoyé est compatible avec `_g45BlocAVenir` — le domicile est calculé ici, dans m._dom. */
+async function _g45AVenirNonFoot(sportPath, teamInfo, nom){
+  if(!sportPath||!teamInfo||!teamInfo.espnAbbr) return [];
+  var abbr=String(teamInfo.espnAbbr).toLowerCase();
+  var f=function(d){ return d.getFullYear()+String(d.getMonth()+1).padStart(2,'0')+String(d.getDate()).padStart(2,'0'); };
+  var plage=f(new Date())+'-'+f(new Date(Date.now()+30*86400000));
+  var j=null;
+  try{ j=await (await fetch('https://site.api.espn.com/apis/site/v2/sports/'+sportPath+'/scoreboard?dates='+plage+'&limit=400')).json(); }catch(e){ return []; }
+  var out=[], limite=Date.now()-3*3600000;
+  ((j&&j.events)||[]).forEach(function(e){
+    var comp=(e.competitions&&e.competitions[0])||{};
+    var st=(comp.status&&comp.status.type)||{};
+    if(st.completed===true) return;
+    var t=Date.parse(e.date); if(isNaN(t)||t<limite) return;
+    var cs=comp.competitors||[];
+    var ho=cs.filter(function(x){return x.homeAway==='home';})[0]||cs[0];
+    var aw=cs.filter(function(x){return x.homeAway==='away';})[0]||cs[1];
+    if(!ho||!aw) return;
+    var ha=String((ho.team&&(ho.team.abbreviation||''))||'').toLowerCase();
+    var aa=String((aw.team&&(aw.team.abbreviation||''))||'').toLowerCase();
+    if(ha!==abbr&&aa!==abbr) return;
+    out.push({
+      id:e.id, date:e.date, completed:false,
+      homeTeam:(ho.team&&(ho.team.displayName||ho.team.shortDisplayName))||'?',
+      awayTeam:(aw.team&&(aw.team.displayName||aw.team.shortDisplayName))||'?',
+      _dom:(ha===abbr)
+    });
+  });
+  out.sort(function(a,b){ return Date.parse(a.date)-Date.parse(b.date); });
+  return out.slice(0,8);
+}
+/* Injecte le bloc « Prochains matchs » en tête de la vue Saisons non-foot, en arrière-plan.
+   On appelle depuis chaque `loadXxxSaisons` juste après le rendu du contenu principal. */
+async function _g45AjouterAvenirNonFoot(el, nom, sportPath, teamInfo){
+  try{
+    var L=await _g45AVenirNonFoot(sportPath, teamInfo, nom);
+    if(!L||!L.length) return;
+    _g45AVenir[nom]=L;
+    var bloc=_g45BlocAVenir(nom);
+    if(bloc&&el) el.insertAdjacentHTML('afterbegin', bloc);
+  }catch(e){}
+}
+window._g45AjouterAvenirNonFoot=_g45AjouterAvenirNonFoot;
+
 function _g45BlocAVenir(nom){
   var L=_g45AVenir[nom]||[];
   if(!L.length) return '';
