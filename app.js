@@ -20249,7 +20249,9 @@ function initPariChips() {
   if(!chipsEl||!state.u||!state.u.length) return;
   var html = '<span style="font-size:10px;color:var(--t3);align-self:center;flex-shrink:0;">Focus :</span>';
   html += '<div data-equipe="" data-action="pari-equipe" style="padding:4px 10px;border-radius:12px;border:1px solid rgba(77,132,255,.5);background:rgba(77,132,255,.12);color:#7aaaff;font-size:10px;font-weight:700;cursor:pointer;">Toutes</div>';
-  state.u.slice(0,8).forEach(function(u){
+  /* Toutes les entrées de type club — plus de troncature arbitraire à 8. Les joueurs
+     sont écartés : le « Pari du jour » n'est pas structuré pour raisonner sur un buteur. */
+  state.u.filter(function(u){ return u&&u.type!=='joueur'; }).forEach(function(u){
     html += '<div data-equipe="'+u.n+'" data-action="pari-equipe" style="padding:4px 10px;border-radius:12px;border:1px solid rgba(255,255,255,.08);background:none;color:var(--t3);font-size:10px;font-weight:700;cursor:pointer;">'+u.n+'</div>';
   });
   chipsEl.innerHTML = html;
@@ -20287,7 +20289,7 @@ async function generatePariDuJour() {
   // Filtrer selon équipe focus
   var unitesToAnalyze = _pariEquipeFocus
     ? state.u.filter(function(u){ return u.n === _pariEquipeFocus; })
-    : state.u.slice(0,8);
+    : state.u.filter(function(u){ return u&&u.type!=='joueur'; });
 
   var today = new Date();
   var dateStr = today.toLocaleDateString('fr-FR');
@@ -20334,8 +20336,9 @@ async function generatePariDuJour() {
     + 'Voici les equipes favorites de l utilisateur avec ses stats perso : '+equipes+'. '
     + (upcomingInfo||'')
     + 'En te basant sur les prochains matchs et les stats de l utilisateur, propose 2-3 paris concrets pour les prochains jours. '
-    + 'Pour chaque pari : equipe, type de pari (Victoire/Over 2.5/BTS/etc), cote recommandee (fourchette), et une phrase de justification. '
-    + 'Format: "⚽ EQUIPE — TYPE @cote : justification". Sois direct et precis. En francais. Max 4 lignes.';
+    + 'Pour chaque pari : equipe, type de pari (Victoire/Over 2.5/BTS/etc), et une phrase de justification. '
+    + 'IMPORTANT : NE MENTIONNE AUCUNE COTE. Tu n\'as pas acces aux cotes reelles, ne les invente pas. L\'utilisateur les verifiera chez son bookmaker. '
+    + 'Format: "⚽ EQUIPE — TYPE : justification". Sois direct et precis. En francais. Max 4 lignes.';
 
   try {
     var r = await fetch('https://api.groq.com/openai/v1/chat/completions', {
@@ -20359,6 +20362,7 @@ async function generatePariDuJour() {
       }
     });
     html += '</div>';
+    html += '<div style="font-size:9px;color:var(--t3);margin-top:8px;line-height:1.5;font-style:italic;">💡 Suggestions éditoriales issues d\'une IA. Aucune cote garantie : vérifie chez ton bookmaker avant de miser.</div>';
     html += '<div style="text-align:right;margin-top:6px;"><button onclick="generatePariDuJour()" style="background:none;border:none;color:var(--t3);font-size:10px;cursor:pointer;">↻ Régénérer</button></div>';
     cont.innerHTML = html;
 
