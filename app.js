@@ -18763,8 +18763,16 @@ async function _g45AVenirLancer(el, results, nom){
    Interroge le scoreboard du sport sur 30 jours et filtre par abréviation ESPN. Le format
    renvoyé est compatible avec `_g45BlocAVenir` — le domicile est calculé ici, dans m._dom. */
 async function _g45AVenirNonFoot(sportPath, teamInfo, nom){
-  if(!sportPath||!teamInfo||!teamInfo.espnAbbr) return [];
-  var abbr=String(teamInfo.espnAbbr).toLowerCase();
+  if(!sportPath) return [];
+  /* Certaines tables du mur (MLB_TEAMS) ne contiennent que l'id statsapi et pas d'espnAbbr :
+     on retombe alors sur un match par NOM d'équipe. La dernière portion du nom du mur
+     (« LA Dodgers » → « dodgers ») matche le champ `name` d'ESPN qui contient la mascotte. */
+  var abbr=teamInfo&&teamInfo.espnAbbr?String(teamInfo.espnAbbr).toLowerCase():'';
+  var motCle=(function(){
+    var mots=String(nom||'').toLowerCase().split(/\s+/).filter(Boolean);
+    return mots.length?mots[mots.length-1]:'';
+  })();
+  if(!abbr && !motCle) return [];
   var f=function(d){ return d.getFullYear()+String(d.getMonth()+1).padStart(2,'0')+String(d.getDate()).padStart(2,'0'); };
   var plage=f(new Date())+'-'+f(new Date(Date.now()+30*86400000));
   var j=null;
@@ -18781,12 +18789,18 @@ async function _g45AVenirNonFoot(sportPath, teamInfo, nom){
     if(!ho||!aw) return;
     var ha=String((ho.team&&(ho.team.abbreviation||''))||'').toLowerCase();
     var aa=String((aw.team&&(aw.team.abbreviation||''))||'').toLowerCase();
-    if(ha!==abbr&&aa!==abbr) return;
+    var hn=String((ho.team&&(ho.team.name||ho.team.shortDisplayName||''))||'').toLowerCase();
+    var an=String((aw.team&&(aw.team.name||aw.team.shortDisplayName||''))||'').toLowerCase();
+    /* Chaque camp est comparé à l'abréviation ET au mot clé — on garde le match si l'un des
+       deux critères confirme, pour couvrir aussi bien NBA (espnAbbr) que MLB (nom). */
+    var isDom=(abbr&&ha===abbr) || (motCle&&hn.indexOf(motCle)>=0);
+    var isExt=(abbr&&aa===abbr) || (motCle&&an.indexOf(motCle)>=0);
+    if(!isDom&&!isExt) return;
     out.push({
       id:e.id, date:e.date, completed:false,
       homeTeam:(ho.team&&(ho.team.displayName||ho.team.shortDisplayName))||'?',
       awayTeam:(aw.team&&(aw.team.displayName||aw.team.shortDisplayName))||'?',
-      _dom:(ha===abbr)
+      _dom:isDom
     });
   });
   out.sort(function(a,b){ return Date.parse(a.date)-Date.parse(b.date); });
