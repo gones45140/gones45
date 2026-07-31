@@ -18796,11 +18796,15 @@ async function _g45AVenirNonFoot(sportPath, teamInfo, nom){
     var isDom=(abbr&&ha===abbr) || (motCle&&hn.indexOf(motCle)>=0);
     var isExt=(abbr&&aa===abbr) || (motCle&&an.indexOf(motCle)>=0);
     if(!isDom&&!isExt) return;
+    /* URL ESPN du match : la vue pré-match spécifique foot ne s'applique pas aux autres
+       sports, on ouvre donc la page ESPN externe qui contient l'équivalent (score, stats). */
+    var _sport=String(sportPath).split('/').pop();
     out.push({
       id:e.id, date:e.date, completed:false,
       homeTeam:(ho.team&&(ho.team.displayName||ho.team.shortDisplayName))||'?',
       awayTeam:(aw.team&&(aw.team.displayName||aw.team.shortDisplayName))||'?',
-      _dom:isDom
+      _dom:isDom,
+      _espnUrl:'https://www.espn.com/'+_sport+'/game/_/gameId/'+e.id
     });
   });
   out.sort(function(a,b){ return Date.parse(a.date)-Date.parse(b.date); });
@@ -18838,15 +18842,25 @@ function _g45BlocAVenir(nom){
     /* Même mécanique que les lignes de résultats : clic → fiche avant-match ESPN
        (forme, classement, cotes). Le panneau frère est obligatoire, la fonction le cherche
        via nextElementSibling. */
-    var clic=(m.id&&m.competition)?(' onclick="toggleSaisonMatchDetail(this)" data-eid="'+_g45CyEa(m.id)+'" data-lg="'+_g45CyEa(m.competition)+'"'):'';
+    /* Deux comportements distincts sur les lignes :
+         - foot (m.competition présent)   → déroulé de la fiche pré-match, chevron ›
+         - non-foot (m._espnUrl présent)  → ouverture ESPN dans un nouvel onglet, chevron ↗ */
+    var clic='', chev='';
+    if(m.id&&m.competition){
+      clic=' onclick="toggleSaisonMatchDetail(this)" data-eid="'+_g45CyEa(m.id)+'" data-lg="'+_g45CyEa(m.competition)+'"'; chev='›';
+    } else if(m._espnUrl){
+      clic=' onclick="window.open(\''+_g45CyEa(m._espnUrl)+'\',\'_blank\')"'; chev='↗';
+    }
     h+='<div'+clic+' style="display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:1px solid rgba(255,255,255,.05);'+(clic?'cursor:pointer;':'')+'">'
       +'<div style="flex:none;width:64px;"><div style="font-size:10px;font-weight:700;color:var(--t1);">'+_g45CyEa(d)+'</div>'
       +'<div style="font-size:8px;color:var(--t3);">'+_g45CyEa(hr)+'</div></div>'
       +'<div style="flex:none;font-size:11px;">'+(dom?'🏠':'✈️')+'</div>'
       +'<div style="flex:1;min-width:0;"><div style="font-size:11px;font-weight:700;color:var(--t1);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">'+_g45CyEa(adv)+'</div>'
       +(c?('<div style="font-size:8px;color:var(--t3);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">'+_g45CyEa(c)+'</div>'):'')+'</div>'
-      +'<div style="flex:none;text-align:right;">'+cote+(clic?'<span style="font-size:9px;color:var(--t3);margin-left:5px;">›</span>':'')+'</div></div>'
-      +(clic?'<div class="smd-panel" data-open="0" style="display:none;"></div>':'');
+      +'<div style="flex:none;text-align:right;">'+cote+(chev?('<span style="font-size:9px;color:var(--t3);margin-left:5px;">'+chev+'</span>'):'')+'</div></div>'
+      /* Panneau frère UNIQUEMENT pour le foot : `toggleSaisonMatchDetail` en dépend, mais
+         il n'aurait aucun sens pour un match ouvert dans un onglet externe. */
+      +((m.id&&m.competition)?'<div class="smd-panel" data-open="0" style="display:none;"></div>':'');
   });
   return h+'</div>';
 }
