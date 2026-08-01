@@ -20878,6 +20878,7 @@ var G45_LEAGUE_GROUPS = [
     {name:'Championship', slug:'eng.2', ico:'🏴󠁧󠁢󠁥󠁮󠁧󠁿'},
     {name:'Serie B', slug:'ita.2', ico:'🇮🇹'},
     {name:'Liga 2', slug:'esp.2', ico:'🇪🇸'},
+    {name:'MLS', slug:'usa.1', ico:'🇺🇸'},
     {name:'2.Bundesliga', slug:'ger.2', ico:'🇩🇪'}
   ]},
   {grp:'🇫🇷 Coupes nationales', leagues:[
@@ -21770,7 +21771,8 @@ var _G45_CLV_DEF=[
   {n:'Bayern',  sl:'ger.1', side:'over',  line:2.5, al:['bayern','bayernmunich','bayernmunchen','fcbayern']},
   {n:'Real',    sl:'esp.1', side:'over',  line:2.5, al:['realmadrid','real']},
   {n:'PSV',     sl:'ned.1', side:'over',  line:2.5, al:['psv','psveindhoven']},
-  {n:'Inter',   sl:'ita.1', side:'under', line:2.5, al:['inter','intermilan','internazionale']}
+  {n:'Inter',   sl:'ita.1', side:'under', line:2.5, al:['inter','intermilan','internazionale']},
+  {n:'Miami',   sl:'usa.1', side:'over',  line:2.5, al:['intermiami','miami','intermiamicf']}
 ];
 function _g45ClvCfg(){
   try{ var c=JSON.parse(localStorage.getItem('g45clv_cfg')||'null'); if(c&&c.length) return c; }catch(e){}
@@ -22111,7 +22113,7 @@ function _g45TrCompLbl(slug){
   if(map[slug]) return map[slug];
   var s=String(slug||''), c={
     'uefa.champions_qual':'🏆 Qualif. Champions','uefa.europa_qual':'🥈 Qualif. Europa','uefa.europa.conf_qual':'🥉 Qualif. Conference',
-    'uefa.super_cup':'🏆 Supercoupe UEFA','club.friendly':'⚽ Amical','fra.super_cup':'🇫🇷 Trophée des Champions','ita.super_cup':'🇮🇹 Supercoppa','ger.super_cup':'🇩🇪 Supercup','esp.super_cup':'🇪🇸 Supercopa','ned.supercup':'🇳🇱 Johan Cruyff Shield'
+    'uefa.super_cup':'🏆 Supercoupe UEFA','club.friendly':'⚽ Amical','fra.super_cup':'🇫🇷 Trophée des Champions','ita.super_cup':'🇮🇹 Supercoppa','ger.super_cup':'🇩🇪 Supercup','esp.super_cup':'🇪🇸 Supercopa','ned.supercup':'🇳🇱 Johan Cruyff Shield','usa.1':'🇺🇸 MLS'
   };
   return c[s]||s;
 }
