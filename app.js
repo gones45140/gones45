@@ -1,4 +1,8 @@
 var TEAM_IDS = {
+    /* football-data ne couvre pas la MLS ; on donne quand même un id (non utilisé — le flow
+       ESPN prend le relais grâce à `espnLeagueOf`), juste pour passer le check `if(!teamId)`.
+       Placé en tête pour éviter le rebond sur « Inter Milan » via le match partiel. */
+    'Inter Miami':20232,'Inter Miami CF':20232,'Miami CF':20232,
     'Bayern Munich':5,'Bayern München':5,'FC Bayern':5,
     'Borussia Dortmund':4,'BVB':4,
     'Real Madrid':86,'Real Madrid CF':86,
@@ -47,6 +51,10 @@ var _unitType = "club";
 
 // Championnat ESPN (slug) de chaque équipe favorite
 var ESPN_TEAM_LEAGUE = {
+  /* Inter Miami CF placé en premier : sinon "inter miami" rebondit sur "Inter" (Milan) via
+     le match partiel de `espnLeagueOf`. Vérifié en direct — la fiche affichait Bologna et
+     Torino sous « inter miami ». La boucle prend le premier match, donc l'ordre compte. */
+  'Inter Miami':'usa.1','Inter Miami CF':'usa.1','Miami CF':'usa.1',
   // Ligue 1
   'Lyon':'fra.1','Olympique Lyonnais':'fra.1','OL':'fra.1',
   'Marseille':'fra.1','Olympique de Marseille':'fra.1','OM':'fra.1',
