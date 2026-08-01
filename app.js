@@ -18670,11 +18670,13 @@ async function _g45AVenirLigue(slug, espnId, espnNom){
      vivent sous d'autres slugs (vérifié : uefa.super_cup, fra.super_cup, club.friendly
      contenaient bien les matchs d'août du PSG). Le préfixe pays se déduit du championnat,
      ce qui rend la règle valable pour n'importe quelle équipe. */
-  /* Supercoupes nationales réellement présentes chez ESPN (testé) : seules fra, ita, ger
-     et esp répondent ; ned, bra, arg, eng, por, tur, bel renvoient HTTP 400. */
+  /* Supercoupes nationales chez ESPN : chaque pays a son propre slug, PAS toujours
+     `.super_cup`. Vérifié : le Johan Cruyff Shield (Pays-Bas) s'écrit `ned.supercup`
+     (sans underscore), et l'application le manquait — Claude avait conclu à tort à HTTP 400. */
   var pays=String(slug).split('.')[0];
   var slugs=[slug, 'club.friendly', 'uefa.super_cup'];
-  if(['fra','ita','ger','esp'].indexOf(pays)>=0) slugs.push(pays+'.super_cup');
+  var SUP={fra:'fra.super_cup', ita:'ita.super_cup', ger:'ger.super_cup', esp:'esp.super_cup', ned:'ned.supercup'};
+  if(SUP[pays]) slugs.push(SUP[pays]);
   var f=function(d){ return d.getFullYear()+String(d.getMonth()+1).padStart(2,'0')+String(d.getDate()).padStart(2,'0'); };
   var plage=f(new Date())+'-'+f(new Date(Date.now()+60*86400000));
   var reps=await Promise.all(slugs.map(function(sl){
@@ -18916,6 +18918,33 @@ function renderSaisonsChart(el, results, nom) {
 
   var html = '<div style="padding:4px 0;">';
   html += _g45BlocAVenir(nom);
+
+  /* Bandeau « Saison YYYY-YY+1 » vide, pour Antoine qui « croit ce qu'il voit ». Une saison
+     sans match joué n'apparaît pas dans `results` (correctif du 30/07 qui filtre completed),
+     donc on affiche un placeholder explicite tant qu'aucune journée n'a été disputée. La
+     date du premier match est reprise du bloc « Prochains matchs » déjà collecté. */
+  (function(){
+    var m=new Date().getMonth(), yNow=new Date().getFullYear();
+    var curY=(m>=7)?yNow:(yNow-1);
+    var cle=String(curY);
+    var dejaLa=(results&&results[cle]&&results[cle].length>0);
+    if(dejaLa) return;
+    var L=(typeof _g45AVenir!=='undefined'&&_g45AVenir[nom])||[];
+    var premier=L.filter(function(m2){
+      var t=Date.parse(m2.date); return !isNaN(t)&&t>=Date.now();
+    }).sort(function(a,b){ return Date.parse(a.date)-Date.parse(b.date); })[0];
+    var dateStr='';
+    if(premier){
+      try{ dateStr=new Date(premier.date).toLocaleDateString('fr-FR',{weekday:'long',day:'numeric',month:'long'}); }catch(e){}
+    }
+    html+='<div style="background:rgba(77,132,255,.06);border:1px dashed rgba(77,132,255,.35);border-radius:10px;padding:14px;margin-bottom:12px;text-align:center;">'
+      +'<div style="font-size:12px;font-weight:800;color:var(--t1);letter-spacing:.5px;">Saison '+curY+'-'+(curY+1)+'</div>'
+      +'<div style="font-size:10px;color:var(--t3);margin-top:5px;line-height:1.6;">'
+      +(dateStr?('Premier match : '+_g45CyEa(dateStr)+'.'):'Aucun match encore programmé.')
+      +'<br>Les statistiques s\'afficheront ici dès que la 1re journée aura été jouée.</div>'
+    +'</div>';
+  })();
+
 
   // Barre de filtres
   html += '<div class="cwrap" style="margin-bottom:10px;">';
@@ -22082,7 +22111,7 @@ function _g45TrCompLbl(slug){
   if(map[slug]) return map[slug];
   var s=String(slug||''), c={
     'uefa.champions_qual':'🏆 Qualif. Champions','uefa.europa_qual':'🥈 Qualif. Europa','uefa.europa.conf_qual':'🥉 Qualif. Conference',
-    'uefa.super_cup':'🏆 Supercoupe UEFA','club.friendly':'⚽ Amical','fra.super_cup':'🇫🇷 Trophée des Champions','ita.super_cup':'🇮🇹 Supercoppa','ger.super_cup':'🇩🇪 Supercup','esp.super_cup':'🇪🇸 Supercopa'
+    'uefa.super_cup':'🏆 Supercoupe UEFA','club.friendly':'⚽ Amical','fra.super_cup':'🇫🇷 Trophée des Champions','ita.super_cup':'🇮🇹 Supercoppa','ger.super_cup':'🇩🇪 Supercup','esp.super_cup':'🇪🇸 Supercopa','ned.supercup':'🇳🇱 Johan Cruyff Shield'
   };
   return c[s]||s;
 }
