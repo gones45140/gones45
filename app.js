@@ -29037,3 +29037,87 @@ var _G45_CACHE_MAX=60*1024;
   };
   save._g45quota=1;
 })();
+
+
+/* ═══════════ 💰 GRILLE DE MISES PAR PALIER — UI OUTILS ═══════════
+   Antoine règle la montante via le nombre d'étoiles de chaque équipe, mais les grilles
+   étaient jusqu'ici invisibles et non modifiables. Ce panneau les affiche dans Outils et
+   permet d'écraser une case précise ; la surcharge vit dans localStorage `g45_strats` et
+   est appliquée par-dessus la table de base au démarrage. Rétro-compatible : sans
+   surcharge, on retombe exactement sur les valeurs originales. */
+var _G45_STRATS_BASE = JSON.parse(JSON.stringify(STRATS));
+(function(){
+  try{
+    var over = JSON.parse(localStorage.getItem('g45_strats')||'null');
+    if(over){
+      Object.keys(over).forEach(function(k){
+        if(STRATS[k] && Array.isArray(over[k]) && over[k].length===STRATS[k].length){
+          STRATS[k] = over[k].map(function(v){ return parseFloat(v)||0; });
+        }
+      });
+    }
+  }catch(e){}
+})();
+function _g45SaveStrats(){
+  try{ localStorage.setItem('g45_strats', JSON.stringify(STRATS)); }catch(e){}
+  try{ if(typeof _g45PushBetsGithub==='function') _g45PushBetsGithub(true); }catch(e){}
+}
+function _g45MajPalierCase(etoiles, idx, val){
+  var v = parseFloat(String(val).replace(',','.'));
+  if(isNaN(v)||v<0) v = 0;
+  if(!STRATS[etoiles]) return;
+  STRATS[etoiles][idx] = v;
+  _g45SaveStrats();
+  renderPaliers();     // rafraîchit la ligne (les paliers suivants ne bougent pas — chacun est indépendant)
+}
+window._g45MajPalierCase = _g45MajPalierCase;
+function resetPaliers(){
+  if(!confirm('Restaurer les grilles de mises par défaut ?')) return;
+  STRATS = JSON.parse(JSON.stringify(_G45_STRATS_BASE));
+  try{ localStorage.removeItem('g45_strats'); }catch(e){}
+  try{ if(typeof _g45PushBetsGithub==='function') _g45PushBetsGithub(true); }catch(e){}
+  renderPaliers();
+}
+window.resetPaliers = resetPaliers;
+function renderPaliers(){
+  var el = document.getElementById('palier-grids'); if(!el) return;
+  var etoileLabels = {'1':'⭐','2':'⭐⭐','3':'⭐⭐⭐','4':'⭐⭐⭐⭐','5':'⭐⭐⭐⭐⭐'};
+  var h = '';
+  ['1','2','3','4','5'].forEach(function(k){
+    if(!STRATS[k]) return;
+    var modif = _G45_STRATS_BASE[k] && STRATS[k].some(function(v,i){ return v !== _G45_STRATS_BASE[k][i]; });
+    h += '<div style="background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.06);border-radius:8px;padding:9px 10px;margin-bottom:8px;">'
+       + '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:7px;">'
+         + '<div style="font-size:11px;font-weight:700;color:var(--t2);">'+etoileLabels[k]+'</div>'
+         + (modif?'<div style="font-size:9px;color:#f0b020;">modifiée</div>':'')
+       + '</div>'
+       + '<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:5px;">';
+    STRATS[k].forEach(function(v,i){
+      h += '<div style="text-align:center;">'
+         + '<div style="font-size:8px;color:var(--t3);margin-bottom:2px;">P'+(i+1)+'</div>'
+         + '<input type="number" min="0" step="1" value="'+v+'" '
+         + 'onchange="_g45MajPalierCase(\''+k+'\','+i+',this.value)" '
+         + 'style="width:100%;box-sizing:border-box;background:rgba(0,0,0,.28);border:1px solid rgba(255,255,255,.08);border-radius:6px;color:var(--t1);padding:5px 4px;font-size:11px;text-align:center;">'
+         + '</div>';
+    });
+    h += '</div></div>';
+  });
+  el.innerHTML = h;
+}
+window.renderPaliers = renderPaliers;
+(function(){
+  /* Rendu paresseux : on remplit la grille dès qu'Outils est visible. `showTab` recalcule
+     l'affichage des sections, et le container n'existe que dans cet onglet. */
+  var _tryRender = function(){
+    if(document.getElementById('palier-grids')) renderPaliers();
+  };
+  document.addEventListener('DOMContentLoaded', _tryRender);
+  window.addEventListener('load', _tryRender);
+  /* Redéclenche au clic sur le bouton de nav OUTILS. */
+  setTimeout(function(){
+    document.querySelectorAll('[onclick*="showTab(\'calc\'"], [onclick*="showTab(\'outils\'"]').forEach(function(b){
+      b.addEventListener('click', function(){ setTimeout(_tryRender, 50); });
+    });
+    _tryRender();
+  }, 500);
+})();

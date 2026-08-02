@@ -626,6 +626,18 @@
   <div class="sec">🔔 Notifications</div>
   <div class="fc" id="notif-panel"><div style="font-size:11px;color:var(--t3);">Chargement…</div></div>
 
+  <!-- GRILLE DES MISES PAR PALIER -->
+  <div class="sec">💰 Mises par palier</div>
+  <div class="fc" id="palier-panel">
+    <div style="font-size:10px;color:var(--t3);line-height:1.6;margin-bottom:10px;">
+      Grilles utilisées par la montante selon le nombre d'étoiles de chaque équipe. Modifie une case, valide au clavier ou en changeant d'input : la nouvelle valeur remplace la mise proposée du palier correspondant.
+    </div>
+    <div id="palier-grids"></div>
+    <div style="display:flex;gap:6px;margin-top:8px;">
+      <button class="btn" style="flex:1;font-size:11px;padding:8px;" onclick="resetPaliers()">↩ Valeurs par défaut</button>
+    </div>
+  </div>
+
   <!-- ÉQUIPES / CRÉATION -->
   <div class="sec">Équipes / Unités</div>
   <div class="fc">
