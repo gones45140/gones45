@@ -29062,15 +29062,28 @@ function _g45SaveStrats(){
   try{ localStorage.setItem('g45_strats', JSON.stringify(STRATS)); }catch(e){}
   try{ if(typeof _g45PushBetsGithub==='function') _g45PushBetsGithub(true); }catch(e){}
 }
-function _g45MajPalierCase(etoiles, idx, val){
-  var v = parseFloat(String(val).replace(',','.'));
+/* Progression à récupération d'Antoine : P1 est libre, chaque palier suivant vaut 2×
+   la SOMME des paliers précédents (P2 = P1×2, P3 = (P1+P2)×2, etc.). À cote 2.0, ça
+   couvre exactement les pertes cumulées et laisse P1 de gain net. Vérifié sur les 5
+   grilles préréglées : elles correspondent toutes à cette suite depuis P1 = 1/2/2/5/10. */
+function _g45PaliersDepuisP1(p1){
+  var v = parseFloat(String(p1).replace(',','.'));
   if(isNaN(v)||v<0) v = 0;
-  if(!STRATS[etoiles]) return;
-  STRATS[etoiles][idx] = v;
-  _g45SaveStrats();
-  renderPaliers();     // rafraîchit la ligne (les paliers suivants ne bougent pas — chacun est indépendant)
+  var arr = [v];
+  for(var i=1;i<8;i++){
+    var somme = 0;
+    for(var j=0;j<arr.length;j++) somme += arr[j];
+    arr.push(somme * 2);
+  }
+  return arr.map(function(x){ return Math.round(x * 100) / 100; });
 }
-window._g45MajPalierCase = _g45MajPalierCase;
+function _g45MajP1(etoiles, val){
+  if(!STRATS[etoiles]) return;
+  STRATS[etoiles] = _g45PaliersDepuisP1(val);
+  _g45SaveStrats();
+  renderPaliers();
+}
+window._g45MajP1 = _g45MajP1;
 function resetPaliers(){
   if(!confirm('Restaurer les grilles de mises par défaut ?')) return;
   STRATS = JSON.parse(JSON.stringify(_G45_STRATS_BASE));
@@ -29093,12 +29106,21 @@ function renderPaliers(){
        + '</div>'
        + '<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:5px;">';
     STRATS[k].forEach(function(v,i){
-      h += '<div style="text-align:center;">'
-         + '<div style="font-size:8px;color:var(--t3);margin-bottom:2px;">P'+(i+1)+'</div>'
-         + '<input type="number" min="0" step="1" value="'+v+'" '
-         + 'onchange="_g45MajPalierCase(\''+k+'\','+i+',this.value)" '
-         + 'style="width:100%;box-sizing:border-box;background:rgba(0,0,0,.28);border:1px solid rgba(255,255,255,.08);border-radius:6px;color:var(--t1);padding:5px 4px;font-size:11px;text-align:center;">'
-         + '</div>';
+      /* Seul P1 est éditable ; P2 à P8 sont recalculés à la volée. Le fond doré signale la
+         case active, les autres restent grises et non focusables. */
+      if(i===0){
+        h += '<div style="text-align:center;">'
+           + '<div style="font-size:8px;color:#f0b020;margin-bottom:2px;font-weight:800;">P1 · mise de départ</div>'
+           + '<input type="number" min="0" step="1" value="'+v+'" '
+           + 'onchange="_g45MajP1(\''+k+'\',this.value)" '
+           + 'style="width:100%;box-sizing:border-box;background:rgba(240,176,32,.12);border:1px solid rgba(240,176,32,.4);border-radius:6px;color:#f0c828;padding:6px 4px;font-size:12px;font-weight:800;text-align:center;">'
+           + '</div>';
+      } else {
+        h += '<div style="text-align:center;">'
+           + '<div style="font-size:8px;color:var(--t3);margin-bottom:2px;">P'+(i+1)+'</div>'
+           + '<div style="width:100%;box-sizing:border-box;background:rgba(0,0,0,.22);border:1px solid rgba(255,255,255,.04);border-radius:6px;color:var(--t2);padding:6px 4px;font-size:11px;text-align:center;">'+v+'</div>'
+           + '</div>';
+      }
     });
     h += '</div></div>';
   });
