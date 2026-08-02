@@ -13467,7 +13467,21 @@ async function loadFdSquad(el, nom, teamId, noTerrain, terrainOnly) {
         }
       }
 
-      if(!squad){ el.innerHTML='<div style="color:var(--t3);font-size:10px;text-align:center;padding:12px;">Squad non disponible</div>'; return; }
+      if(!squad){
+        /* Squad indisponible chez football-data (typiquement MLS, Brasileirão…). On propose
+           le lien ESPN à la place : l'ID est résolu via `espnResolveTeam`, qui utilise le
+           mapping ESPN_TEAM_LEAGUE. Cas Miami vécu : ID 20232 en cache, URL directe possible. */
+        var _url=null;
+        try{
+          var _t=await espnResolveTeam(nom);
+          if(_t&&_t.id) _url='https://www.espn.com/soccer/team/squad/_/id/'+_t.id;
+        }catch(e){}
+        el.innerHTML=_url
+          ? '<div style="text-align:center;padding:14px;"><div style="color:var(--t3);font-size:10px;margin-bottom:8px;">Effectif non disponible dans notre source.</div>'
+            +'<a href="'+_url+'" target="_blank" rel="noopener" style="display:inline-block;background:rgba(77,132,255,.18);color:#7aaaff;font-size:11px;font-weight:700;padding:7px 12px;border-radius:8px;text-decoration:none;">↗ Voir l\'effectif sur ESPN</a></div>'
+          : '<div style="color:var(--t3);font-size:10px;text-align:center;padding:12px;">Squad non disponible</div>';
+        return;
+      }
 
       // Fonction de matching nom Sofascore → API-Football
       function matchName(sofaName, afName) {
