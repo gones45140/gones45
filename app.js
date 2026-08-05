@@ -26935,7 +26935,7 @@ window.g45BetTeamNames = (typeof g45BetTeamNames!=='undefined') ? g45BetTeamName
    Remplace Dropbox POUR ANTOINE sans toucher au mode Dropbox (conservé pour Bruno/JP).
    Écrit/lit données/bets_antoine.json directement via l'API GitHub (même mécanisme que les stats joueurs).
    Réservé à Antoine car lui seul possède gones45_github_token en localStorage. */
-var G45_BETS_FILE='données/bets_antoine.json';
+var G45_BETS_FILE='données/paris_antoine.json';
 function _g45BetSyncOn(){
   if(!localStorage.getItem('gones45_github_token')) return false;       // seul Antoine a le token GitHub
   return localStorage.getItem('g45_github_betsync')!=='0';              // ON par défaut, coupable via le flag
