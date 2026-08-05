@@ -20496,9 +20496,7 @@ var _bcp=document.getElementById('btn-chat-params-pc');if(_bcp)_bcp.onclick=func
   /* Correctif 05/08/2026 — ces cinq fonctions sont appelees en onclick inline depuis
      index.html (filtres Archive, styles de carte, curseur d intensite, Agenda et
      Comparateur depuis le menu PC). Un handler inline resout ses identifiants dans la
-     portee GLOBALE, jamais dans cette closure : sans ces exports, ReferenceError.
-     Les boutons Agenda/Comparateur ouvraient bien l onglet (showTab est global) mais
-     le laissaient VIDE, le second appel de la sequence plantant. */
+     portee GLOBALE, jamais dans cette closure : sans ces exports, ReferenceError. */
   window.setArchFilter = setArchFilter;
   window.setCardStyle = setCardStyle;
   window.updateCardIntensity = updateCardIntensity;
@@ -29303,6 +29301,9 @@ function _g45PdfRender(jsPDF, D){
   var pct = function(v){ return v.toFixed(1) + ' %'; };
   var court = function(t, n){
     t = (t == null ? '' : '' + t);
+    /* jsPDF utilise des polices WinAnsi : tout ce qui depasse Latin-1
+       (emoji des sports, symboles) s'imprimerait en charabia. */
+    t = t.replace(/[^\x00-\xFF]/g, '').replace(/\s+/g, ' ').trim();
     return t.length > n ? t.slice(0, n - 1) + '.' : t;
   };
 
@@ -29330,7 +29331,7 @@ function _g45PdfRender(jsPDF, D){
     doc.rect(L, y, R - L, 7, 'F');
     doc.setFont('helvetica', 'bold'); doc.setFontSize(9.5);
     doc.setTextColor(255, 255, 255);
-    doc.text(t, L + 3, y + 4.9);
+    doc.text(court(t, 70), L + 3, y + 4.9);
     y += 11;
   }
 
@@ -29470,6 +29471,167 @@ function _g45PdfRender(jsPDF, D){
       }),
       [6, 7]
     );
+  }
+
+
+  /* ── Détail par équipe favorite ── */
+  var favs = (window.state && state.u ? state.u : []);
+  if (favs.length){
+    var sansPari = [];
+
+    /* Un bloc par équipe favorite ayant au moins un pari sur l'année. */
+    var blocs = favs.map(function(u){
+      var nom = (u.n || '').trim();
+      var paris = D.regles.filter(function(b){
+        return ((b.target || '').trim() === nom) ||
+               (!b.target && (b.n || '').indexOf(nom) === 0);
+      });
+      return {u:u, nom:nom, paris:paris};
+    }).filter(function(o){
+      if (!o.nom) return false;
+      if (!o.paris.length){ sansPari.push(o.nom); return false; }
+      return true;
+    });
+
+    /* Trié par profit décroissant, comme le tableau de synthèse. */
+    blocs.forEach(function(o){
+      o.profit = o.paris.reduce(function(a, b){ return a + _g45PdfProfit(b); }, 0);
+      o.mise   = o.paris.reduce(function(a, b){ return a + (parseFloat(b.m) || 0); }, 0);
+    });
+    blocs.sort(function(x, y){ return y.profit - x.profit; });
+
+    if (blocs.length){
+      titreSection('DETAIL PAR EQUIPE FAVORITE');
+
+      blocs.forEach(function(o, iBloc){
+        var u = o.u, paris = o.paris;
+        var v = paris.filter(function(b){ return b.win; }).length;
+        var d = paris.length - v;
+        var cotes = paris.map(function(b){ return parseFloat(b.cote) || 0; })
+                         .filter(function(c){ return c > 0; });
+        var coteMoy = cotes.length ? cotes.reduce(function(a, c){ return a + c; }, 0) / cotes.length : 0;
+
+        /* Plus longue série de victoires et de défaites. */
+        var sV = 0, sD = 0, curV = 0, curD = 0;
+        paris.forEach(function(b){
+          if (b.win){ curV++; curD = 0; if (curV > sV) sV = curV; }
+          else { curD++; curV = 0; if (curD > sD) sD = curD; }
+        });
+
+        /* Place : il faut au moins l'en-tête + 2 lignes, sinon page suivante. */
+        if (y + 34 > PAGE_BAS){ doc.addPage(); y = 20; }
+        else if (iBloc > 0){ y += 2; }
+
+        /* Bandeau de l'équipe, avec sa couleur si elle est exploitable. */
+        var rgb = [90, 100, 115];
+        var hx = (u.color || '') + '';
+        var mHx = hx.match(/^#?([0-9a-f]{6})$/i);
+        if (mHx){
+          rgb = [parseInt(mHx[1].slice(0,2),16), parseInt(mHx[1].slice(2,4),16), parseInt(mHx[1].slice(4,6),16)];
+        }
+        doc.setFillColor(rgb[0], rgb[1], rgb[2]);
+        doc.rect(L, y, 2.6, 9, 'F');
+        doc.setFillColor(243, 246, 250);
+        doc.rect(L + 2.6, y, R - L - 2.6, 9, 'F');
+        doc.setFont('helvetica', 'bold'); doc.setFontSize(9.5);
+        doc.setTextColor(27, 58, 107);
+        doc.text(court(o.nom, 40), L + 6, y + 6);
+
+        var meta = [];
+        if (u.s) meta.push(u.s + ' etoiles');
+        if (u.l) meta.push('palier ' + u.l);
+        var sp = court(u.sport, 14);
+        if (sp) meta.push(sp);
+        doc.setFont('helvetica', 'normal'); doc.setFontSize(7.5);
+        doc.setTextColor(110, 122, 138);
+        if (meta.length) doc.text(meta.join('  -  '), R - 2, y + 6, {align:'right'});
+        y += 12;
+
+        /* Ligne de chiffres clés. */
+        var chiffres = [
+          ['Paris', String(paris.length)],
+          ['V - D', v + ' - ' + d],
+          ['Taux', (paris.length ? (v / paris.length * 100).toFixed(0) : '0') + ' %'],
+          ['Cote moy.', coteMoy.toFixed(2)],
+          ['Mise', o.mise.toFixed(2)],
+          ['Resultat', eur(o.profit).replace(' EUR', '')],
+          ['ROI', (o.mise ? ((o.profit / o.mise * 100) >= 0 ? '+' : '') + (o.profit / o.mise * 100).toFixed(0) : '0') + ' %'],
+          ['Series', sV + 'V / ' + sD + 'D']
+        ];
+        var cwF = (R - L) / 8;
+        chiffres.forEach(function(c, i){
+          var x = L + i * cwF;
+          doc.setFont('helvetica', 'normal'); doc.setFontSize(6.2);
+          doc.setTextColor(130, 140, 155);
+          doc.text(c[0].toUpperCase(), x + 1.5, y + 3);
+          doc.setFont('helvetica', 'bold'); doc.setFontSize(8.6);
+          if (/^\+/.test(c[1])) doc.setTextColor(21, 128, 61);
+          else if (/^-/.test(c[1])) doc.setTextColor(179, 38, 30);
+          else doc.setTextColor(35, 45, 60);
+          doc.text(c[1], x + 1.5, y + 8);
+        });
+        y += 16;
+
+        /* Répartition par type de pari — c'est ce qui sert à décider
+           quel marché suivre sur cette équipe la saison suivante. */
+        var parType = {};
+        paris.forEach(function(b){
+          var t = (b.type || '-').trim() || '-';
+          if (!parType[t]) parType[t] = {t:t, n:0, v:0, mise:0, profit:0};
+          var e = parType[t];
+          e.n++; if (b.win) e.v++;
+          e.mise += parseFloat(b.m) || 0;
+          e.profit += _g45PdfProfit(b);
+        });
+        var listeT = Object.keys(parType).map(function(k){ return parType[k]; })
+                           .sort(function(x, y){ return y.profit - x.profit; });
+
+        doc.setFont('helvetica', 'bold'); doc.setFontSize(6.8);
+        doc.setTextColor(110, 122, 138);
+        doc.text('PAR TYPE DE PARI', L, y); y += 3;
+        table(
+          [{t:'Type', w:52, max:32}, {t:'Paris', w:18, a:'right'},
+           {t:'V', w:14, a:'right'}, {t:'Taux', w:20, a:'right'},
+           {t:'Mise', w:26, a:'right'}, {t:'Resultat', w:28, a:'right'},
+           {t:'ROI', w:24, a:'right'}],
+          listeT.map(function(e){
+            return [e.t, e.n, e.v,
+                    (e.n ? (e.v / e.n * 100).toFixed(0) : '0') + ' %',
+                    e.mise.toFixed(2),
+                    eur(e.profit).replace(' EUR', ''),
+                    (e.mise ? ((e.profit / e.mise * 100) >= 0 ? '+' : '') +
+                      (e.profit / e.mise * 100).toFixed(0) : '0') + ' %'];
+          }),
+          [5, 6]
+        );
+
+        /* Chronologie des paris de l'équipe. */
+        doc.setFont('helvetica', 'bold'); doc.setFontSize(6.8);
+        doc.setTextColor(110, 122, 138);
+        doc.text('CHRONOLOGIE', L, y); y += 3;
+        table(
+          [{t:'Date', w:14}, {t:'Match', w:60, max:37}, {t:'Type', w:30, max:19},
+           {t:'Cote', w:16, a:'right'}, {t:'Mise', w:18, a:'right'},
+           {t:'Res.', w:16}, {t:'Gain', w:28, a:'right'}],
+          paris.map(function(b){
+            return [_g45PdfJour(b), b.n || '', b.type || '',
+                    (parseFloat(b.cote) || 0).toFixed(2),
+                    (parseFloat(b.m) || 0).toFixed(2),
+                    b.win ? 'Gagne' : 'Perdu',
+                    eur(_g45PdfProfit(b)).replace(' EUR', '')];
+          }),
+          [6]
+        );
+      });
+    }
+
+    if (sansPari.length){
+      saut(14);
+      doc.setFont('helvetica', 'italic'); doc.setFontSize(7.2);
+      doc.setTextColor(130, 140, 155);
+      doc.text('Favorites sans pari en ' + D.annee + ' : ' + court(sansPari.join(', '), 150), L, y);
+      y += 9;
+    }
   }
 
   /* ── Liste complète ── */
