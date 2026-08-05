@@ -1,3 +1,28 @@
+/* ═══════════════════════════════════════════════════════════════
+   ESPN EN DIRECT — correctif du 05/08/2026
+   Akamai (le CDN d'ESPN) renvoie 403 aux IP de sortie des Workers
+   Cloudflare, qui sont partagées et blacklistées. Le navigateur,
+   lui, atteint ESPN sans problème (vérifié : 200).
+   On redirige donc vers ESPN les appels qui passaient par le proxy.
+   Les 28 autres appels ESPN d'app.js sont déjà en direct.
+   Les deux hôtes sont déjà autorisés dans le connect-src du CSP.
+   ═══════════════════════════════════════════════════════════════ */
+(function(){
+  var _f = window.fetch;
+  window.fetch = function(u, o){
+    try{
+      if (typeof u === 'string' && u.indexOf('host=espn') >= 0 && u.indexOf('workers.dev') >= 0) {
+        var p = new URLSearchParams(u.slice(u.indexOf('?') + 1));
+        var path = p.get('path');
+        if (path) u = (p.get('host') === 'espnweb'
+              ? 'https://site.web.api.espn.com'
+              : 'https://site.api.espn.com') + path;
+      }
+    }catch(e){}
+    return _f.call(this, u, o);
+  };
+})();
+
 var TEAM_IDS = {
     /* football-data ne couvre pas la MLS ; on donne quand même un id (non utilisé — le flow
        ESPN prend le relais grâce à `espnLeagueOf`), juste pour passer le check `if(!teamId)`.
