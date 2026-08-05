@@ -20491,7 +20491,20 @@ var _bcp=document.getElementById('btn-chat-params-pc');if(_bcp)_bcp.onclick=func
     else if(action === 'unit-type-club') { setUnitType('club'); }
     else if(action === 'unit-type-joueur') { setUnitType('joueur'); }
   });
-  render();updMise();buildSbRows();setTimeout(initPariChips,100);buildDtRows();buildArjelRows();renderCrash();renderMmRows();renderMmRowsSimple();updateCompList();calcVb();calcLay();calcFreebet();renderArchive();updateBankTotal();setTimeout(initPariChips,200);_apStyle=localStorage.getItem('g45_ap_style')||'halo';_apIntensity=parseInt(localStorage.getItem('g45_ap_intensity')||'40');var _apInp=document.getElementById('ap-intensity');if(_apInp)_apInp.value=_apIntensity;setCardStyle(_apStyle);};
+  render();updMise();buildSbRows();setTimeout(initPariChips,100);buildDtRows();buildArjelRows();renderCrash();renderMmRows();renderMmRowsSimple();updateCompList();calcVb();calcLay();calcFreebet();renderArchive();updateBankTotal();setTimeout(initPariChips,200);_apStyle=localStorage.getItem('g45_ap_style')||'halo';_apIntensity=parseInt(localStorage.getItem('g45_ap_intensity')||'40');var _apInp=document.getElementById('ap-intensity');if(_apInp)_apInp.value=_apIntensity;setCardStyle(_apStyle);
+
+  /* Correctif 05/08/2026 — ces cinq fonctions sont appelees en onclick inline depuis
+     index.html (filtres Archive, styles de carte, curseur d intensite, Agenda et
+     Comparateur depuis le menu PC). Un handler inline resout ses identifiants dans la
+     portee GLOBALE, jamais dans cette closure : sans ces exports, ReferenceError.
+     Les boutons Agenda/Comparateur ouvraient bien l onglet (showTab est global) mais
+     le laissaient VIDE, le second appel de la sequence plantant. */
+  window.setArchFilter = setArchFilter;
+  window.setCardStyle = setCardStyle;
+  window.updateCardIntensity = updateCardIntensity;
+  window.loadCalendrier = loadCalendrier;
+  window.initComparateur = initComparateur;
+};
 
 
 /* ═══════════════════════ Notifications de match (Web Push) ═══════════════════════ */
