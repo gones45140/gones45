@@ -29181,3 +29181,377 @@ window.renderPaliers = renderPaliers;
     _tryRender();
   }, 500);
 })();
+
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   GONES45 — EXPORT PDF ANNUEL DES PARIS
+   ───────────────────────────────────────────────────────────────────────────
+   Bouton manuel dans Outils. Produit : bilan chiffré + stats par équipe +
+   liste complète des paris de l'année.
+
+   Données lues :
+     state.a = paris RÉGLÉS (gagnés/perdus)   → l'essentiel du document
+     state.h = paris EN ATTENTE               → listés à part, hors statistiques
+   Champs d'un pari : date, heure, n, target, type, cote, m, comp, b,
+                      win, isPending, isFreebet, note
+
+   jsPDF est chargé depuis jsDelivr À LA DEMANDE (au clic seulement), donc
+   aucun impact sur le démarrage de l'app. jsdelivr est déjà autorisé dans le
+   script-src du CSP, rien à modifier.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+var _g45JsPdfPromise = null;
+function _g45LoadJsPdf(){
+  if (window.jspdf && window.jspdf.jsPDF) return Promise.resolve(window.jspdf.jsPDF);
+  if (_g45JsPdfPromise) return _g45JsPdfPromise;
+  _g45JsPdfPromise = new Promise(function(res, rej){
+    var s = document.createElement('script');
+    s.src = 'https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js';
+    s.onload = function(){
+      if (window.jspdf && window.jspdf.jsPDF) res(window.jspdf.jsPDF);
+      else rej(new Error('jsPDF chargé mais introuvable'));
+    };
+    s.onerror = function(){ rej(new Error('Impossible de charger jsPDF (réseau ou CSP)')); };
+    document.head.appendChild(s);
+  });
+  return _g45JsPdfPromise;
+}
+
+/* Profit d'un pari réglé — même calcul que _betSettleEffect, redéfini ici pour
+   que le module reste autonome si _betSettleEffect bouge. */
+function _g45PdfProfit(b){
+  var m = parseFloat(b.m) || 0, c = parseFloat(b.cote) || 0;
+  if (b.isFreebet) return b.win ? m * (c - 1) : 0;
+  return b.win ? (m * c - m) : -m;
+}
+
+function _g45PdfJour(b){
+  var d = ((b && b.date) || '') + '';
+  var m = d.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  return m ? (m[3] + '/' + m[2]) : d.slice(0, 10);
+}
+
+function _g45PdfAnnee(b){
+  var d = (b.date || '') + '';
+  var m = d.match(/(\d{4})/);
+  return m ? m[1] : '';
+}
+
+/* Rassemble et calcule tout ce qui sera imprimé. */
+function _g45PdfData(annee){
+  var regles = (window.state && state.a ? state.a : []).filter(function(b){
+    return _g45PdfAnnee(b) === annee;
+  });
+  var attente = (window.state && state.h ? state.h : []).filter(function(b){
+    return _g45PdfAnnee(b) === annee;
+  });
+
+  regles.sort(function(x, y){ return (x.date || '').localeCompare(y.date || ''); });
+  attente.sort(function(x, y){ return (x.date || '').localeCompare(y.date || ''); });
+
+  var mise = 0, profit = 0, gagnes = 0, perdus = 0, sommeCotes = 0, nbCotes = 0;
+  var meilleur = null, pire = null;
+  regles.forEach(function(b){
+    var m = parseFloat(b.m) || 0, c = parseFloat(b.cote) || 0, p = _g45PdfProfit(b);
+    mise += m; profit += p;
+    if (b.win) gagnes++; else perdus++;
+    if (c > 0){ sommeCotes += c; nbCotes++; }
+    if (!meilleur || p > _g45PdfProfit(meilleur)) meilleur = b;
+    if (!pire || p < _g45PdfProfit(pire)) pire = b;
+  });
+
+  /* Stats par équipe : on regroupe sur `target` (l'équipe suivie), et à défaut
+     sur `n` pour ne perdre aucun pari. */
+  var parEquipe = {};
+  regles.forEach(function(b){
+    var k = (b.target || b.n || '—').trim() || '—';
+    if (!parEquipe[k]) parEquipe[k] = {nom:k, n:0, v:0, d:0, mise:0, profit:0};
+    var e = parEquipe[k];
+    e.n++; if (b.win) e.v++; else e.d++;
+    e.mise += parseFloat(b.m) || 0;
+    e.profit += _g45PdfProfit(b);
+  });
+  var equipes = Object.keys(parEquipe).map(function(k){ return parEquipe[k]; });
+  equipes.sort(function(x, y){ return y.profit - x.profit; });
+
+  return {
+    annee: annee,
+    regles: regles,
+    attente: attente,
+    nb: regles.length,
+    gagnes: gagnes,
+    perdus: perdus,
+    taux: regles.length ? (gagnes / regles.length * 100) : 0,
+    mise: mise,
+    profit: profit,
+    roi: mise ? (profit / mise * 100) : 0,
+    coteMoy: nbCotes ? (sommeCotes / nbCotes) : 0,
+    meilleur: meilleur,
+    pire: pire
+  };
+}
+
+/* ─────────────────────────── Rendu du document ─────────────────────────── */
+function _g45PdfRender(jsPDF, D){
+  var doc = new jsPDF({unit:'mm', format:'a4'});
+  var L = 14, R = 196, y = 0, PAGE_BAS = 280;
+
+  var eur = function(v){
+    var s = (v >= 0 ? '+' : '-') + Math.abs(v).toFixed(2) + ' EUR';
+    return v === 0 ? '0.00 EUR' : s;
+  };
+  var pct = function(v){ return v.toFixed(1) + ' %'; };
+  var court = function(t, n){
+    t = (t == null ? '' : '' + t);
+    return t.length > n ? t.slice(0, n - 1) + '.' : t;
+  };
+
+  function pied(){
+    var tot = doc.internal.getNumberOfPages();
+    for (var i = 1; i <= tot; i++){
+      doc.setPage(i);
+      doc.setDrawColor(210, 216, 224); doc.setLineWidth(0.3);
+      doc.line(L, 287, R, 287);
+      doc.setFont('helvetica', 'normal'); doc.setFontSize(7.5);
+      doc.setTextColor(120, 130, 145);
+      doc.text('GONES45 — Paris ' + D.annee, L, 291);
+      doc.text('Page ' + i + ' / ' + tot, R, 291, {align:'right'});
+    }
+  }
+
+  function saut(besoin){
+    if (y + besoin > PAGE_BAS){ doc.addPage(); y = 20; return true; }
+    return false;
+  }
+
+  function titreSection(t){
+    saut(16);
+    doc.setFillColor(27, 58, 107);
+    doc.rect(L, y, R - L, 7, 'F');
+    doc.setFont('helvetica', 'bold'); doc.setFontSize(9.5);
+    doc.setTextColor(255, 255, 255);
+    doc.text(t, L + 3, y + 4.9);
+    y += 11;
+  }
+
+  /* Table générique avec pagination et en-tête répété. */
+  function table(cols, lignes, couleurCol){
+    var hEnt = 6.5, hLig = 5.4;
+
+    function entete(){
+      doc.setFillColor(233, 238, 245);
+      doc.rect(L, y, R - L, hEnt, 'F');
+      doc.setFont('helvetica', 'bold'); doc.setFontSize(7.4);
+      doc.setTextColor(40, 55, 75);
+      var x = L;
+      cols.forEach(function(c){
+        doc.text(c.t, c.a === 'right' ? x + c.w - 2 : x + 2, y + 4.4,
+                 c.a === 'right' ? {align:'right'} : undefined);
+        x += c.w;
+      });
+      y += hEnt;
+    }
+
+    entete();
+    doc.setFont('helvetica', 'normal'); doc.setFontSize(7.2);
+
+    lignes.forEach(function(ln, idx){
+      if (y + hLig > PAGE_BAS){ doc.addPage(); y = 20; entete();
+        doc.setFont('helvetica', 'normal'); doc.setFontSize(7.2); }
+      if (idx % 2 === 1){
+        doc.setFillColor(247, 249, 251);
+        doc.rect(L, y, R - L, hLig, 'F');
+      }
+      var x = L;
+      cols.forEach(function(c, i){
+        var v = ln[i] == null ? '' : '' + ln[i];
+        if (couleurCol && couleurCol.indexOf(i) >= 0 && /^[+-]/.test(v)){
+          if (v.charAt(0) === '+') doc.setTextColor(21, 128, 61);
+          else doc.setTextColor(179, 38, 30);
+        } else {
+          doc.setTextColor(35, 45, 60);
+        }
+        doc.text(court(v, c.max || 60), c.a === 'right' ? x + c.w - 2 : x + 2, y + 3.8,
+                 c.a === 'right' ? {align:'right'} : undefined);
+        x += c.w;
+      });
+      doc.setTextColor(35, 45, 60);
+      y += hLig;
+    });
+    doc.setDrawColor(200, 208, 218); doc.setLineWidth(0.25);
+    doc.line(L, y, R, y);
+    y += 8;
+  }
+
+  /* ── En-tête ── */
+  doc.setFillColor(27, 58, 107);
+  doc.rect(0, 0, 210, 30, 'F');
+  doc.setFont('helvetica', 'bold'); doc.setFontSize(21);
+  doc.setTextColor(255, 255, 255);
+  doc.text('GONES45', L, 15);
+  doc.setFont('helvetica', 'normal'); doc.setFontSize(11);
+  doc.setTextColor(180, 200, 230);
+  doc.text('Bilan des paris — ' + D.annee, L, 23);
+  doc.setFontSize(8);
+  doc.text('Edite le ' + new Date().toLocaleDateString('fr-FR'), R, 23, {align:'right'});
+  y = 40;
+
+  /* ── Bilan ── */
+  titreSection('BILAN DE L\'ANNEE');
+
+  var cases = [
+    ['Paris regles', String(D.nb)],
+    ['Gagnes',       String(D.gagnes)],
+    ['Perdus',       String(D.perdus)],
+    ['Taux',         pct(D.taux)],
+    ['Total mise',   D.mise.toFixed(2) + ' EUR'],
+    ['Cote moyenne', D.coteMoy.toFixed(2)],
+    ['Resultat net', eur(D.profit)],
+    ['ROI',          (D.roi >= 0 ? '+' : '') + D.roi.toFixed(1) + ' %']
+  ];
+  var cw = (R - L) / 4, ch = 15;
+  cases.forEach(function(c, i){
+    var col = i % 4, lig = Math.floor(i / 4);
+    var x = L + col * cw, yy = y + lig * ch;
+    doc.setDrawColor(213, 220, 229); doc.setLineWidth(0.3);
+    doc.setFillColor(250, 251, 253);
+    doc.rect(x, yy, cw, ch, 'FD');
+    doc.setFont('helvetica', 'normal'); doc.setFontSize(6.8);
+    doc.setTextColor(120, 130, 145);
+    doc.text(c[0].toUpperCase(), x + 2.5, yy + 5);
+    doc.setFont('helvetica', 'bold'); doc.setFontSize(11);
+    var v = c[1];
+    if (/^\+/.test(v)) doc.setTextColor(21, 128, 61);
+    else if (/^-/.test(v)) doc.setTextColor(179, 38, 30);
+    else doc.setTextColor(27, 58, 107);
+    doc.text(v, x + 2.5, yy + 11.5);
+  });
+  y += 2 * ch + 8;
+
+  if (D.meilleur || D.pire){
+    doc.setFont('helvetica', 'normal'); doc.setFontSize(7.8);
+    doc.setTextColor(90, 100, 115);
+    if (D.meilleur){
+      doc.text('Meilleur : ' + court(D.meilleur.n || D.meilleur.target, 45) +
+               '  (' + eur(_g45PdfProfit(D.meilleur)) + ')', L, y); y += 4.6;
+    }
+    if (D.pire){
+      doc.text('Pire : ' + court(D.pire.n || D.pire.target, 45) +
+               '  (' + eur(_g45PdfProfit(D.pire)) + ')', L, y); y += 4.6;
+    }
+    y += 5;
+  }
+
+  /* ── Stats par équipe ── */
+  var equipes = {};
+  D.regles.forEach(function(b){
+    var k = (b.target || b.n || '-').trim() || '-';
+    if (!equipes[k]) equipes[k] = {nom:k, n:0, v:0, d:0, mise:0, profit:0};
+    var e = equipes[k]; e.n++; if (b.win) e.v++; else e.d++;
+    e.mise += parseFloat(b.m) || 0; e.profit += _g45PdfProfit(b);
+  });
+  var listeEq = Object.keys(equipes).map(function(k){ return equipes[k]; })
+                      .sort(function(x, y){ return y.profit - x.profit; });
+
+  if (listeEq.length){
+    titreSection('STATISTIQUES PAR EQUIPE');
+    table(
+      [{t:'Equipe', w:54, max:33}, {t:'Paris', w:15, a:'right'},
+       {t:'V', w:12, a:'right'}, {t:'D', w:12, a:'right'},
+       {t:'Taux', w:19, a:'right'}, {t:'Mise', w:24, a:'right'},
+       {t:'Resultat', w:26, a:'right'}, {t:'ROI', w:20, a:'right'}],
+      listeEq.map(function(e){
+        return [e.nom, e.n, e.v, e.d,
+                (e.n ? (e.v / e.n * 100).toFixed(0) : '0') + ' %',
+                e.mise.toFixed(2),
+                eur(e.profit).replace(' EUR', ''),
+                (e.mise ? ((e.profit / e.mise * 100) >= 0 ? '+' : '') +
+                  (e.profit / e.mise * 100).toFixed(0) : '0') + ' %'];
+      }),
+      [6, 7]
+    );
+  }
+
+  /* ── Liste complète ── */
+  titreSection('DETAIL DES PARIS (' + D.nb + ')');
+  if (!D.nb){
+    doc.setFont('helvetica', 'italic'); doc.setFontSize(8);
+    doc.setTextColor(120, 130, 145);
+    doc.text('Aucun pari regle sur cette annee.', L, y); y += 8;
+  } else {
+    table(
+      [{t:'Date', w:14}, {t:'Pari', w:55, max:34}, {t:'Type', w:26, max:16},
+       {t:'Cote', w:14, a:'right'}, {t:'Mise', w:17, a:'right'},
+       {t:'Book', w:20, max:11}, {t:'Res.', w:14}, {t:'Gain', w:22, a:'right'}],
+      D.regles.map(function(b){
+        return [_g45PdfJour(b),
+                b.n || b.target || '', b.type || '',
+                (parseFloat(b.cote) || 0).toFixed(2),
+                (parseFloat(b.m) || 0).toFixed(2),
+                b.b || '', b.win ? 'Gagne' : 'Perdu',
+                eur(_g45PdfProfit(b)).replace(' EUR', '')];
+      }),
+      [7]
+    );
+  }
+
+  /* ── En attente ── */
+  if (D.attente.length){
+    titreSection('PARIS EN ATTENTE (' + D.attente.length + ')');
+    table(
+      [{t:'Date', w:14}, {t:'Pari', w:77, max:48}, {t:'Type', w:30, max:18},
+       {t:'Cote', w:16, a:'right'}, {t:'Mise', w:20, a:'right'},
+       {t:'Book', w:25, max:14}],
+      D.attente.map(function(b){
+        return [_g45PdfJour(b),
+                b.n || b.target || '', b.type || '',
+                (parseFloat(b.cote) || 0).toFixed(2),
+                (parseFloat(b.m) || 0).toFixed(2), b.b || ''];
+      })
+    );
+  }
+
+  pied();
+  return doc;
+}
+
+/* ─────────────────────────── Point d'entrée ─────────────────────────── */
+async function g45ExportPdfAnnee(){
+  var st = document.getElementById('pdf-export-status');
+  var dire = function(t, err){
+    if (st){ st.textContent = t; st.style.color = err ? '#ff6b6b' : 'var(--t3)'; }
+  };
+
+  try {
+    var tous = ((window.state && state.a) || []).concat((window.state && state.h) || []);
+    var annees = {};
+    tous.forEach(function(b){ var a = _g45PdfAnnee(b); if (a) annees[a] = (annees[a] || 0) + 1; });
+    var listeA = Object.keys(annees).sort().reverse();
+
+    if (!listeA.length){ alert('Aucun pari daté à exporter.'); return; }
+
+    var annee = listeA[0];
+    if (listeA.length > 1){
+      var saisi = prompt('Année à exporter ?\n\nDisponibles : ' +
+        listeA.map(function(a){ return a + ' (' + annees[a] + ')'; }).join(', '), listeA[0]);
+      if (saisi === null) return;
+      saisi = (saisi + '').trim();
+      if (listeA.indexOf(saisi) < 0){ alert('Année « ' + saisi + ' » sans pari.'); return; }
+      annee = saisi;
+    }
+
+    dire('Chargement du générateur PDF…');
+    var jsPDF = await _g45LoadJsPdf();
+
+    dire('Génération…');
+    var D = _g45PdfData(annee);
+    var doc = _g45PdfRender(jsPDF, D);
+    doc.save('GONES45-paris-' + annee + '.pdf');
+
+    dire('✅ ' + D.nb + ' paris exportés pour ' + annee);
+  } catch(e){
+    console.error('export PDF', e);
+    dire('❌ ' + (e && e.message ? e.message : 'échec de la génération'), true);
+  }
+}
+window.g45ExportPdfAnnee = g45ExportPdfAnnee;
