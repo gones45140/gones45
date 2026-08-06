@@ -21,6 +21,8 @@
    execution boucle pendant ~5 h 45 (le plafond GitHub est de 6 h).
    ═══════════════════════════════════════════════════════════════════════════ */
 
+import { execFile } from 'node:child_process';
+
 const WORKER = (process.env.WORKER_URL || '').replace(/\/$/, '');
 const CLE = process.env.RELAY_KEY || '';
 const DUREE_MS = Number(process.env.DUREE_MIN || 345) * 60 * 1000;  // 5 h 45
@@ -34,12 +36,12 @@ const HOTES_OK = new Set([
   'sports.core.api.espn.com',
 ]);
 
-const ENTETES_ESPN = {
-  'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36',
-  'Accept': 'application/json, text/plain, */*',
-  'Accept-Language': 'en-US,en;q=0.9',
-  'Referer': 'https://www.espn.com/',
-};
+/* PAS d'en-tetes de navigateur ici — c'est contre-intuitif mais verifie le
+   06/08/2026 sur un runner GitHub : avec un User-Agent Chrome complet et un
+   Referer ESPN, Akamai renvoie 403 ; avec le curl brut, il renvoie 200. Une
+   IP de datacenter qui PRETEND etre un navigateur est plus suspecte qu'un
+   client qui s'annonce honnetement comme un outil en ligne de commande.
+   On passe donc par curl, exactement comme le test manuel qui a fonctionne. */
 
 const MAX_CACHE = 120;              // nombre d'URL gardees
 const PEREMPTION_MS = 5 * 60 * 1000; // au-dela, on oublie une URL plus demandee
@@ -71,6 +73,21 @@ function elaguer() {
   }
 }
 
+function curl(url) {
+  return new Promise((resolve) => {
+    execFile('curl',
+      ['-sS', '--compressed', '--max-time', '15', '-w', '\n%{http_code}', url],
+      { maxBuffer: 32 * 1024 * 1024 },
+      (err, stdout) => {
+        if (err && !stdout) return resolve(null);
+        const txt = String(stdout);
+        const coupe = txt.lastIndexOf('\n');
+        const status = parseInt(txt.slice(coupe + 1).trim(), 10);
+        resolve({ status: Number.isFinite(status) ? status : 0, body: txt.slice(0, coupe) });
+      });
+  });
+}
+
 async function recupererEspn(url) {
   let cible;
   try { cible = new URL(url); } catch { return null; }
@@ -78,19 +95,11 @@ async function recupererEspn(url) {
     console.warn(`  hote refuse : ${cible.hostname}`);
     return null;
   }
-  try {
-    const ctrl = new AbortController();
-    const t = setTimeout(() => ctrl.abort(), 15000);
-    const r = await fetch(url, { headers: ENTETES_ESPN, signal: ctrl.signal });
-    clearTimeout(t);
-    const body = await r.text();
-    /* On memorise meme un statut d'erreur : le Worker verra un r.ok faux et
-       passera son tour, au lieu de redemander la meme URL a chaque tick. */
-    return { status: r.status, body, ts: Date.now() };
-  } catch (e) {
-    console.warn(`  echec ${url.slice(0, 80)} : ${e.message}`);
-    return null;
-  }
+  const r = await curl(url);
+  if (!r) { console.warn(`  echec curl ${url.slice(0, 80)}`); return null; }
+  /* On memorise meme un statut d'erreur : le Worker verra un r.ok faux et
+     passera son tour, au lieu de redemander la meme URL a chaque tick. */
+  return { status: r.status, body: r.body, ts: Date.now() };
 }
 
 async function parLots(liste, taille, tache) {
