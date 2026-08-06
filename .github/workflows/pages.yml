@@ -1,0 +1,64 @@
+# ═══════════════════════════════════════════════════════════════════════════
+# GONES45 — publication GitHub Pages, déclenchée uniquement quand le SITE change
+#
+# POURQUOI CE FICHIER EXISTE
+# Le mécanisme automatique de GitHub Pages (« Deploy from a branch ») republie
+# le site à CHAQUE commit, sans exception. Or l'app écrit plusieurs fois par
+# heure dans données/ pour synchroniser les paris. Chacune de ces écritures
+# déclenchait donc un déploiement de ~10 minutes ; ils s'empilaient, se
+# bloquaient mutuellement et finissaient en « Timeout reached, aborting ».
+# 1 259 déploiements accumulés, dont une majorité en échec.
+#
+# Ici, paths-ignore exclut données/ : les synchros de paris ne publient plus
+# rien. Seules les modifications de app.js, index.html, style.css, sw.js ou
+# manifest.json redéploient.
+#
+# ⚠️ AVANT DE POUSSER CE FICHIER
+# Settings → Pages → Build and deployment → Source : passer de
+# « Deploy from a branch » à « GitHub Actions ».
+# Sans cette bascule, ce workflow ne sera pas pris en compte et l'ancien
+# mécanisme continuera comme avant.
+# ═══════════════════════════════════════════════════════════════════════════
+name: pages
+
+on:
+  push:
+    branches: [main]
+    paths-ignore:
+      - 'données/**'      # synchro des paris, joueurs, stats — aucun impact sur le site
+      - 'donnees/**'      # variante sans accent, au cas où
+      - '.github/**'      # le relais ESPN n'a pas à republier le site
+      - '**.md'
+  workflow_dispatch:       # bouton « Run workflow » pour forcer une publication
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# Une seule publication à la fois. Contrairement au relais, on NE veut PAS
+# annuler celle en cours : une publication interrompue peut laisser le site
+# dans un état incomplet. La suivante attend son tour.
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  publier:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deploiement.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/configure-pages@v5
+
+      - name: Préparer l'artefact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: '.'
+
+      - name: Publier
+        id: deploiement
+        uses: actions/deploy-pages@v4
