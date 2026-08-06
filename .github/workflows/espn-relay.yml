@@ -1,0 +1,52 @@
+# ═══════════════════════════════════════════════════════════════════════════
+# GONES45 — relais ESPN pour les notifications push
+#
+# Le cron du Worker Cloudflare ne peut plus joindre ESPN : Akamai bloque les
+# IP de sortie des datacenters. Les runners GitHub passent. Ce workflow lance
+# donc un job LONG qui alimente le Worker toutes les 60 secondes.
+#
+# Pourquoi un job long plutot qu'un cron toutes les minutes : le cron GitHub
+# ne descend pas sous 5 minutes et traine souvent 10 a 15, ce qui rendrait
+# une alerte de but inutile. Un job peut tourner jusqu'a 6 heures, on boucle
+# donc a l'interieur.
+#
+# AVANT DE L'ACTIVER, deux secrets a creer dans
+# Settings > Secrets and variables > Actions :
+#   WORKER_URL = https://fd-proxy.touraine-antoine.workers.dev
+#   RELAY_KEY  = une longue chaine aleatoire, la MEME que la variable
+#                RELAY_KEY ajoutee cote Cloudflare (Worker > Settings >
+#                Variables and Secrets)
+#
+# Minutes illimitees car le depot est public.
+# ═══════════════════════════════════════════════════════════════════════════
+name: relais-espn
+
+on:
+  schedule:
+    - cron: '0 */5 * * *'   # toutes les 5 h ; le job dure 5 h 45 -> recouvrement
+  workflow_dispatch:         # bouton "Run workflow" pour demarrer a la main
+
+concurrency:
+  group: relais-espn
+  cancel-in-progress: true   # la nouvelle execution remplace l'ancienne, sans trou
+
+permissions:
+  contents: read
+
+jobs:
+  relais:
+    runs-on: ubuntu-latest
+    timeout-minutes: 350     # 5 h 50, sous le plafond GitHub de 6 h
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Boucle de relais
+        env:
+          WORKER_URL: ${{ secrets.WORKER_URL }}
+          RELAY_KEY: ${{ secrets.RELAY_KEY }}
+          DUREE_MIN: '345'   # 5 h 45, marge avant le timeout du job
+        run: node .github/scripts/relay.mjs
