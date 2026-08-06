@@ -108,7 +108,7 @@ var ESPN_TEAM_LEAGUE = {
   // Autres
   'Benfica':'por.1','SL Benfica':'por.1','Porto':'por.1','FC Porto':'por.1',
   'Ajax':'ned.1','AFC Ajax':'ned.1','PSV':'ned.1','PSV Eindhoven':'ned.1',
-  'Palmeiras':'bra.1','SE Palmeiras':'bra.1'
+  'Boca Juniors':'arg.1','Boca':'arg.1','River Plate':'arg.1','Palmeiras':'bra.1','SE Palmeiras':'bra.1'
 };
 
 // Cache des listes d'équipes par championnat (pour résoudre les IDs ESPN)
@@ -18053,9 +18053,19 @@ async function loadTeamSaisons() {
     }
   }
 
+  /* TEAM_IDS ne contient que des identifiants football-data. Les clubs des
+     championnats hors offre gratuite (Argentine, Mexique...) n'y figurent pas,
+     et l'onglet Saisons s'arretait la — alors qu'ESPN, lui, les connait.
+     On continue donc avec une cle de cache synthetique, et on note que le repli
+     football-data est impossible pour ce club. */
+  var fdTeamOk = !!teamId;
   if(!teamId) {
-    el.innerHTML = '<div class="fc" style="text-align:center;color:var(--t3);padding:20px;">&#9888;&#65039; Equipe non trouvee dans la base.<br><small>Verifie le nom exact.</small></div>';
-    return;
+    if(typeof espnLeagueOf==='function' && espnLeagueOf(nom)) {
+      teamId = 'espn_' + String(nom).toLowerCase().replace(/[^a-z0-9]/g,'');
+    } else {
+      el.innerHTML = '<div class="fc" style="text-align:center;color:var(--t3);padding:20px;">&#9888;&#65039; Equipe non trouvee dans la base.<br><small>Verifie le nom exact.</small></div>';
+      return;
+    }
   }
 
   // Cache mémoire (session courante)
@@ -18160,8 +18170,8 @@ async function loadTeamSaisons() {
   // ── 2) football-data (pour les coupes d'Europe que ESPN ne fournit pas) ──
   // Championnats SANS coupe d'Europe gérée par football-data → on saute (Brésil, MLS, nordiques...).
   var lgNow = espnLeagueOf(nom) || '';
-  var noEuropeLeagues = ['bra.1','usa.1','nor.1','swe.1','fin.1','irl.1','rus.1','jpn.1','kor.1'];
-  var skipFd = espnOk && noEuropeLeagues.indexOf(lgNow) >= 0;
+  var noEuropeLeagues = ['bra.1','usa.1','arg.1','mex.1','nor.1','swe.1','fin.1','irl.1','rus.1','jpn.1','kor.1'];
+  var skipFd = (espnOk && noEuropeLeagues.indexOf(lgNow) >= 0) || !fdTeamOk;
 
   if(espnOk && !skipFd) {
     // ESPN OK : afficher d'abord ESPN, compléter les coupes en arrière-plan (non bloquant)
@@ -18214,6 +18224,7 @@ async function loadTeamSaisons() {
   if(!espnOk) {
     // ESPN KO → football-data en fallback complet (années calculées auto)
     try {
+      if(!fdTeamOk) throw new Error('pas d identifiant football-data pour ce club');
       var _now = new Date(), _cy = _now.getFullYear(), _cm = _now.getMonth()+1;
       var _sA = (_cm >= 8) ? _cy : _cy - 1; // saison en cours (Europe)
       var _sB = _sA - 1;
