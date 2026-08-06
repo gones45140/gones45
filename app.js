@@ -108,7 +108,7 @@ var ESPN_TEAM_LEAGUE = {
   // Autres
   'Benfica':'por.1','SL Benfica':'por.1','Porto':'por.1','FC Porto':'por.1',
   'Ajax':'ned.1','AFC Ajax':'ned.1','PSV':'ned.1','PSV Eindhoven':'ned.1',
-  'Boca Juniors':'arg.1','Boca':'arg.1','River Plate':'arg.1','Palmeiras':'bra.1','SE Palmeiras':'bra.1'
+  'Boca Juniors':'arg.1','Boca':'arg.1','Palmeiras':'bra.1','SE Palmeiras':'bra.1'
 };
 
 // Cache des listes d'équipes par championnat (pour résoudre les IDs ESPN)
@@ -155,7 +155,21 @@ function _espnMatchTeam(nom, teams, league, mode) {
 }
 
 // Résout l'équipe ESPN. Essaie le championnat deviné, sinon TOUS les championnats connus.
+/* Identifiants ESPN forces.
+   POURQUOI : la resolution normale passe par /soccer/{ligue}/teams, la LISTE des
+   clubs. Or ESPN sert ce point d'entree SANS en-tete Access-Control-Allow-Origin,
+   alors que /teams/{id}/schedule en envoie un. Depuis le navigateur, la liste est
+   donc inaccessible et aucun club non deja mis en cache ne peut etre resolu.
+   Les clubs listes ici court-circuitent cette etape. Verifie le 06/08/2026 :
+   arg.1/teams/5/schedule renvoie bien 20 matchs pour Boca. */
+var ESPN_TEAM_ID_FIX = {
+  'boca juniors': {id:'5', league:'arg.1'},
+  'boca':         {id:'5', league:'arg.1'}
+};
+
 async function espnResolveTeam(nom) {
+  var _fix = ESPN_TEAM_ID_FIX[String(nom||'').toLowerCase().trim()];
+  if(_fix) return {id:_fix.id, league:_fix.league, name:nom, logo:''};
   var nomKey = (nom||'').toLowerCase().replace(/\s+/g,'_');
   try { var cached = localStorage.getItem('espn_teamid_any_'+nomKey); if(cached){ var ci=JSON.parse(cached); if(ci&&ci.id) return ci; } } catch(e){}
 
