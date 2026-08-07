@@ -30389,11 +30389,14 @@ window.enrichTeamLogos = async function() {
   var libelle = btn ? btn.textContent : '';
   var dire = function(t) { if (btn) btn.textContent = t; };
 
+  /* Par defaut on ne touche qu'aux logos manquants. Mais un logo DEJA pose peut
+     etre faux — l'ancienne version prenait le premier resultat venu, d'ou le
+     blason d'Odense sur Boca et celui de l'universite de Miami sur Miami CF.
+     Quand il n'y a plus rien a completer, on propose donc de tout recontroler. */
   var aFaire = state.u.filter(function(u) { return u.n && !u.logoUrl; });
   if (!aFaire.length) {
-    dire('\u2705 Tous les logos sont deja renseignes');
-    setTimeout(function() { dire(libelle); }, 2500);
-    return;
+    if (!confirm('Tous les logos sont deja renseignes.\n\nVoulez-vous les RE-VERIFIER tous ?\nLes logos errones seront remplaces, ceux qui sont introuvables seront conserves.')) return;
+    aFaire = state.u.filter(function(u) { return u.n; });
   }
 
   var ok = 0, rates = [];
@@ -30403,8 +30406,8 @@ window.enrichTeamLogos = async function() {
     try {
       var res = await g45SdbSearch(u.n);
       var best = _g45SdbMeilleur(res, u.n, u.sport);
-      if (best) { u.logoUrl = best.logo; ok++; }
-      else rates.push(u.n);
+      if (best && best.logo) { u.logoUrl = best.logo; ok++; }
+      else rates.push(u.n);   /* introuvable : on GARDE le logo existant */
     } catch (e) { rates.push(u.n); }
     await new Promise(function(r) { setTimeout(r, 250); });   // on menage l'API publique
   }
