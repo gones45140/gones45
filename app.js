@@ -30406,7 +30406,15 @@ window.enrichTeamLogos = async function() {
     try {
       var res = await g45SdbSearch(u.n);
       var best = _g45SdbMeilleur(res, u.n, u.sport);
-      if (best && best.logo) { u.logoUrl = best.logo; ok++; }
+      if (best && best.logo) {
+        u.logoUrl = best.logo;
+        /* Le mur lit d'abord le cache memoire LOGOS[nom] et ne retombe sur
+           u.logoUrl que si cette entree est VIDE. Sans cette ligne, le nouveau
+           badge n'etait jamais affiche : LOGOS gardait l'ancienne URL (le
+           blason d'Odense pour Boca) tant que la page n'etait pas rechargee. */
+        try { if (typeof LOGOS !== 'undefined') LOGOS[u.n] = best.logo; } catch (e) {}
+        ok++;
+      }
       else rates.push(u.n);   /* introuvable : on GARDE le logo existant */
     } catch (e) { rates.push(u.n); }
     await new Promise(function(r) { setTimeout(r, 250); });   // on menage l'API publique
