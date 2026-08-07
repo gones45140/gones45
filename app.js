@@ -163,8 +163,26 @@ function _espnMatchTeam(nom, teams, league, mode) {
    Les clubs listes ici court-circuitent cette etape. Verifie le 06/08/2026 :
    arg.1/teams/5/schedule renvoie bien 20 matchs pour Boca. */
 var ESPN_TEAM_ID_FIX = {
-  'boca juniors': {id:'5', league:'arg.1'},
-  'boca':         {id:'5', league:'arg.1'}
+  'boca juniors':  {id:'5',     league:'arg.1'},
+  'boca':          {id:'5',     league:'arg.1'},
+  /* Identifiants relevés le 06/08/2026 dans la réponse /pdebug du Worker, qui
+     liste les équipes suivies avec leur id ESPN et leur ligue. Sans eux, vider
+     les clés espn_teamid_any_* du localStorage suffit à rendre ces clubs
+     introuvables, puisque la résolution par nom passe par /{ligue}/teams, servi
+     sans en-tête CORS. */
+  'miami cf':      {id:'20232', league:'usa.1'},
+  'inter miami':   {id:'20232', league:'usa.1'},
+  'inter miami cf':{id:'20232', league:'usa.1'},
+  'palmeiras':     {id:'2029',  league:'bra.1'},
+  'se palmeiras':  {id:'2029',  league:'bra.1'},
+  'france':        {id:'478',   league:'fifa.world'},
+  'inter milan':   {id:'110',   league:'ita.1'},
+  'lyon':          {id:'167',   league:'fra.1'},
+  'psg':           {id:'160',   league:'fra.1'},
+  'psv':           {id:'148',   league:'ned.1'},
+  'real madrid':   {id:'86',    league:'esp.1'},
+  'bayern munich': {id:'132',   league:'ger.1'},
+  'arsenal':       {id:'359',   league:'eng.1'}
 };
 
 async function espnResolveTeam(nom) {
