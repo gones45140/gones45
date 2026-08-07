@@ -18227,6 +18227,7 @@ async function loadTeamSaisons() {
         'esp.1': ['esp.copa_del_rey'],
         'ger.1': ['ger.dfb_pokal'],
         'ita.1': ['ita.coppa_italia'],
+        'ned.1': ['ned.cup'],
         'eng.1': ['eng.fa','eng.league_cup'],
         'bra.1': ['bra.copa_do_brazil'],
         'usa.1': ['concacaf.leagues.cup','usa.open'],
