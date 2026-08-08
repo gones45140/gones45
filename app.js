@@ -108,7 +108,7 @@ var ESPN_TEAM_LEAGUE = {
   // Autres
   'Benfica':'por.1','SL Benfica':'por.1','Porto':'por.1','FC Porto':'por.1',
   'Ajax':'ned.1','AFC Ajax':'ned.1','PSV':'ned.1','PSV Eindhoven':'ned.1',
-  'Boca Juniors':'arg.1','Boca':'arg.1','Palmeiras':'bra.1','SE Palmeiras':'bra.1'
+  'Boca Juniors':'arg.1','Boca':'arg.1','Feyenoord':'ned.1','Feyenoord Rotterdam':'ned.1','AZ Alkmaar':'ned.1','FC Twente':'ned.1','FC Utrecht':'ned.1','Palmeiras':'bra.1','SE Palmeiras':'bra.1'
 };
 
 // Cache des listes d'équipes par championnat (pour résoudre les IDs ESPN)
@@ -30482,12 +30482,17 @@ async function g45ParisPourNotif() {
     var type = String(h.type || '').trim();
     if (!type) continue;              /* sans type, aucun verdict possible */
 
+    /* La resolution passait par site.api/{ligue}/teams, bloque en CORS : aucun
+       pari n'etait donc transmis. g45ResolvePourPari essaie la table cablee, le
+       cache, puis sports.core qui autorise le CORS. */
     var res = null;
     try {
-      if (sp === 'soccer') res = await _g45ResolveTeam(nom);
-      else if (sp === 'rugby') res = await _g45ResolveEspnTeam(nom, 'rugby', _g45RugbyLeagueId(h.comp));
-      else if (sp === 'nrl') res = await _g45ResolveEspnTeam(nom, 'rugby-league', '3');
-    } catch (e) {}
+      var lgh = (sp === 'nrl') ? '3'
+              : (sp === 'rugby' && typeof _g45RugbyLeagueId === 'function') ? _g45RugbyLeagueId(h.comp)
+              : null;
+      res = await g45ResolvePourPari(nom, sp, lgh);
+      if (!res && sp === 'soccer') res = await _g45ResolveTeam(nom);
+    } catch (e) { console.warn('resolution pari', nom, e && e.message); }
     if (!res || !res.id) continue;
 
     var pid = String(h.id || (nom + '|' + type + '|' + (h.date || '')));
@@ -30642,3 +30647,143 @@ async function g45NotifTest() {
   }
 }
 window.g45NotifTest = g45NotifTest;
+
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   GONES45 — RESOLUTION D'EQUIPE PAR sports.core.api (repli CORS)
+   ───────────────────────────────────────────────────────────────────────────
+   PROBLEME : `site.api.espn.com/apis/site/v2/sports/{sport}/{ligue}/teams`,
+   la LISTE des clubs, est servie SANS en-tete Access-Control-Allow-Origin.
+   Depuis le navigateur elle est donc inaccessible, et aucun club jamais
+   consulte ne peut etre resolu par son nom. Consequence concrete : le pari sur
+   « Redcliffe Dolphins » n'etait pas transmis au Worker, donc aucun verdict.
+
+   `sports.core.api.espn.com`, lui, envoie bien les en-tetes CORS (verifie).
+   Il renvoie des $ref plutot que les equipes : une requete par club. C'est plus
+   lourd, mais le resultat est mis en cache DEFINITIVEMENT en localStorage, donc
+   ce cout n'est paye qu'une fois par championnat.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+var _g45CoreCache = {};
+
+function _g45CoreCle(sportPath, ligue) { return 'g45core_' + sportPath + '_' + ligue; }
+
+function _g45Norm(s) {
+  return String(s || '').toLowerCase()
+    .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-z0-9]/g, '');
+}
+
+/* Charge (et met en cache) la liste { nom -> id } d'un championnat. */
+async function g45CoreTeams(sportPath, ligue) {
+  var cle = _g45CoreCle(sportPath, ligue);
+  if (_g45CoreCache[cle]) return _g45CoreCache[cle];
+  try {
+    var brut = localStorage.getItem(cle);
+    if (brut) { _g45CoreCache[cle] = JSON.parse(brut); return _g45CoreCache[cle]; }
+  } catch (e) {}
+
+  var out = {};
+  try {
+    var url = 'https://sports.core.api.espn.com/v2/sports/' + sportPath +
+              '/leagues/' + ligue + '/teams?limit=100';
+    var r = await fetch(url);
+    if (!r.ok) { console.warn('core teams', sportPath, ligue, r.status); return out; }
+    var d = await r.json();
+    var refs = (d && d.items ? d.items : []).map(function (i) { return i.$ref; }).filter(Boolean);
+
+    /* Les $ref sont en http:// dans certaines reponses : le navigateur bloquerait
+       en contenu mixte depuis une page https. On force donc https. */
+    refs = refs.map(function (u) { return String(u).replace(/^http:/, 'https:'); });
+
+    for (var i = 0; i < refs.length; i += 8) {
+      var lot = refs.slice(i, i + 8);
+      var res = await Promise.all(lot.map(function (u) {
+        return fetch(u).then(function (x) { return x.ok ? x.json() : null; }).catch(function () { return null; });
+      }));
+      res.forEach(function (t) {
+        if (!t || !t.id) return;
+        [t.displayName, t.name, t.shortDisplayName, t.nickname, t.location]
+          .filter(Boolean).forEach(function (n) { out[_g45Norm(n)] = String(t.id); });
+      });
+    }
+    _g45CoreCache[cle] = out;
+    try { localStorage.setItem(cle, JSON.stringify(out)); } catch (e) {}
+    console.log('✅ ' + Object.keys(out).length + ' noms d\'équipes chargés pour ' + sportPath + '/' + ligue);
+  } catch (e) {
+    console.warn('core teams', e && e.message);
+  }
+  return out;
+}
+window.g45CoreTeams = g45CoreTeams;
+
+/* Cherche l'id d'une equipe : correspondance exacte, puis inclusion. */
+async function g45CoreTeamId(sportPath, ligue, nom) {
+  var table = await g45CoreTeams(sportPath, ligue);
+  var n = _g45Norm(nom);
+  if (!n) return null;
+  if (table[n]) return table[n];
+  var cles = Object.keys(table);
+  for (var i = 0; i < cles.length; i++) {
+    if (cles[i].indexOf(n) >= 0 || n.indexOf(cles[i]) >= 0) return table[cles[i]];
+  }
+  return null;
+}
+window.g45CoreTeamId = g45CoreTeamId;
+
+/* On remplace la resolution utilisee par la transmission des paris : elle passe
+   d'abord par la table cablee, puis par sports.core. */
+var _G45_SPORT_PATH = { soccer: 'soccer', rugby: 'rugby', nrl: 'rugby-league' };
+
+async function g45ResolvePourPari(nom, sp, ligue) {
+  /* 1. table cablee (ESPN_TEAM_ID_FIX), la plus fiable */
+  try {
+    var fix = (typeof ESPN_TEAM_ID_FIX !== 'undefined')
+      ? ESPN_TEAM_ID_FIX[String(nom || '').toLowerCase().trim()] : null;
+    if (fix) return { id: fix.id, league: fix.league };
+  } catch (e) {}
+
+  /* 2. identifiant deja resolu et garde en localStorage */
+  try {
+    var c = localStorage.getItem('espn_teamid_any_' + String(nom || '').toLowerCase().replace(/\s+/g, '_'));
+    if (c) { var o = JSON.parse(c); if (o && o.id) return { id: String(o.id), league: o.league || ligue }; }
+  } catch (e) {}
+
+  /* 3. sports.core, seul hote ESPN qui autorise le CORS sur la liste des clubs */
+  var path = _G45_SPORT_PATH[sp] || sp;
+  var lg = ligue || (sp === 'nrl' ? '3' : '');
+  if (!lg) return null;
+  var id = await g45CoreTeamId(path, lg, nom);
+  return id ? { id: id, league: lg } : null;
+}
+window.g45ResolvePourPari = g45ResolvePourPari;
+
+/* Repli general : quand la resolution normale echoue (liste des clubs bloquee
+   en CORS), on passe par sports.core. Corrige toute la categorie « club absent
+   des tables cablees » — Feyenoord etait introuvable alors qu'Ajax marchait,
+   simplement parce que l'un est dans ESPN_TEAM_LEAGUE et l'autre non. */
+var _g45ResolveTeamOrig = (typeof espnResolveTeam === 'function') ? espnResolveTeam : null;
+
+window.espnResolveTeam = async function (nom) {
+  var r = null;
+  if (_g45ResolveTeamOrig) { try { r = await _g45ResolveTeamOrig(nom); } catch (e) {} }
+  if (r && r.id) return r;
+
+  var lg = null;
+  try { lg = (typeof espnLeagueOf === 'function') ? espnLeagueOf(nom) : null; } catch (e) {}
+  if (!lg) return r;
+
+  try {
+    var id = await g45CoreTeamId('soccer', lg, nom);
+    if (id) {
+      var out = { id: String(id), league: lg, name: nom, logo: '' };
+      try {
+        localStorage.setItem('espn_teamid_any_' + String(nom).toLowerCase().replace(/\s+/g, '_'),
+                             JSON.stringify(out));
+      } catch (e) {}
+      console.log('✅ ' + nom + ' résolu via sports.core (id ' + id + ', ' + lg + ')');
+      return out;
+    }
+  } catch (e) { console.warn('repli core', nom, e && e.message); }
+  return r;
+};
