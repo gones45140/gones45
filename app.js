@@ -30588,7 +30588,10 @@ async function g45NotifEtat() {
     var h = '<div style="line-height:1.9">';
     h += '<div>Équipes favorites suivies : <b>' + (d.teams || []).length + '</b></div>';
     h += '<div>Paris en cours transmis : <b>' + (d.paris || []).length + '</b>'
-       + ((d.paris === undefined) ? ' <span style="color:#ffb13d">(app.js pas à jour)</span>' : '') + '</div>';
+       + ((d.paris === undefined) ? ' <span style="color:#ffb13d">(worker.js pas à jour)</span>' : '') + '</div>';
+    (d.paris || []).forEach(function (p) {
+      h += '<div style="margin-left:8px;color:#9fb0c7">• ' + (p.team || '?') + ' — ' + (p.type || '?') + '</div>';
+    });
     h += '<div>Matchs ⭐ sur cet appareil : <b>' + locaux.length + '</b></div>';
     h += '<div>Matchs ⭐ connus du serveur : <b style="color:' +
          ((d.matches || []).length === locaux.length ? '#4ade80' : '#ff6b6b') + '">' +
