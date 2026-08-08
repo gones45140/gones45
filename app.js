@@ -30543,3 +30543,102 @@ window.g45SyncNotifs = async function(subOpt) {
     console.warn('synchro paris/verdict :', e && e.message);
   }
 };
+
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   GONES45 — DIAGNOSTIC DES NOTIFICATIONS DEPUIS L'APP
+   ───────────────────────────────────────────────────────────────────────────
+   Tout le diagnostic se faisait en console. Or Antoine consulte surtout depuis
+   son TELEPHONE, ou il n'y a pas de console : les commandes etaient donc
+   inutilisables la ou le probleme se manifeste. Deux boutons dans l'onglet
+   Outils font desormais le meme travail, avec un resume lisible.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+function _g45NdMsg(html) {
+  var el = document.getElementById('g45-notif-diag');
+  if (el) el.innerHTML = html;
+}
+
+async function _g45NdEndpoint() {
+  var reg = await navigator.serviceWorker.getRegistration();
+  if (!reg) return null;
+  var sub = await reg.pushManager.getSubscription();
+  return sub ? sub.endpoint : null;
+}
+
+/* Renvoie l'etat connu du Worker, en francais et sans jargon. */
+async function g45NotifEtat() {
+  _g45NdMsg('<span style="color:#9fb0c7">⏳ Interrogation du serveur…</span>');
+  try {
+    var ep = await _g45NdEndpoint();
+    if (!ep) { _g45NdMsg('<b style="color:#ff6b6b">❌ Cet appareil n\'est pas abonné.</b><br>Active les notifications ci-dessus, puis réessaie.'); return; }
+
+    var r = await fetch(FD_PROXY + '/pdebug?ep=' + encodeURIComponent(ep));
+    var d = await r.json();
+    if (!d || d.found === false) { _g45NdMsg('<b style="color:#ff6b6b">❌ Le serveur ne connaît pas cet appareil.</b><br>Appuie sur « Resynchroniser » ci-dessous.'); return; }
+
+    var locaux = [];
+    try { locaux = JSON.parse(localStorage.getItem('g45_suivis') || '[]'); } catch (e) {}
+
+    var h = '<div style="line-height:1.9">';
+    h += '<div>Équipes favorites suivies : <b>' + (d.teams || []).length + '</b></div>';
+    h += '<div>Paris en cours transmis : <b>' + (d.paris || []).length + '</b>'
+       + ((d.paris === undefined) ? ' <span style="color:#ffb13d">(app.js pas à jour)</span>' : '') + '</div>';
+    h += '<div>Matchs ⭐ sur cet appareil : <b>' + locaux.length + '</b></div>';
+    h += '<div>Matchs ⭐ connus du serveur : <b style="color:' +
+         ((d.matches || []).length === locaux.length ? '#4ade80' : '#ff6b6b') + '">' +
+         (d.matches || []).length + '</b></div>';
+
+    if ((d.matches || []).length) {
+      h += '<div style="margin-top:8px;color:#9fb0c7">Le serveur surveille :</div>';
+      (d.matches || []).forEach(function (m) {
+        var e = ((d.etatsMatchsSuivis || []).filter(function (x) { return String(x.id) === String(m.id); })[0] || {}).fstate;
+        var etat = (!e || typeof e === 'string') ? 'pas encore vu'
+          : (e.state === 'post' ? 'terminé' : e.state === 'in' ? 'en cours' : 'à venir')
+            + ' · score ' + (e.total || 0)
+            + (e.startSent ? ' · coup d\'envoi envoyé' : '')
+            + (e.endSent ? ' · fin envoyée' : '');
+        h += '<div style="margin-left:8px">• ' + (m.home || '?') + ' - ' + (m.away || '?')
+           + ' <span style="color:#9fb0c7">(' + etat + ')</span></div>';
+      });
+    }
+    if ((d.matches || []).length !== locaux.length) {
+      h += '<div style="margin-top:8px;color:#ffb13d">⚠️ Décalage : appuie sur « Resynchroniser ».</div>';
+    }
+    h += '</div>';
+    _g45NdMsg(h);
+  } catch (e) {
+    _g45NdMsg('<b style="color:#ff6b6b">❌ ' + (e && e.message ? e.message : 'échec') + '</b>');
+  }
+}
+window.g45NotifEtat = g45NotifEtat;
+
+/* Force l'envoi de la liste complete au Worker, puis reaffiche l'etat. */
+async function g45NotifResync() {
+  _g45NdMsg('<span style="color:#9fb0c7">⏳ Envoi de la liste au serveur…</span>');
+  try {
+    await g45SyncNotifs();
+    await new Promise(function (r) { setTimeout(r, 800); });
+    await g45NotifEtat();
+  } catch (e) {
+    _g45NdMsg('<b style="color:#ff6b6b">❌ ' + (e && e.message ? e.message : 'échec') + '</b>');
+  }
+}
+window.g45NotifResync = g45NotifResync;
+
+/* Envoie une notification de test : valide la chaine jusqu'a l'ecran. */
+async function g45NotifTest() {
+  _g45NdMsg('<span style="color:#9fb0c7">⏳ Envoi d\'une notification de test…</span>');
+  try {
+    var ep = await _g45NdEndpoint();
+    if (!ep) { _g45NdMsg('<b style="color:#ff6b6b">❌ Cet appareil n\'est pas abonné.</b>'); return; }
+    var r = await fetch(FD_PROXY + '/ptest?ep=' + encodeURIComponent(ep));
+    var d = await r.json();
+    _g45NdMsg(d && d.sent
+      ? '<b style="color:#4ade80">✅ Test envoyé (code ' + d.status + ').</b><br>Si rien ne s\'affiche d\'ici une minute, le problème est dans les réglages du téléphone, pas dans l\'app.'
+      : '<b style="color:#ff6b6b">❌ ' + JSON.stringify(d) + '</b>');
+  } catch (e) {
+    _g45NdMsg('<b style="color:#ff6b6b">❌ ' + (e && e.message ? e.message : 'échec') + '</b>');
+  }
+}
+window.g45NotifTest = g45NotifTest;

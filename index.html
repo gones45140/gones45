@@ -622,6 +622,18 @@
   </div>
 
 
+  <!-- DIAGNOSTIC NOTIFICATIONS -->
+  <div class="sec">🔔 Notifications — diagnostic</div>
+  <div class="fc">
+    <div style="font-size:10px;color:var(--t3);line-height:1.6;margin-bottom:12px;">
+      Vérifie ce que le serveur sait réellement de cet appareil, sans passer par la console.
+    </div>
+    <button onclick="g45NotifEtat()" style="display:block;width:100%;margin-bottom:8px;padding:12px 14px;font-size:12.5px;font-weight:700;text-align:left;cursor:pointer;border-radius:10px;background:#1a2235;border:1px solid rgba(255,255,255,.14);color:#e6ecf5;">🔍&nbsp; Voir ce que le serveur suit</button>
+    <button onclick="g45NotifResync()" style="display:block;width:100%;margin-bottom:8px;padding:13px 14px;font-size:12.5px;font-weight:800;text-align:left;cursor:pointer;border-radius:10px;background:#2563eb;border:1px solid #3b82f6;color:#ffffff;">🔄&nbsp; Resynchroniser les notifications</button>
+    <button onclick="g45NotifTest()" style="display:block;width:100%;padding:12px 14px;font-size:12.5px;font-weight:700;text-align:left;cursor:pointer;border-radius:10px;background:#1a2235;border:1px solid rgba(255,255,255,.14);color:#e6ecf5;">📨&nbsp; Envoyer une notification de test</button>
+    <div id="g45-notif-diag" style="margin-top:12px;font-size:11.5px;font-weight:600;min-height:16px;color:#9fb0c7;background:rgba(0,0,0,.25);border-radius:8px;padding:10px 12px;">Appuie sur « Voir ce que le serveur suit ».</div>
+  </div>
+
   <!-- SYNCHRO GITHUB -->
   <div class="sec">🔄 Synchro GitHub</div>
   <div class="fc">
