@@ -30790,3 +30790,179 @@ window.espnResolveTeam = async function (nom) {
   } catch (e) { console.warn('repli core', nom, e && e.message); }
   return r;
 };
+
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   GONES45 — ÉQUIPES PERSONNALISÉES (ajout sans toucher au code)
+   ───────────────────────────────────────────────────────────────────────────
+   ESPN_TEAM_LEAGUE est une table ecrite en dur : 92 clubs, 10 championnats.
+   Un club absent (Feyenoord hier, un promu de Ligue 2 demain) ne pouvait etre
+   ajoute qu'en editant app.js — impossible depuis un telephone.
+
+   Ici, Antoine saisit le nom et choisit le championnat ; l'app retrouve
+   l'identifiant ESPN via sports.core (le seul hote qui autorise le CORS sur la
+   liste des clubs), VERIFIE que le calendrier repond, et n'enregistre qu'apres.
+   Le tout dans localStorage : aucune modification de code, rien a redeployer.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+var G45_CLE_PERSO = 'g45_teams_perso';
+
+/* Championnats proposes, par sport. Le chemin sports.core est
+   /v2/sports/{sport}/leagues/{ligue}/teams : la meme mecanique sert donc pour
+   le rugby a XIII, le basket ou le hockey, seul le couple sport/ligue change. */
+var G45_SPORTS_DISPO = [
+  ['soccer',       '\u26bd Football'],
+  ['rugby-league', '\ud83c\udfc9 Rugby \u00e0 XIII'],
+  ['rugby',        '\ud83c\udfc9 Rugby \u00e0 XV'],
+  ['basketball',   '\ud83c\udfc0 Basket'],
+  ['hockey',       '\ud83c\udfd2 Hockey'],
+  ['baseball',     '\u26be Baseball'],
+  ['football',     '\ud83c\udfc8 Football US']
+];
+
+var G45_LIGUES_PAR_SPORT = {
+  'soccer': [
+    ['fra.1','Ligue 1'], ['fra.2','Ligue 2'], ['eng.1','Premier League'],
+    ['eng.2','Championship'], ['esp.1','LaLiga'], ['esp.2','LaLiga 2'],
+    ['ita.1','Serie A'], ['ita.2','Serie B'], ['ger.1','Bundesliga'], ['ger.2','2.Bundesliga'],
+    ['ned.1','Eredivisie'], ['por.1','Liga Portugal'], ['bel.1','Belgique'],
+    ['sco.1','\u00c9cosse'], ['tur.1','Turquie'], ['gre.1','Gr\u00e8ce'], ['aut.1','Autriche'],
+    ['den.1','Danemark'], ['nor.1','Norv\u00e8ge'], ['swe.1','Su\u00e8de'],
+    ['usa.1','MLS'], ['mex.1','Liga MX'], ['bra.1','Br\u00e9sil'], ['arg.1','Argentine'],
+    ['jpn.1','Japon'], ['chn.1','Chine'], ['ksa.1','Arabie saoudite'], ['aus.1','Australie']
+  ],
+  'rugby-league': [ ['3','NRL (Australie)'] ],
+  'rugby': [ ['270559','Top 14'], ['270557','United Rugby Championship'], ['164205','Champions Cup'] ],
+  'basketball': [ ['nba','NBA'], ['wnba','WNBA'] ],
+  'hockey': [ ['nhl','NHL'] ],
+  'baseball': [ ['mlb','MLB'] ],
+  'football': [ ['nfl','NFL'] ]
+};
+
+function g45TeamsPerso() {
+  try { return JSON.parse(localStorage.getItem(G45_CLE_PERSO) || '{}') || {}; }
+  catch (e) { return {}; }
+}
+function _g45SavePerso(o) {
+  try { localStorage.setItem(G45_CLE_PERSO, JSON.stringify(o)); } catch (e) {}
+}
+function _g45CleNom(n) { return String(n || '').toLowerCase().trim(); }
+
+/* La table perso est consultee AVANT la table cablee, pour qu'Antoine puisse
+   aussi corriger une entree existante qui pointerait au mauvais endroit. */
+var _g45EspnLeagueOfOrig = (typeof espnLeagueOf === 'function') ? espnLeagueOf : null;
+window.espnLeagueOf = function (nom) {
+  var p = g45TeamsPerso()[_g45CleNom(nom)];
+  /* espnLeagueOf sert la logique FOOTBALL : on ne renvoie donc une entree perso
+     que si elle est bien du football, sinon l'onglet Saisons croirait qu'une
+     equipe de NRL est un club de foot. */
+  if (p && p.league && (p.sport || 'soccer') === 'soccer') return p.league;
+  return _g45EspnLeagueOfOrig ? _g45EspnLeagueOfOrig(nom) : null;
+};
+
+var _g45ResolveTeamPersoOrig = (typeof espnResolveTeam === 'function') ? espnResolveTeam : null;
+window.espnResolveTeam = async function (nom) {
+  var p = g45TeamsPerso()[_g45CleNom(nom)];
+  if (p && p.id) return { id: String(p.id), league: p.league, name: nom, logo: p.logo || '' };
+  return _g45ResolveTeamPersoOrig ? await _g45ResolveTeamPersoOrig(nom) : null;
+};
+
+/* ── Interface ──────────────────────────────────────────────────────────── */
+
+function _g45TpMsg(html, couleur) {
+  var el = document.getElementById('g45-tp-msg');
+  if (el) { el.innerHTML = html; el.style.color = couleur || '#9fb0c7'; }
+}
+
+function g45TpMajLigues() {
+  var sp = (document.getElementById('g45-tp-sport') || {}).value || 'soccer';
+  var sel = document.getElementById('g45-tp-ligue');
+  if (!sel) return;
+  sel.innerHTML = (G45_LIGUES_PAR_SPORT[sp] || []).map(function (l) {
+    return '<option value="' + l[0] + '">' + l[1] + '</option>';
+  }).join('');
+}
+window.g45TpMajLigues = g45TpMajLigues;
+
+function _g45TpNomLigue(sp, id) {
+  var l = (G45_LIGUES_PAR_SPORT[sp] || []).filter(function (x) { return x[0] === id; })[0];
+  return l ? l[1] : id;
+}
+
+function g45TpRender() {
+  var ss = document.getElementById('g45-tp-sport');
+  if (ss && !ss.options.length) {
+    ss.innerHTML = G45_SPORTS_DISPO.map(function (x) {
+      return '<option value="' + x[0] + '">' + x[1] + '</option>';
+    }).join('');
+    g45TpMajLigues();
+  }
+  var liste = document.getElementById('g45-tp-liste');
+  if (!liste) return;
+  var p = g45TeamsPerso();
+  var cles = Object.keys(p);
+  if (!cles.length) { liste.innerHTML = '<div style="color:#9fb0c7;font-size:11px;">Aucune équipe ajoutée pour l\'instant.</div>'; return; }
+  liste.innerHTML = cles.sort().map(function (k) {
+    var v = p[k];
+    var nomLigue = _g45TpNomLigue(v.sport || 'soccer', v.league);
+    return '<div style="display:flex;align-items:center;justify-content:space-between;padding:7px 9px;margin-bottom:5px;background:rgba(255,255,255,.04);border-radius:8px;">'
+      + '<div><b>' + (v.nom || k) + '</b> <span style="color:#9fb0c7;font-size:10px;">· ' + nomLigue + ' · id ' + v.id + '</span></div>'
+      + '<button onclick="g45TpSupprimer(\'' + k.replace(/'/g, "\\'") + '\')" style="background:none;border:1px solid rgba(255,107,107,.5);color:#ff6b6b;border-radius:6px;padding:3px 9px;font-size:11px;cursor:pointer;">Retirer</button>'
+      + '</div>';
+  }).join('');
+}
+window.g45TpRender = g45TpRender;
+
+function g45TpSupprimer(cle) {
+  var p = g45TeamsPerso();
+  delete p[cle];
+  _g45SavePerso(p);
+  g45TpRender();
+  _g45TpMsg('Équipe retirée.', '#ffb13d');
+}
+window.g45TpSupprimer = g45TpSupprimer;
+
+async function g45TpAjouter() {
+  var nom = (document.getElementById('g45-tp-nom') || {}).value || '';
+  var ligue = (document.getElementById('g45-tp-ligue') || {}).value || '';
+  var sport = (document.getElementById('g45-tp-sport') || {}).value || 'soccer';
+  var idManuel = ((document.getElementById('g45-tp-id') || {}).value || '').trim();
+  nom = nom.trim();
+  if (!nom || !ligue) { _g45TpMsg('Saisis un nom et choisis un championnat.', '#ffb13d'); return; }
+
+  _g45TpMsg('⏳ Recherche de l\'identifiant ESPN…');
+  try {
+    var id = idManuel;
+    if (!id) id = await g45CoreTeamId(sport, ligue, nom);
+    if (!id) {
+      _g45TpMsg('❌ Introuvable dans ce championnat. Vérifie l\'orthographe exacte (celle d\'ESPN), ou saisis l\'identifiant à la main — il est dans l\'URL de la fiche ESPN de l\'équipe, après <b>/id/</b>.', '#ff6b6b');
+      return;
+    }
+
+    /* On ne fait confiance qu'a une verification reelle : si le calendrier ne
+       repond pas, l'entree serait inutile et on prefere ne rien enregistrer. */
+    _g45TpMsg('⏳ Vérification du calendrier…');
+    var an = new Date().getFullYear();
+    if (['bra.1','usa.1','arg.1','nor.1','swe.1','jpn.1','chn.1'].indexOf(ligue) < 0 && new Date().getMonth() + 1 < 8) an -= 1;
+    var r = await fetch('https://site.api.espn.com/apis/site/v2/sports/' + sport + '/' + ligue + '/teams/' + id + '/schedule?season=' + an);
+    if (!r.ok) { _g45TpMsg('❌ ESPN ne répond pas pour cet identifiant (code ' + r.status + '). Rien n\'a été enregistré.', '#ff6b6b'); return; }
+    var d = await r.json();
+    var n = (d.events || []).length;
+    var vrai = (d.team && d.team.displayName) ? d.team.displayName : nom;
+
+    var p = g45TeamsPerso();
+    p[_g45CleNom(nom)] = { nom: nom, id: String(id), league: ligue, sport: sport };
+    if (_g45CleNom(vrai) !== _g45CleNom(nom)) p[_g45CleNom(vrai)] = { nom: vrai, id: String(id), league: ligue, sport: sport };
+    _g45SavePerso(p);
+    g45TpRender();
+
+    _g45TpMsg('✅ <b>' + vrai + '</b> enregistrée (id ' + id + ') — ' + n + ' match(s) trouvés sur la saison. Elle est utilisable dès maintenant dans le mur et les paris.', '#4ade80');
+    var i1 = document.getElementById('g45-tp-nom'); if (i1) i1.value = '';
+    var i2 = document.getElementById('g45-tp-id'); if (i2) i2.value = '';
+  } catch (e) {
+    _g45TpMsg('❌ ' + (e && e.message ? e.message : 'échec'), '#ff6b6b');
+  }
+}
+window.g45TpAjouter = g45TpAjouter;
+
+setTimeout(g45TpRender, 800);
