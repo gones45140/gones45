@@ -19061,8 +19061,15 @@ function _g45BlocAVenir(nom){
 function renderSaisonsChart(el, results, nom) {
   var saisons = Object.keys(results).sort().reverse();
   var teamId = null;
+  /* MEMES TROIS CONDITIONS que loadTeamSaisons — la troisieme manquait ici, si
+     bien que les deux fonctions calculaient un teamId DIFFERENT pour certains
+     clubs. Le filtre domicile/exterieur comparait alors `m.homeTeam.id` a un
+     identifiant qui ne correspondait a rien : 0 match retenu, et des NaN
+     partout par division par zero (constate sur le PSG). */
   for(var k in TEAM_IDS) {
-    if(k.toLowerCase()===nom.toLowerCase() || nom.toLowerCase().indexOf(k.toLowerCase())>=0) { teamId=TEAM_IDS[k]; break; }
+    if(k.toLowerCase()===nom.toLowerCase()
+       || nom.toLowerCase().indexOf(k.toLowerCase())>=0
+       || k.toLowerCase().indexOf(nom.toLowerCase())>=0) { teamId=TEAM_IDS[k]; break; }
   }
   /* Clubs absents de TEAM_IDS (championnats hors offre gratuite football-data :
      Argentine, Mexique...). Sans ce repli, teamId reste null, le test
@@ -19174,8 +19181,19 @@ function renderSaisonsChart(el, results, nom) {
     var filteredMatches = filterMatchesByComp(matches, filters);
     if(!filteredMatches.length) filteredMatches = matches; // fallback si filtre vide
     // Filtre dom/ext
-    if(_statFilter==='dom') filteredMatches = filteredMatches.filter(function(m){return m.homeTeam&&m.homeTeam.id===teamId;});
-    else if(_statFilter==='ext') filteredMatches = filteredMatches.filter(function(m){return m.awayTeam&&m.awayTeam.id===teamId;});
+    /* Filet de securite : si AUCUN match ne porte cet identifiant, on retombe sur
+       une comparaison par nom plutot que de tout jeter et d'afficher des NaN. */
+    var _idOk = filteredMatches.some(function(m){
+      return (m.homeTeam && m.homeTeam.id===teamId) || (m.awayTeam && m.awayTeam.id===teamId);
+    });
+    var _estNous = function(t){
+      if(!t) return false;
+      if(_idOk) return t.id===teamId;
+      var a=String(t.name||'').toLowerCase(), b=String(nom||'').toLowerCase();
+      return a===b || a.indexOf(b)>=0 || b.indexOf(a)>=0;
+    };
+    if(_statFilter==='dom') filteredMatches = filteredMatches.filter(function(m){return _estNous(m.homeTeam);});
+    else if(_statFilter==='ext') filteredMatches = filteredMatches.filter(function(m){return _estNous(m.awayTeam);});
     var st = calcSaisonStats(filteredMatches, teamId);
     var champMatches = matches.filter(function(m){ return m.competition && (m.competition.type==='LEAGUE' || m.competition.code==='BL1'||m.competition.code==='PL'||m.competition.code==='PD'||m.competition.code==='SA'||m.competition.code==='FL1'||m.competition.code==='PPL'); });
     var stC = champMatches.length ? calcSaisonStats(champMatches, teamId) : null;
