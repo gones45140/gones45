@@ -19191,7 +19191,7 @@ function renderSaisonsChart(el, results, nom) {
     html += '<div style="font-size:10px;color:var(--t3);">'+st.n+' matchs'+(stC?' · '+champMatches.length+' champ.':'')+'</div>';
     html += '</div>';
     // Sélecteur stats rapides
-    var QUICK_STATS = ['O0.5','O1.5','O2.5','O3.5','O4.5','U0.5','U1.5','U2.5','U3.5','U4.5','BTS','CS','WIN','LOSE'];
+    var QUICK_STATS = ['O0.5','O1.5','O2.5','O3.5','O4.5','U0.5','U1.5','U2.5','U3.5','U4.5','BTS','CS','WIN','LOSE','1N','N2'];
     if(!window._quickStats) window._quickStats = ['O2.5','BTS'];
     html += '<div style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:10px;">';
     QUICK_STATS.forEach(function(qs){
@@ -19427,12 +19427,16 @@ function renderSaisonsChart(el, results, nom) {
           'O3.5': total>3.5, 'O4.5': total>4.5,
           'U0.5': total<=0.5, 'U1.5': total<=1.5, 'U2.5': total<=2.5, 'U3.5': total<=3.5, 'U4.5': total<=4.5,
           'BTS': hg>0&&ag>0, 'CS': tg===0&&og>0||tg>0&&og===0,
-          'WIN': tg>og, 'LOSE': tg<og
+          'WIN': tg>og, 'LOSE': tg<og,
+          /* Double chance : « gagne ou nul » et « perd ou nul ». Antoine joue
+             beaucoup ces marches, ils manquaient aux selecteurs. */
+          '1N': tg>=og, 'N2': tg<=og
         };
         var BADGE_COLORS = {
           'O0.5':'#1ed760','O1.5':'#4d84ff','O2.5':'#f0b020','O3.5':'#ff7b54','O4.5':'#ff4545',
           'U0.5':'#22d3ee','U1.5':'#67e8f9','U2.5':'#a5f3fc','U3.5':'#bae6fd','U4.5':'#e0f2fe',
-          'BTS':'#a78bfa','CS':'#1ed760','WIN':'#1ed760','LOSE':'#ff4545','WIN':'#1ed760','LOSE':'#ff4545'
+          'BTS':'#a78bfa','CS':'#1ed760','WIN':'#1ed760','LOSE':'#ff4545',
+          '1N':'#7ee787','N2':'#ffa198'
         };
         qs.forEach(function(k){
           if(MATCH_CHECKS[k]) badges += '<span style="color:'+BADGE_COLORS[k]+';">'+k+'</span> ';
@@ -22006,8 +22010,44 @@ var _G45_CLV_DEF=[
   {n:'Miami',   sl:'usa.1', side:'over',  line:2.5, al:['intermiami','miami','intermiamicf']}
 ];
 function _g45ClvCfg(){
-  try{ var c=JSON.parse(localStorage.getItem('g45clv_cfg')||'null'); if(c&&c.length) return c; }catch(e){}
-  return _G45_CLV_DEF;
+  var enreg = null;
+  try{ enreg = JSON.parse(localStorage.getItem('g45clv_cfg')||'null'); }catch(e){}
+
+  /* La liste etait FIGEE a 5 equipes : Arsenal, Metz, Boca, Lyon, PSG et toute
+     nouvelle equipe n'apparaissaient donc nulle part, et leur cote Under
+     n'etait jamais relevee. On la construit desormais depuis le MUR, en
+     conservant les reglages deja enregistres (cote et ligne choisis par chips). */
+  var deja = {};
+  (enreg||[]).forEach(function(c){ deja[String(c.n).toLowerCase()] = c; });
+  _G45_CLV_DEF.forEach(function(c){ if(!deja[String(c.n).toLowerCase()]) deja[String(c.n).toLowerCase()] = c; });
+
+  var out = [];
+  var vus = {};
+  var mur = (window.state && state.u) ? state.u : [];
+  mur.forEach(function(u){
+    if(!u || !u.n) return;
+    if((u.sport||'\u26bd') !== '\u26bd') return;      /* football uniquement : ESPN ne cote que lui ici */
+    if(u.type === 'joueur') return;
+    var k = String(u.n).toLowerCase();
+    if(vus[k]) return; vus[k] = 1;
+    var lg = null;
+    try{ lg = (typeof espnLeagueOf === 'function') ? espnLeagueOf(u.n) : null; }catch(e){}
+    if(!lg) return;                                    /* championnat inconnu : rien a relever */
+    var anc = deja[k];
+    out.push({
+      n: u.n, sl: lg,
+      side: (anc && anc.side) || 'over',
+      line: (anc && anc.line) || 2.5,
+      al: (anc && anc.al) || [String(u.n).toLowerCase().replace(/[^a-z0-9]/g,'')]
+    });
+  });
+
+  /* Equipes reglees a la main mais absentes du mur : on ne les perd pas. */
+  (enreg||[]).forEach(function(c){
+    if(!vus[String(c.n).toLowerCase()]) out.push(c);
+  });
+
+  return out.length ? out : _G45_CLV_DEF;
 }
 function _g45ClvSaveCfg(c){ try{ localStorage.setItem('g45clv_cfg', JSON.stringify(c)); }catch(e){} }
 function g45ClvSide(i){
