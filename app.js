@@ -19437,6 +19437,12 @@ function renderSaisonsChart(el, results, nom) {
         qs.forEach(function(k){
           if(MATCH_CHECKS[k]) badges += '<span style="color:'+BADGE_COLORS[k]+';">'+k+'</span> ';
         });
+        /* Pastille de cote : la cote d'avant-match de NOTRE equipe, saisie dans
+           le panneau Cotes. Affichee comme les autres indicateurs, en gris pour
+           ne pas concurrencer les O2.5/BTS qui, eux, sont des resultats. */
+        var _coteMatch = (typeof _g45CoteDuMatch === 'function')
+          ? _g45CoteDuMatch(m.espnId, isDom) : null;
+        if (_coteMatch) badges += '<span style="color:#9fb0c7;">@' + _coteMatch.toFixed(2) + '</span> ';
         html += '<div style="font-size:8px;text-align:right;min-width:40px;">'+compIco+'<br>'+badges+'</div>';
         html += '</div>';
         html += '<div class="smd-panel" style="display:none;"></div>';
@@ -31256,3 +31262,19 @@ setTimeout(function () {
     }).join('');
   }
 }, 900);
+
+/* Cote enregistree d'un match, quel que soit le sport : les cles du stockage
+   sont prefixees « sport| », or la fiche equipe ne connait pas ce prefixe.
+   `estDom` dit de quel cote se trouve l'equipe affichee. */
+function _g45CoteDuMatch(espnId, estDom) {
+  if (!espnId) return null;
+  var o;
+  try { o = JSON.parse(localStorage.getItem('g45_cotes_hist') || '{}') || {}; } catch (e) { return null; }
+  var suffixe = '|' + String(espnId);
+  var k = Object.keys(o).filter(function (x) { return x.slice(-suffixe.length) === suffixe; })[0];
+  if (!k) return null;
+  var c = o[k];
+  var v = estDom ? c.dom : c.ext;
+  return (v && v > 1) ? v : null;
+}
+window._g45CoteDuMatch = _g45CoteDuMatch;
