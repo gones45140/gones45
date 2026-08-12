@@ -31454,8 +31454,12 @@ async function _g45CompetEquipes(c) {
   }
 
   out.sort(function (a, b) { return (a.rang || 99) - (b.rang || 99) || b.pts - a.pts; });
-  _g45CompetCache[cle] = out;
-  try { localStorage.setItem(cle, JSON.stringify({ ts: Date.now(), d: out })); } catch (e) {}
+  /* NE JAMAIS mettre en cache un resultat VIDE : sinon un echec ponctuel (reseau,
+     saison pas encore ouverte) est fige pour 6 h et la competition parait morte. */
+  if (out.length) {
+    _g45CompetCache[cle] = out;
+    try { localStorage.setItem(cle, JSON.stringify({ ts: Date.now(), d: out })); } catch (e) {}
+  }
   return out;
 }
 
@@ -31803,7 +31807,8 @@ async function _g45CompetMatchs(sportPath, slug, an, ids, progres) {
       });
     } catch (e) {}
   }
-  try { localStorage.setItem(ck, JSON.stringify({ t: Date.now(), d: ms })); } catch (e) {}
+  /* Meme regle : une collecte vide n'est pas un resultat, c'est un echec. */
+  if (ms.length) { try { localStorage.setItem(ck, JSON.stringify({ t: Date.now(), d: ms })); } catch (e) {} }
   return ms;
 }
 window._g45CompetMatchs = _g45CompetMatchs;
@@ -31818,16 +31823,25 @@ async function g45FormeRender(c, body) {
   var noms = {};
   eq.forEach(function (t) { noms[String(t.id)] = { nom: t.nom, logo: t.logo }; });
 
-  var ms = null;
-  try {
-    ms = await _g45CompetMatchs(c.sp, c.s, an, eq.map(function (t) { return t.id; }), function (i, n) {
-      body.innerHTML = '<div style="color:#9fb0c7;font-size:11.5px;">\u23f3 \u00c9quipe ' + i + '/' + n + '\u2026</div>';
-    });
-  } catch (e) {}
+  var ids = eq.map(function (t) { return t.id; });
+  var prog = function (i, n) {
+    body.innerHTML = '<div style="color:#9fb0c7;font-size:11.5px;">\u23f3 \u00c9quipe ' + i + '/' + n + '\u2026</div>';
+  };
+  var ms = null, anUtil = an;
+  try { ms = await _g45CompetMatchs(c.sp, c.s, an, ids, prog); } catch (e) {}
+  /* Debut de saison : on bascule sur l'exercice precedent plutot que d'afficher
+     une page vide, comme pour les transferts. */
   if (!ms || !ms.length) {
-    body.innerHTML = '<div style="color:#ffb13d;font-size:11.5px;">Aucun match jou\u00e9 pour l\'instant sur cette saison.</div>';
+    anUtil = an - 1;
+    try { ms = await _g45CompetMatchs(c.sp, c.s, anUtil, ids, prog); } catch (e) {}
+  }
+  if (!ms || !ms.length) {
+    body.innerHTML = '<div style="color:#ffb13d;font-size:11.5px;">Aucun match trouv\u00e9 pour '
+      + eq.length + ' \u00e9quipe(s), saisons ' + an + ' et ' + (an - 1) + '.<br>'
+      + '<span style="font-size:10.5px;color:var(--t3);">ESPN n\'expose peut-\u00eatre pas les calendriers par \u00e9quipe pour cette comp\u00e9tition.</span></div>';
     return;
   }
+  an = anUtil;
 
   ms = ms.slice().sort(function (x, y) { return x.t - y.t; });
 
