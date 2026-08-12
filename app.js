@@ -31457,8 +31457,24 @@ function g45CompetVue(v) { _g45CompetVue = v; loadCompetTab(); }
 window.g45CompetSel = g45CompetSel;
 window.g45CompetVue = g45CompetVue;
 
-/* Ouvre la fiche complete d'une equipe, qu'elle soit dans le mur ou non. */
-function g45CompetOuvrir(nom) {
+/* Ouvre la fiche complete d'une equipe, qu'elle soit dans le mur ou non.
+   POINT CLE : le classement vient de nous donner l'identifiant ESPN et le
+   championnat. On les ENREGISTRE dans la table perso avant d'ouvrir, sinon la
+   fiche affiche « Equipe non trouvee dans la base » — TEAM_IDS et
+   ESPN_TEAM_LEAGUE ne connaissent qu'une centaine de clubs, pas Angers ni
+   Le Mans. Une fois enregistree, l'equipe est resolue partout : Saisons,
+   paris, notifications. */
+function g45CompetOuvrir(nom, id, slug, sport) {
+  try {
+    if (id && slug && typeof g45TeamsPerso === 'function') {
+      var p = g45TeamsPerso();
+      var cle = String(nom || '').toLowerCase().trim();
+      if (!p[cle] || String(p[cle].id) !== String(id)) {
+        p[cle] = { nom: nom, id: String(id), league: slug, sport: sport || 'soccer' };
+        try { localStorage.setItem('g45_teams_perso', JSON.stringify(p)); } catch (e) {}
+      }
+    }
+  } catch (e) { console.warn('enregistrement equipe', e && e.message); }
   try { openClub(nom); } catch (e) { console.warn('ouverture fiche', nom, e && e.message); }
 }
 window.g45CompetOuvrir = g45CompetOuvrir;
@@ -31506,7 +31522,8 @@ async function loadCompetTab() {
         return (g ? '<div style="font-size:11px;font-weight:800;color:var(--a);margin:10px 0 6px;">' + g + '</div>' : '')
           + '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:7px;">'
           + grp[g].map(function (t) {
-              return '<div onclick="g45CompetOuvrir(\'' + String(t.nom).replace(/'/g, "\\'") + '\')" '
+              return '<div onclick="g45CompetOuvrir(\'' + String(t.nom).replace(/'/g, "\\'") + '\',\''
+                + t.id + '\',\'' + c.s + '\',\'' + c.sp + '\')" '
                 + 'style="display:flex;align-items:center;gap:8px;padding:8px 9px;background:rgba(255,255,255,.04);border-radius:9px;cursor:pointer;">'
                 + (t.logo ? '<img src="' + t.logo + '" style="width:22px;height:22px;object-fit:contain;" loading="lazy">' : '<span style="width:22px;"></span>')
                 + '<div style="min-width:0;"><div style="font-size:11.5px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">' + t.nom + '</div>'
