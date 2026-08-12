@@ -31528,7 +31528,21 @@ function g45CompetOuvrir(nom, id, slug, sport) {
       }
     }
   } catch (e) { console.warn('enregistrement equipe', e && e.message); }
-  try { openClub(nom); } catch (e) { console.warn('ouverture fiche', nom, e && e.message); }
+  /* On BASCULE d'abord sur l'onglet Bilan, puis on ouvre la fiche — comme le fait
+     `openClubFromDash`. Sans ce changement d'onglet, la fiche s'affichait par
+     dessus le contenu des Competitions sans le masquer : sur telephone on se
+     retrouvait avec la fiche du club PUIS la grille des equipes en dessous, ce
+     qui ressemble a un bug. */
+  try {
+    var btn = document.querySelector('.ni[onclick*="t-bilan"]');
+    if (typeof showTab === 'function') showTab('t-bilan', btn);
+    setTimeout(function () {
+      try {
+        var idx = (window.state && state.u) ? state.u.findIndex(function (u) { return u.n === nom; }) : -1;
+        openClub(nom, idx >= 0 ? idx : 0);
+      } catch (e) { console.warn('ouverture fiche', nom, e && e.message); }
+    }, 60);
+  } catch (e) { console.warn('ouverture fiche', nom, e && e.message); }
 }
 window.g45CompetOuvrir = g45CompetOuvrir;
 
