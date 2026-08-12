@@ -31632,8 +31632,20 @@ async function loadCompetTab() {
   if (!choisie) {
     var html = groupes.map(function (g) {
       var ch = (g.leagues || []).map(function (l) {
-        return '<button onclick="g45CompetSel(\'' + l.slug + '\')" style="border:none;cursor:pointer;font-size:11px;font-weight:700;padding:7px 11px;margin:0 5px 5px 0;border-radius:16px;background:#1a2235;color:#e6ecf5;">'
-          + (l.ico || '') + ' ' + l.name + '</button>';
+        /* ESPN sert le logo de chaque competition depuis son slug. Deux formes :
+           le chemin par nom (soccer/fra.1) et le chemin numerique (500/270559),
+           qui couvre le Top 14 et le NRL. `onerror` bascule de l'un a l'autre,
+           puis retombe sur l'emoji si aucun logo n'existe — jamais d'image
+           cassee dans la liste. */
+        var slug = String(l.slug);
+        var url1 = 'https://a.espncdn.com/i/leaguelogos/soccer/500/' + slug + '.png';
+        var url2 = 'https://a.espncdn.com/i/leaguelogos/' + _g45CompetSport + '/500/' + slug + '.png';
+        var img = '<img src="' + (/^\d+$/.test(slug) ? url2 : url1) + '" '
+          + 'onerror="if(!this.dataset.r){this.dataset.r=1;this.src=\'' + (/^\d+$/.test(slug) ? url1 : url2) + '\';}else{this.style.display=\'none\';this.nextSibling.style.display=\'inline\';}" '
+          + 'style="width:17px;height:17px;object-fit:contain;vertical-align:middle;margin-right:5px;" loading="lazy">'
+          + '<span style="display:none;">' + (l.ico || '') + ' </span>';
+        return '<button onclick="g45CompetSel(\'' + slug + '\')" style="border:none;cursor:pointer;font-size:11px;font-weight:700;padding:7px 11px;margin:0 5px 5px 0;border-radius:16px;background:#1a2235;color:#e6ecf5;display:inline-flex;align-items:center;">'
+          + img + l.name + '</button>';
       }).join('');
       return '<div style="margin-bottom:10px;"><div style="font-size:9px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;color:#4f5d88;margin-bottom:5px;">'
         + g.grp + '</div><div>' + ch + '</div></div>';
@@ -31667,7 +31679,10 @@ async function loadCompetTab() {
   }).join('');
 
   el.innerHTML = '<button onclick="g45CompetSel(null)" style="border:none;background:rgba(255,255,255,.06);color:var(--t2);border-radius:8px;padding:6px 12px;font-size:11px;font-weight:700;cursor:pointer;margin-bottom:10px;">\u2190 ' + sp.name + '</button>'
-    + '<div class="sec" style="margin-top:0;">' + (c.ico || '') + ' ' + c.n + '</div>'
+    + '<div class="sec" style="margin-top:0;display:flex;align-items:center;gap:8px;">'
+      + '<img src="https://a.espncdn.com/i/leaguelogos/' + (/^\d+$/.test(String(c.s)) ? c.sp : 'soccer') + '/500/' + c.s + '.png" '
+      + 'onerror="this.style.display=\'none\'" style="width:22px;height:22px;object-fit:contain;">'
+      + '<span>' + c.n + '</span></div>'
     + '<div style="display:flex;gap:8px;margin-bottom:10px;align-items:center;flex-wrap:wrap;">'
       + '<select onchange="g45CompetSaison(this.value)" style="padding:9px 11px;font-size:12px;border-radius:9px;background:#0f1626;border:1px solid rgba(255,255,255,.14);color:#e6ecf5;">' + opts + '</select>'
       + '</div>'
