@@ -31393,8 +31393,21 @@ var _g45CompetSel = 'fra.1';
 var _g45CompetVue = 'equipes';
 var _g45CompetCache = {};
 
-/* Annee de saison : les championnats en annee civile ne basculent pas en aout. */
+var _g45CompetSaison = null;   /* null = automatique */
+
+function g45CompetSaison(v) {
+  _g45CompetSaison = v ? parseInt(v, 10) : null;
+  loadCompetTab();
+}
+window.g45CompetSaison = g45CompetSaison;
+
+/* Annee de saison : les championnats en annee civile ne basculent pas en aout.
+   Un choix manuel prime sur le calcul automatique. */
 function _g45CompetAnnee(slug) {
+  if (_g45CompetSaison) return _g45CompetSaison;
+  return _g45CompetAnneeAuto(slug);
+}
+function _g45CompetAnneeAuto(slug) {
   var civils = ['bra.1','usa.1','arg.1','nor.1','swe.1','jpn.1','chn.1','3','mlb'];
   var d = new Date();
   if (civils.indexOf(slug) >= 0) return d.getFullYear();
@@ -31509,7 +31522,8 @@ async function loadCompetTab() {
   var vues = [['equipes','\ud83d\udc65 \u00c9quipes'], ['calendrier','\ud83d\udcc5 Calendrier'],
               ['journees','\ud83d\uddd3\ufe0f Journ\u00e9es'],
               ['classement','\ud83d\udcca Classement'], ['forme','\ud83d\udcc8 Forme'],
-              ['buteurs','\u26bd Buteurs'], ['transferts','\ud83d\udd04 Transferts']];
+              ['buteurs', c.sp === 'soccer' ? '\u26bd Buteurs' : '\ud83c\udfc5 Leaders'],
+              ['transferts','\ud83d\udd04 Transferts']];
   var onglets = vues.map(function (v) {
     var on = (v[0] === _g45CompetVue);
     return '<button onclick="g45CompetVue(\'' + v[0] + '\')" style="flex:1;padding:10px;font-size:12px;font-weight:800;cursor:pointer;border-radius:9px;'
@@ -31517,15 +31531,40 @@ async function loadCompetTab() {
       + '">' + v[1] + '</button>';
   }).join('');
 
+  /* Selecteur de saison : sans lui, on reste bloque sur l'exercice en cours, qui
+     est vide pendant les premieres semaines. Les libelles suivent la convention
+     du championnat — annee civile au Bresil ou en NRL, a cheval en Europe. */
+  var anAuto = _g45CompetAnneeAuto(c.s);
+  var civil = ['bra.1','usa.1','arg.1','nor.1','swe.1','jpn.1','chn.1','3','mlb'].indexOf(c.s) >= 0;
+  var opts = '<option value="">Saison auto (' + anAuto + ')</option>';
+  /* ESPN remonte plus loin qu'attendu : classement de LIGUE 2 disponible en
+     2008-09, verifie par Antoine. On propose donc jusqu'a 2002, quitte a ce que
+     les competitions recentes affichent un message sur les annees vides. */
+  for (var y = anAuto; y >= 2002; y--) {
+    opts += '<option value="' + y + '"' + (_g45CompetSaison === y ? ' selected' : '') + '>'
+          + (civil ? y : (y + '-' + String(y + 1).slice(2))) + '</option>';
+  }
+
   el.innerHTML = '<div class="sec" style="margin-top:0;">\ud83c\udfc6 Comp\u00e9titions</div>'
     + '<div class="fc" style="margin-bottom:10px;">' + chips + '</div>'
+    + '<div style="display:flex;gap:8px;margin-bottom:10px;align-items:center;flex-wrap:wrap;">'
+      + '<select onchange="g45CompetSaison(this.value)" style="padding:9px 11px;font-size:12px;border-radius:9px;background:#0f1626;border:1px solid rgba(255,255,255,.14);color:#e6ecf5;">' + opts + '</select>'
+      + '<span style="font-size:10px;color:var(--t3);">Une saison sans donn\u00e9es affichera un message \u2014 la profondeur d\u00e9pend de la comp\u00e9tition.</span>'
+      + '</div>'
     + '<div style="display:flex;gap:8px;margin-bottom:12px;">' + onglets + '</div>'
     + '<div id="g45-compet-body" class="fc"><div style="color:#9fb0c7;font-size:11.5px;">\u23f3 Chargement\u2026</div></div>';
 
   var body = document.getElementById('g45-compet-body');
 
   if (_g45CompetVue === 'classement') { await g45LoadStandings(c.s, c.sp, body); return; }
-  if (_g45CompetVue === 'buteurs')    { await g45LoadScorers(c.s, c.sp, body); return; }
+  /* Le chargeur historique ne connaît que le football et les buteurs ; pour les
+     autres sports on passe par le chargeur generique, qui decouvre les
+     categories (ERA, retraits, points, rebonds…). */
+  if (_g45CompetVue === 'buteurs') {
+    if (c.sp === 'soccer') { await g45LoadScorers(c.s, c.sp, body); }
+    else { await g45LeadersGen(c, body, _g45CompetAnnee(c.s)); }
+    return;
+  }
   if (_g45CompetVue === 'transferts') { await g45TrfRender(c, body); return; }
   if (_g45CompetVue === 'forme')      { await g45FormeRender(c, body); return; }
 
@@ -31688,7 +31727,7 @@ async function g45TrfRender(c, body) {
   var liste = await g45Transferts(c.s, c.sp, an);
   /* Debut de saison : la saison en cours est encore vide, on montre la precedente. */
   var anAff = an;
-  if (!liste.length) { anAff = an - 1; liste = await g45Transferts(c.s, c.sp, anAff); }
+  if (!liste.length && !_g45CompetSaison) { anAff = an - 1; liste = await g45Transferts(c.s, c.sp, anAff); }
   if (!liste.length) {
     body.innerHTML = '<div style="color:#ffb13d;font-size:11.5px;">Aucun transfert publi\u00e9 par ESPN pour cette comp\u00e9tition.</div>';
     return;
@@ -31880,8 +31919,9 @@ async function g45FormeRender(c, body) {
   var ms = null, anUtil = an;
   try { ms = await _g45CompetMatchs(c.sp, c.s, an, ids, prog); } catch (e) {}
   /* Debut de saison : on bascule sur l'exercice precedent plutot que d'afficher
-     une page vide, comme pour les transferts. */
-  if (!ms || !ms.length) {
+     une page vide. Mais si Antoine a CHOISI une saison, on respecte son choix —
+     sinon il croirait consulter 2019 en voyant 2018. */
+  if ((!ms || !ms.length) && !_g45CompetSaison) {
     anUtil = an - 1;
     try { ms = await _g45CompetMatchs(c.sp, c.s, anUtil, ids, prog); } catch (e) {}
   }
@@ -31997,3 +32037,302 @@ async function g45FormeRender(c, body) {
       + ' \u00b7 saison ' + an + ' \u00b7 le r\u00e9sultat le plus r\u00e9cent est \u00e0 gauche.</div>';
 }
 window.g45FormeRender = g45FormeRender;
+
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   GONES45 — CLASSEMENTS INDIVIDUELS, TOUS SPORTS
+   ───────────────────────────────────────────────────────────────────────────
+   `g45LoadScorers` est cable en dur sur le football et la categorie
+   `goalsLeaders`. Or Antoine suit des LANCEURS de MLB sur leur ERA (moyenne de
+   points merites) — categorie qui n'existe qu'au baseball.
+
+   Plutot qu'un chargeur par sport, celui-ci DECOUVRE les categories exposees
+   par ESPN et les propose en chips : ERA, retraits au baton, victoires au
+   baseball ; points, rebonds, passes en NBA ; essais au rugby. Aucune liste a
+   maintenir, et un sport ajoute demain fonctionne sans rien changer.
+
+   Les athletes et les equipes arrivent en `$ref` http:// — reecrits en https
+   (le CSP ne laisse pas passer http) puis mis en cache definitivement, un nom
+   de joueur ne changeant pas.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+var _g45LdCat = {};   /* categorie choisie, par competition */
+
+function g45LdCat(slug, nom) { _g45LdCat[slug] = nom; loadCompetTab(); }
+window.g45LdCat = g45LdCat;
+
+async function _g45LdNom(ref) {
+  if (!ref) return null;
+  var url = String(ref).replace(/^http:/, 'https:');
+  var m = url.match(/\/(\d+)(?:\?|$)/);
+  var id = m ? m[1] : url;
+  var ck = 'g45ld_' + id;
+  try { var c = localStorage.getItem(ck); if (c) return JSON.parse(c); } catch (e) {}
+  try {
+    var r = await fetch(url);
+    if (!r.ok) return null;
+    var j = await r.json();
+    var o = {
+      nom: j.displayName || j.fullName || j.shortDisplayName || j.name || '',
+      abbr: j.abbreviation || '',
+      logo: (j.logos && j.logos[0] && j.logos[0].href) || ''
+    };
+    try { localStorage.setItem(ck, JSON.stringify(o)); } catch (e) {}
+    return o;
+  } catch (e) { return null; }
+}
+
+async function g45LeadersGen(c, box, an) {
+  box.innerHTML = '<div style="color:#9fb0c7;font-size:11.5px;">\u23f3 Chargement des classements individuels\u2026</div>';
+
+  /* Le « type » de saison varie : 1 = pre-saison, 2 = saison reguliere,
+     0 = toutes. On essaie dans l'ordre le plus probable. */
+  var data = null;
+  for (var t = 0; t < 3; t++) {
+    var typ = [2, 1, 0][t];
+    try {
+      var r = await fetch('https://sports.core.api.espn.com/v2/sports/' + c.sp +
+                          '/leagues/' + c.s + '/seasons/' + an + '/types/' + typ + '/leaders');
+      if (!r.ok) continue;
+      var j = await r.json();
+      if (j && j.categories && j.categories.length) { data = j; break; }
+    } catch (e) {}
+  }
+  if (!data) {
+    box.innerHTML = '<div style="color:#ffb13d;font-size:11.5px;">Aucun classement individuel publi\u00e9 par ESPN pour '
+      + c.n + ' en ' + an + '.</div>';
+    return;
+  }
+
+  var cats = data.categories.filter(function (x) { return x.leaders && x.leaders.length; });
+  if (!cats.length) { box.innerHTML = '<div style="color:#ffb13d;font-size:11.5px;">Classements vides pour cette saison.</div>'; return; }
+
+  var choisie = _g45LdCat[c.s];
+  var cat = cats.filter(function (x) { return x.name === choisie; })[0] || cats[0];
+
+  var chips = cats.map(function (x) {
+    var on = (x.name === cat.name);
+    return '<button onclick="g45LdCat(\'' + c.s + '\',\'' + x.name + '\')" style="padding:6px 11px;margin:0 5px 5px 0;font-size:11px;font-weight:700;cursor:pointer;border-radius:16px;'
+      + (on ? 'background:#2563eb;border:1px solid #3b82f6;color:#fff;' : 'background:#1a2235;border:1px solid rgba(255,255,255,.14);color:#9fb0c7;')
+      + '">' + (x.displayName || x.name) + '</button>';
+  }).join('');
+
+  var top = cat.leaders.slice(0, 20);
+  box.innerHTML = '<div style="margin-bottom:10px;">' + chips + '</div>'
+    + '<div style="color:#9fb0c7;font-size:11.5px;">\u23f3 R\u00e9solution des joueurs\u2026</div>';
+
+  var lignes = [];
+  for (var i = 0; i < top.length; i++) {
+    var l = top[i];
+    var a = await _g45LdNom(l.athlete && l.athlete.$ref);
+    var e = await _g45LdNom(l.team && l.team.$ref);
+    lignes.push({
+      rang: i + 1,
+      joueur: (a && a.nom) || 'Joueur #' + (i + 1),
+      equipe: (e && (e.abbr || e.nom)) || '',
+      logo: (e && e.logo) || '',
+      val: l.displayValue || l.value || ''
+    });
+  }
+
+  box.innerHTML = '<div style="margin-bottom:10px;">' + chips + '</div>'
+    + '<div style="font-size:10px;color:var(--t3);margin-bottom:8px;">'
+      + (cat.displayName || cat.name) + ' \u00b7 saison ' + an + '</div>'
+    + lignes.map(function (t) {
+        return '<div style="display:flex;align-items:center;gap:9px;padding:8px 9px;margin-bottom:5px;background:rgba(255,255,255,.04);border-radius:8px;">'
+          + '<span style="color:#9fb0c7;font-size:11px;min-width:20px;text-align:right;">' + t.rang + '</span>'
+          + (t.logo ? '<img src="' + t.logo + '" style="width:20px;height:20px;object-fit:contain;" loading="lazy">' : '<span style="width:20px;"></span>')
+          + '<span style="flex:1;font-size:11.5px;font-weight:700;">' + t.joueur + '</span>'
+          + '<span style="font-size:10.5px;color:#9fb0c7;">' + t.equipe + '</span>'
+          + '<span style="font-size:13px;font-weight:800;color:var(--a);min-width:52px;text-align:right;">' + t.val + '</span>'
+          + '</div>';
+      }).join('');
+}
+window.g45LeadersGen = g45LeadersGen;
+
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   GONES45 — LANCEURS MLB : la strategie « le parier a chaque sortie »
+   ───────────────────────────────────────────────────────────────────────────
+   Antoine suit trois lanceurs partants et on lui a conseille de parier la
+   victoire de leur equipe a chaque fois qu'ils lancent. C'est une affirmation
+   TESTABLE : on compte ce qu'aurait donne la strategie sur la saison.
+
+   AVERTISSEMENT QUI COMPTE : au baseball, le lanceur partant est le facteur le
+   plus integre par les bookmakers. Une equipe menee par un bon lanceur part
+   deja a cote basse. La strategie n'est donc rentable que si le taux de
+   victoire DEPASSE ce que la cote implique — d'ou la « cote d'equilibre »
+   affichee, qui est le vrai verdict. Il se peut qu'elle dise non.
+
+   Sources : scoreboard MLB pour les lanceurs annonces (champ `probables`,
+   verifie), et calendrier d'equipe pour l'historique. Aucune cle, aucun quota.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+var G45_LANCEURS_CLE = 'g45_lanceurs';
+
+function g45Lanceurs() {
+  try { return JSON.parse(localStorage.getItem(G45_LANCEURS_CLE) || '[]') || []; } catch (e) { return []; }
+}
+function _g45LanceursSave(a) { try { localStorage.setItem(G45_LANCEURS_CLE, JSON.stringify(a)); } catch (e) {} }
+
+function g45LanceurAjouter() {
+  var el = document.getElementById('g45-lc-nom');
+  var nom = (el && el.value || '').trim();
+  if (!nom) return;
+  var a = g45Lanceurs();
+  if (a.map(function (x) { return x.toLowerCase(); }).indexOf(nom.toLowerCase()) < 0) a.push(nom);
+  _g45LanceursSave(a);
+  if (el) el.value = '';
+  g45LanceursRender();
+}
+function g45LanceurRetirer(nom) {
+  _g45LanceursSave(g45Lanceurs().filter(function (x) { return x !== nom; }));
+  g45LanceursRender();
+}
+window.g45LanceurAjouter = g45LanceurAjouter;
+window.g45LanceurRetirer = g45LanceurRetirer;
+
+var _g45MoisMlb = [3, 4, 5, 6, 7, 8, 9];   /* avril a octobre */
+
+/* Historique : toutes les sorties du lanceur sur la saison, avec le resultat de
+   SON equipe. On balaie le scoreboard mois par mois — le calendrier par equipe
+   ne dit pas qui a lance. */
+async function _g45LanceurHisto(nom, an, progres) {
+  var ck = 'g45lch_' + an + '_' + nom.toLowerCase().replace(/[^a-z0-9]/g, '');
+  try { var c = JSON.parse(localStorage.getItem(ck) || 'null'); if (c && (Date.now() - c.t) < 6 * 3600000) return c.d; } catch (e) {}
+
+  var bas = nom.toLowerCase(), out = [];
+  for (var i = 0; i < _g45MoisMlb.length; i++) {
+    if (progres) progres(i + 1, _g45MoisMlb.length);
+    var d1 = new Date(an, _g45MoisMlb[i], 1), d2 = new Date(an, _g45MoisMlb[i] + 1, 0);
+    var f = function (d) { return d.getFullYear() + String(d.getMonth() + 1).padStart(2, '0') + String(d.getDate()).padStart(2, '0'); };
+    try {
+      var r = await fetch('https://site.api.espn.com/apis/site/v2/sports/baseball/mlb/scoreboard?dates=' + f(d1) + '-' + f(d2) + '&limit=1000');
+      if (!r.ok) continue;
+      var j = await r.json();
+      (j.events || []).forEach(function (e) {
+        var cp = (e.competitions && e.competitions[0]) || {};
+        var cs = cp.competitors || []; if (cs.length < 2) return;
+        var moi = null, adv = null;
+        cs.forEach(function (x) {
+          var p = (x.probables && x.probables[0]) || null;
+          var pn = p ? ((p.athlete && p.athlete.displayName) || p.displayName || '') : '';
+          if (pn && pn.toLowerCase().indexOf(bas) >= 0) moi = x;
+        });
+        if (!moi) return;
+        adv = cs.filter(function (x) { return x !== moi; })[0];
+        var st = (cp.status && cp.status.type) || {};
+        var sv = function (x) { var v = x.score; if (v && typeof v === 'object') v = (v.value != null ? v.value : v.displayValue); return parseInt(v, 10); };
+        out.push({
+          date: e.date || '',
+          dom: moi.homeAway === 'home',
+          equipe: (moi.team && (moi.team.abbreviation || moi.team.displayName)) || '',
+          adverse: (adv && adv.team && (adv.team.abbreviation || adv.team.displayName)) || '',
+          pour: sv(moi), contre: sv(adv),
+          joue: (st.completed === true)
+        });
+      });
+    } catch (e) {}
+  }
+  out.sort(function (a, b) { return new Date(a.date) - new Date(b.date); });
+  if (out.length) { try { localStorage.setItem(ck, JSON.stringify({ t: Date.now(), d: out })); } catch (e) {} }
+  return out;
+}
+
+/* Prochaine sortie annoncee, sur les 7 prochains jours. */
+async function _g45LanceurProchain(nom) {
+  var bas = nom.toLowerCase();
+  var d1 = new Date(), d2 = new Date(); d2.setDate(d2.getDate() + 7);
+  var f = function (d) { return d.getFullYear() + String(d.getMonth() + 1).padStart(2, '0') + String(d.getDate()).padStart(2, '0'); };
+  try {
+    var r = await fetch('https://site.api.espn.com/apis/site/v2/sports/baseball/mlb/scoreboard?dates=' + f(d1) + '-' + f(d2) + '&limit=1000');
+    if (!r.ok) return null;
+    var j = await r.json();
+    var trouve = null;
+    (j.events || []).forEach(function (e) {
+      if (trouve) return;
+      var cp = (e.competitions && e.competitions[0]) || {};
+      (cp.competitors || []).forEach(function (x) {
+        var p = (x.probables && x.probables[0]) || null;
+        var pn = p ? ((p.athlete && p.athlete.displayName) || p.displayName || '') : '';
+        if (pn && pn.toLowerCase().indexOf(bas) >= 0) {
+          var adv = (cp.competitors || []).filter(function (y) { return y !== x; })[0];
+          trouve = {
+            date: e.date, nom: e.name,
+            equipe: (x.team && (x.team.abbreviation || x.team.displayName)) || '',
+            adverse: (adv && adv.team && (adv.team.abbreviation || adv.team.displayName)) || '',
+            dom: x.homeAway === 'home'
+          };
+        }
+      });
+    });
+    return trouve;
+  } catch (e) { return null; }
+}
+
+async function g45LanceursRender() {
+  var box = document.getElementById('g45-lc-body');
+  if (!box) return;
+  var liste = g45Lanceurs();
+  if (!liste.length) {
+    box.innerHTML = '<div style="color:#9fb0c7;font-size:11.5px;">Ajoute un lanceur ci-dessus pour mesurer la strat\u00e9gie.</div>';
+    return;
+  }
+  var an = _g45CompetSaison || new Date().getFullYear();
+  box.innerHTML = '';
+
+  for (var k = 0; k < liste.length; k++) {
+    var nom = liste[k];
+    var bloc = document.createElement('div');
+    bloc.style.cssText = 'margin-bottom:16px;padding:11px;background:rgba(255,255,255,.04);border-radius:10px;';
+    bloc.innerHTML = '<div style="font-size:12.5px;font-weight:800;">' + nom + '</div>'
+      + '<div style="font-size:11px;color:#9fb0c7;">\u23f3 Recherche de ses sorties\u2026</div>';
+    box.appendChild(bloc);
+
+    var histo = await _g45LanceurHisto(nom, an, function (i, n) {
+      bloc.querySelector('div:last-child').textContent = '\u23f3 ' + i + '/' + n + ' mois\u2026';
+    });
+    var prochain = await _g45LanceurProchain(nom);
+
+    var joues = histo.filter(function (m) { return m.joue && !isNaN(m.pour) && !isNaN(m.contre); });
+    var v = joues.filter(function (m) { return m.pour > m.contre; }).length;
+    var d = joues.length - v;
+    var taux = joues.length ? (v / joues.length * 100) : 0;
+    var eq = taux > 0 ? (100 / taux) : 0;
+
+    /* Plus longue serie de defaites : ce qui tue une montante. */
+    var pire = 0, cur = 0;
+    joues.forEach(function (m) { if (m.pour > m.contre) cur = 0; else { cur++; if (cur > pire) pire = cur; } });
+
+    var chip = function (m) {
+      var g = m.pour > m.contre;
+      return '<span title="' + (m.date || '').slice(0, 10) + ' ' + m.equipe + ' ' + m.pour + '-' + m.contre + ' ' + m.adverse + '" '
+        + 'style="display:inline-block;width:17px;height:17px;line-height:17px;text-align:center;border-radius:4px;'
+        + 'background:' + (g ? '#1ed760' : '#ff4545') + ';color:#0a0e1a;font-size:9.5px;font-weight:800;margin:0 2px 2px 0;">'
+        + (g ? 'V' : 'D') + '</span>';
+    };
+
+    bloc.innerHTML = '<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;">'
+        + '<div style="font-size:12.5px;font-weight:800;">' + nom + '</div>'
+        + '<button onclick="g45LanceurRetirer(\'' + nom.replace(/'/g, "\\'") + '\')" style="background:none;border:1px solid rgba(255,107,107,.5);color:#ff6b6b;border-radius:6px;padding:3px 9px;font-size:10.5px;cursor:pointer;">Retirer</button>'
+        + '</div>'
+      + (prochain
+          ? '<div style="margin-top:6px;font-size:11.5px;color:#4ade80;">\ud83d\uddd3\ufe0f Prochaine sortie : '
+            + new Date(prochain.date).toLocaleString('fr-FR', { weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })
+            + ' \u00b7 ' + prochain.equipe + (prochain.dom ? ' re\u00e7oit ' : ' \u00e0 ') + prochain.adverse + '</div>'
+          : '<div style="margin-top:6px;font-size:11px;color:#9fb0c7;">Aucune sortie annonc\u00e9e dans les 7 jours.</div>')
+      + (joues.length
+          ? '<div style="margin-top:9px;display:flex;gap:14px;flex-wrap:wrap;font-size:11.5px;">'
+              + '<div>Sorties : <b>' + joues.length + '</b></div>'
+              + '<div>Bilan : <b style="color:#1ed760;">' + v + 'V</b> / <b style="color:#ff4545;">' + d + 'D</b></div>'
+              + '<div>Taux : <b>' + taux.toFixed(1) + '%</b></div>'
+              + '<div>Cote d\'\u00e9quilibre : <b style="color:var(--a);">' + eq.toFixed(2) + '</b></div>'
+              + '<div>Pire s\u00e9rie : <b style="color:#ffb13d;">' + pire + '</b></div>'
+            + '</div>'
+            + '<div style="margin-top:8px;">' + joues.map(chip).join('') + '</div>'
+            + '<div style="margin-top:7px;font-size:10px;color:var(--t3);">Il faut une cote sup\u00e9rieure \u00e0 <b>' + eq.toFixed(2)
+              + '</b> pour que le parier syst\u00e9matiquement soit rentable. Compare-la \u00e0 ce que propose ton bookmaker : au baseball, le lanceur partant est d\u00e9j\u00e0 largement int\u00e9gr\u00e9 dans la cote.</div>'
+          : '<div style="margin-top:8px;font-size:11px;color:#ffb13d;">Aucune sortie trouv\u00e9e en ' + an + '. V\u00e9rifie l\'orthographe exacte du nom.</div>');
+  }
+}
+window.g45LanceursRender = g45LanceursRender;

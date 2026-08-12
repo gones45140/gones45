@@ -622,6 +622,20 @@
   </div>
 
 
+  <!-- LANCEURS MLB -->
+  <div class="sec">⚾ Lanceurs MLB — tester la stratégie</div>
+  <div class="fc">
+    <div style="font-size:10px;color:var(--t3);line-height:1.6;margin-bottom:12px;">
+      Pour chaque lanceur suivi : sa prochaine sortie, le bilan de son équipe quand il démarre, et la cote minimale pour que « le parier à chaque fois » soit rentable.
+    </div>
+    <div style="display:flex;gap:8px;margin-bottom:10px;flex-wrap:wrap;">
+      <input id="g45-lc-nom" placeholder="Nom du lanceur — ex : Cristopher Sanchez" autocomplete="off" style="flex:1;min-width:180px;padding:11px 12px;font-size:12.5px;border-radius:9px;background:#0f1626;border:1px solid rgba(255,255,255,.14);color:#e6ecf5;">
+      <button onclick="g45LanceurAjouter()" style="padding:11px 16px;font-size:12.5px;font-weight:800;cursor:pointer;border-radius:9px;background:#2563eb;border:1px solid #3b82f6;color:#fff;">Ajouter</button>
+    </div>
+    <button onclick="g45LanceursRender()" style="display:block;width:100%;padding:12px 14px;margin-bottom:12px;font-size:12.5px;font-weight:800;text-align:left;cursor:pointer;border-radius:10px;background:#1a2235;border:1px solid rgba(255,255,255,.14);color:#e6ecf5;">↻&nbsp; Calculer / actualiser</button>
+    <div id="g45-lc-body" style="font-size:11.5px;">Ajoute un lanceur puis appuie sur Calculer.</div>
+  </div>
+
   <!-- DIAGNOSTIC NOTIFICATIONS -->
   <div class="sec">🔔 Notifications — diagnostic</div>
   <div class="fc">
