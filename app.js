@@ -31499,6 +31499,7 @@ async function loadCompetTab() {
   }).join('');
 
   var vues = [['equipes','\ud83d\udc65 \u00c9quipes'], ['calendrier','\ud83d\udcc5 Calendrier'],
+              ['journees','\ud83d\uddd3\ufe0f Journ\u00e9es'],
               ['classement','\ud83d\udcca Classement'], ['forme','\ud83d\udcc8 Forme'],
               ['buteurs','\u26bd Buteurs'], ['transferts','\ud83d\udd04 Transferts']];
   var onglets = vues.map(function (v) {
@@ -31520,6 +31521,24 @@ async function loadCompetTab() {
   if (_g45CompetVue === 'transferts') { await g45TrfRender(c, body); return; }
   if (_g45CompetVue === 'forme')      { await g45FormeRender(c, body); return; }
 
+  /* Journees & cotes — c'est le panneau qui vivait dans Outils. Sa place est
+     ici : il porte sur une COMPETITION, pas sur l'application. Le contexte
+     sport/ligue vient de la competition selectionnee, plus besoin de le
+     choisir une seconde fois. */
+  if (_g45CompetVue === 'journees') {
+    _g45NrlCtx = { sport: c.sp, ligue: c.s };
+    body.innerHTML = '<div style="display:flex;gap:8px;align-items:center;margin-bottom:10px;flex-wrap:wrap;">'
+      + '<input id="g45-nrl-annee" value="' + _g45CompetAnnee(c.s) + '" style="width:82px;padding:10px 11px;font-size:12.5px;border-radius:9px;background:#0f1626;border:1px solid rgba(255,255,255,.14);color:#e6ecf5;">'
+      + '<button onclick="g45NrlDemarrer()" style="flex:1;min-width:180px;padding:12px 14px;font-size:12.5px;font-weight:800;cursor:pointer;border-radius:10px;background:#2563eb;border:1px solid #3b82f6;color:#fff;">\u2b07\ufe0f Charger la saison</button>'
+      + '</div>'
+      + '<div style="font-size:10px;color:var(--t3);line-height:1.6;margin-bottom:10px;">Tous les matchs group\u00e9s par journ\u00e9e. Colle l\'URL Sofascore d\'un match pour r\u00e9cup\u00e9rer ses cotes, ou saisis-les \u00e0 la main : une fois enregistr\u00e9es elles ne sont plus jamais redemand\u00e9es.</div>'
+      + '<div id="g45-nrl-msg" style="font-size:11.5px;font-weight:600;min-height:16px;color:#9fb0c7;background:rgba(0,0,0,.25);border-radius:8px;padding:10px 12px;margin-bottom:12px;">Appuie sur \u00ab Charger la saison \u00bb.</div>'
+      + '<div id="g45-nrl-synth" style="font-size:11.5px;line-height:1.8;margin-bottom:12px;"></div>'
+      + '<div id="g45-nrl-liste"></div>';
+    if (_g45NrlMatchs && _g45NrlMatchs.length) g45NrlRender();
+    return;
+  }
+
   /* Le calendrier mensuel de l'onglet Resultats est reutilisable tel quel : il
      ecrit dans l'element designe par `window._g45ListId`. On le pointe sur notre
      conteneur, puis on le REMET a sa valeur d'origine — sinon l'onglet Resultats
@@ -31540,6 +31559,21 @@ async function loadCompetTab() {
   var grp = {};
   eq.forEach(function (t) { (grp[t.grp || ''] = grp[t.grp || ''] || []).push(t); });
 
+  var champ = 'padding:10px 11px;margin-bottom:7px;font-size:12px;border-radius:9px;background:#0f1626;border:1px solid rgba(255,255,255,.14);color:#e6ecf5;';
+  /* Ajout manuel : deplace depuis Outils. Sert pour un club qu'ESPN ne classe
+     pas encore (promu, equipe de coupe) — sinon un clic dans la grille suffit,
+     l'identifiant est enregistre automatiquement. */
+  var ajout = '<details style="margin-top:14px;"><summary style="cursor:pointer;font-size:11.5px;font-weight:700;color:#9fb0c7;">\u2795 Ajouter une \u00e9quipe absente de cette liste</summary>'
+    + '<div style="margin-top:10px;display:flex;flex-direction:column;">'
+    + '<select id="g45-tp-sport" onchange="g45TpMajLigues()" style="' + champ + '"></select>'
+    + '<input id="g45-tp-nom" placeholder="Nom de l\'\u00e9quipe" autocomplete="off" style="' + champ + '">'
+    + '<select id="g45-tp-ligue" style="' + champ + '"></select>'
+    + '<input id="g45-tp-id" placeholder="Identifiant ESPN (facultatif)" autocomplete="off" style="' + champ + '">'
+    + '<button onclick="g45TpAjouter()" style="padding:12px 14px;font-size:12.5px;font-weight:800;cursor:pointer;border-radius:10px;background:#1a2235;border:1px solid rgba(255,255,255,.14);color:#e6ecf5;">V\u00e9rifier et ajouter</button>'
+    + '<div id="g45-tp-msg" style="margin-top:10px;font-size:11.5px;font-weight:600;color:#9fb0c7;background:rgba(0,0,0,.25);border-radius:8px;padding:10px 12px;">L\'\u00e9quipe est v\u00e9rifi\u00e9e chez ESPN avant enregistrement.</div>'
+    + '<div id="g45-tp-liste" style="margin-top:10px;font-size:11.5px;"></div>'
+    + '</div></details>';
+
   body.innerHTML = '<div style="font-size:10px;color:var(--t3);margin-bottom:10px;">'
       + eq.length + ' \u00e9quipes \u00b7 clique pour ouvrir la fiche compl\u00e8te</div>'
     + Object.keys(grp).map(function (g) {
@@ -31555,7 +31589,8 @@ async function loadCompetTab() {
                 + '</div></div>';
             }).join('')
           + '</div>';
-      }).join('');
+      }).join('') + ajout;
+  try { g45TpRender(); } catch (e) {}
 }
 window.loadCompetTab = loadCompetTab;
 
