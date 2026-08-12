@@ -31491,8 +31491,9 @@ async function loadCompetTab() {
       + '">' + x.ico + ' ' + x.n + '</button>';
   }).join('');
 
-  var vues = [['equipes','\ud83d\udc65 \u00c9quipes'], ['classement','\ud83d\udcca Classement'],
-              ['buteurs','\u26bd Buteurs & passeurs']];
+  var vues = [['equipes','\ud83d\udc65 \u00c9quipes'], ['calendrier','\ud83d\udcc5 Calendrier'],
+              ['classement','\ud83d\udcca Classement'], ['buteurs','\u26bd Buteurs'],
+              ['transferts','\ud83d\udd04 Transferts']];
   var onglets = vues.map(function (v) {
     var on = (v[0] === _g45CompetVue);
     return '<button onclick="g45CompetVue(\'' + v[0] + '\')" style="flex:1;padding:10px;font-size:12px;font-weight:800;cursor:pointer;border-radius:9px;'
@@ -31509,6 +31510,21 @@ async function loadCompetTab() {
 
   if (_g45CompetVue === 'classement') { await g45LoadStandings(c.s, c.sp, body); return; }
   if (_g45CompetVue === 'buteurs')    { await g45LoadScorers(c.s, c.sp, body); return; }
+  if (_g45CompetVue === 'transferts') { await g45TrfRender(c, body); return; }
+
+  /* Le calendrier mensuel de l'onglet Resultats est reutilisable tel quel : il
+     ecrit dans l'element designe par `window._g45ListId`. On le pointe sur notre
+     conteneur, puis on le REMET a sa valeur d'origine — sinon l'onglet Resultats
+     ecrirait ensuite dans le panneau Competitions. */
+  if (_g45CompetVue === 'calendrier') {
+    body.id = 'g45-compet-cal';
+    var ancien = window._g45ListId;
+    window._g45ListId = 'g45-compet-cal';
+    try { await g45LoadCalendar(c.s, null, 0, c.sp); }
+    catch (e) { body.innerHTML = '<div style="color:#ff6b6b;font-size:11.5px;">\u274c ' + (e && e.message ? e.message : 'calendrier indisponible') + '</div>'; }
+    window._g45ListId = ancien;
+    return;
+  }
 
   var eq = await _g45CompetEquipes(c);
   if (!eq.length) { body.innerHTML = '<div style="color:#ffb13d;font-size:11.5px;">Aucune \u00e9quipe trouv\u00e9e pour cette comp\u00e9tition.</div>'; return; }
@@ -31534,3 +31550,152 @@ async function loadCompetTab() {
       }).join('');
 }
 window.loadCompetTab = loadCompetTab;
+
+/* Les fleches < > du calendrier appellent g45CalNav, qui ecrit dans
+   `window._g45ListId`. Tant qu'on est sur la vue Calendrier des Competitions,
+   on redirige vers notre conteneur. */
+var _g45CalNavOrig = (typeof g45CalNav === 'function') ? g45CalNav : null;
+if (_g45CalNavOrig) {
+  window.g45CalNav = function (delta) {
+    if (_g45CompetVue === 'calendrier' && document.getElementById('g45-compet-cal')) {
+      var ancien = window._g45ListId;
+      window._g45ListId = 'g45-compet-cal';
+      var r = _g45CalNavOrig(delta);
+      Promise.resolve(r).then(function () { window._g45ListId = ancien; });
+      return r;
+    }
+    return _g45CalNavOrig(delta);
+  };
+}
+
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   GONES45 — TRANSFERTS (vue de l'onglet Compétitions)
+   ───────────────────────────────────────────────────────────────────────────
+   Source : site.api.espn.com/apis/site/v2/sports/{sport}/{ligue}/transactions
+   Choisi apres test : `sports.core` renvoie les memes 611 transferts mais avec
+   des `$ref` a resoudre un par un, alors que `site.api` livre le joueur et les
+   deux clubs deja developpes. Une requete, aucune resolution.
+
+   PIEGE : sans parametre `season`, ESPN pointe sur la saison EN COURS, qui est
+   vide en debut d'exercice — la premiere tentative renvoyait 0. On demande donc
+   explicitement l'annee, avec repli sur la precedente si le compte est nul.
+
+   Les montants existent (`displayAmount`) mais valent le plus souvent
+   « Undisclosed » : ESPN ne publie pas les indemnites comme Transfermarkt.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+var _g45TrfCache = {};
+
+async function g45Transferts(slug, sportPath, an) {
+  sportPath = sportPath || 'soccer';
+  var cle = 'g45trf_' + sportPath + '_' + slug + '_' + an;
+  if (_g45TrfCache[cle]) return _g45TrfCache[cle];
+  try {
+    var b = localStorage.getItem(cle);
+    if (b) { var o = JSON.parse(b); if (Date.now() - o.ts < 12 * 3600 * 1000) { _g45TrfCache[cle] = o.d; return o.d; } }
+  } catch (e) {}
+
+  var out = [];
+  try {
+    var r = await fetch('https://site.api.espn.com/apis/site/v2/sports/' + sportPath + '/' + slug +
+                        '/transactions?season=' + an + '&limit=400');
+    if (r.ok) {
+      var d = await r.json();
+      out = (d.transactions || []).map(function (t) {
+        var a = t.athlete || {};
+        return {
+          date: t.date || '',
+          joueur: a.displayName || ((a.firstName || '') + ' ' + (a.lastName || '')).trim() || '?',
+          de: (t.from && (t.from.displayName || t.from.abbreviation)) || '',
+          vers: (t.to && (t.to.displayName || t.to.abbreviation)) || '',
+          deId: (t.from && t.from.id) || '',
+          versId: (t.to && t.to.id) || '',
+          type: t.type || '',
+          montant: (t.displayAmount && t.displayAmount !== 'Undisclosed') ? t.displayAmount : ''
+        };
+      });
+    }
+  } catch (e) { console.warn('transferts', e && e.message); }
+
+  out.sort(function (x, y) { return new Date(y.date) - new Date(x.date); });
+  _g45TrfCache[cle] = out;
+  try { localStorage.setItem(cle, JSON.stringify({ ts: Date.now(), d: out })); } catch (e) {}
+  return out;
+}
+window.g45Transferts = g45Transferts;
+
+var _g45TrfFiltre = '';
+
+function g45TrfFiltrer(v) { _g45TrfFiltre = v; loadCompetTab(); }
+window.g45TrfFiltrer = g45TrfFiltrer;
+
+async function g45TrfRender(c, body) {
+  var an = _g45CompetAnnee(c.s);
+  body.innerHTML = '<div style="color:#9fb0c7;font-size:11.5px;">\u23f3 Chargement des transferts\u2026</div>';
+
+  var liste = await g45Transferts(c.s, c.sp, an);
+  /* Debut de saison : la saison en cours est encore vide, on montre la precedente. */
+  var anAff = an;
+  if (!liste.length) { anAff = an - 1; liste = await g45Transferts(c.s, c.sp, anAff); }
+  if (!liste.length) {
+    body.innerHTML = '<div style="color:#ffb13d;font-size:11.5px;">Aucun transfert publi\u00e9 par ESPN pour cette comp\u00e9tition.</div>';
+    return;
+  }
+
+  /* Clubs presents, pour filtrer par equipe. */
+  var clubs = {};
+  liste.forEach(function (t) { if (t.de) clubs[t.de] = 1; if (t.vers) clubs[t.vers] = 1; });
+  var opts = '<option value="">Tous les clubs</option>' + Object.keys(clubs).sort().map(function (n) {
+    return '<option value="' + n.replace(/"/g, '&quot;') + '"' + (n === _g45TrfFiltre ? ' selected' : '') + '>' + n + '</option>';
+  }).join('');
+
+  var vis = _g45TrfFiltre
+    ? liste.filter(function (t) { return t.de === _g45TrfFiltre || t.vers === _g45TrfFiltre; })
+    : liste;
+
+  var ligne = function (t, sens) {
+    var autre = sens === 'in' ? t.de : t.vers;
+    var fl = sens === 'in' ? '<span style="color:#4ade80;">\u2190</span>' : '<span style="color:#ffb13d;">\u2192</span>';
+    var d = (t.date || '').slice(8, 10) + '/' + (t.date || '').slice(5, 7);
+    return '<div style="display:flex;align-items:center;gap:8px;padding:7px 9px;margin-bottom:5px;background:rgba(255,255,255,.04);border-radius:8px;">'
+      + '<span style="color:#9fb0c7;font-size:10px;min-width:36px;">' + d + '</span>'
+      + '<span style="flex:1;font-size:11.5px;font-weight:700;">' + t.joueur + '</span>'
+      + fl + '<span style="font-size:11px;color:#9fb0c7;max-width:130px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">'
+      + (autre || 'libre') + '</span>'
+      + (t.montant ? '<span style="font-size:10px;color:#4ade80;font-weight:700;">' + t.montant + '</span>' : '')
+      + '</div>';
+  };
+
+  var corps;
+  if (_g45TrfFiltre) {
+    /* Vue club : arrivees et departs separes, comme demande. */
+    var arr = vis.filter(function (t) { return t.vers === _g45TrfFiltre; });
+    var dep = vis.filter(function (t) { return t.de === _g45TrfFiltre; });
+    corps = '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:12px;">'
+      + '<div><div style="font-size:11.5px;font-weight:800;color:#4ade80;margin-bottom:7px;">\u2b07\ufe0f Arriv\u00e9es (' + arr.length + ')</div>'
+        + (arr.length ? arr.map(function (t) { return ligne(t, 'in'); }).join('') : '<div style="color:#9fb0c7;font-size:11px;">Aucune</div>') + '</div>'
+      + '<div><div style="font-size:11.5px;font-weight:800;color:#ffb13d;margin-bottom:7px;">\u2b06\ufe0f D\u00e9parts (' + dep.length + ')</div>'
+        + (dep.length ? dep.map(function (t) { return ligne(t, 'out'); }).join('') : '<div style="color:#9fb0c7;font-size:11px;">Aucun</div>') + '</div>'
+      + '</div>';
+  } else {
+    corps = vis.slice(0, 200).map(function (t) {
+      var d = (t.date || '').slice(8, 10) + '/' + (t.date || '').slice(5, 7);
+      return '<div style="display:flex;align-items:center;gap:8px;padding:7px 9px;margin-bottom:5px;background:rgba(255,255,255,.04);border-radius:8px;flex-wrap:wrap;">'
+        + '<span style="color:#9fb0c7;font-size:10px;min-width:36px;">' + d + '</span>'
+        + '<span style="flex:1;min-width:110px;font-size:11.5px;font-weight:700;">' + t.joueur + '</span>'
+        + '<span style="font-size:11px;color:#9fb0c7;">' + (t.de || 'libre') + '</span>'
+        + '<span style="color:var(--a);">\u2192</span>'
+        + '<span style="font-size:11px;font-weight:700;">' + (t.vers || '?') + '</span>'
+        + (t.montant ? '<span style="font-size:10px;color:#4ade80;font-weight:700;">' + t.montant + '</span>' : '')
+        + '</div>';
+    }).join('');
+  }
+
+  body.innerHTML = '<div style="display:flex;gap:8px;align-items:center;margin-bottom:10px;flex-wrap:wrap;">'
+      + '<select onchange="g45TrfFiltrer(this.value)" style="flex:1;min-width:180px;padding:9px 11px;font-size:12px;border-radius:9px;background:#0f1626;border:1px solid rgba(255,255,255,.14);color:#e6ecf5;">' + opts + '</select>'
+      + '<span style="font-size:10px;color:var(--t3);">' + vis.length + ' transfert(s) \u00b7 saison ' + anAff + '</span>'
+      + '</div>' + corps
+    + '<div style="margin-top:10px;font-size:10px;color:var(--t3);">Source ESPN. Les indemnit\u00e9s sont rarement publi\u00e9es \u2014 la plupart des transferts sont annonc\u00e9s sans montant.</div>';
+}
+window.g45TrfRender = g45TrfRender;
