@@ -19949,6 +19949,31 @@ async function loadCalendrier() {
     var u = teams[i];
     var sched;
     try { sched = await _calTeamSchedule(u.n); } catch(e){ sched = null; }
+
+    /* PIEGE DEJA RENCONTRE SUR LE MUR : le calendrier d'EQUIPE d'ESPN est VIDE
+       pour la saison a venir (0 match pour le PSG en season=2026) alors que le
+       scoreboard du CHAMPIONNAT contient bien les rencontres. En aout, l'Agenda
+       n'affichait donc plus rien. On rejoue ici le meme repli que le mur :
+       balayage du scoreboard sur 60 jours via _g45AVenirLigue. */
+    var _aVenirSup = [];
+    var _pasDeFutur = !sched || !sched.matches ||
+      !sched.matches.some(function(m){
+        return !m.completed && new Date(m.date).getTime() >= nowTs;
+      });
+    if(_pasDeFutur){
+      try{
+        var _lg = (typeof espnLeagueOf === 'function') ? espnLeagueOf(u.n) : null;
+        var _res = (typeof espnResolveTeam === 'function') ? await espnResolveTeam(u.n) : null;
+        if(_lg && _res && _res.id){
+          _aVenirSup = await _g45AVenirLigue(_lg, String(_res.id), (_res.name || u.n));
+        }
+      }catch(e){}
+      if(_aVenirSup && _aVenirSup.length){
+        sched = sched || { team: null, matches: [] };
+        sched.matches = (sched.matches || []).concat(_aVenirSup);
+      }
+    }
+
     if(!sched || !sched.matches || !sched.matches.length) continue;
     var ourId = (sched.team && sched.team.id!=null) ? String(sched.team.id) : null;
     var ourName = (sched.team && sched.team.name) ? sched.team.name : u.n;
@@ -31522,7 +31547,7 @@ async function loadCompetTab() {
   var vues = [['equipes','\ud83d\udc65 \u00c9quipes'], ['calendrier','\ud83d\udcc5 Calendrier'],
               ['journees','\ud83d\uddd3\ufe0f Journ\u00e9es'],
               ['classement','\ud83d\udcca Classement'], ['forme','\ud83d\udcc8 Forme'],
-              ['buteurs', c.sp === 'soccer' ? '\u26bd Buteurs' : '\ud83c\udfc5 Leaders'],
+              ['buteurs', c.sp === 'soccer' ? '\u26bd Buteurs' : '\ud83c\udfc5 Individuel'],
               ['transferts','\ud83d\udd04 Transferts']];
   var onglets = vues.map(function (v) {
     var on = (v[0] === _g45CompetVue);
