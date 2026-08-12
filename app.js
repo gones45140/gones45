@@ -31453,6 +31453,11 @@ window.g45CompetVersResultats = g45CompetVersResultats;
 var _g45CompetVue = 'equipes';
 var _g45CompetCache = {};
 
+/* Logo officiel de la competition, capture GRATUITEMENT dans la reponse du
+   classement (leagues[0].logos) — aucune requete supplementaire. */
+var _g45CompetLogos = {};
+try { _g45CompetLogos = JSON.parse(localStorage.getItem('g45_compet_logos') || '{}') || {}; } catch (e) {}
+
 var _g45CompetSaison = null;   /* null = automatique */
 
 function g45CompetSaison(v) {
@@ -31494,6 +31499,12 @@ async function _g45CompetEquipes(c) {
                         '/standings?season=' + an);
     if (r.ok) {
       var d = await r.json();
+      var _lg = (d.leagues && d.leagues[0]) || null;
+      var _lo = (_lg && _lg.logos && _lg.logos[0] && _lg.logos[0].href) || '';
+      if (_lo && !_g45CompetLogos[c.s]) {
+        _g45CompetLogos[c.s] = _lo;
+        try { localStorage.setItem('g45_compet_logos', JSON.stringify(_g45CompetLogos)); } catch (e) {}
+      }
       /* Deux formes : groupes (children[]) ou table unique (standings.entries). */
       var groupes = (d.children && d.children.length) ? d.children : [{ standings: d.standings }];
       groupes.forEach(function (g) {
@@ -31631,21 +31642,24 @@ async function loadCompetTab() {
 
   if (!choisie) {
     var html = groupes.map(function (g) {
+      /* PAS de logo ici : ESPN indexe ses logos de competition par IDENTIFIANT
+         NUMERIQUE (soccer/500/9.png pour la Ligue 1), pas par slug. Les
+         construire depuis le slug donnait 79 requetes en 404. Recuperer les
+         identifiants couterait une requete par competition — trop cher pour de
+         la decoration. On garde donc l'emoji, et le vrai logo n'apparait que sur
+         la competition OUVERTE, ou il arrive gratuitement avec le classement. */
       var ch = (g.leagues || []).map(function (l) {
-        /* ESPN sert le logo de chaque competition depuis son slug. Deux formes :
-           le chemin par nom (soccer/fra.1) et le chemin numerique (500/270559),
-           qui couvre le Top 14 et le NRL. `onerror` bascule de l'un a l'autre,
-           puis retombe sur l'emoji si aucun logo n'existe — jamais d'image
-           cassee dans la liste. */
-        var slug = String(l.slug);
-        var url1 = 'https://a.espncdn.com/i/leaguelogos/soccer/500/' + slug + '.png';
-        var url2 = 'https://a.espncdn.com/i/leaguelogos/' + _g45CompetSport + '/500/' + slug + '.png';
-        var img = '<img src="' + (/^\d+$/.test(slug) ? url2 : url1) + '" '
-          + 'onerror="if(!this.dataset.r){this.dataset.r=1;this.src=\'' + (/^\d+$/.test(slug) ? url1 : url2) + '\';}else{this.style.display=\'none\';this.nextSibling.style.display=\'inline\';}" '
-          + 'style="width:17px;height:17px;object-fit:contain;vertical-align:middle;margin-right:5px;" loading="lazy">'
-          + '<span style="display:none;">' + (l.ico || '') + ' </span>';
-        return '<button onclick="g45CompetSel(\'' + slug + '\')" style="border:none;cursor:pointer;font-size:11px;font-weight:700;padding:7px 11px;margin:0 5px 5px 0;border-radius:16px;background:#1a2235;color:#e6ecf5;display:inline-flex;align-items:center;">'
-          + img + l.name + '</button>';
+        /* Le logo n'apparait que si la competition a deja ete ouverte au moins
+           une fois : son URL a alors ete capturee GRATUITEMENT dans la reponse
+           du classement. La table se remplit donc a l'usage, sans une seule
+           requete de plus, et sans les 404 que produisait la construction
+           d'URL depuis le slug (ESPN indexe par identifiant numerique). */
+        var lo = _g45CompetLogos[l.slug];
+        var vis = lo
+          ? '<img src="' + lo + '" style="width:16px;height:16px;object-fit:contain;margin-right:5px;" onerror="this.remove()" loading="lazy">'
+          : '<span style="margin-right:4px;">' + (l.ico || '') + '</span>';
+        return '<button onclick="g45CompetSel(\'' + l.slug + '\')" style="border:none;cursor:pointer;font-size:11px;font-weight:700;padding:7px 11px;margin:0 5px 5px 0;border-radius:16px;background:#1a2235;color:#e6ecf5;display:inline-flex;align-items:center;">'
+          + vis + l.name + '</button>';
       }).join('');
       return '<div style="margin-bottom:10px;"><div style="font-size:9px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;color:#4f5d88;margin-bottom:5px;">'
         + g.grp + '</div><div>' + ch + '</div></div>';
@@ -31680,9 +31694,8 @@ async function loadCompetTab() {
 
   el.innerHTML = '<button onclick="g45CompetSel(null)" style="border:none;background:rgba(255,255,255,.06);color:var(--t2);border-radius:8px;padding:6px 12px;font-size:11px;font-weight:700;cursor:pointer;margin-bottom:10px;">\u2190 ' + sp.name + '</button>'
     + '<div class="sec" style="margin-top:0;display:flex;align-items:center;gap:8px;">'
-      + '<img src="https://a.espncdn.com/i/leaguelogos/' + (/^\d+$/.test(String(c.s)) ? c.sp : 'soccer') + '/500/' + c.s + '.png" '
-      + 'onerror="this.style.display=\'none\'" style="width:22px;height:22px;object-fit:contain;">'
-      + '<span>' + c.n + '</span></div>'
+      + (_g45CompetLogos[c.s] ? '<img src="' + _g45CompetLogos[c.s] + '" style="width:22px;height:22px;object-fit:contain;" onerror="this.style.display=\'none\'">' : '')
+      + '<span>' + (c.ico || '') + ' ' + c.n + '</span></div>'
     + '<div style="display:flex;gap:8px;margin-bottom:10px;align-items:center;flex-wrap:wrap;">'
       + '<select onchange="g45CompetSaison(this.value)" style="padding:9px 11px;font-size:12px;border-radius:9px;background:#0f1626;border:1px solid rgba(255,255,255,.14);color:#e6ecf5;">' + opts + '</select>'
       + '</div>'
@@ -31691,7 +31704,13 @@ async function loadCompetTab() {
 
   var body = document.getElementById('g45-compet-body');
 
-  if (_g45CompetVue === 'classement') { await g45LoadStandings(c.s, c.sp, body); return; }
+  if (_g45CompetVue === 'classement') {
+    /* On lance la capture du logo en arriere-plan : elle passe par la meme
+       reponse de classement, deja mise en cache 6 h. */
+    _g45CompetEquipes(c).catch(function () {});
+    await g45LoadStandings(c.s, c.sp, body);
+    return;
+  }
   if (_g45CompetVue === 'buteurs') {
     if (c.sp === 'soccer') { await g45LoadScorers(c.s, c.sp, body); return; }
     if (c.s === '3') { await g45StatsIndRender(c, body); return; }
