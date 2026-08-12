@@ -31181,6 +31181,46 @@ async function g45NrlCharger(annee) {
       });
     } catch (e) {}
   }
+  /* REPLI SCOREBOARD, meme cause que pour la vue Forme : les identifiants de
+     `sports.core` ne sont pas ceux de `site.api`, donc le calendrier par equipe
+     renvoie 500 sur le NRL — d'ou « 0 matchs sur 0 journees ». Le scoreboard
+     accepte une plage de dates et porte les bons identifiants. */
+  if (!out.length) {
+    var civil = ['bra.1','usa.1','arg.1','3','mlb'].indexOf(_g45NrlCtx.ligue) >= 0;
+    var moisDeb = civil ? 0 : 7;
+    var fjour = function (d) {
+      return d.getFullYear() + String(d.getMonth() + 1).padStart(2, '0') + String(d.getDate()).padStart(2, '0');
+    };
+    for (var mo = 0; mo < 12; mo++) {
+      _g45NrlMsg('\u23f3 Mois ' + (mo + 1) + '/12\u2026');
+      var da = new Date(annee, moisDeb + mo, 1), db = new Date(annee, moisDeb + mo + 1, 0);
+      try {
+        var rr = await fetch('https://site.api.espn.com/apis/site/v2/sports/' + _g45NrlCtx.sport +
+                             '/' + _g45NrlCtx.ligue + '/scoreboard?dates=' + fjour(da) + '-' + fjour(db) + '&limit=1000');
+        if (!rr.ok) continue;
+        var jj = await rr.json();
+        (jj.events || []).forEach(function (e) {
+          var id = String(e.id);
+          if (vus[id]) return;
+          var cc = (e.competitions && e.competitions[0]) || {};
+          var stt = (cc.status && cc.status.type) || {};
+          var cps = cc.competitors || []; if (cps.length < 2) return;
+          var hd = cps.filter(function (x) { return x.homeAway === 'home'; })[0] || cps[0];
+          var ad = cps.filter(function (x) { return x.homeAway === 'away'; })[0] || cps[1];
+          var nm2 = function (x) { return (x.team && (x.team.shortDisplayName || x.team.displayName)) || '?'; };
+          var sc2 = function (x) { var v = x.score; if (v && typeof v === 'object') v = (v.value != null ? v.value : v.displayValue); return parseInt(v, 10) || 0; };
+          vus[id] = 1;
+          out.push({
+            id: id, date: e.date || '',
+            joue: (stt.completed === true || stt.state === 'post'),
+            jr: (e.week && e.week.number) || (cc.week && cc.week.number) || 0,
+            dom: nm2(hd), ext: nm2(ad), sDom: sc2(hd), sExt: sc2(ad)
+          });
+        });
+      } catch (e) {}
+    }
+  }
+
   out.sort(function (a, b) { return new Date(a.date) - new Date(b.date); });
   if (!out.some(function (m) { return m.jr; })) {
     var base = out.length ? new Date(out[0].date).getTime() : 0;
