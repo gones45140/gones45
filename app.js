@@ -337,8 +337,16 @@ function espnToFdMatch(m, ourName, ourFdId) {
   function simScore(teamNameLow, ourLow){
     if(teamNameLow===ourLow) return 100;
     if(teamNameLow.indexOf(ourLow)>=0 || ourLow.indexOf(teamNameLow)>=0) return 50;
-    // mots communs significatifs (>3 lettres)
-    var words = ourLow.split(/\s+/).filter(function(w){return w.length>3;});
+    /* ABREVIATIONS. Le filtre « mots de plus de 3 lettres » ecartait entierement
+       un nom comme « PSG » : les deux scores tombaient a 0, et le repli
+       « on garde home par defaut » collait l'identifiant du PSG a PARIS FC,
+       l'equipe qui recevait. Resultat : filtre domicile/exterieur a 0 match et
+       des NaN partout. On compare donc aussi les INITIALES. */
+    var mots = teamNameLow.split(/[^a-z0-9]+/).filter(Boolean);
+    var initiales = mots.map(function(w){ return w.charAt(0); }).join('');
+    if(ourLow.length <= 4 && ourLow.replace(/[^a-z0-9]/g,'') === initiales) return 90;
+    // mots communs significatifs (3 lettres ou plus)
+    var words = ourLow.split(/\s+/).filter(function(w){return w.length>=3;});
     var hits = words.filter(function(w){ return teamNameLow.indexOf(w)>=0; }).length;
     return hits>0 ? 10*hits : 0;
   }
@@ -31336,3 +31344,176 @@ function _g45CoteDuMatch(espnId, estDom) {
   return (v && v > 1) ? v : null;
 }
 window._g45CoteDuMatch = _g45CoteDuMatch;
+
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   GONES45 — ONGLET COMPÉTITIONS
+   ───────────────────────────────────────────────────────────────────────────
+   POURQUOI : jusqu'ici on ne pouvait consulter une equipe que si elle etait
+   dans le MUR. Cet onglet ouvre l'inverse — on part de la competition, on voit
+   toutes les equipes qui y participent, et on clique pour ouvrir la fiche
+   complete (memes onglets Saisons / Bilan / Compo qu'une equipe suivie).
+   Il range aussi ce qui n'avait rien a faire dans Outils : Outils reste pour
+   l'APPLICATION (synchro, notifications, export), Competitions pour le SPORT.
+
+   ECONOMIE : le classement ESPN renvoie en UNE requete le tableau ET la liste
+   des equipes avec leurs logos. Pas besoin d'un appel par club.
+   On reutilise `g45LoadStandings` et `g45LoadScorers`, deja ecrits et testes.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+var G45_COMPETS = [
+  { s:'uefa.champions',   n:'Ligue des Champions', ico:'\ud83c\udfc6', sp:'soccer' },
+  { s:'uefa.europa',      n:'Ligue Europa',        ico:'\ud83c\udfc5', sp:'soccer' },
+  { s:'uefa.europa.conf', n:'Conference League',   ico:'\ud83e\udd49', sp:'soccer' },
+  { s:'fra.1',            n:'Ligue 1',             ico:'\ud83c\uddeb\ud83c\uddf7', sp:'soccer' },
+  { s:'eng.1',            n:'Premier League',      ico:'\ud83c\uddec\ud83c\udde7', sp:'soccer' },
+  { s:'esp.1',            n:'LaLiga',              ico:'\ud83c\uddea\ud83c\uddf8', sp:'soccer' },
+  { s:'ita.1',            n:'Serie A',             ico:'\ud83c\uddee\ud83c\uddf9', sp:'soccer' },
+  { s:'ger.1',            n:'Bundesliga',          ico:'\ud83c\udde9\ud83c\uddea', sp:'soccer' },
+  { s:'ned.1',            n:'Eredivisie',          ico:'\ud83c\uddf3\ud83c\uddf1', sp:'soccer' },
+  { s:'por.1',            n:'Liga Portugal',       ico:'\ud83c\uddf5\ud83c\uddf9', sp:'soccer' },
+  { s:'bra.1',            n:'Br\u00e9sil',         ico:'\ud83c\udde7\ud83c\uddf7', sp:'soccer' },
+  { s:'arg.1',            n:'Argentine',           ico:'\ud83c\udde6\ud83c\uddf7', sp:'soccer' },
+  { s:'usa.1',            n:'MLS',                 ico:'\ud83c\uddfa\ud83c\uddf8', sp:'soccer' },
+  { s:'3',                n:'NRL',                 ico:'\ud83c\udfc9', sp:'rugby-league' }
+];
+
+var _g45CompetSel = 'fra.1';
+var _g45CompetVue = 'equipes';
+var _g45CompetCache = {};
+
+/* Annee de saison : les championnats en annee civile ne basculent pas en aout. */
+function _g45CompetAnnee(slug) {
+  var civils = ['bra.1','usa.1','arg.1','nor.1','swe.1','jpn.1','chn.1','3'];
+  var d = new Date();
+  if (civils.indexOf(slug) >= 0) return d.getFullYear();
+  return (d.getMonth() + 1 >= 8) ? d.getFullYear() : d.getFullYear() - 1;
+}
+
+/* Liste des equipes d'une competition, tiree du CLASSEMENT — une seule requete,
+   et on recupere au passage logos, rang et points. Cache 6 h. */
+async function _g45CompetEquipes(c) {
+  var an = _g45CompetAnnee(c.s);
+  var cle = 'g45compet_' + c.sp + '_' + c.s + '_' + an;
+  if (_g45CompetCache[cle]) return _g45CompetCache[cle];
+  try {
+    var brut = localStorage.getItem(cle);
+    if (brut) {
+      var o = JSON.parse(brut);
+      if (Date.now() - o.ts < 6 * 3600 * 1000) { _g45CompetCache[cle] = o.d; return o.d; }
+    }
+  } catch (e) {}
+
+  var out = [];
+  try {
+    var r = await fetch('https://site.api.espn.com/apis/v2/sports/' + c.sp + '/' + c.s +
+                        '/standings?season=' + an);
+    if (r.ok) {
+      var d = await r.json();
+      /* Deux formes : groupes (children[]) ou table unique (standings.entries). */
+      var groupes = (d.children && d.children.length) ? d.children : [{ standings: d.standings }];
+      groupes.forEach(function (g) {
+        ((g.standings && g.standings.entries) || []).forEach(function (e) {
+          var t = e.team || {};
+          var st = {};
+          (e.stats || []).forEach(function (x) { st[x.name] = x.value; });
+          out.push({
+            id: String(t.id || ''),
+            nom: t.displayName || t.name || '?',
+            court: t.shortDisplayName || t.abbreviation || '',
+            logo: (t.logos && t.logos[0] && t.logos[0].href) || '',
+            grp: (d.children && d.children.length) ? (g.name || '') : '',
+            j: st.gamesPlayed || 0, v: st.wins || 0, n: st.ties || 0, p: st.losses || 0,
+            bp: st.pointsFor || 0, bc: st.pointsAgainst || 0,
+            diff: st.pointDifferential || ((st.pointsFor || 0) - (st.pointsAgainst || 0)),
+            pts: st.points || 0, rang: st.rank || 0
+          });
+        });
+      });
+    }
+  } catch (e) { console.warn('compet equipes', e && e.message); }
+
+  /* Repli : certaines coupes n'ont pas de classement avant la phase de groupes. */
+  if (!out.length) {
+    try {
+      var tb = await g45CoreTeams(c.sp, c.s);
+      var vus = {};
+      Object.keys(tb).forEach(function (k) {
+        var id = tb[k];
+        if (vus[id]) return; vus[id] = 1;
+        out.push({ id: String(id), nom: k, court: '', logo: '', j:0,v:0,n:0,p:0,bp:0,bc:0,diff:0,pts:0,rang:0 });
+      });
+    } catch (e) {}
+  }
+
+  out.sort(function (a, b) { return (a.rang || 99) - (b.rang || 99) || b.pts - a.pts; });
+  _g45CompetCache[cle] = out;
+  try { localStorage.setItem(cle, JSON.stringify({ ts: Date.now(), d: out })); } catch (e) {}
+  return out;
+}
+
+function g45CompetSel(slug) { _g45CompetSel = slug; loadCompetTab(); }
+function g45CompetVue(v) { _g45CompetVue = v; loadCompetTab(); }
+window.g45CompetSel = g45CompetSel;
+window.g45CompetVue = g45CompetVue;
+
+/* Ouvre la fiche complete d'une equipe, qu'elle soit dans le mur ou non. */
+function g45CompetOuvrir(nom) {
+  try { openClub(nom); } catch (e) { console.warn('ouverture fiche', nom, e && e.message); }
+}
+window.g45CompetOuvrir = g45CompetOuvrir;
+
+async function loadCompetTab() {
+  var el = document.getElementById('t-compet');
+  if (!el) return;
+  var c = G45_COMPETS.filter(function (x) { return x.s === _g45CompetSel; })[0] || G45_COMPETS[3];
+
+  var chips = G45_COMPETS.map(function (x) {
+    var on = (x.s === _g45CompetSel);
+    return '<button onclick="g45CompetSel(\'' + x.s + '\')" style="padding:7px 12px;margin:0 6px 6px 0;font-size:11.5px;font-weight:700;cursor:pointer;border-radius:20px;'
+      + (on ? 'background:#2563eb;border:1px solid #3b82f6;color:#fff;' : 'background:#1a2235;border:1px solid rgba(255,255,255,.14);color:#e6ecf5;')
+      + '">' + x.ico + ' ' + x.n + '</button>';
+  }).join('');
+
+  var vues = [['equipes','\ud83d\udc65 \u00c9quipes'], ['classement','\ud83d\udcca Classement'],
+              ['buteurs','\u26bd Buteurs & passeurs']];
+  var onglets = vues.map(function (v) {
+    var on = (v[0] === _g45CompetVue);
+    return '<button onclick="g45CompetVue(\'' + v[0] + '\')" style="flex:1;padding:10px;font-size:12px;font-weight:800;cursor:pointer;border-radius:9px;'
+      + (on ? 'background:#2563eb;border:1px solid #3b82f6;color:#fff;' : 'background:#1a2235;border:1px solid rgba(255,255,255,.14);color:#9fb0c7;')
+      + '">' + v[1] + '</button>';
+  }).join('');
+
+  el.innerHTML = '<div class="sec" style="margin-top:0;">\ud83c\udfc6 Comp\u00e9titions</div>'
+    + '<div class="fc" style="margin-bottom:10px;">' + chips + '</div>'
+    + '<div style="display:flex;gap:8px;margin-bottom:12px;">' + onglets + '</div>'
+    + '<div id="g45-compet-body" class="fc"><div style="color:#9fb0c7;font-size:11.5px;">\u23f3 Chargement\u2026</div></div>';
+
+  var body = document.getElementById('g45-compet-body');
+
+  if (_g45CompetVue === 'classement') { await g45LoadStandings(c.s, c.sp, body); return; }
+  if (_g45CompetVue === 'buteurs')    { await g45LoadScorers(c.s, c.sp, body); return; }
+
+  var eq = await _g45CompetEquipes(c);
+  if (!eq.length) { body.innerHTML = '<div style="color:#ffb13d;font-size:11.5px;">Aucune \u00e9quipe trouv\u00e9e pour cette comp\u00e9tition.</div>'; return; }
+
+  var grp = {};
+  eq.forEach(function (t) { (grp[t.grp || ''] = grp[t.grp || ''] || []).push(t); });
+
+  body.innerHTML = '<div style="font-size:10px;color:var(--t3);margin-bottom:10px;">'
+      + eq.length + ' \u00e9quipes \u00b7 clique pour ouvrir la fiche compl\u00e8te</div>'
+    + Object.keys(grp).map(function (g) {
+        return (g ? '<div style="font-size:11px;font-weight:800;color:var(--a);margin:10px 0 6px;">' + g + '</div>' : '')
+          + '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:7px;">'
+          + grp[g].map(function (t) {
+              return '<div onclick="g45CompetOuvrir(\'' + String(t.nom).replace(/'/g, "\\'") + '\')" '
+                + 'style="display:flex;align-items:center;gap:8px;padding:8px 9px;background:rgba(255,255,255,.04);border-radius:9px;cursor:pointer;">'
+                + (t.logo ? '<img src="' + t.logo + '" style="width:22px;height:22px;object-fit:contain;" loading="lazy">' : '<span style="width:22px;"></span>')
+                + '<div style="min-width:0;"><div style="font-size:11.5px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">' + t.nom + '</div>'
+                + (t.j ? '<div style="font-size:9.5px;color:#9fb0c7;">' + t.j + 'j \u00b7 ' + t.pts + ' pts</div>' : '')
+                + '</div></div>';
+            }).join('')
+          + '</div>';
+      }).join('');
+}
+window.loadCompetTab = loadCompetTab;
