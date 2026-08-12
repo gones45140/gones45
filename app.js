@@ -32137,6 +32137,40 @@ window.g45FormeRender = g45FormeRender;
 
 var _g45LdCat = {};   /* categorie choisie, par competition */
 
+/* ESPN nomme ses categories en anglais. Table de correspondance pour les sports
+   qu'Antoine suit ; toute categorie absente garde son libelle d'origine plutot
+   que d'etre masquee — mieux vaut un mot anglais qu'une statistique perdue. */
+var G45_LD_FR = {
+  /* rugby a XIII et a XV */
+  'tries':'Essais', 'tryScorers':'Marqueurs d\'essai', 'points':'Points',
+  'conversions':'Transformations', 'penaltyGoals':'P\u00e9nalit\u00e9s',
+  'tackles':'Plaquages', 'metres':'M\u00e8tres gagn\u00e9s', 'lineBreaks':'Perc\u00e9es',
+  'tryAssists':'Passes d\u00e9cisives', 'offloads':'Offloads',
+  /* hockey */
+  'goals':'Buts', 'assists':'Passes d\u00e9cisives', 'plusMinus':'Diff\u00e9rentiel',
+  'powerPlayGoals':'Buts en sup\u00e9riorit\u00e9', 'shortHandedGoals':'Buts en inf\u00e9riorit\u00e9',
+  'savePct':'% d\'arr\u00eats', 'goalsAgainstAverage':'Buts encaiss\u00e9s / match', 'shutouts':'Blanchissages',
+  'wins':'Victoires', 'saves':'Arr\u00eats',
+  /* basket */
+  'avgPoints':'Points / match', 'avgRebounds':'Rebonds / match', 'avgAssists':'Passes / match',
+  'avgSteals':'Interceptions / match', 'avgBlocks':'Contres / match',
+  'rebounds':'Rebonds', 'steals':'Interceptions', 'blocks':'Contres',
+  'threePointFieldGoalPct':'% \u00e0 3 points', 'fieldGoalPct':'% aux tirs', 'freeThrowPct':'% aux lancers',
+  /* baseball */
+  'ERA':'Moyenne de points m\u00e9rit\u00e9s', 'earnedRunAverage':'Moyenne de points m\u00e9rit\u00e9s',
+  'strikeouts':'Retraits au b\u00e2ton', 'battingAverage':'Moyenne au b\u00e2ton',
+  'homeRuns':'Coups de circuit', 'RBIs':'Points produits', 'hits':'Coups s\u00fbrs',
+  'stolenBases':'Buts vol\u00e9s', 'whip':'WHIP',
+  /* football americain */
+  'passingYards':'Yards \u00e0 la passe', 'rushingYards':'Yards \u00e0 la course',
+  'receivingYards':'Yards \u00e0 la r\u00e9ception', 'passingTouchdowns':'Touchdowns \u00e0 la passe',
+  'totalTackles':'Plaquages', 'sacks':'Sacks', 'interceptions':'Interceptions'
+};
+
+function _g45LdLibelle(cat) {
+  return G45_LD_FR[cat.name] || G45_LD_FR[cat.abbreviation] || cat.displayName || cat.name;
+}
+
 function g45LdCat(slug, nom) { _g45LdCat[slug] = nom; loadCompetTab(); }
 window.g45LdCat = g45LdCat;
 
@@ -32166,12 +32200,21 @@ async function g45LeadersGen(c, box, an) {
 
   /* Le « type » de saison varie : 1 = pre-saison, 2 = saison reguliere,
      0 = toutes. On essaie dans l'ordre le plus probable. */
+  /* Le chemin core varie : le type de saison (2 = saison reguliere, 1 = pre,
+     0 = toutes) n'est pas le meme partout, et certains sports exposent aussi
+     les leaders SANS segment `types`. On essaie les combinaisons plutot que de
+     supposer — c'est ce qui fait repondre le NRL et la NHL. */
   var data = null;
-  for (var t = 0; t < 3; t++) {
-    var typ = [2, 1, 0][t];
+  var bases = [
+    '/v2/sports/' + c.sp + '/leagues/' + c.s + '/seasons/' + an + '/types/2/leaders',
+    '/v2/sports/' + c.sp + '/leagues/' + c.s + '/seasons/' + an + '/types/1/leaders',
+    '/v2/sports/' + c.sp + '/leagues/' + c.s + '/seasons/' + an + '/types/0/leaders',
+    '/v2/sports/' + c.sp + '/leagues/' + c.s + '/seasons/' + an + '/types/3/leaders',
+    '/v2/sports/' + c.sp + '/leagues/' + c.s + '/seasons/' + an + '/leaders'
+  ];
+  for (var t = 0; t < bases.length; t++) {
     try {
-      var r = await fetch('https://sports.core.api.espn.com/v2/sports/' + c.sp +
-                          '/leagues/' + c.s + '/seasons/' + an + '/types/' + typ + '/leaders');
+      var r = await fetch('https://sports.core.api.espn.com' + bases[t]);
       if (!r.ok) continue;
       var j = await r.json();
       if (j && j.categories && j.categories.length) { data = j; break; }
@@ -32179,7 +32222,7 @@ async function g45LeadersGen(c, box, an) {
   }
   if (!data) {
     box.innerHTML = '<div style="color:#ffb13d;font-size:11.5px;">Aucun classement individuel publi\u00e9 par ESPN pour '
-      + c.n + ' en ' + an + '.</div>';
+      + c.n + ' en ' + an + '.<br><span style="font-size:10.5px;color:var(--t3);">Essaie une autre saison avec le s\u00e9lecteur ci-dessus \u2014 la profondeur varie selon la comp\u00e9tition.</span></div>';
     return;
   }
 
@@ -32193,7 +32236,7 @@ async function g45LeadersGen(c, box, an) {
     var on = (x.name === cat.name);
     return '<button onclick="g45LdCat(\'' + c.s + '\',\'' + x.name + '\')" style="padding:6px 11px;margin:0 5px 5px 0;font-size:11px;font-weight:700;cursor:pointer;border-radius:16px;'
       + (on ? 'background:#2563eb;border:1px solid #3b82f6;color:#fff;' : 'background:#1a2235;border:1px solid rgba(255,255,255,.14);color:#9fb0c7;')
-      + '">' + (x.displayName || x.name) + '</button>';
+      + '">' + _g45LdLibelle(x) + '</button>';
   }).join('');
 
   var top = cat.leaders.slice(0, 20);
@@ -32216,7 +32259,7 @@ async function g45LeadersGen(c, box, an) {
 
   box.innerHTML = '<div style="margin-bottom:10px;">' + chips + '</div>'
     + '<div style="font-size:10px;color:var(--t3);margin-bottom:8px;">'
-      + (cat.displayName || cat.name) + ' \u00b7 saison ' + an + '</div>'
+      + _g45LdLibelle(cat) + ' \u00b7 saison ' + an + '</div>'
     + lignes.map(function (t) {
         return '<div style="display:flex;align-items:center;gap:9px;padding:8px 9px;margin-bottom:5px;background:rgba(255,255,255,.04);border-radius:8px;">'
           + '<span style="color:#9fb0c7;font-size:11px;min-width:20px;text-align:right;">' + t.rang + '</span>'
