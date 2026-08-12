@@ -18584,20 +18584,24 @@ function calcSaisonStats(matchesRaw, teamId) {
     if(isDom) {
       stats.domN++;
       if(won) stats.domW++; else if(draw) stats.domD++; else stats.domL++;
-      if(total>0.5) stats.domOver05=(stats.domOver05||0)+1;
-      if(total>1.5) stats.domOver15=(stats.domOver15||0)+1;
-      if(total>2.5) stats.domOver25=(stats.domOver25||0)+1;
-      if(total>3.5) stats.domOver35=(stats.domOver35||0)+1;
-      if(total>4.5) stats.domOver45=(stats.domOver45||0)+1;
+      /* Les compteurs UNDER manquaient en domicile/exterieur : seul le global
+         les avait, d'ou des « Under x » a 0 % alors qu'Over 2.5 affichait 29 %.
+         On les incremente explicitement plutot que de deduire 100 - over, qui
+         serait faux des qu'un total tombe pile sur la ligne. */
+      if(total>0.5) stats.domOver05=(stats.domOver05||0)+1; else stats.domUnder05=(stats.domUnder05||0)+1;
+      if(total>1.5) stats.domOver15=(stats.domOver15||0)+1; else stats.domUnder15=(stats.domUnder15||0)+1;
+      if(total>2.5) stats.domOver25=(stats.domOver25||0)+1; else stats.domUnder25=(stats.domUnder25||0)+1;
+      if(total>3.5) stats.domOver35=(stats.domOver35||0)+1; else stats.domUnder35=(stats.domUnder35||0)+1;
+      if(total>4.5) stats.domOver45=(stats.domOver45||0)+1; else stats.domUnder45=(stats.domUnder45||0)+1;
       if(hg>0&&ag>0) stats.domBts=(stats.domBts||0)+1;
     } else {
       stats.extN++;
       if(won) stats.extW++; else if(draw) stats.extD++; else stats.extL++;
-      if(total>0.5) stats.extOver05=(stats.extOver05||0)+1;
-      if(total>1.5) stats.extOver15=(stats.extOver15||0)+1;
-      if(total>2.5) stats.extOver25=(stats.extOver25||0)+1;
-      if(total>3.5) stats.extOver35=(stats.extOver35||0)+1;
-      if(total>4.5) stats.extOver45=(stats.extOver45||0)+1;
+      if(total>0.5) stats.extOver05=(stats.extOver05||0)+1; else stats.extUnder05=(stats.extUnder05||0)+1;
+      if(total>1.5) stats.extOver15=(stats.extOver15||0)+1; else stats.extUnder15=(stats.extUnder15||0)+1;
+      if(total>2.5) stats.extOver25=(stats.extOver25||0)+1; else stats.extUnder25=(stats.extUnder25||0)+1;
+      if(total>3.5) stats.extOver35=(stats.extOver35||0)+1; else stats.extUnder35=(stats.extUnder35||0)+1;
+      if(total>4.5) stats.extOver45=(stats.extOver45||0)+1; else stats.extUnder45=(stats.extUnder45||0)+1;
       if(hg>0&&ag>0) stats.extBts=(stats.extBts||0)+1;
     }
 
@@ -31807,7 +31811,53 @@ async function _g45CompetMatchs(sportPath, slug, an, ids, progres) {
       });
     } catch (e) {}
   }
-  /* Meme regle : une collecte vide n'est pas un resultat, c'est un echec. */
+  /* REPLI SCOREBOARD. Les identifiants d'equipe de `sports.core` (28919, 28920…)
+     ne sont PAS ceux de `site.api` : le calendrier par equipe renvoie alors 500.
+     C'est le cas du NRL, dont le classement n'est pas publie et dont les equipes
+     viennent donc de core. Le scoreboard, lui, accepte une plage de dates et
+     renvoie les matchs AVEC les bons identifiants — une requete par mois au lieu
+     d'une par equipe, et ca marche pour tous les sports. */
+  if (!ms.length) {
+    var moisDebut = (['bra.1','usa.1','arg.1','3','mlb'].indexOf(slug) >= 0) ? 0 : 7;
+    for (var mo = 0; mo < 12; mo++) {
+      if (progres) progres(mo + 1, 12);
+      var d1 = new Date(an, moisDebut + mo, 1);
+      var d2 = new Date(an, moisDebut + mo + 1, 0);
+      var fmt = function (d) {
+        return d.getFullYear() + String(d.getMonth() + 1).padStart(2, '0') + String(d.getDate()).padStart(2, '0');
+      };
+      try {
+        var rs = await fetch('https://site.api.espn.com/apis/site/v2/sports/' + sportPath + '/' + slug +
+                             '/scoreboard?dates=' + fmt(d1) + '-' + fmt(d2) + '&limit=1000');
+        if (!rs.ok) continue;
+        var js = await rs.json();
+        ((js && js.events) || []).forEach(function (e) {
+          if (vus[e.id]) return;
+          var c3 = (e.competitions && e.competitions[0]) || {};
+          var st3 = (c3.status && c3.status.type) || (e.status && e.status.type) || {};
+          if (st3.completed !== true) return;
+          var cs3 = c3.competitors || []; if (cs3.length < 2) return;
+          var ho3 = cs3.filter(function (x) { return x.homeAway === 'home'; })[0];
+          var aw3 = cs3.filter(function (x) { return x.homeAway === 'away'; })[0];
+          if (!ho3 || !aw3) return;
+          var sv3 = function (x) { var v = x.score; if (v && typeof v === 'object') v = (v.value != null ? v.value : v.displayValue); return parseInt(v, 10); };
+          var hg3 = sv3(ho3), ag3 = sv3(aw3);
+          var hid3 = String((ho3.team && ho3.team.id) || ''), aid3 = String((aw3.team && aw3.team.id) || '');
+          var t3 = Date.parse(e.date);
+          if (isNaN(hg3) || isNaN(ag3) || !hid3 || !aid3 || isNaN(t3)) return;
+          vus[e.id] = 1;
+          ms.push({
+            h: hid3, a: aid3, hg: hg3, ag: ag3, t: t3,
+            hn: (ho3.team && (ho3.team.shortDisplayName || ho3.team.displayName)) || '',
+            an: (aw3.team && (aw3.team.shortDisplayName || aw3.team.displayName)) || '',
+            hl: (ho3.team && ho3.team.logo) || '', al: (aw3.team && aw3.team.logo) || ''
+          });
+        });
+      } catch (e) {}
+    }
+  }
+
+  /* Une collecte vide n'est pas un resultat, c'est un echec : on ne la cache pas. */
   if (ms.length) { try { localStorage.setItem(ck, JSON.stringify({ t: Date.now(), d: ms })); } catch (e) {} }
   return ms;
 }
@@ -31844,6 +31894,20 @@ async function g45FormeRender(c, body) {
   an = anUtil;
 
   ms = ms.slice().sort(function (x, y) { return x.t - y.t; });
+
+  /* Quand les matchs viennent du scoreboard, ils portent leurs propres
+     identifiants et noms d'equipe — ceux du classement peuvent etre d'une autre
+     API et ne correspondre a rien. On reconstruit alors la liste depuis eux. */
+  var idsMatchs = {};
+  ms.forEach(function (m) {
+    if (m.hn) idsMatchs[m.h] = { nom: m.hn, logo: m.hl || '' };
+    if (m.an) idsMatchs[m.a] = { nom: m.an, logo: m.al || '' };
+  });
+  var cles = Object.keys(idsMatchs);
+  if (cles.length && !eq.some(function (t) { return idsMatchs[String(t.id)]; })) {
+    eq = cles.map(function (id) { return { id: id, nom: idsMatchs[id].nom, logo: idsMatchs[id].logo }; });
+    noms = idsMatchs;
+  }
 
   /* Une ligne par equipe, en ne retenant que les matchs du contexte choisi. */
   var lignes = eq.map(function (t) {
