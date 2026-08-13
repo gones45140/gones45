@@ -33094,8 +33094,22 @@ async function _g45SaisonsGen(el, nom, perso) {
   });
   html += '</div>';
 
-  /* ── Resultats : chaque ligne porte les marches coches qui sont passes ── */
-  html += '<div style="font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#4f5d88;margin-bottom:6px;">R\u00e9sultats (' + nF + ' matchs)</div>';
+  /* ── Compteur de COMBINE ──────────────────────────────────────────────────
+     Le chiffre qui sert vraiment : combien de matchs valident TOUS les marches
+     coches a la fois. Chaque barre prise isolement dit 55% et 47% ; leur
+     intersection dit 39%, et c'est elle qu'on parie. Calcule sur la liste
+     FILTREE, donc il suit le choix Global / Domicile / Exterieur. */
+  var combN = 0;
+  liste.forEach(function (m) {
+    if (coches.every(function (k) { return _g45SgCompte([m], k) === 1; })) combN++;
+  });
+  var combPc = pct(combN, nF);
+  var combCol = combPc >= 60 ? '#1ed760' : (combPc >= 40 ? '#f0b020' : '#ff7b54');
+
+  html += '<div style="display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;margin-bottom:6px;">'
+    + '<div style="font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#4f5d88;">R\u00e9sultats (' + nF + ' matchs)</div>'
+    + '<div style="font-size:11px;font-weight:800;color:' + combCol + ';background:' + combCol + '1a;border:1px solid ' + combCol + '55;border-radius:12px;padding:3px 10px;">'
+    + '\u2705 ' + combN + '/' + nF + ' \u2014 ' + coches.join(' + ') + ' \u00b7 ' + combPc + '%</div></div>';
   liste.forEach(function (m) {
     var col = m.res === 'V' ? '#1ed760' : (m.res === 'N' ? '#f0b020' : '#ff4545');
     var d = new Date(m.t);
