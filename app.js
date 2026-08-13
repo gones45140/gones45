@@ -31525,7 +31525,10 @@ function _g45CompetAnneeAuto(slug) {
 /* Liste des equipes d'une competition, tiree du CLASSEMENT — une seule requete,
    et on recupere au passage logos, rang et points. Cache 6 h. */
 async function _g45CompetEquipes(c) {
-  var an = _g45CompetAnnee(c.s);
+  /* `c.an` permet a un appelant d'imposer la saison. Indispensable hors
+     football : la regle par defaut bascule en aout et demandait le classement
+     NFL 2026, saison non commencee donc VIDE. */
+  var an = (c.an != null) ? c.an : _g45CompetAnnee(c.s);
   var cle = 'g45compet_' + c.sp + '_' + c.s + '_' + an;
   if (_g45CompetCache[cle]) return _g45CompetCache[cle];
   try {
@@ -32863,6 +32866,8 @@ var _g45SgAn = null;        /* saison choisie dans la fiche */
 var _g45SgFiltre = 'global';
 var _g45SgQuick = null;     /* cases cochees ; null = valeurs par defaut */
 var _g45SgMem = {};         /* matchs deja charges, par sport|ligue|annee */
+var _g45SgReplie = false;
+var _g45SgNomCourant = '';   /* un seul repli automatique sur la saison precedente */
 
 function _g45SgNorm(s) {
   return String(s || '').toLowerCase()
@@ -32877,9 +32882,26 @@ function _g45SgCle(n) { return String(n || '').toLowerCase().trim(); }
    fait 2025-26 : on croit consulter une saison et on en voit une autre. */
 function _g45SgLabel(lg, y) {
   if (['3', 'mlb'].indexOf(lg) >= 0) return String(y);                 /* annee civile */
-  if (['nhl', 'nba', 'wnba', 'nfl'].indexOf(lg) >= 0)                  /* annee de fin */
+  if (['nhl', 'nba', 'wnba'].indexOf(lg) >= 0)                         /* annee de FIN */
     return (y - 1) + '-' + String(y).slice(2);
-  return y + '-' + String(y + 1).slice(2);                             /* annee de debut */
+  return y + '-' + String(y + 1).slice(2);                             /* annee de DEBUT */
+}
+
+/* PIEGE NFL : la NFL se joue a cheval sur deux annees comme la NBA et la NHL,
+   mais ESPN la numerote par l'annee de DEBUT — saison 2025 = septembre 2025 a
+   fevrier 2026 — alors que la NBA et la NHL sont numerotees par l'annee de FIN.
+   Les mettre dans le meme panier affichait « 2025-26 » sur des donnees 2026-27,
+   et surtout proposait par defaut une saison qui n'a pas encore commence.
+
+   Deuxieme piege, la date de bascule. Au 13 aout la NFL n'a pas repris : sa
+   derniere saison COMPLETE est 2025. On ne bascule donc qu'en septembre, alors
+   que le football europeen bascule des aout. */
+function _g45SgAnAuto(lg) {
+  var d = new Date(), y = d.getFullYear(), m = d.getMonth() + 1;
+  if (['3', 'mlb'].indexOf(lg) >= 0) return y;                          /* annee civile */
+  if (['nhl', 'nba', 'wnba'].indexOf(lg) >= 0) return (m >= 9) ? (y + 1) : y;
+  if (['nfl', 'college-football'].indexOf(lg) >= 0) return (m >= 9) ? y : (y - 1);
+  return (m >= 8) ? y : (y - 1);                                        /* football, rugby */
 }
 
 /* Cinq lignes autour de la moyenne. Le pas suit l'ordre de grandeur du sport. */
@@ -32953,7 +32975,7 @@ function _g45SgCompte(liste, cle) {
 
 async function _g45SaisonsGen(el, nom, perso) {
   var sp = perso.sport || 'soccer', lg = String(perso.league || '');
-  var anAuto = (typeof _g45CompetAnneeAuto === 'function') ? _g45CompetAnneeAuto(lg) : new Date().getFullYear();
+  var anAuto = _g45SgAnAuto(lg);
   var an = _g45SgAn || anAuto;
   var memK = sp + '|' + lg + '|' + an;
 
@@ -32974,6 +32996,16 @@ async function _g45SaisonsGen(el, nom, perso) {
   }
 
   var st = _g45SgCalc(ms || [], perso.id, nom);
+
+  /* Entre deux saisons (aout pour la NFL, juillet pour la NHL), la saison en
+     cours est vide. Plutot qu'un panneau desert, on recule d'un an une fois —
+     seulement en mode automatique, un choix explicite d'Antoine est respecte. */
+  if (!st.j && !_g45SgAn && !_g45SgReplie) {
+    _g45SgReplie = true;
+    _g45SgAn = an - 1;
+    return await _g45SaisonsGen(el, nom, perso);
+  }
+
   _g45SgCtx = { sp: sp, lg: lg };   /* lu par _g45SgMatch au clic */
   var pct = function (a, b) { return b ? Math.round(a / b * 100) : 0; };
 
@@ -33230,7 +33262,17 @@ window.loadTeamSaisons = async function () {
      depuis l'entree perso, sinon depuis le classement de la competition. */
   try {
     var ctx = await _g45CompoCtx(nom);
+    if (ctx && ctx.via === 'ambigu') {
+      el.innerHTML = '<div class="fc" style="text-align:center;color:var(--t3);padding:18px;font-size:12px;">'
+        + 'Nom trop g\u00e9n\u00e9rique : <b>' + nom + '</b> correspond \u00e0 plusieurs sports ('
+        + (ctx.pistes || []).map(function (p) { return p.sp; }).join(', ') + ').'
+        + '<br><small style="opacity:.7;">Ouvre l\'\u00e9quipe depuis Comp\u00e9titions pour lever le doute.</small></div>';
+      return;
+    }
     if (ctx && ctx.sp && ctx.sp !== 'soccer') {
+      /* Nouvelle equipe : on repart d'une saison automatique. Sans ca, la
+         saison choisie sur les Roosters s'appliquait aux Islanders. */
+      if (_g45SgNomCourant !== nom) { _g45SgNomCourant = nom; _g45SgAn = null; _g45SgReplie = false; }
       if (!ctx.ref) {
         el.innerHTML = '<div class="fc" style="text-align:center;color:var(--t3);padding:18px;font-size:12px;">'
           + '\u00c9quipe introuvable dans le classement <b>' + ctx.sp + '/' + ctx.lg + '</b>.'
@@ -33304,24 +33346,72 @@ var _G45_LIGUES_SCAN = [
   ['football', 'nfl'], ['rugby-league', '3']
 ];
 
-/* Rapprochement en trois passes. PIEGE : une simple inclusion accepte
-   n'importe quoi de court — « Col » matche Colorado ET Columbus. On exige
-   4 caracteres, et on passe par les MOTS avant l'inclusion brute. */
-function _g45CompoMatch(nom, eq) {
+/* Rapprochement d'un nom d'equipe dans une liste.
+   PIEGE 1 : une simple inclusion accepte n'importe quoi de court — « Col »
+   matche Colorado ET Columbus. On exige 4 caracteres.
+   PIEGE 2 : la VILLE est partagee entre ligues et entre clubs. « Cleveland »
+   colle aux Browns (NFL) comme aux Cavaliers (NBA) ; « New York » colle aux
+   Islanders comme aux Rangers. On compte donc les mots communs et on EXIGE
+   un vainqueur unique : deux candidats a egalite, on renonce plutot que de
+   rendre une equipe au hasard.
+   `strict` limite le rapprochement a l'egalite exacte — indispensable quand on
+   balaye PLUSIEURS ligues, ou la moindre tolerance melange les sports. */
+function _g45CompoMatch(nom, eq, strict) {
   var n2 = _g45SgNorm(nom);
   var cands = (eq || []).map(function (t) {
     return { id: t.id, a: _g45SgNorm(t.nom), b: _g45SgNorm(t.court || ''),
              mots: String(t.nom || '').split(/\s+/).map(_g45SgNorm) };
   });
-  var hit = cands.filter(function (t) { return t.a === n2 || t.b === n2; })[0];
-  if (!hit) {
-    var motsMoi = String(nom || '').split(/\s+/).map(_g45SgNorm).filter(function (w) { return w.length >= 4; });
-    hit = cands.filter(function (t) { return motsMoi.some(function (w) { return t.mots.indexOf(w) >= 0; }); })[0];
+
+  var exact = cands.filter(function (t) { return t.a === n2 || t.b === n2; })[0];
+  if (exact) return String(exact.id);
+  if (strict) return '';
+
+  var motsMoi = String(nom || '').split(/\s+/).map(_g45SgNorm).filter(function (w) { return w.length >= 4; });
+  if (motsMoi.length) {
+    var notes = cands.map(function (t) {
+      return { id: t.id, n: motsMoi.filter(function (w) { return t.mots.indexOf(w) >= 0; }).length };
+    }).filter(function (x) { return x.n > 0; }).sort(function (x, y) { return y.n - x.n; });
+    if (notes.length === 1 || (notes.length > 1 && notes[0].n > notes[1].n)) return String(notes[0].id);
+    if (notes.length > 1) return '';        /* egalite : ambigu, on renonce */
   }
-  if (!hit && n2.length >= 4) {
-    hit = cands.filter(function (t) { return t.a.indexOf(n2) >= 0 || n2.indexOf(t.a) >= 0; })[0];
+
+  if (n2.length >= 4) {
+    var inc = cands.filter(function (t) { return t.a.indexOf(n2) >= 0 || n2.indexOf(t.a) >= 0; });
+    if (inc.length === 1) return String(inc[0].id);
   }
-  return hit ? String(hit.id) : '';
+  return '';
+}
+
+/* Liste des equipes d'une ligue, saison EXPLICITE.
+   PIEGE MAJEUR : `_g45CompetEquipes` calcule l'annee avec la regle du football
+   (bascule en aout). Au 13 aout elle demande donc le classement NFL 2026 — une
+   saison qui n'a pas commence, donc VIDE. La NFL disparaissait du balayage, et
+   « Denver Broncos » partait vers la seule ligue qui repondait : les Nuggets.
+   Meme mecanique pour Miami, Houston, Atlanta, Pittsburgh, Los Angeles. */
+async function _g45CompoEq(sp, lg) {
+  var an = (typeof _g45SgAnAuto === 'function') ? _g45SgAnAuto(lg) : null;
+  var eq = [];
+  try { eq = await _g45CompetEquipes({ sp: sp, s: lg, an: an }); } catch (e) {}
+  /* Une table vide n'est pas une reponse : on recule d'un an avant d'abandonner. */
+  if ((!eq || !eq.length) && an) {
+    try { eq = await _g45CompetEquipes({ sp: sp, s: lg, an: an - 1 }); } catch (e) {}
+  }
+  return eq || [];
+}
+
+/* Tables de noms deja presentes dans l'appli. Elles sont incompletes (8 clubs
+   de NHL sur 32) et leurs identifiants ne sont pas ceux d'ESPN — on ne s'en
+   sert donc QUE comme indice de SPORT, jamais comme source d'identifiant. */
+function _g45CompoIndice(nom) {
+  try {
+    if (typeof NFL_TEAMS !== 'undefined' && NFL_TEAMS[nom]) return ['football', 'nfl'];
+    if (typeof NHL_TEAMS !== 'undefined' && NHL_TEAMS[nom]) return ['hockey', 'nhl'];
+    if (typeof MLB_TEAMS !== 'undefined' && MLB_TEAMS[nom]) return ['baseball', 'mlb'];
+    if (typeof NBA_TEAMS !== 'undefined' && NBA_TEAMS[nom]) return ['basketball', 'nba'];
+    if (typeof resolveNbaTeam === 'function' && resolveNbaTeam(nom)) return ['basketball', 'nba'];
+  } catch (e) {}
+  return null;
 }
 
 async function _g45CompoCtx(nom) {
@@ -33345,22 +33435,49 @@ async function _g45CompoCtx(nom) {
         var sp = sg[1], lg = sg[2];
         /* 🏉 + drapeau australien = rugby a XIII, pas rugby a XV. */
         if (sp === 'rugby' && em.indexOf('\ud83c\udde6\ud83c\uddfa') >= 0) { sp = 'rugby-league'; lg = '3'; }
-        var eq0 = [];
-        try { eq0 = await _g45CompetEquipes({ sp: sp, s: lg }); } catch (e) {}
+        var eq0 = await _g45CompoEq(sp, lg);
         return { sp: sp, lg: lg, ref: _g45CompoMatch(nom, eq0), via: 'mur' };
       }
     }
   }
 
-  /* 3. Dernier recours : on cherche le nom dans les classements. Aucun emoji,
-     aucune table de noms — si ESPN classe l'equipe quelque part, on la trouve. */
+  /* 3. Indice gratuit : les tables de noms de l'appli donnent le SPORT sans
+     aucune requete. Incompletes, mais quand elles repondent elles ont raison. */
+  var ind = _g45CompoIndice(nom);
+  if (ind) {
+    var eqI = await _g45CompoEq(ind[0], ind[1]);
+    var refI = _g45CompoMatch(nom, eqI, false);
+    if (refI) return { sp: ind[0], lg: ind[1], ref: refI, via: 'table' };
+  }
+
+  /* 4. Dernier recours : on cherche le nom dans les classements. */
   if (!em || em.indexOf('\u26bd') < 0) {
+    var tables = [];
     for (var j = 0; j < _G45_LIGUES_SCAN.length; j++) {
-      var L = _G45_LIGUES_SCAN[j], eqL = [];
-      try { eqL = await _g45CompetEquipes({ sp: L[0], s: L[1] }); } catch (e) { continue; }
-      var ref = _g45CompoMatch(nom, eqL);
-      if (ref) return { sp: L[0], lg: L[1], ref: ref, via: 'scan' };
+      var L = _G45_LIGUES_SCAN[j];
+      var eqJ = await _g45CompoEq(L[0], L[1]);
+      if (eqJ.length) tables.push({ sp: L[0], lg: L[1], eq: eqJ });
     }
+    /* Si une ligue n'a rien renvoye, on le DIT : c'est exactement ce qui a
+       envoye les Broncos en NBA, et un balayage partiel doit se voir. */
+    if (tables.length < _G45_LIGUES_SCAN.length) {
+      try { console.warn('[GONES45] balayage partiel :', tables.map(function (t) { return t.lg; }).join(', ')); } catch (e) {}
+    }
+    /* Passe 1, STRICTE : nom complet ou abreviation officielle. C'est elle qui
+       distingue Cleveland Browns de Cleveland Cavaliers. */
+    for (var k = 0; k < tables.length; k++) {
+      var r1 = _g45CompoMatch(nom, tables[k].eq, true);
+      if (r1) return { sp: tables[k].sp, lg: tables[k].lg, ref: r1, via: 'scan' };
+    }
+    /* Passe 2, tolerante — acceptee UNIQUEMENT si une seule ligue repond.
+       Deux ligues qui repondent, c'est un nom de ville : on ne devine pas. */
+    var touches = [];
+    for (var m = 0; m < tables.length; m++) {
+      var r2 = _g45CompoMatch(nom, tables[m].eq, false);
+      if (r2) touches.push({ sp: tables[m].sp, lg: tables[m].lg, ref: r2 });
+    }
+    if (touches.length === 1) return { sp: touches[0].sp, lg: touches[0].lg, ref: touches[0].ref, via: 'scan-large' };
+    if (touches.length > 1) return { sp: '', lg: '', ref: '', via: 'ambigu', pistes: touches };
   }
   return null;
 }
