@@ -1,9 +1,19 @@
 [
   {
+    "id": "s1786616618772eyn9",
+    "ts": 1786616618772,
+    "text": "les champions ont toujours fini entre la 1 ere position et la 4eme en saison reguliere",
+    "sport": "🏉🇦🇺",
+    "targets": [],
+    "place": "",
+    "comp": "Nrl",
+    "context": "champion"
+  },
+  {
     "id": "s1782723888225a3vf",
     "ts": 1782723888225,
-    "text": "Le GP d'Autriche ne réussit pas à Ferrari",
-    "sport": "🏎",
+    "text": "Le GP d'Autriche ne rÃ©ussit pas Ã  Ferrari",
+    "sport": "ð",
     "targets": [
       "Ferrari"
     ],
