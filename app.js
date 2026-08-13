@@ -31400,8 +31400,9 @@ function g45NrlRender() {
     var nCotes = lst.filter(function (m) { var c = cotes[_g45Cle(m.id)]; return c && c.dom > 1 && c.ext > 1; }).length;
     return '<div style="margin-bottom:14px;">'
       + '<div style="font-weight:800;font-size:11.5px;color:var(--a);margin-bottom:6px;">'
-        + 'Journ\u00e9e ' + jr + ' <span style="color:#9fb0c7;font-weight:600;">\u00b7 ' + lst.length + ' matchs \u00b7 '
-        + nCotes + ' avec cotes</span></div>'
+        + 'Journ\u00e9e ' + jr + ' <span data-jr-compte="1" data-jr-ids="'
+        + lst.map(function (m) { return m.id; }).join(',') + '" style="color:#9fb0c7;font-weight:600;">\u00b7 '
+        + lst.length + ' matchs \u00b7 ' + nCotes + ' avec cotes</span></div>'
       + lst.map(function (m) {
           var c = cotes[_g45Cle(m.id)] || {};
           var d = (m.date || '').slice(8, 10) + '/' + (m.date || '').slice(5, 7);
@@ -31411,8 +31412,9 @@ function g45NrlRender() {
             + '<div style="display:flex;justify-content:space-between;align-items:center;gap:7px;flex-wrap:wrap;">'
             + '<div style="flex:1;min-width:150px;font-size:11.5px;"><span style="color:#9fb0c7">' + d + '</span> '
               + '<b>' + m.dom + '</b> ' + score + ' <b>' + m.ext + '</b></div>'
-            + '<input value="' + (c.dom || '') + '" placeholder="dom" onchange="g45NrlSaisir(\'' + m.id + '\',\'dom\',this.value)" style="' + ch + '">'
-            + '<input value="' + (c.ext || '') + '" placeholder="ext" onchange="g45NrlSaisir(\'' + m.id + '\',\'ext\',this.value)" style="' + ch + '">'
+            + '<input value="' + (c.dom || '') + '" placeholder="dom" inputmode="decimal" onchange="g45NrlSaisir(\'' + m.id + '\',\'dom\',this.value,this)" style="' + ch + '">'
+            + '<input value="' + (c.ext || '') + '" placeholder="ext" inputmode="decimal" onchange="g45NrlSaisir(\'' + m.id + '\',\'ext\',this.value,this)" style="' + ch + '">'
+            + ((c.dom || c.ext) ? ('<button onclick="g45NrlEffacer(\'' + m.id + '\')" title="Effacer les cotes de ce match" style="padding:6px 9px;border-radius:7px;border:1px solid rgba(255,107,107,.35);background:rgba(255,107,107,.10);color:#ff8a8a;font-size:11px;font-weight:800;cursor:pointer;">\u2715</button>') : '')
             + '<input placeholder="URL Sofascore" onchange="g45NrlCotesSofa(\'' + m.id + '\',this.value)" style="width:110px;padding:6px;font-size:10.5px;border-radius:7px;background:#0f1626;border:1px solid rgba(255,255,255,.14);color:#e6ecf5;">'
             + '</div></div>';
         }).join('')
@@ -33642,3 +33644,77 @@ window.loadTeamCompo = function () {
   el.style.display = 'block';
   _g45CompoEffectif(el, nom);
 };
+
+
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   COTES SAISIES A LA MAIN — retour visuel et effacement (13/08/2026)
+   ───────────────────────────────────────────────────────────────────────────
+   La saisie manuelle enregistrait deja (`g45NrlSaisir` -> localStorage), mais
+   sans rien montrer : impossible de savoir si la valeur etait prise. Et une
+   cote fausse ne pouvait pas etre RETIREE — la retaper marchait, la vider
+   laissait un 0 dans la base.
+
+   On ajoute donc trois choses, sans toucher au stockage existant :
+     - un liseré vert bref quand la valeur est enregistree ;
+     - un bouton ✕ par match, qui supprime la ligne de cotes ;
+     - le compteur « N avec cotes » de la journee, remis a jour.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+function _g45CoteFlash(el, ok) {
+  if (!el || !el.style) return;
+  var av = el.style.borderColor;
+  el.style.borderColor = ok ? '#1ed760' : '#ff6b6b';
+  el.style.transition = 'border-color .25s';
+  setTimeout(function () { el.style.borderColor = av || 'rgba(255,255,255,.14)'; }, 900);
+}
+
+var _g45SaisirOrig = (typeof g45NrlSaisir === 'function') ? g45NrlSaisir : null;
+
+window.g45NrlSaisir = function (id, camp, val, el) {
+  var txt = String(val == null ? '' : val).trim();
+  /* Champ vide = retrait de la cote, pas un zero fantome. */
+  if (!txt) {
+    try {
+      var o0 = g45NrlCotes(), k0 = _g45Cle(id);
+      if (o0[k0]) { o0[k0][camp] = 0; if (!o0[k0].dom && !o0[k0].ext) delete o0[k0]; _g45NrlSave(o0); }
+    } catch (e) {}
+    _g45CoteFlash(el, true);
+    if (typeof g45NrlSynthese === 'function') g45NrlSynthese();
+    _g45MajCompteurs();
+    return;
+  }
+  var n = parseFloat(txt.replace(',', '.'));
+  /* Une cote decimale est toujours > 1 : 1.85 oui, 0.85 ou « 185 » non. */
+  if (!isFinite(n) || n <= 1 || n > 100) {
+    _g45CoteFlash(el, false);
+    if (typeof _g45NrlMsg === 'function') _g45NrlMsg('\u26a0\ufe0f « ' + txt + ' » n\'est pas une cote d\u00e9cimale valide (attendu entre 1.01 et 100).', '#ffb13d');
+    return;
+  }
+  if (_g45SaisirOrig) _g45SaisirOrig(id, camp, n);
+  _g45CoteFlash(el, true);
+  _g45MajCompteurs();
+};
+
+/* Efface les deux cotes d'un match. Redessine, donc les champs se vident. */
+function g45NrlEffacer(id) {
+  try {
+    var o = g45NrlCotes(), k = _g45Cle(id);
+    if (o[k]) { delete o[k]; _g45NrlSave(o); }
+  } catch (e) {}
+  if (typeof g45NrlRender === 'function') g45NrlRender();
+}
+window.g45NrlEffacer = g45NrlEffacer;
+
+/* Met a jour les « N avec cotes » sans redessiner : redessiner ferait perdre
+   le focus et sauter la page au milieu d'une saisie en serie. */
+function _g45MajCompteurs() {
+  try {
+    var o = g45NrlCotes();
+    document.querySelectorAll('[data-jr-compte]').forEach(function (sp) {
+      var ids = String(sp.getAttribute('data-jr-ids') || '').split(',').filter(Boolean);
+      var n = ids.filter(function (i) { var c = o[_g45Cle(i)]; return c && c.dom > 1 && c.ext > 1; }).length;
+      sp.textContent = '\u00b7 ' + ids.length + ' matchs \u00b7 ' + n + ' avec cotes';
+    });
+  } catch (e) {}
+}
