@@ -31655,9 +31655,24 @@ async function loadCompetTab() {
            requete de plus, et sans les 404 que produisait la construction
            d'URL depuis le slug (ESPN indexe par identifiant numerique). */
         var lo = _g45CompetLogos[l.slug];
-        var vis = lo
-          ? '<img src="' + lo + '" style="width:16px;height:16px;object-fit:contain;margin-right:5px;" onerror="this.remove()" loading="lazy">'
-          : '<span style="margin-right:4px;">' + (l.ico || '') + '</span>';
+        /* Les emoji DRAPEAUX ne sont pas rendus en couleur par Chrome sous
+           Windows : ils apparaissent en petites lettres grises (« FR », « PT »),
+           alors qu'ils s'affichent normalement sur telephone. On ne peut pas le
+           corriger cote police. En attendant que le vrai logo soit connu, on
+           affiche donc une PASTILLE avec le code pays, lisible partout.
+           Les emoji non-drapeaux (coupes, ballons) restent tels quels. */
+        var estDrapeau = /^[\u{1F1E6}-\u{1F1FF}]{2}/u.test(String(l.ico || ''));
+        var vis;
+        if (lo) {
+          vis = '<img src="' + lo + '" style="width:16px;height:16px;object-fit:contain;margin-right:5px;" onerror="this.remove()" loading="lazy">';
+        } else if (estDrapeau) {
+          var pays = String(l.slug).split('.')[0].toUpperCase().slice(0, 3);
+          vis = '<span style="display:inline-block;min-width:22px;padding:1px 4px;margin-right:5px;border-radius:4px;'
+              + 'background:rgba(255,255,255,.10);color:#9fb0c7;font-size:8.5px;font-weight:800;letter-spacing:.4px;text-align:center;">'
+              + pays + '</span>';
+        } else {
+          vis = '<span style="margin-right:4px;">' + (l.ico || '') + '</span>';
+        }
         return '<button onclick="g45CompetSel(\'' + l.slug + '\')" style="border:none;cursor:pointer;font-size:11px;font-weight:700;padding:7px 11px;margin:0 5px 5px 0;border-radius:16px;background:#1a2235;color:#e6ecf5;display:inline-flex;align-items:center;">'
           + vis + l.name + '</button>';
       }).join('');
@@ -31712,7 +31727,16 @@ async function loadCompetTab() {
     return;
   }
   if (_g45CompetVue === 'buteurs') {
-    if (c.sp === 'soccer') { await g45LoadScorers(c.s, c.sp, body); return; }
+    if (c.sp === 'soccer') {
+      await g45LoadScorers(c.s, c.sp, body);
+      /* Le chargeur historique n'essaie qu'UNE forme d'URL et rend « indisponible »
+         des que la saison en cours n'a pas encore de buteurs. Le chargeur
+         generique en essaie cinq et respecte le selecteur de saison : on
+         l'utilise en repli plutot que de laisser un message d'echec. */
+      var vide = /indisponible|aucun/i.test(body.textContent || '');
+      if (vide) { await g45LeadersGen(c, body, _g45CompetAnnee(c.s)); }
+      return;
+    }
     if (c.s === '3') { await g45StatsIndRender(c, body); return; }
     await g45LeadersGen(c, body, _g45CompetAnnee(c.s));
     return;
