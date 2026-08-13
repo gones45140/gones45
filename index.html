@@ -261,8 +261,21 @@
   </div>
 </div>
 
-<!-- ARCHIVE -->
-<div id="t-arch" class="tab">
+<!-- ══════════════════════════════════════════
+     BILAN — Stats + Équipes + Sofascore
+     ══════════════════════════════════════════ -->
+<section id="t-bilan" class="tab" style="padding:0;">
+  <!-- 4 onglets stats -->
+  <div class="gtabs">
+    <button class="gtab on" id="btab-global" onclick="showBilanTab('global',this)" style="font-size:9px;">🌍 Global</button>
+    <button class="gtab" id="btab-cockpit" onclick="showBilanTab('cockpit',this)" style="font-size:9px;">🚀 Cockpit</button>
+    <button class="gtab" id="btab-simple" onclick="showBilanTab('simple',this)" style="font-size:9px;">🎯 Simple</button>
+    <button class="gtab" id="btab-combi" onclick="showBilanTab('combi',this)" style="font-size:9px;">🔗 Combiné</button>
+    <button class="gtab" id="btab-flash" onclick="showBilanTab('flash',this)" style="font-size:9px;">⚡ Flash</button>
+    <button class="gtab" id="btab-arch" onclick="showBilanTab('arch',this)" style="font-size:9px;">🕒 Archive</button>
+  </div>
+<!-- ARCHIVE — devenue un sous-onglet du Bilan -->
+<div id="bilan-arch" style="display:none;">
   <!-- KPIs rapides -->
   <div class="kpi2" style="margin-bottom:10px;">
     <div class="kpibox" style="--ac:var(--g);"><div class="kpi-l">Victoires</div><div class="kpi-v" id="arch-wins" style="color:var(--g);">—</div></div>
@@ -295,18 +308,8 @@
   <button class="btn btn-d" style="margin-top:4px;font-size:11px;" onclick="if(confirm('Effacer tout ?')){state.a=[];save();renderArchive();}">Effacer l'historique</button>
 </div>
 
-<!-- ══════════════════════════════════════════
-     BILAN — Stats + Équipes + Sofascore
-     ══════════════════════════════════════════ -->
-<section id="t-bilan" class="tab" style="padding:0;">
-  <!-- 4 onglets stats -->
-  <div class="gtabs">
-    <button class="gtab on" id="btab-global" onclick="showBilanTab('global',this)" style="font-size:9px;">🌍 Global</button>
-    <button class="gtab" id="btab-cockpit" onclick="showBilanTab('cockpit',this)" style="font-size:9px;">🚀 Cockpit</button>
-    <button class="gtab" id="btab-simple" onclick="showBilanTab('simple',this)" style="font-size:9px;">🎯 Simple</button>
-    <button class="gtab" id="btab-combi" onclick="showBilanTab('combi',this)" style="font-size:9px;">🔗 Combiné</button>
-    <button class="gtab" id="btab-flash" onclick="showBilanTab('flash',this)" style="font-size:9px;">⚡ Flash</button>
-  </div>
+  <!-- Tout le Bilan hors Archive, regroupe pour pouvoir le masquer d'un bloc -->
+  <div id="bilan-normal">
   <!-- Filtre sport -->
   <div class="sec" style="margin-top:0;">Filtre sport</div>
   <div class="sfrow" id="sport-filter"></div>
@@ -408,6 +411,7 @@
   <div id="g-equipes" class="gpanel">
     <div class="sec" style="margin-top:0;">Mes équipes</div>
     <div id="equipes-list"></div>
+  </div>
   </div>
 </section>
 
@@ -1101,7 +1105,6 @@
 <nav class="nav">
   <button class="ni on" onclick="showTab('t-dash',this)"><span>🥧</span>Mur</button>
   <button class="ni" onclick="showTab('t-paris',this)"><span>⚽</span>Pari</button>
-  <button class="ni" onclick="showTab('t-arch',this)"><span>🕐</span>Archive</button>
   <button class="ni" onclick="showTab('t-bilan',this)"><span>📈</span>Bilan</button>
   <button class="ni" onclick="showTab('t-calc',this)"><span>🧮</span>Calc</button>
   <button class="ni pc-only" onclick="showTab('t-links',this)"><span>🔗</span>Liens</button>
@@ -1111,8 +1114,6 @@
   <button class="ni pc-only" onclick="showTab('t-cal',this);loadCalendrier()"><span>📅</span>Agenda</button>
   <button class="ni pc-only" onclick="showTab('t-comp',this);" data-action-comp="init"><span>⚖️</span>Vs</button>
   <button class="ni pc-only" onclick="showTab('t-simu',this);loadSimuTab();"><span>🎮</span>Simu</button>
-  <button class="ni pc-only" onclick="showTab('t-live',this);loadLiveTab();_g45F1LiveCard();_g45MotoLiveCard();"><span>📡</span>Direct</button>
-  <button class="ni pc-only" onclick="showTab('t-resultats',this);loadResultatsTab();"><span>🏆</span>Résultats</button>
   <button class="ni pc-only" onclick="showTab('t-tend',this);loadTendancesTab();"><span>🔥</span>Tendances</button>
   <button class="ni pc-only" onclick="showTab('t-compet',this);loadCompetTab();"><span>🏆</span>Compétitions</button>
   <button class="ni pc-only" onclick="showTab('t-social',this);loadSocialTab();"><span>🤝</span>Social</button>
@@ -1149,12 +1150,6 @@
       </button>
       <button onclick="showTab('t-social',$i('btn-plus-menu'));togglePlusMenu();loadSocialTab();" style="display:flex;align-items:center;gap:12px;padding:14px 12px;background:var(--bg3);border:none;border-radius:8px;color:var(--t1);font-size:13px;font-weight:700;cursor:pointer;text-align:left;margin-top:4px;">
         <span>🤝</span> Social
-      </button>
-      <button onclick="showTab('t-live',$i('btn-plus-menu'));togglePlusMenu();loadLiveTab();_g45F1LiveCard();" style="display:flex;align-items:center;gap:12px;padding:14px 12px;background:var(--bg3);border:none;border-radius:8px;color:var(--t1);font-size:13px;font-weight:700;cursor:pointer;text-align:left;margin-top:4px;">
-        <span>📡</span> Matchs en direct
-      </button>
-      <button onclick="showTab('t-resultats',$i('btn-plus-menu'));togglePlusMenu();loadResultatsTab();" style="display:flex;align-items:center;gap:12px;padding:14px 12px;background:var(--bg3);border:none;border-radius:8px;color:var(--t1);font-size:13px;font-weight:700;cursor:pointer;text-align:left;margin-top:4px;">
-        <span>🏆</span> Résultats (tous sports)
       </button>
       <button onclick="showTab('t-tend',$i('btn-plus-menu'));togglePlusMenu();loadTendancesTab();" style="display:flex;align-items:center;gap:12px;padding:14px 12px;background:var(--bg3);border:none;border-radius:8px;color:var(--t1);font-size:13px;font-weight:700;cursor:pointer;text-align:left;margin-top:4px;">
         <span>🔥</span> Tendances du jour

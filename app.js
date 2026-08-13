@@ -1291,6 +1291,18 @@ function showBilanTab(mode,btn){
   var outils=$i('t-outils');
   if(outils)outils.querySelectorAll('.gtab').forEach(function(b){if(b.id&&b.id.startsWith('btab-'))b.classList.remove('on');});
   if(btn)btn.classList.add('on');
+
+  /* ARCHIVE, devenue le sixieme sous-onglet du Bilan : c'est un bloc HTML
+     complet avec ses propres identifiants, on l'affiche ou on le masque plutot
+     que de le redessiner. Les autres vues du Bilan sont masquees pendant ce
+     temps, sinon les deux se superposeraient. */
+  var arch = $i('bilan-arch');
+  var estArch = (mode === 'arch');
+  if (arch) arch.style.display = estArch ? 'block' : 'none';
+  var normal = $i('bilan-normal');
+  if (normal) normal.style.display = estArch ? 'none' : '';
+  if (estArch) { try { renderArchive(); } catch(e) { console.warn('archive', e && e.message); } return; }
+
   renderBilanTab();
 }
 var dtRows=[{c:2.0},{c:3.0}];
@@ -7690,6 +7702,18 @@ function showBilanTab(mode,btn){
   var outils=$i('t-outils');
   if(outils)outils.querySelectorAll('.gtab').forEach(function(b){if(b.id&&b.id.startsWith('btab-'))b.classList.remove('on');});
   if(btn)btn.classList.add('on');
+
+  /* ARCHIVE, devenue le sixieme sous-onglet du Bilan : c'est un bloc HTML
+     complet avec ses propres identifiants, on l'affiche ou on le masque plutot
+     que de le redessiner. Les autres vues du Bilan sont masquees pendant ce
+     temps, sinon les deux se superposeraient. */
+  var arch = $i('bilan-arch');
+  var estArch = (mode === 'arch');
+  if (arch) arch.style.display = estArch ? 'block' : 'none';
+  var normal = $i('bilan-normal');
+  if (normal) normal.style.display = estArch ? 'none' : '';
+  if (estArch) { try { renderArchive(); } catch(e) { console.warn('archive', e && e.message); } return; }
+
   renderBilanTab();
 }
 var dtRows=[{c:2.0},{c:3.0}];
@@ -31700,8 +31724,8 @@ async function loadCompetTab() {
           + (civil ? y : (y + '-' + String(y + 1).slice(2))) + '</option>';
   }
 
-  var vues = [['equipes','\ud83d\udc65 \u00c9quipes'], ['calendrier','\ud83d\udcc5 Calendrier'],
-              ['journees','\ud83d\uddd3\ufe0f Journ\u00e9es'],
+  var vues = [['equipes','\ud83d\udc65 \u00c9quipes'], ['direct','\ud83d\udd34 Direct'],
+              ['calendrier','\ud83d\udcc5 Calendrier'], ['journees','\ud83d\uddd3\ufe0f Journ\u00e9es'],
               ['classement','\ud83d\udcca Classement'], ['forme','\ud83d\udcc8 Forme'],
               ['buteurs', c.sp === 'soccer' ? '\u26bd Buteurs' : '\ud83c\udfc5 Individuel'],
               ['transferts','\ud83d\udd04 Transferts']];
@@ -31748,6 +31772,20 @@ async function loadCompetTab() {
   }
   if (_g45CompetVue === 'transferts') { await g45TrfRender(c, body); return; }
   if (_g45CompetVue === 'forme')      { await g45FormeRender(c, body); return; }
+
+  /* Direct filtre sur la competition affichee, alors que l'onglet Direct global
+     montrait tous les sports. `g45LoadLeagueMatches` prend deja le slug en
+     parametre : on lui designe simplement notre conteneur, puis on restaure
+     `_g45ListId` pour ne pas detourner l'autre onglet. */
+  if (_g45CompetVue === 'direct') {
+    body.id = 'g45-compet-live';
+    var ancienL = window._g45ListId;
+    window._g45ListId = 'g45-compet-live';
+    try { await g45LoadLeagueMatches(c.s, null, 0, c.sp); }
+    catch (e) { body.innerHTML = '<div style="color:#ff6b6b;font-size:11.5px;">\u274c ' + (e && e.message ? e.message : 'direct indisponible') + '</div>'; }
+    window._g45ListId = ancienL;
+    return;
+  }
 
   if (_g45CompetVue === 'calendrier') {
     body.id = 'g45-compet-cal';
@@ -31807,6 +31845,23 @@ async function loadCompetTab() {
       }).join('');
 }
 window.loadCompetTab = loadCompetTab;
+
+/* Les fleches de navigation par jour appellent g45LiveNav, qui ecrit dans
+   `window._g45ListId` : on la redirige tant que la vue Direct des Competitions
+   est ouverte. */
+var _g45LiveNavOrig = (typeof g45LiveNav === 'function') ? g45LiveNav : null;
+if (_g45LiveNavOrig) {
+  window.g45LiveNav = function (delta) {
+    if (_g45CompetVue === 'direct' && document.getElementById('g45-compet-live')) {
+      var anc = window._g45ListId;
+      window._g45ListId = 'g45-compet-live';
+      var r = _g45LiveNavOrig(delta);
+      Promise.resolve(r).then(function () { window._g45ListId = anc; });
+      return r;
+    }
+    return _g45LiveNavOrig(delta);
+  };
+}
 
 /* Les fleches < > du calendrier appellent g45CalNav, qui ecrit dans
    `window._g45ListId`. Tant qu'on est sur la vue Calendrier des Competitions,
