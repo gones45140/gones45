@@ -31608,15 +31608,12 @@ window.g45CompetVue = g45CompetVue;
    paris, notifications. */
 function g45CompetOuvrir(nom, id, slug, sport, dejaResolu) {
   /* FILET : plusieurs vues appellent cette fonction avec le seul nom. Sans
-     identifiant ni championnat, rien n'est enregistre et la fiche retombe sur
-     la logique FOOTBALL — Columbus Blue Jackets affichait ainsi la fiche de
-     Lyon, apres avoir interroge en vain arg.1 et bra.1 (d'ou les erreurs CORS).
-     On complete donc depuis la competition affichee a l'ecran. */
+     identifiant ni championnat, rien n'est enregistre et la fiche retombait sur
+     la logique FOOTBALL. On complete depuis la competition affichee a l'ecran. */
   if (!dejaResolu && (!id || !slug) && typeof _g45CompetSel !== 'undefined' && _g45CompetSel) {
     slug = slug || _g45CompetSel;
     sport = sport || (typeof _g45CompetSport !== 'undefined' ? _g45CompetSport : '') || 'soccer';
     if (!id && typeof _g45CompetEquipes === 'function') {
-      /* Asynchrone : on resout puis on relance, plutot que d'ouvrir a moitie. */
       _g45CompetEquipes({ sp: sport, s: slug }).then(function (eq) {
         var n2 = String(nom || '').toLowerCase().replace(/[^a-z0-9]/g, '');
         var hit = (eq || []).filter(function (t) {
@@ -33282,56 +33279,92 @@ window.loadTeamSaisons = async function () {
    identifiants ESPN et evite les tables de noms cablees.
    ═══════════════════════════════════════════════════════════════════════════ */
 
-/* Sport du mur (emoji) -> couple sport/ligue ESPN. Une entree perso a toujours
-   la priorite sur cette table : elle vient du classement, donc elle est sure. */
-var _G45_EMOJI_LIGUE = {
-  '\ud83c\udfc0': ['basketball', 'nba'], '\ud83c\udfc0\ud83c\uddfa\ud83c\uddf8': ['basketball', 'nba'],
-  '\ud83c\udfd2': ['hockey', 'nhl'],     '\ud83c\udfd2\ud83c\uddfa\ud83c\uddf8': ['hockey', 'nhl'],
-  '\u26be': ['baseball', 'mlb'],         '\u26be\ud83c\uddfa\ud83c\uddf8': ['baseball', 'mlb'],
-  '\ud83c\udfc8': ['football', 'nfl'],   '\ud83c\udfc8\ud83c\uddfa\ud83c\uddf8': ['football', 'nfl'],
-  '\ud83c\udfc9\ud83c\udde6\ud83c\uddfa': ['rugby-league', '3'],
-  '\ud83c\udfc9': ['rugby', '270559']
-};
+/* ═══ RESOLUTION DU SPORT D'UNE EQUIPE ═══
+   Trois passes, de la plus sure a la plus tolerante. La version precedente ne
+   faisait que la deuxieme, avec une table d'emojis en correspondance EXACTE :
+   « New York Islanders » renvoyait null parce que son champ sport ne tombait
+   sur aucune cle au caractere pres (selecteur de variante, drapeau accole,
+   champ vide). On ne fait donc plus dependre le sport d'un emoji. */
+
+/* Un emoji peut porter un selecteur de variante ou un drapeau : on cherche le
+   symbole du sport N'IMPORTE OU dans la chaine, jamais une egalite stricte. */
+var _G45_SPORT_SIGNES = [
+  ['\ud83c\udfc0', 'basketball', 'nba'],
+  ['\ud83c\udfd2', 'hockey', 'nhl'],
+  ['\u26be', 'baseball', 'mlb'],
+  ['\ud83c\udfc8', 'football', 'nfl'],
+  ['\ud83c\udfc9', 'rugby', '270559']
+];
+
+/* Ligues balayees en dernier recours, quand ni l'entree perso ni le sport du
+   mur ne disent rien. Cinq classements, mis en cache 6 h par _g45CompetEquipes :
+   au pire cinq requetes une seule fois, et l'equipe est identifiee a coup sur. */
+var _G45_LIGUES_SCAN = [
+  ['hockey', 'nhl'], ['basketball', 'nba'], ['baseball', 'mlb'],
+  ['football', 'nfl'], ['rugby-league', '3']
+];
+
+/* Rapprochement en trois passes. PIEGE : une simple inclusion accepte
+   n'importe quoi de court — « Col » matche Colorado ET Columbus. On exige
+   4 caracteres, et on passe par les MOTS avant l'inclusion brute. */
+function _g45CompoMatch(nom, eq) {
+  var n2 = _g45SgNorm(nom);
+  var cands = (eq || []).map(function (t) {
+    return { id: t.id, a: _g45SgNorm(t.nom), b: _g45SgNorm(t.court || ''),
+             mots: String(t.nom || '').split(/\s+/).map(_g45SgNorm) };
+  });
+  var hit = cands.filter(function (t) { return t.a === n2 || t.b === n2; })[0];
+  if (!hit) {
+    var motsMoi = String(nom || '').split(/\s+/).map(_g45SgNorm).filter(function (w) { return w.length >= 4; });
+    hit = cands.filter(function (t) { return motsMoi.some(function (w) { return t.mots.indexOf(w) >= 0; }); })[0];
+  }
+  if (!hit && n2.length >= 4) {
+    hit = cands.filter(function (t) { return t.a.indexOf(n2) >= 0 || n2.indexOf(t.a) >= 0; })[0];
+  }
+  return hit ? String(hit.id) : '';
+}
 
 async function _g45CompoCtx(nom) {
+  /* 1. Entree perso, posee au clic depuis Competitions : la plus fiable. */
   var perso = null;
   try { perso = g45TeamsPerso()[String(nom || '').toLowerCase().trim()]; } catch (e) {}
   if (perso && perso.league && (perso.sport || 'soccer') !== 'soccer') {
-    return { sp: perso.sport, lg: String(perso.league), ref: String(perso.id || '') };
+    return { sp: perso.sport, lg: String(perso.league), ref: String(perso.id || ''), via: 'perso' };
   }
-  var u = null;
-  try { u = (window.state && state.u ? state.u : []).filter(function (x) { return x && x.n === nom; })[0]; } catch (e) {}
-  var em = (u && u.sport) || '';
-  var pair = _G45_EMOJI_LIGUE[em];
-  if (!pair) return null;
 
-  /* Identifiant ESPN pris dans le classement — aucune table de noms a tenir. */
-  var ref = '';
+  /* 2. Sport du mur, cherche comme SYMBOLE contenu et non comme cle exacte. */
+  var em = '';
   try {
-    var eq = await _g45CompetEquipes({ sp: pair[0], s: pair[1] });
-    var n2 = _g45SgNorm(nom);
-    /* Rapprochement en trois passes, de la plus sure a la plus tolerante.
-       PIEGE : une simple inclusion accepte n'importe quoi de court — « Col »
-       matche Colorado ET Columbus. On exige donc 4 caracteres au minimum, et
-       on passe par les MOTS (« jazz », « bluejackets ») avant de se rabattre
-       sur l'inclusion brute. */
-    var cands = eq.map(function (t) {
-      return { id: t.id, a: _g45SgNorm(t.nom), b: _g45SgNorm(t.court || ''), mots: String(t.nom || '').split(/\s+/).map(_g45SgNorm) };
-    });
-    var hit = cands.filter(function (t) { return t.a === n2 || t.b === n2; })[0];
-    if (!hit) {
-      var motsMoi = String(nom || '').split(/\s+/).map(_g45SgNorm).filter(function (w) { return w.length >= 4; });
-      hit = cands.filter(function (t) {
-        return motsMoi.some(function (w) { return t.mots.indexOf(w) >= 0; });
-      })[0];
-    }
-    if (!hit && n2.length >= 4) {
-      hit = cands.filter(function (t) { return t.a.indexOf(n2) >= 0 || n2.indexOf(t.a) >= 0; })[0];
-    }
-    if (hit) ref = String(hit.id);
+    var u = (window.state && state.u ? state.u : []).filter(function (x) { return x && x.n === nom; })[0];
+    em = (u && u.sport) || '';
   } catch (e) {}
-  return { sp: pair[0], lg: pair[1], ref: ref };
+  if (em && em.indexOf('\u26bd') < 0) {                    /* ⚽ = football, on ne touche pas */
+    for (var i = 0; i < _G45_SPORT_SIGNES.length; i++) {
+      var sg = _G45_SPORT_SIGNES[i];
+      if (em.indexOf(sg[0]) >= 0) {
+        var sp = sg[1], lg = sg[2];
+        /* 🏉 + drapeau australien = rugby a XIII, pas rugby a XV. */
+        if (sp === 'rugby' && em.indexOf('\ud83c\udde6\ud83c\uddfa') >= 0) { sp = 'rugby-league'; lg = '3'; }
+        var eq0 = [];
+        try { eq0 = await _g45CompetEquipes({ sp: sp, s: lg }); } catch (e) {}
+        return { sp: sp, lg: lg, ref: _g45CompoMatch(nom, eq0), via: 'mur' };
+      }
+    }
+  }
+
+  /* 3. Dernier recours : on cherche le nom dans les classements. Aucun emoji,
+     aucune table de noms — si ESPN classe l'equipe quelque part, on la trouve. */
+  if (!em || em.indexOf('\u26bd') < 0) {
+    for (var j = 0; j < _G45_LIGUES_SCAN.length; j++) {
+      var L = _G45_LIGUES_SCAN[j], eqL = [];
+      try { eqL = await _g45CompetEquipes({ sp: L[0], s: L[1] }); } catch (e) { continue; }
+      var ref = _g45CompoMatch(nom, eqL);
+      if (ref) return { sp: L[0], lg: L[1], ref: ref, via: 'scan' };
+    }
+  }
+  return null;
 }
+window._g45CompoCtx = _g45CompoCtx;
 
 async function _g45CompoEffectif(el, nom) {
   var ctx = await _g45CompoCtx(nom);
