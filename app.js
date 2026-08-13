@@ -31846,6 +31846,37 @@ async function loadCompetTab() {
 }
 window.loadCompetTab = loadCompetTab;
 
+/* ═══════════════════════════════════════════════════════════════════════════
+   SOUS-ONGLETS DE « PARI »
+   ───────────────────────────────────────────────────────────────────────────
+   Pari, Bilan, Calculatrice, VS, Bank et Tendances etaient six entrees du menu
+   principal alors qu'ils traitent tous du meme sujet : les paris d'Antoine.
+   Ils restent des `.tab` distincts — aucun HTML deplace, donc aucun risque —
+   et une barre identique inseree dans chacun permet de passer de l'un a l'autre.
+   ═══════════════════════════════════════════════════════════════════════════ */
+function showPariSub(id, btn) {
+  var boutonMenu = document.querySelector('.ni[onclick*="t-paris"]');
+  showTab(id, boutonMenu);
+  /* La barre est dupliquee dans les six onglets : on met a jour CELLE de
+     l'onglet affiche, sinon le bouton actif resterait sur l'ancien. */
+  var cible = document.getElementById(id);
+  if (cible) {
+    cible.querySelectorAll('.psub').forEach(function (b) {
+      var on = (b.dataset.sub === id);
+      b.style.background = on ? '#2563eb' : '#1a2235';
+      b.style.border = on ? '1px solid #3b82f6' : '1px solid rgba(255,255,255,.14)';
+      b.style.color = on ? '#fff' : '#9fb0c7';
+    });
+  }
+  /* Chaque vue a son propre chargement differe. */
+  try {
+    if (id === 't-bilan') { renderBilanTab(); renderGlobalCharts(); }
+    else if (id === 't-tend' && typeof loadTendancesTab === 'function') loadTendancesTab();
+    else if (id === 't-bank' && typeof renderBank === 'function') renderBank();
+  } catch (e) { console.warn('sous-onglet', id, e && e.message); }
+}
+window.showPariSub = showPariSub;
+
 /* Les fleches de navigation par jour appellent g45LiveNav, qui ecrit dans
    `window._g45ListId` : on la redirige tant que la vue Direct des Competitions
    est ouverte. */
