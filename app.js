@@ -31606,7 +31606,27 @@ window.g45CompetVue = g45CompetVue;
    ESPN_TEAM_LEAGUE ne connaissent qu'une centaine de clubs, pas Angers ni
    Le Mans. Une fois enregistree, l'equipe est resolue partout : Saisons,
    paris, notifications. */
-function g45CompetOuvrir(nom, id, slug, sport) {
+function g45CompetOuvrir(nom, id, slug, sport, dejaResolu) {
+  /* FILET : plusieurs vues appellent cette fonction avec le seul nom. Sans
+     identifiant ni championnat, rien n'est enregistre et la fiche retombe sur
+     la logique FOOTBALL — Columbus Blue Jackets affichait ainsi la fiche de
+     Lyon, apres avoir interroge en vain arg.1 et bra.1 (d'ou les erreurs CORS).
+     On complete donc depuis la competition affichee a l'ecran. */
+  if (!dejaResolu && (!id || !slug) && typeof _g45CompetSel !== 'undefined' && _g45CompetSel) {
+    slug = slug || _g45CompetSel;
+    sport = sport || (typeof _g45CompetSport !== 'undefined' ? _g45CompetSport : '') || 'soccer';
+    if (!id && typeof _g45CompetEquipes === 'function') {
+      /* Asynchrone : on resout puis on relance, plutot que d'ouvrir a moitie. */
+      _g45CompetEquipes({ sp: sport, s: slug }).then(function (eq) {
+        var n2 = String(nom || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+        var hit = (eq || []).filter(function (t) {
+          return String(t.nom || '').toLowerCase().replace(/[^a-z0-9]/g, '') === n2;
+        })[0];
+        g45CompetOuvrir(nom, hit ? hit.id : '', slug, sport, true);
+      }).catch(function () { g45CompetOuvrir(nom, '', slug, sport, true); });
+      return;
+    }
+  }
   try {
     if (id && slug && typeof g45TeamsPerso === 'function') {
       var p = g45TeamsPerso();
@@ -32243,6 +32263,7 @@ async function g45FormeRender(c, body) {
     st.serie = der.map(function (x) { return x.r; }).reverse();   /* le plus recent a gauche */
     st.nom = (noms[id] && noms[id].nom) || t.nom;
     st.logo = (noms[id] && noms[id].logo) || t.logo;
+    st.id = id;   /* sans ca, le clic ouvrait la fiche SANS identifiant ESPN */
     return st;
   }).filter(function (x) { return x.mj > 0; });
 
@@ -32282,7 +32303,7 @@ async function g45FormeRender(c, body) {
     return '<tr style="border-top:1px solid rgba(255,255,255,.06);">'
       + '<td style="padding:7px 4px;text-align:center;color:#9fb0c7;font-size:11px;">' + (i + 1) + '</td>'
       + '<td style="padding:7px 4px;">'
-        + '<span onclick="g45CompetOuvrir(\'' + String(t.nom).replace(/'/g, "\\'") + '\')" style="display:flex;align-items:center;gap:6px;cursor:pointer;">'
+        + '<span onclick="g45CompetOuvrir(\'' + String(t.nom).replace(/'/g, "\\'") + '\',\'' + (t.id || '') + '\',\'' + c.s + '\',\'' + c.sp + '\')" style="display:flex;align-items:center;gap:6px;cursor:pointer;">'
         + (t.logo ? '<img src="' + t.logo + '" style="width:18px;height:18px;object-fit:contain;" loading="lazy">' : '')
         + '<span style="font-size:11.5px;font-weight:700;">' + t.nom + '</span></span></td>'
       + '<td style="padding:7px 4px;text-align:center;font-size:11px;">' + t.mj + '</td>'
