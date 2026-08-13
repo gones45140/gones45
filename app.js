@@ -32852,6 +32852,18 @@ function _g45SgNorm(s) {
 }
 function _g45SgCle(n) { return String(n || '').toLowerCase().trim(); }
 
+/* Libelle d'une saison. ESPN n'a PAS la meme convention partout : le parametre
+   `season` vaut l'annee de FIN pour les ligues nord-americaines (2026 = saison
+   2025-26), l'annee civile pour le NRL et la MLB, et l'annee de DEBUT pour le
+   football et le rugby. Sans ca, une chip « 2026 » sur les Avalanche montre en
+   fait 2025-26 : on croit consulter une saison et on en voit une autre. */
+function _g45SgLabel(lg, y) {
+  if (['3', 'mlb'].indexOf(lg) >= 0) return String(y);                 /* annee civile */
+  if (['nhl', 'nba', 'wnba', 'nfl'].indexOf(lg) >= 0)                  /* annee de fin */
+    return (y - 1) + '-' + String(y).slice(2);
+  return y + '-' + String(y + 1).slice(2);                             /* annee de debut */
+}
+
 /* Cinq lignes autour de la moyenne. Le pas suit l'ordre de grandeur du sport. */
 function _g45SgLignes(moy) {
   var pas = moy <= 15 ? 1 : (moy <= 90 ? 5 : 10);
@@ -32951,7 +32963,7 @@ async function _g45SaisonsGen(el, nom, perso) {
     + [anAuto, anAuto - 1, anAuto - 2].map(function (y) {
         var on = (y === an);
         return '<button onclick="_g45SgSaison(' + y + ')" style="border:none;cursor:pointer;padding:5px 11px;border-radius:14px;font-size:11px;font-weight:700;'
-          + (on ? 'background:#4d84ff;color:#fff;' : 'background:rgba(255,255,255,.06);color:#9fb0c7;') + '">' + y + '</button>';
+          + (on ? 'background:#4d84ff;color:#fff;' : 'background:rgba(255,255,255,.06);color:#9fb0c7;') + '">' + _g45SgLabel(lg, y) + '</button>';
       }).join('') + '</div>';
 
   if (!st.j) {
@@ -32994,7 +33006,7 @@ async function _g45SaisonsGen(el, nom, perso) {
 
   /* En-tete */
   html += '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">'
-    + '<div style="font-size:13px;font-weight:800;color:var(--t1);">Saison ' + an + '</div>'
+    + '<div style="font-size:13px;font-weight:800;color:var(--t1);">Saison ' + _g45SgLabel(lg, an) + '</div>'
     + '<div style="font-size:10px;color:var(--t3);">' + st.j + ' matchs \u00b7 ' + st.v + (avecNul ? '-' + st.n : '') + '-' + st.d + '</div></div>';
 
   /* ── Selecteurs de marche ── */
@@ -33193,12 +33205,21 @@ window.loadTeamSaisons = async function () {
   if (!el) return;
   var nom = (typeof _currentTeam !== 'undefined' ? _currentTeam : '') ||
             (typeof _currentUnitNom !== 'undefined' ? _currentUnitNom : '') || '';
+  /* On ne distingue PLUS les equipes du mur : NHL_TEAMS ne connait que 8 des
+     32 clubs de NHL, et une equipe absente tombait dans la branche FOOTBALL —
+     Columbus Blue Jackets affichait la fiche de Lyon. Le sport decide, pas la
+     presence au mur. `_g45CompoCtx` resout sport + ligue + identifiant ESPN
+     depuis l'entree perso, sinon depuis le classement de la competition. */
   try {
-    var U = (window.state && state.u) ? state.u : [];
-    var estMur = U.some(function (u) { return u && u.n === nom; });
-    var perso = (typeof g45TeamsPerso === 'function') ? g45TeamsPerso()[_g45SgCle(nom)] : null;
-    if (!estMur && perso && perso.league && (perso.sport || 'soccer') !== 'soccer') {
-      return await _g45SaisonsGen(el, nom, perso);
+    var ctx = await _g45CompoCtx(nom);
+    if (ctx && ctx.sp && ctx.sp !== 'soccer') {
+      if (!ctx.ref) {
+        el.innerHTML = '<div class="fc" style="text-align:center;color:var(--t3);padding:18px;font-size:12px;">'
+          + '\u00c9quipe introuvable dans le classement <b>' + ctx.sp + '/' + ctx.lg + '</b>.'
+          + '<br><small style="opacity:.7;">nom lu : \u00ab ' + nom + ' \u00bb</small></div>';
+        return;
+      }
+      return await _g45SaisonsGen(el, nom, { sport: ctx.sp, league: ctx.lg, id: ctx.ref });
     }
   } catch (e) { console.warn('saisons generiques', e && e.message); }
 
@@ -33268,10 +33289,24 @@ async function _g45CompoCtx(nom) {
   try {
     var eq = await _g45CompetEquipes({ sp: pair[0], s: pair[1] });
     var n2 = _g45SgNorm(nom);
-    var hit = eq.filter(function (t) {
-      var a = _g45SgNorm(t.nom), b = _g45SgNorm(t.court || '');
-      return a === n2 || b === n2 || a.indexOf(n2) >= 0 || n2.indexOf(a) >= 0;
-    })[0];
+    /* Rapprochement en trois passes, de la plus sure a la plus tolerante.
+       PIEGE : une simple inclusion accepte n'importe quoi de court — « Col »
+       matche Colorado ET Columbus. On exige donc 4 caracteres au minimum, et
+       on passe par les MOTS (« jazz », « bluejackets ») avant de se rabattre
+       sur l'inclusion brute. */
+    var cands = eq.map(function (t) {
+      return { id: t.id, a: _g45SgNorm(t.nom), b: _g45SgNorm(t.court || ''), mots: String(t.nom || '').split(/\s+/).map(_g45SgNorm) };
+    });
+    var hit = cands.filter(function (t) { return t.a === n2 || t.b === n2; })[0];
+    if (!hit) {
+      var motsMoi = String(nom || '').split(/\s+/).map(_g45SgNorm).filter(function (w) { return w.length >= 4; });
+      hit = cands.filter(function (t) {
+        return motsMoi.some(function (w) { return t.mots.indexOf(w) >= 0; });
+      })[0];
+    }
+    if (!hit && n2.length >= 4) {
+      hit = cands.filter(function (t) { return t.a.indexOf(n2) >= 0 || n2.indexOf(t.a) >= 0; })[0];
+    }
     if (hit) ref = String(hit.id);
   } catch (e) {}
   return { sp: pair[0], lg: pair[1], ref: ref };
