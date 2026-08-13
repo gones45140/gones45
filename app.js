@@ -31434,9 +31434,18 @@ function g45NrlRender() {
 window.g45NrlRender = g45NrlRender;
 
 async function g45NrlDemarrer() {
-  var comp = (document.getElementById('g45-nrl-comp') || {}).value || 'rugby-league|3';
-  var p = comp.split('|');
-  _g45NrlCtx = { sport: p[0], ligue: p[1] };
+  /* PIEGE : ce selecteur n'existe QUE dans le panneau NRL autonome. Dans la vue
+     Journees des Competitions il est absent, et le repli code en dur
+     'rugby-league|3' ECRASAIT le contexte que la vue venait de poser — d'ou les
+     matchs de NRL affiches sous la Ligue 1. Quand le selecteur n'est pas la, le
+     contexte deja en place fait autorite. */
+  var sel = document.getElementById('g45-nrl-comp');
+  if (sel && sel.value) {
+    var p = String(sel.value).split('|');
+    _g45NrlCtx = { sport: p[0], ligue: p[1] };
+  } else if (!_g45NrlCtx || !_g45NrlCtx.sport || !_g45NrlCtx.ligue) {
+    _g45NrlCtx = { sport: 'rugby-league', ligue: '3' };
+  }
   var an = (document.getElementById('g45-nrl-annee') || {}).value || new Date().getFullYear();
   await g45NrlCharger(parseInt(an, 10));
   g45NrlRender();
