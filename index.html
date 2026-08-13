@@ -1111,14 +1111,14 @@
 <nav class="nav">
   <button class="ni on" onclick="showTab('t-dash',this)"><span>🥧</span>Mur</button>
   <button class="ni" onclick="showTab('t-paris',this)"><span>⚽</span>Pari</button>
-  <button class="ni pc-only" onclick="showTab('t-links',this)"><span>🔗</span>Liens</button>
-  <button class="ni pc-hide-chat" id="btn-plus-menu" onclick="togglePlusMenu()" style="position:relative;"><span>+</span>Plus</button>
-  <button class="ni pc-only" onclick="showTab('t-outils',this)"><span>🔧</span>Outils</button>
-  <button class="ni pc-only" onclick="showTab('t-cal',this);loadCalendrier()"><span>📅</span>Agenda</button>
-  <button class="ni pc-only" onclick="showTab('t-simu',this);loadSimuTab();"><span>🎮</span>Jeu</button>
   <button class="ni pc-only" onclick="showTab('t-compet',this);loadCompetTab();"><span>🏆</span>Compétitions</button>
+  <button class="ni pc-only" onclick="showTab('t-cal',this);loadCalendrier()"><span>📅</span>Agenda</button>
+  <button class="ni pc-only" onclick="showTab('t-outils',this)"><span>🔧</span>Outils</button>
   <button class="ni pc-only" onclick="showTab('t-social',this);loadSocialTab();"><span>🤝</span>Social</button>
   <button class="ni pc-only" onclick="showTab('t-stats',this);loadStatsTab();"><span>🧠</span>Stats</button>
+  <button class="ni pc-only" onclick="showTab('t-simu',this);loadSimuTab();"><span>🎮</span>Jeu</button>
+  <button class="ni pc-only" onclick="showTab('t-links',this)"><span>🔗</span>Liens</button>
+  <button class="ni pc-hide-chat" id="btn-plus-menu" onclick="togglePlusMenu()" style="position:relative;"><span>+</span>Plus</button>
 
   <div style="flex:1;display:flex;flex-direction:column;padding:0 8px 8px;min-height:0;" class="pc-note-area">
     <div id="pc-note" contenteditable="true" style="flex:1;min-height:100px;background:var(--bg3);border:1px solid var(--b1);border-radius:var(--r6);color:var(--t1);font-size:11px;line-height:1.6;padding:10px;outline:none;font-family:inherit;overflow-y:auto;word-break:break-word;" data-placeholder="Notes, cotes, screenshots…" oninput="saveNote()"></div>
