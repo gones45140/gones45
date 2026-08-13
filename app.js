@@ -31412,10 +31412,11 @@ function g45NrlRender() {
             + '<div style="display:flex;justify-content:space-between;align-items:center;gap:7px;flex-wrap:wrap;">'
             + '<div style="flex:1;min-width:150px;font-size:11.5px;"><span style="color:#9fb0c7">' + d + '</span> '
               + '<b>' + m.dom + '</b> ' + score + ' <b>' + m.ext + '</b></div>'
+            /* Champ URL Sofascore retire le 13/08 : Antoine saisit ses cotes a la
+               main, et cet appel consommait une requete RapidAPI par match. */
             + '<input value="' + (c.dom || '') + '" placeholder="dom" inputmode="decimal" onchange="g45NrlSaisir(\'' + m.id + '\',\'dom\',this.value,this)" style="' + ch + '">'
             + '<input value="' + (c.ext || '') + '" placeholder="ext" inputmode="decimal" onchange="g45NrlSaisir(\'' + m.id + '\',\'ext\',this.value,this)" style="' + ch + '">'
             + ((c.dom || c.ext) ? ('<button onclick="g45NrlEffacer(\'' + m.id + '\')" title="Effacer les cotes de ce match" style="padding:6px 9px;border-radius:7px;border:1px solid rgba(255,107,107,.35);background:rgba(255,107,107,.10);color:#ff8a8a;font-size:11px;font-weight:800;cursor:pointer;">\u2715</button>') : '')
-            + '<input placeholder="URL Sofascore" onchange="g45NrlCotesSofa(\'' + m.id + '\',this.value)" style="width:110px;padding:6px;font-size:10.5px;border-radius:7px;background:#0f1626;border:1px solid rgba(255,255,255,.14);color:#e6ecf5;">'
             + '</div></div>';
         }).join('')
       + '</div>';
@@ -31837,10 +31838,10 @@ async function loadCompetTab() {
     _g45NrlCtx = { sport: c.sp, ligue: c.s };
     body.innerHTML = '<div style="display:flex;gap:8px;align-items:center;margin-bottom:10px;flex-wrap:wrap;">'
       + '<input id="g45-nrl-annee" value="' + _g45CompetAnnee(c.s) + '" style="width:82px;padding:10px 11px;font-size:12.5px;border-radius:9px;background:#0f1626;border:1px solid rgba(255,255,255,.14);color:#e6ecf5;">'
-      + '<button onclick="g45NrlDemarrer()" style="flex:1;min-width:180px;padding:12px 14px;font-size:12.5px;font-weight:800;cursor:pointer;border-radius:10px;background:#2563eb;border:1px solid #3b82f6;color:#fff;">\u2b07\ufe0f Charger la saison</button>'
+      + '<button onclick="g45NrlRecharger()" title="Force le rechargement depuis ESPN" style="flex:1;min-width:180px;padding:12px 14px;font-size:12.5px;font-weight:800;cursor:pointer;border-radius:10px;background:#2563eb;border:1px solid #3b82f6;color:#fff;">\u21bb Recharger depuis ESPN</button>'
       + '</div>'
-      + '<div style="font-size:10px;color:var(--t3);line-height:1.6;margin-bottom:10px;">Tous les matchs group\u00e9s par journ\u00e9e. Colle l\'URL Sofascore d\'un match pour r\u00e9cup\u00e9rer ses cotes, ou saisis-les \u00e0 la main.</div>'
-      + '<div id="g45-nrl-msg" style="font-size:11.5px;font-weight:600;min-height:16px;color:#9fb0c7;background:rgba(0,0,0,.25);border-radius:8px;padding:10px 12px;margin-bottom:12px;">Appuie sur \u00ab Charger la saison \u00bb.</div>'
+      + '<div style="font-size:10px;color:var(--t3);line-height:1.6;margin-bottom:10px;">Tous les matchs group\u00e9s par journ\u00e9e. Saisis les cotes \u00e0 la main : elles sont enregistr\u00e9es aussit\u00f4t. Le calendrier est gard\u00e9 en m\u00e9moire \u2014 le bouton ne sert que si tu veux forcer une mise \u00e0 jour.</div>'
+      + '<div id="g45-nrl-msg" style="font-size:11.5px;font-weight:600;min-height:16px;color:#9fb0c7;background:rgba(0,0,0,.25);border-radius:8px;padding:10px 12px;margin-bottom:12px;">\u23f3\u2026</div>'
       + '<div id="g45-nrl-synth" style="font-size:11.5px;line-height:1.8;margin-bottom:12px;"></div>'
       + '<div id="g45-nrl-liste"></div>';
     var cleAttendue = c.sp + '|' + c.s + '|' + _g45CompetAnnee(c.s);
@@ -33718,3 +33719,67 @@ function _g45MajCompteurs() {
     });
   } catch (e) {}
 }
+
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   CACHE DU CALENDRIER DE SAISON (13/08/2026)
+   ───────────────────────────────────────────────────────────────────────────
+   La vue Journees relançait `g45NrlCharger` a CHAQUE ouverture : 17 requetes
+   pour le NRL, 12 en repli scoreboard. Le code s'en excusait meme en commentaire
+   (« le cache rend l'operation instantanee ») — sauf qu'aucun cache n'existait.
+
+   REGLE RETENUE, calquee sur la nature de la donnee :
+     - saison TERMINEE (tous les matchs joues) -> cache PERMANENT. Un calendrier
+       passe ne change plus jamais, le rafraichir est du gaspillage pur.
+     - saison EN COURS -> 6 h. Les scores et les reports bougent, mais pas
+       toutes les cinq minutes.
+   Un bouton force le rechargement quand Antoine le decide.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+function _g45NrlCleCache(annee) {
+  return 'g45nrlcal2_' + _g45NrlCtx.sport + '_' + _g45NrlCtx.ligue + '_' + annee;
+}
+
+var _g45NrlChargerOrig = (typeof g45NrlCharger === 'function') ? g45NrlCharger : null;
+
+window.g45NrlCharger = async function (annee, force) {
+  annee = annee || new Date().getFullYear();
+  var cle = _g45NrlCleCache(annee);
+
+  if (!force) {
+    try {
+      var brut = localStorage.getItem(cle);
+      if (brut) {
+        var o = JSON.parse(brut);
+        var d = (o && o.d) || [];
+        if (d.length) {
+          var tousJoues = d.every(function (m) { return m.joue; });
+          var frais = (Date.now() - (o.t || 0)) < 6 * 3600000;
+          if (tousJoues || frais) {
+            _g45NrlMatchs = d;
+            _g45NrlMatchsCle = _g45NrlCtx.sport + '|' + _g45NrlCtx.ligue + '|' + annee;
+            var nj = d.filter(function (m) { return m.joue; }).length;
+            _g45NrlMsg('\u2705 ' + d.length + ' matchs (' + nj + ' jou\u00e9s) \u00b7 '
+              + (tousJoues ? 'saison termin\u00e9e, en m\u00e9moire' : 'en m\u00e9moire depuis moins de 6 h')
+              + ' \u2014 aucune requ\u00eate.', '#4ade80');
+            return d;
+          }
+        }
+      }
+    } catch (e) {}
+  }
+
+  var out = _g45NrlChargerOrig ? await _g45NrlChargerOrig(annee) : [];
+  if (out && out.length) {
+    try { localStorage.setItem(cle, JSON.stringify({ t: Date.now(), d: out })); } catch (e) {}
+  }
+  return out;
+};
+
+/* Rechargement force, a la demande. */
+async function g45NrlRecharger() {
+  var an = parseInt((document.getElementById('g45-nrl-annee') || {}).value, 10) || new Date().getFullYear();
+  await window.g45NrlCharger(an, true);
+  if (typeof g45NrlRender === 'function') g45NrlRender();
+}
+window.g45NrlRecharger = g45NrlRecharger;
