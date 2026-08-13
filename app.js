@@ -31770,8 +31770,16 @@ async function loadCompetTab() {
       + '<div id="g45-nrl-synth" style="font-size:11.5px;line-height:1.8;margin-bottom:12px;"></div>'
       + '<div id="g45-nrl-liste"></div>';
     var cleAttendue = c.sp + '|' + c.s + '|' + _g45CompetAnnee(c.s);
-    if (_g45NrlMatchs && _g45NrlMatchs.length && _g45NrlMatchsCle === cleAttendue) g45NrlRender();
-    else { _g45NrlMatchs = null; _g45NrlMatchsCle = null; }
+    if (_g45NrlMatchs && _g45NrlMatchs.length && _g45NrlMatchsCle === cleAttendue) {
+      g45NrlRender();
+    } else {
+      /* Les matchs en memoire viennent d'une AUTRE competition : on ne les
+         affiche pas, et surtout on charge directement ceux de la competition
+         ouverte plutot que d'attendre un clic. Le cache rend l'operation
+         instantanee si la saison a deja ete consultee. */
+      _g45NrlMatchs = null; _g45NrlMatchsCle = null;
+      g45NrlDemarrer();
+    }
     return;
   }
 
@@ -32241,11 +32249,35 @@ var G45_LD_FR = {
   'strikeouts':'Retraits au b\u00e2ton', 'battingAverage':'Moyenne au b\u00e2ton',
   'homeRuns':'Coups de circuit', 'RBIs':'Points produits', 'hits':'Coups s\u00fbrs',
   'stolenBases':'Buts vol\u00e9s', 'whip':'WHIP',
+  /* football : les libelles varient d'un endpoint a l'autre (goals / totalGoals /
+     goalsScored), d'ou les doublons « Goals » et « Buts » cote a cote. On couvre
+     donc toutes les formes rencontrees. */
+  'totalGoals':'Buts', 'goalsScored':'Buts', 'goalAssists':'Passes d\u00e9cisives',
+  'shotsOnTarget':'Tirs cadr\u00e9s', 'totalShots':'Tirs', 'accuratePasses':'Passes r\u00e9ussies',
+  'yellowCards':'Cartons jaunes', 'redCards':'Cartons rouges',
+  'foulsCommitted':'Fautes commises', 'foulsSuffered':'Fautes subies',
+  'saves':'Arr\u00eats', 'cleanSheet':'Clean sheets', 'appearances':'Matchs jou\u00e9s',
+  'minutes':'Minutes', 'ownGoals':'Buts contre son camp', 'penaltyKickGoals':'Penalties marqu\u00e9s',
   /* football americain */
   'passingYards':'Yards \u00e0 la passe', 'rushingYards':'Yards \u00e0 la course',
   'receivingYards':'Yards \u00e0 la r\u00e9ception', 'passingTouchdowns':'Touchdowns \u00e0 la passe',
   'totalTackles':'Plaquages', 'sacks':'Sacks', 'interceptions':'Interceptions'
 };
+
+/* ESPN renvoie des valeurs comme « Matches: 31, Goals: 27 » : on traduit les
+   etiquettes, sinon la colonne reste anglaise malgre les chips en francais. */
+function _g45LdValFr(v) {
+  return String(v == null ? '' : v)
+    .replace(/\bMatches\b/gi, 'Matchs')
+    .replace(/\bGoals\b/gi, 'Buts')
+    .replace(/\bAssists\b/gi, 'Passes')
+    .replace(/\bSaves\b/gi, 'Arr\u00eats')
+    .replace(/\bPoints\b/gi, 'Points')
+    .replace(/\bTries\b/gi, 'Essais')
+    .replace(/\bShots\b/gi, 'Tirs')
+    .replace(/\bYards\b/gi, 'Yards')
+    .replace(/\bStrikeouts\b/gi, 'Retraits');
+}
 
 function _g45LdLibelle(cat) {
   return G45_LD_FR[cat.name] || G45_LD_FR[cat.abbreviation] || cat.displayName || cat.name;
@@ -32346,7 +32378,7 @@ async function g45LeadersGen(c, box, an) {
           + (t.logo ? '<img src="' + t.logo + '" style="width:20px;height:20px;object-fit:contain;" loading="lazy">' : '<span style="width:20px;"></span>')
           + '<span style="flex:1;font-size:11.5px;font-weight:700;">' + t.joueur + '</span>'
           + '<span style="font-size:10.5px;color:#9fb0c7;">' + t.equipe + '</span>'
-          + '<span style="font-size:13px;font-weight:800;color:var(--a);min-width:52px;text-align:right;">' + t.val + '</span>'
+          + '<span style="font-size:12px;font-weight:800;color:var(--a);text-align:right;">' + _g45LdValFr(t.val) + '</span>'
           + '</div>';
       }).join('');
 }
