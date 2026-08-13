@@ -33214,3 +33214,225 @@ window.loadTeamSaisons = async function () {
     }
   } catch (e) {}
 };
+
+
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   EFFECTIF & STATS JOUEURS DANS « COMPO » — tous sports (13/08/2026)
+   ───────────────────────────────────────────────────────────────────────────
+   L'onglet Compo appelait `loadFdSquad`, qui interroge football-data : vide
+   pour une equipe de NBA, NHL, NFL, MLB ou rugby. Le panneau d'effectif qui
+   existait pour le basket etait enferme dans l'onglet Saisons et cable sur
+   NBA_TEAMS. On le sort de la et on le rend generique.
+
+   TROIS ENDPOINTS ESPN, LES MEMES POUR TOUS LES SPORTS :
+     .../sports/{sport}/{ligue}/teams/{ref}/roster        -> effectif
+     .../common/v3/sports/{sport}/{ligue}/athletes/{id}/overview -> moyennes
+     .../common/v3/sports/{sport}/{ligue}/athletes/{id}/gamelog  -> derniers matchs
+
+   PIEGE EVITE : ne PAS cabler la liste des stats affichees. En NBA c'est
+   PTS/REB/AST, en NFL des yards, en NHL des buts et des arrets. On prend donc
+   les libelles que RENVOIE ESPN (`statistics.labels`) au lieu d'en imposer —
+   c'est ce qui fait que le meme code sert les six sports.
+
+   RESOLUTION DE L'EQUIPE : l'entree `g45_teams_perso` d'abord (posee au clic
+   depuis Competitions), sinon le classement de la competition, qui donne les
+   identifiants ESPN et evite les tables de noms cablees.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* Sport du mur (emoji) -> couple sport/ligue ESPN. Une entree perso a toujours
+   la priorite sur cette table : elle vient du classement, donc elle est sure. */
+var _G45_EMOJI_LIGUE = {
+  '\ud83c\udfc0': ['basketball', 'nba'], '\ud83c\udfc0\ud83c\uddfa\ud83c\uddf8': ['basketball', 'nba'],
+  '\ud83c\udfd2': ['hockey', 'nhl'],     '\ud83c\udfd2\ud83c\uddfa\ud83c\uddf8': ['hockey', 'nhl'],
+  '\u26be': ['baseball', 'mlb'],         '\u26be\ud83c\uddfa\ud83c\uddf8': ['baseball', 'mlb'],
+  '\ud83c\udfc8': ['football', 'nfl'],   '\ud83c\udfc8\ud83c\uddfa\ud83c\uddf8': ['football', 'nfl'],
+  '\ud83c\udfc9\ud83c\udde6\ud83c\uddfa': ['rugby-league', '3'],
+  '\ud83c\udfc9': ['rugby', '270559']
+};
+
+async function _g45CompoCtx(nom) {
+  var perso = null;
+  try { perso = g45TeamsPerso()[String(nom || '').toLowerCase().trim()]; } catch (e) {}
+  if (perso && perso.league && (perso.sport || 'soccer') !== 'soccer') {
+    return { sp: perso.sport, lg: String(perso.league), ref: String(perso.id || '') };
+  }
+  var u = null;
+  try { u = (window.state && state.u ? state.u : []).filter(function (x) { return x && x.n === nom; })[0]; } catch (e) {}
+  var em = (u && u.sport) || '';
+  var pair = _G45_EMOJI_LIGUE[em];
+  if (!pair) return null;
+
+  /* Identifiant ESPN pris dans le classement — aucune table de noms a tenir. */
+  var ref = '';
+  try {
+    var eq = await _g45CompetEquipes({ sp: pair[0], s: pair[1] });
+    var n2 = _g45SgNorm(nom);
+    var hit = eq.filter(function (t) {
+      var a = _g45SgNorm(t.nom), b = _g45SgNorm(t.court || '');
+      return a === n2 || b === n2 || a.indexOf(n2) >= 0 || n2.indexOf(a) >= 0;
+    })[0];
+    if (hit) ref = String(hit.id);
+  } catch (e) {}
+  return { sp: pair[0], lg: pair[1], ref: ref };
+}
+
+async function _g45CompoEffectif(el, nom) {
+  var ctx = await _g45CompoCtx(nom);
+  if (!ctx || !ctx.ref) {
+    el.innerHTML = '<div style="text-align:center;color:var(--t3);font-size:11.5px;padding:18px;">Effectif indisponible pour <b>' + nom + '</b>.'
+      + '<br><small style="opacity:.7;">' + (ctx ? ('\u00e9quipe non trouv\u00e9e dans ' + ctx.sp + '/' + ctx.lg) : 'sport non reconnu') + '</small></div>';
+    return;
+  }
+  _g45CompoCtxCourant = ctx;
+
+  el.innerHTML = '<div style="display:flex;align-items:center;gap:9px;padding:16px;color:var(--t3);font-size:11.5px;">'
+    + '<div style="width:14px;height:14px;border:2px solid rgba(77,132,255,.2);border-top-color:#4d84ff;border-radius:50%;animation:spin .8s linear infinite;"></div>Chargement de l\'effectif\u2026</div>';
+
+  var joueurs = [], saison = '';
+  try {
+    var r = await fetch('https://site.api.espn.com/apis/site/v2/sports/' + ctx.sp + '/' + ctx.lg + '/teams/' + ctx.ref + '/roster');
+    var d = await r.json();
+    saison = (d.season && d.season.displayName) || '';
+    var ath = d.athletes || [];
+    /* ESPN groupe parfois par poste (objets avec .items), parfois non. */
+    if (ath.length && ath[0] && ath[0].items) ath.forEach(function (g) { (g.items || []).forEach(function (p) { joueurs.push(p); }); });
+    else joueurs = ath;
+  } catch (e) {}
+
+  if (!joueurs.length) {
+    el.innerHTML = '<div style="text-align:center;color:var(--t3);font-size:11.5px;padding:18px;">Aucun joueur renvoy\u00e9 par ESPN.<br><small style="opacity:.7;">' + ctx.sp + '/' + ctx.lg + ' \u00b7 id ' + ctx.ref + '</small></div>';
+    return;
+  }
+
+  var html = '<div class="cwrap">'
+    + '<div style="font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#4f5d88;margin-bottom:8px;">\ud83d\udc65 Effectif '
+    + (saison ? saison + ' ' : '') + '(' + joueurs.length + ')</div>';
+
+  joueurs.forEach(function (p) {
+    var num = p.jersey || '';
+    var pos = (p.position && (p.position.abbreviation || p.position.name)) || '';
+    var nm = p.fullName || p.displayName || ((p.firstName || '') + ' ' + (p.lastName || ''));
+    var ht = p.displayHeight || '';
+    var img = (p.headshot && p.headshot.href) || '';
+    var pid = String(p.id || '');
+    if (!pid) return;
+    html += '<div onclick="_g45CompoJoueur(\'' + pid + '\')" style="display:flex;align-items:center;gap:9px;padding:7px 6px;border-bottom:1px solid rgba(255,255,255,.04);cursor:pointer;border-radius:5px;">'
+      + (img ? '<img src="' + img + '" style="width:30px;height:30px;border-radius:50%;object-fit:cover;background:rgba(255,255,255,.05);flex-shrink:0;" onerror="this.style.display=\'none\'">'
+             : '<div style="width:30px;height:30px;border-radius:50%;background:rgba(77,132,255,.12);display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:800;color:#4d84ff;flex-shrink:0;">' + (num || '\u2014') + '</div>')
+      + '<div style="flex:1;min-width:0;">'
+      + '<div style="font-size:11.5px;font-weight:700;color:var(--t1);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">' + (num ? '#' + num + ' ' : '') + nm + '</div>'
+      + '<div style="font-size:9px;color:var(--t3);">' + [pos, ht].filter(Boolean).join(' \u00b7 ') + '</div></div>'
+      + '<div style="color:#4d84ff;font-size:13px;">\ud83d\udcca</div></div>'
+      + '<div id="g45-pst-' + pid + '"></div>';
+  });
+
+  html += '</div>';
+  el.innerHTML = html;
+}
+
+var _g45CompoCtxCourant = null;
+
+/* Moyennes de la saison — libelles pris chez ESPN, jamais cables. */
+async function _g45CompoJoueur(pid) {
+  var box = document.getElementById('g45-pst-' + pid);
+  var ctx = _g45CompoCtxCourant;
+  if (!box || !ctx) return;
+  if (box.innerHTML.trim()) { box.innerHTML = ''; return; }          /* bascule */
+  box.innerHTML = '<div style="padding:8px 8px 8px 40px;color:var(--t3);font-size:10px;">\u23f3 Stats\u2026</div>';
+
+  try {
+    var r = await fetch('https://site.web.api.espn.com/apis/common/v3/sports/' + ctx.sp + '/' + ctx.lg + '/athletes/' + pid + '/overview');
+    var d = await r.json();
+    var st = d && d.statistics;
+    if (!st || !st.labels || !st.splits || !st.splits.length) {
+      box.innerHTML = '<div style="padding:8px 8px 8px 40px;color:var(--t3);font-size:10px;">Pas de stats publi\u00e9es cette saison.</div>';
+      return;
+    }
+    var split = st.splits.filter(function (s) { return /regular|saison/i.test(s.displayName || ''); })[0] || st.splits[0];
+    var vals = split.stats || [];
+    var COUL = ['#4d84ff','#1ed760','#f0b020','#a78bfa','#22d3ee','#ff7b54','#ec4899','#84cc16'];
+
+    var h = '<div style="background:rgba(77,132,255,.05);border-radius:8px;padding:10px;margin:4px 0 8px 38px;">'
+      + '<div style="font-size:9px;color:var(--t3);margin-bottom:8px;">Moyennes ' + (split.displayName || 'saison') + '</div>'
+      + '<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:6px;">';
+    st.labels.slice(0, 8).forEach(function (lab, i) {
+      var v = (vals[i] !== undefined && vals[i] !== null && vals[i] !== '') ? vals[i] : '\u2014';
+      h += '<div style="text-align:center;"><div style="font-size:14px;font-weight:800;color:' + COUL[i % COUL.length] + ';">' + v + '</div>'
+        + '<div style="font-size:8px;color:var(--t3);">' + lab + '</div></div>';
+    });
+    h += '</div><button onclick="_g45CompoGamelog(\'' + pid + '\')" style="width:100%;margin-top:8px;padding:7px;border-radius:6px;border:1px solid rgba(255,255,255,.1);background:rgba(255,255,255,.04);color:var(--t2);font-size:10px;font-weight:700;cursor:pointer;">\ud83d\udccb 5 derniers matchs</button>'
+      + '<div id="g45-pgl-' + pid + '"></div></div>';
+    box.innerHTML = h;
+  } catch (e) {
+    box.innerHTML = '<div style="padding:8px 8px 8px 40px;color:#ff6b6b;font-size:10px;">Erreur stats joueur.</div>';
+  }
+}
+
+async function _g45CompoGamelog(pid) {
+  var box = document.getElementById('g45-pgl-' + pid);
+  var ctx = _g45CompoCtxCourant;
+  if (!box || !ctx) return;
+  if (box.innerHTML.trim()) { box.innerHTML = ''; return; }
+  box.innerHTML = '<div style="padding:8px;color:var(--t3);font-size:10px;">\u23f3 Matchs\u2026</div>';
+
+  try {
+    var r = await fetch('https://site.web.api.espn.com/apis/common/v3/sports/' + ctx.sp + '/' + ctx.lg + '/athletes/' + pid + '/gamelog');
+    var d = await r.json();
+    var evs = d.events || {}, labels = d.labels || d.names || [];
+    var lignes = [];
+    (d.seasonTypes || []).forEach(function (t) {
+      (t.categories || []).forEach(function (c) {
+        (c.events || []).forEach(function (e) { lignes.push(e); });
+      });
+    });
+    if (!lignes.length) { box.innerHTML = '<div style="padding:8px;color:var(--t3);font-size:10px;">Aucun match r\u00e9cent.</div>'; return; }
+
+    var h = '<div style="margin-top:8px;font-size:9px;color:var(--t3);">5 derniers matchs</div>';
+    lignes.slice(0, 5).forEach(function (e) {
+      var ev = evs[e.eventId] || {};
+      var res = (ev.gameResult || '').toUpperCase();
+      var col = res === 'W' ? '#1ed760' : (res === 'L' ? '#ff4545' : 'var(--t3)');
+      var adv = (ev.opponent && (ev.opponent.abbreviation || ev.opponent.displayName)) || '';
+      var lieu = ev.atVs || '';
+      var sc = ev.score || '';
+      /* Les trois premieres stats du sport, quelles qu'elles soient. */
+      var det = (e.stats || []).slice(0, 3).map(function (v, i) {
+        return v + (labels[i] ? (' ' + labels[i]) : '');
+      }).join(' \u00b7 ');
+      h += '<div style="display:flex;align-items:center;gap:6px;padding:5px 2px;border-bottom:1px solid rgba(255,255,255,.04);font-size:10px;">'
+        + '<div style="width:14px;font-weight:800;color:' + col + ';">' + res + '</div>'
+        + '<div style="width:74px;color:var(--t2);">' + lieu + ' ' + adv + '</div>'
+        + '<div style="width:60px;color:var(--t3);">' + sc + '</div>'
+        + '<div style="flex:1;text-align:right;font-weight:700;color:var(--t1);">' + det + '</div></div>';
+    });
+    box.innerHTML = h;
+  } catch (e) {
+    box.innerHTML = '<div style="padding:8px;color:#ff6b6b;font-size:10px;">Erreur gamelog.</div>';
+  }
+}
+
+window._g45CompoJoueur = _g45CompoJoueur;
+window._g45CompoGamelog = _g45CompoGamelog;
+
+/* ── Branchement sur l'onglet Compo, par enveloppe ──
+   Le football garde `loadFdSquad` et son terrain : on ne detourne que les
+   equipes dont le sport n'est pas le football. */
+var _g45CompoOrig = (typeof loadTeamCompo === 'function') ? loadTeamCompo : null;
+
+window.loadTeamCompo = function () {
+  var el = (typeof $i === 'function') ? $i('ip-compo') : document.getElementById('ip-compo');
+  if (!el) return;
+  var nom = (typeof _currentTeam !== 'undefined' ? _currentTeam : '') || '';
+  var estFoot = true;
+  try {
+    var u = (window.state && state.u ? state.u : []).filter(function (x) { return x && x.n === nom; })[0];
+    var perso = g45TeamsPerso()[String(nom || '').toLowerCase().trim()];
+    if (u && u.sport && u.sport !== '\u26bd') estFoot = false;
+    if (!u && perso && (perso.sport || 'soccer') !== 'soccer') estFoot = false;
+  } catch (e) {}
+
+  if (estFoot) { if (_g45CompoOrig) return _g45CompoOrig(); return; }
+  el.style.display = 'block';
+  _g45CompoEffectif(el, nom);
+};
