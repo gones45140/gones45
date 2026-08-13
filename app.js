@@ -31090,6 +31090,7 @@ setTimeout(g45TpRender, 800);
 
 var G45_NRL_CLE = 'g45_cotes_hist';
 var _g45NrlMatchs = null;
+var _g45NrlMatchsCle = null;
 var _g45NrlCtx = { sport: 'rugby-league', ligue: '3' };
 
 /* Les competitions ouvertes a l'analyse. Le couple sport/ligue sert a la fois a
@@ -31229,6 +31230,10 @@ async function g45NrlCharger(annee) {
     });
   }
   _g45NrlMatchs = out;
+  /* On retient DE QUELLE competition viennent ces matchs : la variable est
+     globale, et sans ce marqueur les matchs de NRL se reaffichaient sous la
+     Ligue 1 des qu'on changeait de competition. */
+  _g45NrlMatchsCle = _g45NrlCtx.sport + '|' + _g45NrlCtx.ligue + '|' + annee;
   var nj = out.filter(function (m) { return m.joue; }).length;
   _g45NrlMsg('✅ ' + out.length + ' matchs (' + nj + ' joués) sur '
     + (out.length ? out[out.length - 1].jr : 0) + ' journées.', '#4ade80');
@@ -31764,7 +31769,9 @@ async function loadCompetTab() {
       + '<div id="g45-nrl-msg" style="font-size:11.5px;font-weight:600;min-height:16px;color:#9fb0c7;background:rgba(0,0,0,.25);border-radius:8px;padding:10px 12px;margin-bottom:12px;">Appuie sur \u00ab Charger la saison \u00bb.</div>'
       + '<div id="g45-nrl-synth" style="font-size:11.5px;line-height:1.8;margin-bottom:12px;"></div>'
       + '<div id="g45-nrl-liste"></div>';
-    if (_g45NrlMatchs && _g45NrlMatchs.length) g45NrlRender();
+    var cleAttendue = c.sp + '|' + c.s + '|' + _g45CompetAnnee(c.s);
+    if (_g45NrlMatchs && _g45NrlMatchs.length && _g45NrlMatchsCle === cleAttendue) g45NrlRender();
+    else { _g45NrlMatchs = null; _g45NrlMatchsCle = null; }
     return;
   }
 
