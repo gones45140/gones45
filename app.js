@@ -31399,10 +31399,14 @@ function g45NrlRender() {
     var lst = parJr[jr];
     var nCotes = lst.filter(function (m) { var c = cotes[_g45Cle(m.id)]; return c && c.dom > 1 && c.ext > 1; }).length;
     return '<div style="margin-bottom:14px;">'
-      + '<div style="font-weight:800;font-size:11.5px;color:var(--a);margin-bottom:6px;">'
-        + 'Journ\u00e9e ' + jr + ' <span data-jr-compte="1" data-jr-ids="'
-        + lst.map(function (m) { return m.id; }).join(',') + '" style="color:#9fb0c7;font-weight:600;">\u00b7 '
-        + lst.length + ' matchs \u00b7 ' + nCotes + ' avec cotes</span></div>'
+      + '<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:6px;">'
+        + '<div style="font-weight:800;font-size:11.5px;color:var(--a);">Journ\u00e9e ' + jr
+        + ' <span data-jr-compte="1" data-jr-ids="' + lst.map(function (m) { return m.id; }).join(',')
+        + '" style="color:#9fb0c7;font-weight:600;">\u00b7 ' + lst.length + ' matchs \u00b7 ' + nCotes + ' avec cotes</span></div>'
+        + (g45EstAdmin()
+            ? ('<button onclick="g45CotesEspnJournee(\'' + jr + '\',this)" title="Remplit les cotes vides de cette journ\u00e9e depuis ESPN" style="margin-left:auto;padding:4px 10px;border-radius:12px;border:1px solid rgba(46,204,113,.4);background:rgba(46,204,113,.10);color:#2ecc71;font-size:10px;font-weight:800;cursor:pointer;">\ud83d\udcb0 Cotes ESPN</button>')
+            : '')
+        + '</div>'
       + lst.map(function (m) {
           var c = cotes[_g45Cle(m.id)] || {};
           var d = (m.date || '').slice(8, 10) + '/' + (m.date || '').slice(5, 7);
@@ -31412,11 +31416,15 @@ function g45NrlRender() {
             + '<div style="display:flex;justify-content:space-between;align-items:center;gap:7px;flex-wrap:wrap;">'
             + '<div style="flex:1;min-width:150px;font-size:11.5px;"><span style="color:#9fb0c7">' + d + '</span> '
               + '<b>' + m.dom + '</b> ' + score + ' <b>' + m.ext + '</b></div>'
-            /* Champ URL Sofascore retire le 13/08 : Antoine saisit ses cotes a la
-               main, et cet appel consommait une requete RapidAPI par match. */
+            /* URL Sofascore retiree le 13/08 (une requete RapidAPI par match).
+               Le champ NUL n'apparait que la ou le nul existe. La saisie reste
+               ouverte a tous : c'est leur propre stockage, ca ne coute rien. */
             + '<input value="' + (c.dom || '') + '" placeholder="dom" inputmode="decimal" onchange="g45NrlSaisir(\'' + m.id + '\',\'dom\',this.value,this)" style="' + ch + '">'
+            + (_g45AvecNul(_g45NrlCtx.sport)
+                ? ('<input value="' + (c.nul || '') + '" placeholder="nul" inputmode="decimal" onchange="g45NrlSaisir(\'' + m.id + '\',\'nul\',this.value,this)" style="' + ch + '">')
+                : '')
             + '<input value="' + (c.ext || '') + '" placeholder="ext" inputmode="decimal" onchange="g45NrlSaisir(\'' + m.id + '\',\'ext\',this.value,this)" style="' + ch + '">'
-            + ((c.dom || c.ext) ? ('<button onclick="g45NrlEffacer(\'' + m.id + '\')" title="Effacer les cotes de ce match" style="padding:6px 9px;border-radius:7px;border:1px solid rgba(255,107,107,.35);background:rgba(255,107,107,.10);color:#ff8a8a;font-size:11px;font-weight:800;cursor:pointer;">\u2715</button>') : '')
+            + ((c.dom || c.ext || c.nul) ? ('<button onclick="g45NrlEffacer(\'' + m.id + '\')" title="Effacer les cotes de ce match" style="padding:6px 9px;border-radius:7px;border:1px solid rgba(255,107,107,.35);background:rgba(255,107,107,.10);color:#ff8a8a;font-size:11px;font-weight:800;cursor:pointer;">\u2715</button>') : '')
             + '</div></div>';
         }).join('')
       + '</div>';
@@ -31838,9 +31846,14 @@ async function loadCompetTab() {
     _g45NrlCtx = { sport: c.sp, ligue: c.s };
     body.innerHTML = '<div style="display:flex;gap:8px;align-items:center;margin-bottom:10px;flex-wrap:wrap;">'
       + '<input id="g45-nrl-annee" value="' + _g45CompetAnnee(c.s) + '" style="width:82px;padding:10px 11px;font-size:12.5px;border-radius:9px;background:#0f1626;border:1px solid rgba(255,255,255,.14);color:#e6ecf5;">'
-      + '<button onclick="g45NrlRecharger()" title="Force le rechargement depuis ESPN" style="flex:1;min-width:180px;padding:12px 14px;font-size:12.5px;font-weight:800;cursor:pointer;border-radius:10px;background:#2563eb;border:1px solid #3b82f6;color:#fff;">\u21bb Recharger depuis ESPN</button>'
+      + (g45EstAdmin()
+          ? ('<button onclick="g45NrlRecharger()" title="Force le rechargement du calendrier depuis ESPN" style="flex:1;min-width:140px;padding:12px 14px;font-size:12.5px;font-weight:800;cursor:pointer;border-radius:10px;background:#2563eb;border:1px solid #3b82f6;color:#fff;">\u21bb Recharger</button>'
+             + '<button onclick="g45CotesEspnSaison(this)" title="Remplit toutes les cotes vides de la saison depuis ESPN" style="flex:1;min-width:140px;padding:12px 14px;font-size:12.5px;font-weight:800;cursor:pointer;border-radius:10px;background:rgba(46,204,113,.14);border:1px solid rgba(46,204,113,.5);color:#2ecc71;">\ud83d\udcb0 Cotes ESPN \u2014 saison</button>')
+          : '')
+      + '<button id="btn-admin-lock-journees" onclick="g45AdminBascule()" title="Mode administrateur" style="padding:12px 13px;border-radius:10px;border:1px solid rgba(255,255,255,.15);background:rgba(255,255,255,.07);color:var(--t2);font-size:14px;cursor:pointer;">'
+        + (g45EstAdmin() ? '\ud83d\udd13' : '\ud83d\udd12') + '</button>'
       + '</div>'
-      + '<div style="font-size:10px;color:var(--t3);line-height:1.6;margin-bottom:10px;">Tous les matchs group\u00e9s par journ\u00e9e. Saisis les cotes \u00e0 la main : elles sont enregistr\u00e9es aussit\u00f4t. Le calendrier est gard\u00e9 en m\u00e9moire \u2014 le bouton ne sert que si tu veux forcer une mise \u00e0 jour.</div>'
+      + '<div style="font-size:10px;color:var(--t3);line-height:1.6;margin-bottom:10px;">Tous les matchs group\u00e9s par journ\u00e9e. La saisie des cotes est libre \u2014 dom, nul, ext. Le rechargement du calendrier et le remplissage automatique depuis ESPN sont r\u00e9serv\u00e9s \u00e0 l\'administrateur (cadenas).</div>'
       + '<div id="g45-nrl-msg" style="font-size:11.5px;font-weight:600;min-height:16px;color:#9fb0c7;background:rgba(0,0,0,.25);border-radius:8px;padding:10px 12px;margin-bottom:12px;">\u23f3\u2026</div>'
       + '<div id="g45-nrl-synth" style="font-size:11.5px;line-height:1.8;margin-bottom:12px;"></div>'
       + '<div id="g45-nrl-liste"></div>';
@@ -33783,3 +33796,230 @@ async function g45NrlRecharger() {
   if (typeof g45NrlRender === 'function') g45NrlRender();
 }
 window.g45NrlRecharger = g45NrlRecharger;
+
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   COTES ESPN AUTOMATIQUES + CHAMP NUL (13/08/2026)
+   ───────────────────────────────────────────────────────────────────────────
+   ESPN publie les cotes DANS le scoreboard : `competitions[0].odds[0]`, avec
+   homeTeamOdds / awayTeamOdds / drawOdds et le total. C'est gratuit, sans cle
+   et sans quota — a l'oppose de The Odds API (500 requetes par mois) et de
+   RapidAPI. On va donc les chercher la.
+
+   ECONOMIE : une requete par JOUR de match, pas par match. Une journee de NRL
+   tient sur 3 ou 4 dates, donc 3 ou 4 requetes pour 8 matchs. Le bouton est
+   pose par journee et non sur la saison entiere : charger 27 journees d'un coup
+   ferait une centaine de requetes pour des cotes qui, sur les matchs deja
+   joues, ne servent qu'a l'historique.
+
+   COUVERTURE REELLE (constatee) : tres bonne en NFL, NBA, MLB, NHL et NCAA,
+   ou ESPN sert son propre bookmaker. Correcte en football europeen avec le
+   NUL. Faible a nulle en NRL et en rugby a XV — d'ou la saisie manuelle qui
+   reste le chemin principal.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* Les cotes americaines sont converties en decimal : +150 -> 2.50, -200 -> 1.50. */
+function _g45AmDec(a) {
+  a = parseFloat(a);
+  if (!a || isNaN(a)) return 0;
+  return a > 0 ? (1 + a / 100) : (1 + 100 / Math.abs(a));
+}
+
+/* Extrait dom / nul / ext d'un bloc `odds` ESPN, quelle que soit sa forme :
+   selon les ligues on trouve un decimal tout pret, une cote americaine, ou
+   seulement l'americaine dans `current`. */
+function _g45OddsTrio(od) {
+  if (!od) return null;
+  var cur = od.current || {};
+  function lire(o1, o2) {
+    var o = o1 || o2 || {};
+    var ml = o.moneyLine != null ? o.moneyLine : (o.moneyline != null ? o.moneyline : null);
+    if (ml && typeof ml === 'object') {
+      if (ml.decimal) return parseFloat(ml.decimal);
+      if (ml.american != null) return _g45AmDec(String(ml.american).replace('+', ''));
+    }
+    if (o.decimal) return parseFloat(o.decimal);
+    if (ml != null) return _g45AmDec(ml);
+    return 0;
+  }
+  var dom = lire(od.homeTeamOdds, cur.homeTeamOdds);
+  var ext = lire(od.awayTeamOdds, cur.awayTeamOdds);
+  var nul = lire(od.drawOdds, cur.drawOdds);
+  if (!dom && !ext) return null;
+  return { dom: dom || 0, nul: nul || 0, ext: ext || 0,
+           prov: (od.provider && od.provider.name) || 'ESPN' };
+}
+
+/* Sports ou le match nul existe : inutile d'afficher un champ qui ne sera
+   jamais rempli en NBA, NHL, NFL ou MLB. */
+function _g45AvecNul(sport) {
+  return ['soccer', 'rugby', 'rugby-league', 'cricket'].indexOf(String(sport || '')) >= 0;
+}
+window._g45AvecNul = _g45AvecNul;
+
+/* Memoire de session : une meme date n'est demandee qu'une fois, meme si on
+   relance le bouton ou qu'on passe de la journee a la saison entiere. */
+var _g45OddsJourMem = {};
+
+/* Coeur commun : remplit les cotes VIDES d'une liste de matchs.
+   Une requete par JOUR, jamais par match. */
+async function _g45CotesEspnPour(lst, etiquette, btn) {
+  if (!lst || !lst.length) return;
+  var libelleBtn = btn ? btn.textContent : '';
+  if (btn) { btn.disabled = true; btn.textContent = '\u23f3\u2026'; }
+
+  var o = g45NrlCotes();
+  /* On ne redemande pas les dates dont TOUS les matchs ont deja leurs cotes. */
+  var aFaire = lst.filter(function (m) {
+    var c = o[_g45Cle(m.id)];
+    return !(c && c.dom > 1 && c.ext > 1);
+  });
+  if (!aFaire.length) {
+    if (btn) { btn.disabled = false; btn.textContent = libelleBtn; }
+    _g45NrlMsg('\u2705 ' + etiquette + ' : toutes les cotes sont deja saisies, aucune requete.', '#4ade80');
+    return;
+  }
+
+  var parJour = {};
+  aFaire.forEach(function (m) {
+    var d = new Date(m.date);
+    if (isNaN(d)) return;
+    var k = d.getUTCFullYear() + String(d.getUTCMonth() + 1).padStart(2, '0') + String(d.getUTCDate()).padStart(2, '0');
+    (parJour[k] = parJour[k] || []).push(m);
+  });
+
+  var jours = Object.keys(parJour).sort();
+  var trouves = 0, prov = '', reseau = 0;
+
+  for (var i = 0; i < jours.length; i++) {
+    _g45NrlMsg('\u23f3 Cotes ESPN \u00b7 ' + etiquette + ' \u00b7 jour ' + (i + 1) + '/' + jours.length + '\u2026');
+    var memK = _g45NrlCtx.sport + '|' + _g45NrlCtx.ligue + '|' + jours[i];
+    var j = _g45OddsJourMem[memK];
+    if (!j) {
+      try {
+        var r = await fetch('https://site.api.espn.com/apis/site/v2/sports/' + _g45NrlCtx.sport +
+                            '/' + _g45NrlCtx.ligue + '/scoreboard?dates=' + jours[i] + '&limit=1000');
+        if (!r.ok) continue;
+        j = await r.json();
+        _g45OddsJourMem[memK] = j;
+        reseau++;
+      } catch (e) { continue; }
+    }
+
+    var index = {};
+    ((j && j.events) || []).forEach(function (e) { index[String(e.id)] = e; });
+
+    parJour[jours[i]].forEach(function (m) {
+      var e = index[String(m.id)];
+      var c0 = e && e.competitions && e.competitions[0];
+      var trio = _g45OddsTrio(c0 && c0.odds && c0.odds[0]);
+      if (!trio) return;
+      var k = _g45Cle(m.id);
+      /* On n'ECRASE PAS une cote saisie a la main : elle vient de SON
+         bookmaker et fait foi. On ne remplit que le vide. */
+      var d = o[k] || { dom: 0, nul: 0, ext: 0 };
+      if (!d.dom && trio.dom) d.dom = Math.round(trio.dom * 100) / 100;
+      if (!d.ext && trio.ext) d.ext = Math.round(trio.ext * 100) / 100;
+      if (!d.nul && trio.nul) d.nul = Math.round(trio.nul * 100) / 100;
+      if (d.dom || d.ext) { o[k] = d; trouves++; prov = trio.prov; }
+    });
+  }
+
+  _g45NrlSave(o);
+  if (typeof g45NrlRender === 'function') g45NrlRender();
+  _g45NrlMsg(trouves
+    ? ('\u2705 ' + etiquette + ' : ' + trouves + '/' + aFaire.length + ' matchs remplis \u00b7 '
+       + reseau + ' requ\u00eate' + (reseau > 1 ? 's' : '') + ' \u00b7 ' + prov + ' via ESPN.')
+    : ('\u2139\ufe0f ' + etiquette + ' : ESPN ne publie pas de cotes sur ces matchs (' + reseau + ' requ\u00eates). Saisie manuelle.'),
+    trouves ? '#4ade80' : '#ffb13d');
+}
+
+async function g45CotesEspnJournee(jr, btn) {
+  var lst = (_g45NrlMatchs || []).filter(function (m) { return String(m.jr) === String(jr); });
+  await _g45CotesEspnPour(lst, 'Journ\u00e9e ' + jr, btn);
+}
+window.g45CotesEspnJournee = g45CotesEspnJournee;
+
+/* Saison entiere. Le cout est ANNONCE avant de partir : ESPN est gratuit et
+   sans quota, mais une centaine de requetes enchainees reste une centaine de
+   requetes, et Antoine doit savoir ce qu'il declenche. */
+async function g45CotesEspnSaison(btn) {
+  var tous = _g45NrlMatchs || [];
+  if (!tous.length) return;
+  var o = g45NrlCotes();
+  var manquants = tous.filter(function (m) {
+    var c = o[_g45Cle(m.id)];
+    return !(c && c.dom > 1 && c.ext > 1);
+  });
+  if (!manquants.length) { _g45NrlMsg('\u2705 Toute la saison a deja ses cotes.', '#4ade80'); return; }
+
+  var dates = {};
+  manquants.forEach(function (m) {
+    var d = new Date(m.date);
+    if (!isNaN(d)) dates[d.getUTCFullYear() + '' + d.getUTCMonth() + '' + d.getUTCDate()] = 1;
+  });
+  var nJours = Object.keys(dates).length;
+  if (!confirm('Remplir les cotes de ' + manquants.length + ' matchs.\n\n'
+      + nJours + ' requetes ESPN (une par jour de match), gratuites et sans quota.\n'
+      + 'Compte environ ' + Math.max(1, Math.round(nJours * 0.6)) + ' secondes.\n\nContinuer ?')) return;
+
+  await _g45CotesEspnPour(manquants, 'Saison', btn);
+}
+window.g45CotesEspnSaison = g45CotesEspnSaison;
+
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   MODE ADMINISTRATEUR SUR LES BOUTONS RESEAU (13/08/2026)
+   ───────────────────────────────────────────────────────────────────────────
+   GONES45 est partage avec Bruno, JP, Cedric et Baptiste. Les boutons qui
+   declenchent des dizaines de requetes — rechargement du calendrier, cotes
+   ESPN d'une journee ou d'une saison — passent donc derriere le meme verrou
+   que la zone FBref : `gones45_admin` dans localStorage.
+
+   On REUTILISE `toggleAdminLock` au lieu de recopier le controle du mot de
+   passe : un second exemplaire du code se serait desynchronise du premier au
+   premier changement, et surtout aurait duplique le mot de passe en clair.
+
+   Ce qui reste ouvert a tous : la SAISIE manuelle des cotes et l'effacement.
+   C'est leur propre localStorage, ca ne coute rien et ca ne casse rien.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+function g45EstAdmin() {
+  try { return localStorage.getItem('gones45_admin') === '1'; } catch (e) { return false; }
+}
+window.g45EstAdmin = g45EstAdmin;
+
+function g45AdminBascule() {
+  /* toggleAdminLock gere le prompt, la verification et la memorisation du code.
+     Elle cherche ensuite des elements par identifiant : le cadenas de cette vue
+     porte justement `btn-admin-lock-journees`, il se met donc a jour tout seul. */
+  if (typeof toggleAdminLock === 'function') toggleAdminLock('journees');
+  else {
+    var p = prompt('Code admin :');
+    if (p && p === localStorage.getItem('gones45_admin_pwd')) localStorage.setItem('gones45_admin', '1');
+  }
+  /* On redessine la vue pour faire apparaitre ou disparaitre les boutons. */
+  if (typeof loadCompetTab === 'function') loadCompetTab();
+}
+window.g45AdminBascule = g45AdminBascule;
+
+/* Garde-fou cote fonction, pas seulement cote affichage : masquer un bouton
+   n'empeche personne d'appeler la fonction depuis la console. */
+var _g45CotesPourOrig = _g45CotesEspnPour;
+_g45CotesEspnPour = async function (lst, etiquette, btn) {
+  if (!g45EstAdmin()) {
+    _g45NrlMsg('\ud83d\udd12 R\u00e9serv\u00e9 \u00e0 l\'administrateur \u2014 d\u00e9verrouille avec le cadenas.', '#ffb13d');
+    if (btn) btn.disabled = false;
+    return;
+  }
+  return await _g45CotesPourOrig(lst, etiquette, btn);
+};
+
+var _g45RechargerOrig = g45NrlRecharger;
+window.g45NrlRecharger = async function () {
+  if (!g45EstAdmin()) {
+    _g45NrlMsg('\ud83d\udd12 Rechargement r\u00e9serv\u00e9 \u00e0 l\'administrateur \u2014 le calendrier en m\u00e9moire reste affich\u00e9.', '#ffb13d');
+    return;
+  }
+  return await _g45RechargerOrig();
+};
