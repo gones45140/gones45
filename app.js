@@ -13742,7 +13742,13 @@ async function loadFdSquad(el, nom, teamId, noTerrain, terrainOnly) {
     html += '<button id="btn-fbref-import-'+uid+'" onclick="importFbrefStats(\''+uid+'\',\''+nom+'\')" style="display:flex;align-items:center;gap:4px;padding:4px 8px;border-radius:6px;border:1px solid rgba(255,255,255,.15);background:rgba(255,255,255,.07);color:var(--t2);font-size:9px;font-weight:700;cursor:pointer;">📸 Import FBref</button>';}
     html += '<button id="btn-admin-lock-'+uid+'" onclick="toggleAdminLock(\''+uid+'\')" style="padding:4px 7px;border-radius:6px;border:1px solid rgba(255,255,255,.15);background:rgba(255,255,255,.07);color:var(--t2);font-size:12px;cursor:pointer;" title="Mode admin">'+(localStorage.getItem('gones45_admin')==='1'?'🔓':'🔒')+'</button>';
     html += '<button onclick="refreshSquadCache(\''+nom+'\')" style="display:flex;align-items:center;gap:4px;padding:4px 8px;border-radius:6px;border:1px solid rgba(255,255,255,.15);background:rgba(255,255,255,.07);color:var(--t2);font-size:9px;font-weight:700;cursor:pointer;" title="Vider le cache et recharger le squad depuis l\'API">🔄</button>';
-    if(localStorage.getItem('gones45_admin')==='1'){ html += '<button onclick="resetTeamStats(\''+nom+'\')" style="display:flex;align-items:center;gap:4px;padding:4px 8px;border-radius:6px;border:1px solid rgba(255,69,69,.3);background:rgba(255,69,69,.1);color:#ff7b7b;font-size:9px;font-weight:700;cursor:pointer;" title="Effacer les stats de cette equipe">Reset</button>'; }
+    if(localStorage.getItem('gones45_admin')==='1'){
+      /* Reset de la SAISON entiere, toutes equipes, avec sauvegarde prealable. */
+      html += '<button id="btn-rattr-'+uid+'" onclick="g45RattrapageJournees(\''+uid+'\',\''+nom+'\')" style="display:flex;align-items:center;gap:4px;padding:4px 8px;border-radius:6px;border:1px solid rgba(34,211,238,.35);background:rgba(34,211,238,.10);color:#22d3ee;font-size:9px;font-weight:700;cursor:pointer;" title="Recupere les stats journee par journee (1 requete par match, budget quotidien)">\ud83d\udcc5 Rattrapage J</button>';
+      html += '<span style="font-size:8.5px;color:var(--t3);align-self:center;" title="Requetes api-sports consommees aujourd\'hui">'+g45ApisConso()+'/'+g45ApisPlafond()+'</span>';
+      html += '<button onclick="g45ResetSaisonToutes()" style="display:flex;align-items:center;gap:4px;padding:4px 8px;border-radius:6px;border:1px solid rgba(255,120,80,.35);background:rgba(255,120,80,.10);color:#ff9a6b;font-size:9px;font-weight:700;cursor:pointer;" title="Efface les stats de TOUTE la saison selectionnee, toutes equipes. Sauvegarde telechargee avant.">\ud83e\uddf9 Reset saison</button>';
+      html += '<button onclick="g45RestaurerSaison()" style="display:flex;align-items:center;gap:4px;padding:4px 8px;border-radius:6px;border:1px solid rgba(120,160,255,.3);background:rgba(120,160,255,.10);color:#8fb2ff;font-size:9px;font-weight:700;cursor:pointer;" title="Restaure une sauvegarde JSON">\u21a9\ufe0f Restaurer</button>';
+      html += '<button onclick="resetTeamStats(\''+nom+'\')" style="display:flex;align-items:center;gap:4px;padding:4px 8px;border-radius:6px;border:1px solid rgba(255,69,69,.3);background:rgba(255,69,69,.1);color:#ff7b7b;font-size:9px;font-weight:700;cursor:pointer;" title="Effacer les stats de cette equipe">Reset</button>'; }
     html += '</div>';
     html += '</div>';
 
@@ -34079,6 +34085,8 @@ window.loadTeamCompo = async function () {
     /* `loadFdSquad` peut encore reecrire el apres son retour (chargements
        imbriques non attendus) : on verifie une fois et on repose si besoin. */
     setTimeout(poser, 1400);
+    /* Reprise silencieuse d'un rattrapage interrompu la veille par le budget. */
+    setTimeout(function () { if (typeof _g45RattrReprise === 'function') _g45RattrReprise(nom); }, 3000);
     return;
   }
   el.style.display = 'block';
@@ -34639,3 +34647,340 @@ async function autoApiSportsFillSquad(uid, nom) {
   }
 }
 window.autoApiSportsFillSquad = autoApiSportsFillSquad;
+
+
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   RESET D'UNE SAISON ENTIERE + SAUVEGARDE (14/08/2026)
+   ───────────────────────────────────────────────────────────────────────────
+   `resetTeamStats` ne vide qu'UNE equipe. Antoine a rempli par erreur toute la
+   saison 2026/27 et n'allait pas ouvrir trente fiches a la main.
+
+   IRREVERSIBLE, donc SAUVEGARDE D'ABORD : un fichier JSON est telecharge avant
+   la suppression, et une fonction de restauration le relit. Les imports FBref
+   sont passes par une reconnaissance d'image sur des captures qu'Antoine n'a
+   plus forcement — les perdre serait bien pire que garder des chiffres faux.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+function _g45ClesSaison(saison) {
+  var out = [];
+  var motifs = ['manual_stats_' + saison + '_', 'espn_src_' + saison + '_',
+                'apis_src_' + saison + '_', 'squad_lastJ_' + saison + '_'];
+  for (var i = 0; i < localStorage.length; i++) {
+    var k = localStorage.key(i);
+    if (!k) continue;
+    for (var m = 0; m < motifs.length; m++) {
+      if (k.indexOf(motifs[m]) === 0) { out.push(k); break; }
+    }
+  }
+  return out;
+}
+
+function _g45LibelleSaison(s) {
+  s = String(s || '');
+  return (s.length === 4) ? (s.slice(0, 2) + '/' + s.slice(2)) : s;
+}
+
+function g45SauvegardeSaison(saison) {
+  saison = saison || _currentSaison;
+  var cles = _g45ClesSaison(saison), dump = {};
+  cles.forEach(function (k) { dump[k] = localStorage.getItem(k); });
+  var blob = new Blob([JSON.stringify({ saison: saison, ts: Date.now(), cles: dump }, null, 1)], { type: 'application/json' });
+  var a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'gones45-stats-' + saison + '-' + new Date().toISOString().slice(0, 10) + '.json';
+  document.body.appendChild(a); a.click();
+  setTimeout(function () { URL.revokeObjectURL(a.href); a.remove(); }, 2000);
+  return cles.length;
+}
+window.g45SauvegardeSaison = g45SauvegardeSaison;
+
+function g45ResetSaisonToutes(saison) {
+  saison = saison || _currentSaison;
+  var cles = _g45ClesSaison(saison);
+  if (!cles.length) { alert('Rien a effacer pour la saison ' + _g45LibelleSaison(saison) + '.'); return; }
+
+  /* Nombre d'equipes concernees : l'identifiant d'equipe est le segment qui
+     suit le prefixe et la saison. */
+  var equipes = {};
+  cles.forEach(function (k) {
+    var m = k.match(/^(?:manual_stats|espn_src|apis_src|squad_lastJ)_\d+_([^_]+)/);
+    if (m) equipes[m[1]] = 1;
+  });
+
+  if (!confirm('Saison ' + _g45LibelleSaison(saison) + '\n\n'
+    + cles.length + ' entrees, ' + Object.keys(equipes).length + ' equipes.\n\n'
+    + 'Une SAUVEGARDE va d\'abord etre telechargee.\nContinuer ?')) return;
+
+  var n = g45SauvegardeSaison(saison);
+
+  if (!confirm('Sauvegarde de ' + n + ' entrees telechargee.\n\n'
+    + 'EFFACER MAINTENANT toutes les stats de la saison ' + _g45LibelleSaison(saison) + ' ?\n'
+    + 'Les effectifs sont conserves, seules les statistiques partent.\n\nIrreversible sans le fichier.')) return;
+
+  var ok = 0;
+  cles.forEach(function (k) { try { localStorage.removeItem(k); ok++; } catch (e) {} });
+  alert(ok + ' entrees effacees pour la saison ' + _g45LibelleSaison(saison) + '.\n'
+    + 'Tu peux relancer Auto api-sports equipe par equipe.');
+  if (typeof loadTeamCompo === 'function') loadTeamCompo();
+}
+window.g45ResetSaisonToutes = g45ResetSaisonToutes;
+
+/* Restauration : relit le fichier produit ci-dessus et remet les cles. */
+function g45RestaurerSaison() {
+  var inp = document.createElement('input');
+  inp.type = 'file'; inp.accept = 'application/json,.json';
+  inp.onchange = function (e) {
+    var f = e.target.files && e.target.files[0];
+    if (!f) return;
+    var fr = new FileReader();
+    fr.onload = function () {
+      var o = null;
+      try { o = JSON.parse(fr.result); } catch (err) { alert('Fichier illisible.'); return; }
+      if (!o || !o.cles) { alert('Ce fichier n\'est pas une sauvegarde GONES45.'); return; }
+      var n = Object.keys(o.cles).length;
+      if (!confirm('Restaurer ' + n + ' entrees de la saison ' + _g45LibelleSaison(o.saison) + ' ?\n'
+        + 'Les valeurs actuelles de ces cles seront remplacees.')) return;
+      var ok = 0;
+      Object.keys(o.cles).forEach(function (k) { try { localStorage.setItem(k, o.cles[k]); ok++; } catch (err) {} });
+      alert(ok + ' entrees restaurees.');
+      if (typeof loadTeamCompo === 'function') loadTeamCompo();
+    };
+    fr.readAsText(f);
+  };
+  inp.click();
+}
+window.g45RestaurerSaison = g45RestaurerSaison;
+
+
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   RATTRAPAGE JOURNEE PAR JOURNEE — api-sports, budget 90/jour (14/08/2026)
+   ───────────────────────────────────────────────────────────────────────────
+   `/players?team&season` ne rend que des TOTAUX. Pour du journee par journee il
+   faut `/fixtures/players?fixture={id}` : une requete = un match = tous les
+   joueurs des DEUX equipes. Le cout est donc fixe par le nombre de MATCHS, pas
+   par le nombre de joueurs ni d'equipes suivies.
+
+   TROIS GARDE-FOUS, parce que 34 journees x plusieurs clubs, ca chiffre :
+     1. BUDGET QUOTIDIEN (90 par defaut, reglable). Le compteur est remis a zero
+        au changement de date. Arrive a la limite, on s'arrete NET et on garde
+        la file d'attente.
+     2. REPRISE AUTOMATIQUE : la file est stockee. Le lendemain, l'ouverture de
+        l'onglet Compo la reprend la ou elle s'etait arretee, sans rien demander.
+     3. CACHE DEFINITIF PAR MATCH : un match joue ne change plus jamais. Une fois
+        traite, il n'est PLUS JAMAIS redemande, meme apres un reset de saison.
+
+   On ecrit dans `manual_stats_{saison}_{equipe}_{joueur}` avec le prefixe
+   `league_J12_…`, exactement le format que le selecteur de journee attend.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+function _g45AujKey() {
+  var d = new Date();
+  return '' + d.getFullYear() + String(d.getMonth() + 1).padStart(2, '0') + String(d.getDate()).padStart(2, '0');
+}
+function g45ApisPlafond() {
+  var v = parseInt(localStorage.getItem('gones45_apis_cap') || '90', 10);
+  return (isFinite(v) && v > 0) ? v : 90;
+}
+function g45ApisConso() {
+  try {
+    var o = JSON.parse(localStorage.getItem('g45_apis_quota') || '{}');
+    return (o.j === _g45AujKey()) ? (o.n || 0) : 0;   /* nouveau jour = compteur a zero */
+  } catch (e) { return 0; }
+}
+function _g45ApisPlusUn() {
+  try { localStorage.setItem('g45_apis_quota', JSON.stringify({ j: _g45AujKey(), n: g45ApisConso() + 1 })); } catch (e) {}
+}
+function g45ApisReste() { return Math.max(0, g45ApisPlafond() - g45ApisConso()); }
+window.g45ApisReste = g45ApisReste;
+
+/* Matchs deja traites, tous clubs confondus : un match vu pour le PSG n'est pas
+   redemande si on rattrape ensuite l'adversaire sur la meme rencontre. */
+function _g45FxFaits() {
+  try { return JSON.parse(localStorage.getItem('g45_fx_faits') || '{}'); } catch (e) { return {}; }
+}
+function _g45FxMarque(id) {
+  var o = _g45FxFaits(); o[id] = 1;
+  try { localStorage.setItem('g45_fx_faits', JSON.stringify(o)); } catch (e) {}
+}
+
+function _g45JournuDeRound(round) {
+  var m = String(round || '').match(/(\d+)\s*$/);
+  return m ? parseInt(m[1], 10) : 0;
+}
+
+/* ── File d'attente par equipe et par saison ── */
+function _g45RattrCle(keyTeam, saison) { return 'g45_rattr_' + saison + '_' + keyTeam; }
+function _g45RattrLire(keyTeam, saison) {
+  try { return JSON.parse(localStorage.getItem(_g45RattrCle(keyTeam, saison)) || 'null'); } catch (e) { return null; }
+}
+function _g45RattrEcrire(keyTeam, saison, job) {
+  try {
+    if (!job || !job.file || !job.file.length) localStorage.removeItem(_g45RattrCle(keyTeam, saison));
+    else localStorage.setItem(_g45RattrCle(keyTeam, saison), JSON.stringify(job));
+  } catch (e) {}
+}
+
+/* ── Traitement d'UN match : ecrit les stats de nos joueurs pour cette journee ── */
+async function _g45RattrUnMatch(fx, index, keyTeam, saison, tid) {
+  var d = await apiSportsFetch('/fixtures/players?fixture=' + fx.id);
+  _g45ApisPlusUn();
+  _g45FxMarque(fx.id);
+  var blocs = (d && d.response) || [];
+  var moi = blocs.filter(function (b) { return b.team && String(b.team.id) === String(tid); })[0];
+  if (!moi) return 0;
+
+  var pref = 'league_J' + fx.j;
+  var maj = 0;
+  (moi.players || []).forEach(function (jp) {
+    var pl = jp.player || {}, st = (jp.statistics && jp.statistics[0]) || {};
+    var g = st.games || {}, go = st.goals || {}, ca = st.cards || {}, pe = st.penalty || {};
+    var min = g.minutes || 0;
+    var cible = index.apparier(pl.name || '');
+    if (!cible) return;
+
+    var mk = 'manual_stats_' + saisonKey(keyTeam + '_' + cible.id);
+    var ms = {}; try { ms = JSON.parse(localStorage.getItem(mk) || '{}'); } catch (e) {}
+    ms[pref + '_apps'] = min > 0 ? 1 : 0;
+    ms[pref + '_starts'] = (g.substitute === false && min > 0) ? 1 : 0;
+    ms[pref + '_minutes'] = min;
+    if (/^g/i.test(String(g.position || ''))) {
+      ms[pref + '_ga'] = go.conceded || 0;
+      ms[pref + '_saves'] = go.saves || 0;
+    } else {
+      var pk = pe.scored || 0;
+      ms[pref + '_goals'] = go.total || 0;
+      ms[pref + '_assists'] = go.assists || 0;
+      ms[pref + '_gpk'] = (go.total || 0) - pk;
+      ms[pref + '_pk'] = pk;
+      ms[pref + '_pkatt'] = pk + (pe.missed || 0);
+      ms[pref + '_yellow'] = ca.yellow || 0;
+      ms[pref + '_red'] = ca.red || 0;
+    }
+    try { localStorage.setItem(mk, JSON.stringify(ms)); maj++; } catch (e) {}
+  });
+  return maj;
+}
+
+/* ── Index d'appariement construit une fois par equipe ── */
+function _g45RattrIndex(squadData) {
+  var idx = squadData.map(function (p) {
+    var n = _g45ApisNorm(p.name || p.shortName || '');
+    var mots = n.split(' ').filter(function (w) { return w.length > 2; });
+    return { p: p, n: n, fam: mots[mots.length - 1] || n };
+  });
+  return {
+    apparier: function (nomComplet) {
+      var n = _g45ApisNorm(nomComplet);
+      var ex = idx.filter(function (x) { return x.n === n; })[0];
+      if (ex) return ex.p;
+      var mots = n.split(' ').filter(function (w) { return w.length > 2; });
+      var fam = mots[mots.length - 1] || n;
+      var c = idx.filter(function (x) { return x.fam === fam; });
+      if (c.length === 1) return c[0].p;
+      var pre = mots[0] || '';
+      var f = c.filter(function (x) { return pre && x.n.indexOf(pre) >= 0; });
+      return (f.length === 1) ? f[0].p : null;
+    }
+  };
+}
+
+/* ── Deroule la file tant qu'il reste du budget ── */
+async function _g45RattrDerouler(keyTeam, saison, tid, squadData, silencieux) {
+  var job = _g45RattrLire(keyTeam, saison);
+  if (!job || !job.file || !job.file.length) return 0;
+  var index = _g45RattrIndex(squadData);
+  var faits = _g45FxFaits(), traites = 0;
+
+  while (job.file.length) {
+    if (g45ApisReste() <= 0) break;
+    var fx = job.file[0];
+    if (faits[fx.id]) { job.file.shift(); continue; }   /* deja vu via l'adversaire */
+    try { await _g45RattrUnMatch(fx, index, keyTeam, saison, tid); traites++; }
+    catch (e) { break; }                                 /* erreur reseau : on garde la file */
+    job.file.shift();
+    _g45RattrEcrire(keyTeam, saison, job);
+  }
+  _g45RattrEcrire(keyTeam, saison, job);
+
+  if (!silencieux) {
+    alert(traites + ' journ\u00e9es r\u00e9cup\u00e9r\u00e9es.\n'
+      + (job.file.length ? (job.file.length + ' restantes \u2014 reprise automatique demain.\n') : 'Rattrapage termin\u00e9.\n')
+      + 'Budget du jour : ' + g45ApisConso() + '/' + g45ApisPlafond());
+    if (typeof loadTeamCompo === 'function') loadTeamCompo();
+  }
+  return traites;
+}
+
+/* ── Lancement : construit la file, annonce le cout, deroule ── */
+async function g45RattrapageJournees(uid, nom) {
+  if (typeof apiSportsFetch !== 'function' || !getApiSportsKey()) { alert('Cl\u00e9 api-sports manquante \u2014 Outils.'); return; }
+  var sofaId = (typeof SOFASCORE_TEAM_IDS !== 'undefined') ? SOFASCORE_TEAM_IDS[nom] : null;
+  if (!sofaId && typeof SOFASCORE_TEAM_IDS !== 'undefined') {
+    for (var k in SOFASCORE_TEAM_IDS) { if (nom.toLowerCase().indexOf(k.toLowerCase()) >= 0 || k.toLowerCase().indexOf(nom.toLowerCase()) >= 0) { sofaId = SOFASCORE_TEAM_IDS[k]; break; } }
+  }
+  var keyTeam = sofaId || '0';
+  var trouve = _g45SquadDe(nom, sofaId);
+  if (!trouve) { alert('Effectif introuvable \u2014 ouvre l\'onglet Compo et laisse-le charger.'); return; }
+
+  var saison = 2000 + parseInt(String(_currentSaison).slice(0, 2), 10);
+  var tid = await findApiSportsTeamId(nom);
+  if (!tid) { alert('Club introuvable chez api-sports.'); return; }
+
+  var job = _g45RattrLire(keyTeam, _currentSaison);
+  if (!job || !job.file) {
+    var d = await apiSportsFetch('/fixtures?team=' + tid + '&season=' + saison);
+    _g45ApisPlusUn();
+    var faits = _g45FxFaits();
+    var file = [];
+    ((d && d.response) || []).forEach(function (f) {
+      var st = (f.fixture && f.fixture.status && f.fixture.status.short) || '';
+      if (st !== 'FT' && st !== 'AET' && st !== 'PEN') return;      /* matchs joues seulement */
+      var lg = f.league || {};
+      if (_G45_APIS_EURO[lg.id] || String(lg.type || '') !== 'League') return;   /* championnat */
+      var j = _g45JournuDeRound(lg.round);
+      if (!j || j > 38) return;
+      if (faits[f.fixture.id]) return;
+      file.push({ id: f.fixture.id, j: j });
+    });
+    file.sort(function (a, b) { return b.j - a.j; });   /* les plus recentes d'abord */
+    job = { file: file, ts: Date.now() };
+    _g45RattrEcrire(keyTeam, _currentSaison, job);
+  }
+
+  if (!job.file.length) { alert('Rien \u00e0 rattraper : toutes les journ\u00e9es jou\u00e9es sont d\u00e9j\u00e0 en base.'); return; }
+
+  var reste = g45ApisReste();
+  var faisable = Math.min(job.file.length, reste);
+  if (!confirm(nom + ' \u00b7 saison ' + saison + '\n\n'
+    + job.file.length + ' journ\u00e9es \u00e0 r\u00e9cup\u00e9rer (1 requ\u00eate chacune).\n'
+    + 'Budget restant aujourd\'hui : ' + reste + '/' + g45ApisPlafond() + '\n\n'
+    + 'On en traite ' + faisable + ' maintenant'
+    + (job.file.length > faisable ? ', le reste repartira tout seul demain' : '') + '.\n\nLancer ?')) return;
+
+  await _g45RattrDerouler(keyTeam, _currentSaison, tid, trouve.squad, false);
+}
+window.g45RattrapageJournees = g45RattrapageJournees;
+
+/* ── Reprise automatique, en silence, a l'ouverture de l'onglet ── */
+async function _g45RattrReprise(nom) {
+  try {
+    if (localStorage.getItem('gones45_admin') !== '1') return;
+    if (g45ApisReste() <= 5) return;                 /* on garde une marge pour ses usages manuels */
+    var sofaId = (typeof SOFASCORE_TEAM_IDS !== 'undefined') ? SOFASCORE_TEAM_IDS[nom] : null;
+    if (!sofaId && typeof SOFASCORE_TEAM_IDS !== 'undefined') {
+      for (var k in SOFASCORE_TEAM_IDS) { if (nom.toLowerCase().indexOf(k.toLowerCase()) >= 0 || k.toLowerCase().indexOf(nom.toLowerCase()) >= 0) { sofaId = SOFASCORE_TEAM_IDS[k]; break; } }
+    }
+    var keyTeam = sofaId || '0';
+    var job = _g45RattrLire(keyTeam, _currentSaison);
+    if (!job || !job.file || !job.file.length) return;
+    var trouve = _g45SquadDe(nom, sofaId);
+    if (!trouve) return;
+    var tid = await findApiSportsTeamId(nom);
+    if (!tid) return;
+    var n = await _g45RattrDerouler(keyTeam, _currentSaison, tid, trouve.squad, true);
+    if (n && typeof loadTeamCompo === 'function') loadTeamCompo();
+  } catch (e) {}
+}
+window._g45RattrReprise = _g45RattrReprise;
