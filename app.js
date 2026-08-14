@@ -26726,22 +26726,39 @@ function g45ToggleStandings(slug, sportPath, btn){
 }
 async function g45LoadStandings(slug, sportPath, box){
   box.innerHTML='<div style="display:flex;align-items:center;gap:8px;padding:14px;color:var(--t3);font-size:11px;"><div style="width:12px;height:12px;border:2px solid rgba(240,176,32,.2);border-top-color:#f0b020;border-radius:50%;animation:spin .8s linear infinite;"></div>Chargement du classement…</div>';
-  var now=new Date(), curY=now.getFullYear();
-  var augY=(now.getMonth()>=7)?curY:curY-1; // saison européenne (août)
-  var calYear=['bra.1','usa.1','arg.1','mex.1','nor.1','swe.1','fin.1','irl.1','jpn.1','kor.1','conmebol.libertadores','conmebol.america','242041'];
-  var primary=(calYear.indexOf(slug)>=0)?curY:augY;
-  if(sportPath==='rugby-league'||sportPath==='baseball'){ primary=curY; } // NRL / MLB = saison en année civile
-  var seen={}, seasons=[primary,augY,curY,curY-1].filter(function(y){ if(seen[y])return false; seen[y]=1; return true; });
+  var now=new Date(), curY=now.getFullYear(), mois=now.getMonth()+1;
+  var augY=(mois>=8)?curY:curY-1; // saison européenne (août)
+  var calYear=G45_LIGUES_CIVILES;   /* source unique */
+  /* Meme calcul que les autres vues : une seule fonction decide de l'annee, sinon
+     le classement et le calendrier se contredisent (c'etait le cas). */
+  var primary=(typeof _g45CompetAnneeAuto==='function') ? _g45CompetAnneeAuto(slug)
+              : ((calYear.indexOf(slug)>=0)?curY:augY);
+  if(sportPath==='rugby-league'||sportPath==='baseball'){ primary=curY; }
+  var seen={}, seasons=[];
+  /* La saison choisie dans le sélecteur passe AVANT tout le reste : elle était
+     purement et simplement ignorée ici. */
+  if(typeof _g45CompetSaison!=='undefined' && _g45CompetSaison) seasons.push(_g45CompetSaison);
+  seasons=seasons.concat([primary,augY,curY,curY-1]).filter(function(y){ if(seen[y])return false; seen[y]=1; return true; });
   try{
-    var data=null, used=null;
+    var data=null, used=null, repli=null, repliAn=null;
     for(var i=0;i<seasons.length;i++){
       var r=await fetch('https://site.api.espn.com/apis/v2/sports/'+sportPath+'/'+slug+'/standings?season='+seasons[i]);
       if(!r.ok) continue;
       var j=await r.json();
       var groups=j.children||(j.standings?[j]:[]);
-      var tot=0; groups.forEach(function(g){ tot+=(((g.standings&&g.standings.entries)||g.entries||[]).length); });
-      if(tot>0){ data=j; used=seasons[i]; break; }
+      var tot=0, joues=0;
+      groups.forEach(function(g){
+        var es=((g.standings&&g.standings.entries)||g.entries||[]);
+        tot+=es.length;
+        es.forEach(function(e){ joues += (parseFloat(_g45Stat(e.stats,['gamesPlayed','games','wins','losses']))||0); });
+      });
+      /* UN CLASSEMENT A ZERO N'EST PAS UN CLASSEMENT : une saison a venir renvoie
+         toutes ses equipes avec 0 match joue, et c'etait accepte comme valide.
+         On le garde en repli, mais on continue a chercher une saison jouee. */
+      if(tot>0 && joues>0){ data=j; used=seasons[i]; break; }
+      if(tot>0 && !repli){ repli=j; repliAn=seasons[i]; }
     }
+    if(!data && repli){ data=repli; used=repliAn; }
     if(!data){ box.innerHTML='<div style="color:var(--t3);font-size:11px;text-align:center;padding:12px;">Classement indisponible pour cette compétition.</div>'; return; }
     box.innerHTML=g45RenderStandings(data, used, sportPath, slug);
   }catch(e){
@@ -26790,7 +26807,11 @@ function g45RenderStandings(data, season, sportPath, slug){
   if(!groups.length) return '<div style="color:var(--t3);font-size:11px;text-align:center;padding:12px;">Classement indisponible.</div>';
   var multi=groups.length>1;
   var usePct=(sportPath==='baseball'||sportPath==='basketball'||sportPath==='football'); // MLB/NBA/NFL = % victoires (NHL garde ses points)
-  var seasLbl = season ? ((sportPath==='rugby-league'||sportPath==='baseball') ? String(season) : (season+'-'+String(season+1).slice(-2))) : '';
+  /* Conventions ESPN : annee de FIN en NHL/NBA (2026 = 2025-26), de DEBUT en
+     NFL et en football, annee civile en NRL et MLB. Le libelle unique
+     « season-(season+1) » annonçait donc 2026-27 sur des donnees 2025-26. */
+  var seasLbl = season ? ((typeof _g45SgLabel==='function') ? _g45SgLabel(slug, season)
+                : ((sportPath==='rugby-league'||sportPath==='baseball') ? String(season) : (season+'-'+String(season+1).slice(-2)))) : '';
   var out='<div style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:#8aa0ff;margin:2px 0 8px;">Classement'+(seasLbl?' · '+seasLbl:'')+'</div>';
   var legend={};
   groups.forEach(function(g){
@@ -26887,7 +26908,7 @@ async function g45LoadScorers(slug, sportPath, box){
   box.innerHTML='<div style="display:flex;align-items:center;gap:8px;padding:14px;color:var(--t3);font-size:11px;"><div style="width:12px;height:12px;border:2px solid rgba(77,132,255,.2);border-top-color:#4d84ff;border-radius:50%;animation:spin .8s linear infinite;"></div>Chargement des buteurs…</div>';
   var now=new Date(), curY=now.getFullYear();
   var augY=(now.getMonth()>=7)?curY:curY-1;
-  var calYear=['bra.1','usa.1','arg.1','mex.1','nor.1','swe.1','fin.1','irl.1','jpn.1','kor.1'];
+  var calYear=G45_LIGUES_CIVILES;   /* source unique */
   var primary=(calYear.indexOf(slug)>=0)?curY:augY;
   var seen={}, seasons=[primary,augY,curY].filter(function(y){ if(seen[y])return false; seen[y]=1; return true; });
   try{
@@ -27987,7 +28008,7 @@ function _g45FillStandings(box, sp){
     var hId=cont.getAttribute('data-h')||'', aId=cont.getAttribute('data-a')||'';
     var parts=String(sp||'soccer/eng.1').split('/'); var sportPath=parts[0]||'soccer', slug=parts.slice(1).join('/')||'eng.1';
     var now=new Date(), curY=now.getFullYear(), augY=(now.getMonth()>=7)?curY:curY-1;
-    var calYear=['bra.1','usa.1','arg.1','mex.1','nor.1','swe.1','fin.1','irl.1','jpn.1','kor.1','conmebol.libertadores','conmebol.america','242041','fifa.world'];
+    var calYear=G45_LIGUES_CIVILES;   /* source unique */
     var primary=(sportPath==='rugby-league'||sportPath==='baseball'||calYear.indexOf(slug)>=0)?curY:augY;
     var seen={}, seasons=[primary,curY,augY].filter(function(y){ if(seen[y])return false; seen[y]=1; return true; });
     (function tryS(i){
@@ -31417,8 +31438,7 @@ function g45NrlRender() {
             + '<div style="flex:1;min-width:150px;font-size:11.5px;"><span style="color:#9fb0c7">' + d + '</span> '
               + '<b>' + m.dom + '</b> ' + score + ' <b>' + m.ext + '</b></div>'
             /* URL Sofascore retiree le 13/08 (une requete RapidAPI par match).
-               Le champ NUL n'apparait que la ou le nul existe. La saisie reste
-               ouverte a tous : c'est leur propre stockage, ca ne coute rien. */
+               Le champ NUL n'apparait que la ou le nul existe. */
             + '<input value="' + (c.dom || '') + '" placeholder="dom" inputmode="decimal" onchange="g45NrlSaisir(\'' + m.id + '\',\'dom\',this.value,this)" style="' + ch + '">'
             + (_g45AvecNul(_g45NrlCtx.sport)
                 ? ('<input value="' + (c.nul || '') + '" placeholder="nul" inputmode="decimal" onchange="g45NrlSaisir(\'' + m.id + '\',\'nul\',this.value,this)" style="' + ch + '">')
@@ -31436,9 +31456,8 @@ window.g45NrlRender = g45NrlRender;
 async function g45NrlDemarrer() {
   /* PIEGE : ce selecteur n'existe QUE dans le panneau NRL autonome. Dans la vue
      Journees des Competitions il est absent, et le repli code en dur
-     'rugby-league|3' ECRASAIT le contexte que la vue venait de poser — d'ou les
-     matchs de NRL affiches sous la Ligue 1. Quand le selecteur n'est pas la, le
-     contexte deja en place fait autorite. */
+     'rugby-league|3' ECRASAIT le contexte pose par la vue — d'ou des matchs de
+     NRL affiches sous la Ligue 1. */
   var sel = document.getElementById('g45-nrl-comp');
   if (sel && sel.value) {
     var p = String(sel.value).split('|');
@@ -31535,19 +31554,34 @@ function _g45CompetAnnee(slug) {
   if (_g45CompetSaison) return _g45CompetSaison;
   return _g45CompetAnneeAuto(slug);
 }
+/* ═══ CHAMPIONNATS EN ANNEE CIVILE — SOURCE UNIQUE ═══
+   Il en existait TROIS listes divergentes dans le fichier : celle-ci ignorait
+   le Mexique, la Finlande, l'Irlande et la Coree, que le classement connaissait.
+   Resultat : les grands championnats (aout-mai) tombaient juste partout, et les
+   championnats secondaires en annee civile affichaient une saison a zero selon
+   la vue consultee. Toute nouvelle ligue s'ajoute ICI, et nulle part ailleurs. */
+var G45_LIGUES_CIVILES = [
+  'bra.1','bra.2','usa.1','usa.2','arg.1','arg.2','mex.1','chi.1','col.1','uru.1',
+  'nor.1','nor.2','swe.1','swe.2','fin.1','irl.1','isl.1','est.1','lva.1','ltu.1',
+  'jpn.1','jpn.2','kor.1','chn.1','aus.1','sgp.1',
+  'conmebol.libertadores','conmebol.america','242041','fifa.world',
+  '3','mlb'
+];
+
 function _g45CompetAnneeAuto(slug) {
-  var civils = ['bra.1','usa.1','arg.1','nor.1','swe.1','jpn.1','chn.1','3','mlb'];
-  var d = new Date();
+  var civils = G45_LIGUES_CIVILES;
+  var d = new Date(), m = d.getMonth() + 1;
   if (civils.indexOf(slug) >= 0) return d.getFullYear();
-  return (d.getMonth() + 1 >= 8) ? d.getFullYear() : d.getFullYear() - 1;
+  /* La NFL commence en septembre, pas en août : sinon on propose par défaut une
+     saison sans un seul match joué, et tout s'affiche à zéro. */
+  if (slug === 'nfl' || slug === 'college-football') return (m >= 9) ? d.getFullYear() : d.getFullYear() - 1;
+  return (m >= 8) ? d.getFullYear() : d.getFullYear() - 1;
 }
 
 /* Liste des equipes d'une competition, tiree du CLASSEMENT — une seule requete,
    et on recupere au passage logos, rang et points. Cache 6 h. */
 async function _g45CompetEquipes(c) {
-  /* `c.an` permet a un appelant d'imposer la saison. Indispensable hors
-     football : la regle par defaut bascule en aout et demandait le classement
-     NFL 2026, saison non commencee donc VIDE. */
+  /* `c.an` permet a un appelant d'imposer la saison. */
   var an = (c.an != null) ? c.an : _g45CompetAnnee(c.s);
   var cle = 'g45compet_' + c.sp + '_' + c.s + '_' + an;
   if (_g45CompetCache[cle]) return _g45CompetCache[cle];
@@ -31630,9 +31664,7 @@ window.g45CompetVue = g45CompetVue;
    Le Mans. Une fois enregistree, l'equipe est resolue partout : Saisons,
    paris, notifications. */
 function g45CompetOuvrir(nom, id, slug, sport, dejaResolu) {
-  /* FILET : plusieurs vues appellent cette fonction avec le seul nom. Sans
-     identifiant ni championnat, rien n'est enregistre et la fiche retombait sur
-     la logique FOOTBALL. On complete depuis la competition affichee a l'ecran. */
+  /* FILET : plusieurs vues appellent cette fonction avec le seul nom. */
   if (!dejaResolu && (!id || !slug) && typeof _g45CompetSel !== 'undefined' && _g45CompetSel) {
     slug = slug || _g45CompetSel;
     sport = sport || (typeof _g45CompetSport !== 'undefined' ? _g45CompetSport : '') || 'soccer';
@@ -31775,7 +31807,8 @@ async function loadCompetTab() {
   var opts = '<option value="">Saison auto (' + anAuto + ')</option>';
   for (var y = anAuto; y >= 2002; y--) {
     opts += '<option value="' + y + '"' + (_g45CompetSaison === y ? ' selected' : '') + '>'
-          + (civil ? y : (y + '-' + String(y + 1).slice(2))) + '</option>';
+          + ((typeof _g45SgLabel === 'function') ? _g45SgLabel(c.s, y)
+             : (civil ? y : (y + '-' + String(y + 1).slice(2)))) + '</option>';
   }
 
   var vues = [['equipes','\ud83d\udc65 \u00c9quipes'], ['direct','\ud83d\udd34 Direct'],
@@ -32129,7 +32162,7 @@ window.g45FormeN = g45FormeN;
    parametre — la vue Forme marche donc aussi en NBA, NHL, NFL, MLB et rugby.
    Cache 12 h par sport+ligue+saison, car c'est une requete par equipe. */
 async function _g45CompetMatchs(sportPath, slug, an, ids, progres) {
-  var ck = 'g45cm2_' + sportPath + '_' + slug + '_' + an;   /* v2 : les lignes portent l'id d'evenement */
+  var ck = 'g45cm3_' + sportPath + '_' + slug + '_' + an;   /* v3 : id d'evenement + phase finale */
   try {
     var cc = JSON.parse(localStorage.getItem(ck) || 'null');
     if (cc && (Date.now() - cc.t) < 12 * 3600000) return cc.d;
@@ -32162,6 +32195,56 @@ async function _g45CompetMatchs(sportPath, slug, an, ids, progres) {
       });
     } catch (e) {}
   }
+  /* ═══ PHASE FINALE ═══
+     `teams/{id}/schedule` ne renvoie QUE la saison reguliere : ESPN range les
+     playoffs derriere `seasontype=3`. Les Super Bowl, finales de conference,
+     series NBA et NHL, World Series et finales NRL manquaient donc a l'appel
+     dans les fiches d'equipe.
+
+     ECONOMIE : on ne refait PAS 32 appels par equipe. Les playoffs suivent
+     immediatement la saison reguliere, donc une SEULE requete scoreboard sur la
+     fenetre qui suit le dernier match collecte suffit pour toute la ligue.
+     La fenetre est deduite des donnees, jamais codee en dur : elle s'adapte
+     donc aux calendriers decales sans nouveau reglage. */
+  if (ms.length && ['football', 'basketball', 'hockey', 'baseball', 'rugby-league', 'rugby'].indexOf(sportPath) >= 0) {
+    var maxT = 0;
+    ms.forEach(function (m) { if (m.t > maxT) maxT = m.t; });
+    var fmtP = function (d) {
+      return d.getFullYear() + String(d.getMonth() + 1).padStart(2, '0') + String(d.getDate()).padStart(2, '0');
+    };
+    var p1 = new Date(maxT - 21 * 86400000), p2 = new Date(maxT + 120 * 86400000);
+    try {
+      var rp = await fetch('https://site.api.espn.com/apis/site/v2/sports/' + sportPath + '/' + slug +
+                           '/scoreboard?dates=' + fmtP(p1) + '-' + fmtP(p2) + '&limit=1000&seasontype=3');
+      if (rp.ok) {
+        var jp = await rp.json();
+        ((jp && jp.events) || []).forEach(function (e) {
+          if (vus[e.id]) return;
+          var cp = (e.competitions && e.competitions[0]) || {};
+          var stp = (cp.status && cp.status.type) || (e.status && e.status.type) || {};
+          if (stp.completed !== true) return;
+          var csp = cp.competitors || []; if (csp.length < 2) return;
+          var hop = csp.filter(function (x) { return x.homeAway === 'home'; })[0];
+          var awp = csp.filter(function (x) { return x.homeAway === 'away'; })[0];
+          if (!hop || !awp) return;
+          var svp = function (x) { var v = x.score; if (v && typeof v === 'object') v = (v.value != null ? v.value : v.displayValue); return parseInt(v, 10); };
+          var hgp = svp(hop), agp = svp(awp);
+          var hidp = String((hop.team && hop.team.id) || ''), aidp = String((awp.team && awp.team.id) || '');
+          var tp = Date.parse(e.date);
+          if (isNaN(hgp) || isNaN(agp) || !hidp || !aidp || isNaN(tp)) return;
+          vus[e.id] = 1;
+          ms.push({
+            id: String(e.id), h: hidp, a: aidp, hg: hgp, ag: agp, t: tp,
+            po: 1,   /* marque « phase finale » : exploitable a l'affichage */
+            hn: (hop.team && (hop.team.shortDisplayName || hop.team.displayName)) || '',
+            an: (awp.team && (awp.team.shortDisplayName || awp.team.displayName)) || '',
+            hl: (hop.team && hop.team.logo) || '', al: (awp.team && awp.team.logo) || ''
+          });
+        });
+      }
+    } catch (e) {}
+  }
+
   /* REPLI SCOREBOARD. Les identifiants d'equipe de `sports.core` (28919, 28920…)
      ne sont PAS ceux de `site.api` : le calendrier par equipe renvoie alors 500.
      C'est le cas du NRL, dont le classement n'est pas publie et dont les equipes
@@ -32891,8 +32974,9 @@ var _g45SgAn = null;        /* saison choisie dans la fiche */
 var _g45SgFiltre = 'global';
 var _g45SgQuick = null;     /* cases cochees ; null = valeurs par defaut */
 var _g45SgMem = {};         /* matchs deja charges, par sport|ligue|annee */
-var _g45SgReplie = false;
-var _g45SgNomCourant = '';   /* un seul repli automatique sur la saison precedente */
+var _g45SgReplie = false;    /* un seul repli automatique sur la saison precedente */
+var _g45SgNomCourant = '';   /* equipe affichee, pour reinitialiser les filtres */
+var _g45SgPhase = 'tout';    /* 'tout' | 'reg' | 'po' */
 
 function _g45SgNorm(s) {
   return String(s || '').toLowerCase()
@@ -32943,7 +33027,7 @@ function _g45SgLignes(moy) {
 
 /* Calcul pur : aucune requete, testable hors navigateur. */
 function _g45SgCalc(ms, monId, monNom) {
-  var st = { j:0, v:0, n:0, d:0, bp:0, bc:0, cs:0, sansMarquer:0, liste:[],
+  var st = { j:0, v:0, n:0, d:0, bp:0, bc:0, cs:0, sansMarquer:0, po:0, liste:[],
              dom:{j:0,v:0,n:0,d:0,bp:0,bc:0}, ext:{j:0,v:0,n:0,d:0,bp:0,bc:0} };
   var id = String(monId || ''), nn = _g45SgNorm(monNom);
 
@@ -32963,8 +33047,9 @@ function _g45SgCalc(ms, monId, monNom) {
     if (res === 'V') { st.v++; b.v++; } else if (res === 'D') { st.d++; b.d++; } else { st.n++; b.n++; }
     if (contre === 0) st.cs++;
     if (pour === 0) st.sansMarquer++;
+    if (m.po) st.po++;
 
-    st.liste.push({ id:m.id || '', t:m.t, dom:estDom, res:res, pour:pour, contre:contre, tot:pour + contre,
+    st.liste.push({ id:m.id || '', po:m.po ? 1 : 0, t:m.t, dom:estDom, res:res, pour:pour, contre:contre, tot:pour + contre,
                     adv: estDom ? (m.an || '') : (m.hn || ''),
                     advId: estDom ? String(m.a) : String(m.h) });
   });
@@ -33020,12 +33105,19 @@ async function _g45SaisonsGen(el, nom, perso) {
     _g45SgMem[memK] = ms;
   }
 
-  var st = _g45SgCalc(ms || [], perso.id, nom);
+  /* Le filtre phase agit AVANT le calcul, pas a l'affichage : sinon le bilan,
+     les moyennes et le split domicile/exterieur continueraient d'inclure les
+     matchs ecartes, et le panneau se contredirait lui-meme. */
+  var stTous = _g45SgCalc(ms || [], perso.id, nom);
+  var msPhase = ms || [];
+  if (_g45SgPhase === 'reg') msPhase = msPhase.filter(function (m) { return !m.po; });
+  else if (_g45SgPhase === 'po') msPhase = msPhase.filter(function (m) { return m.po; });
+  var st = _g45SgCalc(msPhase, perso.id, nom);
 
   /* Entre deux saisons (aout pour la NFL, juillet pour la NHL), la saison en
      cours est vide. Plutot qu'un panneau desert, on recule d'un an une fois —
      seulement en mode automatique, un choix explicite d'Antoine est respecte. */
-  if (!st.j && !_g45SgAn && !_g45SgReplie) {
+  if (!stTous.j && !_g45SgAn && !_g45SgReplie) {
     _g45SgReplie = true;
     _g45SgAn = an - 1;
     return await _g45SaisonsGen(el, nom, perso);
@@ -33043,7 +33135,7 @@ async function _g45SaisonsGen(el, nom, perso) {
 
   if (!st.j) {
     el.innerHTML = '<div style="padding:4px 0;">' + chips
-      + '<div class="fc" style="text-align:center;color:var(--t3);padding:18px;font-size:12px;">Aucun match termin\u00e9 pour <b>' + nom + '</b> en ' + an + '.'
+      + '<div class="fc" style="text-align:center;color:var(--t3);padding:18px;font-size:12px;">Aucun match ' + (_g45SgPhase === 'po' ? 'de phase finale ' : (_g45SgPhase === 'reg' ? 'de saison r\u00e9guli\u00e8re ' : 'termin\u00e9 ')) + 'pour <b>' + nom + '</b> en ' + _g45SgLabel(lg, an) + '.'
       + '<br><small style="opacity:.7;">' + (ms || []).length + ' matchs charg\u00e9s \u00b7 ' + sp + '/' + lg + ' \u00b7 id ' + perso.id + '</small></div></div>';
     return;
   }
@@ -33082,7 +33174,25 @@ async function _g45SaisonsGen(el, nom, perso) {
   /* En-tete */
   html += '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">'
     + '<div style="font-size:13px;font-weight:800;color:var(--t1);">Saison ' + _g45SgLabel(lg, an) + '</div>'
-    + '<div style="font-size:10px;color:var(--t3);">' + st.j + ' matchs \u00b7 ' + st.v + (avecNul ? '-' + st.n : '') + '-' + st.d + '</div></div>';
+    + '<div style="font-size:10px;color:var(--t3);">' + st.j + ' matchs'
+    + (st.po ? (' \u00b7 dont ' + st.po + ' en phase finale') : '')
+    + ' \u00b7 ' + st.v + (avecNul ? '-' + st.n : '') + '-' + st.d + '</div></div>';
+
+  /* ── Filtre saison reguliere / phase finale ──
+     Affiche seulement si la saison en contient : inutile en football europeen,
+     indispensable en NFL, NBA, NHL, MLB et NRL. */
+  if (stTous.po > 0) {
+    var reg = stTous.j - stTous.po;
+    html += '<div style="display:flex;gap:6px;margin-bottom:10px;">';
+    [['tout', 'Tout (' + stTous.j + ')'], ['reg', 'Saison r\u00e9g. (' + reg + ')'], ['po', '\ud83c\udfc6 Phase finale (' + stTous.po + ')']]
+      .forEach(function (f) {
+        var on = (f[0] === _g45SgPhase);
+        html += '<button onclick="_g45SgPhaseSet(\'' + f[0] + '\')" style="flex:1;padding:6px 4px;border-radius:7px;border:1px solid rgba(255,255,255,'
+          + (on ? '.3' : '.08') + ');background:' + (on ? 'rgba(240,176,32,.16)' : 'rgba(255,255,255,.04)')
+          + ';color:' + (on ? '#f0b020' : 'var(--t3)') + ';font-size:10px;font-weight:' + (on ? '800' : '400') + ';cursor:pointer;">' + f[1] + '</button>';
+      });
+    html += '</div>';
+  }
 
   /* ── Selecteurs de marche ── */
   html += '<div style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:10px;">';
@@ -33205,7 +33315,8 @@ async function _g45SaisonsGen(el, nom, perso) {
       + 'style="display:flex;align-items:center;gap:8px;padding:7px 2px;border-left:3px solid ' + col + ';padding-left:8px;margin-bottom:3px;background:rgba(255,255,255,.02);border-radius:0 6px 6px 0;font-size:11.5px;' + (m.id ? 'cursor:pointer;' : '') + '">'
       + '<div style="width:38px;color:var(--t3);font-size:10px;">' + String(d.getDate()).padStart(2, '0') + '/' + String(d.getMonth() + 1).padStart(2, '0') + '</div>'
       + '<div style="width:16px;font-size:10px;">' + (m.dom ? '\ud83c\udfe0' : '\ud83d\ude8c') + '</div>'
-      + '<div style="flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">' + (noms[m.advId] || m.adv || '?') + '</div>'
+      + '<div style="flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">' + (noms[m.advId] || m.adv || '?')
+      + (m.po ? ' <span style="font-size:8px;font-weight:800;color:#f0b020;border:1px solid rgba(240,176,32,.4);border-radius:6px;padding:0 4px;">PO</span>' : '') + '</div>'
       + '<div style="font-size:9px;color:#7aaaff;white-space:nowrap;">' + passes.join(' ') + '</div>'
       + '<div style="width:52px;text-align:right;font-weight:700;">' + m.pour + '-' + m.contre + '</div>'
       + '<div style="width:16px;text-align:right;font-weight:800;color:' + col + ';">' + m.res + '</div></div>';
@@ -33259,6 +33370,8 @@ window._g45SgMatch = _g45SgMatch;
 function _g45SgRefresh() { if (typeof loadTeamSaisons === 'function') loadTeamSaisons(); }
 function _g45SgSaison(y) { _g45SgAn = y; _g45SgRefresh(); }
 function _g45SgLieu(f) { _g45SgFiltre = f; _g45SgRefresh(); }
+function _g45SgPhaseSet(f) { _g45SgPhase = f; _g45SgRefresh(); }
+window._g45SgPhaseSet = _g45SgPhaseSet;
 function _g45SgToggle(k) {
   if (!_g45SgQuick) _g45SgQuick = [];
   var i = _g45SgQuick.indexOf(k);
@@ -33297,7 +33410,7 @@ window.loadTeamSaisons = async function () {
     if (ctx && ctx.sp && ctx.sp !== 'soccer') {
       /* Nouvelle equipe : on repart d'une saison automatique. Sans ca, la
          saison choisie sur les Roosters s'appliquait aux Islanders. */
-      if (_g45SgNomCourant !== nom) { _g45SgNomCourant = nom; _g45SgAn = null; _g45SgReplie = false; }
+      if (_g45SgNomCourant !== nom) { _g45SgNomCourant = nom; _g45SgAn = null; _g45SgReplie = false; _g45SgPhase = 'tout'; }
       if (!ctx.ref) {
         el.innerHTML = '<div class="fc" style="text-align:center;color:var(--t3);padding:18px;font-size:12px;">'
           + '\u00c9quipe introuvable dans le classement <b>' + ctx.sp + '/' + ctx.lg + '</b>.'
@@ -33545,15 +33658,22 @@ async function _g45CompoEffectif(el, nom) {
     var pos = (p.position && (p.position.abbreviation || p.position.name)) || '';
     var nm = p.fullName || p.displayName || ((p.firstName || '') + ' ' + (p.lastName || ''));
     var ht = p.displayHeight || '';
+    /* ESPN sert souvent l'age tout calcule ; sinon on le deduit de la date de
+       naissance, dont le champ varie selon les ligues. */
+    var age = p.age;
+    if (!age && p.dateOfBirth) {
+      var dn = new Date(p.dateOfBirth);
+      if (!isNaN(dn)) age = Math.floor((Date.now() - dn.getTime()) / 31557600000);
+    }
     var img = (p.headshot && p.headshot.href) || '';
     var pid = String(p.id || '');
     if (!pid) return;
-    html += '<div onclick="_g45CompoJoueur(\'' + pid + '\')" style="display:flex;align-items:center;gap:9px;padding:7px 6px;border-bottom:1px solid rgba(255,255,255,.04);cursor:pointer;border-radius:5px;">'
+    html += '<div onclick="_g45CompoJoueur(\'' + pid + '\',\'' + String(pos).replace(/'/g, '') + '\')" style="display:flex;align-items:center;gap:9px;padding:7px 6px;border-bottom:1px solid rgba(255,255,255,.04);cursor:pointer;border-radius:5px;">'
       + (img ? '<img src="' + img + '" style="width:30px;height:30px;border-radius:50%;object-fit:cover;background:rgba(255,255,255,.05);flex-shrink:0;" onerror="this.style.display=\'none\'">'
              : '<div style="width:30px;height:30px;border-radius:50%;background:rgba(77,132,255,.12);display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:800;color:#4d84ff;flex-shrink:0;">' + (num || '\u2014') + '</div>')
       + '<div style="flex:1;min-width:0;">'
       + '<div style="font-size:11.5px;font-weight:700;color:var(--t1);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">' + (num ? '#' + num + ' ' : '') + nm + '</div>'
-      + '<div style="font-size:9px;color:var(--t3);">' + [pos, ht].filter(Boolean).join(' \u00b7 ') + '</div></div>'
+      + '<div style="font-size:9px;color:var(--t3);">' + [pos, ht, (age ? (age + ' ans') : '')].filter(Boolean).join(' \u00b7 ') + '</div></div>'
       + '<div style="color:#4d84ff;font-size:13px;">\ud83d\udcca</div></div>'
       + '<div id="g45-pst-' + pid + '"></div>';
   });
@@ -33564,8 +33684,55 @@ async function _g45CompoEffectif(el, nom) {
 
 var _g45CompoCtxCourant = null;
 
-/* Moyennes de la saison — libelles pris chez ESPN, jamais cables. */
-async function _g45CompoJoueur(pid) {
+/* ═══ TRADUCTION DES LIBELLES DE STATS ═══
+   ESPN renvoie ses abreviations americaines : CMP, ATT, YDS, LNG, PIM, RBI…
+   Illisible quand on ne pratique pas le sport. On garde la valeur telle quelle
+   mais on affiche un libelle francais, et l'abreviation d'origine reste en
+   infobulle pour retrouver ses petits sur ESPN ou chez un bookmaker.
+
+   On NE remplace PAS la liste des stats : elle vient toujours d'ESPN, donc un
+   sport non traduit affiche simplement ses abreviations brutes plutot que rien. */
+var _G45_STAT_FR = {
+  /* football americain — passe */
+  CMP:'Passes r\u00e9ussies', ATT:'Tentatives', 'CMP%':'% r\u00e9ussite', YDS:'Yards',
+  AVG:'Yards / tentative', TD:'Touchdowns', INT:'Interceptions', LNG:'Plus longue',
+  SACK:'Sacks', RTG:'Note QB', QBR:'Note QBR',
+  /* football americain — course et reception */
+  CAR:'Courses', REC:'R\u00e9ceptions', TGTS:'Ballons vis\u00e9s', FUM:'Fumbles',
+  TOT:'Total plaquages', SOLO:'Plaquages solo', 'FF':'Fumbles provoqu\u00e9s',
+  /* basket */
+  PTS:'Points', REB:'Rebonds', AST:'Passes d\u00e9c.', STL:'Interceptions',
+  BLK:'Contres', 'FG%':'% aux tirs', '3P%':'% \u00e0 3 pts', 'FT%':'% lancers francs',
+  MIN:'Minutes', GP:'Matchs jou\u00e9s', TO:'Ballons perdus',
+  /* hockey */
+  G:'Buts', A:'Passes d\u00e9c.', P:'Points', PIM:'Minutes de p\u00e9nalit\u00e9',
+  'S':'Tirs', 'S%':'% de tirs', 'SV%':'% d\u2019arr\u00eats', GAA:'Buts encaiss\u00e9s / match',
+  SO:'Blanchissages', TOI:'Temps de jeu',
+  /* baseball */
+  HR:'Circuits', RBI:'Points produits', OBP:'% pr\u00e9sence base', SLG:'Puissance',
+  OPS:'OBP + SLG', SB:'Bases vol\u00e9es', ERA:'Moy. points m\u00e9rit\u00e9s', 'K':'Retraits sur 3 pr.',
+  /* rugby */
+  TRIES:'Essais', TRY:'Essais', CONV:'Transformations', PEN:'P\u00e9nalit\u00e9s',
+  TACKLES:'Plaquages', METRES:'M\u00e8tres gagn\u00e9s',
+  /* football */
+  GLS:'Buts', SOG:'Tirs cadr\u00e9s', SH:'Tirs', 'YC':'Cartons jaunes', 'RC':'Cartons rouges'
+};
+function _g45StatFr(lab) {
+  var k = String(lab || '').toUpperCase().trim();
+  return _G45_STAT_FR[k] || lab;
+}
+
+/* Statistiques de la saison — libelles pris chez ESPN, jamais cables. */
+/* Postes SANS statistique individuelle publiee. Ce ne sont pas des joueurs qui
+   n'ont pas joue : un offensive tackle dispute souvent tous les snaps de la
+   saison, mais son travail ne produit rien de comptabilisable. Afficher
+   « pas de stats publiees » laissait croire a une absence. */
+var _G45_POSTES_SANS_STATS = {
+  OT:'ligne offensive', OG:'ligne offensive', C:'ligne offensive', G:'ligne offensive',
+  T:'ligne offensive', OL:'ligne offensive', LS:'longsnapper'
+};
+
+async function _g45CompoJoueur(pid, pos) {
   var box = document.getElementById('g45-pst-' + pid);
   var ctx = _g45CompoCtxCourant;
   if (!box || !ctx) return;
@@ -33577,20 +33744,33 @@ async function _g45CompoJoueur(pid) {
     var d = await r.json();
     var st = d && d.statistics;
     if (!st || !st.labels || !st.splits || !st.splits.length) {
-      box.innerHTML = '<div style="padding:8px 8px 8px 40px;color:var(--t3);font-size:10px;">Pas de stats publi\u00e9es cette saison.</div>';
+      var motif = _G45_POSTES_SANS_STATS[String(pos || '').toUpperCase()];
+      box.innerHTML = '<div style="padding:8px 8px 8px 40px;color:var(--t3);font-size:10px;line-height:1.5;">'
+        + (motif
+            ? ('Poste sans statistique individuelle (' + motif + ').<br><span style="opacity:.7;">Il peut avoir jou\u00e9 toute la saison : la NFL ne publie rien de chiffr\u00e9 pour ce r\u00f4le.</span>')
+            : 'Aucune statistique publi\u00e9e \u2014 n\'a probablement pas jou\u00e9, ou saison pas encore commenc\u00e9e.')
+        + '</div>';
       return;
     }
     var split = st.splits.filter(function (s) { return /regular|saison/i.test(s.displayName || ''); })[0] || st.splits[0];
     var vals = split.stats || [];
     var COUL = ['#4d84ff','#1ed760','#f0b020','#a78bfa','#22d3ee','#ff7b54','#ec4899','#84cc16'];
 
+    /* « Moyennes » etait faux : ESPN renvoie des TOTAUX de saison en football
+       americain, hockey et baseball (3 587 yards, ce n'est pas une moyenne par
+       match), et des moyennes par match en basket. On annonce donc ce qui est
+       reellement affiche, sport par sport. */
+    var parMatch = (ctx.sp === 'basketball');
+    var titre = (split.displayName || 'Saison') + ' \u00b7 ' + (parMatch ? 'moyennes par match' : 'totaux de la saison');
     var h = '<div style="background:rgba(77,132,255,.05);border-radius:8px;padding:10px;margin:4px 0 8px 38px;">'
-      + '<div style="font-size:9px;color:var(--t3);margin-bottom:8px;">Moyennes ' + (split.displayName || 'saison') + '</div>'
+      + '<div style="font-size:9px;color:var(--t3);margin-bottom:8px;">' + titre + '</div>'
       + '<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:6px;">';
     st.labels.slice(0, 8).forEach(function (lab, i) {
       var v = (vals[i] !== undefined && vals[i] !== null && vals[i] !== '') ? vals[i] : '\u2014';
-      h += '<div style="text-align:center;"><div style="font-size:14px;font-weight:800;color:' + COUL[i % COUL.length] + ';">' + v + '</div>'
-        + '<div style="font-size:8px;color:var(--t3);">' + lab + '</div></div>';
+      var fr = _g45StatFr(lab);
+      h += '<div style="text-align:center;" title="' + String(lab).replace(/"/g, '') + '">'
+        + '<div style="font-size:14px;font-weight:800;color:' + COUL[i % COUL.length] + ';">' + v + '</div>'
+        + '<div style="font-size:7.5px;color:var(--t3);line-height:1.25;">' + fr + '</div></div>';
     });
     h += '</div><button onclick="_g45CompoGamelog(\'' + pid + '\')" style="width:100%;margin-top:8px;padding:7px;border-radius:6px;border:1px solid rgba(255,255,255,.1);background:rgba(255,255,255,.04);color:var(--t2);font-size:10px;font-weight:700;cursor:pointer;">\ud83d\udccb 5 derniers matchs</button>'
       + '<div id="g45-pgl-' + pid + '"></div></div>';
@@ -33619,7 +33799,12 @@ async function _g45CompoGamelog(pid) {
     });
     if (!lignes.length) { box.innerHTML = '<div style="padding:8px;color:var(--t3);font-size:10px;">Aucun match r\u00e9cent.</div>'; return; }
 
-    var h = '<div style="margin-top:8px;font-size:9px;color:var(--t3);">5 derniers matchs</div>';
+    /* Le nombre de matchs joues n'est pas servi dans les stats de tous les
+       sports — la NFL ne le donne pas. On le compte sur le releve lui-meme,
+       ce qui ne coute aucune requete de plus : il est deja charge. */
+    var h = '<div style="margin-top:8px;font-size:9px;color:var(--t3);">'
+      + lignes.length + ' match' + (lignes.length > 1 ? 's' : '') + ' jou\u00e9' + (lignes.length > 1 ? 's' : '')
+      + ' cette saison \u00b7 les 5 derniers</div>';
     lignes.slice(0, 5).forEach(function (e) {
       var ev = evs[e.eventId] || {};
       var res = (ev.gameResult || '').toUpperCase();
@@ -33629,7 +33814,7 @@ async function _g45CompoGamelog(pid) {
       var sc = ev.score || '';
       /* Les trois premieres stats du sport, quelles qu'elles soient. */
       var det = (e.stats || []).slice(0, 3).map(function (v, i) {
-        return v + (labels[i] ? (' ' + labels[i]) : '');
+        return v + (labels[i] ? (' ' + _g45StatFr(labels[i])) : '');
       }).join(' \u00b7 ');
       h += '<div style="display:flex;align-items:center;gap:6px;padding:5px 2px;border-bottom:1px solid rgba(255,255,255,.04);font-size:10px;">'
         + '<div style="width:14px;font-weight:800;color:' + col + ';">' + res + '</div>'
