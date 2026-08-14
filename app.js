@@ -13598,7 +13598,10 @@ async function loadFdSquad(el, nom, teamId, noTerrain, terrainOnly) {
       if(!squad && afKey) {
         var afId = await findApiSportsTeamId(nom, afKey);
         if(afId) {
-          var season = 2024;
+          /* La saison etait FIGEE a 2024 : le repli renvoyait donc les stats
+             d'une saison ancienne pour tout club absent de Sofascore — AS Monaco,
+             les clubs de MLS, du Bresil… On suit desormais la saison choisie. */
+          var season = 2000 + parseInt(String(_currentSaison).slice(0, 2), 10);
           var [squadData, statsData] = await Promise.all([
             apiSportsFetch('/players/squads?team='+afId),
             apiSportsFetch('/players?team='+afId+'&season='+season+'&page=1')
@@ -13627,6 +13630,35 @@ async function loadFdSquad(el, nom, teamId, noTerrain, terrainOnly) {
             });
           }
         }
+      }
+
+      /* DERNIER RECOURS : construire l'effectif depuis le ROSTER ESPN.
+         Jusqu'ici, un club absent de Sofascore ET d'api-sports n'avait qu'un lien
+         « voir sur ESPN » — donc pas de tableau, pas d'import FBref, pas de
+         remplissage auto. Le roster ESPN suffit pourtant a fabriquer la liste :
+         il donne identifiant, nom, poste, numero et age. Les statistiques
+         resteront a remplir, mais le tableau EXISTE et devient exploitable. */
+      if(!squad){
+        try{
+          var _re = await espnResolveTeam(nom);
+          if(_re && _re.id){
+            var _rr = await fetch(FD_PROXY + '?host=espn&path=' + encodeURIComponent('/apis/site/v2/sports/soccer/' + _re.league + '/teams/' + _re.id + '/roster'));
+            var _rj = await _rr.json();
+            var _ath = (_rj && _rj.athletes) || [];
+            if(_ath.length && _ath[0] && _ath[0].items){ var _p2=[]; _ath.forEach(function(g){ (g.items||[]).forEach(function(x){_p2.push(x);}); }); _ath = _p2; }
+            if(_ath.length){
+              var _posMap = {G:'Goalkeeper', D:'Defender', M:'Midfielder', F:'Attacker'};
+              squad = _ath.map(function(a){
+                var _ab = (a.position && (a.position.abbreviation || a.position.name)) || '';
+                return { id:'espn'+a.id, name:(a.fullName||a.displayName||''), shortName:(a.displayName||''),
+                         nationality:(a.citizenship||''), position:(_posMap[String(_ab).charAt(0).toUpperCase()]||'Midfielder'),
+                         number:parseInt(a.jersey,10)||0, _age:a.age||0, marketValue:0, sofaId:null,
+                         _goals:0,_assists:0,_minutes:0,_rating:null };
+              });
+              usingSofa = false;
+            }
+          }
+        }catch(e){}
       }
 
       if(!squad){
