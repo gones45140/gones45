@@ -34586,11 +34586,14 @@ async function autoApiSportsFillSquad(uid, nom) {
     while (page <= total && page <= 5) {
       var d = await apiSportsFetch('/players?team=' + tid + '&season=' + saison + '&page=' + page);
       appels++;
+      var errP = _g45ApisErreur(d);
+      if (errP) throw new Error('api-sports : ' + errP + ' (saison ' + saison + ')');
       total = (d && d.paging && d.paging.total) || 1;
       ((d && d.response) || []).forEach(function (x) { joueurs.push(x); });
       page++;
     }
-    if (!joueurs.length) throw new Error('aucune donn\u00e9e pour la saison ' + saison);
+    if (!joueurs.length) throw new Error('aucune donnee pour la saison ' + saison
+      + '\n\nTon plan api-sports ne couvre peut-etre pas cette saison. Teste une saison anterieure.');
 
     /* Index de l'effectif affiche, par nom complet et par nom de famille. */
     var index = squadData.map(function (p) {
@@ -34807,6 +34810,22 @@ window.g45RestaurerSaison = g45RestaurerSaison;
    `league_J12_…`, exactement le format que le selecteur de journee attend.
    ═══════════════════════════════════════════════════════════════════════════ */
 
+/* api-sports ne renvoie PAS un code HTTP d'erreur quand il refuse : il repond
+   200 avec `response:[]` et un objet `errors` explicite — plan insuffisant,
+   saison hors couverture, parametre invalide. Le jeter revenait a transformer
+   une raison precise en « aucune donnee », impossible a diagnostiquer. */
+function _g45ApisErreur(d) {
+  if (!d) return 'reponse vide';
+  var e = d.errors;
+  if (!e) return '';
+  if (typeof e === 'string') return e;
+  if (Array.isArray(e)) return e.length ? e.join(' \u00b7 ') : '';
+  var out = [];
+  for (var k in e) { if (e[k]) out.push(k + ' : ' + e[k]); }
+  return out.join(' \u00b7 ');
+}
+window._g45ApisErreur = _g45ApisErreur;
+
 function _g45AujKey() {
   var d = new Date();
   return '' + d.getFullYear() + String(d.getMonth() + 1).padStart(2, '0') + String(d.getDate()).padStart(2, '0');
@@ -34964,6 +34983,8 @@ async function g45RattrapageJournees(uid, nom) {
   if (!job || !job.file) {
     var d = await apiSportsFetch('/fixtures?team=' + tid + '&season=' + saison);
     _g45ApisPlusUn();
+    var errFx = _g45ApisErreur(d);
+    if (errFx) { alert('api-sports refuse la requ\u00eate :\n\n' + errFx + '\n\n(saison ' + saison + ', club ' + tid + ')'); return; }
     var faits = _g45FxFaits();
     var file = [];
     ((d && d.response) || []).forEach(function (f) {
@@ -34981,7 +35002,13 @@ async function g45RattrapageJournees(uid, nom) {
     _g45RattrEcrire(keyTeam, _currentSaison, job);
   }
 
-  if (!job.file.length) { alert('Rien \u00e0 rattraper : toutes les journ\u00e9es jou\u00e9es sont d\u00e9j\u00e0 en base.'); return; }
+  if (!job.file.length) {
+    alert('Aucune journ\u00e9e \u00e0 r\u00e9cup\u00e9rer pour la saison ' + saison + '.\n\n'
+      + 'Soit tout est d\u00e9j\u00e0 en base, soit api-sports ne couvre pas cette saison avec ton plan '
+      + '(le plan gratuit est souvent limit\u00e9 a quelques saisons passees).\n'
+      + 'Teste une saison anterieure dans le selecteur pour trancher.');
+    return;
+  }
 
   var reste = g45ApisReste();
   var faisable = Math.min(job.file.length, reste);
