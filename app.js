@@ -34584,7 +34584,7 @@ async function autoApiSportsFillSquad(uid, nom) {
     /* Une requete, deux si l'effectif depasse 20 joueurs. */
     var joueurs = [], page = 1, total = 1, appels = 0;
     while (page <= total && page <= 5) {
-      var d = await apiSportsFetch('/players?team=' + tid + '&season=' + saison + '&page=' + page);
+      var d = await _g45ApisAppel('/players?team=' + tid + '&season=' + saison + '&page=' + page);
       appels++;
       var errP = _g45ApisErreur(d);
       if (errP) throw new Error('api-sports : ' + errP + ' (saison ' + saison + ')');
@@ -34826,6 +34826,39 @@ function _g45ApisErreur(d) {
 }
 window._g45ApisErreur = _g45ApisErreur;
 
+/* ═══ CADENCE ═══
+   api-sports limite aussi les requetes PAR MINUTE (10 sur le plan gratuit,
+   davantage au-dessus). Ma boucle de rattrapage les enchainait sans pause : le
+   quota minute sautait des le deuxieme match, et l'erreur ressemblait a un
+   probleme de saison ou de plan alors que tout allait bien.
+
+   On espace donc les appels, et on RETENTE une fois apres une minute quand la
+   limite tombe quand meme — plutot que de perdre la file d'attente. */
+function g45ApisRpm() {
+  var v = parseInt(localStorage.getItem('gones45_apis_rpm') || '10', 10);
+  return (isFinite(v) && v > 0) ? v : 10;
+}
+var _g45ApisDernier = 0;
+
+function _g45Dodo(ms) { return new Promise(function (r) { setTimeout(r, ms); }); }
+
+/* Appel cadence, avec une seule reprise apres limite minute. */
+async function _g45ApisAppel(path) {
+  var ecart = Math.ceil(60000 / g45ApisRpm()) + 250;   /* marge : l'API compte au plus juste */
+  var depuis = Date.now() - _g45ApisDernier;
+  if (depuis < ecart) await _g45Dodo(ecart - depuis);
+  _g45ApisDernier = Date.now();
+
+  var d = await apiSportsFetch(path);
+  var err = _g45ApisErreur(d);
+  if (/rateLimit|too many requests/i.test(err)) {
+    await _g45Dodo(61000);                              /* la fenetre d'une minute passe */
+    _g45ApisDernier = Date.now();
+    d = await apiSportsFetch(path);
+  }
+  return d;
+}
+
 function _g45AujKey() {
   var d = new Date();
   return '' + d.getFullYear() + String(d.getMonth() + 1).padStart(2, '0') + String(d.getDate()).padStart(2, '0');
@@ -34875,8 +34908,10 @@ function _g45RattrEcrire(keyTeam, saison, job) {
 
 /* ── Traitement d'UN match : ecrit les stats de nos joueurs pour cette journee ── */
 async function _g45RattrUnMatch(fx, index, keyTeam, saison, tid) {
-  var d = await apiSportsFetch('/fixtures/players?fixture=' + fx.id);
+  var d = await _g45ApisAppel('/fixtures/players?fixture=' + fx.id);
   _g45ApisPlusUn();
+  var errM = _g45ApisErreur(d);
+  if (errM) throw new Error(errM);
   _g45FxMarque(fx.id);
   var blocs = (d && d.response) || [];
   var moi = blocs.filter(function (b) { return b.team && String(b.team.id) === String(tid); })[0];
@@ -34944,16 +34979,20 @@ async function _g45RattrDerouler(keyTeam, saison, tid, squadData, silencieux) {
   var index = _g45RattrIndex(squadData);
   var faits = _g45FxFaits(), traites = 0;
 
+  var total0 = job.file.length;
+  var btnP = document.querySelector('[id^="btn-rattr-"]');
   while (job.file.length) {
     if (g45ApisReste() <= 0) break;
     var fx = job.file[0];
     if (faits[fx.id]) { job.file.shift(); continue; }   /* deja vu via l'adversaire */
+    if (btnP) btnP.textContent = '\u23f3 J' + fx.j + ' \u00b7 ' + (traites + 1) + '/' + total0;
     try { await _g45RattrUnMatch(fx, index, keyTeam, saison, tid); traites++; }
-    catch (e) { break; }                                 /* erreur reseau : on garde la file */
+    catch (e) { break; }                                 /* erreur ou limite : on garde la file */
     job.file.shift();
     _g45RattrEcrire(keyTeam, saison, job);
   }
   _g45RattrEcrire(keyTeam, saison, job);
+  if (btnP) btnP.textContent = '\ud83d\udcc5 Rattrapage J';
 
   if (!silencieux) {
     alert(traites + ' journ\u00e9es r\u00e9cup\u00e9r\u00e9es.\n'
@@ -34981,7 +35020,7 @@ async function g45RattrapageJournees(uid, nom) {
 
   var job = _g45RattrLire(keyTeam, _currentSaison);
   if (!job || !job.file) {
-    var d = await apiSportsFetch('/fixtures?team=' + tid + '&season=' + saison);
+    var d = await _g45ApisAppel('/fixtures?team=' + tid + '&season=' + saison);
     _g45ApisPlusUn();
     var errFx = _g45ApisErreur(d);
     if (errFx) { alert('api-sports refuse la requ\u00eate :\n\n' + errFx + '\n\n(saison ' + saison + ', club ' + tid + ')'); return; }
@@ -35015,6 +35054,8 @@ async function g45RattrapageJournees(uid, nom) {
   if (!confirm(nom + ' \u00b7 saison ' + saison + '\n\n'
     + job.file.length + ' journ\u00e9es \u00e0 r\u00e9cup\u00e9rer (1 requ\u00eate chacune).\n'
     + 'Budget restant aujourd\'hui : ' + reste + '/' + g45ApisPlafond() + '\n\n'
+    + 'Cadence : ' + g45ApisRpm() + ' requetes/minute, soit environ '
+    + Math.ceil(faisable * 60 / g45ApisRpm() / 60) + ' min.\n'
     + 'On en traite ' + faisable + ' maintenant'
     + (job.file.length > faisable ? ', le reste repartira tout seul demain' : '') + '.\n\nLancer ?')) return;
 
