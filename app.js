@@ -33552,12 +33552,27 @@ function _g45CompoIndice(nom) {
   return null;
 }
 
-async function _g45CompoCtx(nom) {
+async function _g45CompoCtx(nom, avecFoot) {
   /* 1. Entree perso, posee au clic depuis Competitions : la plus fiable. */
   var perso = null;
   try { perso = g45TeamsPerso()[String(nom || '').toLowerCase().trim()]; } catch (e) {}
   if (perso && perso.league && (perso.sport || 'soccer') !== 'soccer') {
     return { sp: perso.sport, lg: String(perso.league), ref: String(perso.id || ''), via: 'perso' };
+  }
+
+  /* 1 bis. FOOTBALL, seulement si l'appelant le demande. L'onglet Saisons garde
+     son rendu football historique ; c'est Compo qui a besoin de ce chemin, pour
+     servir l'effectif depuis ESPN au lieu de football-data et son quota. */
+  if (avecFoot) {
+    if (perso && perso.league && (perso.sport || 'soccer') === 'soccer') {
+      return { sp: 'soccer', lg: String(perso.league), ref: String(perso.id || ''), via: 'perso-foot' };
+    }
+    try {
+      if (typeof espnResolveTeam === 'function') {
+        var rf = await espnResolveTeam(nom);
+        if (rf && rf.id && rf.league) return { sp: 'soccer', lg: String(rf.league), ref: String(rf.id), via: 'espn-foot' };
+      }
+    } catch (e) {}
   }
 
   /* 2. Sport du mur, cherche comme SYMBOLE contenu et non comme cle exacte. */
@@ -33621,8 +33636,8 @@ async function _g45CompoCtx(nom) {
 }
 window._g45CompoCtx = _g45CompoCtx;
 
-async function _g45CompoEffectif(el, nom) {
-  var ctx = await _g45CompoCtx(nom);
+async function _g45CompoEffectif(el, nom, avecFoot) {
+  var ctx = await _g45CompoCtx(nom, avecFoot);
   if (!ctx || !ctx.ref) {
     el.innerHTML = '<div style="text-align:center;color:var(--t3);font-size:11.5px;padding:18px;">Effectif indisponible pour <b>' + nom + '</b>.'
       + '<br><small style="opacity:.7;">' + (ctx ? ('\u00e9quipe non trouv\u00e9e dans ' + ctx.sp + '/' + ctx.lg) : 'sport non reconnu') + '</small></div>';
@@ -33836,7 +33851,7 @@ window._g45CompoGamelog = _g45CompoGamelog;
    equipes dont le sport n'est pas le football. */
 var _g45CompoOrig = (typeof loadTeamCompo === 'function') ? loadTeamCompo : null;
 
-window.loadTeamCompo = function () {
+window.loadTeamCompo = async function () {
   var el = (typeof $i === 'function') ? $i('ip-compo') : document.getElementById('ip-compo');
   if (!el) return;
   var nom = (typeof _currentTeam !== 'undefined' ? _currentTeam : '') || '';
@@ -33848,7 +33863,29 @@ window.loadTeamCompo = function () {
     if (!u && perso && (perso.sport || 'soccer') !== 'soccer') estFoot = false;
   } catch (e) {}
 
-  if (estFoot) { if (_g45CompoOrig) return _g45CompoOrig(); return; }
+  if (estFoot) {
+    /* On NE remplace PAS le terrain et les positions de `loadFdSquad` : Antoine
+       s'en sert. On ajoute l'effectif ESPN EN DESSOUS, avec les stats joueur
+       cliquables et a jour, sans toucher a l'existant. */
+    var r = null;
+    try { r = _g45CompoOrig ? _g45CompoOrig() : null; } catch (e) {}
+    if (r && typeof r.then === 'function') { try { await r; } catch (e) {} }
+
+    var poser = function () {
+      if (!document.getElementById('ip-compo')) return;
+      if (document.getElementById('g45-compo-espn')) return;
+      var sub = document.createElement('div');
+      sub.id = 'g45-compo-espn';
+      sub.style.marginTop = '10px';
+      el.appendChild(sub);
+      _g45CompoEffectif(sub, nom, true);
+    };
+    poser();
+    /* `loadFdSquad` peut encore reecrire el apres son retour (chargements
+       imbriques non attendus) : on verifie une fois et on repose si besoin. */
+    setTimeout(poser, 1400);
+    return;
+  }
   el.style.display = 'block';
   _g45CompoEffectif(el, nom);
 };
