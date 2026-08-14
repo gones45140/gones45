@@ -33657,20 +33657,87 @@ async function _g45CompoCtx(nom, avecFoot) {
 window._g45CompoCtx = _g45CompoCtx;
 
 /* ═══ PORTRAITS ═══
-   Le champ `headshot` du roster n'est renseigne que pour une poignee de joueurs
-   hors ligues americaines — un seul sur trente-sept au Real Madrid. Les images
-   existent pourtant : ESPN les sert a une adresse construite sur l'identifiant
-   de l'athlete. On la fabrique donc quand le champ manque.
+   TESTE ET INVALIDE le 14/08/2026. J'avais suppose qu'ESPN servait les portraits
+   a une adresse construite sur l'identifiant de l'athlete :
+     a.espncdn.com/i/headshots/soccer/players/full/{id}.png
+   Verification sur l'effectif du Real Madrid : 37 joueurs, UN SEUL portrait
+   fourni par le roster, et les adresses fabriquees renvoient toutes 404
+   (Navarro 84349, Courtois 134283, Lunin 257237, Mestre 350351).
+   ESPN n'heberge tout simplement pas ces images pour la Liga.
 
-   Le numero reste dessine EN DESSOUS de la photo : si l'image n'existe pas,
-   `onerror` masque simplement l'img et la pastille reapparait. Aucun trou. */
-var _G45_HEADSHOT_SEG = {
-  soccer:'soccer', basketball:'nba', hockey:'nhl', baseball:'mlb', football:'nfl'
-};
+   On ne construit donc plus rien : 36 requetes vouees a l'echec par affichage,
+   pour zero photo gagnee. On utilise UNIQUEMENT le `headshot` que le roster
+   fournit, et la pastille numerotee prend le relais partout ailleurs.
+
+   Le numero reste dessine EN DESSOUS de la photo : si une image fournie casse,
+   `onerror` la masque et la pastille reapparait, sans trou dans la liste. */
 function _g45HeadshotUrl(sp, pid) {
-  var seg = _G45_HEADSHOT_SEG[sp];
-  if (!seg || !pid) return '';
-  return 'https://a.espncdn.com/i/headshots/' + seg + '/players/full/' + pid + '.png';
+  return '';   /* ESPN : voir le constat ci-dessus */
+}
+
+/* ═══ PORTRAITS FOOTBALL VIA API-SPORTS ═══
+   ESPN n'ayant pas les images, on passe par api-sports, dont la cle est deja
+   configuree dans Outils. COUT : UNE requete `/players/squads`, qui rend tout
+   l'effectif avec les portraits d'un coup — pas une requete par joueur.
+   `findApiSportsTeamId` en coute une seconde la premiere fois seulement, et
+   uniquement si le club n'est pas deja dans `API_SPORTS_IDS`.
+
+   MISE EN CACHE 30 JOURS, y compris les echecs (3 jours pour ceux-la) : sans ca
+   un club introuvable relancerait la requete a chaque ouverture de l'onglet.
+
+   PIEGE DE NOMMAGE : api-sports ecrit souvent « K. Mbappe » la ou ESPN ecrit
+   « Kylian Mbappe ». Un rapprochement sur le nom complet echouerait sur la
+   moitie de l'effectif. On indexe donc aussi le NOM DE FAMILLE avec l'initiale
+   du prenom, et on n'accepte ce rapprochement que s'il est UNIQUE dans
+   l'effectif — deux freres ou deux homonymes, on renonce plutot que se tromper. */
+async function _g45PhotosFoot(nom) {
+  var cle = 'g45photos_' + _g45SgNorm(nom);
+  try {
+    var brut = localStorage.getItem(cle);
+    if (brut) {
+      var o = JSON.parse(brut);
+      var age = Date.now() - (o.t || 0);
+      var duree = (o.l && o.l.length) ? 30 * 86400000 : 3 * 86400000;
+      if (age < duree) return o.l || [];
+    }
+  } catch (e) {}
+
+  var liste = [];
+  try {
+    if (typeof findApiSportsTeamId === 'function' && typeof apiSportsFetch === 'function') {
+      var tid = await findApiSportsTeamId(nom);
+      if (tid) {
+        var d = await apiSportsFetch('/players/squads?team=' + tid);
+        var js = (d && d.response && d.response[0] && d.response[0].players) || [];
+        js.forEach(function (j) {
+          if (!j || !j.name || !j.photo) return;
+          var mots = String(j.name).trim().split(/\s+/);
+          liste.push({
+            n: _g45SgNorm(j.name),
+            f: _g45SgNorm(mots[mots.length - 1]),               /* nom de famille */
+            i: _g45SgNorm(mots[0]).charAt(0),                    /* initiale prenom */
+            u: j.photo
+          });
+        });
+      }
+    }
+  } catch (e) {}
+
+  try { localStorage.setItem(cle, JSON.stringify({ t: Date.now(), l: liste })); } catch (e) {}
+  return liste;
+}
+
+function _g45PhotoDe(liste, nomJoueur) {
+  if (!liste || !liste.length || !nomJoueur) return '';
+  var n = _g45SgNorm(nomJoueur);
+  var exact = liste.filter(function (x) { return x.n === n; })[0];
+  if (exact) return exact.u;
+
+  var mots = String(nomJoueur).trim().split(/\s+/);
+  var fam = _g45SgNorm(mots[mots.length - 1]);
+  var ini = _g45SgNorm(mots[0]).charAt(0);
+  var cands = liste.filter(function (x) { return x.f === fam && (!x.i || !ini || x.i === ini); });
+  return (cands.length === 1) ? cands[0].u : '';   /* ambigu -> pastille */
 }
 
 async function _g45CompoEffectif(el, nom, avecFoot) {
@@ -33702,6 +33769,10 @@ async function _g45CompoEffectif(el, nom, avecFoot) {
     return;
   }
 
+  /* Football : une requete api-sports pour tout l'effectif, mise en cache 30 j. */
+  var photos = [];
+  if (ctx.sp === 'soccer') { try { photos = await _g45PhotosFoot(nom); } catch (e) {} }
+
   var html = '<div class="cwrap">'
     + '<div style="font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#4f5d88;margin-bottom:8px;">\ud83d\udc65 Effectif '
     + (saison ? saison + ' ' : '') + '(' + joueurs.length + ')</div>';
@@ -33720,7 +33791,7 @@ async function _g45CompoEffectif(el, nom, avecFoot) {
     }
     var pid = String(p.id || '');
     if (!pid) return;
-    var img = (p.headshot && p.headshot.href) || _g45HeadshotUrl(ctx.sp, pid);
+    var img = (p.headshot && p.headshot.href) || _g45PhotoDe(photos, nm) || _g45HeadshotUrl(ctx.sp, pid);
     html += '<div onclick="_g45CompoJoueur(\'' + pid + '\',\'' + String(pos).replace(/'/g, '') + '\')" style="display:flex;align-items:center;gap:9px;padding:7px 6px;border-bottom:1px solid rgba(255,255,255,.04);cursor:pointer;border-radius:5px;">'
       + '<div style="position:relative;width:30px;height:30px;flex-shrink:0;">'
       + '<div style="position:absolute;inset:0;border-radius:50%;background:rgba(77,132,255,.12);display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:800;color:#4d84ff;">' + (num || '\u2014') + '</div>'
