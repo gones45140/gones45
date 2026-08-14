@@ -33573,6 +33573,26 @@ async function _g45CompoCtx(nom, avecFoot) {
         if (rf && rf.id && rf.league) return { sp: 'soccer', lg: String(rf.league), ref: String(rf.id), via: 'espn-foot' };
       }
     } catch (e) {}
+
+    /* REPLI. `espnResolveTeam` compare les noms tels quels et rate les clubs
+       accentues ou nommes autrement : « Atl\u00e9tico Madrid » ne tombait sur rien.
+       On rejoue donc le rapprochement du module, qui NORMALISE (accents,
+       ponctuation) et exige un vainqueur unique, sur les grands championnats.
+       Les classements sont deja en cache 6 h. */
+    var LIGUES_FOOT = ['esp.1','eng.1','ita.1','ger.1','fra.1','por.1','ned.1','bel.1',
+                       'tur.1','sco.1','fra.2','eng.2','esp.2','ita.2','ger.2'];
+    for (var f = 0; f < LIGUES_FOOT.length; f++) {
+      var eqF = await _g45CompoEq('soccer', LIGUES_FOOT[f]);
+      if (!eqF.length) continue;
+      var refF = _g45CompoMatch(nom, eqF, true);            /* strict d'abord */
+      if (refF) return { sp: 'soccer', lg: LIGUES_FOOT[f], ref: refF, via: 'scan-foot' };
+    }
+    for (var f2 = 0; f2 < LIGUES_FOOT.length; f2++) {
+      var eqF2 = await _g45CompoEq('soccer', LIGUES_FOOT[f2]);
+      if (!eqF2.length) continue;
+      var refF2 = _g45CompoMatch(nom, eqF2, false);         /* puis tolerant */
+      if (refF2) return { sp: 'soccer', lg: LIGUES_FOOT[f2], ref: refF2, via: 'scan-foot-large' };
+    }
   }
 
   /* 2. Sport du mur, cherche comme SYMBOLE contenu et non comme cle exacte. */
@@ -33636,11 +33656,29 @@ async function _g45CompoCtx(nom, avecFoot) {
 }
 window._g45CompoCtx = _g45CompoCtx;
 
+/* ═══ PORTRAITS ═══
+   Le champ `headshot` du roster n'est renseigne que pour une poignee de joueurs
+   hors ligues americaines — un seul sur trente-sept au Real Madrid. Les images
+   existent pourtant : ESPN les sert a une adresse construite sur l'identifiant
+   de l'athlete. On la fabrique donc quand le champ manque.
+
+   Le numero reste dessine EN DESSOUS de la photo : si l'image n'existe pas,
+   `onerror` masque simplement l'img et la pastille reapparait. Aucun trou. */
+var _G45_HEADSHOT_SEG = {
+  soccer:'soccer', basketball:'nba', hockey:'nhl', baseball:'mlb', football:'nfl'
+};
+function _g45HeadshotUrl(sp, pid) {
+  var seg = _G45_HEADSHOT_SEG[sp];
+  if (!seg || !pid) return '';
+  return 'https://a.espncdn.com/i/headshots/' + seg + '/players/full/' + pid + '.png';
+}
+
 async function _g45CompoEffectif(el, nom, avecFoot) {
   var ctx = await _g45CompoCtx(nom, avecFoot);
   if (!ctx || !ctx.ref) {
     el.innerHTML = '<div style="text-align:center;color:var(--t3);font-size:11.5px;padding:18px;">Effectif indisponible pour <b>' + nom + '</b>.'
-      + '<br><small style="opacity:.7;">' + (ctx ? ('\u00e9quipe non trouv\u00e9e dans ' + ctx.sp + '/' + ctx.lg) : 'sport non reconnu') + '</small></div>';
+      + '<br><small style="opacity:.7;">' + (ctx ? ('\u00e9quipe non trouv\u00e9e dans ' + ctx.sp + '/' + ctx.lg)
+          : 'club introuvable chez ESPN sous ce nom \u2014 ouvre-le depuis Comp\u00e9titions pour l\'associer') + '</small></div>';
     return;
   }
   _g45CompoCtxCourant = ctx;
@@ -33680,12 +33718,14 @@ async function _g45CompoEffectif(el, nom, avecFoot) {
       var dn = new Date(p.dateOfBirth);
       if (!isNaN(dn)) age = Math.floor((Date.now() - dn.getTime()) / 31557600000);
     }
-    var img = (p.headshot && p.headshot.href) || '';
     var pid = String(p.id || '');
     if (!pid) return;
+    var img = (p.headshot && p.headshot.href) || _g45HeadshotUrl(ctx.sp, pid);
     html += '<div onclick="_g45CompoJoueur(\'' + pid + '\',\'' + String(pos).replace(/'/g, '') + '\')" style="display:flex;align-items:center;gap:9px;padding:7px 6px;border-bottom:1px solid rgba(255,255,255,.04);cursor:pointer;border-radius:5px;">'
-      + (img ? '<img src="' + img + '" style="width:30px;height:30px;border-radius:50%;object-fit:cover;background:rgba(255,255,255,.05);flex-shrink:0;" onerror="this.style.display=\'none\'">'
-             : '<div style="width:30px;height:30px;border-radius:50%;background:rgba(77,132,255,.12);display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:800;color:#4d84ff;flex-shrink:0;">' + (num || '\u2014') + '</div>')
+      + '<div style="position:relative;width:30px;height:30px;flex-shrink:0;">'
+      + '<div style="position:absolute;inset:0;border-radius:50%;background:rgba(77,132,255,.12);display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:800;color:#4d84ff;">' + (num || '\u2014') + '</div>'
+      + (img ? '<img src="' + img + '" loading="lazy" style="position:absolute;inset:0;width:30px;height:30px;border-radius:50%;object-fit:cover;background:#0f1626;" onerror="this.style.display=\'none\'">' : '')
+      + '</div>'
       + '<div style="flex:1;min-width:0;">'
       + '<div style="font-size:11.5px;font-weight:700;color:var(--t1);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">' + (num ? '#' + num + ' ' : '') + nm + '</div>'
       + '<div style="font-size:9px;color:var(--t3);">' + [pos, ht, (age ? (age + ' ans') : '')].filter(Boolean).join(' \u00b7 ') + '</div></div>'
@@ -33730,7 +33770,10 @@ var _G45_STAT_FR = {
   TRIES:'Essais', TRY:'Essais', CONV:'Transformations', PEN:'P\u00e9nalit\u00e9s',
   TACKLES:'Plaquages', METRES:'M\u00e8tres gagn\u00e9s',
   /* football */
-  GLS:'Buts', SOG:'Tirs cadr\u00e9s', SH:'Tirs', 'YC':'Cartons jaunes', 'RC':'Cartons rouges'
+  GLS:'Buts', SOG:'Tirs cadr\u00e9s', SH:'Tirs', 'YC':'Cartons jaunes', 'RC':'Cartons rouges',
+  STRT:'Titularisations', APP:'Matchs jou\u00e9s', SUB:'Entr\u00e9es en jeu', SHOT:'Tirs',
+  ST:'Tirs cadr\u00e9s', FC:'Fautes commises', FA:'Fautes subies', OFF:'Hors-jeu',
+  GA:'Buts encaiss\u00e9s', SV:'Arr\u00eats', CS:'Clean sheets'
 };
 function _g45StatFr(lab) {
   var k = String(lab || '').toUpperCase().trim();
@@ -33742,6 +33785,17 @@ function _g45StatFr(lab) {
    n'ont pas joue : un offensive tackle dispute souvent tous les snaps de la
    saison, mais son travail ne produit rien de comptabilisable. Afficher
    « pas de stats publiees » laissait croire a une absence. */
+var _g45SplitChoisi = {};   /* competition selectionnee, par joueur */
+var _g45CompoPosMem = {};   /* poste memorise, pour redessiner sans le reperdre */
+
+function _g45CompoSplit(pid, i) {
+  _g45SplitChoisi[pid] = i;
+  var box = document.getElementById('g45-pst-' + pid);
+  if (box) box.innerHTML = '';
+  _g45CompoJoueur(pid, _g45CompoPosMem[pid]);
+}
+window._g45CompoSplit = _g45CompoSplit;
+
 var _G45_POSTES_SANS_STATS = {
   OT:'ligne offensive', OG:'ligne offensive', C:'ligne offensive', G:'ligne offensive',
   T:'ligne offensive', OL:'ligne offensive', LS:'longsnapper'
@@ -33767,7 +33821,26 @@ async function _g45CompoJoueur(pid, pos) {
         + '</div>';
       return;
     }
-    var split = st.splits.filter(function (s) { return /regular|saison/i.test(s.displayName || ''); })[0] || st.splits[0];
+    /* PIEGE FOOTBALL : ESPN ne renvoie pas UN bloc « saison reguliere » mais un
+       bloc PAR COMPETITION — Liga, Ligue des champions, Coupe du Roi, amicaux…
+       Prendre le premier donnait « 2026 International Friendly » sur Ferran
+       Torres : 3 titularisations, alors que sa saison de Liga en compte trente.
+       On choisit le bloc le plus FOURNI, et on laisse basculer sur les autres. */
+    var idxJeu = -1;
+    (st.labels || []).forEach(function (l, i) {
+      if (idxJeu < 0 && /^(GP|APP|STRT|MIN)$/i.test(String(l).trim())) idxJeu = i;
+    });
+    var note = function (sp) {
+      var v = (idxJeu >= 0) ? parseFloat(sp.stats && sp.stats[idxJeu]) : NaN;
+      if (isFinite(v) && v > 0) return v * 1000;
+      var somme = 0;
+      (sp.stats || []).forEach(function (x) { var n = parseFloat(x); if (isFinite(n)) somme += Math.abs(n); });
+      return somme;
+    };
+    var iSel = 0;
+    if (_g45SplitChoisi[pid] != null && st.splits[_g45SplitChoisi[pid]]) iSel = _g45SplitChoisi[pid];
+    else { var best = -1; st.splits.forEach(function (sp, i) { var n = note(sp); if (n > best) { best = n; iSel = i; } }); }
+    var split = st.splits[iSel];
     var vals = split.stats || [];
     var COUL = ['#4d84ff','#1ed760','#f0b020','#a78bfa','#22d3ee','#ff7b54','#ec4899','#84cc16'];
 
@@ -33787,9 +33860,22 @@ async function _g45CompoJoueur(pid, pos) {
         + '<div style="font-size:14px;font-weight:800;color:' + COUL[i % COUL.length] + ';">' + v + '</div>'
         + '<div style="font-size:7.5px;color:var(--t3);line-height:1.25;">' + fr + '</div></div>';
     });
-    h += '</div><button onclick="_g45CompoGamelog(\'' + pid + '\')" style="width:100%;margin-top:8px;padding:7px;border-radius:6px;border:1px solid rgba(255,255,255,.1);background:rgba(255,255,255,.04);color:var(--t2);font-size:10px;font-weight:700;cursor:pointer;">\ud83d\udccb 5 derniers matchs</button>'
+    h += '</div>';
+    if (st.splits.length > 1) {
+      h += '<div style="display:flex;gap:4px;flex-wrap:wrap;margin-top:8px;">';
+      st.splits.forEach(function (sp, i) {
+        var on = (i === iSel);
+        var nomC = String(sp.displayName || ('Bloc ' + (i + 1))).replace(/^\d{4}[-\d]*\s*/, '');
+        h += '<button onclick="_g45CompoSplit(\'' + pid + '\',' + i + ')" style="padding:3px 8px;border-radius:10px;border:1px solid rgba(255,255,255,'
+          + (on ? '.3' : '.08') + ');background:rgba(255,255,255,' + (on ? '.14' : '.04') + ');color:' + (on ? 'var(--t1)' : 'var(--t3)')
+          + ';font-size:8.5px;font-weight:' + (on ? '800' : '400') + ';cursor:pointer;">' + nomC + '</button>';
+      });
+      h += '</div>';
+    }
+    h += '<button onclick="_g45CompoGamelog(\'' + pid + '\')" style="width:100%;margin-top:8px;padding:7px;border-radius:6px;border:1px solid rgba(255,255,255,.1);background:rgba(255,255,255,.04);color:var(--t2);font-size:10px;font-weight:700;cursor:pointer;">\ud83d\udccb 5 derniers matchs</button>'
       + '<div id="g45-pgl-' + pid + '"></div></div>';
     box.innerHTML = h;
+    _g45CompoPosMem[pid] = pos;
   } catch (e) {
     box.innerHTML = '<div style="padding:8px 8px 8px 40px;color:#ff6b6b;font-size:10px;">Erreur stats joueur.</div>';
   }
