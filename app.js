@@ -13207,7 +13207,37 @@ async function autoEspnFillSquad(uid, nom) {
   var cacheKey = 'squad_sofa_' + (sofaId || 'af_' + nom);
   var squadData = null;
   try { var cc = JSON.parse(localStorage.getItem(cacheKey) || '{}'); squadData = cc.squad; } catch (e) {}
-  if (!squadData || !squadData.length) { alert('Effectif Sofascore non chargé pour ' + nom + ' — ouvre d\'abord l\'effectif.'); return; }
+
+  /* REPLI 1 : l'effectif affiche a l'ecran. Le message « non charge » etait un
+     FAUX NEGATIF — le tableau montrait bien ses 26 joueurs, mais l'ecriture en
+     cache avait echoue (quota) ou la cle differait. */
+  if ((!squadData || !squadData.length) && window._g45SquadCourant
+      && window._g45SquadCourant.squad && window._g45SquadCourant.squad.length
+      && String(window._g45SquadCourant.nom || '') === String(nom)) {
+    squadData = window._g45SquadCourant.squad;
+    if (window._g45SquadCourant.key) cacheKey = window._g45SquadCourant.key;
+  }
+
+  /* REPLI 2 : on balaye les effectifs en cache et on prend celui dont la cle
+     correspond au club, quelle que soit la variante de nom utilisee a l'ecriture. */
+  if (!squadData || !squadData.length) {
+    var cible = String(nom || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+    for (var i = 0; i < localStorage.length; i++) {
+      var kk = localStorage.key(i);
+      if (!kk || kk.indexOf('squad_sofa_') !== 0) continue;
+      var suffixe = kk.slice(11).toLowerCase().replace(/[^a-z0-9]/g, '');
+      if (suffixe !== cible && suffixe !== ('af' + cible) && String(sofaId || '') !== kk.slice(11)) continue;
+      try {
+        var oo = JSON.parse(localStorage.getItem(kk) || '{}');
+        if (oo.squad && oo.squad.length) { squadData = oo.squad; cacheKey = kk; break; }
+      } catch (e) {}
+    }
+  }
+
+  if (!squadData || !squadData.length) {
+    alert('Effectif introuvable pour ' + nom + '.\n\nOuvre l\'onglet Compo et laisse l\'effectif se charger, puis relance Auto ESPN.');
+    return;
+  }
 
   // Équipe déjà saisie manuellement (FBref) et pas sourcée ESPN → on laisse intact
   var srcFlag = 'espn_src_' + saisonKey(keyTeam + '_' + savePrefix);
@@ -13676,6 +13706,11 @@ async function loadFdSquad(el, nom, teamId, noTerrain, terrainOnly) {
       }
 
       // Sauvegarder cache
+      /* L'ecriture peut echouer silencieusement (quota localStorage sature) : le
+         tableau s'affiche alors normalement, mais « Auto ESPN » ne retrouve plus
+         l'effectif et refuse de travailler. On publie donc l'effectif affiche
+         dans une variable, qui sert de repli au bouton. */
+      window._g45SquadCourant = { nom: nom, key: cacheKey, squad: squad, ts: Date.now() };
       try { localStorage.setItem(cacheKey, JSON.stringify({squad:squad,statsMap:statsMap,usingSofa:usingSofa,ts:Date.now()})); } catch(e) {}
     }
 
@@ -13700,7 +13735,10 @@ async function loadFdSquad(el, nom, teamId, noTerrain, terrainOnly) {
     html += '<div style="font-size:9px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;color:var(--t3);">👤 Squad · '+nom+' <span style="color:var(--t2);font-weight:500;">('+squad.length+')</span></div>';
     html += '<div style="display:flex;align-items:center;gap:8px;">';
     html += '<div style="font-size:9px;color:var(--t3);">'+(usingSofa?'sofascore':'api-football · 2024-25')+'</div>';
-    if(localStorage.getItem('gones45_admin')==='1'){html += '<button id="btn-espn-auto-'+uid+'" onclick="autoEspnFillSquad(\''+uid+'\',\''+nom+'\')" style="display:flex;align-items:center;gap:4px;padding:4px 8px;border-radius:6px;border:1px solid rgba(30,215,96,.3);background:rgba(30,215,96,.12);color:#1ed760;font-size:9px;font-weight:700;cursor:pointer;" title="Remplir auto depuis ESPN (saison sélectionnée, Championnat) — n\'écrase pas une équipe déjà saisie">⚡ Auto ESPN</button>';
+    if(localStorage.getItem('gones45_admin')==='1'){
+      /* Une requete pour tout l'effectif, championnat ET Europe (14/08/2026). */
+      html += '<button id="btn-apis-auto-'+uid+'" onclick="autoApiSportsFillSquad(\''+uid+'\',\''+nom+'\')" style="display:flex;align-items:center;gap:4px;padding:4px 8px;border-radius:6px;border:1px solid rgba(167,139,250,.35);background:rgba(167,139,250,.12);color:#a78bfa;font-size:9px;font-weight:700;cursor:pointer;" title="Remplit tout l\'effectif en 1 requete api-sports (championnat et Europe separes)">\u26a1 Auto api-sports</button>';
+      html += '<button id="btn-espn-auto-'+uid+'" onclick="autoEspnFillSquad(\''+uid+'\',\''+nom+'\')" style="display:flex;align-items:center;gap:4px;padding:4px 8px;border-radius:6px;border:1px solid rgba(30,215,96,.3);background:rgba(30,215,96,.12);color:#1ed760;font-size:9px;font-weight:700;cursor:pointer;" title="Remplir auto depuis ESPN (saison sélectionnée, Championnat) — n\'écrase pas une équipe déjà saisie">⚡ Auto ESPN</button>';
     html += '<button id="btn-fbref-import-'+uid+'" onclick="importFbrefStats(\''+uid+'\',\''+nom+'\')" style="display:flex;align-items:center;gap:4px;padding:4px 8px;border-radius:6px;border:1px solid rgba(255,255,255,.15);background:rgba(255,255,255,.07);color:var(--t2);font-size:9px;font-weight:700;cursor:pointer;">📸 Import FBref</button>';}
     html += '<button id="btn-admin-lock-'+uid+'" onclick="toggleAdminLock(\''+uid+'\')" style="padding:4px 7px;border-radius:6px;border:1px solid rgba(255,255,255,.15);background:rgba(255,255,255,.07);color:var(--t2);font-size:12px;cursor:pointer;" title="Mode admin">'+(localStorage.getItem('gones45_admin')==='1'?'🔓':'🔒')+'</button>';
     html += '<button onclick="refreshSquadCache(\''+nom+'\')" style="display:flex;align-items:center;gap:4px;padding:4px 8px;border-radius:6px;border:1px solid rgba(255,255,255,.15);background:rgba(255,255,255,.07);color:var(--t2);font-size:9px;font-weight:700;cursor:pointer;" title="Vider le cache et recharger le squad depuis l\'API">🔄</button>';
@@ -34411,3 +34449,193 @@ window.g45NrlRecharger = async function () {
   }
   return await _g45RechargerOrig();
 };
+
+
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   AUTO API-SPORTS — remplit tout l'effectif en UNE requete (14/08/2026)
+   ───────────────────────────────────────────────────────────────────────────
+   POURQUOI, alors qu'« Auto ESPN » existe deja : ce dernier interroge ESPN
+   JOUEUR PAR JOUEUR — 26 requetes pour le PSG — et, pour l'Europe, sonde
+   jusqu'a six competitions sur huit joueurs avant de trouver la bonne, soit
+   pres de 50 appels supplementaires.
+
+   `/players?team=X&season=Y` rend l'effectif ENTIER avec ses statistiques, et
+   les separe deja par competition : championnat ET Europe dans la meme reponse.
+   L'API pagine par 20, donc 2 requetes pour 26 joueurs. Pas de sondage.
+
+   REGLE DE PRUDENCE, la meme que pour ESPN : on ne touche PAS a une equipe
+   saisie a la main (FBref). Seules les equipes vides ou deja sourcees
+   automatiquement sont (re)remplies.
+
+   CE QU'API-SPORTS NE DONNE PAS : les clean sheets et les tirs cadres subis des
+   gardiens. On laisse ces deux cases INTACTES plutot que d'ecrire un zero qui
+   passerait pour une donnee. Un zero faux est pire qu'une case vide.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* Competitions europeennes chez api-sports : C1, Europa, Conference. */
+var _G45_APIS_EURO = { 2: 1, 3: 1, 848: 1 };
+
+function _g45ApisNorm(s) {
+  return String(s || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-z ]/g, '').replace(/\s+/g, ' ').trim();
+}
+
+/* Retrouve l'effectif affiche, ou qu'il soit : cache, variable de la vue, ou
+   balayage des cles. Meme repli que celui pose sur « Auto ESPN ». */
+function _g45SquadDe(nom, sofaId) {
+  var cle = 'squad_sofa_' + (sofaId || 'af_' + nom);
+  try { var c = JSON.parse(localStorage.getItem(cle) || '{}'); if (c.squad && c.squad.length) return { squad: c.squad, key: cle }; } catch (e) {}
+  if (window._g45SquadCourant && window._g45SquadCourant.squad && window._g45SquadCourant.squad.length
+      && String(window._g45SquadCourant.nom || '') === String(nom)) {
+    return { squad: window._g45SquadCourant.squad, key: window._g45SquadCourant.key || cle };
+  }
+  var cible = String(nom || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+  for (var i = 0; i < localStorage.length; i++) {
+    var kk = localStorage.key(i);
+    if (!kk || kk.indexOf('squad_sofa_') !== 0) continue;
+    var suf = kk.slice(11).toLowerCase().replace(/[^a-z0-9]/g, '');
+    if (suf !== cible && suf !== ('af' + cible) && String(sofaId || '') !== kk.slice(11)) continue;
+    try { var oo = JSON.parse(localStorage.getItem(kk) || '{}'); if (oo.squad && oo.squad.length) return { squad: oo.squad, key: kk }; } catch (e) {}
+  }
+  return null;
+}
+
+async function autoApiSportsFillSquad(uid, nom) {
+  var btn = document.getElementById('btn-apis-auto-' + uid);
+  if (typeof apiSportsFetch !== 'function' || typeof getApiSportsKey !== 'function' || !getApiSportsKey()) {
+    alert('Cl\u00e9 api-sports manquante \u2014 configure-la dans Outils.'); return;
+  }
+
+  var sofaId = (typeof SOFASCORE_TEAM_IDS !== 'undefined') ? SOFASCORE_TEAM_IDS[nom] : null;
+  if (!sofaId && typeof SOFASCORE_TEAM_IDS !== 'undefined') {
+    for (var k in SOFASCORE_TEAM_IDS) {
+      if (nom.toLowerCase().indexOf(k.toLowerCase()) >= 0 || k.toLowerCase().indexOf(nom.toLowerCase()) >= 0) { sofaId = SOFASCORE_TEAM_IDS[k]; break; }
+    }
+  }
+  var keyTeam = sofaId || '0';
+
+  var trouve = _g45SquadDe(nom, sofaId);
+  if (!trouve) { alert('Effectif introuvable pour ' + nom + '.\n\nOuvre l\'onglet Compo et laisse l\'effectif se charger, puis relance.'); return; }
+  var squadData = trouve.squad;
+
+  var comp = window['_compMode_' + uid] || 'league';
+  var savePrefix = (comp === 'euro') ? 'euro' : 'league';
+
+  /* Garde-fou : une equipe remplie a la main n'est jamais ecrasee. */
+  var srcApis = 'apis_src_' + saisonKey(keyTeam + '_' + savePrefix);
+  var srcEspn = 'espn_src_' + saisonKey(keyTeam + '_' + savePrefix);
+  var autoSource = localStorage.getItem(srcApis) === '1' || localStorage.getItem(srcEspn) === '1';
+  var aDuManuel = squadData.some(function (p) {
+    var ms = {}; try { ms = JSON.parse(localStorage.getItem('manual_stats_' + saisonKey(keyTeam + '_' + p.id)) || '{}'); } catch (e) {}
+    return ms[savePrefix + '_goals'] !== undefined || ms[savePrefix + '_apps'] !== undefined;
+  });
+  if (aDuManuel && !autoSource) {
+    alert('\u00ab ' + nom + ' \u00bb contient une saisie manuelle (FBref) \u2014 laiss\u00e9 intact.\nFais Reset d\'abord pour passer en source automatique.');
+    return;
+  }
+
+  if (btn) { btn.disabled = true; btn.textContent = '\u23f3 api-sports\u2026'; }
+  try {
+    var saison = 2000 + parseInt(String(_currentSaison).slice(0, 2), 10);
+    var tid = await findApiSportsTeamId(nom);
+    if (!tid) throw new Error('club introuvable chez api-sports');
+
+    /* Une requete, deux si l'effectif depasse 20 joueurs. */
+    var joueurs = [], page = 1, total = 1, appels = 0;
+    while (page <= total && page <= 5) {
+      var d = await apiSportsFetch('/players?team=' + tid + '&season=' + saison + '&page=' + page);
+      appels++;
+      total = (d && d.paging && d.paging.total) || 1;
+      ((d && d.response) || []).forEach(function (x) { joueurs.push(x); });
+      page++;
+    }
+    if (!joueurs.length) throw new Error('aucune donn\u00e9e pour la saison ' + saison);
+
+    /* Index de l'effectif affiche, par nom complet et par nom de famille. */
+    var index = squadData.map(function (p) {
+      var n = _g45ApisNorm(p.name || p.shortName || '');
+      var mots = n.split(' ').filter(function (w) { return w.length > 2; });
+      return { p: p, n: n, fam: mots[mots.length - 1] || n };
+    });
+    var apparier = function (nomComplet) {
+      var n = _g45ApisNorm(nomComplet);
+      var exact = index.filter(function (x) { return x.n === n; })[0];
+      if (exact) return exact.p;
+      var mots = n.split(' ').filter(function (w) { return w.length > 2; });
+      var fam = mots[mots.length - 1] || n;
+      var cands = index.filter(function (x) { return x.fam === fam; });
+      if (cands.length === 1) return cands[0].p;
+      /* Homonymes de nom de famille : on tranche sur le prenom. */
+      var prenom = mots[0] || '';
+      var fin = cands.filter(function (x) { return x.n.indexOf(prenom) >= 0; });
+      return (fin.length === 1) ? fin[0].p : null;
+    };
+
+    var maj = 0, sansMatch = 0;
+    joueurs.forEach(function (item) {
+      var pl = item.player || {};
+      var nomPlein = ((pl.firstname || '') + ' ' + (pl.lastname || '')).trim() || pl.name || '';
+      var cible = apparier(nomPlein) || apparier(pl.name || '');
+      if (!cible) { sansMatch++; return; }
+
+      /* Cumul des blocs de la competition demandee : un joueur peut avoir
+         plusieurs lignes (phase de groupes + qualifications, par exemple). */
+      var acc = null;
+      (item.statistics || []).forEach(function (st) {
+        var lg = st.league || {};
+        var estEuro = !!_G45_APIS_EURO[lg.id];
+        var estChamp = !estEuro && String(lg.type || '') === 'League';
+        if ((savePrefix === 'euro') !== estEuro) return;
+        if (savePrefix === 'league' && !estChamp) return;
+        acc = acc || { apps:0, starts:0, minutes:0, goals:0, assists:0, pk:0, pkm:0, yellow:0, red:0, ga:0, saves:0 };
+        var g = st.games || {}, go = st.goals || {}, pe = st.penalty || {}, ca = st.cards || {};
+        acc.apps += g.appearences || 0;
+        acc.starts += g.lineups || 0;
+        acc.minutes += g.minutes || 0;
+        acc.goals += go.total || 0;
+        acc.assists += go.assists || 0;
+        acc.ga += go.conceded || 0;
+        acc.saves += go.saves || 0;
+        acc.pk += pe.scored || 0;
+        acc.pkm += pe.missed || 0;
+        acc.yellow += ca.yellow || 0;
+        acc.red += ca.red || 0;
+      });
+      if (!acc) return;
+
+      var estGardien = /^g/i.test(String(cible.position || cible.pos || '')) || (acc.saves > 0 || acc.ga > 0);
+      var mk = 'manual_stats_' + saisonKey(keyTeam + '_' + cible.id);
+      var ms = {}; try { ms = JSON.parse(localStorage.getItem(mk) || '{}'); } catch (e) {}
+      ms[savePrefix + '_apps'] = acc.apps;
+      ms[savePrefix + '_starts'] = acc.starts;
+      ms[savePrefix + '_minutes'] = acc.minutes;
+      if (estGardien) {
+        ms[savePrefix + '_ga'] = acc.ga;
+        ms[savePrefix + '_saves'] = acc.saves;
+        /* clean sheets et tirs cadres subis : NON fournis, on n'y touche pas. */
+      } else {
+        ms[savePrefix + '_goals'] = acc.goals;
+        ms[savePrefix + '_assists'] = acc.assists;
+        ms[savePrefix + '_gpk'] = acc.goals - acc.pk;
+        ms[savePrefix + '_pk'] = acc.pk;
+        ms[savePrefix + '_pkatt'] = acc.pk + acc.pkm;
+        ms[savePrefix + '_yellow'] = acc.yellow;
+        ms[savePrefix + '_red'] = acc.red;
+      }
+      try { localStorage.setItem(mk, JSON.stringify(ms)); maj++; } catch (e) {}
+    });
+
+    localStorage.setItem(srcApis, '1');
+    if (btn) { btn.disabled = false; btn.textContent = '\u26a1 Auto api-sports'; }
+    alert('\u2705 ' + nom + ' \u00b7 ' + (savePrefix === 'euro' ? 'Europe' : 'Championnat') + ' ' + saison + '\n'
+      + maj + ' joueurs mis \u00e0 jour sur ' + joueurs.length + ' renvoy\u00e9s\n'
+      + appels + ' requ\u00eate' + (appels > 1 ? 's' : '') + ' api-sports'
+      + (sansMatch ? ('\n' + sansMatch + ' non appari\u00e9s \u00e0 ton effectif') : ''));
+    if (typeof loadTeamCompo === 'function') loadTeamCompo();
+  } catch (e) {
+    if (btn) { btn.disabled = false; btn.textContent = '\u26a1 Auto api-sports'; }
+    alert('\u274c ' + ((e && e.message) || e));
+  }
+}
+window.autoApiSportsFillSquad = autoApiSportsFillSquad;
