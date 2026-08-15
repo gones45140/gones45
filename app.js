@@ -13810,6 +13810,7 @@ async function loadFdSquad(el, nom, teamId, noTerrain, terrainOnly) {
       /* Reset de la SAISON entiere, toutes equipes, avec sauvegarde prealable. */
       html += '<button id="btn-rattr-'+uid+'" onclick="g45RattrapageJournees(\''+uid+'\',\''+nom+'\')" style="display:flex;align-items:center;gap:4px;padding:4px 8px;border-radius:6px;border:1px solid rgba(34,211,238,.35);background:rgba(34,211,238,.10);color:#22d3ee;font-size:9px;font-weight:700;cursor:pointer;" title="Recupere les stats journee par journee (1 requete par match, budget quotidien)">\ud83d\udcc5 Rattrapage J</button>';
       html += '<span style="font-size:8.5px;color:var(--t3);align-self:center;" title="Requetes api-sports consommees aujourd\'hui">'+g45ApisConso()+'/'+g45ApisPlafond()+'</span>';
+      html += '<button onclick="g45ReparerStats()" title="Repare les accents et emojis abimes dans la Memoire stats" style="display:flex;align-items:center;gap:4px;padding:4px 8px;border-radius:6px;border:1px solid rgba(167,139,250,.35);background:rgba(167,139,250,.10);color:#a78bfa;font-size:9px;font-weight:700;cursor:pointer;">\ud83e\uddf9 R\u00e9parer les accents</button>';
       html += '<button onclick="g45ResetSaisonToutes()" style="display:flex;align-items:center;gap:4px;padding:4px 8px;border-radius:6px;border:1px solid rgba(255,120,80,.35);background:rgba(255,120,80,.10);color:#ff9a6b;font-size:9px;font-weight:700;cursor:pointer;" title="Efface les stats de TOUTE la saison selectionnee, toutes equipes. Sauvegarde telechargee avant.">\ud83e\uddf9 Reset saison</button>';
       html += '<button onclick="g45RestaurerSaison()" style="display:flex;align-items:center;gap:4px;padding:4px 8px;border-radius:6px;border:1px solid rgba(120,160,255,.3);background:rgba(120,160,255,.10);color:#8fb2ff;font-size:9px;font-weight:700;cursor:pointer;" title="Restaure une sauvegarde JSON">\u21a9\ufe0f Restaurer</button>';
       html += '<button onclick="resetTeamStats(\''+nom+'\')" style="display:flex;align-items:center;gap:4px;padding:4px 8px;border-radius:6px;border:1px solid rgba(255,69,69,.3);background:rgba(255,69,69,.1);color:#ff7b7b;font-size:9px;font-weight:700;cursor:pointer;" title="Effacer les stats de cette equipe">Reset</button>'; }
@@ -36031,3 +36032,98 @@ document.addEventListener('click', function () {
    pas passe. On le fait au demarrage. */
 setTimeout(_g45DeplacerLanceurs, 1200);
 setTimeout(_g45DeplacerLanceurs, 4000);
+
+
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   RÉPARATION DES TEXTES DOUBLEMENT ENCODÉS (15/08/2026)
+   ───────────────────────────────────────────────────────────────────────────
+   L'ECRITURE etait correcte : `btoa(unescape(encodeURIComponent(x)))`.
+   La LECTURE, elle, faisait un simple `atob` — donc « réussit » revenait en
+   « rÃ©ussit ». Ce texte abime etait ensuite RE-ENREGISTRE tel quel, et le cycle
+   ajoutait une couche a chaque passage : « rÃÂ©ussit », puis « rÃÂÃÂ©ussit ».
+
+   Le correctif de lecture arrete l'hemorragie mais ne repare pas l'existant :
+   les couches sont dans le fichier. On les retire donc en rejouant la
+   transformation inverse TANT QU'ELLE PROGRESSE, avec deux garde-fous :
+     - on s'arrete des qu'une passe echoue ou ne change rien ;
+     - on refuse un resultat qui contient un caractere de remplacement, signe
+       qu'on a decode une couche de trop.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+function g45Demojibake(txt) {
+  var s = String(txt == null ? '' : txt);
+  /* On rejoue l'INVERSE exact du bug : chaque caractere redevient un octet, et
+     ces octets sont relus comme de l'UTF-8. `decodeURIComponent(escape(x))`
+     echouait des la deuxieme couche — la sequence C3 C2 n'est pas un UTF-8
+     valide pour lui, alors que TextDecoder la traite correctement. */
+  for (var i = 0; i < 5; i++) {
+    if (!/[\u00c3\u00c2\u00e2]/.test(s)) break;          /* plus de signature */
+    var essai = null;
+    try {
+      var oct = new Uint8Array(s.length);
+      for (var k = 0; k < s.length; k++) {
+        var c = s.charCodeAt(k);
+        if (c > 255) { oct = null; break; }               /* deja du vrai texte */
+        oct[k] = c;
+      }
+      if (!oct) break;
+      essai = new TextDecoder('utf-8', { fatal: true }).decode(oct);
+    } catch (e) { break; }                                 /* couche de trop */
+    if (!essai || essai === s || essai.indexOf('\ufffd') >= 0) break;
+    s = essai;
+  }
+  return s;
+}
+window.g45Demojibake = g45Demojibake;
+
+/* Parcourt une structure et repare toutes ses chaines. */
+function _g45ReparerProfond(o) {
+  if (typeof o === 'string') return g45Demojibake(o);
+  if (Array.isArray(o)) return o.map(_g45ReparerProfond);
+  if (o && typeof o === 'object') {
+    var out = {};
+    Object.keys(o).forEach(function (k) { out[k] = _g45ReparerProfond(o[k]); });
+    return out;
+  }
+  return o;
+}
+
+/* Repare la Memoire stats : local d'abord, puis renvoi sur GitHub. */
+async function g45ReparerStats() {
+  /* On passe par les fonctions existantes plutot que par une cle en dur :
+     `G45_STATS_CACHE` peut changer, `g45StatsLocal` non. */
+  var avant = (typeof g45StatsLocal === 'function') ? g45StatsLocal() : [];
+  if (!Array.isArray(avant) || !avant.length) {
+    alert('Aucune stat en m\u00e9moire locale. Ouvre l\'onglet Stats une fois, puis relance.');
+    return;
+  }
+
+  var apres = _g45ReparerProfond(avant);
+  var nb = 0, exemples = [];
+  avant.forEach(function (x, i) {
+    var a = JSON.stringify(x), b = JSON.stringify(apres[i]);
+    if (a !== b) {
+      nb++;
+      if (exemples.length < 3) exemples.push('\u2022 ' + String(apres[i].texte || apres[i].t || '').slice(0, 60));
+    }
+  });
+
+  if (!nb) { alert('Rien \u00e0 r\u00e9parer : aucun texte ab\u00eem\u00e9 d\u00e9tect\u00e9.'); return; }
+  if (!confirm(nb + ' stat(s) \u00e0 r\u00e9parer sur ' + avant.length + '.\n\n' + exemples.join('\n')
+    + '\n\nLa version r\u00e9par\u00e9e sera enregistr\u00e9e localement puis envoy\u00e9e sur GitHub.')) return;
+
+  if (typeof g45StatsSetLocal === 'function') g45StatsSetLocal(apres);
+  var envoye = false;
+  try {
+    /* Il faut le `sha` du fichier distant pour l'ecraser, sinon GitHub refuse. */
+    if (typeof g45StatsGithubGet === 'function' && typeof g45StatsGithubSave === 'function') {
+      var dist = await g45StatsGithubGet();
+      envoye = await g45StatsGithubSave(apres, dist && dist.sha);
+    }
+  } catch (e) { console.warn('envoi stats', e); }
+  alert('\u2705 ' + nb + ' stat(s) r\u00e9par\u00e9e(s).\n'
+    + (envoye ? 'Envoy\u00e9es sur GitHub.' : '\u26a0\ufe0f Envoi GitHub non confirm\u00e9 \u2014 v\u00e9rifie ton token.'));
+  location.reload();
+}
+window.g45ReparerStats = g45ReparerStats;
