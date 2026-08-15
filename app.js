@@ -35676,10 +35676,29 @@ async function g45DirectMesEquipes(silencieux) {
   var LIMITE = Date.now() - 24 * 3600000;   /* un score reste affiche 24 h */
   var trouves = [], enCours = 0;
 
-  for (var i = 0; i < cles.length; i++) {
-    var g = grp[cles[i]], js = null;
+  /* ═══ FOOTBALL : UNE SEULE REQUETE, TOUTES COMPETITIONS ═══
+     PIEGE TROUVE LE 15/08 : on n'interrogeait que le CHAMPIONNAT de l'equipe
+     (`fra.1` pour le PSG), donc Lens-PSG en Trophee des Champions n'apparaissait
+     pas — pas plus qu'une Coupe de France ou une Ligue des Champions.
+     Le slug generique `all` renvoie TOUTES les competitions de football d'un
+     coup. On regroupe donc tout le football en UNE requete, au lieu d'une par
+     championnat : c'est a la fois plus complet ET moins couteux.
+     Les sports US et le rugby gardent leur championnat : ils n'ont pas de coupe
+     parallele, et `all` n'existe pas pour eux. */
+  var grpFoot = { sp: 'soccer', lg: 'all', ids: {}, noms: {} };
+  var aDuFoot = false;
+  cles.forEach(function (k) {
+    if (grp[k].sp !== 'soccer') return;
+    aDuFoot = true;
+    Object.keys(grp[k].ids).forEach(function (id) { grpFoot.ids[id] = 1; grpFoot.noms[id] = grp[k].noms[id]; });
+  });
+  var aInterroger = cles.filter(function (k) { return grp[k].sp !== 'soccer'; }).map(function (k) { return grp[k]; });
+  if (aDuFoot) aInterroger.unshift(grpFoot);
+
+  for (var i = 0; i < aInterroger.length; i++) {
+    var g = aInterroger[i], js = null;
     try {
-      var r = await fetch('https://site.api.espn.com/apis/site/v2/sports/' + g.sp + '/' + g.lg + '/scoreboard?dates=' + jour + '&limit=300');
+      var r = await fetch('https://site.api.espn.com/apis/site/v2/sports/' + g.sp + '/' + g.lg + '/scoreboard?dates=' + jour + '&limit=1000');
       if (!r.ok) continue;
       js = await r.json();
     } catch (e) { continue; }
@@ -35708,8 +35727,14 @@ async function g45DirectMesEquipes(silencieux) {
         return /^[0-9a-f]{6}$/i.test(c) ? ('#' + c) : dft;
       };
       var lg2 = function (x) { return (x.team && (x.team.logo || (x.team.logos && x.team.logos[0] && x.team.logos[0].href))) || ''; };
+      /* Avec le slug `all`, le championnat reel est porte par l'EVENEMENT.
+         Sans ca, toutes les cartes de football afficheraient « all ». */
+      var lgReel = (e.league && (e.league.slug || e.league.abbreviation))
+                || (cp.league && (cp.league.slug || cp.league.abbreviation))
+                || g.lg;
+      var lgNom = (e.league && e.league.name) || (cp.league && cp.league.name) || lgReel;
       trouves.push({
-        etat: etat, id: String(e.id), sp: g.sp, lg: g.lg,
+        etat: etat, id: String(e.id), sp: g.sp, lg: lgReel, lgNom: lgNom,
         moi: nm(moi), adv: nm(autre), dom: moi.homeAway === 'home',
         cMoi: col(moi, '#4d84ff'), cAdv: col(autre, '#8899aa'),
         lMoi: lg2(moi), lAdv: lg2(autre),
@@ -35775,11 +35800,11 @@ async function g45DirectMesEquipes(silencieux) {
       + '<div style="font-size:12.5px;font-weight:800;color:#e6ecf5;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">'
       + m.moi + ' <span style="color:#8899aa;font-weight:500;">' + (m.dom ? 'vs' : '@') + '</span> ' + m.adv + '</div>'
       + '<div style="font-size:22px;font-weight:900;color:#fff;line-height:1.25;letter-spacing:-.5px;">' + score + '</div>'
-      + '<div style="font-size:8.5px;color:#8899aa;">' + m.lg + (m.detail ? (' \u00b7 ' + m.detail) : '') + '</div>'
+      + '<div style="font-size:8.5px;color:#8899aa;">' + (m.lgNom || m.lg) + (m.detail ? (' \u00b7 ' + m.detail) : '') + '</div>'
       + '</div></div>';
   }).join('')
   + '<div style="font-size:9px;color:var(--t3);text-align:center;margin-top:6px;">'
-  + cles.length + ' championnat(s) \u00b7 ' + (enCours ? 'rafra\u00eechissement auto toutes les 45 s' : 'aucun match en cours, rafra\u00eechissement arr\u00eat\u00e9') + '</div>';
+  + aInterroger.length + ' requ\u00eate(s) \u00b7 ' + (enCours ? 'rafra\u00eechissement auto toutes les 45 s' : 'aucun match en cours, rafra\u00eechissement arr\u00eat\u00e9') + '</div>';
 
   /* Visuels manquants : on les cherche APRES avoir affiche, jamais avant —
      l'ecran ne doit pas attendre une image decorative. */
