@@ -35612,17 +35612,30 @@ function _g45FanLire(nom) {
   } catch (e) { return undefined; }
 }
 
-async function _g45FanChercher(nom) {
+/* Sport ESPN -> sport TheSportsDB. Sans cette verification, « Reds » ramenait
+   une ecurie de MotoGP et « Giants » pouvait ramener du rugby : l'image etait
+   spectaculairement fausse sans qu'aucune erreur ne soit levee. */
+var _G45_TSDB_SPORT = {
+  soccer:'soccer', basketball:'basketball', baseball:'baseball',
+  hockey:'ice hockey', football:'american football',
+  'rugby-league':'rugby', rugby:'rugby'
+};
+
+async function _g45FanChercher(nom, sport) {
   var url = '';
   try {
     var r = await fetch('https://www.thesportsdb.com/api/v1/json/3/searchteams.php?t=' + encodeURIComponent(nom));
     if (r.ok) {
       var j = await r.json();
-      var t = (j && j.teams && j.teams[0]) || null;
-      if (t) {
-        /* Ordre de preference : bandeau large, puis ambiance, puis stade. */
-        url = t.strTeamBanner || t.strFanart1 || t.strFanart2 || t.strStadiumThumb || '';
-      }
+      var liste = (j && j.teams) || [];
+      var attendu = _G45_TSDB_SPORT[sport || ''] || '';
+      var n = _g45SgNorm(nom);
+      /* On garde d'abord les equipes du BON SPORT, puis on prefere le nom exact. */
+      var bons = liste.filter(function (t) {
+        return !attendu || _g45SgNorm(t.strSport || '') === _g45SgNorm(attendu);
+      });
+      var t = bons.filter(function (x) { return _g45SgNorm(x.strTeam || '') === n; })[0] || bons[0] || null;
+      if (t) url = t.strTeamBanner || t.strFanart1 || t.strFanart2 || t.strStadiumThumb || '';
     }
   } catch (e) {}
   try { localStorage.setItem(_G45_FANART + _g45SgNorm(nom), JSON.stringify({ u: url, t: Date.now() })); } catch (e) {}
@@ -35637,16 +35650,20 @@ async function _g45FanCompleter(noms) {
 
   /* 1. Images personnelles d'abord : simple chargement d'image depuis le depot,
      aucune API, aucun quota. On les teste TOUTES, c'est gratuit. */
-  var perso = noms.filter(function (n) { return _g45ImgPersoLire(n) === undefined; });
+  var perso = noms.filter(function (n) { return _g45ImgPersoLire(n.nom || n) === undefined; });
   for (var p2 = 0; p2 < perso.length && p2 < 8; p2++) {
-    if (await _g45ImgPersoTester(perso[p2])) maj = true;
+    if (await _g45ImgPersoTester(perso[p2].nom || perso[p2])) maj = true;
   }
 
   /* 2. TheSportsDB seulement pour celles qui n'ont PAS d'image personnelle. */
   var aFaire = noms.filter(function (n) {
-    return !_g45ImgPersoLire(n) && _g45FanLire(n) === undefined;
+    return !_g45ImgPersoLire(n.nom || n) && _g45FanLire(n.nom || n) === undefined;
   }).slice(0, 2);
-  for (var i = 0; i < aFaire.length; i++) { await _g45FanChercher(aFaire[i]); maj = true; }
+  for (var i = 0; i < aFaire.length; i++) {
+    var it = aFaire[i];
+    await _g45FanChercher(it.nom || it, it.sp || '');
+    maj = true;
+  }
 
   _g45FanEnCours = 0;
   return maj;
@@ -35788,9 +35805,12 @@ async function g45DirectMesEquipes(silencieux) {
          n'apprend rien. Sans nom de competition, on prefere ne RIEN ecrire. */
       if (!lgNom && lgReel !== 'all') lgNom = lgReel;
       if (lgNom === 'all') lgNom = '';
+      /* Nom COMPLET pour la recherche d'image : « Reds » seul ramenait une equipe
+         de MotoGP, « Cincinnati Reds » ramene la bonne. */
+      var nmLong = function (x) { return (x.team && (x.team.displayName || x.team.name)) || ''; };
       trouves.push({
         etat: etat, id: String(e.id), sp: g.sp, lg: lgReel, lgNom: lgNom,
-        moi: nm(moi), adv: nm(autre), dom: moi.homeAway === 'home',
+        moi: nm(moi), moiLong: nmLong(moi) || nm(moi), adv: nm(autre), dom: moi.homeAway === 'home',
         cMoi: col(moi, '#4d84ff'), cAdv: col(autre, '#8899aa'),
         lMoi: lg2(moi), lAdv: lg2(autre),
         sMoi: sc(moi), sAdv: sc(autre),
@@ -35830,7 +35850,9 @@ async function g45DirectMesEquipes(silencieux) {
     /* Le visuel de MON equipe passe en fond, tres assombri pour que le score
        reste lisible ; le degrade de couleurs reste par-dessus. Sans visuel
        connu, on retombe exactement sur la carte precedente. */
-    var vis = _g45ImgPersoLire(m.moi) || _g45FanLire(m.moi);
+    var cleImg = m.moiLong || m.moi;
+    var vis = _g45ImgPersoLire(cleImg) || _g45FanLire(cleImg)
+           || _g45ImgPersoLire(m.moi) || _g45FanLire(m.moi);
     var degrade = 'linear-gradient(100deg, ' + m.cMoi + '55 0%, rgba(12,17,29,.94) 42%, rgba(12,17,29,.94) 58%, ' + m.cAdv + '55 100%)';
     var fond = vis
       ? ('linear-gradient(100deg, ' + m.cMoi + '66 0%, rgba(10,14,26,.90) 45%, rgba(10,14,26,.90) 55%, ' + m.cAdv + '66 100%), url(\'' + vis + '\')')
@@ -35870,7 +35892,7 @@ async function g45DirectMesEquipes(silencieux) {
   /* Visuels manquants : on les cherche APRES avoir affiche, jamais avant —
      l'ecran ne doit pas attendre une image decorative. */
   try {
-    var noms = trouves.map(function (m) { return m.moi; });
+    var noms = trouves.map(function (m) { return { nom: m.moiLong || m.moi, sp: m.sp }; });
     _g45FanCompleter(noms).then(function (maj) {
       if (maj) {
         if (_g45Visible('t-suivies')) g45DirectMesEquipes(true);
