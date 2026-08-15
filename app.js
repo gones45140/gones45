@@ -36421,7 +36421,8 @@ function g45CompteRenduUI() {
   el.innerHTML = '<div style="font-size:10.5px;color:var(--t3);line-height:1.6;margin-bottom:10px;">'
     + 'Choisis la simulation qui contient les <b>vrais r\u00e9sultats</b>, puis coche les participants.</div>'
     + '<div id="g45-cr-liste" style="font-size:11.5px;color:var(--t3);">\u23f3 Recherche des simulations\u2026</div>'
-    + '<button onclick="g45CompteRendu()" style="width:100%;margin-top:10px;padding:11px;border-radius:10px;border:1px solid rgba(30,215,96,.4);background:rgba(30,215,96,.12);color:#1ed760;font-size:13px;font-weight:800;cursor:pointer;">\ud83c\udfc6 Calculer le classement</button>'
+    + '<button onclick="g45CreerReferenceESPN()" style="width:100%;margin-top:8px;padding:10px;border-radius:9px;border:1px solid rgba(77,132,255,.4);background:rgba(77,132,255,.12);color:#4d84ff;font-size:12px;font-weight:800;cursor:pointer;">\ud83c\udf10 Cr\u00e9er la r\u00e9f\u00e9rence depuis ESPN</button>'
+    + '<button onclick="g45CompteRendu()" style="width:100%;margin-top:8px;padding:11px;border-radius:10px;border:1px solid rgba(30,215,96,.4);background:rgba(30,215,96,.12);color:#1ed760;font-size:13px;font-weight:800;cursor:pointer;">\ud83c\udfc6 Calculer le classement</button>'
     + '<div id="g45-cr-res" style="margin-top:12px;"></div>';
 
   /* On construit la liste SANS reseau : recues + la sienne. */
@@ -36475,23 +36476,47 @@ async function g45CompteRendu() {
   var vrai = await g45SimuCharger(ref);
   if (!vrai) { res.innerHTML = '<div style="color:#ff6b6b;font-size:11.5px;">R\u00e9f\u00e9rence illisible : <b>' + ref + '</b></div>'; return; }
 
-  var lignes = [];
+  var nomRef = (_g45SimuListe || []).filter(function (x) { return x.id === ref; })[0];
+  nomRef = (nomRef && nomRef.nom) || ref;
+  var sigRef = JSON.stringify(vrai);
+
+  var lignes = [], jumeaux = [];
   for (var i = 0; i < joueurs.length; i++) {
+    if (joueurs[i].id === ref) continue;          /* la reference ne se note pas elle-meme */
     var s3 = await g45SimuCharger(joueurs[i].id);
     if (!s3) { lignes.push({ nom: joueurs[i].nom, absent: true }); continue; }
+    /* Deux entrees identiques = le meme fichier vu deux fois (« Moi » et sa
+       simulation recue). On le SIGNALE plutot que d'afficher deux fois le
+       meme score, ce qui donne l'impression d'un classement au hasard. */
+    if (JSON.stringify(s3) === sigRef) { jumeaux.push(joueurs[i].nom); continue; }
     var n = g45SimuNoter(s3, vrai);
-    lignes.push({ nom: s3.nom || joueurs[i].nom, total: n.total, det: n, champion: n.champion });
+    lignes.push({ nom: s3.nom || joueurs[i].nom, total: n.total, det: n, champion: n.champion, sig: JSON.stringify(s3) });
   }
+
+  /* Doublons entre participants. */
+  var vus = {};
+  lignes.forEach(function (l) {
+    if (!l.sig) return;
+    if (vus[l.sig]) { l.doublonDe = vus[l.sig]; } else { vus[l.sig] = l.nom; }
+  });
   lignes.sort(function (a, b) { return (b.total || -1) - (a.total || -1); });
 
   var med = ['\ud83e\udd47', '\ud83e\udd48', '\ud83e\udd49'];
-  res.innerHTML = lignes.map(function (l, i) {
+  var entete = '<div style="padding:9px 11px;border-radius:9px;background:rgba(240,176,32,.10);border:1px solid rgba(240,176,32,.35);margin-bottom:10px;font-size:11px;color:#f0b020;line-height:1.6;">'
+    + '\u2696\ufe0f Tout le monde est not\u00e9 contre <b>' + nomRef + '</b>.'
+    + (jumeaux.length ? ('<br><b>' + jumeaux.join(', ') + '</b> est identique \u00e0 la r\u00e9f\u00e9rence \u2014 \u00e9cart\u00e9 du classement.') : '')
+    + '<br><span style="opacity:.85;">Si cette simulation contient tes PRONOSTICS et non les vrais r\u00e9sultats, le classement mesure la ressemblance avec toi, pas la performance.</span>'
+    + '</div>';
+
+  res.innerHTML = entete + lignes.map(function (l, i) {
     if (l.absent) return '<div style="padding:9px;color:#ff8a8a;font-size:11.5px;">' + l.nom + ' \u2014 simulation illisible</div>';
     return '<div style="margin-bottom:7px;padding:10px;border-radius:10px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.07);'
       + (i === 0 ? 'border-color:rgba(240,176,32,.45);' : '') + '">'
       + '<div style="display:flex;align-items:center;gap:8px;">'
       + '<div style="font-size:15px;">' + (med[i] || ('#' + (i + 1))) + '</div>'
-      + '<div style="flex:1;font-size:13px;font-weight:800;">' + l.nom + '</div>'
+      + '<div style="flex:1;font-size:13px;font-weight:800;">' + l.nom
+      + (l.doublonDe ? ('<span style="font-size:9px;font-weight:600;color:#ff8a8a;"> \u00b7 identique \u00e0 ' + l.doublonDe + '</span>') : '')
+      + '</div>'
       + '<div style="font-size:19px;font-weight:900;color:#f0b020;">' + l.total + ' <span style="font-size:10px;color:var(--t3);">pts</span></div></div>'
       + '<div style="font-size:9.5px;color:var(--t3);margin-top:6px;line-height:1.7;">'
       + l.det.lignes.map(function (x) { return x.lib + ' : ' + x.n + ' \u00d7 ' + x.unite + ' = <b style="color:#9fb0c7;">' + x.pts + '</b>'; }).join(' \u00b7 ')
@@ -36523,3 +36548,167 @@ document.addEventListener('click', function () {
   }, 150);
 });
 setTimeout(_g45PoserCompteRendu, 2500);
+
+
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   RÉFÉRENCE AUTOMATIQUE DEPUIS ESPN (15/08/2026)
+   ───────────────────────────────────────────────────────────────────────────
+   Antoine : « on a tout dans Compétitions → Coupe du Monde ». Exact — lui faire
+   ressaisir 104 matchs a la main etait absurde. On construit donc la simulation
+   de reference directement depuis le scoreboard ESPN de `fifa.world`.
+
+   LE SEUL VRAI OBSTACLE est le NOM des equipes : le jeu les nomme en francais
+   (« Coree du Sud »), ESPN en anglais (« South Korea »). Un rapprochement flou
+   echouerait sur la moitie du plateau.
+   DEUX GARDE-FOUS contre une mauvaise correspondance, qui fausserait le
+   classement de tout le monde sans que personne ne s'en apercoive :
+     1. table explicite anglais -> francais, ecrite a la main pour les 48 ;
+     2. le rapprochement est CONFINE au groupe : on ne cherche « Mexico » que
+        parmi les 4 equipes du groupe A du jeu. Une erreur devient donc presque
+        impossible, et toute equipe non reconnue est SIGNALEE plutot qu'ignoree.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+var G45_FIFA_FR = {
+  'mexico':'Mexique','south korea':'Cor\u00e9e du Sud','korea republic':'Cor\u00e9e du Sud',
+  'south africa':'Afrique du Sud','czechia':'Tch\u00e9quie','czech republic':'Tch\u00e9quie',
+  'canada':'Canada','switzerland':'Suisse','qatar':'Qatar','bosnia and herzegovina':'Bosnie-Herz\u00e9govine',
+  'bosnia-herzegovina':'Bosnie-Herz\u00e9govine','bosnia herz':'Bosnie-Herz\u00e9govine',
+  'brazil':'Br\u00e9sil','morocco':'Maroc','scotland':'\u00c9cosse','haiti':'Ha\u00efti',
+  'united states':'\u00c9tats-Unis','usa':'\u00c9tats-Unis','paraguay':'Paraguay','australia':'Australie',
+  'turkey':'Turquie','t\u00fcrkiye':'Turquie','turkiye':'Turquie',
+  'germany':'Allemagne','ecuador':'\u00c9quateur','ivory coast':'C\u00f4te d\u2019Ivoire',
+  "c\u00f4te d'ivoire":'C\u00f4te d\u2019Ivoire','cote divoire':'C\u00f4te d\u2019Ivoire','curacao':'Cura\u00e7ao','cura\u00e7ao':'Cura\u00e7ao',
+  'netherlands':'Pays-Bas','holland':'Pays-Bas','japan':'Japon','tunisia':'Tunisie','sweden':'Su\u00e8de',
+  'belgium':'Belgique','iran':'Iran','ir iran':'Iran','egypt':'\u00c9gypte','new zealand':'Nouvelle-Z\u00e9lande',
+  'spain':'Espagne','uruguay':'Uruguay','cape verde':'Cap-Vert','cabo verde':'Cap-Vert',
+  'saudi arabia':'Arabie saoudite','france':'France','senegal':'S\u00e9n\u00e9gal','norway':'Norv\u00e8ge','iraq':'Irak',
+  'argentina':'Argentine','algeria':'Alg\u00e9rie','austria':'Autriche','jordan':'Jordanie',
+  'portugal':'Portugal','colombia':'Colombie','dr congo':'RD Congo','congo dr':'RD Congo',
+  'uzbekistan':'Ouzb\u00e9kistan','england':'Angleterre','croatia':'Croatie','ghana':'Ghana','panama':'Panama'
+};
+
+function _g45FifaNorm(s) {
+  return String(s || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-z ]/g, '').replace(/\s+/g, ' ').trim();
+}
+
+/* Traduit un nom ESPN vers le nom du jeu, en restreignant aux equipes du groupe
+   quand on le connait — c'est ce confinement qui rend l'erreur improbable. */
+function _g45FifaVersFr(nomEspn, candidats) {
+  var n = _g45FifaNorm(nomEspn);
+  var fr = G45_FIFA_FR[n];
+  if (fr && (!candidats || candidats.indexOf(fr) >= 0)) return fr;
+  if (!candidats) return fr || null;
+  /* Repli : rapprochement direct dans le groupe (Qatar, Ghana, Panama…). */
+  var exact = candidats.filter(function (c) { return _g45FifaNorm(c) === n; })[0];
+  return exact || fr || null;
+}
+
+var _G45_KO_ESPN = {
+  'round of 32':'r32', 'round of 16':'r16', 'quarterfinals':'qf', 'quarter-finals':'qf',
+  'semifinals':'sf', 'semi-finals':'sf', 'final':'f', 'third place':'', '3rd place':''
+};
+
+/* Construit une simulation de reference complete depuis ESPN. */
+async function g45RefDepuisESPN(annee) {
+  annee = annee || 2026;
+  var deb = annee + '0601', fin = annee + '0731';
+  var url = 'https://site.api.espn.com/apis/site/v2/sports/soccer/fifa.world/scoreboard?dates='
+          + deb + '-' + fin + '&limit=1000';
+  var js = null;
+  try {
+    var r = await fetch(url);
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    js = await r.json();
+  } catch (e) { return { err: 'ESPN injoignable : ' + (e && e.message) }; }
+
+  var evts = (js && js.events) || [];
+  if (!evts.length) return { err: 'Aucun match trouv\u00e9 pour ' + annee + '.' };
+
+  var ref = { v: 1, nom: 'VRAIS R\u00c9SULTATS ' + annee, groups: {}, ko: {} };
+  var inconnus = {}, nMatch = 0, nKo = 0;
+
+  evts.forEach(function (e) {
+    var cp = (e.competitions && e.competitions[0]) || {};
+    var st = (cp.status && cp.status.type) || {};
+    if (st.completed !== true) return;                 /* seuls les matchs joues */
+    var cps = cp.competitors || [];
+    var h = cps.filter(function (x) { return x.homeAway === 'home'; })[0] || cps[0];
+    var a = cps.filter(function (x) { return x.homeAway === 'away'; })[0] || cps[1];
+    if (!h || !a) return;
+    var nomH = (h.team && (h.team.displayName || h.team.name)) || '';
+    var nomA = (a.team && (a.team.displayName || a.team.name)) || '';
+    var sh = parseInt(h.score && h.score.value != null ? h.score.value : h.score, 10);
+    var sa = parseInt(a.score && a.score.value != null ? a.score.value : a.score, 10);
+    if (isNaN(sh) || isNaN(sa)) return;
+
+    var note = _g45FifaNorm((e.season && e.season.slug) || '') + ' ' + _g45FifaNorm(e.name || '')
+             + ' ' + _g45FifaNorm((cp.notes && cp.notes[0] && cp.notes[0].headline) || '');
+
+    /* ── Phase de groupes : on cherche le groupe qui contient les DEUX equipes ── */
+    var gid = null, frH = null, frA = null;
+    for (var i = 0; i < SIMU_GROUPES.length; i++) {
+      var g = SIMU_GROUPES[i];
+      var x = _g45FifaVersFr(nomH, g.teams), y = _g45FifaVersFr(nomA, g.teams);
+      if (x && y && g.teams.indexOf(x) >= 0 && g.teams.indexOf(y) >= 0) { gid = g.id; frH = x; frA = y; break; }
+    }
+
+    if (gid && !/round of|final|quarter|semi/.test(note)) {
+      ref.groups[gid] = ref.groups[gid] || {};
+      /* La cle doit respecter l'ORDRE des paires du jeu, sinon elle ne
+         correspondra a aucune saisie : on essaie les deux sens. */
+      var k1 = frH + '_' + frA, k2 = frA + '_' + frH;
+      var pairs = (typeof getGroupPairs === 'function')
+        ? getGroupPairs(SIMU_GROUPES.filter(function (z) { return z.id === gid; })[0].teams).map(function (p) { return p[0] + '_' + p[1]; })
+        : [];
+      if (pairs.length && pairs.indexOf(k1) < 0 && pairs.indexOf(k2) >= 0) {
+        ref.groups[gid][k2] = { h: String(sa), a: String(sh) };   /* sens inverse */
+      } else {
+        ref.groups[gid][k1] = { h: String(sh), a: String(sa) };
+      }
+      nMatch++;
+      return;
+    }
+
+    /* ── Phase finale ── */
+    var tour = '';
+    Object.keys(_G45_KO_ESPN).forEach(function (lib) { if (note.indexOf(_g45FifaNorm(lib)) >= 0) tour = _G45_KO_ESPN[lib]; });
+    if (!tour) return;
+    var fH = _g45FifaVersFr(nomH), fA = _g45FifaVersFr(nomA);
+    if (!fH) inconnus[nomH] = 1;
+    if (!fA) inconnus[nomA] = 1;
+    ref.ko[tour] = ref.ko[tour] || [];
+    ref.ko[tour].push({ home: fH || nomH, away: fA || nomA, sh: String(sh), sa: String(sa) });
+    nKo++;
+  });
+
+  ref._resume = { matchs: nMatch, ko: nKo, inconnus: Object.keys(inconnus) };
+  return ref;
+}
+window.g45RefDepuisESPN = g45RefDepuisESPN;
+
+/* Enregistre la reference dans les simulations recues, pour qu'elle apparaisse
+   dans la liste du compte rendu comme n'importe quelle autre. */
+async function g45CreerReferenceESPN() {
+  var res = document.getElementById('g45-cr-res');
+  if (res) res.innerHTML = '<div style="color:var(--t3);font-size:11.5px;">\u23f3 Lecture des r\u00e9sultats ESPN\u2026</div>';
+  var ref = await g45RefDepuisESPN(2026);
+  if (ref.err) { if (res) res.innerHTML = '<div style="color:#ff6b6b;font-size:11.5px;">' + ref.err + '</div>'; return; }
+
+  var r = ref._resume;
+  if (!confirm('R\u00e9sultats lus chez ESPN :\n\n' + r.matchs + ' matchs de poule\n' + r.ko + ' matchs \u00e0 \u00e9limination\n'
+    + (r.inconnus.length ? ('\n\u26a0\ufe0f \u00c9quipes non reconnues : ' + r.inconnus.join(', ') + '\n') : '')
+    + '\nCr\u00e9er la r\u00e9f\u00e9rence « ' + ref.nom + ' » ?')) return;
+
+  try {
+    var liste = JSON.parse(localStorage.getItem('simu2026_recues') || '[]');
+    liste = liste.filter(function (x) { return x.nom !== ref.nom; });     /* pas de doublon */
+    liste.unshift({ nom: ref.nom, recu: new Date().toLocaleDateString('fr-FR'), data: ref });
+    localStorage.setItem('simu2026_recues', JSON.stringify(liste));
+  } catch (e) { alert('Enregistrement impossible : ' + e.message); return; }
+
+  alert('\u2705 R\u00e9f\u00e9rence cr\u00e9\u00e9e.\nS\u00e9lectionne-la comme r\u00e9f\u00e9rence dans la liste.');
+  g45CompteRenduUI();
+}
+window.g45CreerReferenceESPN = g45CreerReferenceESPN;
