@@ -36329,6 +36329,13 @@ window.g45SimuNoter = g45SimuNoter;
 
 /* ── Récupération d'une simulation publiée ── */
 async function g45SimuCharger(id) {
+  /* Identifiants locaux d'abord : « recue:2 » et « moi » ne sont pas des fichiers. */
+  if (id === 'moi') return g45SimuLocale();
+  if (String(id).indexOf('recue:') === 0) {
+    var i = parseInt(String(id).split(':')[1], 10);
+    var r = g45SimuRecues()[i];
+    return r ? (r.data || r) : null;
+  }
   var url = encodeURI('donn\u00e9es/simulations/' + id + '.json') + '?t=' + Date.now();
   try {
     var r = await fetch(url);
@@ -36347,58 +36354,139 @@ function g45SimuCfg() {
 }
 function g45SimuCfgSave(c) { try { localStorage.setItem('g45_simu_cr', JSON.stringify(c)); } catch (e) {} }
 
+/* ═══ DECOUVERTE AUTOMATIQUE DES SIMULATIONS ═══
+   Antoine a saisi « Simulation Coupe du Monde 2026 » alors que le champ attendait
+   l'IDENTIFIANT du fichier. Lui faire deviner une chaine technique est un mauvais
+   design : on liste donc le dossier directement.
+   Le depot est PUBLIC, donc l'API GitHub repond SANS jeton (60 requetes par heure
+   et par adresse, largement suffisant). On lit ensuite chaque simulation pour en
+   tirer le prenom et la date. */
+var _g45SimuListe = null;
+
+/* SOURCE PRINCIPALE : les simulations DEJA RECUES, stockees en local sous
+   `simu2026_recues` — cinq y sont deja. Aucune requete, aucun identifiant a
+   deviner, et ca marche hors ligne. Le depot GitHub ne sert plus que de
+   complement pour une simulation qui n'aurait pas ete recue sur cet appareil. */
+function g45SimuRecues() {
+  try {
+    var a = JSON.parse(localStorage.getItem('simu2026_recues') || '[]');
+    return Array.isArray(a) ? a : [];
+  } catch (e) { return []; }
+}
+
+/* Ma propre simulation compte comme les autres : elle vit dans les cles
+   `simu2026_*`, pas dans la liste des recues. */
+function g45SimuLocale() {
+  try {
+    if (typeof exportSimuData !== 'function') return null;
+    var d = exportSimuData();
+    var vide = !Object.keys(d.groups || {}).length && !Object.keys(d.ko || {}).length;
+    return vide ? null : d;
+  } catch (e) { return null; }
+}
+
+async function g45SimuLister(force) {
+  if (_g45SimuListe && !force) return _g45SimuListe;
+  var out = [];
+  try {
+    var url = 'https://api.github.com/repos/' + GITHUB_OWNER + '/' + GITHUB_REPO
+            + '/contents/' + encodeURIComponent('donn\u00e9es') + '/simulations';
+    var r = await fetch(url, { headers: { 'Accept': 'application/vnd.github.v3+json' } });
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    var fichiers = await r.json();
+    if (!Array.isArray(fichiers)) throw new Error('dossier illisible');
+
+    for (var i = 0; i < fichiers.length; i++) {
+      var f = fichiers[i];
+      if (!f || !/\.json$/i.test(f.name || '')) continue;
+      var id = f.name.replace(/\.json$/i, '');
+      var sim = await g45SimuCharger(id);
+      out.push({
+        id: id,
+        nom: (sim && (sim.nom || sim.prenom)) || id,
+        date: (sim && (sim.date || sim.ts)) || '',
+        ok: !!sim
+      });
+    }
+  } catch (e) { console.warn('liste simulations', e && e.message); }
+  _g45SimuListe = out;
+  return out;
+}
+window.g45SimuLister = g45SimuLister;
+
 function g45CompteRenduUI() {
   var el = document.getElementById('g45-cr-body');
   if (!el) return;
   var c = g45SimuCfg();
-  el.innerHTML =
-      '<div style="font-size:10.5px;color:var(--t3);line-height:1.6;margin-bottom:10px;">'
-    + 'La <b>r\u00e9f\u00e9rence</b> est une simulation remplie avec les VRAIS r\u00e9sultats. '
-    + 'Chaque participant est not\u00e9 contre elle.</div>'
-    + '<div style="font-size:9px;font-weight:800;letter-spacing:1px;color:#4f5d88;margin-bottom:4px;">R\u00c9F\u00c9RENCE (vrais r\u00e9sultats)</div>'
-    + '<input id="g45-cr-ref" value="' + (c.ref || '') + '" placeholder="identifiant de la simu de r\u00e9f\u00e9rence" '
-    + 'style="width:100%;box-sizing:border-box;padding:9px;border-radius:8px;background:#0f1626;border:1px solid rgba(255,255,255,.14);color:#e6ecf5;font-size:12px;margin-bottom:10px;">'
-    + '<div style="font-size:9px;font-weight:800;letter-spacing:1px;color:#4f5d88;margin-bottom:4px;">PARTICIPANTS</div>'
-    + '<textarea id="g45-cr-list" rows="4" placeholder="Un par ligne :  identifiant  |  Pr\u00e9nom" '
-    + 'style="width:100%;box-sizing:border-box;padding:9px;border-radius:8px;background:#0f1626;border:1px solid rgba(255,255,255,.14);color:#e6ecf5;font-size:12px;">'
-    + (c.joueurs || []).map(function (j) { return j.id + ' | ' + j.nom; }).join('\n') + '</textarea>'
-    + '<button onclick="g45CompteRendu()" style="width:100%;margin-top:9px;padding:11px;border-radius:10px;border:1px solid rgba(30,215,96,.4);background:rgba(30,215,96,.12);color:#1ed760;font-size:13px;font-weight:800;cursor:pointer;">\ud83c\udfc6 Calculer le classement</button>'
+  el.innerHTML = '<div style="font-size:10.5px;color:var(--t3);line-height:1.6;margin-bottom:10px;">'
+    + 'Choisis la simulation qui contient les <b>vrais r\u00e9sultats</b>, puis coche les participants.</div>'
+    + '<div id="g45-cr-liste" style="font-size:11.5px;color:var(--t3);">\u23f3 Recherche des simulations\u2026</div>'
+    + '<button onclick="g45CompteRendu()" style="width:100%;margin-top:10px;padding:11px;border-radius:10px;border:1px solid rgba(30,215,96,.4);background:rgba(30,215,96,.12);color:#1ed760;font-size:13px;font-weight:800;cursor:pointer;">\ud83c\udfc6 Calculer le classement</button>'
     + '<div id="g45-cr-res" style="margin-top:12px;"></div>';
+
+  /* On construit la liste SANS reseau : recues + la sienne. */
+  var liste = g45SimuRecues().map(function (r, i) {
+    return { id: 'recue:' + i, nom: r.nom || ('Simu ' + (i + 1)), date: r.recu || '', data: r.data || r };
+  });
+  var moi = g45SimuLocale();
+  if (moi) liste.unshift({ id: 'moi', nom: 'Moi (ma simulation)', date: '', data: moi });
+  _g45SimuListe = liste;
+
+  Promise.resolve(liste).then(function (liste) {
+    var box = document.getElementById('g45-cr-liste');
+    if (!box) return;
+    if (!liste.length) {
+      box.innerHTML = 'Aucune simulation publi\u00e9e trouv\u00e9e.<br>'
+        + '<span style="opacity:.7;">Chaque joueur doit d\'abord partager sa simulation depuis l\'onglet Jeu.</span>';
+      return;
+    }
+    box.innerHTML = '<div style="font-size:9px;font-weight:800;letter-spacing:1px;color:#4f5d88;margin-bottom:6px;">'
+      + liste.length + ' SIMULATION(S)</div>'
+      + liste.map(function (s2) {
+        var estRef = (c.ref === s2.id);
+        var coche = (c.joueurs || []).some(function (j) { return j.id === s2.id; });
+        var d = s2.date ? (' \u00b7 ' + String(s2.date).slice(0, 10)) : '';
+        return '<div style="display:flex;align-items:center;gap:8px;padding:7px 4px;border-bottom:1px solid rgba(255,255,255,.05);">'
+          + '<input type="radio" name="g45crref" value="' + s2.id + '"' + (estRef ? ' checked' : '') + ' title="R\u00e9f\u00e9rence (vrais r\u00e9sultats)">'
+          + '<input type="checkbox" class="g45crj" value="' + s2.id + '" data-nom="' + String(s2.nom).replace(/"/g, '') + '"' + (coche ? ' checked' : '') + ' title="Participant">'
+          + '<div style="flex:1;min-width:0;"><div style="font-size:12px;font-weight:700;color:var(--t1);">' + s2.nom + '</div>'
+          + '<div style="font-size:9px;color:var(--t3);">' + s2.id + d + '</div></div></div>';
+      }).join('')
+      + '<div style="font-size:9px;color:var(--t3);margin-top:6px;">Rond = r\u00e9f\u00e9rence \u00b7 case = particip\u00e9. La r\u00e9f\u00e9rence peut aussi \u00eatre coch\u00e9e comme participant.</div>';
+  });
 }
 window.g45CompteRenduUI = g45CompteRenduUI;
 
 async function g45CompteRendu() {
-  var ref = (document.getElementById('g45-cr-ref') || {}).value || '';
-  var brut = (document.getElementById('g45-cr-list') || {}).value || '';
   var res = document.getElementById('g45-cr-res');
-  ref = ref.trim();
-  if (!ref) { res.innerHTML = '<div style="color:#ffb13d;font-size:11.5px;">Indique d\'abord l\'identifiant de la simulation de r\u00e9f\u00e9rence.</div>'; return; }
+  var radio = document.querySelector('input[name="g45crref"]:checked');
+  var ref = radio ? radio.value : '';
+  if (!ref) { res.innerHTML = '<div style="color:#ffb13d;font-size:11.5px;">S\u00e9lectionne la simulation de r\u00e9f\u00e9rence (le rond \u00e0 gauche).</div>'; return; }
 
-  var joueurs = brut.split('\n').map(function (l) {
-    var p = l.split('|');
-    var id = (p[0] || '').trim();
-    return id ? { id: id, nom: (p[1] || id).trim() } : null;
-  }).filter(Boolean);
-  if (!joueurs.length) { res.innerHTML = '<div style="color:#ffb13d;font-size:11.5px;">Ajoute au moins un participant.</div>'; return; }
+  var joueurs = [];
+  Array.prototype.forEach.call(document.querySelectorAll('.g45crj:checked'), function (c2) {
+    joueurs.push({ id: c2.value, nom: c2.getAttribute('data-nom') || c2.value });
+  });
+  if (!joueurs.length) { res.innerHTML = '<div style="color:#ffb13d;font-size:11.5px;">Coche au moins un participant.</div>'; return; }
 
   g45SimuCfgSave({ ref: ref, joueurs: joueurs });
-  res.innerHTML = '<div style="color:var(--t3);font-size:11.5px;">\u23f3 Chargement des simulations\u2026</div>';
+  res.innerHTML = '<div style="color:var(--t3);font-size:11.5px;">\u23f3 Calcul en cours\u2026</div>';
 
   var vrai = await g45SimuCharger(ref);
-  if (!vrai) { res.innerHTML = '<div style="color:#ff6b6b;font-size:11.5px;">R\u00e9f\u00e9rence introuvable : <b>' + ref + '</b></div>'; return; }
+  if (!vrai) { res.innerHTML = '<div style="color:#ff6b6b;font-size:11.5px;">R\u00e9f\u00e9rence illisible : <b>' + ref + '</b></div>'; return; }
 
   var lignes = [];
   for (var i = 0; i < joueurs.length; i++) {
-    var s = await g45SimuCharger(joueurs[i].id);
-    if (!s) { lignes.push({ nom: joueurs[i].nom, absent: true }); continue; }
-    var n = g45SimuNoter(s, vrai);
-    lignes.push({ nom: s.nom || joueurs[i].nom, total: n.total, det: n, champion: n.champion });
+    var s3 = await g45SimuCharger(joueurs[i].id);
+    if (!s3) { lignes.push({ nom: joueurs[i].nom, absent: true }); continue; }
+    var n = g45SimuNoter(s3, vrai);
+    lignes.push({ nom: s3.nom || joueurs[i].nom, total: n.total, det: n, champion: n.champion });
   }
   lignes.sort(function (a, b) { return (b.total || -1) - (a.total || -1); });
 
   var med = ['\ud83e\udd47', '\ud83e\udd48', '\ud83e\udd49'];
   res.innerHTML = lignes.map(function (l, i) {
-    if (l.absent) return '<div style="padding:9px;color:#ff8a8a;font-size:11.5px;">' + l.nom + ' \u2014 simulation introuvable</div>';
+    if (l.absent) return '<div style="padding:9px;color:#ff8a8a;font-size:11.5px;">' + l.nom + ' \u2014 simulation illisible</div>';
     return '<div style="margin-bottom:7px;padding:10px;border-radius:10px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.07);'
       + (i === 0 ? 'border-color:rgba(240,176,32,.45);' : '') + '">'
       + '<div style="display:flex;align-items:center;gap:8px;">'
