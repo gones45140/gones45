@@ -35880,14 +35880,29 @@ async function g45DirectMesEquipes(silencieux) {
       + '<div style="font-size:8.5px;color:#8899aa;">'
       + [(m.lgNom || ''), (m.detail || '')].filter(Boolean).join(' \u00b7 ')
       + (function () {
-          var tv = _g45TvDe(m.lg);
-          return tv ? ('<span style="color:#a78bfa;"> \u00b7 \ud83d\udcfa ' + tv + '</span>') : '';
+          /* Priorite a la chaine REELLE lue sur tv-sports.fr ; a defaut, le
+             diffuseur habituel du championnat. */
+          var reel = (typeof g45TvPourMatch === 'function') ? g45TvPourMatch(m.moiLong || m.moi, m.adv) : '';
+          var tv = reel || _g45TvDe(m.lg);
+          if (!tv) return '';
+          return '<span style="color:' + (reel ? '#a78bfa' : '#6b7a99') + ';"> \u00b7 \ud83d\udcfa ' + tv + '</span>';
         })()
       + '</div>'
       + '</div></div>';
   }).join('')
   + '<div style="font-size:9px;color:var(--t3);text-align:center;margin-top:6px;">'
   + aInterroger.length + ' requ\u00eate(s) \u00b7 ' + (enCours ? 'rafra\u00eechissement auto toutes les 45 s' : 'aucun match en cours, rafra\u00eechissement arr\u00eat\u00e9') + '</div>';
+
+  /* Programme TV : charge en arriere-plan, mis en cache 3 h. Si le Worker n'a
+     pas l'hote « tvsports », la fonction echoue en silence et on retombe sur la
+     table par competition. */
+  try {
+    if (typeof g45TvProgramme === 'function' && !_g45TvCache) {
+      g45TvProgramme().then(function (l) {
+        if (l && l.length && _g45Visible('t-suivies')) g45DirectMesEquipes(true);
+      });
+    }
+  } catch (e) {}
 
   /* Visuels manquants : on les cherche APRES avoir affiche, jamais avant —
      l'ecran ne doit pas attendre une image decorative. */
@@ -36380,3 +36395,116 @@ async function g45PrixL1Generer(saison) {
   } catch (e) { alert('Publication impossible : ' + (e && e.message)); }
 }
 window.g45PrixL1Generer = g45PrixL1Generer;
+
+
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   DIFFUSEURS TV — lecture de tv-sports.fr (15/08/2026)
+   ───────────────────────────────────────────────────────────────────────────
+   Aucune API : il faut lire la page HTML. Je n'ai PAS acces au reseau pour voir
+   sa structure, donc j'ecris un analyseur qui ne depend d'AUCUNE classe CSS —
+   celles-ci changent au premier redesign et cassent en silence.
+
+   METHODE : on retire les balises, on cherche les noms de CHAINES connus (liste
+   fermee, stable dans le temps), et on rattache a chacun le texte qui le
+   precede — c'est la que se trouvent les equipes et l'heure. Une mise en page
+   differente decale le texte mais ne fait pas disparaitre « Ligue 1+ ».
+
+   `g45TvDiag()` affiche ce qui a ete extrait : si le rapprochement echoue, on
+   verra POURQUOI au lieu de deviner.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+var G45_CHAINES = [
+  'Ligue 1+','Canal+ Sport 360','Canal+ Foot','Canal+ Sport','Canal+',
+  'beIN SPORTS 1','beIN SPORTS 2','beIN SPORTS 3','beIN SPORTS',
+  'RMC Sport 1','RMC Sport 2','RMC Sport','Eurosport 1','Eurosport 2','Eurosport',
+  'L\u2019\u00c9quipe','L\'\u00c9quipe','La Cha\u00eene L\'\u00c9quipe',
+  'France 2','France 3','France 4','France TV','TF1','TMC','M6','W9','6ter',
+  'Prime Video','DAZN','Netflix','Ligue1+','Multisports'
+];
+
+function _g45TvNorm(s) {
+  return String(s || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-z0-9 ]/g, ' ').replace(/\s+/g, ' ').trim();
+}
+
+var _g45TvCache = null;
+
+async function g45TvProgramme(force) {
+  try {
+    if (!force) {
+      var brut = localStorage.getItem('g45_tv_prog');
+      if (brut) {
+        var o = JSON.parse(brut);
+        if (Date.now() - (o.t || 0) < 3 * 3600000) { _g45TvCache = o.l; return o.l; }
+      }
+    }
+  } catch (e) {}
+
+  var html = '';
+  try {
+    var u = FD_PROXY + '?host=tvsports&path=' + encodeURIComponent('/?types=live');
+    var r = await fetch(u);
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    html = await r.text();
+  } catch (e) { console.warn('tv-sports', e && e.message); return []; }
+
+  /* Texte brut : on supprime scripts, styles et balises, en gardant des
+     separateurs pour ne pas coller les mots entre eux. */
+  var txt = html
+    .replace(/<script[\s\S]*?<\/script>/gi, ' ')
+    .replace(/<style[\s\S]*?<\/style>/gi, ' ')
+    .replace(/<[^>]+>/g, '\n')
+    .replace(/&nbsp;/g, ' ').replace(/&amp;/g, '&').replace(/&#039;|&apos;/g, "'")
+    .split('\n').map(function (x) { return x.trim(); }).filter(Boolean);
+
+  var out = [];
+  txt.forEach(function (ligne, i) {
+    var ch = G45_CHAINES.filter(function (c) { return _g45TvNorm(ligne) === _g45TvNorm(c); })[0];
+    if (!ch) return;
+    /* Les equipes sont dans les lignes qui PRECEDENT la chaine. On remonte
+       jusqu'a 8 lignes en cherchant un « A – B » ou un « A - B ». */
+    for (var k = i - 1; k >= Math.max(0, i - 8); k--) {
+      var l = txt[k];
+      var m = l.match(/^(.{3,40})\s+[\u2013\u2014-]\s+(.{3,40})$/);
+      if (m) { out.push({ a: m[1].trim(), b: m[2].trim(), tv: ch }); return; }
+    }
+  });
+
+  try { localStorage.setItem('g45_tv_prog', JSON.stringify({ t: Date.now(), l: out })); } catch (e) {}
+  _g45TvCache = out;
+  return out;
+}
+window.g45TvProgramme = g45TvProgramme;
+
+/* Retrouve la chaine d'un match a partir des deux equipes. On EXIGE les DEUX
+   pour eviter d'attribuer la chaine d'un autre match du meme club. */
+function g45TvPourMatch(eqA, eqB) {
+  var l = _g45TvCache || [];
+  if (!l.length) return '';
+  var A = _g45TvNorm(eqA), B = _g45TvNorm(eqB);
+  var court = function (x) { return x.split(' ').filter(function (w) { return w.length > 3; }); };
+  var mA = court(A), mB = court(B);
+  var hit = l.filter(function (p) {
+    var pa = _g45TvNorm(p.a), pb = _g45TvNorm(p.b);
+    var okA = mA.some(function (w) { return pa.indexOf(w) >= 0 || pb.indexOf(w) >= 0; });
+    var okB = mB.some(function (w) { return pa.indexOf(w) >= 0 || pb.indexOf(w) >= 0; });
+    return okA && okB;
+  })[0];
+  return hit ? hit.tv : '';
+}
+window.g45TvPourMatch = g45TvPourMatch;
+
+/* Diagnostic : montre ce qui a ete extrait, ou l'echec exact. */
+async function g45TvDiag() {
+  var l = await g45TvProgramme(true);
+  if (!l.length) {
+    console.warn('Aucun programme extrait. Causes possibles : hote tvsports absent du Worker, page vide, ou structure inattendue.');
+    alert('Aucun programme TV extrait.\n\nV\u00e9rifie que l\'h\u00f4te « tvsports » a bien \u00e9t\u00e9 ajout\u00e9 au Worker.\nD\u00e9tail dans la console.');
+    return l;
+  }
+  console.table(l.slice(0, 30));
+  alert(l.length + ' diffusions extraites.\nDetail dans la console (console.table).');
+  return l;
+}
+window.g45TvDiag = g45TvDiag;
