@@ -36182,3 +36182,256 @@ if (typeof g45StatsGithubSave === 'function') {
     return await _g45StatsGhSaveOrig(arr, sha);
   };
 }
+
+
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   COMPTE RENDU DU JEU MONDIAL 2026 — barème d'Antoine (15/08/2026)
+   ───────────────────────────────────────────────────────────────────────────
+   POURQUOI UNE SIMU DE REFERENCE plutot qu'un appel a ESPN : les equipes sont
+   nommees en FRANCAIS dans le jeu (« Coree du Sud », « Tchequie »), ESPN les
+   nomme en anglais. Il faudrait une table de 48 correspondances, a maintenir,
+   et une seule erreur fausserait le classement de tout le monde. Le tournoi
+   etant termine, Antoine saisit les vrais resultats dans une simulation comme
+   les autres : la comparaison se fait alors sur des chaines strictement
+   identiques, sans traduction possible d'erreur.
+
+   BAREME (fixe par Antoine) :
+     match de poule : bon vainqueur trouve         1 pt
+     vainqueur de groupe correct                   3 pts
+     2eme du groupe correct                        3 pts
+     qualifie correct, peu importe la place        1 pt
+     bon qualifie en 8es                           2 pts
+     bon qualifie en quarts                        3 pts
+     bon qualifie en demies                        4 pts
+     finaliste correct                             5 pts
+     champion correct                             10 pts
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+var G45_BAREME = {
+  match: 1, premier: 3, deuxieme: 3, qualifie: 1,
+  r16: 2, qf: 3, sf: 4, finale: 5, champion: 10
+};
+
+/* Issue d'un match : 'H', 'A' ou 'N'. Renvoie null si non saisi — un match non
+   rempli ne doit RIEN rapporter, ni etre compte comme une erreur. */
+function _g45Issue(m) {
+  if (!m) return null;
+  var h = parseInt(m.h != null ? m.h : m.sh, 10);
+  var a = parseInt(m.a != null ? m.a : m.sa, 10);
+  if (isNaN(h) || isNaN(a)) return null;
+  return h > a ? 'H' : (h < a ? 'A' : 'N');
+}
+
+/* Classement d'un groupe a partir des scores d'une simulation.
+   Regles FIFA simplifiees : points, puis difference, puis buts marques. */
+function _g45ClassementSimu(gid, scores) {
+  var g = (typeof SIMU_GROUPES !== 'undefined') ? SIMU_GROUPES.filter(function (x) { return x.id === gid; })[0] : null;
+  if (!g) return [];
+  var st = {};
+  g.teams.forEach(function (t) { st[t] = { team: t, pts: 0, bp: 0, bc: 0 }; });
+
+  Object.keys(scores || {}).forEach(function (cle) {
+    var s = scores[cle];
+    var h = parseInt(s.h, 10), a = parseInt(s.a, 10);
+    if (isNaN(h) || isNaN(a)) return;
+    /* La cle d'un match encode les deux equipes, separees par « | » ou « - ». */
+    var duo = String(cle).split(/\||__|-{2}/);
+    if (duo.length < 2) return;
+    var A = duo[0].trim(), B = duo[1].trim();
+    if (!st[A] || !st[B]) return;
+    st[A].bp += h; st[A].bc += a; st[B].bp += a; st[B].bc += h;
+    if (h > a) st[A].pts += 3; else if (h < a) st[B].pts += 3; else { st[A].pts++; st[B].pts++; }
+  });
+
+  return Object.keys(st).map(function (k) { return st[k]; }).sort(function (x, y) {
+    return (y.pts - x.pts) || ((y.bp - y.bc) - (x.bp - x.bc)) || (y.bp - x.bp);
+  });
+}
+
+/* Equipes presentes a un tour, d'apres les matchs saisis. */
+function _g45EquipesTour(ko, tour) {
+  var out = {};
+  ((ko && ko[tour]) || []).forEach(function (m) {
+    if (m && m.home) out[m.home] = 1;
+    if (m && m.away) out[m.away] = 1;
+  });
+  return out;
+}
+
+function _g45VainqueurTour(ko, tour) {
+  var m = ((ko && ko[tour]) || [])[0];
+  var iss = _g45Issue(m);
+  if (!m || !iss || iss === 'N') return null;
+  return iss === 'H' ? m.home : m.away;
+}
+
+/* ── Notation d'une simulation contre la reference ── */
+function g45SimuNoter(sim, ref) {
+  var d = { match: 0, premier: 0, deuxieme: 0, qualifie: 0, r16: 0, qf: 0, sf: 0, finale: 0, champion: 0 };
+  var det = { total: 0, lignes: [] };
+
+  /* 1. Matchs de poule : bon vainqueur trouve. */
+  Object.keys(ref.groups || {}).forEach(function (gid) {
+    var vrais = ref.groups[gid], miens = (sim.groups || {})[gid] || {};
+    Object.keys(vrais).forEach(function (cle) {
+      var iv = _g45Issue(vrais[cle]), im = _g45Issue(miens[cle]);
+      if (iv && im && iv === im) d.match++;
+    });
+  });
+
+  /* 2. Classements de groupe. */
+  Object.keys(ref.groups || {}).forEach(function (gid) {
+    var cv = _g45ClassementSimu(gid, ref.groups[gid]);
+    var cm = _g45ClassementSimu(gid, (sim.groups || {})[gid] || {});
+    if (!cv.length || !cm.length) return;
+    if (cv[0] && cm[0] && cv[0].team === cm[0].team) d.premier++;
+    if (cv[1] && cm[1] && cv[1].team === cm[1].team) d.deuxieme++;
+    /* Qualifie « peu importe la place » : les deux premiers, sans l'ordre.
+       On ne recompte PAS ici les deux precedents, sinon un pronostic parfait
+       serait paye trois fois pour la meme equipe. */
+    var qv = [cv[0] && cv[0].team, cv[1] && cv[1].team].filter(Boolean);
+    var qm = [cm[0] && cm[0].team, cm[1] && cm[1].team].filter(Boolean);
+    qm.forEach(function (t, i) {
+      if (qv.indexOf(t) < 0) return;
+      var memePlace = (qv[i] === t);
+      if (!memePlace) d.qualifie++;          /* bonne equipe, mauvaise place */
+    });
+  });
+
+  /* 3. Phase finale : equipes presentes a chaque tour. */
+  [['r16', 'r16'], ['qf', 'qf'], ['sf', 'sf']].forEach(function (p) {
+    var vrai = _g45EquipesTour(ref.ko, p[0]), mien = _g45EquipesTour(sim.ko, p[0]);
+    Object.keys(mien).forEach(function (t) { if (vrai[t]) d[p[1]]++; });
+  });
+
+  /* Finalistes : les deux equipes de la finale. */
+  var fv = _g45EquipesTour(ref.ko, 'f'), fm = _g45EquipesTour(sim.ko, 'f');
+  Object.keys(fm).forEach(function (t) { if (fv[t]) d.finale++; });
+
+  var chV = _g45VainqueurTour(ref.ko, 'f'), chM = _g45VainqueurTour(sim.ko, 'f');
+  if (chV && chM && chV === chM) d.champion = 1;
+
+  var LIB = {
+    match: 'Vainqueurs de match trouv\u00e9s', premier: '1ers de groupe', deuxieme: '2\u00e8mes de groupe',
+    qualifie: 'Qualifi\u00e9s (place invers\u00e9e)', r16: 'Bons 8es', qf: 'Bons quarts',
+    sf: 'Bonnes demies', finale: 'Finalistes', champion: 'Champion'
+  };
+  Object.keys(d).forEach(function (k) {
+    var pts = d[k] * G45_BAREME[k];
+    det.total += pts;
+    if (d[k]) det.lignes.push({ lib: LIB[k], n: d[k], unite: G45_BAREME[k], pts: pts });
+  });
+  det.champion = chM || null;
+  return det;
+}
+window.g45SimuNoter = g45SimuNoter;
+
+/* ── Récupération d'une simulation publiée ── */
+async function g45SimuCharger(id) {
+  var url = encodeURI('donn\u00e9es/simulations/' + id + '.json') + '?t=' + Date.now();
+  try {
+    var r = await fetch(url);
+    if (!r.ok) return null;
+    return await r.json();
+  } catch (e) { return null; }
+}
+window.g45SimuCharger = g45SimuCharger;
+
+/* ── Panneau « Compte rendu » ────────────────────────────────────────────────
+   Les identifiants des participants et celui de la reference sont conserves en
+   local : le classement se rejoue en un clic, sans tout resaisir. */
+function g45SimuCfg() {
+  try { return JSON.parse(localStorage.getItem('g45_simu_cr') || '{"ref":"","joueurs":[]}'); }
+  catch (e) { return { ref: '', joueurs: [] }; }
+}
+function g45SimuCfgSave(c) { try { localStorage.setItem('g45_simu_cr', JSON.stringify(c)); } catch (e) {} }
+
+function g45CompteRenduUI() {
+  var el = document.getElementById('g45-cr-body');
+  if (!el) return;
+  var c = g45SimuCfg();
+  el.innerHTML =
+      '<div style="font-size:10.5px;color:var(--t3);line-height:1.6;margin-bottom:10px;">'
+    + 'La <b>r\u00e9f\u00e9rence</b> est une simulation remplie avec les VRAIS r\u00e9sultats. '
+    + 'Chaque participant est not\u00e9 contre elle.</div>'
+    + '<div style="font-size:9px;font-weight:800;letter-spacing:1px;color:#4f5d88;margin-bottom:4px;">R\u00c9F\u00c9RENCE (vrais r\u00e9sultats)</div>'
+    + '<input id="g45-cr-ref" value="' + (c.ref || '') + '" placeholder="identifiant de la simu de r\u00e9f\u00e9rence" '
+    + 'style="width:100%;box-sizing:border-box;padding:9px;border-radius:8px;background:#0f1626;border:1px solid rgba(255,255,255,.14);color:#e6ecf5;font-size:12px;margin-bottom:10px;">'
+    + '<div style="font-size:9px;font-weight:800;letter-spacing:1px;color:#4f5d88;margin-bottom:4px;">PARTICIPANTS</div>'
+    + '<textarea id="g45-cr-list" rows="4" placeholder="Un par ligne :  identifiant  |  Pr\u00e9nom" '
+    + 'style="width:100%;box-sizing:border-box;padding:9px;border-radius:8px;background:#0f1626;border:1px solid rgba(255,255,255,.14);color:#e6ecf5;font-size:12px;">'
+    + (c.joueurs || []).map(function (j) { return j.id + ' | ' + j.nom; }).join('\n') + '</textarea>'
+    + '<button onclick="g45CompteRendu()" style="width:100%;margin-top:9px;padding:11px;border-radius:10px;border:1px solid rgba(30,215,96,.4);background:rgba(30,215,96,.12);color:#1ed760;font-size:13px;font-weight:800;cursor:pointer;">\ud83c\udfc6 Calculer le classement</button>'
+    + '<div id="g45-cr-res" style="margin-top:12px;"></div>';
+}
+window.g45CompteRenduUI = g45CompteRenduUI;
+
+async function g45CompteRendu() {
+  var ref = (document.getElementById('g45-cr-ref') || {}).value || '';
+  var brut = (document.getElementById('g45-cr-list') || {}).value || '';
+  var res = document.getElementById('g45-cr-res');
+  ref = ref.trim();
+  if (!ref) { res.innerHTML = '<div style="color:#ffb13d;font-size:11.5px;">Indique d\'abord l\'identifiant de la simulation de r\u00e9f\u00e9rence.</div>'; return; }
+
+  var joueurs = brut.split('\n').map(function (l) {
+    var p = l.split('|');
+    var id = (p[0] || '').trim();
+    return id ? { id: id, nom: (p[1] || id).trim() } : null;
+  }).filter(Boolean);
+  if (!joueurs.length) { res.innerHTML = '<div style="color:#ffb13d;font-size:11.5px;">Ajoute au moins un participant.</div>'; return; }
+
+  g45SimuCfgSave({ ref: ref, joueurs: joueurs });
+  res.innerHTML = '<div style="color:var(--t3);font-size:11.5px;">\u23f3 Chargement des simulations\u2026</div>';
+
+  var vrai = await g45SimuCharger(ref);
+  if (!vrai) { res.innerHTML = '<div style="color:#ff6b6b;font-size:11.5px;">R\u00e9f\u00e9rence introuvable : <b>' + ref + '</b></div>'; return; }
+
+  var lignes = [];
+  for (var i = 0; i < joueurs.length; i++) {
+    var s = await g45SimuCharger(joueurs[i].id);
+    if (!s) { lignes.push({ nom: joueurs[i].nom, absent: true }); continue; }
+    var n = g45SimuNoter(s, vrai);
+    lignes.push({ nom: s.nom || joueurs[i].nom, total: n.total, det: n, champion: n.champion });
+  }
+  lignes.sort(function (a, b) { return (b.total || -1) - (a.total || -1); });
+
+  var med = ['\ud83e\udd47', '\ud83e\udd48', '\ud83e\udd49'];
+  res.innerHTML = lignes.map(function (l, i) {
+    if (l.absent) return '<div style="padding:9px;color:#ff8a8a;font-size:11.5px;">' + l.nom + ' \u2014 simulation introuvable</div>';
+    return '<div style="margin-bottom:7px;padding:10px;border-radius:10px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.07);'
+      + (i === 0 ? 'border-color:rgba(240,176,32,.45);' : '') + '">'
+      + '<div style="display:flex;align-items:center;gap:8px;">'
+      + '<div style="font-size:15px;">' + (med[i] || ('#' + (i + 1))) + '</div>'
+      + '<div style="flex:1;font-size:13px;font-weight:800;">' + l.nom + '</div>'
+      + '<div style="font-size:19px;font-weight:900;color:#f0b020;">' + l.total + ' <span style="font-size:10px;color:var(--t3);">pts</span></div></div>'
+      + '<div style="font-size:9.5px;color:var(--t3);margin-top:6px;line-height:1.7;">'
+      + l.det.lignes.map(function (x) { return x.lib + ' : ' + x.n + ' \u00d7 ' + x.unite + ' = <b style="color:#9fb0c7;">' + x.pts + '</b>'; }).join(' \u00b7 ')
+      + (l.champion ? ('<br>Champion pronostiqu\u00e9 : <b>' + l.champion + '</b>') : '')
+      + '</div></div>';
+  }).join('');
+}
+window.g45CompteRendu = g45CompteRendu;
+
+/* ── Greffe dans l'onglet SIMU ──
+   L'identifiant reel est `t-simu` (verifie dans index.html) : c'est la que vivent
+   les simulations, donc la que le classement doit apparaitre. On l'insere en
+   HAUT pour qu'il soit vu sans faire defiler tout le tableau du Mondial. */
+function _g45PoserCompteRendu() {
+  var jeu = document.getElementById('t-simu') || document.getElementById('t-jeu');
+  if (!jeu || document.getElementById('g45-cr-bloc')) return;
+  var d = document.createElement('div');
+  d.id = 'g45-cr-bloc';
+  d.innerHTML = '<div class="sec" style="margin-top:0;">\ud83c\udfc6 Compte rendu du jeu</div>'
+    + '<div class="fc" id="g45-cr-body"></div>';
+  jeu.insertBefore(d, jeu.firstChild);
+  g45CompteRenduUI();
+}
+window._g45PoserCompteRendu = _g45PoserCompteRendu;
+
+document.addEventListener('click', function () {
+  setTimeout(function () {
+    if (_g45Visible('t-simu') || _g45Visible('t-jeu')) _g45PoserCompteRendu();
+  }, 150);
+});
+setTimeout(_g45PoserCompteRendu, 2500);
