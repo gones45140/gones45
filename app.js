@@ -35391,8 +35391,7 @@ function g45SuiviEqToggle(nom, id, slug, sport, ico, logo, ev) {
       try { localStorage.setItem('g45_teams_perso', JSON.stringify(p)); } catch (e) {}
     }
   } catch (e) { console.warn('suivi equipe', e && e.message); }
-  var tc = document.getElementById('t-compet');
-  if (tc && tc.classList && tc.classList.contains('active') && typeof loadCompetTab === 'function') loadCompetTab();
+  if (_g45Visible('t-compet') && typeof loadCompetTab === 'function') loadCompetTab();
 }
 window.g45SuiviEqToggle = g45SuiviEqToggle;
 
@@ -35470,8 +35469,7 @@ window.loadSuiviesTab = loadSuiviesTab;
 var _g45SuiviEqToggleBase = g45SuiviEqToggle;
 window.g45SuiviEqToggle = function () {
   _g45SuiviEqToggleBase.apply(null, arguments);
-  var tSui = document.getElementById('t-suivies');
-  if (tSui && tSui.classList && tSui.classList.contains('active')) loadSuiviesTab();
+  if (_g45Visible('t-suivies')) loadSuiviesTab();
 };
 
 
@@ -35489,6 +35487,16 @@ window.g45SuiviEqToggle = function () {
    qu'un match est en cours — sinon on arrête, inutile d'interroger ESPN toute
    la nuit.
    ═══════════════════════════════════════════════════════════════════════════ */
+
+/* PIEGE CORRIGE LE 15/08 : `showTab` masque les onglets avec `style.display`,
+   il ne pose AUCUNE classe « active ». Tous mes tests `classList.contains('active')`
+   etaient donc toujours faux — les sous-onglets des Outils ne s'affichaient jamais
+   et le direct ne se rafraichissait pas. */
+function _g45Visible(id) {
+  var el = document.getElementById(id);
+  return !!(el && el.style.display !== 'none' && el.offsetParent !== null);
+}
+window._g45Visible = _g45Visible;
 
 var _g45DirTimer = null;
 
@@ -35812,8 +35820,7 @@ async function g45DirectMesEquipes(silencieux) {
     var noms = trouves.map(function (m) { return m.moi; });
     _g45FanCompleter(noms).then(function (maj) {
       if (maj) {
-        var t = document.getElementById('t-suivies');
-        if (t && t.classList && t.classList.contains('active')) g45DirectMesEquipes(true);
+        if (_g45Visible('t-suivies')) g45DirectMesEquipes(true);
       }
     });
   } catch (e) {}
@@ -35821,8 +35828,7 @@ async function g45DirectMesEquipes(silencieux) {
   /* On ne relance QUE s'il y a du direct : sinon on interrogerait ESPN pour rien. */
   _g45DirStop();
   if (enCours) _g45DirTimer = setTimeout(function () {
-    var t = document.getElementById('t-suivies');
-    if (t && t.classList && t.classList.contains('active') && document.visibilityState === 'visible') g45DirectMesEquipes(true);
+    if (_g45Visible('t-suivies') && document.visibilityState === 'visible') g45DirectMesEquipes(true);
     else _g45DirStop();
   }, 45000);
 }
@@ -35925,19 +35931,54 @@ window.g45OutilsSection = g45OutilsSection;
    Le bloc est fait de DEUX noeuds freres — le titre puis le panneau — comme tous
    les blocs de l'appli. On deplace les deux, sinon le titre resterait orphelin
    dans les Outils. */
+/* `swCalc` ne connait que ses cinq panneaux d'origine : on l'enveloppe pour
+   ajouter 'lc' sans toucher a la fonction elle-meme. */
+var _g45SwCalcOrig = (typeof swCalc === 'function') ? swCalc : null;
+window.swCalc = function (m) {
+  var lc = document.getElementById('calc-lc');
+  if (lc) lc.style.display = (m === 'lc') ? 'block' : 'none';
+  var bl = document.getElementById('ct-lc');
+  if (bl) bl.classList.toggle('on', m === 'lc');
+  if (m === 'lc') {
+    ['sb','dt','lay','vb','arjel'].forEach(function (p) {
+      var el = document.getElementById('calc-' + p); if (el) el.style.display = 'none';
+      var bt = document.getElementById('ct-' + p); if (bt) bt.classList.remove('on');
+    });
+    return;
+  }
+  if (_g45SwCalcOrig) _g45SwCalcOrig(m);
+};
+
 function _g45DeplacerLanceurs() {
   var champ = document.getElementById('g45-lc-nom');
   if (!champ) return;
   var panneau = champ.closest ? champ.closest('#t-outils > *') : null;
   var cible = document.getElementById('t-calc');
-  if (!panneau || !cible || panneau.parentNode === cible) return;
+  if (panneau && cible && panneau.parentNode !== cible) {
+    var titre = panneau.previousElementSibling;
+    if (titre && !(titre.className && String(titre.className).indexOf('sec') >= 0)) titre = null;
+    /* On enveloppe les deux noeuds dans un panneau de calculatrice : sans ca le
+       bloc restait affiche SOUS toutes les calculatrices a la fois, quelle que
+       soit celle choisie. */
+    var boite = document.createElement('div');
+    boite.id = 'calc-lc';
+    boite.style.display = 'none';
+    if (titre) boite.appendChild(titre);
+    boite.appendChild(panneau);
+    panneau.style.display = '';
+    cible.appendChild(boite);
+  }
 
-  var titre = panneau.previousElementSibling;
-  if (titre && !(titre.className && String(titre.className).indexOf('sec') >= 0)) titre = null;
-  if (titre) cible.appendChild(titre);
-  cible.appendChild(panneau);
-  panneau.style.display = '';
-  if (titre) titre.style.display = '';
+  /* Bouton dans la barre des calculatrices, a cote de Surebet et Lay. */
+  var barre = document.querySelector('#t-calc .calc-tabs');
+  if (barre && !document.getElementById('ct-lc')) {
+    var b = document.createElement('button');
+    b.className = 'ctbtn';
+    b.id = 'ct-lc';
+    b.textContent = '\u26be Lanceurs';
+    b.onclick = function () { swCalc('lc'); };
+    barre.appendChild(b);
+  }
 }
 window._g45DeplacerLanceurs = _g45DeplacerLanceurs;
 
@@ -35967,8 +36008,7 @@ window.g45OutilsRanger = g45OutilsRanger;
    envelopper, d'où cette verification legere sur les clics. */
 document.addEventListener('click', function () {
   setTimeout(function () {
-    var t = document.getElementById('t-outils');
-    if (t && t.classList && t.classList.contains('active')) g45OutilsRanger();
+    if (_g45Visible('t-outils')) g45OutilsRanger();
   }, 120);
 });
 
