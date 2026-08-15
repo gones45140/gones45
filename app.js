@@ -36127,3 +36127,18 @@ async function g45ReparerStats() {
   location.reload();
 }
 window.g45ReparerStats = g45ReparerStats;
+
+/* ═══ NETTOYAGE À LA LECTURE ═══
+   Le correctif d'encodage empeche d'ABIMER davantage, mais les couches deja
+   presentes restent dans le fichier : l'ecran continuait donc d'afficher des
+   hieroglyphes tant qu'Antoine n'avait pas lance la reparation.
+   On enveloppe donc la lecture : ce qui s'affiche est propre immediatement.
+   Le bouton « Reparer les accents » reste utile — c'est lui qui ECRIT la version
+   propre sur GitHub, donc qui repare pour ses amis et ses autres appareils. */
+if (typeof g45StatsLocal === 'function') {
+  var _g45StatsLocalOrig = g45StatsLocal;
+  window.g45StatsLocal = function () {
+    var arr = _g45StatsLocalOrig();
+    try { return _g45ReparerProfond(arr); } catch (e) { return arr; }
+  };
+}
