@@ -35893,25 +35893,54 @@ async function g45DirectMesEquipes(silencieux) {
       + '<div style="font-size:12.5px;font-weight:800;color:#e6ecf5;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">'
       + m.moi + ' <span style="color:#8899aa;font-weight:500;">' + (m.dom ? 'vs' : '@') + '</span> ' + m.adv + '</div>'
       + '<div style="font-size:22px;font-weight:900;color:#fff;line-height:1.25;letter-spacing:-.5px;">' + score + '</div>'
-      + '<div style="font-size:8.5px;color:#8899aa;">'
-      + [(m.lgNom || ''), (m.detail || '')].filter(Boolean).join(' \u00b7 ')
+      /* ═══ BAS DE CARTE EN PASTILLES ═══
+         L'ancienne ligne empilait competition, statut et chaine dans le meme gris
+         de 8,5 px : illisible. Trois pastilles distinctes, chacune avec sa
+         couleur — la chaine ressort, c'est l'information qu'on cherche en un
+         coup d'oeil quand on veut regarder. */
       + (function () {
-          /* Priorite a la chaine REELLE lue sur tv-sports.fr ; a defaut, le
-             diffuseur habituel du championnat. */
+          var SPORT_ICO = { soccer:'\u26bd', basketball:'\ud83c\udfc0', hockey:'\ud83c\udfd2',
+                            baseball:'\u26be', football:'\ud83c\udfc8',
+                            'rugby-league':'\ud83c\udfc9', rugby:'\ud83c\udfc9' };
+          var pastille = function (contenu, coul, fond) {
+            return '<span style="display:inline-flex;align-items:center;gap:3px;padding:2px 7px;border-radius:9px;'
+                 + 'background:' + (fond || 'rgba(255,255,255,.06)') + ';color:' + coul + ';font-size:8.5px;font-weight:700;'
+                 + 'white-space:nowrap;">' + contenu + '</span>';
+          };
+          var p = [];
+
+          var comp = m.lgNom || '';
+          p.push(pastille((SPORT_ICO[m.sp] || '') + ' ' + (comp || m.lgTv || m.sp), '#9fb0c7'));
+
+          var dd = new Date(m.date);
+          if (!isNaN(dd)) {
+            var jourTxt = dd.toLocaleDateString('fr-FR', { weekday: 'short', day: 'numeric', month: 'short' });
+            var hTxt = dd.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+            p.push(pastille('\ud83d\udcc5 ' + jourTxt + ' \u00b7 ' + hTxt, '#9fb0c7'));
+          }
+
           var info = (typeof g45TvInfosMatch === 'function') ? g45TvInfosMatch(m.moiLong || m.moi, m.adv) : null;
           var reel = info ? info.tv : '';
           var tv = reel || _g45TvDe(m.lgTv || m.lg);
-          if (!tv) return '';
-          var txt = '<span style="color:' + (reel ? '#a78bfa' : '#6b7a99') + ';"> \u00b7 \ud83d\udcfa ' + tv + '</span>';
-          /* Lien vers le direct. `stopPropagation` obligatoire : sans lui, le
-             clic ouvrirait AUSSI la fiche du match par-dessus. */
-          if (info && info.url) {
-            txt += ' <a href="' + info.url + '" target="_blank" rel="noopener" onclick="event.stopPropagation();" '
-                 + 'style="color:#1ed760;font-weight:800;text-decoration:none;">\u25b6 voir</a>';
+          if (tv) {
+            var gratuit = /youtube|twitch|dailymotion/i.test(reel || '');
+            var coul = gratuit ? '#1ed760' : (reel ? '#a78bfa' : '#6b7a99');
+            var fond = gratuit ? 'rgba(30,215,96,.14)' : (reel ? 'rgba(167,139,250,.14)' : 'rgba(255,255,255,.05)');
+            var dedans = '\ud83d\udcfa ' + tv;
+            if (info && info.url) {
+              var arg = "'" + String(info.url).replace(/'/g, '') + "','"
+                      + String((m.moiLong || m.moi) + ' - ' + m.adv).replace(/'/g, '') + "'";
+              dedans += gratuit
+                ? (' <a href="#" onclick="event.preventDefault();event.stopPropagation();g45RegarderYT(' + arg + ');" style="color:#1ed760;text-decoration:none;font-weight:800;">\u25b6</a>')
+                : (' <a href="' + info.url + '" target="_blank" rel="noopener" onclick="event.stopPropagation();" style="color:#8899aa;text-decoration:none;">\u2197</a>');
+            }
+            p.push(pastille(dedans, coul, fond));
           }
-          return txt;
+
+          if (m.detail && !/scheduled/i.test(m.detail)) p.push(pastille(m.detail, '#6b7a99'));
+
+          return '<div style="display:flex;gap:4px;flex-wrap:wrap;justify-content:center;margin-top:4px;">' + p.join('') + '</div>';
         })()
-      + '</div>'
       + '</div></div>';
   }).join('')
   + '<div style="font-size:9px;color:var(--t3);text-align:center;margin-top:6px;">'
@@ -36608,6 +36637,64 @@ function g45TvInfosMatch(eqA, eqB) {
   })[0] || null;
 }
 window.g45TvInfosMatch = g45TvInfosMatch;
+
+/* ═══ LECTEUR YOUTUBE INTÉGRÉ ═══
+   Le bouton « voir » ouvrait la page du site, qui renvoie vers un abonnement
+   payant : sans interet. En revanche, quand le match est diffuse GRATUITEMENT
+   sur YouTube — les amicaux d'ete, souvent —, on peut le lire directement ici.
+
+   L'identifiant de la video n'est pas dans la liste du jour : il faut ouvrir la
+   page du match. UNE requete, au clic seulement, jamais en arriere-plan.
+   Le CSP n'autorise QUE youtube.com en cadre : aucune autre origine ne peut
+   s'inserer dans l'application. */
+var _g45YtCache = {};
+
+async function g45YtIdDepuisPage(url) {
+  if (!url) return '';
+  if (_g45YtCache[url] !== undefined) return _g45YtCache[url];
+  var id = '';
+  try {
+    var chemin = String(url).replace(/^https?:\/\/[^/]+/, '');
+    var r = await fetch(FD_PROXY + '?host=tvsports&path=' + encodeURIComponent(chemin));
+    if (r.ok) {
+      var t = await r.text();
+      /* Trois ecritures possibles selon l'integration : embed, lien court, ou
+         identifiant nu dans un attribut de donnees. */
+      var m = t.match(/youtube(?:-nocookie)?\.com\/embed\/([A-Za-z0-9_-]{11})/)
+           || t.match(/youtu\.be\/([A-Za-z0-9_-]{11})/)
+           || t.match(/["'](?:videoId|data-video|youtube[-_]?id)["']?\s*[:=]\s*["']([A-Za-z0-9_-]{11})["']/);
+      if (m) id = m[1];
+    }
+  } catch (e) {}
+  _g45YtCache[url] = id;
+  return id;
+}
+window.g45YtIdDepuisPage = g45YtIdDepuisPage;
+
+async function g45RegarderYT(url, titre) {
+  var mo = document.createElement('div');
+  mo.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.92);z-index:100000;display:flex;align-items:center;justify-content:center;padding:12px;';
+  mo.onclick = function (e) { if (e.target === mo) mo.remove(); };
+  mo.innerHTML = '<div style="width:100%;max-width:900px;">'
+    + '<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;color:#e6ecf5;font-size:13px;font-weight:800;">'
+    + '<span style="flex:1;">' + (titre || 'Direct') + '</span>'
+    + '<button onclick="this.closest(\'div\').parentNode.parentNode.remove()" style="background:none;border:none;color:#8899aa;font-size:22px;cursor:pointer;">\u2715</button></div>'
+    + '<div id="g45-yt-box" style="color:#8899aa;font-size:12px;text-align:center;padding:24px;">\u23f3 Recherche du flux\u2026</div></div>';
+  document.body.appendChild(mo);
+
+  var id = await g45YtIdDepuisPage(url);
+  var box = document.getElementById('g45-yt-box');
+  if (!box) return;
+  if (!id) {
+    box.innerHTML = 'Aucune vid\u00e9o YouTube trouv\u00e9e sur cette page.<br>'
+      + '<a href="' + url + '" target="_blank" rel="noopener" style="color:#4d84ff;">Ouvrir la page du match \u2197</a>';
+    return;
+  }
+  box.outerHTML = '<div style="position:relative;padding-top:56.25%;border-radius:12px;overflow:hidden;">'
+    + '<iframe src="https://www.youtube.com/embed/' + id + '?autoplay=1" allow="autoplay; encrypted-media; picture-in-picture" '
+    + 'allowfullscreen style="position:absolute;inset:0;width:100%;height:100%;border:0;"></iframe></div>';
+}
+window.g45RegarderYT = g45RegarderYT;
 
 /* Diagnostic : montre ce qui a ete extrait, ou l'echec exact. */
 async function g45TvDiag() {
