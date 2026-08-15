@@ -20162,6 +20162,69 @@ async function loadCalendrier() {
     });
   }
 
+  /* ═══ ÉQUIPES SUIVIES HORS FOOTBALL ═══
+     Le pipeline ci-dessus resout l'equipe par son NOM, ce qui ne marche qu'en
+     football. Pour la NBA, la NHL, la NFL, la MLB ou la NRL, on prend l'autre
+     chemin : le SCOREBOARD du championnat sur une fenetre de dates.
+
+     C'est meme moins couteux — UNE requete par championnat couvre toutes les
+     equipes suivies dedans, la ou le chemin football en demande une a deux PAR
+     EQUIPE. On dispose de l'identifiant ESPN et du slug dans `state.suiviEq`,
+     donc aucune resolution de nom, donc aucun risque de confusion (le piege
+     Columbus/Lyon). */
+  try {
+    var _grpSui = {};
+    (typeof g45SuiviEqGet === 'function' ? g45SuiviEqGet() : []).forEach(function(t){
+      var sp = t.sport || 'soccer';
+      if (sp === 'soccer') return;                 /* deja traite plus haut */
+      var k = sp + '|' + t.league;
+      (_grpSui[k] = _grpSui[k] || { sp: sp, lg: t.league, ids: {}, noms: {} });
+      _grpSui[k].ids[String(t.id)] = 1;
+      _grpSui[k].noms[String(t.id)] = t.nom;
+    });
+
+    var _fmtJ = function(d){ return d.getFullYear() + String(d.getMonth()+1).padStart(2,'0') + String(d.getDate()).padStart(2,'0'); };
+    var _d1 = new Date(Date.now() - 2*3600000), _d2 = new Date(Date.now() + 21*86400000);
+    var _cles = Object.keys(_grpSui).slice(0, 6);   /* plafond : 6 requetes maximum */
+
+    for (var _gi = 0; _gi < _cles.length; _gi++) {
+      var _g = _grpSui[_cles[_gi]];
+      var _js = null;
+      try {
+        var _r = await fetch('https://site.api.espn.com/apis/site/v2/sports/' + _g.sp + '/' + _g.lg
+                             + '/scoreboard?dates=' + _fmtJ(_d1) + '-' + _fmtJ(_d2) + '&limit=400');
+        if (!_r.ok) continue;
+        _js = await _r.json();
+      } catch(e) { continue; }
+
+      ((_js && _js.events) || []).forEach(function(e){
+        var cp = (e.competitions && e.competitions[0]) || {};
+        var cps = cp.competitors || [];
+        var moi = null, autre = null;
+        cps.forEach(function(x){
+          var xid = String((x.team && x.team.id) || x.id || '');
+          if (_g.ids[xid]) moi = x; else autre = x;
+        });
+        if (!moi || !autre) return;
+        var t = new Date(e.date).getTime();
+        if (isNaN(t) || t < nowTs) return;
+        var nm = function(x){ return (x.team && (x.team.shortDisplayName || x.team.displayName || x.team.name)) || '?'; };
+        allMatches.push({
+          date: e.date,
+          isDom: moi.homeAway === 'home',
+          adv: nm(autre),
+          ourName: _g.noms[String((moi.team && moi.team.id) || moi.id || '')] || nm(moi),
+          color: '#f0b020',                        /* teinte des equipes suivies */
+          comp: (_js.leagues && _js.leagues[0] && _js.leagues[0].name) || _g.lg,
+          compSlug: _g.lg,
+          venue: (cp.venue && cp.venue.fullName) || '',
+          suivi: true,
+          id: String(e.id)
+        });
+      });
+    }
+  } catch(e) { console.warn('agenda equipes suivies', e && e.message); }
+
   // + matchs suivis manuellement (sélection dans Résultats), même hors favoris
   _suivis.forEach(function(s){
     var t=new Date(s.date).getTime();
@@ -35389,12 +35452,16 @@ window.g45SuiviEqRender = g45SuiviEqRender;
 async function loadSuiviesTab() {
   var el = document.getElementById('t-suivies');
   if (!el) return;
-  el.innerHTML = '<div class="sec" style="margin-top:0;">\u2b50 \u00c9quipes suivies</div>'
+  el.innerHTML = '<div class="sec" style="margin-top:0;">\ud83d\udd34 Le direct de mes \u00e9quipes</div>'
+    + '<div style="font-size:10px;color:var(--t3);margin-bottom:8px;">Mur ET \u00e9quipes suivies, tous sports \u00b7 une requ\u00eate par championnat.</div>'
+    + '<div id="g45-direct-body" class="fc" style="margin-bottom:14px;"></div>'
+    + '<div class="sec" style="margin-top:0;">\u2b50 \u00c9quipes suivies</div>'
     + '<div style="font-size:10px;color:var(--t3);line-height:1.6;margin-bottom:10px;">'
     + 'Suivi de consultation, ind\u00e9pendant du mur : aucun pari, aucun palier, aucune statistique. '
     + 'L\'\u00e9toile \u2606 se trouve dans Comp\u00e9titions \u2192 \u00c9quipes.</div>'
     + '<div id="g45-suivies-body" class="fc"></div>';
   await g45SuiviEqRender(document.getElementById('g45-suivies-body'));
+  g45DirectMesEquipes();          /* asynchrone : la liste s'affiche sans attendre */
 }
 window.loadSuiviesTab = loadSuiviesTab;
 
@@ -35406,3 +35473,343 @@ window.g45SuiviEqToggle = function () {
   var tSui = document.getElementById('t-suivies');
   if (tSui && tSui.classList && tSui.classList.contains('active')) loadSuiviesTab();
 };
+
+
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   🔴 DIRECT DE MES ÉQUIPES — mur + suivies, tous sports (14/08/2026)
+   ───────────────────────────────────────────────────────────────────────────
+   Le direct existait par COMPÉTITION (Compétitions → une ligue → Direct) et par
+   ÉQUIPE (fiche → Live). Rien ne rassemblait « mes équipes » : suivre le Bayern,
+   les Roosters et les Celtics un soir de match imposait trois écrans.
+
+   COÛT : une requête par CHAMPIONNAT concerné, pas par équipe. Le scoreboard du
+   jour rend tous les matchs de la ligue, on filtre ensuite sur nos équipes.
+   Rafraîchissement toutes les 45 s UNIQUEMENT tant que l'onglet est visible et
+   qu'un match est en cours — sinon on arrête, inutile d'interroger ESPN toute
+   la nuit.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+var _g45DirTimer = null;
+
+/* ═══ VISUELS D'ÉQUIPE (façon Winamax) ═══
+   TheSportsDB — deja utilise par « Enrichir les logos » — sert des visuels
+   larges : `strTeamBanner` (bandeau 1000x185, taille ideale pour une carte),
+   `strFanart1..4` (photos d'ambiance) et `strStadiumThumb`.
+
+   COUT : UNE requete par equipe, UNE SEULE FOIS. Le resultat est mis en cache
+   DEFINITIVEMENT — un visuel de club ne change pas d'une semaine a l'autre — et
+   un echec est memorise 30 jours pour ne pas re-interroger a chaque affichage
+   une equipe qu'ils ne connaissent pas.
+
+   On ne demande QUE les equipes reellement affichees a l'ecran, deux au maximum
+   par rafraichissement : le direct se redessine toutes les 45 s, et sans cette
+   limite un soir de multiplex declencherait vingt requetes par minute. */
+var _G45_FANART = 'g45_fanart_';
+var _g45FanEnCours = 0;
+
+/* ═══ VISUELS PERSONNELS ═══
+   Antoine depose ses propres images dans le depot, sous `images/equipes/`.
+   Priorite absolue sur TheSportsDB : c'est SON choix, il gagne.
+
+   POURQUOI PAS LE localStorage : une image en base64 pese 200 a 600 ko, soit
+   plus que tout son historique de paris. Le quota a deja provoque DEUX pertes
+   de donnees (30/07 et 04/08). Les images vivent donc dans le depot, servies
+   par le CDN de GitHub Pages, partagees entre appareils et avec ses amis.
+
+   CONVENTION DE NOM : nom de l'equipe normalise (minuscules, sans accents ni
+   espaces) + .jpg — « Real Madrid » -> images/equipes/realmadrid.jpg.
+   Aucun fichier de configuration a tenir : deposer le fichier suffit.
+
+   L'existence est testee UNE FOIS par equipe puis memorisee : une image trouvee
+   l'est definitivement, une absence est reessayee au bout de 7 jours (le temps
+   qu'il en ajoute). Sans ce cache, chaque rafraichissement du direct produirait
+   une rafale de 404. */
+var _G45_PERSO_IMG = 'g45_img_perso_';
+var _G45_PERSO_DIR = 'images/equipes/';
+
+function _g45ImgPersoLire(nom) {
+  try {
+    var o = JSON.parse(localStorage.getItem(_G45_PERSO_IMG + _g45SgNorm(nom)) || 'null');
+    if (!o) return undefined;
+    if (!o.u && (Date.now() - (o.t || 0)) > 7 * 86400000) return undefined;
+    return o.u || '';
+  } catch (e) { return undefined; }
+}
+
+function _g45ImgPersoTester(nom) {
+  var url = _G45_PERSO_DIR + _g45SgNorm(nom) + '.jpg';
+  return new Promise(function (res) {
+    var im = new Image();
+    im.onload = function () {
+      try { localStorage.setItem(_G45_PERSO_IMG + _g45SgNorm(nom), JSON.stringify({ u: url, t: Date.now() })); } catch (e) {}
+      res(url);
+    };
+    im.onerror = function () {
+      try { localStorage.setItem(_G45_PERSO_IMG + _g45SgNorm(nom), JSON.stringify({ u: '', t: Date.now() })); } catch (e) {}
+      res('');
+    };
+    im.src = url;
+  });
+}
+
+function _g45FanLire(nom) {
+  try {
+    var o = JSON.parse(localStorage.getItem(_G45_FANART + _g45SgNorm(nom)) || 'null');
+    if (!o) return undefined;                       /* jamais demande */
+    if (!o.u && (Date.now() - (o.t || 0)) > 30 * 86400000) return undefined;  /* echec perime */
+    return o.u || '';                               /* '' = connu sans visuel */
+  } catch (e) { return undefined; }
+}
+
+async function _g45FanChercher(nom) {
+  var url = '';
+  try {
+    var r = await fetch('https://www.thesportsdb.com/api/v1/json/3/searchteams.php?t=' + encodeURIComponent(nom));
+    if (r.ok) {
+      var j = await r.json();
+      var t = (j && j.teams && j.teams[0]) || null;
+      if (t) {
+        /* Ordre de preference : bandeau large, puis ambiance, puis stade. */
+        url = t.strTeamBanner || t.strFanart1 || t.strFanart2 || t.strStadiumThumb || '';
+      }
+    }
+  } catch (e) {}
+  try { localStorage.setItem(_G45_FANART + _g45SgNorm(nom), JSON.stringify({ u: url, t: Date.now() })); } catch (e) {}
+  return url;
+}
+
+/* Complete les visuels manquants puis redessine, sans bloquer l'affichage. */
+async function _g45FanCompleter(noms) {
+  if (_g45FanEnCours) return false;
+  var maj = false;
+  _g45FanEnCours = 1;
+
+  /* 1. Images personnelles d'abord : simple chargement d'image depuis le depot,
+     aucune API, aucun quota. On les teste TOUTES, c'est gratuit. */
+  var perso = noms.filter(function (n) { return _g45ImgPersoLire(n) === undefined; });
+  for (var p2 = 0; p2 < perso.length && p2 < 8; p2++) {
+    if (await _g45ImgPersoTester(perso[p2])) maj = true;
+  }
+
+  /* 2. TheSportsDB seulement pour celles qui n'ont PAS d'image personnelle. */
+  var aFaire = noms.filter(function (n) {
+    return !_g45ImgPersoLire(n) && _g45FanLire(n) === undefined;
+  }).slice(0, 2);
+  for (var i = 0; i < aFaire.length; i++) { await _g45FanChercher(aFaire[i]); maj = true; }
+
+  _g45FanEnCours = 0;
+  return maj;
+}
+
+/* Outil de diagnostic : quel visuel est utilise pour une equipe, et sous quel
+   nom de fichier deposer le sien. */
+window.g45VisuelInfo = function (nom) {
+  var f = _G45_PERSO_DIR + _g45SgNorm(nom) + '.jpg';
+  console.log('Equipe   : ' + nom);
+  console.log('Fichier a deposer : ' + f);
+  console.log('Image perso       : ' + (_g45ImgPersoLire(nom) || '(aucune)'));
+  console.log('TheSportsDB       : ' + (_g45FanLire(nom) || '(aucun)'));
+  return f;
+};
+
+/* L'animation de la pastille « live » est injectee ICI et non dans style.css :
+   ce fichier n'est pas livre dans les sessions, et une regle manquante donnerait
+   une pastille figee sans qu'aucune erreur ne le signale. */
+(function () {
+  if (document.getElementById('g45-dir-css')) return;
+  var st = document.createElement('style');
+  st.id = 'g45-dir-css';
+  st.textContent = '@keyframes g45pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.3;transform:scale(.7)}}';
+  document.head.appendChild(st);
+})();
+
+/* Rassemble les équipes à surveiller : celles du mur ET les suivies.
+   Le mur ne stocke pas le championnat ; on le récupère dans `g45_teams_perso`,
+   alimenté par les clics depuis Compétitions et par la pose d'une étoile. */
+function _g45DirEquipes() {
+  var out = {}, perso = {};
+  try { perso = (typeof g45TeamsPerso === 'function') ? g45TeamsPerso() : {}; } catch (e) {}
+
+  (typeof g45SuiviEqGet === 'function' ? g45SuiviEqGet() : []).forEach(function (t) {
+    var k = (t.sport || 'soccer') + '|' + t.league;
+    (out[k] = out[k] || { sp: t.sport || 'soccer', lg: t.league, ids: {}, noms: {} });
+    out[k].ids[String(t.id)] = 1;
+    out[k].noms[String(t.id)] = t.nom;
+  });
+
+  try {
+    (state.u || []).forEach(function (u) {
+      if (!u || !u.n) return;
+      if (u.type === 'joueur') return;
+      var p = perso[String(u.n).toLowerCase().trim()];
+      if (!p || !p.league) return;              /* championnat inconnu : on saute */
+      var k = (p.sport || 'soccer') + '|' + p.league;
+      (out[k] = out[k] || { sp: p.sport || 'soccer', lg: p.league, ids: {}, noms: {} });
+      out[k].ids[String(p.id)] = 1;
+      out[k].noms[String(p.id)] = u.n;
+    });
+  } catch (e) {}
+  return out;
+}
+
+async function g45DirectMesEquipes(silencieux) {
+  var box = document.getElementById('g45-direct-body');
+  if (!box) return;
+  var grp = _g45DirEquipes();
+  var cles = Object.keys(grp).slice(0, 8);        /* plafond : 8 requêtes */
+  if (!cles.length) {
+    box.innerHTML = '<div style="font-size:11.5px;color:var(--t3);padding:12px;text-align:center;line-height:1.6;">'
+      + 'Aucune \u00e9quipe exploitable.<br><span style="opacity:.7;">Ouvre une \u00e9quipe depuis Comp\u00e9titions ou pose une \u00e9toile \u2606 : '
+      + 'c\'est ce qui enregistre son championnat.</span></div>';
+    return;
+  }
+  if (!silencieux) box.innerHTML = '<div style="padding:12px;color:var(--t3);font-size:11.5px;">\u23f3 Recherche des matchs\u2026</div>';
+
+  /* PLAGE DE DATES, PAS UN SEUL JOUR. N'interroger que la date du jour faisait
+     disparaitre un match a minuit pile — precisement quand on veut encore voir le
+     score. ESPN accepte `dates=debut-fin` dans la MEME requete : la veille et le
+     lendemain ne coutent donc rien de plus. Le lendemain sert aux matchs nocturnes
+     des ligues americaines, qui basculent de jour en heure francaise. */
+  var _fj = function (dd) { return dd.getFullYear() + String(dd.getMonth() + 1).padStart(2, '0') + String(dd.getDate()).padStart(2, '0'); };
+  var jour = _fj(new Date(Date.now() - 86400000)) + '-' + _fj(new Date(Date.now() + 86400000));
+  var LIMITE = Date.now() - 24 * 3600000;   /* un score reste affiche 24 h */
+  var trouves = [], enCours = 0;
+
+  for (var i = 0; i < cles.length; i++) {
+    var g = grp[cles[i]], js = null;
+    try {
+      var r = await fetch('https://site.api.espn.com/apis/site/v2/sports/' + g.sp + '/' + g.lg + '/scoreboard?dates=' + jour + '&limit=300');
+      if (!r.ok) continue;
+      js = await r.json();
+    } catch (e) { continue; }
+
+    ((js && js.events) || []).forEach(function (e) {
+      var cp = (e.competitions && e.competitions[0]) || {};
+      var cps = cp.competitors || [];
+      var moi = null, autre = null;
+      cps.forEach(function (x) {
+        var xid = String((x.team && x.team.id) || x.id || '');
+        if (g.ids[xid]) moi = x; else autre = x;
+      });
+      if (!moi || !autre) return;
+      var st = (cp.status && cp.status.type) || (e.status && e.status.type) || {};
+      var etat = st.state || '';
+      if (etat === 'in') enCours++;
+      var tMatch = Date.parse(e.date);
+      if (!isNaN(tMatch) && etat === 'post' && tMatch < LIMITE) return;   /* plus vieux que 24 h */
+      var nm = function (x) { return (x.team && (x.team.shortDisplayName || x.team.displayName)) || '?'; };
+      var sc = function (x) { var v = x.score; if (v && typeof v === 'object') v = v.value; return (v == null ? '' : v); };
+      /* Couleur officielle et logo : deja presents dans la reponse, donc gratuits.
+         C'est ce qui permet la carte facon Winamax sans une seule requete de plus. */
+      var col = function (x, dft) {
+        var c = (x.team && (x.team.color || x.team.alternateColor)) || '';
+        c = String(c).replace('#', '');
+        return /^[0-9a-f]{6}$/i.test(c) ? ('#' + c) : dft;
+      };
+      var lg2 = function (x) { return (x.team && (x.team.logo || (x.team.logos && x.team.logos[0] && x.team.logos[0].href))) || ''; };
+      trouves.push({
+        etat: etat, id: String(e.id), sp: g.sp, lg: g.lg,
+        moi: nm(moi), adv: nm(autre), dom: moi.homeAway === 'home',
+        cMoi: col(moi, '#4d84ff'), cAdv: col(autre, '#8899aa'),
+        lMoi: lg2(moi), lAdv: lg2(autre),
+        sMoi: sc(moi), sAdv: sc(autre),
+        horloge: (cp.status && cp.status.displayClock) || '',
+        periode: (cp.status && cp.status.period) || 0,
+        detail: st.shortDetail || st.detail || '',
+        date: e.date
+      });
+    });
+  }
+
+  /* En cours d'abord, puis à venir, puis terminés — l'ordre d'intérêt. */
+  var rang = { 'in': 0, 'pre': 1, 'post': 2 };
+  trouves.sort(function (a, b) { return (rang[a.etat] || 3) - (rang[b.etat] || 3) || (Date.parse(a.date) - Date.parse(b.date)); });
+
+  if (!trouves.length) {
+    box.innerHTML = '<div style="font-size:11.5px;color:var(--t3);padding:12px;text-align:center;">'
+      + 'Aucun match de tes \u00e9quipes depuis 24 h, ni aujourd\'hui.<br><span style="opacity:.7;">' + cles.length + ' championnat(s) consult\u00e9(s).</span></div>';
+    _g45DirStop();
+    return;
+  }
+
+  box.innerHTML = trouves.map(function (m) {
+    var dM = new Date(m.date);
+    var hier = dM.toDateString() !== new Date().toDateString();
+    var live = (m.etat === 'in'), fini = (m.etat === 'post');
+    var badge = live ? ('\ud83d\udd34 ' + (m.horloge || ('P' + m.periode)))
+              : (fini ? (hier ? 'Hier' : 'Termin\u00e9')
+              : ((hier ? dM.toLocaleDateString('fr-FR', { weekday: 'short' }) + ' ' : '')
+                 + dM.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })));
+    var colBadge = live ? '#ff4545' : (fini ? '#9fb0c7' : '#4d84ff');
+
+    /* CARTE FA\u00c7ON WINAMAX. Le degrade part de la couleur officielle de chaque
+       club vers le centre, assombri pour que le texte reste lisible quel que soit
+       le club — un fond Real Madrid est blanc, un fond Juventus est noir, et les
+       deux doivent rester lisibles avec le meme texte clair. */
+    /* Le visuel de MON equipe passe en fond, tres assombri pour que le score
+       reste lisible ; le degrade de couleurs reste par-dessus. Sans visuel
+       connu, on retombe exactement sur la carte precedente. */
+    var vis = _g45ImgPersoLire(m.moi) || _g45FanLire(m.moi);
+    var degrade = 'linear-gradient(100deg, ' + m.cMoi + '55 0%, rgba(12,17,29,.94) 42%, rgba(12,17,29,.94) 58%, ' + m.cAdv + '55 100%)';
+    var fond = vis
+      ? ('linear-gradient(100deg, ' + m.cMoi + '66 0%, rgba(10,14,26,.90) 45%, rgba(10,14,26,.90) 55%, ' + m.cAdv + '66 100%), url(\'' + vis + '\')')
+      : degrade;
+    var logo = function (url, cote) {
+      if (!url) return '';
+      return '<img src="' + url + '" loading="lazy" onerror="this.style.display=\'none\'" '
+        + 'style="position:absolute;' + cote + ':6px;top:50%;transform:translateY(-50%);height:52px;width:52px;'
+        + 'object-fit:contain;opacity:.22;filter:saturate(1.3);pointer-events:none;">';
+    };
+    var score = (m.etat === 'pre') ? '<span style="font-size:13px;color:#9fb0c7;">vs</span>'
+              : (m.sMoi + ' <span style="opacity:.45;">-</span> ' + m.sAdv);
+
+    return '<div onclick="_g45SgMatchDepuisDirect(\'' + m.id + '\',\'' + m.sp + '\',\'' + m.lg + '\')" '
+      + 'style="position:relative;overflow:hidden;margin-bottom:7px;border-radius:12px;cursor:pointer;'
+      + 'background:' + fond + ';background-size:cover;background-position:center;border:1px solid rgba(255,255,255,.08);'
+      + (live ? 'box-shadow:0 0 0 1px rgba(255,69,69,.35),0 2px 14px rgba(255,69,69,.12);' : '') + '">'
+      + logo(m.lMoi, 'left') + logo(m.lAdv, 'right')
+      + '<div style="position:relative;padding:11px 62px;text-align:center;">'
+      + '<div style="font-size:9px;font-weight:800;letter-spacing:.5px;color:' + colBadge + ';margin-bottom:3px;">'
+      + badge + (live ? ' <span style="display:inline-block;width:6px;height:6px;border-radius:50%;background:#ff4545;animation:g45pulse 1.4s infinite;"></span>' : '') + '</div>'
+      + '<div style="font-size:12.5px;font-weight:800;color:#e6ecf5;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">'
+      + m.moi + ' <span style="color:#8899aa;font-weight:500;">' + (m.dom ? 'vs' : '@') + '</span> ' + m.adv + '</div>'
+      + '<div style="font-size:22px;font-weight:900;color:#fff;line-height:1.25;letter-spacing:-.5px;">' + score + '</div>'
+      + '<div style="font-size:8.5px;color:#8899aa;">' + m.lg + (m.detail ? (' \u00b7 ' + m.detail) : '') + '</div>'
+      + '</div></div>';
+  }).join('')
+  + '<div style="font-size:9px;color:var(--t3);text-align:center;margin-top:6px;">'
+  + cles.length + ' championnat(s) \u00b7 ' + (enCours ? 'rafra\u00eechissement auto toutes les 45 s' : 'aucun match en cours, rafra\u00eechissement arr\u00eat\u00e9') + '</div>';
+
+  /* Visuels manquants : on les cherche APRES avoir affiche, jamais avant —
+     l'ecran ne doit pas attendre une image decorative. */
+  try {
+    var noms = trouves.map(function (m) { return m.moi; });
+    _g45FanCompleter(noms).then(function (maj) {
+      if (maj) {
+        var t = document.getElementById('t-suivies');
+        if (t && t.classList && t.classList.contains('active')) g45DirectMesEquipes(true);
+      }
+    });
+  } catch (e) {}
+
+  /* On ne relance QUE s'il y a du direct : sinon on interrogerait ESPN pour rien. */
+  _g45DirStop();
+  if (enCours) _g45DirTimer = setTimeout(function () {
+    var t = document.getElementById('t-suivies');
+    if (t && t.classList && t.classList.contains('active') && document.visibilityState === 'visible') g45DirectMesEquipes(true);
+    else _g45DirStop();
+  }, 45000);
+}
+window.g45DirectMesEquipes = g45DirectMesEquipes;
+
+function _g45DirStop() { if (_g45DirTimer) { clearTimeout(_g45DirTimer); _g45DirTimer = null; } }
+window._g45DirStop = _g45DirStop;
+
+/* Ouvre le détail complet du match — celui des fiches équipe (cotes, analyse IA,
+   tendance du public, résumé vidéo). */
+function _g45SgMatchDepuisDirect(eid, sp, lg) {
+  _g45SgCtx = { sp: sp, lg: lg };
+  if (typeof _g45SgMatch === 'function') _g45SgMatch(eid);
+}
+window._g45SgMatchDepuisDirect = _g45SgMatchDepuisDirect;
