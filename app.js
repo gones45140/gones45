@@ -35532,7 +35532,10 @@ var G45_TV_FR = {
   'uefa.champions':'Canal+ / beIN SPORTS', 'uefa.europa':'Canal+', 'uefa.europa.conf':'Canal+',
   'uefa.super_cup':'Canal+', 'fifa.world':'TF1 / M6', 'uefa.euro':'TF1 / M6',
   'club.friendly':'\u2014',
-  'nba':'beIN SPORTS', 'nfl':'beIN SPORTS', 'nhl':'\u2014', 'mlb':'\u2014',
+  'nba':'beIN SPORTS', 'nfl':'beIN SPORTS',
+  /* Corrige le 15/08 : la MLB et la NHL passent bien en France, sur les chaines
+     beIN SPORTS MAX — je les avais classees « non diffusees » a tort. */
+  'nhl':'beIN SPORTS MAX', 'mlb':'beIN SPORTS MAX',
   '3':'\u2014', '270559':'Canal+', '271937':'beIN SPORTS'
 };
 function _g45TvDe(slug) {
@@ -35752,12 +35755,19 @@ async function g45DirectMesEquipes(silencieux) {
      championnat : c'est a la fois plus complet ET moins couteux.
      Les sports US et le rugby gardent leur championnat : ils n'ont pas de coupe
      parallele, et `all` n'existe pas pour eux. */
-  var grpFoot = { sp: 'soccer', lg: 'all', ids: {}, noms: {} };
+  /* En fusionnant tout le football sous `all`, on perdait le championnat de
+     chaque equipe — or c'est lui qui donne le diffuseur. On le conserve donc
+     dans `lgDe`, indexe par identifiant d'equipe. */
+  var grpFoot = { sp: 'soccer', lg: 'all', ids: {}, noms: {}, lgDe: {} };
   var aDuFoot = false;
   cles.forEach(function (k) {
     if (grp[k].sp !== 'soccer') return;
     aDuFoot = true;
-    Object.keys(grp[k].ids).forEach(function (id) { grpFoot.ids[id] = 1; grpFoot.noms[id] = grp[k].noms[id]; });
+    Object.keys(grp[k].ids).forEach(function (id) {
+      grpFoot.ids[id] = 1;
+      grpFoot.noms[id] = grp[k].noms[id];
+      grpFoot.lgDe[id] = grp[k].lg;
+    });
   });
   var aInterroger = cles.filter(function (k) { return grp[k].sp !== 'soccer'; }).map(function (k) { return grp[k]; });
   if (aDuFoot) aInterroger.unshift(grpFoot);
@@ -35805,11 +35815,17 @@ async function g45DirectMesEquipes(silencieux) {
          n'apprend rien. Sans nom de competition, on prefere ne RIEN ecrire. */
       if (!lgNom && lgReel !== 'all') lgNom = lgReel;
       if (lgNom === 'all') lgNom = '';
+      /* Slug servant UNIQUEMENT au diffuseur : quand ESPN ne dit pas de quelle
+         competition il s'agit, on retombe sur le championnat de l'equipe suivie.
+         Approximatif pour une coupe, mais c'est justement ce que la table
+         annonce — le diffuseur habituel, pas une garantie pour ce match. */
+      var idMoi = String((moi.team && moi.team.id) || moi.id || '');
+      var lgTv = (lgReel && lgReel !== 'all') ? lgReel : ((g.lgDe && g.lgDe[idMoi]) || g.lg);
       /* Nom COMPLET pour la recherche d'image : « Reds » seul ramenait une equipe
          de MotoGP, « Cincinnati Reds » ramene la bonne. */
       var nmLong = function (x) { return (x.team && (x.team.displayName || x.team.name)) || ''; };
       trouves.push({
-        etat: etat, id: String(e.id), sp: g.sp, lg: lgReel, lgNom: lgNom,
+        etat: etat, id: String(e.id), sp: g.sp, lg: lgReel, lgTv: lgTv, lgNom: lgNom,
         moi: nm(moi), moiLong: nmLong(moi) || nm(moi), adv: nm(autre), dom: moi.homeAway === 'home',
         cMoi: col(moi, '#4d84ff'), cAdv: col(autre, '#8899aa'),
         lMoi: lg2(moi), lAdv: lg2(autre),
@@ -35882,10 +35898,18 @@ async function g45DirectMesEquipes(silencieux) {
       + (function () {
           /* Priorite a la chaine REELLE lue sur tv-sports.fr ; a defaut, le
              diffuseur habituel du championnat. */
-          var reel = (typeof g45TvPourMatch === 'function') ? g45TvPourMatch(m.moiLong || m.moi, m.adv) : '';
-          var tv = reel || _g45TvDe(m.lg);
+          var info = (typeof g45TvInfosMatch === 'function') ? g45TvInfosMatch(m.moiLong || m.moi, m.adv) : null;
+          var reel = info ? info.tv : '';
+          var tv = reel || _g45TvDe(m.lgTv || m.lg);
           if (!tv) return '';
-          return '<span style="color:' + (reel ? '#a78bfa' : '#6b7a99') + ';"> \u00b7 \ud83d\udcfa ' + tv + '</span>';
+          var txt = '<span style="color:' + (reel ? '#a78bfa' : '#6b7a99') + ';"> \u00b7 \ud83d\udcfa ' + tv + '</span>';
+          /* Lien vers le direct. `stopPropagation` obligatoire : sans lui, le
+             clic ouvrirait AUSSI la fiche du match par-dessus. */
+          if (info && info.url) {
+            txt += ' <a href="' + info.url + '" target="_blank" rel="noopener" onclick="event.stopPropagation();" '
+                 + 'style="color:#1ed760;font-weight:800;text-decoration:none;">\u25b6 voir</a>';
+          }
+          return txt;
         })()
       + '</div>'
       + '</div></div>';
@@ -36415,12 +36439,31 @@ window.g45PrixL1Generer = g45PrixL1Generer;
    ═══════════════════════════════════════════════════════════════════════════ */
 
 var G45_CHAINES = [
-  'Ligue 1+','Canal+ Sport 360','Canal+ Foot','Canal+ Sport','Canal+',
-  'beIN SPORTS 1','beIN SPORTS 2','beIN SPORTS 3','beIN SPORTS',
-  'RMC Sport 1','RMC Sport 2','RMC Sport','Eurosport 1','Eurosport 2','Eurosport',
-  'L\u2019\u00c9quipe','L\'\u00c9quipe','La Cha\u00eene L\'\u00c9quipe',
-  'France 2','France 3','France 4','France TV','TF1','TMC','M6','W9','6ter',
-  'Prime Video','DAZN','Netflix','Ligue1+','Multisports'
+  /* Liste relevee sur tv-sports.fr le 15/08/2026. Les DECLINAISONS NUMEROTEES
+     sont indispensables : un match sur « Canal+ Live 14 » ou « beIN SPORTS MAX 5 »
+     n'etait pas reconnu du tout, faute d'ancrage dans le HTML.
+     ATTENTION A L'ORDRE : les libelles LONGS d'abord. « Canal+ Live 1 » est
+     contenu dans « Canal+ Live 12 » — en testant le court en premier, tous les
+     matchs de Live 10 a 19 seraient etiquetes Live 1. */
+  'Canal+ Live 19', 'Canal+ Live 18', 'Canal+ Live 17', 'Canal+ Live 16', 'Canal+ Live 15', 'Canal+ Live 14', 'Canal+ Live 13', 'Canal+ Live 12', 'Canal+ Live 11', 'Canal+ Live 10', 'Canal+ Live 9', 'Canal+ Live 8', 'Canal+ Live 7', 'Canal+ Live 6', 'Canal+ Live 5', 'Canal+ Live 4', 'Canal+ Live 3', 'Canal+ Live 2', 'Canal+ Live 1',
+  'Canal+ Premi\u00e8re League', 'Canal+ Sport 360', 'Canal+ Sport', 'Canal+ Foot', 'Canal+',
+  'Ligue 1+ 10', 'Ligue 1+ 9', 'Ligue 1+ 8', 'Ligue 1+ 7', 'Ligue 1+ 6', 'Ligue 1+ 5', 'Ligue 1+ 4', 'Ligue 1+ 3', 'Ligue 1+ 2', 'Ligue 1+ expert', 'Ligue 1+',
+  'beIN SPORTS MAX 10', 'beIN SPORTS MAX 9', 'beIN SPORTS MAX 8', 'beIN SPORTS MAX 7', 'beIN SPORTS MAX 6', 'beIN SPORTS MAX 5', 'beIN SPORTS MAX 4', 'beIN SPORTS MAX', 'beIN SPORTS 1', 'beIN SPORTS 2', 'beIN SPORTS 3', 'beIN SPORTS',
+  'RMC Sport Live 16', 'RMC Sport Live 15', 'RMC Sport Live 14', 'RMC Sport Live 13', 'RMC Sport Live 12', 'RMC Sport Live 11', 'RMC Sport Live 10', 'RMC Sport Live 9', 'RMC Sport Live 8', 'RMC Sport Live 7', 'RMC Sport Live 6', 'RMC Sport Live 5', 'RMC Sport Access 1', 'RMC Sport Access', 'RMC Sport 1', 'RMC Sport 2', 'RMC Sport',
+  'Eurosport 1', 'Eurosport 2', 'Eurosport',
+  'La Cha\u00eene L\'\u00c9quipe', 'L\'Equipe', 'L\u2019\u00c9quipe',
+  'France 2', 'France 3', 'France 4', 'France 5', 'France TV',
+  'TF1 S\u00e9ries Films', 'TF1', 'TMC', 'TFX', 'M6', 'W9', '6ter', 'Gulli', 'Arte',
+  'Sport en France', '\u00c9quidia', 'Equidia', 'Automoto',
+  /* Belgique et Suisse : elles diffusent des affiches que la France n'a pas. */
+  'VOOsport World 1', 'VOOsport World 2', 'RTS 1', 'RTS 2', 'La Une', 'La Trois',
+  'Tipik', 'RTL tvi', 'Club RTL', 'Plug RTL', 'AB 3', 'ABXplore', 'VTM 2',
+  'Prime Video', 'Amazon Prime Video', 'DAZN', 'Netflix',
+  /* STREAMING GRATUIT. Vu le 15/08 : Bayern-Leipzig etait sur YouTube, diffuse
+     par le club. Les amicaux d'ete y passent souvent, et sans ces entrees le
+     match ressortait sans diffuseur alors qu'il etait regardable gratuitement —
+     l'information la PLUS utile, justement. */
+  'YouTube', 'Twitch', 'Dailymotion', 'Molotov', 'Free Ligue 1', 'Footao', 'Streaming'
 ];
 
 function _g45TvNorm(s) {
@@ -36441,13 +36484,20 @@ async function g45TvProgramme(force) {
     }
   } catch (e) {}
 
+  /* La page `?types=live` ne liste que ce qui passe A CET INSTANT — d'ou un seul
+     match reconnu sur dix. On lit donc AUSSI la page complete du jour, et on
+     fusionne. Deux requetes toutes les 3 heures, negligeable. */
+  var pages = ['/', '/?types=live'];
   var html = '';
-  try {
-    var u = FD_PROXY + '?host=tvsports&path=' + encodeURIComponent('/?types=live');
-    var r = await fetch(u);
-    if (!r.ok) throw new Error('HTTP ' + r.status);
-    html = await r.text();
-  } catch (e) { console.warn('tv-sports', e && e.message); return []; }
+  for (var pi = 0; pi < pages.length; pi++) {
+    try {
+      var u = FD_PROXY + '?host=tvsports&path=' + encodeURIComponent(pages[pi]);
+      var r = await fetch(u);
+      if (!r.ok) continue;
+      html += '\n' + (await r.text());
+    } catch (e) { console.warn('tv-sports', pages[pi], e && e.message); }
+  }
+  if (!html) return [];
 
   /* Texte brut : on supprime scripts, styles et balises, en gardant des
      separateurs pour ne pas coller les mots entre eux. */
@@ -36460,7 +36510,11 @@ async function g45TvProgramme(force) {
 
   var out = [];
   txt.forEach(function (ligne, i) {
-    var ch = G45_CHAINES.filter(function (c) { return _g45TvNorm(ligne) === _g45TvNorm(c); })[0];
+    /* Egalite stricte sur la ligne entiere : « Canal+ Live 1 » ne peut donc pas
+       capturer « Canal+ Live 12 ». Le tri par longueur protege les cas ou le
+       site ajoute un suffixe (HD, chaine, etc.). */
+    var ch = G45_CHAINES.filter(function (c) { return _g45TvNorm(ligne) === _g45TvNorm(c); })
+             .sort(function (x, y) { return y.length - x.length; })[0];
     if (!ch) return;
     /* Les equipes sont dans les lignes qui PRECEDENT la chaine. On remonte
        jusqu'a 8 lignes en cherchant un « A – B » ou un « A - B ». */
@@ -36471,9 +36525,44 @@ async function g45TvProgramme(force) {
     }
   });
 
-  try { localStorage.setItem('g45_tv_prog', JSON.stringify({ t: Date.now(), l: out })); } catch (e) {}
-  _g45TvCache = out;
-  return out;
+  /* ═══ LIEN VERS LA PAGE DU MATCH ═══
+     Le site heberge le direct sur sa propre page (/foot/…-e4492490/). En
+     supprimant les balises, je jetais les href avec — or c'est exactement ce
+     qui permet d'ouvrir le flux en un clic.
+     On repasse donc sur le HTML BRUT, decoupe par ancres : chaque ancre porte
+     son adresse ET le texte de la ligne, donc le rapprochement est direct et
+     ne depend d'aucune classe CSS. */
+  try {
+    html.split('<a ').forEach(function (bloc) {
+      var mh = bloc.match(/href="([^"]+)"/);
+      if (!mh) return;
+      var lien = mh[1];
+      if (!/\/[a-z-]+\/[^"]*-e\d+\/?$/.test(lien)) return;      /* page de match uniquement */
+      /* Le texte d'une ancre contient AUSSI l'heure et la chaine (« 15h30 Bayern
+         Munich – Leipzig YouTube »). Une egalite stricte echouait donc toujours :
+         on verifie simplement que les DEUX equipes y figurent. */
+      var texte = _g45TvNorm(bloc.replace(/<[^>]*>/g, ' '));
+      if (texte.indexOf('-') < 0 && texte.indexOf(' vs ') < 0 && texte.length < 8) return;
+      out.forEach(function (p2) {
+        if (p2.url) return;
+        var a = _g45TvNorm(p2.a), b = _g45TvNorm(p2.b);
+        if (a && b && texte.indexOf(a) >= 0 && texte.indexOf(b) >= 0) {
+          p2.url = lien.indexOf('http') === 0 ? lien : ('https://tv-sports.fr' + lien);
+        }
+      });
+    });
+  } catch (e) {}
+
+  var vus = {}, uniq = [];
+  out.forEach(function (p) {
+    var k = _g45TvNorm(p.a) + '|' + _g45TvNorm(p.b);
+    if (vus[k]) return;
+    vus[k] = 1; uniq.push(p);
+  });
+
+  try { localStorage.setItem('g45_tv_prog', JSON.stringify({ t: Date.now(), l: uniq })); } catch (e) {}
+  _g45TvCache = uniq;
+  return uniq;
 }
 window.g45TvProgramme = g45TvProgramme;
 
@@ -36483,7 +36572,13 @@ function g45TvPourMatch(eqA, eqB) {
   var l = _g45TvCache || [];
   if (!l.length) return '';
   var A = _g45TvNorm(eqA), B = _g45TvNorm(eqB);
-  var court = function (x) { return x.split(' ').filter(function (w) { return w.length > 3; }); };
+  /* BUG : le filtre « plus de 3 lettres » supprimait PSG, OL, OM, RCL… donc le
+     match ne pouvait JAMAIS etre trouve pour ces clubs. On garde des 3 lettres,
+     et si tout est filtre on retombe sur le nom complet. */
+  var court = function (x) {
+    var m = x.split(' ').filter(function (w) { return w.length >= 3; });
+    return m.length ? m : [x];
+  };
   var mA = court(A), mB = court(B);
   var hit = l.filter(function (p) {
     var pa = _g45TvNorm(p.a), pb = _g45TvNorm(p.b);
@@ -36495,10 +36590,37 @@ function g45TvPourMatch(eqA, eqB) {
 }
 window.g45TvPourMatch = g45TvPourMatch;
 
+/* Meme recherche, mais rend l'entree complete (chaine + lien vers le direct). */
+function g45TvInfosMatch(eqA, eqB) {
+  var l = _g45TvCache || [];
+  if (!l.length) return null;
+  var A = _g45TvNorm(eqA), B = _g45TvNorm(eqB);
+  var court = function (x) {
+    var m = x.split(' ').filter(function (w) { return w.length >= 3; });
+    return m.length ? m : [x];
+  };
+  var mA = court(A), mB = court(B);
+  return l.filter(function (p) {
+    var pa = _g45TvNorm(p.a), pb = _g45TvNorm(p.b);
+    var okA = mA.some(function (w) { return pa.indexOf(w) >= 0 || pb.indexOf(w) >= 0; });
+    var okB = mB.some(function (w) { return pa.indexOf(w) >= 0 || pb.indexOf(w) >= 0; });
+    return okA && okB;
+  })[0] || null;
+}
+window.g45TvInfosMatch = g45TvInfosMatch;
+
 /* Diagnostic : montre ce qui a ete extrait, ou l'echec exact. */
 async function g45TvDiag() {
   var l = await g45TvProgramme(true);
   if (!l.length) {
+    var cf = false;
+    try { cf = !!(JSON.parse(localStorage.getItem('g45_tv_prog') || '{}').cf); } catch (e2) {}
+    if (cf) {
+      alert('\ud83d\udee1\ufe0f tv-sports.fr renvoie une page de v\u00e9rification Cloudflare.\n\n'
+        + 'L\'adresse IP du Worker est filtr\u00e9e : le lecteur ne peut pas fonctionner tant que c\'est le cas.\n'
+        + 'La table par comp\u00e9tition prend le relais automatiquement.');
+      return l;
+    }
     console.warn('Aucun programme extrait. Causes possibles : hote tvsports absent du Worker, page vide, ou structure inattendue.');
     alert('Aucun programme TV extrait.\n\nV\u00e9rifie que l\'h\u00f4te « tvsports » a bien \u00e9t\u00e9 ajout\u00e9 au Worker.\nD\u00e9tail dans la console.');
     return l;
