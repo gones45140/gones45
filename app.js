@@ -5526,7 +5526,7 @@ async function githubGetStats() {
     });
     if(r.status===404) return {data:{}, sha:null};
     var d = await r.json();
-    var data = JSON.parse(atob(d.content.split('\n').join('')));
+    var data = JSON.parse(_g45b64utf8(d.content));   /* UTF-8 : voir _g45b64utf8 */
     return {data:data, sha:d.sha};
   } catch(e) { console.warn('GitHub read error:', e); return null; }
 }
@@ -11825,7 +11825,7 @@ async function githubGetStats() {
     });
     if(r.status===404) return {data:{}, sha:null};
     var d = await r.json();
-    var data = JSON.parse(atob(d.content.split('\n').join('')));
+    var data = JSON.parse(_g45b64utf8(d.content));   /* UTF-8 : voir _g45b64utf8 */
     return {data:data, sha:d.sha};
   } catch(e) { console.warn('GitHub read error:', e); return null; }
 }
@@ -27481,6 +27481,20 @@ async function _g45CryptoKey(pass, salt){
   return crypto.subtle.deriveKey({name:'PBKDF2', salt:salt, iterations:120000, hash:'SHA-256'}, km, {name:'AES-GCM', length:256}, false, ['encrypt','decrypt']);
 }
 function _g45b64(buf){ var b=new Uint8Array(buf),s=''; for(var i=0;i<b.length;i++) s+=String.fromCharCode(b[i]); return btoa(s); }
+/* ═══ BASE64 → UTF-8 ═══
+   `atob` rend une chaine d'OCTETS, pas du texte : chaque octet devient un
+   caractere. Un « é » stocke en UTF-8 (0xC3 0xA9) ressort donc en « Ã© », et un
+   emoji sur 4 octets en quatre caracteres illisibles — l'« ecriture egyptienne »
+   vue le 15/08 dans la Memoire stats.
+   L'ecriture, elle, encode correctement (`btoa(unescape(encodeURIComponent(x)))`),
+   donc seule la LECTURE etait fautive. Trois endroits l'oubliaient. */
+function _g45b64utf8(b64) {
+  var brut = atob(String(b64 || '').split('\n').join(''));
+  try { return decodeURIComponent(escape(brut)); }
+  catch (e) { return brut; }   /* deja du texte simple : on ne casse rien */
+}
+window._g45b64utf8 = _g45b64utf8;
+
 function _g45unb64(str){ var bin=atob(str),a=new Uint8Array(bin.length); for(var i=0;i<bin.length;i++) a[i]=bin.charCodeAt(i); return a; }
 async function _g45EncryptState(obj, pass){
   var salt=crypto.getRandomValues(new Uint8Array(16)), iv=crypto.getRandomValues(new Uint8Array(12));
@@ -28262,7 +28276,7 @@ async function g45StatsGithubGet(){
   try{
     var r=await fetch('https://api.github.com/repos/'+GITHUB_OWNER+'/'+GITHUB_REPO+'/contents/'+G45_STATS_FILE,{headers:{'Authorization':'token '+token,'Accept':'application/vnd.github.v3+json'}});
     if(r.status===404) return {arr:[], sha:null};
-    var d=await r.json(); var arr=JSON.parse(atob(d.content.split('\n').join(''))); if(!Array.isArray(arr)) arr=[];
+    var d=await r.json(); var arr=JSON.parse(_g45b64utf8(d.content));   /* UTF-8 : accents et emojis */ if(!Array.isArray(arr)) arr=[];
     return {arr:arr, sha:d.sha};
   }catch(e){ console.warn('stats github read', e); return null; }
 }
