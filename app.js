@@ -35838,3 +35838,142 @@ function _g45SgMatchDepuisDirect(eid, sp, lg) {
   if (typeof _g45SgMatch === 'function') _g45SgMatch(eid);
 }
 window._g45SgMatchDepuisDirect = _g45SgMatchDepuisDirect;
+
+
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   ONGLET OUTILS — RANGEMENT EN QUATRE SECTIONS (15/08/2026)
+   ───────────────────────────────────────────────────────────────────────────
+   32 blocs empiles a la suite, dont neuf champs de cles d'API et un simulateur
+   de lanceurs MLB qui n'a rien a faire la.
+
+   CHOIX TECHNIQUE : on ne DEPLACE PAS le HTML. Les blocs restent exactement ou
+   ils sont, avec leurs identifiants et leurs onclick intacts ; on se contente
+   de les MASQUER selon la section choisie. Deplacer 30 blocs dans index.html
+   aurait casse des references que rien n'aurait signalees avant l'usage.
+
+   Le classement se fait sur le TITRE de section, ou a defaut sur l'identifiant
+   du premier champ du bloc — les cles d'API n'ont pas de titre.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+var _G45_OUTILS_SEC = [
+  { id: 'app',    lab: '\u2699\ufe0f Application' },
+  { id: 'eq',     lab: '\u2795 \u00c9quipes' },
+  { id: 'cles',   lab: '\ud83d\udd11 Cl\u00e9s' },
+  { id: 'donnees',lab: '\ud83d\udcbe Donn\u00e9es' },
+  /* Plus de section Labo : les Lanceurs MLB sont deplaces dans l'onglet
+     Calculateur (t-calc), leur vraie place — c'est un simulateur de
+     rentabilite, pas un reglage. Voir _g45DeplacerLanceurs. */
+];
+var _g45OutilsSec = null;
+
+/* Classement d'un bloc. On lit d'abord le titre visible, puis les identifiants
+   qu'il contient — c'est ce qui permet de rattraper les blocs anonymes. */
+function _g45OutilsClasser(el, dernierTitre) {
+  var t = (dernierTitre || '').toLowerCase();
+  var html = el.innerHTML || '';
+  var ids = (html.match(/id="([^"]+)"/g) || []).join(' ').toLowerCase();
+
+  /* Ne devrait plus se presenter : le bloc est deplace au demarrage. Garde-fou
+     au cas ou le deplacement echoue — il retombe alors dans Application plutot
+     que de disparaitre. */
+  if (/lanceur/.test(t) || /g45-lc-/.test(ids)) return 'app';
+  /* Dropbox teste AVANT : son champ s'appelle `dbx-key-input`, donc la regle des
+     cles l'attrapait et separait le bloc de son titre « Backup & Config ». */
+  if (/dbx-/.test(ids)) return 'donnees';
+  if (/cl\u00e9|key|token/.test(t) || /-key-input|-token-input|odds-quota/.test(ids)) return 'cles';
+  if (/synchro|backup|export|sauvegarde|dropbox|dbx/.test(t) || /g45-sync|pdf-export|dbx-/.test(ids)) return 'donnees';
+  if (/\u00e9quipe|unit\u00e9|equipe/.test(t) || /u-search|u-nom|u-add/.test(ids)) return 'eq';
+  if (/apparence|notification|palier|mise/.test(t) || /bg-file|notif-|palier-|ap-off/.test(ids)) return 'app';
+  return 'app';   /* par defaut : reglages generaux */
+}
+
+function g45OutilsSection(sec) {
+  _g45OutilsSec = sec;
+  try { localStorage.setItem('g45_outils_sec', sec); } catch (e) {}
+  var hote = document.getElementById('t-outils');
+  if (!hote) return;
+
+  var titre = '';
+  Array.prototype.forEach.call(hote.children, function (el) {
+    if (el.id === 'g45-outils-nav') return;
+    var estTitre = el.className && String(el.className).indexOf('sec') >= 0;
+    if (estTitre) titre = (el.textContent || '').trim();
+    /* Un titre appartient au bloc qui le SUIT : on les classe ensemble, sinon
+       un intitule resterait seul au milieu d'une section qui n'est pas la sienne. */
+    var cat = _g45OutilsClasser(el, titre);
+    el.style.display = (cat === sec) ? '' : 'none';
+  });
+
+  var nav = document.getElementById('g45-outils-nav');
+  if (nav) Array.prototype.forEach.call(nav.children, function (b) {
+    var on = b.getAttribute('data-sec') === sec;
+    b.style.background = on ? 'rgba(77,132,255,.18)' : 'rgba(255,255,255,.04)';
+    b.style.color = on ? '#4d84ff' : 'var(--t3)';
+    b.style.borderColor = on ? 'rgba(77,132,255,.45)' : 'rgba(255,255,255,.08)';
+    b.style.fontWeight = on ? '800' : '600';
+  });
+}
+window.g45OutilsSection = g45OutilsSection;
+
+/* ═══ DEPLACEMENT DES LANCEURS MLB VERS LE CALCULATEUR ═══
+   Ici on DEPLACE vraiment les noeuds, contrairement au rangement des Outils qui
+   se contente de masquer. `appendChild` deplace l'element existant : identifiants,
+   contenu et gestionnaires d'evenements suivent, rien n'est recree. Rejouer le
+   HTML a la main aurait perdu les onclick poses par app.js.
+
+   Le bloc est fait de DEUX noeuds freres — le titre puis le panneau — comme tous
+   les blocs de l'appli. On deplace les deux, sinon le titre resterait orphelin
+   dans les Outils. */
+function _g45DeplacerLanceurs() {
+  var champ = document.getElementById('g45-lc-nom');
+  if (!champ) return;
+  var panneau = champ.closest ? champ.closest('#t-outils > *') : null;
+  var cible = document.getElementById('t-calc');
+  if (!panneau || !cible || panneau.parentNode === cible) return;
+
+  var titre = panneau.previousElementSibling;
+  if (titre && !(titre.className && String(titre.className).indexOf('sec') >= 0)) titre = null;
+  if (titre) cible.appendChild(titre);
+  cible.appendChild(panneau);
+  panneau.style.display = '';
+  if (titre) titre.style.display = '';
+}
+window._g45DeplacerLanceurs = _g45DeplacerLanceurs;
+
+function g45OutilsRanger() {
+  _g45DeplacerLanceurs();   /* avant tout classement, sinon on masquerait un bloc parti */
+  var hote = document.getElementById('t-outils');
+  if (!hote || document.getElementById('g45-outils-nav')) return;
+
+  var nav = document.createElement('div');
+  nav.id = 'g45-outils-nav';
+  nav.style.cssText = 'display:flex;gap:5px;flex-wrap:wrap;margin:0 0 14px;';
+  nav.innerHTML = _G45_OUTILS_SEC.map(function (s) {
+    return '<button data-sec="' + s.id + '" onclick="g45OutilsSection(\'' + s.id + '\')" '
+      + 'style="flex:1;min-width:88px;padding:9px 6px;border-radius:9px;border:1px solid rgba(255,255,255,.08);'
+      + 'background:rgba(255,255,255,.04);color:var(--t3);font-size:10.5px;font-weight:600;cursor:pointer;">' + s.lab + '</button>';
+  }).join('');
+  hote.insertBefore(nav, hote.firstChild);
+
+  var mem = null;
+  try { mem = localStorage.getItem('g45_outils_sec'); } catch (e) {}
+  g45OutilsSection(mem || 'app');
+}
+window.g45OutilsRanger = g45OutilsRanger;
+
+/* L'onglet Outils est deja rendu dans index.html : on range des qu'il s'affiche.
+   Le clic sur l'entree de menu ne passe par aucune fonction qu'on puisse
+   envelopper, d'où cette verification legere sur les clics. */
+document.addEventListener('click', function () {
+  setTimeout(function () {
+    var t = document.getElementById('t-outils');
+    if (t && t.classList && t.classList.contains('active')) g45OutilsRanger();
+  }, 120);
+});
+
+/* Le deplacement ne doit PAS dependre d'une visite dans les Outils : sinon le
+   simulateur resterait invisible dans le Calculateur tant qu'Antoine n'y serait
+   pas passe. On le fait au demarrage. */
+setTimeout(_g45DeplacerLanceurs, 1200);
+setTimeout(_g45DeplacerLanceurs, 4000);
