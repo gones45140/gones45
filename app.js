@@ -36142,3 +36142,43 @@ if (typeof g45StatsLocal === 'function') {
     try { return _g45ReparerProfond(arr); } catch (e) { return arr; }
   };
 }
+
+/* La source PRINCIPALE n'est pas le cache local mais GitHub : `g45StatsAdd`,
+   `g45StatsUpdate` et l'affichage passent tous par `g45StatsGithubGet`. Nettoyer
+   le seul cache local laissait donc les hieroglyphes a l'ecran. */
+if (typeof g45StatsGithubGet === 'function') {
+  var _g45StatsGhGetOrig = g45StatsGithubGet;
+  window.g45StatsGithubGet = async function () {
+    var o = await _g45StatsGhGetOrig();
+    if (o && Array.isArray(o.arr)) { try { o.arr = _g45ReparerProfond(o.arr); } catch (e) {} }
+    return o;
+  };
+}
+if (typeof g45StatsLoadPublic === 'function') {
+  var _g45StatsPubOrig = g45StatsLoadPublic;
+  window.g45StatsLoadPublic = async function () {
+    var a = await _g45StatsPubOrig();
+    try { return Array.isArray(a) ? _g45ReparerProfond(a) : a; } catch (e) { return a; }
+  };
+}
+
+/* ═══ LE VRAI COUPABLE : LE CHAMP SPORT ═══
+   Le sport est stocke AVEC son emoji (« \u26bd Football »). Un texte abime ne
+   correspond donc a AUCUNE option du menu deroulant, qui retombe sur vide — d'ou
+   « le sport revient en neutre au rafraichissement ». Et cette valeur vide,
+   reenregistree, ecrasait le sport correct.
+   On nettoie donc AUSSI a l'ECRITURE : plus rien d'abime n'entre en base. */
+if (typeof g45StatsSetLocal === 'function') {
+  var _g45StatsSetOrig = g45StatsSetLocal;
+  window.g45StatsSetLocal = function (arr) {
+    try { arr = _g45ReparerProfond(arr); } catch (e) {}
+    return _g45StatsSetOrig(arr);
+  };
+}
+if (typeof g45StatsGithubSave === 'function') {
+  var _g45StatsGhSaveOrig = g45StatsGithubSave;
+  window.g45StatsGithubSave = async function (arr, sha) {
+    try { arr = _g45ReparerProfond(arr); } catch (e) {}
+    return await _g45StatsGhSaveOrig(arr, sha);
+  };
+}
