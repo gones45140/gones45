@@ -37737,8 +37737,14 @@ function _g45CageHTML(tirs, idDom, nomDom, nomExt, CD, CE) {
      a l'identique. */
   var GY0 = 44.62, GYW = 10.76, GZH = 40;
 
-  var W = 560, H = 190, m = 26;
-  var GW = W - 2 * m, GH = H - m - 14;
+  /* PROPORTIONS REELLES : un but fait 7,32 m sur 2,44, soit exactement 3 fois
+     plus large que haut. Mes dimensions donnaient 3,39 — les tirs hauts
+     paraissaient donc plus bas qu'ils ne l'etaient, ce qui fausse la lecture
+     d'une lucarne. La hauteur est deduite de la largeur, plus jamais fixee. */
+  var W = 560, m = 26;
+  var GW = W - 2 * m;
+  var GH = GW / 3;
+  var H = GH + m + 14;
   var px = function (t) {
     var f = (t.gy - GY0) / GYW;
     f = 1 - Math.max(0, Math.min(1, f));            /* gy eleve = gauche */
@@ -37765,11 +37771,23 @@ function _g45CageHTML(tirs, idDom, nomDom, nomExt, CD, CE) {
   return '<div style="margin-top:10px;">'
     + '<div style="font-size:9px;font-weight:800;letter-spacing:1px;text-transform:uppercase;color:#4f5d88;margin-bottom:4px;">'
     + '\ud83e\udd45 Dans la cage \u00b7 ' + cadres.length + ' tir(s) cadr\u00e9(s)</div>'
-    + '<svg viewBox="0 0 ' + W + ' ' + H + '" style="width:100%;height:auto;background:rgba(255,255,255,.03);border-radius:8px;">'
-    + '<rect x="' + m + '" y="' + (H - 14 - GH) + '" width="' + GW + '" height="' + GH + '" fill="rgba(255,255,255,.04)" stroke="rgba(255,255,255,.45)" stroke-width="3"/>'
-    + '<line x1="' + (m + GW / 3) + '" y1="' + (H - 14 - GH) + '" x2="' + (m + GW / 3) + '" y2="' + (H - 14) + '" stroke="rgba(255,255,255,.10)" stroke-width="1"/>'
-    + '<line x1="' + (m + 2 * GW / 3) + '" y1="' + (H - 14 - GH) + '" x2="' + (m + 2 * GW / 3) + '" y2="' + (H - 14) + '" stroke="rgba(255,255,255,.10)" stroke-width="1"/>'
-    + '<line x1="' + m + '" y1="' + (H - 14 - GH / 2) + '" x2="' + (m + GW) + '" y2="' + (H - 14 - GH / 2) + '" stroke="rgba(255,255,255,.10)" stroke-width="1"/>'
+    /* VRAIE CAGE (20/08) : un rectangle et deux traits ne ressemblaient pas a un
+       but. On dessine le FILET par un motif SVG repete — beaucoup plus leger
+       qu'une centaine de lignes tracees une a une — plus des montants epais et
+       une barre transversale, et le sol sous la ligne de but. */
+    + '<svg viewBox="0 0 ' + W + ' ' + H + '" style="width:100%;height:auto;border-radius:8px;">'
+    + '<defs><pattern id="g45filet" width="9" height="9" patternUnits="userSpaceOnUse">'
+    + '<path d="M0 0 L9 9 M9 0 L0 9" stroke="rgba(255,255,255,.16)" stroke-width="0.7" fill="none"/></pattern></defs>'
+    /* sol */
+    + '<rect x="0" y="' + (H - 14) + '" width="' + W + '" height="14" fill="rgba(30,120,70,.22)"/>'
+    /* filet */
+    + '<rect x="' + m + '" y="' + (H - 14 - GH) + '" width="' + GW + '" height="' + GH + '" fill="url(#g45filet)"/>'
+    /* montants et barre : trait blanc epais, comme un vrai but */
+    + '<rect x="' + (m - 4) + '" y="' + (H - 14 - GH - 4) + '" width="4" height="' + (GH + 4) + '" fill="#fff" opacity=".92"/>'
+    + '<rect x="' + (m + GW) + '" y="' + (H - 14 - GH - 4) + '" width="4" height="' + (GH + 4) + '" fill="#fff" opacity=".92"/>'
+    + '<rect x="' + (m - 4) + '" y="' + (H - 14 - GH - 4) + '" width="' + (GW + 8) + '" height="4" fill="#fff" opacity=".92"/>'
+    /* ligne de but */
+    + '<rect x="' + (m - 4) + '" y="' + (H - 14) + '" width="' + (GW + 8) + '" height="2" fill="rgba(255,255,255,.55)"/>'
     + pts + '</svg>'
     + '<div style="font-size:9px;color:var(--t3);margin-top:4px;">Vue depuis le tireur \u00b7 point plein = but '
     + '\u00b7 survole pour la zone annonc\u00e9e par ESPN et le xGOT</div></div>';
