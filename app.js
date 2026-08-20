@@ -20910,7 +20910,44 @@ function _renderEspnMatchPitch(s, col, nameFn){
       h+='</div>';
       return h;
     }
-    var homeCol=col||'#4d84ff', awayCol='#e0564f';
+    /* ═══ COULEURS REELLES DES CLUBS (20/08) ═══
+       Ces deux couleurs etaient CODEES EN DUR — bleu et rouge, simplement pour
+       distinguer les deux camps. Sur des maillots, c'est faux et ca se voit :
+       l'Atletico ressortait bleu, Malaga rouge.
+       Le roster porte pourtant `team.color` et `team.alternateColor`. On les
+       utilise, avec deux garde-fous :
+         - une couleur trop CLAIRE (blanc, jaune pale) sur un terrain vert clair
+           serait illisible : on bascule alors sur l'alternative ;
+         - si les deux equipes ressortent trop PROCHES l'une de l'autre, on
+           passe la seconde a son alternative, sinon on ne distingue plus rien —
+           exactement le probleme que les couleurs fixes evitaient. */
+    var _hex = function (x) {
+      var v = String(x || '').replace('#', '').trim();
+      return /^[0-9a-f]{6}$/i.test(v) ? ('#' + v) : '';
+    };
+    var _lum = function (h) {                      /* 0 = noir, 1 = blanc */
+      var n = parseInt(h.slice(1), 16);
+      return (0.2126 * ((n >> 16) & 255) + 0.7152 * ((n >> 8) & 255) + 0.0722 * (n & 255)) / 255;
+    };
+    var _ecart = function (a, b) {
+      var A = parseInt(a.slice(1), 16), B = parseInt(b.slice(1), 16);
+      return Math.abs(((A >> 16) & 255) - ((B >> 16) & 255))
+           + Math.abs(((A >> 8) & 255) - ((B >> 8) & 255))
+           + Math.abs((A & 255) - (B & 255));
+    };
+    var _couleurEquipe = function (r, dft) {
+      var t = (r && r.team) || {};
+      var c1 = _hex(t.color), c2 = _hex(t.alternateColor);
+      if (c1 && _lum(c1) < 0.82) return c1;         /* assez sombre pour etre lisible */
+      if (c2 && _lum(c2) < 0.82) return c2;
+      return c1 || c2 || dft;
+    };
+    var homeCol = _couleurEquipe(hR, col || '#4d84ff');
+    var awayCol = _couleurEquipe(aR, '#e0564f');
+    if (_ecart(homeCol, awayCol) < 90) {            /* trop proches : on differencie */
+      var alt = _hex((aR && aR.team && aR.team.alternateColor) || '');
+      awayCol = (alt && _ecart(homeCol, alt) >= 90) ? alt : '#e0564f';
+    }
     var pitch='<div style="position:relative;width:100%;max-width:430px;margin:4px auto 2px;aspect-ratio:5/8;min-height:440px;background:linear-gradient(180deg,#1f7a3f 0%,#19682f 50%,#1f7a3f 100%);border-radius:10px;overflow:hidden;border:1px solid rgba(255,255,255,.12);">'
       +'<div style="position:absolute;inset:5px;border:2px solid rgba(255,255,255,.18);border-radius:6px;"></div>'
       +'<div style="position:absolute;top:50%;left:5px;right:5px;height:2px;background:rgba(255,255,255,.22);"></div>'
