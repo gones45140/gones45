@@ -29682,7 +29682,22 @@ window.g45F1Session=g45F1Session;
    du navigateur. Tous ces caches sont reconstructibles : ils cèdent la place aux données. */
 var _G45_CACHE_PREFIXES=['g45rcP_','g45rcD_','g45rcY_','g45rc_','g45dcm_','g45dcf_','g45dc_',
   'g45trv3_','g45trv2_','g45trOdds_','g45tr_','g45but_st_','g45butL_','g45butA_','g45but_mur_',
-  '_g45clv','g45clv_snaps','g45_saisons_cache_v2_'];
+  '_g45clv','g45clv_snaps','g45_saisons_cache_v2_',
+  /* Ajoutes le 20/08 : ces caches, tous reconstructibles, n'etaient PAS declares
+     ici — donc jamais purges quand le stockage saturait. Resultat : le quota
+     explosait et des ecritures LEGITIMES echouaient en silence (le filtre par
+     competition, qui restait bloque sur « Toutes »). Les cartes de tirs sont
+     les plus lourdes : plusieurs Ko par match, gardees indefiniment. */
+  'g45_tirs_','g45_fanart_','g45_img_perso_','g45_tv_prog','g45_mqnom_',
+  'g45nrlcal2_','g45_fx_faits','g45_veille_','g45_compet_logos','g45_groq_modele','g45_gemini_modeles',
+  /* MESURE DU 20/08 sur le stockage reel d'Antoine (5,1 Mo, sature) :
+       fpl_bootstrap_cache ... 1951 Ko  <- a lui seul 38 % du total
+       g45itf_*            ... 1779 Ko  <- tennis ITF/Challenger, par date
+       g45_saisons_cache_* ...  243 Ko
+       nba_pstat_, g45cm_, g45news3_ ... ~180 Ko
+     AUCUN n'etait declare purgeable, d'où une purge qui ne liberait que 80 Ko
+     alors que 3,7 Mo dormaient en cache. Tous sont reconstructibles. */
+  'fpl_bootstrap','g45itf_','g45_saisons_cache_','nba_pstat_','g45cm_','g45news3_','g45trf_','g45sofastats_'];
 function _g45CachePoids(){
   var t={}, tot=0;
   try{
@@ -29732,7 +29747,20 @@ var _G45_CACHE_MAX=60*1024;
           }
         }
       }catch(e){}
-      return _set(k,v);
+      try {
+        return _set(k,v);
+      } catch(e2) {
+        /* AVANT : seul `save()` savait purger et reessayer. Toute autre ecriture
+           — un filtre, une preference, un choix de saison — echouait donc
+           DEFINITIVEMENT et sans bruit quand le stockage etait plein. C'est ce
+           qui a fait croire pendant une heure que le filtre par competition
+           etait casse. Desormais toute ecriture beneficie du meme filet. */
+        var q=(e2&&(e2.name==='QuotaExceededError'||e2.code===22))||/quota/i.test(String(e2&&e2.message));
+        if(!q) throw e2;
+        console.warn('\ud83d\uddc4\ufe0f stockage sature \u2014 purge des caches, nouvelle tentative pour : '+k);
+        try{ if(typeof _g45FreeSpace==='function') _g45FreeSpace(); }catch(e3){}
+        return _set(k,v);        /* si ca echoue encore, l'erreur remonte */
+      }
     };
     wrap._g45cap=1;
     localStorage.setItem=wrap;
