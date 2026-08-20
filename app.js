@@ -37521,7 +37521,18 @@ window.g45CarteTirsHTML = g45CarteTirsHTML;
    des pourcentages ; en deca, des metres (le but fait 7,32 m sur 2,44 m).
    Deviner aurait place les tirs n'importe ou. */
 function _g45CageHTML(tirs, idDom, nomDom, nomExt) {
-  var cadres = tirs.filter(function (t) { return t.gy != null && t.gz != null; });
+  /* CORRIGE le 20/08 : je gardais tout tir PORTANT des coordonnees de cage.
+     Or les tirs contres et hors cadre en ont aussi — souvent (0,0), faute de
+     point d'impact reel. D'ou 20 points la ou le match en comptait 7 cadres, et
+     un amas au centre du but.
+     On exige donc un tir REELLEMENT cadre, et on ecarte le couple (0,0) qui
+     signale une donnee absente plutot qu'un tir au ras du poteau gauche. */
+  var cadres = tirs.filter(function (t) {
+    if (!t.cadre) return false;
+    if (t.gy == null || t.gz == null) return false;
+    if (Math.abs(t.gy) < 0.01 && Math.abs(t.gz) < 0.01) return false;
+    return true;
+  });
   if (!cadres.length) return '';
 
   var maxY = Math.max.apply(null, cadres.map(function (t) { return Math.abs(t.gy); }));
