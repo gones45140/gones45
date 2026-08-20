@@ -18663,18 +18663,35 @@ async function loadTeamSaisons() {
 
 
 // ── FILTRES ONGLET SAISONS ──
-function updateSaisonFilter() {
+/* REECRIT le 20/08/2026 — le filtre etait inutilisable.
+   Ancien comportement : avec « Toutes » active, les chips de competition
+   s'affichaient TOUTES cochees. Cliquer sur « Championnat » la DECOCHAIT donc,
+   et le gestionnaire, voyant « Toutes » encore cochee, remettait tout a zero :
+   l'ecran ne changeait pas. Il fallait deviner qu'il fallait d'abord decocher
+   « Toutes ». Le repli « si le filtre est vide, on montre tout » masquait le
+   reste.
+   Nouveau comportement, en UN clic : cliquer une competition ne garde QUE
+   celle-la (et « Toutes » se decoche) ; recliquer l'enleve ; si plus rien n'est
+   selectionne on revient a « Toutes ». */
+function updateSaisonFilter(clique) {
   var allChk = document.getElementById('sf-all');
   if(!allChk) return;
-  // Tous les chips de filtre (génériques : marche pour n'importe quels groupes)
   var _boxes = Array.prototype.slice.call(document.querySelectorAll('#saison-filter-chips input[id^="sf-"]')).filter(function(b){ return b.id!=='sf-all'; });
-  if(allChk.checked) {
+
+  if(clique === 'sf-all' || (!clique && allChk.checked)) {
+    allChk.checked = true;
     _boxes.forEach(function(b){ b.checked=false; });
     localStorage.setItem('g45_saison_filters', JSON.stringify({all:true}));
   } else {
-    var _f = { all:false };
-    _boxes.forEach(function(b){ _f[b.id] = !!b.checked; });
-    localStorage.setItem('g45_saison_filters', JSON.stringify(_f));
+    allChk.checked = false;
+    var _f = { all:false }, n = 0;
+    _boxes.forEach(function(b){ _f[b.id] = !!b.checked; if(b.checked) n++; });
+    if(!n) {                       /* plus aucune competition : retour a Toutes */
+      allChk.checked = true;
+      localStorage.setItem('g45_saison_filters', JSON.stringify({all:true}));
+    } else {
+      localStorage.setItem('g45_saison_filters', JSON.stringify(_f));
+    }
   }
   // Recharger les saisons
   _saisonsCache = {};
@@ -19434,7 +19451,7 @@ function renderSaisonsChart(el, results, nom) {
   // Chip "Toutes"
   var allActive = !_saisonFilters || _saisonFilters.all;
   html += '<label style="display:flex;align-items:center;gap:5px;padding:5px 10px;border-radius:12px;border:1px solid '+(allActive?'rgba(77,132,255,.5)':'rgba(255,255,255,.1)')+';background:'+(allActive?'rgba(77,132,255,.12)':'none')+';cursor:pointer;font-size:10px;font-weight:700;color:'+(allActive?'#7aaaff':'var(--t3)')+';">'
-    +'<input type="checkbox" id="sf-all" '+(allActive?'checked':'')+' onchange="updateSaisonFilter()" style="accent-color:var(--a);">Toutes</label>';
+    +'<input type="checkbox" id="sf-all" '+(allActive?'checked':'')+' onchange="updateSaisonFilter(\'sf-all\')" style="accent-color:var(--a);">Toutes</label>';
 
   // Chips par groupe
   var groupColors = {'Championnat':'#1ed760','Ligue des Champions':'#4d84ff','Ligue Europa':'#f0b020','Conference League':'#22d3ee','Coupe Nationale':'#ff7b54','Autre':'#a78bfa'};
@@ -19442,10 +19459,12 @@ function renderSaisonsChart(el, results, nom) {
   Object.keys(compGroups).forEach(function(g){
     if(!compGroups[g].length) return;
     var key = 'sf-'+g.replace(/ /g,'_');
-    var active = _saisonFilters.all || (_saisonFilters[key]);
+    /* PLUS de « cochee parce que Toutes est cochee » : c'est ce qui rendait le
+       premier clic destructeur au lieu d'etre selectif. */
+    var active = !!_saisonFilters[key];
     var col = groupColors[g]||'#7aaaff';
     html += '<label style="display:flex;align-items:center;gap:5px;padding:5px 10px;border-radius:12px;border:1px solid '+(active?col.replace('#','rgba(').replace(/(..)(..)(..)/, function(m,r,g2,b){ return parseInt(r,16)+','+parseInt(g2,16)+','+parseInt(b,16); })+',.4)':'rgba(255,255,255,.1)')+';background:'+(active?'rgba(77,132,255,.08)':'none')+';cursor:pointer;font-size:10px;font-weight:700;color:'+(active?col:'var(--t3)')+';">'
-      +'<input type="checkbox" id="'+key+'" '+(active?'checked':'')+' onchange="updateSaisonFilter()" style="accent-color:'+col+';">'+(groupLabels[g]||g)+'</label>';
+      +'<input type="checkbox" id="'+key+'" '+(active?'checked':'')+' onchange="updateSaisonFilter(\''+key+'\')" style="accent-color:'+col+';">'+(groupLabels[g]||g)+'</label>';
     // Tooltip avec les compétitions
     html += '';
   });
@@ -19455,7 +19474,10 @@ function renderSaisonsChart(el, results, nom) {
     var matches = results[s];
     var filters = JSON.parse(localStorage.getItem('g45_saison_filters')||'null');
     var filteredMatches = filterMatchesByComp(matches, filters);
-    if(!filteredMatches.length) filteredMatches = matches; // fallback si filtre vide
+    /* On n'affiche PLUS tous les matchs quand le filtre ne rend rien : c'est
+       exactement ce qui donnait l'impression que le filtre ne marchait pas.
+       Une saison sans match dans la competition choisie est simplement sautee. */
+    if(!filteredMatches.length) return;
     // Filtre dom/ext
     /* Filet de securite : si AUCUN match ne porte cet identifiant, on retombe sur
        une comparaison par nom plutot que de tout jeter et d'afficher des NaN. */
@@ -33789,6 +33811,11 @@ async function _g45SgButeurs(panel, lg, eid) {
     sum = await r.json();
   } catch (e) { return; }
 
+  /* Carte des tirs : posee AVANT les absences pour qu'elle finisse en tete du
+     panneau (chaque bloc est insere en premiere position). Asynchrone et sans
+     bloquer : si les actions ne sont pas disponibles, rien ne s'affiche. */
+  try { _g45SgCarteTirs(panel, lg, eid, sum); } catch (e) {}
+
   /* ═══ ABSENCES ═══ (15/08/2026)
      Le resume porte AUSSI les blessures et suspensions des deux equipes, dans
      `sum.injuries`. On les rend depuis la MEME reponse : aucune requete de plus.
@@ -33877,6 +33904,28 @@ function _g45SgAbsences(panel, sum) {
   panel.insertBefore(bloc, panel.firstChild);
 }
 window._g45SgAbsences = _g45SgAbsences;
+
+/* Insère la carte des tirs dans le détail d'un match de football. */
+async function _g45SgCarteTirs(panel, lg, eid, sum) {
+  if (!panel) return;
+  var comp = (sum && sum.header && sum.header.competitions && sum.header.competitions[0]) || {};
+  var cps = comp.competitors || [];
+  var dom = cps.filter(function (c) { return c.homeAway === 'home'; })[0] || cps[0] || {};
+  var ext = cps.filter(function (c) { return c.homeAway === 'away'; })[0] || cps[1] || {};
+  var idDom = String((dom.team && dom.team.id) || dom.id || '');
+  var nm = function (c) { return (c.team && (c.team.shortDisplayName || c.team.displayName)) || '?'; };
+
+  var st = (comp.status && comp.status.type) || {};
+  var tirs = await g45TirsMatch(lg, eid, st.completed === true);
+  if (!tirs || !tirs.length) return;
+
+  var html = g45CarteTirsHTML(tirs, idDom, nm(dom), nm(ext));
+  if (!html) return;
+  var bloc = document.createElement('div');
+  bloc.innerHTML = html;
+  panel.insertBefore(bloc.firstChild, panel.firstChild);
+}
+window._g45SgCarteTirs = _g45SgCarteTirs;
 
 function _g45SgRefresh() { if (typeof loadTeamSaisons === 'function') loadTeamSaisons(); }
 function _g45SgSaison(y) { _g45SgAn = y; _g45SgRefresh(); }
@@ -37151,3 +37200,184 @@ window.g45MarqueursUI = g45MarqueursUI;
 document.addEventListener('click', function () {
   setTimeout(function () { if (_g45Visible('t-tend')) g45MarqueursUI(); }, 200);
 });
+
+
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   CARTE DES TIRS & xG MAISON (20/08/2026)
+   ───────────────────────────────────────────────────────────────────────────
+   SONDÉ AVANT D'ÉCRIRE, sur Atletico-Malaga (401882925). Trois constats qui
+   commandent tout le code :
+
+   1. `fieldPositionX` / `fieldPositionY` existent bien, de 0 a 100.
+   2. Les coordonnees sont RELATIVES AU SENS D'ATTAQUE : les tirs des DEUX
+      equipes sont entre x=71 et x=91. x=100 est donc toujours le but adverse,
+      quelle que soit la mi-temps. Aucune inversion a gerer.
+   3. PIEGE MAJEUR : un `Save` est enregistre du point de vue du GARDIEN, a
+      x=3-9, c'est-a-dire devant SON but. Chaque tir cadre apparait donc DEUX
+      fois. Sans filtre, la moitie des points se retrouverait devant le mauvais
+      but. On ne garde que les actions du TIREUR.
+
+   xG : modele explicite distance + angle, cale sur les reperes publics
+   (6 yards 42%, penalty en jeu ouvert 22%, entree de surface 9%, 25 m 3,5%).
+   Le penalty est traite a part via le drapeau `penaltyKick`, a 0,76.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+var _G45_POSTE = 3.66;          /* demi-largeur du but, en metres */
+var _G45_LONG = 105, _G45_LARG = 68;
+
+function _g45AngleBut(dx, dy) {
+  return Math.abs(Math.atan2(_G45_POSTE - dy, dx) - Math.atan2(-_G45_POSTE - dy, dx));
+}
+
+/* x, y en 0-100 tels que rendus par ESPN. */
+function g45XgTir(x, y, penalty) {
+  if (penalty) return 0.76;
+  var dx = Math.max(0.5, (100 - x) / 100 * _G45_LONG);      /* distance a la ligne de but */
+  var dy = Math.abs((y - 50) / 100 * _G45_LARG);            /* ecart par rapport a l'axe */
+  var dist = Math.sqrt(dx * dx + dy * dy);
+  var base = 0.92 * Math.exp(-0.13 * dist);
+  var aCentre = 2 * Math.atan(_G45_POSTE / Math.max(0.5, dist));
+  var ratio = _g45AngleBut(dx, dy) / Math.max(1e-6, aCentre);
+  return Math.max(0.01, Math.min(0.95, base * Math.pow(Math.min(1, ratio), 2)));
+}
+window.g45XgTir = g45XgTir;
+
+/* ── Récupération des actions, paginée ──
+   Une page rend 400 actions et un match en compte 1200 a 1500 : sans
+   pagination, les tirs de la fin de match manquaient. Cache DEFINITIF, un match
+   termine ne changeant plus. */
+async function g45TirsMatch(lg, eid, termine) {
+  var cle = 'g45_tirs_' + lg + '_' + eid;
+  try {
+    var c = JSON.parse(localStorage.getItem(cle) || 'null');
+    if (c && (termine || (Date.now() - c.t) < 120000)) return c.l;
+  } catch (e) {}
+
+  var items = [];
+  for (var p = 1; p <= 5; p++) {
+    try {
+      var r = await fetch('https://sports.core.api.espn.com/v2/sports/soccer/leagues/' + lg
+        + '/events/' + eid + '/competitions/' + eid + '/plays?limit=400&page=' + p);
+      if (!r.ok) break;
+      var j = await r.json();
+      var lot = j.items || [];
+      items = items.concat(lot);
+      if (lot.length < 400) break;
+    } catch (e) { break; }
+  }
+  if (!items.length) return null;
+
+  /* Seules les actions du TIREUR. « Save » et « Goal Kick » sont exclus : ce
+     sont les memes tirs vus du gardien, a l'autre bout du terrain. */
+  var estTir = /^(shot|goal)/i;
+  var exclu = /save|goal kick|assists? shot/i;
+
+  var tirs = items.filter(function (a) {
+    var t = (a.type && a.type.text) || '';
+    if (exclu.test(t)) return false;
+    if (!estTir.test(t)) return false;
+    return typeof a.fieldPositionX === 'number';
+  }).map(function (a) {
+    var t = (a.type && a.type.text) || '';
+    var but = a.scoringPlay === true || /^goal/i.test(t);
+    var cadre = but || /on target|hit woodwork/i.test(t);
+    return {
+      min: (a.clock && a.clock.displayValue) || '',
+      periode: (a.period && a.period.number) || 1,
+      type: t,
+      but: but,
+      cadre: cadre,
+      bloque: /blocked/i.test(t),
+      csc: a.ownGoal === true,
+      pen: a.penaltyKick === true,
+      equipe: String((a.team && a.team.$ref) || '').match(/teams\/(\d+)/) ? String(a.team.$ref).match(/teams\/(\d+)/)[1] : '',
+      qui: String(a.shortText || '').replace(/\s+(Shot|Goal).*$/i, '').trim(),
+      x: a.fieldPositionX,
+      y: a.fieldPositionY,
+      xg: g45XgTir(a.fieldPositionX, a.fieldPositionY, a.penaltyKick === true)
+    };
+  });
+
+  try { localStorage.setItem(cle, JSON.stringify({ t: Date.now(), l: tirs })); } catch (e) {}
+  return tirs;
+}
+window.g45TirsMatch = g45TirsMatch;
+
+/* ── Rendu : terrain SVG, les deux equipes face a face ──
+   Les coordonnees etant relatives au sens d'attaque, on RENVERSE l'equipe
+   visiteuse (x -> 100-x, y -> 100-y) pour obtenir la lecture habituelle :
+   domicile attaque a droite, visiteur a gauche. */
+function g45CarteTirsHTML(tirs, idDom, nomDom, nomExt) {
+  if (!tirs || !tirs.length) return '';
+
+  var W = 660, H = 420, M = 8;
+  var px = function (t) {
+    var x = (String(t.equipe) === String(idDom)) ? t.x : (100 - t.x);
+    return M + (x / 100) * (W - 2 * M);
+  };
+  var py = function (t) {
+    var y = (String(t.equipe) === String(idDom)) ? t.y : (100 - t.y);
+    return M + (y / 100) * (H - 2 * M);
+  };
+
+  var somme = { dom: 0, ext: 0 }, nb = { dom: 0, ext: 0 }, buts = { dom: 0, ext: 0 };
+  tirs.forEach(function (t) {
+    var k = (String(t.equipe) === String(idDom)) ? 'dom' : 'ext';
+    somme[k] += t.xg; nb[k]++; if (t.but) buts[k]++;
+  });
+
+  /* Le rayon suit le xG : un tir dangereux se voit immediatement. */
+  var points = tirs.map(function (t) {
+    var dom = (String(t.equipe) === String(idDom));
+    var coul = dom ? '#4d84ff' : '#f0b020';
+    var r = 4 + Math.sqrt(t.xg) * 13;
+    var titre = (t.qui || '?') + ' \u00b7 ' + t.min + ' \u00b7 ' + t.type
+              + ' \u00b7 xG ' + t.xg.toFixed(2) + (t.pen ? ' (penalty)' : '');
+    if (t.but) {
+      return '<circle cx="' + px(t).toFixed(1) + '" cy="' + py(t).toFixed(1) + '" r="' + r.toFixed(1) + '" '
+        + 'fill="' + coul + '" stroke="#fff" stroke-width="2.5"><title>' + titre + '</title></circle>';
+    }
+    return '<circle cx="' + px(t).toFixed(1) + '" cy="' + py(t).toFixed(1) + '" r="' + r.toFixed(1) + '" '
+      + 'fill="' + (t.cadre ? coul : 'none') + '" fill-opacity="' + (t.cadre ? '.55' : '0') + '" '
+      + 'stroke="' + coul + '" stroke-width="1.6" ' + (t.bloque ? 'stroke-dasharray="3 2"' : '')
+      + '><title>' + titre + '</title></circle>';
+  }).join('');
+
+  var L = function (x1, y1, x2, y2) {
+    return '<line x1="' + x1 + '" y1="' + y1 + '" x2="' + x2 + '" y2="' + y2 + '" stroke="rgba(255,255,255,.20)" stroke-width="1.4"/>';
+  };
+  var surf = (W - 2 * M) * 0.165, six = (W - 2 * M) * 0.055;
+  var hs = (H - 2 * M) * 0.60, h6 = (H - 2 * M) * 0.28;
+
+  return '<div style="margin-bottom:12px;padding:10px;border-radius:10px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.07);">'
+    + '<div style="font-size:9px;font-weight:800;letter-spacing:1px;text-transform:uppercase;color:#4f5d88;margin-bottom:6px;">'
+    + '\ud83c\udfaf Carte des tirs & xG</div>'
+
+    + '<div style="display:flex;gap:10px;font-size:11px;margin-bottom:6px;">'
+    + '<div style="flex:1;"><span style="color:#4d84ff;font-weight:800;">' + nomDom + '</span><br>'
+    + '<span style="font-size:16px;font-weight:900;color:#4d84ff;">' + somme.dom.toFixed(2) + '</span>'
+    + '<span style="font-size:9px;color:var(--t3);"> xG \u00b7 ' + nb.dom + ' tirs \u00b7 ' + buts.dom + ' but(s)</span></div>'
+    + '<div style="flex:1;text-align:right;"><span style="color:#f0b020;font-weight:800;">' + nomExt + '</span><br>'
+    + '<span style="font-size:16px;font-weight:900;color:#f0b020;">' + somme.ext.toFixed(2) + '</span>'
+    + '<span style="font-size:9px;color:var(--t3);"> xG \u00b7 ' + nb.ext + ' tirs \u00b7 ' + buts.ext + ' but(s)</span></div></div>'
+
+    + '<svg viewBox="0 0 ' + W + ' ' + H + '" style="width:100%;height:auto;background:rgba(30,120,70,.16);border-radius:8px;">'
+    + '<rect x="' + M + '" y="' + M + '" width="' + (W - 2 * M) + '" height="' + (H - 2 * M) + '" fill="none" stroke="rgba(255,255,255,.20)" stroke-width="1.4"/>'
+    + L(W / 2, M, W / 2, H - M)
+    + '<circle cx="' + (W / 2) + '" cy="' + (H / 2) + '" r="' + ((H - 2 * M) * 0.13) + '" fill="none" stroke="rgba(255,255,255,.20)" stroke-width="1.4"/>'
+    /* surfaces */
+    + '<rect x="' + M + '" y="' + ((H - hs) / 2) + '" width="' + surf + '" height="' + hs + '" fill="none" stroke="rgba(255,255,255,.20)" stroke-width="1.4"/>'
+    + '<rect x="' + (W - M - surf) + '" y="' + ((H - hs) / 2) + '" width="' + surf + '" height="' + hs + '" fill="none" stroke="rgba(255,255,255,.20)" stroke-width="1.4"/>'
+    + '<rect x="' + M + '" y="' + ((H - h6) / 2) + '" width="' + six + '" height="' + h6 + '" fill="none" stroke="rgba(255,255,255,.14)" stroke-width="1.2"/>'
+    + '<rect x="' + (W - M - six) + '" y="' + ((H - h6) / 2) + '" width="' + six + '" height="' + h6 + '" fill="none" stroke="rgba(255,255,255,.14)" stroke-width="1.2"/>'
+    + points
+    + '</svg>'
+
+    + '<div style="font-size:9px;color:var(--t3);margin-top:6px;line-height:1.6;">'
+    + '\u25cf plein = but \u00b7 \u25cf translucide = cadr\u00e9 \u00b7 \u25cb vide = hors cadre \u00b7 pointill\u00e9 = contr\u00e9 \u2014 '
+    + 'la TAILLE du point suit le xG. Survole un point pour le d\u00e9tail.<br>'
+    + '<b>xG maison</b>, calcul\u00e9 depuis la position du tir (distance et angle) : il ignore la pression '
+    + 'defensive et la partie du corps, donc il diverge un peu des xG commerciaux.</div></div>';
+}
+window.g45CarteTirsHTML = g45CarteTirsHTML;
