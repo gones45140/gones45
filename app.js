@@ -20860,8 +20860,24 @@ function _renderEspnMatchPitch(s, col, nameFn){
       var num=(p.jersey!=null)?p.jersey:((p.athlete&&p.athlete.jersey)||'');
       var nm=lastName((p.athlete&&(p.athlete.displayName||p.athlete.shortName))||'');
       var ev=_evOf(p), ic=_icoStr(ev);
-      var subTag=(ev&&ev.subOut)?'<span style="color:#ff8a8a;">🔻'+(ev.subOut.min||'')+'</span>':'';
-      var row=(ic||subTag)?'<div style="font-size:7px;line-height:1.05;margin-top:1px;white-space:nowrap;">'+ic+subTag+'</div>':'';
+            /* La minute de sortie etait noyee dans la meme ligne que les icones, en
+         petit et sans fond. On la detache : fleche + minute sur une pastille
+         sombre, lisible sur le vert comme sur un maillot clair. */
+      /* Le nom du remplacant etait DEJA collecte (`subOut.partner`) mais jamais
+         affiche. On le met a cote de la minute, en vert et avec une fleche
+         montante : rouge = celui qui sort, vert = celui qui entre, on lit la
+         permutation d'un coup d'oeil sans descendre a la liste des changements. */
+      var subTag='';
+      if(ev&&ev.subOut){
+        subTag='<span style="display:inline-block;padding:0 4px;border-radius:6px;background:rgba(0,0,0,.55);color:#ff9a9a;font-weight:800;">\u2193'+(ev.subOut.min||'')+'</span>';
+        if(ev.subOut.partner){
+          subTag+='<span style="display:inline-block;margin-left:2px;padding:0 4px;border-radius:6px;background:rgba(0,0,0,.55);color:#6ee7a0;font-weight:800;">\u2191'+ev.subOut.partner+'</span>';
+        }
+      }
+      /* Les icones (but, carton, passe, sortie) etaient figees a 7 px : illisibles
+         des que le terrain s'est elargi. Meme regle d'echelle que le maillot et
+         le nom, avec un plancher identique pour le telephone. */
+      var row=(ic||subTag)?'<div style="font-size:clamp(7px,1.05vw,12px);line-height:1.15;margin-top:2px;white-space:nowrap;text-shadow:0 1px 2px rgba(0,0,0,.9);">'+ic+subTag+'</div>':'';
       return '<div style="display:flex;flex-direction:column;align-items:center;gap:1px;">'
         /* MAILLOT plutot qu'un rond (20/08) : meme couleur de club, meme place,
            mais l'equipe se reconnait d'un coup d'oeil. Dessine en SVG — aucune
