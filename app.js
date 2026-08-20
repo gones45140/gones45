@@ -20869,11 +20869,11 @@ function _renderEspnMatchPitch(s, col, nameFn){
            Le col est une couche noire translucide plutot qu'une teinte calculee :
            une opacite fonctionne sur n'importe quelle couleur, claire ou sombre,
            sans avoir a convertir chaque code hexadecimal. */
-        +'<svg viewBox="0 0 24 24" style="width:26px;height:26px;filter:drop-shadow(0 1px 3px rgba(0,0,0,.6));">'
+        +'<svg viewBox="0 0 24 24" style="width:clamp(26px,3.4vw,38px);height:clamp(26px,3.4vw,38px);filter:drop-shadow(0 1px 3px rgba(0,0,0,.6));">'
         +'<path d="M8 2 L4 4 L2 8 L5 9.5 L5 22 L19 22 L19 9.5 L22 8 L20 4 L16 2 L14.5 3.6 A3.2 3.2 0 0 1 9.5 3.6 Z" fill="'+c+'" stroke="rgba(0,0,0,.45)" stroke-width="1"/>'
         +'<path d="M8 2 L9.5 3.6 A3.2 3.2 0 0 0 14.5 3.6 L16 2 L14 1.4 A4.6 4.6 0 0 1 10 1.4 Z" fill="rgba(0,0,0,.35)"/>'
         +'<text x="12" y="16.5" text-anchor="middle" font-size="9" font-weight="800" fill="#fff" stroke="rgba(0,0,0,.55)" stroke-width="0.5" paint-order="stroke">'+num+'</text></svg>'
-        +'<div style="font-size:7.5px;font-weight:700;color:#fff;text-shadow:0 1px 2px rgba(0,0,0,.95);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:'+(maxW||44)+'px;text-align:center;">'+nm+'</div>'+row+'</div>';
+        +'<div style="font-size:clamp(7.5px,0.95vw,11px);font-weight:700;color:#fff;text-shadow:0 1px 2px rgba(0,0,0,.95);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:'+(maxW||44)+'px;text-align:center;">'+nm+'</div>'+row+'</div>';
     }
     function placeTeam(r,c,fromTop){
       var lines=getLines(r); if(!lines.length) return '';
@@ -20882,7 +20882,10 @@ function _renderEspnMatchPitch(s, col, nameFn){
         var frac = nL>1 ? li/(nL-1) : 0;
         var y = fromTop ? (4+frac*43) : (96-frac*43);
         var n=line.length;
-        var maxW = n>=6?34:(n===5?40:48);  // noms plus courts quand la ligne est chargée
+        /* Le terrain passe de 430 a 660 px sur grand ecran (il restait dimensionne
+           pour le telephone). On elargit donc aussi les noms, sinon ils seraient
+           tronques pour rien au milieu d'un terrain devenu large. */
+        var maxW = n>=6?46:(n===5?54:64);
         var cw = maxW+6;
         line.forEach(function(p,i){
           /* SENS DE JEU (corrige le 20/08) : l'equipe du HAUT attaque vers le
@@ -20954,7 +20957,7 @@ function _renderEspnMatchPitch(s, col, nameFn){
       var alt = _hex((aR && aR.team && aR.team.alternateColor) || '');
       awayCol = (alt && _ecart(homeCol, alt) >= 90) ? alt : '#e0564f';
     }
-    var pitch='<div style="position:relative;width:100%;max-width:430px;margin:4px auto 2px;aspect-ratio:5/8;min-height:440px;background:linear-gradient(180deg,#1f7a3f 0%,#19682f 50%,#1f7a3f 100%);border-radius:10px;overflow:hidden;border:1px solid rgba(255,255,255,.12);">'
+    var pitch='<div style="position:relative;width:100%;max-width:min(660px,100%);margin:4px auto 2px;aspect-ratio:5/8;min-height:440px;background:linear-gradient(180deg,#1f7a3f 0%,#19682f 50%,#1f7a3f 100%);border-radius:10px;overflow:hidden;border:1px solid rgba(255,255,255,.12);">'
       +'<div style="position:absolute;inset:5px;border:2px solid rgba(255,255,255,.18);border-radius:6px;"></div>'
       +'<div style="position:absolute;top:50%;left:5px;right:5px;height:2px;background:rgba(255,255,255,.22);"></div>'
       +'<div style="position:absolute;top:50%;left:50%;width:72px;height:72px;border:2px solid rgba(255,255,255,.22);border-radius:50%;transform:translate(-50%,-50%);"></div>'
