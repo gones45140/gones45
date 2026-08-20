@@ -37367,7 +37367,22 @@ async function g45TirsMatch(lg, eid, termine) {
       qui: String(a.shortText || '').replace(/\s+(Shot|Goal).*$/i, '').trim(),
       x: a.fieldPositionX,
       y: a.fieldPositionY,
-      xg: g45XgTir(a.fieldPositionX, a.fieldPositionY, a.penaltyKick === true)
+      /* ═══ xG RÉEL D'ESPN (decouvert le 20/08) ═══
+         Un tir porte `expectedGoals` : inutile d'estimer ce qui est fourni. Mon
+         modele maison ne sert plus que de REPLI, quand le champ est absent —
+         tirs contres, competitions moins couvertes. La provenance est notee
+         pour que l'affichage puisse le dire honnetement. */
+      xg: (typeof a.expectedGoals === 'number' && a.expectedGoals >= 0)
+            ? a.expectedGoals
+            : g45XgTir(a.fieldPositionX, a.fieldPositionY, a.penaltyKick === true),
+      xgSrc: (typeof a.expectedGoals === 'number' && a.expectedGoals >= 0) ? 'espn' : 'maison',
+      xgot: (typeof a.expectedGoalsOnTarget === 'number') ? a.expectedGoalsOnTarget : null,
+      /* Position DANS LA CAGE, presente uniquement sur les tirs cadres. */
+      gy: (typeof a.goalPositionY === 'number') ? a.goalPositionY : null,
+      gz: (typeof a.goalPositionZ === 'number') ? a.goalPositionZ : null,
+      zone: a.targetZone || '',
+      contact: (a.contactType && (a.contactType.text || a.contactType)) || '',
+      info: (a.shotInfo && (a.shotInfo.text || a.shotInfo)) || ''
     };
   });
 
@@ -37449,7 +37464,66 @@ function g45CarteTirsHTML(tirs, idDom, nomDom, nomExt) {
     + '<div style="font-size:9px;color:var(--t3);margin-top:6px;line-height:1.6;">'
     + '\u25cf plein = but \u00b7 \u25cf translucide = cadr\u00e9 \u00b7 \u25cb vide = hors cadre \u00b7 pointill\u00e9 = contr\u00e9 \u2014 '
     + 'la TAILLE du point suit le xG. Survole un point pour le d\u00e9tail.<br>'
-    + '<b>xG maison</b>, calcul\u00e9 depuis la position du tir (distance et angle) : il ignore la pression '
-    + 'defensive et la partie du corps, donc il diverge un peu des xG commerciaux.</div></div>';
+    + (function () {
+        var nEspn = tirs.filter(function (t) { return t.xgSrc === 'espn'; }).length;
+        if (nEspn === tirs.length) return '<b>xG fourni par ESPN</b> pour les ' + tirs.length + ' tirs.';
+        if (!nEspn) return '<b>xG maison</b> (distance et angle) : ESPN n\'en fournit pas sur ce match.';
+        return '<b>xG ESPN</b> sur ' + nEspn + ' tir(s) sur ' + tirs.length
+             + ' ; les autres sont estim\u00e9s maison (distance et angle).';
+      })()
+    + '</div>'
+    + _g45CageHTML(tirs, idDom, nomDom, nomExt)
+    + '</div>';
 }
 window.g45CarteTirsHTML = g45CarteTirsHTML;
+
+/* ═══ VUE « DANS LA CAGE » ═══
+   `goalPositionY` (largeur) et `goalPositionZ` (hauteur) ne sont presents que
+   sur les tirs CADRES — c'est logique : un tir hors cadre n'a pas de point
+   d'impact dans le but.
+   L'unite n'est pas documentee. On la DEDUIT : au-dela de 8, ce sont forcement
+   des pourcentages ; en deca, des metres (le but fait 7,32 m sur 2,44 m).
+   Deviner aurait place les tirs n'importe ou. */
+function _g45CageHTML(tirs, idDom, nomDom, nomExt) {
+  var cadres = tirs.filter(function (t) { return t.gy != null && t.gz != null; });
+  if (!cadres.length) return '';
+
+  var maxY = Math.max.apply(null, cadres.map(function (t) { return Math.abs(t.gy); }));
+  var maxZ = Math.max.apply(null, cadres.map(function (t) { return Math.abs(t.gz); }));
+  var pct = (maxY > 8 || maxZ > 8);                 /* echelle 0-100 ou metres */
+
+  var W = 560, H = 190, m = 26;
+  var GW = W - 2 * m, GH = H - m - 14;
+  var px = function (t) {
+    var f = pct ? (t.gy / 100) : ((t.gy + 3.66) / 7.32);   /* metres : 0 = centre */
+    return m + Math.max(0, Math.min(1, f)) * GW;
+  };
+  var py = function (t) {
+    var f = pct ? (t.gz / 100) : (t.gz / 2.44);
+    return (H - 14) - Math.max(0, Math.min(1, f)) * GH;     /* 0 = au sol */
+  };
+
+  var pts = cadres.map(function (t) {
+    var dom = (String(t.equipe) === String(idDom));
+    var coul = dom ? '#4d84ff' : '#f0b020';
+    var r = t.but ? 8 : 6;
+    var titre = (t.qui || '?') + ' \u00b7 ' + t.min + ' \u00b7 ' + (t.but ? 'BUT' : t.type)
+              + ' \u00b7 xG ' + t.xg.toFixed(2) + (t.zone ? (' \u00b7 ' + t.zone) : '');
+    return '<circle cx="' + px(t).toFixed(1) + '" cy="' + py(t).toFixed(1) + '" r="' + r + '" '
+      + 'fill="' + (t.but ? coul : 'none') + '" fill-opacity="' + (t.but ? '1' : '0') + '" '
+      + 'stroke="' + coul + '" stroke-width="2"><title>' + titre + '</title></circle>';
+  }).join('');
+
+  return '<div style="margin-top:10px;">'
+    + '<div style="font-size:9px;font-weight:800;letter-spacing:1px;text-transform:uppercase;color:#4f5d88;margin-bottom:4px;">'
+    + '\ud83e\udd45 Dans la cage \u00b7 ' + cadres.length + ' tir(s) cadr\u00e9(s)</div>'
+    + '<svg viewBox="0 0 ' + W + ' ' + H + '" style="width:100%;height:auto;background:rgba(255,255,255,.03);border-radius:8px;">'
+    + '<rect x="' + m + '" y="' + (H - 14 - GH) + '" width="' + GW + '" height="' + GH + '" fill="rgba(255,255,255,.04)" stroke="rgba(255,255,255,.45)" stroke-width="3"/>'
+    + '<line x1="' + (m + GW / 3) + '" y1="' + (H - 14 - GH) + '" x2="' + (m + GW / 3) + '" y2="' + (H - 14) + '" stroke="rgba(255,255,255,.10)" stroke-width="1"/>'
+    + '<line x1="' + (m + 2 * GW / 3) + '" y1="' + (H - 14 - GH) + '" x2="' + (m + 2 * GW / 3) + '" y2="' + (H - 14) + '" stroke="rgba(255,255,255,.10)" stroke-width="1"/>'
+    + '<line x1="' + m + '" y1="' + (H - 14 - GH / 2) + '" x2="' + (m + GW) + '" y2="' + (H - 14 - GH / 2) + '" stroke="rgba(255,255,255,.10)" stroke-width="1"/>'
+    + pts + '</svg>'
+    + '<div style="font-size:9px;color:var(--t3);margin-top:4px;">Vue depuis le tireur \u00b7 point plein = but'
+    + (pct ? '' : ' \u00b7 \u00e9chelle en m\u00e8tres') + '</div></div>';
+}
+window._g45CageHTML = _g45CageHTML;
