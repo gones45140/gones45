@@ -37630,7 +37630,7 @@ async function g45XgSaison(matches, teamId, nom, boiteId, lgDef) {
       + aLire + ' \u00e0 lire (' + aLire + ' \u00e0 ' + (aLire * 3) + ' requ\u00eates ESPN, gratuites)\n\n'
       + 'Dur\u00e9e : environ ' + Math.max(1, Math.round(aLire * 1.2 / 60)) + ' min. Lancer ?')) return;
 
-  var pour = 0, contre = 0, butsP = 0, butsC = 0, lus = 0, sansXg = 0;
+  var pour = 0, contre = 0, butsP = 0, butsC = 0, lus = 0, sansXg = 0, indetermine = 0;
   var parMatch = [];
 
   for (var i = 0; i < joues.length; i++) {
@@ -37643,7 +37643,36 @@ async function g45XgSaison(matches, teamId, nom, boiteId, lgDef) {
     try { tirs = await g45TirsMatch(lg, m.espnId, true); } catch (e) {}
     if (!tirs || !tirs.length) { sansXg++; continue; }
 
-    var estNous = function (t) { return String(t.equipe) === String(teamId); };
+    /* ═══ IDENTIFIER NOTRE CAMP, SANS SUPPOSER L'IDENTIFIANT ═══
+       Les tirs portent l'identifiant ESPN de l'equipe. Or l'onglet Saisons
+       travaille parfois avec un identifiant d'une AUTRE source. Quand aucun tir
+       ne correspond, tout bascule du cote adverse : Espanyol est ressorti a
+       0,0 xG pour 3 buts marques, et 1,8 xG contre 0 encaisse.
+       On DEDUIT donc notre camp en comparant les buts marques dans les tirs au
+       score reel du match. Si la deduction est impossible — score de parite,
+       aucun but —, on ECARTE le match plutot que de risquer une inversion
+       silencieuse, et on le signale. */
+    var bH0 = (m.score && m.score.fullTime && m.score.fullTime.home) || 0;
+    var bA0 = (m.score && m.score.fullTime && m.score.fullTime.away) || 0;
+    var nousDom0 = (m.homeTeam && String(m.homeTeam.id) === String(teamId));
+    var nosButs = nousDom0 ? bH0 : bA0, sesButs = nousDom0 ? bA0 : bH0;
+
+    var ids = [];
+    tirs.forEach(function (t) { if (t.equipe && ids.indexOf(t.equipe) < 0) ids.push(t.equipe); });
+
+    var idNous = null;
+    if (ids.indexOf(String(teamId)) >= 0) {
+      idNous = String(teamId);                       /* correspondance directe */
+    } else if (ids.length === 2 && nosButs !== sesButs) {
+      var butsPar = {};
+      ids.forEach(function (id) { butsPar[id] = 0; });
+      tirs.forEach(function (t) { if (t.but && butsPar[t.equipe] != null) butsPar[t.equipe]++; });
+      if (butsPar[ids[0]] === nosButs && butsPar[ids[1]] === sesButs) idNous = ids[0];
+      else if (butsPar[ids[1]] === nosButs && butsPar[ids[0]] === sesButs) idNous = ids[1];
+    }
+    if (!idNous) { indetermine++; continue; }
+
+    var estNous = function (t) { return String(t.equipe) === String(idNous); };
     var xp = 0, xc = 0, vrai = false;
     tirs.forEach(function (t) {
       if (t.xgSrc === 'espn') vrai = true;
@@ -37699,7 +37728,9 @@ async function g45XgSaison(matches, teamId, nom, boiteId, lgDef) {
           ? '<span style="color:#4ade80;">encaisse ' + Math.abs(ecartC).toFixed(1) + ' buts de moins</span>'
           : '<span style="color:var(--t3);">conforme</span>')) + '</div>'
     + '<div style="font-size:9px;color:var(--t3);margin-top:6px;line-height:1.6;">'
-    + lus + ' match(s) avec xG ESPN' + (sansXg ? (' \u00b7 ' + sansXg + ' sans donn\u00e9e, exclus du calcul') : '') + '.<br>'
+    + lus + ' match(s) avec xG ESPN'
+    + (sansXg ? (' \u00b7 ' + sansXg + ' sans donn\u00e9e') : '')
+    + (indetermine ? (' \u00b7 ' + indetermine + ' \u00e9cart\u00e9(s), camp ind\u00e9terminable') : '') + '.<br>'
     + 'Une <b>sur-performance</b> durable finit presque toujours par se corriger : c\'est l\u00e0 que le march\u00e9 '
     + 'retarde le plus, puisqu\'il suit les r\u00e9sultats.</div>';
 }
