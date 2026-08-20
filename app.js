@@ -20863,7 +20863,16 @@ function _renderEspnMatchPitch(s, col, nameFn){
       var subTag=(ev&&ev.subOut)?'<span style="color:#ff8a8a;">🔻'+(ev.subOut.min||'')+'</span>':'';
       var row=(ic||subTag)?'<div style="font-size:7px;line-height:1.05;margin-top:1px;white-space:nowrap;">'+ic+subTag+'</div>':'';
       return '<div style="display:flex;flex-direction:column;align-items:center;gap:1px;">'
-        +'<div style="width:20px;height:20px;border-radius:50%;background:'+c+';color:#fff;font-size:9px;font-weight:800;display:flex;align-items:center;justify-content:center;box-shadow:0 1px 4px rgba(0,0,0,.5);">'+num+'</div>'
+        /* MAILLOT plutot qu'un rond (20/08) : meme couleur de club, meme place,
+           mais l'equipe se reconnait d'un coup d'oeil. Dessine en SVG — aucune
+           image a telecharger, rien a maintenir.
+           Le col est une couche noire translucide plutot qu'une teinte calculee :
+           une opacite fonctionne sur n'importe quelle couleur, claire ou sombre,
+           sans avoir a convertir chaque code hexadecimal. */
+        +'<svg viewBox="0 0 24 24" style="width:26px;height:26px;filter:drop-shadow(0 1px 3px rgba(0,0,0,.6));">'
+        +'<path d="M8 2 L4 4 L2 8 L5 9.5 L5 22 L19 22 L19 9.5 L22 8 L20 4 L16 2 L14.5 3.6 A3.2 3.2 0 0 1 9.5 3.6 Z" fill="'+c+'" stroke="rgba(0,0,0,.45)" stroke-width="1"/>'
+        +'<path d="M8 2 L9.5 3.6 A3.2 3.2 0 0 0 14.5 3.6 L16 2 L14 1.4 A4.6 4.6 0 0 1 10 1.4 Z" fill="rgba(0,0,0,.35)"/>'
+        +'<text x="12" y="16.5" text-anchor="middle" font-size="9" font-weight="800" fill="#fff" stroke="rgba(0,0,0,.55)" stroke-width="0.5" paint-order="stroke">'+num+'</text></svg>'
         +'<div style="font-size:7.5px;font-weight:700;color:#fff;text-shadow:0 1px 2px rgba(0,0,0,.95);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:'+(maxW||44)+'px;text-align:center;">'+nm+'</div>'+row+'</div>';
     }
     function placeTeam(r,c,fromTop){
