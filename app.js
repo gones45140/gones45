@@ -330,9 +330,19 @@ function espnToFdMatch(m, ourName, ourFdId) {
   }
 
   // Déterminer de quel côté est notre équipe (pour domicile/extérieur)
-  var nl = (ourName||'').toLowerCase().trim();
-  var homeLow = (m.homeTeam||'').toLowerCase().trim();
-  var awayLow = (m.awayTeam||'').toLowerCase().trim();
+  /* ACCENTS — bug trouve le 15/08 sur l'Atletico Madrid.
+     Le nom stocke porte l'accent (« atletico madrid »), celui d'ESPN non. Le
+     test d'egalite echouait donc, et les deux camps ne marquaient plus que 10
+     via le mot commun « madrid » : egalite, et le repli « on garde domicile »
+     classait les DEPLACEMENTS au Bernabeu comme des receptions.
+     Meme famille que le bug PSG/Paris FC, autre cause. On normalise les trois
+     chaines avant toute comparaison. */
+  var _sansAcc = function (x) {
+    return String(x || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim();
+  };
+  var nl = _sansAcc(ourName);
+  var homeLow = _sansAcc(m.homeTeam);
+  var awayLow = _sansAcc(m.awayTeam);
   // Score de similarité : combien de mots du nom de l'équipe se retrouvent dans home/away
   function simScore(teamNameLow, ourLow){
     if(teamNameLow===ourLow) return 100;
@@ -5710,6 +5720,53 @@ var G45_GROQ_PREF = [
   'llama-3.1-8b-instant'
 ];
 var G45_GROQ_MODELE = null;
+
+/* ═══ MODÈLES GEMINI — MÊME MALADIE, MÊME REMÈDE ═══
+   `gemini-1.5-flash` a ete retire par Google. La cascade nommait ses quatre
+   modeles en dur : chaque retrait cassera donc un maillon, en silence, jusqu'a
+   ce qu'il n'en reste aucun.
+   L'endpoint /v1beta/models liste ce que LA CLE peut reellement appeler. On ne
+   garde que les modeles qui acceptent `generateContent`, tries du plus recent
+   au plus ancien, en ecartant les modeles d'image et d'embedding. */
+var G45_GEM_LISTE = null;
+
+async function g45GeminiModeles(force) {
+  if (G45_GEM_LISTE && !force) return G45_GEM_LISTE;
+  var repli = ['gemini-2.5-flash', 'gemini-2.0-flash', 'gemini-2.0-flash-lite'];
+  try {
+    if (!force) {
+      var o = JSON.parse(localStorage.getItem('g45_gem_modeles') || 'null');
+      if (o && o.l && o.l.length && (Date.now() - o.t) < 86400000) { G45_GEM_LISTE = o.l; return o.l; }
+    }
+  } catch (e) {}
+
+  var cle = localStorage.getItem('gones45_google_key');
+  if (!cle) return repli;
+  try {
+    var r = await fetch('https://generativelanguage.googleapis.com/v1beta/models?key=' + encodeURIComponent(cle));
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    var j = await r.json();
+    var ok = ((j && j.models) || []).filter(function (m) {
+      var meth = m.supportedGenerationMethods || m.supportedActions || [];
+      return meth.indexOf('generateContent') >= 0 && !/embed|image|vision-only|aqa/i.test(m.name || '');
+    }).map(function (m) { return String(m.name || '').replace(/^models\//, ''); });
+
+    /* On prefere les « flash » : gratuits et rapides, ce qui compte pour une
+       analyse d'avant-match. Puis tri decroissant, donc les versions recentes
+       d'abord. */
+    var flash = ok.filter(function (n) { return /flash/i.test(n); }).sort().reverse();
+    var autres = ok.filter(function (n) { return !/flash/i.test(n); }).sort().reverse();
+    var liste = flash.concat(autres).slice(0, 6);
+    if (liste.length) {
+      G45_GEM_LISTE = liste;
+      try { localStorage.setItem('g45_gem_modeles', JSON.stringify({ l: liste, t: Date.now() })); } catch (e) {}
+      console.log('\ud83d\udd37 mod\u00e8les Gemini disponibles : ' + liste.join(', '));
+      return liste;
+    }
+  } catch (e) { console.warn('decouverte Gemini', e && e.message); }
+  return repli;
+}
+window.g45GeminiModeles = g45GeminiModeles;
 
 function g45GroqModele() {
   if (G45_GROQ_MODELE) return G45_GROQ_MODELE;
@@ -23246,7 +23303,9 @@ async function _g45MultiAI(box, boxId, sys, facts, title){
     if(gk){
       box.innerHTML+='<div id="'+boxId+'-gm" style="font-size:10px;color:var(--t3);padding:6px;text-align:center;">🔷 Gemini réfléchit…</div>';
       try{
-        var GM=['gemini-2.5-flash','gemini-2.0-flash','gemini-2.0-flash-lite','gemini-1.5-flash'];
+        /* Liste decouverte aupres de Google plutot que codee en dur : un modele
+           retire ne casse plus le maillon correspondant. */
+        var GM = await g45GeminiModeles();
         var gt='', dg=null;
         for(var gi=0; gi<GM.length && !gt; gi++){
           try{
@@ -33730,6 +33789,14 @@ async function _g45SgButeurs(panel, lg, eid) {
     sum = await r.json();
   } catch (e) { return; }
 
+  /* ═══ ABSENCES ═══ (15/08/2026)
+     Le resume porte AUSSI les blessures et suspensions des deux equipes, dans
+     `sum.injuries`. On les rend depuis la MEME reponse : aucune requete de plus.
+     C'est l'information la plus utile avant un pari — un buteur forfait change
+     un « victoire + plus de 2,5 buts » du tout au tout, et le marche l'integre
+     lentement le matin du match. */
+  try { _g45SgAbsences(panel, sum); } catch (e) {}
+
   var evs = (sum && sum.keyEvents) || [];
   if (!evs.length) return;
 
@@ -33764,6 +33831,52 @@ async function _g45SgButeurs(panel, lg, eid) {
   panel.insertBefore(bloc, panel.firstChild);
 }
 window._g45SgButeurs = _g45SgButeurs;
+
+/* Bloc des absences, construit depuis le resume deja telecharge. */
+function _g45SgAbsences(panel, sum) {
+  if (!panel || !sum) return;
+  var grp = (sum.injuries || []).filter(function (g) { return (g.injuries || []).length; });
+  if (!grp.length) return;
+
+  /* ESPN melange les statuts : on distingue ce qui est CERTAIN (forfait,
+     suspendu) de ce qui est incertain (douteux, de retour), parce que les deux
+     ne se parient pas pareil. */
+  var certain = /out|suspend|injured reserve|\bir\b/i;
+  var douteux = /doubtful|questionable|day-to-day|probable/i;
+
+  var colonnes = grp.map(function (g) {
+    var eq = (g.team && (g.team.shortDisplayName || g.team.displayName || g.team.abbreviation)) || '';
+    var lignes = (g.injuries || []).slice(0, 10).map(function (b) {
+      var a = b.athlete || {};
+      var nom = a.shortName || a.displayName || a.fullName || '?';
+      var poste = (a.position && (a.position.abbreviation || a.position.name)) || '';
+      var st = String(b.status || (b.type && b.type.description) || '').trim();
+      var detail = (b.details && (b.details.type || b.details.detail)) || (b.longComment || b.shortComment) || '';
+      var coul = certain.test(st) ? '#ff6b6b' : (douteux.test(st) ? '#ffb13d' : '#9fb0c7');
+      var ico = certain.test(st) ? '\u26d4' : (douteux.test(st) ? '\u2753' : '\ud83e\ude79');
+      return '<div style="display:flex;align-items:baseline;gap:5px;padding:3px 0;font-size:11px;">'
+        + '<span>' + ico + '</span>'
+        + '<span style="font-weight:700;">' + nom + '</span>'
+        + (poste ? '<span style="font-size:9px;color:var(--t3);">' + poste + '</span>' : '')
+        + '<span style="margin-left:auto;font-size:9px;color:' + coul + ';font-weight:700;white-space:nowrap;">'
+        + (st || '?') + '</span></div>'
+        + (detail ? '<div style="font-size:9px;color:var(--t3);margin:-2px 0 3px 20px;">' + detail + '</div>' : '');
+    }).join('');
+    return '<div style="flex:1;min-width:150px;">'
+      + '<div style="font-size:10px;font-weight:800;color:var(--t1);margin-bottom:4px;">' + eq
+      + ' <span style="color:var(--t3);font-weight:600;">(' + (g.injuries || []).length + ')</span></div>'
+      + lignes + '</div>';
+  }).join('');
+
+  var bloc = document.createElement('div');
+  bloc.style.cssText = 'margin-bottom:12px;padding:10px;border-radius:10px;background:rgba(255,107,107,.07);border:1px solid rgba(255,107,107,.22);';
+  bloc.innerHTML = '<div style="font-size:9px;font-weight:800;letter-spacing:1px;text-transform:uppercase;color:#ff8a8a;margin-bottom:6px;">'
+    + '\ud83e\ude79 Absences & incertitudes</div>'
+    + '<div style="display:flex;gap:14px;flex-wrap:wrap;">' + colonnes + '</div>'
+    + '<div style="font-size:9px;color:var(--t3);margin-top:6px;">\u26d4 forfait \u00b7 \u2753 incertain \u2014 source ESPN, v\u00e9rifie avant de miser gros.</div>';
+  panel.insertBefore(bloc, panel.firstChild);
+}
+window._g45SgAbsences = _g45SgAbsences;
 
 function _g45SgRefresh() { if (typeof loadTeamSaisons === 'function') loadTeamSaisons(); }
 function _g45SgSaison(y) { _g45SgAn = y; _g45SgRefresh(); }
@@ -36867,4 +36980,174 @@ window.g45TvDiag = g45TvDiag;
 
 /* Decouverte au demarrage, sans bloquer l'affichage. Si le modele en cache a
    ete retire depuis, le prochain appel utilisera le nouveau. */
-setTimeout(function () { if (typeof g45GroqDecouvrir === 'function') g45GroqDecouvrir(); }, 3000);
+setTimeout(function () {
+  if (typeof g45GroqDecouvrir === 'function') g45GroqDecouvrir();
+  if (typeof g45GeminiModeles === 'function') g45GeminiModeles();
+}, 3000);
+
+
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   MARQUEURS NFL & NHL (15/08/2026)
+   ───────────────────────────────────────────────────────────────────────────
+   Meme logique que la vue Buteurs football : probabilite de Poisson a partir du
+   rendement par match, puis COTE MINIMALE au-dessus de laquelle le pari devient
+   theoriquement rentable. C'est cette cote qui interesse Antoine, pas le
+   pourcentage brut — au-dela de 67 %, une cote equitable passe sous son seuil
+   de 1.50 et le pari n'est plus jouable.
+
+   SAISONS : la NFL demarre en septembre, la NHL en octobre. Interroges en aout,
+   les deux championnats renvoient une saison VIDE. On bascule donc sur la
+   derniere saison jouee et on l'affiche en clair — un tableau de zeros sans
+   explication ferait croire a une panne.
+
+   `types/2` = saison reguliere chez ESPN (types/0 = toutes phases, utilise en
+   football). Verifie : en NFL types/0 melange preseason et playoffs, ce qui
+   fausse le rendement par match.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+var G45_MQ = {
+  nfl: {
+    sport: 'football', lg: 'nfl', nom: 'NFL', ico: '\ud83c\udfc8',
+    cat: 'totalTouchdownsLeaders', libelle: 'Touchdowns', marche: 'Marque un TD',
+    debutMois: 8   /* septembre */
+  },
+  nhl: {
+    sport: 'hockey', lg: 'nhl', nom: 'NHL', ico: '\ud83c\udfd2',
+    cat: 'goalsLeaders', libelle: 'Buts', marche: 'Marque un but',
+    cat2: 'pointsLeaders', libelle2: 'Points', marche2: 'Marque ou passe',
+    debutMois: 9   /* octobre */
+  }
+};
+
+/* Saison a interroger : si le championnat n'a pas encore repris, la precedente. */
+function _g45MqSaison(c) {
+  var d = new Date();
+  var y = d.getFullYear();
+  return (d.getMonth() >= c.debutMois) ? y : (y - 1);
+}
+
+async function _g45MqLeaders(c, saison, categorie) {
+  var url = 'https://sports.core.api.espn.com/v2/sports/' + c.sport + '/leagues/' + c.lg
+          + '/seasons/' + saison + '/types/2/leaders';
+  var j = null;
+  try {
+    var r = await fetch(url);
+    if (!r.ok) return [];
+    j = await r.json();
+  } catch (e) { return []; }
+
+  var cat = ((j && j.categories) || []).filter(function (x) { return x.name === categorie; })[0];
+  if (!cat) {
+    /* Le nom de categorie change parfois d'une saison a l'autre : on prend la
+       premiere qui contient le mot-cle plutot que d'echouer. */
+    var mot = categorie.replace('Leaders', '').toLowerCase();
+    cat = ((j && j.categories) || []).filter(function (x) { return String(x.name || '').toLowerCase().indexOf(mot) >= 0; })[0];
+  }
+  return (cat && cat.leaders) ? cat.leaders.slice(0, 15) : [];
+}
+
+/* Le nom du joueur n'est pas dans la reponse : seulement une reference. */
+var _g45MqNoms = {};
+async function _g45MqNom(ref) {
+  var m = String(ref || '').match(/athletes\/(\d+)/);
+  if (!m) return { id: '', nom: '?' };
+  var id = m[1];
+  if (_g45MqNoms[id]) return { id: id, nom: _g45MqNoms[id] };
+  try {
+    var cle = 'g45_mqnom_' + id;
+    var cache = localStorage.getItem(cle);
+    if (cache) { _g45MqNoms[id] = cache; return { id: id, nom: cache }; }
+    var r = await fetch(String(ref).replace(/^http:/, 'https:'));
+    if (r.ok) {
+      var a = await r.json();
+      var n = a.displayName || a.fullName || a.shortName || '';
+      if (n) {
+        _g45MqNoms[id] = n;
+        try { localStorage.setItem(cle, n); } catch (e) {}   /* definitif : un nom ne change pas */
+        return { id: id, nom: n };
+      }
+    }
+  } catch (e) {}
+  return { id: id, nom: '#' + id };
+}
+
+async function g45MarqueursUS(quoi, secondaire) {
+  var c = G45_MQ[quoi];
+  var body = document.getElementById('g45-mq-body');
+  if (!c || !body) return;
+  var saison = _g45MqSaison(c);
+  var categorie = secondaire && c.cat2 ? c.cat2 : c.cat;
+  var libelle = secondaire && c.libelle2 ? c.libelle2 : c.libelle;
+  var marche = secondaire && c.marche2 ? c.marche2 : c.marche;
+
+  body.innerHTML = '<div style="color:var(--t3);font-size:11.5px;padding:12px;">\u23f3 Lecture des classements ' + c.nom + '\u2026</div>';
+  var leaders = await _g45MqLeaders(c, saison, categorie);
+  if (!leaders.length && saison === new Date().getFullYear()) {
+    saison = saison - 1;
+    leaders = await _g45MqLeaders(c, saison, categorie);
+  }
+  if (!leaders.length) {
+    body.innerHTML = '<div style="color:#ffb13d;font-size:11.5px;padding:12px;">Aucun classement disponible pour ' + c.nom + '.</div>';
+    return;
+  }
+
+  var lignes = [];
+  for (var i = 0; i < leaders.length; i++) {
+    var L = leaders[i];
+    var total = parseFloat(L.value) || 0;
+    var who = await _g45MqNom(L.athlete && L.athlete.$ref);
+    /* Nombre de matchs : ESPN le donne rarement ici. On l'approche par la saison
+       complete du championnat — 17 en NFL, 82 en NHL — ce qui SOUS-ESTIME le
+       rendement d'un joueur blesse. Signale sous le tableau. */
+    var matchs = (c.lg === 'nfl') ? 17 : 82;
+    var lam = total / matchs;
+    var p = 1 - Math.exp(-lam);
+    var coteMin = p > 0 ? (1 / p) : 0;
+    lignes.push({ nom: who.nom, total: total, lam: lam, p: p, cote: coteMin });
+  }
+  lignes.sort(function (a, b) { return b.p - a.p; });
+
+  body.innerHTML = '<div style="font-size:10px;color:var(--t3);margin-bottom:8px;">'
+      + c.ico + ' ' + c.nom + ' \u00b7 saison ' + saison + ' \u00b7 march\u00e9 \u00ab ' + marche + ' \u00bb'
+      + (saison < new Date().getFullYear() ? ' <span style="color:#ffb13d;">(saison pass\u00e9e : le championnat n\'a pas repris)</span>' : '')
+      + '</div>'
+    + '<div style="display:flex;font-size:9px;font-weight:800;color:#4f5d88;padding:0 6px 4px;">'
+    + '<div style="flex:1;">JOUEUR</div><div style="width:46px;text-align:right;">' + libelle.toUpperCase() + '</div>'
+    + '<div style="width:52px;text-align:right;">PAR M.</div><div style="width:46px;text-align:right;">PROBA</div>'
+    + '<div style="width:56px;text-align:right;">COTE MIN</div></div>'
+    + lignes.map(function (l) {
+        var coul = l.cote <= 1.5 ? '#6b7a99' : (l.cote <= 2.5 ? '#1ed760' : '#f0b020');
+        return '<div style="display:flex;align-items:center;padding:6px;border-bottom:1px solid rgba(255,255,255,.05);font-size:11.5px;">'
+          + '<div style="flex:1;min-width:0;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">' + l.nom + '</div>'
+          + '<div style="width:46px;text-align:right;color:var(--t3);">' + l.total + '</div>'
+          + '<div style="width:52px;text-align:right;color:var(--t3);">' + l.lam.toFixed(2) + '</div>'
+          + '<div style="width:46px;text-align:right;font-weight:700;">' + Math.round(l.p * 100) + '%</div>'
+          + '<div style="width:56px;text-align:right;font-weight:800;color:' + coul + ';">' + l.cote.toFixed(2) + '</div></div>';
+      }).join('')
+    + '<div style="font-size:9px;color:var(--t3);margin-top:8px;line-height:1.6;">'
+    + 'La <b>cote minimale</b> est celle au-dessus de laquelle le pari devient rentable \u00e0 long terme (1 \u00f7 probabilit\u00e9). '
+    + 'Elle n\'est pas d\u00e9vigorisée : la marge du bookmaker s\'y ajoute.<br>'
+    + 'Le rendement par match suppose une saison compl\u00e8te (' + ((c.lg === 'nfl') ? 17 : 82) + ' matchs) : '
+    + 'un joueur bless\u00e9 une partie de la saison est donc <b>sous-estim\u00e9</b>.</div>';
+}
+window.g45MarqueursUS = g45MarqueursUS;
+
+function g45MarqueursUI() {
+  var el = document.getElementById('t-tend') || document.getElementById('t-compet');
+  if (!el || document.getElementById('g45-mq-bloc')) return;
+  var d = document.createElement('div');
+  d.id = 'g45-mq-bloc';
+  d.innerHTML = '<div class="sec">\ud83c\udfc8 Marqueurs NFL & NHL</div>'
+    + '<div class="fc"><div style="display:flex;gap:5px;flex-wrap:wrap;margin-bottom:10px;">'
+    + '<button onclick="g45MarqueursUS(\'nfl\')" style="flex:1;min-width:90px;padding:9px;border-radius:9px;border:1px solid rgba(255,255,255,.10);background:rgba(255,255,255,.04);color:var(--t1);font-size:11px;font-weight:700;cursor:pointer;">\ud83c\udfc8 NFL \u00b7 TD</button>'
+    + '<button onclick="g45MarqueursUS(\'nhl\')" style="flex:1;min-width:90px;padding:9px;border-radius:9px;border:1px solid rgba(255,255,255,.10);background:rgba(255,255,255,.04);color:var(--t1);font-size:11px;font-weight:700;cursor:pointer;">\ud83c\udfd2 NHL \u00b7 buts</button>'
+    + '<button onclick="g45MarqueursUS(\'nhl\',1)" style="flex:1;min-width:90px;padding:9px;border-radius:9px;border:1px solid rgba(255,255,255,.10);background:rgba(255,255,255,.04);color:var(--t1);font-size:11px;font-weight:700;cursor:pointer;">\ud83c\udfd2 NHL \u00b7 points</button>'
+    + '</div><div id="g45-mq-body" style="font-size:11.5px;color:var(--t3);">Choisis un march\u00e9.</div></div>';
+  el.appendChild(d);
+}
+window.g45MarqueursUI = g45MarqueursUI;
+
+document.addEventListener('click', function () {
+  setTimeout(function () { if (_g45Visible('t-tend')) g45MarqueursUI(); }, 200);
+});
