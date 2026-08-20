@@ -20755,14 +20755,58 @@ function _renderEspnMatchPitch(s, col, nameFn){
         if(c==='D'||pos.indexOf('B')>=0) return 'D';
         return 'M';
       }
+      /* ═══ PROFONDEUR RÉELLE, PAS `formationPlace` ═══ (20/08)
+         PIEGE VERIFIE sur Atletico-Malaga : `formationPlace` n'est PAS un rang
+         defense -> attaque, c'est la numerotation positionnelle classique
+         (1 gardien, 2 lateral droit, 3 lateral gauche, 4 milieu, 5 et 6 axiaux,
+         7 ailier droit, 8 milieu, 9 attaquant, 10 milieu, 11 ailier gauche).
+         Trier dessus intercalait le milieu defensif (Koke, place 4) au milieu
+         des defenseurs et reléguait l'attaquant (Lookman, place 9) derriere.
+         Le CODE DE POSTE d'ESPN, lui, est explicite : CD-L, DM, CM-R, LM, F.
+         On s'en sert pour la profondeur, et du suffixe -L/-R pour le cote. */
       function fp(p){ var v=parseInt(p.formationPlace,10); return isNaN(v)?9999:v; }
+      function profondeur(p){
+        var pos=((p.position&&(p.position.abbreviation||p.position.name))||'').toUpperCase();
+        if(pos.charAt(0)==='G') return 0;
+        /* ORDRE CRITIQUE : `DM` doit etre teste AVANT les defenseurs, sinon le
+           « D » isole de la liste l'attrape et le milieu defensif retombe en
+           defense — le bug meme qu'on corrige. */
+        if(/^DM/.test(pos)) return 2;
+        /* PISTONS a 1,5 : entre les axiaux et le milieu defensif. En 4-4-2 ils
+           completent la defense, en 3-5-2 ils debordent naturellement dans la
+           ligne de 5 — ce qui est leur vraie place. Les classer comme de simples
+           defenseurs donnait une defense a cinq dans un 3-5-2. */
+        if(/^(LWB|RWB)/.test(pos)) return 1.5;
+        if(/^(LB|RB|CD|CB)/.test(pos) || /^D(?!M)/.test(pos)) return 1;
+        if(/^(CM|LM|RM|M)/.test(pos)) return 3;
+        if(/^AM/.test(pos)) return 3.5;
+        if(/^(F|CF|ST|LW|RW|W)/.test(pos)) return 4;
+        return 3;                      /* inconnu : milieu par defaut */
+      }
+      /* Cote sur le terrain : -1 tout a gauche, +1 tout a droite. */
+      function lateral(p){
+        var pos=((p.position&&(p.position.abbreviation||p.position.name))||'').toUpperCase();
+        if(/^(LB|LWB|LM|LW)/.test(pos)) return -2;
+        if(/^(RB|RWB|RM|RW)/.test(pos)) return 2;
+        if(/-L$/.test(pos)) return -1;
+        if(/-R$/.test(pos)) return 1;
+        return 0;
+      }
       // Gardien : formationPlace 1 en priorité, sinon poste G, sinon le 1er
       var gk=null, outfield=[];
       starters.forEach(function(p){ if(gk===null && fp(p)===1) gk=p; else outfield.push(p); });
       if(gk===null){ outfield=[]; starters.forEach(function(p){ if(gk===null && posCat(p)==='G') gk=p; else outfield.push(p); }); }
       if(gk===null){ gk=starters[0]; outfield=starters.slice(1); }
       // Joueurs de champ triés défense → attaque (formationPlace si dispo, sinon ordre d'effectif)
-      outfield.sort(function(a,b){ var d=fp(a)-fp(b); return d!==0?d:a.__o-b.__o; });
+      /* Profondeur d'abord, puis cote gauche -> droite a l'interieur d'une ligne.
+         `formationPlace` ne sert plus que de departage ultime. */
+      /* PROFONDEUR seulement ici : le tri lateral se fait ENSUITE, ligne par
+         ligne. Melanger les deux plaçait le meneur (AM, profondeur 3,5) apres
+         l'ailier droit dans un 4-2-3-1, alors qu'il joue au centre. */
+      outfield.sort(function(a,b){
+        var d=profondeur(a)-profondeur(b); if(d!==0) return d;
+        var f=fp(a)-fp(b); return f!==0?f:a.__o-b.__o;
+      });
       // Découpe selon la formation réelle (ex. 4-2-3-1 → lignes de 4,2,3,1) si le compte tombe juste
       var parts=(r&&r.formation)?String(r.formation).split('-').map(function(x){return parseInt(x,10);}).filter(function(x){return x>0;}):[];
       var sumParts=parts.reduce(function(a,b){return a+b;},0);
@@ -20777,6 +20821,16 @@ function _renderEspnMatchPitch(s, col, nameFn){
         if(mf.length) lines.push(mf);
         if(fw.length) lines.push(fw);
       }
+      /* TRI LATERAL, ligne par ligne : gauche -> droite. Fait ICI, une fois les
+         lignes constituees, pour que le meneur central reste au centre et que
+         les pistons se placent aux extremites de la ligne ou ils ont atterri. */
+      lines.forEach(function(l, i){
+        if(i===0) return;                       /* le gardien reste seul */
+        l.sort(function(a,b){
+          var d=lateral(a)-lateral(b); if(d!==0) return d;
+          return fp(a)-fp(b);
+        });
+      });
       return lines.filter(function(l){return l.length;});
     }
     var evMap={};
