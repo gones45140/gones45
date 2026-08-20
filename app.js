@@ -37535,19 +37535,31 @@ function _g45CageHTML(tirs, idDom, nomDom, nomExt) {
   });
   if (!cadres.length) return '';
 
-  var maxY = Math.max.apply(null, cadres.map(function (t) { return Math.abs(t.gy); }));
-  var maxZ = Math.max.apply(null, cadres.map(function (t) { return Math.abs(t.gz); }));
-  var pct = (maxY > 8 || maxZ > 8);                 /* echelle 0-100 ou metres */
+  /* ═══ ÉCHELLE DÉDUITE DES DONNÉES, PAS SUPPOSÉE (20/08) ═══
+     Ma premiere version tassait tous les tirs en bas au centre. En comparant
+     `goalPositionY/Z` aux zones que ESPN annonce lui-meme (`targetZone`), la
+     regle apparait :
+       gy = pourcentage de la LARGEUR DU TERRAIN, comme `fieldPositionY`. Le but
+            occupe 7,32 m sur 68, soit 10,76 % : de 44,62 a 55,38 autour de
+            l'axe. Les valeurs observees tenaient TOUTES dans cet intervalle
+            (49 a 54,5), alors que je les divisais par 100 — d'ou l'amas au
+            centre du but.
+       gz = hauteur, barre transversale vers 40 et non 100.
+       gy CROISSANT = cote GAUCHE (vocabulaire d'ESPN).
+     Verifie sur les 7 tirs cadres d'Atletico-Malaga : 7 zones sur 7 reproduites
+     a l'identique. */
+  var GY0 = 44.62, GYW = 10.76, GZH = 40;
 
   var W = 560, H = 190, m = 26;
   var GW = W - 2 * m, GH = H - m - 14;
   var px = function (t) {
-    var f = pct ? (t.gy / 100) : ((t.gy + 3.66) / 7.32);   /* metres : 0 = centre */
-    return m + Math.max(0, Math.min(1, f)) * GW;
+    var f = (t.gy - GY0) / GYW;
+    f = 1 - Math.max(0, Math.min(1, f));            /* gy eleve = gauche */
+    return m + f * GW;
   };
   var py = function (t) {
-    var f = pct ? (t.gz / 100) : (t.gz / 2.44);
-    return (H - 14) - Math.max(0, Math.min(1, f)) * GH;     /* 0 = au sol */
+    var f = Math.max(0, Math.min(1, t.gz / GZH));
+    return (H - 14) - f * GH;                        /* 0 = au sol */
   };
 
   var pts = cadres.map(function (t) {
@@ -37555,7 +37567,9 @@ function _g45CageHTML(tirs, idDom, nomDom, nomExt) {
     var coul = dom ? '#4d84ff' : '#f0b020';
     var r = t.but ? 8 : 6;
     var titre = (t.qui || '?') + ' \u00b7 ' + t.min + ' \u00b7 ' + (t.but ? 'BUT' : t.type)
-              + ' \u00b7 xG ' + t.xg.toFixed(2) + (t.zone ? (' \u00b7 ' + t.zone) : '');
+              + ' \u00b7 xG ' + t.xg.toFixed(2)
+              + (t.xgot != null ? (' \u00b7 xGOT ' + t.xgot.toFixed(2)) : '')
+              + (t.zone ? (' \u00b7 ' + ((t.zone && t.zone.text) || t.zone)) : '');
     return '<circle cx="' + px(t).toFixed(1) + '" cy="' + py(t).toFixed(1) + '" r="' + r + '" '
       + 'fill="' + (t.but ? coul : 'none') + '" fill-opacity="' + (t.but ? '1' : '0') + '" '
       + 'stroke="' + coul + '" stroke-width="2"><title>' + titre + '</title></circle>';
@@ -37570,8 +37584,8 @@ function _g45CageHTML(tirs, idDom, nomDom, nomExt) {
     + '<line x1="' + (m + 2 * GW / 3) + '" y1="' + (H - 14 - GH) + '" x2="' + (m + 2 * GW / 3) + '" y2="' + (H - 14) + '" stroke="rgba(255,255,255,.10)" stroke-width="1"/>'
     + '<line x1="' + m + '" y1="' + (H - 14 - GH / 2) + '" x2="' + (m + GW) + '" y2="' + (H - 14 - GH / 2) + '" stroke="rgba(255,255,255,.10)" stroke-width="1"/>'
     + pts + '</svg>'
-    + '<div style="font-size:9px;color:var(--t3);margin-top:4px;">Vue depuis le tireur \u00b7 point plein = but'
-    + (pct ? '' : ' \u00b7 \u00e9chelle en m\u00e8tres') + '</div></div>';
+    + '<div style="font-size:9px;color:var(--t3);margin-top:4px;">Vue depuis le tireur \u00b7 point plein = but '
+    + '\u00b7 survole pour la zone annonc\u00e9e par ESPN et le xGOT</div></div>';
 }
 window._g45CageHTML = _g45CageHTML;
 
