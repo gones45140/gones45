@@ -715,6 +715,18 @@ function renderApiSportsStats(zone, data) {
       html += '<div style="font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#4f5d88;margin-bottom:8px;">📊 Stats du match</div>';
       html += '<div style="display:flex;flex-direction:column;gap:4px;margin-bottom:10px;">';
 
+      /* Couleurs officielles des deux equipes, memes que partout ailleurs.
+         Les competitors du header portent `team.color` ; repli sur l'ancien
+         couple si l'endpoint ne les fournit pas. */
+      var _cStat = ['#4d84ff', '#a78bfa'];
+      try {
+        if (typeof g45CoulPaire === 'function') {
+          var _cs = (data && data.header && data.header.competitions && data.header.competitions[0] && data.header.competitions[0].competitors) || [];
+          var _hs = _cs.filter(function (x) { return x.homeAway === 'home'; })[0] || _cs[0];
+          var _as = _cs.filter(function (x) { return x.homeAway === 'away'; })[0] || _cs[1];
+          if (_hs && _as) _cStat = g45CoulPaire(_hs, _as);
+        }
+      } catch (e) {}
       var SHOW_STATS = ['Ball Possession','Expected Goals','Total Shots','Shots on Goal','Corner Kicks','Fouls','Yellow Cards'];
       SHOW_STATS.forEach(function(sn){
         var hs = (homeSt.statistics||[]).find(function(x){return x.type===sn;});
@@ -733,8 +745,12 @@ function renderApiSportsStats(zone, data) {
         html += '<div style="flex:1;">';
         html += '<div style="font-size:8px;color:var(--t3);text-align:center;margin-bottom:2px;">'+label+'</div>';
         html += '<div style="height:6px;background:rgba(255,255,255,.06);border-radius:3px;overflow:hidden;display:flex;">';
-        html += '<div style="width:'+hPct+'%;background:#4d84ff;border-radius:3px 0 0 3px;"></div>';
-        html += '<div style="width:'+(100-hPct)+'%;background:#a78bfa;border-radius:0 3px 3px 0;"></div>';
+        /* COULEURS DES CLUBS (20/08) : ces barres etaient restees en bleu/violet
+           fixes alors que les compositions et la carte des tirs utilisent deja
+           la couleur officielle. Une equipe changeait donc de couleur d'un bloc
+           a l'autre dans le meme ecran. */
+        html += '<div style="width:'+hPct+'%;background:'+_cStat[0]+';border-radius:3px 0 0 3px;"></div>';
+        html += '<div style="width:'+(100-hPct)+'%;background:'+_cStat[1]+';border-radius:0 3px 3px 0;"></div>';
         html += '</div></div>';
         html += '<div style="font-size:10px;font-weight:700;color:var(--t1);width:30px;text-align:center;">'+av+'</div>';
         html += '</tr>';
@@ -7265,8 +7281,12 @@ function renderApiSportsStats(zone, data) {
         html += '<div style="flex:1;">';
         html += '<div style="font-size:8px;color:var(--t3);text-align:center;margin-bottom:2px;">'+label+'</div>';
         html += '<div style="height:6px;background:rgba(255,255,255,.06);border-radius:3px;overflow:hidden;display:flex;">';
-        html += '<div style="width:'+hPct+'%;background:#4d84ff;border-radius:3px 0 0 3px;"></div>';
-        html += '<div style="width:'+(100-hPct)+'%;background:#a78bfa;border-radius:0 3px 3px 0;"></div>';
+        /* COULEURS DES CLUBS (20/08) : ces barres etaient restees en bleu/violet
+           fixes alors que les compositions et la carte des tirs utilisent deja
+           la couleur officielle. Une equipe changeait donc de couleur d'un bloc
+           a l'autre dans le meme ecran. */
+        html += '<div style="width:'+hPct+'%;background:'+_cStat[0]+';border-radius:3px 0 0 3px;"></div>';
+        html += '<div style="width:'+(100-hPct)+'%;background:'+_cStat[1]+';border-radius:0 3px 3px 0;"></div>';
         html += '</div></div>';
         html += '<div style="font-size:10px;font-weight:700;color:var(--t1);width:30px;text-align:center;">'+av+'</div>';
         html += '</tr>';
