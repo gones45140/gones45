@@ -19114,7 +19114,11 @@ function _buildScorerBarHtml(teamId, s, nom, finCount, scIdx){
   if(!has){
     var _lbl = scIdx ? ('↻ Réessayer l\'analyse ('+analyzed+'/'+tot+')') : ('⚽ Analyser buteurs / passeurs ('+finCount+' matchs)');
     h += '<button id="scbtn-'+s+'" onclick="buildScorerIndexUI(\''+teamId+'\',\''+s+'\',\''+_scEscJs(nom)+'\')" style="padding:6px 12px;border-radius:10px;border:1px solid rgba(30,215,96,.4);background:rgba(30,215,96,.1);color:#1ed760;font-size:11px;font-weight:700;cursor:pointer;">'+_lbl+'</button>';
+    h += '<button onclick="g45XgSaison((_saisonsCache[\''+teamId+'\']||{})[\''+s+'\'],\''+teamId+'\',\''+_scEscJs(nom)+'\',\'g45-xg-'+s+'\')" '
+      + 'style="padding:6px 10px;border-radius:8px;border:1px solid rgba(34,211,238,.35);background:rgba(34,211,238,.10);color:#22d3ee;font-size:11px;font-weight:800;cursor:pointer;">'
+      + '\ud83d\udcca xG de la saison</button>';
     h += '<span style="font-size:9px;color:var(--t3);">1 seule fois · mis en cache</span>';
+    h += '<div id="g45-xg-'+s+'" style="width:100%;margin-top:8px;"></div>';
     h += '</div>'; return h;
   }
   var players = Object.keys(scIdx.players);
@@ -37527,3 +37531,119 @@ function _g45CageHTML(tirs, idDom, nomDom, nomExt) {
     + (pct ? '' : ' \u00b7 \u00e9chelle en m\u00e8tres') + '</div></div>';
 }
 window._g45CageHTML = _g45CageHTML;
+
+
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   xG DE LA SAISON — pour, contre, et ECART avec les buts reels (20/08/2026)
+   ───────────────────────────────────────────────────────────────────────────
+   Rendu possible par la decouverte du champ `expectedGoals` dans les actions
+   ESPN. C'est l'information que la memoire notait comme « hors de portee
+   gratuitement » depuis juillet : la conclusion etait juste pour les sources
+   connues, fausse pour celle-ci.
+
+   POURQUOI C'EST LA STATISTIQUE LA PLUS UTILE POUR PARIER : une equipe qui
+   marque 2,1 buts pour 1,4 xG emprunte a son avenir et regressera ; le marche,
+   lui, suit les resultats et met du temps a corriger. L'ecart se lit ici.
+
+   COUT : le xG est par MATCH, jamais par saison. Il faut donc lire les actions
+   de chaque rencontre — 1 a 4 requetes ESPN, gratuites. Une saison complete
+   coute ~100 requetes, UNE SEULE FOIS : le cache par match est definitif
+   (`g45_tirs_*`), un match termine ne changeant plus.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+async function g45XgSaison(matches, teamId, nom, boiteId, lgDef) {
+  var box = document.getElementById(boiteId);
+  if (!box) return;
+
+  var joues = (matches || []).filter(function (m) {
+    return m && m.espnId && (m.status === 'FINISHED' || m.score && m.score.fullTime && m.score.fullTime.home != null);
+  });
+  if (!joues.length) { box.innerHTML = '<div style="color:var(--t3);font-size:11px;">Aucun match jou\u00e9 exploitable.</div>'; return; }
+
+  var dejaEnCache = joues.filter(function (m) {
+    try { return !!localStorage.getItem('g45_tirs_' + ((m.competition && m.competition.code) || lgDef || 'esp.1') + '_' + m.espnId); }
+    catch (e) { return false; }
+  }).length;
+  var aLire = joues.length - dejaEnCache;
+
+  if (aLire > 0 && !confirm('Calculer les xG de la saison\n\n'
+      + joues.length + ' matchs jou\u00e9s\n'
+      + dejaEnCache + ' d\u00e9j\u00e0 en cache\n'
+      + aLire + ' \u00e0 lire (' + aLire + ' \u00e0 ' + (aLire * 3) + ' requ\u00eates ESPN, gratuites)\n\n'
+      + 'Dur\u00e9e : environ ' + Math.max(1, Math.round(aLire * 1.2 / 60)) + ' min. Lancer ?')) return;
+
+  var pour = 0, contre = 0, butsP = 0, butsC = 0, lus = 0, sansXg = 0;
+  var parMatch = [];
+
+  for (var i = 0; i < joues.length; i++) {
+    var m = joues[i];
+    var lg = (m.competition && m.competition.code) || lgDef || 'esp.1';
+    box.innerHTML = '<div style="color:var(--t3);font-size:11px;">\u23f3 ' + (i + 1) + '/' + joues.length
+      + ' \u00b7 ' + (m.homeTeam && m.homeTeam.name || '') + '</div>';
+
+    var tirs = null;
+    try { tirs = await g45TirsMatch(lg, m.espnId, true); } catch (e) {}
+    if (!tirs || !tirs.length) { sansXg++; continue; }
+
+    var estNous = function (t) { return String(t.equipe) === String(teamId); };
+    var xp = 0, xc = 0, vrai = false;
+    tirs.forEach(function (t) {
+      if (t.xgSrc === 'espn') vrai = true;
+      if (estNous(t)) xp += t.xg; else xc += t.xg;
+    });
+    /* Un match dont AUCUN tir n'a de xG ESPN fausserait la comparaison avec les
+       buts reels : on le compte a part plutot que de melanger les sources. */
+    if (!vrai) { sansXg++; continue; }
+
+    var bH = (m.score && m.score.fullTime && m.score.fullTime.home) || 0;
+    var bA = (m.score && m.score.fullTime && m.score.fullTime.away) || 0;
+    var nousDom = (m.homeTeam && String(m.homeTeam.id) === String(teamId));
+    pour += xp; contre += xc;
+    butsP += nousDom ? bH : bA;
+    butsC += nousDom ? bA : bH;
+    lus++;
+    parMatch.push({ adv: nousDom ? (m.awayTeam && m.awayTeam.name) : (m.homeTeam && m.homeTeam.name),
+                    date: m.utcDate || m.date, xp: xp, xc: xc,
+                    bp: nousDom ? bH : bA, bc: nousDom ? bA : bH });
+  }
+
+  if (!lus) {
+    box.innerHTML = '<div style="color:#ffb13d;font-size:11px;">ESPN ne fournit pas de xG sur cette comp\u00e9tition '
+      + '(' + sansXg + ' matchs sans donn\u00e9e).</div>';
+    return;
+  }
+
+  var ecartP = butsP - pour, ecartC = butsC - contre;
+  var pastille = function (lib, val, sous, coul) {
+    return '<div style="flex:1;min-width:110px;padding:9px;border-radius:9px;background:rgba(255,255,255,.04);text-align:center;">'
+      + '<div style="font-size:9px;color:var(--t3);">' + lib + '</div>'
+      + '<div style="font-size:19px;font-weight:900;color:' + coul + ';">' + val + '</div>'
+      + '<div style="font-size:9px;color:var(--t3);">' + sous + '</div></div>';
+  };
+  var fleche = function (e) {
+    if (e > 1.5) return '<span style="color:#ff8a8a;">sur-performe de ' + e.toFixed(1) + ' buts</span>';
+    if (e < -1.5) return '<span style="color:#4ade80;">sous-performe de ' + Math.abs(e).toFixed(1) + ' buts</span>';
+    return '<span style="color:var(--t3);">conforme \u00e0 ses occasions</span>';
+  };
+
+  box.innerHTML =
+      '<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px;">'
+    + pastille('xG POUR', pour.toFixed(1), (pour / lus).toFixed(2) + ' / match', '#1ed760')
+    + pastille('BUTS MARQU\u00c9S', butsP, (butsP / lus).toFixed(2) + ' / match', '#e6ecf5')
+    + pastille('xG CONTRE', contre.toFixed(1), (contre / lus).toFixed(2) + ' / match', '#ff8a8a')
+    + pastille('BUTS ENCAISS\u00c9S', butsC, (butsC / lus).toFixed(2) + ' / match', '#e6ecf5')
+    + '</div>'
+    + '<div style="font-size:11px;line-height:1.8;padding:8px;border-radius:8px;background:rgba(255,255,255,.03);">'
+    + '<b>Attaque</b> : ' + fleche(ecartP) + '<br>'
+    + '<b>D\u00e9fense</b> : ' + (ecartC > 1.5
+        ? '<span style="color:#ff8a8a;">encaisse ' + ecartC.toFixed(1) + ' buts de plus que les occasions conc\u00e9d\u00e9es</span>'
+        : (ecartC < -1.5
+          ? '<span style="color:#4ade80;">encaisse ' + Math.abs(ecartC).toFixed(1) + ' buts de moins</span>'
+          : '<span style="color:var(--t3);">conforme</span>')) + '</div>'
+    + '<div style="font-size:9px;color:var(--t3);margin-top:6px;line-height:1.6;">'
+    + lus + ' match(s) avec xG ESPN' + (sansXg ? (' \u00b7 ' + sansXg + ' sans donn\u00e9e, exclus du calcul') : '') + '.<br>'
+    + 'Une <b>sur-performance</b> durable finit presque toujours par se corriger : c\'est l\u00e0 que le march\u00e9 '
+    + 'retarde le plus, puisqu\'il suit les r\u00e9sultats.</div>';
+}
+window.g45XgSaison = g45XgSaison;
