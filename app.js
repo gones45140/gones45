@@ -21428,6 +21428,16 @@ async function _renderSaisonDetail(el, eventId, league){
     var r=await fetch('https://site.api.espn.com/apis/site/v2/sports/soccer/'+(league||'eng.1')+'/summary?event='+eventId+'&lang=fr&region=fr');
     var data=await r.json();
     el._data=data;   // pour le sélecteur de marché (re-rendu sans re-fetch)
+    /* CARTE DES TIRS (20/08) : elle n'existait que dans le detail GENERIQUE,
+       celui des sports US. Le football a son propre rendu — celui-ci — donc la
+       carte n'apparaissait jamais par l'interface, seulement en console.
+       Insertion differee : on laisse ce rendu poser son HTML, puis on ajoute la
+       carte en tete. */
+    try {
+      setTimeout(function () {
+        if (typeof _g45SgCarteTirs === 'function') _g45SgCarteTirs(el, league || 'eng.1', eventId, data);
+      }, 60);
+    } catch (e) {}
     var comp=(data.header&&data.header.competitions&&data.header.competitions[0])||{};
     var cps=comp.competitors||[];
     var home=cps.filter(function(c){return c.homeAway==='home';})[0]||cps[0]||{};
@@ -34140,6 +34150,27 @@ function _g45CompoIndice(nom) {
   return null;
 }
 
+/* Reconnaissance FOOTBALL stricte, independante du drapeau `avecFoot`.
+   Necessaire parce qu'un club de MLS porte presque toujours le nom d'une ville
+   deja prise par une franchise US : sans ce test prealable, « Nashville SC »
+   part chez les Predators (NHL) et « Inter Miami CF » repond en NBA, MLB et NFL
+   a la fois — d'ou le message « nom trop generique ».
+   Strict uniquement : on ne devine pas, on reconnait. */
+var _G45_FOOT_STRICT = ['usa.1','mex.1','bra.1','arg.1','esp.1','eng.1','ita.1','ger.1','fra.1',
+                        'por.1','ned.1','bel.1','tur.1','sco.1'];
+async function _g45FootStrict(nom) {
+  for (var i = 0; i < _G45_FOOT_STRICT.length; i++) {
+    try {
+      var eq = await _g45CompoEq('soccer', _G45_FOOT_STRICT[i]);
+      if (!eq.length) continue;
+      var ref = _g45CompoMatch(nom, eq, true);
+      if (ref) return { sp: 'soccer', lg: _G45_FOOT_STRICT[i], ref: ref, via: 'foot-strict' };
+    } catch (e) {}
+  }
+  return null;
+}
+window._g45FootStrict = _g45FootStrict;
+
 async function _g45CompoCtx(nom, avecFoot) {
   /* 1. Entree perso, posee au clic depuis Competitions : la plus fiable. */
   var perso = null;
@@ -34167,8 +34198,16 @@ async function _g45CompoCtx(nom, avecFoot) {
        On rejoue donc le rapprochement du module, qui NORMALISE (accents,
        ponctuation) et exige un vainqueur unique, sur les grands championnats.
        Les classements sont deja en cache 6 h. */
+    /* MLS, Bresil, Argentine et Mexique AJOUTES le 20/08 : la liste s'arretait a
+       l'Europe, donc « Inter Miami CF » et « Nashville SC » n'etaient jamais
+       reconnus comme footballeurs. Le balayage des sports americains les
+       recuperait ensuite — Nashville partait chez les Predators (NHL), et Miami
+       repondait a la fois en NBA, MLB et NFL, d'ou le message « nom trop
+       generique ». Un club de MLS porte presque toujours un nom de ville deja
+       pris par une franchise US : il DOIT etre teste avant elles. */
     var LIGUES_FOOT = ['esp.1','eng.1','ita.1','ger.1','fra.1','por.1','ned.1','bel.1',
-                       'tur.1','sco.1','fra.2','eng.2','esp.2','ita.2','ger.2'];
+                       'tur.1','sco.1','fra.2','eng.2','esp.2','ita.2','ger.2',
+                       'usa.1','mex.1','bra.1','arg.1'];
     for (var f = 0; f < LIGUES_FOOT.length; f++) {
       var eqF = await _g45CompoEq('soccer', LIGUES_FOOT[f]);
       if (!eqF.length) continue;
@@ -34237,6 +34276,11 @@ async function _g45CompoCtx(nom, avecFoot) {
       var r2 = _g45CompoMatch(nom, tables[m].eq, false);
       if (r2) touches.push({ sp: tables[m].sp, lg: tables[m].lg, ref: r2 });
     }
+    /* AVANT de retenir un rapprochement tolerant hors football — ou de declarer
+       le nom ambigu — on verifie s'il correspond STRICTEMENT a un club de
+       football. Un nom exact vaut toujours mieux qu'un nom de ville approche. */
+    var fs = await _g45FootStrict(nom);
+    if (fs) return fs;
     if (touches.length === 1) return { sp: touches[0].sp, lg: touches[0].lg, ref: touches[0].ref, via: 'scan-large' };
     if (touches.length > 1) return { sp: '', lg: '', ref: '', via: 'ambigu', pistes: touches };
   }
