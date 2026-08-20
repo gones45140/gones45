@@ -29702,7 +29702,7 @@ var _G45_CACHE_PREFIXES=['g45rcP_','g45rcD_','g45rcY_','g45rc_','g45dcm_','g45dc
      explosait et des ecritures LEGITIMES echouaient en silence (le filtre par
      competition, qui restait bloque sur « Toutes »). Les cartes de tirs sont
      les plus lourdes : plusieurs Ko par match, gardees indefiniment. */
-  'g45_tirs_','g45_fanart_','g45_img_perso_','g45_tv_prog','g45_mqnom_',
+  'g45_tirs2_','g45_fanart_','g45_img_perso_','g45_tv_prog','g45_mqnom_',
   'g45nrlcal2_','g45_fx_faits','g45_veille_','g45_compet_logos','g45_groq_modele','g45_gemini_modeles',
   /* MESURE DU 20/08 sur le stockage reel d'Antoine (5,1 Mo, sature) :
        fpl_bootstrap_cache ... 1951 Ko  <- a lui seul 38 % du total
@@ -33958,16 +33958,44 @@ async function _g45SgCarteTirs(panel, lg, eid, sum) {
   var nm = function (c) { return (c.team && (c.team.shortDisplayName || c.team.displayName)) || '?'; };
 
   var st = (comp.status && comp.status.type) || {};
-  var tirs = await g45TirsMatch(lg, eid, st.completed === true);
-  if (!tirs || !tirs.length) return;
 
-  var html = g45CarteTirsHTML(tirs, idDom, nm(dom), nm(ext));
-  if (!html) return;
+  /* BOUTON plutot qu'affichage systematique : la carte demande 1 a 4 requetes
+     par match, inutiles tant qu'on ne la regarde pas. Meme presentation que les
+     autres actions du panneau. */
+  var uid = 'g45-tirs-' + eid;
+  if (document.getElementById(uid)) return;
   var bloc = document.createElement('div');
-  bloc.innerHTML = html;
-  panel.insertBefore(bloc.firstChild, panel.firstChild);
+  bloc.id = uid;
+  bloc.innerHTML = '<button onclick="_g45SgOuvrirTirs(this,\'' + lg + '\',\'' + eid + '\',\'' + idDom + '\',\''
+    + String(nm(dom)).replace(/'/g, '') + '\',\'' + String(nm(ext)).replace(/'/g, '') + '\',' + (st.completed === true) + ')" '
+    + 'style="width:100%;margin-bottom:10px;padding:11px;border-radius:10px;border:1px solid rgba(255,107,107,.35);'
+    + 'background:rgba(255,107,107,.08);color:#ff8a8a;font-size:13px;font-weight:800;cursor:pointer;">'
+    + '\ud83c\udfaf Carte des tirs & xG</button><div class="g45-tirs-zone"></div>';
+  panel.insertBefore(bloc, panel.firstChild);
 }
 window._g45SgCarteTirs = _g45SgCarteTirs;
+
+/* Chargement a la demande, avec repli parlant plutot qu'un bouton mort. */
+async function _g45SgOuvrirTirs(btn, lg, eid, idDom, nomDom, nomExt, termine) {
+  var zone = btn.parentNode.querySelector('.g45-tirs-zone');
+  if (!zone) return;
+  if (zone.innerHTML) {                       /* deja ouverte : on replie */
+    zone.innerHTML = '';
+    btn.textContent = '\ud83c\udfaf Carte des tirs & xG';
+    return;
+  }
+  btn.textContent = '\u23f3 Lecture des actions\u2026';
+  var tirs = null;
+  try { tirs = await g45TirsMatch(lg, eid, termine === true || termine === 'true'); } catch (e) {}
+  btn.textContent = '\ud83c\udfaf Carte des tirs & xG';
+  if (!tirs || !tirs.length) {
+    zone.innerHTML = '<div style="font-size:11px;color:#ffb13d;padding:8px;">ESPN ne publie pas le d\u00e9tail des actions '
+      + 'pour ce match \u2014 pas de carte possible.</div>';
+    return;
+  }
+  zone.innerHTML = g45CarteTirsHTML(tirs, idDom, nomDom, nomExt);
+}
+window._g45SgOuvrirTirs = _g45SgOuvrirTirs;
 
 function _g45SgRefresh() { if (typeof loadTeamSaisons === 'function') loadTeamSaisons(); }
 function _g45SgSaison(y) { _g45SgAn = y; _g45SgRefresh(); }
@@ -37324,7 +37352,11 @@ window.g45XgTir = g45XgTir;
    pagination, les tirs de la fin de match manquaient. Cache DEFINITIF, un match
    termine ne changeant plus. */
 async function g45TirsMatch(lg, eid, termine) {
-  var cle = 'g45_tirs_' + lg + '_' + eid;
+  /* VERSION 2 dans la cle : les entrees enregistrees avant la decouverte du xG
+     ESPN et des positions de cage n'ont pas ces champs. Les relire donnerait un
+     xG maison et une cage vide, sans le moindre signe d'anomalie. Changer la
+     cle est plus sur que de tenter une migration. */
+  var cle = 'g45_tirs2_' + lg + '_' + eid;
   try {
     var c = JSON.parse(localStorage.getItem(cle) || 'null');
     if (c && (termine || (Date.now() - c.t) < 120000)) return c.l;
@@ -37562,7 +37594,7 @@ async function g45XgSaison(matches, teamId, nom, boiteId, lgDef) {
   if (!joues.length) { box.innerHTML = '<div style="color:var(--t3);font-size:11px;">Aucun match jou\u00e9 exploitable.</div>'; return; }
 
   var dejaEnCache = joues.filter(function (m) {
-    try { return !!localStorage.getItem('g45_tirs_' + ((m.competition && m.competition.code) || lgDef || 'esp.1') + '_' + m.espnId); }
+    try { return !!localStorage.getItem('g45_tirs2_' + ((m.competition && m.competition.code) || lgDef || 'esp.1') + '_' + m.espnId); }
     catch (e) { return false; }
   }).length;
   var aLire = joues.length - dejaEnCache;
