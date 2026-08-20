@@ -20885,7 +20885,13 @@ function _renderEspnMatchPitch(s, col, nameFn){
         var maxW = n>=6?34:(n===5?40:48);  // noms plus courts quand la ligne est chargée
         var cw = maxW+6;
         line.forEach(function(p,i){
-          var x=(i+1)/(n+1)*100;
+          /* SENS DE JEU (corrige le 20/08) : l'equipe du HAUT attaque vers le
+             bas, donc SON cote droit est a GAUCHE de l'ecran. Sans cette
+             inversion, son lateral droit apparaissait a droite — soit du point
+             de vue de l'adversaire. Les lignes sont deja triees gauche->droite
+             dans le repere du terrain ; il suffit de les lire a l'envers. */
+          var rang = fromTop ? (n-1-i) : i;
+          var x=(rang+1)/(n+1)*100;
           html+='<div style="position:absolute;left:'+x+'%;top:'+y+'%;transform:translate(-50%,-50%);width:'+cw+'px;z-index:2;">'+badge(p,c,maxW)+'</div>';
         });
       });
