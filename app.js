@@ -22557,12 +22557,16 @@ async function g45ButeursView(){
        Le bord gauche garde la couleur de l'ECART a la cote tant que le club
        n'a pas repondu — l'information de value n'est jamais perdue, elle est
        simplement remplacee par l'identite visuelle une fois disponible. */
-    h+='<div data-tid="'+(id.tid||'')+'" data-lg="'+(id.lg||'')+'" style="background:rgba(12,16,28,.96);border:1px solid rgba(255,255,255,.08);border-left:3px solid '+col+';border-radius:10px;padding:10px 11px;margin-bottom:9px;">'
+    h+='<div data-tid="'+(id.tid||'')+'" data-lg="'+(id.lg||'')+'" data-club="'+String(id.tname||'').replace(/"/g,'')+'" style="background:rgba(12,16,28,.96);border:1px solid rgba(255,255,255,.08);border-left:3px solid '+col+';border-radius:10px;padding:10px 11px;margin-bottom:9px;">'
       +'<div style="display:flex;align-items:center;gap:9px;margin-bottom:8px;">'
         +'<span class="g45-maillot" style="display:flex;"></span>'
         +'<img src="https://a.espncdn.com/i/headshots/soccer/players/full/'+id.aid+'.png" loading="lazy" onerror="this.style.display=\'none\'" style="width:40px;height:40px;border-radius:50%;object-fit:cover;background:rgba(255,255,255,.07);flex:none;">'
-        +'<div style="flex:1;min-width:0;"><div style="font-size:12px;font-weight:800;color:var(--t1);">'+_g45CyEa(id.pname)+'</div>'
-        +'<div style="font-size:8.5px;color:var(--t2);">'+_g45CyEa(id.tname||'')+' · saison '+an+'/'+(an+1)+'</div></div>'
+        /* TYPOGRAPHIE revue : le nom du joueur avait la meme force que le reste et
+           se noyait. Il passe a 15px avec une ombre portee — le fond image
+           l'exige — et le club devient une ligne de capitales espacees. */
+        +'<div style="flex:1;min-width:0;">'
+        +'<div style="font-size:15px;font-weight:900;color:#fff;letter-spacing:-.3px;line-height:1.15;text-shadow:0 1px 3px rgba(0,0,0,.85);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">'+_g45CyEa(id.pname)+'</div>'
+        +'<div style="font-size:8.5px;font-weight:700;letter-spacing:.7px;text-transform:uppercase;color:rgba(255,255,255,.62);text-shadow:0 1px 2px rgba(0,0,0,.7);margin-top:1px;">'+_g45CyEa(id.tname||'')+' · '+an+'/'+(an+1)+'</div></div>'
       +'</div>'
       +'<div style="display:flex;gap:5px;flex-wrap:wrap;margin-bottom:7px;">'
         +cell(d.g,'buts','#f0c828')+cell(d.app,'matchs')+cell(gpm.toFixed(2),'buts/match','#f0c828')
@@ -22688,11 +22692,35 @@ async function g45ColorerFiches(sport, lg) {
     var el = cibles[i];
     if (el.getAttribute('data-coloree')) continue;
     el.setAttribute('data-coloree', '1');
+    var nomClub = el.getAttribute('data-club') || '';
     var c = await g45CoulParId(sport || 'soccer', el.getAttribute('data-lg') || lg || 'all', el.getAttribute('data-tid'));
-    if (!c) continue;
-    el.style.borderLeftColor = c;
+    if (c) el.style.borderLeftColor = c;
+
+    /* VISUEL DU CLUB EN FOND (21/08) : meme rendu que les cartes du direct.
+       On reutilise les fonctions existantes — image perso du depot d'abord,
+       puis TheSportsDB — donc aucun mecanisme nouveau a maintenir. */
+    var vis = '';
+    try {
+      if (typeof _g45ImgPersoLire === 'function') vis = _g45ImgPersoLire(nomClub) || '';
+      if (!vis && typeof _g45FanLire === 'function') vis = _g45FanLire(nomClub) || '';
+      if (!vis && nomClub && typeof _g45FanCompleter === 'function') {
+        await _g45FanCompleter([{ nom: nomClub, sp: sport || 'soccer' }]);
+        vis = (typeof _g45FanLire === 'function' ? _g45FanLire(nomClub) : '') || '';
+      }
+    } catch (e) {}
+
+    var base = c || '#4d84ff';
+    if (vis) {
+      /* Degrade partant de la couleur du club et s'opacifiant vers la droite :
+         le visuel reste perceptible sans gener la lecture des chiffres. */
+      el.style.background = 'linear-gradient(100deg, ' + base + '55 0%, rgba(12,16,28,.94) 45%, rgba(12,16,28,.97) 100%), url(\'' + vis + '\')';
+      el.style.backgroundSize = 'cover';
+      el.style.backgroundPosition = 'center';
+    } else if (c) {
+      el.style.background = 'linear-gradient(100deg, ' + base + '33 0%, rgba(12,16,28,.96) 55%)';
+    }
     var m = el.querySelector('.g45-maillot');
-    if (m) m.innerHTML = g45MaillotHTML(c, 26);
+    if (m) m.innerHTML = g45MaillotHTML(base, 26);
   }
 }
 window.g45ColorerFiches = g45ColorerFiches;
