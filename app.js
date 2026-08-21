@@ -38444,6 +38444,27 @@ async function g45RemplirPastilles(sport, saison) {
     var anFiche = b.getAttribute('data-saison') || saison || '';
     var evs = null;
     try { evs = await g45GameLog(sport || 'soccer', id, anFiche); } catch (e) {}
+
+    /* ═══ FILTRE PAR DATE (21/08) ═══
+       ESPN n'honore pas toujours le parametre `season` : la fiche affichait
+       2026/2027 et une seule rencontre, tandis que les pastilles portaient sur
+       35 matchs de 2025. Plutot que de chercher pourquoi au cas par cas, on
+       DECIDE : on ne garde que les matchs tombant dans la fenetre de la saison
+       demandee — d'aout de l'annee N a juillet de N+1 pour le football.
+       Le resultat ne depend donc plus de ce qu'ESPN veut bien renvoyer. */
+    if (evs && evs.length && /^\d{4}$/.test(String(anFiche))) {
+      var a0 = parseInt(anFiche, 10);
+      var civil = (sport === 'baseball' || sport === 'basketball');   /* saisons a cheval ailleurs */
+      var deb = civil ? new Date(a0, 0, 1) : new Date(a0, 6, 1);      /* 1er juillet */
+      var fin = civil ? new Date(a0, 11, 31) : new Date(a0 + 1, 6, 31);
+      var filtres = evs.filter(function (e) {
+        var t = Date.parse(e.date || '');
+        return isNaN(t) ? true : (t >= deb.getTime() && t <= fin.getTime());
+      });
+      /* Si le filtre vide tout, c'est que les dates sont absentes ou dans un
+         format inattendu : on garde la liste brute plutot que d'afficher rien. */
+      if (filtres.length) evs = filtres;
+    }
     if (!evs || !evs.length) {
       /* Rien plutot qu'un espace vide inexplique : un joueur sans journal
          disponible ne doit pas laisser croire a un bug d'affichage. */
