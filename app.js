@@ -22591,7 +22591,7 @@ async function g45ButeursView(){
            l'exige — et le club devient une ligne de capitales espacees. */
         +'<div style="flex:1;min-width:0;">'
         +'<div style="font-size:15px;font-weight:900;color:#fff;letter-spacing:-.3px;line-height:1.15;text-shadow:0 1px 3px rgba(0,0,0,.85);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">'+_g45CyEa(id.pname)+'</div>'
-        +'<div style="font-size:8.5px;font-weight:700;letter-spacing:.7px;text-transform:uppercase;color:rgba(255,255,255,.62);text-shadow:0 1px 2px rgba(0,0,0,.7);margin-top:1px;">'+_g45CyEa(id.tname||'')+' · '+an+'/'+(an+1)+'</div></div>'
+        +'<div style="font-size:8.5px;font-weight:700;letter-spacing:.7px;text-transform:uppercase;color:rgba(255,255,255,.62);text-shadow:0 1px 2px rgba(0,0,0,.7);margin-top:1px;"><span class="g45-club">'+_g45CyEa(id.tname||'')+'</span> · '+an+'/'+(an+1)+'</div></div>'
       +'</div>'
       +'<div style="display:flex;gap:5px;flex-wrap:wrap;margin-bottom:7px;">'
         +cell(d.g,'buts','#f0c828')+cell(d.app,'matchs')+cell(gpm.toFixed(2),'buts/match','#f0c828')
@@ -22703,6 +22703,26 @@ async function g45CoulParId(sport, lg, tid) {
 }
 window.g45CoulParId = g45CoulParId;
 
+/* Nom officiel d'un club par son identifiant. Cache definitif : un club ne
+   change pas de nom en cours de saison. */
+var _g45NomClub = {};
+async function g45NomClubParId(sport, lg, tid) {
+  if (!tid) return '';
+  var cle = 'g45nom_' + sport + '_' + tid;
+  if (_g45NomClub[cle] !== undefined) return _g45NomClub[cle];
+  try { var v = localStorage.getItem(cle); if (v) { _g45NomClub[cle] = v; return v; } } catch (e) {}
+  var n = '';
+  try {
+    var r = await fetch('https://sports.core.api.espn.com/v2/sports/' + sport + '/leagues/'
+      + (lg || 'all') + '/teams/' + tid);
+    if (r.ok) { var j = await r.json(); n = j.displayName || j.name || ''; }
+  } catch (e) {}
+  _g45NomClub[cle] = n;
+  if (n) { try { localStorage.setItem(cle, n); } catch (e) {} }
+  return n;
+}
+window.g45NomClubParId = g45NomClubParId;
+
 /* Petit maillot, meme dessin que sur le terrain des compositions. */
 function g45MaillotHTML(coul, taille) {
   var t = taille || 26;
@@ -22722,9 +22742,23 @@ async function g45ColorerFiches(sport, lg) {
     var el = cibles[i];
     if (el.getAttribute('data-coloree')) continue;
     el.setAttribute('data-coloree', '1');
+    var tid = el.getAttribute('data-tid') || '';
     var nomClub = el.getAttribute('data-club') || '';
-    var c = await g45CoulParId(sport || 'soccer', el.getAttribute('data-lg') || lg || 'all', el.getAttribute('data-tid'));
+    var c = await g45CoulParId(sport || 'soccer', el.getAttribute('data-lg') || lg || 'all', tid);
     if (c) el.style.borderLeftColor = c;
+
+    /* NOM DU CLUB PAR L'IDENTIFIANT (21/08) : selon le chemin qui construit la
+       fiche, `tname` contient le club... ou le CHAMPIONNAT (« Premier L. » pour
+       Haaland, « Liga » pour Pavlidis). L'identifiant, lui, ne ment pas. On
+       corrige donc le libelle affiche ET le nom qui sert a trouver le visuel. */
+    if (tid && typeof g45NomClubParId === 'function') {
+      var vrai = await g45NomClubParId(sport || 'soccer', el.getAttribute('data-lg') || lg || 'all', tid);
+      if (vrai) {
+        nomClub = vrai;
+        var lbl = el.querySelector('.g45-club');
+        if (lbl) lbl.textContent = vrai;
+      }
+    }
 
     /* VISUEL DU CLUB EN FOND (21/08) : meme rendu que les cartes du direct.
        On reutilise les fonctions existantes — image perso du depot d'abord,
@@ -38391,7 +38425,18 @@ async function g45RemplirPastilles(sport, saison) {
     if (!evs || !evs.length) {
       /* Rien plutot qu'un espace vide inexplique : un joueur sans journal
          disponible ne doit pas laisser croire a un bug d'affichage. */
-      b.innerHTML = '<div style="font-size:9px;color:var(--t3);">Historique par match indisponible</div>';
+      /* VERIFIE le 21/08 : le journal de matchs n'existe que pour la SAISON EN
+         COURS — zero match pour 2025, un pour 2026. Comme les actions, ESPN le
+         purge ensuite. Quand la fiche porte sur une saison passee, on le dit
+         plutot que d'afficher un « indisponible » qui laisse croire a une
+         panne. */
+      var anC = (new Date().getMonth() >= 7) ? new Date().getFullYear() : (new Date().getFullYear() - 1);
+      var vieille = /^\d{4}$/.test(String(anFiche)) && parseInt(anFiche, 10) < anC;
+      b.innerHTML = '<div style="font-size:9px;color:var(--t3);background:rgba(0,0,0,.35);border-radius:8px;padding:5px 7px;display:inline-block;">'
+        + (vieille
+            ? 'Historique par match non conserv\u00e9 par ESPN au-del\u00e0 de la saison en cours'
+            : 'Aucun match jou\u00e9 cette saison')
+        + '</div>';
       continue;
     }
     b.innerHTML = g45PastillesHTML(evs, sport || 'soccer', 10);
