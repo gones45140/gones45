@@ -22793,8 +22793,15 @@ async function g45ColorerFiches(sport, lg) {
       el.style.backgroundSize = 'cover';
       el.style.backgroundPosition = 'center 30%';
       el.style.backgroundRepeat = 'no-repeat';
-    } else if (c) {
-      el.style.background = 'linear-gradient(100deg, ' + base + '33 0%, rgba(12,16,28,.96) 55%)';
+    } else {
+      /* CORRECTION DU 22/08 — ce degrade s'arretait a 55 %. Au-dela, la carte
+         n'avait PLUS AUCUN fond : elle etait transparente et laissait voir le
+         papier peint de l'application. C'est ce qu'on prenait pour « une image
+         bizarre » sur Alaves — en realite une piscine du fond d'ecran vue a
+         travers la carte. Le degrade couvre desormais 100 % et se termine sur
+         un fond OPAQUE, donc un club sans visuel reste propre et lisible. */
+      el.style.background = 'linear-gradient(100deg, ' + base + '33 0%, rgba(12,16,28,.97) 55%, rgba(12,16,28,.97) 100%)';
+      el.style.backgroundColor = 'rgba(12,16,28,.97)';
     }
     var m = el.querySelector('.g45-maillot');
     if (m) m.innerHTML = g45MaillotHTML(base, 26);
@@ -30092,7 +30099,7 @@ var _G45_CACHE_PREFIXES=['g45rcP_','g45rcD_','g45rcY_','g45rc_','g45dcm_','g45dc
      explosait et des ecritures LEGITIMES echouaient en silence (le filtre par
      competition, qui restait bloque sur « Toutes »). Les cartes de tirs sont
      les plus lourdes : plusieurs Ko par match, gardees indefiniment. */
-  'g45butA2_','g45gl2_','g45gl_','g45_tirs2_','g45_fanart_','g45_img_perso_','g45_tv_prog','g45_mqnom_',
+  'g45butA2_','g45gl2_','g45gl_','g45_tirs2_','g45_fanart2_','g45_fanart_','g45_img_perso_','g45_tv_prog','g45_mqnom_',
   'g45nrlcal2_','g45_fx_faits','g45_veille_','g45_compet_logos','g45_groq_modele','g45_gemini_modeles',
   /* MESURE DU 20/08 sur le stockage reel d'Antoine (5,1 Mo, sature) :
        fpl_bootstrap_cache ... 1951 Ko  <- a lui seul 38 % du total
@@ -36332,7 +36339,10 @@ var _g45DirTimer = null;
    On ne demande QUE les equipes reellement affichees a l'ecran, deux au maximum
    par rafraichissement : le direct se redessine toutes les 45 s, et sans cette
    limite un soir de multiplex declencherait vingt requetes par minute. */
-var _G45_FANART = 'g45_fanart_';
+/* Version bumpee le 22/08 : les entrees existantes memorisent des ECHECS de
+   recherche (u:'') pour trente jours. Les relire annulerait la recherche a
+   plusieurs ecritures ci-dessus. Changer la cle plutot que migrer. */
+var _G45_FANART = 'g45_fanart2_';
 var _g45FanEnCours = 0;
 
 /* ═══ VISUELS PERSONNELS ═══
@@ -36398,23 +36408,85 @@ var _G45_TSDB_SPORT = {
   'rugby-league':'rugby', rugby:'rugby'
 };
 
+/* ECRITURES A ESSAYER (22/08) : une seule requete par nom ne suffisait pas.
+   ESPN ecrit « Alaves » avec accent et sans prefixe, TheSportsDB enregistre
+   « Deportivo Alaves » sans accent — la recherche exacte ne renvoyait donc
+   AUCUNE equipe, l'echec etait mis en cache trente jours, et la carte restait
+   sans visuel. Meme famille que le bug d'accents d'espnToFdMatch et que
+   « LA Dodgers » introuvable chez TheSportsDB.
+   On essaie, dans l'ordre : le nom tel quel, le nom sans accents, puis le nom
+   ampute d'un prefixe de club courant (Deportivo, Real, Athletic, RCD...).
+   Trois requetes au maximum, sur une API gratuite et sans quota, et seulement
+   pour les clubs encore inconnus. */
+function _g45FanVariantes(nom) {
+  var brut = String(nom || '').trim();
+  var sansAcc = brut.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+  var court = sansAcc.replace(/^(deportivo|real|club|rcd|rc|cd|ca|ac|as|sc|cf|fc|sd|ud)\s+/i, '').trim();
+  /* AJOUTER un prefixe, pas seulement en enlever (22/08). Verifie en production :
+     `searchteams.php` matche par DEBUT de nom. ESPN dit « Alaves », TheSportsDB
+     range le club sous « Deportivo Alaves » — la requete « Alaves » ne pouvait
+     donc jamais l'atteindre et ne ramenait que « Alaves Gloriosas », l'equipe
+     feminine, qui commence bien par ce mot. Ces formes ne partent qu'en dernier
+     recours, pour un club encore inconnu, et le controle de correspondance plus
+     bas ecarte tout ce qui ne contient pas le nom demande. */
+  var prefixes = ['Deportivo', 'Real', 'Club', 'Athletic', 'CD', 'FC'];
+  /* Dedoublonnage sur la chaine BRUTE, pas sur `_g45SgNorm` : celui-ci enleve
+     les accents, donc « Alaves » et « Alaves » sans accent auraient ete
+     confondus et une seule des deux requetes serait partie — alors que c'est
+     precisement cette difference qu'on veut essayer. */
+  var out = [], vus = {};
+  var ajout = function (v) {
+    var k = String(v || '').toLowerCase().trim();
+    if (v && k && !vus[k]) { vus[k] = 1; out.push(v); }
+  };
+  [brut, sansAcc, court].forEach(ajout);
+  /* Un nom qui porte deja un de ces prefixes n'a pas besoin qu'on lui en colle
+     un second. */
+  var dejaPrefixe = /^(deportivo|real|club|athletic|cd|fc)\s+/i.test(brut);
+  if (!dejaPrefixe) prefixes.forEach(function (p) { ajout(p + ' ' + sansAcc); });
+  return out.slice(0, 8);   /* plafond : API gratuite, mais pas de rafale inutile */
+}
+
 async function _g45FanChercher(nom, sport) {
   var url = '';
-  try {
-    var r = await fetch('https://www.thesportsdb.com/api/v1/json/3/searchteams.php?t=' + encodeURIComponent(nom));
-    if (r.ok) {
+  var attendu = _G45_TSDB_SPORT[sport || ''] || '';
+  var n = _g45SgNorm(nom);
+  var essais = _g45FanVariantes(nom);
+
+  for (var v = 0; v < essais.length && !url; v++) {
+    try {
+      var r = await fetch('https://www.thesportsdb.com/api/v1/json/3/searchteams.php?t=' + encodeURIComponent(essais[v]));
+      if (!r.ok) continue;
       var j = await r.json();
       var liste = (j && j.teams) || [];
-      var attendu = _G45_TSDB_SPORT[sport || ''] || '';
-      var n = _g45SgNorm(nom);
-      /* On garde d'abord les equipes du BON SPORT, puis on prefere le nom exact. */
+      /* On garde d'abord les equipes du BON SPORT, puis on prefere le nom exact.
+         Le controle de sport reste indispensable : sans lui « Reds » ramenait
+         une ecurie de MotoGP. */
       var bons = liste.filter(function (t) {
         return !attendu || _g45SgNorm(t.strSport || '') === _g45SgNorm(attendu);
       });
-      var t = bons.filter(function (x) { return _g45SgNorm(x.strTeam || '') === n; })[0] || bons[0] || null;
+      /* GARDE-FOU DU 22/08 : chercher « Alaves » ne ramene QUE « Alaves
+         Gloriosas », l'equipe FEMININE. Le rapprochement tolerant l'aurait
+         acceptee pour la fiche d'un joueur masculin, et l'erreur aurait ete
+         invisible — une image de club plausible, mais la mauvaise equipe.
+         Meme piege que `ned.w.knvb_cup` en juillet. On ecarte donc les
+         variantes feminines, jeunes et equipes reserves, SAUF si le nom
+         demande les contient lui-meme. */
+      var marq = /(gloriosas|femenin|feminin|women|ladies|damen|dames|girls|youth|academy|reserve|reserves|\bu\s?1[4-9]\b|\bu\s?2[0-3]\b|\bii\b|\bb\b)/i;
+      var demandeMarq = marq.test(nom);
+      var propres = bons.filter(function (x) {
+        return demandeMarq || !marq.test(String(x.strTeam || ''));
+      });
+      /* Le repli « premier resultat venu » est SUPPRIME : c'est lui qui mettait
+         Odense sur Boca en juillet. Sans correspondance serieuse, on prefere
+         aucune image — le repli opaque est propre, et une image perso peut
+         etre deposee dans le depot. */
+      var t = propres.filter(function (x) { return _g45SgNorm(x.strTeam || '') === n; })[0]
+           || propres.filter(function (x) { var k = _g45SgNorm(x.strTeam || ''); return k.indexOf(n) >= 0 || n.indexOf(k) >= 0; })[0]
+           || null;
       if (t) url = t.strTeamBanner || t.strFanart1 || t.strFanart2 || t.strStadiumThumb || '';
-    }
-  } catch (e) {}
+    } catch (e) {}
+  }
   try { localStorage.setItem(_G45_FANART + _g45SgNorm(nom), JSON.stringify({ u: url, t: Date.now() })); } catch (e) {}
   return url;
 }
