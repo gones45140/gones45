@@ -38562,9 +38562,52 @@ async function g45EquipesDeCompet(champComp, dlEquipe) {
       /* SIGNATURE VERIFIEE avant d'appeler : la fonction attend un OBJET
          { sp: sport, s: slug }, pas deux arguments — l'appeler autrement
          aurait rendu une liste vide sans erreur visible. */
-      eq = await _g45CompetEquipes({ sp: info.sport || 'soccer', s: info.slug }) || [];
+      /* SAISON EN COURS IMPOSEE (21/08) : sans `an`, la fonction deduit l'annee
+         elle-meme et peut retomber sur la precedente — on obtient alors le
+         plateau d'AVANT les montees et descentes. Coventry, promue en Premier
+         League cette saison, en etait absente tandis qu'un relegue y figurait.
+         Le football bascule au 1er juillet ; les championnats en annee civile
+         (MLS, Bresil, NRL, MLB) prennent l'annee courante. */
+      var _d = new Date();
+      var _civil = /^(usa|bra|arg|mex)\.|^(mlb|nrl)$/.test(String(info.slug || ''));
+      var _an = _civil ? _d.getFullYear() : (_d.getMonth() >= 6 ? _d.getFullYear() : _d.getFullYear() - 1);
+      eq = await _g45CompetEquipes({ sp: info.sport || 'soccer', s: info.slug, an: _an }) || [];
+      /* Si la saison en cours n'a pas encore de classement publie, on retombe
+         sur la precedente plutot que de ne rien proposer. */
+      if (!eq.length && !_civil) {
+        eq = await _g45CompetEquipes({ sp: info.sport || 'soccer', s: info.slug, an: _an - 1 }) || [];
+      }
     }
   } catch (e) {}
+  /* ═══ COMPLETER PAR LE CALENDRIER (21/08) ═══
+     Le classement ne suffit pas : une COUPE n'en a pas, et meme en championnat
+     un match peut opposer un club d'une autre division (Arsenal-Coventry, la
+     deuxieme division anglaise). On ajoute donc les equipes vues au calendrier
+     des prochains jours, qui sont par definition celles qui jouent vraiment.
+     Une requete, sur le slug generique `all` en football pour couvrir toutes
+     les competitions d'un coup. */
+  try {
+    var f = function (d) { return d.getFullYear() + String(d.getMonth()+1).padStart(2,'0') + String(d.getDate()).padStart(2,'0'); };
+    var sp2 = info.sport || 'soccer';
+    var lg2 = (sp2 === 'soccer') ? 'all' : info.slug;
+    var r2 = await fetch('https://site.api.espn.com/apis/site/v2/sports/' + sp2 + '/' + lg2
+      + '/scoreboard?dates=' + f(new Date(Date.now() - 2*864e5)) + '-' + f(new Date(Date.now() + 12*864e5)) + '&limit=900');
+    if (r2.ok) {
+      var j2 = await r2.json();
+      var vus = {};
+      eq.forEach(function (t) { vus[String(t.nom || '').toLowerCase()] = 1; });
+      ((j2 && j2.events) || []).forEach(function (e) {
+        var cp = (e.competitions && e.competitions[0]) || {};
+        (cp.competitors || []).forEach(function (x) {
+          var n2 = (x.team && (x.team.displayName || x.team.name)) || '';
+          if (!n2 || vus[n2.toLowerCase()]) return;
+          vus[n2.toLowerCase()] = 1;
+          eq.push({ id: String((x.team && x.team.id) || ''), nom: n2, court: '' });
+        });
+      });
+    }
+  } catch (e) {}
+
   if (!eq.length) { dl.innerHTML = ''; return; }
 
   dl.innerHTML = eq.map(function (t) {
