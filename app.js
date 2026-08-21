@@ -22645,10 +22645,20 @@ async function g45MqSport(sp) {
   if (sp === 'foot') { g45ButeursView(); return; }
 
   var titre = { nfl: '\ud83c\udfc8 NFL', nhl: '\ud83c\udfd2 NHL', mlb: '\u26be Lanceurs MLB' }[sp] || '';
+  /* PANNEAU `.fc` AUTOUR DE L'HOTE (22/08). Le tableau NFL/NHL etait pose a NU
+     dans l'onglet : aucun fond, donc le papier peint de l'application passait
+     au travers et les chiffres devenaient illisibles. Le MLB, lui, paraissait
+     correct — mais seulement parce qu'il EMPRUNTE le bloc `calc-lc`, qui porte
+     deja la classe `.fc`. Ce n'etait donc pas un probleme de sport mais de
+     conteneur manquant. On reutilise la classe existante plutot que d'inventer
+     un style : meme fond, meme flou, meme rayon que partout ailleurs.
+     `data-mq-hote` sert au MLB, qui doit retrouver son hote pour y deplacer
+     son noeud sans se soucier de la profondeur du panneau. */
   el.innerHTML = '<button onclick="g45ButeursView()" style="border:none;cursor:pointer;background:rgba(255,255,255,.06);'
     + 'border-radius:8px;color:var(--t2);padding:6px 10px;font-size:10px;font-weight:700;margin-bottom:8px;">'
     + '\u2190 Buteurs football</button>'
-    + '<div class="sec" style="margin-top:0;">' + titre + '</div><div id="g45-mq-hote"></div>';
+    + '<div class="sec" style="margin-top:0;">' + titre + '</div>'
+    + '<div class="fc" style="--card-alpha:.92;"><div id="g45-mq-hote" data-mq-hote="1"></div></div>';
   var hote = document.getElementById('g45-mq-hote');
 
   if (sp === 'mlb') {
@@ -33589,9 +33599,17 @@ async function _g45LanceurProchain(nom) {
         var pn = p ? ((p.athlete && p.athlete.displayName) || p.displayName || '') : '';
         if (pn && pn.toLowerCase().indexOf(bas) >= 0) {
           var adv = (cp.competitors || []).filter(function (y) { return y !== x; })[0];
+          /* On garde AUSSI le nom complet, l'identifiant et la couleur du club
+             (22/08). Le tableau de bord n'affichait que l'abreviation « PHI »,
+             qui ne permet de retrouver ni visuel ni couleur. Ces trois champs
+             sont deja dans la reponse du scoreboard : les prendre ne coute
+             AUCUNE requete supplementaire. */
           trouve = {
             date: e.date, nom: e.name,
             equipe: (x.team && (x.team.abbreviation || x.team.displayName)) || '',
+            club: (x.team && (x.team.displayName || x.team.name)) || '',
+            tid: (x.team && x.team.id) || '',
+            coul: (x.team && x.team.color) ? ('#' + String(x.team.color).replace('#', '')) : '',
             adverse: (adv && adv.team && (adv.team.abbreviation || adv.team.displayName)) || '',
             dom: x.homeAway === 'home'
           };
@@ -33601,6 +33619,40 @@ async function _g45LanceurProchain(nom) {
     return trouve;
   } catch (e) { return null; }
 }
+
+/* ═══ VISUEL DE CLUB EN FOND D'UN ELEMENT (22/08) ═══
+   Extrait de `g45ColorerFiches` pour etre reutilisable. Meme chaine de sources
+   que partout ailleurs : image perso du depot d'abord (gratuite, sous controle),
+   puis TheSportsDB. Les deux garde-fous du jour s'appliquent donc aussi ici —
+   plusieurs ecritures du nom essayees, equipes feminines et reserves ecartees.
+   Le repli est OPAQUE : sans visuel, la carte ne doit pas laisser passer le
+   papier peint de l'application. */
+async function g45FondClub(el, nomClub, base, sport) {
+  if (!el) return;
+  var coul = base || '#4d84ff';
+  var vis = '';
+  try {
+    if (nomClub) {
+      if (typeof _g45ImgPersoLire === 'function') vis = _g45ImgPersoLire(nomClub) || '';
+      if (!vis && typeof _g45FanLire === 'function') vis = _g45FanLire(nomClub) || '';
+      if (!vis && typeof _g45FanCompleter === 'function') {
+        await _g45FanCompleter([{ nom: nomClub, sp: sport || 'baseball' }]);
+        vis = (typeof _g45FanLire === 'function' ? _g45FanLire(nomClub) : '') || '';
+      }
+    }
+  } catch (e) {}
+  if (vis) {
+    el.style.background = 'linear-gradient(180deg, rgba(12,16,28,.93) 0%, rgba(12,16,28,.88) 55%, ' + coul + '3a 100%), url(\'' + vis + '\')';
+    el.style.backgroundSize = 'cover';
+    el.style.backgroundPosition = 'center 30%';
+    el.style.backgroundRepeat = 'no-repeat';
+  } else {
+    el.style.background = 'linear-gradient(100deg, ' + coul + '33 0%, rgba(12,16,28,.97) 55%, rgba(12,16,28,.97) 100%)';
+    el.style.backgroundColor = 'rgba(12,16,28,.97)';
+  }
+  el.style.borderLeft = '3px solid ' + coul;
+}
+window.g45FondClub = g45FondClub;
 
 async function g45LanceursRender() {
   var box = document.getElementById('g45-lc-body');
@@ -33665,6 +33717,14 @@ async function g45LanceursRender() {
             + '<div style="margin-top:7px;font-size:10px;color:var(--t3);">Il faut une cote sup\u00e9rieure \u00e0 <b>' + eq.toFixed(2)
               + '</b> pour que le parier syst\u00e9matiquement soit rentable. Compare-la \u00e0 ce que propose ton bookmaker : au baseball, le lanceur partant est d\u00e9j\u00e0 largement int\u00e9gr\u00e9 dans la cote.</div>'
           : '<div style="margin-top:8px;font-size:11px;color:#ffb13d;">Aucune sortie trouv\u00e9e en ' + an + '. V\u00e9rifie l\'orthographe exacte du nom.</div>');
+
+    /* Visuel du club APRES le rendu, jamais avant : la carte doit apparaitre
+       immediatement, l'image arrive quand elle arrive. Le club vient de la
+       prochaine sortie ; a defaut, du dernier match joue. */
+    var clubNom = (prochain && prochain.club) || '';
+    var clubCoul = (prochain && prochain.coul) || '';
+    if (!clubNom && joues.length) clubNom = joues[joues.length - 1].club || '';
+    try { await g45FondClub(bloc, clubNom, clubCoul, 'baseball'); } catch (e) {}
   }
 }
 window.g45LanceursRender = g45LanceursRender;
@@ -37742,13 +37802,21 @@ async function g45MarqueursUS(quoi, secondaire) {
       + c.ico + ' ' + c.nom + ' \u00b7 saison ' + saison + ' \u00b7 march\u00e9 \u00ab ' + marche + ' \u00bb'
       + (saison < new Date().getFullYear() ? ' <span style="color:#ffb13d;">(saison pass\u00e9e : le championnat n\'a pas repris)</span>' : '')
       + '</div>'
-    + '<div style="display:flex;font-size:9px;font-weight:800;color:#4f5d88;padding:0 6px 4px;">'
+    /* Entete DETACHEE (22/08) : en #4f5d88 sur fond translucide elle disparaissait
+       purement et simplement. Bandeau sombre + texte eclairci, comme la ligne de
+       pastilles des fiches joueur. */
+    + '<div style="display:flex;font-size:9px;font-weight:800;color:rgba(255,255,255,.55);letter-spacing:.4px;'
+    + 'background:rgba(0,0,0,.32);border-radius:7px 7px 0 0;padding:6px;">'
     + '<div style="flex:1;">JOUEUR</div><div style="width:46px;text-align:right;">' + libelle.toUpperCase() + '</div>'
     + '<div style="width:52px;text-align:right;">PAR M.</div><div style="width:46px;text-align:right;">PROBA</div>'
     + '<div style="width:56px;text-align:right;">COTE MIN</div></div>'
-    + lignes.map(function (l) {
+    + lignes.map(function (l, rang) {
         var coul = l.cote <= 1.5 ? '#6b7a99' : (l.cote <= 2.5 ? '#1ed760' : '#f0b020');
-        return '<div style="display:flex;align-items:center;padding:6px;border-bottom:1px solid rgba(255,255,255,.05);font-size:11.5px;">'
+        /* Lignes alternees sur fond OPAQUE : un simple filet a 5 % d'opacite ne
+           suffit pas quand une image passe derriere. */
+        return '<div style="display:flex;align-items:center;padding:7px 6px;font-size:11.5px;'
+          + 'background:' + (rang % 2 ? 'rgba(8,11,20,.55)' : 'rgba(8,11,20,.38)') + ';'
+          + 'border-bottom:1px solid rgba(255,255,255,.06);">'
           + '<div style="flex:1;min-width:0;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">' + l.nom + '</div>'
           + '<div style="width:46px;text-align:right;color:var(--t3);">' + l.total + '</div>'
           + '<div style="width:52px;text-align:right;color:var(--t3);">' + l.lam.toFixed(2) + '</div>'
