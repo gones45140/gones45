@@ -37957,8 +37957,22 @@ async function g45XgSaison(matches, teamId, nom, boiteId, lgDef) {
   }
 
   if (!lus) {
-    box.innerHTML = '<div style="color:#ffb13d;font-size:11px;">ESPN ne fournit pas de xG sur cette comp\u00e9tition '
-      + '(' + sansXg + ' matchs sans donn\u00e9e).</div>';
+    /* CONSTAT DU 20/08 : ESPN PURGE le detail des actions une fois la saison
+       terminee. La saison en cours rend bien le xG, la precedente ne rend RIEN.
+       Le message accusait donc la competition d'etre non couverte, alors que la
+       vraie cause est l'anciennete de la saison — et la conclusion pratique est
+       tout autre : le xG se CONSTRUIT au fil des journees, sans rattrapage
+       possible. */
+    var _anCourante = (new Date().getMonth() >= 7) ? new Date().getFullYear() : (new Date().getFullYear() - 1);
+    var _vieille = /^\d{4}$/.test(String(_currentSaison || '')) ? (parseInt(_currentSaison, 10) < _anCourante) : false;
+    box.innerHTML = '<div style="color:#ffb13d;font-size:11px;line-height:1.6;">'
+      + (_vieille
+          ? 'Saison termin\u00e9e : ESPN ne conserve pas le d\u00e9tail des actions au-del\u00e0 de la saison en cours, '
+            + 'donc aucun xG r\u00e9cup\u00e9rable r\u00e9troactivement.<br>'
+            + '<span style="opacity:.8;">Le xG se construit au fil des journ\u00e9es : lance ce calcul r\u00e9guli\u00e8rement '
+            + 'sur la saison EN COURS, le cache par match est d\u00e9finitif.</span>'
+          : 'ESPN ne fournit pas de xG sur cette comp\u00e9tition (' + sansXg + ' matchs sans donn\u00e9e).')
+      + '</div>';
     return;
   }
 
