@@ -22381,12 +22381,37 @@ async function _g45ButLeaders(lg, y, top){
   return out;
 }
 async function _g45ButAth(lg, y, aid){
-  var ck='g45butA_'+aid;
+  /* VERSION 2 : les entrees precedentes ont un `tname` vide ou egal au nom du
+     CHAMPIONNAT, et aucun `tid`. Les relire redonnerait « Liga » a la place du
+     club, sans le moindre signe. */
+  var ck='g45butA2_'+aid;
   try{ var c=JSON.parse(localStorage.getItem(ck)||'null'); if(c&&c.pname) return c; }catch(e){}
   var res={aid:aid, pname:'#'+aid, tname:''};
   try{
     var r=await fetch('https://sports.core.api.espn.com/v2/sports/soccer/leagues/'+lg+'/seasons/'+y+'/athletes/'+aid);
-    if(r.ok){ var j=await r.json(); res.pname=(j.displayName||j.fullName||j.shortName||res.pname); }
+    if(r.ok){
+      var j=await r.json();
+      res.pname=(j.displayName||j.fullName||j.shortName||res.pname);
+      /* CLUB MANQUANT (21/08) : ce chemin — celui des « Meilleurs buteurs » —
+         ne recuperait QUE le nom. `tname` restait vide, et la fiche affichait le
+         CHAMPIONNAT en repli (« Liga » pour un joueur de Benfica), sans jamais
+         de couleur ni de visuel faute d'identifiant d'equipe.
+         La reponse porte une reference vers l'equipe : une requete de plus, une
+         seule fois par joueur puisque le resultat est mis en cache juste apres. */
+      var tref = (j.team && j.team.$ref) || '';
+      var m = String(tref).match(/teams\/(\d+)/);
+      if (m) {
+        res.tid = m[1];
+        try {
+          var rt = await fetch(String(tref).replace(/^http:/, 'https:'));
+          if (rt.ok) {
+            var t = await rt.json();
+            res.tname = t.displayName || t.name || '';
+            res.lg = lg;
+          }
+        } catch(e2){}
+      }
+    }
   }catch(e){}
   try{ localStorage.setItem(ck, JSON.stringify(res)); }catch(e){}
   return res;
@@ -30029,7 +30054,7 @@ var _G45_CACHE_PREFIXES=['g45rcP_','g45rcD_','g45rcY_','g45rc_','g45dcm_','g45dc
      explosait et des ecritures LEGITIMES echouaient en silence (le filtre par
      competition, qui restait bloque sur « Toutes »). Les cartes de tirs sont
      les plus lourdes : plusieurs Ko par match, gardees indefiniment. */
-  'g45gl_','g45_tirs2_','g45_fanart_','g45_img_perso_','g45_tv_prog','g45_mqnom_',
+  'g45butA2_','g45gl_','g45_tirs2_','g45_fanart_','g45_img_perso_','g45_tv_prog','g45_mqnom_',
   'g45nrlcal2_','g45_fx_faits','g45_veille_','g45_compet_logos','g45_groq_modele','g45_gemini_modeles',
   /* MESURE DU 20/08 sur le stockage reel d'Antoine (5,1 Mo, sature) :
        fpl_bootstrap_cache ... 1951 Ko  <- a lui seul 38 % du total
