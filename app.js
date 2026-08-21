@@ -22552,8 +22552,14 @@ async function g45ButeursView(){
     var gap=imp?(pAnyN-imp):null;
     var col=(gap!=null&&gap>=0.05)?'#2ecc71':(gap!=null&&gap<=-0.05)?'#ff6b6b':'#8aa0ff';
     var cell=function(v,l,c){ return '<div style="flex:1;min-width:66px;text-align:center;background:rgba(0,0,0,.20);border-radius:7px;padding:6px 4px;"><div style="font-size:13px;font-weight:800;color:'+(c||'var(--t1)')+';">'+v+'</div><div style="font-size:7.5px;color:var(--t3);margin-top:1px;">'+l+'</div></div>'; };
-    h+='<div style="background:rgba(12,16,28,.96);border:1px solid rgba(255,255,255,.08);border-left:3px solid '+col+';border-radius:10px;padding:10px 11px;margin-bottom:9px;">'
+    /* `data-tid` permet de colorer la fiche APRES coup, sans bloquer le rendu :
+       la couleur du club demande une requete, mise en cache definitivement.
+       Le bord gauche garde la couleur de l'ECART a la cote tant que le club
+       n'a pas repondu — l'information de value n'est jamais perdue, elle est
+       simplement remplacee par l'identite visuelle une fois disponible. */
+    h+='<div data-tid="'+(id.tid||'')+'" data-lg="'+(id.lg||'')+'" style="background:rgba(12,16,28,.96);border:1px solid rgba(255,255,255,.08);border-left:3px solid '+col+';border-radius:10px;padding:10px 11px;margin-bottom:9px;">'
       +'<div style="display:flex;align-items:center;gap:9px;margin-bottom:8px;">'
+        +'<span class="g45-maillot" style="display:flex;"></span>'
         +'<img src="https://a.espncdn.com/i/headshots/soccer/players/full/'+id.aid+'.png" loading="lazy" onerror="this.style.display=\'none\'" style="width:40px;height:40px;border-radius:50%;object-fit:cover;background:rgba(255,255,255,.07);flex:none;">'
         +'<div style="flex:1;min-width:0;"><div style="font-size:12px;font-weight:800;color:var(--t1);">'+_g45CyEa(id.pname)+'</div>'
         +'<div style="font-size:8.5px;color:var(--t2);">'+_g45CyEa(id.tname||'')+' · saison '+an+'/'+(an+1)+'</div></div>'
@@ -22591,6 +22597,7 @@ async function g45ButeursView(){
      en restant syntaxiquement valide — la note de bas de vue disparaissait sans
      la moindre erreur. */
   try { g45RemplirPastilles('soccer', an); } catch (e) {}
+  try { g45ColorerFiches('soccer'); } catch (e) {}
 }
 window.g45ButeursView=g45ButeursView;
 
@@ -22631,6 +22638,64 @@ async function g45MqSport(sp) {
   if (typeof g45MarqueursUS === 'function') await g45MarqueursUS(sp);
 }
 window.g45MqSport = g45MqSport;
+
+/* ═══ COULEUR D'UN CLUB PAR SON IDENTIFIANT ═══
+   Les fiches Buteurs n'ont que `tid`, pas l'objet team : on va chercher la
+   couleur une fois et on la garde DEFINITIVEMENT — une couleur de club ne
+   change pas d'une semaine a l'autre.
+   Les memes garde-fous que partout ailleurs : une couleur trop claire bascule
+   sur l'alternative (Real en blanc, Lens en jaune, illisibles). */
+var _g45CoulClub = {};
+async function g45CoulParId(sport, lg, tid) {
+  if (!tid) return '';
+  var cle = 'g45coul_' + sport + '_' + tid;
+  if (_g45CoulClub[cle] !== undefined) return _g45CoulClub[cle];
+  try {
+    var v = localStorage.getItem(cle);
+    if (v) { _g45CoulClub[cle] = v; return v; }
+  } catch (e) {}
+  var c = '';
+  try {
+    var r = await fetch('https://sports.core.api.espn.com/v2/sports/' + sport + '/leagues/'
+      + (lg || 'all') + '/teams/' + tid);
+    if (r.ok) {
+      var j = await r.json();
+      c = (typeof g45CoulEquipe === 'function') ? g45CoulEquipe(j, '') : '';
+    }
+  } catch (e) {}
+  _g45CoulClub[cle] = c;
+  if (c) { try { localStorage.setItem(cle, c); } catch (e) {} }
+  return c;
+}
+window.g45CoulParId = g45CoulParId;
+
+/* Petit maillot, meme dessin que sur le terrain des compositions. */
+function g45MaillotHTML(coul, taille) {
+  var t = taille || 26;
+  return '<svg viewBox="0 0 24 24" style="width:' + t + 'px;height:' + t + 'px;flex:0 0 auto;'
+    + 'filter:drop-shadow(0 1px 2px rgba(0,0,0,.5));">'
+    + '<path d="M8 2 L4 4 L2 8 L5 9.5 L5 22 L19 22 L19 9.5 L22 8 L20 4 L16 2 L14.5 3.6 '
+    + 'A3.2 3.2 0 0 1 9.5 3.6 Z" fill="' + (coul || '#4d84ff') + '" stroke="rgba(0,0,0,.45)" stroke-width="1"/>'
+    + '<path d="M8 2 L9.5 3.6 A3.2 3.2 0 0 0 14.5 3.6 L16 2 L14 1.4 A4.6 4.6 0 0 1 10 1.4 Z" fill="rgba(0,0,0,.35)"/></svg>';
+}
+window.g45MaillotHTML = g45MaillotHTML;
+
+/* Colore les fiches deja affichees : bord gauche + maillot devant le nom.
+   En serie, apres le rendu, comme les pastilles. */
+async function g45ColorerFiches(sport, lg) {
+  var cibles = Array.prototype.slice.call(document.querySelectorAll('[data-tid]'));
+  for (var i = 0; i < cibles.length && i < 20; i++) {
+    var el = cibles[i];
+    if (el.getAttribute('data-coloree')) continue;
+    el.setAttribute('data-coloree', '1');
+    var c = await g45CoulParId(sport || 'soccer', el.getAttribute('data-lg') || lg || 'all', el.getAttribute('data-tid'));
+    if (!c) continue;
+    el.style.borderLeftColor = c;
+    var m = el.querySelector('.g45-maillot');
+    if (m) m.innerHTML = g45MaillotHTML(c, 26);
+  }
+}
+window.g45ColorerFiches = g45ColorerFiches;
 
 /* ═══════════ 📏 CLV — CLOSING LINE VALUE ═══════════
    Mesure si Antoine bat la cote de clôture. Sur une montante ou sur un petit nombre de
