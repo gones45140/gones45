@@ -37876,6 +37876,7 @@ async function g45XgSaison(matches, teamId, nom, boiteId, lgDef) {
       + 'Dur\u00e9e : environ ' + Math.max(1, Math.round(aLire * 1.2 / 60)) + ' min. Lancer ?')) return;
 
   var pour = 0, contre = 0, butsP = 0, butsC = 0, lus = 0, sansXg = 0, indetermine = 0;
+  var parJoueur = {};
   var parMatch = [];
 
   for (var i = 0; i < joues.length; i++) {
@@ -37921,7 +37922,23 @@ async function g45XgSaison(matches, teamId, nom, boiteId, lgDef) {
     var xp = 0, xc = 0, vrai = false;
     tirs.forEach(function (t) {
       if (t.xgSrc === 'espn') vrai = true;
-      if (estNous(t)) xp += t.xg; else xc += t.xg;
+      if (estNous(t)) {
+        xp += t.xg;
+        /* PAR JOUEUR : accumule ICI, dans la boucle qui tourne deja. ESPN ne
+           publie AUCUN xG agrege par joueur (verifie : 100 statistiques, pas
+           une seule « expected »), il faut donc le sommer depuis les tirs.
+           Comme cette boucle lit deja chaque match pour le total d'equipe, le
+           detail par joueur ne coute pas une requete de plus. */
+        var q = (t.qui || '').trim();
+        if (q) {
+          if (!parJoueur[q]) parJoueur[q] = { xg: 0, tirs: 0, buts: 0, cadres: 0, xgot: 0 };
+          var J = parJoueur[q];
+          J.xg += t.xg; J.tirs++;
+          if (t.but) J.buts++;
+          if (t.cadre) J.cadres++;
+          if (t.xgot != null) J.xgot += t.xgot;
+        }
+      } else xc += t.xg;
     });
     /* Un match dont AUCUN tir n'a de xG ESPN fausserait la comparaison avec les
        buts reels : on le compte a part plutot que de melanger les sources. */
@@ -37972,6 +37989,34 @@ async function g45XgSaison(matches, teamId, nom, boiteId, lgDef) {
         : (ecartC < -1.5
           ? '<span style="color:#4ade80;">encaisse ' + Math.abs(ecartC).toFixed(1) + ' buts de moins</span>'
           : '<span style="color:var(--t3);">conforme</span>')) + '</div>'
+    + (function () {
+        var noms = Object.keys(parJoueur).filter(function (n) { return parJoueur[n].tirs >= 2; });
+        if (!noms.length) return '';
+        noms.sort(function (a, b) { return parJoueur[b].xg - parJoueur[a].xg; });
+        return '<div style="font-size:9px;font-weight:800;letter-spacing:1px;text-transform:uppercase;color:#4f5d88;margin:12px 0 4px;">'
+          + '\u26bd xG par joueur</div>'
+          + '<div style="display:flex;font-size:9px;font-weight:800;color:#4f5d88;padding:0 6px 3px;">'
+          + '<div style="flex:1;">JOUEUR</div><div style="width:38px;text-align:right;">TIRS</div>'
+          + '<div style="width:46px;text-align:right;">xG</div><div style="width:38px;text-align:right;">BUTS</div>'
+          + '<div style="width:56px;text-align:right;">\u00c9CART</div></div>'
+          + noms.slice(0, 14).map(function (n) {
+              var J = parJoueur[n], e = J.buts - J.xg;
+              /* L'ECART est la lecture utile : un attaquant tres au-dessus de
+                 son xG traverse une bonne serie et regressera ; en dessous, il
+                 cree ses occasions sans les convertir — souvent sous-cote. */
+              var coul = e > 1.5 ? '#ff8a8a' : (e < -1.5 ? '#4ade80' : 'var(--t3)');
+              return '<div style="display:flex;align-items:center;padding:5px 6px;border-bottom:1px solid rgba(255,255,255,.05);font-size:11.5px;">'
+                + '<div style="flex:1;min-width:0;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">' + n + '</div>'
+                + '<div style="width:38px;text-align:right;color:var(--t3);">' + J.tirs + '</div>'
+                + '<div style="width:46px;text-align:right;font-weight:800;color:#22d3ee;">' + J.xg.toFixed(2) + '</div>'
+                + '<div style="width:38px;text-align:right;font-weight:700;">' + J.buts + '</div>'
+                + '<div style="width:56px;text-align:right;font-weight:800;color:' + coul + ';">'
+                + (e >= 0 ? '+' : '') + e.toFixed(2) + '</div></div>';
+            }).join('')
+          + '<div style="font-size:9px;color:var(--t3);margin-top:4px;">Joueurs \u00e0 2 tirs minimum \u00b7 '
+          + '\u00e9cart = buts moins xG : <span style="color:#ff8a8a;">rouge</span> sur-performe, '
+          + '<span style="color:#4ade80;">vert</span> sous-performe.</div>';
+      })()
     + '<div style="font-size:9px;color:var(--t3);margin-top:6px;line-height:1.6;">'
     + lus + ' match(s) avec xG ESPN'
     + (sansXg ? (' \u00b7 ' + sansXg + ' sans donn\u00e9e') : '')
