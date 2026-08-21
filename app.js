@@ -30092,7 +30092,7 @@ var _G45_CACHE_PREFIXES=['g45rcP_','g45rcD_','g45rcY_','g45rc_','g45dcm_','g45dc
      explosait et des ecritures LEGITIMES echouaient en silence (le filtre par
      competition, qui restait bloque sur « Toutes »). Les cartes de tirs sont
      les plus lourdes : plusieurs Ko par match, gardees indefiniment. */
-  'g45butA2_','g45gl_','g45_tirs2_','g45_fanart_','g45_img_perso_','g45_tv_prog','g45_mqnom_',
+  'g45butA2_','g45gl2_','g45gl_','g45_tirs2_','g45_fanart_','g45_img_perso_','g45_tv_prog','g45_mqnom_',
   'g45nrlcal2_','g45_fx_faits','g45_veille_','g45_compet_logos','g45_groq_modele','g45_gemini_modeles',
   /* MESURE DU 20/08 sur le stockage reel d'Antoine (5,1 Mo, sature) :
        fpl_bootstrap_cache ... 1951 Ko  <- a lui seul 38 % du total
@@ -38306,7 +38306,7 @@ async function g45GameLog(sport, id, saison) {
     var evs0 = await _g45GameLogFetch(sport, id, '');
     return evs0;
   }
-  var cle = 'g45gl_' + sport + '_' + id + '_' + saison;
+  var cle = 'g45gl2_' + sport + '_' + id + '_' + saison;
   try {
     var c = JSON.parse(localStorage.getItem(cle) || 'null');
     if (c && (Date.now() - c.t) < 6 * 3600000) return c.l;
@@ -38329,23 +38329,51 @@ async function _g45GameLogFetch(sport, id, saison) {
     j = await r.json();
   } catch (e) { return null; }
 
-  var noms = j.names || [];
   var col = _G45_GL_COL[sport] || _G45_GL_COL.soccer;
-  var iBut = noms.indexOf(col.but), iPas = noms.indexOf(col.passe);
-  if (iBut < 0) return null;
+  var nomsGlob = j.names || [];
 
-  /* `events` est un objet indexe par identifiant de match ; on le remet a plat
-     et on trie du plus RECENT au plus ancien. */
+  /* CORRECTION DU 22/08 — cause des pastilles TOUTES ROUGES.
+     `j.events` est un dictionnaire de CONTEXTE : date, adversaire, score,
+     resultat. Il ne porte AUCUNE statistique. Les chiffres vivent dans
+     seasonTypes[].categories[].events[], apparies par `eventId`. On lisait donc
+     `e.stats` -> undefined -> parseInt(undefined) -> NaN -> 0, pour TOUS les
+     matchs et TOUS les joueurs. Symptome : Ueda affichait 1 but au-dessus et
+     0/2 buteur en dessous ; Aguado 1 but et 0/10. Le repli sur `e.stats` est
+     conserve au cas ou ESPN servirait les deux formes selon le sport. */
+  var parId = {};
+  (j.seasonTypes || []).forEach(function (t) {
+    (t.categories || []).forEach(function (c) {
+      var noms = (c.names && c.names.length) ? c.names : nomsGlob;
+      (c.events || []).forEach(function (ev) {
+        if (ev && ev.eventId != null) parId[String(ev.eventId)] = { s: ev.stats || [], n: noms };
+      });
+    });
+  });
+
+  /* La colonne doit exister QUELQUE PART, sinon on ne rend rien du tout plutot
+     qu'une ligne de pastilles rouges qui ferait croire a une disette. */
+  var dispo = nomsGlob.indexOf(col.but) >= 0;
+  Object.keys(parId).forEach(function (k) { if (parId[k].n.indexOf(col.but) >= 0) dispo = true; });
+  if (!dispo) return null;
+
+  /* Union des deux sources : un match peut avoir ses stats sans figurer dans
+     `events`, et inversement. Tri du plus RECENT au plus ancien. */
+  var cles = {};
+  Object.keys(j.events || {}).forEach(function (k) { cles[k] = 1; });
+  Object.keys(parId).forEach(function (k) { cles[k] = 1; });
+
   var evs = [];
-  Object.keys(j.events || {}).forEach(function (k) {
-    var e = j.events[k];
-    var st = (e && e.stats) || [];
+  Object.keys(cles).forEach(function (k) {
+    var e = (j.events || {})[k] || {};
+    var src = parId[k] || { s: e.stats || [], n: nomsGlob };
+    var iBut = src.n.indexOf(col.but), iPas = src.n.indexOf(col.passe);
+    if (iBut < 0) return;
     evs.push({
       id: k,
-      date: e && (e.gameDate || e.date) || '',
-      adv: (e && e.opponent && (e.opponent.abbreviation || e.opponent.displayName)) || '',
-      buts: parseInt(st[iBut], 10) || 0,
-      passes: (iPas >= 0 ? (parseInt(st[iPas], 10) || 0) : 0)
+      date: (e.gameDate || e.date) || '',
+      adv: (e.opponent && (e.opponent.abbreviation || e.opponent.displayName)) || '',
+      buts: parseInt(src.s[iBut], 10) || 0,
+      passes: (iPas >= 0 ? (parseInt(src.s[iPas], 10) || 0) : 0)
     });
   });
   evs.sort(function (a, b) { return Date.parse(b.date || 0) - Date.parse(a.date || 0); });
