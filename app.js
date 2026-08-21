@@ -22755,6 +22755,10 @@ async function g45ColorerFiches(sport, lg) {
       var vrai = await g45NomClubParId(sport || 'soccer', el.getAttribute('data-lg') || lg || 'all', tid);
       if (vrai) {
         nomClub = vrai;
+        /* L'ATTRIBUT aussi, pas seulement le libelle : il sert de cle pour
+           retrouver le visuel du club, et il contenait encore le nom du
+           championnat. */
+        el.setAttribute('data-club', vrai);
         var lbl = el.querySelector('.g45-club');
         if (lbl) lbl.textContent = vrai;
       }
@@ -38294,12 +38298,28 @@ var _G45_GL_COL = {
 /* Cache 6 h : un joueur ne joue pas deux fois dans la journee, mais la saison
    avance. Cle par joueur ET par sport. */
 async function g45GameLog(sport, id, saison) {
-  var cle = 'g45gl_' + sport + '_' + id + '_' + (saison || '');
+  /* SANS SAISON, PAS DE CACHE (21/08) : un appel sans saison rend l'annee par
+     DEFAUT d'ESPN — souvent la precedente. Mise en cache six heures, cette
+     reponse contaminait ensuite toutes les fiches, d'ou 35 matchs affiches face
+     a un joueur qui n'en a joue qu'un. */
+  if (!saison) {
+    var evs0 = await _g45GameLogFetch(sport, id, '');
+    return evs0;
+  }
+  var cle = 'g45gl_' + sport + '_' + id + '_' + saison;
   try {
     var c = JSON.parse(localStorage.getItem(cle) || 'null');
     if (c && (Date.now() - c.t) < 6 * 3600000) return c.l;
   } catch (e) {}
 
+  var evs = await _g45GameLogFetch(sport, id, saison);
+  if (evs) { try { localStorage.setItem(cle, JSON.stringify({ t: Date.now(), l: evs })); } catch (e) {} }
+  return evs;
+}
+window.g45GameLog = g45GameLog;
+
+/* Appel nu, sans cache. */
+async function _g45GameLogFetch(sport, id, saison) {
   var url = 'https://site.web.api.espn.com/apis/common/v3/sports/' + sport + '/all/athletes/'
           + id + '/gamelog' + (saison ? ('?season=' + saison) : '');
   var j = null;
@@ -38329,14 +38349,11 @@ async function g45GameLog(sport, id, saison) {
     });
   });
   evs.sort(function (a, b) { return Date.parse(b.date || 0) - Date.parse(a.date || 0); });
-
-  try { localStorage.setItem(cle, JSON.stringify({ t: Date.now(), l: evs })); } catch (e) {}
   return evs;
 }
-window.g45GameLog = g45GameLog;
 
 /* Suite de pastilles, du plus ancien au plus recent (lecture naturelle). */
-function g45PastillesHTML(evs, sport, n) {
+function g45PastillesHTML(evs, sport, n, sais) {
   if (!evs || !evs.length) return '';
   var col = _G45_GL_COL[sport] || _G45_GL_COL.soccer;
   /* n = 0 signifie TOUTE la saison. Le journal la contient deja, la limite
@@ -38381,7 +38398,12 @@ function g45PastillesHTML(evs, sport, n) {
     + 'background:rgba(0,0,0,.42);border-radius:8px;padding:5px 7px;">'
     + liste.map(pastille).join('')
     + '<span style="font-size:9px;font-weight:700;color:rgba(255,255,255,.75);margin-left:4px;white-space:nowrap;">'
-    + nB + '/' + liste.length + ' buteur \u00b7 ' + nD + '/' + liste.length + ' d\u00e9cisif</span>'
+    + nB + '/' + liste.length + ' buteur \u00b7 ' + nD + '/' + liste.length + ' d\u00e9cisif'
+    /* La SAISON du journal est affichee : c'est le seul moyen de voir d'un coup
+       d'oeil si les pastilles parlent bien de la meme annee que les chiffres
+       au-dessus. Une incoherence sautera aux yeux au lieu de demander une sonde. */
+    + (sais ? (' \u00b7 <span style="opacity:.7;">' + sais + '</span>') : '')
+    + '</span>'
     + (evs.length > 10
         ? ('<span style="font-size:9px;color:#4d84ff;cursor:pointer;margin-left:6px;white-space:nowrap;" '
            + 'onclick="g45PastillesPlus(this,\'' + sport + '\',' + (n ? 0 : 10) + ')">'
@@ -38398,7 +38420,7 @@ async function g45PastillesPlus(el, sport, n) {
   if (!boite) return;
   var id = boite.id.replace('g45-past-', '');
   var evs = await g45GameLog(sport, id, boite.getAttribute('data-saison') || '');
-  if (evs && evs.length) boite.innerHTML = g45PastillesHTML(evs, sport, n);
+  if (evs && evs.length) boite.innerHTML = g45PastillesHTML(evs, sport, n, boite.getAttribute('data-saison') || '');
 }
 window.g45PastillesPlus = g45PastillesPlus;
 
@@ -38439,7 +38461,7 @@ async function g45RemplirPastilles(sport, saison) {
         + '</div>';
       continue;
     }
-    b.innerHTML = g45PastillesHTML(evs, sport || 'soccer', 10);
+    b.innerHTML = g45PastillesHTML(evs, sport || 'soccer', 10, anFiche);
   }
 }
 window.g45RemplirPastilles = g45RemplirPastilles;
