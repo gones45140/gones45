@@ -38337,9 +38337,8 @@ async function _g45GameLogFetch(sport, id, saison) {
      resultat. Il ne porte AUCUNE statistique. Les chiffres vivent dans
      seasonTypes[].categories[].events[], apparies par `eventId`. On lisait donc
      `e.stats` -> undefined -> parseInt(undefined) -> NaN -> 0, pour TOUS les
-     matchs et TOUS les joueurs. Symptome : Ueda affichait 1 but au-dessus et
-     0/2 buteur en dessous ; Aguado 1 but et 0/10. Le repli sur `e.stats` est
-     conserve au cas ou ESPN servirait les deux formes selon le sport. */
+     matchs et TOUS les joueurs. Repli sur `e.stats` conserve au cas ou ESPN
+     servirait les deux formes selon le sport. */
   var parId = {};
   (j.seasonTypes || []).forEach(function (t) {
     (t.categories || []).forEach(function (c) {
@@ -38461,7 +38460,15 @@ async function g45RemplirPastilles(sport, saison) {
     var b = boites[i];
     if (b.getAttribute('data-fait')) continue;
     b.setAttribute('data-fait', '1');
-    if (saison) b.setAttribute('data-saison', saison);
+    /* CORRECTION DU 22/08 — cette ligne ANNULAIT le correctif « saison par
+       fiche » du 21/08. Elle ECRASAIT le `data-saison` propre a chaque carte
+       avec la saison globale passee en argument, c'est-a-dire celle du DERNIER
+       joueur de la boucle d'affichage ; trois lignes plus bas on relisait
+       l'attribut qu'on venait de detruire. Visible en production : Roberto
+       Fernandez en 2026/2027 avec 2 buts en 1 match, mais des pastilles
+       portant sur 38 matchs de 2025. La saison globale ne sert plus que de
+       REPLI, pour une boite qui n'aurait aucun attribut. */
+    if (saison && !b.getAttribute('data-saison')) b.setAttribute('data-saison', saison);
     var id = b.id.replace('g45-past-', '');
     if (!id || id === 'undefined') continue;
     /* SAISON PAR FICHE (21/08) : `an` est calcule JOUEUR PAR JOUEUR — un joueur
