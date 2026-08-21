@@ -22470,7 +22470,18 @@ async function g45ButeursView(){
   if(!Object.keys(L).length) L={'fra.1':1,'eng.1':1,'esp.1':1,'ita.1':1,'ger.1':1};
   var chip=function(lbl,on,fn){ return '<button onclick="'+fn+'" style="border:none;cursor:pointer;border-radius:7px;padding:5px 10px;font-size:9.5px;font-weight:800;background:'+(on?'#f0c828':'rgba(255,255,255,.06)')+';color:'+(on?'#221b00':'var(--t2)')+';">'+lbl+'</button>'; };
   var head='<button onclick="loadTendancesTab()" style="border:none;cursor:pointer;background:rgba(255,255,255,.06);border-radius:8px;color:var(--t2);padding:7px 12px;font-size:11px;font-weight:700;margin-bottom:10px;">← Tendances</button>'
-    +'<div class="sec" style="margin-top:0;">⚽ Buteurs</div>'
+    +'<div class="sec" style="margin-top:0;">⚽ Marqueurs</div>'
+    /* REGROUPEMENT (20/08) : la meme question — quelle probabilite qu'un
+       joueur marque — vivait a TROIS endroits (Buteurs football ici, NFL/NHL
+       dans Tendances, Lanceurs MLB dans la Calculatrice). Chips de sport pour
+       les reunir. Les autres blocs ne sont PAS reecrits : on DEPLACE leurs
+       noeuds, donc leurs fonctions et gestionnaires restent intacts. */
+    +'<div style="display:flex;gap:5px;flex-wrap:wrap;margin-bottom:9px;padding-bottom:8px;border-bottom:1px solid rgba(255,255,255,.07);">'
+      +chip('⚽ Football', true, "g45MqSport('foot')")
+      +chip('🏈 NFL', false, "g45MqSport('nfl')")
+      +chip('🏒 NHL', false, "g45MqSport('nhl')")
+      +chip('⚾ Lanceurs MLB', false, "g45MqSport('mlb')")
+    +'</div>'
     +'<div style="display:flex;gap:5px;flex-wrap:wrap;margin-bottom:7px;">'
       +chip('⭐ Mes joueurs', mode==='fav', "g45ButMode('fav')")
       +chip('🏆 Meilleurs buteurs', mode==='top', "g45ButMode('top')")
@@ -22557,6 +22568,11 @@ async function g45ButeursView(){
         +(d.head?(' · '+d.head+' de la tête'):'')+(d.fk?(' · '+d.fk+' sur coup franc'):'')
         +' · '+Math.round(d.min/(d.app||1))+' min par match'
       +'</div>'
+      /* PASTILLES PAR MATCH (20/08) : une moyenne ne dit pas la meme chose qu'une
+         serie. Le conteneur est vide au rendu et rempli ensuite — le journal de
+         matchs demande une requete, et on ne bloque pas l'affichage de la fiche
+         pour ca. */
+      +'<div id="g45-past-'+id.aid+'" style="margin-bottom:7px;min-height:24px;"></div>'
       +'<div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;background:rgba(0,0,0,.18);border-radius:8px;padding:7px 9px;">'
         +'<div style="flex:1;min-width:130px;"><div style="font-size:8px;color:var(--t3);">Probabilité de marquer (Poisson)</div>'
         +'<div style="font-size:11px;font-weight:800;color:var(--t1);">'+Math.round(pAny*100)+'% <span style="font-size:9px;color:var(--t3);font-weight:600;">tout compris</span> · <span style="color:#2ecc71;">'+Math.round(pAnyN*100)+'%</span> <span style="font-size:9px;color:var(--t3);font-weight:600;">hors penalty</span></div></div>'
@@ -22567,8 +22583,54 @@ async function g45ButeursView(){
   var bandeau = anyPrev ? ('<div style="background:rgba(138,160,255,.12);border:1px solid rgba(138,160,255,.28);border-radius:8px;padding:7px 10px;margin-bottom:9px;font-size:9px;color:#8aa0ff;line-height:1.5;">\uD83D\uDCDA Saison '+y+'/'+(y+1)+' pas encore commencée : les chiffres viennent de l\'\u00e9dition pr\u00e9c\u00e9dente.</div>') : '';
   el.innerHTML=head+bandeau+(h||'<div style="font-size:10px;color:var(--t3);text-align:center;padding:14px;">Aucun buteur trouvé — sélectionne au moins un championnat.</div>')
     +'<div style="font-size:8px;color:var(--t3);text-align:center;margin-top:8px;font-style:italic;line-height:1.6;">'+(comp==='ucl'?'Statistiques de <b>Ligue des Champions uniquement</b> — échantillon plus petit, mais face à des défenses du même niveau que celles du prochain match européen.':'Statistiques de <b>championnat uniquement</b> (hors coupes) — adversaires homogènes, ce qui convient pour parier sur les matchs de championnat.')+'<br>Classement par buts hors penalty. λ = buts par match joué ; p = 1 − e<sup>−λ</sup>.<br>La cote saisie n\'est pas dévigorisée (marché à deux issues non disponible) : l\'écart réel est donc un peu plus faible qu\'affiché.</div>';
+
+  /* Pastilles remplies APRES l'affichage complet : chaque joueur demande une
+     requete, et la fiche doit apparaitre immediatement.
+     PIEGE EVITE : l'affectation de `innerHTML` s'etend sur PLUSIEURS lignes.
+     Inserer cet appel juste apres la premiere aurait coupe la fin du rendu tout
+     en restant syntaxiquement valide — la note de bas de vue disparaissait sans
+     la moindre erreur. */
+  try { g45RemplirPastilles('soccer', an); } catch (e) {}
 }
 window.g45ButeursView=g45ButeursView;
+
+/* ═══ AIGUILLAGE DES SPORTS ═══
+   Football : la vue existante. Les trois autres : on RAPATRIE le bloc deja
+   construit ailleurs en DEPLAÇANT son noeud — le recreer perdrait les
+   gestionnaires poses par ses fonctions d'origine. */
+async function g45MqSport(sp) {
+  var el = document.getElementById('t-tend');
+  if (!el) return;
+  if (sp === 'foot') { g45ButeursView(); return; }
+
+  var titre = { nfl: '\ud83c\udfc8 NFL', nhl: '\ud83c\udfd2 NHL', mlb: '\u26be Lanceurs MLB' }[sp] || '';
+  el.innerHTML = '<button onclick="g45ButeursView()" style="border:none;cursor:pointer;background:rgba(255,255,255,.06);'
+    + 'border-radius:8px;color:var(--t2);padding:6px 10px;font-size:10px;font-weight:700;margin-bottom:8px;">'
+    + '\u2190 Buteurs football</button>'
+    + '<div class="sec" style="margin-top:0;">' + titre + '</div><div id="g45-mq-hote"></div>';
+  var hote = document.getElementById('g45-mq-hote');
+
+  if (sp === 'mlb') {
+    /* Le simulateur de lanceurs vit dans le Calculateur : on l'emprunte. Le
+       retour a Pari le remettra en place, la fonction qui le pose la-bas
+       s'execute a chaque ouverture de l'onglet. */
+    var lc = document.getElementById('calc-lc');
+    if (lc) { hote.appendChild(lc); lc.style.display = 'block'; }
+    else hote.innerHTML = '<div style="font-size:11px;color:var(--t3);">Bloc Lanceurs introuvable \u2014 ouvre une fois Pari \u2192 Calculateur.</div>';
+    return;
+  }
+
+  if (sp === 'nhl') {
+    hote.innerHTML = '<div style="display:flex;gap:5px;margin-bottom:8px;">'
+      + '<button onclick="g45MarqueursUS(\'nhl\')" style="flex:1;padding:8px;border-radius:8px;border:1px solid rgba(255,255,255,.10);background:rgba(255,255,255,.04);color:var(--t1);font-size:11px;font-weight:700;cursor:pointer;">Buts</button>'
+      + '<button onclick="g45MarqueursUS(\'nhl\',1)" style="flex:1;padding:8px;border-radius:8px;border:1px solid rgba(255,255,255,.10);background:rgba(255,255,255,.04);color:var(--t1);font-size:11px;font-weight:700;cursor:pointer;">Points</button></div>'
+      + '<div id="g45-mq-body" style="font-size:11.5px;color:var(--t3);"></div>';
+  } else {
+    hote.innerHTML = '<div id="g45-mq-body" style="font-size:11.5px;color:var(--t3);"></div>';
+  }
+  if (typeof g45MarqueursUS === 'function') await g45MarqueursUS(sp);
+}
+window.g45MqSport = g45MqSport;
 
 /* ═══════════ 📏 CLV — CLOSING LINE VALUE ═══════════
    Mesure si Antoine bat la cote de clôture. Sur une montante ou sur un petit nombre de
@@ -29860,7 +29922,7 @@ var _G45_CACHE_PREFIXES=['g45rcP_','g45rcD_','g45rcY_','g45rc_','g45dcm_','g45dc
      explosait et des ecritures LEGITIMES echouaient en silence (le filtre par
      competition, qui restait bloque sur « Toutes »). Les cartes de tirs sont
      les plus lourdes : plusieurs Ko par match, gardees indefiniment. */
-  'g45_tirs2_','g45_fanart_','g45_img_perso_','g45_tv_prog','g45_mqnom_',
+  'g45gl_','g45_tirs2_','g45_fanart_','g45_img_perso_','g45_tv_prog','g45_mqnom_',
   'g45nrlcal2_','g45_fx_faits','g45_veille_','g45_compet_logos','g45_groq_modele','g45_gemini_modeles',
   /* MESURE DU 20/08 sur le stockage reel d'Antoine (5,1 Mo, sature) :
        fpl_bootstrap_cache ... 1951 Ko  <- a lui seul 38 % du total
@@ -37474,9 +37536,8 @@ function g45MarqueursUI() {
 }
 window.g45MarqueursUI = g45MarqueursUI;
 
-document.addEventListener('click', function () {
-  setTimeout(function () { if (_g45Visible('t-tend')) g45MarqueursUI(); }, 200);
-});
+/* Le bloc ne s'installe plus tout seul dans Tendances : il est accessible par
+   les chips de l'onglet Marqueurs, un seul endroit desormais. */
 
 
 
@@ -38039,3 +38100,159 @@ async function g45XgSaison(matches, teamId, nom, boiteId, lgDef) {
     + 'retarde le plus, puisqu\'il suit les r\u00e9sultats.</div>';
 }
 window.g45XgSaison = g45XgSaison;
+
+
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   PASTILLES PAR MATCH — a-t-il marque ? passe ? (20/08/2026)
+   ───────────────────────────────────────────────────────────────────────────
+   SONDE AVANT D'ECRIRE. Deux constats :
+     - `/soccer/esp.1/athletes/{id}/gamelog` renvoie 500. Le slug generique
+       `all` repond 200 — meme piege que le scoreboard, ou seul `all` couvre
+       toutes les competitions.
+     - Les colonnes utiles sont `totalGoals` et `goalAssists`, par match. UNE
+       requete donne donc toute la saison d'un joueur.
+
+   Une moyenne de buts par match ne dit pas la meme chose qu'une serie : un
+   joueur a 0,5 but/match qui a marque cinq fois d'affilee puis plus rien n'est
+   pas le meme pari qu'un joueur regulier. Les pastilles montrent la serie.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+var _G45_GL_COL = {
+  soccer:   { but: 'totalGoals',  passe: 'goalAssists',  ico: '\u26bd' },
+  hockey:   { but: 'goals',       passe: 'assists',      ico: '\ud83c\udfd2' },
+  football: { but: 'totalTouchdowns', passe: 'passingTouchdowns', ico: '\ud83c\udfc8' },
+  basketball:{ but: 'points',     passe: 'assists',      ico: '\ud83c\udfc0' }
+};
+
+/* Cache 6 h : un joueur ne joue pas deux fois dans la journee, mais la saison
+   avance. Cle par joueur ET par sport. */
+async function g45GameLog(sport, id, saison) {
+  var cle = 'g45gl_' + sport + '_' + id + '_' + (saison || '');
+  try {
+    var c = JSON.parse(localStorage.getItem(cle) || 'null');
+    if (c && (Date.now() - c.t) < 6 * 3600000) return c.l;
+  } catch (e) {}
+
+  var url = 'https://site.web.api.espn.com/apis/common/v3/sports/' + sport + '/all/athletes/'
+          + id + '/gamelog' + (saison ? ('?season=' + saison) : '');
+  var j = null;
+  try {
+    var r = await fetch(url);
+    if (!r.ok) return null;
+    j = await r.json();
+  } catch (e) { return null; }
+
+  var noms = j.names || [];
+  var col = _G45_GL_COL[sport] || _G45_GL_COL.soccer;
+  var iBut = noms.indexOf(col.but), iPas = noms.indexOf(col.passe);
+  if (iBut < 0) return null;
+
+  /* `events` est un objet indexe par identifiant de match ; on le remet a plat
+     et on trie du plus RECENT au plus ancien. */
+  var evs = [];
+  Object.keys(j.events || {}).forEach(function (k) {
+    var e = j.events[k];
+    var st = (e && e.stats) || [];
+    evs.push({
+      id: k,
+      date: e && (e.gameDate || e.date) || '',
+      adv: (e && e.opponent && (e.opponent.abbreviation || e.opponent.displayName)) || '',
+      buts: parseInt(st[iBut], 10) || 0,
+      passes: (iPas >= 0 ? (parseInt(st[iPas], 10) || 0) : 0)
+    });
+  });
+  evs.sort(function (a, b) { return Date.parse(b.date || 0) - Date.parse(a.date || 0); });
+
+  try { localStorage.setItem(cle, JSON.stringify({ t: Date.now(), l: evs })); } catch (e) {}
+  return evs;
+}
+window.g45GameLog = g45GameLog;
+
+/* Suite de pastilles, du plus ancien au plus recent (lecture naturelle). */
+function g45PastillesHTML(evs, sport, n) {
+  if (!evs || !evs.length) return '';
+  var col = _G45_GL_COL[sport] || _G45_GL_COL.soccer;
+  /* n = 0 signifie TOUTE la saison. Le journal la contient deja, la limite
+     n'etait qu'un choix d'affichage : 38 pastilles debordent sur telephone,
+     mais sur PC elles tiennent et montrent les alternances et les disettes. */
+  var liste = (n ? evs.slice(0, n) : evs.slice()).reverse();
+  /* Pastilles plus petites quand la serie est longue, sinon la ligne deborde. */
+  var taille = liste.length > 24 ? 15 : (liste.length > 14 ? 18 : 22);
+
+  var pastille = function (e) {
+    var b = e.buts, p = e.passes;
+    var fond, bord, dedans;
+    if (b > 0) {
+      fond = 'rgba(30,215,96,.20)'; bord = '#1ed760';
+      /* Un double est une information forte : on affiche le CHIFFRE plutot que
+         deux symboles, illisibles a cette taille. */
+      dedans = (b > 1) ? ('<tspan>' + b + '</tspan>') : col.ico;
+    } else if (p > 0) {
+      fond = 'rgba(240,176,32,.20)'; bord = '#f0b020';
+      dedans = (p > 1) ? ('<tspan>' + p + '</tspan>') : '\ud83d\udc5f';
+    } else {
+      fond = 'rgba(255,107,107,.14)'; bord = 'rgba(255,107,107,.55)'; dedans = '';
+    }
+    var titre = (e.date || '').slice(0, 10) + (e.adv ? (' \u00b7 ' + e.adv) : '')
+              + ' \u00b7 ' + b + ' but(s), ' + p + ' passe(s)';
+    /* Passe EN PLUS d'un but : petit point orange en coin, pour ne pas perdre
+       l'information du marche « buteur ou passeur ». */
+    var coin = (b > 0 && p > 0) ? '<circle cx="20" cy="6" r="4" fill="#f0b020" stroke="rgba(0,0,0,.4)" stroke-width="1"/>' : '';
+    return '<svg viewBox="0 0 26 26" style="width:' + taille + 'px;height:' + taille + 'px;flex:0 0 auto;" role="img"><title>' + titre + '</title>'
+      + '<circle cx="13" cy="14" r="11" fill="' + fond + '" stroke="' + bord + '" stroke-width="1.6"/>'
+      + (dedans ? ('<text x="13" y="18" text-anchor="middle" font-size="11" font-weight="800" fill="#fff">' + dedans + '</text>') : '')
+      + coin + '</svg>';
+  };
+
+  var nB = liste.filter(function (e) { return e.buts > 0; }).length;
+  var nD = liste.filter(function (e) { return e.buts > 0 || e.passes > 0; }).length;
+
+  return '<div style="display:flex;align-items:center;gap:3px;flex-wrap:wrap;">'
+    + liste.map(pastille).join('')
+    + '<span style="font-size:9px;color:var(--t3);margin-left:4px;white-space:nowrap;">'
+    + nB + '/' + liste.length + ' buteur \u00b7 ' + nD + '/' + liste.length + ' d\u00e9cisif</span>'
+    + (evs.length > 10
+        ? ('<span style="font-size:9px;color:#4d84ff;cursor:pointer;margin-left:6px;white-space:nowrap;" '
+           + 'onclick="g45PastillesPlus(this,\'' + sport + '\',' + (n ? 0 : 10) + ')">'
+           + (n ? ('tout voir (' + evs.length + ')') : 'voir 10') + '</span>')
+        : '')
+    + '</div>';
+}
+window.g45PastillesHTML = g45PastillesHTML;
+
+/* Bascule 10 matchs <-> saison entiere. Le journal est deja en cache, donc
+   AUCUNE requete supplementaire : on redessine seulement. */
+async function g45PastillesPlus(el, sport, n) {
+  var boite = el.closest('[id^="g45-past-"]');
+  if (!boite) return;
+  var id = boite.id.replace('g45-past-', '');
+  var evs = await g45GameLog(sport, id, boite.getAttribute('data-saison') || '');
+  if (evs && evs.length) boite.innerHTML = g45PastillesHTML(evs, sport, n);
+}
+window.g45PastillesPlus = g45PastillesPlus;
+
+/* Remplit les pastilles des fiches Buteurs deja affichees.
+   UNE requete par joueur, en serie et non en parallele : une rafale de dix
+   appels simultanes vers ESPN se fait couper, on l'a vu avec api-sports. */
+async function g45RemplirPastilles(sport, saison) {
+  var boites = Array.prototype.slice.call(document.querySelectorAll('[id^="g45-past-"]'));
+  for (var i = 0; i < boites.length && i < 20; i++) {
+    var b = boites[i];
+    if (b.getAttribute('data-fait')) continue;
+    b.setAttribute('data-fait', '1');
+    if (saison) b.setAttribute('data-saison', saison);
+    var id = b.id.replace('g45-past-', '');
+    if (!id || id === 'undefined') continue;
+    var evs = null;
+    try { evs = await g45GameLog(sport || 'soccer', id, saison); } catch (e) {}
+    if (!evs || !evs.length) {
+      /* Rien plutot qu'un espace vide inexplique : un joueur sans journal
+         disponible ne doit pas laisser croire a un bug d'affichage. */
+      b.innerHTML = '<div style="font-size:9px;color:var(--t3);">Historique par match indisponible</div>';
+      continue;
+    }
+    b.innerHTML = g45PastillesHTML(evs, sport || 'soccer', 10);
+  }
+}
+window.g45RemplirPastilles = g45RemplirPastilles;
