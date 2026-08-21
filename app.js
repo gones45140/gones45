@@ -38505,42 +38505,65 @@ window.g45RemplirPastilles = g45RemplirPastilles;
 function _g45SlugDepuisLibelle(txt) {
   var n = String(txt || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim();
   if (!n) return null;
-  var trouve = null;
+
+  /* STRUCTURE VERIFIEE le 21/08 : `G45_LEAGUE_GROUPS` est un TABLEAU de groupes
+     de la forme { grp, leagues:[{name, slug}] } — et non un objet indexe par
+     clef comme je l'avais suppose. Mon parcours par `Object.keys` ne rendait
+     donc jamais rien : « Ligue 1 », « Premier League » et « Liga » sortaient
+     tous les trois non reconnus, d'ou l'absence totale de liste. */
+  var tout = [];
   try {
-    Object.keys(G45_LEAGUE_GROUPS || {}).forEach(function (z) {
-      (G45_LEAGUE_GROUPS[z] || []).forEach(function (l) {
-        if (trouve) return;
-        var nom = String(l.name || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
-        /* Egalite d'abord, puis inclusion : « Liga » ne doit pas attraper
-           « Liga Portugal » si l'utilisateur a ecrit exactement « Liga ». */
-        if (nom === n) trouve = { slug: l.slug, sport: 'soccer', nom: l.name };
+    (G45_LEAGUE_GROUPS || []).forEach(function (g) {
+      (g.leagues || []).forEach(function (l) {
+        if (l && l.slug) tout.push({ slug: l.slug, sport: 'soccer', nom: l.name || l.slug });
       });
     });
-    if (!trouve) {
-      Object.keys(G45_LEAGUE_GROUPS || {}).forEach(function (z) {
-        (G45_LEAGUE_GROUPS[z] || []).forEach(function (l) {
-          if (trouve) return;
-          var nom = String(l.name || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
-          if (nom.indexOf(n) >= 0 || n.indexOf(nom) >= 0) trouve = { slug: l.slug, sport: 'soccer', nom: l.name };
-        });
-      });
-    }
   } catch (e) {}
-  /* Autres sports : les groupes vivent dans G45_SPORTS. */
-  if (!trouve) {
-    try {
-      (G45_SPORTS || []).forEach(function (sp) {
-        (sp.groups || []).forEach(function (g) {
-          (g.leagues || []).forEach(function (l) {
-            if (trouve) return;
-            var nom = String(l.name || '').toLowerCase();
-            if (nom === n || nom.indexOf(n) >= 0) trouve = { slug: l.slug, sport: sp.path || sp.key, nom: l.name };
-          });
+  try {
+    (G45_SPORTS || []).forEach(function (sp) {
+      (sp.groups || []).forEach(function (g) {
+        (g.leagues || []).forEach(function (l) {
+          if (l && l.slug) tout.push({ slug: l.slug, sport: sp.path || sp.key || 'soccer', nom: l.name || l.slug });
         });
       });
-    } catch (e) {}
+    });
+  } catch (e) {}
+
+  var norm = function (x) {
+    return String(x || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim();
+  };
+  /* Egalite d'abord : « Liga » ne doit pas attraper « Liga Portugal ». */
+  var exact = tout.filter(function (l) { return norm(l.nom) === n; })[0];
+  if (exact) return exact;
+  /* Puis le slug lui-meme, au cas ou l'utilisateur saisirait « fra.1 ». */
+  var parSlug = tout.filter(function (l) { return norm(l.slug) === n; })[0];
+  if (parSlug) return parSlug;
+  /* Enfin l'inclusion, en preferant le libelle le plus COURT : « Premier
+     League » doit gagner sur « Premier League 2 ». */
+  /* SYNONYMES : la table abrege (« Champions L. », « Europa L. ») alors qu'on
+     saisit naturellement le nom complet. Sans cette table, « Ligue des
+     Champions » restait non reconnu. */
+  var SYN = {
+    'ligue des champions': 'uefa.champions', 'champions league': 'uefa.champions',
+    'c1': 'uefa.champions', 'ldc': 'uefa.champions',
+    'ligue europa': 'uefa.europa', 'europa league': 'uefa.europa', 'c3': 'uefa.europa',
+    'conference league': 'uefa.europa.conf', 'ligue conference': 'uefa.europa.conf',
+    'championnat anglais': 'eng.1', 'championnat espagnol': 'esp.1',
+    'championnat italien': 'ita.1', 'championnat allemand': 'ger.1',
+    'championnat francais': 'fra.1', 'l1': 'fra.1', 'pl': 'eng.1',
+    'championship': 'eng.2', 'ligue 2': 'fra.2', 'liga portugal': 'por.1'
+  };
+  if (SYN[n]) {
+    var viaSyn = tout.filter(function (l) { return l.slug === SYN[n]; })[0];
+    if (viaSyn) return viaSyn;
+    return { slug: SYN[n], sport: 'soccer', nom: txt };
   }
-  return trouve;
+
+  var proches = tout.filter(function (l) {
+    var v = norm(l.nom);
+    return v.indexOf(n) >= 0 || n.indexOf(v) >= 0;
+  }).sort(function (a, b) { return String(a.nom).length - String(b.nom).length; });
+  return proches[0] || null;
 }
 
 /* Remplit les datalists des champs equipe et adversaire du formulaire. */
