@@ -22582,7 +22582,7 @@ async function g45ButeursView(){
        Le bord gauche garde la couleur de l'ECART a la cote tant que le club
        n'a pas repondu — l'information de value n'est jamais perdue, elle est
        simplement remplacee par l'identite visuelle une fois disponible. */
-    h+='<div data-tid="'+(id.tid||'')+'" data-lg="'+(id.lg||'')+'" data-club="'+String(id.tname||'').replace(/"/g,'')+'" style="background:rgba(12,16,28,.96);border:1px solid rgba(255,255,255,.08);border-left:3px solid '+col+';border-radius:10px;padding:10px 11px;margin-bottom:9px;">'
+    h+='<div data-tid="'+(id.tid||'')+'" data-lg="'+(id.lg||'')+'" data-club="'+String(id.tname||'').replace(/"/g,'')+'" data-an="'+an+'" style="background:rgba(12,16,28,.96);border:1px solid rgba(255,255,255,.08);border-left:3px solid '+col+';border-radius:10px;padding:10px 11px;margin-bottom:9px;">'
       +'<div style="display:flex;align-items:center;gap:9px;margin-bottom:8px;">'
         +'<span class="g45-maillot" style="display:flex;"></span>'
         +'<img src="https://a.espncdn.com/i/headshots/soccer/players/full/'+id.aid+'.png" loading="lazy" onerror="this.style.display=\'none\'" style="width:40px;height:40px;border-radius:50%;object-fit:cover;background:rgba(255,255,255,.07);flex:none;">'
@@ -22612,7 +22612,7 @@ async function g45ButeursView(){
          serie. Le conteneur est vide au rendu et rempli ensuite — le journal de
          matchs demande une requete, et on ne bloque pas l'affichage de la fiche
          pour ca. */
-      +'<div id="g45-past-'+id.aid+'" style="margin-bottom:7px;min-height:24px;"></div>'
+      +'<div id="g45-past-'+id.aid+'" data-saison="'+an+'" style="margin-bottom:7px;min-height:24px;"></div>'
       +'<div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;background:rgba(0,0,0,.18);border-radius:8px;padding:7px 9px;">'
         +'<div style="flex:1;min-width:130px;"><div style="font-size:8px;color:var(--t3);">Probabilité de marquer (Poisson)</div>'
         +'<div style="font-size:11px;font-weight:800;color:var(--t1);">'+Math.round(pAny*100)+'% <span style="font-size:9px;color:var(--t3);font-weight:600;">tout compris</span> · <span style="color:#2ecc71;">'+Math.round(pAnyN*100)+'%</span> <span style="font-size:9px;color:var(--t3);font-weight:600;">hors penalty</span></div></div>'
@@ -38380,8 +38380,14 @@ async function g45RemplirPastilles(sport, saison) {
     if (saison) b.setAttribute('data-saison', saison);
     var id = b.id.replace('g45-past-', '');
     if (!id || id === 'undefined') continue;
+    /* SAISON PAR FICHE (21/08) : `an` est calcule JOUEUR PAR JOUEUR — un joueur
+       dont les compteurs de la saison en cours sont vides bascule sur l'edition
+       precedente. Je passais une saison globale, celle du dernier joueur
+       traite : les pastilles d'un joueur pouvaient donc porter sur une autre
+       saison que ses chiffres. D'ou « 0/10 buteur » face a « 4 buts ». */
+    var anFiche = b.getAttribute('data-saison') || saison || '';
     var evs = null;
-    try { evs = await g45GameLog(sport || 'soccer', id, saison); } catch (e) {}
+    try { evs = await g45GameLog(sport || 'soccer', id, anFiche); } catch (e) {}
     if (!evs || !evs.length) {
       /* Rien plutot qu'un espace vide inexplique : un joueur sans journal
          disponible ne doit pas laisser croire a un bug d'affichage. */
