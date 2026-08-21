@@ -22639,6 +22639,36 @@ window.g45ButeursView=g45ButeursView;
    Football : la vue existante. Les trois autres : on RAPATRIE le bloc deja
    construit ailleurs en DEPLAÇANT son noeud — le recreer perdrait les
    gestionnaires poses par ses fonctions d'origine. */
+/* ═══ FOND DE CHAMPIONNAT (22/08) ═══
+   Demande d'Antoine : un fond NFL sur le NFL, NHL sur le NHL. Pose au niveau
+   du PANNEAU, pas de la ligne — quinze fonds par joueur restaient exclus, mais
+   un seul par championnat ne gene aucune lecture.
+   Deux sources, dans l'ordre : une image deposee dans le depot
+   (`images/ligues/nfl.jpg`), qui prime et qu'Antoine controle entierement, puis
+   le logo du championnat sur le CDN d'ESPN, deja utilise ailleurs dans l'app.
+   Le resultat du test est memorise : inutile de recharger l'image a chaque
+   ouverture de l'onglet. */
+var _G45_MQ_FOND = {
+  nfl: { logo: 'https://a.espncdn.com/i/teamlogos/leagues/500/nfl.png', tinte: '#1a4b8c' },
+  nhl: { logo: 'https://a.espncdn.com/i/teamlogos/leagues/500/nhl.png', tinte: '#5b6b7f' },
+  mlb: { logo: 'https://a.espncdn.com/i/teamlogos/leagues/500/mlb.png', tinte: '#8c2a33' }
+};
+var _g45MqFonds = {};
+function _g45MqFondPerso(lg) {
+  /* Test non bloquant : si le fichier existe dans le depot, la prochaine
+     ouverture l'utilisera. On ne fait PAS attendre l'affichage pour ca. */
+  var cle = 'g45_mqfond_' + lg;
+  var c = null;
+  try { c = localStorage.getItem(cle); } catch (e) {}
+  if (c !== null) return c;                       /* '' = teste, absent */
+  var url = 'images/ligues/' + lg + '.jpg';
+  var img = new Image();
+  img.onload = function () { try { localStorage.setItem(cle, url); } catch (e) {} };
+  img.onerror = function () { try { localStorage.setItem(cle, ''); } catch (e) {} };
+  img.src = url;
+  return null;                                    /* pas encore teste */
+}
+
 async function g45MqSport(sp) {
   var el = document.getElementById('t-tend');
   if (!el) return;
@@ -22654,11 +22684,24 @@ async function g45MqSport(sp) {
      un style : meme fond, meme flou, meme rayon que partout ailleurs.
      `data-mq-hote` sert au MLB, qui doit retrouver son hote pour y deplacer
      son noeud sans se soucier de la profondeur du panneau. */
+  var F = _G45_MQ_FOND[sp] || null;
+  var fondUrl = F ? (_g45MqFondPerso(sp) || F.logo) : '';
+  /* L'image est une COUCHE INTERMEDIAIRE : le panneau garde son fond opaque en
+     dessous — c'est lui qui empeche le papier peint de l'application de
+     traverser — et le contenu passe au-dessus. A 13 % d'opacite, l'identite du
+     championnat est lisible sans concurrencer les chiffres. */
+  var couche = F
+    ? '<div style="position:absolute;inset:0;background-image:linear-gradient(120deg,' + F.tinte + '33 0%,transparent 60%),url(\'' + fondUrl + '\');'
+      + 'background-size:auto,contain;background-position:center,right -40px center;background-repeat:no-repeat,no-repeat;'
+      + 'opacity:.13;pointer-events:none;border-radius:var(--r8);"></div>'
+    : '';
   el.innerHTML = '<button onclick="g45ButeursView()" style="border:none;cursor:pointer;background:rgba(255,255,255,.06);'
     + 'border-radius:8px;color:var(--t2);padding:6px 10px;font-size:10px;font-weight:700;margin-bottom:8px;">'
     + '\u2190 Buteurs football</button>'
     + '<div class="sec" style="margin-top:0;">' + titre + '</div>'
-    + '<div class="fc" style="--card-alpha:.92;"><div id="g45-mq-hote" data-mq-hote="1"></div></div>';
+    + '<div class="fc" style="--card-alpha:.92;position:relative;overflow:hidden;">'
+    + couche
+    + '<div id="g45-mq-hote" data-mq-hote="1" style="position:relative;"></div></div>';
   var hote = document.getElementById('g45-mq-hote');
 
   if (sp === 'mlb') {
@@ -30109,7 +30152,7 @@ var _G45_CACHE_PREFIXES=['g45rcP_','g45rcD_','g45rcY_','g45rc_','g45dcm_','g45dc
      explosait et des ecritures LEGITIMES echouaient en silence (le filtre par
      competition, qui restait bloque sur « Toutes »). Les cartes de tirs sont
      les plus lourdes : plusieurs Ko par match, gardees indefiniment. */
-  'g45butA2_','g45gl2_','g45gl_','g45_tirs2_','g45_fanart2_','g45_fanart_','g45_img_perso_','g45_tv_prog','g45_mqnom_','g45_mqteam_',
+  'g45butA2_','g45gl2_','g45gl_','g45_tirs2_','g45_fanart2_','g45_fanart_','g45_img_perso_','g45_tv_prog','g45_mqnom_','g45_mqteam_','g45_mqfond_',
   'g45nrlcal2_','g45_fx_faits','g45_veille_','g45_compet_logos','g45_groq_modele','g45_gemini_modeles',
   /* MESURE DU 20/08 sur le stockage reel d'Antoine (5,1 Mo, sature) :
        fpl_bootstrap_cache ... 1951 Ko  <- a lui seul 38 % du total
@@ -37868,7 +37911,7 @@ async function g45MarqueursUS(quoi, secondaire) {
            suffit pas quand une image passe derriere. */
         var e = l.eq || {};
         return '<div style="display:flex;align-items:center;padding:7px 6px;font-size:11.5px;'
-          + 'background:' + (rang % 2 ? 'rgba(8,11,20,.55)' : 'rgba(8,11,20,.38)') + ';'
+          + 'background:' + (rang % 2 ? 'rgba(8,11,20,.46)' : 'rgba(8,11,20,.28)') + ';'
           + 'border-left:3px solid ' + (e.coul || 'rgba(255,255,255,.10)') + ';'
           + 'border-bottom:1px solid rgba(255,255,255,.06);">'
           + (e.logo
