@@ -20367,7 +20367,9 @@ async function loadCalendrier() {
         var moi = null, autre = null;
         cps.forEach(function(x){
           var xid = String((x.team && x.team.id) || x.id || '');
-          if (_g.ids[xid]) moi = x; else autre = x;
+          /* Meme correction que pour le direct : deux equipes suivies dans le
+             meme match ne doivent pas faire disparaitre la rencontre. */
+          if (_g.ids[xid] && !moi) moi = x; else if (!autre) autre = x;
         });
         if (!moi || !autre) return;
         var t = new Date(e.date).getTime();
@@ -23269,7 +23271,20 @@ async function g45LoadOdds(btn){
     var data=await r.json();
     if(!r.ok || (data&&data.error)){ box.innerHTML='<div style="color:#ff6b6b;font-size:11px;padding:8px;">Cotes indisponibles ('+((data&&data.error)||r.status)+').</div>'; btn.disabled=false; return; }
     var ev=_g45OddsFindEvent(data, hN, aN);
-    if(!ev){ box.innerHTML='<div style="color:var(--t3);font-size:11px;padding:8px;">Match introuvable chez The Odds API (pas encore coté, ou nom d\'équipe différent).</div>'; btn.disabled=false; return; }
+    if(!ev){
+      /* MESSAGE CORRIGE le 20/08 : il disait « pas encore cote, ou nom d'equipe
+         different » et nous a envoyes sur une fausse piste pendant vingt
+         minutes. La vraie raison, dans l'immense majorite des cas, est que The
+         Odds API ne conserve AUCUNE cote apres un match : son endpoint ne rend
+         que les rencontres a VENIR. On le dit, et on ne le dit que si le match
+         est effectivement passe. */
+      var _passe = false;
+      try { _passe = new Date((data && data.header && data.header.competitions && data.header.competitions[0] && data.header.competitions[0].date) || 0).getTime() < Date.now(); } catch(e){}
+      box.innerHTML = '<div style="color:var(--t3);font-size:11px;padding:8px;">'
+        + (_passe
+            ? 'Match d\u00e9j\u00e0 jou\u00e9 : The Odds API ne conserve pas les cotes apr\u00e8s coup, elle ne publie que les rencontres \u00e0 venir.'
+            : 'Match introuvable chez The Odds API (pas encore cot\u00e9, ou nom d\'\u00e9quipe diff\u00e9rent).')
+        + '</div>'; return; }
     box.innerHTML=_g45RenderOdds(ev, hN, aN, remain);
     box.setAttribute('data-loaded','1');
   }catch(e){ box.innerHTML='<div style="color:#ff6b6b;font-size:11px;padding:8px;">Erreur cotes.</div>'; }
@@ -36313,7 +36328,12 @@ async function g45DirectMesEquipes(silencieux) {
       var moi = null, autre = null;
       cps.forEach(function (x) {
         var xid = String((x.team && x.team.id) || x.id || '');
-        if (g.ids[xid]) moi = x; else autre = x;
+        /* BUG CORRIGE le 20/08 : quand les DEUX equipes sont suivies — Mariners
+           contre Brewers, tous deux en MLB —, les deux camps etaient classes
+           « mien », `autre` restait vide et le match etait ECARTE. On ne prend
+           donc que le PREMIER comme reference, le second devient l'adversaire
+           quoi qu'il arrive. */
+        if (g.ids[xid] && !moi) moi = x; else if (!autre) autre = x;
       });
       if (!moi || !autre) return;
       var st = (cp.status && cp.status.type) || (e.status && e.status.type) || {};
