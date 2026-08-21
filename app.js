@@ -22551,7 +22551,7 @@ async function g45ButeursView(){
     var cote=cotes[id.aid]||'', imp=cote?(1/cote):0;
     var gap=imp?(pAnyN-imp):null;
     var col=(gap!=null&&gap>=0.05)?'#2ecc71':(gap!=null&&gap<=-0.05)?'#ff6b6b':'#8aa0ff';
-    var cell=function(v,l,c){ return '<div style="flex:1;min-width:66px;text-align:center;background:rgba(0,0,0,.20);border-radius:7px;padding:6px 4px;"><div style="font-size:13px;font-weight:800;color:'+(c||'var(--t1)')+';">'+v+'</div><div style="font-size:7.5px;color:var(--t3);margin-top:1px;">'+l+'</div></div>'; };
+    var cell=function(v,l,c){ return '<div style="flex:1;min-width:66px;text-align:center;background:rgba(0,0,0,.45);border-radius:7px;padding:6px 4px;"><div style="font-size:13px;font-weight:800;color:'+(c||'var(--t1)')+';">'+v+'</div><div style="font-size:7.5px;color:var(--t3);margin-top:1px;">'+l+'</div></div>'; };
     /* `data-tid` permet de colorer la fiche APRES coup, sans bloquer le rendu :
        la couleur du club demande une requete, mise en cache definitivement.
        Le bord gauche garde la couleur de l'ECART a la cote tant que le club
@@ -22573,8 +22573,13 @@ async function g45ButeursView(){
         +cell(npg.toFixed(2),'hors penalty','#2ecc71')+cell(sotpm.toFixed(1),'tirs cadrés/m')
         +cell(Math.round(conv*100)+'%','conversion')+cell(Math.round(stpc*100)+'%','titulaire')
       +'</div>'
-      +'<div style="font-size:9px;color:var(--t2);line-height:1.6;margin-bottom:7px;">'
-        +'⚠️ <b>'+d.pg+'</b> de ses '+d.g+' buts sur penalty ('+Math.round(d.g?100*d.pg/d.g:0)+'%)'
+      /* Un « avertissement » pour annoncer ZERO penalty n'avait aucun sens : on
+         ne signale les penalties que s'il y en a, et le symbole d'alerte n'est
+         garde que s'ils pesent lourd dans le total. */
+      +'<div style="font-size:9.5px;color:rgba(255,255,255,.68);line-height:1.7;margin-bottom:7px;text-shadow:0 1px 2px rgba(0,0,0,.6);">'
+        +(d.pg
+           ? ((100*d.pg/d.g >= 30 ? '⚠️ ' : '')+'<b>'+d.pg+'</b> but'+(d.pg>1?'s':'')+' sur penalty ('+Math.round(100*d.pg/d.g)+'%)')
+           : '<b>Aucun</b> but sur penalty')
         +(d.head?(' · '+d.head+' de la tête'):'')+(d.fk?(' · '+d.fk+' sur coup franc'):'')
         +' · '+Math.round(d.min/(d.app||1))+' min par match'
       +'</div>'
@@ -22713,9 +22718,18 @@ async function g45ColorerFiches(sport, lg) {
     if (vis) {
       /* Degrade partant de la couleur du club et s'opacifiant vers la droite :
          le visuel reste perceptible sans gener la lecture des chiffres. */
-      el.style.background = 'linear-gradient(100deg, ' + base + '55 0%, rgba(12,16,28,.94) 45%, rgba(12,16,28,.97) 100%), url(\'' + vis + '\')';
+      /* UN SEUL CLUB, TOUTE LA LARGEUR (21/08).
+         J'avais recopie le rendu des cartes du direct, qui opposent DEUX
+         equipes : chacune y occupe une moitie et les deux visuels se rejoignent
+         au centre. Sur une fiche de joueur il n'y a qu'un club, donc la moitie
+         restante paraissait vide ou coupee.
+         Le visuel couvre desormais toute la carte, et le voile sombre est
+         VERTICAL — dense en haut ou vivent le nom et les chiffres, plus leger
+         en bas pour laisser respirer l'image. */
+      el.style.background = 'linear-gradient(180deg, rgba(12,16,28,.93) 0%, rgba(12,16,28,.88) 55%, ' + base + '3a 100%), url(\'' + vis + '\')';
       el.style.backgroundSize = 'cover';
-      el.style.backgroundPosition = 'center';
+      el.style.backgroundPosition = 'center 30%';
+      el.style.backgroundRepeat = 'no-repeat';
     } else if (c) {
       el.style.background = 'linear-gradient(100deg, ' + base + '33 0%, rgba(12,16,28,.96) 55%)';
     }
@@ -38301,9 +38315,13 @@ function g45PastillesHTML(evs, sport, n) {
   var nB = liste.filter(function (e) { return e.buts > 0; }).length;
   var nD = liste.filter(function (e) { return e.buts > 0 || e.passes > 0; }).length;
 
-  return '<div style="display:flex;align-items:center;gap:3px;flex-wrap:wrap;">'
+  /* FOND PROPRE (21/08) : posees directement sur le visuel du club, les
+     pastilles se fondaient dedans. Un bandeau sombre les detache, quel que soit
+     l'arriere-plan. */
+  return '<div style="display:flex;align-items:center;gap:3px;flex-wrap:wrap;'
+    + 'background:rgba(0,0,0,.42);border-radius:8px;padding:5px 7px;">'
     + liste.map(pastille).join('')
-    + '<span style="font-size:9px;color:var(--t3);margin-left:4px;white-space:nowrap;">'
+    + '<span style="font-size:9px;font-weight:700;color:rgba(255,255,255,.75);margin-left:4px;white-space:nowrap;">'
     + nB + '/' + liste.length + ' buteur \u00b7 ' + nD + '/' + liste.length + ' d\u00e9cisif</span>'
     + (evs.length > 10
         ? ('<span style="font-size:9px;color:#4d84ff;cursor:pointer;margin-left:6px;white-space:nowrap;" '
