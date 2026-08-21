@@ -38486,3 +38486,121 @@ async function g45RemplirPastilles(sport, saison) {
   }
 }
 window.g45RemplirPastilles = g45RemplirPastilles;
+
+
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   ÉQUIPES DE LA COMPÉTITION CHOISIE — formulaire de pari (21/08/2026)
+   ───────────────────────────────────────────────────────────────────────────
+   En saisissant un pari, choisir « Liga » doit proposer les 20 clubs de Liga
+   pour l'equipe ET pour l'adversaire, plutot que de taper le nom a la main avec
+   le risque d'orthographe qui casse ensuite la resolution ESPN.
+
+   AUCUNE requete nouvelle : on reutilise `_g45CompetEquipes`, deja ecrite pour
+   l'onglet Competitions, avec son cache. Et on retrouve le slug a partir du
+   LIBELLE saisi en balayant `G45_LEAGUE_GROUPS` — la table de 79 competitions
+   qui existe deja — plutot que de tenir une seconde liste a jour.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+function _g45SlugDepuisLibelle(txt) {
+  var n = String(txt || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim();
+  if (!n) return null;
+  var trouve = null;
+  try {
+    Object.keys(G45_LEAGUE_GROUPS || {}).forEach(function (z) {
+      (G45_LEAGUE_GROUPS[z] || []).forEach(function (l) {
+        if (trouve) return;
+        var nom = String(l.name || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+        /* Egalite d'abord, puis inclusion : « Liga » ne doit pas attraper
+           « Liga Portugal » si l'utilisateur a ecrit exactement « Liga ». */
+        if (nom === n) trouve = { slug: l.slug, sport: 'soccer', nom: l.name };
+      });
+    });
+    if (!trouve) {
+      Object.keys(G45_LEAGUE_GROUPS || {}).forEach(function (z) {
+        (G45_LEAGUE_GROUPS[z] || []).forEach(function (l) {
+          if (trouve) return;
+          var nom = String(l.name || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+          if (nom.indexOf(n) >= 0 || n.indexOf(nom) >= 0) trouve = { slug: l.slug, sport: 'soccer', nom: l.name };
+        });
+      });
+    }
+  } catch (e) {}
+  /* Autres sports : les groupes vivent dans G45_SPORTS. */
+  if (!trouve) {
+    try {
+      (G45_SPORTS || []).forEach(function (sp) {
+        (sp.groups || []).forEach(function (g) {
+          (g.leagues || []).forEach(function (l) {
+            if (trouve) return;
+            var nom = String(l.name || '').toLowerCase();
+            if (nom === n || nom.indexOf(n) >= 0) trouve = { slug: l.slug, sport: sp.path || sp.key, nom: l.name };
+          });
+        });
+      });
+    } catch (e) {}
+  }
+  return trouve;
+}
+
+/* Remplit les datalists des champs equipe et adversaire du formulaire. */
+async function g45EquipesDeCompet(champComp, dlEquipe) {
+  var inp = document.getElementById(champComp);
+  if (!inp) return;
+  var info = _g45SlugDepuisLibelle(inp.value);
+  var dl = document.getElementById(dlEquipe);
+  if (!dl) {
+    dl = document.createElement('datalist');
+    dl.id = dlEquipe;
+    document.body.appendChild(dl);
+  }
+  if (!info) { dl.innerHTML = ''; return; }
+
+  var eq = [];
+  try {
+    if (typeof _g45CompetEquipes === 'function') {
+      /* SIGNATURE VERIFIEE avant d'appeler : la fonction attend un OBJET
+         { sp: sport, s: slug }, pas deux arguments — l'appeler autrement
+         aurait rendu une liste vide sans erreur visible. */
+      eq = await _g45CompetEquipes({ sp: info.sport || 'soccer', s: info.slug }) || [];
+    }
+  } catch (e) {}
+  if (!eq.length) { dl.innerHTML = ''; return; }
+
+  dl.innerHTML = eq.map(function (t) {
+    return '<option value="' + String(t.nom || t.name || '').replace(/"/g, '') + '">';
+  }).join('');
+
+  /* Indication discrete : sans elle, rien ne dit que la liste s'est remplie. */
+  var note = document.getElementById(dlEquipe + '-note');
+  if (note) note.textContent = eq.length + ' \u00e9quipes de ' + info.nom;
+}
+window.g45EquipesDeCompet = g45EquipesDeCompet;
+
+/* Branche les deux formulaires : pari simple et montante. */
+function g45BrancherEquipesCompet() {
+  var paires = [
+    { comp: 'n-comp', champs: ['n-team', 'n-analysis'], dl: 'dl-eq-simple' },
+    { comp: 'c-comp', champs: ['c-target'], dl: 'dl-eq-combi' }
+  ];
+  paires.forEach(function (p) {
+    var c = document.getElementById(p.comp);
+    if (!c || c.getAttribute('data-eqbranche')) return;
+    c.setAttribute('data-eqbranche', '1');
+    p.champs.forEach(function (id) {
+      var f = document.getElementById(id);
+      if (f) f.setAttribute('list', p.dl);
+    });
+    /* `change` et non `input` : on ne relance pas une resolution a chaque
+       lettre tapee, seulement quand le choix est arrete. */
+    c.addEventListener('change', function () { g45EquipesDeCompet(p.comp, p.dl); });
+    c.addEventListener('blur', function () { g45EquipesDeCompet(p.comp, p.dl); });
+    if (c.value) g45EquipesDeCompet(p.comp, p.dl);
+  });
+}
+window.g45BrancherEquipesCompet = g45BrancherEquipesCompet;
+
+document.addEventListener('click', function () {
+  setTimeout(g45BrancherEquipesCompet, 200);
+});
+setTimeout(g45BrancherEquipesCompet, 2500);
