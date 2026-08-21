@@ -30109,7 +30109,7 @@ var _G45_CACHE_PREFIXES=['g45rcP_','g45rcD_','g45rcY_','g45rc_','g45dcm_','g45dc
      explosait et des ecritures LEGITIMES echouaient en silence (le filtre par
      competition, qui restait bloque sur « Toutes »). Les cartes de tirs sont
      les plus lourdes : plusieurs Ko par match, gardees indefiniment. */
-  'g45butA2_','g45gl2_','g45gl_','g45_tirs2_','g45_fanart2_','g45_fanart_','g45_img_perso_','g45_tv_prog','g45_mqnom_',
+  'g45butA2_','g45gl2_','g45gl_','g45_tirs2_','g45_fanart2_','g45_fanart_','g45_img_perso_','g45_tv_prog','g45_mqnom_','g45_mqteam_',
   'g45nrlcal2_','g45_fx_faits','g45_veille_','g45_compet_logos','g45_groq_modele','g45_gemini_modeles',
   /* MESURE DU 20/08 sur le stockage reel d'Antoine (5,1 Mo, sature) :
        fpl_bootstrap_cache ... 1951 Ko  <- a lui seul 38 % du total
@@ -37737,6 +37737,56 @@ async function _g45MqLeaders(c, saison, categorie) {
   return (cat && cat.leaders) ? cat.leaders.slice(0, 15) : [];
 }
 
+/* ═══ CLUB D'UN LEADER (22/08) ═══
+   VERIFIE dans la reponse reelle : chaque entree de classement porte
+   `displayValue, value, rel, athlete, team, statistics`. Le club est donc
+   FOURNI, il n'y avait qu'a le lire — seule sa resolution coute une requete,
+   et une seule par equipe DISTINCTE puisque le resultat est memorise
+   definitivement (un nom et une couleur de club ne changent pas en cours de
+   saison).
+   Choix de rendu assume : pas de visuel en fond ici. Une carte de joueur
+   supporte une image, une ligne de tableau a 11,5 px non — quinze fonds
+   empiles, c'est exactement le defaut qu'on vient de corriger sur NFL/NHL.
+   Logo a gauche et bord colore : l'identite sans perdre la lecture. */
+var _g45MqTeams = {};
+async function _g45MqEquipe(ref, lg) {
+  var m = String(ref || '').match(/teams\/(\d+)/);
+  if (!m) return null;
+  var id = m[1];
+  if (_g45MqTeams[id]) return _g45MqTeams[id];
+  var cle = 'g45_mqteam_' + lg + '_' + id;
+  try {
+    var c = JSON.parse(localStorage.getItem(cle) || 'null');
+    if (c && c.nom) { _g45MqTeams[id] = c; return c; }
+  } catch (e) {}
+  var t = null;
+  try {
+    var r = await fetch(String(ref).replace(/^http:/, 'https:'));
+    if (r.ok) {
+      var j = await r.json();
+      /* Meme garde-fou que partout : une couleur trop claire est illisible sur
+         le fond sombre, on bascule sur l'alternative, puis sur l'ambre. */
+      var coul = _g45Hex(j.color) || '';
+      if (!coul || _g45Lum(coul) > 0.82) {
+        var alt = _g45Hex(j.alternateColor) || '';
+        coul = (alt && _g45Lum(alt) <= 0.82) ? alt : '#f0b020';
+      }
+      t = {
+        id: id,
+        nom: j.displayName || j.name || '',
+        abbr: j.abbreviation || '',
+        coul: coul,
+        logo: ((j.logos || [])[0] || {}).href || ''
+      };
+    }
+  } catch (e) {}
+  if (t && t.nom) {
+    _g45MqTeams[id] = t;
+    try { localStorage.setItem(cle, JSON.stringify(t)); } catch (e) {}
+  }
+  return t;
+}
+
 /* Le nom du joueur n'est pas dans la reponse : seulement une reference. */
 var _g45MqNoms = {};
 async function _g45MqNom(ref) {
@@ -37794,7 +37844,9 @@ async function g45MarqueursUS(quoi, secondaire) {
     var lam = total / matchs;
     var p = 1 - Math.exp(-lam);
     var coteMin = p > 0 ? (1 / p) : 0;
-    lignes.push({ nom: who.nom, total: total, lam: lam, p: p, cote: coteMin });
+    var eq = null;
+    try { eq = await _g45MqEquipe(L.team && L.team.$ref, c.lg); } catch (e) {}
+    lignes.push({ nom: who.nom, total: total, lam: lam, p: p, cote: coteMin, eq: eq });
   }
   lignes.sort(function (a, b) { return b.p - a.p; });
 
@@ -37814,10 +37866,18 @@ async function g45MarqueursUS(quoi, secondaire) {
         var coul = l.cote <= 1.5 ? '#6b7a99' : (l.cote <= 2.5 ? '#1ed760' : '#f0b020');
         /* Lignes alternees sur fond OPAQUE : un simple filet a 5 % d'opacite ne
            suffit pas quand une image passe derriere. */
+        var e = l.eq || {};
         return '<div style="display:flex;align-items:center;padding:7px 6px;font-size:11.5px;'
           + 'background:' + (rang % 2 ? 'rgba(8,11,20,.55)' : 'rgba(8,11,20,.38)') + ';'
+          + 'border-left:3px solid ' + (e.coul || 'rgba(255,255,255,.10)') + ';'
           + 'border-bottom:1px solid rgba(255,255,255,.06);">'
-          + '<div style="flex:1;min-width:0;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">' + l.nom + '</div>'
+          + (e.logo
+              ? '<img src="' + e.logo + '" loading="lazy" onerror="this.style.display=\'none\'" title="' + (e.nom || '') + '" '
+                + 'style="width:18px;height:18px;object-fit:contain;flex:none;margin-right:7px;">'
+              : '<span style="width:18px;flex:none;margin-right:7px;"></span>')
+          + '<div style="flex:1;min-width:0;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">' + l.nom
+          + (e.abbr ? ('<span style="font-size:8.5px;font-weight:800;letter-spacing:.5px;color:var(--t3);margin-left:6px;">' + e.abbr + '</span>') : '')
+          + '</div>'
           + '<div style="width:46px;text-align:right;color:var(--t3);">' + l.total + '</div>'
           + '<div style="width:52px;text-align:right;color:var(--t3);">' + l.lam.toFixed(2) + '</div>'
           + '<div style="width:46px;text-align:right;font-weight:700;">' + Math.round(l.p * 100) + '%</div>'
