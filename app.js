@@ -22690,10 +22690,13 @@ async function g45MqSport(sp) {
      dessous — c'est lui qui empeche le papier peint de l'application de
      traverser — et le contenu passe au-dessus. A 13 % d'opacite, l'identite du
      championnat est lisible sans concurrencer les chiffres. */
+  /* Le placement du logo DIFFERE entre telephone et PC — cale a droite sur
+     petit ecran, centre sur grand — donc il appartient a la feuille de style,
+     pas a une chaine construite en JavaScript : une regle inline ne peut pas
+     porter de media query. Ici on ne passe que ce qui varie reellement,
+     l'image et la teinte, via deux variables CSS. */
   var couche = F
-    ? '<div style="position:absolute;inset:0;background-image:linear-gradient(120deg,' + F.tinte + '33 0%,transparent 60%),url(\'' + fondUrl + '\');'
-      + 'background-size:auto,contain;background-position:center,right -40px center;background-repeat:no-repeat,no-repeat;'
-      + 'opacity:.13;pointer-events:none;border-radius:var(--r8);"></div>'
+    ? '<div class="g45-mq-fond" style="--mq-img:url(\'' + fondUrl + '\');--mq-tinte:' + F.tinte + '33;"></div>'
     : '';
   el.innerHTML = '<button onclick="g45ButeursView()" style="border:none;cursor:pointer;background:rgba(255,255,255,.06);'
     + 'border-radius:8px;color:var(--t2);padding:6px 10px;font-size:10px;font-weight:700;margin-bottom:8px;">'
