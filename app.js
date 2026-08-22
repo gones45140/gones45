@@ -36831,10 +36831,13 @@ window.g45SportDe = g45SportDe;
    appellations differentes, pas des variantes orthographiques. Table courte,
    completee au fil des manques constates. */
 var _G45_TSDB_ALIAS = {
-  internazionale:'Inter Milan', inter:'Inter Milan',
-  psg:'Paris SG', 'parissaintgermain':'Paris SG',
-  asroma:'Roma', barcelona:'Barcelona',
-  manchestercity:'Manchester City', bayernmunich:'Bayern Munich'
+  internazionale:'Inter Milan', inter:'Inter Milan', intermilan:'Inter Milan',
+  psg:'Paris SG', 'parissaintgermain':'Paris SG', paris:'Paris SG',
+  asroma:'Roma', roma:'Roma',
+  atleticomadrid:'Atletico Madrid', atletico:'Atletico Madrid',
+  realmadrid:'Real Madrid', barcelona:'Barcelona',
+  manchestercity:'Manchester City', bayernmunich:'Bayern Munich',
+  carolinahurricanes:'Carolina Hurricanes', coloradoavalanche:'Colorado Avalanche'
 };
 
 /* VISUEL DES ENTREES DE CATEGORIE (22/08). TENNIS, RUGBY, FORMULE 1, Basket et
@@ -36950,7 +36953,16 @@ async function _g45FanChercher(nom, sport) {
                 return k.indexOf(n) >= 0 || n.indexOf(k) >= 0;
               })[0] : null)
            || null;
-      if (t) url = t.strTeamBanner || t.strFanart1 || t.strFanart2 || t.strStadiumThumb || '';
+      /* CASCADE ELARGIE (22/08). Une equipe peut etre trouvee sans avoir de
+         bandeau : Alaves avait `fanart:true` mais `banner:false`. Se limiter a
+         quatre champs faisait donc echouer des clubs pourtant presents dans la
+         base. On balaie tout ce qui peut servir de fond, du plus large au plus
+         etroit — le bandeau reste prioritaire, c'est le format taille pour une
+         carte, et l'ecusson n'arrive qu'en dernier recours. */
+      if (t) {
+        url = t.strTeamBanner || t.strFanart1 || t.strFanart2 || t.strFanart3 || t.strFanart4
+           || t.strStadiumThumb || t.strTeamJersey || t.strPoster || '';
+      }
     } catch (e) {}
   }
   try { localStorage.setItem(_G45_FANART + _g45SgNorm(nom), JSON.stringify({ u: url, t: Date.now() })); } catch (e) {}
