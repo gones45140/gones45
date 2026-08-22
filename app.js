@@ -2033,8 +2033,13 @@ function render(){
          `border-bottom` disparait — c'est lui qui donnait l'aspect « salon de
          discussion » d'une suite de lignes collees. */
       return '<div style="position:relative;overflow:hidden;display:flex;align-items:center;gap:11px;padding:14px 16px;'
-        +'min-height:74px;border-radius:12px;margin-bottom:7px;border:1px solid rgba(255,255,255,.07);'
-        +'cursor:pointer;background:'+_fond+';background-size:cover;background-position:center 35%;" '
+        /* HAUTEUR ET CADRAGE (22/08). A 74 px, `cover` coupait l'essentiel d'une
+           banniere de club : sur le PSG, le mot PARIS tombait hors cadre. On
+           passe a 92 px et on descend le point d'ancrage a 50 %, ou se trouve
+           le sujet de la plupart des bannieres TheSportsDB — elles sont
+           cadrees pour un bandeau large, pas pour une bande fine. */
+        +'min-height:92px;border-radius:12px;margin-bottom:7px;border:1px solid rgba(255,255,255,.07);'
+        +'cursor:pointer;background:'+_fond+';background-size:cover;background-position:center 50%;" '
         +'data-nom="'+u.n+'" onclick="openClubFromDash(this.dataset.nom)">'
         +_filig
         +logo
@@ -8605,8 +8610,13 @@ function render(){
          `border-bottom` disparait — c'est lui qui donnait l'aspect « salon de
          discussion » d'une suite de lignes collees. */
       return '<div style="position:relative;overflow:hidden;display:flex;align-items:center;gap:11px;padding:14px 16px;'
-        +'min-height:74px;border-radius:12px;margin-bottom:7px;border:1px solid rgba(255,255,255,.07);'
-        +'cursor:pointer;background:'+_fond+';background-size:cover;background-position:center 35%;" '
+        /* HAUTEUR ET CADRAGE (22/08). A 74 px, `cover` coupait l'essentiel d'une
+           banniere de club : sur le PSG, le mot PARIS tombait hors cadre. On
+           passe a 92 px et on descend le point d'ancrage a 50 %, ou se trouve
+           le sujet de la plupart des bannieres TheSportsDB — elles sont
+           cadrees pour un bandeau large, pas pour une bande fine. */
+        +'min-height:92px;border-radius:12px;margin-bottom:7px;border:1px solid rgba(255,255,255,.07);'
+        +'cursor:pointer;background:'+_fond+';background-size:cover;background-position:center 50%;" '
         +'data-nom="'+u.n+'" onclick="openClubFromDash(this.dataset.nom)">'
         +_filig
         +logo
@@ -38700,8 +38710,11 @@ window.g45FondMatch = g45FondMatch;
 function g45FondSolo(coul, vis) {
   var c = _g45CoulFond(coul || '#4d84ff'), N = _G45_FOND_NIV;
   if (vis) {
-    return 'linear-gradient(100deg, rgba(10,14,26,' + (N.voileVis - 0.06) + ') 0%, rgba(10,14,26,'
-         + (N.voileVis + 0.04) + ') 62%, rgba(12,16,28,.96) 100%), url(\'' + vis + '\')';
+    /* Voile allege le 22/08 : a 0,80-0,84 il effacait la banniere qu'on venait
+       justement de chercher. Il reste plus dense a DROITE, ou s'affichent le
+       profit et le blason, qui doivent rester lisibles quel que soit le club. */
+    return 'linear-gradient(100deg, rgba(10,14,26,' + (N.voileVis - 0.22) + ') 0%, rgba(10,14,26,'
+         + (N.voileVis - 0.06) + ') 58%, rgba(12,16,28,.94) 100%), url(\'' + vis + '\')';
   }
   return 'linear-gradient(100deg,' + c + '55 0%,' + c + '26 38%,rgba(12,16,28,.14) 70%,transparent 100%)';
 }
