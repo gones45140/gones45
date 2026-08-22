@@ -1178,6 +1178,28 @@ var SPORT_EMOJIS={
 /* Relançable a la main : `g45MurVisuelsReset()` en console remet le drapeau a
    zero et relance la recherche. Utile apres une correction de sport ou d'alias,
    sans avoir a vider tout le cache. */
+/* VERSION DE LA RECHERCHE DE VISUELS (22/08).
+   La logique a change quatre fois aujourd'hui — cascade elargie, alias, filtre
+   par sport, longueur minimale — et chaque fois les ECHECS deja memorises
+   annulaient la correction pendant trente jours, obligeant a une commande
+   manuelle en console. Ce numero regle le probleme : des qu'il change, les
+   entrees vides sont purgees automatiquement au premier rendu du mur. Les
+   visuels TROUVES sont conserves, eux n'ont aucune raison d'etre refaits.
+   A INCREMENTER a chaque modification de la recherche. */
+var _G45_FAN_VER = '20260822d';
+function _g45FanPurgeSiVersion(){
+  try{
+    if (localStorage.getItem('g45_fanver') === _G45_FAN_VER) return 0;
+    var n = 0;
+    Object.keys(localStorage).filter(function(k){ return k.indexOf(_G45_FANART) === 0; })
+      .forEach(function(k){
+        try{ if(!JSON.parse(localStorage.getItem(k) || '{}').u){ localStorage.removeItem(k); n++; } }catch(e){}
+      });
+    localStorage.setItem('g45_fanver', _G45_FAN_VER);
+    return n;
+  }catch(e){ return 0; }
+}
+
 var _g45MurVisFait = false;
 function g45MurVisuelsReset(){
   try{
@@ -1190,6 +1212,7 @@ function g45MurVisuelsReset(){
 window.g45MurVisuelsReset = g45MurVisuelsReset;
 async function g45MurVisuels(){
   if(_g45MurVisFait) return;
+  try{ _g45FanPurgeSiVersion(); }catch(e){}
   if(typeof _g45FanCompleter!=='function' || typeof g45VisuelCache!=='function') return;
   var liste=((typeof state!=='undefined'&&state&&state.u)||[])
     .filter(function(u){ return u && u.n && !g45VisuelCache(u.n); })
@@ -31724,8 +31747,24 @@ function _g45SdbMeilleur(liste, nom, sport) {
   var n = String(nom || '').toLowerCase().trim();
   var exact = liste.filter(function(r) { return String(r.name).toLowerCase().trim() === n; });
   var pool = exact.length ? exact : liste;
+  /* CORRECTION DU 22/08 : ce filtre comparait `r.sport` (« Ice Hockey ») a
+     `u.sport`, qui est un EMOJI (🏒). Il ne matchait jamais, donc il ne filtrait
+     rien — c'est ainsi qu'un club de hockey bielorusse a pu se poser sur
+     Carolina Hurricanes. On traduit l'emoji comme ailleurs dans l'app, puis on
+     passe par la meme table que TheSportsDB. */
   if (sport) {
-    var memeSport = pool.filter(function(r) { return r.sport === sport; });
+    var att = sport;
+    try {
+      if (typeof g45SportDe === 'function' && !/^[a-z ]+$/i.test(String(sport))) {
+        att = _G45_TSDB_SPORT[g45SportDe({ sport: sport })] || sport;
+      } else if (typeof _G45_TSDB_SPORT !== 'undefined' && _G45_TSDB_SPORT[sport]) {
+        att = _G45_TSDB_SPORT[sport];
+      }
+    } catch (e) {}
+    var na = String(att).toLowerCase().replace(/[^a-z]/g, '');
+    var memeSport = pool.filter(function(r) {
+      return String(r.sport || '').toLowerCase().replace(/[^a-z]/g, '') === na;
+    });
     if (memeSport.length) pool = memeSport;
   }
   if (!exact.length) {
@@ -36885,16 +36924,23 @@ var _G45_TSDB_ALIAS = {
    On leur donne donc un visuel fixe. Le fichier du depot prime quand il existe,
    comme partout ailleurs — c'est la voie a utiliser pour avoir exactement
    l'image voulue, gratuitement et sans dependre d'une API. */
+/* DESSINES, PAS TELECHARGES (22/08). Pointer sur `images/ligues/*.jpg`
+   supposait qu'Antoine depose les fichiers, et sans eux la ligne restait vide —
+   c'est ce qu'il a constate sur TENNIS et FORMULE 1. Ces visuels sont donc des
+   SVG en data-URI : aucune requete, aucun fichier a fournir, aucune question de
+   droits, et ils s'affichent meme hors ligne. Le fichier du depot reste
+   prioritaire s'il existe, via `_g45ImgPersoLire`. */
 var _G45_CAT_IMG = {
-  basket:      'https://a.espncdn.com/i/teamlogos/leagues/500/nba.png',
-  basketball:  'https://a.espncdn.com/i/teamlogos/leagues/500/nba.png',
-  aunrl:       'https://a.espncdn.com/i/teamlogos/leagues/500/nrl.png',
-  nrl:         'https://a.espncdn.com/i/teamlogos/leagues/500/nrl.png',
-  rugby:       'images/ligues/rugby.jpg',
-  tennis:      'images/ligues/tennis.jpg',
-  formule1:    'images/ligues/f1.jpg',
-  formula1:    'images/ligues/f1.jpg',
-  f1:          'images/ligues/f1.jpg'
+  basket:      'data:image/svg+xml;utf8,%3Csvg%20xmlns%3D%27http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%27%20viewBox%3D%270%200%20400%20200%27%3E%3Crect%20width%3D%27400%27%20height%3D%27200%27%20fill%3D%27none%27%2F%3E%3Cg%20fill%3D%27none%27%20stroke%3D%27%23ffffff%27%20stroke-width%3D%278%27%20opacity%3D%27.85%27%3E%3Ccircle%20cx%3D%27200%27%20cy%3D%27100%27%20r%3D%2772%27%2F%3E%3Cpath%20d%3D%27M128%20100h144M200%2028v144%27%2F%3E%3Cpath%20d%3D%27M148%2048q52%2052%200%20104M252%2048q-52%2052%200%20104%27%2F%3E%3C%2Fg%3E%3C%2Fsvg%3E',
+  basketball:  'data:image/svg+xml;utf8,%3Csvg%20xmlns%3D%27http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%27%20viewBox%3D%270%200%20400%20200%27%3E%3Crect%20width%3D%27400%27%20height%3D%27200%27%20fill%3D%27none%27%2F%3E%3Cg%20fill%3D%27none%27%20stroke%3D%27%23ffffff%27%20stroke-width%3D%278%27%20opacity%3D%27.85%27%3E%3Ccircle%20cx%3D%27200%27%20cy%3D%27100%27%20r%3D%2772%27%2F%3E%3Cpath%20d%3D%27M128%20100h144M200%2028v144%27%2F%3E%3Cpath%20d%3D%27M148%2048q52%2052%200%20104M252%2048q-52%2052%200%20104%27%2F%3E%3C%2Fg%3E%3C%2Fsvg%3E',
+  nba:         'data:image/svg+xml;utf8,%3Csvg%20xmlns%3D%27http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%27%20viewBox%3D%270%200%20400%20200%27%3E%3Crect%20width%3D%27400%27%20height%3D%27200%27%20fill%3D%27none%27%2F%3E%3Cg%20fill%3D%27none%27%20stroke%3D%27%23ffffff%27%20stroke-width%3D%278%27%20opacity%3D%27.85%27%3E%3Ccircle%20cx%3D%27200%27%20cy%3D%27100%27%20r%3D%2772%27%2F%3E%3Cpath%20d%3D%27M128%20100h144M200%2028v144%27%2F%3E%3Cpath%20d%3D%27M148%2048q52%2052%200%20104M252%2048q-52%2052%200%20104%27%2F%3E%3C%2Fg%3E%3C%2Fsvg%3E',
+  rugby:       'data:image/svg+xml;utf8,%3Csvg%20xmlns%3D%27http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%27%20viewBox%3D%270%200%20400%20200%27%3E%3Crect%20width%3D%27400%27%20height%3D%27200%27%20fill%3D%27none%27%2F%3E%3Cg%20fill%3D%27none%27%20stroke%3D%27%23ffffff%27%20stroke-width%3D%278%27%20opacity%3D%27.85%27%3E%3Cellipse%20cx%3D%27200%27%20cy%3D%27100%27%20rx%3D%2796%27%20ry%3D%2758%27%20transform%3D%27rotate%28-22%20200%20100%29%27%2F%3E%3Cpath%20d%3D%27M148%20128L252%2072M170%2088h18M186%2076h18M202%2064h18M162%20112h18M178%20100h18M194%2088h18%27%20stroke-width%3D%276%27%2F%3E%3C%2Fg%3E%3C%2Fsvg%3E',
+  aunrl:       'data:image/svg+xml;utf8,%3Csvg%20xmlns%3D%27http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%27%20viewBox%3D%270%200%20400%20200%27%3E%3Crect%20width%3D%27400%27%20height%3D%27200%27%20fill%3D%27none%27%2F%3E%3Cg%20fill%3D%27none%27%20stroke%3D%27%23ffffff%27%20stroke-width%3D%278%27%20opacity%3D%27.85%27%3E%3Cellipse%20cx%3D%27200%27%20cy%3D%27100%27%20rx%3D%2796%27%20ry%3D%2758%27%20transform%3D%27rotate%28-22%20200%20100%29%27%2F%3E%3Cpath%20d%3D%27M148%20128L252%2072M170%2088h18M186%2076h18M202%2064h18M162%20112h18M178%20100h18M194%2088h18%27%20stroke-width%3D%276%27%2F%3E%3C%2Fg%3E%3C%2Fsvg%3E',
+  nrl:         'data:image/svg+xml;utf8,%3Csvg%20xmlns%3D%27http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%27%20viewBox%3D%270%200%20400%20200%27%3E%3Crect%20width%3D%27400%27%20height%3D%27200%27%20fill%3D%27none%27%2F%3E%3Cg%20fill%3D%27none%27%20stroke%3D%27%23ffffff%27%20stroke-width%3D%278%27%20opacity%3D%27.85%27%3E%3Cellipse%20cx%3D%27200%27%20cy%3D%27100%27%20rx%3D%2796%27%20ry%3D%2758%27%20transform%3D%27rotate%28-22%20200%20100%29%27%2F%3E%3Cpath%20d%3D%27M148%20128L252%2072M170%2088h18M186%2076h18M202%2064h18M162%20112h18M178%20100h18M194%2088h18%27%20stroke-width%3D%276%27%2F%3E%3C%2Fg%3E%3C%2Fsvg%3E',
+  tennis:      'data:image/svg+xml;utf8,%3Csvg%20xmlns%3D%27http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%27%20viewBox%3D%270%200%20400%20200%27%3E%3Crect%20width%3D%27400%27%20height%3D%27200%27%20fill%3D%27none%27%2F%3E%3Cg%20fill%3D%27none%27%20stroke%3D%27%23ffffff%27%20stroke-width%3D%277%27%20opacity%3D%27.85%27%3E%3Cellipse%20cx%3D%27150%27%20cy%3D%2778%27%20rx%3D%2752%27%20ry%3D%2766%27%2F%3E%3Cpath%20d%3D%27M150%2012v132M98%2078h104M120%2022l60%20112M180%2022l-60%20112%27%2F%3E%3Cpath%20d%3D%27M150%20144l14%2026%2034%2022%27%20stroke-width%3D%2711%27%20stroke-linecap%3D%27round%27%2F%3E%3C%2Fg%3E%3Ccircle%20cx%3D%27285%27%20cy%3D%27140%27%20r%3D%2724%27%20fill%3D%27none%27%20stroke%3D%27%23ffffff%27%20stroke-width%3D%277%27%20opacity%3D%27.85%27%2F%3E%3Cpath%20d%3D%27M263%20128q22%2012%2044%200M263%20152q22-12%2044%200%27%20fill%3D%27none%27%20stroke%3D%27%23ffffff%27%20stroke-width%3D%274%27%20opacity%3D%27.85%27%2F%3E%3C%2Fsvg%3E',
+  formule1:    'data:image/svg+xml;utf8,%3Csvg%20xmlns%3D%27http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%27%20viewBox%3D%270%200%20400%20200%27%3E%3Crect%20width%3D%27400%27%20height%3D%27200%27%20fill%3D%27none%27%2F%3E%3Cg%20fill%3D%27%23ffffff%27%20opacity%3D%27.85%27%3E%3Cpath%20d%3D%27M40%20118h60l26-24h96l22%2024h96v26H40z%27%2F%3E%3Cpath%20d%3D%27M126%2094l18-26h74l16%2026z%27%20opacity%3D%27.6%27%2F%3E%3C%2Fg%3E%3Cg%20fill%3D%27none%27%20stroke%3D%27%23ffffff%27%20stroke-width%3D%277%27%20opacity%3D%27.85%27%3E%3Ccircle%20cx%3D%27112%27%20cy%3D%27150%27%20r%3D%2722%27%2F%3E%3Ccircle%20cx%3D%27288%27%20cy%3D%27150%27%20r%3D%2722%27%2F%3E%3C%2Fg%3E%3Cg%20fill%3D%27%23ffffff%27%20opacity%3D%27.55%27%3E%3Crect%20x%3D%27300%27%20y%3D%2734%27%20width%3D%2718%27%20height%3D%2718%27%2F%3E%3Crect%20x%3D%27336%27%20y%3D%2734%27%20width%3D%2718%27%20height%3D%2718%27%2F%3E%3Crect%20x%3D%27318%27%20y%3D%2752%27%20width%3D%2718%27%20height%3D%2718%27%2F%3E%3Crect%20x%3D%27354%27%20y%3D%2752%27%20width%3D%2718%27%20height%3D%2718%27%2F%3E%3Crect%20x%3D%27300%27%20y%3D%2770%27%20width%3D%2718%27%20height%3D%2718%27%2F%3E%3Crect%20x%3D%27336%27%20y%3D%2770%27%20width%3D%2718%27%20height%3D%2718%27%2F%3E%3C%2Fg%3E%3C%2Fsvg%3E',
+  formula1:    'data:image/svg+xml;utf8,%3Csvg%20xmlns%3D%27http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%27%20viewBox%3D%270%200%20400%20200%27%3E%3Crect%20width%3D%27400%27%20height%3D%27200%27%20fill%3D%27none%27%2F%3E%3Cg%20fill%3D%27%23ffffff%27%20opacity%3D%27.85%27%3E%3Cpath%20d%3D%27M40%20118h60l26-24h96l22%2024h96v26H40z%27%2F%3E%3Cpath%20d%3D%27M126%2094l18-26h74l16%2026z%27%20opacity%3D%27.6%27%2F%3E%3C%2Fg%3E%3Cg%20fill%3D%27none%27%20stroke%3D%27%23ffffff%27%20stroke-width%3D%277%27%20opacity%3D%27.85%27%3E%3Ccircle%20cx%3D%27112%27%20cy%3D%27150%27%20r%3D%2722%27%2F%3E%3Ccircle%20cx%3D%27288%27%20cy%3D%27150%27%20r%3D%2722%27%2F%3E%3C%2Fg%3E%3Cg%20fill%3D%27%23ffffff%27%20opacity%3D%27.55%27%3E%3Crect%20x%3D%27300%27%20y%3D%2734%27%20width%3D%2718%27%20height%3D%2718%27%2F%3E%3Crect%20x%3D%27336%27%20y%3D%2734%27%20width%3D%2718%27%20height%3D%2718%27%2F%3E%3Crect%20x%3D%27318%27%20y%3D%2752%27%20width%3D%2718%27%20height%3D%2718%27%2F%3E%3Crect%20x%3D%27354%27%20y%3D%2752%27%20width%3D%2718%27%20height%3D%2718%27%2F%3E%3Crect%20x%3D%27300%27%20y%3D%2770%27%20width%3D%2718%27%20height%3D%2718%27%2F%3E%3Crect%20x%3D%27336%27%20y%3D%2770%27%20width%3D%2718%27%20height%3D%2718%27%2F%3E%3C%2Fg%3E%3C%2Fsvg%3E',
+  f1:          'data:image/svg+xml;utf8,%3Csvg%20xmlns%3D%27http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%27%20viewBox%3D%270%200%20400%20200%27%3E%3Crect%20width%3D%27400%27%20height%3D%27200%27%20fill%3D%27none%27%2F%3E%3Cg%20fill%3D%27%23ffffff%27%20opacity%3D%27.85%27%3E%3Cpath%20d%3D%27M40%20118h60l26-24h96l22%2024h96v26H40z%27%2F%3E%3Cpath%20d%3D%27M126%2094l18-26h74l16%2026z%27%20opacity%3D%27.6%27%2F%3E%3C%2Fg%3E%3Cg%20fill%3D%27none%27%20stroke%3D%27%23ffffff%27%20stroke-width%3D%277%27%20opacity%3D%27.85%27%3E%3Ccircle%20cx%3D%27112%27%20cy%3D%27150%27%20r%3D%2722%27%2F%3E%3Ccircle%20cx%3D%27288%27%20cy%3D%27150%27%20r%3D%2722%27%2F%3E%3C%2Fg%3E%3Cg%20fill%3D%27%23ffffff%27%20opacity%3D%27.55%27%3E%3Crect%20x%3D%27300%27%20y%3D%2734%27%20width%3D%2718%27%20height%3D%2718%27%2F%3E%3Crect%20x%3D%27336%27%20y%3D%2734%27%20width%3D%2718%27%20height%3D%2718%27%2F%3E%3Crect%20x%3D%27318%27%20y%3D%2752%27%20width%3D%2718%27%20height%3D%2718%27%2F%3E%3Crect%20x%3D%27354%27%20y%3D%2752%27%20width%3D%2718%27%20height%3D%2718%27%2F%3E%3Crect%20x%3D%27300%27%20y%3D%2770%27%20width%3D%2718%27%20height%3D%2718%27%2F%3E%3Crect%20x%3D%27336%27%20y%3D%2770%27%20width%3D%2718%27%20height%3D%2718%27%2F%3E%3C%2Fg%3E%3C%2Fsvg%3E'
 };
 function g45VisuelCategorie(nom){
   try{
