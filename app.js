@@ -465,8 +465,12 @@ var LOGOS={
   "PSG":          "https://media.api-sports.io/football/teams/85.png",
   "PSV":          "https://media.api-sports.io/football/teams/674.png",
   "Real Madrid":  "https://media.api-sports.io/football/teams/541.png",
-  "Carolina Hurricanes":"https://media.api-sports.io/hockey/teams/7.png",
-  "Colorado Avalanche": "https://media.api-sports.io/hockey/teams/9.png",
+  /* RETIRES LE 22/08 : les identifiants api-sports 7 et 9 ne designent PAS ces
+     deux clubs mais des equipes bielorusses (Mogilev, Neman Grodno). Comme
+     `logoHtml` lisait cette table AVANT `u.logoUrl`, chaque rechargement de
+     page redeclarait le mauvais blason et annulait toute reparation. Sans
+     entree ici, la resolution retombe sur le logo memorise dans le mur, qui est
+     le bon depuis `g45ReparerLogo`. */
   "LA Dodgers":   "https://media.api-sports.io/baseball/teams/19.png"
 };
 var FAV_LINKS={
@@ -1255,15 +1259,19 @@ function logoHtml(name,color,abbr,sz){
   }
 
   // 2. Logo URL si disponible
-  var logo=LOGOS[name];
-  /* LOGOS n'est pas reconstruit au chargement : on retombe sur le logoUrl mémorisé
-     dans l'entrée du mur, sinon la photo d'un joueur disparaîtrait à chaque rechargement. */
-  if(!logo){
-    try{
-      var _u=((typeof state!=='undefined'&&state&&state.u)||[]).filter(function(x){ return x&&x.n===name; })[0];
-      if(_u&&_u.logoUrl){ logo=_u.logoUrl; LOGOS[name]=logo; }
-    }catch(e){}
-  }
+  /* PRIORITE INVERSEE LE 22/08. `LOGOS` est une table CABLEE dans le source :
+     elle est donc redeclarée a chaque chargement et ecrasait systematiquement un
+     logo corrige a la main. Or `u.logoUrl` n'existe que si l'utilisateur a
+     ajoute l'equipe ou lance l'enrichissement — c'est une donnee CHOISIE, alors
+     que la table est une valeur par defaut. Le choix doit gagner sur le defaut.
+     Le repli inverse reste en place : sans logo memorise, on lit la table. */
+  var logo='';
+  try{
+    var _u=((typeof state!=='undefined'&&state&&state.u)||[]).filter(function(x){ return x&&x.n===name; })[0];
+    if(_u&&_u.logoUrl) logo=_u.logoUrl;
+  }catch(e){}
+  if(!logo) logo=LOGOS[name];
+  if(logo) LOGOS[name]=logo;
   if(logo){
     return '<div style="'+baseStyle+'background:rgba('+rgb+',.07);border:1px solid rgba('+rgb+',.18);display:flex;align-items:center;justify-content:center;">'
       +'<img src="'+logo+'" style="width:'+(s-10)+'px;height:'+(s-10)+'px;object-fit:contain;" loading="lazy" onerror="logoErr(this)">'
@@ -4173,8 +4181,11 @@ var CLUB_DB=[
   {name:"Sporting CP",league:"Liga Portugal",logo:"https://media.api-sports.io/football/teams/228.png",abbr:"SCP",stars:3,color:"#22c55e"},
   {name:"Porto",league:"Liga Portugal",logo:"https://media.api-sports.io/football/teams/212.png",abbr:"FCP",stars:3,color:"#3b82f6"},
   /* NHL */
-  {name:"Carolina Hurricanes",league:"NHL",logo:"https://media.api-sports.io/hockey/teams/7.png",abbr:"CAR",stars:3,color:"#cc0000"},
-  {name:"Colorado Avalanche",league:"NHL",logo:"https://media.api-sports.io/hockey/teams/9.png",abbr:"COL",stars:3,color:"#7c3aed"},
+  /* Logos VIDES depuis le 22/08 : les identifiants api-sports 7 et 9 designent
+     des clubs bielorusses, pas ces deux franchises NHL. Un champ vide fait
+     chercher le blason chez TheSportsDB a l'ajout, ce qui donne le bon. */
+  {name:"Carolina Hurricanes",league:"NHL",logo:"",abbr:"CAR",stars:3,color:"#cc0000"},
+  {name:"Colorado Avalanche",league:"NHL",logo:"",abbr:"COL",stars:3,color:"#7c3aed"},
   {name:"Tampa Bay Lightning",league:"NHL",logo:"https://media.api-sports.io/hockey/teams/24.png",abbr:"TBL",stars:3,color:"#3b82f6"},
   {name:"Vegas Golden Knights",league:"NHL",logo:"https://media.api-sports.io/hockey/teams/26.png",abbr:"VGK",stars:3,color:"#f0b020"},
   {name:"Florida Panthers",league:"NHL",logo:"https://media.api-sports.io/hockey/teams/15.png",abbr:"FLA",stars:3,color:"#cc0000"},
@@ -7122,8 +7133,12 @@ var LOGOS={
   "PSG":          "https://media.api-sports.io/football/teams/85.png",
   "PSV":          "https://media.api-sports.io/football/teams/674.png",
   "Real Madrid":  "https://media.api-sports.io/football/teams/541.png",
-  "Carolina Hurricanes":"https://media.api-sports.io/hockey/teams/7.png",
-  "Colorado Avalanche": "https://media.api-sports.io/hockey/teams/9.png",
+  /* RETIRES LE 22/08 : les identifiants api-sports 7 et 9 ne designent PAS ces
+     deux clubs mais des equipes bielorusses (Mogilev, Neman Grodno). Comme
+     `logoHtml` lisait cette table AVANT `u.logoUrl`, chaque rechargement de
+     page redeclarait le mauvais blason et annulait toute reparation. Sans
+     entree ici, la resolution retombe sur le logo memorise dans le mur, qui est
+     le bon depuis `g45ReparerLogo`. */
   "LA Dodgers":   "https://media.api-sports.io/baseball/teams/19.png"
 };
 var FAV_LINKS={
@@ -7832,15 +7847,19 @@ function logoHtml(name,color,abbr,sz){
   }
 
   // 2. Logo URL si disponible
-  var logo=LOGOS[name];
-  /* LOGOS n'est pas reconstruit au chargement : on retombe sur le logoUrl mémorisé
-     dans l'entrée du mur, sinon la photo d'un joueur disparaîtrait à chaque rechargement. */
-  if(!logo){
-    try{
-      var _u=((typeof state!=='undefined'&&state&&state.u)||[]).filter(function(x){ return x&&x.n===name; })[0];
-      if(_u&&_u.logoUrl){ logo=_u.logoUrl; LOGOS[name]=logo; }
-    }catch(e){}
-  }
+  /* PRIORITE INVERSEE LE 22/08. `LOGOS` est une table CABLEE dans le source :
+     elle est donc redeclarée a chaque chargement et ecrasait systematiquement un
+     logo corrige a la main. Or `u.logoUrl` n'existe que si l'utilisateur a
+     ajoute l'equipe ou lance l'enrichissement — c'est une donnee CHOISIE, alors
+     que la table est une valeur par defaut. Le choix doit gagner sur le defaut.
+     Le repli inverse reste en place : sans logo memorise, on lit la table. */
+  var logo='';
+  try{
+    var _u=((typeof state!=='undefined'&&state&&state.u)||[]).filter(function(x){ return x&&x.n===name; })[0];
+    if(_u&&_u.logoUrl) logo=_u.logoUrl;
+  }catch(e){}
+  if(!logo) logo=LOGOS[name];
+  if(logo) LOGOS[name]=logo;
   if(logo){
     return '<div style="'+baseStyle+'background:rgba('+rgb+',.07);border:1px solid rgba('+rgb+',.18);display:flex;align-items:center;justify-content:center;">'
       +'<img src="'+logo+'" style="width:'+(s-10)+'px;height:'+(s-10)+'px;object-fit:contain;" loading="lazy" onerror="logoErr(this)">'
@@ -10622,8 +10641,11 @@ var CLUB_DB=[
   {name:"Sporting CP",league:"Liga Portugal",logo:"https://media.api-sports.io/football/teams/228.png",abbr:"SCP",stars:3,color:"#22c55e"},
   {name:"Porto",league:"Liga Portugal",logo:"https://media.api-sports.io/football/teams/212.png",abbr:"FCP",stars:3,color:"#3b82f6"},
   /* NHL */
-  {name:"Carolina Hurricanes",league:"NHL",logo:"https://media.api-sports.io/hockey/teams/7.png",abbr:"CAR",stars:3,color:"#cc0000"},
-  {name:"Colorado Avalanche",league:"NHL",logo:"https://media.api-sports.io/hockey/teams/9.png",abbr:"COL",stars:3,color:"#7c3aed"},
+  /* Logos VIDES depuis le 22/08 : les identifiants api-sports 7 et 9 designent
+     des clubs bielorusses, pas ces deux franchises NHL. Un champ vide fait
+     chercher le blason chez TheSportsDB a l'ajout, ce qui donne le bon. */
+  {name:"Carolina Hurricanes",league:"NHL",logo:"",abbr:"CAR",stars:3,color:"#cc0000"},
+  {name:"Colorado Avalanche",league:"NHL",logo:"",abbr:"COL",stars:3,color:"#7c3aed"},
   {name:"Tampa Bay Lightning",league:"NHL",logo:"https://media.api-sports.io/hockey/teams/24.png",abbr:"TBL",stars:3,color:"#3b82f6"},
   {name:"Vegas Golden Knights",league:"NHL",logo:"https://media.api-sports.io/hockey/teams/26.png",abbr:"VGK",stars:3,color:"#f0b020"},
   {name:"Florida Panthers",league:"NHL",logo:"https://media.api-sports.io/hockey/teams/15.png",abbr:"FLA",stars:3,color:"#cc0000"},
@@ -37137,6 +37159,31 @@ async function _g45FanCompleter(noms) {
 
 /* Outil de diagnostic : quel visuel est utilise pour une equipe, et sous quel
    nom de fichier deposer le sien. */
+/* REPARATION CIBLEE D'UN VISUEL (22/08), pendant de `g45ReparerLogo`.
+   Force la recherche pour UNE equipe en ignorant l'echec memorise, et
+   journalise chaque etape : ecritures essayees, sport retenu, resultat. Quand
+   un fond manque, c'est la commande qui dit POURQUOI plutot que de laisser
+   deviner.  Usage : g45ReparerVisuel('Atletico Madrid') */
+window.g45ReparerVisuel = async function (nom, sport) {
+  try {
+    console.log('Equipe             :', nom);
+    console.log('Ecritures essayees :', _g45FanVariantes(nom));
+    try { localStorage.removeItem(_G45_FANART + _g45SgNorm(nom)); } catch (e) {}
+    var sp = sport || 'soccer';
+    try {
+      var u = ((typeof state !== 'undefined' && state && state.u) || [])
+                .filter(function (x) { return x && x.n === nom; })[0];
+      if (u && typeof g45SportDe === 'function') sp = g45SportDe(u);
+      if (!u) console.warn('(equipe absente du mur — sport suppose : ' + sp + ')');
+    } catch (e) {}
+    console.log('Sport retenu       :', sp);
+    var url = await _g45FanChercher(nom, sp);
+    console.log(url ? ('TROUVE : ' + url) : 'AUCUN visuel exploitable.');
+    if (url) { try { if (typeof render === 'function') render(); } catch (e) {} }
+    return url;
+  } catch (e) { console.warn('Echec :', e); }
+};
+
 window.g45VisuelInfo = function (nom) {
   var f = _G45_PERSO_DIR + _g45SgNorm(nom) + '.jpg';
   console.log('Equipe   : ' + nom);
