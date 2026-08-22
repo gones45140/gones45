@@ -30494,7 +30494,7 @@ var _G45_CACHE_PREFIXES=['g45rcP_','g45rcD_','g45rcY_','g45rc_','g45dcm_','g45dc
      explosait et des ecritures LEGITIMES echouaient en silence (le filtre par
      competition, qui restait bloque sur « Toutes »). Les cartes de tirs sont
      les plus lourdes : plusieurs Ko par match, gardees indefiniment. */
-  'g45butA2_','g45gl2_','g45gl_','g45_tirs2_','g45_fanart2_','g45_fanart_','g45_img_perso_','g45_tv_prog','g45_mqnom_','g45_mqteam_','g45_mqfond_','g45trv4_',
+  'g45butA2_','g45gl2_','g45gl_','g45_tirs2_','g45_fanart2_','g45_fanart_','g45_img_perso_','g45_tv_prog','g45_mqnom_','g45_mqteam_','g45_mqfond_','g45trv4_','g45_catimg_',
   'g45nrlcal2_','g45_fx_faits','g45_veille_','g45_compet_logos','g45_groq_modele','g45_gemini_modeles',
   /* MESURE DU 20/08 sur le stockage reel d'Antoine (5,1 Mo, sature) :
        fpl_bootstrap_cache ... 1951 Ko  <- a lui seul 38 % du total
@@ -31805,6 +31805,17 @@ function _g45SdbMeilleur(liste, nom, sport) {
     var memeSport = pool.filter(function(r) { return slug(r.sport) === att; });
     if (memeSport.length) pool = memeSport;
   }
+  /* EXCLUSIONS (22/08). Meme liste que pour les visuels, plus l'ESPORT :
+     chercher « PSG » ramenait « PSG Esports » et son blason s'est retrouve sur
+     la ligne du Paris Saint-Germain des que `u.logoUrl` est passe devant la
+     table cablee. Une equipe d'esport, une section feminine ou une reserve
+     portent un nom proche et un blason different — exactement le faux positif
+     le plus difficile a reperer, puisqu'il a l'air plausible. */
+  var _excl = /(esport|e-sport|gaming|gloriosas|femenin|feminin|women|ladies|damen|dames|girls|youth|academy|reserve|reserves|\bu\s?1[4-9]\b|\bu\s?2[0-3]\b|\bii\b)/i;
+  if (!_excl.test(nom)) {
+    var propres = pool.filter(function(r) { return !_excl.test(String(r.name || '')); });
+    if (propres.length) pool = propres;
+  }
   if (!exact.length) {
     pool = pool.filter(function(r) {
       var rn = String(r.name).toLowerCase();
@@ -31814,6 +31825,29 @@ function _g45SdbMeilleur(liste, nom, sport) {
   var avecBadge = pool.filter(function(r) { return r.logo; });
   return avecBadge.length ? avecBadge[0] : null;
 }
+
+/* RESOLUTION UNIQUE (22/08). La recherche de BLASON ignorait les alias et les
+   variantes d'ecriture que la recherche de VISUEL utilise depuis ce matin :
+   « PSG » n'etait donc jamais traduit en « Paris Saint-Germain », d'ou un
+   blason d'esport. Les deux passent desormais par les memes ecritures.
+   C'est le meme defaut que le filtre par sport et que la liste des entrees non
+   club : une regle posee d'un cote et pas de l'autre. */
+async function g45SdbClub(nom, sport) {
+  var essais = (typeof _g45FanVariantes === 'function') ? _g45FanVariantes(nom) : [nom];
+  for (var i = 0; i < essais.length; i++) {
+    try {
+      var res = await g45SdbSearch(essais[i]);
+      if (!res || !res.length) continue;
+      /* On valide contre l'ECRITURE INTERROGEE, pas contre le nom du mur : sinon
+         l'alias serait annule par le controle, comme c'etait le cas pour Inter
+         et le PSG cote visuels. */
+      var best = _g45SdbMeilleur(res, essais[i], sport) || _g45SdbMeilleur(res, nom, sport);
+      if (best && best.logo) return best;
+    } catch (e) {}
+  }
+  return null;
+}
+window.g45SdbClub = g45SdbClub;
 
 window.enrichTeamLogos = async function() {
   if (!window.state || !state.u || !state.u.length) { alert('Aucune equipe dans le mur.'); return; }
@@ -31860,8 +31894,7 @@ window.enrichTeamLogos = async function() {
         if (u.logoUrl) { u.logoUrl = ''; try { if (typeof LOGOS !== 'undefined') delete LOGOS[u.n]; } catch (e) {} }
         continue;
       }
-      var res = await g45SdbSearch(u.n);
-      var best = _g45SdbMeilleur(res, u.n, u.sport);
+      var best = await g45SdbClub(u.n, u.sport);
       if (best && best.logo) {
         u.logoUrl = best.logo;
         /* Le mur lit d'abord le cache memoire LOGOS[nom] et ne retombe sur
@@ -31899,9 +31932,8 @@ window.g45ReparerLogo = async function(nom) {
   try {
     var u = (state.u || []).filter(function(x) { return x && x.n === nom; })[0];
     if (!u) { console.warn('Equipe absente du mur :', nom); return; }
-    var res = await g45SdbSearch(nom);
-    console.log('Resultats pour', nom, ':', (res || []).map(function(r) { return r.name + ' | ' + r.sport + ' | logo:' + !!r.logo; }));
-    var best = _g45SdbMeilleur(res, nom, null);
+    console.log('Ecritures essayees :', _g45FanVariantes(nom));
+    var best = await g45SdbClub(nom, u.sport);
     if (!best || !best.logo) { console.warn('Aucun logo exploitable trouve.'); return; }
     console.log('Retenu :', best.name, best.logo);
     u.logoUrl = best.logo;
@@ -36996,10 +37028,34 @@ var _G45_CAT_IMG = {
   formula1:    'data:image/svg+xml;utf8,%3Csvg%20xmlns%3D%27http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%27%20viewBox%3D%270%200%20400%20200%27%3E%3Crect%20width%3D%27400%27%20height%3D%27200%27%20fill%3D%27none%27%2F%3E%3Cg%20fill%3D%27%23ffffff%27%20opacity%3D%27.85%27%3E%3Cpath%20d%3D%27M40%20118h60l26-24h96l22%2024h96v26H40z%27%2F%3E%3Cpath%20d%3D%27M126%2094l18-26h74l16%2026z%27%20opacity%3D%27.6%27%2F%3E%3C%2Fg%3E%3Cg%20fill%3D%27none%27%20stroke%3D%27%23ffffff%27%20stroke-width%3D%277%27%20opacity%3D%27.85%27%3E%3Ccircle%20cx%3D%27112%27%20cy%3D%27150%27%20r%3D%2722%27%2F%3E%3Ccircle%20cx%3D%27288%27%20cy%3D%27150%27%20r%3D%2722%27%2F%3E%3C%2Fg%3E%3Cg%20fill%3D%27%23ffffff%27%20opacity%3D%27.55%27%3E%3Crect%20x%3D%27300%27%20y%3D%2734%27%20width%3D%2718%27%20height%3D%2718%27%2F%3E%3Crect%20x%3D%27336%27%20y%3D%2734%27%20width%3D%2718%27%20height%3D%2718%27%2F%3E%3Crect%20x%3D%27318%27%20y%3D%2752%27%20width%3D%2718%27%20height%3D%2718%27%2F%3E%3Crect%20x%3D%27354%27%20y%3D%2752%27%20width%3D%2718%27%20height%3D%2718%27%2F%3E%3Crect%20x%3D%27300%27%20y%3D%2770%27%20width%3D%2718%27%20height%3D%2718%27%2F%3E%3Crect%20x%3D%27336%27%20y%3D%2770%27%20width%3D%2718%27%20height%3D%2718%27%2F%3E%3C%2Fg%3E%3C%2Fsvg%3E',
   f1:          'data:image/svg+xml;utf8,%3Csvg%20xmlns%3D%27http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%27%20viewBox%3D%270%200%20400%20200%27%3E%3Crect%20width%3D%27400%27%20height%3D%27200%27%20fill%3D%27none%27%2F%3E%3Cg%20fill%3D%27%23ffffff%27%20opacity%3D%27.85%27%3E%3Cpath%20d%3D%27M40%20118h60l26-24h96l22%2024h96v26H40z%27%2F%3E%3Cpath%20d%3D%27M126%2094l18-26h74l16%2026z%27%20opacity%3D%27.6%27%2F%3E%3C%2Fg%3E%3Cg%20fill%3D%27none%27%20stroke%3D%27%23ffffff%27%20stroke-width%3D%277%27%20opacity%3D%27.85%27%3E%3Ccircle%20cx%3D%27112%27%20cy%3D%27150%27%20r%3D%2722%27%2F%3E%3Ccircle%20cx%3D%27288%27%20cy%3D%27150%27%20r%3D%2722%27%2F%3E%3C%2Fg%3E%3Cg%20fill%3D%27%23ffffff%27%20opacity%3D%27.55%27%3E%3Crect%20x%3D%27300%27%20y%3D%2734%27%20width%3D%2718%27%20height%3D%2718%27%2F%3E%3Crect%20x%3D%27336%27%20y%3D%2734%27%20width%3D%2718%27%20height%3D%2718%27%2F%3E%3Crect%20x%3D%27318%27%20y%3D%2752%27%20width%3D%2718%27%20height%3D%2718%27%2F%3E%3Crect%20x%3D%27354%27%20y%3D%2752%27%20width%3D%2718%27%20height%3D%2718%27%2F%3E%3Crect%20x%3D%27300%27%20y%3D%2770%27%20width%3D%2718%27%20height%3D%2718%27%2F%3E%3Crect%20x%3D%27336%27%20y%3D%2770%27%20width%3D%2718%27%20height%3D%2718%27%2F%3E%3C%2Fg%3E%3C%2Fsvg%3E'
 };
+/* FICHIER DU DEPOT PRIORITAIRE (22/08), meme principe que `images/equipes/`.
+   Antoine voulait le vrai logo de la Formule 1 en fond de sa ligne FORMULE 1 :
+   c'est une marque deposee, donc elle n'a rien a faire dans le code source de
+   l'app, qui est partagee. Mais rien n'empeche de deposer le fichier soi-meme
+   dans son propre depot — le code va le chercher, et le pictogramme dessine ne
+   sert plus que de repli tant qu'il n'est pas la.
+   Le test d'existence est NON BLOQUANT et memorise : on ne fait pas attendre
+   l'affichage du mur pour savoir si un fichier existe. */
+function _g45CatPerso(k){
+  var cle = 'g45_catimg_' + k;
+  var c = null;
+  try{ c = localStorage.getItem(cle); }catch(e){}
+  if (c !== null) return c;                       /* '' = teste, absent */
+  ['png','jpg'].forEach(function(ext){
+    var url = 'images/ligues/' + k + '.' + ext;
+    var img = new Image();
+    img.onload = function(){ try{ localStorage.setItem(cle, url); }catch(e){} };
+    img.onerror = function(){ try{ if(localStorage.getItem(cle)===null && ext==='jpg') localStorage.setItem(cle,''); }catch(e){} };
+    img.src = url;
+  });
+  return null;                                    /* pas encore teste */
+}
+
 function g45VisuelCategorie(nom){
   try{
     var k = _g45SgNorm(nom);
-    return _G45_CAT_IMG[k] || '';
+    if (!_G45_CAT_IMG[k]) return '';
+    return _g45CatPerso(k) || _G45_CAT_IMG[k];
   }catch(e){ return ''; }
 }
 window.g45VisuelCategorie = g45VisuelCategorie;
