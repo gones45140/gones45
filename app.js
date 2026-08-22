@@ -37057,6 +37057,7 @@ var _G45_CAT_IMG = {
    sert plus que de repli tant qu'il n'est pas la.
    Le test d'existence est NON BLOQUANT et memorise : on ne fait pas attendre
    l'affichage du mur pour savoir si un fichier existe. */
+var _g45CatVus = {};
 function _g45CatPerso(k){
   var cle = 'g45_catimg_' + k;
   var c = null;
@@ -37065,7 +37066,21 @@ function _g45CatPerso(k){
   ['png','jpg'].forEach(function(ext){
     var url = 'images/ligues/' + k + '.' + ext;
     var img = new Image();
-    img.onload = function(){ try{ localStorage.setItem(cle, url); }catch(e){} };
+    img.onload = function(){
+      try{ localStorage.setItem(cle, url); }catch(e){}
+      /* REDESSIN (22/08). Sans lui, le fichier etait bien detecte et memorise,
+         mais la ligne restait sur le pictogramme dessine jusqu'au rechargement
+         SUIVANT — le test part au moment ou la ligne s'affiche, donc il repond
+         toujours trop tard pour ce rendu-la. Constate apres le depot de
+         formule1.png : l'image existait, la cle etait bonne, et rien ne
+         changeait a l'ecran.
+         Garde-fou : on ne redessine qu'une fois par fichier trouve, sinon
+         chaque rendu relancerait un test qui relancerait un rendu. */
+      if(!_g45CatVus[cle]){
+        _g45CatVus[cle] = 1;
+        try{ if(typeof render === 'function') render(); }catch(e){}
+      }
+    };
     img.onerror = function(){ try{ if(localStorage.getItem(cle)===null && ext==='jpg') localStorage.setItem(cle,''); }catch(e){} };
     img.src = url;
   });
