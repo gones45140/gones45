@@ -2001,7 +2001,13 @@ function render(){
          en vert comme en rouge sans dependre de la couleur du club. */
       var _lu=(typeof g45LogoUrlDe==='function')?g45LogoUrlDe(u.n):'';
       var _vis=(typeof g45VisuelCache==='function')?g45VisuelCache(u.n):'';
-      if(!_vis && typeof g45VisuelCategorie==='function') _vis=g45VisuelCategorie(u.n);
+      /* CORRECTION DU 22/08 : le pictogramme d'une categorie ne doit PAS servir
+         de fond. La ligne est en `background-size:cover`, pensee pour une photo
+         de club ; un SVG s'y retrouve agrandi jusqu'a ce qu'on n'en voie plus
+         qu'un fragment — un arc de ballon traversant trois lignes. On le pose
+         donc comme un filigrane CENTRE, a taille fixe, et la ligne garde son
+         degrade de couleur en fond. */
+      var _cat=(!_vis && typeof g45VisuelCategorie==='function')?g45VisuelCategorie(u.n):'';
       var _fond=(typeof g45FondSolo==='function')?g45FondSolo(u.color,_vis)
               :('linear-gradient(100deg,'+(u.color||'#4d84ff')+'2e 0%,transparent 55%)');
       /* Logo nettement plus present : 86 px a 18 %. Une ligne du mur faisait
@@ -2010,6 +2016,9 @@ function render(){
       var _filig=_lu?('<img src="'+_lu+'" loading="lazy" onerror="this.style.display=\'none\'" '
         +'style="position:absolute;right:14px;top:50%;transform:translateY(-50%);height:86px;width:86px;'
         +'object-fit:contain;opacity:.18;filter:saturate(1.4);pointer-events:none;">'):'';
+      if(_cat) _filig+='<img src="'+_cat+'" alt="" '
+        +'style="position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);height:64px;'
+        +'object-fit:contain;opacity:.20;pointer-events:none;">';
       /* CARTE, plus une ligne de liste (22/08). On reprend la presentation des
          cartes du direct, qu'Antoine a validee : coins arrondis, cartes
          detachees, visuel plein cadre, hauteur qui laisse respirer. Le filet
@@ -8553,7 +8562,13 @@ function render(){
          en vert comme en rouge sans dependre de la couleur du club. */
       var _lu=(typeof g45LogoUrlDe==='function')?g45LogoUrlDe(u.n):'';
       var _vis=(typeof g45VisuelCache==='function')?g45VisuelCache(u.n):'';
-      if(!_vis && typeof g45VisuelCategorie==='function') _vis=g45VisuelCategorie(u.n);
+      /* CORRECTION DU 22/08 : le pictogramme d'une categorie ne doit PAS servir
+         de fond. La ligne est en `background-size:cover`, pensee pour une photo
+         de club ; un SVG s'y retrouve agrandi jusqu'a ce qu'on n'en voie plus
+         qu'un fragment — un arc de ballon traversant trois lignes. On le pose
+         donc comme un filigrane CENTRE, a taille fixe, et la ligne garde son
+         degrade de couleur en fond. */
+      var _cat=(!_vis && typeof g45VisuelCategorie==='function')?g45VisuelCategorie(u.n):'';
       var _fond=(typeof g45FondSolo==='function')?g45FondSolo(u.color,_vis)
               :('linear-gradient(100deg,'+(u.color||'#4d84ff')+'2e 0%,transparent 55%)');
       /* Logo nettement plus present : 86 px a 18 %. Une ligne du mur faisait
@@ -8562,6 +8577,9 @@ function render(){
       var _filig=_lu?('<img src="'+_lu+'" loading="lazy" onerror="this.style.display=\'none\'" '
         +'style="position:absolute;right:14px;top:50%;transform:translateY(-50%);height:86px;width:86px;'
         +'object-fit:contain;opacity:.18;filter:saturate(1.4);pointer-events:none;">'):'';
+      if(_cat) _filig+='<img src="'+_cat+'" alt="" '
+        +'style="position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);height:64px;'
+        +'object-fit:contain;opacity:.20;pointer-events:none;">';
       /* CARTE, plus une ligne de liste (22/08). On reprend la presentation des
          cartes du direct, qu'Antoine a validee : coins arrondis, cartes
          detachees, visuel plein cadre, hauteur qui laisse respirer. Le filet
@@ -31814,6 +31832,14 @@ window.enrichTeamLogos = async function() {
     var u = aFaire[i];
     dire('\u23f3 ' + (i + 1) + '/' + aFaire.length + ' \u2014 ' + u.n);
     try {
+      /* Une entree de categorie ne doit pas davantage recevoir un blason de club
+         (22/08) : c'est ainsi que TENNIS portait celui de Tennis Borussia
+         Berlin, Basket celui de Basket Brno et RUGBY celui de Rugby ATL. Meme
+         liste que pour les visuels, et on EFFACE le logo errone au passage. */
+      if (typeof _G45_NON_CLUB !== 'undefined' && _G45_NON_CLUB.test(String(u.n || '').trim())) {
+        if (u.logoUrl) { u.logoUrl = ''; try { if (typeof LOGOS !== 'undefined') delete LOGOS[u.n]; } catch (e) {} }
+        continue;
+      }
       var res = await g45SdbSearch(u.n);
       var best = _g45SdbMeilleur(res, u.n, u.sport);
       if (best && best.logo) {
