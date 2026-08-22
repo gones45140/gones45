@@ -31748,10 +31748,26 @@ window.enrichTeamLogos = async function() {
      etre faux — l'ancienne version prenait le premier resultat venu, d'ou le
      blason d'Odense sur Boca et celui de l'universite de Miami sur Miami CF.
      Quand il n'y a plus rien a completer, on propose donc de tout recontroler. */
-  var aFaire = state.u.filter(function(u) { return u.n && !u.logoUrl; });
-  if (!aFaire.length) {
-    if (!confirm('Tous les logos sont deja renseignes.\n\nVoulez-vous les RE-VERIFIER tous ?\nLes logos errones seront remplaces, ceux qui sont introuvables seront conserves.')) return;
-    aFaire = state.u.filter(function(u) { return u.n; });
+  /* CORRECTION DU 22/08. La question « voulez-vous tout re-verifier ? » n'etait
+     posee que si AUCUN logo ne manquait. Or le mur contient des entrees de
+     categorie qui n'en auront jamais (FORMULE 1, AU NRL) : la liste des
+     manquants n'etait donc jamais vide, la question jamais posee, et une equipe
+     portant un logo FAUX n'etait jamais revisitee. Constate sur Carolina
+     Hurricanes et Colorado Avalanche, affublees de blasons de clubs bielorusses
+     depuis l'ancienne version qui prenait le premier resultat venu.
+     On pose desormais la question des qu'il existe au moins un logo deja mis. */
+  var manquants = state.u.filter(function(u) { return u.n && !u.logoUrl; });
+  var deja      = state.u.filter(function(u) { return u.n && u.logoUrl; });
+  var aFaire    = manquants;
+  if (deja.length) {
+    var q = manquants.length
+      ? ('OK  \u2192 completer les ' + manquants.length + ' logo(s) manquant(s).\n'
+         + 'Annuler  \u2192 RE-VERIFIER les ' + state.u.length + ' entrees, y compris celles qui ont deja un logo.\n\n'
+         + 'Choisissez Annuler si un logo affiche est FAUX.')
+      : ('Tous les logos sont renseignes.\n\nOK  \u2192 ne rien faire.\n'
+         + 'Annuler  \u2192 tout RE-VERIFIER (les errones seront remplaces, les introuvables conserves).');
+    if (!confirm(q)) aFaire = state.u.filter(function(u) { return u.n; });
+    else if (!manquants.length) return;
   }
 
   var ok = 0, rates = [];
@@ -31781,6 +31797,25 @@ window.enrichTeamLogos = async function() {
   dire('\u2705 ' + ok + '/' + aFaire.length + ' logos ajoutes');
   if (rates.length) console.warn('Sans logo trouve :', rates.join(', '));
   setTimeout(function() { dire(libelle); }, 4000);
+};
+
+/* REPARATION CIBLEE (22/08) : refait le logo d'UNE equipe, sans repasser sur
+   tout le mur ni dependre de la question posee par le bouton.
+   Usage en console : g45ReparerLogo('Carolina Hurricanes') */
+window.g45ReparerLogo = async function(nom) {
+  try {
+    var u = (state.u || []).filter(function(x) { return x && x.n === nom; })[0];
+    if (!u) { console.warn('Equipe absente du mur :', nom); return; }
+    var res = await g45SdbSearch(nom);
+    console.log('Resultats pour', nom, ':', (res || []).map(function(r) { return r.name + ' | ' + r.sport + ' | logo:' + !!r.logo; }));
+    var best = _g45SdbMeilleur(res, nom, null);
+    if (!best || !best.logo) { console.warn('Aucun logo exploitable trouve.'); return; }
+    console.log('Retenu :', best.name, best.logo);
+    u.logoUrl = best.logo;
+    try { if (typeof LOGOS !== 'undefined') LOGOS[nom] = best.logo; } catch (e) {}
+    try { save(); } catch (e) {}
+    try { render(); } catch (e) {}
+  } catch (e) { console.warn('Echec :', e); }
 };
 
 /* getTeamLogo reste utilisee ailleurs : on la corrige aussi. */
@@ -36832,7 +36867,11 @@ window.g45SportDe = g45SportDe;
    completee au fil des manques constates. */
 var _G45_TSDB_ALIAS = {
   internazionale:'Inter Milan', inter:'Inter Milan', intermilan:'Inter Milan',
-  psg:'Paris SG', 'parissaintgermain':'Paris SG', paris:'Paris SG',
+  /* VERIFIE le 22/08 : « Paris SG » renvoie TORCY. La base fait du
+     rapprochement approximatif, donc un alias faux est pire que pas d'alias.
+     On essaie plusieurs ecritures, la plus complete d'abord. */
+  psg:['Paris Saint-Germain','Paris Saint Germain','PSG'],
+  'parissaintgermain':['Paris Saint-Germain','Paris Saint Germain'],
   asroma:'Roma', roma:'Roma',
   atleticomadrid:'Atletico Madrid', atletico:'Atletico Madrid',
   realmadrid:'Real Madrid', barcelona:'Barcelona',
@@ -36892,7 +36931,11 @@ function _g45FanVariantes(nom) {
   /* L'alias passe en PREMIER quand il existe : c'est le nom exact de la base,
      donc autant ne pas gaspiller deux requetes avant lui. */
   var al = _G45_TSDB_ALIAS[_g45SgNorm(brut)];
-  if (al) { out.length = 0; vus = {}; ajout(al); [brut, sansAcc, court].forEach(ajout); }
+  if (al) {
+    out.length = 0; vus = {};
+    (Array.isArray(al) ? al : [al]).forEach(ajout);
+    [brut, sansAcc, court].forEach(ajout);
+  }
   /* Un nom qui porte deja un de ces prefixes n'a pas besoin qu'on lui en colle
      un second. */
   var dejaPrefixe = /^(deportivo|real|club|athletic|cd|fc)\s+/i.test(brut);
