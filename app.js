@@ -1186,7 +1186,7 @@ var SPORT_EMOJIS={
    entrees vides sont purgees automatiquement au premier rendu du mur. Les
    visuels TROUVES sont conserves, eux n'ont aucune raison d'etre refaits.
    A INCREMENTER a chaque modification de la recherche. */
-var _G45_FAN_VER = '20260822d';
+var _G45_FAN_VER = '20260822e';
 function _g45FanPurgeSiVersion(){
   try{
     if (localStorage.getItem('g45_fanver') === _G45_FAN_VER) return 0;
@@ -31765,24 +31765,22 @@ function _g45SdbMeilleur(liste, nom, sport) {
   var n = String(nom || '').toLowerCase().trim();
   var exact = liste.filter(function(r) { return String(r.name).toLowerCase().trim() === n; });
   var pool = exact.length ? exact : liste;
-  /* CORRECTION DU 22/08 : ce filtre comparait `r.sport` (« Ice Hockey ») a
-     `u.sport`, qui est un EMOJI (🏒). Il ne matchait jamais, donc il ne filtrait
-     rien — c'est ainsi qu'un club de hockey bielorusse a pu se poser sur
-     Carolina Hurricanes. On traduit l'emoji comme ailleurs dans l'app, puis on
-     passe par la meme table que TheSportsDB. */
+  /* CORRIGE PUIS RETABLI LE 22/08. Diagnostic errone de ma part : j'avais conclu
+     que ce filtre comparait « Ice Hockey » a un emoji et ne matchait jamais.
+     FAUX — `g45SdbSearch` traduit deja `strSport` en emoji avant de rendre ses
+     resultats, donc les deux cotes etaient bien homogenes et le filtre marchait.
+     Ma « correction » traduisait un seul cote et cassait la comparaison.
+     Le filtre passe desormais les DEUX cotes par `g45SportDe`, ce qui accepte
+     indifferemment un emoji ou un libelle et ne peut plus se desynchroniser si
+     l'une des deux sources change de format.
+     LECON : ne pas conclure sur une fonction sans lire celle qui l'alimente. */
   if (sport) {
-    var att = sport;
-    try {
-      if (typeof g45SportDe === 'function' && !/^[a-z ]+$/i.test(String(sport))) {
-        att = _G45_TSDB_SPORT[g45SportDe({ sport: sport })] || sport;
-      } else if (typeof _G45_TSDB_SPORT !== 'undefined' && _G45_TSDB_SPORT[sport]) {
-        att = _G45_TSDB_SPORT[sport];
-      }
-    } catch (e) {}
-    var na = String(att).toLowerCase().replace(/[^a-z]/g, '');
-    var memeSport = pool.filter(function(r) {
-      return String(r.sport || '').toLowerCase().replace(/[^a-z]/g, '') === na;
-    });
+    var slug = function (v) {
+      try { return (typeof g45SportDe === 'function') ? g45SportDe({ sport: v }) : String(v || ''); }
+      catch (e) { return String(v || ''); }
+    };
+    var att = slug(sport);
+    var memeSport = pool.filter(function(r) { return slug(r.sport) === att; });
     if (memeSport.length) pool = memeSport;
   }
   if (!exact.length) {
@@ -31860,6 +31858,14 @@ window.enrichTeamLogos = async function() {
   try { render(); } catch (e) {}
 
   dire('\u2705 ' + ok + '/' + aFaire.length + ' logos ajoutes');
+  /* Compte rendu VISIBLE (22/08) : le bouton se contentait de changer son propre
+     libelle quelques secondes, ce qui donne l'impression qu'il ne fait rien
+     quand la liste est courte ou quand tout echoue. */
+  try {
+    alert(ok + ' logo(s) mis a jour sur ' + aFaire.length + ' entree(s) traitee(s).'
+      + (rates.length ? ('\n\nSans resultat exploitable : ' + rates.join(', ')
+          + '\n(leur logo actuel est conserve)') : ''));
+  } catch (e) {}
   if (rates.length) console.warn('Sans logo trouve :', rates.join(', '));
   setTimeout(function() { dire(libelle); }, 4000);
 };
@@ -37027,6 +37033,27 @@ async function _g45FanChercher(nom, sport) {
   var n = _g45SgNorm(nom);
   var essais = _g45FanVariantes(nom);
 
+  /* CORRECTION DU 22/08 — l'alias etait annule par le controle qui le suit.
+     On interrogeait bien « Inter Milan », la base repondait « Inter Milan », et
+     le rapprochement rejetait la reponse parce qu'elle ne ressemblait pas a
+     « Internazionale », le nom du mur. Idem « Paris Saint-Germain » face a
+     « PSG ». Les deux clubs restaient donc sans fond alors que leur fanart
+     existe — verifie par sonde.
+     Les noms ACCEPTABLES sont desormais l'ensemble des ecritures essayees et
+     plus seulement celle d'origine : si une ecriture est jugee assez fiable
+     pour interroger la base, elle l'est aussi pour valider la reponse. */
+  var accept = {};
+  essais.forEach(function (v) { var k = _g45SgNorm(v); if (k) accept[k] = 1; });
+  accept[n] = 1;
+  var noms = Object.keys(accept);
+  var correspond = function (k) {
+    if (!k) return false;
+    if (accept[k]) return true;
+    return noms.some(function (a) {
+      return a.length >= 6 && (k.indexOf(a) >= 0 || a.indexOf(k) >= 0);
+    });
+  };
+
   for (var v = 0; v < essais.length && !url; v++) {
     try {
       var r = await fetch('https://www.thesportsdb.com/api/v1/json/3/searchteams.php?t=' + encodeURIComponent(essais[v]));
@@ -37062,11 +37089,8 @@ async function _g45FanChercher(nom, sport) {
          `_G45_NON_CLUB`, qui elimine les mots generiques en amont, et une
          longueur minimale de six caracteres significatifs, sous laquelle un nom
          est trop court pour qu'une contenance veuille dire quelque chose. */
-      var t = propres.filter(function (x) { return _g45SgNorm(x.strTeam || '') === n; })[0]
-           || (n.length >= 6 ? propres.filter(function (x) {
-                var k = _g45SgNorm(x.strTeam || '');
-                return k.indexOf(n) >= 0 || n.indexOf(k) >= 0;
-              })[0] : null)
+      var t = propres.filter(function (x) { return accept[_g45SgNorm(x.strTeam || '')]; })[0]
+           || propres.filter(function (x) { return correspond(_g45SgNorm(x.strTeam || '')); })[0]
            || null;
       /* CASCADE ELARGIE (22/08). Une equipe peut etre trouvee sans avoir de
          bandeau : Alaves avait `fanart:true` mais `banner:false`. Se limiter a
