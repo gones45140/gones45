@@ -36786,6 +36786,15 @@ var _G45_TSDB_SPORT = {
    ampute d'un prefixe de club courant (Deportivo, Real, Athletic, RCD...).
    Trois requetes au maximum, sur une API gratuite et sans quota, et seulement
    pour les clubs encore inconnus. */
+/* ENTREES QUI NE SONT PAS DES CLUBS (22/08). Le mur d'Antoine contient des
+   categories — TENNIS, Basket, RUGBY, AU NRL, FORMULE 1 — deja identifiees en
+   juillet comme introuvables chez TheSportsDB. Le rapprochement tolerant pose
+   ce matin les a rattrapees par le mauvais bout : « Tennis » est contenu dans
+   « Tennis Borussia Berlin », « Basket » dans « Basket Brno », « Rugby » dans
+   « Rugby ATL ». Resultat en production : un club de handball berlinois en fond
+   de la ligne TENNIS. On refuse donc toute recherche sur ces termes. */
+var _G45_NON_CLUB = /^(tennis|basket|basketball|rugby|rugby a ?xiii|au nrl|nrl|formule ?1|formula ?1|f1|football|foot|hockey|baseball|mma|boxe|cyclisme|velo|golf|nascar|moto ?gp|athletisme|handball|volley)$/i;
+
 function _g45FanVariantes(nom) {
   var brut = String(nom || '').trim();
   var sansAcc = brut.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
@@ -36817,6 +36826,12 @@ function _g45FanVariantes(nom) {
 
 async function _g45FanChercher(nom, sport) {
   var url = '';
+  /* Sortie immediate, et on MEMORISE l'echec : sans ca la passe du mur
+     relancerait la recherche a chaque session. */
+  if (_G45_NON_CLUB.test(String(nom || '').trim())) {
+    try { localStorage.setItem(_G45_FANART + _g45SgNorm(nom), JSON.stringify({ u: '', t: Date.now() })); } catch (e) {}
+    return '';
+  }
   var attendu = _G45_TSDB_SPORT[sport || ''] || '';
   var n = _g45SgNorm(nom);
   var essais = _g45FanVariantes(nom);
@@ -36849,8 +36864,18 @@ async function _g45FanChercher(nom, sport) {
          Odense sur Boca en juillet. Sans correspondance serieuse, on prefere
          aucune image — le repli opaque est propre, et une image perso peut
          etre deposee dans le depot. */
+      /* Le rapprochement reste par CONTENANCE, et non par debut de nom : exiger
+         un prefixe recalait « Deportivo Alaves », dont le nom demande est
+         « Alaves » et se trouve au milieu. Ce qui protege du faux positif, ce
+         n'est donc pas la position mais deux autres conditions — la liste
+         `_G45_NON_CLUB`, qui elimine les mots generiques en amont, et une
+         longueur minimale de six caracteres significatifs, sous laquelle un nom
+         est trop court pour qu'une contenance veuille dire quelque chose. */
       var t = propres.filter(function (x) { return _g45SgNorm(x.strTeam || '') === n; })[0]
-           || propres.filter(function (x) { var k = _g45SgNorm(x.strTeam || ''); return k.indexOf(n) >= 0 || n.indexOf(k) >= 0; })[0]
+           || (n.length >= 6 ? propres.filter(function (x) {
+                var k = _g45SgNorm(x.strTeam || '');
+                return k.indexOf(n) >= 0 || n.indexOf(k) >= 0;
+              })[0] : null)
            || null;
       if (t) url = t.strTeamBanner || t.strFanart1 || t.strFanart2 || t.strStadiumThumb || '';
     } catch (e) {}
