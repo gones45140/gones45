@@ -1171,6 +1171,21 @@ var SPORT_EMOJIS={
   'mma':'🥊','ufc':'🥊','boxe':'🥊',
   'natation':'🏊','cyclisme':'🚴','athlétisme':'🏃'
 };
+/* URL du logo SEULE (22/08), pour l'utiliser en fond. `logoHtml` rend un bloc
+   complet ; ici on ne veut que l'adresse. Meme cascade que lui : table LOGOS,
+   puis le `logoUrl` memorise dans l'entree du mur — qui existe justement parce
+   que LOGOS n'est pas reconstruit au chargement. */
+function g45LogoUrlDe(name){
+  try{
+    var l = (typeof LOGOS!=='undefined' && LOGOS[name]) || '';
+    if(!l){
+      var u = ((typeof state!=='undefined' && state && state.u)||[]).filter(function(x){ return x && x.n===name; })[0];
+      if(u && u.logoUrl) l = u.logoUrl;
+    }
+    return l || '';
+  }catch(e){ return ''; }
+}
+
 function logoHtml(name,color,abbr,sz){
   var s=sz||46;
   var fb=abbr||(name.substring(0,3).toUpperCase());
@@ -1925,9 +1940,24 @@ function render(){
       var logo=logoHtml(u.n,u.color,u.abbr,32);
       var forme=formeHtml(paris,5);
       var pColor=profit>=0?'var(--g)':'var(--r)';
-      return '<div style="display:flex;align-items:center;gap:10px;padding:10px 12px;border-bottom:1px solid var(--b1);cursor:pointer;" data-nom="'+u.n+'" onclick="openClubFromDash(this.dataset.nom)">'
+      /* ═══ LOGO ET COULEUR DU CLUB EN FOND DE LIGNE (22/08) ═══
+         Meme grammaire que les cartes de match : teinte du club a gauche, logo
+         en filigrane a droite. `_g45CoulFond` releve les couleurs quasi noires,
+         sinon la ligne d'un club en noir n'aurait aucun fond du tout.
+         Le degrade s'eteint a 55 % : le profit, a droite, doit rester lisible
+         en vert comme en rouge sans dependre de la couleur du club. */
+      var _cf=(typeof _g45CoulFond==='function')?_g45CoulFond(u.color||'#4d84ff'):(u.color||'#4d84ff');
+      var _lu=(typeof g45LogoUrlDe==='function')?g45LogoUrlDe(u.n):'';
+      var _fond='linear-gradient(100deg,'+_cf+'2e 0%,'+_cf+'12 30%,transparent 55%)';
+      var _filig=_lu?('<img src="'+_lu+'" loading="lazy" onerror="this.style.display=\'none\'" '
+        +'style="position:absolute;right:10px;top:50%;transform:translateY(-50%);height:60px;width:60px;'
+        +'object-fit:contain;opacity:.13;filter:saturate(1.3);pointer-events:none;">'):'';
+      return '<div style="position:relative;overflow:hidden;display:flex;align-items:center;gap:10px;padding:10px 12px;'
+        +'border-bottom:1px solid var(--b1);cursor:pointer;background:'+_fond+';" '
+        +'data-nom="'+u.n+'" onclick="openClubFromDash(this.dataset.nom)">'
+        +_filig
         +logo
-        +'<div style="flex:1;min-width:0;">'
+        +'<div style="position:relative;flex:1;min-width:0;">'
         +'<div style="font-size:12px;font-weight:700;">'+(u.sport||'')+' '+u.n+'</div>'
         +'<div style="font-size:9px;color:var(--t3);">'+'⭐'.repeat(u.s)+' · P'+u.l+' · '+pc+'% réussite</div>'
         +(u.note?'<div style="font-size:10px;color:var(--a);margin-top:2px;font-style:italic;">📌 '+u.note+'</div>':'')
@@ -1935,7 +1965,7 @@ function render(){
         +(streak(paris).n>1?'<div style="display:inline-flex;align-items:center;gap:3px;padding:1px 7px;border-radius:10px;font-size:9px;font-weight:700;margin-top:3px;background:'+(streak(paris).t?'rgba(30,215,96,.1)':'rgba(255,69,69,.1)')+';color:'+(streak(paris).t?'var(--g)':'var(--r)')+'">'
         +(streak(paris).t?'🔥':'❄️')+' '+streak(paris).n+'</div>':'')
         +'</div>'
-        +'<div style="font-size:14px;font-weight:800;color:'+pColor+';">'+fmt(profit)+'</div>'
+        +'<div style="position:relative;font-size:14px;font-weight:800;color:'+pColor+';">'+fmt(profit)+'</div>'
         +'</div>';
     }).join('')+'':'<div class="empty">Aucune équipe</div>';
   /* books */
@@ -8445,9 +8475,24 @@ function render(){
       var logo=logoHtml(u.n,u.color,u.abbr,32);
       var forme=formeHtml(paris,5);
       var pColor=profit>=0?'var(--g)':'var(--r)';
-      return '<div style="display:flex;align-items:center;gap:10px;padding:10px 12px;border-bottom:1px solid var(--b1);cursor:pointer;" data-nom="'+u.n+'" onclick="openClubFromDash(this.dataset.nom)">'
+      /* ═══ LOGO ET COULEUR DU CLUB EN FOND DE LIGNE (22/08) ═══
+         Meme grammaire que les cartes de match : teinte du club a gauche, logo
+         en filigrane a droite. `_g45CoulFond` releve les couleurs quasi noires,
+         sinon la ligne d'un club en noir n'aurait aucun fond du tout.
+         Le degrade s'eteint a 55 % : le profit, a droite, doit rester lisible
+         en vert comme en rouge sans dependre de la couleur du club. */
+      var _cf=(typeof _g45CoulFond==='function')?_g45CoulFond(u.color||'#4d84ff'):(u.color||'#4d84ff');
+      var _lu=(typeof g45LogoUrlDe==='function')?g45LogoUrlDe(u.n):'';
+      var _fond='linear-gradient(100deg,'+_cf+'2e 0%,'+_cf+'12 30%,transparent 55%)';
+      var _filig=_lu?('<img src="'+_lu+'" loading="lazy" onerror="this.style.display=\'none\'" '
+        +'style="position:absolute;right:10px;top:50%;transform:translateY(-50%);height:60px;width:60px;'
+        +'object-fit:contain;opacity:.13;filter:saturate(1.3);pointer-events:none;">'):'';
+      return '<div style="position:relative;overflow:hidden;display:flex;align-items:center;gap:10px;padding:10px 12px;'
+        +'border-bottom:1px solid var(--b1);cursor:pointer;background:'+_fond+';" '
+        +'data-nom="'+u.n+'" onclick="openClubFromDash(this.dataset.nom)">'
+        +_filig
         +logo
-        +'<div style="flex:1;min-width:0;">'
+        +'<div style="position:relative;flex:1;min-width:0;">'
         +'<div style="font-size:12px;font-weight:700;">'+(u.sport||'')+' '+u.n+'</div>'
         +'<div style="font-size:9px;color:var(--t3);">'+'⭐'.repeat(u.s)+' · P'+u.l+' · '+pc+'% réussite</div>'
         +(u.note?'<div style="font-size:10px;color:var(--a);margin-top:2px;font-style:italic;">📌 '+u.note+'</div>':'')
@@ -8455,7 +8500,7 @@ function render(){
         +(streak(paris).n>1?'<div style="display:inline-flex;align-items:center;gap:3px;padding:1px 7px;border-radius:10px;font-size:9px;font-weight:700;margin-top:3px;background:'+(streak(paris).t?'rgba(30,215,96,.1)':'rgba(255,69,69,.1)')+';color:'+(streak(paris).t?'var(--g)':'var(--r)')+'">'
         +(streak(paris).t?'🔥':'❄️')+' '+streak(paris).n+'</div>':'')
         +'</div>'
-        +'<div style="font-size:14px;font-weight:800;color:'+pColor+';">'+fmt(profit)+'</div>'
+        +'<div style="position:relative;font-size:14px;font-weight:800;color:'+pColor+';">'+fmt(profit)+'</div>'
         +'</div>';
     }).join('')+'':'<div class="empty">Aucune équipe</div>';
   /* books */
@@ -23376,7 +23421,21 @@ function _g45TrRender(){
   var pmini=Math.max(_G45_TR_PFLOOR, _G45_TR.pmin||0);
   var avec=R.filter(function(x){ return x.m.ev!=null&&x.m.ev>=0.03&&x.m.cote>=mini&&x.m.p>=pmini&&x.m.n>=12&&x.m.cote>0; });
   avec.sort(function(a,b){ return b.m.ev-a.m.ev; });
-  var sans=R.filter(function(x){ return (x.m.gap==null||!(x.m.fair>0.02))&&x.m.p>=Math.max(0.50,pmini)&&x.m.n>=6&&jouable(x); }).slice(0,18);
+  /* UN SEUL MARCHE PAR MATCH (22/08). Cette section produit une ligne par
+     marche : Toulouse-Lyon ressortait avec « -3,5 buts » ET « +1,5 but », et
+     pouvait aller jusqu'a quatre entrees pour la meme rencontre. Le plafond de
+     18 lignes etait alors mange par trois ou quatre matchs. On garde le marche
+     au taux le plus eleve, ce qui laisse la place a d'autres rencontres — la
+     section sert a balayer ce qui se passe, pas a detailler un match. */
+  /* Tri par taux decroissant d'abord : sans lui, « on garde le premier » ne
+     garderait pas le meilleur mais celui que la boucle a produit en premier. */
+  var sansTous=R.slice().sort(function(a,b){ return b.m.p-a.m.p; }).filter(function(x){ return (x.m.gap==null||!(x.m.fair>0.02))&&x.m.p>=Math.max(0.50,pmini)&&x.m.n>=6&&jouable(x); });
+  var vuMatch={};
+  var sans=sansTous.filter(function(x){
+    var k=String(x.id||(x.hN+'|'+x.aN));
+    if(vuMatch[k]) return false;
+    vuMatch[k]=1; return true;
+  }).slice(0,18);
   var h='<button onclick="_G45_TR.res=null;loadTendancesTab();" style="border:none;cursor:pointer;background:rgba(255,255,255,.06);border-radius:8px;color:var(--t2);padding:6px 11px;font-size:10px;font-weight:700;margin-bottom:9px;">↺ Relancer</button>';
   var card=function(x,showGap){
     var m=x.m;
@@ -38195,8 +38254,33 @@ function g45CoulEquipe(src, dft) {
    Eclairci d'un cran le 22/08 a la demande d'Antoine : le voile central passe
    de .94 a .86 sans visuel, de .90 a .80 avec, et les bords de 55 a 6e. */
 var _G45_FOND_NIV = { voile:0.86, voileVis:0.80, bord:'6e', bordVis:'7a' };
+/* PLANCHER DE LUMINOSITE POUR UN FOND (22/08).
+   Troisieme visage du meme defaut : `g45CoulEquipe` ne rejette que le TROP
+   CLAIR. Une couleur ESPN quasi noire — Lyon, Udinese, plusieurs clubs anglais —
+   donnait donc une moitie de carte en aplat noir, alors qu'on croyait afficher
+   la couleur du club. Constate sur Toulouse-Lyon : violet a gauche, rien a
+   droite. On remonte la luminosite au minimum necessaire pour que la teinte se
+   voie, en gardant la couleur d'origine. Le seuil est bas (0,20) : il s'agit de
+   rendre le club RECONNAISSABLE, pas d'eclaircir la carte.
+   Applique ici seulement, et non dans `g45CoulEquipe` : sur le terrain vert des
+   compositions, un maillot sombre est parfaitement lisible et doit le rester. */
+function _g45CoulFond(h) {
+  try {
+    var c = _g45Hex(h); if (!c) return h;
+    var n = parseInt(c.slice(1), 16);
+    var r = (n >> 16) & 255, g = (n >> 8) & 255, b = n & 255;
+    var hex = function () { return '#' + ((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1); };
+    for (var i = 0; i < 20 && _g45Lum(hex()) < 0.20; i++) {
+      r = Math.min(255, Math.round(r + (255 - r) * 0.14));
+      g = Math.min(255, Math.round(g + (255 - g) * 0.14));
+      b = Math.min(255, Math.round(b + (255 - b) * 0.14));
+    }
+    return hex();
+  } catch (e) { return h; }
+}
+
 function g45FondMatch(cDom, cExt, vis) {
-  var a = cDom || '#4d84ff', b = cExt || '#f0b020', N = _G45_FOND_NIV;
+  var a = _g45CoulFond(cDom || '#4d84ff'), b = _g45CoulFond(cExt || '#f0b020'), N = _G45_FOND_NIV;
   if (vis) {
     return 'linear-gradient(100deg,' + a + N.bordVis + ' 0%,rgba(10,14,26,' + N.voileVis + ') 45%,'
          + 'rgba(10,14,26,' + N.voileVis + ') 55%,' + b + N.bordVis + ' 100%), url(\'' + vis + '\')';
