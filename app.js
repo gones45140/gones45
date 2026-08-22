@@ -1175,6 +1175,24 @@ var SPORT_EMOJIS={
    complet ; ici on ne veut que l'adresse. Meme cascade que lui : table LOGOS,
    puis le `logoUrl` memorise dans l'entree du mur — qui existe justement parce
    que LOGOS n'est pas reconstruit au chargement. */
+var _g45MurVisFait = false;
+async function g45MurVisuels(){
+  if(_g45MurVisFait) return;
+  if(typeof _g45FanCompleter!=='function' || typeof g45VisuelCache!=='function') return;
+  var liste=((typeof state!=='undefined'&&state&&state.u)||[])
+    .filter(function(u){ return u && u.n && !g45VisuelCache(u.n); })
+    .map(function(u){ return { nom:u.n, sp:'soccer' }; });
+  if(!liste.length){ _g45MurVisFait=true; return; }
+  _g45MurVisFait=true;                       /* pose AVANT l'attente : le rendu
+                                                peut etre rappele entre-temps */
+  var bouge=false;
+  for(var i=0;i<liste.length;i++){
+    try{ if(await _g45FanCompleter([liste[i]])) bouge=true; }catch(e){}
+  }
+  if(bouge){ try{ if(typeof render==='function') render(); }catch(e){} }
+}
+window.g45MurVisuels = g45MurVisuels;
+
 function g45LogoUrlDe(name){
   try{
     var l = (typeof LOGOS!=='undefined' && LOGOS[name]) || '';
@@ -1956,9 +1974,14 @@ function render(){
       var _filig=_lu?('<img src="'+_lu+'" loading="lazy" onerror="this.style.display=\'none\'" '
         +'style="position:absolute;right:14px;top:50%;transform:translateY(-50%);height:86px;width:86px;'
         +'object-fit:contain;opacity:.18;filter:saturate(1.4);pointer-events:none;">'):'';
-      return '<div style="position:relative;overflow:hidden;display:flex;align-items:center;gap:11px;padding:13px 14px;'
-        +'border-bottom:1px solid var(--b1);cursor:pointer;background:'+_fond+';'
-        +'background-size:cover;background-position:center 35%;" '
+      /* CARTE, plus une ligne de liste (22/08). On reprend la presentation des
+         cartes du direct, qu'Antoine a validee : coins arrondis, cartes
+         detachees, visuel plein cadre, hauteur qui laisse respirer. Le filet
+         `border-bottom` disparait — c'est lui qui donnait l'aspect « salon de
+         discussion » d'une suite de lignes collees. */
+      return '<div style="position:relative;overflow:hidden;display:flex;align-items:center;gap:11px;padding:14px 16px;'
+        +'min-height:74px;border-radius:12px;margin-bottom:7px;border:1px solid rgba(255,255,255,.07);'
+        +'cursor:pointer;background:'+_fond+';background-size:cover;background-position:center 35%;" '
         +'data-nom="'+u.n+'" onclick="openClubFromDash(this.dataset.nom)">'
         +_filig
         +logo
@@ -1973,6 +1996,12 @@ function render(){
         +'<div style="position:relative;font-size:14px;font-weight:800;color:'+pColor+';">'+fmt(profit)+'</div>'
         +'</div>';
     }).join('')+'':'<div class="empty">Aucune équipe</div>';
+  /* Le fond photo est ce qui fait tout l'effet, mais `g45VisuelCache` ne LIT que
+     le cache. Sans amorcage, un mur neuf n'afficherait que des aplats. On lance
+     donc une passe de completion en arriere-plan, UNE SEULE FOIS par session et
+     seulement pour les equipes qui n'ont pas encore de visuel, puis on redessine.
+     Le drapeau evite la boucle : redessiner rappelle ce bloc. */
+  try{ g45MurVisuels(); }catch(e){}
   /* books */
   $i('books-grid').innerHTML=Object.entries(state.b).map(function(e){
     var b=bki(e[0]);
@@ -8496,9 +8525,14 @@ function render(){
       var _filig=_lu?('<img src="'+_lu+'" loading="lazy" onerror="this.style.display=\'none\'" '
         +'style="position:absolute;right:14px;top:50%;transform:translateY(-50%);height:86px;width:86px;'
         +'object-fit:contain;opacity:.18;filter:saturate(1.4);pointer-events:none;">'):'';
-      return '<div style="position:relative;overflow:hidden;display:flex;align-items:center;gap:11px;padding:13px 14px;'
-        +'border-bottom:1px solid var(--b1);cursor:pointer;background:'+_fond+';'
-        +'background-size:cover;background-position:center 35%;" '
+      /* CARTE, plus une ligne de liste (22/08). On reprend la presentation des
+         cartes du direct, qu'Antoine a validee : coins arrondis, cartes
+         detachees, visuel plein cadre, hauteur qui laisse respirer. Le filet
+         `border-bottom` disparait — c'est lui qui donnait l'aspect « salon de
+         discussion » d'une suite de lignes collees. */
+      return '<div style="position:relative;overflow:hidden;display:flex;align-items:center;gap:11px;padding:14px 16px;'
+        +'min-height:74px;border-radius:12px;margin-bottom:7px;border:1px solid rgba(255,255,255,.07);'
+        +'cursor:pointer;background:'+_fond+';background-size:cover;background-position:center 35%;" '
         +'data-nom="'+u.n+'" onclick="openClubFromDash(this.dataset.nom)">'
         +_filig
         +logo
@@ -8513,6 +8547,12 @@ function render(){
         +'<div style="position:relative;font-size:14px;font-weight:800;color:'+pColor+';">'+fmt(profit)+'</div>'
         +'</div>';
     }).join('')+'':'<div class="empty">Aucune équipe</div>';
+  /* Le fond photo est ce qui fait tout l'effet, mais `g45VisuelCache` ne LIT que
+     le cache. Sans amorcage, un mur neuf n'afficherait que des aplats. On lance
+     donc une passe de completion en arriere-plan, UNE SEULE FOIS par session et
+     seulement pour les equipes qui n'ont pas encore de visuel, puis on redessine.
+     Le drapeau evite la boucle : redessiner rappelle ce bloc. */
+  try{ g45MurVisuels(); }catch(e){}
   /* books */
   $i('books-grid').innerHTML=Object.entries(state.b).map(function(e){
     var b=bki(e[0]);
