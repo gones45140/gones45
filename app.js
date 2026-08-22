@@ -1946,14 +1946,19 @@ function render(){
          sinon la ligne d'un club en noir n'aurait aucun fond du tout.
          Le degrade s'eteint a 55 % : le profit, a droite, doit rester lisible
          en vert comme en rouge sans dependre de la couleur du club. */
-      var _cf=(typeof _g45CoulFond==='function')?_g45CoulFond(u.color||'#4d84ff'):(u.color||'#4d84ff');
       var _lu=(typeof g45LogoUrlDe==='function')?g45LogoUrlDe(u.n):'';
-      var _fond='linear-gradient(100deg,'+_cf+'2e 0%,'+_cf+'12 30%,transparent 55%)';
+      var _vis=(typeof g45VisuelCache==='function')?g45VisuelCache(u.n):'';
+      var _fond=(typeof g45FondSolo==='function')?g45FondSolo(u.color,_vis)
+              :('linear-gradient(100deg,'+(u.color||'#4d84ff')+'2e 0%,transparent 55%)');
+      /* Logo nettement plus present : 86 px a 18 %. Une ligne du mur faisait
+         10 px de haut de matiere pour 100 % de largeur vide — l'effet « salon
+         Discord » qu'Antoine veut casser. */
       var _filig=_lu?('<img src="'+_lu+'" loading="lazy" onerror="this.style.display=\'none\'" '
-        +'style="position:absolute;right:10px;top:50%;transform:translateY(-50%);height:60px;width:60px;'
-        +'object-fit:contain;opacity:.13;filter:saturate(1.3);pointer-events:none;">'):'';
-      return '<div style="position:relative;overflow:hidden;display:flex;align-items:center;gap:10px;padding:10px 12px;'
-        +'border-bottom:1px solid var(--b1);cursor:pointer;background:'+_fond+';" '
+        +'style="position:absolute;right:14px;top:50%;transform:translateY(-50%);height:86px;width:86px;'
+        +'object-fit:contain;opacity:.18;filter:saturate(1.4);pointer-events:none;">'):'';
+      return '<div style="position:relative;overflow:hidden;display:flex;align-items:center;gap:11px;padding:13px 14px;'
+        +'border-bottom:1px solid var(--b1);cursor:pointer;background:'+_fond+';'
+        +'background-size:cover;background-position:center 35%;" '
         +'data-nom="'+u.n+'" onclick="openClubFromDash(this.dataset.nom)">'
         +_filig
         +logo
@@ -8481,14 +8486,19 @@ function render(){
          sinon la ligne d'un club en noir n'aurait aucun fond du tout.
          Le degrade s'eteint a 55 % : le profit, a droite, doit rester lisible
          en vert comme en rouge sans dependre de la couleur du club. */
-      var _cf=(typeof _g45CoulFond==='function')?_g45CoulFond(u.color||'#4d84ff'):(u.color||'#4d84ff');
       var _lu=(typeof g45LogoUrlDe==='function')?g45LogoUrlDe(u.n):'';
-      var _fond='linear-gradient(100deg,'+_cf+'2e 0%,'+_cf+'12 30%,transparent 55%)';
+      var _vis=(typeof g45VisuelCache==='function')?g45VisuelCache(u.n):'';
+      var _fond=(typeof g45FondSolo==='function')?g45FondSolo(u.color,_vis)
+              :('linear-gradient(100deg,'+(u.color||'#4d84ff')+'2e 0%,transparent 55%)');
+      /* Logo nettement plus present : 86 px a 18 %. Une ligne du mur faisait
+         10 px de haut de matiere pour 100 % de largeur vide — l'effet « salon
+         Discord » qu'Antoine veut casser. */
       var _filig=_lu?('<img src="'+_lu+'" loading="lazy" onerror="this.style.display=\'none\'" '
-        +'style="position:absolute;right:10px;top:50%;transform:translateY(-50%);height:60px;width:60px;'
-        +'object-fit:contain;opacity:.13;filter:saturate(1.3);pointer-events:none;">'):'';
-      return '<div style="position:relative;overflow:hidden;display:flex;align-items:center;gap:10px;padding:10px 12px;'
-        +'border-bottom:1px solid var(--b1);cursor:pointer;background:'+_fond+';" '
+        +'style="position:absolute;right:14px;top:50%;transform:translateY(-50%);height:86px;width:86px;'
+        +'object-fit:contain;opacity:.18;filter:saturate(1.4);pointer-events:none;">'):'';
+      return '<div style="position:relative;overflow:hidden;display:flex;align-items:center;gap:11px;padding:13px 14px;'
+        +'border-bottom:1px solid var(--b1);cursor:pointer;background:'+_fond+';'
+        +'background-size:cover;background-position:center 35%;" '
         +'data-nom="'+u.n+'" onclick="openClubFromDash(this.dataset.nom)">'
         +_filig
         +logo
@@ -38289,6 +38299,33 @@ function g45FondMatch(cDom, cExt, vis) {
        + 'rgba(12,17,29,' + N.voile + ') 58%,' + b + N.bord + ' 100%)';
 }
 window.g45FondMatch = g45FondMatch;
+
+/* Version UNE SEULE equipe (22/08), pour les lignes du mur et tout ce qui ne
+   met pas deux clubs face a face. Meme cadran `_G45_FOND_NIV`, donc regler la
+   luminosite reste une modification a un seul endroit.
+   Le visuel prime largement sur la couleur : l'objectif d'Antoine est de
+   remplir le vide, et une photo de club remplit infiniment mieux qu'un aplat. */
+function g45FondSolo(coul, vis) {
+  var c = _g45CoulFond(coul || '#4d84ff'), N = _G45_FOND_NIV;
+  if (vis) {
+    return 'linear-gradient(100deg, rgba(10,14,26,' + (N.voileVis - 0.06) + ') 0%, rgba(10,14,26,'
+         + (N.voileVis + 0.04) + ') 62%, rgba(12,16,28,.96) 100%), url(\'' + vis + '\')';
+  }
+  return 'linear-gradient(100deg,' + c + '55 0%,' + c + '26 38%,rgba(12,16,28,.14) 70%,transparent 100%)';
+}
+window.g45FondSolo = g45FondSolo;
+
+/* Visuel d'un club LU DANS LE CACHE seulement : aucune recherche declenchee au
+   rendu, sinon afficher le mur partirait en rafale vers TheSportsDB. Le cache
+   se remplit par les autres vues. */
+function g45VisuelCache(nom) {
+  try {
+    if (!nom) return '';
+    return (typeof _g45ImgPersoLire === 'function' ? (_g45ImgPersoLire(nom) || '') : '')
+        || (typeof _g45FanLire === 'function' ? (_g45FanLire(nom) || '') : '');
+  } catch (e) { return ''; }
+}
+window.g45VisuelCache = g45VisuelCache;
 
 function g45CoulPaire(srcDom, srcExt) {
   var a = g45CoulEquipe(srcDom, '#4d84ff');
