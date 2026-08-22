@@ -31795,7 +31795,10 @@ window.selectClub = function(idx) {
 function _g45SdbMeilleur(liste, nom, sport) {
   if (!liste || !liste.length) return null;
   var n = String(nom || '').toLowerCase().trim();
-  var exact = liste.filter(function(r) { return String(r.name).toLowerCase().trim() === n; });
+  var _nz = function (v) {
+    return (typeof _g45SgNorm === 'function') ? _g45SgNorm(v) : String(v || '').toLowerCase().trim();
+  };
+  var exact = liste.filter(function(r) { return _nz(r.name) === _nz(nom); });
   var pool = exact.length ? exact : liste;
   /* CORRIGE PUIS RETABLI LE 22/08. Diagnostic errone de ma part : j'avais conclu
      que ce filtre comparait « Ice Hockey » a un emoji et ne matchait jamais.
@@ -31826,11 +31829,19 @@ function _g45SdbMeilleur(liste, nom, sport) {
     var propres = pool.filter(function(r) { return !_excl.test(String(r.name || '')); });
     if (propres.length) pool = propres;
   }
+  /* LONGUEUR MINIMALE (22/08) — regle deja posee cote visuels, oubliee ici.
+     Sans elle, « PSG » etait contenu dans « PSG Talon » et ce club turc a ete
+     retenu pour le Paris Saint-Germain (constate en console : « Retenu : PSG
+     Talon »). Sous six caracteres significatifs, une contenance ne veut rien
+     dire : on exige alors le nom EXACT. La comparaison passe aussi par
+     `_g45SgNorm` pour ignorer accents et ponctuation, sinon « Atletico » et
+     « Atlético » ne se reconnaissent pas. */
   if (!exact.length) {
-    pool = pool.filter(function(r) {
-      var rn = String(r.name).toLowerCase();
-      return rn.indexOf(n) >= 0 || n.indexOf(rn) >= 0;
-    });
+    var nn = (typeof _g45SgNorm === 'function') ? _g45SgNorm(nom) : n.replace(/[^a-z0-9]/g, '');
+    pool = (nn.length >= 6) ? pool.filter(function(r) {
+      var rn = (typeof _g45SgNorm === 'function') ? _g45SgNorm(r.name) : String(r.name).toLowerCase();
+      return rn.indexOf(nn) >= 0 || nn.indexOf(rn) >= 0;
+    }) : [];
   }
   var avecBadge = pool.filter(function(r) { return r.logo; });
   return avecBadge.length ? avecBadge[0] : null;
