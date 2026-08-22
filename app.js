@@ -23321,7 +23321,8 @@ async function g45TrRun(){
       var paire=['#4d84ff','#f0b020'];
       try{ paire=g45CoulPaire(ho,aw); }catch(e){}
       var deco={ ch:paire[0], ca:paire[1],
-                 lh:(ho.team&&ho.team.logo)||'', la:(aw.team&&aw.team.logo)||'' };
+                 lh:(ho.team&&ho.team.logo)||'', la:(aw.team&&aw.team.logo)||'',
+                 nh:(ho.team&&(ho.team.displayName||ho.team.name))||hN };
       mk.forEach(function(m){
         /* FILET DE SECURITE, independant du filtre par competition. Quand le
            modele annonce plus du DOUBLE de la probabilite du marche marge
@@ -23392,24 +23393,30 @@ function _g45TrRender(){
        La bordure gauche reste la couleur de l'ESPERANCE, pas celle d'un club :
        c'est l'information qui doit primer sur la decoration. */
     var d=x.deco||{};
-    /* DEGRADE FRANC, zone neutre ETROITE (22/08, seconde passe).
-       La premiere version noyait le texte, la deuxieme l'avait rendu invisible :
-       les deux etaient des reglages d'opacite alors que le vrai probleme etait
-       la COULEUR DU TEXTE, reglee depuis par `_g45CoulTexte`. La decoration
-       peut donc etre franche. Les teintes montent quasiment a plein sur les
-       bords (cc, puis 66) et ne s'effacent que sur la bande 42-58 %, ou vivent
-       le libelle du marche et les faits. Logos a 16 % et 108 px, largement
-       debordants. */
+    /* ═══ MEME RECETTE QUE LES CARTES DU DIRECT (22/08, quatrieme passe) ═══
+       Les trois essais precedents inventaient leur propre dosage alors que
+       `_g45DirRender` avait deja resolu le probleme : degrade a 55 d'opacite,
+       bande neutre 42-58 %, logos DANS la carte a 52 px et 22 % avec saturation
+       renforcee, et surtout le VISUEL DU CLUB en fond. Valeurs reprises telles
+       quelles — une seule grammaire visuelle pour toute l'application, et les
+       reglages futurs se font a un seul endroit.
+       Le visuel est lu dans le cache uniquement : pas de recherche declenchee
+       ici, sinon chaque affichage de la liste partirait en rafale de requetes.
+       Il se remplit tout seul via les autres vues. */
     var ch=(d.ch||'#4d84ff'), ca=(d.ca||'#f0b020');
-    var fondCoul='linear-gradient(100deg,'+ch+'aa 0%,'+ch+'44 22%,rgba(12,16,28,.96) 40%,'
-      +'rgba(12,16,28,.96) 60%,'+ca+'44 78%,'+ca+'aa 100%)';
-    var filig='';
-    if(d.lh) filig+='<div style="position:absolute;left:-20px;top:50%;transform:translateY(-50%);width:108px;height:108px;'
-      +'background:url(\''+d.lh+'\') no-repeat center/contain;opacity:.16;pointer-events:none;"></div>';
-    if(d.la) filig+='<div style="position:absolute;right:-20px;top:50%;transform:translateY(-50%);width:108px;height:108px;'
-      +'background:url(\''+d.la+'\') no-repeat center/contain;opacity:.16;pointer-events:none;"></div>';
-    var s='<div style="position:relative;overflow:hidden;background:'+fondCoul+';background-color:rgba(12,16,28,.97);'
-      +'border:1px solid rgba(255,255,255,.08);border-left:3px solid '+col+';border-radius:9px;padding:9px 11px;margin-bottom:7px;">'
+    var vis='';
+    try{ if(d.nh) vis=_g45ImgPersoLire(d.nh)||_g45FanLire(d.nh)||''; }catch(e){}
+    var fondCoul = g45FondMatch(ch, ca, vis);
+    var lg=function(url,cote){
+      if(!url) return '';
+      return '<img src="'+url+'" loading="lazy" onerror="this.style.display=\'none\'" '
+        +'style="position:absolute;'+cote+':6px;top:50%;transform:translateY(-50%);height:52px;width:52px;'
+        +'object-fit:contain;opacity:.22;filter:saturate(1.3);pointer-events:none;">';
+    };
+    var filig=lg(d.lh,'left')+lg(d.la,'right');
+    var s='<div style="position:relative;overflow:hidden;background:'+fondCoul+';background-size:cover;background-position:center;'
+      +'background-color:rgba(12,16,28,.97);border:1px solid rgba(255,255,255,.08);border-left:3px solid '+col+';'
+      +'border-radius:12px;padding:10px 62px;margin-bottom:7px;">'
       +filig
       +'<div style="position:relative;display:flex;justify-content:space-between;align-items:flex-start;gap:8px;">'
       +'<div style="flex:1;min-width:0;">'
@@ -36999,10 +37006,7 @@ async function g45DirectMesEquipes(silencieux) {
     var cleImg = m.moiLong || m.moi;
     var vis = _g45ImgPersoLire(cleImg) || _g45FanLire(cleImg)
            || _g45ImgPersoLire(m.moi) || _g45FanLire(m.moi);
-    var degrade = 'linear-gradient(100deg, ' + m.cMoi + '55 0%, rgba(12,17,29,.94) 42%, rgba(12,17,29,.94) 58%, ' + m.cAdv + '55 100%)';
-    var fond = vis
-      ? ('linear-gradient(100deg, ' + m.cMoi + '66 0%, rgba(10,14,26,.90) 45%, rgba(10,14,26,.90) 55%, ' + m.cAdv + '66 100%), url(\'' + vis + '\')')
-      : degrade;
+    var fond = g45FondMatch(m.cMoi, m.cAdv, vis);
     var logo = function (url, cote) {
       if (!url) return '';
       return '<img src="' + url + '" loading="lazy" onerror="this.style.display=\'none\'" '
@@ -38183,6 +38187,25 @@ function g45CoulEquipe(src, dft) {
   return c1 || c2 || dft || '#4d84ff';
 }
 /* Rend le couple [domicile, exterieur] en garantissant qu'on les distingue. */
+/* ═══ FOND D'UNE CARTE DE MATCH — SOURCE UNIQUE (22/08) ═══
+   Le direct et les Tendances dessinaient la meme chose avec deux chaines
+   recopiees ; regler la luminosite demandait donc de modifier deux endroits, et
+   d'en oublier un. Une seule fonction desormais, et un seul cadran :
+   `_G45_FOND_NIV`. Plus il est bas, plus la couleur du club transparait.
+   Eclairci d'un cran le 22/08 a la demande d'Antoine : le voile central passe
+   de .94 a .86 sans visuel, de .90 a .80 avec, et les bords de 55 a 6e. */
+var _G45_FOND_NIV = { voile:0.86, voileVis:0.80, bord:'6e', bordVis:'7a' };
+function g45FondMatch(cDom, cExt, vis) {
+  var a = cDom || '#4d84ff', b = cExt || '#f0b020', N = _G45_FOND_NIV;
+  if (vis) {
+    return 'linear-gradient(100deg,' + a + N.bordVis + ' 0%,rgba(10,14,26,' + N.voileVis + ') 45%,'
+         + 'rgba(10,14,26,' + N.voileVis + ') 55%,' + b + N.bordVis + ' 100%), url(\'' + vis + '\')';
+  }
+  return 'linear-gradient(100deg,' + a + N.bord + ' 0%,rgba(12,17,29,' + N.voile + ') 42%,'
+       + 'rgba(12,17,29,' + N.voile + ') 58%,' + b + N.bord + ' 100%)';
+}
+window.g45FondMatch = g45FondMatch;
+
 function g45CoulPaire(srcDom, srcExt) {
   var a = g45CoulEquipe(srcDom, '#4d84ff');
   var b = g45CoulEquipe(srcExt, '#f0b020');
