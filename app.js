@@ -1462,7 +1462,7 @@ function renderCrash(){
     var gain=(mise*cote-mise).toFixed(2);
     var pct=total>0?(mise/total*100):0;
     var cls=pct>15?'danger':pct>8?'warning':'safe';
-    var active=(i===_g45Pal(u,($i('c-comp')&&$i('c-comp').value)||'')-1);
+    var active=(i===_g45Pal(u,($i('c-comp')&&$i('c-comp').value)||'',g45LieuCourant())-1);
     if(active&&pct>15){alertMsg='⚠ Palier P'+(i+1)+' : '+mise+'€ = '+pct.toFixed(1)+'% du capital — risque élevé !';}
     html+='<div class="cc '+cls+'"'+(active?' style="outline:2px solid var(--a);outline-offset:2px;"':'')+''
       +'><div class="cc-l">P'+(i+1)+(active?' ◀':'')+''+'</div>'
@@ -2045,7 +2045,7 @@ function render(){
         +logo
         +'<div style="position:relative;flex:1;min-width:0;">'
         +'<div style="font-size:12px;font-weight:700;">'+(u.sport||'')+' '+u.n+'</div>'
-        +'<div style="font-size:9px;color:var(--t3);">'+'⭐'.repeat(u.s)+' · P'+u.l+' · '+pc+'% réussite</div>'
+        +'<div style="font-size:9px;color:var(--t3);">'+'⭐'.repeat(u.s)+' · '+_g45PalLabel(u)+' · '+pc+'% réussite</div>'
         +(u.note?'<div style="font-size:10px;color:var(--a);margin-top:2px;font-style:italic;">📌 '+u.note+'</div>':'')
         +forme
         +(streak(paris).n>1?'<div style="display:inline-flex;align-items:center;gap:3px;padding:1px 7px;border-radius:10px;font-size:9px;font-weight:700;margin-top:3px;background:'+(streak(paris).t?'rgba(30,215,96,.1)':'rgba(255,69,69,.1)')+';color:'+(streak(paris).t?'var(--g)':'var(--r)')+'">'
@@ -2719,19 +2719,68 @@ function renderEquipes(){
    Le palier historique `u.l` reste la valeur par défaut ; les paliers par compétition
    vivent dans `u.lc` (clé = compétition normalisée). Rétro-compatible : une entrée sans
    `u.lc` se comporte exactement comme avant. */
-function _g45PalKey(comp){ return _g45CompNz(comp); }
-function _g45Pal(u, comp){
+/* ── LIEU (22/08) : montante SEPAREE domicile / exterieur ──
+   Demande d'Antoine : deux progressions independantes sur la MEME entree du
+   mur, sans dupliquer « Real Madrid ». La structure `u.lc` le permettait deja
+   pour les competitions ; seule la cle changeait. Elle porte maintenant
+   competition + lieu (`liga|dom`, `liga|ext`).
+   La C1 restant en pari simple chez lui, cela revient en pratique a deux
+   echelles par equipe.
+   RETRO-COMPATIBILITE : un palier existant sous l'ancienne cle (`liga`) sert de
+   valeur de depart aux DEUX nouvelles echelles. Les progressions en cours ne
+   sont donc pas remises a zero — elles se dedoublent a partir de leur niveau
+   actuel, ce qui est le comportement le moins surprenant. */
+function _g45LieuNz(l){ l=String(l||'').toLowerCase(); return (l==='dom'||l==='ext')?l:''; }
+function _g45PalKey(comp, lieu){
+  var k=_g45CompNz(comp), L=_g45LieuNz(lieu);
+  if(!k) return L?('|'+L):'';
+  return L?(k+'|'+L):k;
+}
+function _g45Pal(u, comp, lieu){
   if(!u) return 1;
-  var k=_g45PalKey(comp);
+  var k=_g45PalKey(comp, lieu);
   if(k && u.lc && u.lc[k]) return parseInt(u.lc[k],10)||1;
+  /* Repli sur l'ancienne cle sans lieu, puis sur le palier historique. */
+  var k0=_g45PalKey(comp, '');
+  if(k0 && u.lc && u.lc[k0]) return parseInt(u.lc[k0],10)||1;
   return parseInt(u.l,10)||1;
 }
-function _g45SetPal(u, comp, v){
+function _g45SetPal(u, comp, lieu, v){
   if(!u) return;
   v=Math.max(1, Math.min(8, parseInt(v,10)||1));
-  var k=_g45PalKey(comp);
+  var k=_g45PalKey(comp, lieu);
   if(k){ if(!u.lc) u.lc={}; u.lc[k]=v; }
   u.l=v;                      // conserve l'affichage historique et le repli
+}
+
+/* Lieu selectionne dans le formulaire de montante. */
+function g45LieuCourant(){ var e=$i('c-lieu'); return _g45LieuNz(e&&e.value); }
+window.g45LieuCourant=g45LieuCourant;
+
+/* Changer le lieu doit redessiner les paliers ET recalculer la mise proposee :
+   sans ca, on miserait le palier de l'autre echelle. */
+function g45LieuChange(){
+  try{ if(typeof updMise==='function') updMise(); }catch(e){}
+  try{ if(typeof renderCrash==='function') renderCrash(); }catch(e){}
+}
+window.g45LieuChange=g45LieuChange;
+
+/* Libelle « P2 domicile · P1 exterieur » pour la carte du mur. N'affiche les
+   deux que si les deux echelles existent, sinon on retombe sur l'affichage
+   historique. */
+function _g45PalLabel(u){
+  try{
+    if(!u||!u.lc) return 'P'+(parseInt(u&&u.l,10)||1);
+    var d=null,e=null;
+    Object.keys(u.lc).forEach(function(k){
+      if(/\|dom$/.test(k)) d=Math.max(d||0, parseInt(u.lc[k],10)||1);
+      if(/\|ext$/.test(k)) e=Math.max(e||0, parseInt(u.lc[k],10)||1);
+    });
+    if(d!=null&&e!=null) return 'P'+d+'\ud83c\udfe0 · P'+e+'\u2708\ufe0f';
+    if(d!=null) return 'P'+d+'\ud83c\udfe0';
+    if(e!=null) return 'P'+e+'\u2708\ufe0f';
+    return 'P'+(parseInt(u.l,10)||1);
+  }catch(err){ return 'P'+(parseInt(u&&u.l,10)||1); }
 }
 window._g45Pal=_g45Pal;
 
@@ -3102,7 +3151,11 @@ function pari(isS){
   if(m>0&&_fund){
     if(isFreebet){state.fb[b]=((parseFloat(state.fb[b])||0)-m).toFixed(2);}
     else{state.b[b]=(parseFloat(state.b[b])-m).toFixed(2);}
-    var domicile=($i('n-lieu')&&$i('n-lieu').value)||($i('p-domicile')?$i('p-domicile').value:'');state.h.unshift({id:Date.now().toString(),n:n,target:target,b:b,l:l,m:m,cote:c,isS:isS,isFlash:isFlash,isFreebet:isFreebet,isLay:isLay,t:t,sport:sport,type:type,comp:comp,heure:heure,date:date,notes:notes||'',domicile:domicile,notif:notif});
+    /* Le lieu d'une MONTANTE vient de son propre selecteur : `n-lieu` appartient
+       au formulaire de pari simple et vaut « dom » en dur, ce qui aurait range
+       tous les paris de montante dans l'echelle domicile. */
+    var domicile=isS?(($i('c-lieu')&&$i('c-lieu').value)||'')
+                    :(($i('n-lieu')&&$i('n-lieu').value)||($i('p-domicile')?$i('p-domicile').value:''));state.h.unshift({id:Date.now().toString(),n:n,target:target,b:b,l:l,m:m,cote:c,isS:isS,isFlash:isFlash,isFreebet:isFreebet,isLay:isLay,t:t,sport:sport,type:type,comp:comp,heure:heure,date:date,notes:notes||'',domicile:domicile,notif:notif});
     save();
     if(isS){$i('c-target').value='';$i('c-comp').value='';if($i('c-notes'))$i('c-notes').value='';}
     else{$i('n-comp').value='';$i('n-type').value='';$i('n-analysis').value='';if($i('n-notes'))$i('n-notes').value='';if($i('n-team'))$i('n-team').value='';if($i('n-flashboost'))$i('n-flashboost').checked=false;if($i('n-freebet'))$i('n-freebet').checked=false;if($i('n-lay'))$i('n-lay').checked=false;if($i('n-notif'))$i('n-notif').checked=true;mmRowsSimple=[{type:'',cote:1.50}];renderMmRowsSimple();}
@@ -3112,8 +3165,8 @@ function result(id,win){
   var idx=state.h.findIndex(function(x){return x.id===id;});if(idx===-1)return;
   var bet=state.h[idx];
   var debrief=prompt('Débrief ('+(win?'WIN ✅':'LOSS ❌')+') :','')||'';
-  if(win){var _g=bet.isFreebet?(bet.m*(bet.cote-1)):(bet.m*bet.cote);state.b[bet.b]=(parseFloat(state.b[bet.b])+_g).toFixed(2);if(bet.isS){var u=state.u.find(function(x){return x.n===bet.n;});if(u)_g45SetPal(u,bet.comp,1);}}
-  else if(bet.isS){var u2=state.u.find(function(x){return x.n===bet.n;});if(u2){var _p=_g45Pal(u2,bet.comp);if(_p<8)_g45SetPal(u2,bet.comp,_p+1);}}
+  if(win){var _g=bet.isFreebet?(bet.m*(bet.cote-1)):(bet.m*bet.cote);state.b[bet.b]=(parseFloat(state.b[bet.b])+_g).toFixed(2);if(bet.isS){var u=state.u.find(function(x){return x.n===bet.n;});if(u)_g45SetPal(u,bet.comp,bet.domicile,1);}}
+  else if(bet.isS){var u2=state.u.find(function(x){return x.n===bet.n;});if(u2){var _p=_g45Pal(u2,bet.comp,bet.domicile);if(_p<8)_g45SetPal(u2,bet.comp,bet.domicile,_p+1);}}
   var archived=Object.assign({},bet,{win:win,debrief:debrief});
   state.a.unshift(archived);state.h.splice(idx,1);save();updMise();
 }
@@ -3123,7 +3176,7 @@ function cancelBet(id){
   var bet=state.h[idx];
   if(bet.isFreebet){if(!state.fb)state.fb={};state.fb[bet.b]=((parseFloat(state.fb[bet.b])||0)+parseFloat(bet.m)).toFixed(2);}
   else{state.b[bet.b]=(parseFloat(state.b[bet.b]||0)+parseFloat(bet.m)).toFixed(2);}
-  if(bet.isS&&bet.l){var u=state.u.find(function(x){return x.n===bet.n;});if(u)_g45SetPal(u,bet.comp,parseInt(bet.l)||1);}
+  if(bet.isS&&bet.l){var u=state.u.find(function(x){return x.n===bet.n;});if(u)_g45SetPal(u,bet.comp,bet.domicile,parseInt(bet.l)||1);}
   state.h.splice(idx,1);save();
 }
 function deleteArchived(id){
@@ -3163,7 +3216,7 @@ function editArchived(id){
 function updMise(){
   var u=state.u.find(function(x){return x.n===$i('c-unit').value;});
   if(!u)return;
-  if($i('c-mise'))$i('c-mise').value=STRATS[u.s][_g45Pal(u,($i('c-comp')&&$i('c-comp').value)||'')-1]||0;
+  if($i('c-mise'))$i('c-mise').value=STRATS[u.s][_g45Pal(u,($i('c-comp')&&$i('c-comp').value)||'',g45LieuCourant())-1]||0;
   /* Auto-fill sport */
   if(u.sport&&$i('c-sport'))$i('c-sport').value=u.sport;
   /* Auto-fill competition from CLUB_DB */
@@ -8055,7 +8108,7 @@ function renderCrash(){
     var gain=(mise*cote-mise).toFixed(2);
     var pct=total>0?(mise/total*100):0;
     var cls=pct>15?'danger':pct>8?'warning':'safe';
-    var active=(i===_g45Pal(u,($i('c-comp')&&$i('c-comp').value)||'')-1);
+    var active=(i===_g45Pal(u,($i('c-comp')&&$i('c-comp').value)||'',g45LieuCourant())-1);
     if(active&&pct>15){alertMsg='⚠ Palier P'+(i+1)+' : '+mise+'€ = '+pct.toFixed(1)+'% du capital — risque élevé !';}
     html+='<div class="cc '+cls+'"'+(active?' style="outline:2px solid var(--a);outline-offset:2px;"':'')+''
       +'><div class="cc-l">P'+(i+1)+(active?' ◀':'')+''+'</div>'
@@ -8622,7 +8675,7 @@ function render(){
         +logo
         +'<div style="position:relative;flex:1;min-width:0;">'
         +'<div style="font-size:12px;font-weight:700;">'+(u.sport||'')+' '+u.n+'</div>'
-        +'<div style="font-size:9px;color:var(--t3);">'+'⭐'.repeat(u.s)+' · P'+u.l+' · '+pc+'% réussite</div>'
+        +'<div style="font-size:9px;color:var(--t3);">'+'⭐'.repeat(u.s)+' · '+_g45PalLabel(u)+' · '+pc+'% réussite</div>'
         +(u.note?'<div style="font-size:10px;color:var(--a);margin-top:2px;font-style:italic;">📌 '+u.note+'</div>':'')
         +forme
         +(streak(paris).n>1?'<div style="display:inline-flex;align-items:center;gap:3px;padding:1px 7px;border-radius:10px;font-size:9px;font-weight:700;margin-top:3px;background:'+(streak(paris).t?'rgba(30,215,96,.1)':'rgba(255,69,69,.1)')+';color:'+(streak(paris).t?'var(--g)':'var(--r)')+'">'
@@ -9567,7 +9620,11 @@ function pari(isS){
   if(m>0&&_fund){
     if(isFreebet){state.fb[b]=((parseFloat(state.fb[b])||0)-m).toFixed(2);}
     else{state.b[b]=(parseFloat(state.b[b])-m).toFixed(2);}
-    var domicile=($i('n-lieu')&&$i('n-lieu').value)||($i('p-domicile')?$i('p-domicile').value:'');state.h.unshift({id:Date.now().toString(),n:n,target:target,b:b,l:l,m:m,cote:c,isS:isS,isFlash:isFlash,isFreebet:isFreebet,isLay:isLay,t:t,sport:sport,type:type,comp:comp,heure:heure,date:date,notes:notes||'',domicile:domicile,notif:notif});
+    /* Le lieu d'une MONTANTE vient de son propre selecteur : `n-lieu` appartient
+       au formulaire de pari simple et vaut « dom » en dur, ce qui aurait range
+       tous les paris de montante dans l'echelle domicile. */
+    var domicile=isS?(($i('c-lieu')&&$i('c-lieu').value)||'')
+                    :(($i('n-lieu')&&$i('n-lieu').value)||($i('p-domicile')?$i('p-domicile').value:''));state.h.unshift({id:Date.now().toString(),n:n,target:target,b:b,l:l,m:m,cote:c,isS:isS,isFlash:isFlash,isFreebet:isFreebet,isLay:isLay,t:t,sport:sport,type:type,comp:comp,heure:heure,date:date,notes:notes||'',domicile:domicile,notif:notif});
     save();
     if(isS){$i('c-target').value='';$i('c-comp').value='';if($i('c-notes'))$i('c-notes').value='';}
     else{$i('n-comp').value='';$i('n-type').value='';$i('n-analysis').value='';if($i('n-notes'))$i('n-notes').value='';if($i('n-team'))$i('n-team').value='';if($i('n-flashboost'))$i('n-flashboost').checked=false;if($i('n-freebet'))$i('n-freebet').checked=false;if($i('n-lay'))$i('n-lay').checked=false;if($i('n-notif'))$i('n-notif').checked=true;mmRowsSimple=[{type:'',cote:1.50}];renderMmRowsSimple();}
@@ -9577,8 +9634,8 @@ function result(id,win){
   var idx=state.h.findIndex(function(x){return x.id===id;});if(idx===-1)return;
   var bet=state.h[idx];
   var debrief=prompt('Débrief ('+(win?'WIN ✅':'LOSS ❌')+') :','')||'';
-  if(win){var _g=bet.isFreebet?(bet.m*(bet.cote-1)):(bet.m*bet.cote);state.b[bet.b]=(parseFloat(state.b[bet.b])+_g).toFixed(2);if(bet.isS){var u=state.u.find(function(x){return x.n===bet.n;});if(u)_g45SetPal(u,bet.comp,1);}}
-  else if(bet.isS){var u2=state.u.find(function(x){return x.n===bet.n;});if(u2){var _p=_g45Pal(u2,bet.comp);if(_p<8)_g45SetPal(u2,bet.comp,_p+1);}}
+  if(win){var _g=bet.isFreebet?(bet.m*(bet.cote-1)):(bet.m*bet.cote);state.b[bet.b]=(parseFloat(state.b[bet.b])+_g).toFixed(2);if(bet.isS){var u=state.u.find(function(x){return x.n===bet.n;});if(u)_g45SetPal(u,bet.comp,bet.domicile,1);}}
+  else if(bet.isS){var u2=state.u.find(function(x){return x.n===bet.n;});if(u2){var _p=_g45Pal(u2,bet.comp,bet.domicile);if(_p<8)_g45SetPal(u2,bet.comp,bet.domicile,_p+1);}}
   var archived=Object.assign({},bet,{win:win,debrief:debrief});
   state.a.unshift(archived);state.h.splice(idx,1);save();updMise();
 }
@@ -9588,7 +9645,7 @@ function cancelBet(id){
   var bet=state.h[idx];
   if(bet.isFreebet){if(!state.fb)state.fb={};state.fb[bet.b]=((parseFloat(state.fb[bet.b])||0)+parseFloat(bet.m)).toFixed(2);}
   else{state.b[bet.b]=(parseFloat(state.b[bet.b]||0)+parseFloat(bet.m)).toFixed(2);}
-  if(bet.isS&&bet.l){var u=state.u.find(function(x){return x.n===bet.n;});if(u)_g45SetPal(u,bet.comp,parseInt(bet.l)||1);}
+  if(bet.isS&&bet.l){var u=state.u.find(function(x){return x.n===bet.n;});if(u)_g45SetPal(u,bet.comp,bet.domicile,parseInt(bet.l)||1);}
   state.h.splice(idx,1);save();
 }
 function deleteArchived(id){
@@ -9628,7 +9685,7 @@ function editArchived(id){
 function updMise(){
   var u=state.u.find(function(x){return x.n===$i('c-unit').value;});
   if(!u)return;
-  if($i('c-mise'))$i('c-mise').value=STRATS[u.s][_g45Pal(u,($i('c-comp')&&$i('c-comp').value)||'')-1]||0;
+  if($i('c-mise'))$i('c-mise').value=STRATS[u.s][_g45Pal(u,($i('c-comp')&&$i('c-comp').value)||'',g45LieuCourant())-1]||0;
   /* Auto-fill sport */
   if(u.sport&&$i('c-sport'))$i('c-sport').value=u.sport;
   /* Auto-fill competition from CLUB_DB */
@@ -22757,7 +22814,11 @@ async function g45ButeursView(){
            plutôt que d'afficher « données indisponibles » pendant six semaines. */
         if(!dd){ try{ dd=await _g45ButStats(cible, ii, y-1); }catch(e){} if(dd){ an=y-1; anyPrev=true; } }
       }
-      items.push({p:pp, id:ii, d:dd, an:an, npg:(dd&&dd.app)?((dd.g-dd.pg)/dd.app):-1});
+      /* La competition ciblee voyage AVEC la fiche (22/08). Elle etait lue au
+         rendu depuis `cible`, declaree avec `var` dans CETTE boucle : a
+         l'affichage, toutes les fiches heritaient donc de la valeur du dernier
+         joueur charge. */
+      items.push({p:pp, id:ii, d:dd, an:an, lgc:(cible&&cible.lg)||'', npg:(dd&&dd.app)?((dd.g-dd.pg)/dd.app):-1});
     }
   } else {
     var slugs=(comp==='ucl')?[{s:UCL,n:'Ligue des Champions'}]:_G45_BUT_LG.filter(function(x){ return L[x.s]; });
@@ -22775,7 +22836,7 @@ async function g45ButeursView(){
         try{ st=await _g45ButStats({lg:slugs[k].s}, {aid:lead[m].aid}, anL); }catch(e){}
         if(!ath||!st) continue;
         ath.tname=slugs[k].n;
-        items.push({p:{n:ath.pname, lg:slugs[k].s}, id:ath, d:st, an:anL, npg:st.app?((st.g-st.pg)/st.app):-1});
+        items.push({p:{n:ath.pname, lg:slugs[k].s}, id:ath, d:st, an:anL, lgc:slugs[k].s, npg:st.app?((st.g-st.pg)/st.app):-1});
       }
     }
   }
@@ -22783,7 +22844,7 @@ async function g45ButeursView(){
 
   var h='';
   for(var i2=0;i2<items.length;i2++){
-    var p=items[i2].p, id=items[i2].id, d=items[i2].d, an=(items[i2].an||y);
+    var p=items[i2].p, id=items[i2].id, d=items[i2].d, an=(items[i2].an||y), lgc=(items[i2].lgc||'');
     if(!id||!d){
       h+='<div style="background:rgba(12,16,28,.96);border:1px solid rgba(255,255,255,.08);border-radius:9px;padding:10px;margin-bottom:8px;font-size:10px;color:var(--t3);">'+_g45CyEa(p.n)+((p.mur)?' — introuvable. Ajoute son club au mur, ou saisis-le dans la note de l\'entrée.':(comp==='ucl'?' — n\'a pas disputé la Ligue des Champions en '+an+'/'+(an+1)+'.':' — données indisponibles pour la saison '+an+'.'))+'</div>';
       continue;
@@ -22830,7 +22891,7 @@ async function g45ButeursView(){
          serie. Le conteneur est vide au rendu et rempli ensuite — le journal de
          matchs demande une requete, et on ne bloque pas l'affichage de la fiche
          pour ca. */
-      +'<div id="g45-past-'+id.aid+'" data-saison="'+an+'" style="margin-bottom:7px;min-height:24px;"></div>'
+      +'<div id="g45-past-'+id.aid+'" data-saison="'+an+'" data-lg="'+lgc+'" style="margin-bottom:7px;min-height:24px;"></div>'
       +'<div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;background:rgba(0,0,0,.18);border-radius:8px;padding:7px 9px;">'
         +'<div style="flex:1;min-width:130px;"><div style="font-size:8px;color:var(--t3);">Probabilité de marquer (Poisson)</div>'
         +'<div style="font-size:11px;font-weight:800;color:var(--t1);">'+Math.round(pAny*100)+'% <span style="font-size:9px;color:var(--t3);font-weight:600;">tout compris</span> · <span style="color:#2ecc71;">'+Math.round(pAnyN*100)+'%</span> <span style="font-size:9px;color:var(--t3);font-weight:600;">hors penalty</span></div></div>'
@@ -30504,7 +30565,7 @@ var _G45_CACHE_PREFIXES=['g45rcP_','g45rcD_','g45rcY_','g45rc_','g45dcm_','g45dc
      explosait et des ecritures LEGITIMES echouaient en silence (le filtre par
      competition, qui restait bloque sur « Toutes »). Les cartes de tirs sont
      les plus lourdes : plusieurs Ko par match, gardees indefiniment. */
-  'g45butA2_','g45gl2_','g45gl_','g45_tirs2_','g45_fanart2_','g45_fanart_','g45_img_perso_','g45_tv_prog','g45_mqnom_','g45_mqteam_','g45_mqfond_','g45trv4_','g45_catimg_',
+  'g45butA2_','g45gl3_','g45gl2_','g45gl_','g45_tirs2_','g45_fanart2_','g45_fanart_','g45_img_perso_','g45_tv_prog','g45_mqnom_','g45_mqteam_','g45_mqfond_','g45trv4_','g45_catimg_',
   'g45nrlcal2_','g45_fx_faits','g45_veille_','g45_compet_logos','g45_groq_modele','g45_gemini_modeles',
   /* MESURE DU 20/08 sur le stockage reel d'Antoine (5,1 Mo, sature) :
        fpl_bootstrap_cache ... 1951 Ko  <- a lui seul 38 % du total
@@ -39288,29 +39349,43 @@ var _G45_GL_COL = {
 
 /* Cache 6 h : un joueur ne joue pas deux fois dans la journee, mais la saison
    avance. Cle par joueur ET par sport. */
-async function g45GameLog(sport, id, saison) {
+async function g45GameLog(sport, id, saison, lgCible) {
   /* SANS SAISON, PAS DE CACHE (21/08) : un appel sans saison rend l'annee par
      DEFAUT d'ESPN — souvent la precedente. Mise en cache six heures, cette
      reponse contaminait ensuite toutes les fiches, d'ou 35 matchs affiches face
      a un joueur qui n'en a joue qu'un. */
   if (!saison) {
-    var evs0 = await _g45GameLogFetch(sport, id, '');
+    var evs0 = await _g45GameLogFetch(sport, id, '', lgCible);
     return evs0;
   }
-  var cle = 'g45gl2_' + sport + '_' + id + '_' + saison;
+  /* La competition entre dans la CLE : une meme saison rend des series
+     differentes selon qu'on regarde le championnat ou la C1. Sans elle, la
+     premiere consultee contaminerait l'autre. */
+  var cle = 'g45gl3_' + sport + '_' + id + '_' + saison + '_' + (lgCible || 'tout');
   try {
     var c = JSON.parse(localStorage.getItem(cle) || 'null');
     if (c && (Date.now() - c.t) < 6 * 3600000) return c.l;
   } catch (e) {}
 
-  var evs = await _g45GameLogFetch(sport, id, saison);
+  var evs = await _g45GameLogFetch(sport, id, saison, lgCible);
   if (evs) { try { localStorage.setItem(cle, JSON.stringify({ t: Date.now(), l: evs })); } catch (e) {} }
   return evs;
 }
 window.g45GameLog = g45GameLog;
 
 /* Appel nu, sans cache. */
-async function _g45GameLogFetch(sport, id, saison) {
+/* Identifiant de competition d'un evenement du journal. ESPN ne le place pas
+   toujours au meme endroit ; on essaie plusieurs chemins et on accepte de ne
+   rien trouver. */
+function _g45GlLigue(e, meta) {
+  var src = e || {}, m = meta || {};
+  var n = src.league || m.league || src.leagueName || m.leagueName || null;
+  var k = n && (n.slug || n.abbreviation || n.shortName || n.name || n.id);
+  if (!k) k = src.leagueSlug || src.leagueAbbreviation || m.leagueAbbreviation || '';
+  return k ? String(k).toLowerCase().replace(/[^a-z0-9]/g, '') : '';
+}
+
+async function _g45GameLogFetch(sport, id, saison, lgCible) {
   var url = 'https://site.web.api.espn.com/apis/common/v3/sports/' + sport + '/all/athletes/'
           + id + '/gamelog' + (saison ? ('?season=' + saison) : '');
   var j = null;
@@ -39360,6 +39435,7 @@ async function _g45GameLogFetch(sport, id, saison) {
     if (iBut < 0) return;
     evs.push({
       id: k,
+      lg: _g45GlLigue(e, src),
       date: (e.gameDate || e.date) || '',
       adv: (e.opponent && (e.opponent.abbreviation || e.opponent.displayName)) || '',
       buts: parseInt(src.s[iBut], 10) || 0,
@@ -39367,6 +39443,28 @@ async function _g45GameLogFetch(sport, id, saison) {
     });
   });
   evs.sort(function (a, b) { return Date.parse(b.date || 0) - Date.parse(a.date || 0); });
+
+  /* FILTRE PAR COMPETITION (22/08). Le journal est tire du slug `all` : il
+     melangeait championnat, coupes et Europe, puis n'etait filtre que par
+     SAISON. Consequence visible sur la fiche de Mbappe en mode Ligue des
+     Champions : 15 buts en 11 matchs au-dessus, et des pastilles portant sur
+     12 matchs pour 10 buts. Les deux blocs ne parlaient pas de la meme
+     competition.
+     Si aucun evenement ne porte d'identifiant de competition — ESPN ne le sert
+     pas partout — on rend la liste ENTIERE plutot qu'une liste vide : mieux
+     vaut une serie approximative et signalee qu'une ligne absente. */
+  var cible = String(lgCible || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+  if (cible) {
+    var connus = evs.filter(function (e) { return e.lg; });
+    if (connus.length) {
+      var gardes = evs.filter(function (e) {
+        return e.lg && (e.lg === cible || e.lg.indexOf(cible) >= 0 || cible.indexOf(e.lg) >= 0);
+      });
+      if (gardes.length) { gardes.melange = false; return gardes; }
+      return [];                      /* competition connue, aucun match : c'est un vrai zero */
+    }
+    evs.melange = true;               /* impossible de trancher : on le signale */
+  }
   return evs;
 }
 
@@ -39437,7 +39535,7 @@ async function g45PastillesPlus(el, sport, n) {
   var boite = el.closest('[id^="g45-past-"]');
   if (!boite) return;
   var id = boite.id.replace('g45-past-', '');
-  var evs = await g45GameLog(sport, id, boite.getAttribute('data-saison') || '');
+  var evs = await g45GameLog(sport, id, boite.getAttribute('data-saison') || '', boite.getAttribute('data-lg') || '');
   if (evs && evs.length) boite.innerHTML = g45PastillesHTML(evs, sport, n, boite.getAttribute('data-saison') || '');
 }
 window.g45PastillesPlus = g45PastillesPlus;
