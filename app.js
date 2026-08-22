@@ -21767,10 +21767,40 @@ function _g45TrRate(spec, all, k){
   if(spec.n>=6) return 0.6*(spec[k]/spec.n)+0.4*ra;
   return ra;
 }
+/* Cle de competition d'un evenement. ESPN ne la place pas toujours au meme
+   endroit selon le point d'entree, donc on essaie plusieurs chemins et on
+   accepte de ne rien trouver : dans ce cas on retombe simplement sur l'ancien
+   comportement, sans rien casser. */
+function _g45TrEvLigue(e, c){
+  var n = (e && e.league) || (c && c.league) || (e && e.season && e.season.league) || null;
+  var k = n && (n.slug || n.abbreviation || n.id);
+  if (!k && e && e.season && e.season.slug) k = e.season.slug;
+  return k ? String(k).toLowerCase() : '';
+}
+
+/* Taux de base RESTREINTS a la competition du match a venir (22/08).
+   C'etait la cause des « Values » aberrantes : le calendrier est tire du slug
+   `all`, donc un club relegue ou promu arrivait avec le taux de reussite de sa
+   division precedente, compare a un adversaire de l'elite. Monza ressortait a
+   34 % de victoire a l'Inter — 45 % de victoires a l'exterieur, mais en Serie B
+   — quand le marche le cotait a 7,7 %.
+   En dessous de huit matchs dans la bonne competition l'echantillon ne vaut
+   rien : on rend la version melangee en le SIGNALANT, et l'appelant supprime
+   alors l'ecart 1N2, exactement comme pour une rencontre inter-championnats. */
+function _g45TrRestreint(T, slug){
+  var vide = { all:T.all, home:T.home, away:T.away, restreint:false, connu:false };
+  if (!T || !T.parLg) return vide;
+  vide.connu = true;
+  var k = String(slug||'').toLowerCase();
+  var d = T.parLg[k];
+  if (!d || !d.all || d.all.n < 8) return vide;
+  return { all:d.all, home:d.home, away:d.away, restreint:true, connu:true };
+}
+
 async function _g45TrTeam(league, tid){
-  var ck='g45trv3_'+tid;
+  var ck='g45trv4_'+tid;
   try{ var c=JSON.parse(localStorage.getItem(ck)||'null'); if(c&&(Date.now()-c.t)<6*3600000) return c.d; }catch(e){}
-  var all=_g45TrAcc(), home=_g45TrAcc(), away=_g45TrAcc(), evs=[];
+  var all=_g45TrAcc(), home=_g45TrAcc(), away=_g45TrAcc(), evs=[], parLg={};
   var pull=async function(season){
     var p='/apis/site/v2/sports/soccer/'+_G45_TR_ALL+'/teams/'+tid+'/schedule'+(season?('?season='+season):'');
     var j=null; try{ j=await _g45TrEspn(p); }catch(e){ return; }
@@ -21795,8 +21825,14 @@ async function _g45TrTeam(league, tid){
     if(isNaN(gf)||isNaN(ga)) return;
     _g45TrAdd(all,gf,ga);
     if(me.homeAway==='home') _g45TrAdd(home,gf,ga); else _g45TrAdd(away,gf,ga);
+    var lg=_g45TrEvLigue(e,c);
+    if(lg){
+      if(!parLg[lg]) parLg[lg]={all:_g45TrAcc(), home:_g45TrAcc(), away:_g45TrAcc()};
+      _g45TrAdd(parLg[lg].all,gf,ga);
+      if(me.homeAway==='home') _g45TrAdd(parLg[lg].home,gf,ga); else _g45TrAdd(parLg[lg].away,gf,ga);
+    }
   });
-  var d={all:all, home:home, away:away};
+  var d={all:all, home:home, away:away, parLg:(Object.keys(parLg).length?parLg:null)};
   try{ localStorage.setItem(ck, JSON.stringify({t:Date.now(), d:d})); }catch(e){}
   return d;
 }
@@ -23160,6 +23196,33 @@ function g45TrDay(d){ _G45_TR.day=d; _G45_TR.res=null; loadTendancesTab(); }
    atteindre ce seuil, quel que soit le bookmaker. Le filtre écarte donc ce qui est
    mécaniquement injouable pour qui exige une cote minimale. */
 function g45TrMin(v){ _G45_TR.min=v; loadTendancesTab(); }
+/* SEUIL DE PROBABILITE (22/08, demande d'Antoine : « tout % estime en dessous
+   de 40 % ne m'interesse pas »). Distinct du seuil de cote, et complementaire :
+   exiger une cote >= 1.50 ecarte le trop probable, exiger une probabilite
+   >= 40 % ecarte le trop improbable. Les deux ensemble decoupent la fenetre
+   1.50-2.50, qui est celle de sa methode.
+   Utile au-dela du confort : une esperance positive obtenue avec 15 % de
+   probabilite suppose une estimation juste a un point pres, ce qu'aucun modele
+   maison ne tient. Plus la probabilite est basse, plus l'esperance est fragile.
+   Reglable, parce qu'un seuil code en dur devient faux le jour ou il change
+   d'avis. */
+/* PLANCHER DUR (22/08) : Antoine ne veut RIEN en dessous de 40 % de probabilite
+   estimee. Ce n'est donc plus une option d'affichage mais une regle appliquee a
+   la SOURCE — une entree sous ce seuil n'entre meme pas dans les resultats, et
+   aucun reglage de l'interface ne peut la faire revenir. Le seuil reglable ne
+   sert plus qu'a durcir, jamais a assouplir. */
+var _G45_TR_PFLOOR=0.40;
+_G45_TR.pmin=(function(){
+  var v=null; try{ v=localStorage.getItem('g45tr_pmin'); }catch(e){}
+  var p=(v==null)?_G45_TR_PFLOOR:parseFloat(v);
+  return (isNaN(p)||p<_G45_TR_PFLOOR)?_G45_TR_PFLOOR:p;   /* jamais sous le plancher */
+})();
+function g45TrPMin(v){
+  _G45_TR.pmin=Math.max(_G45_TR_PFLOOR, v||0);
+  try{ localStorage.setItem('g45tr_pmin', String(_G45_TR.pmin)); }catch(e){}
+  loadTendancesTab();
+}
+window.g45TrPMin=g45TrPMin;
 window.g45TrMin=g45TrMin;
 window.g45TrSel=g45TrSel; window.g45TrDay=g45TrDay;
 
@@ -23177,6 +23240,9 @@ function loadTendancesTab(){
     +chip("Aujourd'hui", _G45_TR.day===0, "g45TrDay(0)")+chip('Demain', _G45_TR.day===1, "g45TrDay(1)")
     +'<span style="font-size:9px;color:var(--t3);margin-left:6px;">Cote mini :</span>'
     +chip('Toutes', !_G45_TR.min, "g45TrMin(0)")+chip('1.30', _G45_TR.min===1.3, "g45TrMin(1.3)")+chip('1.50', _G45_TR.min===1.5, "g45TrMin(1.5)")
+    +'<span style="font-size:9px;color:var(--t3);margin-left:6px;">Proba mini :</span>'
+    +chip('40%', _G45_TR.pmin===0.40, "g45TrPMin(0.40)")+chip('50%', _G45_TR.pmin===0.50, "g45TrPMin(0.50)")
+    +chip('60%', _G45_TR.pmin===0.60, "g45TrPMin(0.60)")
     +'<button onclick="g45ButeursView()" style="border:none;cursor:pointer;border-radius:8px;padding:6px 11px;font-size:10px;font-weight:800;background:rgba(240,200,40,.16);color:#f0c828;margin-left:4px;">⚽ Buteurs</button>'
     +'<button onclick="g45ClvView()" style="border:none;cursor:pointer;border-radius:8px;padding:6px 11px;font-size:10px;font-weight:800;background:rgba(46,204,113,.16);color:#2ecc71;margin-left:4px;">📏 CLV</button>'
     +'</div>';
@@ -23229,7 +23295,15 @@ async function g45TrRun(){
       var H=null,A=null;
       try{ H=await _g45TrTeam(f.slug,hid); A=await _g45TrTeam(f.slug,aid); }catch(e){ continue; }
       if(!H||!A||!H.all.n||!A.all.n) continue;
-      var cross=/^(uefa|fifa|concacaf|conmebol|caf|afc)\./i.test(f.slug);
+      /* Taux restreints a la competition du match. Si l'un des deux clubs n'a
+         pas assez de matchs DANS cette competition, l'echelle des deux camps
+         n'est pas comparable et l'ecart 1N2 n'a aucun sens. */
+      var Hr=_g45TrRestreint(H,f.slug), Ar=_g45TrRestreint(A,f.slug);
+      var melange=(Hr.connu||Ar.connu) && !(Hr.restreint && Ar.restreint);
+      H={all:Hr.all, home:Hr.home, away:Hr.away};
+      A={all:Ar.all, home:Ar.home, away:Ar.away};
+      if(!H.all.n||!A.all.n) continue;
+      var cross=/^(uefa|fifa|concacaf|conmebol|caf|afc)\./i.test(f.slug) || melange;
       var pr={};
       try{
         var oaList=await _g45TrOddsApi(f.slug);
@@ -23240,7 +23314,34 @@ async function g45TrRun(){
       var mk=_g45TrBuild(f.ev,H,A,hN,aN,cross,pr,dc);
       var when='';
       try{ when=new Date(f.ev.date).toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'}); }catch(e){}
-      mk.forEach(function(m){ res.push({m:m, hN:hN, aN:aN, when:when, slug:f.slug, id:f.ev.id}); });
+      /* Couleurs et logos des DEUX equipes, pris dans l'objet competitor deja
+         telecharge (22/08) : aucune requete supplementaire. `g45CoulPaire`
+         garantit qu'on les distingue — couleur trop claire -> alternative,
+         equipes trop proches -> alternative de la seconde, puis ambre. */
+      var paire=['#4d84ff','#f0b020'];
+      try{ paire=g45CoulPaire(ho,aw); }catch(e){}
+      var deco={ ch:paire[0], ca:paire[1],
+                 lh:(ho.team&&ho.team.logo)||'', la:(aw.team&&aw.team.logo)||'' };
+      mk.forEach(function(m){
+        /* FILET DE SECURITE, independant du filtre par competition. Quand le
+           modele annonce plus du DOUBLE de la probabilite du marche marge
+           retiree, ce n'est pas une value, c'est une anomalie : un bookmaker et
+           un modele maison ne divergent pas d'un facteur deux sur un marche
+           liquide. On retire l'ecart au lieu de le classer en tete — le
+           classement par esperance remontait justement les matchs les plus mal
+           modelises, puisqu'une probabilite fausse multipliee par une grosse
+           cote donne un chiffre spectaculaire. */
+        if(m && m.fair!=null && m.fair>0 && m.p > 2.2*m.fair){
+          m.gap=null; m.ev=null;
+          m.note='Ecart ecarte : le modele donne '+_g45TrPct(m.p)+' quand le marche, marge retiree, donne '
+                +_g45TrPct(m.fair)+'. Une divergence de cet ordre revele une donnee inadaptee, pas une opportunite.';
+        }
+        /* Ecarte des la construction, pas seulement a l'affichage : c'est ce que
+           veut dire « enlever totalement ». Le tri par esperance ne peut donc
+           plus remonter une improbabilite bien cotee. */
+        if(!m || !(m.p >= _G45_TR_PFLOOR)) return;
+        res.push({m:m, hN:hN, aN:aN, when:when, slug:f.slug, id:f.ev.id, deco:deco});
+      });
     }
     res.sort(function(x,z){
       var gx=(x.m.gap==null)?-9:x.m.gap, gz=(z.m.gap==null)?-9:z.m.gap;
@@ -23271,18 +23372,42 @@ function _g45TrRender(){
   var mini=_G45_TR.min||0;
   var jouable=function(x){ return !mini || (x.m.p>0 && (1/x.m.p)>=mini); };
   /* Une value = cote réelle disponible, au-dessus du seuil, et espérance positive. */
-  var avec=R.filter(function(x){ return x.m.ev!=null&&x.m.ev>=0.03&&x.m.cote>=mini&&x.m.n>=12&&x.m.cote>0; });
+  var pmini=Math.max(_G45_TR_PFLOOR, _G45_TR.pmin||0);
+  var avec=R.filter(function(x){ return x.m.ev!=null&&x.m.ev>=0.03&&x.m.cote>=mini&&x.m.p>=pmini&&x.m.n>=12&&x.m.cote>0; });
   avec.sort(function(a,b){ return b.m.ev-a.m.ev; });
-  var sans=R.filter(function(x){ return (x.m.gap==null||!(x.m.fair>0.02))&&x.m.p>=0.50&&x.m.n>=6&&jouable(x); }).slice(0,18);
+  var sans=R.filter(function(x){ return (x.m.gap==null||!(x.m.fair>0.02))&&x.m.p>=Math.max(0.50,pmini)&&x.m.n>=6&&jouable(x); }).slice(0,18);
   var h='<button onclick="_G45_TR.res=null;loadTendancesTab();" style="border:none;cursor:pointer;background:rgba(255,255,255,.06);border-radius:8px;color:var(--t2);padding:6px 11px;font-size:10px;font-weight:700;margin-bottom:9px;">↺ Relancer</button>';
   var card=function(x,showGap){
     var m=x.m;
     var col=(m.ev!=null&&m.ev>=0.08)?'#2ecc71':(m.ev!=null&&m.ev>=0.03)?'#f0c828':'#8aa0ff';
-    var s='<div style="background:rgba(12,16,28,.96);border:1px solid rgba(255,255,255,.08);border-left:3px solid '+col+';border-radius:9px;padding:9px 11px;margin-bottom:7px;">'
-      +'<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;">'
+    /* ═══ FOND DEUX EQUIPES (22/08) ═══
+       Meme grammaire que les cartes du direct : degrade des couleurs
+       officielles, domicile a gauche, exterieur a droite, logos en filigrane
+       de chaque cote. Deux differences assumees par rapport au direct, parce
+       qu'ici la carte porte du TEXTE DENSE et pas seulement un score :
+       - le degrade s'eteint au centre (les deux teintes ne montent qu'a 22 %
+         d'opacite et laissent 40 % de fond neutre au milieu), la ou vivent le
+         libelle du marche et les faits ;
+       - les logos sont a 9 %, contre 18 % sur le direct.
+       La bordure gauche reste la couleur de l'ESPERANCE, pas celle d'un club :
+       c'est l'information qui doit primer sur la decoration. */
+    var d=x.deco||{};
+    var fondCoul='linear-gradient(100deg,'+(d.ch||'#4d84ff')+'38 0%,rgba(12,16,28,.97) 34%,rgba(12,16,28,.97) 66%,'+(d.ca||'#f0b020')+'38 100%)';
+    var filig='';
+    if(d.lh) filig+='<div style="position:absolute;left:-14px;top:50%;transform:translateY(-50%);width:88px;height:88px;'
+      +'background:url(\''+d.lh+'\') no-repeat center/contain;opacity:.09;pointer-events:none;"></div>';
+    if(d.la) filig+='<div style="position:absolute;right:-14px;top:50%;transform:translateY(-50%);width:88px;height:88px;'
+      +'background:url(\''+d.la+'\') no-repeat center/contain;opacity:.09;pointer-events:none;"></div>';
+    var s='<div style="position:relative;overflow:hidden;background:'+fondCoul+';background-color:rgba(12,16,28,.97);'
+      +'border:1px solid rgba(255,255,255,.08);border-left:3px solid '+col+';border-radius:9px;padding:9px 11px;margin-bottom:7px;">'
+      +filig
+      +'<div style="position:relative;display:flex;justify-content:space-between;align-items:flex-start;gap:8px;">'
       +'<div style="flex:1;min-width:0;">'
         +'<div style="font-size:8.5px;font-weight:800;color:#8aa0ff;letter-spacing:.4px;text-transform:uppercase;margin-bottom:2px;">'+_g45CyEa(_g45TrCompLbl(x.slug))+'</div>'
-        +'<div style="font-size:11px;font-weight:800;color:var(--t1);">'+_g45CyEa(x.hN)+' – '+_g45CyEa(x.aN)+'</div>'
+        +'<div style="font-size:11px;font-weight:800;color:var(--t1);">'
+          +'<span style="color:'+(d.ch||'var(--t1)')+';">'+_g45CyEa(x.hN)+'</span>'
+          +'<span style="color:var(--t3);font-weight:700;"> – </span>'
+          +'<span style="color:'+(d.ca||'var(--t1)')+';">'+_g45CyEa(x.aN)+'</span></div>'
         +'<div style="font-size:11px;font-weight:700;color:'+col+';margin-top:2px;">'+_g45CyEa(m.m)+'</div>'
       +'</div>'
       +'<div style="flex:none;text-align:right;">'
@@ -23293,26 +23418,28 @@ function _g45TrRender(){
         +(showGap&&m.ev!=null&&m.cote?('<div style="font-size:10px;font-weight:800;color:'+col+';">espérance '+(m.ev>=0?'+':'')+Math.round(m.ev*1000)/10+'%</div>'):'')
         +(x.when?('<div style="font-size:8px;color:var(--t3);">'+_g45CyEa(x.when)+'</div>'):'')
       +'</div></div>';
-    if(m.fair!=null) s+='<div style="font-size:8px;color:var(--t3);margin-top:4px;">Bookmaker (marge retirée) : '+_g45TrPct(m.fair)+'</div>';
+    if(m.fair!=null) s+='<div style="position:relative;font-size:8px;color:var(--t3);margin-top:4px;">Bookmaker (marge retirée) : '+_g45TrPct(m.fair)+'</div>';
     if(m.note) s+='<div style="font-size:8px;color:#8aa0ff;margin-top:4px;line-height:1.5;">ℹ️ '+_g45CyEa(m.note)+'</div>';
     if(m.dc) s+='<div style="font-size:7.5px;color:#2ecc71;margin-top:3px;">📐 Dixon-Coles '
       +(m.dcFit?'ajusté par maximum de vraisemblance — force de l\'adversaire et pondération temporelle prises en compte'
                :'dérivé du classement — repli, les matchs du championnat n\'ont pas pu être récupérés')+'</div>';
-    if(m.faits&&m.faits.length) s+='<ul style="margin:6px 0 0 0;padding-left:15px;">'+m.faits.slice(0,4).map(function(f){ return '<li style="font-size:9px;color:var(--t2);line-height:1.55;">'+_g45CyEa(f)+'</li>'; }).join('')+'</ul>';
+    if(m.faits&&m.faits.length) s+='<ul style="position:relative;margin:6px 0 0 0;padding-left:15px;">'+m.faits.slice(0,4).map(function(f){ return '<li style="font-size:9px;color:var(--t2);line-height:1.55;">'+_g45CyEa(f)+'</li>'; }).join('')+'</ul>';
     if(m.n<9) s+='<div style="font-size:8px;color:#ff6b6b;margin-top:4px;">⛔ Échantillon très réduit ('+m.n+' matchs) — statistiquement peu fiable, à titre indicatif seulement.</div>';
     else if(m.n<14) s+='<div style="font-size:8px;color:#ff8c42;margin-top:4px;">⚠️ Échantillon réduit ('+m.n+' matchs) — à prendre avec prudence.</div>';
     return s+'</div>';
   };
   if(avec.length){
     h+='<div style="font-size:10px;font-weight:800;color:#2ecc71;margin:8px 0 6px;">💎 Values du jour ('+avec.length+')</div>'
-      +'<div style="font-size:8px;color:var(--t3);margin-bottom:6px;font-style:italic;">Cote réelle ≥ '+mini.toFixed(2)+' et espérance positive. Classées par espérance : probabilité × cote − 1.</div>';
+      +'<div style="font-size:8px;color:var(--t3);margin-bottom:6px;font-style:italic;">Cote réelle ≥ '+mini.toFixed(2)
+      +(' et probabilité estimée ≥ '+Math.round(pmini*100)+'%')
+      +', espérance positive. Classées par espérance : probabilité × cote − 1.</div>';
     avec.slice(0,25).forEach(function(x){ h+=card(x,true); });
   } else {
     h+='<div style="font-size:10px;color:var(--t3);text-align:center;padding:12px;line-height:1.6;">Aucune value détectée aujourd\'hui au-dessus de '+mini.toFixed(2)+'.<br><span style="font-size:9px;">C\'est le résultat le plus fréquent, et c\'est normal : le marché est efficace la plupart du temps.<br>En juillet, seules les qualifications tournent : les équipes ont peu de matchs joués dans ces compétitions, donc peu de données exploitables.</span></div>';
   }
   if(sans.length){
     h+='<div style="font-size:10px;font-weight:800;color:#8aa0ff;margin:14px 0 6px;">📊 Taux élevés sans écart calculable</div>'
-      +'<div style="font-size:8px;color:var(--t3);margin-bottom:6px;font-style:italic;">Soit la cote n\'est pas disponible, soit la comparaison n\'est pas fiable (rencontre inter-championnats). À vérifier chez ton bookmaker.</div>';
+      +'<div style="font-size:8px;color:var(--t3);margin-bottom:6px;font-style:italic;">Soit la cote n\'est pas disponible, soit la comparaison n\'est pas fiable : rencontre inter-championnats, club dont les matchs de référence ont été joués dans une AUTRE division (promu, relégué, début de saison), ou divergence trop forte avec le marché. À vérifier chez ton bookmaker.</div>';
     sans.forEach(function(x){ h+=card(x,false); });
   }
   var q=(window._g45TrQuota!=null)?('<br>The Odds API : '+_g45CyEa(window._g45TrQuota)+' requêtes restantes ce mois'):'';
@@ -30155,7 +30282,7 @@ var _G45_CACHE_PREFIXES=['g45rcP_','g45rcD_','g45rcY_','g45rc_','g45dcm_','g45dc
      explosait et des ecritures LEGITIMES echouaient en silence (le filtre par
      competition, qui restait bloque sur « Toutes »). Les cartes de tirs sont
      les plus lourdes : plusieurs Ko par match, gardees indefiniment. */
-  'g45butA2_','g45gl2_','g45gl_','g45_tirs2_','g45_fanart2_','g45_fanart_','g45_img_perso_','g45_tv_prog','g45_mqnom_','g45_mqteam_','g45_mqfond_',
+  'g45butA2_','g45gl2_','g45gl_','g45_tirs2_','g45_fanart2_','g45_fanart_','g45_img_perso_','g45_tv_prog','g45_mqnom_','g45_mqteam_','g45_mqfond_','g45trv4_',
   'g45nrlcal2_','g45_fx_faits','g45_veille_','g45_compet_logos','g45_groq_modele','g45_gemini_modeles',
   /* MESURE DU 20/08 sur le stockage reel d'Antoine (5,1 Mo, sature) :
        fpl_bootstrap_cache ... 1951 Ko  <- a lui seul 38 % du total
