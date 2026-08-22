@@ -1175,13 +1175,25 @@ var SPORT_EMOJIS={
    complet ; ici on ne veut que l'adresse. Meme cascade que lui : table LOGOS,
    puis le `logoUrl` memorise dans l'entree du mur — qui existe justement parce
    que LOGOS n'est pas reconstruit au chargement. */
+/* Relançable a la main : `g45MurVisuelsReset()` en console remet le drapeau a
+   zero et relance la recherche. Utile apres une correction de sport ou d'alias,
+   sans avoir a vider tout le cache. */
 var _g45MurVisFait = false;
+function g45MurVisuelsReset(){
+  try{
+    Object.keys(localStorage).filter(function(k){ return k.indexOf(_G45_FANART)===0; })
+      .forEach(function(k){ try{ if(!JSON.parse(localStorage.getItem(k)||'{}').u) localStorage.removeItem(k); }catch(e){} });
+  }catch(e){}
+  _g45MurVisFait=false;
+  try{ g45MurVisuels(); }catch(e){}
+}
+window.g45MurVisuelsReset = g45MurVisuelsReset;
 async function g45MurVisuels(){
   if(_g45MurVisFait) return;
   if(typeof _g45FanCompleter!=='function' || typeof g45VisuelCache!=='function') return;
   var liste=((typeof state!=='undefined'&&state&&state.u)||[])
     .filter(function(u){ return u && u.n && !g45VisuelCache(u.n); })
-    .map(function(u){ return { nom:u.n, sp:'soccer' }; });
+    .map(function(u){ return { nom:u.n, sp:g45SportDe(u) }; });
   if(!liste.length){ _g45MurVisFait=true; return; }
   _g45MurVisFait=true;                       /* pose AVANT l'attente : le rendu
                                                 peut etre rappele entre-temps */
@@ -1966,6 +1978,7 @@ function render(){
          en vert comme en rouge sans dependre de la couleur du club. */
       var _lu=(typeof g45LogoUrlDe==='function')?g45LogoUrlDe(u.n):'';
       var _vis=(typeof g45VisuelCache==='function')?g45VisuelCache(u.n):'';
+      if(!_vis && typeof g45VisuelCategorie==='function') _vis=g45VisuelCategorie(u.n);
       var _fond=(typeof g45FondSolo==='function')?g45FondSolo(u.color,_vis)
               :('linear-gradient(100deg,'+(u.color||'#4d84ff')+'2e 0%,transparent 55%)');
       /* Logo nettement plus present : 86 px a 18 %. Une ligne du mur faisait
@@ -8517,6 +8530,7 @@ function render(){
          en vert comme en rouge sans dependre de la couleur du club. */
       var _lu=(typeof g45LogoUrlDe==='function')?g45LogoUrlDe(u.n):'';
       var _vis=(typeof g45VisuelCache==='function')?g45VisuelCache(u.n):'';
+      if(!_vis && typeof g45VisuelCategorie==='function') _vis=g45VisuelCategorie(u.n);
       var _fond=(typeof g45FondSolo==='function')?g45FondSolo(u.color,_vis)
               :('linear-gradient(100deg,'+(u.color||'#4d84ff')+'2e 0%,transparent 55%)');
       /* Logo nettement plus present : 86 px a 18 %. Une ligne du mur faisait
@@ -36793,6 +36807,61 @@ var _G45_TSDB_SPORT = {
    « Tennis Borussia Berlin », « Basket » dans « Basket Brno », « Rugby » dans
    « Rugby ATL ». Resultat en production : un club de handball berlinois en fond
    de la ligne TENNIS. On refuse donc toute recherche sur ces termes. */
+/* SPORT D'UNE ENTREE DU MUR (22/08). Ma passe de completion envoyait
+   `sp:'soccer'` pour TOUTES les equipes : le filtre par sport de
+   `_g45FanChercher` ecartait donc systematiquement Carolina Hurricanes et
+   Colorado Avalanche, qui sont en hockey. Le mur ne stocke pas de slug de sport
+   mais un EMOJI (`u.sport`), c'est donc lui qu'on traduit. */
+var _G45_EMOJI_SPORT = {
+  '\u26bd':'soccer', '\ud83c\udfc0':'basketball', '\u26be':'baseball',
+  '\ud83c\udfd2':'hockey', '\ud83c\udfc8':'football', '\ud83c\udfc9':'rugby',
+  '\ud83c\udfbe':'tennis'
+};
+function g45SportDe(u){
+  try{
+    var e = String((u && u.sport) || '').trim();
+    for (var k in _G45_EMOJI_SPORT) { if (e.indexOf(k) >= 0) return _G45_EMOJI_SPORT[k]; }
+  }catch(err){}
+  return 'soccer';
+}
+window.g45SportDe = g45SportDe;
+
+/* ALIAS TheSportsDB (22/08). Ces clubs y sont ranges sous un autre nom que
+   celui du mur, et aucune regle generique ne rattrape l'ecart : ce sont des
+   appellations differentes, pas des variantes orthographiques. Table courte,
+   completee au fil des manques constates. */
+var _G45_TSDB_ALIAS = {
+  internazionale:'Inter Milan', inter:'Inter Milan',
+  psg:'Paris SG', 'parissaintgermain':'Paris SG',
+  asroma:'Roma', barcelona:'Barcelona',
+  manchestercity:'Manchester City', bayernmunich:'Bayern Munich'
+};
+
+/* VISUEL DES ENTREES DE CATEGORIE (22/08). TENNIS, RUGBY, FORMULE 1, Basket et
+   AU NRL ne sont pas des clubs : aucune recherche ne peut aboutir, et c'est
+   voulu. Mais leur ligne restait vide, ce qu'Antoine veut precisement eviter.
+   On leur donne donc un visuel fixe. Le fichier du depot prime quand il existe,
+   comme partout ailleurs — c'est la voie a utiliser pour avoir exactement
+   l'image voulue, gratuitement et sans dependre d'une API. */
+var _G45_CAT_IMG = {
+  basket:      'https://a.espncdn.com/i/teamlogos/leagues/500/nba.png',
+  basketball:  'https://a.espncdn.com/i/teamlogos/leagues/500/nba.png',
+  aunrl:       'https://a.espncdn.com/i/teamlogos/leagues/500/nrl.png',
+  nrl:         'https://a.espncdn.com/i/teamlogos/leagues/500/nrl.png',
+  rugby:       'images/ligues/rugby.jpg',
+  tennis:      'images/ligues/tennis.jpg',
+  formule1:    'images/ligues/f1.jpg',
+  formula1:    'images/ligues/f1.jpg',
+  f1:          'images/ligues/f1.jpg'
+};
+function g45VisuelCategorie(nom){
+  try{
+    var k = _g45SgNorm(nom);
+    return _G45_CAT_IMG[k] || '';
+  }catch(e){ return ''; }
+}
+window.g45VisuelCategorie = g45VisuelCategorie;
+
 var _G45_NON_CLUB = /^(tennis|basket|basketball|rugby|rugby a ?xiii|au nrl|nrl|formule ?1|formula ?1|f1|football|foot|hockey|baseball|mma|boxe|cyclisme|velo|golf|nascar|moto ?gp|athletisme|handball|volley)$/i;
 
 function _g45FanVariantes(nom) {
@@ -36817,6 +36886,10 @@ function _g45FanVariantes(nom) {
     if (v && k && !vus[k]) { vus[k] = 1; out.push(v); }
   };
   [brut, sansAcc, court].forEach(ajout);
+  /* L'alias passe en PREMIER quand il existe : c'est le nom exact de la base,
+     donc autant ne pas gaspiller deux requetes avant lui. */
+  var al = _G45_TSDB_ALIAS[_g45SgNorm(brut)];
+  if (al) { out.length = 0; vus = {}; ajout(al); [brut, sansAcc, court].forEach(ajout); }
   /* Un nom qui porte deja un de ces prefixes n'a pas besoin qu'on lui en colle
      un second. */
   var dejaPrefixe = /^(deportivo|real|club|athletic|cd|fc)\s+/i.test(brut);
