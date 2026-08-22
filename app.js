@@ -23392,30 +23392,36 @@ function _g45TrRender(){
        La bordure gauche reste la couleur de l'ESPERANCE, pas celle d'un club :
        c'est l'information qui doit primer sur la decoration. */
     var d=x.deco||{};
-    /* Degrade ramene de 38 a 1c d'opacite et zone neutre elargie a 28-72 % :
-       la premiere version noyait la carte, notamment le jaune de Leeds qui
-       effacait l'esperance ecrite par-dessus. Les logos passent de 88 a 58 px,
-       sont davantage sortis du cadre et tombent a 6 % — sur la carte
-       Troyes-Paris FC ils venaient carrement sous le texte des faits. */
-    var fondCoul='linear-gradient(100deg,'+(d.ch||'#4d84ff')+'1c 0%,rgba(12,16,28,.97) 28%,rgba(12,16,28,.97) 72%,'+(d.ca||'#f0b020')+'1c 100%)';
+    /* DEGRADE FRANC, zone neutre ETROITE (22/08, seconde passe).
+       La premiere version noyait le texte, la deuxieme l'avait rendu invisible :
+       les deux etaient des reglages d'opacite alors que le vrai probleme etait
+       la COULEUR DU TEXTE, reglee depuis par `_g45CoulTexte`. La decoration
+       peut donc etre franche. Les teintes montent quasiment a plein sur les
+       bords (cc, puis 66) et ne s'effacent que sur la bande 42-58 %, ou vivent
+       le libelle du marche et les faits. Logos a 16 % et 108 px, largement
+       debordants. */
+    var ch=(d.ch||'#4d84ff'), ca=(d.ca||'#f0b020');
+    var fondCoul='linear-gradient(100deg,'+ch+'cc 0%,'+ch+'66 18%,rgba(12,16,28,.96) 42%,'
+      +'rgba(12,16,28,.96) 58%,'+ca+'66 82%,'+ca+'cc 100%)';
     var filig='';
-    if(d.lh) filig+='<div style="position:absolute;left:-24px;top:50%;transform:translateY(-50%);width:58px;height:58px;'
-      +'background:url(\''+d.lh+'\') no-repeat center/contain;opacity:.06;pointer-events:none;"></div>';
-    if(d.la) filig+='<div style="position:absolute;right:-24px;top:50%;transform:translateY(-50%);width:58px;height:58px;'
-      +'background:url(\''+d.la+'\') no-repeat center/contain;opacity:.06;pointer-events:none;"></div>';
+    if(d.lh) filig+='<div style="position:absolute;left:-20px;top:50%;transform:translateY(-50%);width:108px;height:108px;'
+      +'background:url(\''+d.lh+'\') no-repeat center/contain;opacity:.16;pointer-events:none;"></div>';
+    if(d.la) filig+='<div style="position:absolute;right:-20px;top:50%;transform:translateY(-50%);width:108px;height:108px;'
+      +'background:url(\''+d.la+'\') no-repeat center/contain;opacity:.16;pointer-events:none;"></div>';
     var s='<div style="position:relative;overflow:hidden;background:'+fondCoul+';background-color:rgba(12,16,28,.97);'
       +'border:1px solid rgba(255,255,255,.08);border-left:3px solid '+col+';border-radius:9px;padding:9px 11px;margin-bottom:7px;">'
       +filig
       +'<div style="position:relative;display:flex;justify-content:space-between;align-items:flex-start;gap:8px;">'
       +'<div style="flex:1;min-width:0;">'
-        +'<div style="font-size:8.5px;font-weight:800;color:#8aa0ff;letter-spacing:.4px;text-transform:uppercase;margin-bottom:2px;">'+_g45CyEa(_g45TrCompLbl(x.slug))+'</div>'
+        +'<div style="display:inline-block;font-size:8.5px;font-weight:800;color:#b9c6ff;letter-spacing:.4px;text-transform:uppercase;'
+          +'background:rgba(8,11,20,.55);border-radius:5px;padding:2px 6px;margin-bottom:3px;">'+_g45CyEa(_g45TrCompLbl(x.slug))+'</div>'
         +'<div style="font-size:11px;font-weight:800;color:var(--t1);">'
           +'<span style="color:'+_g45CoulTexte(d.ch)+';">'+_g45CyEa(x.hN)+'</span>'
           +'<span style="color:var(--t3);font-weight:700;"> – </span>'
           +'<span style="color:'+_g45CoulTexte(d.ca)+';">'+_g45CyEa(x.aN)+'</span></div>'
         +'<div style="font-size:11px;font-weight:700;color:'+col+';margin-top:2px;">'+_g45CyEa(m.m)+'</div>'
       +'</div>'
-      +'<div style="flex:none;text-align:right;">'
+      +'<div style="flex:none;text-align:right;background:rgba(8,11,20,.62);border-radius:7px;padding:5px 8px;margin:-3px -4px 0 0;">'
         +(m.cote?('<div style="font-size:16px;font-weight:800;color:#f0c828;line-height:1;">@'+m.cote.toFixed(2)+'</div>'
                  +'<div style="font-size:7.5px;color:var(--t3);letter-spacing:.4px;">COTE MARCHÉ</div>')
                 :('<div style="font-size:12px;font-weight:800;color:var(--t3);">cote à vérifier</div>'))
