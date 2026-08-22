@@ -23401,8 +23401,8 @@ function _g45TrRender(){
        le libelle du marche et les faits. Logos a 16 % et 108 px, largement
        debordants. */
     var ch=(d.ch||'#4d84ff'), ca=(d.ca||'#f0b020');
-    var fondCoul='linear-gradient(100deg,'+ch+'cc 0%,'+ch+'66 18%,rgba(12,16,28,.96) 42%,'
-      +'rgba(12,16,28,.96) 58%,'+ca+'66 82%,'+ca+'cc 100%)';
+    var fondCoul='linear-gradient(100deg,'+ch+'aa 0%,'+ch+'44 22%,rgba(12,16,28,.96) 40%,'
+      +'rgba(12,16,28,.96) 60%,'+ca+'44 78%,'+ca+'aa 100%)';
     var filig='';
     if(d.lh) filig+='<div style="position:absolute;left:-20px;top:50%;transform:translateY(-50%);width:108px;height:108px;'
       +'background:url(\''+d.lh+'\') no-repeat center/contain;opacity:.16;pointer-events:none;"></div>';
@@ -23421,20 +23421,28 @@ function _g45TrRender(){
           +'<span style="color:'+_g45CoulTexte(d.ca)+';">'+_g45CyEa(x.aN)+'</span></div>'
         +'<div style="font-size:11px;font-weight:700;color:'+col+';margin-top:2px;">'+_g45CyEa(m.m)+'</div>'
       +'</div>'
-      +'<div style="flex:none;text-align:right;background:rgba(8,11,20,.62);border-radius:7px;padding:5px 8px;margin:-3px -4px 0 0;">'
+      +'<div style="flex:none;text-align:right;background:rgba(8,11,20,.74);border-radius:7px;padding:6px 9px;margin:-3px -4px 0 0;">'
         +(m.cote?('<div style="font-size:16px;font-weight:800;color:#f0c828;line-height:1;">@'+m.cote.toFixed(2)+'</div>'
-                 +'<div style="font-size:7.5px;color:var(--t3);letter-spacing:.4px;">COTE MARCHÉ</div>')
-                :('<div style="font-size:12px;font-weight:800;color:var(--t3);">cote à vérifier</div>'))
-        +'<div style="font-size:10px;color:var(--t1);margin-top:4px;">'+_g45TrPct(m.p)+' <span style="font-size:8px;color:var(--t3);">estimée</span></div>'
+                 +'<div style="font-size:7.5px;color:rgba(255,255,255,.62);letter-spacing:.4px;">COTE MARCHÉ</div>')
+                :('<div style="font-size:12px;font-weight:800;color:rgba(255,255,255,.7);">cote à vérifier</div>'))
+        +'<div style="font-size:10px;color:var(--t1);margin-top:4px;">'+_g45TrPct(m.p)+' <span style="font-size:8px;color:rgba(255,255,255,.62);">estimée</span></div>'
         +(showGap&&m.ev!=null&&m.cote?('<div style="font-size:10px;font-weight:800;color:'+col+';">espérance '+(m.ev>=0?'+':'')+Math.round(m.ev*1000)/10+'%</div>'):'')
-        +(x.when?('<div style="font-size:8px;color:var(--t3);">'+_g45CyEa(x.when)+'</div>'):'')
+        +(x.when?('<div style="font-size:8.5px;color:rgba(255,255,255,.62);">'+_g45CyEa(x.when)+'</div>'):'')
       +'</div></div>';
-    if(m.fair!=null) s+='<div style="position:relative;font-size:8px;color:var(--t3);margin-top:4px;">Bookmaker (marge retirée) : '+_g45TrPct(m.fair)+'</div>';
+    /* Ces petits textes etaient ecrits en var(--t3), un gris bleute prevu pour un
+       fond neutre uni. Sur une teinte de club ils deviennent illisibles — signale
+       en production sur la carte Nottingham-Leeds. Chacun recoit donc son propre
+       substrat sombre et une couleur eclaircie, plutot que d'affaiblir encore le
+       degrade : c'est le texte qui doit s'adapter au fond, pas l'inverse. */
+    if(m.fair!=null) s+='<div style="position:relative;display:inline-block;font-size:8.5px;color:rgba(255,255,255,.78);'
+      +'background:rgba(8,11,20,.6);border-radius:5px;padding:2px 7px;margin-top:5px;">Bookmaker (marge retirée) : '+_g45TrPct(m.fair)+'</div>';
     if(m.note) s+='<div style="font-size:8px;color:#8aa0ff;margin-top:4px;line-height:1.5;">ℹ️ '+_g45CyEa(m.note)+'</div>';
     if(m.dc) s+='<div style="font-size:7.5px;color:#2ecc71;margin-top:3px;">📐 Dixon-Coles '
       +(m.dcFit?'ajusté par maximum de vraisemblance — force de l\'adversaire et pondération temporelle prises en compte'
                :'dérivé du classement — repli, les matchs du championnat n\'ont pas pu être récupérés')+'</div>';
-    if(m.faits&&m.faits.length) s+='<ul style="position:relative;margin:6px 0 0 0;padding-left:15px;">'+m.faits.slice(0,4).map(function(f){ return '<li style="font-size:9px;color:var(--t2);line-height:1.55;">'+_g45CyEa(f)+'</li>'; }).join('')+'</ul>';
+    if(m.faits&&m.faits.length) s+='<ul style="position:relative;margin:6px 0 0 0;padding:6px 9px 6px 24px;'
+      +'background:rgba(8,11,20,.58);border-radius:7px;list-style-position:outside;">'
+      +m.faits.slice(0,4).map(function(f){ return '<li style="font-size:9.5px;color:rgba(255,255,255,.84);line-height:1.6;">'+_g45CyEa(f)+'</li>'; }).join('')+'</ul>';
     if(m.n<9) s+='<div style="font-size:8px;color:#ff6b6b;margin-top:4px;">⛔ Échantillon très réduit ('+m.n+' matchs) — statistiquement peu fiable, à titre indicatif seulement.</div>';
     else if(m.n<14) s+='<div style="font-size:8px;color:#ff8c42;margin-top:4px;">⚠️ Échantillon réduit ('+m.n+' matchs) — à prendre avec prudence.</div>';
     return s+'</div>';
