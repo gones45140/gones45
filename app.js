@@ -23392,12 +23392,17 @@ function _g45TrRender(){
        La bordure gauche reste la couleur de l'ESPERANCE, pas celle d'un club :
        c'est l'information qui doit primer sur la decoration. */
     var d=x.deco||{};
-    var fondCoul='linear-gradient(100deg,'+(d.ch||'#4d84ff')+'38 0%,rgba(12,16,28,.97) 34%,rgba(12,16,28,.97) 66%,'+(d.ca||'#f0b020')+'38 100%)';
+    /* Degrade ramene de 38 a 1c d'opacite et zone neutre elargie a 28-72 % :
+       la premiere version noyait la carte, notamment le jaune de Leeds qui
+       effacait l'esperance ecrite par-dessus. Les logos passent de 88 a 58 px,
+       sont davantage sortis du cadre et tombent a 6 % — sur la carte
+       Troyes-Paris FC ils venaient carrement sous le texte des faits. */
+    var fondCoul='linear-gradient(100deg,'+(d.ch||'#4d84ff')+'1c 0%,rgba(12,16,28,.97) 28%,rgba(12,16,28,.97) 72%,'+(d.ca||'#f0b020')+'1c 100%)';
     var filig='';
-    if(d.lh) filig+='<div style="position:absolute;left:-14px;top:50%;transform:translateY(-50%);width:88px;height:88px;'
-      +'background:url(\''+d.lh+'\') no-repeat center/contain;opacity:.09;pointer-events:none;"></div>';
-    if(d.la) filig+='<div style="position:absolute;right:-14px;top:50%;transform:translateY(-50%);width:88px;height:88px;'
-      +'background:url(\''+d.la+'\') no-repeat center/contain;opacity:.09;pointer-events:none;"></div>';
+    if(d.lh) filig+='<div style="position:absolute;left:-24px;top:50%;transform:translateY(-50%);width:58px;height:58px;'
+      +'background:url(\''+d.lh+'\') no-repeat center/contain;opacity:.06;pointer-events:none;"></div>';
+    if(d.la) filig+='<div style="position:absolute;right:-24px;top:50%;transform:translateY(-50%);width:58px;height:58px;'
+      +'background:url(\''+d.la+'\') no-repeat center/contain;opacity:.06;pointer-events:none;"></div>';
     var s='<div style="position:relative;overflow:hidden;background:'+fondCoul+';background-color:rgba(12,16,28,.97);'
       +'border:1px solid rgba(255,255,255,.08);border-left:3px solid '+col+';border-radius:9px;padding:9px 11px;margin-bottom:7px;">'
       +filig
@@ -23405,9 +23410,9 @@ function _g45TrRender(){
       +'<div style="flex:1;min-width:0;">'
         +'<div style="font-size:8.5px;font-weight:800;color:#8aa0ff;letter-spacing:.4px;text-transform:uppercase;margin-bottom:2px;">'+_g45CyEa(_g45TrCompLbl(x.slug))+'</div>'
         +'<div style="font-size:11px;font-weight:800;color:var(--t1);">'
-          +'<span style="color:'+(d.ch||'var(--t1)')+';">'+_g45CyEa(x.hN)+'</span>'
+          +'<span style="color:'+_g45CoulTexte(d.ch)+';">'+_g45CyEa(x.hN)+'</span>'
           +'<span style="color:var(--t3);font-weight:700;"> – </span>'
-          +'<span style="color:'+(d.ca||'var(--t1)')+';">'+_g45CyEa(x.aN)+'</span></div>'
+          +'<span style="color:'+_g45CoulTexte(d.ca)+';">'+_g45CyEa(x.aN)+'</span></div>'
         +'<div style="font-size:11px;font-weight:700;color:'+col+';margin-top:2px;">'+_g45CyEa(m.m)+'</div>'
       +'</div>'
       +'<div style="flex:none;text-align:right;">'
@@ -38122,6 +38127,30 @@ function _g45Lum(h) {
   var n = parseInt(h.slice(1), 16);
   return (0.2126 * ((n >> 16) & 255) + 0.7152 * ((n >> 8) & 255) + 0.0722 * (n & 255)) / 255;
 }
+/* ═══ COULEUR DE CLUB LISIBLE SUR FOND SOMBRE (22/08) ═══
+   `g45CoulEquipe` ne protege que du TROP CLAIR — un blanc illisible sur le vert
+   d'un terrain. Le probleme symetrique n'avait jamais ete traite : sur le fond
+   bleu nuit de l'app, un bleu marine ou un noir disparait tout autant. Constate
+   en production sur Spurs, Troyes et Udinese, dont les noms etaient invisibles.
+   On eclaircit donc vers le blanc jusqu'a atteindre une luminance suffisante,
+   en conservant la TEINTE du club : le rouge de Nottingham reste rouge, il
+   devient seulement assez clair pour se lire. */
+function _g45CoulTexte(h, cible) {
+  try {
+    var c = _g45Hex(h); if (!c) return 'var(--t1)';
+    var seuil = cible || 0.58;
+    var n = parseInt(c.slice(1), 16);
+    var r = (n >> 16) & 255, g = (n >> 8) & 255, b = n & 255;
+    for (var i = 0; i < 24 && _g45Lum('#' + ((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1)) < seuil; i++) {
+      r = Math.min(255, Math.round(r + (255 - r) * 0.18));
+      g = Math.min(255, Math.round(g + (255 - g) * 0.18));
+      b = Math.min(255, Math.round(b + (255 - b) * 0.18));
+    }
+    return '#' + ((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1);
+  } catch (e) { return 'var(--t1)'; }
+}
+window._g45CoulTexte = _g45CoulTexte;
+
 function _g45Ecart(a, b) {
   var A = parseInt(a.slice(1), 16), B = parseInt(b.slice(1), 16);
   return Math.abs(((A >> 16) & 255) - ((B >> 16) & 255))
