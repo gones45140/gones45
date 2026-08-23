@@ -2016,8 +2016,20 @@ function render(){
          donc comme un filigrane CENTRE, a taille fixe, et la ligne garde son
          degrade de couleur en fond. */
       var _cat=(!_vis && typeof g45VisuelCategorie==='function')?g45VisuelCategorie(u.n):'';
-      var _fond=(typeof g45FondSolo==='function')?g45FondSolo(u.color,_vis)
+      /* ═══ LE VISUEL EST UNE COUCHE, PLUS UN FOND (23/08) ═══
+         En fond de la ligne il fallait choisir entre `cover`, qui l'agrandissait
+         jusqu'a un gros plan illisible sur une ligne quinze fois plus large que
+         haute, et une taille naturelle, qui laissait un pave net au milieu avec
+         du vide autour. Aucune des deux n'allait.
+         En couche separee, l'image garde ses proportions ET se fond sur les
+         cotes grace a un masque horizontal : elle se prolonge visuellement dans
+         le degrade aux couleurs du club au lieu de s'arreter net. */
+      var _fond=(typeof g45FondSolo==='function')?g45FondSolo(u.color,'')
               :('linear-gradient(100deg,'+(u.color||'#4d84ff')+'2e 0%,transparent 55%)');
+      var _mask='linear-gradient(90deg,transparent 0%,#000 16%,#000 84%,transparent 100%)';
+      var _couche=_vis?('<div style="position:absolute;inset:0;pointer-events:none;opacity:.55;'
+        +'background-image:url(\''+_vis+'\');background-size:auto 118%;background-position:center;'
+        +'background-repeat:no-repeat;-webkit-mask-image:'+_mask+';mask-image:'+_mask+';"></div>'):'';
       /* Logo nettement plus present : 86 px a 18 %. Une ligne du mur faisait
          10 px de haut de matiere pour 100 % de largeur vide — l'effet « salon
          Discord » qu'Antoine veut casser. */
@@ -2029,7 +2041,7 @@ function render(){
          le moins risque, puisqu'il ne recouvre rien. */
       var _cfmt = _cat ? ((typeof _g45CatFormat==='function') ? _g45CatFormat(_g45SgNorm(u.n)) : '') : '';
       if(_cat && _cfmt === 'banniere'){
-        _fond = (typeof g45FondSolo==='function') ? g45FondSolo(u.color, _cat) : _fond;
+        _vis = _cat;                      /* traitee comme un visuel de club */
       } else if(_cat){
         _filig+='<img src="'+_cat+'" alt="" '
           +'style="position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);height:64px;'
@@ -2047,8 +2059,9 @@ function render(){
            le sujet de la plupart des bannieres TheSportsDB — elles sont
            cadrees pour un bandeau large, pas pour une bande fine. */
         +'min-height:92px;border-radius:12px;margin-bottom:7px;border:1px solid rgba(255,255,255,.07);'
-        +'cursor:pointer;background:'+_fond+';background-size:auto 118%;background-position:center;background-repeat:no-repeat;" '
+        +'cursor:pointer;background:'+_fond+';" '
         +'data-nom="'+u.n+'" onclick="openClubFromDash(this.dataset.nom)">'
+        +_couche
         +_filig
         +logo
         +'<div style="position:relative;flex:1;min-width:0;">'
@@ -8654,8 +8667,20 @@ function render(){
          donc comme un filigrane CENTRE, a taille fixe, et la ligne garde son
          degrade de couleur en fond. */
       var _cat=(!_vis && typeof g45VisuelCategorie==='function')?g45VisuelCategorie(u.n):'';
-      var _fond=(typeof g45FondSolo==='function')?g45FondSolo(u.color,_vis)
+      /* ═══ LE VISUEL EST UNE COUCHE, PLUS UN FOND (23/08) ═══
+         En fond de la ligne il fallait choisir entre `cover`, qui l'agrandissait
+         jusqu'a un gros plan illisible sur une ligne quinze fois plus large que
+         haute, et une taille naturelle, qui laissait un pave net au milieu avec
+         du vide autour. Aucune des deux n'allait.
+         En couche separee, l'image garde ses proportions ET se fond sur les
+         cotes grace a un masque horizontal : elle se prolonge visuellement dans
+         le degrade aux couleurs du club au lieu de s'arreter net. */
+      var _fond=(typeof g45FondSolo==='function')?g45FondSolo(u.color,'')
               :('linear-gradient(100deg,'+(u.color||'#4d84ff')+'2e 0%,transparent 55%)');
+      var _mask='linear-gradient(90deg,transparent 0%,#000 16%,#000 84%,transparent 100%)';
+      var _couche=_vis?('<div style="position:absolute;inset:0;pointer-events:none;opacity:.55;'
+        +'background-image:url(\''+_vis+'\');background-size:auto 118%;background-position:center;'
+        +'background-repeat:no-repeat;-webkit-mask-image:'+_mask+';mask-image:'+_mask+';"></div>'):'';
       /* Logo nettement plus present : 86 px a 18 %. Une ligne du mur faisait
          10 px de haut de matiere pour 100 % de largeur vide — l'effet « salon
          Discord » qu'Antoine veut casser. */
@@ -8667,7 +8692,7 @@ function render(){
          le moins risque, puisqu'il ne recouvre rien. */
       var _cfmt = _cat ? ((typeof _g45CatFormat==='function') ? _g45CatFormat(_g45SgNorm(u.n)) : '') : '';
       if(_cat && _cfmt === 'banniere'){
-        _fond = (typeof g45FondSolo==='function') ? g45FondSolo(u.color, _cat) : _fond;
+        _vis = _cat;                      /* traitee comme un visuel de club */
       } else if(_cat){
         _filig+='<img src="'+_cat+'" alt="" '
           +'style="position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);height:64px;'
@@ -8685,8 +8710,9 @@ function render(){
            le sujet de la plupart des bannieres TheSportsDB — elles sont
            cadrees pour un bandeau large, pas pour une bande fine. */
         +'min-height:92px;border-radius:12px;margin-bottom:7px;border:1px solid rgba(255,255,255,.07);'
-        +'cursor:pointer;background:'+_fond+';background-size:auto 118%;background-position:center;background-repeat:no-repeat;" '
+        +'cursor:pointer;background:'+_fond+';" '
         +'data-nom="'+u.n+'" onclick="openClubFromDash(this.dataset.nom)">'
+        +_couche
         +_filig
         +logo
         +'<div style="position:relative;flex:1;min-width:0;">'
