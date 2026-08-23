@@ -2016,20 +2016,13 @@ function render(){
          donc comme un filigrane CENTRE, a taille fixe, et la ligne garde son
          degrade de couleur en fond. */
       var _cat=(!_vis && typeof g45VisuelCategorie==='function')?g45VisuelCategorie(u.n):'';
-      /* ═══ LE VISUEL EST UNE COUCHE, PLUS UN FOND (23/08) ═══
-         En fond de la ligne il fallait choisir entre `cover`, qui l'agrandissait
-         jusqu'a un gros plan illisible sur une ligne quinze fois plus large que
-         haute, et une taille naturelle, qui laissait un pave net au milieu avec
-         du vide autour. Aucune des deux n'allait.
-         En couche separee, l'image garde ses proportions ET se fond sur les
-         cotes grace a un masque horizontal : elle se prolonge visuellement dans
-         le degrade aux couleurs du club au lieu de s'arreter net. */
-      var _fond=(typeof g45FondSolo==='function')?g45FondSolo(u.color,'')
+      /* RETOUR AU VISUEL EN FOND PLEIN CADRE (23/08). J'avais essaye une couche
+         masquee pour eviter l'agrandissement sur grand ecran ; Antoine prefere
+         nettement le rendu d'origine, ou l'image occupe toute la ligne. Le
+         cadrage serre sur large ecran est donc un choix assume, pas un oubli. */
+      var _fond=(typeof g45FondSolo==='function')?g45FondSolo(u.color,_vis)
               :('linear-gradient(100deg,'+(u.color||'#4d84ff')+'2e 0%,transparent 55%)');
-      var _mask='linear-gradient(90deg,transparent 0%,#000 16%,#000 84%,transparent 100%)';
-      var _couche=_vis?('<div style="position:absolute;inset:0;pointer-events:none;opacity:.55;'
-        +'background-image:url(\''+_vis+'\');background-size:auto 118%;background-position:center;'
-        +'background-repeat:no-repeat;-webkit-mask-image:'+_mask+';mask-image:'+_mask+';"></div>'):'';
+      var _couche='';
       /* Logo nettement plus present : 86 px a 18 %. Une ligne du mur faisait
          10 px de haut de matiere pour 100 % de largeur vide — l'effet « salon
          Discord » qu'Antoine veut casser. */
@@ -2059,7 +2052,7 @@ function render(){
            le sujet de la plupart des bannieres TheSportsDB — elles sont
            cadrees pour un bandeau large, pas pour une bande fine. */
         +'min-height:92px;border-radius:12px;margin-bottom:7px;border:1px solid rgba(255,255,255,.07);'
-        +'cursor:pointer;background:'+_fond+';" '
+        +'cursor:pointer;background:'+_fond+';background-size:cover;background-position:center 50%;" '
         +'data-nom="'+u.n+'" onclick="openClubFromDash(this.dataset.nom)">'
         +_couche
         +_filig
@@ -8667,20 +8660,13 @@ function render(){
          donc comme un filigrane CENTRE, a taille fixe, et la ligne garde son
          degrade de couleur en fond. */
       var _cat=(!_vis && typeof g45VisuelCategorie==='function')?g45VisuelCategorie(u.n):'';
-      /* ═══ LE VISUEL EST UNE COUCHE, PLUS UN FOND (23/08) ═══
-         En fond de la ligne il fallait choisir entre `cover`, qui l'agrandissait
-         jusqu'a un gros plan illisible sur une ligne quinze fois plus large que
-         haute, et une taille naturelle, qui laissait un pave net au milieu avec
-         du vide autour. Aucune des deux n'allait.
-         En couche separee, l'image garde ses proportions ET se fond sur les
-         cotes grace a un masque horizontal : elle se prolonge visuellement dans
-         le degrade aux couleurs du club au lieu de s'arreter net. */
-      var _fond=(typeof g45FondSolo==='function')?g45FondSolo(u.color,'')
+      /* RETOUR AU VISUEL EN FOND PLEIN CADRE (23/08). J'avais essaye une couche
+         masquee pour eviter l'agrandissement sur grand ecran ; Antoine prefere
+         nettement le rendu d'origine, ou l'image occupe toute la ligne. Le
+         cadrage serre sur large ecran est donc un choix assume, pas un oubli. */
+      var _fond=(typeof g45FondSolo==='function')?g45FondSolo(u.color,_vis)
               :('linear-gradient(100deg,'+(u.color||'#4d84ff')+'2e 0%,transparent 55%)');
-      var _mask='linear-gradient(90deg,transparent 0%,#000 16%,#000 84%,transparent 100%)';
-      var _couche=_vis?('<div style="position:absolute;inset:0;pointer-events:none;opacity:.55;'
-        +'background-image:url(\''+_vis+'\');background-size:auto 118%;background-position:center;'
-        +'background-repeat:no-repeat;-webkit-mask-image:'+_mask+';mask-image:'+_mask+';"></div>'):'';
+      var _couche='';
       /* Logo nettement plus present : 86 px a 18 %. Une ligne du mur faisait
          10 px de haut de matiere pour 100 % de largeur vide — l'effet « salon
          Discord » qu'Antoine veut casser. */
@@ -8710,7 +8696,7 @@ function render(){
            le sujet de la plupart des bannieres TheSportsDB — elles sont
            cadrees pour un bandeau large, pas pour une bande fine. */
         +'min-height:92px;border-radius:12px;margin-bottom:7px;border:1px solid rgba(255,255,255,.07);'
-        +'cursor:pointer;background:'+_fond+';" '
+        +'cursor:pointer;background:'+_fond+';background-size:cover;background-position:center 50%;" '
         +'data-nom="'+u.n+'" onclick="openClubFromDash(this.dataset.nom)">'
         +_couche
         +_filig
@@ -23713,7 +23699,7 @@ function _g45TrRender(){
         +'object-fit:contain;opacity:.22;filter:saturate(1.3);pointer-events:none;">';
     };
     var filig=lg(d.lh,'left')+lg(d.la,'right');
-    var s='<div style="position:relative;overflow:hidden;background:'+fondCoul+';background-size:auto 118%;background-position:center;background-repeat:no-repeat;'
+    var s='<div style="position:relative;overflow:hidden;background:'+fondCoul+';background-size:cover;background-position:center;'
       +'background-color:rgba(12,16,28,.97);border:1px solid rgba(255,255,255,.08);border-left:3px solid '+col+';'
       +'border-radius:12px;padding:10px 62px;margin-bottom:7px;">'
       +filig
@@ -37844,14 +37830,11 @@ async function g45DirectMesEquipes(silencieux) {
 
     return '<div onclick="_g45SgMatchDepuisDirect(\'' + m.id + '\',\'' + m.sp + '\',\'' + m.lg + '\')" '
       + 'style="position:relative;overflow:hidden;margin-bottom:7px;border-radius:12px;cursor:pointer;'
-      /* PAS `cover` SUR UNE BANNIERE (23/08). Ces cartes sont bien plus LARGES
-         que hautes, alors qu'une banniere TheSportsDB fait 1000x185. `cover`
-         l'agrandissait jusqu'a remplir la largeur, d'ou un gros plan sur le
-         milieu de l'ecusson — l'OL et le Bayern etaient illisibles.
-         `auto 118%` cale l'image sur la HAUTEUR de la carte : elle garde ses
-         proportions, reste a taille lisible, et les cotes montrent simplement
-         le degrade aux couleurs des deux clubs. */
-      + 'background:' + fond + ';background-size:auto 118%;background-position:center;background-repeat:no-repeat;'
+      /* PLEIN CADRE, choix d'Antoine (23/08). J'avais cale l'image sur la hauteur
+         pour eviter le cadrage serre sur grand ecran ; le rendu laissait un pave
+         au milieu de la carte et il prefere nettement le plein cadre. Le
+         recadrage sur large ecran est donc assume. */
+      + 'background:' + fond + ';background-size:cover;background-position:center;'
       + 'border:1px solid rgba(255,255,255,.08);'
       + (live ? 'box-shadow:0 0 0 1px rgba(255,69,69,.35),0 2px 14px rgba(255,69,69,.12);' : '') + '">'
       + logo(m.lMoi, 'left') + logo(m.lAdv, 'right')
