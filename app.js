@@ -30593,7 +30593,7 @@ var _G45_CACHE_PREFIXES=['g45rcP_','g45rcD_','g45rcY_','g45rc_','g45dcm_','g45dc
      explosait et des ecritures LEGITIMES echouaient en silence (le filtre par
      competition, qui restait bloque sur « Toutes »). Les cartes de tirs sont
      les plus lourdes : plusieurs Ko par match, gardees indefiniment. */
-  'g45butA2_','g45gl3_','g45gl2_','g45gl_','g45_tirs2_','g45_fanart2_','g45_fanart_','g45_img_perso_','g45_tv_prog','g45_mqnom_','g45_mqteam_','g45_mqfond_','g45trv4_','g45_catimg_','g45_catfmt_','g45ld2_','g45ld_',
+  'g45butA2_','g45gl3_','g45gl2_','g45gl_','g45_tirs2_','g45_fanart2_','g45_fanart_','g45_img_perso_','g45_tv_prog','g45_mqnom_','g45_mqteam_','g45_mqfond_','g45trv4_','g45_catimg_','g45_catfmt2_','g45_catfmt_','g45ld2_','g45ld_',
   'g45nrlcal2_','g45_fx_faits','g45_veille_','g45_compet_logos','g45_groq_modele','g45_gemini_modeles',
   /* MESURE DU 20/08 sur le stockage reel d'Antoine (5,1 Mo, sature) :
        fpl_bootstrap_cache ... 1951 Ko  <- a lui seul 38 % du total
@@ -37192,17 +37192,52 @@ var _G45_CAT_IMG = {
    largeur/hauteur de 2,5, c'est une banniere et elle occupe toute la carte ;
    en deca, c'est un pictogramme et il reste centre a taille fixe.
    Le rapport est memorise a cote de l'URL, donc la mesure ne se refait pas. */
+/* ═══ LOGO OU PHOTO : C'EST LA TRANSPARENCE QUI TRANCHE (23/08) ═══
+   Premiere version : le rapport largeur/hauteur, avec un seuil a 2,5. Mauvais
+   critere — la photo de tennis d'Antoine, pas assez large, etait traitee comme
+   un pictogramme et restait en petit au milieu, alors qu'il voulait un fond
+   plein cadre. Et l'obliger a recadrer ses images pour contenter un seuil
+   arbitraire n'a aucun sens.
+   Le vrai discriminant est ailleurs : un LOGO a des coins TRANSPARENTS, une
+   PHOTO n'en a pas. On dessine donc l'image sur un canevas et on lit le canal
+   alpha des quatre coins. Aucune ambiguite, aucune contrainte de format.
+   Les fichiers viennent du meme domaine que la page, le canevas n'est donc pas
+   souille et la lecture des pixels est autorisee. En cas d'echec — navigateur
+   restrictif, image cassee — on retombe sur le rapport, qui reste un repli
+   raisonnable. */
 var _G45_CAT_SEUIL = 2.5;
 function _g45CatFormat(k){
-  try{ return localStorage.getItem('g45_catfmt_' + k) || ''; }catch(e){ return ''; }
+  try{ return localStorage.getItem('g45_catfmt2_' + k) || ''; }catch(e){ return ''; }
+}
+function _g45CatCoinsTransparents(im){
+  try{
+    var c = document.createElement('canvas');
+    var w = Math.max(2, Math.min(64, im.naturalWidth || 2));
+    var h = Math.max(2, Math.min(64, im.naturalHeight || 2));
+    c.width = w; c.height = h;
+    var x = c.getContext('2d');
+    if (!x) return null;
+    x.drawImage(im, 0, 0, w, h);
+    var coins = [[0,0],[w-1,0],[0,h-1],[w-1,h-1]];
+    for (var i = 0; i < coins.length; i++){
+      var d = x.getImageData(coins[i][0], coins[i][1], 1, 1).data;
+      if (d[3] < 128) return true;          /* un coin translucide suffit */
+    }
+    return false;
+  }catch(e){ return null; }               /* null = indetermine */
 }
 function _g45CatMesurer(k, url){
   try{
-    if (localStorage.getItem('g45_catfmt_' + k)) return;
+    if (localStorage.getItem('g45_catfmt2_' + k)) return;
     var im = new Image();
+    im.crossOrigin = 'anonymous';
     im.onload = function(){
-      var r = (im.naturalWidth || 1) / (im.naturalHeight || 1);
-      try{ localStorage.setItem('g45_catfmt_' + k, r >= _G45_CAT_SEUIL ? 'banniere' : 'logo'); }catch(e){}
+      var t = _g45CatCoinsTransparents(im);
+      var fmt;
+      if (t === true) fmt = 'logo';
+      else if (t === false) fmt = 'banniere';
+      else fmt = (((im.naturalWidth || 1) / (im.naturalHeight || 1)) >= _G45_CAT_SEUIL) ? 'banniere' : 'logo';
+      try{ localStorage.setItem('g45_catfmt2_' + k, fmt); }catch(e){}
       if(!_g45CatVus['fmt_' + k]){
         _g45CatVus['fmt_' + k] = 1;
         try{ if(typeof render === 'function') render(); }catch(e){}
