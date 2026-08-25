@@ -4187,7 +4187,13 @@ function saveMmAsPari(mode) {
     alert('Ajoute au moins une sélection !'); return;
   }
   var cote = rows.reduce(function(a,r){ return a*(parseFloat(r.cote)||1); }, 1);
-  var label = rows.filter(function(r){ return r.type; }).map(function(r){ return r.type+' @'+r.cote; }).join(' + ');
+  /* COTE RETIREE DU LIBELLE (25/08). Elle etait collee a chaque selection —
+     « Victoire @1.8 + BTS Oui @1.7 » — ce qui faisait de chaque combinaison de
+     cotes un TYPE distinct : le bilan comptait autant de categories que de
+     paris. Le nettoyage a la lecture ne suffisait pas, le formulaire d'edition
+     affichant la valeur brute. On corrige donc a la SOURCE.
+     La cote totale reste enregistree dans le champ `cote` du pari. */
+  var label = rows.filter(function(r){ return r.type; }).map(function(r){ return r.type; }).join(' + ');
 
   // Récupérer les infos selon le mode
   var team, mise, book, date, sport, comp;
@@ -4242,7 +4248,7 @@ function saveMmAsPari(mode) {
 }
 
 function getMmLabel(){
-  return mmRows.filter(function(r){return r.type;}).map(function(r){return r.type+' @'+r.cote;}).join(' + ');
+  return mmRows.filter(function(r){return r.type;}).map(function(r){return r.type;}).join(' + ');
 }
 function getMmCote(){
   return mmRows.reduce(function(a,r){return a*(parseFloat(r.cote)||1);},1);
@@ -5268,7 +5274,7 @@ function addMmTypeSimple(t){
   mmRowsSimple.push({type:t,cote:1.50});renderMmRowsSimple();
 }
 function getMmLabelSimple(){
-  return mmRowsSimple.filter(function(r){return r.type;}).map(function(r){return r.type+' @'+r.cote;}).join(' + ');
+  return mmRowsSimple.filter(function(r){return r.type;}).map(function(r){return r.type;}).join(' + ');
 }
 function syncSimpleCote(){
   var nc=$i('n-cote');if(!nc)return;
@@ -5563,7 +5569,10 @@ function editBet(id){
   $i('edit-mise').value=h.m||'';
   $i('edit-sport').value=h.sport||'';
   $i('edit-comp').value=h.comp||'';
-  $i('edit-type').value=h.type||'';
+  /* Les paris deja enregistres portent encore les cotes dans leur libelle :
+     on les nettoie a l'ouverture, pour que la moindre modification les range
+     definitivement du bon cote. */
+  $i('edit-type').value=((typeof g45TypeSansCote==='function')?g45TypeSansCote(h.type):h.type)||'';
   $i('edit-bk').value=h.b||'';
   $i('edit-date').value=h.date||'';
   $i('edit-heure').value=h.heure||'';
@@ -10703,7 +10712,13 @@ function saveMmAsPari(mode) {
     alert('Ajoute au moins une sélection !'); return;
   }
   var cote = rows.reduce(function(a,r){ return a*(parseFloat(r.cote)||1); }, 1);
-  var label = rows.filter(function(r){ return r.type; }).map(function(r){ return r.type+' @'+r.cote; }).join(' + ');
+  /* COTE RETIREE DU LIBELLE (25/08). Elle etait collee a chaque selection —
+     « Victoire @1.8 + BTS Oui @1.7 » — ce qui faisait de chaque combinaison de
+     cotes un TYPE distinct : le bilan comptait autant de categories que de
+     paris. Le nettoyage a la lecture ne suffisait pas, le formulaire d'edition
+     affichant la valeur brute. On corrige donc a la SOURCE.
+     La cote totale reste enregistree dans le champ `cote` du pari. */
+  var label = rows.filter(function(r){ return r.type; }).map(function(r){ return r.type; }).join(' + ');
 
   // Récupérer les infos selon le mode
   var team, mise, book, date, sport, comp;
@@ -10758,7 +10773,7 @@ function saveMmAsPari(mode) {
 }
 
 function getMmLabel(){
-  return mmRows.filter(function(r){return r.type;}).map(function(r){return r.type+' @'+r.cote;}).join(' + ');
+  return mmRows.filter(function(r){return r.type;}).map(function(r){return r.type;}).join(' + ');
 }
 function getMmCote(){
   return mmRows.reduce(function(a,r){return a*(parseFloat(r.cote)||1);},1);
@@ -11784,7 +11799,7 @@ function addMmTypeSimple(t){
   mmRowsSimple.push({type:t,cote:1.50});renderMmRowsSimple();
 }
 function getMmLabelSimple(){
-  return mmRowsSimple.filter(function(r){return r.type;}).map(function(r){return r.type+' @'+r.cote;}).join(' + ');
+  return mmRowsSimple.filter(function(r){return r.type;}).map(function(r){return r.type;}).join(' + ');
 }
 function syncSimpleCote(){
   var nc=$i('n-cote');if(!nc)return;
@@ -12079,7 +12094,10 @@ function editBet(id){
   $i('edit-mise').value=h.m||'';
   $i('edit-sport').value=h.sport||'';
   $i('edit-comp').value=h.comp||'';
-  $i('edit-type').value=h.type||'';
+  /* Les paris deja enregistres portent encore les cotes dans leur libelle :
+     on les nettoie a l'ouverture, pour que la moindre modification les range
+     definitivement du bon cote. */
+  $i('edit-type').value=((typeof g45TypeSansCote==='function')?g45TypeSansCote(h.type):h.type)||'';
   $i('edit-bk').value=h.b||'';
   $i('edit-date').value=h.date||'';
   $i('edit-heure').value=h.heure||'';
@@ -30841,7 +30859,7 @@ var _G45_CACHE_PREFIXES=['g45rcP_','g45rcD_','g45rcY_','g45rc_','g45dcm_','g45dc
      explosait et des ecritures LEGITIMES echouaient en silence (le filtre par
      competition, qui restait bloque sur « Toutes »). Les cartes de tirs sont
      les plus lourdes : plusieurs Ko par match, gardees indefiniment. */
-  'g45butA2_','g45gl3_','g45gl2_','g45gl_','g45_tirs2_','g45_fanart2_','g45_fanart_','g45_img_perso_','g45_tv_prog','g45_mqnom_','g45_mqteam_','g45_mqfond_','g45trv4_','g45_catimg_','g45_catfmt2_','g45_catfmt_','g45nrlcal3_','g45nrlcal2_','g45_lglogo_','g45compet2_','g45compet_','g45tmeta_','g45ld2_','g45ld_',
+  'g45butA2_','g45gl3_','g45gl2_','g45gl_','g45_tirs2_','g45_fanart2_','g45_fanart_','g45_img_perso_','g45_tv_prog','g45_mqnom_','g45_mqteam_','g45_mqfond_','g45trv4_','g45_catimg_','g45_catfmt2_','g45_catfmt_','g45nrlcal3_','g45nrlcal2_','g45_lglogo_','g45compet2_','g45compet_','g45tmeta_','g45histo_','g45ld2_','g45ld_',
   'g45nrlcal2_','g45_fx_faits','g45_veille_','g45_compet_logos','g45_groq_modele','g45_gemini_modeles',
   /* MESURE DU 20/08 sur le stockage reel d'Antoine (5,1 Mo, sature) :
        fpl_bootstrap_cache ... 1951 Ko  <- a lui seul 38 % du total
@@ -35946,6 +35964,107 @@ var _G45_POSTES_SANS_STATS = {
   T:'ligne offensive', OL:'ligne offensive', LS:'longsnapper'
 };
 
+/* ═══ HISTORIQUE SAISON PAR SAISON D'UN JOUEUR (25/08) ═══
+   Le panneau ne montrait que la saison en cours : « 2 buts » ne dit rien tant
+   qu'on ignore qu'il en a mis 8 l'an dernier et 10 l'annee d'avant. C'est ce
+   qui manquait pour juger la REGULARITE d'un buteur.
+   Point d'entree retenu apres sonde : `statisticslog`. Deux autres ont ete
+   essayes et ecartes — `common/v3/.../stats` rend 404, et le meme avec le slug
+   `all` rend 500. Chaque entree porte la saison, le club de l'epoque et une
+   reference vers les statistiques.
+   L'annee est LUE DANS L'URL de la reference plutot que d'etre resolue par une
+   requete : elle y figure en clair, autant l'economiser.
+   Cache : douze heures. Les saisons closes ne bougent plus, mais celle en cours
+   evolue chaque week-end, et le tout tient dans une seule entree. */
+async function _g45HistoSaisons(lg, aid, maxi) {
+  maxi = maxi || 4;
+  var ck = 'g45histo_' + lg + '_' + aid;
+  try { var c = JSON.parse(localStorage.getItem(ck) || 'null'); if (c && (Date.now() - c.t) < 12 * 3600000) return c.d; } catch (e) {}
+
+  var j = null;
+  try {
+    var r = await fetch('https://sports.core.api.espn.com/v2/sports/soccer/leagues/' + lg + '/athletes/' + aid + '/statisticslog');
+    if (!r.ok) return null;
+    j = await r.json();
+  } catch (e) { return null; }
+
+  var entrees = (j && j.entries) || [];
+  if (!entrees.length) return null;
+
+  /* Les plus recentes d'abord, et on s'arrete a `maxi` : au-dela ca n'aide plus
+     a parier, et chaque saison coute une requete. */
+  var lues = entrees.map(function (e) {
+    var an = parseInt((String((e.season && e.season.$ref) || '').match(/seasons\/(\d{4})/) || [, 0])[1], 10) || 0;
+    var tot = (e.statistics || []).filter(function (x) { return x.type === 'total'; })[0]
+           || (e.statistics || [])[0] || null;
+    var eq = (e.statistics || []).filter(function (x) { return x.type === 'team' && x.team && x.team.$ref; })[0];
+    return { an: an, ref: (tot && tot.statistics && tot.statistics.$ref) || '', team: eq ? eq.team.$ref : '' };
+  }).filter(function (x) { return x.an && x.ref; })
+    .sort(function (a, b) { return b.an - a.an; })
+    .slice(0, maxi);
+
+  var meta = {};
+  try { meta = await _g45TeamMetaRefs(lues.map(function (x) { return x.team; })); } catch (e) {}
+
+  var out = [];
+  await Promise.all(lues.map(async function (x) {
+    try {
+      var rr = await fetch(String(x.ref).replace(/^http:/, 'https:'));
+      if (!rr.ok) return;
+      var d = await rr.json();
+      var v = {};
+      (((d.splits && d.splits.categories) || [])).forEach(function (c) {
+        (c.stats || []).forEach(function (st) { if (st && st.name != null) v[st.name] = (st.value != null ? st.value : parseFloat(st.displayValue)); });
+      });
+      var id = (String(x.team).match(/teams\/(\d+)/) || [, ''])[1];
+      var m = meta[id] || {};
+      out.push({
+        an: x.an,
+        club: m.a || '', logo: m.l || '', coul: m.c || '',
+        st: +v.starts || 0, app: +v.appearances || 0,
+        g: +v.totalGoals || 0, a: +v.goalAssists || 0,
+        sh: +v.totalShots || 0, sot: +v.shotsOnTarget || 0
+      });
+    } catch (e) {}
+  }));
+
+  out.sort(function (a, b) { return b.an - a.an; });
+  if (!out.length) return null;
+  try { localStorage.setItem(ck, JSON.stringify({ t: Date.now(), d: out })); } catch (e) {}
+  return out;
+}
+
+/* Tableau compact, une ligne par saison. */
+function _g45HistoHtml(h) {
+  if (!h || !h.length) return '';
+  var lib = function (an) { return an + '-' + String((an + 1) % 100).padStart(2, '0'); };
+  var cel = function (v, c) {
+    return '<div style="text-align:right;font-weight:800;color:' + (c || 'var(--t1)') + ';">' + v + '</div>';
+  };
+  return '<div style="margin-top:10px;border-top:1px solid rgba(255,255,255,.08);padding-top:9px;">'
+    + '<div style="font-size:9px;font-weight:800;letter-spacing:.5px;color:rgba(255,255,255,.55);margin-bottom:6px;">HISTORIQUE PAR SAISON</div>'
+    + '<div style="display:grid;grid-template-columns:1fr 34px 30px 30px 34px;gap:6px;font-size:8.5px;'
+      + 'font-weight:800;color:rgba(255,255,255,.45);padding:0 7px 4px;">'
+      + '<div>SAISON</div><div style="text-align:right;">TIT.</div><div style="text-align:right;">BUTS</div>'
+      + '<div style="text-align:right;">P.D.</div><div style="text-align:right;">TIRS</div></div>'
+    + h.map(function (x) {
+        return '<div style="display:grid;grid-template-columns:1fr 34px 30px 30px 34px;gap:6px;align-items:center;'
+          + 'font-size:10.5px;padding:6px 7px;margin-bottom:3px;border-radius:7px;background:rgba(255,255,255,.035);'
+          + 'border-left:3px solid ' + (x.coul || 'rgba(255,255,255,.10)') + ';">'
+          + '<div style="display:flex;align-items:center;gap:6px;min-width:0;">'
+            + (x.logo ? ('<img src="' + x.logo + '" alt="" loading="lazy" onerror="this.style.visibility=\'hidden\'" style="width:15px;height:15px;object-fit:contain;flex:none;">') : '')
+            + '<span style="font-weight:700;color:var(--t1);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">'
+              + lib(x.an) + (x.club ? (' <span style="color:var(--t3);font-size:8.5px;">' + x.club + '</span>') : '') + '</span>'
+          + '</div>'
+          + cel(x.st || x.app, 'rgba(255,255,255,.72)')
+          + cel(x.g, '#f0c828')
+          + cel(x.a, '#1ed760')
+          + cel(x.sh, 'rgba(255,255,255,.55)')
+        + '</div>';
+      }).join('')
+  + '</div>';
+}
+
 async function _g45CompoJoueur(pid, pos) {
   var box = document.getElementById('g45-pst-' + pid);
   var ctx = _g45CompoCtxCourant;
@@ -36018,9 +36137,24 @@ async function _g45CompoJoueur(pid, pos) {
       h += '</div>';
     }
     h += '<button onclick="_g45CompoGamelog(\'' + pid + '\')" style="width:100%;margin-top:8px;padding:7px;border-radius:6px;border:1px solid rgba(255,255,255,.1);background:rgba(255,255,255,.04);color:var(--t2);font-size:10px;font-weight:700;cursor:pointer;">\ud83d\udccb 5 derniers matchs</button>'
-      + '<div id="g45-pgl-' + pid + '"></div></div>';
+      + '<div id="g45-pgl-' + pid + '"></div>'
+      /* L'historique arrive APRES, en differe : il demande une requete par
+         saison et ne doit pas retarder l'affichage des totaux. */
+      + '<div id="g45-phist-' + pid + '"></div></div>';
     box.innerHTML = h;
     _g45CompoPosMem[pid] = pos;
+
+    /* Football uniquement : `statisticslog` n'existe que sur ce sport, et le
+       tableau parle de buts et de passes decisives. */
+    if (ctx.sp === 'soccer') {
+      (async function () {
+        try {
+          var hh = await _g45HistoSaisons(ctx.lg, pid, 4);
+          var cible = document.getElementById('g45-phist-' + pid);
+          if (cible && hh && hh.length) cible.innerHTML = _g45HistoHtml(hh);
+        } catch (e) {}
+      })();
+    }
   } catch (e) {
     box.innerHTML = '<div style="padding:8px 8px 8px 40px;color:#ff6b6b;font-size:10px;">Erreur stats joueur.</div>';
   }
