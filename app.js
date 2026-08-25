@@ -30711,7 +30711,7 @@ var _G45_CACHE_PREFIXES=['g45rcP_','g45rcD_','g45rcY_','g45rc_','g45dcm_','g45dc
      explosait et des ecritures LEGITIMES echouaient en silence (le filtre par
      competition, qui restait bloque sur « Toutes »). Les cartes de tirs sont
      les plus lourdes : plusieurs Ko par match, gardees indefiniment. */
-  'g45butA2_','g45gl3_','g45gl2_','g45gl_','g45_tirs2_','g45_fanart2_','g45_fanart_','g45_img_perso_','g45_tv_prog','g45_mqnom_','g45_mqteam_','g45_mqfond_','g45trv4_','g45_catimg_','g45_catfmt2_','g45_catfmt_','g45ld2_','g45ld_',
+  'g45butA2_','g45gl3_','g45gl2_','g45gl_','g45_tirs2_','g45_fanart2_','g45_fanart_','g45_img_perso_','g45_tv_prog','g45_mqnom_','g45_mqteam_','g45_mqfond_','g45trv4_','g45_catimg_','g45_catfmt2_','g45_catfmt_','g45nrlcal3_','g45nrlcal2_','g45ld2_','g45ld_',
   'g45nrlcal2_','g45_fx_faits','g45_veille_','g45_compet_logos','g45_groq_modele','g45_gemini_modeles',
   /* MESURE DU 20/08 sur le stockage reel d'Antoine (5,1 Mo, sature) :
        fpl_bootstrap_cache ... 1951 Ko  <- a lui seul 38 % du total
@@ -36054,7 +36054,13 @@ function _g45MajCompteurs() {
    ═══════════════════════════════════════════════════════════════════════════ */
 
 function _g45NrlCleCache(annee) {
-  return 'g45nrlcal2_' + _g45NrlCtx.sport + '_' + _g45NrlCtx.ligue + '_' + annee;
+  /* VERSION 3 (25/08). Les entrees precedentes ont ete enregistrees AVANT deux
+     corrections : la lecture du score, qui rendait 0-0 partout hors NRL, et la
+     capture des couleurs et logos des clubs. Comme une saison terminee est
+     conservee SANS limite de duree, ces donnees incompletes seraient restees
+     affichees indefiniment. Changer la cle force une reconstruction propre,
+     une seule fois. */
+  return 'g45nrlcal3_' + _g45NrlCtx.sport + '_' + _g45NrlCtx.ligue + '_' + annee;
 }
 
 var _g45NrlChargerOrig = (typeof g45NrlCharger === 'function') ? g45NrlCharger : null;
@@ -36069,6 +36075,11 @@ window.g45NrlCharger = async function (annee, force) {
       if (brut) {
         var o = JSON.parse(brut);
         var d = (o && o.d) || [];
+        /* GARDE-FOU (25/08) : un cache dont AUCUN match joue ne porte de score
+           vient forcement d'une version fautive. On l'ignore et on recharge,
+           plutot que d'afficher une saison entiere a 0-0. */
+        var joues = d.filter(function (m) { return m.joue; });
+        if (joues.length && !joues.some(function (m) { return (m.sDom || m.sExt); })) d = [];
         if (d.length) {
           var tousJoues = d.every(function (m) { return m.joue; });
           var frais = (Date.now() - (o.t || 0)) < 6 * 3600000;
