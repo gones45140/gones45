@@ -28325,6 +28325,34 @@ async function _g45ResolveRefs(refs){
    La cle porte le SPORT et le CHAMPIONNAT, tires de l'URL : les identifiants
    d'equipes ESPN redemarrent a 1 dans chaque sport, et c'est ce piege qui avait
    mis les logos de la NFL sur le classement des lanceurs MLB. */
+/* ═══ ABREVIATIONS FRANCAISES (25/08) ═══
+   ESPN suit sa convention anglophone : LILL pour Lille, OLM pour Marseille,
+   PARIS pour le PSG. Antoine lit du football francais, il attend LOSC, OM, PSG.
+   Table posee sur les clubs francais uniquement, la ou le decalage se voit ;
+   partout ailleurs l'abreviation d'ESPN est conservee telle quelle.
+   La cle est l'IDENTIFIANT d'equipe et non le nom : il est stable, alors qu'un
+   nom change d'ecriture d'un point d'entree a l'autre. */
+var _G45_ABBR_FR = {
+  '176':'OM',    /* Marseille          — ESPN : OLM   */
+  '166':'LOSC',  /* Lille              — ESPN : LILL  */
+  '160':'PSG',   /* Paris Saint-Germain— ESPN : PARIS */
+  '167':'OL',    /* Lyon               — ESPN : LYON  */
+  '174':'ASM',   /* Monaco             — ESPN : MON   */
+  '169':'SRFC',  /* Rennes             — ESPN : REN   */
+  '175':'RCL',   /* Lens                                */
+  '164':'OGCN',  /* Nice               — ESPN : NICE  */
+  '179':'FCN',   /* Nantes             — ESPN : NAN   */
+  '2196':'RCSA', /* Strasbourg         — ESPN : STR   */
+  '168':'TFC',   /* Toulouse           — ESPN : TOU   */
+  '3243':'SB29', /* Brest              — ESPN : BRE   */
+  '170':'AJA',   /* Auxerre                             */
+  '178':'ASSE'   /* Saint-Etienne      — ESPN : STE    */
+};
+function _g45AbbrFr(id, defaut) {
+  return _G45_ABBR_FR[String(id || '')] || defaut || '';
+}
+window._g45AbbrFr = _g45AbbrFr;
+
 async function _g45TeamMetaRefs(refs) {
   var out = {}, aFaire = [];
   (refs || []).forEach(function (ref) {
@@ -28348,7 +28376,7 @@ async function _g45TeamMetaRefs(refs) {
       var coul = d.color ? ('#' + String(d.color).replace('#', '')) : '';
       if (coul && typeof _g45CoulFond === 'function') coul = _g45CoulFond(coul);
       var meta = {
-        a: d.abbreviation || d.shortDisplayName || '',
+        a: _g45AbbrFr(u.id, d.abbreviation || d.shortDisplayName || ''),
         l: ((d.logos || [])[0] || {}).href || '',
         c: coul
       };
@@ -28370,6 +28398,7 @@ function g45ToggleScorers(slug, sportPath, btn){
   g45LoadScorers(slug, sportPath, box);
 }
 async function g45LoadScorers(slug, sportPath, box){
+  window._g45ScorerCtx = { sp: sportPath || 'soccer', lg: slug };
   box.innerHTML='<div style="display:flex;align-items:center;gap:8px;padding:14px;color:var(--t3);font-size:11px;"><div style="width:12px;height:12px;border:2px solid rgba(77,132,255,.2);border-top-color:#4d84ff;border-radius:50%;animation:spin .8s linear infinite;"></div>Chargement des buteurs…</div>';
   var now=new Date(), curY=now.getFullYear();
   var augY=(now.getMonth()>=7)?curY:curY-1;
@@ -28403,6 +28432,7 @@ async function g45LoadScorers(slug, sportPath, box){
     function nameOf(L){ return map['ath:'+_g45RefId(L.athlete&&L.athlete.$ref)]||'?'; }
     function teamOf(L){ return map['team:'+_g45RefId(L.team&&L.team.$ref)]||''; }
     function metaOf(L){ return meta[_g45RefId(L.team&&L.team.$ref)]||{}; }
+    function _aid(L){ return _g45RefId(L.athlete&&L.athlete.$ref)||''; }
 
     /* ═══ LIFTING DU 25/08 ═══
        La liste alignait dix lignes identiques : le premier et le dixieme
@@ -28415,7 +28445,12 @@ async function g45LoadScorers(slug, sportPath, box){
     function ptl(L, rang){
       var m=metaOf(L), c=m.c||'#4d84ff';
       var med=['\ud83e\udd47','\ud83e\udd48','\ud83e\udd49'][rang]||'';
-      return '<div style="position:relative;overflow:hidden;flex:1;min-width:0;border-radius:12px;padding:11px 10px;'
+      /* CLIQUABLE (25/08) : le panneau joueur existe deja, il lui faut seulement
+         un conteneur portant son identifiant et le contexte de competition.
+         Les deux sont disponibles ici — on les pose et on reutilise
+         `_g45CompoJoueur`, qui gere aussi la fermeture au second clic. */
+      return '<div onclick="g45ScorerOuvrir(\''+_aid(L)+'\')" title="Voir la fiche du joueur" '
+        + 'style="position:relative;overflow:hidden;flex:1;min-width:0;border-radius:12px;padding:11px 10px;cursor:pointer;'
         + 'background:linear-gradient(160deg,'+c+'55 0%,rgba(12,17,29,.90) 62%);'
         + 'border:1px solid rgba(255,255,255,.10);text-align:center;">'
         + (m.l?('<img src="'+m.l+'" alt="" loading="lazy" onerror="this.style.visibility=\'hidden\'" '
@@ -28429,7 +28464,8 @@ async function g45LoadScorers(slug, sportPath, box){
     }
     function ligne(L, i){
       var m=metaOf(L), c=m.c||'rgba(255,255,255,.10)';
-      return '<div style="display:flex;align-items:center;gap:9px;padding:7px 9px;margin-bottom:4px;border-radius:9px;'
+      return '<div onclick="g45ScorerOuvrir(\''+_aid(L)+'\')" title="Voir la fiche du joueur" '
+        + 'style="display:flex;align-items:center;gap:9px;padding:7px 9px;margin-bottom:4px;border-radius:9px;cursor:pointer;'
         + 'background:rgba(255,255,255,.035);border-left:3px solid '+c+';">'
         + '<div style="width:16px;text-align:center;color:var(--t3);font-weight:800;font-size:10px;flex:none;">'+(i+1)+'</div>'
         + (m.l?('<img src="'+m.l+'" alt="" loading="lazy" onerror="this.style.visibility=\'hidden\'" '
@@ -28438,14 +28474,16 @@ async function g45LoadScorers(slug, sportPath, box){
           + 'white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">'+nameOf(L)+'</div>'
         + '<div style="font-size:8.5px;font-weight:700;color:var(--t3);letter-spacing:.3px;flex:none;">'+(m.a||teamOf(L))+'</div>'
         + '<div style="font-size:13px;font-weight:900;color:var(--a);min-width:24px;text-align:right;flex:none;">'+(L.value!=null?Math.round(L.value):'')+'</div>'
-      + '</div>';
+      + '</div>'
+      + '<div id="g45-pst-'+_aid(L)+'"></div>';
     }
     function listHtml(title, ico, arr){
       if(!arr.length) return '';
       var podium=arr.slice(0,3), suite=arr.slice(3);
       return '<div style="margin-bottom:14px;">'
         + '<div style="font-size:11px;font-weight:800;color:var(--t1);margin:6px 0 7px;">'+ico+' '+title+'</div>'
-        + (podium.length?('<div style="display:flex;gap:7px;margin-bottom:8px;">'+podium.map(ptl).join('')+'</div>'):'')
+        + (podium.length?('<div style="display:flex;gap:7px;margin-bottom:8px;">'+podium.map(ptl).join('')+'</div>'
+            + podium.map(function(L){ return '<div id="g45-pst-'+_aid(L)+'"></div>'; }).join('')):'')
         + suite.map(function(L,i){ return ligne(L,i+3); }).join('')
       + '</div>';
     }
@@ -35873,7 +35911,7 @@ async function _g45CompoEffectif(el, nom, avecFoot) {
     var num = p.jersey || '';
     var pos = (p.position && (p.position.abbreviation || p.position.name)) || '';
     var nm = p.fullName || p.displayName || ((p.firstName || '') + ' ' + (p.lastName || ''));
-    var ht = p.displayHeight || '';
+    var ht = _g45TailleCm(p);
     /* ESPN sert souvent l'age tout calcule ; sinon on le deduit de la date de
        naissance, dont le champ varie selon les ligues. */
     var age = p.age;
@@ -35884,6 +35922,8 @@ async function _g45CompoEffectif(el, nom, avecFoot) {
     var pid = String(p.id || '');
     if (!pid) return;
     var img = (p.headshot && p.headshot.href) || _g45PhotoDe(photos, nm) || _g45HeadshotUrl(ctx.sp, pid);
+    var posFr = _g45PosteFr(pos, (p.position && p.position.name) || '');
+    var natio = _g45NatioHtml(p);
     html += '<div onclick="_g45CompoJoueur(\'' + pid + '\',\'' + String(pos).replace(/'/g, '') + '\')" style="display:flex;align-items:center;gap:9px;padding:7px 6px;border-bottom:1px solid rgba(255,255,255,.04);cursor:pointer;border-radius:5px;">'
       + '<div style="position:relative;width:30px;height:30px;flex-shrink:0;">'
       + '<div style="position:absolute;inset:0;border-radius:50%;background:rgba(77,132,255,.12);display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:800;color:#4d84ff;">' + (num || '\u2014') + '</div>'
@@ -35891,7 +35931,10 @@ async function _g45CompoEffectif(el, nom, avecFoot) {
       + '</div>'
       + '<div style="flex:1;min-width:0;">'
       + '<div style="font-size:11.5px;font-weight:700;color:var(--t1);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">' + (num ? '#' + num + ' ' : '') + nm + '</div>'
-      + '<div style="font-size:9px;color:var(--t3);">' + [pos, ht, (age ? (age + ' ans') : '')].filter(Boolean).join(' \u00b7 ') + '</div></div>'
+      + '<div style="font-size:9px;color:rgba(255,255,255,.55);display:flex;align-items:center;gap:5px;flex-wrap:wrap;">'
+        + (posFr ? ('<span style="background:rgba(77,132,255,.16);color:#8aa0ff;border-radius:4px;padding:1px 6px;font-weight:700;">' + posFr + '</span>') : '')
+        + [natio, ht, (age ? (age + ' ans') : '')].filter(Boolean).join('<span style="opacity:.4;"> \u00b7 </span>')
+      + '</div></div>'
       + '<div style="color:#4d84ff;font-size:13px;">\ud83d\udcca</div></div>'
       + '<div id="g45-pst-' + pid + '"></div>';
   });
@@ -35976,6 +36019,47 @@ var _G45_POSTES_SANS_STATS = {
    requete : elle y figure en clair, autant l'economiser.
    Cache : douze heures. Les saisons closes ne bougent plus, mais celle en cours
    evolue chaque week-end, et le tout tient dans une seule entree. */
+/* ═══ LISIBILITE DE LA FICHE JOUEUR (25/08) ═══
+   La ligne affichait « F · 5' 11" · 26 ans » : des PIEDS et des POUCES, l'unite
+   d'ESPN. Illisible pour un francais, et convertible sans aucune requete
+   puisque `height` est deja fourni en pouces a cote de `displayHeight`.
+   Le poste passe en toutes lettres — « F » ne dit rien, « Attaquant » si — et
+   la nationalite, presente dans la reponse, n'etait pas affichee du tout. */
+function _g45TailleCm(p) {
+  try {
+    var po = parseFloat(p && p.height);
+    if (po > 0 && po < 100) return Math.round(po * 2.54) + ' cm';
+    var d = String((p && p.displayHeight) || '');
+    var m = d.match(/(\d+)\s*'\s*(\d+)?/);
+    if (m) return Math.round(((+m[1]) * 12 + (+(m[2] || 0))) * 2.54) + ' cm';
+    var mm = d.match(/(\d+(?:[.,]\d+)?)\s*m\b/i);
+    if (mm) return Math.round(parseFloat(mm[1].replace(',', '.')) * 100) + ' cm';
+  } catch (e) {}
+  return '';
+}
+var _G45_POSTE_FR = {
+  G:'Gardien', GK:'Gardien', D:'D\u00e9fenseur', DF:'D\u00e9fenseur', CB:'D\u00e9fenseur central',
+  LB:'Lat\u00e9ral gauche', RB:'Lat\u00e9ral droit', M:'Milieu', MF:'Milieu', CM:'Milieu',
+  DM:'Milieu d\u00e9fensif', AM:'Milieu offensif', F:'Attaquant', FW:'Attaquant',
+  ST:'Attaquant', CF:'Attaquant', W:'Ailier', LW:'Ailier gauche', RW:'Ailier droit'
+};
+function _g45PosteFr(abbr, nom) {
+  var a = String(abbr || '').toUpperCase();
+  return _G45_POSTE_FR[a] || nom || abbr || '';
+}
+function _g45NatioHtml(p) {
+  try {
+    var n = (p.citizenship || (p.birthCountry && p.birthCountry.name)
+          || (p.nationality && (p.nationality.name || p.nationality)) || '');
+    var fl = (p.flag && p.flag.href) || '';
+    if (!fl && n && typeof flagUrl === 'function') fl = flagUrl(n) || '';
+    if (!n && !fl) return '';
+    return (fl ? ('<img src="' + fl + '" alt="" loading="lazy" onerror="this.style.display=\'none\'" '
+        + 'style="width:14px;height:10px;object-fit:cover;border-radius:2px;vertical-align:-1px;margin-right:4px;">') : '')
+      + (n ? ('<span>' + n + '</span>') : '');
+  } catch (e) { return ''; }
+}
+
 async function _g45HistoSaisons(lg, aid, maxi) {
   maxi = maxi || 4;
   var ck = 'g45histo_' + lg + '_' + aid;
@@ -36064,6 +36148,18 @@ function _g45HistoHtml(h) {
       }).join('')
   + '</div>';
 }
+
+/* Ouvre la fiche d'un joueur depuis le classement des buteurs (25/08).
+   `_g45CompoJoueur` s'appuie sur `_g45CompoCtxCourant`, pose par la vue
+   Effectif. Ici cette vue n'a pas ete ouverte : on renseigne donc le contexte
+   avec la competition affichee avant d'appeler. */
+window.g45ScorerOuvrir = function (pid) {
+  if (!pid) return;
+  try {
+    if (window._g45ScorerCtx) _g45CompoCtxCourant = window._g45ScorerCtx;
+    _g45CompoJoueur(pid, '');
+  } catch (e) {}
+};
 
 async function _g45CompoJoueur(pid, pos) {
   var box = document.getElementById('g45-pst-' + pid);
