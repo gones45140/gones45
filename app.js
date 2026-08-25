@@ -1996,7 +1996,7 @@ function render(){
     return '<tr>'
       +'<td><div style="font-size:10px;color:var(--t3);">'+(h.sport||'')+' '+(h.comp||'')+' '+(h.date?'📅 '+h.date:'')+' '+(h.heure?'⏰ '+h.heure:'')+'</div>'
       +'<div style="font-weight:600;">'+(h.domicile==='dom'?'🏠 ':h.domicile==='ext'?'🚌 ':'')+(h.isCombi?h.n:h.target)+'</div>'
-      +'<div style="font-size:10px;color:var(--t2);">'+(h.type||'—')+' · @'+h.cote+' · '+bbadge(h.b)+(h.isFreebet?' 🎟':'')+(h.isLay?' ↩️ Lay':'')+'</div></td>'
+      +'<div style="font-size:10px;color:var(--t2);">'+((typeof g45TypeSansCote==='function'?g45TypeSansCote(h.type):h.type)||'—')+' · @'+h.cote+' · '+bbadge(h.b)+(h.isFreebet?' 🎟':'')+(h.isLay?' ↩️ Lay':'')+'</div></td>'
       +'<td style="color:var(--gold);font-weight:700;">'+h.m+'€</td>'
       +'<td style="text-align:right;white-space:nowrap"><button data-id="'+h.id+'" onclick="openBetLive(this.dataset.id)" title="Voir le match live" style="display:inline-flex;align-items:center;padding:5px 7px;background:rgba(167,139,250,.12);border:1px solid rgba(167,139,250,.3);border-radius:4px;color:#a78bfa;font-size:11px;font-weight:700;cursor:pointer;margin-right:3px;">\ud83d\udce1</button><a href="https://www.google.com/search?q='+encodeURIComponent(h.target+' sofascore résumé')+'" target="_blank" style="display:inline-flex;align-items:center;padding:5px 7px;background:rgba(77,132,255,.1);border:1px solid rgba(77,132,255,.25);border-radius:4px;color:#4d84ff;font-size:11px;font-weight:700;text-decoration:none;margin-right:3px;" title="Résumé">🔍</a><button class="sbtn sw" data-id="'+h.id+'" onclick="result(this.dataset.id,true)" style="margin-right:3px">✅</button><button class="sbtn sl" data-id="'+h.id+'" onclick="result(this.dataset.id,false)" style="margin-right:3px">❌</button><button data-id="'+h.id+'" onclick="editBet(this.dataset.id)" style="background:none;border:1px solid rgba(77,132,255,.25);color:var(--a);font-size:11px;font-weight:700;padding:5px 8px;border-radius:4px;cursor:pointer;margin-right:3px">✏️</button><button data-id="'+h.id+'" onclick="cancelBet(this.dataset.id)" style="background:none;border:1px solid rgba(255,69,69,.25);color:var(--r);font-size:11px;font-weight:700;padding:5px 8px;border-radius:4px;cursor:pointer">✕</button></td>'
       +'</tr>';
@@ -8725,7 +8725,7 @@ function render(){
     return '<tr>'
       +'<td><div style="font-size:10px;color:var(--t3);">'+(h.sport||'')+' '+(h.comp||'')+' '+(h.date?'📅 '+h.date:'')+' '+(h.heure?'⏰ '+h.heure:'')+'</div>'
       +'<div style="font-weight:600;">'+(h.domicile==='dom'?'🏠 ':h.domicile==='ext'?'🚌 ':'')+(h.isCombi?h.n:h.target)+'</div>'
-      +'<div style="font-size:10px;color:var(--t2);">'+(h.type||'—')+' · @'+h.cote+' · '+bbadge(h.b)+(h.isFreebet?' 🎟':'')+(h.isLay?' ↩️ Lay':'')+'</div></td>'
+      +'<div style="font-size:10px;color:var(--t2);">'+((typeof g45TypeSansCote==='function'?g45TypeSansCote(h.type):h.type)||'—')+' · @'+h.cote+' · '+bbadge(h.b)+(h.isFreebet?' 🎟':'')+(h.isLay?' ↩️ Lay':'')+'</div></td>'
       +'<td style="color:var(--gold);font-weight:700;">'+h.m+'€</td>'
       +'<td style="text-align:right;white-space:nowrap"><button data-id="'+h.id+'" onclick="openBetLive(this.dataset.id)" title="Voir le match live" style="display:inline-flex;align-items:center;padding:5px 7px;background:rgba(167,139,250,.12);border:1px solid rgba(167,139,250,.3);border-radius:4px;color:#a78bfa;font-size:11px;font-weight:700;cursor:pointer;margin-right:3px;">\ud83d\udce1</button><a href="https://www.google.com/search?q='+encodeURIComponent(h.target+' sofascore résumé')+'" target="_blank" style="display:inline-flex;align-items:center;padding:5px 7px;background:rgba(77,132,255,.1);border:1px solid rgba(77,132,255,.25);border-radius:4px;color:#4d84ff;font-size:11px;font-weight:700;text-decoration:none;margin-right:3px;" title="Résumé">🔍</a><button class="sbtn sw" data-id="'+h.id+'" onclick="result(this.dataset.id,true)" style="margin-right:3px">✅</button><button class="sbtn sl" data-id="'+h.id+'" onclick="result(this.dataset.id,false)" style="margin-right:3px">❌</button><button data-id="'+h.id+'" onclick="editBet(this.dataset.id)" style="background:none;border:1px solid rgba(77,132,255,.25);color:var(--a);font-size:11px;font-weight:700;padding:5px 8px;border-radius:4px;cursor:pointer;margin-right:3px">✏️</button><button data-id="'+h.id+'" onclick="cancelBet(this.dataset.id)" style="background:none;border:1px solid rgba(255,69,69,.25);color:var(--r);font-size:11px;font-weight:700;padding:5px 8px;border-radius:4px;cursor:pointer">✕</button></td>'
       +'</tr>';
@@ -24897,10 +24897,37 @@ function _g45MatchRow(e, slug, sportPath){
   var badgeCol = live?'#ff4545':(fin?'var(--t3)':'#8aa0ff');
   var score=((hS!==''&&aS!=='')&&(live||fin))?(hS+' - '+aS):'vs';
   var onclick = (sportPath==='soccer') ? 'toggleSaisonMatchDetail(this)' : 'toggleGenericMatchDetail(this)';
-  return '<div onclick="'+onclick+'" data-eid="'+e.id+'" data-lg="'+slug+'" data-sport="'+sportPath+'" style="display:grid;grid-template-columns:1fr auto 1fr 62px;gap:6px;align-items:center;padding:9px 10px;background:'+(live?'rgba(255,69,69,.07)':'rgba(255,255,255,.03)')+';border-radius:8px;border-left:3px solid '+(live?'#ff4545':'rgba(255,255,255,.1)')+';cursor:pointer;margin-bottom:4px;">'
-    +'<div style="font-size:11px;font-weight:700;color:var(--t1);text-align:right;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">'+hN+'</div>'
+
+  /* ═══ LIFTING DU 25/08 ═══
+     Cette ligne sert le calendrier, la liste par championnat et le direct : la
+     retoucher lifte plusieurs vues d'un coup.
+     Ajoutes : le blason de chaque club, un degrade discret a ses couleurs, et
+     un liseré gauche colore. Tout vient de l'objet `competitor` deja telecharge
+     — aucune requete supplementaire.
+     Le degrade reste TRES leger (18 et 12 d'opacite) : contrairement aux cartes
+     du direct, il n'y a ici qu'une ligne de 40 px de haut, et les noms sont
+     ecrits en clair par-dessus. Un fond franc les rendrait illisibles. */
+  var hC=(home.team&&home.team.color)?('#'+String(home.team.color).replace('#','')):'';
+  var aC=(away.team&&away.team.color)?('#'+String(away.team.color).replace('#','')):'';
+  if(typeof _g45CoulFond==='function'){ if(hC) hC=_g45CoulFond(hC); if(aC) aC=_g45CoulFond(aC); }
+  var hL=(home.team&&home.team.logo)||'', aL=(away.team&&away.team.logo)||'';
+  var img=function(u){
+    return u ? ('<img src="'+u+'" loading="lazy" alt="" onerror="this.style.visibility=\'hidden\'" '
+      + 'style="width:20px;height:20px;object-fit:contain;flex:none;">') : '<span style="width:20px;flex:none;"></span>';
+  };
+  var fond = live ? 'rgba(255,69,69,.07)'
+    : ((hC||aC)
+        ? ('linear-gradient(100deg,'+(hC||'#4d84ff')+'2e 0%,rgba(255,255,255,.03) 38%,rgba(255,255,255,.03) 62%,'+(aC||'#f0b020')+'2e 100%)')
+        : 'rgba(255,255,255,.03)');
+
+  return '<div onclick="'+onclick+'" data-eid="'+e.id+'" data-lg="'+slug+'" data-sport="'+sportPath+'" style="display:grid;grid-template-columns:1fr auto 1fr 62px;gap:6px;align-items:center;padding:9px 10px;background:'+fond+';border-radius:8px;border-left:3px solid '+(live?'#ff4545':(hC||'rgba(255,255,255,.1)'))+';cursor:pointer;margin-bottom:4px;">'
+    +'<div style="display:flex;align-items:center;justify-content:flex-end;gap:7px;min-width:0;">'
+      +'<span style="font-size:11px;font-weight:700;color:var(--t1);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">'+hN+'</span>'+img(hL)
+    +'</div>'
     +'<div data-g45score style="font-size:12px;font-weight:900;color:'+(live?'#ff4545':'var(--a)')+';text-align:center;white-space:nowrap;min-width:42px;">'+score+'</div>'
-    +'<div style="font-size:11px;font-weight:700;color:var(--t1);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">'+aN+'</div>'
+    +'<div style="display:flex;align-items:center;gap:7px;min-width:0;">'
+      +img(aL)+'<span style="font-size:11px;font-weight:700;color:var(--t1);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">'+aN+'</span>'
+    +'</div>'
     +'<div data-g45badge style="text-align:right;font-size:9px;font-weight:700;color:'+badgeCol+';white-space:nowrap;">'+badge+'</div>'
     +'</div>'
     +'<div class="smd-panel" style="display:none;"></div>';
@@ -27797,7 +27824,17 @@ function saveBetEdit(id){
 window.saveBetEdit=saveBetEdit;
 /* Normalise un type de pari : fusionne buteur/passeur/décisif (casse, accent, nom de joueur), garde les accents pour le reste. Sert de clé ET de libellé. */
 function _normType(t){
+  /* COTES RETIREES D'ABORD (25/08). Le libelle d'un combine porte la cote de
+     chaque selection — « Victoire @1.2 + Under 3.5 @1.5 ». Chaque combinaison
+     de cotes formait donc un type distinct, et le bilan comptait autant de
+     categories que de paris : Antoine devait effacer les cotes a la main pour
+     obtenir un regroupement lisible.
+     Le nettoyage est fait ICI, dans la normalisation deja utilisee par tous les
+     regroupements, plutot que chez chacun des appelants. L'historique deja
+     enregistre en profite retroactivement, et la cote reste intacte dans le
+     champ `cote` du pari. */
   var raw=(t==null?'':(''+t)).trim();
+  if(typeof g45TypeSansCote==='function') raw=g45TypeSansCote(raw);
   if(!raw) return 'Autre';
   var s=raw.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
   if(s.indexOf('buteur')===0) return 'Buteur';
@@ -27977,7 +28014,19 @@ async function g45LoadCalendar(slug, btn, monthOffset, sportPath){
     var r=await fetch('https://site.api.espn.com/apis/site/v2/sports/'+sportPath+'/'+slug+'/scoreboard?dates='+_g45ymd(mb.first)+'-'+_g45ymd(mb.last)+'&limit=1000');
     var data=await r.json();
     var events=(data.events||[]);
+    /* LOGO DE COMPETITION MEMORISE (25/08). ESPN ne le renvoie PAS a chaque
+       appel du scoreboard : present au premier chargement, absent des qu'on
+       navigue d'un mois. Le logo apparaissait donc puis disparaissait, remplace
+       par l'emoji du sport — c'est le comportement signale par Antoine.
+       On le retient donc par competition des qu'on le voit, et on le relit
+       quand la reponse ne le porte pas. Un logo de championnat ne change
+       pratiquement jamais : aucune peremption necessaire. */
     var lgLogo=''; try{ var lo=(data.leagues&&data.leagues[0]&&data.leagues[0].logos); if(lo){ lgLogo=Array.isArray(lo)?((lo[0]&&lo[0].href)||''):(lo.href||''); } }catch(e){}
+    var _clLogo='g45_lglogo_'+sportPath+'_'+slug;
+    try{
+      if(lgLogo){ localStorage.setItem(_clLogo, lgLogo); }
+      else { lgLogo = localStorage.getItem(_clLogo) || ''; }
+    }catch(e){}
     var sportIco={soccer:'⚽',basketball:'🏀',hockey:'🏒',baseball:'⚾',football:'🏈',rugby:'🏉','rugby-league':'🏉'}[sportPath]||'⚽';
     var marker = lgLogo ? ('<img src="'+lgLogo+'" style="width:18px;height:18px;object-fit:contain;" onerror="this.style.display=\'none\'">') : ('<span style="font-size:15px;">'+sportIco+'</span>');
     var byDay={};
@@ -28250,6 +28299,48 @@ async function _g45ResolveRefs(refs){
   }));
   return out;
 }
+/* ═══ BLASON ET COULEUR D'UNE EQUIPE, DEPUIS SA REFERENCE (25/08) ═══
+   `_g45ResolveRefs` ne retient que l'abreviation : elle sert a plusieurs vues
+   et changer sa valeur de retour les casserait toutes. On ajoute donc une
+   resolution parallele, dediee, avec son propre cache — definitif, un blason
+   et une couleur de club ne changeant pas en cours de saison.
+   La cle porte le SPORT et le CHAMPIONNAT, tires de l'URL : les identifiants
+   d'equipes ESPN redemarrent a 1 dans chaque sport, et c'est ce piege qui avait
+   mis les logos de la NFL sur le classement des lanceurs MLB. */
+async function _g45TeamMetaRefs(refs) {
+  var out = {}, aFaire = [];
+  (refs || []).forEach(function (ref) {
+    if (!ref) return;
+    var url = String(ref).replace(/^http:/, 'https:');
+    var id = (url.match(/teams\/(\d+)/) || [, ''])[1];
+    if (!id) return;
+    var sp = (url.match(/\/sports\/([a-z-]+)\//i) || [, ''])[1];
+    var lg = (url.match(/\/leagues\/([a-z0-9.-]+)\//i) || [, ''])[1];
+    var cle = 'g45tmeta_' + sp + '_' + lg + '_' + id;
+    if (out[id]) return;
+    var c = null;
+    try { c = JSON.parse(localStorage.getItem(cle) || 'null'); } catch (e) {}
+    if (c && c.a != null) { out[id] = c; return; }
+    aFaire.push({ id: id, url: url, cle: cle });
+  });
+  await Promise.all(aFaire.map(async function (u) {
+    try {
+      var r = await fetch(u.url); if (!r.ok) return;
+      var d = await r.json();
+      var coul = d.color ? ('#' + String(d.color).replace('#', '')) : '';
+      if (coul && typeof _g45CoulFond === 'function') coul = _g45CoulFond(coul);
+      var meta = {
+        a: d.abbreviation || d.shortDisplayName || '',
+        l: ((d.logos || [])[0] || {}).href || '',
+        c: coul
+      };
+      out[u.id] = meta;
+      try { localStorage.setItem(u.cle, JSON.stringify(meta)); } catch (e) {}
+    } catch (e) {}
+  }));
+  return out;
+}
+
 function g45ToggleScorers(slug, sportPath, btn){
   var box=document.getElementById('g45-scorers'); if(!box) return;
   if(box.getAttribute('data-open')==='1'){
@@ -28288,18 +28379,57 @@ async function g45LoadScorers(slug, sportPath, box){
       if(L.team&&L.team.$ref) refs.push(['team',L.team.$ref]);
     });
     var map=await _g45ResolveRefs(refs);
+    /* Blasons et couleurs, resolus en parallele et mis en cache definitivement. */
+    var meta={};
+    try{ meta=await _g45TeamMetaRefs(goalTop.concat(assistTop).map(function(L){ return L.team&&L.team.$ref; })); }catch(e){}
     function nameOf(L){ return map['ath:'+_g45RefId(L.athlete&&L.athlete.$ref)]||'?'; }
     function teamOf(L){ return map['team:'+_g45RefId(L.team&&L.team.$ref)]||''; }
+    function metaOf(L){ return meta[_g45RefId(L.team&&L.team.$ref)]||{}; }
+
+    /* ═══ LIFTING DU 25/08 ═══
+       La liste alignait dix lignes identiques : le premier et le dixieme
+       avaient exactement le meme poids visuel alors qu'ils n'ont pas la meme
+       valeur, et l'abreviation du club, reléguee a droite en petit gris, ne se
+       lisait pas. D'ou l'aspect « liste de salon de discussion ».
+       Le podium est desormais detache en trois cartes, avec le blason en grand,
+       la couleur du club en fond et le total en gros. La suite reste en liste,
+       mais avec blason et liseré colore. */
+    function ptl(L, rang){
+      var m=metaOf(L), c=m.c||'#4d84ff';
+      var med=['\ud83e\udd47','\ud83e\udd48','\ud83e\udd49'][rang]||'';
+      return '<div style="position:relative;overflow:hidden;flex:1;min-width:0;border-radius:12px;padding:11px 10px;'
+        + 'background:linear-gradient(160deg,'+c+'55 0%,rgba(12,17,29,.90) 62%);'
+        + 'border:1px solid rgba(255,255,255,.10);text-align:center;">'
+        + (m.l?('<img src="'+m.l+'" alt="" loading="lazy" onerror="this.style.visibility=\'hidden\'" '
+            + 'style="position:absolute;right:-10px;bottom:-10px;width:56px;height:56px;object-fit:contain;opacity:.20;pointer-events:none;">'):'')
+        + '<div style="position:relative;font-size:15px;line-height:1;">'+med+'</div>'
+        + '<div style="position:relative;font-size:11px;font-weight:800;color:var(--t1);margin-top:5px;'
+          + 'white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">'+nameOf(L)+'</div>'
+        + '<div style="position:relative;font-size:8.5px;font-weight:700;color:rgba(255,255,255,.62);letter-spacing:.4px;">'+(m.a||teamOf(L))+'</div>'
+        + '<div style="position:relative;font-size:20px;font-weight:900;color:#f0c828;margin-top:3px;">'+(L.value!=null?Math.round(L.value):'')+'</div>'
+      + '</div>';
+    }
+    function ligne(L, i){
+      var m=metaOf(L), c=m.c||'rgba(255,255,255,.10)';
+      return '<div style="display:flex;align-items:center;gap:9px;padding:7px 9px;margin-bottom:4px;border-radius:9px;'
+        + 'background:rgba(255,255,255,.035);border-left:3px solid '+c+';">'
+        + '<div style="width:16px;text-align:center;color:var(--t3);font-weight:800;font-size:10px;flex:none;">'+(i+1)+'</div>'
+        + (m.l?('<img src="'+m.l+'" alt="" loading="lazy" onerror="this.style.visibility=\'hidden\'" '
+            + 'style="width:19px;height:19px;object-fit:contain;flex:none;">'):'<span style="width:19px;flex:none;"></span>')
+        + '<div style="flex:1;min-width:0;font-size:11.5px;font-weight:700;color:var(--t1);'
+          + 'white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">'+nameOf(L)+'</div>'
+        + '<div style="font-size:8.5px;font-weight:700;color:var(--t3);letter-spacing:.3px;flex:none;">'+(m.a||teamOf(L))+'</div>'
+        + '<div style="font-size:13px;font-weight:900;color:var(--a);min-width:24px;text-align:right;flex:none;">'+(L.value!=null?Math.round(L.value):'')+'</div>'
+      + '</div>';
+    }
     function listHtml(title, ico, arr){
       if(!arr.length) return '';
-      var rows=arr.map(function(L,i){
-        return '<div style="display:grid;grid-template-columns:20px 1fr auto auto;gap:8px;align-items:center;padding:5px 3px;border-top:1px solid rgba(255,255,255,.05);font-size:12px;">'
-          +'<div style="color:var(--t3);font-weight:700;">'+(i+1)+'</div>'
-          +'<div style="color:var(--t1);font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">'+nameOf(L)+'</div>'
-          +'<div style="color:var(--t3);font-size:9px;">'+teamOf(L)+'</div>'
-          +'<div style="color:var(--a);font-weight:800;min-width:24px;text-align:right;">'+(L.value!=null?Math.round(L.value):'')+'</div></div>';
-      }).join('');
-      return '<div style="margin-bottom:10px;"><div style="font-size:11px;font-weight:800;color:var(--t1);margin:6px 0 2px;">'+ico+' '+title+'</div>'+rows+'</div>';
+      var podium=arr.slice(0,3), suite=arr.slice(3);
+      return '<div style="margin-bottom:14px;">'
+        + '<div style="font-size:11px;font-weight:800;color:var(--t1);margin:6px 0 7px;">'+ico+' '+title+'</div>'
+        + (podium.length?('<div style="display:flex;gap:7px;margin-bottom:8px;">'+podium.map(ptl).join('')+'</div>'):'')
+        + suite.map(function(L,i){ return ligne(L,i+3); }).join('')
+      + '</div>';
     }
     var seasLbl = used ? (used+'-'+String(used+1).slice(-2)) : '';
     box.innerHTML='<div style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:#4d84ff;margin:2px 0 8px;">⚽ Classement individuel'+(seasLbl?' · '+seasLbl:'')+'</div>'
@@ -30711,7 +30841,7 @@ var _G45_CACHE_PREFIXES=['g45rcP_','g45rcD_','g45rcY_','g45rc_','g45dcm_','g45dc
      explosait et des ecritures LEGITIMES echouaient en silence (le filtre par
      competition, qui restait bloque sur « Toutes »). Les cartes de tirs sont
      les plus lourdes : plusieurs Ko par match, gardees indefiniment. */
-  'g45butA2_','g45gl3_','g45gl2_','g45gl_','g45_tirs2_','g45_fanart2_','g45_fanart_','g45_img_perso_','g45_tv_prog','g45_mqnom_','g45_mqteam_','g45_mqfond_','g45trv4_','g45_catimg_','g45_catfmt2_','g45_catfmt_','g45nrlcal3_','g45nrlcal2_','g45ld2_','g45ld_',
+  'g45butA2_','g45gl3_','g45gl2_','g45gl_','g45_tirs2_','g45_fanart2_','g45_fanart_','g45_img_perso_','g45_tv_prog','g45_mqnom_','g45_mqteam_','g45_mqfond_','g45trv4_','g45_catimg_','g45_catfmt2_','g45_catfmt_','g45nrlcal3_','g45nrlcal2_','g45_lglogo_','g45compet2_','g45compet_','g45tmeta_','g45ld2_','g45ld_',
   'g45nrlcal2_','g45_fx_faits','g45_veille_','g45_compet_logos','g45_groq_modele','g45_gemini_modeles',
   /* MESURE DU 20/08 sur le stockage reel d'Antoine (5,1 Mo, sature) :
        fpl_bootstrap_cache ... 1951 Ko  <- a lui seul 38 % du total
@@ -30953,6 +31083,25 @@ function _g45LoadJsPdf(){
 
 /* Profit d'un pari réglé — même calcul que _betSettleEffect, redéfini ici pour
    que le module reste autonome si _betSettleEffect bouge. */
+/* ═══ TYPE DE PARI SANS LES COTES (25/08) ═══
+   Le libelle d'un pari combine incorpore la cote de chaque selection :
+   « Victoire @1.2 + Under 3.5 @1.5 ». Chaque combinaison de cotes cree donc un
+   type UNIQUE, et tout ce qui regroupe par type — bilan, repartition par
+   marche, PDF — se retrouve avec autant de categories que de paris. Antoine en
+   etait reduit a effacer les cotes a la main pour obtenir un regroupement
+   exploitable.
+   On retire donc les cotes A LA LECTURE : l'historique deja enregistre en
+   profite retroactivement, sans migration ni perte. La cote reste dans le champ
+   `cote` du pari, la ou elle a sa place. */
+function g45TypeSansCote(t) {
+  return String(t || '')
+    .replace(/\s*@\s*\d+(?:[.,]\d+)?/g, '')
+    .replace(/\s*\+\s*/g, ' + ')
+    .replace(/\s{2,}/g, ' ')
+    .trim();
+}
+window.g45TypeSansCote = g45TypeSansCote;
+
 function _g45PdfProfit(b){
   var m = parseFloat(b.m) || 0, c = parseFloat(b.cote) || 0;
   if (b.isFreebet) return b.win ? m * (c - 1) : 0;
@@ -31312,7 +31461,7 @@ function _g45PdfRender(jsPDF, D){
            quel marché suivre sur cette équipe la saison suivante. */
         var parType = {};
         paris.forEach(function(b){
-          var t = (b.type || '-').trim() || '-';
+          var t = ((typeof g45TypeSansCote==='function') ? g45TypeSansCote(b.type) : String(b.type||'').trim()) || '-';
           if (!parType[t]) parType[t] = {t:t, n:0, v:0, mise:0, profit:0};
           var e = parType[t];
           e.n++; if (b.win) e.v++;
@@ -33225,7 +33374,9 @@ function _g45CompetAnneeAuto(slug) {
 async function _g45CompetEquipes(c) {
   /* `c.an` permet a un appelant d'imposer la saison. */
   var an = (c.an != null) ? c.an : _g45CompetAnnee(c.s);
-  var cle = 'g45compet_' + c.sp + '_' + c.s + '_' + an;
+  /* Version 2 (25/08) : les entrees precedentes ont ete enregistrees sans les
+     chemins de repli du logo. */
+  var cle = 'g45compet2_' + c.sp + '_' + c.s + '_' + an;
   if (_g45CompetCache[cle]) return _g45CompetCache[cle];
   try {
     var brut = localStorage.getItem(cle);
@@ -33258,7 +33409,16 @@ async function _g45CompetEquipes(c) {
             id: String(t.id || ''),
             nom: t.displayName || t.name || '?',
             court: t.shortDisplayName || t.abbreviation || '',
-            logo: (t.logos && t.logos[0] && t.logos[0].href) || '',
+            /* LOGO : trois chemins (25/08). Le classement ESPN ne remplit pas
+               toujours `logos[]` — selon la competition on trouve `logo` au
+               singulier, ou rien du tout. D'ou des vignettes vides dans la vue
+               Equipes. Dernier recours : l'adresse du CDN construite sur
+               l'identifiant de l'equipe, qui suit un motif stable par sport.
+               L'attribut `onerror` de la vignette masque proprement l'image si
+               ce dernier chemin ne repond pas. */
+            logo: (t.logos && t.logos[0] && t.logos[0].href)
+               || t.logo
+               || (t.id ? ('https://a.espncdn.com/i/teamlogos/' + c.sp + '/500/' + t.id + '.png') : ''),
             grp: (d.children && d.children.length) ? (g.name || '') : '',
             j: st.gamesPlayed || 0, v: st.wins || 0, n: st.ties || 0, p: st.losses || 0,
             bp: st.pointsFor || 0, bc: st.pointsAgainst || 0,
@@ -33573,7 +33733,7 @@ async function loadCompetTab() {
               return '<div onclick="g45CompetOuvrir(\'' + String(t.nom).replace(/'/g, "\\'") + '\',\''
                 + t.id + '\',\'' + c.s + '\',\'' + c.sp + '\')" '
                 + 'style="display:flex;align-items:center;gap:8px;padding:8px 9px;background:rgba(255,255,255,.04);border-radius:9px;cursor:pointer;">'
-                + (t.logo ? '<img src="' + t.logo + '" style="width:22px;height:22px;object-fit:contain;" loading="lazy">' : '<span style="width:22px;"></span>')
+                + (t.logo ? '<img src="' + t.logo + '" style="width:22px;height:22px;object-fit:contain;flex:none;" loading="lazy" onerror="this.style.visibility=\'hidden\'">' : '<span style="width:22px;flex:none;"></span>')
                 + '<div style="min-width:0;"><div style="font-size:11.5px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">' + t.nom + '</div>'
                 + (t.j ? '<div style="font-size:9.5px;color:#9fb0c7;">' + t.j + 'j \u00b7 ' + t.pts + ' pts</div>' : '')
                 + '</div>'
