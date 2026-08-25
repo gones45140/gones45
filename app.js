@@ -1974,10 +1974,9 @@ function render(){
      a P1 domicile et P2 exterieur, la liste annoncait P2 quel que soit le lieu
      choisi juste a cote. On lit donc l'echelle reellement en vigueur. */
   if(uSel){
-    var _cmp=($i('c-comp')&&$i('c-comp').value)||'';
     var _lu=(typeof g45LieuCourant==='function')?g45LieuCourant():'';
     uSel.innerHTML=state.u.map(function(u){
-      var _p=(typeof _g45Pal==='function')?_g45Pal(u,_cmp,_lu):(u.l||1);
+      var _p=(typeof _g45PalLieu==='function')?_g45PalLieu(u,_lu):(u.l||1);
       return '<option value="'+u.n+'">'+(u.sport||'')+' '+u.n+' (P'+_p+')</option>';
     }).join('');
   }
@@ -2816,6 +2815,34 @@ function _g45SetPal(u, comp, lieu, v){
   if(k){ if(!u.lc) u.lc={}; u.lc[k]=v; }
   u.l=v;                      // conserve l'affichage historique et le repli
 }
+
+/* PALIER D'UN LIEU, TOUTES COMPETITIONS CONFONDUES (23/08).
+   Le libelle du menu d'equipes ne peut pas dependre de la competition tapee
+   dans le formulaire : avec « Ligue 1 » dans le champ, Barcelone n'a aucune cle
+   `ligue1|dom`, le repli retombait sur `u.l` — le palier pollue — et le menu
+   affichait un chiffre faux pour toutes les equipes sauf celle du championnat
+   saisi. Ici on cherche l'echelle du LIEU dans les cles de l'equipe, quelle que
+   soit sa competition. Chaque equipe n'en a qu'une en pratique, la Ligue des
+   Champions etant jouee en pari simple. */
+function _g45PalLieu(u, lieu){
+  if(!u) return 1;
+  var L=_g45LieuNz(lieu);
+  try{
+    if(u.lc){
+      var suf='|'+L, sansLieu=null, aDesLieux=false;
+      for(var k in u.lc){
+        if(L && k.length>suf.length && k.slice(-suf.length)===suf) return parseInt(u.lc[k],10)||1;
+        if(k.indexOf('|')>=0) aDesLieux=true; else if(sansLieu===null) sansLieu=parseInt(u.lc[k],10)||1;
+      }
+      /* Ancienne cle sans lieu : point de depart legitime des deux echelles. */
+      if(sansLieu!==null) return sansLieu;
+      /* Des qu'une echelle par lieu existe, `u.l` n'est plus une reference. */
+      if(aDesLieux) return 1;
+    }
+  }catch(e){}
+  return parseInt(u.l,10)||1;
+}
+window._g45PalLieu=_g45PalLieu;
 
 /* Lieu selectionne dans le formulaire de montante. */
 function g45LieuCourant(){ var e=$i('c-lieu'); return _g45LieuNz(e&&e.value); }
@@ -8676,10 +8703,9 @@ function render(){
      a P1 domicile et P2 exterieur, la liste annoncait P2 quel que soit le lieu
      choisi juste a cote. On lit donc l'echelle reellement en vigueur. */
   if(uSel){
-    var _cmp=($i('c-comp')&&$i('c-comp').value)||'';
     var _lu=(typeof g45LieuCourant==='function')?g45LieuCourant():'';
     uSel.innerHTML=state.u.map(function(u){
-      var _p=(typeof _g45Pal==='function')?_g45Pal(u,_cmp,_lu):(u.l||1);
+      var _p=(typeof _g45PalLieu==='function')?_g45PalLieu(u,_lu):(u.l||1);
       return '<option value="'+u.n+'">'+(u.sport||'')+' '+u.n+' (P'+_p+')</option>';
     }).join('');
   }
