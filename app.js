@@ -13763,8 +13763,15 @@ async function runFbrefGroq(uid, nom, b64, groqKey, mode, comp) {
      ou déjà sourcées ESPN sont (re)remplies → rafraîchissable à chaque journée.
    - écrit uniquement dans manual_stats_{saison}_… → les autres saisons restent intactes.
    - matching joueurs par nom (même logique que l'import FBref). */
-async function autoEspnFillSquad(uid, nom) {
-  if (typeof espnResolveTeam !== 'function') { alert('Module ESPN non chargé (foot.js / app.js).'); return; }
+async function autoEspnFillSquad(uid, nom, silencieux) {
+  /* MODE SILENCIEUX (25/08) : depuis le 25/08 cette fonction est aussi
+     declenchee TOUTE SEULE a l'ouverture d'un effectif. Ses alertes, ecrites
+     pour un clic volontaire, feraient surgir des boites de dialogue sans que
+     personne les ait demandees — notamment le « deja rempli », qui est le cas
+     NORMAL sur une equipe saisie a la main. On les tait donc sur ce chemin,
+     tout en gardant le comportement d'origine pour le bouton. */
+  var _dire = function (m) { if (!silencieux) alert(m); };
+  if (typeof espnResolveTeam !== 'function') { _dire('Module ESPN non chargé (foot.js / app.js).'); return; }
   var btn = document.getElementById('btn-espn-auto-' + uid);
 
   var sofaId = SOFASCORE_TEAM_IDS && SOFASCORE_TEAM_IDS[nom];
@@ -13805,7 +13812,7 @@ async function autoEspnFillSquad(uid, nom) {
   }
 
   if (!squadData || !squadData.length) {
-    alert('Effectif introuvable pour ' + nom + '.\n\nOuvre l\'onglet Compo et laisse l\'effectif se charger, puis relance Auto ESPN.');
+    _dire('Effectif introuvable pour ' + nom + '.\n\nOuvre l\'onglet Compo et laisse l\'effectif se charger, puis relance Auto ESPN.');
     return;
   }
 
@@ -13817,7 +13824,7 @@ async function autoEspnFillSquad(uid, nom) {
     return ms[savePrefix + '_goals'] !== undefined || ms[savePrefix + '_apps'] !== undefined;
   });
   if (hasManual && !isEspnSourced) {
-    alert('« ' + nom + ' » est déjà rempli (saisie manuelle / FBref) — laissé intact.\nFais Reset d\'abord si tu veux le passer en source ESPN.');
+    _dire('« ' + nom + ' » est déjà rempli (saisie manuelle / FBref) — laissé intact.\nFais Reset d\'abord si tu veux le passer en source ESPN.');
     return;
   }
 
@@ -14337,6 +14344,28 @@ async function loadFdSquad(el, nom, teamId, noTerrain, terrainOnly) {
     html += '<div style="font-size:9px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;color:var(--t3);">👤 Squad · '+nom+' <span style="color:var(--t2);font-weight:500;">('+squad.length+')</span></div>';
     html += '<div style="display:flex;align-items:center;gap:8px;">';
     html += '<div style="font-size:9px;color:var(--t3);">'+(usingSofa?'sofascore':'api-football · 2024-25')+'</div>';
+    /* ═══ REMPLISSAGE AUTOMATIQUE (25/08) ═══
+       Antoine veut que le tableau se remplisse seul, sans cliquer. On reutilise
+       `autoEspnFillSquad` — appariement de noms robuste, gestion des gardiens,
+       et surtout refus d'ecraser une saisie manuelle deja presente.
+       UNE SEULE FOIS par equipe, saison et competition : c'est une trentaine de
+       requetes, hors de question de les relancer a chaque ouverture. Le drapeau
+       est pose AVANT l'appel, sinon deux rendus rapproches partiraient en
+       double. Et on attend deux secondes, le temps que l'effectif soit
+       reellement en place — la fonction en a besoin pour apparier. */
+    (function(){
+      try{
+        var _cmp = window['_compMode_'+uid] || 'league';
+        var _fl  = 'g45autoespn_' + saisonKey((sofaId||afId||nom||'0') + '_' + _cmp);
+        if(localStorage.getItem(_fl) === '1') return;
+        if(typeof autoEspnFillSquad !== 'function') return;
+        localStorage.setItem(_fl, '1');
+        setTimeout(function(){
+          try{ autoEspnFillSquad(uid, nom, true); }catch(e){}
+        }, 2000);
+      }catch(e){}
+    })();
+
     if(localStorage.getItem('gones45_admin')==='1'){
       /* Une requete pour tout l'effectif, championnat ET Europe (14/08/2026). */
       html += '<button id="btn-apis-auto-'+uid+'" onclick="autoApiSportsFillSquad(\''+uid+'\',\''+nom+'\')" style="display:flex;align-items:center;gap:4px;padding:4px 8px;border-radius:6px;border:1px solid rgba(167,139,250,.35);background:rgba(167,139,250,.12);color:#a78bfa;font-size:9px;font-weight:700;cursor:pointer;" title="Remplit tout l\'effectif en 1 requete api-sports (championnat et Europe separes)">\u26a1 Auto api-sports</button>';
@@ -27640,7 +27669,20 @@ async function g45TennisResults(offset){
       +'<span style="font-size:10px;color:var(--t2);font-weight:700;text-align:center;text-transform:capitalize;">📅 '+human+(offset!==0?('<br><a onclick="g45TennisResults(0)" style="color:#4d84ff;cursor:pointer;font-size:9px;">⏎ revenir à aujourd\'hui</a>'):'')+'</span>'
       +'<button onclick="g45TennisResults('+(offset+1)+')" style="border:none;background:rgba(255,255,255,.06);color:var(--t2);border-radius:8px;padding:7px 13px;font-weight:800;cursor:pointer;">▶</button>'
     +'</div>'
-    +'<div id="g45-tennis-res"><div style="text-align:center;color:var(--t3);font-size:11px;padding:24px;">⏳ Chargement…</div></div>'+'</div>';
+    +'<div id="g45-tennis-res"><div style="text-align:center;color:var(--t3);font-size:11px;padding:24px;">⏳ Chargement…</div></div>'
+    /* RECHERCHE DE JOUEUR RAPATRIEE ICI (25/08). Elle vivait dans la fiche de
+       l'entree TENNIS du mur — chips ATP/WTA, recherche par nom, liens vers les
+       classements. Antoine veut retirer cette entree du mur, ce qui aurait fait
+       disparaitre tout le bloc avec elle. Sa place logique est de toute facon
+       ici, dans la vue Tennis des Competitions.
+       `loadTennisSaisons` prend son conteneur en parametre : on l'appelle donc
+       telle quelle, sans recopier une ligne. */
+    +'<div id="g45-tennis-recherche" style="margin-top:14px;"></div>'
+    +'</div>';
+  try {
+    var _rech = document.getElementById('g45-tennis-recherche');
+    if (_rech && typeof loadTennisSaisons === 'function') loadTennisSaisons(_rech, 'TENNIS');
+  } catch (e) {}
   var list=document.getElementById('g45-tennis-res');
   async function f(lg){ try{ var r=await fetch('https://site.api.espn.com/apis/site/v2/sports/tennis/'+lg+'/scoreboard?dates='+ymd); if(!r.ok) return []; var j=await r.json(); return j.events||[]; }catch(e){ return []; } }
   var atp=await f('atp'); var wta=await f('wta');
@@ -28095,7 +28137,21 @@ async function g45LoadCalendar(slug, btn, monthOffset, sportPath){
       cps.textContent='.g45-cal-panel{max-width:480px;}@media(min-width:900px){.g45-cal-panel{max-width:760px !important;}}@media(min-width:1280px){.g45-cal-panel{max-width:920px !important;}}';
       document.head.appendChild(cps);
     }
-    list.innerHTML='<div class="g45-cal-panel" style="background:var(--bg2);border:1px solid var(--card-border,rgba(77,132,255,.32));border-radius:14px;padding:14px;box-shadow:0 4px 18px rgba(0,0,0,.5);width:100%;margin:0 auto;box-sizing:border-box;">'+h+'</div>';
+    /* LOGO DE COMPETITION EN FILIGRANE (25/08). Il etait deja recupere et
+       memorise, mais ne servait qu'au petit marqueur du bandeau. Pose en grand
+       derriere la grille, il identifie la competition d'un coup d'oeil quand on
+       navigue de mois en mois.
+       Il est place en COUCHE, sous le contenu et sans interaction : les cases
+       du calendrier restent cliquables. A 7 % d'opacite, il ne concurrence ni
+       les numeros de jour ni les etiquettes de journee. */
+    var _filigCal = lgLogo
+      ? ('<div style="position:absolute;inset:0;background-image:url(\'' + lgLogo + '\');'
+         + 'background-repeat:no-repeat;background-position:center 58%;background-size:auto 62%;'
+         + 'opacity:.07;pointer-events:none;border-radius:14px;"></div>')
+      : '';
+    list.innerHTML='<div class="g45-cal-panel" style="position:relative;overflow:hidden;background:var(--bg2);border:1px solid var(--card-border,rgba(77,132,255,.32));border-radius:14px;padding:14px;box-shadow:0 4px 18px rgba(0,0,0,.5);width:100%;margin:0 auto;box-sizing:border-box;">'
+      + _filigCal
+      + '<div style="position:relative;">'+h+'</div></div>';
     if(sportPath==='soccer'){ try{ _g45ApplyMatchdays(slug, mb); }catch(e){} }
     if(window._g45CalOpenDay){ var _od=window._g45CalOpenDay; window._g45CalOpenDay=null; setTimeout(function(){ try{ g45CalDay(_od); var bx=document.getElementById('g45-cal-day'); if(bx&&bx.scrollIntoView) bx.scrollIntoView({behavior:'smooth',block:'nearest'}); }catch(e){} }, 160); }
     _g45StartListRefresh();
@@ -30897,7 +30953,7 @@ var _G45_CACHE_PREFIXES=['g45rcP_','g45rcD_','g45rcY_','g45rc_','g45dcm_','g45dc
      explosait et des ecritures LEGITIMES echouaient en silence (le filtre par
      competition, qui restait bloque sur « Toutes »). Les cartes de tirs sont
      les plus lourdes : plusieurs Ko par match, gardees indefiniment. */
-  'g45butA2_','g45gl3_','g45gl2_','g45gl_','g45_tirs2_','g45_fanart2_','g45_fanart_','g45_img_perso_','g45_tv_prog','g45_mqnom_','g45_mqteam_','g45_mqfond_','g45trv4_','g45_catimg_','g45_catfmt2_','g45_catfmt_','g45nrlcal3_','g45nrlcal2_','g45_lglogo_','g45compet2_','g45compet_','g45tmeta_','g45histo_','g45ld2_','g45ld_',
+  'g45butA2_','g45gl3_','g45gl2_','g45gl_','g45_tirs2_','g45_fanart2_','g45_fanart_','g45_img_perso_','g45_tv_prog','g45_mqnom_','g45_mqteam_','g45_mqfond_','g45trv4_','g45_catimg_','g45_catfmt2_','g45_catfmt_','g45nrlcal3_','g45nrlcal2_','g45_lglogo_','g45compet3_','g45compet2_','g45compet_','g45tmeta_','g45histo_','g45ld2_','g45ld_',
   'g45nrlcal2_','g45_fx_faits','g45_veille_','g45_compet_logos','g45_groq_modele','g45_gemini_modeles',
   /* MESURE DU 20/08 sur le stockage reel d'Antoine (5,1 Mo, sature) :
        fpl_bootstrap_cache ... 1951 Ko  <- a lui seul 38 % du total
@@ -33432,7 +33488,7 @@ async function _g45CompetEquipes(c) {
   var an = (c.an != null) ? c.an : _g45CompetAnnee(c.s);
   /* Version 2 (25/08) : les entrees precedentes ont ete enregistrees sans les
      chemins de repli du logo. */
-  var cle = 'g45compet2_' + c.sp + '_' + c.s + '_' + an;
+  var cle = 'g45compet3_' + c.sp + '_' + c.s + '_' + an;
   if (_g45CompetCache[cle]) return _g45CompetCache[cle];
   try {
     var brut = localStorage.getItem(cle);
@@ -33472,6 +33528,8 @@ async function _g45CompetEquipes(c) {
                l'identifiant de l'equipe, qui suit un motif stable par sport.
                L'attribut `onerror` de la vignette masque proprement l'image si
                ce dernier chemin ne repond pas. */
+            /* Couleur du club : presente dans le classement, jamais lue jusqu'ici. */
+            coul: t.color ? ('#' + String(t.color).replace('#','')) : '',
             logo: (t.logos && t.logos[0] && t.logos[0].href)
                || t.logo
                || (t.id ? ('https://a.espncdn.com/i/teamlogos/' + c.sp + '/500/' + t.id + '.png') : ''),
@@ -33786,11 +33844,24 @@ async function loadCompetTab() {
         return (g ? '<div style="font-size:11px;font-weight:800;color:var(--a);margin:10px 0 6px;">' + g + '</div>' : '')
           + '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:7px;">'
           + grp[g].map(function (t) {
+              /* BLASON EN FILIGRANE (25/08). La vignette etait un aplat gris
+                 uniforme d'un club a l'autre. Le classement fournit deja le
+                 logo et le classement fournit la couleur : on s'en sert pour
+                 un fond, sans aucune requete de plus.
+                 Le degrade s'eteint a 60 % et le filigrane est cale a droite :
+                 le nom et les points, a gauche, restent sur du neutre. */
+              var _tc = (typeof _g45CoulFond === 'function' && t.coul) ? _g45CoulFond(t.coul) : (t.coul || '');
+              var _tf = _tc
+                ? ('linear-gradient(100deg,' + _tc + '3a 0%,' + _tc + '14 38%,rgba(255,255,255,.04) 60%)')
+                : 'rgba(255,255,255,.04)';
               return '<div onclick="g45CompetOuvrir(\'' + String(t.nom).replace(/'/g, "\\'") + '\',\''
                 + t.id + '\',\'' + c.s + '\',\'' + c.sp + '\')" '
-                + 'style="display:flex;align-items:center;gap:8px;padding:8px 9px;background:rgba(255,255,255,.04);border-radius:9px;cursor:pointer;">'
-                + (t.logo ? '<img src="' + t.logo + '" style="width:22px;height:22px;object-fit:contain;flex:none;" loading="lazy" onerror="this.style.visibility=\'hidden\'">' : '<span style="width:22px;flex:none;"></span>')
-                + '<div style="min-width:0;"><div style="font-size:11.5px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">' + t.nom + '</div>'
+                + 'style="position:relative;overflow:hidden;display:flex;align-items:center;gap:8px;padding:8px 9px;background:' + _tf + ';border-radius:9px;cursor:pointer;border:1px solid rgba(255,255,255,.06);">'
+                + (t.logo ? ('<img src="' + t.logo + '" alt="" loading="lazy" onerror="this.style.display=\'none\'" '
+                    + 'style="position:absolute;right:-8px;top:50%;transform:translateY(-50%);width:46px;height:46px;'
+                    + 'object-fit:contain;opacity:.16;pointer-events:none;">') : '')
+                + (t.logo ? '<img src="' + t.logo + '" style="position:relative;width:22px;height:22px;object-fit:contain;flex:none;" loading="lazy" onerror="this.style.visibility=\'hidden\'">' : '<span style="width:22px;flex:none;"></span>')
+                + '<div style="position:relative;min-width:0;"><div style="font-size:11.5px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">' + t.nom + '</div>'
                 + (t.j ? '<div style="font-size:9.5px;color:#9fb0c7;">' + t.j + 'j \u00b7 ' + t.pts + ' pts</div>' : '')
                 + '</div>'
                 + (typeof g45SuiviEqEtoile === 'function' ? g45SuiviEqEtoile(t, c) : '')
