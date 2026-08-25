@@ -1969,7 +1969,18 @@ function render(){
   var bOpt=Object.keys(state.b).map(function(k){return '<option value="'+k+'">'+bki(k).n+'</option>';}).join('');
   ['c-book','n-book','mv-book'].forEach(function(id){var e=$i(id);if(e)e.innerHTML=bOpt;});
   var uSel=$i('c-unit');
-  if(uSel)uSel.innerHTML=state.u.map(function(u){return '<option value="'+u.n+'">'+(u.sport||'')+' '+u.n+' (P'+u.l+')</option>';}).join('');
+  /* PALIER DU LIEU SELECTIONNE (23/08). Le menu affichait `u.l`, le palier
+     historique — celui-la meme qui reste pollue par l'autre lieu. Avec « PSG »
+     a P1 domicile et P2 exterieur, la liste annoncait P2 quel que soit le lieu
+     choisi juste a cote. On lit donc l'echelle reellement en vigueur. */
+  if(uSel){
+    var _cmp=($i('c-comp')&&$i('c-comp').value)||'';
+    var _lu=(typeof g45LieuCourant==='function')?g45LieuCourant():'';
+    uSel.innerHTML=state.u.map(function(u){
+      var _p=(typeof _g45Pal==='function')?_g45Pal(u,_cmp,_lu):(u.l||1);
+      return '<option value="'+u.n+'">'+(u.sport||'')+' '+u.n+' (P'+_p+')</option>';
+    }).join('');
+  }
 
   /* live cockpit */
   $i('live-strat').innerHTML=state.h.filter(function(x){return x.isS;}).map(function(h){
@@ -2813,6 +2824,14 @@ window.g45LieuCourant=g45LieuCourant;
 /* Changer le lieu doit redessiner les paliers ET recalculer la mise proposee :
    sans ca, on miserait le palier de l'autre echelle. */
 function g45LieuChange(){
+  /* On redessine le formulaire ENTIER : les libelles du menu d'equipes portent
+     le palier, qui depend du lieu. Sans ce rendu, la liste garderait les valeurs
+     de l'autre echelle. L'equipe selectionnee est preservee. */
+  try{
+    var sel=$i('c-unit'), garde=sel?sel.value:'';
+    if(typeof render==='function') render();
+    if(garde && $i('c-unit')) $i('c-unit').value=garde;
+  }catch(e){}
   try{ if(typeof updMise==='function') updMise(); }catch(e){}
   try{ if(typeof renderCrash==='function') renderCrash(); }catch(e){}
 }
@@ -8652,7 +8671,18 @@ function render(){
   var bOpt=Object.keys(state.b).map(function(k){return '<option value="'+k+'">'+bki(k).n+'</option>';}).join('');
   ['c-book','n-book','mv-book'].forEach(function(id){var e=$i(id);if(e)e.innerHTML=bOpt;});
   var uSel=$i('c-unit');
-  if(uSel)uSel.innerHTML=state.u.map(function(u){return '<option value="'+u.n+'">'+(u.sport||'')+' '+u.n+' (P'+u.l+')</option>';}).join('');
+  /* PALIER DU LIEU SELECTIONNE (23/08). Le menu affichait `u.l`, le palier
+     historique — celui-la meme qui reste pollue par l'autre lieu. Avec « PSG »
+     a P1 domicile et P2 exterieur, la liste annoncait P2 quel que soit le lieu
+     choisi juste a cote. On lit donc l'echelle reellement en vigueur. */
+  if(uSel){
+    var _cmp=($i('c-comp')&&$i('c-comp').value)||'';
+    var _lu=(typeof g45LieuCourant==='function')?g45LieuCourant():'';
+    uSel.innerHTML=state.u.map(function(u){
+      var _p=(typeof _g45Pal==='function')?_g45Pal(u,_cmp,_lu):(u.l||1);
+      return '<option value="'+u.n+'">'+(u.sport||'')+' '+u.n+' (P'+_p+')</option>';
+    }).join('');
+  }
 
   /* live cockpit */
   $i('live-strat').innerHTML=state.h.filter(function(x){return x.isS;}).map(function(h){
