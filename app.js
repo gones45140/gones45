@@ -37252,7 +37252,16 @@ function _g45CatPerso(k){
   var cle = 'g45_catimg_' + k;
   var c = null;
   try{ c = localStorage.getItem(cle); }catch(e){}
-  if (c !== null) return c;                       /* '' = teste, absent */
+  if (c !== null) {
+    /* CORRECTION DU 23/08 : la mesure du format n'etait declenchee qu'a la
+       DECOUVERTE du fichier, dans le `onload` du test d'existence. Pour une
+       image deja connue — le cas normal des le second chargement — on sortait
+       ici sans jamais mesurer, et la detection logo/photo ne tournait pas.
+       Constate sur `tennis.png` : le fichier etait bien trouve, le format
+       restait `null`. On mesure donc aussi sur ce chemin. */
+    if (c) { try{ _g45CatMesurer(k, c); }catch(e){} }
+    return c;                                     /* '' = teste, absent */
+  }
   ['png','jpg'].forEach(function(ext){
     var url = 'images/ligues/' + k + '.' + ext;
     var img = new Image();
