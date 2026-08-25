@@ -1996,6 +1996,20 @@ function render(){
   $i('dash-units').innerHTML=state.u.length?state.u.map(function(u){
       var paris=state.a.filter(function(h){return h.n===u.n;});
       var profit=paris.reduce(function(a,h){return a+(h.win?(h.m*h.cote)-h.m:-h.m);},0);
+      /* ═══ PROFIT PAR LIEU (23/08) ═══
+         Les montantes sont separees depuis hier ; leur RENTABILITE doit l'etre
+         aussi, sinon on pilote deux progressions distinctes avec un seul chiffre
+         qui les melange. Les paris archives portent deja `domicile`, il n'y a
+         donc rien a recalculer ni a stocker.
+         Un pari anterieur a la separation n'a pas de lieu fiable : il compte
+         dans le global mais dans aucun des deux details. Le total peut donc ne
+         pas etre la somme des deux, et c'est VOULU — mieux vaut un ecart visible
+         qu'un chiffre faussement precis range du mauvais cote. */
+      var _pfLieu=function(lg){
+        var l=paris.filter(function(h){return h.domicile===lg;});
+        return { p:l.reduce(function(a,h){return a+(h.win?(h.m*h.cote)-h.m:-h.m);},0), n:l.length };
+      };
+      var _dom=_pfLieu('dom'), _ext=_pfLieu('ext');
       var wins=paris.filter(function(h){return h.win&&!h.isCashout;}).length;
       var pc=paris.length?Math.round(wins/paris.length*100):0;
       var logo=logoHtml(u.n,u.color,u.abbr,32);
@@ -2065,7 +2079,16 @@ function render(){
         +(streak(paris).n>1?'<div style="display:inline-flex;align-items:center;gap:3px;padding:1px 7px;border-radius:10px;font-size:9px;font-weight:700;margin-top:3px;background:'+(streak(paris).t?'rgba(30,215,96,.1)':'rgba(255,69,69,.1)')+';color:'+(streak(paris).t?'var(--g)':'var(--r)')+'">'
         +(streak(paris).t?'🔥':'❄️')+' '+streak(paris).n+'</div>':'')
         +'</div>'
-        +'<div style="position:relative;font-size:14px;font-weight:800;color:'+pColor+';">'+fmt(profit)+'</div>'
+        +'<div style="position:relative;text-align:right;line-height:1.25;">'
+          +'<div style="font-size:14px;font-weight:800;color:'+pColor+';">'+fmt(profit)+'</div>'
+          + ((_dom.n||_ext.n)
+              ? ('<div style="font-size:9px;font-weight:700;white-space:nowrap;">'
+                  +'<span style="color:'+(_dom.p>=0?'var(--g)':'var(--r)')+';opacity:'+(_dom.n?'1':'.35')+';">\ud83c\udfe0 '+fmt(_dom.p)+'</span>'
+                  +'<span style="color:var(--t3);"> · </span>'
+                  +'<span style="color:'+(_ext.p>=0?'var(--g)':'var(--r)')+';opacity:'+(_ext.n?'1':'.35')+';">\u2708\ufe0f '+fmt(_ext.p)+'</span>'
+                +'</div>')
+              : '')
+        +'</div>'
         +'</div>';
     }).join('')+'':'<div class="empty">Aucune équipe</div>';
   /* Le fond photo est ce qui fait tout l'effet, mais `g45VisuelCache` ne LIT que
@@ -2754,9 +2777,25 @@ function _g45Pal(u, comp, lieu){
   if(!u) return 1;
   var k=_g45PalKey(comp, lieu);
   if(k && u.lc && u.lc[k]) return parseInt(u.lc[k],10)||1;
-  /* Repli sur l'ancienne cle sans lieu, puis sur le palier historique. */
+
+  /* Repli sur l'ancienne cle SANS lieu : c'est le palier d'avant la separation,
+     il sert legitimement de point de depart aux deux echelles. */
   var k0=_g45PalKey(comp, '');
   if(k0 && u.lc && u.lc[k0]) return parseInt(u.lc[k0],10)||1;
+
+  /* CORRECTION DU 23/08 — les deux echelles se contaminaient par le repli.
+     `_g45SetPal` ecrit aussi dans `u.l` pour la retrocompatibilite d'affichage.
+     Un pari PSG a l'EXTERIEUR mettait donc `ligue1|ext` a 2 ET `u.l` a 2 ;
+     le domicile, faute de cle propre, retombait sur `u.l` et affichait 2 alors
+     qu'il n'avait jamais bouge.
+     Des qu'une echelle par lieu existe pour cette competition, `u.l` n'est plus
+     une reference valable : il porte le dernier palier ecrit, tous lieux
+     confondus. Le lieu encore jamais joue repart donc du DEBUT. */
+  if(k0 && u.lc){
+    for(var kk in u.lc){
+      if(kk.indexOf(k0+'|')===0) return 1;
+    }
+  }
   return parseInt(u.l,10)||1;
 }
 function _g45SetPal(u, comp, lieu, v){
@@ -8640,6 +8679,20 @@ function render(){
   $i('dash-units').innerHTML=state.u.length?state.u.map(function(u){
       var paris=state.a.filter(function(h){return h.n===u.n;});
       var profit=paris.reduce(function(a,h){return a+(h.win?(h.m*h.cote)-h.m:-h.m);},0);
+      /* ═══ PROFIT PAR LIEU (23/08) ═══
+         Les montantes sont separees depuis hier ; leur RENTABILITE doit l'etre
+         aussi, sinon on pilote deux progressions distinctes avec un seul chiffre
+         qui les melange. Les paris archives portent deja `domicile`, il n'y a
+         donc rien a recalculer ni a stocker.
+         Un pari anterieur a la separation n'a pas de lieu fiable : il compte
+         dans le global mais dans aucun des deux details. Le total peut donc ne
+         pas etre la somme des deux, et c'est VOULU — mieux vaut un ecart visible
+         qu'un chiffre faussement precis range du mauvais cote. */
+      var _pfLieu=function(lg){
+        var l=paris.filter(function(h){return h.domicile===lg;});
+        return { p:l.reduce(function(a,h){return a+(h.win?(h.m*h.cote)-h.m:-h.m);},0), n:l.length };
+      };
+      var _dom=_pfLieu('dom'), _ext=_pfLieu('ext');
       var wins=paris.filter(function(h){return h.win&&!h.isCashout;}).length;
       var pc=paris.length?Math.round(wins/paris.length*100):0;
       var logo=logoHtml(u.n,u.color,u.abbr,32);
@@ -8709,7 +8762,16 @@ function render(){
         +(streak(paris).n>1?'<div style="display:inline-flex;align-items:center;gap:3px;padding:1px 7px;border-radius:10px;font-size:9px;font-weight:700;margin-top:3px;background:'+(streak(paris).t?'rgba(30,215,96,.1)':'rgba(255,69,69,.1)')+';color:'+(streak(paris).t?'var(--g)':'var(--r)')+'">'
         +(streak(paris).t?'🔥':'❄️')+' '+streak(paris).n+'</div>':'')
         +'</div>'
-        +'<div style="position:relative;font-size:14px;font-weight:800;color:'+pColor+';">'+fmt(profit)+'</div>'
+        +'<div style="position:relative;text-align:right;line-height:1.25;">'
+          +'<div style="font-size:14px;font-weight:800;color:'+pColor+';">'+fmt(profit)+'</div>'
+          + ((_dom.n||_ext.n)
+              ? ('<div style="font-size:9px;font-weight:700;white-space:nowrap;">'
+                  +'<span style="color:'+(_dom.p>=0?'var(--g)':'var(--r)')+';opacity:'+(_dom.n?'1':'.35')+';">\ud83c\udfe0 '+fmt(_dom.p)+'</span>'
+                  +'<span style="color:var(--t3);"> · </span>'
+                  +'<span style="color:'+(_ext.p>=0?'var(--g)':'var(--r)')+';opacity:'+(_ext.n?'1':'.35')+';">\u2708\ufe0f '+fmt(_ext.p)+'</span>'
+                +'</div>')
+              : '')
+        +'</div>'
         +'</div>';
     }).join('')+'':'<div class="empty">Aucune équipe</div>';
   /* Le fond photo est ce qui fait tout l'effet, mais `g45VisuelCache` ne LIT que
