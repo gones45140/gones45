@@ -2081,7 +2081,13 @@ function render(){
         +_couche
         +_filig
         +logo
-        +'<div style="position:relative;flex:1;min-width:0;">'
+        /* VOILE LOCAL SOUS LE TEXTE (25/08). Le visuel est desormais franc ; sans
+           cette protection « Arsenal » se noyait dans le maillot blanc et le
+           libelle de Barcelone passait sur l'ecusson dore. Degrade sous le seul
+           bloc de texte, plus une ombre portee : l'image reste intacte ailleurs. */
+        +'<div style="position:relative;flex:1;min-width:0;padding:5px 14px 5px 8px;margin:-5px 0;border-radius:9px;'
+          +'background:linear-gradient(90deg,rgba(8,11,20,.80) 0%,rgba(8,11,20,.62) 62%,transparent 100%);'
+          +'text-shadow:0 1px 3px rgba(0,0,0,.9);">'
         +'<div style="font-size:12px;font-weight:700;">'+(u.sport||'')+' '+u.n+'</div>'
         +'<div style="font-size:9px;color:var(--t3);">'+'⭐'.repeat(u.s)+' · '+_g45PalLabel(u)+' · '+pc+'% réussite</div>'
         +(u.note?'<div style="font-size:10px;color:var(--a);margin-top:2px;font-style:italic;">📌 '+u.note+'</div>':'')
@@ -2089,7 +2095,9 @@ function render(){
         +(streak(paris).n>1?'<div style="display:inline-flex;align-items:center;gap:3px;padding:1px 7px;border-radius:10px;font-size:9px;font-weight:700;margin-top:3px;background:'+(streak(paris).t?'rgba(30,215,96,.1)':'rgba(255,69,69,.1)')+';color:'+(streak(paris).t?'var(--g)':'var(--r)')+'">'
         +(streak(paris).t?'🔥':'❄️')+' '+streak(paris).n+'</div>':'')
         +'</div>'
-        +'<div style="position:relative;text-align:right;line-height:1.25;">'
+        +'<div style="position:relative;text-align:right;line-height:1.25;padding:5px 8px 5px 16px;margin:-5px 0;border-radius:9px;'
+          +'background:linear-gradient(270deg,rgba(8,11,20,.80) 0%,rgba(8,11,20,.62) 62%,transparent 100%);'
+          +'text-shadow:0 1px 3px rgba(0,0,0,.9);">'
           +'<div style="font-size:14px;font-weight:800;color:'+pColor+';">'+fmt(profit)+'</div>'
           + ((_dom.n||_ext.n)
               ? ('<div style="font-size:9px;font-weight:700;white-space:nowrap;">'
@@ -8819,7 +8827,13 @@ function render(){
         +_couche
         +_filig
         +logo
-        +'<div style="position:relative;flex:1;min-width:0;">'
+        /* VOILE LOCAL SOUS LE TEXTE (25/08). Le visuel est desormais franc ; sans
+           cette protection « Arsenal » se noyait dans le maillot blanc et le
+           libelle de Barcelone passait sur l'ecusson dore. Degrade sous le seul
+           bloc de texte, plus une ombre portee : l'image reste intacte ailleurs. */
+        +'<div style="position:relative;flex:1;min-width:0;padding:5px 14px 5px 8px;margin:-5px 0;border-radius:9px;'
+          +'background:linear-gradient(90deg,rgba(8,11,20,.80) 0%,rgba(8,11,20,.62) 62%,transparent 100%);'
+          +'text-shadow:0 1px 3px rgba(0,0,0,.9);">'
         +'<div style="font-size:12px;font-weight:700;">'+(u.sport||'')+' '+u.n+'</div>'
         +'<div style="font-size:9px;color:var(--t3);">'+'⭐'.repeat(u.s)+' · '+_g45PalLabel(u)+' · '+pc+'% réussite</div>'
         +(u.note?'<div style="font-size:10px;color:var(--a);margin-top:2px;font-style:italic;">📌 '+u.note+'</div>':'')
@@ -8827,7 +8841,9 @@ function render(){
         +(streak(paris).n>1?'<div style="display:inline-flex;align-items:center;gap:3px;padding:1px 7px;border-radius:10px;font-size:9px;font-weight:700;margin-top:3px;background:'+(streak(paris).t?'rgba(30,215,96,.1)':'rgba(255,69,69,.1)')+';color:'+(streak(paris).t?'var(--g)':'var(--r)')+'">'
         +(streak(paris).t?'🔥':'❄️')+' '+streak(paris).n+'</div>':'')
         +'</div>'
-        +'<div style="position:relative;text-align:right;line-height:1.25;">'
+        +'<div style="position:relative;text-align:right;line-height:1.25;padding:5px 8px 5px 16px;margin:-5px 0;border-radius:9px;'
+          +'background:linear-gradient(270deg,rgba(8,11,20,.80) 0%,rgba(8,11,20,.62) 62%,transparent 100%);'
+          +'text-shadow:0 1px 3px rgba(0,0,0,.9);">'
           +'<div style="font-size:14px;font-weight:800;color:'+pColor+';">'+fmt(profit)+'</div>'
           + ((_dom.n||_ext.n)
               ? ('<div style="font-size:9px;font-weight:700;white-space:nowrap;">'
@@ -27669,15 +27685,17 @@ async function g45TennisResults(offset){
       +'<span style="font-size:10px;color:var(--t2);font-weight:700;text-align:center;text-transform:capitalize;">📅 '+human+(offset!==0?('<br><a onclick="g45TennisResults(0)" style="color:#4d84ff;cursor:pointer;font-size:9px;">⏎ revenir à aujourd\'hui</a>'):'')+'</span>'
       +'<button onclick="g45TennisResults('+(offset+1)+')" style="border:none;background:rgba(255,255,255,.06);color:var(--t2);border-radius:8px;padding:7px 13px;font-weight:800;cursor:pointer;">▶</button>'
     +'</div>'
-    +'<div id="g45-tennis-res"><div style="text-align:center;color:var(--t3);font-size:11px;padding:24px;">⏳ Chargement…</div></div>'
     /* RECHERCHE DE JOUEUR RAPATRIEE ICI (25/08). Elle vivait dans la fiche de
        l'entree TENNIS du mur — chips ATP/WTA, recherche par nom, liens vers les
-       classements. Antoine veut retirer cette entree du mur, ce qui aurait fait
-       disparaitre tout le bloc avec elle. Sa place logique est de toute facon
-       ici, dans la vue Tennis des Competitions.
-       `loadTennisSaisons` prend son conteneur en parametre : on l'appelle donc
-       telle quelle, sans recopier une ligne. */
-    +'<div id="g45-tennis-recherche" style="margin-top:14px;"></div>'
+       classements. Antoine retire cette entree du mur, ce qui aurait fait
+       disparaitre le bloc avec elle. Sa place logique est de toute facon ici.
+       PLACEE AU-DESSUS des resultats : en dessous, elle se retrouvait enterree
+       sous des dizaines de lignes de qualifications et de doubles, alors qu'elle
+       a bien plus de valeur que ces matchs de challenger.
+       `loadTennisSaisons` prend son conteneur en parametre : on l'appelle telle
+       quelle, sans recopier une ligne. */
+    +'<div id="g45-tennis-recherche" style="margin-bottom:14px;"></div>'
+    +'<div id="g45-tennis-res"><div style="text-align:center;color:var(--t3);font-size:11px;padding:24px;">⏳ Chargement…</div></div>'
     +'</div>';
   try {
     var _rech = document.getElementById('g45-tennis-recherche');
@@ -39706,7 +39724,12 @@ function g45CoulEquipe(src, dft) {
    `_G45_FOND_NIV`. Plus il est bas, plus la couleur du club transparait.
    Eclairci d'un cran le 22/08 a la demande d'Antoine : le voile central passe
    de .94 a .86 sans visuel, de .90 a .80 avec, et les bords de 55 a 6e. */
-var _G45_FOND_NIV = { voile:0.86, voileVis:0.80, bord:'6e', bordVis:'7a' };
+/* voileVis abaisse a 0.30 le 25/08, apres essais en direct : a 0.80 les visuels
+   de club etaient invisibles, a 0.30 ils ressortent pleinement. Le texte n'est
+   plus protege par l'assombrissement general mais LOCALEMENT, la ou il se
+   trouve — inutile d'ecraser l'image sur toute la carte pour proteger un tiers
+   de sa surface. */
+var _G45_FOND_NIV = { voile:0.86, voileVis:0.30, bord:'6e', bordVis:'7a' };
 /* PLANCHER DE LUMINOSITE POUR UN FOND (22/08).
    Troisieme visage du meme defaut : `g45CoulEquipe` ne rejette que le TROP
    CLAIR. Une couleur ESPN quasi noire — Lyon, Udinese, plusieurs clubs anglais —
