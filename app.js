@@ -32811,6 +32811,19 @@ async function g45NrlCharger(annee) {
         var dom = cps.filter(function (x) { return x.homeAway === 'home'; })[0] || cps[0] || {};
         var ext = cps.filter(function (x) { return x.homeAway === 'away'; })[0] || cps[1] || {};
         var nm = function (x) { return (x.team && (x.team.shortDisplayName || x.team.displayName)) || '?'; };
+        /* CORRECTION DU 25/08 — tous les scores sortaient a 0-0 hors NRL.
+           Sur ce point d'entree, `score` est un OBJET `{value, displayValue}` et
+           non un nombre : `parseInt` rendait NaN, donc 0. Le NRL echouait sur ce
+           chemin et basculait vers le scoreboard de secours, dont la lecture
+           gerait deja les deux formes — le repli etait mieux ecrit que le
+           chemin principal, d'ou l'illusion que seul le NRL fonctionnait.
+           On lit desormais les deux formes ici aussi. */
+        var sc = function (x) {
+          var v = x && x.score;
+          if (v && typeof v === 'object') v = (v.value != null ? v.value : v.displayValue);
+          var n = parseInt(v, 10);
+          return isNaN(n) ? 0 : n;
+        };
         vus[id] = 1;
         out.push({
           id: id, date: e.date || '', joue: joue,
@@ -32819,7 +32832,12 @@ async function g45NrlCharger(annee) {
              du jeudi au dimanche). */
           jr: (e.week && e.week.number) || (c.week && c.week.number) || 0,
           dom: nm(dom), ext: nm(ext),
-          sDom: parseInt(dom.score, 10) || 0, sExt: parseInt(ext.score, 10) || 0
+          sDom: sc(dom), sExt: sc(ext),
+          /* Couleurs et logos pris au passage (25/08) : ils sont deja dans la
+             reponse, les cartes de journee n'exigent donc aucune requete. */
+          cD: (dom.team && dom.team.color) ? ('#' + String(dom.team.color).replace('#','')) : '',
+          cE: (ext.team && ext.team.color) ? ('#' + String(ext.team.color).replace('#','')) : '',
+          lD: (dom.team && dom.team.logo) || '', lE: (ext.team && ext.team.logo) || ''
         });
       });
     } catch (e) {}
@@ -32857,7 +32875,10 @@ async function g45NrlCharger(annee) {
             id: id, date: e.date || '',
             joue: (stt.completed === true || stt.state === 'post'),
             jr: (e.week && e.week.number) || (cc.week && cc.week.number) || 0,
-            dom: nm2(hd), ext: nm2(ad), sDom: sc2(hd), sExt: sc2(ad)
+            dom: nm2(hd), ext: nm2(ad), sDom: sc2(hd), sExt: sc2(ad),
+            cD: (hd.team && hd.team.color) ? ('#' + String(hd.team.color).replace('#','')) : '',
+            cE: (ad.team && ad.team.color) ? ('#' + String(ad.team.color).replace('#','')) : '',
+            lD: (hd.team && hd.team.logo) || '', lE: (ad.team && ad.team.logo) || ''
           });
         });
       } catch (e) {}
@@ -32987,52 +33008,90 @@ function g45NrlSynthese() {
 }
 window.g45NrlSynthese = g45NrlSynthese;
 
+/* ═══ COMPTE RENDU D'UN MATCH DES JOURNEES (25/08) ═══
+   La modale et les deux moteurs de detail existent deja — `_renderSaisonDetail`
+   pour le football, `_renderGenericDetail` pour les autres sports. Il manquait
+   seulement un point d'entree prenant un identifiant ESPN deja connu, sans
+   repasser par la resolution par nom d'equipe utilisee depuis les paris. */
+window.g45OuvrirMatchJournee = async function (eid, sport, ligue) {
+  try {
+    var card = _g45BetLiveCard();
+    card.innerHTML = '<button onclick="_g45CloseBetLive()" style="position:absolute;top:10px;right:12px;'
+      + 'background:none;border:none;color:var(--t2);font-size:22px;cursor:pointer;z-index:3;">\u2715</button>'
+      + '<div class="smd-panel" id="g45-betlive-panel" style="display:block;padding:6px;"></div>';
+    var panel = document.getElementById('g45-betlive-panel');
+    panel.setAttribute('data-open', '1');
+    panel.innerHTML = '<div style="padding:26px 18px;text-align:center;color:var(--t3);font-size:12px;">\u23f3 Chargement\u2026</div>';
+    if (sport === 'soccer') { await _renderSaisonDetail(panel, eid, ligue); }
+    else { await _renderGenericDetail(panel, sport, ligue, eid); }
+  } catch (e) {
+    var p = document.getElementById('g45-betlive-panel');
+    if (p) p.innerHTML = '<div style="padding:16px;color:#ff6b6b;font-size:12px;text-align:center;">D\u00e9tail indisponible pour ce match.</div>';
+  }
+};
+
 function g45NrlRender() {
   var el = document.getElementById('g45-nrl-liste');
   if (!el) return;
   if (!_g45NrlMatchs) { el.innerHTML = '<div style="color:#9fb0c7">Appuie sur \u00ab Charger la saison \u00bb.</div>'; return; }
-  var cotes = g45NrlCotes();
-  var ch = 'width:58px;padding:6px;font-size:11.5px;border-radius:7px;background:#0f1626;border:1px solid rgba(255,255,255,.14);color:#e6ecf5;text-align:center;';
 
-  /* Groupement par journee : c'est ainsi qu'on lit un championnat, et ca permet
-     de reperer les journees ou les favoris tombent en serie. */
+  /* ═══ REFONTE DU 25/08 ═══
+     Les champs de saisie de cotes sont retires : Antoine ne veut ici que les
+     RESULTATS par journee. Chaque match devient une carte cliquable qui ouvre
+     le compte rendu complet — feuille de match, buteurs, compositions, video —
+     et reprend la grammaire visuelle des cartes du direct : degrade aux
+     couleurs des deux clubs, logos de part et d'autre.
+     Les fonctions de saisie et de synthese restent dans le fichier : elles
+     servent encore au panneau NRL autonome. */
+  var sp = (_g45NrlCtx && _g45NrlCtx.sport) || '';
+  var lg = (_g45NrlCtx && _g45NrlCtx.ligue) || '';
+
   var parJr = {};
   _g45NrlMatchs.forEach(function (m) { (parJr[m.jr] = parJr[m.jr] || []).push(m); });
 
-  el.innerHTML = Object.keys(parJr).sort(function (a, b) { return a - b; }).map(function (jr) {
+  el.innerHTML = Object.keys(parJr).sort(function (a, b) { return b - a; }).map(function (jr) {
     var lst = parJr[jr];
-    var nCotes = lst.filter(function (m) { var c = cotes[_g45Cle(m.id)]; return c && c.dom > 1 && c.ext > 1; }).length;
-    return '<div style="margin-bottom:14px;">'
-      + '<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:6px;">'
+    var nJoues = lst.filter(function (m) { return m.joue; }).length;
+    return '<div style="margin-bottom:16px;">'
+      + '<div style="display:flex;align-items:center;gap:8px;margin-bottom:7px;">'
         + '<div style="font-weight:800;font-size:11.5px;color:var(--a);">Journ\u00e9e ' + jr
-        + ' <span data-jr-compte="1" data-jr-ids="' + lst.map(function (m) { return m.id; }).join(',')
-        + '" style="color:#9fb0c7;font-weight:600;">\u00b7 ' + lst.length + ' matchs \u00b7 ' + nCotes + ' avec cotes</span></div>'
-        + (g45EstAdmin()
-            ? ('<button onclick="g45CotesEspnJournee(\'' + jr + '\',this)" title="Remplit les cotes vides de cette journ\u00e9e depuis ESPN" style="margin-left:auto;padding:4px 10px;border-radius:12px;border:1px solid rgba(46,204,113,.4);background:rgba(46,204,113,.10);color:#2ecc71;font-size:10px;font-weight:800;cursor:pointer;">\ud83d\udcb0 Cotes ESPN</button>')
-            : '')
-        + '</div>'
+        + ' <span style="color:#9fb0c7;font-weight:600;">\u00b7 ' + lst.length + ' matchs \u00b7 '
+        + nJoues + ' jou\u00e9' + (nJoues > 1 ? 's' : '') + '</span></div>'
+      + '</div>'
       + lst.map(function (m) {
-          var c = cotes[_g45Cle(m.id)] || {};
           var d = (m.date || '').slice(8, 10) + '/' + (m.date || '').slice(5, 7);
-          var score = m.joue ? (m.sDom + '-' + m.sExt) : '<span style="color:#9fb0c7">\u00e0 venir</span>';
-          return '<div style="padding:7px 9px;margin-bottom:5px;background:rgba(255,255,255,.04);border-radius:8px;'
-            + (m.joue ? '' : 'opacity:.65;') + '">'
-            + '<div style="display:flex;justify-content:space-between;align-items:center;gap:7px;flex-wrap:wrap;">'
-            + '<div style="flex:1;min-width:150px;font-size:11.5px;"><span style="color:#9fb0c7">' + d + '</span> '
-              + '<b>' + m.dom + '</b> ' + score + ' <b>' + m.ext + '</b></div>'
-            /* URL Sofascore retiree le 13/08 (une requete RapidAPI par match).
-               Le champ NUL n'apparait que la ou le nul existe. */
-            + '<input value="' + (c.dom || '') + '" placeholder="dom" inputmode="decimal" onchange="g45NrlSaisir(\'' + m.id + '\',\'dom\',this.value,this)" style="' + ch + '">'
-            + (_g45AvecNul(_g45NrlCtx.sport)
-                ? ('<input value="' + (c.nul || '') + '" placeholder="nul" inputmode="decimal" onchange="g45NrlSaisir(\'' + m.id + '\',\'nul\',this.value,this)" style="' + ch + '">')
-                : '')
-            + '<input value="' + (c.ext || '') + '" placeholder="ext" inputmode="decimal" onchange="g45NrlSaisir(\'' + m.id + '\',\'ext\',this.value,this)" style="' + ch + '">'
-            + ((c.dom || c.ext || c.nul) ? ('<button onclick="g45NrlEffacer(\'' + m.id + '\')" title="Effacer les cotes de ce match" style="padding:6px 9px;border-radius:7px;border:1px solid rgba(255,107,107,.35);background:rgba(255,107,107,.10);color:#ff8a8a;font-size:11px;font-weight:800;cursor:pointer;">\u2715</button>') : '')
-            + '</div></div>';
+          var cD = m.cD || '#4d84ff', cE = m.cE || '#f0b020';
+          var fond = (typeof g45FondMatch === 'function') ? g45FondMatch(cD, cE, '')
+                   : ('linear-gradient(100deg,' + cD + '55 0%,rgba(12,17,29,.94) 42%,rgba(12,17,29,.94) 58%,' + cE + '55 100%)');
+          var lg2 = function (url, cote) {
+            if (!url) return '';
+            return '<img src="' + url + '" loading="lazy" onerror="this.style.display=\'none\'" '
+              + 'style="position:absolute;' + cote + ':8px;top:50%;transform:translateY(-50%);height:40px;width:40px;'
+              + 'object-fit:contain;opacity:.9;pointer-events:none;">';
+          };
+          var score = m.joue
+            ? ('<span style="font-size:15px;font-weight:800;color:var(--t1);">' + m.sDom + ' - ' + m.sExt + '</span>')
+            : ('<span style="font-size:11px;color:#9fb0c7;">\u00e0 venir</span>');
+          /* Le nom de chaque equipe prend la couleur de son club, ECLAIRCIE :
+             sans ca, un club en bleu marine disparait sur le fond sombre. */
+          var ct = function (c) { return (typeof _g45CoulTexte === 'function') ? _g45CoulTexte(c) : 'var(--t1)'; };
+          return '<div onclick="g45OuvrirMatchJournee(\'' + m.id + '\',\'' + sp + '\',\'' + lg + '\')" '
+            + 'title="Voir le compte rendu" '
+            + 'style="position:relative;overflow:hidden;cursor:pointer;border-radius:11px;margin-bottom:6px;'
+            + 'border:1px solid rgba(255,255,255,.08);background:' + fond + ';padding:10px 56px;min-height:58px;'
+            + 'display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;'
+            + (m.joue ? '' : 'opacity:.72;') + '">'
+            + lg2(m.lD, 'left') + lg2(m.lE, 'right')
+            + '<div style="position:relative;font-size:9px;color:rgba(255,255,255,.62);font-weight:700;">' + d + '</div>'
+            + '<div style="position:relative;font-size:11.5px;font-weight:800;text-align:center;">'
+              + '<span style="color:' + ct(cD) + ';">' + m.dom + '</span>'
+              + '<span style="color:var(--t3);"> \u2013 </span>'
+              + '<span style="color:' + ct(cE) + ';">' + m.ext + '</span></div>'
+            + '<div style="position:relative;">' + score + '</div>'
+            + '</div>';
         }).join('')
       + '</div>';
   }).join('');
-  g45NrlSynthese();
 }
 window.g45NrlRender = g45NrlRender;
 
@@ -33476,14 +33535,14 @@ async function loadCompetTab() {
       + '<input id="g45-nrl-annee" value="' + _g45CompetAnnee(c.s) + '" style="width:82px;padding:10px 11px;font-size:12.5px;border-radius:9px;background:#0f1626;border:1px solid rgba(255,255,255,.14);color:#e6ecf5;">'
       + (g45EstAdmin()
           ? ('<button onclick="g45NrlRecharger()" title="Force le rechargement du calendrier depuis ESPN" style="flex:1;min-width:140px;padding:12px 14px;font-size:12.5px;font-weight:800;cursor:pointer;border-radius:10px;background:#2563eb;border:1px solid #3b82f6;color:#fff;">\u21bb Recharger</button>'
-             + '<button onclick="g45CotesEspnSaison(this)" title="Remplit toutes les cotes vides de la saison depuis ESPN" style="flex:1;min-width:140px;padding:12px 14px;font-size:12.5px;font-weight:800;cursor:pointer;border-radius:10px;background:rgba(46,204,113,.14);border:1px solid rgba(46,204,113,.5);color:#2ecc71;">\ud83d\udcb0 Cotes ESPN \u2014 saison</button>')
+             )
           : '')
       + '<button id="btn-admin-lock-journees" onclick="g45AdminBascule()" title="Mode administrateur" style="padding:12px 13px;border-radius:10px;border:1px solid rgba(255,255,255,.15);background:rgba(255,255,255,.07);color:var(--t2);font-size:14px;cursor:pointer;">'
         + (g45EstAdmin() ? '\ud83d\udd13' : '\ud83d\udd12') + '</button>'
       + '</div>'
-      + '<div style="font-size:10px;color:var(--t3);line-height:1.6;margin-bottom:10px;">Tous les matchs group\u00e9s par journ\u00e9e. La saisie des cotes est libre \u2014 dom, nul, ext. Le rechargement du calendrier et le remplissage automatique depuis ESPN sont r\u00e9serv\u00e9s \u00e0 l\'administrateur (cadenas).</div>'
+      + '<div style="font-size:10px;color:var(--t3);line-height:1.6;margin-bottom:10px;">R\u00e9sultats group\u00e9s par journ\u00e9e, de la plus r\u00e9cente \u00e0 la plus ancienne. <b>Clique sur un match</b> pour son compte rendu complet.</div>'
       + '<div id="g45-nrl-msg" style="font-size:11.5px;font-weight:600;min-height:16px;color:#9fb0c7;background:rgba(0,0,0,.25);border-radius:8px;padding:10px 12px;margin-bottom:12px;">\u23f3\u2026</div>'
-      + '<div id="g45-nrl-synth" style="font-size:11.5px;line-height:1.8;margin-bottom:12px;"></div>'
+
       + '<div id="g45-nrl-liste"></div>';
     var cleAttendue = c.sp + '|' + c.s + '|' + _g45CompetAnnee(c.s);
     if (_g45NrlMatchs && _g45NrlMatchs.length && _g45NrlMatchsCle === cleAttendue) {
