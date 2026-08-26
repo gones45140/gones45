@@ -21263,6 +21263,144 @@ async function _espnMatchLiveData(nom){
   return {resolved:resolved, event:ev, summary:summary, league:lg};
 }
 
+/* ═══ PRESSION DU MATCH (26/08) ═══
+   Equivalent du « Match Momentum » d'ESPN et de Sofascore. Ni l'un ni l'autre ne
+   publie sa courbe : ESPN ne l'expose dans aucun point d'entree du compte rendu
+   — verifie par sonde, ni `momentum` ni `winprobability`. Elle est donc
+   RECONSTRUITE a partir du commentaire minute par minute, qui porte pour chaque
+   action son type, sa minute et surtout son EQUIPE dans un champ dedie.
+   Nommee « Pression » et non « Momentum » : la forme est comparable, les valeurs
+   sont les notres. Annoncer un momentum laisserait croire a un calcul identique.
+   Ponderation : un but pese beaucoup, un tir cadre nettement, un tir bloque ou
+   un corner un peu. Les fautes comptent NEGATIVEMENT pour l'equipe qui la
+   commet — subir une faute traduit une progression, la commettre une defense.
+   Tranches de trois minutes : en dessous le graphique devient du bruit, au-dela
+   il lisse les temps forts. */
+var _G45_PRESS_POIDS = {
+  'goal': 10, 'penalty - scored': 10,
+  'shot on target': 5, 'penalty - missed': 4, 'penalty - saved': 4,
+  'shot blocked': 2.5, 'shot off target': 2, 'attempt missed': 2,
+  'corner awarded': 1.5, 'offside': -0.5,
+  'foul': -0.6, 'handball': -0.6,
+  'yellow card': -1, 'red card': -3
+};
+function _g45PressPoids(t){
+  var k = String(t || '').toLowerCase();
+  if (_G45_PRESS_POIDS[k] != null) return _G45_PRESS_POIDS[k];
+  if (k.indexOf('goal') >= 0 && k.indexOf('own') < 0) return 10;
+  if (k.indexOf('on target') >= 0) return 5;
+  if (k.indexOf('blocked') >= 0) return 2.5;
+  if (k.indexOf('shot') >= 0 || k.indexOf('attempt') >= 0) return 2;
+  if (k.indexOf('corner') >= 0) return 1.5;
+  if (k.indexOf('card') >= 0) return -1;
+  if (k.indexOf('foul') >= 0 || k.indexOf('handball') >= 0) return -0.6;
+  return 0;
+}
+
+function _renderMatchPression(s, homeId, awayId){
+  try {
+    var com = (s && s.commentary) || [];
+
+    /* SEUIL SELON L'ETAT DU MATCH (26/08). Un seuil unique a 10 actions rendait
+       le graphique invisible pendant la premiere demi-heure d'un match EN COURS,
+       alors que c'est justement le moment ou il sert. On descend a 4 tant que le
+       match n'est pas termine, et on garde 10 apres coup : sur une rencontre
+       finie, moins de dix actions signifie que la competition est mal couverte
+       et le graphique n'aurait aucune valeur. */
+    var _et = (s.header && s.header.competitions && s.header.competitions[0]
+               && s.header.competitions[0].status && s.header.competitions[0].status.type) || null;
+    var enCours = _et ? (_et.completed !== true) : false;
+    var MINI = enCours ? 4 : 10;
+    if (com.length < (enCours ? 6 : 12)) return '';
+
+    /* Nom de chaque camp : le champ `team` du commentaire ne porte que le nom
+       affiche, pas l'identifiant — on apparie donc sur le nom. */
+    var cps = (s.header && s.header.competitions && s.header.competitions[0] && s.header.competitions[0].competitors) || [];
+    var dom = cps.filter(function(c){ return c.homeAway === 'home'; })[0] || cps[0] || {};
+    var ext = cps.filter(function(c){ return c.homeAway === 'away'; })[0] || cps[1] || {};
+    var nomD = (dom.team && (dom.team.displayName || dom.team.name)) || '';
+    var nomE = (ext.team && (ext.team.displayName || ext.team.name)) || '';
+    if (!nomD || !nomE) return '';
+    var cD = (dom.team && dom.team.color) ? ('#' + String(dom.team.color).replace('#','')) : '#4d84ff';
+    var cE = (ext.team && ext.team.color) ? ('#' + String(ext.team.color).replace('#','')) : '#f0b020';
+    if (typeof _g45CoulFond === 'function') { cD = _g45CoulFond(cD); cE = _g45CoulFond(cE); }
+
+    var PAS = 3, MAXMIN = 96;
+    var n = Math.ceil(MAXMIN / PAS);
+    var bD = new Array(n).fill(0), bE = new Array(n).fill(0);
+    var buts = [];
+    var vus = 0;
+
+    com.forEach(function(c){
+      var p = c.play; if (!p || !p.team) return;
+      var mn = parseInt(String((p.clock && p.clock.displayValue) || '').replace(/[^0-9]/g,''), 10);
+      if (isNaN(mn)) return;
+      /* ESPN remet l'horloge a zero en seconde periode sur certains matchs :
+         on rattrape avec le numero de periode. */
+      if (p.period && p.period.number === 2 && mn <= 45) mn += 45;
+      var i = Math.min(n - 1, Math.floor(mn / PAS));
+      var w = _g45PressPoids(p.type && p.type.text);
+      if (!w) return;
+      var estDom = (String(p.team.displayName || '') === nomD);
+      vus++;
+      if (w > 0) { if (estDom) bD[i] += w; else bE[i] += w; }
+      else       { if (estDom) bE[i] += -w * 0.5; else bD[i] += -w * 0.5; }
+      if (String((p.type && p.type.text) || '').toLowerCase().indexOf('goal') >= 0) {
+        buts.push({ i: i, dom: estDom });
+      }
+    });
+    if (vus < MINI) return '';
+
+    var maxi = Math.max(1, Math.max.apply(null, bD.concat(bE)));
+    var H = 46;
+    /* En direct, on s'arrete a la minute atteinte : dessiner les tranches a
+       venir donnerait un graphique aux trois quarts vide, comme si les deux
+       equipes ne faisaient rien. */
+    var nAff = n;
+    if (enCours) {
+      var dernier = 0;
+      for (var k = 0; k < n; k++) { if (bD[k] > 0 || bE[k] > 0) dernier = k; }
+      nAff = Math.min(n, dernier + 2);
+    }
+    var barres = '';
+    for (var i = 0; i < nAff; i++) {
+      var hD = Math.round((bD[i] / maxi) * H), hE = Math.round((bE[i] / maxi) * H);
+      var but = buts.filter(function(g){ return g.i === i; })[0];
+      barres += '<div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;position:relative;">'
+        + '<div style="height:' + H + 'px;display:flex;align-items:flex-end;width:100%;">'
+          + '<div style="width:100%;height:' + hD + 'px;background:' + cD + ';border-radius:2px 2px 0 0;opacity:.92;"></div>'
+        + '</div>'
+        + '<div style="height:1px;width:100%;background:rgba(255,255,255,.18);"></div>'
+        + '<div style="height:' + H + 'px;display:flex;align-items:flex-start;width:100%;">'
+          + '<div style="width:100%;height:' + hE + 'px;background:' + cE + ';border-radius:0 0 2px 2px;opacity:.92;"></div>'
+        + '</div>'
+        + (but ? ('<div style="position:absolute;top:' + (but.dom ? '-2px' : 'auto') + ';bottom:' + (but.dom ? 'auto' : '-2px') + ';font-size:9px;">\u26bd</div>') : '')
+      + '</div>';
+    }
+
+    var lg = function(c, nom){
+      return '<span style="display:inline-flex;align-items:center;gap:5px;font-size:9.5px;font-weight:700;color:rgba(255,255,255,.75);">'
+        + '<span style="width:9px;height:9px;border-radius:2px;background:' + c + ';"></span>' + _g45CyEa(nom) + '</span>';
+    };
+
+    return '<div class="fc" style="padding:14px;">'
+      + '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:11px;">'
+        + '<div style="font-size:11px;font-weight:800;letter-spacing:.5px;color:var(--t2);">\ud83d\udcc8 PRESSION DU MATCH'
+          + (enCours ? ' <span style="color:#ff5a5a;font-size:9px;">\u25cf EN COURS</span>' : '') + '</div>'
+        + '<div style="display:flex;gap:11px;">' + lg(cD, nomD) + lg(cE, nomE) + '</div>'
+      + '</div>'
+      + '<div style="display:flex;align-items:center;gap:1px;">' + barres + '</div>'
+      + '<div style="display:flex;justify-content:space-between;font-size:8.5px;color:var(--t3);margin-top:5px;font-weight:700;">'
+        + '<span>0\'</span>'
+        + (nAff > n * 0.55 ? '<span>45\'</span>' : '')
+        + '<span>' + Math.round(nAff * PAS) + '\'</span></div>'
+      + '<div style="font-size:8.5px;color:var(--t3);margin-top:7px;line-height:1.5;">'
+        + 'Reconstruite \u00e0 partir des actions du match \u2014 tirs, corners, buts, fautes. '
+        + 'Indicateur maison, non comparable aux valeurs d\'ESPN ou de Sofascore.</div>'
+    + '</div>';
+  } catch (e) { return ''; }
+}
+
 function _renderEspnMatchStats(s, homeId, awayId, col){
   try {
     /* ═══ AUCUNE STATISTIQUE AVANT LE COUP D'ENVOI (26/08) ═══
@@ -21636,6 +21774,7 @@ async function loadEspnMatchLive(el, nom, col){
   html+='<div style="text-align:center;margin-top:10px;"><button onclick="loadTeamLive()" style="background:rgba(255,255,255,.06);border:1px solid var(--b2);color:var(--t2);font-size:11px;padding:6px 14px;border-radius:6px;cursor:pointer;">🔄 Rafraîchir</button></div>';
   html+='</div>';
   var homeId=(home.team&&home.team.id), awayId=(away.team&&away.team.id);
+  try{ html+=_renderMatchPression(s, homeId, awayId); }catch(e){}
   html+=_renderEspnMatchStats(s, homeId, awayId, col);
   var _compo=_renderEspnMatchPitch(s, col); html+=_compo||_renderEspnMatchLineups(s, col);
   el.innerHTML=html;
