@@ -21401,6 +21401,18 @@ function _renderMatchPression(s, homeId, awayId){
   } catch (e) { return ''; }
 }
 
+/* EXPORTS EXPLICITES (26/08). La declaration est pourtant au niveau superieur,
+   mais `typeof _renderMatchPression` rendait `undefined` en console chez
+   Antoine. Plutot que de supposer la portee, on expose franchement : c'est ce
+   que fait deja le reste du fichier pour tout ce qui est appele de l'exterieur,
+   et ca rend aussi la fonction testable a la main. */
+window._renderMatchPression = _renderMatchPression;
+window._g45PressPoids = _g45PressPoids;
+window._G45_PRESS_POIDS = _G45_PRESS_POIDS;
+/* Marqueur de version, pour verifier en une ligne quel app.js tourne
+   reellement : g45Build() en console. */
+window.g45Build = function(){ return '20260826m'; };
+
 function _renderEspnMatchStats(s, homeId, awayId, col){
   try {
     /* ═══ AUCUNE STATISTIQUE AVANT LE COUP D'ENVOI (26/08) ═══
