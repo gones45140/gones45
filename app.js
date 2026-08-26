@@ -25854,6 +25854,14 @@ async function _renderGenericDetail(el, sport, lg, eid){
     var _tSlug=({mlb:'baseball',nba:'basketball',nfl:'american-football',nhl:'ice-hockey',wnba:'basketball'})[lg]||({rugby:'rugby','rugby-league':'rugby'})[sport]||'';
     if(_tSlug){ h+='<div style="margin-top:8px;"><button onclick="g45LoadTendance(this)" data-slug="'+_tSlug+'" data-h="'+String(hN).replace(/"/g,'&quot;')+'" data-a="'+String(aN).replace(/"/g,'&quot;')+'" data-date="'+(comp.date||'')+'" data-box="ustend-'+eid+'" style="width:100%;box-sizing:border-box;font-size:12px;font-weight:800;padding:9px 12px;border-radius:9px;cursor:pointer;border:1.5px solid rgba(122,140,255,.5);background:rgba(122,140,255,.08);color:#8aa2ff;">📈 Tendance du public</button><div id="ustend-'+eid+'" style="margin-top:8px;"></div></div>'; }
     h+='<div style="margin-top:8px;"><button onclick="g45YT(this.dataset.q)" data-q="'+String(hN+' '+aN+' highlights').replace(/"/g,'&quot;')+'" style="width:100%;box-sizing:border-box;font-size:12px;font-weight:800;padding:9px 12px;border-radius:9px;cursor:pointer;border:1.5px solid rgba(255,69,58,.5);background:rgba(255,69,58,.10);color:#ff6b5e;">📺 Résumé sur YouTube</button></div>';
+    /* PRESSION DU MATCH (26/08). Elle n'etait branchee que sur le rendu
+       FOOTBALL (`_renderSaisonDetail`). Or ce rendu-ci, generique multi-sports,
+       sert aussi au football depuis certaines vues — d'ou un graphique absent la
+       ou Antoine l'attendait. La fonction se protege seule : elle rend une
+       chaine vide si le commentaire est absent ou trop maigre, donc l'appeler
+       sur un match de baseball ou de hockey ne coute rien. */
+    try{ if(typeof _renderMatchPression==='function'){ h+=_renderMatchPression(data, (home.team&&home.team.id)||'', (away.team&&away.team.id)||''); } }catch(e){}
+
     // H2H + Classement (génériques : rugby, baseball, basket, hockey, NFL…)
     var _hid=(home.team&&home.team.id)||'', _aid=(away.team&&away.team.id)||'';
     if(_hid&&_aid) h+='<div style="margin-top:8px;"><button onclick="g45RugbyH2H(this)" data-sport="'+sport+'" data-lg="'+lg+'" data-hid="'+_hid+'" data-aid="'+_aid+'" data-date="'+(comp.date||'')+'" data-h="'+String(hN).replace(/"/g,'&quot;')+'" data-a="'+String(aN).replace(/"/g,'&quot;')+'" data-box="rh2h-'+eid+'" style="width:100%;box-sizing:border-box;font-size:12px;font-weight:800;padding:9px 12px;border-radius:9px;cursor:pointer;border:1.5px solid rgba(138,160,255,.5);background:rgba(138,160,255,.10);color:#8aa0ff;">⚔️ Confrontations &amp; forme</button><div id="rh2h-'+eid+'" style="margin-top:8px;"></div></div>';
