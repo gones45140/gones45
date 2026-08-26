@@ -21325,10 +21325,15 @@ function _renderMatchPression(s, homeId, awayId){
     var cE = (ext.team && ext.team.color) ? ('#' + String(ext.team.color).replace('#','')) : '#f0b020';
     if (typeof _g45CoulFond === 'function') { cD = _g45CoulFond(cD); cE = _g45CoulFond(cE); }
 
-    var PAS = 3, MAXMIN = 96;
+    /* UNE BARRE PAR MINUTE (26/08). Les tranches de trois minutes lissaient trop :
+       la ou ESPN montre un temps fort de trois minutes consecutives, on ne voyait
+       qu'une seule barre moyennee. La comparaison avec leur graphique l'a rendu
+       evident. Il y a assez de matiere dans le commentaire pour descendre a la
+       minute sans que ca devienne du bruit. */
+    var PAS = 1, MAXMIN = 96;
     var n = Math.ceil(MAXMIN / PAS);
     var bD = new Array(n).fill(0), bE = new Array(n).fill(0);
-    var buts = [];
+    var buts = [], reperes = [];
     var vus = 0;
 
     com.forEach(function(c){
@@ -21345,9 +21350,27 @@ function _renderMatchPression(s, homeId, awayId){
       vus++;
       if (w > 0) { if (estDom) bD[i] += w; else bE[i] += w; }
       else       { if (estDom) bE[i] += -w * 0.5; else bD[i] += -w * 0.5; }
-      if (String((p.type && p.type.text) || '').toLowerCase().indexOf('goal') >= 0) {
-        buts.push({ i: i, dom: estDom });
-      }
+      var tt = String((p.type && p.type.text) || '').toLowerCase();
+      if (tt.indexOf('goal') >= 0) buts.push({ i: i, dom: estDom });
+    });
+
+    /* REPERES (26/08) : cartons et remplacements, comme les pastilles et les
+       fleches d'ESPN. Ils sont dans le commentaire mais etaient ignores. Releves
+       a part car ils ne pesent pas dans la pression — un remplacement ne dit
+       rien de la domination, il situe un moment du match. */
+    com.forEach(function(c){
+      var p = c.play; if (!p || !p.team) return;
+      var tt = String((p.type && p.type.text) || '').toLowerCase();
+      var ico = '';
+      if (tt.indexOf('red card') >= 0) ico = '\ud83d\udfe5';
+      else if (tt.indexOf('yellow') >= 0) ico = '\ud83d\udfe8';
+      else if (tt.indexOf('substitut') >= 0) ico = '\ud83d\udd01';
+      if (!ico) return;
+      var mn = parseInt(String((p.clock && p.clock.displayValue) || '').replace(/[^0-9]/g,''), 10);
+      if (isNaN(mn)) return;
+      if (p.period && p.period.number === 2 && mn <= 45) mn += 45;
+      reperes.push({ i: Math.min(n - 1, Math.floor(mn / PAS)), ico: ico,
+                     dom: (String(p.team.displayName || '') === nomD) });
     });
     if (vus < MINI) return '';
 
@@ -21366,15 +21389,19 @@ function _renderMatchPression(s, homeId, awayId){
     for (var i = 0; i < nAff; i++) {
       var hD = Math.round((bD[i] / maxi) * H), hE = Math.round((bE[i] / maxi) * H);
       var but = buts.filter(function(g){ return g.i === i; })[0];
-      barres += '<div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;position:relative;">'
-        + '<div style="height:' + H + 'px;display:flex;align-items:flex-end;width:100%;">'
-          + '<div style="width:100%;height:' + hD + 'px;background:' + cD + ';border-radius:2px 2px 0 0;opacity:.92;"></div>'
+      var rep = reperes.filter(function(g){ return g.i === i; })[0];
+      /* A la minute, les barres deviennent fines : 1 px d'ecart suffit, sinon
+         les 96 colonnes ne tiennent plus sur un ecran de telephone. */
+      barres += '<div style="flex:1;min-width:0;display:flex;flex-direction:column;align-items:center;position:relative;">'
+        + '<div style="height:11px;font-size:8px;line-height:11px;">' + (but && but.dom ? '\u26bd' : (rep && rep.dom ? rep.ico : '')) + '</div>'
+        + '<div style="height:' + H + 'px;display:flex;align-items:flex-end;width:100%;padding:0 .5px;box-sizing:border-box;">'
+          + '<div style="width:100%;height:' + hD + 'px;background:' + cD + ';border-radius:1px 1px 0 0;"></div>'
         + '</div>'
-        + '<div style="height:1px;width:100%;background:rgba(255,255,255,.18);"></div>'
-        + '<div style="height:' + H + 'px;display:flex;align-items:flex-start;width:100%;">'
-          + '<div style="width:100%;height:' + hE + 'px;background:' + cE + ';border-radius:0 0 2px 2px;opacity:.92;"></div>'
+        + '<div style="height:1px;width:100%;background:rgba(255,255,255,.22);"></div>'
+        + '<div style="height:' + H + 'px;display:flex;align-items:flex-start;width:100%;padding:0 .5px;box-sizing:border-box;">'
+          + '<div style="width:100%;height:' + hE + 'px;background:' + cE + ';border-radius:0 0 1px 1px;"></div>'
         + '</div>'
-        + (but ? ('<div style="position:absolute;top:' + (but.dom ? '-2px' : 'auto') + ';bottom:' + (but.dom ? 'auto' : '-2px') + ';font-size:9px;">\u26bd</div>') : '')
+        + '<div style="height:11px;font-size:8px;line-height:11px;">' + (but && !but.dom ? '\u26bd' : (rep && !rep.dom ? rep.ico : '')) + '</div>'
       + '</div>';
     }
 
@@ -21395,6 +21422,7 @@ function _renderMatchPression(s, homeId, awayId){
         + (nAff > n * 0.55 ? '<span>45\'</span>' : '')
         + '<span>' + Math.round(nAff * PAS) + '\'</span></div>'
       + '<div style="font-size:8.5px;color:var(--t3);margin-top:7px;line-height:1.5;">'
+        + '\u26bd but \u00b7 \ud83d\udfe8 carton \u00b7 \ud83d\udfe5 expulsion \u00b7 \ud83d\udd01 remplacement<br>'
         + 'Reconstruite \u00e0 partir des actions du match \u2014 tirs, corners, buts, fautes. '
         + 'Indicateur maison, non comparable aux valeurs d\'ESPN ou de Sofascore.</div>'
     + '</div>';
@@ -21411,7 +21439,7 @@ window._g45PressPoids = _g45PressPoids;
 window._G45_PRESS_POIDS = _G45_PRESS_POIDS;
 /* Marqueur de version, pour verifier en une ligne quel app.js tourne
    reellement : g45Build() en console. */
-window.g45Build = function(){ return '20260826m'; };
+window.g45Build = function(){ return '20260826n'; };
 
 function _renderEspnMatchStats(s, homeId, awayId, col){
   try {
