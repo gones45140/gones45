@@ -4299,7 +4299,13 @@ function saveMmAsPari(mode) {
   if (!rows || !rows.length || !rows.some(function(r){ return r.type; })) {
     alert('Ajoute au moins une sélection !'); return;
   }
-  var cote = rows.reduce(function(a,r){ return a*(parseFloat(r.cote)||1); }, 1);
+  var coteProduit = rows.reduce(function(a,r){ return a*(parseFloat(r.cote)||1); }, 1);
+  /* COTE MANUELLE PRISE EN COMPTE A L'ENREGISTREMENT (27/08). `renderMmCote()`
+     affichait deja la cote manuelle en aperçu (barre le produit automatique),
+     mais `saveMmAsPari` recalculait le produit brut depuis `rows` sans jamais
+     regarder le champ manuel : le pari enregistrait toujours le produit, pas
+     la cote reelle du ticket. Seul le mode 'cockpit' a ce champ. */
+  var cote = (mode==='cockpit' && typeof _mmCoteManuelle==='function' && _mmCoteManuelle()>0) ? _mmCoteManuelle() : coteProduit;
   /* COTE RETIREE DU LIBELLE (25/08). Elle etait collee a chaque selection —
      « Victoire @1.8 + BTS Oui @1.7 » — ce qui faisait de chaque combinaison de
      cotes un TYPE distinct : le bilan comptait autant de categories que de
@@ -10936,7 +10942,13 @@ function saveMmAsPari(mode) {
   if (!rows || !rows.length || !rows.some(function(r){ return r.type; })) {
     alert('Ajoute au moins une sélection !'); return;
   }
-  var cote = rows.reduce(function(a,r){ return a*(parseFloat(r.cote)||1); }, 1);
+  var coteProduit = rows.reduce(function(a,r){ return a*(parseFloat(r.cote)||1); }, 1);
+  /* COTE MANUELLE PRISE EN COMPTE A L'ENREGISTREMENT (27/08). `renderMmCote()`
+     affichait deja la cote manuelle en aperçu (barre le produit automatique),
+     mais `saveMmAsPari` recalculait le produit brut depuis `rows` sans jamais
+     regarder le champ manuel : le pari enregistrait toujours le produit, pas
+     la cote reelle du ticket. Seul le mode 'cockpit' a ce champ. */
+  var cote = (mode==='cockpit' && typeof _mmCoteManuelle==='function' && _mmCoteManuelle()>0) ? _mmCoteManuelle() : coteProduit;
   /* COTE RETIREE DU LIBELLE (25/08). Elle etait collee a chaque selection —
      « Victoire @1.8 + BTS Oui @1.7 » — ce qui faisait de chaque combinaison de
      cotes un TYPE distinct : le bilan comptait autant de categories que de
@@ -28360,8 +28372,10 @@ function renderBilanTypeFilter(){
   var cur=window._bilanType||'all';
   var defs=[['all','Tous']].concat(_bilanTypes().map(function(t){return [t,t];}));
   window._bilanTypeList=defs.map(function(d){return d[0];});
-  var html='<div style="font-size:9px;color:var(--t3);font-weight:700;text-transform:uppercase;letter-spacing:.5px;margin-bottom:5px;">📊 Filtrer par type de pari</div><div style="display:flex;gap:5px;overflow-x:auto;padding-bottom:6px;-webkit-overflow-scrolling:touch;">';
-  defs.forEach(function(d,i){ var on=cur===d[0]; html+='<button onclick="setBilanTypeIdx('+i+')" style="flex-shrink:0;border:none;border-radius:7px;padding:6px 11px;font-size:10px;font-weight:700;cursor:pointer;background:'+(on?'#4d84ff':'rgba(255,255,255,.06)')+';color:'+(on?'#fff':'var(--t2)')+';">'+d[1]+'</button>'; });
+  /* GRILLE DE TUILES, meme langage que .sfbtn/.mm-type (27/08, "comme le
+     screen 2"). Avant : pilules en ligne scroll-x, largeur variable. */
+  var html='<div style="font-size:9px;color:var(--t3);font-weight:700;text-transform:uppercase;letter-spacing:.5px;margin-bottom:5px;">📊 Filtrer par type de pari</div><div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(88px,1fr));gap:6px;">';
+  defs.forEach(function(d,i){ var on=cur===d[0]; html+='<button onclick="setBilanTypeIdx('+i+')" class="sfbtn'+(on?' on':'')+'">'+d[1]+'</button>'; });
   fb.innerHTML=html+'</div>';
 }
 function setBilanTypeIdx(i){ window._bilanType=(window._bilanTypeList||[])[i]||'all'; renderBilanTypeFilter(); try{renderBilanCompFilter();}catch(e){} try{renderBilanTab();}catch(e){} try{renderGlobalCharts();}catch(e){} }
@@ -28394,8 +28408,10 @@ function renderBilanCompFilter(){
   var cur=window._bilanComp||'all';
   var defs=[['all','Toutes']].concat(comps.map(function(c){return [c,c];}));
   window._bilanCompList=defs.map(function(d){return d[0];});
-  var html='<div style="font-size:9px;color:var(--t3);font-weight:700;text-transform:uppercase;letter-spacing:.5px;margin-bottom:5px;">🏆 Filtrer par compétition</div><div style="display:flex;gap:5px;overflow-x:auto;padding-bottom:6px;-webkit-overflow-scrolling:touch;">';
-  defs.forEach(function(d,i){ var on=cur===d[0]; html+='<button onclick="setBilanCompIdx('+i+')" style="flex-shrink:0;border:none;border-radius:7px;padding:6px 11px;font-size:10px;font-weight:700;cursor:pointer;background:'+(on?'#4d84ff':'rgba(255,255,255,.06)')+';color:'+(on?'#fff':'var(--t2)')+';">'+d[1]+'</button>'; });
+  /* GRILLE DE TUILES, meme langage que .sfbtn/.mm-type (27/08, "comme le
+     screen 2"). Avant : pilules en ligne scroll-x, largeur variable. */
+  var html='<div style="font-size:9px;color:var(--t3);font-weight:700;text-transform:uppercase;letter-spacing:.5px;margin-bottom:5px;">🏆 Filtrer par compétition</div><div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(88px,1fr));gap:6px;">';
+  defs.forEach(function(d,i){ var on=cur===d[0]; html+='<button onclick="setBilanCompIdx('+i+')" class="sfbtn'+(on?' on':'')+'">'+d[1]+'</button>'; });
   fb.innerHTML=html+'</div>';
 }
 function setBilanCompIdx(i){ window._bilanComp=(window._bilanCompList||[])[i]||'all'; renderBilanCompFilter(); try{renderBilanTab();}catch(e){} try{renderGlobalCharts();}catch(e){} }
