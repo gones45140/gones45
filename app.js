@@ -4370,7 +4370,14 @@ function getMmLabel(){
   return mmRows.filter(function(r){return r.type;}).map(function(r){return r.type;}).join(' + ');
 }
 function getMmCote(){
-  return mmRows.reduce(function(a,r){return a*(parseFloat(r.cote)||1);},1);
+  /* COTE MANUELLE PRISE EN COMPTE ICI AUSSI (27/08, 2e endroit trouve apres
+     retour d'Antoine). `getMmCote()` est ce que lit `pari(true)` pour la
+     colonne "Engager la montante" — un chemin totalement distinct de
+     `saveMmAsPari` (le bouton "Enregistrer pari" du cockpit), corrige plus
+     tot. Meme bug ici : le produit brut de `mmRows` etait renvoye sans jamais
+     regarder le champ "cote reelle" manuel. */
+  var produit=mmRows.reduce(function(a,r){return a*(parseFloat(r.cote)||1);},1);
+  return (typeof _mmCoteManuelle==='function' && _mmCoteManuelle()>0) ? _mmCoteManuelle() : produit;
 }
 
 /* ── SEARCH CLUB API-SPORTS ── */
@@ -11013,7 +11020,14 @@ function getMmLabel(){
   return mmRows.filter(function(r){return r.type;}).map(function(r){return r.type;}).join(' + ');
 }
 function getMmCote(){
-  return mmRows.reduce(function(a,r){return a*(parseFloat(r.cote)||1);},1);
+  /* COTE MANUELLE PRISE EN COMPTE ICI AUSSI (27/08, 2e endroit trouve apres
+     retour d'Antoine). `getMmCote()` est ce que lit `pari(true)` pour la
+     colonne "Engager la montante" — un chemin totalement distinct de
+     `saveMmAsPari` (le bouton "Enregistrer pari" du cockpit), corrige plus
+     tot. Meme bug ici : le produit brut de `mmRows` etait renvoye sans jamais
+     regarder le champ "cote reelle" manuel. */
+  var produit=mmRows.reduce(function(a,r){return a*(parseFloat(r.cote)||1);},1);
+  return (typeof _mmCoteManuelle==='function' && _mmCoteManuelle()>0) ? _mmCoteManuelle() : produit;
 }
 
 /* ── SEARCH CLUB API-SPORTS ── */
