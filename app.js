@@ -24119,21 +24119,30 @@ function loadTendancesTab(){
   var el=document.getElementById('t-tend'); if(!el) return;
   var G=_g45TrGroups();
   if(!_G45_TR.sel){ _G45_TR.sel={}; G.forEach(function(g,i){ if(/Grands championnats|Coupes d/i.test(g.grp)) _G45_TR.sel[i]=true; }); }
-  var chip=function(lbl,on,fn){ return '<button onclick="'+fn+'" style="border:none;cursor:pointer;border-radius:8px;padding:6px 11px;font-size:10px;font-weight:800;background:'+(on?'#f0c828':'rgba(255,255,255,.06)')+';color:'+(on?'#221b00':'var(--t2)')+';">'+lbl+'</button>'; };
+  /* LIFTING DU 27/08 (meme demande que le Bilan : "comme le screen 2"). Les
+     puces etaient des pilules en ligne flex-wrap, largeur variable, un seul
+     ton (jaune plein/transparent). On applique la meme grille de tuiles que
+     .sfbtn (Bilan) pour les GROUPES (ligne 1, meme nature de choix — un
+     ensemble de filtres homogenes). La ligne 2 (Jour / Cote mini / Proba
+     mini / Buteurs / CLV) melange des etiquettes et des puces courtes :
+     forcer une grille uniforme y gaspillerait de la place et casserait le
+     regroupement label->options. On garde le flex-wrap mais chaque sous-
+     groupe est isole dans son propre segment arrondi, pour que l'oeil separe
+     "Jour" de "Cote mini" de "Proba mini" au lieu d'une ligne continue. */
+  var chip=function(lbl,on,fn){ return '<button onclick="'+fn+'" class="sfbtn"'+(on?' style="background:#f0c828;border-color:#f0c828;color:#221b00;"':'')+'>'+lbl+'</button>'; };
+  var seg=function(label,inner){ return '<div style="display:inline-flex;align-items:center;gap:5px;background:rgba(255,255,255,.035);border:1px solid rgba(255,255,255,.08);border-radius:10px;padding:5px 7px 5px 9px;">'
+    +(label?'<span style="font-size:9px;color:var(--t3);font-weight:700;white-space:nowrap;">'+label+'</span>':'')
+    +'<div style="display:flex;gap:5px;flex-wrap:wrap;">'+inner+'</div></div>'; };
   var h='<div class="sec" style="margin-top:0;">🔥 Tendances du jour</div>'
     +'<div style="font-size:9px;color:var(--t3);line-height:1.6;margin-bottom:9px;">Les tendances sont classées par <b>écart avec la cote</b>, pas par pourcentage brut : une série à 100% ne vaut rien si le bookmaker l\'a déjà intégrée. Les cotes sont dévigorisées avant comparaison.</div>'
-    +'<div style="display:flex;gap:5px;flex-wrap:wrap;margin-bottom:7px;">'
+    +'<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(110px,1fr));gap:6px;margin-bottom:9px;">'
     +G.map(function(g,i){ return chip(g.grp, !!_G45_TR.sel[i], "g45TrSel("+i+")"); }).join('')+'</div>'
-    +'<div style="display:flex;gap:5px;flex-wrap:wrap;margin-bottom:9px;align-items:center;">'
-    +'<span style="font-size:9px;color:var(--t3);">Jour :</span>'
-    +chip("Aujourd'hui", _G45_TR.day===0, "g45TrDay(0)")+chip('Demain', _G45_TR.day===1, "g45TrDay(1)")
-    +'<span style="font-size:9px;color:var(--t3);margin-left:6px;">Cote mini :</span>'
-    +chip('Toutes', !_G45_TR.min, "g45TrMin(0)")+chip('1.30', _G45_TR.min===1.3, "g45TrMin(1.3)")+chip('1.50', _G45_TR.min===1.5, "g45TrMin(1.5)")
-    +'<span style="font-size:9px;color:var(--t3);margin-left:6px;">Proba mini :</span>'
-    +chip('40%', _G45_TR.pmin===0.40, "g45TrPMin(0.40)")+chip('50%', _G45_TR.pmin===0.50, "g45TrPMin(0.50)")
-    +chip('60%', _G45_TR.pmin===0.60, "g45TrPMin(0.60)")
-    +'<button onclick="g45ButeursView()" style="border:none;cursor:pointer;border-radius:8px;padding:6px 11px;font-size:10px;font-weight:800;background:rgba(240,200,40,.16);color:#f0c828;margin-left:4px;">⚽ Buteurs</button>'
-    +'<button onclick="g45ClvView()" style="border:none;cursor:pointer;border-radius:8px;padding:6px 11px;font-size:10px;font-weight:800;background:rgba(46,204,113,.16);color:#2ecc71;margin-left:4px;">📏 CLV</button>'
+    +'<div style="display:flex;gap:7px;flex-wrap:wrap;margin-bottom:9px;align-items:center;">'
+    +seg('Jour', chip("Aujourd'hui", _G45_TR.day===0, "g45TrDay(0)")+chip('Demain', _G45_TR.day===1, "g45TrDay(1)"))
+    +seg('Cote mini', chip('Toutes', !_G45_TR.min, "g45TrMin(0)")+chip('1.30', _G45_TR.min===1.3, "g45TrMin(1.3)")+chip('1.50', _G45_TR.min===1.5, "g45TrMin(1.5)"))
+    +seg('Proba mini', chip('40%', _G45_TR.pmin===0.40, "g45TrPMin(0.40)")+chip('50%', _G45_TR.pmin===0.50, "g45TrPMin(0.50)")+chip('60%', _G45_TR.pmin===0.60, "g45TrPMin(0.60)"))
+    +seg('', '<button onclick="g45ButeursView()" class="sfbtn" style="background:rgba(240,200,40,.16);border-color:rgba(240,200,40,.35);color:#f0c828;">⚽ Buteurs</button>'
+      +'<button onclick="g45ClvView()" class="sfbtn" style="background:rgba(46,204,113,.16);border-color:rgba(46,204,113,.35);color:#2ecc71;">📏 CLV</button>')
     +'</div>';
   if(!_G45_TR.res){
     h+='<button onclick="g45TrRun()" style="width:100%;border:none;cursor:pointer;border-radius:9px;padding:11px;font-size:11px;font-weight:800;background:rgba(240,200,40,.16);color:#f0c828;">⚡ Analyser les matchs</button>'
