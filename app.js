@@ -2022,7 +2022,6 @@ function render(){
       var _dom=_pfLieu('dom'), _ext=_pfLieu('ext');
       var wins=paris.filter(function(h){return h.win&&!h.isCashout;}).length;
       var pc=paris.length?Math.round(wins/paris.length*100):0;
-      var logo=logoHtml(u.n,u.color,u.abbr,32);
       /* ═══ SERIE PAR LIEU (26/08) ═══
          La serie melangeait domicile et exterieur alors que tout le reste de la
          carte est ventile : sur le Real Madrid, deux W dont un a domicile et un
@@ -2132,7 +2131,13 @@ function render(){
         +'data-nom="'+u.n+'" onclick="openClubFromDash(this.dataset.nom)">'
         +_couche
         +_filig
-        +logo
+        /* BADGE ROND SUPPRIME (27/08, corrige le decalage persistant). C'etait un
+           vrai element flex de 32px+11px de gap AVANT le bloc texte : il poussait
+           systematiquement la bulle vers la droite, laissant un vide a gauche sur
+           toute carte sans visuel centre (France, Lyon, PSG, Real...). Les tentatives
+           du 27/08 sur les marges du bloc texte corrigeaient un symptome sans toucher
+           la vraie cause. Le club est deja identifie par la teinte de fond et le
+           filigrane a droite ; le badge etait redondant. */
         /* VOILE LOCAL SOUS LE TEXTE (25/08). Le visuel est desormais franc ; sans
            cette protection « Arsenal » se noyait dans le maillot blanc et le
            libelle de Barcelone passait sur l'ecusson dore. Degrade sous le seul
@@ -8868,7 +8873,6 @@ function render(){
       var _dom=_pfLieu('dom'), _ext=_pfLieu('ext');
       var wins=paris.filter(function(h){return h.win&&!h.isCashout;}).length;
       var pc=paris.length?Math.round(wins/paris.length*100):0;
-      var logo=logoHtml(u.n,u.color,u.abbr,32);
       /* ═══ SERIE PAR LIEU (26/08) ═══
          La serie melangeait domicile et exterieur alors que tout le reste de la
          carte est ventile : sur le Real Madrid, deux W dont un a domicile et un
@@ -8978,7 +8982,13 @@ function render(){
         +'data-nom="'+u.n+'" onclick="openClubFromDash(this.dataset.nom)">'
         +_couche
         +_filig
-        +logo
+        /* BADGE ROND SUPPRIME (27/08, corrige le decalage persistant). C'etait un
+           vrai element flex de 32px+11px de gap AVANT le bloc texte : il poussait
+           systematiquement la bulle vers la droite, laissant un vide a gauche sur
+           toute carte sans visuel centre (France, Lyon, PSG, Real...). Les tentatives
+           du 27/08 sur les marges du bloc texte corrigeaient un symptome sans toucher
+           la vraie cause. Le club est deja identifie par la teinte de fond et le
+           filigrane a droite ; le badge etait redondant. */
         /* VOILE LOCAL SOUS LE TEXTE (25/08). Le visuel est desormais franc ; sans
            cette protection « Arsenal » se noyait dans le maillot blanc et le
            libelle de Barcelone passait sur l'ecusson dore. Degrade sous le seul
