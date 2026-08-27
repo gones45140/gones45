@@ -471,7 +471,11 @@ var LOGOS={
      page redeclarait le mauvais blason et annulait toute reparation. Sans
      entree ici, la resolution retombe sur le logo memorise dans le mur, qui est
      le bon depuis `g45ReparerLogo`. */
-  "LA Dodgers":   "https://media.api-sports.io/baseball/teams/19.png"
+  "LA Dodgers":   "https://media.api-sports.io/baseball/teams/19.png",
+  /* AJOUTE LE 27/08 : blason perso deposee par Antoine sur GitHub (absent
+     de api-sports). La cle doit correspondre EXACTEMENT au nom de l'equipe
+     sur le mur (`u.n`) pour que g45LogoUrlDe() la trouve. */
+  "Atletico Madrid": "https://raw.githubusercontent.com/gones45140/gones45/main/images/ligues/Atletico%20Madrid.png"
 };
 var FAV_LINKS={
   "Bayern Munich":"https://www.flashscore.fr/equipe/bayern/nVp0wiqd/",
@@ -7431,7 +7435,11 @@ var LOGOS={
      page redeclarait le mauvais blason et annulait toute reparation. Sans
      entree ici, la resolution retombe sur le logo memorise dans le mur, qui est
      le bon depuis `g45ReparerLogo`. */
-  "LA Dodgers":   "https://media.api-sports.io/baseball/teams/19.png"
+  "LA Dodgers":   "https://media.api-sports.io/baseball/teams/19.png",
+  /* AJOUTE LE 27/08 : blason perso deposee par Antoine sur GitHub (absent
+     de api-sports). La cle doit correspondre EXACTEMENT au nom de l'equipe
+     sur le mur (`u.n`) pour que g45LogoUrlDe() la trouve. */
+  "Atletico Madrid": "https://raw.githubusercontent.com/gones45140/gones45/main/images/ligues/Atletico%20Madrid.png"
 };
 var FAV_LINKS={
   "Bayern Munich":"https://www.flashscore.fr/equipe/bayern/nVp0wiqd/",
@@ -38460,21 +38468,34 @@ function _g45CatPerso(k){
   var cle = 'g45_catimg_' + k;
   var c = null;
   try{ c = localStorage.getItem(cle); }catch(e){}
-  if (c !== null) {
+  /* NEGATIF PERIME (27/08). Un resultat "absent" restait en cache POUR
+     TOUJOURS (chaine vide indefinie) : deposer formule1.png dans le depot
+     APRES ce premier test ne changeait plus jamais rien, rien ne retestait.
+     Constate par Antoine sur FORMULE 1 (fichier present, jamais affiche) et
+     AU NRL (image plus la, malgre un nouveau depot). Le negatif expire donc
+     desormais au bout de 6h ; le positif (une vraie URL trouvee) reste en
+     cache sans limite, aucune raison de re-tester un fichier qui existe deja. */
+  if (c !== null && c !== '') {
     /* CORRECTION DU 23/08 : la mesure du format n'etait declenchee qu'a la
        DECOUVERTE du fichier, dans le `onload` du test d'existence. Pour une
        image deja connue — le cas normal des le second chargement — on sortait
        ici sans jamais mesurer, et la detection logo/photo ne tournait pas.
        Constate sur `tennis.png` : le fichier etait bien trouve, le format
        restait `null`. On mesure donc aussi sur ce chemin. */
-    if (c) { try{ _g45CatMesurer(k, c); }catch(e){} }
-    return c;                                     /* '' = teste, absent */
+    try{ _g45CatMesurer(k, c); }catch(e){}
+    return c;
+  }
+  if (c === '') {
+    var negT=0; try{ negT=parseInt(localStorage.getItem(cle+'_neg_t')||'0',10)||0; }catch(e){}
+    if (negT && (Date.now()-negT) < 6*3600*1000) return c;   /* negatif encore frais */
+    /* perime, ou jamais horodate (ancien cache d'avant ce correctif) : on
+       retente ci-dessous plutot que de faire confiance a un test qui date. */
   }
   ['png','jpg'].forEach(function(ext){
     var url = 'images/ligues/' + k + '.' + ext;
     var img = new Image();
     img.onload = function(){
-      try{ localStorage.setItem(cle, url); }catch(e){}
+      try{ localStorage.setItem(cle, url); localStorage.removeItem(cle+'_neg_t'); }catch(e){}
       try{ _g45CatMesurer(k, url); }catch(e){}
       /* REDESSIN (22/08). Sans lui, le fichier etait bien detecte et memorise,
          mais la ligne restait sur le pictogramme dessine jusqu'au rechargement
@@ -38489,10 +38510,18 @@ function _g45CatPerso(k){
         try{ if(typeof render === 'function') render(); }catch(e){}
       }
     };
-    img.onerror = function(){ try{ if(localStorage.getItem(cle)===null && ext==='jpg') localStorage.setItem(cle,''); }catch(e){} };
+    img.onerror = function(){
+      try{
+        var cur = localStorage.getItem(cle);
+        if((cur===null || cur==='') && ext==='jpg'){
+          localStorage.setItem(cle,'');
+          localStorage.setItem(cle+'_neg_t', String(Date.now()));
+        }
+      }catch(e){}
+    };
     img.src = url;
   });
-  return null;                                    /* pas encore teste */
+  return c;                                    /* '' ou null = absent pour CE rendu */
 }
 
 function g45VisuelCategorie(nom){
