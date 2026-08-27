@@ -29696,16 +29696,45 @@ function _g45BetRowMini(h){
   var gain=h.win?(mise*cote-mise):-mise;
   var gainC=gain>=0?'var(--g)':'var(--r)';
   var borderC=h.win?'var(--g)':'var(--r)';
-  var titre=(h.target&&h.target!=='-'?h.target:(h.n||'—'));
-  var parts=[]; if(h.type) parts.push(h.type); parts.push('@'+cote.toFixed(2)); if(h.comp) parts.push(h.comp);
-  return '<div data-aid="'+h.id+'" onclick="try{openBetEdit(this.dataset.aid)}catch(e){}" style="display:flex;align-items:center;padding:8px 10px;background:var(--s1);border-radius:8px;margin-bottom:4px;border-left:3px solid '+borderC+';gap:8px;cursor:pointer;">'
-    +'<div style="font-size:10px;color:var(--t3);min-width:50px;flex-shrink:0;text-align:center;line-height:1.3;">'+(h.date||'')+(h.heure?'<br>'+h.heure:'')+'</div>'
-    +'<div style="width:22px;height:22px;border-radius:5px;background:'+b2.c+';color:#fff;font-size:9px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0;">'+((b2.n||'?').charAt(0).toUpperCase())+'</div>'
-    +'<div style="flex:1;min-width:0;overflow:hidden;">'
+  /* QUI EST LE PARI, VRAIMENT ? (27/08, corrige apres retour d'Antoine). Sur une
+     MONTANTE, le champ `target`/`c-target` s'appelle "Adversaire" dans le
+     formulaire — ce n'est JAMAIS l'equipe jouee, c'est le camp d'en face. Un
+     premier essai affichait pourtant target en priorite sur `h.n` (le nom du
+     mur, la VRAIE equipe jouee) : un pari sur le Real Madrid contre la
+     Sociedad ressortait "Real Sociedad gagne", l'inverse de la realite. Pour
+     un pari SIMPLE (h.n==='SIMPLE', pas rattache a une equipe du mur), target
+     reste la bonne source : il vient deja de "Equipe / Joueur" + "Adversaire"
+     combines dans le bon ordre par `pari()`. */
+  var isSimple=(h.n==='SIMPLE');
+  var adversaire=(h.target&&h.target!=='-'&&!isSimple)?h.target:'';
+  var titre=isSimple?(h.target&&h.target!=='-'?h.target:(h.n||'—')):(h.n||h.target||'—');
+  var typeTxt=h.type||'';
+  if(/^victoire\b/i.test(typeTxt) && titre.toLowerCase().indexOf(' vs ')===-1){
+    typeTxt=titre+' '+typeTxt.replace(/^victoire\b/i,'gagne');
+  }
+  var parts=[]; if(typeTxt) parts.push(typeTxt); if(adversaire) parts.push('vs '+adversaire); parts.push('@'+cote.toFixed(2)); if(h.comp) parts.push(h.comp);
+  /* IDENTITE VISUELLE DE LA LIGNE (27/08, lifting demande par Antoine — "logo
+     du book ou de l'equipe, je sais pas"). On choisit selon ce que la ligne
+     represente VRAIMENT : l'EQUIPE pour une montante (elle a deja une couleur
+     et un logo sur le mur, meme grammaire que les cartes du mur : teinte +
+     filigrane), le BOOKMAKER pour un pari SIMPLE qui n'est rattache a aucune
+     equipe. Un pari simple n'a pas d'equipe unique a mettre en avant — le book
+     est la seule identite stable de la ligne. */
+  var _idU=isSimple?null:(state.u||[]).filter(function(x){return x&&x.n===h.n;})[0];
+  var _idColor=(_idU&&_idU.color)||b2.c||'#4d84ff';
+  var _idLogo=isSimple?'':((typeof g45LogoUrlDe==='function')?g45LogoUrlDe(h.n):'');
+  var _idFilig=_idLogo
+    ?('<img src="'+_idLogo+'" alt="" loading="lazy" onerror="this.style.display=\'none\'" style="position:absolute;right:6px;top:50%;transform:translateY(-50%);height:34px;width:34px;object-fit:contain;opacity:.20;pointer-events:none;">')
+    :((isSimple&&b2.d)?('<img src="https://www.google.com/s2/favicons?domain='+b2.d+'&sz=64" alt="" loading="lazy" onerror="this.style.display=\'none\'" style="position:absolute;right:8px;top:50%;transform:translateY(-50%);height:26px;width:26px;object-fit:contain;opacity:.30;border-radius:5px;pointer-events:none;">'):'');
+  return '<div data-aid="'+h.id+'" onclick="try{openBetEdit(this.dataset.aid)}catch(e){}" style="position:relative;overflow:hidden;display:flex;align-items:center;padding:8px 10px;background:linear-gradient(100deg,'+_idColor+'26 0%,var(--s1) 62%);border-radius:8px;margin-bottom:4px;border-left:3px solid '+borderC+';gap:8px;cursor:pointer;">'
+    +_idFilig
+    +'<div style="position:relative;font-size:10px;color:var(--t3);min-width:50px;flex-shrink:0;text-align:center;line-height:1.3;">'+(h.date||'')+(h.heure?'<br>'+h.heure:'')+'</div>'
+    +'<div style="position:relative;width:22px;height:22px;border-radius:5px;background:'+b2.c+';color:#fff;font-size:9px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0;">'+((b2.n||'?').charAt(0).toUpperCase())+'</div>'
+    +'<div style="position:relative;flex:1;min-width:0;overflow:hidden;">'
     +'<div style="font-size:12px;font-weight:700;color:var(--t1);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">'+titre+'</div>'
     +'<div style="font-size:10px;color:var(--t3);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">'+parts.join(' · ')+'</div>'
     +'</div>'
-    +'<div style="text-align:right;flex-shrink:0;">'
+    +'<div style="position:relative;text-align:right;flex-shrink:0;">'
     +'<div style="font-size:11px;font-weight:800;">'+(h.win?'✅':'❌')+'</div>'
     +'<div style="font-size:11px;font-weight:700;color:'+gainC+';">'+(gain>=0?'+':'')+gain.toFixed(2)+'€</div>'
     +'<div style="font-size:9px;color:var(--t3);">'+mise.toFixed(2)+'€</div>'
