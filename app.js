@@ -2040,6 +2040,22 @@ function render(){
         ? ('<span style="display:inline-flex;align-items:center;flex-wrap:wrap;">'
             + _serieLieu('dom','\ud83c\udfe0') + _serieLieu('ext','\u2708\ufe0f') + '</span>')
         : formeHtml(paris,5);
+      /* SERIE EN COURS PAR LIEU (27/08). Meme raison que la separation de la
+         forme le 26/08 : `streak(paris)` melangeait dom+ext, donc le badge 🔥
+         pouvait afficher une "serie de 2" composee d'un W a domicile et un W a
+         l'exterieur, fausse pour chacune des deux montantes suivies separement.
+         Repli sur l'ancien comportement global si le pari n'a pas de lieu
+         fiable (anterieur a la separation du 22/08), comme pour `forme`. */
+      var _streakLieu=function(lg, ico){
+        var l=paris.filter(function(h){ return h.domicile===lg; });
+        var sk=streak(l);
+        if(sk.n<=1) return '';
+        return '<span style="display:inline-flex;align-items:center;gap:3px;padding:1px 7px;border-radius:10px;font-size:9px;font-weight:700;margin-top:3px;margin-right:5px;background:'+(sk.t?'rgba(30,215,96,.1)':'rgba(255,69,69,.1)')+';color:'+(sk.t?'var(--g)':'var(--r)')+';">'
+          +ico+' '+(sk.t?'🔥':'❄️')+' '+sk.n+'</span>';
+      };
+      var serieFeu=(_dom.n||_ext.n)
+        ? (_streakLieu('dom','\ud83c\udfe0')+_streakLieu('ext','\u2708\ufe0f'))
+        : (streak(paris).n>1?'<span style="display:inline-flex;align-items:center;gap:3px;padding:1px 7px;border-radius:10px;font-size:9px;font-weight:700;margin-top:3px;background:'+(streak(paris).t?'rgba(30,215,96,.1)':'rgba(255,69,69,.1)')+';color:'+(streak(paris).t?'var(--g)':'var(--r)')+';">'+(streak(paris).t?'🔥':'❄️')+' '+streak(paris).n+'</span>':'');
       var pColor=profit>=0?'var(--g)':'var(--r)';
       /* ═══ LOGO ET COULEUR DU CLUB EN FOND DE LIGNE (22/08) ═══
          Meme grammaire que les cartes de match : teinte du club a gauche, logo
@@ -2149,8 +2165,7 @@ function render(){
         +'<div style="font-size:9px;color:var(--t3);">'+'⭐'.repeat(u.s)+' · '+_g45PalLabel(u)+' · '+pc+'% réussite</div>'
         +(u.note?'<div style="font-size:10px;color:var(--a);margin-top:2px;font-style:italic;">📌 '+u.note+'</div>':'')
         +forme
-        +(streak(paris).n>1?'<div style="display:inline-flex;align-items:center;gap:3px;padding:1px 7px;border-radius:10px;font-size:9px;font-weight:700;margin-top:3px;background:'+(streak(paris).t?'rgba(30,215,96,.1)':'rgba(255,69,69,.1)')+';color:'+(streak(paris).t?'var(--g)':'var(--r)')+'">'
-        +(streak(paris).t?'🔥':'❄️')+' '+streak(paris).n+'</div>':'')
+        +serieFeu
         +'</div>'
         +'<div style="position:relative;margin-left:auto;text-align:right;line-height:1.25;padding:4px 9px 4px 18px;border-radius:10px;'
           +'background:linear-gradient(270deg,rgba(8,11,20,.72) 0%,rgba(8,11,20,.40) 55%,transparent 100%);'
@@ -8871,6 +8886,22 @@ function render(){
         ? ('<span style="display:inline-flex;align-items:center;flex-wrap:wrap;">'
             + _serieLieu('dom','\ud83c\udfe0') + _serieLieu('ext','\u2708\ufe0f') + '</span>')
         : formeHtml(paris,5);
+      /* SERIE EN COURS PAR LIEU (27/08). Meme raison que la separation de la
+         forme le 26/08 : `streak(paris)` melangeait dom+ext, donc le badge 🔥
+         pouvait afficher une "serie de 2" composee d'un W a domicile et un W a
+         l'exterieur, fausse pour chacune des deux montantes suivies separement.
+         Repli sur l'ancien comportement global si le pari n'a pas de lieu
+         fiable (anterieur a la separation du 22/08), comme pour `forme`. */
+      var _streakLieu=function(lg, ico){
+        var l=paris.filter(function(h){ return h.domicile===lg; });
+        var sk=streak(l);
+        if(sk.n<=1) return '';
+        return '<span style="display:inline-flex;align-items:center;gap:3px;padding:1px 7px;border-radius:10px;font-size:9px;font-weight:700;margin-top:3px;margin-right:5px;background:'+(sk.t?'rgba(30,215,96,.1)':'rgba(255,69,69,.1)')+';color:'+(sk.t?'var(--g)':'var(--r)')+';">'
+          +ico+' '+(sk.t?'🔥':'❄️')+' '+sk.n+'</span>';
+      };
+      var serieFeu=(_dom.n||_ext.n)
+        ? (_streakLieu('dom','\ud83c\udfe0')+_streakLieu('ext','\u2708\ufe0f'))
+        : (streak(paris).n>1?'<span style="display:inline-flex;align-items:center;gap:3px;padding:1px 7px;border-radius:10px;font-size:9px;font-weight:700;margin-top:3px;background:'+(streak(paris).t?'rgba(30,215,96,.1)':'rgba(255,69,69,.1)')+';color:'+(streak(paris).t?'var(--g)':'var(--r)')+';">'+(streak(paris).t?'🔥':'❄️')+' '+streak(paris).n+'</span>':'');
       var pColor=profit>=0?'var(--g)':'var(--r)';
       /* ═══ LOGO ET COULEUR DU CLUB EN FOND DE LIGNE (22/08) ═══
          Meme grammaire que les cartes de match : teinte du club a gauche, logo
@@ -8980,8 +9011,7 @@ function render(){
         +'<div style="font-size:9px;color:var(--t3);">'+'⭐'.repeat(u.s)+' · '+_g45PalLabel(u)+' · '+pc+'% réussite</div>'
         +(u.note?'<div style="font-size:10px;color:var(--a);margin-top:2px;font-style:italic;">📌 '+u.note+'</div>':'')
         +forme
-        +(streak(paris).n>1?'<div style="display:inline-flex;align-items:center;gap:3px;padding:1px 7px;border-radius:10px;font-size:9px;font-weight:700;margin-top:3px;background:'+(streak(paris).t?'rgba(30,215,96,.1)':'rgba(255,69,69,.1)')+';color:'+(streak(paris).t?'var(--g)':'var(--r)')+'">'
-        +(streak(paris).t?'🔥':'❄️')+' '+streak(paris).n+'</div>':'')
+        +serieFeu
         +'</div>'
         +'<div style="position:relative;margin-left:auto;text-align:right;line-height:1.25;padding:4px 9px 4px 18px;border-radius:10px;'
           +'background:linear-gradient(270deg,rgba(8,11,20,.72) 0%,rgba(8,11,20,.40) 55%,transparent 100%);'
