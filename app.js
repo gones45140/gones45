@@ -2023,7 +2023,23 @@ function render(){
       var wins=paris.filter(function(h){return h.win&&!h.isCashout;}).length;
       var pc=paris.length?Math.round(wins/paris.length*100):0;
       var logo=logoHtml(u.n,u.color,u.abbr,32);
-      var forme=formeHtml(paris,5);
+      /* ═══ SERIE PAR LIEU (26/08) ═══
+         La serie melangeait domicile et exterieur alors que tout le reste de la
+         carte est ventile : sur le Real Madrid, deux W dont un a domicile et un
+         a l'exterieur s'affichaient comme une serie de deux, ce qui est faux
+         pour chacune des deux montantes prises separement.
+         Les paris anterieurs a la separation n'ont pas de lieu fiable : ils
+         n'apparaissent dans aucune des deux series, comme pour le profit. */
+      var _serieLieu=function(lg, ico){
+        var l=paris.filter(function(h){ return h.domicile===lg; });
+        if(!l.length) return '';
+        return '<span style="display:inline-flex;align-items:center;gap:4px;margin-right:9px;">'
+          + '<span style="font-size:9px;opacity:.75;">'+ico+'</span>'+formeHtml(l,5)+'</span>';
+      };
+      var forme=(_dom.n||_ext.n)
+        ? ('<span style="display:inline-flex;align-items:center;flex-wrap:wrap;">'
+            + _serieLieu('dom','\ud83c\udfe0') + _serieLieu('ext','\u2708\ufe0f') + '</span>')
+        : formeHtml(paris,5);
       var pColor=profit>=0?'var(--g)':'var(--r)';
       /* ═══ LOGO ET COULEUR DU CLUB EN FOND DE LIGNE (22/08) ═══
          Meme grammaire que les cartes de match : teinte du club a gauche, logo
@@ -2117,7 +2133,15 @@ function render(){
            `flex:0 1 auto` le fait se dimensionner sur SON contenu ; `max-width`
            garde la troncature sur les noms tres longs. L'image reste donc nue
            partout ou il n'y a rien a lire. */
-        +'<div style="position:relative;flex:0 1 auto;min-width:0;max-width:72%;'
+        /* CORRECTION DU 27/08 — decalage sur telephone.
+           `flex:0 1 auto` a resserre le voile autour du texte, mais a retire au
+           bloc ce qui le collait a gauche : avec le `margin-left:auto` des
+           montants, les deux blocs se retrouvaient pousses vers le centre et un
+           vide apparaissait devant le logo. Visible surtout sur mobile, ou tout
+           est serre.
+           `margin-right:auto` remet le bloc a gauche SANS lui rendre la largeur
+           — c'est l'espace vide qui absorbe la place, plus le voile. */
+        +'<div style="position:relative;flex:0 1 auto;min-width:0;max-width:72%;margin-right:auto;'
           +'padding:4px 16px 4px 9px;border-radius:10px;'
           +'background:linear-gradient(90deg,rgba(8,11,20,.72) 0%,rgba(8,11,20,.34) 62%,transparent 100%);'
           +'text-shadow:0 1px 4px rgba(0,0,0,.95),0 0 10px rgba(0,0,0,.7);">'
@@ -8830,7 +8854,23 @@ function render(){
       var wins=paris.filter(function(h){return h.win&&!h.isCashout;}).length;
       var pc=paris.length?Math.round(wins/paris.length*100):0;
       var logo=logoHtml(u.n,u.color,u.abbr,32);
-      var forme=formeHtml(paris,5);
+      /* ═══ SERIE PAR LIEU (26/08) ═══
+         La serie melangeait domicile et exterieur alors que tout le reste de la
+         carte est ventile : sur le Real Madrid, deux W dont un a domicile et un
+         a l'exterieur s'affichaient comme une serie de deux, ce qui est faux
+         pour chacune des deux montantes prises separement.
+         Les paris anterieurs a la separation n'ont pas de lieu fiable : ils
+         n'apparaissent dans aucune des deux series, comme pour le profit. */
+      var _serieLieu=function(lg, ico){
+        var l=paris.filter(function(h){ return h.domicile===lg; });
+        if(!l.length) return '';
+        return '<span style="display:inline-flex;align-items:center;gap:4px;margin-right:9px;">'
+          + '<span style="font-size:9px;opacity:.75;">'+ico+'</span>'+formeHtml(l,5)+'</span>';
+      };
+      var forme=(_dom.n||_ext.n)
+        ? ('<span style="display:inline-flex;align-items:center;flex-wrap:wrap;">'
+            + _serieLieu('dom','\ud83c\udfe0') + _serieLieu('ext','\u2708\ufe0f') + '</span>')
+        : formeHtml(paris,5);
       var pColor=profit>=0?'var(--g)':'var(--r)';
       /* ═══ LOGO ET COULEUR DU CLUB EN FOND DE LIGNE (22/08) ═══
          Meme grammaire que les cartes de match : teinte du club a gauche, logo
@@ -8924,7 +8964,15 @@ function render(){
            `flex:0 1 auto` le fait se dimensionner sur SON contenu ; `max-width`
            garde la troncature sur les noms tres longs. L'image reste donc nue
            partout ou il n'y a rien a lire. */
-        +'<div style="position:relative;flex:0 1 auto;min-width:0;max-width:72%;'
+        /* CORRECTION DU 27/08 — decalage sur telephone.
+           `flex:0 1 auto` a resserre le voile autour du texte, mais a retire au
+           bloc ce qui le collait a gauche : avec le `margin-left:auto` des
+           montants, les deux blocs se retrouvaient pousses vers le centre et un
+           vide apparaissait devant le logo. Visible surtout sur mobile, ou tout
+           est serre.
+           `margin-right:auto` remet le bloc a gauche SANS lui rendre la largeur
+           — c'est l'espace vide qui absorbe la place, plus le voile. */
+        +'<div style="position:relative;flex:0 1 auto;min-width:0;max-width:72%;margin-right:auto;'
           +'padding:4px 16px 4px 9px;border-radius:10px;'
           +'background:linear-gradient(90deg,rgba(8,11,20,.72) 0%,rgba(8,11,20,.34) 62%,transparent 100%);'
           +'text-shadow:0 1px 4px rgba(0,0,0,.95),0 0 10px rgba(0,0,0,.7);">'
@@ -21439,7 +21487,7 @@ window._g45PressPoids = _g45PressPoids;
 window._G45_PRESS_POIDS = _G45_PRESS_POIDS;
 /* Marqueur de version, pour verifier en une ligne quel app.js tourne
    reellement : g45Build() en console. */
-window.g45Build = function(){ return '20260826n'; };
+window.g45Build = function(){ return '20260827b'; };
 
 function _renderEspnMatchStats(s, homeId, awayId, col){
   try {
@@ -38915,11 +38963,19 @@ async function g45DirectMesEquipes(silencieux) {
       + 'border:1px solid rgba(255,255,255,.08);'
       + (live ? 'box-shadow:0 0 0 1px rgba(255,69,69,.35),0 2px 14px rgba(255,69,69,.12);' : '') + '">'
       + logo(m.lMoi, 'left') + logo(m.lAdv, 'right')
-      + '<div style="position:relative;padding:11px 62px;text-align:center;">'
+      /* ═══ LISIBILITE SANS VOILE (27/08) ═══
+         Le texte est centre sur toute la largeur : un fond sombre suivrait donc
+         l'image d'un bord a l'autre et casserait le visuel de club, exactement
+         ce qu'on vient d'eviter sur le mur.
+         On mise sur l'OMBRE PORTEE — double, une nette et une diffuse — qui
+         detache les caracteres sans rien recouvrir. Un halo suffit la ou un
+         rectangle serait de trop. */
+      + '<div style="position:relative;padding:11px 62px;text-align:center;'
+      + 'text-shadow:0 1px 3px rgba(0,0,0,.95),0 0 12px rgba(0,0,0,.85),0 0 26px rgba(0,0,0,.6);">'
       + '<div style="font-size:9px;font-weight:800;letter-spacing:.5px;color:' + colBadge + ';margin-bottom:3px;">'
       + badge + (live ? ' <span style="display:inline-block;width:6px;height:6px;border-radius:50%;background:#ff4545;animation:g45pulse 1.4s infinite;"></span>' : '') + '</div>'
-      + '<div style="font-size:12.5px;font-weight:800;color:#e6ecf5;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">'
-      + m.moi + ' <span style="color:#8899aa;font-weight:500;">' + (m.dom ? 'vs' : '@') + '</span> ' + m.adv + '</div>'
+      + '<div style="font-size:13px;font-weight:900;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">'
+      + m.moi + ' <span style="color:#c2ccdb;font-weight:600;">' + (m.dom ? 'vs' : '@') + '</span> ' + m.adv + '</div>'
       + '<div style="font-size:22px;font-weight:900;color:#fff;line-height:1.25;letter-spacing:-.5px;">' + score + '</div>'
       /* ═══ BAS DE CARTE EN PASTILLES ═══
          L'ancienne ligne empilait competition, statut et chaine dans le meme gris
@@ -38931,20 +38987,24 @@ async function g45DirectMesEquipes(silencieux) {
                             baseball:'\u26be', football:'\ud83c\udfc8',
                             'rugby-league':'\ud83c\udfc9', rugby:'\ud83c\udfc9' };
           var pastille = function (contenu, coul, fond) {
-            return '<span style="display:inline-flex;align-items:center;gap:3px;padding:2px 7px;border-radius:9px;'
-                 + 'background:' + (fond || 'rgba(255,255,255,.06)') + ';color:' + coul + ';font-size:8.5px;font-weight:700;'
-                 + 'white-space:nowrap;">' + contenu + '</span>';
+            /* Les pastilles, elles, PEUVENT porter un fond : elles epousent leur
+               contenu, donc elles n'occultent qu'une fraction de l'image. Fond
+               nettement plus opaque et texte eclairci — a 8,5 px sur une photo,
+               c'etait le plus illisible de la carte. */
+            return '<span style="display:inline-flex;align-items:center;gap:3px;padding:3px 8px;border-radius:9px;margin:2px 2px 0;'
+                 + 'background:' + (fond || 'rgba(8,11,20,.74)') + ';color:' + coul + ';font-size:9px;font-weight:800;'
+                 + 'text-shadow:none;white-space:nowrap;">' + contenu + '</span>';
           };
           var p = [];
 
           var comp = m.lgNom || '';
-          p.push(pastille((SPORT_ICO[m.sp] || '') + ' ' + (comp || m.lgTv || m.sp), '#9fb0c7'));
+          p.push(pastille((SPORT_ICO[m.sp] || '') + ' ' + (comp || m.lgTv || m.sp), 'rgba(255,255,255,.80)'));
 
           var dd = new Date(m.date);
           if (!isNaN(dd)) {
             var jourTxt = dd.toLocaleDateString('fr-FR', { weekday: 'short', day: 'numeric', month: 'short' });
             var hTxt = dd.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
-            p.push(pastille('\ud83d\udcc5 ' + jourTxt + ' \u00b7 ' + hTxt, '#9fb0c7'));
+            p.push(pastille('\ud83d\udcc5 ' + jourTxt + ' \u00b7 ' + hTxt, 'rgba(255,255,255,.80)'));
           }
 
           var info = (typeof g45TvInfosMatch === 'function') ? g45TvInfosMatch(m.moiLong || m.moi, m.adv) : null;
