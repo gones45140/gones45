@@ -29724,15 +29724,21 @@ function _g45BetRowMini(h){
   var _idColor=(_idU&&_idU.color)||b2.c||'#4d84ff';
   var _idLogo=isSimple?'':((typeof g45LogoUrlDe==='function')?g45LogoUrlDe(h.n):'');
   var _idFilig=_idLogo
-    ?('<img src="'+_idLogo+'" alt="" loading="lazy" onerror="this.style.display=\'none\'" style="position:absolute;right:6px;top:50%;transform:translateY(-50%);height:34px;width:34px;object-fit:contain;opacity:.20;pointer-events:none;">')
-    :((isSimple&&b2.d)?('<img src="https://www.google.com/s2/favicons?domain='+b2.d+'&sz=64" alt="" loading="lazy" onerror="this.style.display=\'none\'" style="position:absolute;right:8px;top:50%;transform:translateY(-50%);height:26px;width:26px;object-fit:contain;opacity:.30;border-radius:5px;pointer-events:none;">'):'');
+    ?('<img src="'+_idLogo+'" alt="" loading="lazy" onerror="this.style.display=\'none\'" style="position:absolute;right:2px;top:50%;transform:translateY(-50%);height:30px;width:30px;object-fit:contain;opacity:.16;pointer-events:none;">')
+    :((isSimple&&b2.d)?('<img src="https://www.google.com/s2/favicons?domain='+b2.d+'&sz=64" alt="" loading="lazy" onerror="this.style.display=\'none\'" style="position:absolute;right:2px;top:50%;transform:translateY(-50%);height:22px;width:22px;object-fit:contain;opacity:.25;border-radius:5px;pointer-events:none;">'):'');
+  /* Le filigrane est CONFINE au bloc titre/sous-titre (position:relative sur
+     ce div precis), pas sur toute la ligne. Sur une ligne compacte comme
+     celle-ci, ancrer le logo par rapport a toute la largeur de la carte
+     l'envoyait pile sous la colonne resultat (case ✅/❌ + montants) a droite
+     — les deux se superposaient. Confine au bloc texte, il reste derriere le
+     titre et ne touche jamais les chiffres. */
   return '<div data-aid="'+h.id+'" onclick="try{openBetEdit(this.dataset.aid)}catch(e){}" style="position:relative;overflow:hidden;display:flex;align-items:center;padding:8px 10px;background:linear-gradient(100deg,'+_idColor+'26 0%,var(--s1) 62%);border-radius:8px;margin-bottom:4px;border-left:3px solid '+borderC+';gap:8px;cursor:pointer;">'
-    +_idFilig
     +'<div style="position:relative;font-size:10px;color:var(--t3);min-width:50px;flex-shrink:0;text-align:center;line-height:1.3;">'+(h.date||'')+(h.heure?'<br>'+h.heure:'')+'</div>'
     +'<div style="position:relative;width:22px;height:22px;border-radius:5px;background:'+b2.c+';color:#fff;font-size:9px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0;">'+((b2.n||'?').charAt(0).toUpperCase())+'</div>'
     +'<div style="position:relative;flex:1;min-width:0;overflow:hidden;">'
-    +'<div style="font-size:12px;font-weight:700;color:var(--t1);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">'+titre+'</div>'
-    +'<div style="font-size:10px;color:var(--t3);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">'+parts.join(' · ')+'</div>'
+    +_idFilig
+    +'<div style="position:relative;font-size:12px;font-weight:700;color:var(--t1);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">'+titre+'</div>'
+    +'<div style="position:relative;font-size:10px;color:var(--t3);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">'+parts.join(' · ')+'</div>'
     +'</div>'
     +'<div style="position:relative;text-align:right;flex-shrink:0;">'
     +'<div style="font-size:11px;font-weight:800;">'+(h.win?'✅':'❌')+'</div>'
