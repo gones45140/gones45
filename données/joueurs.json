@@ -1298,7 +1298,7 @@
     ],
     "statsMap": {},
     "usingSofa": true,
-    "ts": 1786010732033
+    "ts": 1788000059355
   },
   "manual_stats_2526_1963_881110": {
     "league_apps": 30,
@@ -2230,7 +2230,7 @@
     ],
     "statsMap": {},
     "usingSofa": true,
-    "ts": 1786010732032
+    "ts": 1788000059355
   },
   "manual_stats_2526_1644_155995": {
     "league_apps": 14,
@@ -3118,7 +3118,7 @@
     ],
     "statsMap": {},
     "usingSofa": true,
-    "ts": 1786010732032
+    "ts": 1788000059356
   },
   "manual_stats_2526_2952_812145": {
     "league_apps": 25,
@@ -3767,7 +3767,7 @@
     ],
     "statsMap": {},
     "usingSofa": true,
-    "ts": 1786010732032
+    "ts": 1788000059356
   },
   "manual_stats_2526_2952_1886213": {
     "league_apps": 10,
@@ -4984,7 +4984,7 @@
     ],
     "statsMap": {},
     "usingSofa": true,
-    "ts": 1786010732033
+    "ts": 1788000059356
   },
   "manual_stats_2627_1644_917087": {
     "league_apps": 27,
@@ -5667,7 +5667,7 @@
     ],
     "statsMap": {},
     "usingSofa": false,
-    "ts": 1786010732033
+    "ts": 1788000059357
   },
   "manual_stats_2627_1963_220833": {
     "league_apps": 16,
@@ -6108,7 +6108,7 @@
     ],
     "statsMap": {},
     "usingSofa": true,
-    "ts": 1786010732033
+    "ts": 1788000059357
   },
   "manual_stats_2627_1963_2479177": {
     "league_apps": 0,
@@ -7243,7 +7243,7 @@
     ],
     "statsMap": {},
     "usingSofa": true,
-    "ts": 1786010732033
+    "ts": 1788000059357
   },
   "manual_stats_2526_2952_1540010": {
     "league_apps": 5,
@@ -8008,7 +8008,7 @@
     ],
     "statsMap": {},
     "usingSofa": true,
-    "ts": 1786010732032
+    "ts": 1788000059357
   },
   "manual_stats_2526_2829_1142683": {
     "league_apps": 4,
@@ -9259,7 +9259,7 @@
     ],
     "statsMap": {},
     "usingSofa": true,
-    "ts": 1786010732033
+    "ts": 1788000059357
   },
   "manual_stats_2627_1963_874729": {
     "league_apps": 15,
@@ -9607,7 +9607,7 @@
     "league_red": 0
   },
   "_meta": {
-    "updated": "2026-08-06T10:07:50.327Z",
+    "updated": "2026-08-29T10:46:15.247Z",
     "count": 300
   }
 }
