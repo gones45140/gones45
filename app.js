@@ -4114,10 +4114,21 @@ function toggleCurveTeam(el){
   if(checked&&cnt>=5){el.checked=false;renderCurvePicker();return;}
   _multiSelected[nom]=checked;renderCurvePicker();renderMultiCurveChart();
 }
+var _gcMToken=(typeof _gcMToken!=='undefined')?_gcMToken:0;
 function renderMultiCurveChart(){
   var ctx=$i('chart-multi');if(!ctx)return;
   if(window._gcM){try{window._gcM.destroy();}catch(e){}}window._gcM=null;
   var leg=$i('chart-multi-legend');if(leg)leg.innerHTML='';
+  /* JETON ANTI-CHEVAUCHEMENT (31/08). BUG : "Canvas is already in use" — la
+     creation du graphique est differee de 80ms plus bas, donc deux appels
+     rapproches de `renderMultiCurveChart()` (typiquement plusieurs scores de
+     paris qui se resolvent presque en meme temps et redessinent chacun le
+     Bilan) programment chacun leur propre `new Chart(...)` sur LE MEME
+     canvas, sans que le destroy() du second ait pu voir le chart cree par le
+     premier — il n'existe pas encore au moment ou ce destroy() s'execute.
+     Seul le DERNIER appel en date doit reellement creer le graphique ; les
+     autres se desistent silencieusement. */
+  var _meJeton=++_gcMToken;
   var all=[];
   state.u.forEach(function(u){
     var paris=state.a.filter(function(h){return h.n===u.n;});if(!paris.length)return;
@@ -4144,7 +4155,9 @@ function renderMultiCurveChart(){
   var maxLen=active.reduce(function(m,d){return Math.max(m,d.data.length);},0);
   active.forEach(function(d){while(d.data.length<maxLen)d.data.push(null);});
   setTimeout(function(){
+    if(_meJeton!==_gcMToken)return;   // un appel plus recent a pris le relais
     if(!$i('chart-multi'))return;
+    if(window._gcM){try{window._gcM.destroy();}catch(e){}}window._gcM=null;
     var ct=$i('chart-multi').getContext('2d');
     window._gcM=new Chart(ct,{type:'line',data:{labels:Array.from({length:maxLen},function(_,i){return i;}),datasets:active},options:{
       animation:false,responsive:true,maintainAspectRatio:false,interaction:{mode:'nearest',intersect:false},
@@ -10858,10 +10871,21 @@ function toggleCurveTeam(el){
   if(checked&&cnt>=5){el.checked=false;renderCurvePicker();return;}
   _multiSelected[nom]=checked;renderCurvePicker();renderMultiCurveChart();
 }
+var _gcMToken=(typeof _gcMToken!=='undefined')?_gcMToken:0;
 function renderMultiCurveChart(){
   var ctx=$i('chart-multi');if(!ctx)return;
   if(window._gcM){try{window._gcM.destroy();}catch(e){}}window._gcM=null;
   var leg=$i('chart-multi-legend');if(leg)leg.innerHTML='';
+  /* JETON ANTI-CHEVAUCHEMENT (31/08). BUG : "Canvas is already in use" — la
+     creation du graphique est differee de 80ms plus bas, donc deux appels
+     rapproches de `renderMultiCurveChart()` (typiquement plusieurs scores de
+     paris qui se resolvent presque en meme temps et redessinent chacun le
+     Bilan) programment chacun leur propre `new Chart(...)` sur LE MEME
+     canvas, sans que le destroy() du second ait pu voir le chart cree par le
+     premier — il n'existe pas encore au moment ou ce destroy() s'execute.
+     Seul le DERNIER appel en date doit reellement creer le graphique ; les
+     autres se desistent silencieusement. */
+  var _meJeton=++_gcMToken;
   var all=[];
   state.u.forEach(function(u){
     var paris=state.a.filter(function(h){return h.n===u.n;});if(!paris.length)return;
@@ -10888,7 +10912,9 @@ function renderMultiCurveChart(){
   var maxLen=active.reduce(function(m,d){return Math.max(m,d.data.length);},0);
   active.forEach(function(d){while(d.data.length<maxLen)d.data.push(null);});
   setTimeout(function(){
+    if(_meJeton!==_gcMToken)return;   // un appel plus recent a pris le relais
     if(!$i('chart-multi'))return;
+    if(window._gcM){try{window._gcM.destroy();}catch(e){}}window._gcM=null;
     var ct=$i('chart-multi').getContext('2d');
     window._gcM=new Chart(ct,{type:'line',data:{labels:Array.from({length:maxLen},function(_,i){return i;}),datasets:active},options:{
       animation:false,responsive:true,maintainAspectRatio:false,interaction:{mode:'nearest',intersect:false},
