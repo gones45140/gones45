@@ -2904,11 +2904,19 @@ function renderEquipes(){
       if(gData) datasets.push({data:gData,borderColor:'#f0b020',borderWidth:1.5,fill:false,tension:.4,pointRadius:0});
       /* Remplissage garde seulement si une SEULE courbe (comportement identique
          a avant pour une equipe qui n'utilise qu'un mode) — avec plusieurs
-         courbes superposees, un fond degrade sur chacune brouillerait tout. */
+         courbes superposees, un fond degrade sur chacune brouillerait tout.
+         CORRIGE LE 31/08 (retour d'Antoine, Seattle Mariners/Athletics
+         invisibles) : la couleur de la courbe etait ECRASEE par `p.c`
+         (couleur du theme de l'equipe) juste ici, retombant dans le MEME
+         piege de contraste que le montant de profit corrige juste avant —
+         une equipe au theme sombre/proche du fond de la carte devenait
+         quasi invisible. On garde desormais la couleur DEJA choisie plus
+         haut selon le mode (vert/bleu/or), jamais celle du theme. */
       if(datasets.length===1){
+        var coul=datasets[0].borderColor;
         var g=c2.createLinearGradient(0,0,0,55);
-        g.addColorStop(0,p.fade.replace('.12','.3'));g.addColorStop(1,'rgba(0,0,0,0)');
-        datasets[0].backgroundColor=g; datasets[0].fill=true; datasets[0].borderColor=p.c;
+        g.addColorStop(0,coul+'4d');g.addColorStop(1,'rgba(0,0,0,0)');
+        datasets[0].backgroundColor=g; datasets[0].fill=true;
       }
       MC[u.n]=new Chart(c2,{type:'line',data:{labels:Array.from({length:maxLen},function(_,i){return i;}),datasets:datasets},
         options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{enabled:false}},scales:{x:{display:false},y:{display:false}}}});
@@ -9937,11 +9945,19 @@ function renderEquipes(){
       if(gData) datasets.push({data:gData,borderColor:'#f0b020',borderWidth:1.5,fill:false,tension:.4,pointRadius:0});
       /* Remplissage garde seulement si une SEULE courbe (comportement identique
          a avant pour une equipe qui n'utilise qu'un mode) — avec plusieurs
-         courbes superposees, un fond degrade sur chacune brouillerait tout. */
+         courbes superposees, un fond degrade sur chacune brouillerait tout.
+         CORRIGE LE 31/08 (retour d'Antoine, Seattle Mariners/Athletics
+         invisibles) : la couleur de la courbe etait ECRASEE par `p.c`
+         (couleur du theme de l'equipe) juste ici, retombant dans le MEME
+         piege de contraste que le montant de profit corrige juste avant —
+         une equipe au theme sombre/proche du fond de la carte devenait
+         quasi invisible. On garde desormais la couleur DEJA choisie plus
+         haut selon le mode (vert/bleu/or), jamais celle du theme. */
       if(datasets.length===1){
+        var coul=datasets[0].borderColor;
         var g=c2.createLinearGradient(0,0,0,55);
-        g.addColorStop(0,p.fade.replace('.12','.3'));g.addColorStop(1,'rgba(0,0,0,0)');
-        datasets[0].backgroundColor=g; datasets[0].fill=true; datasets[0].borderColor=p.c;
+        g.addColorStop(0,coul+'4d');g.addColorStop(1,'rgba(0,0,0,0)');
+        datasets[0].backgroundColor=g; datasets[0].fill=true;
       }
       MC[u.n]=new Chart(c2,{type:'line',data:{labels:Array.from({length:maxLen},function(_,i){return i;}),datasets:datasets},
         options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{enabled:false}},scales:{x:{display:false},y:{display:false}}}});
