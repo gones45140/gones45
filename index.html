@@ -157,6 +157,17 @@
         <div class="fg"><label class="fl">Heure</label><input type="time" id="c-heure" class="fi"></div>
       </div>
       <div class="fg" style="margin-top:9px"><label class="fl">📝 Notes</label><textarea id="c-notes" class="fi" style="height:44px;resize:none;" placeholder="Analyse, contexte…"></textarea></div>
+      <!-- AJOUTEE LE 31/08 (retour d'Antoine : "notif n'est pas dans les pari
+           cockpit, ce que j'utilise"). Le pari simple et le combine avaient
+           deja leur case a cocher (n-notif / combi-notif) ; la montante
+           (celle-ci, le formulaire du "+") n'en avait AUCUNE — `pari()`
+           mettait donc `notif` a `true` en dur, sans jamais lire de case
+           puisqu'aucune case n'existait pour ce formulaire. -->
+      <label style="display:flex;align-items:center;gap:8px;padding:9px;background:rgba(77,132,255,.08);border:1px solid rgba(77,132,255,.2);border-radius:var(--r6);cursor:pointer;margin-top:9px;">
+        <input type="checkbox" id="c-notif" checked style="accent-color:var(--a)">
+        <span style="font-size:11px;font-weight:700;color:var(--a)">🔔 Notifications</span>
+        <span style="font-size:10px;color:var(--t3);margin-left:auto;">Suivi du match</span>
+      </label>
       <button class="btn btn-p" style="margin-top:11px;" onclick="pari(true)">Engager la montante</button>
     </div>
     <div class="sec" style="display:flex;justify-content:space-between;align-items:center;">
@@ -1202,7 +1213,7 @@
      worker servaient indefiniment l'ancien fichier sur mobile : rouvrir
      l'application ne changeait rien puisque l'URL demandee etait la meme.
      A INCREMENTER A CHAQUE DEPLOIEMENT, comme sur fenotte45. -->
-<script src="app.js?v=20260831a"></script>
+<script src="app.js?v=20260831b"></script>
 <script src="social.js"></script>
 
 
