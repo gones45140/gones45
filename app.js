@@ -4529,7 +4529,15 @@ function renderPaliersChart(){
       var url=(typeof g45LogoUrlDe==='function')?g45LogoUrlDe(u.n):'';
       if(!url){ resolve(); return; }
       var img=new Image();
-      img.crossOrigin='anonymous';
+      /* PAS DE crossOrigin (01/09, retour d'Antoine sur une console pleine de
+         "blocked by CORS policy"). `crossOrigin='anonymous'` transforme le
+         chargement en requete CORS ; r2.thesportsdb.com ne renvoie aucun
+         en-tete `Access-Control-Allow-Origin`, donc le navigateur REFUSAIT
+         l'image alors qu'elle se charge tres bien sans cet attribut. Resultat :
+         plus aucun ecusson sur le graphique, et une avalanche d'erreurs rouges.
+         L'attribut ne sert qu'a relire les pixels (`getImageData`/`toDataURL`)
+         — ici on ne fait qu'un `drawImage` et ce graphique n'est jamais exporte
+         en image, donc un canvas "teinte" n'a aucune consequence. */
       img.onload=function(){ _logoImgs[u.n]=img; resolve(); };
       img.onerror=function(){ resolve(); };
       img.src=url;
@@ -11551,7 +11559,15 @@ function renderPaliersChart(){
       var url=(typeof g45LogoUrlDe==='function')?g45LogoUrlDe(u.n):'';
       if(!url){ resolve(); return; }
       var img=new Image();
-      img.crossOrigin='anonymous';
+      /* PAS DE crossOrigin (01/09, retour d'Antoine sur une console pleine de
+         "blocked by CORS policy"). `crossOrigin='anonymous'` transforme le
+         chargement en requete CORS ; r2.thesportsdb.com ne renvoie aucun
+         en-tete `Access-Control-Allow-Origin`, donc le navigateur REFUSAIT
+         l'image alors qu'elle se charge tres bien sans cet attribut. Resultat :
+         plus aucun ecusson sur le graphique, et une avalanche d'erreurs rouges.
+         L'attribut ne sert qu'a relire les pixels (`getImageData`/`toDataURL`)
+         — ici on ne fait qu'un `drawImage` et ce graphique n'est jamais exporte
+         en image, donc un canvas "teinte" n'a aucune consequence. */
       img.onload=function(){ _logoImgs[u.n]=img; resolve(); };
       img.onerror=function(){ resolve(); };
       img.src=url;
