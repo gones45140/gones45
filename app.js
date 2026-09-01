@@ -1362,15 +1362,21 @@ function updateInfoBar(barId, txtId, valId, label, val, color){
 function attachTouchTooltip(canvas, chartRef, barId, txtId, valId){
   if(typeof canvas==='string'){var canvasId=canvas;canvas=$i(canvas);}
   if(!canvas)return;
-  canvas.addEventListener('touchend',function(e){
+  /* AJOUT DU 01/09 : cette fonction n'ecoutait que 'touchend' (le doigt),
+     jamais la souris. Le 28/08, le tooltip NATIF de Chart.js — qui etait le
+     SEUL mecanisme a repondre au survol souris sur PC — a ete desactive
+     (tooltip:{enabled:false}) pour corriger un doublon d'affichage sur
+     mobile. Consequence non prevue : plus aucun survol ne montrait quoi que
+     ce soit sur PC (retour d'Antoine, "avant je survolais les points verts,
+     ca mettait le pari correspondant"). Fonction partagee entre le toucher
+     ET la souris desormais — meme boite d'info dans les deux cas. */
+  function _resoudre(clientX, clientY){
     var chart=typeof chartRef==='function'?chartRef():chartRef;
     if(!chart)return;
-    /* Résoudre les éléments DOM dynamiquement au moment du touch */
     var bar=$i(barId);var txt=$i(txtId);var v=$i(valId);
-    var t=e.changedTouches[0];
     var r=canvas.getBoundingClientRect();
-    var x=t.clientX-r.left;
-    var y=t.clientY-r.top;
+    var x=clientX-r.left;
+    var y=clientY-r.top;
     try{
       var pts=chart.getElementsAtEventForMode({offsetX:x,offsetY:y},'nearest',{intersect:false},false);
       if(pts.length){
@@ -1396,6 +1402,13 @@ function attachTouchTooltip(canvas, chartRef, barId, txtId, valId){
         }
       }
     }catch(err){console.log(err);}
+  }
+  canvas.addEventListener('touchend',function(e){
+    var t=e.changedTouches[0];
+    _resoudre(t.clientX, t.clientY);
+  },{passive:true});
+  canvas.addEventListener('mousemove',function(e){
+    _resoudre(e.clientX, e.clientY);
   },{passive:true});
 }
 var bilanMode='global';
@@ -1819,7 +1832,13 @@ function renderAdvancedCharts(paris, bankroll) {
             }
           }
         },
-        scales:{x:{display:false},y:{ticks:{color:'#4f5d88',font:{size:9},callback:function(v){return v+'€';}},grid:{color:'rgba(255,255,255,.03)'}}}
+        /* AXE DES DATES AJOUTE (01/09, retour d'Antoine, screen 2/3 : "une barre
+           horizontale de date tous les 2 jours"). Meme principe applique sur le
+           graphique du Bilan le meme jour : `maxTicksLimit` s'adapte tout seul
+           au volume de donnees (Chart.js repartit toujours le meme nombre
+           d'etiquettes que ce soit 40 ou 400 paris), et on saute toute date
+           identique a la precedente affichee pour eviter les doublons. */
+        scales:{x:{display:true,grid:{display:false},ticks:{color:'#4f5d88',font:{size:8},maxTicksLimit:6,maxRotation:0,autoSkip:true,callback:(function(){var last=null;return function(v,index){var lbl=bkLabels[index];var d=lbl?lbl.split(' ')[0]:'';if(!d||d===last)return '';last=d;return d;};})()}},y:{ticks:{color:'#4f5d88',font:{size:9},callback:function(v){return v+'€';}},grid:{color:'rgba(255,255,255,.03)'}}}
       }
     });
   }
@@ -1865,10 +1884,16 @@ function renderAdvancedCharts(paris, bankroll) {
   });
   var ctx4=document.getElementById('chart-roi-time');
   if(ctx4){
-    _advCharts.roi=new Chart(ctx4,{type:'line',data:{labels:sorted.map(function(h,i){return i+1;}),datasets:[
+    /* VRAIES DATES AU LIEU D'UN SIMPLE INDEX (01/09, retour d'Antoine). Les
+       labels etaient juste "1,2,3..." — aucune date exploitable. Remplaces
+       par la date reelle de chaque pari, meme dedoublonnage que les autres
+       graphiques de cette session pour rester lisible quel que soit le
+       volume de paris. */
+    var roiLabels=sorted.map(function(h){return h.date||'';});
+    _advCharts.roi=new Chart(ctx4,{type:'line',data:{labels:roiLabels,datasets:[
       {label:'ROI %',data:roiCurve,borderColor:'#4d84ff',backgroundColor:'transparent',borderWidth:2,tension:.4,pointRadius:0,yAxisID:'y'},
       {label:'Drawdown %',data:ddCurve,borderColor:'#ff4545',backgroundColor:'rgba(255,69,69,.1)',fill:true,borderWidth:1.5,tension:.4,pointRadius:0,yAxisID:'y'}
-    ]},options:{responsive:true,maintainAspectRatio:false,interaction:{mode:'nearest',intersect:false},plugins:{legend:{position:'bottom',labels:{color:'#4f5d88',font:{size:9},boxWidth:12}}},scales:{x:{display:false},y:{ticks:{color:'#4f5d88',font:{size:9},callback:function(v){return v+'%';}},grid:{color:'rgba(255,255,255,.03)'}}}}});
+    ]},options:{responsive:true,maintainAspectRatio:false,interaction:{mode:'nearest',intersect:false},plugins:{legend:{position:'bottom',labels:{color:'#4f5d88',font:{size:9},boxWidth:12}}},scales:{x:{display:true,grid:{display:false},ticks:{color:'#4f5d88',font:{size:8},maxTicksLimit:6,maxRotation:0,autoSkip:true,callback:(function(){var last=null;return function(v,index){var d=roiLabels[index]||'';if(!d||d===last)return '';last=d;return d;};})()}},y:{ticks:{color:'#4f5d88',font:{size:9},callback:function(v){return v+'%';}},grid:{color:'rgba(255,255,255,.03)'}}}}});
   }
 }
 function renderBilanTab(){
@@ -1914,6 +1939,7 @@ function renderBilanTab(){
         datasets.push({label:bki(bk).n,data:bkCurve,borderColor:bkCol,backgroundColor:'transparent',borderWidth:1.5,fill:false,tension:.4,pointRadius:0,pointHoverRadius:4,borderDash:[4,3]});
       });
 
+      var _lastDateShown=null;
       _bilanChart=new Chart(ct,{type:'line',data:{labels:clabels,datasets:datasets},options:{responsive:true,maintainAspectRatio:false,events:['mousemove','mouseout','click','touchstart','touchmove'],
         interaction:{mode:'nearest',intersect:false},
             plugins:{/* RESSERRE LE 28/08 (retour d'Antoine, illisible sur mobile sans scroller
@@ -1934,7 +1960,12 @@ function renderBilanTab(){
                l'adversaire/le `||`) et on limite le nombre d'etiquettes affichees
                (`maxTicksLimit`) — pas besoin d'une date par pari, juste des reperes
                espaces dans le temps. */
-            scales:{x:{display:true,grid:{display:false},ticks:{color:'#4f5d88',font:{size:8},maxTicksLimit:6,maxRotation:0,autoSkip:true,callback:function(v,index){ var lbl=clabels[index]; return lbl?lbl.split(' ')[0]:''; }}},y:{grid:{color:'rgba(255,255,255,.03)'},ticks:{color:'#4f5d88',font:{size:9},callback:function(v){return v+'€';}}}}}});
+            scales:{x:{display:true,grid:{display:false},ticks:{color:'#4f5d88',font:{size:8},maxTicksLimit:6,maxRotation:0,autoSkip:true,callback:function(v,index){ var lbl=clabels[index]; var dOnly=lbl?lbl.split(' ')[0]:''; /* PAS DE DATE REPETEE (01/09, retour d'Antoine : "19 23 23 27..."). Chart.js
+                 choisit les INDEX a etiqueter par intervalle regulier, pas par date —
+                 deux index differents peuvent tomber sur la meme journee si plusieurs
+                 paris partagent une date. On saute silencieusement toute etiquette
+                 identique a la precedente affichee. */
+if(!dOnly || dOnly===_lastDateShown) return ''; _lastDateShown=dOnly; return dOnly; }}},y:{grid:{color:'rgba(255,255,255,.03)'},ticks:{color:'#4f5d88',font:{size:9},callback:function(v){return v+'€';}}}}}});
         attachTouchTooltip('bilan-chart',function(){return _bilanChart;},'cib-bilan','cib-bilan-txt','cib-bilan-val');
     }
   }
@@ -2828,7 +2859,10 @@ function renderGlobalChart(){
               title:function(ii){if(!ii||!ii.length)return '';var l=glabels[ii[0].dataIndex]||'';return l.split('||')[0]||'Départ';},
               label:function(ii){if(!ii||ii.dataIndex===undefined)return '';var l=glabels[ii.dataIndex]||'';var parts=l.split('||');return parts[1]?'Capital : '+ii.raw.toFixed(2)+'€  '+parts[1]:'Capital : '+ii.raw.toFixed(2)+'€';}
             }}},
-        scales:{x:{display:false},y:{grid:{color:'rgba(255,255,255,.03)'},border:{display:false},
+        /* AXE DES DATES AJOUTE (01/09, retour d'Antoine). Meme principe que les
+           autres graphiques corriges ce jour : `maxTicksLimit` s'adapte tout
+           seul au volume de paris, anti-doublon de date consecutive. */
+        scales:{x:{display:true,grid:{display:false},ticks:{color:'#4f5d88',font:{size:8},maxTicksLimit:6,maxRotation:0,autoSkip:true,callback:(function(){var last=null;return function(v,index){var lbl=glabels[index];var d=lbl?lbl.split('||')[0].split(' ')[0]:'';if(!d||d===last)return '';last=d;return d;};})()}},y:{grid:{color:'rgba(255,255,255,.03)'},border:{display:false},
           ticks:{color:'#4f5d88',font:{size:10},maxTicksLimit:4,callback:function(v){return v+'€';}}}}
       }
     });
@@ -4213,11 +4247,20 @@ function renderMultiCurveChart(){
     if(!$i('chart-multi'))return;
     if(window._gcM){try{window._gcM.destroy();}catch(e){}}window._gcM=null;
     var ct=$i('chart-multi').getContext('2d');
+    /* AXE DES DATES, EN APPROXIMATION ASSUMEE (01/09, retour d'Antoine). Ici,
+       contrairement au Bilan/Bankroll, chaque equipe a SA PROPRE sequence de
+       dates (le point d'index 5 de Real Madrid n'est pas force le meme jour
+       que le point d'index 5 du PSG) — il n'existe pas de "vraie" date par
+       position d'index commune a toutes les courbes. On prend donc la date de
+       la courbe la PLUS LONGUE comme reperage indicatif — utile pour se
+       reperer dans le temps, mais a lire comme approximatif sur les equipes
+       plus courtes, pas comme une date exacte pour chacune. */
+    var refLbl=active.reduce(function(best,d){ return (d._labels&&d._labels.length>(best?best.length:0))?d._labels:best; },null)||[];
     window._gcM=new Chart(ct,{type:'line',data:{labels:Array.from({length:maxLen},function(_,i){return i;}),datasets:active},options:{
       animation:false,responsive:true,maintainAspectRatio:false,interaction:{mode:'nearest',intersect:false},
       plugins:{legend:{display:false},tooltip:{backgroundColor:'rgba(8,11,18,.96)',borderColor:'rgba(255,255,255,.1)',borderWidth:1,
         callbacks:{title:function(ii){var d=active[0];return d&&d._labels?d._labels[ii[0].dataIndex]||'':'';},label:function(i){return ' '+i.dataset.label+' : '+(i.raw!==null?(i.raw>=0?'+':'')+i.raw.toFixed(2)+'€':'—');}}}},
-      scales:{x:{display:false},y:{grid:{color:'rgba(255,255,255,.03)'},border:{display:false},ticks:{color:'#4f5d88',font:{size:9},maxTicksLimit:4,callback:function(v){return v+'€';}}}}
+      scales:{x:{display:true,grid:{display:false},ticks:{color:'#4f5d88',font:{size:8},maxTicksLimit:5,maxRotation:0,autoSkip:true,callback:(function(){var last=null;return function(v,index){var lbl=refLbl[index];var d=lbl?lbl.split(' ')[0]:'';if(!d||d===last)return '';last=d;return d;};})()}},y:{grid:{color:'rgba(255,255,255,.03)'},border:{display:false},ticks:{color:'#4f5d88',font:{size:9},maxTicksLimit:4,callback:function(v){return v+'€';}}}}
     }});
     attachTouchTooltip('chart-multi',function(){return window._gcM;},'cib-multi','cib-multi-txt','cib-multi-val');
   },80);
@@ -4286,6 +4329,14 @@ function renderPaliersChart(){
     if(dom===null&&ext===null&&glob===null) glob=parseInt(u.l,10)||1;  // jamais engagee sur aucun lieu : repli
     domData.push(dom); extData.push(ext); globData.push(glob);
   });
+  /* BARRES HORIZONTALES (01/09, retour d'Antoine : trop resserre/illisible sur
+     mobile en vertical avec 11+ equipes — meme traitement que "Reussite par
+     sport", deja en barres horizontales et lisible sur tous les ecrans. La
+     hauteur du conteneur est desormais calculee selon le nombre d'equipes
+     (~30px par ligne) au lieu d'une hauteur fixe pensee pour un axe X court :
+     sans ca, toutes les lignes s'ecraseraient dans les 200px d'origine. */
+  var _hCont=ctx.parentElement;
+  if(_hCont) _hCont.style.height=Math.max(220, state.u.length*30)+'px';
   GC2.paliers=new Chart(ctx.getContext('2d'),{
     type:'bar',
     data:{labels:labels,datasets:[
@@ -4294,11 +4345,12 @@ function renderPaliersChart(){
       {label:'🌍 Global',data:globData,backgroundColor:'rgba(240,176,32,.75)',borderColor:'rgba(240,176,32,1)',borderWidth:1,borderRadius:4}
     ]},
     options:{
+      indexAxis:'y',
       responsive:true,maintainAspectRatio:false,
       plugins:{legend:{display:true,labels:{color:'#8b97c4',font:{size:9},boxWidth:10}},tooltip:{callbacks:{label:function(i){return i.raw!=null?(i.dataset.label+' : Palier '+i.raw):null;}}}},
       scales:{
-        x:{ticks:{color:'#4f5d88',font:{size:9}},grid:{display:false}},
-        y:{min:0,max:8,ticks:{color:'#4f5d88',font:{size:9},stepSize:1},grid:{color:'rgba(255,255,255,.03)'}}
+        y:{ticks:{color:'#4f5d88',font:{size:9}},grid:{display:false}},
+        x:{min:0,max:8,ticks:{color:'#4f5d88',font:{size:9},stepSize:1},grid:{color:'rgba(255,255,255,.03)'}}
       }
     }
   });
@@ -8425,15 +8477,21 @@ function updateInfoBar(barId, txtId, valId, label, val, color){
 function attachTouchTooltip(canvas, chartRef, barId, txtId, valId){
   if(typeof canvas==='string'){var canvasId=canvas;canvas=$i(canvas);}
   if(!canvas)return;
-  canvas.addEventListener('touchend',function(e){
+  /* AJOUT DU 01/09 : cette fonction n'ecoutait que 'touchend' (le doigt),
+     jamais la souris. Le 28/08, le tooltip NATIF de Chart.js — qui etait le
+     SEUL mecanisme a repondre au survol souris sur PC — a ete desactive
+     (tooltip:{enabled:false}) pour corriger un doublon d'affichage sur
+     mobile. Consequence non prevue : plus aucun survol ne montrait quoi que
+     ce soit sur PC (retour d'Antoine, "avant je survolais les points verts,
+     ca mettait le pari correspondant"). Fonction partagee entre le toucher
+     ET la souris desormais — meme boite d'info dans les deux cas. */
+  function _resoudre(clientX, clientY){
     var chart=typeof chartRef==='function'?chartRef():chartRef;
     if(!chart)return;
-    /* Résoudre les éléments DOM dynamiquement au moment du touch */
     var bar=$i(barId);var txt=$i(txtId);var v=$i(valId);
-    var t=e.changedTouches[0];
     var r=canvas.getBoundingClientRect();
-    var x=t.clientX-r.left;
-    var y=t.clientY-r.top;
+    var x=clientX-r.left;
+    var y=clientY-r.top;
     try{
       var pts=chart.getElementsAtEventForMode({offsetX:x,offsetY:y},'nearest',{intersect:false},false);
       if(pts.length){
@@ -8459,6 +8517,13 @@ function attachTouchTooltip(canvas, chartRef, barId, txtId, valId){
         }
       }
     }catch(err){console.log(err);}
+  }
+  canvas.addEventListener('touchend',function(e){
+    var t=e.changedTouches[0];
+    _resoudre(t.clientX, t.clientY);
+  },{passive:true});
+  canvas.addEventListener('mousemove',function(e){
+    _resoudre(e.clientX, e.clientY);
   },{passive:true});
 }
 var bilanMode='global';
@@ -8866,7 +8931,13 @@ function renderAdvancedCharts(paris, bankroll) {
             }
           }
         },
-        scales:{x:{display:false},y:{ticks:{color:'#4f5d88',font:{size:9},callback:function(v){return v+'€';}},grid:{color:'rgba(255,255,255,.03)'}}}
+        /* AXE DES DATES AJOUTE (01/09, retour d'Antoine, screen 2/3 : "une barre
+           horizontale de date tous les 2 jours"). Meme principe applique sur le
+           graphique du Bilan le meme jour : `maxTicksLimit` s'adapte tout seul
+           au volume de donnees (Chart.js repartit toujours le meme nombre
+           d'etiquettes que ce soit 40 ou 400 paris), et on saute toute date
+           identique a la precedente affichee pour eviter les doublons. */
+        scales:{x:{display:true,grid:{display:false},ticks:{color:'#4f5d88',font:{size:8},maxTicksLimit:6,maxRotation:0,autoSkip:true,callback:(function(){var last=null;return function(v,index){var lbl=bkLabels[index];var d=lbl?lbl.split(' ')[0]:'';if(!d||d===last)return '';last=d;return d;};})()}},y:{ticks:{color:'#4f5d88',font:{size:9},callback:function(v){return v+'€';}},grid:{color:'rgba(255,255,255,.03)'}}}
       }
     });
   }
@@ -8912,10 +8983,16 @@ function renderAdvancedCharts(paris, bankroll) {
   });
   var ctx4=document.getElementById('chart-roi-time');
   if(ctx4){
-    _advCharts.roi=new Chart(ctx4,{type:'line',data:{labels:sorted.map(function(h,i){return i+1;}),datasets:[
+    /* VRAIES DATES AU LIEU D'UN SIMPLE INDEX (01/09, retour d'Antoine). Les
+       labels etaient juste "1,2,3..." — aucune date exploitable. Remplaces
+       par la date reelle de chaque pari, meme dedoublonnage que les autres
+       graphiques de cette session pour rester lisible quel que soit le
+       volume de paris. */
+    var roiLabels=sorted.map(function(h){return h.date||'';});
+    _advCharts.roi=new Chart(ctx4,{type:'line',data:{labels:roiLabels,datasets:[
       {label:'ROI %',data:roiCurve,borderColor:'#4d84ff',backgroundColor:'transparent',borderWidth:2,tension:.4,pointRadius:0,yAxisID:'y'},
       {label:'Drawdown %',data:ddCurve,borderColor:'#ff4545',backgroundColor:'rgba(255,69,69,.1)',fill:true,borderWidth:1.5,tension:.4,pointRadius:0,yAxisID:'y'}
-    ]},options:{responsive:true,maintainAspectRatio:false,interaction:{mode:'nearest',intersect:false},plugins:{legend:{position:'bottom',labels:{color:'#4f5d88',font:{size:9},boxWidth:12}}},scales:{x:{display:false},y:{ticks:{color:'#4f5d88',font:{size:9},callback:function(v){return v+'%';}},grid:{color:'rgba(255,255,255,.03)'}}}}});
+    ]},options:{responsive:true,maintainAspectRatio:false,interaction:{mode:'nearest',intersect:false},plugins:{legend:{position:'bottom',labels:{color:'#4f5d88',font:{size:9},boxWidth:12}}},scales:{x:{display:true,grid:{display:false},ticks:{color:'#4f5d88',font:{size:8},maxTicksLimit:6,maxRotation:0,autoSkip:true,callback:(function(){var last=null;return function(v,index){var d=roiLabels[index]||'';if(!d||d===last)return '';last=d;return d;};})()}},y:{ticks:{color:'#4f5d88',font:{size:9},callback:function(v){return v+'%';}},grid:{color:'rgba(255,255,255,.03)'}}}}});
   }
 }
 function renderBilanTab(){
@@ -8961,6 +9038,7 @@ function renderBilanTab(){
         datasets.push({label:bki(bk).n,data:bkCurve,borderColor:bkCol,backgroundColor:'transparent',borderWidth:1.5,fill:false,tension:.4,pointRadius:0,pointHoverRadius:4,borderDash:[4,3]});
       });
 
+      var _lastDateShown=null;
       _bilanChart=new Chart(ct,{type:'line',data:{labels:clabels,datasets:datasets},options:{responsive:true,maintainAspectRatio:false,events:['mousemove','mouseout','click','touchstart','touchmove'],
         interaction:{mode:'nearest',intersect:false},
             plugins:{/* RESSERRE LE 28/08 (retour d'Antoine, illisible sur mobile sans scroller
@@ -8981,7 +9059,12 @@ function renderBilanTab(){
                l'adversaire/le `||`) et on limite le nombre d'etiquettes affichees
                (`maxTicksLimit`) — pas besoin d'une date par pari, juste des reperes
                espaces dans le temps. */
-            scales:{x:{display:true,grid:{display:false},ticks:{color:'#4f5d88',font:{size:8},maxTicksLimit:6,maxRotation:0,autoSkip:true,callback:function(v,index){ var lbl=clabels[index]; return lbl?lbl.split(' ')[0]:''; }}},y:{grid:{color:'rgba(255,255,255,.03)'},ticks:{color:'#4f5d88',font:{size:9},callback:function(v){return v+'€';}}}}}});
+            scales:{x:{display:true,grid:{display:false},ticks:{color:'#4f5d88',font:{size:8},maxTicksLimit:6,maxRotation:0,autoSkip:true,callback:function(v,index){ var lbl=clabels[index]; var dOnly=lbl?lbl.split(' ')[0]:''; /* PAS DE DATE REPETEE (01/09, retour d'Antoine : "19 23 23 27..."). Chart.js
+                 choisit les INDEX a etiqueter par intervalle regulier, pas par date —
+                 deux index differents peuvent tomber sur la meme journee si plusieurs
+                 paris partagent une date. On saute silencieusement toute etiquette
+                 identique a la precedente affichee. */
+if(!dOnly || dOnly===_lastDateShown) return ''; _lastDateShown=dOnly; return dOnly; }}},y:{grid:{color:'rgba(255,255,255,.03)'},ticks:{color:'#4f5d88',font:{size:9},callback:function(v){return v+'€';}}}}}});
         attachTouchTooltip('bilan-chart',function(){return _bilanChart;},'cib-bilan','cib-bilan-txt','cib-bilan-val');
     }
   }
@@ -9875,7 +9958,10 @@ function renderGlobalChart(){
               title:function(ii){if(!ii||!ii.length)return '';var l=glabels[ii[0].dataIndex]||'';return l.split('||')[0]||'Départ';},
               label:function(ii){if(!ii||ii.dataIndex===undefined)return '';var l=glabels[ii.dataIndex]||'';var parts=l.split('||');return parts[1]?'Capital : '+ii.raw.toFixed(2)+'€  '+parts[1]:'Capital : '+ii.raw.toFixed(2)+'€';}
             }}},
-        scales:{x:{display:false},y:{grid:{color:'rgba(255,255,255,.03)'},border:{display:false},
+        /* AXE DES DATES AJOUTE (01/09, retour d'Antoine). Meme principe que les
+           autres graphiques corriges ce jour : `maxTicksLimit` s'adapte tout
+           seul au volume de paris, anti-doublon de date consecutive. */
+        scales:{x:{display:true,grid:{display:false},ticks:{color:'#4f5d88',font:{size:8},maxTicksLimit:6,maxRotation:0,autoSkip:true,callback:(function(){var last=null;return function(v,index){var lbl=glabels[index];var d=lbl?lbl.split('||')[0].split(' ')[0]:'';if(!d||d===last)return '';last=d;return d;};})()}},y:{grid:{color:'rgba(255,255,255,.03)'},border:{display:false},
           ticks:{color:'#4f5d88',font:{size:10},maxTicksLimit:4,callback:function(v){return v+'€';}}}}
       }
     });
@@ -11047,11 +11133,20 @@ function renderMultiCurveChart(){
     if(!$i('chart-multi'))return;
     if(window._gcM){try{window._gcM.destroy();}catch(e){}}window._gcM=null;
     var ct=$i('chart-multi').getContext('2d');
+    /* AXE DES DATES, EN APPROXIMATION ASSUMEE (01/09, retour d'Antoine). Ici,
+       contrairement au Bilan/Bankroll, chaque equipe a SA PROPRE sequence de
+       dates (le point d'index 5 de Real Madrid n'est pas force le meme jour
+       que le point d'index 5 du PSG) — il n'existe pas de "vraie" date par
+       position d'index commune a toutes les courbes. On prend donc la date de
+       la courbe la PLUS LONGUE comme reperage indicatif — utile pour se
+       reperer dans le temps, mais a lire comme approximatif sur les equipes
+       plus courtes, pas comme une date exacte pour chacune. */
+    var refLbl=active.reduce(function(best,d){ return (d._labels&&d._labels.length>(best?best.length:0))?d._labels:best; },null)||[];
     window._gcM=new Chart(ct,{type:'line',data:{labels:Array.from({length:maxLen},function(_,i){return i;}),datasets:active},options:{
       animation:false,responsive:true,maintainAspectRatio:false,interaction:{mode:'nearest',intersect:false},
       plugins:{legend:{display:false},tooltip:{backgroundColor:'rgba(8,11,18,.96)',borderColor:'rgba(255,255,255,.1)',borderWidth:1,
         callbacks:{title:function(ii){var d=active[0];return d&&d._labels?d._labels[ii[0].dataIndex]||'':'';},label:function(i){return ' '+i.dataset.label+' : '+(i.raw!==null?(i.raw>=0?'+':'')+i.raw.toFixed(2)+'€':'—');}}}},
-      scales:{x:{display:false},y:{grid:{color:'rgba(255,255,255,.03)'},border:{display:false},ticks:{color:'#4f5d88',font:{size:9},maxTicksLimit:4,callback:function(v){return v+'€';}}}}
+      scales:{x:{display:true,grid:{display:false},ticks:{color:'#4f5d88',font:{size:8},maxTicksLimit:5,maxRotation:0,autoSkip:true,callback:(function(){var last=null;return function(v,index){var lbl=refLbl[index];var d=lbl?lbl.split(' ')[0]:'';if(!d||d===last)return '';last=d;return d;};})()}},y:{grid:{color:'rgba(255,255,255,.03)'},border:{display:false},ticks:{color:'#4f5d88',font:{size:9},maxTicksLimit:4,callback:function(v){return v+'€';}}}}
     }});
     attachTouchTooltip('chart-multi',function(){return window._gcM;},'cib-multi','cib-multi-txt','cib-multi-val');
   },80);
@@ -11120,6 +11215,14 @@ function renderPaliersChart(){
     if(dom===null&&ext===null&&glob===null) glob=parseInt(u.l,10)||1;  // jamais engagee sur aucun lieu : repli
     domData.push(dom); extData.push(ext); globData.push(glob);
   });
+  /* BARRES HORIZONTALES (01/09, retour d'Antoine : trop resserre/illisible sur
+     mobile en vertical avec 11+ equipes — meme traitement que "Reussite par
+     sport", deja en barres horizontales et lisible sur tous les ecrans. La
+     hauteur du conteneur est desormais calculee selon le nombre d'equipes
+     (~30px par ligne) au lieu d'une hauteur fixe pensee pour un axe X court :
+     sans ca, toutes les lignes s'ecraseraient dans les 200px d'origine. */
+  var _hCont=ctx.parentElement;
+  if(_hCont) _hCont.style.height=Math.max(220, state.u.length*30)+'px';
   GC2.paliers=new Chart(ctx.getContext('2d'),{
     type:'bar',
     data:{labels:labels,datasets:[
@@ -11128,11 +11231,12 @@ function renderPaliersChart(){
       {label:'🌍 Global',data:globData,backgroundColor:'rgba(240,176,32,.75)',borderColor:'rgba(240,176,32,1)',borderWidth:1,borderRadius:4}
     ]},
     options:{
+      indexAxis:'y',
       responsive:true,maintainAspectRatio:false,
       plugins:{legend:{display:true,labels:{color:'#8b97c4',font:{size:9},boxWidth:10}},tooltip:{callbacks:{label:function(i){return i.raw!=null?(i.dataset.label+' : Palier '+i.raw):null;}}}},
       scales:{
-        x:{ticks:{color:'#4f5d88',font:{size:9}},grid:{display:false}},
-        y:{min:0,max:8,ticks:{color:'#4f5d88',font:{size:9},stepSize:1},grid:{color:'rgba(255,255,255,.03)'}}
+        y:{ticks:{color:'#4f5d88',font:{size:9}},grid:{display:false}},
+        x:{min:0,max:8,ticks:{color:'#4f5d88',font:{size:9},stepSize:1},grid:{color:'rgba(255,255,255,.03)'}}
       }
     }
   });
