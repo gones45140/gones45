@@ -2595,6 +2595,7 @@ function renderArchive(){
           +'<div style="position:relative;display:flex;flex-direction:column;gap:3px;flex-shrink:0;">'
           +'<a href="https://www.google.com/search?q='+encodeURIComponent(titre+' sofascore')+'" target="_blank" style="background:none;border:none;color:#ff7b54;font-size:13px;cursor:pointer;padding:0;text-decoration:none;" title="Sofascore">⚡</a>'
           +'<button data-titre="'+titre.replace(/"/g,'&quot;')+'" data-date="'+(h.date||'')+'" data-comp="'+(h.comp||'')+'" onclick="var d=this.dataset;ouvrirYouTubeAvecScore(d.titre,d.date,d.comp)" style="background:none;border:none;color:#ff0000;font-size:13px;cursor:pointer;padding:0;" title="YouTube highlights">▶️</button>'
+          +'<button data-aid="'+h.id+'" onclick="g45PartagerPari(this.dataset.aid)" style="background:none;border:none;color:#4d84ff;font-size:14px;cursor:pointer;padding:0;" title="Partager ce pari en image">📤</button>'
           +'<button data-aid="'+h.id+'" onclick="openBetEdit(this.dataset.aid)" style="background:none;border:none;color:var(--t3);font-size:14px;cursor:pointer;padding:0;">✏️</button>'
           +'<button data-aid="'+h.id+'" onclick="deleteArchived(this.dataset.aid)" style="background:none;border:none;color:var(--r);font-size:14px;cursor:pointer;padding:0;">🗑</button>'
           +'</div>'
@@ -3496,6 +3497,77 @@ function cancelBet(id){
   if(bet.isS&&bet.l){var u=state.u.find(function(x){return x.n===bet.n;});if(u)_g45SetPal(u,bet.comp,bet.domicile,parseInt(bet.l)||1);}
   state.h.splice(idx,1);save();
 }
+/* ═════════ CARTE DE RESULTAT PARTAGEABLE (01/09, demande d'Antoine) ═════════
+   Reprend le style de la maquette validee la veille (fond stade CSS pur,
+   filigrane sportif, badge de championnat) mais avec les VRAIES donnees du
+   pari. html2canvas transforme la carte (construite hors-ecran) en image ;
+   partage natif sur mobile (WhatsApp/Discord/SMS via le menu du telephone),
+   telechargement en repli sur PC ou si le partage natif echoue. */
+function _g45CarteResultatHTML(h){
+  var isSimpleC=(h.n==='SIMPLE');
+  var adversaireC=(h.target&&h.target!=='-'&&!isSimpleC)?h.target:'';
+  var titreC=isSimpleC?(h.target&&h.target!=='-'?h.target.split(/\s+vs\s+/i)[0]:(h.n||'—')):(h.n||h.target||'—');
+  var u1=(state.u||[]).filter(function(x){return x&&x.n===titreC;})[0];
+  var coul1=(u1&&u1.color)||'#4d84ff';
+  var abbr1=(u1&&u1.abbr)||titreC.replace(/[^a-zA-Z]/g,'').substring(0,3).toUpperCase()||'—';
+  var abbr2=adversaireC?adversaireC.replace(/[^a-zA-Z]/g,'').substring(0,3).toUpperCase():'';
+  var isPend=!!h.isPending;
+  var gain=isPend?0:(h.win?(parseFloat(h.m)*parseFloat(h.cote)-parseFloat(h.m)):-parseFloat(h.m));
+  var verdictTxt=isPend?'⏳ En cours':(h.win?'✅ Gagné':'❌ Perdu');
+  var verdictCls=isPend?'#f0b020':(h.win?'#1ed760':'#ff4545');
+  var score=(typeof _g45ScoreTexte==='function')?(_g45ScoreTexte(h)||''):'';
+  var typeTxtC=h.type||'';
+  if(/^victoire\b/i.test(typeTxtC) && titreC.toLowerCase().indexOf(' vs ')===-1){ typeTxtC=titreC+' '+typeTxtC.replace(/^victoire\b/i,'gagne'); }
+  return '<div style="width:340px;border-radius:20px;overflow:hidden;position:relative;'
+    +'background:radial-gradient(circle at 50% 18%,'+coul1+'59 0%,'+coul1+'00 55%),repeating-linear-gradient(135deg,rgba(255,255,255,.025) 0px,rgba(255,255,255,.025) 1px,transparent 1px,transparent 14px),linear-gradient(160deg,#151b30 0%,#0a0e1a 65%);'
+    +'border:1px solid rgba(255,255,255,.08);font-family:-apple-system,BlinkMacSystemFont,\'Segoe UI\',Roboto,sans-serif;">'
+    +'<div style="position:absolute;right:-20px;bottom:-40px;font-size:210px;opacity:.13;line-height:1;transform:rotate(-8deg);">'+(h.sport||'⚽')+'</div>'
+    +'<div style="position:relative;padding:20px 22px 16px;display:flex;justify-content:space-between;align-items:center;">'
+      +'<div style="font-size:15px;font-weight:900;color:#fff;letter-spacing:-.02em;">BET<span style="color:#ff5a5a;">45</span></div>'
+      +'<div style="font-size:11px;font-weight:800;padding:5px 12px;border-radius:20px;background:'+verdictCls+'26;color:'+verdictCls+';">'+verdictTxt+'</div>'
+    +'</div>'
+    +'<div style="position:relative;display:flex;align-items:center;justify-content:center;gap:18px;padding:6px 22px 22px;">'
+      +'<div style="width:64px;height:64px;border-radius:16px;display:flex;align-items:center;justify-content:center;font-size:20px;font-weight:900;color:#fff;background:'+coul1+';">'+abbr1+'</div>'
+      +(abbr2?'<div style="color:#4f5d88;font-size:13px;font-weight:700;">VS</div><div style="width:64px;height:64px;border-radius:16px;display:flex;align-items:center;justify-content:center;font-size:20px;font-weight:900;color:#fff;background:#5b6690;">'+abbr2+'</div>':'')
+    +'</div>'
+    +'<div style="position:relative;text-align:center;padding:0 22px;font-size:16px;font-weight:800;color:#fff;">'+(titreC||'')+'</div>'
+    +'<div style="position:relative;text-align:center;padding:4px 22px 16px;font-size:11px;color:#8b97c4;">'+(h.comp?('<span style="display:inline-block;font-size:9px;font-weight:900;letter-spacing:.06em;color:#c9d2f0;border:1px solid rgba(255,255,255,.16);padding:3px 8px;border-radius:6px;background:rgba(255,255,255,.05);margin-right:6px;">'+h.comp.toUpperCase()+'</span>'):'')+(h.date||'')+'</div>'
+    +(score?('<div style="position:relative;text-align:center;padding:0 22px 10px;"><span style="font-size:26px;font-weight:900;color:#fff;">'+score+'</span></div>'):'')
+    +'<div style="position:relative;text-align:center;padding:0 22px 18px;font-size:11px;color:#8b97c4;">'+(typeTxtC||'')+'</div>'
+    +'<div style="position:relative;display:flex;border-top:1px solid rgba(255,255,255,.08);">'
+      +'<div style="flex:1;text-align:center;padding:14px 8px;border-right:1px solid rgba(255,255,255,.08);"><div style="font-size:9px;color:#5b6690;text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px;">Mise</div><div style="font-size:15px;font-weight:800;color:#fff;">'+parseFloat(h.m).toFixed(2)+'€</div></div>'
+      +'<div style="flex:1;text-align:center;padding:14px 8px;border-right:1px solid rgba(255,255,255,.08);"><div style="font-size:9px;color:#5b6690;text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px;">Cote</div><div style="font-size:15px;font-weight:800;color:#fff;">'+parseFloat(h.cote).toFixed(2)+'</div></div>'
+      +'<div style="flex:1;text-align:center;padding:14px 8px;"><div style="font-size:9px;color:#5b6690;text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px;">'+(isPend?'Gain pot.':'Gain')+'</div><div style="font-size:15px;font-weight:800;color:'+(isPend?'#fff':(gain>=0?'#1ed760':'#ff4545'))+';">'+(isPend?'+'+(parseFloat(h.m)*parseFloat(h.cote)-parseFloat(h.m)).toFixed(2):((gain>=0?'+':'')+gain.toFixed(2)))+'€</div></div>'
+    +'</div>'
+    +'<div style="position:relative;background:#05070d;padding:10px 22px;display:flex;justify-content:space-between;align-items:center;">'
+      +'<span style="font-size:10px;color:#4f5d88;font-weight:700;">bet45.fr</span><span style="font-size:15px;">'+(h.sport||'⚽')+'</span>'
+    +'</div>'
+  +'</div>';
+}
+async function g45PartagerPari(id){
+  var h=(state.a||[]).concat(state.h||[]).filter(function(x){return x.id===id;})[0];
+  if(!h){ alert('Pari introuvable.'); return; }
+  if(typeof html2canvas==='undefined'){ alert('Génération d\'image indisponible pour le moment.'); return; }
+  var wrap=document.createElement('div');
+  wrap.style.cssText='position:fixed;left:-9999px;top:0;';
+  wrap.innerHTML=_g45CarteResultatHTML(h);
+  document.body.appendChild(wrap);
+  try{
+    var canvas=await html2canvas(wrap.firstChild, {backgroundColor:null, scale:2});
+    document.body.removeChild(wrap);
+    canvas.toBlob(async function(blob){
+      if(!blob) return;
+      var file=new File([blob], 'bet45-pari.png', {type:'image/png'});
+      if(navigator.canShare && navigator.canShare({files:[file]})){
+        try{ await navigator.share({files:[file], title:'BET45', text:'Mon pari sur BET45'}); return; }catch(e){ /* annule ou echoue : repli telechargement */ }
+      }
+      var url=URL.createObjectURL(blob);
+      var a=document.createElement('a'); a.href=url; a.download='bet45-pari.png'; document.body.appendChild(a); a.click(); document.body.removeChild(a);
+      setTimeout(function(){ URL.revokeObjectURL(url); }, 4000);
+    }, 'image/png');
+  }catch(e){ try{ document.body.removeChild(wrap); }catch(e2){} alert('Échec de la génération de l\'image.'); }
+}
+window.g45PartagerPari=g45PartagerPari;
 function deleteArchived(id){
   if(!confirm('Supprimer ce pari ?'))return;
   var idx=state.a.findIndex(function(x){return x.id===id;});if(idx===-1)return;
@@ -9703,6 +9775,7 @@ function renderArchive(){
           +'<div style="position:relative;display:flex;flex-direction:column;gap:3px;flex-shrink:0;">'
           +'<a href="https://www.google.com/search?q='+encodeURIComponent(titre+' sofascore')+'" target="_blank" style="background:none;border:none;color:#ff7b54;font-size:13px;cursor:pointer;padding:0;text-decoration:none;" title="Sofascore">⚡</a>'
           +'<button data-titre="'+titre.replace(/"/g,'&quot;')+'" data-date="'+(h.date||'')+'" data-comp="'+(h.comp||'')+'" onclick="var d=this.dataset;ouvrirYouTubeAvecScore(d.titre,d.date,d.comp)" style="background:none;border:none;color:#ff0000;font-size:13px;cursor:pointer;padding:0;" title="YouTube highlights">▶️</button>'
+          +'<button data-aid="'+h.id+'" onclick="g45PartagerPari(this.dataset.aid)" style="background:none;border:none;color:#4d84ff;font-size:14px;cursor:pointer;padding:0;" title="Partager ce pari en image">📤</button>'
           +'<button data-aid="'+h.id+'" onclick="openBetEdit(this.dataset.aid)" style="background:none;border:none;color:var(--t3);font-size:14px;cursor:pointer;padding:0;">✏️</button>'
           +'<button data-aid="'+h.id+'" onclick="deleteArchived(this.dataset.aid)" style="background:none;border:none;color:var(--r);font-size:14px;cursor:pointer;padding:0;">🗑</button>'
           +'</div>'
