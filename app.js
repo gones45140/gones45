@@ -39729,9 +39729,16 @@ var _g45FanEnCours = 0;
    Aucun fichier de configuration a tenir : deposer le fichier suffit.
 
    L'existence est testee UNE FOIS par equipe puis memorisee : une image trouvee
-   l'est definitivement, une absence est reessayee au bout de 7 jours (le temps
-   qu'il en ajoute). Sans ce cache, chaque rafraichissement du direct produirait
-   une rafale de 404. */
+   l'est definitivement, une absence est reessayee au bout de 3 HEURES.
+   C'ETAIT 7 JOURS jusqu'au 01/09 (retour d'Antoine : "deja que sa fonctionne
+   pas") : l'absence etant memorisee au PREMIER affichage, une image deposee
+   ENSUITE — l'ordre normal des choses — restait invisible une semaine entiere,
+   sans erreur ni message. Le depot passait donc pour casse alors qu'il ne
+   l'etait pas. Meme correction que sur `_g45CatPerso` : un resultat NEGATIF ne
+   doit jamais etre garde longtemps. Sans aucun cache en revanche, chaque
+   rafraichissement du direct produirait une rafale de 404, d'ou les 3 heures
+   plutot que rien. */
+var _G45_PERSO_TTLNEG = 3 * 3600000;
 var _G45_PERSO_IMG = 'g45_img_perso_';
 var _G45_PERSO_DIR = 'images/equipes/';
 
@@ -39739,14 +39746,14 @@ function _g45ImgPersoLire(nom) {
   try {
     var o = JSON.parse(localStorage.getItem(_G45_PERSO_IMG + _g45SgNorm(nom)) || 'null');
     if (!o) return undefined;
-    if (!o.u && (Date.now() - (o.t || 0)) > 7 * 86400000) return undefined;
+    if (!o.u && (Date.now() - (o.t || 0)) > _G45_PERSO_TTLNEG) return undefined;
     return o.u || '';
   } catch (e) { return undefined; }
 }
 
 /* EXTENSIONS ELARGIES LE 27/08 (retour d'Antoine : fichier depose en .png,
    seul .jpg etait teste — meme famille de correctif que `_g45CatPerso`). Le
-   negatif garde le meme cache "7 jours" que la fonction de lecture ; seule
+   negatif garde le meme cache court (`_G45_PERSO_TTLNEG`) que la lecture ; seule
    l'EXTENSION est desormais tolerante, pas la CASSE : GitHub etant sensible a
    la casse, un fichier "AtleticoMadrid.png" ne sera jamais trouve par l'URL
    "atleticomadrid.png" que ce code construit — le nom de fichier doit rester
