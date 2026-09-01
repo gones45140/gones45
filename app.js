@@ -2557,7 +2557,16 @@ function renderArchive(){
         var isSimpleA=(h.n==='SIMPLE');
         var adversaireA=(h.target&&h.target!=='-'&&!isSimpleA)?h.target:'';
         var titre=isSimpleA?(h.target&&h.target!=='-'?h.target:(h.n||'—')):(h.n||h.target||'—');
-        var sous='<span style="color:#7aa2ff;font-weight:800;font-size:11px;background:rgba(77,132,255,.16);padding:1px 7px;border-radius:5px;">@'+parseFloat(h.cote).toFixed(2)+'</span>'+(h.comp?' · '+h.comp:'')+(adversaireA?' · vs '+adversaireA:'');
+        /* TYPE DE PARI AJOUTE (01/09, retour d'Antoine : "dans archive contrairement
+           a global il manque le type de pari"). Meme calcul que dans le Bilan
+           (_g45BetRowMini) : "Victoire" seul se transforme en "Equipe gagne"
+           pour rester lisible, sinon le type s'affiche tel quel (Buteur,
+           Victoire + Over 2.5...). */
+        var typeTxtA=h.type||'';
+        if(/^victoire\b/i.test(typeTxtA) && titre.toLowerCase().indexOf(' vs ')===-1){
+          typeTxtA=titre+' '+typeTxtA.replace(/^victoire\b/i,'gagne');
+        }
+        var sous=(typeTxtA?typeTxtA+' · ':'')+'<span style="color:#7aa2ff;font-weight:800;font-size:11px;background:rgba(77,132,255,.16);padding:1px 7px;border-radius:5px;">@'+parseFloat(h.cote).toFixed(2)+'</span>'+(h.comp?' · '+h.comp:'')+(adversaireA?' · vs '+adversaireA:'');
         /* IDENTITE VISUELLE + SCORE (28/08) : port de ce qui existe deja sur la
            liste du Bilan (`_g45BetRowMini`) — cette liste-ci (onglet PARI) ne
            les avait jamais eus. Meme logique : couleur+logo du club pour une
@@ -9656,7 +9665,16 @@ function renderArchive(){
         var isSimpleA=(h.n==='SIMPLE');
         var adversaireA=(h.target&&h.target!=='-'&&!isSimpleA)?h.target:'';
         var titre=isSimpleA?(h.target&&h.target!=='-'?h.target:(h.n||'—')):(h.n||h.target||'—');
-        var sous='<span style="color:#7aa2ff;font-weight:800;font-size:11px;background:rgba(77,132,255,.16);padding:1px 7px;border-radius:5px;">@'+parseFloat(h.cote).toFixed(2)+'</span>'+(h.comp?' · '+h.comp:'')+(adversaireA?' · vs '+adversaireA:'');
+        /* TYPE DE PARI AJOUTE (01/09, retour d'Antoine : "dans archive contrairement
+           a global il manque le type de pari"). Meme calcul que dans le Bilan
+           (_g45BetRowMini) : "Victoire" seul se transforme en "Equipe gagne"
+           pour rester lisible, sinon le type s'affiche tel quel (Buteur,
+           Victoire + Over 2.5...). */
+        var typeTxtA=h.type||'';
+        if(/^victoire\b/i.test(typeTxtA) && titre.toLowerCase().indexOf(' vs ')===-1){
+          typeTxtA=titre+' '+typeTxtA.replace(/^victoire\b/i,'gagne');
+        }
+        var sous=(typeTxtA?typeTxtA+' · ':'')+'<span style="color:#7aa2ff;font-weight:800;font-size:11px;background:rgba(77,132,255,.16);padding:1px 7px;border-radius:5px;">@'+parseFloat(h.cote).toFixed(2)+'</span>'+(h.comp?' · '+h.comp:'')+(adversaireA?' · vs '+adversaireA:'');
         /* IDENTITE VISUELLE + SCORE (28/08) : port de ce qui existe deja sur la
            liste du Bilan (`_g45BetRowMini`) — cette liste-ci (onglet PARI) ne
            les avait jamais eus. Meme logique : couleur+logo du club pour une
@@ -30824,7 +30842,36 @@ function _g45RenderFilteredArchive(){
     +'</div>';
   if(open){
     if(!sorted.length){ html+='<div style="padding:14px;color:var(--t3);font-size:11px;text-align:center;">Aucun pari pour ces filtres.</div>'; }
-    else { html+='<div style="max-height:62vh;overflow-y:auto;margin-top:8px;-webkit-overflow-scrolling:touch;">'+sorted.map(_g45BetRowMini).join('')+'</div>'; }
+    else {
+      /* SEPARATEUR PAR JOUR AVEC TOTAL (01/09, retour d'Antoine : "reprendre le
+         truc d'archive" — meme regroupement que renderArchive/onglet PARI,
+         absent ici jusque-la, cette liste etait un simple flux continu). */
+      var fullDayNames=['Dimanche','Lundi','Mardi','Mercredi','Jeudi','Vendredi','Samedi'];
+      var byDay={}, order=[];
+      sorted.forEach(function(h){
+        var dk=h.date||'Inconnu';
+        if(!byDay[dk]){ byDay[dk]=[]; order.push(dk); }
+        byDay[dk].push(h);
+      });
+      html+='<div style="max-height:62vh;overflow-y:auto;margin-top:8px;-webkit-overflow-scrolling:touch;">'
+        +order.map(function(dk){
+          var dayParis=byDay[dk];
+          var dayProfit=dayParis.reduce(function(a,h){var m=parseFloat(h.m||0);return a+(h.win?(m*parseFloat(h.cote||0)-m):-m);},0);
+          var dpC=dayProfit>=0?'var(--g)':'var(--r)';
+          var dayLabel=dk;
+          try{
+            var dp=dk.split('-');
+            if(dp.length===3){
+              var dt=new Date(parseInt(dp[0]),parseInt(dp[1])-1,parseInt(dp[2]));
+              dayLabel=fullDayNames[dt.getDay()]+' '+parseInt(dp[2]);
+            }
+          }catch(e){}
+          return '<div style="display:flex;justify-content:space-between;align-items:center;background:rgba(255,255,255,.04);border-radius:8px;padding:7px 10px;margin:10px 0 4px;font-size:11px;font-weight:800;">'
+            +'<span style="color:var(--t1);">'+dayLabel+'</span><span style="color:'+dpC+';">'+(dayProfit>=0?'+':'')+dayProfit.toFixed(2)+'€</span></div>'
+            +dayParis.map(_g45BetRowMini).join('');
+        }).join('')
+        +'</div>';
+    }
   }
   box.innerHTML=html;
 }
