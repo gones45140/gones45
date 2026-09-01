@@ -3557,9 +3557,24 @@ async function g45PartagerPari(id){
     document.body.removeChild(wrap);
     canvas.toBlob(async function(blob){
       if(!blob) return;
+      /* CORRIGE LE 01/09 (retour d'Antoine sur Windows/Discord) : le partage
+         natif Windows (navigator.share) copie le FICHIER, pas une vraie image
+         — Discord n'accepte au Ctrl+V que ce que l'API presse-papiers ecrit
+         comme une IMAGE reelle (exactement ce que fait l'Outil Capture de
+         Windows). Sur mobile, navigator.share reste le bon choix (menu natif
+         WhatsApp/Discord qui fonctionne correctement) ; sur PC, on ecrit
+         directement l'image dans le presse-papiers a la place. */
+      var estMobile=/Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
       var file=new File([blob], 'bet45-pari.png', {type:'image/png'});
-      if(navigator.canShare && navigator.canShare({files:[file]})){
-        try{ await navigator.share({files:[file], title:'BET45', text:'Mon pari sur BET45'}); return; }catch(e){ /* annule ou echoue : repli telechargement */ }
+      if(estMobile && navigator.canShare && navigator.canShare({files:[file]})){
+        try{ await navigator.share({files:[file], title:'BET45', text:'Mon pari sur BET45'}); return; }catch(e){ /* annule ou echoue : repli ci-dessous */ }
+      }
+      if(navigator.clipboard && window.ClipboardItem){
+        try{
+          await navigator.clipboard.write([new ClipboardItem({'image/png':blob})]);
+          alert('📋 Image copiée — colle-la (Ctrl+V) directement dans Discord, WhatsApp Web, etc.');
+          return;
+        }catch(e){ /* repli telechargement ci-dessous */ }
       }
       var url=URL.createObjectURL(blob);
       var a=document.createElement('a'); a.href=url; a.download='bet45-pari.png'; document.body.appendChild(a); a.click(); document.body.removeChild(a);
