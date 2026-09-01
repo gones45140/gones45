@@ -4505,8 +4505,24 @@ function renderPaliersChart(){
      maquettes) : conteneur a largeur fixe qui defile horizontalement plutot
      qu'une hauteur qui grandit avec le nombre d'equipes — chaque equipe garde
      une largeur minimale (46px) pour que les noms tournes restent lisibles. */
+  /* PLACE SOUS L'AXE X (01/09, retour d'Antoine : "on voit pas le nom des
+     equipes ni les logos"). La reservation se faisait par un hook `afterFit`
+     declare au niveau du PLUGIN — or Chart.js 4 n'expose `afterFit` que sur une
+     ECHELLE, jamais comme hook de plugin : la fonction n'etait donc jamais
+     appelee. Les ticks et la grille de l'axe X etant masques, l'axe gardait une
+     hauteur quasi nulle et TOUT ce que le plugin dessine sous
+     `chartArea.bottom` (ecussons puis noms tournes) tombait hors du canvas.
+     Deux corrections : la reservation passe dans `scales.x.afterFit`, et sa
+     valeur est CALCULEE a partir du nom le plus long au lieu des 72px en dur
+     qui n'auraient de toute facon pas suffi pour un "Colorado Avalanche"
+     tourne a 45 degres (le texte descend de largeur x sin(45)). */
+  var _mes=document.createElement('canvas').getContext('2d');
+  _mes.font='9px sans-serif';
+  var _maxLbl=0;
+  labels.forEach(function(t){ _maxLbl=Math.max(_maxLbl, _mes.measureText(t||'').width); });
+  var _xPad=Math.min(130, Math.round(30+_maxLbl*0.7072+8));
   var _hCont=ctx.parentElement;
-  if(_hCont){ _hCont.style.height='280px'; _hCont.parentElement.style.overflowX='auto'; ctx.style.minWidth=Math.max(340, uList.length*46)+'px'; }
+  if(_hCont){ _hCont.style.height=(230+_xPad)+'px'; _hCont.parentElement.style.overflowX='auto'; ctx.style.minWidth=Math.max(340, uList.length*46)+'px'; }
   var _logoImgs={};
   var _preloads=uList.map(function(u){
     return new Promise(function(resolve){
@@ -4524,7 +4540,6 @@ function renderPaliersChart(){
     if(!$i('chart-paliers')) return;
     var _logoPlugin={
       id:'g45TeamLogos',
-      afterFit:function(chart){ chart.scales.x.height=72; },
       afterDraw:function(chart){
         var xA=chart.scales.x, c=chart.ctx, area=chart.chartArea;
         c.save();
@@ -4570,7 +4585,7 @@ function renderPaliersChart(){
         responsive:true,maintainAspectRatio:false,
         plugins:{legend:{display:true,labels:{color:'#8b97c4',font:{size:9},boxWidth:10}},tooltip:{callbacks:{label:function(i){return i.raw!=null?(i.dataset.label+' : Palier '+i.raw):null;}}}},
         scales:{
-          x:{ticks:{display:false},grid:{display:false}},
+          x:{afterFit:function(sc){ sc.height=_xPad; },ticks:{display:false},grid:{display:false}},
           y:{min:0,max:8,ticks:{color:'#e8ecfa',font:{size:9},stepSize:1},grid:{color:'rgba(255,255,255,.03)'}}
         }
       }
@@ -11512,8 +11527,24 @@ function renderPaliersChart(){
      maquettes) : conteneur a largeur fixe qui defile horizontalement plutot
      qu'une hauteur qui grandit avec le nombre d'equipes — chaque equipe garde
      une largeur minimale (46px) pour que les noms tournes restent lisibles. */
+  /* PLACE SOUS L'AXE X (01/09, retour d'Antoine : "on voit pas le nom des
+     equipes ni les logos"). La reservation se faisait par un hook `afterFit`
+     declare au niveau du PLUGIN — or Chart.js 4 n'expose `afterFit` que sur une
+     ECHELLE, jamais comme hook de plugin : la fonction n'etait donc jamais
+     appelee. Les ticks et la grille de l'axe X etant masques, l'axe gardait une
+     hauteur quasi nulle et TOUT ce que le plugin dessine sous
+     `chartArea.bottom` (ecussons puis noms tournes) tombait hors du canvas.
+     Deux corrections : la reservation passe dans `scales.x.afterFit`, et sa
+     valeur est CALCULEE a partir du nom le plus long au lieu des 72px en dur
+     qui n'auraient de toute facon pas suffi pour un "Colorado Avalanche"
+     tourne a 45 degres (le texte descend de largeur x sin(45)). */
+  var _mes=document.createElement('canvas').getContext('2d');
+  _mes.font='9px sans-serif';
+  var _maxLbl=0;
+  labels.forEach(function(t){ _maxLbl=Math.max(_maxLbl, _mes.measureText(t||'').width); });
+  var _xPad=Math.min(130, Math.round(30+_maxLbl*0.7072+8));
   var _hCont=ctx.parentElement;
-  if(_hCont){ _hCont.style.height='280px'; _hCont.parentElement.style.overflowX='auto'; ctx.style.minWidth=Math.max(340, uList.length*46)+'px'; }
+  if(_hCont){ _hCont.style.height=(230+_xPad)+'px'; _hCont.parentElement.style.overflowX='auto'; ctx.style.minWidth=Math.max(340, uList.length*46)+'px'; }
   var _logoImgs={};
   var _preloads=uList.map(function(u){
     return new Promise(function(resolve){
@@ -11531,7 +11562,6 @@ function renderPaliersChart(){
     if(!$i('chart-paliers')) return;
     var _logoPlugin={
       id:'g45TeamLogos',
-      afterFit:function(chart){ chart.scales.x.height=72; },
       afterDraw:function(chart){
         var xA=chart.scales.x, c=chart.ctx, area=chart.chartArea;
         c.save();
@@ -11577,7 +11607,7 @@ function renderPaliersChart(){
         responsive:true,maintainAspectRatio:false,
         plugins:{legend:{display:true,labels:{color:'#8b97c4',font:{size:9},boxWidth:10}},tooltip:{callbacks:{label:function(i){return i.raw!=null?(i.dataset.label+' : Palier '+i.raw):null;}}}},
         scales:{
-          x:{ticks:{display:false},grid:{display:false}},
+          x:{afterFit:function(sc){ sc.height=_xPad; },ticks:{display:false},grid:{display:false}},
           y:{min:0,max:8,ticks:{color:'#e8ecfa',font:{size:9},stepSize:1},grid:{color:'rgba(255,255,255,.03)'}}
         }
       }
