@@ -35905,11 +35905,21 @@ async function loadCompetTab() {
           + (_fdc ? 'text-shadow:0 1px 4px rgba(0,0,0,.95),0 0 10px rgba(0,0,0,.7);' : '') + '">'
           + l.name + '</span></button>';
       }).join('');
-      return '<div style="margin-bottom:14px;"><div style="font-size:9px;font-weight:800;letter-spacing:.6px;text-transform:uppercase;color:#6b7a99;margin-bottom:7px;">'
+      /* Le gris d'origine se lisait sur un panneau uni ; sur la photo il
+         disparait. Teinte plus claire et ombre portee. */
+      return '<div style="margin-bottom:14px;"><div style="font-size:9px;font-weight:800;letter-spacing:.6px;text-transform:uppercase;color:#c3cfe6;text-shadow:0 1px 5px rgba(0,0,0,.95);margin-bottom:7px;">'
         + g.grp + '</div><div class="g45-cmp-grid">' + ch + '</div></div>';
     }).join('');
+    /* PLUS DE PANNEAU (02/09, demande d'Antoine : « que l'on voie moins les
+       caches »). La liste des competitions etait posee dans une carte `.fc`
+       opaque qui masquait `fond.jpg` sur toute sa hauteur — une belle image
+       cachee a 90 %. Le conteneur devient transparent et ce sont les TUILES qui
+       portent leur voile, exactement comme les cartes du mur et les lignes du
+       tableau des resultats depuis ce matin : jamais de bloc pleine largeur,
+       toujours un voile ajuste au contenu. */
+    _g45CmpStyle();
     el.innerHTML = retour + '<div class="sec" style="margin-top:0;">' + sp.ico + ' ' + sp.name + '</div>'
-      + '<div class="fc">' + html + '</div>';
+      + '<div class="g45-cmp-nu">' + html + '</div>';
     return;
   }
 
@@ -43432,3 +43442,95 @@ window.g45FondsCompetInfo = function () {
     return out.length + ' compétitions';
   } catch (e) { return 'indisponible'; }
 };
+
+
+/* Feuille de style de l'onglet Competitions, injectee une seule fois.
+   POINT DELICAT : on emploie `background-color`, jamais la forme courte
+   `background`. Avec `!important`, la forme courte effacerait aussi
+   `background-image` — donc les fonds photo par competition deposes dans
+   `images/ligues/`, qui sont poses en style inline. La couleur seule laisse
+   l'image intacte et ne fait que remplacer le fond des tuiles sans photo. */
+function _g45CmpStyle() {
+  var id = 'g45-cmp-style';
+  if (document.getElementById(id)) return;
+  var st = document.createElement('style');
+  st.id = id;
+  st.textContent =
+      '.g45-cmp-nu{background:none;border:0;box-shadow:none;padding:0;margin:0;}'
+    + '.g45-cmp-nu .g45-cmp-tile{background-color:rgba(14,20,38,.76) !important;'
+      + 'border:1px solid rgba(255,255,255,.13) !important;'
+      + 'text-shadow:0 1px 4px rgba(0,0,0,.85);}';
+  (document.head || document.documentElement).appendChild(st);
+}
+window._g45CmpStyle = _g45CmpStyle;
+
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   GONES45 — DOSAGE DU VOILE SUR LA PHOTO DE FOND (02/09)
+   ───────────────────────────────────────────────────────────────────────────
+   `--scrim` etait fige a 55/72 % dans le :root. Antoine : « on ne voit plus du
+   tout l'image du fond ». Le voile descend donc a ~30/48 % par defaut, et la
+   lisibilite est assuree la ou elle doit l'etre : sur les elements eux-memes.
+   `.card` et `.fc` ont deja leur propre fond, et les tuiles de Competitions ont
+   recu le leur juste avant — la photo peut donc passer entre eux sans gener.
+
+   Une seule valeur pilote les deux arrets du degrade : deux curseurs pour un
+   reglage qui se regarde d'un coup d'oeil n'aurait servi qu'a produire des
+   combinaisons incoherentes. L'ecart de 18 points est conserve, c'est lui qui
+   fait le fondu vers le bas de la page.
+
+   Le reglage est deposé sur `documentElement`, donc il prime sur le :root de la
+   feuille de style sans avoir a la modifier. */
+
+var _G45_SCRIM_DEF = 34;
+
+function _g45ScrimLu() {
+  var v = parseInt(localStorage.getItem('g45_scrim') || '', 10);
+  return (v >= 0 && v <= 100) ? v : _G45_SCRIM_DEF;
+}
+
+function _g45ScrimAppliquer(v) {
+  var a = (v / 100) * 0.90;
+  var b = Math.min(0.97, a + 0.18);
+  document.documentElement.style.setProperty('--scrim',
+    'linear-gradient(180deg,rgba(16,21,40,' + a.toFixed(2) + ') 0%,rgba(13,17,32,' + b.toFixed(2) + ') 100%)');
+}
+
+function _g45ScrimLabel(v) {
+  var lab = document.getElementById('scrim-val');
+  if (!lab) return;
+  lab.textContent = v === 0 ? 'photo nue'
+    : (v >= 95 ? 'photo masquée' : v + ' %' + (v === _G45_SCRIM_DEF ? ' (défaut)' : ''));
+}
+
+function g45Scrim(v) {
+  v = parseInt(v, 10);
+  if (isNaN(v)) v = _G45_SCRIM_DEF;
+  try { localStorage.setItem('g45_scrim', String(v)); } catch (e) {}
+  _g45ScrimAppliquer(v);
+  _g45ScrimLabel(v);
+}
+window.g45Scrim = g45Scrim;
+
+function g45ScrimReset() {
+  try { localStorage.removeItem('g45_scrim'); } catch (e) {}
+  var r = document.getElementById('scrim-range');
+  if (r) r.value = _G45_SCRIM_DEF;
+  _g45ScrimAppliquer(_G45_SCRIM_DEF);
+  _g45ScrimLabel(_G45_SCRIM_DEF);
+}
+window.g45ScrimReset = g45ScrimReset;
+
+/* Applique avant tout rendu : sinon la page s'afficherait sombre puis
+   s'eclaircirait, ce qui se voit. */
+_g45ScrimAppliquer(_g45ScrimLu());
+
+function _g45ScrimSync() {
+  var r = document.getElementById('scrim-range');
+  if (!r) return;
+  var v = _g45ScrimLu();
+  if (String(r.value) !== String(v)) r.value = v;
+  _g45ScrimLabel(v);
+}
+document.addEventListener('click', function () { setTimeout(_g45ScrimSync, 150); });
+setTimeout(_g45ScrimSync, 1500);
