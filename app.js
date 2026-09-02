@@ -1518,6 +1518,11 @@ function buildSbRows(light){
   var dr=$i('sb-rows');if(!dr)return;
   if(!light) dr.innerHTML=sbRows.map(function(r,i){
     return '<div class="dutch-row">'
+      /* ETIQUETTE VISIBLE (02/09) : le `placeholder` « Cote 1 » ne s'affiche que
+         tant que le champ est vide — donc jamais ici, puisqu'il porte toujours
+         une valeur. Deux grands champs cote a cote sans rien pour les
+         distinguer, alors que le resultat plus bas parle de « Mise 1 (@2.1) ». */
+      +'<span class="dutch-lbl">Cote '+(i+1)+'</span>'
       +'<input type="text" inputmode="decimal" class="fi" value="'+r.c+'" placeholder="Cote '+(i+1)+'" data-idx="'+i+'" oninput="sbRows[this.dataset.idx].c=parseFloat(this.value.replace(\',\',\'.\'))||1;buildSbRows(true);">'
       +(sbRows.length>2?'<button class="udel" data-idx="'+i+'" onclick="sbRows.splice(this.dataset.idx,1);buildSbRows();">✕</button>':'')
       +'</div>';
@@ -1581,6 +1586,11 @@ function buildDtRows(light){
   dtRows.forEach(function(r,i){
     var mise=impl>0?(tot*(1/(r.c||1))/impl).toFixed(2):'—';
     html+='<div class="dutch-row">'
+      /* ETIQUETTE VISIBLE (02/09) : le `placeholder` « Cote 1 » ne s'affiche que
+         tant que le champ est vide — donc jamais ici, puisqu'il porte toujours
+         une valeur. Deux grands champs cote a cote sans rien pour les
+         distinguer, alors que le resultat plus bas parle de « Mise 1 (@2.1) ». */
+      +'<span class="dutch-lbl">Cote '+(i+1)+'</span>'
       +'<input type="text" inputmode="decimal" class="fi" value="'+r.c+'" placeholder="Cote '+(i+1)+'" data-idx="'+i+'" oninput="dtRows[this.dataset.idx].c=parseFloat(this.value.replace(\',\',\'.\'))||1;buildDtRows(true);">'
       +'<div class="dutch-mise" id="dt-mise-'+i+'">'+mise+'€</div>'
       +(dtRows.length>2?'<button class="udel" data-idx="'+i+'" onclick="dtRows.splice(this.dataset.idx,1);buildDtRows();">✕</button>':'')
@@ -2814,7 +2824,11 @@ function renderArchive(){
 function renderChartMoisBar(){
   var ctx=$i('chart-mois-bar');if(!ctx)return;
   if(window._gcMoisBar){try{window._gcMoisBar.destroy();}catch(e){}}
-  var moisNames=['','Jan','Fév','Mar','Avr','Mai','Jun','Jul','Aoû','Sep','Oct','Nov','Déc'];
+  /* MOIS EN ENTIER (02/09, retour d'Antoine). Les abreviations a trois lettres
+     dataient d'un axe etroit ; l'axe ne compte ici qu'une poignee de barres, il
+     y a largement la place. « Aoû » et « Déc » n'economisaient rien et se
+     lisaient mal. */
+  var moisNames=['','Janvier','Février','Mars','Avril','Mai','Juin','Juillet','Août','Septembre','Octobre','Novembre','Décembre'];
   var year=new Date().getFullYear();
   var mois={};
   _bilanSrc().forEach(function(h){
@@ -2831,6 +2845,7 @@ function renderChartMoisBar(){
   var data=keys.map(function(m){return parseFloat(mois[m].toFixed(2));});
   var colors=data.map(function(v){return v>=0?'rgba(30,215,96,.7)':'rgba(255,69,69,.7)';});
   window._gcMoisBar=new Chart(ctx.getContext('2d'),{
+    plugins:[G45_VAL_BARRES],
     type:'bar',data:{labels:labels,datasets:[{data:data,backgroundColor:colors,borderRadius:5,borderSkipped:false}]},
     options:{animation:false,responsive:true,maintainAspectRatio:false,
       plugins:{legend:{display:false},tooltip:{callbacks:{label:function(i){return (i.raw>=0?'+':'')+i.raw.toFixed(2)+'€';}}}},
@@ -2853,18 +2868,29 @@ function renderChartSport(){
   });
   var entries=Object.entries(sports).sort(function(a,b){return b[1].profit-a[1].profit;});
   if(!entries.length)return;
-  var labels=entries.map(function(e){return e[0];});
+  /* NOM DU SPORT SOUS LA BARRE (02/09, retour d'Antoine : « on voit à peine les
+     logos de sport »). `h.sport` est l'emoji lui-meme, il servait donc
+     d'etiquette d'axe — rendu minuscule par Chart.js et illisible. On reprend la
+     table de `renderSportFilter`, seule source des noms dans l'appli. */
+  var _SPN={'⚽':'Football','🏀':'Basket','🎾':'Tennis','🏈':'NFL','⚾':'Baseball','🏒':'Hockey',
+            '🏉':'Rugby','🏉🇦🇺':'NRL','🏎':'F1','🥊':'MMA','🚗':'WRC','🚴':'Cyclisme'};
+  var labels=entries.map(function(e){return _SPN[e[0]]||e[0];});
   var profits=entries.map(function(e){return parseFloat(e[1].profit.toFixed(2));});
   var wrs=entries.map(function(e){return parseFloat((e[1].wins/e[1].n*100).toFixed(1));});
   var pColors=profits.map(function(v){return v>=0?'rgba(30,215,96,.7)':'rgba(255,69,69,.7)';});
   var wrColors=['rgba(30,215,96,.7)','rgba(240,176,32,.7)','rgba(255,69,69,.7)','rgba(77,132,255,.7)','rgba(168,85,247,.7)'];
   if(ctxBen)window._gcSportBen=new Chart(ctxBen.getContext('2d'),{
+    plugins:[G45_VAL_BARRES],
     type:'bar',data:{labels:labels,datasets:[{data:profits,backgroundColor:pColors,borderRadius:5,borderSkipped:false}]},
     options:{animation:false,responsive:true,maintainAspectRatio:false,
       plugins:{legend:{display:false},tooltip:{callbacks:{label:function(i){return (i.raw>=0?'+':'')+i.raw.toFixed(2)+'€';}}}},
       scales:{x:{ticks:{color:'#e8ecfa',font:{size:9}},grid:{display:false}},y:{grid:{color:'rgba(255,255,255,.03)'},ticks:{color:'#e8ecfa',font:{size:9},callback:function(v){return v+'€';}}}}}
   });
   if(ctxWr)window._gcSportWr=new Chart(ctxWr.getContext('2d'),{
+    plugins:[G45_VAL_BARRES],
+    /* Seul graphique en pourcentage des quatre ; les trois autres sont en euros
+       et prennent le suffixe par defaut. */
+    _g45Suffixe:'%',
     type:'bar',data:{labels:labels,datasets:[{data:wrs,backgroundColor:wrColors,borderRadius:5,borderSkipped:false}]},
     options:{animation:false,responsive:true,maintainAspectRatio:false,
       plugins:{legend:{display:false},tooltip:{callbacks:{label:function(i){return i.raw+'%';}}}},
@@ -2888,6 +2914,7 @@ function renderChartTypeBen(){
   var TCOLS=['rgba(77,132,255,.8)','rgba(30,215,96,.8)','rgba(240,176,32,.8)','rgba(168,85,247,.8)','rgba(34,211,238,.8)','rgba(249,115,22,.8)','rgba(236,72,153,.8)','rgba(20,184,166,.8)','rgba(132,204,22,.8)','rgba(232,121,249,.8)'];
   var colors=entries.map(function(e,i){return TCOLS[i%TCOLS.length];});
   window._gcTypeBen=new Chart(ctx.getContext('2d'),{
+    plugins:[G45_VAL_BARRES],
     type:'bar',data:{labels:labels,datasets:[{data:data,backgroundColor:colors,borderRadius:5,borderSkipped:false}]},
     options:{animation:false,responsive:true,maintainAspectRatio:false,
       plugins:{legend:{display:false},tooltip:{callbacks:{label:function(i){return (i.raw>=0?'+':'')+i.raw.toFixed(2)+'€';}}}},
@@ -9038,6 +9065,11 @@ function buildSbRows(light){
   var dr=$i('sb-rows');if(!dr)return;
   if(!light) dr.innerHTML=sbRows.map(function(r,i){
     return '<div class="dutch-row">'
+      /* ETIQUETTE VISIBLE (02/09) : le `placeholder` « Cote 1 » ne s'affiche que
+         tant que le champ est vide — donc jamais ici, puisqu'il porte toujours
+         une valeur. Deux grands champs cote a cote sans rien pour les
+         distinguer, alors que le resultat plus bas parle de « Mise 1 (@2.1) ». */
+      +'<span class="dutch-lbl">Cote '+(i+1)+'</span>'
       +'<input type="text" inputmode="decimal" class="fi" value="'+r.c+'" placeholder="Cote '+(i+1)+'" data-idx="'+i+'" oninput="sbRows[this.dataset.idx].c=parseFloat(this.value.replace(\',\',\'.\'))||1;buildSbRows(true);">'
       +(sbRows.length>2?'<button class="udel" data-idx="'+i+'" onclick="sbRows.splice(this.dataset.idx,1);buildSbRows();">✕</button>':'')
       +'</div>';
@@ -9101,6 +9133,11 @@ function buildDtRows(light){
   dtRows.forEach(function(r,i){
     var mise=impl>0?(tot*(1/(r.c||1))/impl).toFixed(2):'—';
     html+='<div class="dutch-row">'
+      /* ETIQUETTE VISIBLE (02/09) : le `placeholder` « Cote 1 » ne s'affiche que
+         tant que le champ est vide — donc jamais ici, puisqu'il porte toujours
+         une valeur. Deux grands champs cote a cote sans rien pour les
+         distinguer, alors que le resultat plus bas parle de « Mise 1 (@2.1) ». */
+      +'<span class="dutch-lbl">Cote '+(i+1)+'</span>'
       +'<input type="text" inputmode="decimal" class="fi" value="'+r.c+'" placeholder="Cote '+(i+1)+'" data-idx="'+i+'" oninput="dtRows[this.dataset.idx].c=parseFloat(this.value.replace(\',\',\'.\'))||1;buildDtRows(true);">'
       +'<div class="dutch-mise" id="dt-mise-'+i+'">'+mise+'€</div>'
       +(dtRows.length>2?'<button class="udel" data-idx="'+i+'" onclick="dtRows.splice(this.dataset.idx,1);buildDtRows();">✕</button>':'')
@@ -10318,7 +10355,11 @@ function renderArchive(){
 function renderChartMoisBar(){
   var ctx=$i('chart-mois-bar');if(!ctx)return;
   if(window._gcMoisBar){try{window._gcMoisBar.destroy();}catch(e){}}
-  var moisNames=['','Jan','Fév','Mar','Avr','Mai','Jun','Jul','Aoû','Sep','Oct','Nov','Déc'];
+  /* MOIS EN ENTIER (02/09, retour d'Antoine). Les abreviations a trois lettres
+     dataient d'un axe etroit ; l'axe ne compte ici qu'une poignee de barres, il
+     y a largement la place. « Aoû » et « Déc » n'economisaient rien et se
+     lisaient mal. */
+  var moisNames=['','Janvier','Février','Mars','Avril','Mai','Juin','Juillet','Août','Septembre','Octobre','Novembre','Décembre'];
   var year=new Date().getFullYear();
   var mois={};
   _bilanSrc().forEach(function(h){
@@ -10335,6 +10376,7 @@ function renderChartMoisBar(){
   var data=keys.map(function(m){return parseFloat(mois[m].toFixed(2));});
   var colors=data.map(function(v){return v>=0?'rgba(30,215,96,.7)':'rgba(255,69,69,.7)';});
   window._gcMoisBar=new Chart(ctx.getContext('2d'),{
+    plugins:[G45_VAL_BARRES],
     type:'bar',data:{labels:labels,datasets:[{data:data,backgroundColor:colors,borderRadius:5,borderSkipped:false}]},
     options:{animation:false,responsive:true,maintainAspectRatio:false,
       plugins:{legend:{display:false},tooltip:{callbacks:{label:function(i){return (i.raw>=0?'+':'')+i.raw.toFixed(2)+'€';}}}},
@@ -10357,18 +10399,29 @@ function renderChartSport(){
   });
   var entries=Object.entries(sports).sort(function(a,b){return b[1].profit-a[1].profit;});
   if(!entries.length)return;
-  var labels=entries.map(function(e){return e[0];});
+  /* NOM DU SPORT SOUS LA BARRE (02/09, retour d'Antoine : « on voit à peine les
+     logos de sport »). `h.sport` est l'emoji lui-meme, il servait donc
+     d'etiquette d'axe — rendu minuscule par Chart.js et illisible. On reprend la
+     table de `renderSportFilter`, seule source des noms dans l'appli. */
+  var _SPN={'⚽':'Football','🏀':'Basket','🎾':'Tennis','🏈':'NFL','⚾':'Baseball','🏒':'Hockey',
+            '🏉':'Rugby','🏉🇦🇺':'NRL','🏎':'F1','🥊':'MMA','🚗':'WRC','🚴':'Cyclisme'};
+  var labels=entries.map(function(e){return _SPN[e[0]]||e[0];});
   var profits=entries.map(function(e){return parseFloat(e[1].profit.toFixed(2));});
   var wrs=entries.map(function(e){return parseFloat((e[1].wins/e[1].n*100).toFixed(1));});
   var pColors=profits.map(function(v){return v>=0?'rgba(30,215,96,.7)':'rgba(255,69,69,.7)';});
   var wrColors=['rgba(30,215,96,.7)','rgba(240,176,32,.7)','rgba(255,69,69,.7)','rgba(77,132,255,.7)','rgba(168,85,247,.7)'];
   if(ctxBen)window._gcSportBen=new Chart(ctxBen.getContext('2d'),{
+    plugins:[G45_VAL_BARRES],
     type:'bar',data:{labels:labels,datasets:[{data:profits,backgroundColor:pColors,borderRadius:5,borderSkipped:false}]},
     options:{animation:false,responsive:true,maintainAspectRatio:false,
       plugins:{legend:{display:false},tooltip:{callbacks:{label:function(i){return (i.raw>=0?'+':'')+i.raw.toFixed(2)+'€';}}}},
       scales:{x:{ticks:{color:'#e8ecfa',font:{size:9}},grid:{display:false}},y:{grid:{color:'rgba(255,255,255,.03)'},ticks:{color:'#e8ecfa',font:{size:9},callback:function(v){return v+'€';}}}}}
   });
   if(ctxWr)window._gcSportWr=new Chart(ctxWr.getContext('2d'),{
+    plugins:[G45_VAL_BARRES],
+    /* Seul graphique en pourcentage des quatre ; les trois autres sont en euros
+       et prennent le suffixe par defaut. */
+    _g45Suffixe:'%',
     type:'bar',data:{labels:labels,datasets:[{data:wrs,backgroundColor:wrColors,borderRadius:5,borderSkipped:false}]},
     options:{animation:false,responsive:true,maintainAspectRatio:false,
       plugins:{legend:{display:false},tooltip:{callbacks:{label:function(i){return i.raw+'%';}}}},
@@ -10392,6 +10445,7 @@ function renderChartTypeBen(){
   var TCOLS=['rgba(77,132,255,.8)','rgba(30,215,96,.8)','rgba(240,176,32,.8)','rgba(168,85,247,.8)','rgba(34,211,238,.8)','rgba(249,115,22,.8)','rgba(236,72,153,.8)','rgba(20,184,166,.8)','rgba(132,204,22,.8)','rgba(232,121,249,.8)'];
   var colors=entries.map(function(e,i){return TCOLS[i%TCOLS.length];});
   window._gcTypeBen=new Chart(ctx.getContext('2d'),{
+    plugins:[G45_VAL_BARRES],
     type:'bar',data:{labels:labels,datasets:[{data:data,backgroundColor:colors,borderRadius:5,borderSkipped:false}]},
     options:{animation:false,responsive:true,maintainAspectRatio:false,
       plugins:{legend:{display:false},tooltip:{callbacks:{label:function(i){return (i.raw>=0?'+':'')+i.raw.toFixed(2)+'€';}}}},
@@ -43977,3 +44031,54 @@ function g45BkVidesToggle(){
   try{ renderBilanTab(); }catch(e){}
 }
 window.g45BkVidesToggle=g45BkVidesToggle;
+
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   GONES45 — VALEURS ECRITES SUR LES BARRES (02/09)
+   ───────────────────────────────────────────────────────────────────────────
+   Retour d'Antoine : « faut survoler pour avoir les infos des 2 graphiques ».
+   C'etait vrai de « Bénéfice par mois », « Bénéfice par sport », « Réussite par
+   sport » et « Bénéfice par type de pari » : la valeur n'existait que dans
+   l'infobulle. Sur telephone il n'y a pas de survol du tout — l'information
+   etait donc simplement inaccessible.
+
+   Le libelle est place a l'exterieur de la barre (au-dessus d'une barre
+   positive, en dessous d'une negative) plutot qu'a l'interieur : une barre
+   courte — le rugby a +0,40 € sur la capture — n'a pas la hauteur d'accueillir
+   un texte, et un libelle qui deborde de sa barre est pire que pas de libelle.
+   Quand la place manque vraiment au bord du cadre, on bascule du cote interieur.
+
+   `afterDatasetsDraw` et non `afterDraw` : il faut passer APRES les barres pour
+   ecrire dessus, mais AVANT la legende et les axes.
+   ═══════════════════════════════════════════════════════════════════════════ */
+var G45_VAL_BARRES = {
+  id: 'g45ValBarres',
+  afterDatasetsDraw: function (chart, args, opts) {
+    var suf = (chart.config && chart.config._g45Suffixe) || '€';
+    var ctx = chart.ctx;
+    ctx.save();
+    ctx.font = '600 11px ' + (getComputedStyle(document.documentElement).getPropertyValue('--ff') || 'sans-serif');
+    ctx.textAlign = 'center';
+    chart.data.datasets.forEach(function (ds, di) {
+      var meta = chart.getDatasetMeta(di);
+      if (meta.hidden) return;
+      meta.data.forEach(function (bar, i) {
+        var v = ds.data[i];
+        if (v === null || v === undefined) return;
+        var txt = (v > 0 ? '+' : '') + v + suf;
+        var pos = v >= 0;
+        var y = pos ? bar.y - 6 : bar.y + 15;
+        /* Repli vers l'interieur quand l'etiquette sortirait du cadre. */
+        if (pos && y < chart.chartArea.top + 11) y = bar.y + 15;
+        if (!pos && y > chart.chartArea.bottom - 4) y = bar.y - 6;
+        ctx.fillStyle = '#eef1fb';
+        ctx.fillText(txt, bar.x, y);
+      });
+    });
+    ctx.restore();
+  }
+};
+/* PAS d'enregistrement global : `Chart.register` l'appliquerait a TOUS les
+   graphiques, courbes et camemberts compris, et notamment au graphique Paliers
+   qui a deja son propre plugin de dessin. Chaque graphique concerne le declare
+   dans son tableau `plugins`. */

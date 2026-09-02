@@ -275,14 +275,30 @@ input[type="date"],input[type="time"]{color-scheme:dark;}
 .crash-alert.show{display:flex;}
 
 /* CALC */
-.calc-tabs{display:flex;background:var(--bg3);border-radius:var(--r6);padding:3px;gap:3px;margin-bottom:14px;}
-.ctbtn{flex:1;padding:8px 3px;font-size:9px;font-weight:700;text-align:center;border-radius:var(--r4);cursor:pointer;color:var(--t3);border:1px solid transparent;background:none;transition:all .2s;letter-spacing:.2px;}
-.ctbtn.on{color:#fff;border-color:transparent;}
-#ct-sb.on{background:rgba(77,132,255,.85);box-shadow:0 0 10px rgba(77,132,255,.4);}
-#ct-dt.on{background:rgba(30,215,96,.75);box-shadow:0 0 10px rgba(30,215,96,.3);}
-#ct-lay.on{background:rgba(255,69,69,.75);box-shadow:0 0 10px rgba(255,69,69,.3);}
-#ct-vb.on{background:rgba(240,176,32,.8);box-shadow:0 0 10px rgba(240,176,32,.3);}
-#ct-arjel.on{background:rgba(167,139,250,.8);box-shadow:0 0 10px rgba(167,139,250,.3);}
+/* ONGLETS DES CALCULATRICES — 02/09.
+   L'onglet actif changeait de COULEUR selon la calculatrice : bleu pour Surebet,
+   vert pour Dutching, rouge pour Lay, or pour Value, violet pour ARJEL. Ces
+   couleurs n'encodaient rien — ce n'est pas la nature du calcul qui change, c'est
+   juste l'onglet selectionne. Cinq halos concurrents pour une seule information.
+   Un soulignement unique, celui deja employe par la barre de navigation.
+   Au passage 9px et l'interlettrage disparaissent : c'etait a la limite du
+   lisible, et « Dutching » n'a aucune raison d'etre ecrit plus petit que le
+   reste de l'interface. */
+.calc-tabs{display:flex;gap:2px;border-bottom:1px solid var(--b1);margin-bottom:15px;overflow-x:auto;scrollbar-width:none;}
+.calc-tabs::-webkit-scrollbar{display:none;}
+.ctbtn{flex:1 0 auto;padding:8px 13px;font-size:12.5px;font-weight:500;text-align:center;border-radius:0;cursor:pointer;color:var(--t3);border:0;border-bottom:2px solid transparent;margin-bottom:-1px;background:none;transition:color .2s,border-color .2s;letter-spacing:0;white-space:nowrap;}
+.ctbtn.on{color:var(--t1);border-bottom-color:var(--or);}
+
+/* Le chiffre que l'on vient chercher — profit garanti, cash garanti — avait
+   exactement le meme poids que « Cote equivalente ». Il sort du tableau. */
+.cres-row.cres-hero{border-top:1px solid var(--b1);margin-top:6px;padding-top:11px;align-items:baseline;}
+.cres-row.cres-hero .cres-l{font-size:13px;}
+.cres-row.cres-hero .cres-v{font-family:var(--ff-t);font-size:29px;font-weight:600;line-height:1;font-variant-numeric:tabular-nums;}
+
+/* Etiquette de cote devant chaque ligne de Surebet et Dutching : le
+   `placeholder` « Cote 1 » existait deja, mais un placeholder disparait des que
+   le champ est rempli — donc toujours, ici. */
+.dutch-lbl{flex:none;min-width:52px;font-size:11.5px;color:var(--t3);}
 .calc-res{background:var(--bg3);border-radius:var(--r6);padding:11px 13px;margin-top:10px;}
 .cres-row{display:flex;justify-content:space-between;padding:4px 0;font-size:12px;border-bottom:1px solid var(--b1);}
 .cres-row:last-child{border-bottom:none;}

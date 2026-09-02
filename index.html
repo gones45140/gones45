@@ -10,8 +10,8 @@
      chemin est volontairement RELATIF : il se resout en `/gones45/favicon.ico`
      sur les Pages de projet et en `/favicon.ico` sur bet45.fr, sans avoir a
      maintenir deux valeurs differentes. -->
-<link rel="icon" href="favicon.ico?v=20260902w" sizes="any">
-<link rel="apple-touch-icon" href="apple-touch-icon.png?v=20260902w">
+<link rel="icon" href="favicon.ico?v=20260902y" sizes="any">
+<link rel="apple-touch-icon" href="apple-touch-icon.png?v=20260902y">
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; frame-src https://www.youtube.com https://www.youtube-nocookie.com; script-src 'self' 'unsafe-eval' 'unsafe-inline' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com; worker-src 'self' blob:; connect-src 'self' data: blob: https://tessdata.projectnaptha.com https://site.api.espn.com https://site.web.api.espn.com https://sports.core.api.espn.com https://fantasy.premierleague.com https://api.dropbox.com https://content.dropboxapi.com https://api.dropboxapi.com https://api.groq.com https://generativelanguage.googleapis.com https://api.mistral.ai https://api.tavily.com https://fd-proxy.touraine-antoine.workers.dev https://media.api-sports.io https://api.football-data.org https://api-web.nhle.com https://statsapi.mlb.com https://www.thesportsdb.com https://cdn.jsdelivr.net https://api.openf1.org https://racecenter.letour.fr https://racecenter.lavuelta.es https://racecenter.letourfemmes.fr https://racecenter.paris-nice.fr https://racecenter.tour-auvergne-rhone-alpes.fr https://racecenter.paris-roubaix.fr https://racecenter.liege-bastogne-liege.be https://racecenter.la-fleche-wallonne.be https://racecenter.paris-tours.fr https://api.jolpi.ca https://en.wikipedia.org https://api.github.com https://raw.githubusercontent.com https://gones45140.github.io https://vbsdewuvycaekfkixynh.supabase.co wss://vbsdewuvycaekfkixynh.supabase.co; img-src 'self' data: https: blob: https://flagcdn.com; style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com https://fonts.googleapis.com; font-src 'self' data: https://fonts.gstatic.com;">
 <meta http-equiv="Content-Security-Policy" content="default-src 'self' 'unsafe-inline' 'unsafe-eval' https: data: blob:;">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
@@ -20,7 +20,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600;700;800&family=Barlow+Condensed:wght@500;600;700&display=swap">
-<link rel="stylesheet" href="style.css?v=20260902d">
+<link rel="stylesheet" href="style.css?v=20260902e">
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js" crossorigin="anonymous"></script>
 <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js" crossorigin="anonymous"></script>
 <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
@@ -572,20 +572,28 @@
   <div class="psub-bar" style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px;"><button onclick="showPariSub('t-paris',this)" class="psub" data-sub="t-paris" style="flex:1;min-width:74px;padding:9px 6px;font-size:10.5px;font-weight:800;cursor:pointer;border-radius:9px;background:#1a2235;border:1px solid rgba(255,255,255,.14);color:#9fb0c7;">🎯 Pari</button><button onclick="showPariSub('t-bilan',this)" class="psub" data-sub="t-bilan" style="flex:1;min-width:74px;padding:9px 6px;font-size:10.5px;font-weight:800;cursor:pointer;border-radius:9px;background:#1a2235;border:1px solid rgba(255,255,255,.14);color:#9fb0c7;">📈 Bilan</button><button onclick="showPariSub('t-calc',this)" class="psub" data-sub="t-calc" style="flex:1;min-width:74px;padding:9px 6px;font-size:10.5px;font-weight:800;cursor:pointer;border-radius:9px;background:#2563eb;border:1px solid #3b82f6;color:#fff;">🧮 Calculatrice</button><button onclick="showPariSub('t-comp',this)" class="psub" data-sub="t-comp" style="flex:1;min-width:74px;padding:9px 6px;font-size:10.5px;font-weight:800;cursor:pointer;border-radius:9px;background:#1a2235;border:1px solid rgba(255,255,255,.14);color:#9fb0c7;">⚖️ VS</button><button onclick="showPariSub('t-bank',this)" class="psub" data-sub="t-bank" style="flex:1;min-width:74px;padding:9px 6px;font-size:10.5px;font-weight:800;cursor:pointer;border-radius:9px;background:#1a2235;border:1px solid rgba(255,255,255,.14);color:#9fb0c7;">🏦 Bank</button><button onclick="showPariSub('t-tend',this)" class="psub" data-sub="t-tend" style="flex:1;min-width:74px;padding:9px 6px;font-size:10.5px;font-weight:800;cursor:pointer;border-radius:9px;background:#1a2235;border:1px solid rgba(255,255,255,.14);color:#9fb0c7;">🔥 Tendances</button></div>
   <!-- CALCULATRICES -->
   <div class="sec" style="margin-top:0;">Calculateur</div>
-  <div class="fc">
+  <!-- 02/09 : meme traitement que les formulaires de la page Pari — panneau
+       retire pour laisser voir le fond, et largeur bornee sur grand ecran. Une
+       cote a quatre caracteres dans un champ de 1550 px, c'etait du vide. -->
+  <div class="fc g45-form g45-nu">
     <div class="calc-tabs">
       <button class="ctbtn on" id="ct-sb" onclick="swCalc('sb')">Surebet</button>
       <button class="ctbtn" id="ct-dt" onclick="swCalc('dt')">Dutching</button>
-      <button class="ctbtn" id="ct-lay" onclick="swCalc('lay')">⚖ Lay</button>
+      <button class="ctbtn" id="ct-lay" onclick="swCalc('lay')">Lay</button>
       <button class="ctbtn" id="ct-vb" onclick="swCalc('vb')">Value</button>
-      <button class="ctbtn" id="ct-arjel" onclick="swCalc('arjel')">🎟 ARJEL</button>
+      <button class="ctbtn" id="ct-arjel" onclick="swCalc('arjel')">ARJEL</button>
     </div>
     <!-- SUREBET -->
     <div id="calc-sb">
       <label style="display:flex;align-items:center;gap:8px;padding:9px;background:rgba(240,176,32,.08);border:1px solid rgba(240,176,32,.2);border-radius:var(--r6);cursor:pointer;margin-bottom:10px">
         <input type="checkbox" id="sb-gorr" onchange="calcSb()" style="accent-color:var(--gold)">
-        <span style="font-size:11px;font-weight:700;color:var(--gold)">🎁 Gagner ou Rembourser (cote 1)</span>
-        <span style="margin-left:auto;display:flex;align-items:center;gap:5px;"><span style="font-size:10px;color:var(--t3);">remboursé à</span><input type="number" id="sb-gorr-val" class="fi" style="width:58px;padding:3px 5px;font-size:11px;" value="70" min="1" max="100" oninput="calcSb()"><span style="font-size:10px;color:var(--t3);">%</span></span>
+        <!-- 02/09 : « remboursé à 70 % » se lisait « on me rend 70 % », alors que
+             la valeur est le TAUX DE VALEUR du remboursement — un freebet de 10 €
+             ne vaut pas 10 € puisqu'on n'en recupere que le gain. Le calcul est
+             inchange (`(c1 - v)` dans `buildSbRows`), seul le libelle est corrige.
+             Mettre 100 revient donc a dire « remboursement en argent reel ». -->
+        <span style="font-size:13px;color:var(--t1)">Gagner ou remboursé sur la cote 1</span>
+        <span style="margin-left:auto;display:flex;align-items:center;gap:5px;"><span style="font-size:11.5px;color:var(--t3);">remboursement valorisé à</span><input type="number" id="sb-gorr-val" class="fi" style="width:58px;padding:3px 5px;font-size:11px;" value="70" min="1" max="100" oninput="calcSb()"><span style="font-size:10px;color:var(--t3);">%</span></span>
       </label>
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
         <label class="fl" style="margin:0;">Mise totale (€)</label>
@@ -597,7 +605,7 @@
         <div class="cres-row"><span class="cres-l">Marge</span><span class="cres-v" id="sb-marge">—</span></div>
         <div class="cres-row"><span class="cres-l">Cote équivalente</span><span class="cres-v" id="sb-cote">—</span></div>
         <div class="cres-row"><span class="cres-l">Retour garanti</span><span class="cres-v" id="sb-retour">—</span></div>
-        <div class="cres-row"><span class="cres-l">Profit garanti</span><span class="cres-v" id="sb-profit">—</span></div>
+        <div class="cres-row cres-hero"><span class="cres-l">Profit garanti</span><span class="cres-v" id="sb-profit">—</span></div>
       </div>
       <div id="sb-mises" style="margin-top:8px;"></div>
     </div>
@@ -611,7 +619,7 @@
       <button class="ba" style="width:100%;margin-top:6px;" onclick="addDtRow()">+ Ajouter une sélection</button>
       <div class="calc-res" style="margin-top:10px;">
         <div class="cres-row"><span class="cres-l">Retour si victoire</span><span class="cres-v" id="dt-ret">—</span></div>
-        <div class="cres-row"><span class="cres-l">Profit</span><span class="cres-v" id="dt-profit">—</span></div>
+        <div class="cres-row cres-hero"><span class="cres-l">Profit</span><span class="cres-v" id="dt-profit">—</span></div>
       </div>
     </div>
     <!-- LAY -->
@@ -654,7 +662,7 @@
         <div class="cres-row"><span class="cres-l">Stake optimal</span><span class="cres-v" id="lay-mise-opt">—</span></div>
         <div class="cres-row"><span class="cres-l">Profit si Back gagne</span><span class="cres-v" id="lay-profit-back">—</span></div>
         <div class="cres-row"><span class="cres-l">Profit si Lay gagne</span><span class="cres-v" id="lay-profit-lay">—</span></div>
-        <div class="cres-row"><span class="cres-l">Profit garanti</span><span class="cres-v" id="lay-profit-garanti" style="font-size:15px;font-weight:800">—</span></div>
+        <div class="cres-row cres-hero"><span class="cres-l">Profit garanti</span><span class="cres-v" id="lay-profit-garanti">—</span></div>
         <div class="cres-row"><span class="cres-l">ROI</span><span class="cres-v" id="lay-roi">—</span></div>
       </div>
       <div id="lay-verdict" style="display:none;margin-top:9px;padding:10px;border-radius:var(--r6);text-align:center;font-size:13px;font-weight:700"></div>
@@ -670,7 +678,7 @@
         <div class="calc-res">
           <div class="cres-row"><span class="cres-l">Stake</span><span class="cres-v" id="fb-lay-mise">—</span></div>
           <div class="cres-row"><span class="cres-l">Liability</span><span class="cres-v" id="fb-liability">—</span></div>
-          <div class="cres-row"><span class="cres-l">Cash garanti</span><span class="cres-v" id="fb-cash" style="font-size:15px;font-weight:800;color:var(--g)">—</span></div>
+          <div class="cres-row cres-hero"><span class="cres-l">Cash garanti</span><span class="cres-v" id="fb-cash" style="color:var(--g)">—</span></div>
           <div class="cres-row"><span class="cres-l">Taux conversion</span><span class="cres-v" id="fb-taux">—</span></div>
           <div class="cres-row"><span class="cres-l">Cash si remboursé</span><span class="cres-v" id="fb-cash-gorr" style="color:var(--gold)">—</span></div>
         </div>
@@ -707,7 +715,7 @@
       <button class="ba" style="width:100%;margin-top:6px;" onclick="addArjelRow()">+ Ajouter une cote</button>
       <div class="calc-res" style="margin-top:10px;">
         <div class="cres-row"><span class="cres-l">Répartition</span><span class="cres-v" id="arjel-mise">—</span></div>
-        <div class="cres-row"><span class="cres-l">Cash garanti</span><span class="cres-v" id="arjel-cash" style="font-size:15px;font-weight:800;color:var(--g)">—</span></div>
+        <div class="cres-row cres-hero"><span class="cres-l">Cash garanti</span><span class="cres-v" id="arjel-cash" style="color:var(--g)">—</span></div>
         <div class="cres-row"><span class="cres-l">Taux conversion</span><span class="cres-v" id="arjel-taux">—</span></div>
       </div>
       <div id="arjel-detail" style="margin-top:8px;"></div>
@@ -1276,7 +1284,7 @@
      worker servaient indefiniment l'ancien fichier sur mobile : rouvrir
      l'application ne changeait rien puisque l'URL demandee etait la meme.
      A INCREMENTER A CHAQUE DEPLOIEMENT, comme sur fenotte45. -->
-<script src="app.js?v=20260902w"></script>
+<script src="app.js?v=20260902y"></script>
 <script src="social.js"></script>
 
 
