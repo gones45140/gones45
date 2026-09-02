@@ -1763,7 +1763,18 @@ function renderSportFilter(){
       mf.innerHTML=chips.map(function(c){ return '<button class="sfbtn'+(bilanMonth===c[0]?' on':'')+'" onclick="bilanMonth=\''+c[0]+'\';renderBilanTab()">'+c[1]+'</button>'; }).join('');
     }
   }catch(e){}
-  try{renderBilanTypeFilter();}catch(e){} try{renderBilanCompFilter();}catch(e){} try{renderBilanBookFilter();}catch(e){}
+  /* LES FILTRES PASSENT DANS UN TIROIR (02/09, sur le modele que m'a montre
+     Antoine). Quatre rangees de puces — type, competition, bookmaker, mois —
+     occupaient la moitie de l'ecran AVANT le moindre chiffre, alors qu'on
+     ouvre un bilan pour lire des chiffres. Elles vivent desormais dans un
+     panneau lateral, resume par un seul bouton qui affiche le nombre de
+     filtres actifs.
+     Les anciens rendus sont conserves mais ne sont plus appeles : ils
+     servaient aussi a recalculer les listes disponibles (`_bilanTypeList`
+     etc.) et surtout a remettre un filtre a « tous » quand sa valeur a disparu
+     du jeu de donnees — logique reprise ici par `_g45BilFiltresNettoyer`. */
+  try{ _g45BilFiltresNettoyer(); }catch(e){}
+  try{ _g45BilBarreFiltres(); }catch(e){}
 }
 function _g45Chrono(arr){
   function ts(h){
@@ -4457,7 +4468,18 @@ function renderMultiCurveChart(){
   },80);
 }
 function renderGlobalCharts(){
-  try{renderBilanTypeFilter();}catch(e){} try{renderBilanCompFilter();}catch(e){} try{renderBilanBookFilter();}catch(e){}
+  /* LES FILTRES PASSENT DANS UN TIROIR (02/09, sur le modele que m'a montre
+     Antoine). Quatre rangees de puces — type, competition, bookmaker, mois —
+     occupaient la moitie de l'ecran AVANT le moindre chiffre, alors qu'on
+     ouvre un bilan pour lire des chiffres. Elles vivent desormais dans un
+     panneau lateral, resume par un seul bouton qui affiche le nombre de
+     filtres actifs.
+     Les anciens rendus sont conserves mais ne sont plus appeles : ils
+     servaient aussi a recalculer les listes disponibles (`_bilanTypeList`
+     etc.) et surtout a remettre un filtre a « tous » quand sa valeur a disparu
+     du jeu de donnees — logique reprise ici par `_g45BilFiltresNettoyer`. */
+  try{ _g45BilFiltresNettoyer(); }catch(e){}
+  try{ _g45BilBarreFiltres(); }catch(e){}
   renderGlobalChart();
   setTimeout(function(){
     renderMultiCurveChart();
@@ -5880,8 +5902,19 @@ function renderMmRowsSimple(){
       +(mmRowsSimple.length>1?'<button class="mm-del" data-idx="'+i+'" onclick="mmRowsSimple.splice(parseInt(this.dataset.idx),1);renderMmRowsSimple();">✕</button>':'')
       +'</div>';
   }).join('');
+  /* MEMES FAMILLES QUE LE COCKPIT (02/09). Le pari simple etait reste sur la
+     liste a plat de `MM_TYPES` alors que le cockpit avait deja ses familles :
+     deux ecrans qui proposent exactement les memes seize marches n'ont aucune
+     raison de les presenter differemment. On reutilise `MM_GROUPES`, donc un
+     marche ajoute un jour se retrouvera automatiquement dans les deux. */
   var types=$i('mm-types-simple');
-  if(types)types.innerHTML=MM_TYPES.map(function(t){return '<button class="mm-type" data-t="'+t+'" onclick="addMmTypeSimple(this.dataset.t)">'+t+'</button>';}).join('');
+  if(types)types.innerHTML=MM_GROUPES.map(function(f){
+    return '<div class="mm-fam"><span>'+f.g+'</span></div>'
+      + '<div class="mm-types-g">' + f.t.map(function(t){
+          var pris = mmRowsSimple.some(function(r){ return r.type===t; });
+          return '<button class="mm-type'+(pris?' pris':'')+'" data-t="'+t+'" onclick="addMmTypeSimple(this.dataset.t)">'+t+'</button>';
+        }).join('') + '</div>';
+  }).join('');
   renderMmCoteSimple();
 }
 function renderMmCoteSimple(){
@@ -9186,7 +9219,18 @@ function renderSportFilter(){
       mf.innerHTML=chips.map(function(c){ return '<button class="sfbtn'+(bilanMonth===c[0]?' on':'')+'" onclick="bilanMonth=\''+c[0]+'\';renderBilanTab()">'+c[1]+'</button>'; }).join('');
     }
   }catch(e){}
-  try{renderBilanTypeFilter();}catch(e){} try{renderBilanCompFilter();}catch(e){} try{renderBilanBookFilter();}catch(e){}
+  /* LES FILTRES PASSENT DANS UN TIROIR (02/09, sur le modele que m'a montre
+     Antoine). Quatre rangees de puces — type, competition, bookmaker, mois —
+     occupaient la moitie de l'ecran AVANT le moindre chiffre, alors qu'on
+     ouvre un bilan pour lire des chiffres. Elles vivent desormais dans un
+     panneau lateral, resume par un seul bouton qui affiche le nombre de
+     filtres actifs.
+     Les anciens rendus sont conserves mais ne sont plus appeles : ils
+     servaient aussi a recalculer les listes disponibles (`_bilanTypeList`
+     etc.) et surtout a remettre un filtre a « tous » quand sa valeur a disparu
+     du jeu de donnees — logique reprise ici par `_g45BilFiltresNettoyer`. */
+  try{ _g45BilFiltresNettoyer(); }catch(e){}
+  try{ _g45BilBarreFiltres(); }catch(e){}
 }
 function _hMonthKey(h){
   var d=String((h&&h.date)||'').trim(); if(!d) return '';
@@ -11565,7 +11609,18 @@ function renderMultiCurveChart(){
   },80);
 }
 function renderGlobalCharts(){
-  try{renderBilanTypeFilter();}catch(e){} try{renderBilanCompFilter();}catch(e){} try{renderBilanBookFilter();}catch(e){}
+  /* LES FILTRES PASSENT DANS UN TIROIR (02/09, sur le modele que m'a montre
+     Antoine). Quatre rangees de puces — type, competition, bookmaker, mois —
+     occupaient la moitie de l'ecran AVANT le moindre chiffre, alors qu'on
+     ouvre un bilan pour lire des chiffres. Elles vivent desormais dans un
+     panneau lateral, resume par un seul bouton qui affiche le nombre de
+     filtres actifs.
+     Les anciens rendus sont conserves mais ne sont plus appeles : ils
+     servaient aussi a recalculer les listes disponibles (`_bilanTypeList`
+     etc.) et surtout a remettre un filtre a « tous » quand sa valeur a disparu
+     du jeu de donnees — logique reprise ici par `_g45BilFiltresNettoyer`. */
+  try{ _g45BilFiltresNettoyer(); }catch(e){}
+  try{ _g45BilBarreFiltres(); }catch(e){}
   renderGlobalChart();
   setTimeout(function(){
     renderMultiCurveChart();
@@ -12987,8 +13042,19 @@ function renderMmRowsSimple(){
       +(mmRowsSimple.length>1?'<button class="mm-del" data-idx="'+i+'" onclick="mmRowsSimple.splice(parseInt(this.dataset.idx),1);renderMmRowsSimple();">✕</button>':'')
       +'</div>';
   }).join('');
+  /* MEMES FAMILLES QUE LE COCKPIT (02/09). Le pari simple etait reste sur la
+     liste a plat de `MM_TYPES` alors que le cockpit avait deja ses familles :
+     deux ecrans qui proposent exactement les memes seize marches n'ont aucune
+     raison de les presenter differemment. On reutilise `MM_GROUPES`, donc un
+     marche ajoute un jour se retrouvera automatiquement dans les deux. */
   var types=$i('mm-types-simple');
-  if(types)types.innerHTML=MM_TYPES.map(function(t){return '<button class="mm-type" data-t="'+t+'" onclick="addMmTypeSimple(this.dataset.t)">'+t+'</button>';}).join('');
+  if(types)types.innerHTML=MM_GROUPES.map(function(f){
+    return '<div class="mm-fam"><span>'+f.g+'</span></div>'
+      + '<div class="mm-types-g">' + f.t.map(function(t){
+          var pris = mmRowsSimple.some(function(r){ return r.type===t; });
+          return '<button class="mm-type'+(pris?' pris':'')+'" data-t="'+t+'" onclick="addMmTypeSimple(this.dataset.t)">'+t+'</button>';
+        }).join('') + '</div>';
+  }).join('');
   renderMmCoteSimple();
 }
 function renderMmCoteSimple(){
@@ -43584,3 +43650,190 @@ function _g45ScrimSync() {
 }
 document.addEventListener('click', function () { setTimeout(_g45ScrimSync, 150); });
 setTimeout(_g45ScrimSync, 1500);
+
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   GONES45 — TIROIR DE FILTRES DU BILAN (02/09)
+   ───────────────────────────────────────────────────────────────────────────
+   Les valeurs sont MISES DE COTE pendant le reglage et ne sont appliquees
+   qu'a la validation, qui referme le tiroir. C'est le choix d'Antoine, et il
+   evite de relancer quatre rendus complets — graphiques compris — a chaque
+   fois qu'on touche une liste.
+   Le bouton du bas annonce ce qu'on obtient (« Voir les 12 paris ») plutot que
+   « Filtrer » : on sait avant de cliquer, et un reglage qui ne laisse aucun
+   pari se repere immediatement.
+   Le compteur sur le bouton de la barre est important : tiroir ferme, plus
+   rien ne dirait que les chiffres affiches sont filtres — c'est le meilleur
+   moyen de mal lire son propre bilan.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* Un filtre dont la valeur n'existe plus dans les donnees (changement de
+   sport, pari supprime) doit revenir a « tous », sinon le bilan se vide sans
+   qu'on comprenne pourquoi. */
+function _g45BilFiltresNettoyer(){
+  try{
+    var comps=(typeof _bilanComps==='function')?_bilanComps():[];
+    if(window._bilanComp && window._bilanComp!=='all' && comps.indexOf(window._bilanComp)<0) window._bilanComp='all';
+    var books=(typeof _bilanBooks==='function')?_bilanBooks():[];
+    if(window._bilanBkFilter && books.indexOf(window._bilanBkFilter)<0) window._bilanBkFilter=null;
+    var types=(typeof _bilanTypes==='function')?_bilanTypes():[];
+    if(window._bilanType && window._bilanType!=='all' && types.indexOf(window._bilanType)<0) window._bilanType='all';
+  }catch(e){}
+}
+
+function _g45BilMoisListe(){
+  var MN={'01':'janv','02':'févr','03':'mars','04':'avr','05':'mai','06':'juin',
+          '07':'juil','08':'août','09':'sept','10':'oct','11':'nov','12':'déc'};
+  var mk={}, out=[['ALL','Tous les mois']];
+  try{
+    (state.a||[]).forEach(function(h){ var k=_hMonthKey(h); if(k) mk[k]=1; });
+    Object.keys(mk).sort().reverse().forEach(function(m){
+      out.push([m,(MN[m.slice(5)]||m.slice(5))+' '+m.slice(0,4)]);
+    });
+  }catch(e){}
+  return out;
+}
+
+/* Combien de filtres ne sont pas sur « tous ». */
+function _g45BilNbFiltres(){
+  var n=0;
+  if(window._bilanType && window._bilanType!=='all') n++;
+  if(window._bilanComp && window._bilanComp!=='all') n++;
+  if(window._bilanBkFilter) n++;
+  if(typeof bilanMonth!=='undefined' && bilanMonth!=='ALL') n++;
+  return n;
+}
+
+/* La barre remplace les quatre rangees de puces, au meme endroit. */
+function _g45BilBarreFiltres(){
+  var sf=document.getElementById('sport-filter');
+  var host=(sf&&sf.parentNode)?sf.parentNode:document.getElementById('g-global');
+  if(!host) return;
+  var b=document.getElementById('bilan-filtres-barre');
+  if(!b){
+    b=document.createElement('div'); b.id='bilan-filtres-barre';
+    b.style.cssText='padding:8px 2px 2px;';
+    if(sf&&sf.parentNode) sf.parentNode.insertBefore(b, sf.nextSibling);
+    else host.insertBefore(b, host.firstChild);
+  }
+  /* Les anciens conteneurs peuvent subsister d'un rendu precedent : on les
+     vide plutot que de les supprimer, au cas ou un autre appel les cible. */
+  ['bilan-type-filter','bilan-comp-filter','bilan-book-filter','month-filter'].forEach(function(id){
+    var e=document.getElementById(id); if(e) e.innerHTML='';
+  });
+  var n=_g45BilNbFiltres();
+  var resume=[];
+  if(window._bilanType && window._bilanType!=='all') resume.push(window._bilanType);
+  if(window._bilanComp && window._bilanComp!=='all') resume.push(window._bilanComp);
+  if(window._bilanBkFilter) resume.push((typeof bki==='function'?(bki(window._bilanBkFilter).n||window._bilanBkFilter):window._bilanBkFilter));
+  if(typeof bilanMonth!=='undefined' && bilanMonth!=='ALL') resume.push(bilanMonth);
+  var nb=0; try{ nb=filteredA().length; }catch(e){}
+  b.innerHTML='<div style="display:flex;align-items:center;justify-content:space-between;gap:10px;'
+    +'background:rgba(11,16,26,.74);border-radius:var(--r4);padding:9px 11px;">'
+    +'<span style="font-size:12.5px;color:var(--t2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">'
+      + nb + ' pari' + (nb>1?'s':'') + (resume.length?' · '+resume.join(' · '):' · aucun filtre')
+    +'</span>'
+    +'<button onclick="g45BilFiltresOuvrir()" style="flex:none;display:flex;align-items:center;gap:7px;'
+      +'background:none;border:1px solid ' + (n?'var(--or,#f2b23c)':'var(--b2)') + ';border-radius:var(--r4);'
+      +'color:var(--t1);font:inherit;font-size:12px;padding:6px 12px;cursor:pointer;">Filtres'
+      + (n?'<span style="background:var(--or,#f2b23c);color:#12161f;border-radius:8px;font-size:10px;font-weight:700;padding:1px 6px;">'+n+'</span>':'')
+    +'</button></div>';
+}
+
+function _g45BilSelect(id, defs, cur){
+  return '<select id="'+id+'" class="fi" style="margin-bottom:2px;">'
+    + defs.map(function(d){
+        var v=(d[0]===null?'':String(d[0]));
+        return '<option value="'+v.replace(/"/g,'&quot;')+'"'+((String(cur===null?'':cur))===v?' selected':'')+'>'+d[1]+'</option>';
+      }).join('')
+    + '</select>';
+}
+
+function g45BilFiltresOuvrir(){
+  _g45BilFiltresFermer();
+  var types=[['all','Tous les types']];
+  try{ _bilanTypes().forEach(function(t){ types.push([t,t]); }); }catch(e){}
+  var comps=[['all','Toutes les compétitions']];
+  try{ _bilanComps().forEach(function(c){ comps.push([c,c]); }); }catch(e){}
+  var books=[[null,'Tous les bookmakers']];
+  try{ _bilanBooks().forEach(function(b){ books.push([b,(typeof bki==='function'?(bki(b).n||b):b)]); }); }catch(e){}
+
+  var d=document.createElement('div');
+  d.id='g45-bil-filtres';
+  d.style.cssText='position:fixed;inset:0;z-index:9000;display:flex;justify-content:flex-end;';
+  d.innerHTML='<div onclick="_g45BilFiltresFermer()" style="position:absolute;inset:0;background:rgba(6,9,16,.55);"></div>'
+    +'<aside style="position:relative;width:320px;max-width:88%;background:var(--bg2);border-left:1px solid var(--b1);'
+      +'display:flex;flex-direction:column;box-shadow:-8px 0 30px rgba(0,0,0,.4);">'
+      +'<header style="display:flex;align-items:center;justify-content:space-between;padding:13px 14px;border-bottom:1px solid var(--b1);">'
+        +'<span style="font-family:var(--ff-t);font-size:21px;font-weight:600;">Filtres</span>'
+        +'<button onclick="_g45BilFiltresFermer()" style="background:none;border:0;color:var(--t3);font-size:15px;cursor:pointer;">✕</button>'
+      +'</header>'
+      +'<div style="padding:13px 14px;overflow-y:auto;flex:1;">'
+        +'<label class="fl">Type de pari</label>'+_g45BilSelect('bf-type',types,window._bilanType||'all')
+        +'<label class="fl" style="margin-top:12px;">Compétition</label>'+_g45BilSelect('bf-comp',comps,window._bilanComp||'all')
+        +'<label class="fl" style="margin-top:12px;">Bookmaker</label>'+_g45BilSelect('bf-book',books,window._bilanBkFilter||null)
+        +'<label class="fl" style="margin-top:12px;">Mois</label>'+_g45BilSelect('bf-mois',_g45BilMoisListe(),(typeof bilanMonth!=='undefined'?bilanMonth:'ALL'))
+      +'</div>'
+      +'<footer style="display:flex;gap:7px;padding:12px 14px;border-top:1px solid var(--b1);">'
+        +'<button onclick="g45BilFiltresVider()" style="flex:none;background:none;border:1px solid var(--b2);border-radius:var(--r4);color:var(--t3);font:inherit;font-size:12px;padding:9px 12px;cursor:pointer;">Tout retirer</button>'
+        +'<button id="bf-ok" onclick="g45BilFiltresAppliquer()" class="btn btn-p" style="flex:1;padding:9px;font-size:12.5px;">Appliquer</button>'
+      +'</footer>'
+    +'</aside>';
+  document.body.appendChild(d);
+  ['bf-type','bf-comp','bf-book','bf-mois'].forEach(function(id){
+    var e=document.getElementById(id); if(e) e.addEventListener('change', _g45BilApercu);
+  });
+  _g45BilApercu();
+}
+window.g45BilFiltresOuvrir=g45BilFiltresOuvrir;
+
+/* L'apercu compte les paris SANS rien appliquer : on lit les listes du tiroir
+   et on rejoue le filtrage sur une copie des valeurs globales. */
+function _g45BilApercu(){
+  var b=document.getElementById('bf-ok'); if(!b) return;
+  var sv={t:window._bilanType,c:window._bilanComp,k:window._bilanBkFilter,
+          m:(typeof bilanMonth!=='undefined'?bilanMonth:'ALL')};
+  try{
+    _g45BilLire();
+    var n=filteredA().length;
+    b.textContent = n ? ('Voir les '+n+' pari'+(n>1?'s':'')) : 'Aucun pari avec ces filtres';
+    b.disabled = !n;
+    b.style.opacity = n ? '1' : '.5';
+  }catch(e){}
+  /* Remise en place systematique : tant que l'utilisateur n'a pas valide, rien
+     ne doit avoir bouge derriere le tiroir. */
+  window._bilanType=sv.t; window._bilanComp=sv.c; window._bilanBkFilter=sv.k;
+  if(typeof bilanMonth!=='undefined') bilanMonth=sv.m;
+}
+
+function _g45BilLire(){
+  var g=function(id){ var e=document.getElementById(id); return e?e.value:null; };
+  var t=g('bf-type'); if(t!==null) window._bilanType=t||'all';
+  var c=g('bf-comp'); if(c!==null) window._bilanComp=c||'all';
+  var k=g('bf-book'); if(k!==null) window._bilanBkFilter=k||null;
+  var m=g('bf-mois'); if(m!==null && typeof bilanMonth!=='undefined') bilanMonth=m||'ALL';
+}
+
+function g45BilFiltresAppliquer(){
+  _g45BilLire();
+  _g45BilFiltresFermer();
+  try{renderBilanTab();}catch(e){}
+  try{renderGlobalCharts();}catch(e){}
+  try{_g45BilBarreFiltres();}catch(e){}
+}
+window.g45BilFiltresAppliquer=g45BilFiltresAppliquer;
+
+function g45BilFiltresVider(){
+  window._bilanType='all'; window._bilanComp='all'; window._bilanBkFilter=null;
+  if(typeof bilanMonth!=='undefined') bilanMonth='ALL';
+  _g45BilFiltresFermer();
+  try{renderBilanTab();}catch(e){}
+  try{renderGlobalCharts();}catch(e){}
+  try{_g45BilBarreFiltres();}catch(e){}
+}
+window.g45BilFiltresVider=g45BilFiltresVider;
+
+function _g45BilFiltresFermer(){
+  var d=document.getElementById('g45-bil-filtres'); if(d) d.remove();
+}
+window._g45BilFiltresFermer=_g45BilFiltresFermer;
