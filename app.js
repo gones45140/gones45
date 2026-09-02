@@ -21355,12 +21355,19 @@ function renderSaisonsChart(el, results, nom) {
         if(qs0.every(function(k){ return CHK0[k]!==undefined ? CHK0[k] : true; })) matchCount++;
       });
       var condLabel = qs0.join(' + ');
-      html += '<div style="display:flex;align-items:center;justify-content:space-between;margin:12px 0 8px;">';
+      /* ENVELOPPE AUX COULEURS DU CLUB (02/09). Le fond raye est pose ici, sur
+         un conteneur qui englobe l'entete ET la liste : il couvre donc toute la
+         hauteur quel que soit le nombre de matchs — 5 comme 38 — sans qu'aucune
+         taille n'ait a etre calculee. Un ecusson centre, lui, se serait retrouve
+         vers le 19e match, invisible a l'ouverture du panneau. */
+      html += '<div style="position:relative;border-radius:10px;padding:8px 10px 10px;margin:12px 0 0;overflow:hidden;">';
+      html += g45FondClubHtml(_currentTeam, 0.2);
+      html += '<div style="position:relative;z-index:1;display:flex;align-items:center;justify-content:space-between;margin:0 0 8px;">';
       html += '<div style="font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#4f5d88;">📅 Résultats ('+allMatchesSorted.length+' matchs)</div>';
       html += '<div style="font-size:10px;font-weight:800;color:'+(matchCount>0?'#1ed760':'#ff4545')+';">✅ '+matchCount+'/'+allMatchesSorted.length+' — '+condLabel+'</div>';
       html += '</div>';
       html += _scoreBarHtml;
-      html += '<div style="display:flex;flex-direction:column;gap:3px;">';
+      html += '<div style="position:relative;z-index:1;display:flex;flex-direction:column;gap:3px;">';
       allMatchesSorted.forEach(function(m){
         var hg = (m.score&&m.score.regularTime?m.score.regularTime.home:m.score&&m.score.fullTime?m.score.fullTime.home:0)||0;
         var ag = (m.score&&m.score.regularTime?m.score.regularTime.away:m.score&&m.score.fullTime?m.score.fullTime.away:0)||0;
@@ -21398,7 +21405,7 @@ function renderSaisonsChart(el, results, nom) {
         var qs = window._quickStats || ['O2.5','BTS'];
         var allOk = qs.every(function(k){ return MATCH_CHECKS[k]!==undefined ? MATCH_CHECKS[k] : true; });
         var barColor = allOk ? '#1ed760' : '#ff4545';
-        html += '<div onclick="toggleSaisonMatchDetail(this)" data-eid="'+(m.espnId||'')+'" data-lg="'+((m.competition&&m.competition.code)||'')+'" style="display:grid;grid-template-columns:32px 1fr auto 1fr 36px;gap:4px;align-items:center;padding:5px 8px;background:'+(isOurHome?'rgba(255,255,255,.04)':'rgba(255,255,255,.02)')+';border-radius:6px;border-left:3px solid '+barColor+';cursor:pointer;" onmouseover="this.style.opacity=\'0.8\'" onmouseout="this.style.opacity=\'1\'">';
+        html += '<div onclick="toggleSaisonMatchDetail(this)" data-eid="'+(m.espnId||'')+'" data-lg="'+((m.competition&&m.competition.code)||'')+'" style="display:grid;grid-template-columns:32px 1fr auto 1fr 36px;gap:4px;align-items:center;padding:5px 8px;background:'+(isOurHome?'rgba(16,21,38,.78)':'rgba(16,21,38,.70)')+';border-radius:6px;border-left:3px solid '+barColor+';cursor:pointer;" onmouseover="this.style.opacity=\'0.8\'" onmouseout="this.style.opacity=\'1\'">';
         // Date
         html += '<div style="font-size:9px;color:var(--t3);text-align:center;">'+dateStr+'</div>';
         // Equipe dom
@@ -21440,6 +21447,7 @@ function renderSaisonsChart(el, results, nom) {
         html += '<div class="smd-panel" style="display:none;"></div>';
       });
       html += '</div>';
+      html += '</div>';   /* ferme l'enveloppe aux couleurs du club */
     }
 
     // ── Classement de la ligue ──
@@ -43109,3 +43117,128 @@ window.addEventListener('resize', function () {
   _g45MurHAppliquer(_g45MurHLue());
   _g45MurHSync();
 });
+
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   GONES45 — COULEURS DU CLUB, LUES DANS SON ECUSSON (02/09)
+   ───────────────────────────────────────────────────────────────────────────
+   POURQUOI : Antoine veut le tableau des resultats habille aux couleurs du
+   club — rouge et blanc pour l'Atletico, noir et bleu pour l'Inter. L'appli ne
+   connait qu'UNE couleur par equipe (`u.color`), et ecrire a la main la
+   deuxieme pour chaque club de chaque sport ne tient pas : la liste est
+   ouverte. On lit donc les deux teintes dominantes directement dans l'image
+   deja presente.
+
+   LIMITE ASSUMEE : lire les pixels impose `getImageData`, donc une image de
+   MEME ORIGINE. Les ecussons TheSportsDB sont sur r2.thesportsdb.com sans
+   en-tete CORS — c'est precisement ce qui cassait les logos du graphique
+   Paliers ce matin. L'extraction ne tourne donc QUE sur les images perso de
+   `images/equipes/`, et tout le reste retombe sur `u.color` + blanc. Mieux
+   vaut un repli previsible qu'un canvas souille et une exception silencieuse.
+
+   METHODE : l'image est reduite a 28x28 — on cherche des teintes dominantes,
+   pas du detail, et ca divise le travail par mille. Les pixels quasi
+   transparents sont ignores (le fond d'un blason detoure), pas les blancs ni
+   les noirs : ce sont de vraies couleurs de club. Les teintes sont regroupees
+   par paliers de 32 pour que deux rouges voisins comptent ensemble. La
+   deuxieme couleur retenue doit etre suffisamment eloignee de la premiere,
+   sinon on obtiendrait deux nuances du meme rouge et aucune rayure visible.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+var _G45_COUL_CLE = 'g45_couleurs_';
+var _g45CoulVus = {};
+
+function _g45CoulHex(r, g, b) {
+  return '#' + [r, g, b].map(function (v) {
+    var h = Math.max(0, Math.min(255, v | 0)).toString(16);
+    return h.length < 2 ? '0' + h : h;
+  }).join('');
+}
+
+/* Distance simple dans l'espace RVB : suffisant pour dire « ces deux teintes
+   sont-elles distinctes a l'oeil », inutile de sortir du CIELAB ici. */
+function _g45CoulEcart(a, b) {
+  var d = 0;
+  for (var i = 0; i < 3; i++) { var x = a[i] - b[i]; d += x * x; }
+  return Math.sqrt(d);
+}
+
+function _g45CoulExtraire(k, url) {
+  try {
+    if (localStorage.getItem(_G45_COUL_CLE + k)) return;
+    var im = new Image();
+    im.onload = function () {
+      try {
+        var T = 28;
+        var cv = document.createElement('canvas');
+        cv.width = T; cv.height = T;
+        var cx = cv.getContext('2d', { willReadFrequently: true });
+        cx.drawImage(im, 0, 0, T, T);
+        var d = cx.getImageData(0, 0, T, T).data;
+
+        var seaux = {};
+        for (var i = 0; i < d.length; i += 4) {
+          if (d[i + 3] < 128) continue;
+          var q = [d[i] >> 5, d[i + 1] >> 5, d[i + 2] >> 5].join(',');
+          var e = seaux[q] || (seaux[q] = { n: 0, r: 0, g: 0, b: 0 });
+          e.n++; e.r += d[i]; e.g += d[i + 1]; e.b += d[i + 2];
+        }
+        var liste = Object.keys(seaux).map(function (q) {
+          var e = seaux[q];
+          return { n: e.n, c: [e.r / e.n, e.g / e.n, e.b / e.n] };
+        }).sort(function (a, b) { return b.n - a.n; });
+        if (!liste.length) return;
+
+        var c1 = liste[0].c, c2 = null;
+        for (var j = 1; j < liste.length; j++) {
+          if (_g45CoulEcart(liste[j].c, c1) > 95) { c2 = liste[j].c; break; }
+        }
+        /* Un ecusson monochrome n'a pas de seconde teinte : on prend du blanc,
+           qui donne une rayure lisible sur n'importe quelle couleur. */
+        var v = _g45CoulHex(c1[0], c1[1], c1[2]) + '|' +
+                (c2 ? _g45CoulHex(c2[0], c2[1], c2[2]) : '#ffffff');
+        try { localStorage.setItem(_G45_COUL_CLE + k, v); } catch (e) {}
+
+        /* Un seul redessin par equipe : sans ce garde-fou, redessiner
+           relancerait la lecture, qui relancerait le redessin. */
+        if (!_g45CoulVus[k]) {
+          _g45CoulVus[k] = 1;
+          try { if (typeof render === 'function') render(); } catch (e) {}
+        }
+      } catch (e) {}
+    };
+    im.src = url;
+  } catch (e) {}
+}
+
+/* Rendue globale : c'est la seule entree utilisee par les vues. */
+function g45CouleursDe(nom) {
+  var repli = ['#4d84ff', '#ffffff'];
+  try {
+    var u = (typeof state !== 'undefined' && state.u)
+      ? state.u.find(function (x) { return x.n === nom; }) : null;
+    if (u && u.color) repli = [u.color, '#ffffff'];
+    /* Une couleur saisie a la main dans la fiche equipe passe AVANT
+       l'extraction : l'automatique ne doit jamais ecraser un choix explicite. */
+    if (u && u.color2) return [u.color, u.color2];
+
+    var k = _g45SgNorm(nom);
+    var c = localStorage.getItem(_G45_COUL_CLE + k);
+    if (c) { var p = c.split('|'); if (p.length === 2) return p; }
+
+    var perso = (typeof _g45ImgPersoLire === 'function') ? _g45ImgPersoLire(nom) : '';
+    if (perso) _g45CoulExtraire(k, perso);
+  } catch (e) {}
+  return repli;
+}
+window.g45CouleursDe = g45CouleursDe;
+
+/* Le fond raye du panneau. Garde en un seul endroit : le jour ou on l'ajoute
+   a une autre vue, l'aspect reste identique sans copier le degrade. */
+function g45FondClubHtml(nom, opac) {
+  var c = g45CouleursDe(nom);
+  return '<div style="position:absolute;inset:0;pointer-events:none;z-index:0;'
+    + 'opacity:' + (opac || 0.2) + ';border-radius:10px;'
+    + 'background:repeating-linear-gradient(90deg,' + c[0] + ' 0 34px,' + c[1] + ' 34px 68px);"></div>';
+}
+window.g45FondClubHtml = g45FondClubHtml;
