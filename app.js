@@ -2029,16 +2029,63 @@ if(!dOnly || dOnly===_lastDateShown) return ''; _lastDateShown=dOnly; return dOn
     bks[h.b].n++;
     if(h.win) bks[h.b].wins++;
   });
+  /* ═══ PAR BOOKMAKER — REVU LE 02/09 ═══
+     Retour d'Antoine : « le tableau du haut est très utile, ça permet de voir où
+     je joue principalement, mais Boursorama les 2 n'ont pas à y être ».
+     Trois changements :
+     1. Les comptes SANS AUCUN PARI sont replies derriere un « + ». Ils sortent
+        donc les deux Boursorama — qui sont ses banques, pas des bookmakers —
+        mais aussi tous les comptes ouverts et jamais joues. On ne les exclut
+        surtout pas par leur NOM : le jour ou un pari y est enregistre, ils
+        reapparaissent d'eux-memes, et un nouveau compte bancaire ne polluera
+        jamais la liste.
+     2. Tri par NOMBRE DE PARIS decroissant. Si le tableau sert a voir ou l'on
+        joue le plus, l'ordre de creation des comptes ne veut rien dire.
+     3. Une ligne de TOTAL, pour verifier d'un coup d'oeil que la somme des
+        lignes correspond au benefice global affiche plus haut.
+     Le nom repasse en blanc : la couleur reste sur la pastille de gauche, qui
+     identifie deja le bookmaker. Quinze teintes plus le vert et le rouge des
+     montants, cela faisait beaucoup de signaux pour peu d'information. */
   var bke=$i('bk-stats');
-  if(bke) bke.innerHTML=Object.entries(bks).map(function(e){
-    var b=bki(e[0]), p=e[1].profit, n=e[1].n, wr=n?Math.round(e[1].wins/n*100):0;
-    var isActive = window._bilanBkFilter===e[0];
-    return '<div class="bkrow" onclick="window._bilanBkFilter=(window._bilanBkFilter===\''+e[0]+'\'?null:\''+e[0]+'\');renderBilanTab();" style="--bc:'+b.c+';display:flex;align-items:center;gap:8px;cursor:pointer;padding:8px;border-radius:8px;border:1px solid rgba(255,255,255,'+(isActive?'.2':'.04')+');background:rgba(255,255,255,'+(isActive?'.06':'.02')+');margin-bottom:4px;">'
-      +bkFavicon(e[0],18)
-      +'<span style="flex:1;font-size:11px;font-weight:700;color:'+b.c+';">'+b.n+'</span>'
-      +(n?'<span style="font-size:10px;color:var(--t3);">'+n+' paris · '+wr+'%</span>':'')
-      +'<span style="font-size:13px;font-weight:800;color:'+(p>=0?'var(--g)':'var(--r)')+';">'+fmt(p)+'</span></div>';
-  }).join('')+(window._bilanBkFilter?'<button onclick="window._bilanBkFilter=null;renderBilanTab();" style="width:100%;padding:6px;margin-top:4px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:6px;color:var(--t3);font-size:10px;cursor:pointer;">✕ Effacer le filtre</button>':'');
+  if(bke){
+    var _lignes=Object.entries(bks).sort(function(a,b){
+      /* A egalite de paris (donc a zero), ordre alphabetique stable plutot qu'un
+         ordre d'objet dependant de l'historique des insertions. */
+      if(b[1].n!==a[1].n) return b[1].n-a[1].n;
+      return (bki(a[0]).n||a[0]).localeCompare(bki(b[0]).n||b[0],'fr');
+    });
+    var _joues=_lignes.filter(function(e){ return e[1].n>0; });
+    var _vides=_lignes.filter(function(e){ return e[1].n===0; });
+    var _ouvert=false;
+    try{ _ouvert=localStorage.getItem('g45_bk_vides')==='1'; }catch(e){}
+
+    var _row=function(e){
+      var b=bki(e[0]), p=e[1].profit, n=e[1].n, wr=n?Math.round(e[1].wins/n*100):0;
+      var isActive = window._bilanBkFilter===e[0];
+      return '<div class="bkrow" onclick="window._bilanBkFilter=(window._bilanBkFilter===\''+e[0]+'\'?null:\''+e[0]+'\');renderBilanTab();" style="--bc:'+b.c+';display:flex;align-items:center;gap:9px;cursor:pointer;padding:9px 11px;border-radius:var(--r4);border:1px solid '+(isActive?b.c:'var(--b1)')+';background:'+(isActive?'rgba(255,255,255,.07)':'rgba(11,16,26,.74)')+';margin-bottom:4px;transition:all .15s;'+(n?'':'opacity:.55;')+'">'
+        +bkFavicon(e[0],18)
+        +'<span style="flex:1;font-size:13px;">'+b.n+'</span>'
+        +'<span style="font-size:11.5px;color:var(--t3);min-width:104px;text-align:right;">'+(n?(n+' pari'+(n>1?'s':'')+' · '+wr+' %'):'—')+'</span>'
+        +'<span style="font-size:13px;font-weight:700;min-width:78px;text-align:right;font-variant-numeric:tabular-nums;color:'+(p>=0?'var(--g)':'var(--r)')+';">'+fmt(p)+'</span></div>';
+    };
+
+    var _tp=0,_tn=0,_tw=0;
+    _joues.forEach(function(e){ _tp+=e[1].profit; _tn+=e[1].n; _tw+=e[1].wins; });
+
+    bke.innerHTML = _joues.map(_row).join('')
+      + (_joues.length>1
+          ? '<div style="display:flex;align-items:center;gap:9px;border-top:1px solid var(--b1);margin-top:8px;padding:11px 11px 0;">'
+              +'<span style="flex:1;font-size:13px;font-weight:600;">Total</span>'
+              +'<span style="font-size:11.5px;color:var(--t3);min-width:104px;text-align:right;">'+_tn+' pari'+(_tn>1?'s':'')+' · '+(_tn?Math.round(_tw/_tn*100):0)+' %</span>'
+              +'<span style="font-size:13px;font-weight:700;min-width:78px;text-align:right;font-variant-numeric:tabular-nums;color:'+(_tp>=0?'var(--g)':'var(--r)')+';">'+fmt(_tp)+'</span></div>'
+          : '')
+      + (_vides.length
+          ? '<button onclick="g45BkVidesToggle()" style="width:100%;margin-top:10px;padding:7px;background:none;border:1px solid var(--b1);border-radius:var(--r4);color:var(--t3);font:inherit;font-size:12px;cursor:pointer;">'
+              + (_ouvert?'−':'+') + ' ' + _vides.length + ' compte' + (_vides.length>1?'s':'') + ' sans pari</button>'
+              + (_ouvert?'<div style="margin-top:6px;">'+_vides.map(_row).join('')+'</div>':'')
+          : '')
+      + (window._bilanBkFilter?'<button onclick="window._bilanBkFilter=null;renderBilanTab();" style="width:100%;padding:7px;margin-top:6px;background:rgba(255,255,255,.04);border:1px solid var(--b1);border-radius:var(--r4);color:var(--t3);font-size:12px;cursor:pointer;">Effacer le filtre</button>':'');
+  }
 }
 
 /* ── RENDER PRINCIPAL ── */
@@ -2346,6 +2393,12 @@ function render(){
      Le drapeau evite la boucle : redessiner rappelle ce bloc. */
   try{ g45MurVisuels(); }catch(e){}
   /* books */
+  /* Le camembert des soldes vit maintenant dans l'onglet Bank (02/09). Il etait
+     dessine depuis la chaine des graphiques du Bilan ; on le redessine donc ici,
+     avec le reste de Bank, sinon il resterait fige apres un depot ou un retrait.
+     Le `setTimeout` laisse le canvas prendre ses dimensions : dessiner dans un
+     onglet encore masque donne un graphique de taille nulle. */
+  try{ setTimeout(function(){ try{ renderBooksChart(); }catch(e){} }, 60); }catch(e){}
   $i('books-grid').innerHTML=Object.entries(state.b).map(function(e){
     var b=bki(e[0]);
     return '<div class="btile" style="--bc:'+b.c+';">'
@@ -2683,8 +2736,19 @@ function renderArchive(){
         var _idFilig=_idLogo
           ?('<img src="'+_idLogo+'" alt="" loading="lazy" onerror="this.style.display=\'none\'" style="position:absolute;right:2px;top:50%;transform:translateY(-50%);height:32px;width:32px;object-fit:contain;opacity:.5;filter:drop-shadow(0 1px 3px rgba(0,0,0,.5));pointer-events:none;">')
           :((isSimpleA&&b2.d)?('<img src="https://www.google.com/s2/favicons?domain='+b2.d+'&sz=64" alt="" loading="lazy" onerror="this.style.display=\'none\'" style="position:absolute;right:2px;top:50%;transform:translateY(-50%);height:24px;width:24px;object-fit:contain;opacity:.55;border-radius:6px;filter:drop-shadow(0 1px 3px rgba(0,0,0,.5));pointer-events:none;">'):'');
+        /* FOND TEINTE PAR LE RESULTAT (02/09, demande d'Antoine : « pari gagné
+           vert, pari perdu rouge, pari en cours jaune »). Le degrade partait de
+           `_idColor`, la couleur du CLUB — d'ou un fond vert sur Athletics et
+           violet sur Seattle, sans aucun rapport avec l'issue du pari. Or
+           l'identite du club est deja portee par son ecusson en filigrane a
+           droite, tandis que le resultat n'etait signale que par un filet de
+           3 px sur le bord gauche.
+           On reutilise `borderC`, deja calcule au-dessus et qui vaut
+           #1ed760 / #ff4545 / #f0b020 selon gagne, perdu ou en cours : une
+           seule source pour le filet et pour le fond, donc impossible qu'ils se
+           contredisent un jour. */
         var _scoreA=h.isCombi?((typeof _g45ScoreTexteCombi==='function')?_g45ScoreTexteCombi(h):''):((typeof _g45ScoreTexte==='function')?_g45ScoreTexte(h):'');
-        return '<div style="position:relative;overflow:hidden;display:flex;align-items:center;padding:8px 10px;background:linear-gradient(100deg,'+_idColor+'40 0%,'+borderC+'20 60%,var(--s1) 100%);border-radius:var(--r6);margin-bottom:4px;border-left:3px solid '+borderC+';gap:8px;">'
+        return '<div style="position:relative;overflow:hidden;display:flex;align-items:center;padding:8px 10px;background:linear-gradient(100deg,'+borderC+'38 0%,'+borderC+'16 52%,var(--s1) 100%);border-radius:var(--r6);margin-bottom:4px;border-left:3px solid '+borderC+';gap:8px;">'
           +'<div style="position:relative;font-size:10px;color:var(--t3);min-width:32px;flex-shrink:0;text-align:center;">'+(h.heure||'—')+'</div>'
           +bkBadge+sportIco
           +'<div data-aid="'+h.id+'" onclick="openBetEdit(this.dataset.aid)" style="position:relative;flex:1;min-width:0;overflow:hidden;cursor:pointer;">'
@@ -9469,16 +9533,63 @@ if(!dOnly || dOnly===_lastDateShown) return ''; _lastDateShown=dOnly; return dOn
     bks[h.b].n++;
     if(h.win) bks[h.b].wins++;
   });
+  /* ═══ PAR BOOKMAKER — REVU LE 02/09 ═══
+     Retour d'Antoine : « le tableau du haut est très utile, ça permet de voir où
+     je joue principalement, mais Boursorama les 2 n'ont pas à y être ».
+     Trois changements :
+     1. Les comptes SANS AUCUN PARI sont replies derriere un « + ». Ils sortent
+        donc les deux Boursorama — qui sont ses banques, pas des bookmakers —
+        mais aussi tous les comptes ouverts et jamais joues. On ne les exclut
+        surtout pas par leur NOM : le jour ou un pari y est enregistre, ils
+        reapparaissent d'eux-memes, et un nouveau compte bancaire ne polluera
+        jamais la liste.
+     2. Tri par NOMBRE DE PARIS decroissant. Si le tableau sert a voir ou l'on
+        joue le plus, l'ordre de creation des comptes ne veut rien dire.
+     3. Une ligne de TOTAL, pour verifier d'un coup d'oeil que la somme des
+        lignes correspond au benefice global affiche plus haut.
+     Le nom repasse en blanc : la couleur reste sur la pastille de gauche, qui
+     identifie deja le bookmaker. Quinze teintes plus le vert et le rouge des
+     montants, cela faisait beaucoup de signaux pour peu d'information. */
   var bke=$i('bk-stats');
-  if(bke) bke.innerHTML=Object.entries(bks).map(function(e){
-    var b=bki(e[0]), p=e[1].profit, n=e[1].n, wr=n?Math.round(e[1].wins/n*100):0;
-    var isActive = window._bilanBkFilter===e[0];
-    return '<div class="bkrow" onclick="window._bilanBkFilter=(window._bilanBkFilter===\''+e[0]+'\'?null:\''+e[0]+'\');renderBilanTab();" style="--bc:'+b.c+';display:flex;align-items:center;gap:8px;cursor:pointer;padding:8px;border-radius:8px;border:1px solid rgba(255,255,255,'+(isActive?'.2':'.04')+');background:rgba(255,255,255,'+(isActive?'.06':'.02')+');margin-bottom:4px;">'
-      +bkFavicon(e[0],18)
-      +'<span style="flex:1;font-size:11px;font-weight:700;color:'+b.c+';">'+b.n+'</span>'
-      +(n?'<span style="font-size:10px;color:var(--t3);">'+n+' paris · '+wr+'%</span>':'')
-      +'<span style="font-size:13px;font-weight:800;color:'+(p>=0?'var(--g)':'var(--r)')+';">'+fmt(p)+'</span></div>';
-  }).join('')+(window._bilanBkFilter?'<button onclick="window._bilanBkFilter=null;renderBilanTab();" style="width:100%;padding:6px;margin-top:4px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:6px;color:var(--t3);font-size:10px;cursor:pointer;">✕ Effacer le filtre</button>':'');
+  if(bke){
+    var _lignes=Object.entries(bks).sort(function(a,b){
+      /* A egalite de paris (donc a zero), ordre alphabetique stable plutot qu'un
+         ordre d'objet dependant de l'historique des insertions. */
+      if(b[1].n!==a[1].n) return b[1].n-a[1].n;
+      return (bki(a[0]).n||a[0]).localeCompare(bki(b[0]).n||b[0],'fr');
+    });
+    var _joues=_lignes.filter(function(e){ return e[1].n>0; });
+    var _vides=_lignes.filter(function(e){ return e[1].n===0; });
+    var _ouvert=false;
+    try{ _ouvert=localStorage.getItem('g45_bk_vides')==='1'; }catch(e){}
+
+    var _row=function(e){
+      var b=bki(e[0]), p=e[1].profit, n=e[1].n, wr=n?Math.round(e[1].wins/n*100):0;
+      var isActive = window._bilanBkFilter===e[0];
+      return '<div class="bkrow" onclick="window._bilanBkFilter=(window._bilanBkFilter===\''+e[0]+'\'?null:\''+e[0]+'\');renderBilanTab();" style="--bc:'+b.c+';display:flex;align-items:center;gap:9px;cursor:pointer;padding:9px 11px;border-radius:var(--r4);border:1px solid '+(isActive?b.c:'var(--b1)')+';background:'+(isActive?'rgba(255,255,255,.07)':'rgba(11,16,26,.74)')+';margin-bottom:4px;transition:all .15s;'+(n?'':'opacity:.55;')+'">'
+        +bkFavicon(e[0],18)
+        +'<span style="flex:1;font-size:13px;">'+b.n+'</span>'
+        +'<span style="font-size:11.5px;color:var(--t3);min-width:104px;text-align:right;">'+(n?(n+' pari'+(n>1?'s':'')+' · '+wr+' %'):'—')+'</span>'
+        +'<span style="font-size:13px;font-weight:700;min-width:78px;text-align:right;font-variant-numeric:tabular-nums;color:'+(p>=0?'var(--g)':'var(--r)')+';">'+fmt(p)+'</span></div>';
+    };
+
+    var _tp=0,_tn=0,_tw=0;
+    _joues.forEach(function(e){ _tp+=e[1].profit; _tn+=e[1].n; _tw+=e[1].wins; });
+
+    bke.innerHTML = _joues.map(_row).join('')
+      + (_joues.length>1
+          ? '<div style="display:flex;align-items:center;gap:9px;border-top:1px solid var(--b1);margin-top:8px;padding:11px 11px 0;">'
+              +'<span style="flex:1;font-size:13px;font-weight:600;">Total</span>'
+              +'<span style="font-size:11.5px;color:var(--t3);min-width:104px;text-align:right;">'+_tn+' pari'+(_tn>1?'s':'')+' · '+(_tn?Math.round(_tw/_tn*100):0)+' %</span>'
+              +'<span style="font-size:13px;font-weight:700;min-width:78px;text-align:right;font-variant-numeric:tabular-nums;color:'+(_tp>=0?'var(--g)':'var(--r)')+';">'+fmt(_tp)+'</span></div>'
+          : '')
+      + (_vides.length
+          ? '<button onclick="g45BkVidesToggle()" style="width:100%;margin-top:10px;padding:7px;background:none;border:1px solid var(--b1);border-radius:var(--r4);color:var(--t3);font:inherit;font-size:12px;cursor:pointer;">'
+              + (_ouvert?'−':'+') + ' ' + _vides.length + ' compte' + (_vides.length>1?'s':'') + ' sans pari</button>'
+              + (_ouvert?'<div style="margin-top:6px;">'+_vides.map(_row).join('')+'</div>':'')
+          : '')
+      + (window._bilanBkFilter?'<button onclick="window._bilanBkFilter=null;renderBilanTab();" style="width:100%;padding:7px;margin-top:6px;background:rgba(255,255,255,.04);border:1px solid var(--b1);border-radius:var(--r4);color:var(--t3);font-size:12px;cursor:pointer;">Effacer le filtre</button>':'');
+  }
 }
 
 /* ── RENDER PRINCIPAL ── */
@@ -9786,6 +9897,12 @@ function render(){
      Le drapeau evite la boucle : redessiner rappelle ce bloc. */
   try{ g45MurVisuels(); }catch(e){}
   /* books */
+  /* Le camembert des soldes vit maintenant dans l'onglet Bank (02/09). Il etait
+     dessine depuis la chaine des graphiques du Bilan ; on le redessine donc ici,
+     avec le reste de Bank, sinon il resterait fige apres un depot ou un retrait.
+     Le `setTimeout` laisse le canvas prendre ses dimensions : dessiner dans un
+     onglet encore masque donne un graphique de taille nulle. */
+  try{ setTimeout(function(){ try{ renderBooksChart(); }catch(e){} }, 60); }catch(e){}
   $i('books-grid').innerHTML=Object.entries(state.b).map(function(e){
     var b=bki(e[0]);
     return '<div class="btile" style="--bc:'+b.c+';">'
@@ -10123,8 +10240,19 @@ function renderArchive(){
         var _idFilig=_idLogo
           ?('<img src="'+_idLogo+'" alt="" loading="lazy" onerror="this.style.display=\'none\'" style="position:absolute;right:2px;top:50%;transform:translateY(-50%);height:32px;width:32px;object-fit:contain;opacity:.5;filter:drop-shadow(0 1px 3px rgba(0,0,0,.5));pointer-events:none;">')
           :((isSimpleA&&b2.d)?('<img src="https://www.google.com/s2/favicons?domain='+b2.d+'&sz=64" alt="" loading="lazy" onerror="this.style.display=\'none\'" style="position:absolute;right:2px;top:50%;transform:translateY(-50%);height:24px;width:24px;object-fit:contain;opacity:.55;border-radius:6px;filter:drop-shadow(0 1px 3px rgba(0,0,0,.5));pointer-events:none;">'):'');
+        /* FOND TEINTE PAR LE RESULTAT (02/09, demande d'Antoine : « pari gagné
+           vert, pari perdu rouge, pari en cours jaune »). Le degrade partait de
+           `_idColor`, la couleur du CLUB — d'ou un fond vert sur Athletics et
+           violet sur Seattle, sans aucun rapport avec l'issue du pari. Or
+           l'identite du club est deja portee par son ecusson en filigrane a
+           droite, tandis que le resultat n'etait signale que par un filet de
+           3 px sur le bord gauche.
+           On reutilise `borderC`, deja calcule au-dessus et qui vaut
+           #1ed760 / #ff4545 / #f0b020 selon gagne, perdu ou en cours : une
+           seule source pour le filet et pour le fond, donc impossible qu'ils se
+           contredisent un jour. */
         var _scoreA=h.isCombi?((typeof _g45ScoreTexteCombi==='function')?_g45ScoreTexteCombi(h):''):((typeof _g45ScoreTexte==='function')?_g45ScoreTexte(h):'');
-        return '<div style="position:relative;overflow:hidden;display:flex;align-items:center;padding:8px 10px;background:linear-gradient(100deg,'+_idColor+'40 0%,'+borderC+'20 60%,var(--s1) 100%);border-radius:var(--r6);margin-bottom:4px;border-left:3px solid '+borderC+';gap:8px;">'
+        return '<div style="position:relative;overflow:hidden;display:flex;align-items:center;padding:8px 10px;background:linear-gradient(100deg,'+borderC+'38 0%,'+borderC+'16 52%,var(--s1) 100%);border-radius:var(--r6);margin-bottom:4px;border-left:3px solid '+borderC+';gap:8px;">'
           +'<div style="position:relative;font-size:10px;color:var(--t3);min-width:32px;flex-shrink:0;text-align:center;">'+(h.heure||'—')+'</div>'
           +bkBadge+sportIco
           +'<div data-aid="'+h.id+'" onclick="openBetEdit(this.dataset.aid)" style="position:relative;flex:1;min-width:0;overflow:hidden;cursor:pointer;">'
@@ -43837,3 +43965,15 @@ function _g45BilFiltresFermer(){
   var d=document.getElementById('g45-bil-filtres'); if(d) d.remove();
 }
 window._g45BilFiltresFermer=_g45BilFiltresFermer;
+
+/* Ouvre ou referme la liste des comptes sans pari du tableau « Par bookmaker ».
+   L'etat est retenu : replier a chaque visite quelqu'un qui veut voir ses soldes
+   serait aussi penible que l'inverse. */
+function g45BkVidesToggle(){
+  try{
+    var o=localStorage.getItem('g45_bk_vides')==='1';
+    localStorage.setItem('g45_bk_vides', o?'0':'1');
+  }catch(e){}
+  try{ renderBilanTab(); }catch(e){}
+}
+window.g45BkVidesToggle=g45BkVidesToggle;

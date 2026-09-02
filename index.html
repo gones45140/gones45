@@ -10,8 +10,8 @@
      chemin est volontairement RELATIF : il se resout en `/gones45/favicon.ico`
      sur les Pages de projet et en `/favicon.ico` sur bet45.fr, sans avoir a
      maintenir deux valeurs differentes. -->
-<link rel="icon" href="favicon.ico?v=20260902t" sizes="any">
-<link rel="apple-touch-icon" href="apple-touch-icon.png?v=20260902t">
+<link rel="icon" href="favicon.ico?v=20260902w" sizes="any">
+<link rel="apple-touch-icon" href="apple-touch-icon.png?v=20260902w">
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; frame-src https://www.youtube.com https://www.youtube-nocookie.com; script-src 'self' 'unsafe-eval' 'unsafe-inline' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com; worker-src 'self' blob:; connect-src 'self' data: blob: https://tessdata.projectnaptha.com https://site.api.espn.com https://site.web.api.espn.com https://sports.core.api.espn.com https://fantasy.premierleague.com https://api.dropbox.com https://content.dropboxapi.com https://api.dropboxapi.com https://api.groq.com https://generativelanguage.googleapis.com https://api.mistral.ai https://api.tavily.com https://fd-proxy.touraine-antoine.workers.dev https://media.api-sports.io https://api.football-data.org https://api-web.nhle.com https://statsapi.mlb.com https://www.thesportsdb.com https://cdn.jsdelivr.net https://api.openf1.org https://racecenter.letour.fr https://racecenter.lavuelta.es https://racecenter.letourfemmes.fr https://racecenter.paris-nice.fr https://racecenter.tour-auvergne-rhone-alpes.fr https://racecenter.paris-roubaix.fr https://racecenter.liege-bastogne-liege.be https://racecenter.la-fleche-wallonne.be https://racecenter.paris-tours.fr https://api.jolpi.ca https://en.wikipedia.org https://api.github.com https://raw.githubusercontent.com https://gones45140.github.io https://vbsdewuvycaekfkixynh.supabase.co wss://vbsdewuvycaekfkixynh.supabase.co; img-src 'self' data: https: blob: https://flagcdn.com; style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com https://fonts.googleapis.com; font-src 'self' data: https://fonts.gstatic.com;">
 <meta http-equiv="Content-Security-Policy" content="default-src 'self' 'unsafe-inline' 'unsafe-eval' https: data: blob:;">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
@@ -492,8 +492,13 @@
       <div style="height:200px;position:relative;"><canvas id="chart-multi"></canvas></div>
       <div class="chart-info-bar" id="cib-multi"><span class="cib-main" id="cib-multi-txt">Touche un point</span><span class="cib-val" id="cib-multi-val"></span></div>
     </div>
-    <div class="sec">Répartition bookmakers</div>
-    <div class="cwrap"><div style="height:180px;position:relative;"><canvas id="chart-books"></canvas></div></div>
+    <!-- « Répartition bookmakers » DEPLACE VERS L'ONGLET BANK (02/09, decision
+         d'Antoine). Ce camembert lit `state.b`, c'est-a-dire les SOLDES : il
+         montre la repartition du CAPITAL, pas des paris. Entoure de blocs qui
+         parlent de paris et de resultats, il se lisait forcement de travers —
+         d'autant que Boursorama et les comptes PMU sont les banques d'Antoine,
+         pas des bookmakers, et y occupaient donc une part alors qu'ils n'ont
+         jamais servi a parier. Sa place est aupres des mouvements de fonds. -->
     <div class="sec" style="display:flex;align-items:center;justify-content:space-between;">
       <span>Paliers par équipe</span>
       <div style="position:relative;">
@@ -1066,6 +1071,8 @@
       <div class="kpi-v" id="bank-fb-total">0 €</div>
     </div>
   </div>
+  <div class="sec">Répartition du capital</div>
+  <div class="cwrap"><div style="height:180px;position:relative;"><canvas id="chart-books"></canvas></div></div>
   <div class="sec">Mouvement de fonds</div>
   <div class="fc">
     <label class="fl">Bookmaker &amp; Montant</label>
@@ -1269,7 +1276,7 @@
      worker servaient indefiniment l'ancien fichier sur mobile : rouvrir
      l'application ne changeait rien puisque l'URL demandee etait la meme.
      A INCREMENTER A CHAQUE DEPLOIEMENT, comme sur fenotte45. -->
-<script src="app.js?v=20260902t"></script>
+<script src="app.js?v=20260902w"></script>
 <script src="social.js"></script>
 
 
