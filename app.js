@@ -2255,10 +2255,14 @@ function render(){
            donc PAS de place. Seul le voile degrade s'etend, ce qui encadre l'image
            au lieu de la barrer. Pour revenir en arriere il suffit de retirer les
            trois proprietes ajoutees ici et sur le bloc des montants. */
-        +'<div style="position:relative;flex:0 1 auto;min-width:0;max-width:72%;margin-right:auto;'
+        +'<div class="g45-murtxt" style="position:relative;flex:0 1 auto;min-width:0;max-width:72%;margin-right:auto;'
           +'align-self:stretch;display:flex;flex-direction:column;justify-content:center;'
           +'padding:4px 16px 4px 9px;border-radius:10px;'
-          +'background:linear-gradient(90deg,rgba(8,11,20,.72) 0%,rgba(8,11,20,.34) 62%,transparent 100%);'
+          /* Le degre s'eteignait a 62%, alors que le bloc s'etend jusqu'a la fin du
+             texte le plus long : la queue d'une note et la barre de serie sortaient
+             dans le clair (visible sur le fond blanc du Real). Il tient maintenant
+             jusqu'a 82%, donc tout le contenu reste couvert. */
+          +'background:linear-gradient(90deg,rgba(8,11,20,.74) 0%,rgba(8,11,20,.55) 82%,transparent 100%);'
           +'text-shadow:0 1px 4px rgba(0,0,0,.95),0 0 10px rgba(0,0,0,.7);">'
         +'<div style="font-size:12px;font-weight:700;">'+(u.sport||'')+' '+u.n+'</div>'
         +'<div style="font-size:9px;color:var(--t3);">'+'⭐'.repeat(u.s)+' · '+_g45PalLabel(u)+' · '+pc+'% réussite</div>'
@@ -9593,10 +9597,14 @@ function render(){
            donc PAS de place. Seul le voile degrade s'etend, ce qui encadre l'image
            au lieu de la barrer. Pour revenir en arriere il suffit de retirer les
            trois proprietes ajoutees ici et sur le bloc des montants. */
-        +'<div style="position:relative;flex:0 1 auto;min-width:0;max-width:72%;margin-right:auto;'
+        +'<div class="g45-murtxt" style="position:relative;flex:0 1 auto;min-width:0;max-width:72%;margin-right:auto;'
           +'align-self:stretch;display:flex;flex-direction:column;justify-content:center;'
           +'padding:4px 16px 4px 9px;border-radius:10px;'
-          +'background:linear-gradient(90deg,rgba(8,11,20,.72) 0%,rgba(8,11,20,.34) 62%,transparent 100%);'
+          /* Le degre s'eteignait a 62%, alors que le bloc s'etend jusqu'a la fin du
+             texte le plus long : la queue d'une note et la barre de serie sortaient
+             dans le clair (visible sur le fond blanc du Real). Il tient maintenant
+             jusqu'a 82%, donc tout le contenu reste couvert. */
+          +'background:linear-gradient(90deg,rgba(8,11,20,.74) 0%,rgba(8,11,20,.55) 82%,transparent 100%);'
           +'text-shadow:0 1px 4px rgba(0,0,0,.95),0 0 10px rgba(0,0,0,.7);">'
         +'<div style="font-size:12px;font-weight:700;">'+(u.sport||'')+' '+u.n+'</div>'
         +'<div style="font-size:9px;color:var(--t3);">'+'⭐'.repeat(u.s)+' · '+_g45PalLabel(u)+' · '+pc+'% réussite</div>'
@@ -42927,7 +42935,14 @@ function _g45MurHStyle() {
   if (document.getElementById(id)) return;
   var st = document.createElement('style');
   st.id = id;
-  st.textContent = '.g45-murcard{min-height:var(--g45-murh,' + _G45_MURH_DEF + 'px) !important;}';
+  /* LARGEUR DU BLOC TEXTE (02/09). A 72% la note filait jusqu'au centre de la
+     carte et passait devant le sujet de l'image. On la ramene a 45% sur grand
+     ecran — elle passe alors a la ligne au lieu de s'etirer. On garde 72% sur
+     telephone : 45% d'une carte de 350px ne laisserait pas de quoi lire.
+     Une media query impose une feuille de style ; une regle inline ne peut pas
+     en contenir, d'ou le passage par ce <style> deja injecte pour la hauteur. */
+  st.textContent = '.g45-murcard{min-height:var(--g45-murh,' + _G45_MURH_DEF + 'px) !important;}'
+    + '@media(min-width:700px){.g45-murtxt{max-width:45% !important;}}';
   (document.head || document.documentElement).appendChild(st);
 }
 
