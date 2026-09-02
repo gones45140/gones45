@@ -2206,13 +2206,18 @@ function render(){
          l'ecusson ne vienne pas manger le sujet de la banniere.
          Le halo radial est necessaire : sur un ecusson clair — le Real, le PSV —
          le vert des gains devenait illisible malgre l'ombre portee. */
-      var _ecuTaille = 'clamp(86px, calc(var(--g45-murh,92px) * .55), 200px)';
-      var _ecuFond = _lu ? ('<img src="'+_lu+'" loading="lazy" onerror="this.style.display=\'none\'" '
+      /* TAILLE ET OPACITE SORTIES DU JS (02/09, retour d'Antoine : « sur telephone
+         les caches cachent un peu trop »). Une seule valeur ne peut pas convenir
+         aux deux : 86 px d'ecusson plus son halo, c'est discret sur une carte de
+         1580 px de large et c'est un gros disque sombre sur une carte de 330 px.
+         Les dimensions passent donc dans la feuille de style injectee, ou une
+         media query peut les differencier — ce qu'un style inline ne permet pas.
+         Le JS ne pose plus que les classes. */
+      var _ecuFond = _lu ? ('<img class="g45-ecu" src="'+_lu+'" loading="lazy" onerror="this.style.display=\'none\'" '
         +'style="position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);'
-        +'height:'+_ecuTaille+';width:'+_ecuTaille+';object-fit:contain;opacity:.30;'
-        +'filter:saturate(1.4);pointer-events:none;z-index:0;">'
-        +'<div style="position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);'
-        +'height:'+_ecuTaille+';width:'+_ecuTaille+';pointer-events:none;z-index:1;'
+        +'object-fit:contain;filter:saturate(1.4);pointer-events:none;z-index:0;">'
+        +'<div class="g45-ecu-halo" style="position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);'
+        +'pointer-events:none;z-index:1;'
         +'background:radial-gradient(closest-side,rgba(8,11,20,.62) 0%,rgba(8,11,20,.32) 55%,transparent 100%);"></div>') : '';
       var _filig='';
       /* Une BANNIERE remplace le fond de la ligne ; un LOGO reste un filigrane
@@ -9583,13 +9588,18 @@ function render(){
          l'ecusson ne vienne pas manger le sujet de la banniere.
          Le halo radial est necessaire : sur un ecusson clair — le Real, le PSV —
          le vert des gains devenait illisible malgre l'ombre portee. */
-      var _ecuTaille = 'clamp(86px, calc(var(--g45-murh,92px) * .55), 200px)';
-      var _ecuFond = _lu ? ('<img src="'+_lu+'" loading="lazy" onerror="this.style.display=\'none\'" '
+      /* TAILLE ET OPACITE SORTIES DU JS (02/09, retour d'Antoine : « sur telephone
+         les caches cachent un peu trop »). Une seule valeur ne peut pas convenir
+         aux deux : 86 px d'ecusson plus son halo, c'est discret sur une carte de
+         1580 px de large et c'est un gros disque sombre sur une carte de 330 px.
+         Les dimensions passent donc dans la feuille de style injectee, ou une
+         media query peut les differencier — ce qu'un style inline ne permet pas.
+         Le JS ne pose plus que les classes. */
+      var _ecuFond = _lu ? ('<img class="g45-ecu" src="'+_lu+'" loading="lazy" onerror="this.style.display=\'none\'" '
         +'style="position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);'
-        +'height:'+_ecuTaille+';width:'+_ecuTaille+';object-fit:contain;opacity:.30;'
-        +'filter:saturate(1.4);pointer-events:none;z-index:0;">'
-        +'<div style="position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);'
-        +'height:'+_ecuTaille+';width:'+_ecuTaille+';pointer-events:none;z-index:1;'
+        +'object-fit:contain;filter:saturate(1.4);pointer-events:none;z-index:0;">'
+        +'<div class="g45-ecu-halo" style="position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);'
+        +'pointer-events:none;z-index:1;'
         +'background:radial-gradient(closest-side,rgba(8,11,20,.62) 0%,rgba(8,11,20,.32) 55%,transparent 100%);"></div>') : '';
       var _filig='';
       /* Une BANNIERE remplace le fond de la ligne ; un LOGO reste un filigrane
@@ -43011,8 +43021,21 @@ function _g45MurHStyle() {
      telephone : 45% d'une carte de 350px ne laisserait pas de quoi lire.
      Une media query impose une feuille de style ; une regle inline ne peut pas
      en contenir, d'ou le passage par ce <style> deja injecte pour la hauteur. */
+  /* Reglages du telephone en valeur de base, grand ecran en surcharge : sur une
+     carte etroite l'ecusson doit rester un filigrane, pas un element de plus.
+     `--g45-ecut` depend de `--g45-murh`, donc le curseur des Outils fait bouger
+     l'ecusson en meme temps que la carte, sans une ligne de JS. */
   st.textContent = '.g45-murcard{min-height:var(--g45-murh,' + _G45_MURH_DEF + 'px) !important;}'
-    + '@media(min-width:700px){.g45-murtxt{max-width:45% !important;}}';
+    + ':root{--g45-ecut:clamp(64px,calc(var(--g45-murh,92px) * .40),130px);}'
+    + '.g45-ecu,.g45-ecu-halo{width:var(--g45-ecut);height:var(--g45-ecut);}'
+    + '.g45-ecu{opacity:.18;}'
+    + '.g45-ecu-halo{opacity:.45;}'
+    + '@media(min-width:700px){'
+      + ':root{--g45-ecut:clamp(86px,calc(var(--g45-murh,92px) * .55),200px);}'
+      + '.g45-murtxt{max-width:45% !important;}'
+      + '.g45-ecu{opacity:.30;}'
+      + '.g45-ecu-halo{opacity:1;}'
+    + '}';
   (document.head || document.documentElement).appendChild(st);
 }
 
