@@ -2214,7 +2214,7 @@ function render(){
            cadrees pour un bandeau large, pas pour une bande fine. */
         +'min-height:92px;border-radius:12px;margin-bottom:7px;border:1px solid rgba(255,255,255,.07);'
         +'cursor:pointer;background:'+_fond+';background-size:cover;background-position:center 50%;" '
-        +'data-nom="'+u.n+'" onclick="openClubFromDash(this.dataset.nom)">'
+        +'class="g45-murcard" data-nom="'+u.n+'" onclick="openClubFromDash(this.dataset.nom)">'
         +_couche
         +_filig
         /* BADGE ROND SUPPRIME (27/08, corrige le decalage persistant). C'etait un
@@ -2248,7 +2248,15 @@ function render(){
            est serre.
            `margin-right:auto` remet le bloc a gauche SANS lui rendre la largeur
            — c'est l'espace vide qui absorbe la place, plus le voile. */
+        /* PLEINE HAUTEUR (02/09). Le parent est en `align-items:center`, donc les deux
+           blocs restaient de petites pastilles flottant au milieu — anecdotiques des
+           que la carte est montee a 500px. `align-self:stretch` les fait courir du
+           haut en bas de la carte ; le flex interne recentre le texte, qui ne bouge
+           donc PAS de place. Seul le voile degrade s'etend, ce qui encadre l'image
+           au lieu de la barrer. Pour revenir en arriere il suffit de retirer les
+           trois proprietes ajoutees ici et sur le bloc des montants. */
         +'<div style="position:relative;flex:0 1 auto;min-width:0;max-width:72%;margin-right:auto;'
+          +'align-self:stretch;display:flex;flex-direction:column;justify-content:center;'
           +'padding:4px 16px 4px 9px;border-radius:10px;'
           +'background:linear-gradient(90deg,rgba(8,11,20,.72) 0%,rgba(8,11,20,.34) 62%,transparent 100%);'
           +'text-shadow:0 1px 4px rgba(0,0,0,.95),0 0 10px rgba(0,0,0,.7);">'
@@ -2259,6 +2267,7 @@ function render(){
         +serieFeu
         +'</div>'
         +'<div style="position:relative;margin-left:auto;text-align:right;line-height:1.25;padding:4px 9px 4px 18px;border-radius:10px;'
+          +'align-self:stretch;display:flex;flex-direction:column;justify-content:center;align-items:flex-end;'
           +'background:linear-gradient(270deg,rgba(8,11,20,.72) 0%,rgba(8,11,20,.40) 55%,transparent 100%);'
           +'text-shadow:0 1px 4px rgba(0,0,0,.95),0 0 10px rgba(0,0,0,.7);">'
           +'<div style="font-size:14px;font-weight:800;color:'+pColor+';">'+fmt(profit)+'</div>'
@@ -9543,7 +9552,7 @@ function render(){
            cadrees pour un bandeau large, pas pour une bande fine. */
         +'min-height:92px;border-radius:12px;margin-bottom:7px;border:1px solid rgba(255,255,255,.07);'
         +'cursor:pointer;background:'+_fond+';background-size:cover;background-position:center 50%;" '
-        +'data-nom="'+u.n+'" onclick="openClubFromDash(this.dataset.nom)">'
+        +'class="g45-murcard" data-nom="'+u.n+'" onclick="openClubFromDash(this.dataset.nom)">'
         +_couche
         +_filig
         /* BADGE ROND SUPPRIME (27/08, corrige le decalage persistant). C'etait un
@@ -9577,7 +9586,15 @@ function render(){
            est serre.
            `margin-right:auto` remet le bloc a gauche SANS lui rendre la largeur
            — c'est l'espace vide qui absorbe la place, plus le voile. */
+        /* PLEINE HAUTEUR (02/09). Le parent est en `align-items:center`, donc les deux
+           blocs restaient de petites pastilles flottant au milieu — anecdotiques des
+           que la carte est montee a 500px. `align-self:stretch` les fait courir du
+           haut en bas de la carte ; le flex interne recentre le texte, qui ne bouge
+           donc PAS de place. Seul le voile degrade s'etend, ce qui encadre l'image
+           au lieu de la barrer. Pour revenir en arriere il suffit de retirer les
+           trois proprietes ajoutees ici et sur le bloc des montants. */
         +'<div style="position:relative;flex:0 1 auto;min-width:0;max-width:72%;margin-right:auto;'
+          +'align-self:stretch;display:flex;flex-direction:column;justify-content:center;'
           +'padding:4px 16px 4px 9px;border-radius:10px;'
           +'background:linear-gradient(90deg,rgba(8,11,20,.72) 0%,rgba(8,11,20,.34) 62%,transparent 100%);'
           +'text-shadow:0 1px 4px rgba(0,0,0,.95),0 0 10px rgba(0,0,0,.7);">'
@@ -9588,6 +9605,7 @@ function render(){
         +serieFeu
         +'</div>'
         +'<div style="position:relative;margin-left:auto;text-align:right;line-height:1.25;padding:4px 9px 4px 18px;border-radius:10px;'
+          +'align-self:stretch;display:flex;flex-direction:column;justify-content:center;align-items:flex-end;'
           +'background:linear-gradient(270deg,rgba(8,11,20,.72) 0%,rgba(8,11,20,.40) 55%,transparent 100%);'
           +'text-shadow:0 1px 4px rgba(0,0,0,.95),0 0 10px rgba(0,0,0,.7);">'
           +'<div style="font-size:14px;font-weight:800;color:'+pColor+';">'+fmt(profit)+'</div>'
@@ -42864,3 +42882,113 @@ document.addEventListener('click', function () {
   setTimeout(g45BrancherEquipesCompet, 200);
 });
 setTimeout(g45BrancherEquipesCompet, 2500);
+
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   GONES45 — HAUTEUR DES CARTES DU MUR (02/09)
+   ───────────────────────────────────────────────────────────────────────────
+   POURQUOI : les cartes sont figees a 92px de haut. Sur un ecran large elles
+   font ~1580px de large, soit un rapport proche de 17:1, alors que les
+   bannieres TheSportsDB sont cadrees en 16:9. `cover` agrandit l'image jusqu'a
+   remplir la largeur, et il n'en reste qu'une mince bande — le PSV coupe en
+   deux, le "SAINT-GERMAIN" du PSG hors cadre. Sur telephone la carte ne fait
+   que ~350px de large, donc les memes 92px en montrent bien plus : la bonne
+   hauteur n'est PAS la meme sur les deux, et une valeur unique en dur cassera
+   toujours l'un des deux.
+
+   D'ou DEUX valeurs memorisees separement, choisies par l'utilisateur au
+   doigt. Le seuil de 700px separe "grand ecran" et "telephone" ; c'est la
+   largeur de la carte qui compte, pas l'appareil, donc une fenetre PC reduite
+   est traitee comme un telephone — ce qui est le comportement voulu.
+
+   MISE EN OEUVRE : une variable CSS plutot qu'une reecriture du mur. La
+   hauteur est posee en inline dans le HTML genere (`min-height:92px`), donc il
+   faut `!important` pour passer devant. L'avantage est qu'un deplacement du
+   curseur se voit INSTANTANEMENT, sans re-rendre les cartes ni retelecharger
+   la moindre image.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+var _G45_MURH_DEF = 92;
+
+/* La cle depend de la largeur, pas du materiel : c'est la largeur qui
+   determine de combien `cover` doit rogner. */
+function _g45MurHCle() {
+  return (window.innerWidth >= 700) ? 'g45_mur_h_large' : 'g45_mur_h_petit';
+}
+
+function _g45MurHLue() {
+  var v = parseInt(localStorage.getItem(_g45MurHCle()) || '', 10);
+  return (v && v >= 60 && v <= 700) ? v : _G45_MURH_DEF;
+}
+
+/* La regle est posee une seule fois ; ensuite seule la variable bouge. */
+function _g45MurHStyle() {
+  var id = 'g45-murh-style';
+  if (document.getElementById(id)) return;
+  var st = document.createElement('style');
+  st.id = id;
+  st.textContent = '.g45-murcard{min-height:var(--g45-murh,' + _G45_MURH_DEF + 'px) !important;}';
+  (document.head || document.documentElement).appendChild(st);
+}
+
+function _g45MurHAppliquer(v) {
+  _g45MurHStyle();
+  document.documentElement.style.setProperty('--g45-murh', v + 'px');
+}
+
+/* Appelee par le curseur des Outils. */
+function g45MurHauteur(v) {
+  v = parseInt(v, 10) || _G45_MURH_DEF;
+  try { localStorage.setItem(_g45MurHCle(), String(v)); } catch (e) {}
+  _g45MurHAppliquer(v);
+  var lab = document.getElementById('mur-h-val');
+  if (lab) {
+    lab.textContent = v + ' px — ' +
+      ((window.innerWidth >= 700) ? 'grand écran' : 'téléphone') +
+      (v === _G45_MURH_DEF ? ' (défaut)' : '');
+  }
+}
+window.g45MurHauteur = g45MurHauteur;
+
+/* Remet les DEUX valeurs a 92 : le bouton sert de sortie de secours si un
+   reglage rend le mur inutilisable, il ne doit pas dependre de l'ecran
+   depuis lequel on le declenche. */
+function g45MurHauteurReset() {
+  try {
+    localStorage.removeItem('g45_mur_h_large');
+    localStorage.removeItem('g45_mur_h_petit');
+  } catch (e) {}
+  var r = document.getElementById('mur-h-range');
+  if (r) r.value = _G45_MURH_DEF;
+  g45MurHauteur(_G45_MURH_DEF);
+}
+window.g45MurHauteurReset = g45MurHauteurReset;
+
+/* Applique tout de suite, avant meme que les Outils soient ouverts, sinon le
+   mur s'afficherait a 92px puis sauterait a la bonne hauteur. */
+_g45MurHAppliquer(_g45MurHLue());
+
+/* Le curseur n'existe qu'une fois l'onglet Outils construit ; on le
+   synchronise a l'ouverture plutot que de deviner un moment. */
+function _g45MurHSync() {
+  var r = document.getElementById('mur-h-range');
+  if (!r) return;
+  var v = _g45MurHLue();
+  if (String(r.value) !== String(v)) r.value = v;
+  var lab = document.getElementById('mur-h-val');
+  if (lab) {
+    lab.textContent = v + ' px — ' +
+      ((window.innerWidth >= 700) ? 'grand écran' : 'téléphone') +
+      (v === _G45_MURH_DEF ? ' (défaut)' : '');
+  }
+}
+document.addEventListener('click', function () { setTimeout(_g45MurHSync, 150); });
+setTimeout(_g45MurHSync, 1500);
+
+/* Passer d'une fenetre large a une fenetre etroite change de reglage : sans
+   ca, la valeur "grand ecran" resterait appliquee a une carte devenue
+   etroite. */
+window.addEventListener('resize', function () {
+  _g45MurHAppliquer(_g45MurHLue());
+  _g45MurHSync();
+});
