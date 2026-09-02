@@ -113,7 +113,10 @@ input[type="date"],input[type="time"]{color-scheme:dark;}
 .togb.on{background:var(--s2);color:var(--t1);}
 
 .ltbl{width:100%;border-collapse:collapse;font-size:12px;}
-.ltbl th{font-size:9px;font-weight:700;letter-spacing:.8px;text-transform:uppercase;color:var(--t3);padding:8px 10px;border-bottom:1px solid var(--b1);text-align:left;}
+/* 02/09 : dernieres capitales interlettrees de l'appli, apres `.sec`, `.fl` et
+   `.mm-title`. Le texte des entetes est deja ecrit en minuscules dans les
+   pages, c'est le CSS qui le deformait. */
+.ltbl th{font-size:11.5px;font-weight:600;letter-spacing:0;color:var(--t3);padding:8px 10px;border-bottom:1px solid var(--b1);text-align:left;}
 .ltbl td{padding:10px;border-bottom:1px solid var(--b1);vertical-align:middle;}
 .ltbl tr:last-child td{border-bottom:none;}
 
@@ -523,8 +526,50 @@ input[type="date"],input[type="time"]{color-scheme:dark;}
 
 /* Le total et le bouton d'enregistrement : c'est l'action finale du bloc,
    elle merite d'etre plus visible que le reste. */
-.mm-cote-total{background:linear-gradient(100deg,rgba(240,200,40,.10) 0%,var(--bg3) 55%);
-  border:1px solid rgba(240,200,40,.20);padding:11px 13px;}
-.mm-ct-l{font-size:10px;color:var(--t3);font-weight:700;}
-.mm-ct-v{font-size:19px;font-weight:900;color:#f0c828;margin-left:7px;}
-.mm-title{font-size:9.5px;letter-spacing:.9px;color:#8aa0ff;}
+/* 02/09 — TROIS CORRECTIONS ICI.
+   1. La cote combinee etait en or sur un cartouche dore. Elle est deja
+      l'element le plus gros de la zone : la taille suffit a la hierarchiser.
+      L'or est desormais reserve aux filets de structure — s'il sert aussi a
+      mettre en valeur, il ne signale plus rien.
+   2. Le cartouche devient un simple filet superieur : il separait deja la zone
+      de total du reste, l'aplat colore n'ajoutait rien.
+   3. Ce bloc REDEFINISSAIT `.mm-title` en 9.5px bleu clair interlettre, APRES
+      la regle corrigee plus haut dans le fichier — d'ou un titre « Ton pari »
+      reste minuscule et bleu malgre la correction. La surcharge est supprimee,
+      pas rectifiee : deux definitions du meme titre a 200 lignes d'ecart, c'est
+      la garantie que la prochaine correction sera annulee elle aussi. */
+.mm-cote-total{background:none;border:0;border-top:1px solid var(--b1);border-radius:0;padding:12px 2px 0;margin-top:14px;}
+.mm-ct-l{font-size:12px;color:var(--t3);font-weight:400;}
+.mm-ct-v{font-family:var(--ff-t);font-size:25px;font-weight:600;color:var(--t1);margin-left:7px;font-variant-numeric:tabular-nums;}
+
+
+/* ═══════════════════════════════════════════════════════════════════════
+   CONTENEURS NUS — PAGE PARI (02/09)
+   Meme principe que l'onglet Competitions : le panneau opaque disparait pour
+   que `fond.jpg` se voie, et ce sont les elements qui portent leur voile. La
+   regle a respecter partout : le fond passe ENTRE les elements, jamais
+   dessous. Un tableau ou un champ pose nu sur une photo devient illisible des
+   qu'il se remplit.
+   ═══════════════════════════════════════════════════════════════════════ */
+
+.g45-nu{background:none;border:0;box-shadow:none;backdrop-filter:none;-webkit-backdrop-filter:none;padding:0;}
+/* Les etiquettes etaient nues sur un aplat uni ; sur la photo il leur faut
+   une ombre portee, sinon elles disparaissent sur les zones claires. */
+.g45-nu .fl,.g45-nu .mm-fam span{text-shadow:0 1px 4px rgba(0,0,0,.85);}
+.g45-nu .fi{background:rgba(11,16,26,.78);}
+
+/* MyMatch : meme traitement, plus un bornage. Sur grand ecran le champ du type
+   de pari s'etirait sur 1350 px avec « Victoire » perdu au centre. */
+.mm-wrap{max-width:640px;}
+.mm-wrap.g45-nu .mm-row{background:rgba(11,16,26,.74);}
+.mm-wrap.g45-nu .mm-type{background:rgba(11,16,26,.74);}
+.mm-wrap.g45-nu .mm-title,
+.mm-wrap.g45-nu .mm-fam span{text-shadow:0 1px 5px rgba(0,0,0,.9);}
+/* Le libelle se lit a gauche, comme un intitule ; centre, il flottait. */
+.mm-lbl,.mm-row .mm-cote:first-of-type{text-align:left;}
+
+/* Tableau des paris en cours : le voile passe de la carte aux lignes. */
+.g45-nu-tbl{background:none;border:0;}
+.g45-nu-tbl .ltbl td{background:rgba(11,16,26,.74);}
+.g45-nu-tbl .ltbl th{background:none;text-shadow:0 1px 4px rgba(0,0,0,.85);}
+.g45-nu-tbl .ltbl .empty{background:rgba(11,16,26,.62);}
