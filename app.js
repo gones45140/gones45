@@ -35842,15 +35842,33 @@ async function loadCompetTab() {
            corriger cote police. En attendant que le vrai logo soit connu, on
            affiche donc une PASTILLE avec le code pays, lisible partout.
            Les emoji non-drapeaux (coupes, ballons) restent tels quels. */
-        var estDrapeau = /^[\u{1F1E6}-\u{1F1FF}]{2}/u.test(String(l.ico || ''));
+        /* REFONTE DU 02/09 (retours d'Antoine : « Angleterre y a le drapeau
+           pourquoi que lui », « un coup bleu blanc rouge un coup logo Ligue 1 »).
+           Trois defauts se cumulaient :
+           1) Le test ne reconnaissait que les drapeaux formes de DEUX indicateurs
+              regionaux (🇫🇷 = F+R). Le drapeau anglais est construit autrement —
+              un drapeau noir suivi d'une sequence de balises — il echappait donc
+              au filtre et restait le seul affiche en vrai.
+           2) La pastille « FRA / ESP » etait imposee a tout le monde alors que le
+              probleme d'origine ne touche QUE Chrome sous Windows, ou la police
+              d'emoji drapeaux est absente.
+           3) Surtout, l'aspect d'une tuile CHANGEAIT avec le temps : le logo du
+              championnat est capte gratuitement dans la reponse du classement,
+              donc tuile au drapeau avant d'avoir ouvert la competition, tuile au
+              logo apres. Rien d'aleatoire, mais rien de previsible non plus.
+           La regle est desormais fixe et ne depend plus de la police du systeme :
+           une competition NATIONALE montre toujours le drapeau de son pays, en
+           IMAGE (flagcdn, deja utilise ailleurs dans l'appli), et une competition
+           internationale montre son logo, ou son emoji a defaut. Le logo ne prend
+           donc plus le dessus sur le drapeau d'un championnat national. */
+        var _pays3 = String(l.slug).split('.')[0];
+        var _iso = _G45_CMP_PAYS[_pays3];
         var vis;
-        if (lo) {
+        if (_iso) {
+          vis = '<img src="https://flagcdn.com/w40/' + _iso + '.png" alt="" loading="lazy" '
+              + 'onerror="this.remove()" style="width:24px;height:16px;object-fit:cover;border-radius:3px;">';
+        } else if (lo) {
           vis = '<img src="' + lo + '" style="width:22px;height:22px;object-fit:contain;" onerror="this.remove()" loading="lazy">';
-        } else if (estDrapeau) {
-          var pays = String(l.slug).split('.')[0].toUpperCase().slice(0, 3);
-          vis = '<span style="display:inline-block;min-width:26px;padding:2px 5px;border-radius:5px;'
-              + 'background:rgba(255,255,255,.10);color:#9fb0c7;font-size:8.5px;font-weight:800;letter-spacing:.4px;text-align:center;">'
-              + pays + '</span>';
         } else {
           vis = '<span style="font-size:17px;line-height:1;">' + (l.ico || '') + '</span>';
         }
@@ -35862,9 +35880,30 @@ async function loadCompetTab() {
            Le visuel est place au-dessus du nom plutot qu'a cote : il gagne en
            taille — 22 px au lieu de 16 — et le nom dispose de toute la largeur
            de la tuile, donc plus de troncature. */
-        return '<button onclick="g45CompetSel(\'' + l.slug + '\')" class="g45-cmp-tile">'
-          + '<span class="g45-cmp-ico">' + vis + '</span>'
-          + '<span class="g45-cmp-nom">' + l.name + '</span></button>';
+        /* FOND PHOTO PAR COMPETITION (02/09, demande d'Antoine : « des fonds qui
+           remplissent les carres »). Meme principe que les fonds NFL/NHL du
+           27/08 : un fichier depose dans `images/ligues/`, teste une fois puis
+           memorise. Une tuile sans fichier garde exactement son aspect actuel,
+           donc les fonds peuvent etre ajoutes un par un sans rien casser.
+           Le voile est un DEGRADE qui ne fonce que le bas, sous le nom, plutot
+           qu'un assombrissement uniforme : la photo garde sa matiere en haut la
+           ou rien n'est ecrit. Le nom recoit en plus une ombre portee, seule
+           garantie de lisibilite sur une photo claire imprevisible. */
+        var _fdc = _g45CompetFond(l.slug);
+        var _st = _fdc
+          ? ' style="position:relative;overflow:hidden;background-image:url(\'' + _fdc + '\');background-size:cover;background-position:center;"'
+          : '';
+        var _vlc = _fdc
+          ? '<span style="position:absolute;inset:0;background:rgba(10,14,26,.30);pointer-events:none;"></span>'
+            + '<span style="position:absolute;left:0;right:0;bottom:0;height:54%;pointer-events:none;'
+            + 'background:linear-gradient(180deg,transparent 0%,rgba(8,11,20,.86) 100%);"></span>'
+          : '';
+        return '<button onclick="g45CompetSel(\'' + l.slug + '\')" class="g45-cmp-tile"' + _st + '>'
+          + _vlc
+          + '<span class="g45-cmp-ico" style="position:relative;">' + vis + '</span>'
+          + '<span class="g45-cmp-nom" style="position:relative;'
+          + (_fdc ? 'text-shadow:0 1px 4px rgba(0,0,0,.95),0 0 10px rgba(0,0,0,.7);' : '') + '">'
+          + l.name + '</span></button>';
       }).join('');
       return '<div style="margin-bottom:14px;"><div style="font-size:9px;font-weight:800;letter-spacing:.6px;text-transform:uppercase;color:#6b7a99;margin-bottom:7px;">'
         + g.grp + '</div><div class="g45-cmp-grid">' + ch + '</div></div>';
@@ -43261,3 +43300,135 @@ function g45FondClubHtml(nom, opac) {
     + 'background:repeating-linear-gradient(90deg,' + c[0] + ' 0 34px,' + c[1] + ' 34px 68px);"></div>';
 }
 window.g45FondClubHtml = g45FondClubHtml;
+
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   GONES45 — LE NAVIGATEUR SAIT-IL DESSINER LES DRAPEAUX ? (02/09)
+   ───────────────────────────────────────────────────────────────────────────
+   Chrome sous Windows ne fournit pas de police d'emoji drapeaux : 🇫🇷 sort en
+   deux petites lettres grises « FR ». Android et iOS les dessinent tres bien.
+   Plutot que de trancher pour tout le monde, on ecrit le drapeau francais dans
+   un canvas et on regarde s'il en sort de la COULEUR. Bleu-blanc-rouge donne
+   des pixels tres satures ; un rendu en lettres grises n'en donne aucun.
+   Le resultat est garde en memoire pour la session : c'est une propriete du
+   navigateur, elle ne change pas en cours de route, et ce serait du gaspillage
+   de refaire le test a chaque tuile.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+var _g45FlagOk = null;
+function _g45DrapeauxOk() {
+  if (_g45FlagOk !== null) return _g45FlagOk;
+  _g45FlagOk = false;
+  try {
+    var cv = document.createElement('canvas');
+    cv.width = 24; cv.height = 24;
+    var cx = cv.getContext('2d', { willReadFrequently: true });
+    cx.font = '18px sans-serif';
+    cx.textBaseline = 'top';
+    cx.fillText('\uD83C\uDDEB\uD83C\uDDF7', 0, 0);
+    var d = cx.getImageData(0, 0, 24, 24).data;
+    for (var i = 0; i < d.length; i += 4) {
+      if (d[i + 3] < 40) continue;
+      var mx = Math.max(d[i], d[i + 1], d[i + 2]);
+      var mn = Math.min(d[i], d[i + 1], d[i + 2]);
+      if (mx - mn > 40) { _g45FlagOk = true; break; }
+    }
+  } catch (e) {}
+  return _g45FlagOk;
+}
+window._g45DrapeauxOk = _g45DrapeauxOk;
+
+
+/* Prefixe de slug ESPN -> code pays flagcdn. Seules les competitions NATIONALES
+   figurent ici : `uefa`, `fifa`, `conmebol`, `concacaf` et `afc` n'ont pas de
+   drapeau et gardent leur logo ou leur emoji. Les nations britanniques ont leurs
+   propres codes chez flagcdn (`gb-eng`, `gb-sct`), ce qui evite de tomber sur
+   l'Union Jack. */
+var _G45_CMP_PAYS = {
+  fra: 'fr', eng: 'gb-eng', esp: 'es', ita: 'it', ger: 'de',
+  por: 'pt', ned: 'nl', bel: 'be', tur: 'tr', sco: 'gb-sct',
+  gre: 'gr', usa: 'us', aut: 'at', den: 'dk', nor: 'no',
+  swe: 'se', mex: 'mx', bra: 'br', arg: 'ar', ksa: 'sa',
+  jpn: 'jp', chn: 'cn', aus: 'au'
+};
+
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   GONES45 — FOND PHOTO D'UNE COMPETITION (02/09)
+   ───────────────────────────────────────────────────────────────────────────
+   Antoine depose lui-meme ses images dans `images/ligues/`. On ne peut pas
+   savoir a l'avance lesquelles existent, donc on TESTE, sans jamais faire
+   attendre l'affichage : la tuile s'affiche nue tout de suite, et le fond
+   apparait au prochain rendu. Le resultat est memorise pour ne pas retester a
+   chaque ouverture de l'onglet.
+
+   NOM DE FICHIER : les identifiants ESPN contiennent des points (`fra.1`,
+   `uefa.champions`). On les normalise en `fra1`, `uefachampions` — un point
+   dans un nom de fichier prete a confusion avec l'extension.
+
+   NEGATIF DE COURTE DUREE : un fichier absent est retenu 3 HEURES, pas plus.
+   C'est la lecon du matin — le cache negatif de 7 jours faisait passer pour
+   casse un depot d'image parfaitement valide, simplement parce que le test
+   avait eu lieu AVANT. Un resultat positif, lui, est garde sans limite.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+var _G45_CMPF_CLE = 'g45_cmpfond_';
+var _G45_CMPF_TTLNEG = 3 * 3600000;
+var _g45CmpfEnCours = {};
+
+function g45CompetFondNom(slug) {
+  return String(slug || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+}
+
+function _g45CompetFond(slug) {
+  var k = g45CompetFondNom(slug);
+  if (!k) return '';
+  try {
+    var o = JSON.parse(localStorage.getItem(_G45_CMPF_CLE + k) || 'null');
+    if (o && o.u) return o.u;
+    if (o && (Date.now() - (o.t || 0)) <= _G45_CMPF_TTLNEG) return '';
+  } catch (e) {}
+
+  /* Un seul test en vol par competition : sans ce garde-fou, chaque rendu de
+     l'onglet relancerait deux requetes par tuile. */
+  if (_g45CmpfEnCours[k]) return '';
+  _g45CmpfEnCours[k] = 1;
+
+  var exts = ['.jpg', '.png', '.jpeg', '.webp'], i = 0;
+  var suivant = function () {
+    if (i >= exts.length) {
+      try { localStorage.setItem(_G45_CMPF_CLE + k, JSON.stringify({ u: '', t: Date.now() })); } catch (e) {}
+      _g45CmpfEnCours[k] = 0;
+      return;
+    }
+    var url = 'images/ligues/' + k + exts[i++];
+    var im = new Image();
+    im.onload = function () {
+      try { localStorage.setItem(_G45_CMPF_CLE + k, JSON.stringify({ u: url, t: Date.now() })); } catch (e) {}
+      _g45CmpfEnCours[k] = 0;
+      try { if (typeof loadCompetTab === 'function') loadCompetTab(); } catch (e) {}
+    };
+    im.onerror = suivant;
+    im.src = url;
+  };
+  suivant();
+  return '';
+}
+
+/* Aide de saisie : sans elle, il faudrait deviner le nom attendu a partir d'un
+   identifiant interne jamais affiche nulle part. */
+window.g45FondsCompetInfo = function () {
+  try {
+    var out = [];
+    (G45_LEAGUE_GROUPS || []).forEach(function (g) {
+      (g.leagues || []).forEach(function (l) {
+        var k = g45CompetFondNom(l.slug);
+        var o = null;
+        try { o = JSON.parse(localStorage.getItem(_G45_CMPF_CLE + k) || 'null'); } catch (e) {}
+        out.push({ Competition: l.name, Fichier: 'images/ligues/' + k + '.jpg', Etat: (o && o.u) ? 'présent' : 'absent' });
+      });
+    });
+    console.table(out);
+    return out.length + ' compétitions';
+  } catch (e) { return 'indisponible'; }
+};
