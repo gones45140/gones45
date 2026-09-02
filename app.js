@@ -2118,11 +2118,17 @@ function render(){
       var _serieLieu=function(lg, ico){
         var l=paris.filter(function(h){ return h.domicile===lg; });
         if(!l.length) return '';
-        return '<span style="display:inline-flex;align-items:center;gap:4px;margin-right:9px;">'
+        return '<span style="display:inline-flex;align-items:center;gap:4px;">'
           + '<span style="font-size:9px;opacity:.75;">'+ico+'</span>'+formeHtml(l,5)+'</span>';
       };
+      /* UNE LIGNE PAR LIEU (02/09, demande d'Antoine). Les deux series se
+         suivaient sur la meme ligne, separees par une simple marge : sur une
+         equipe jouee des deux cotes on lisait une file de dix pastilles ou il
+         fallait retrouver soi-meme la coupure. Passer le conteneur en colonne
+         donne une ligne 🏠 et une ligne ✈️, ce qui rejoint la logique de tout le
+         reste de la carte, ventilee par lieu depuis le 22/08. */
       var forme=(_dom.n||_ext.n)
-        ? ('<span style="display:inline-flex;align-items:center;flex-wrap:wrap;">'
+        ? ('<span style="display:flex;flex-direction:column;align-items:flex-start;gap:3px;">'
             + _serieLieu('dom','\ud83c\udfe0') + _serieLieu('ext','\u2708\ufe0f') + '</span>')
         : formeHtml(paris,5);
       /* SERIE EN COURS PAR LIEU (27/08). Meme raison que la separation de la
@@ -2187,9 +2193,28 @@ function render(){
       /* Logo nettement plus present : 86 px a 18 %. Une ligne du mur faisait
          10 px de haut de matiere pour 100 % de largeur vide — l'effet « salon
          Discord » qu'Antoine veut casser. */
-      var _filig=_lu?('<img src="'+_lu+'" loading="lazy" onerror="this.style.display=\'none\'" '
-        +'style="position:absolute;right:14px;top:50%;transform:translateY(-50%);height:86px;width:86px;'
-        +'object-fit:contain;opacity:.18;filter:saturate(1.4);pointer-events:none;">'):'';
+      /* ECUSSON PORTEUR DES MONTANTS (02/09, demande d'Antoine : « les chiffres
+         peuvent-ils etre inclus dans le logo »). Avant, l'ecusson etait une
+         image posee a `right:14px` en 86x86 a 18 % — dimensionnee pour une carte
+         de 92 px. Depuis que la hauteur est reglable jusqu'a 500 px, il
+         paraissait perdu, et son centre ne tombait pas sur celui des montants.
+         Il devient donc le FOND du bloc des montants : l'alignement est acquis
+         par construction, quelle que soit la hauteur.
+         La taille suit `--g45-murh` en CSS pur — pas de recalcul JS, et le
+         curseur des Outils la fait bouger en direct. `clamp` garde 86 px au
+         minimum (le telephone ne doit rien perdre) et plafonne a 200 px pour que
+         l'ecusson ne vienne pas manger le sujet de la banniere.
+         Le halo radial est necessaire : sur un ecusson clair — le Real, le PSV —
+         le vert des gains devenait illisible malgre l'ombre portee. */
+      var _ecuTaille = 'clamp(86px, calc(var(--g45-murh,92px) * .55), 200px)';
+      var _ecuFond = _lu ? ('<img src="'+_lu+'" loading="lazy" onerror="this.style.display=\'none\'" '
+        +'style="position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);'
+        +'height:'+_ecuTaille+';width:'+_ecuTaille+';object-fit:contain;opacity:.30;'
+        +'filter:saturate(1.4);pointer-events:none;z-index:0;">'
+        +'<div style="position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);'
+        +'height:'+_ecuTaille+';width:'+_ecuTaille+';pointer-events:none;z-index:1;'
+        +'background:radial-gradient(closest-side,rgba(8,11,20,.62) 0%,rgba(8,11,20,.32) 55%,transparent 100%);"></div>') : '';
+      var _filig='';
       /* Une BANNIERE remplace le fond de la ligne ; un LOGO reste un filigrane
          centre. Tant que la mesure n'a pas eu lieu, on traite en logo — le cas
          le moins risque, puisqu'il ne recouvre rien. */
@@ -2274,13 +2299,23 @@ function render(){
           +'align-self:stretch;display:flex;flex-direction:column;justify-content:center;align-items:flex-end;'
           +'background:linear-gradient(270deg,rgba(8,11,20,.72) 0%,rgba(8,11,20,.40) 55%,transparent 100%);'
           +'text-shadow:0 1px 4px rgba(0,0,0,.95),0 0 10px rgba(0,0,0,.7);">'
-          +'<div style="font-size:14px;font-weight:800;color:'+pColor+';">'+fmt(profit)+'</div>'
+          +_ecuFond
+          +'<div style="position:relative;z-index:2;font-size:14px;font-weight:800;color:'+pColor+';">'+fmt(profit)+'</div>'
+          /* TROIS LIGNES (02/09, demande d'Antoine) : total, puis domicile, puis
+             exterieur. Les deux details tenaient sur une seule ligne separes par
+             un point median — lisible a 92 px de haut, mais tasse et illogique
+             une fois la carte montee, alors que les series a gauche sont
+             desormais ventilees ligne par ligne. Les deux colonnes se lisent
+             maintenant de la meme facon.
+             `opacity:.35` reste la marque d'un lieu sans aucun pari : le montant
+             a zero doit se distinguer d'un vrai equilibre a zero. */
           + ((_dom.n||_ext.n)
-              ? ('<div style="font-size:9px;font-weight:700;white-space:nowrap;">'
-                  +'<span style="color:'+(_dom.p>=0?'var(--g)':'var(--r)')+';opacity:'+(_dom.n?'1':'.35')+';">\ud83c\udfe0 '+fmt(_dom.p)+'</span>'
-                  +'<span style="color:var(--t3);"> · </span>'
-                  +'<span style="color:'+(_ext.p>=0?'var(--g)':'var(--r)')+';opacity:'+(_ext.n?'1':'.35')+';">\u2708\ufe0f '+fmt(_ext.p)+'</span>'
-                +'</div>')
+              ? ('<div style="position:relative;z-index:2;font-size:9px;font-weight:700;white-space:nowrap;'
+                  +'color:'+(_dom.p>=0?'var(--g)':'var(--r)')+';opacity:'+(_dom.n?'1':'.35')+';margin-top:1px;">'
+                  +'\ud83c\udfe0 '+fmt(_dom.p)+'</div>'
+                +'<div style="position:relative;z-index:2;font-size:9px;font-weight:700;white-space:nowrap;'
+                  +'color:'+(_ext.p>=0?'var(--g)':'var(--r)')+';opacity:'+(_ext.n?'1':'.35')+';">'
+                  +'\u2708\ufe0f '+fmt(_ext.p)+'</div>')
               : '')
         +'</div>'
         +'</div>';
@@ -9460,11 +9495,17 @@ function render(){
       var _serieLieu=function(lg, ico){
         var l=paris.filter(function(h){ return h.domicile===lg; });
         if(!l.length) return '';
-        return '<span style="display:inline-flex;align-items:center;gap:4px;margin-right:9px;">'
+        return '<span style="display:inline-flex;align-items:center;gap:4px;">'
           + '<span style="font-size:9px;opacity:.75;">'+ico+'</span>'+formeHtml(l,5)+'</span>';
       };
+      /* UNE LIGNE PAR LIEU (02/09, demande d'Antoine). Les deux series se
+         suivaient sur la meme ligne, separees par une simple marge : sur une
+         equipe jouee des deux cotes on lisait une file de dix pastilles ou il
+         fallait retrouver soi-meme la coupure. Passer le conteneur en colonne
+         donne une ligne 🏠 et une ligne ✈️, ce qui rejoint la logique de tout le
+         reste de la carte, ventilee par lieu depuis le 22/08. */
       var forme=(_dom.n||_ext.n)
-        ? ('<span style="display:inline-flex;align-items:center;flex-wrap:wrap;">'
+        ? ('<span style="display:flex;flex-direction:column;align-items:flex-start;gap:3px;">'
             + _serieLieu('dom','\ud83c\udfe0') + _serieLieu('ext','\u2708\ufe0f') + '</span>')
         : formeHtml(paris,5);
       /* SERIE EN COURS PAR LIEU (27/08). Meme raison que la separation de la
@@ -9529,9 +9570,28 @@ function render(){
       /* Logo nettement plus present : 86 px a 18 %. Une ligne du mur faisait
          10 px de haut de matiere pour 100 % de largeur vide — l'effet « salon
          Discord » qu'Antoine veut casser. */
-      var _filig=_lu?('<img src="'+_lu+'" loading="lazy" onerror="this.style.display=\'none\'" '
-        +'style="position:absolute;right:14px;top:50%;transform:translateY(-50%);height:86px;width:86px;'
-        +'object-fit:contain;opacity:.18;filter:saturate(1.4);pointer-events:none;">'):'';
+      /* ECUSSON PORTEUR DES MONTANTS (02/09, demande d'Antoine : « les chiffres
+         peuvent-ils etre inclus dans le logo »). Avant, l'ecusson etait une
+         image posee a `right:14px` en 86x86 a 18 % — dimensionnee pour une carte
+         de 92 px. Depuis que la hauteur est reglable jusqu'a 500 px, il
+         paraissait perdu, et son centre ne tombait pas sur celui des montants.
+         Il devient donc le FOND du bloc des montants : l'alignement est acquis
+         par construction, quelle que soit la hauteur.
+         La taille suit `--g45-murh` en CSS pur — pas de recalcul JS, et le
+         curseur des Outils la fait bouger en direct. `clamp` garde 86 px au
+         minimum (le telephone ne doit rien perdre) et plafonne a 200 px pour que
+         l'ecusson ne vienne pas manger le sujet de la banniere.
+         Le halo radial est necessaire : sur un ecusson clair — le Real, le PSV —
+         le vert des gains devenait illisible malgre l'ombre portee. */
+      var _ecuTaille = 'clamp(86px, calc(var(--g45-murh,92px) * .55), 200px)';
+      var _ecuFond = _lu ? ('<img src="'+_lu+'" loading="lazy" onerror="this.style.display=\'none\'" '
+        +'style="position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);'
+        +'height:'+_ecuTaille+';width:'+_ecuTaille+';object-fit:contain;opacity:.30;'
+        +'filter:saturate(1.4);pointer-events:none;z-index:0;">'
+        +'<div style="position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);'
+        +'height:'+_ecuTaille+';width:'+_ecuTaille+';pointer-events:none;z-index:1;'
+        +'background:radial-gradient(closest-side,rgba(8,11,20,.62) 0%,rgba(8,11,20,.32) 55%,transparent 100%);"></div>') : '';
+      var _filig='';
       /* Une BANNIERE remplace le fond de la ligne ; un LOGO reste un filigrane
          centre. Tant que la mesure n'a pas eu lieu, on traite en logo — le cas
          le moins risque, puisqu'il ne recouvre rien. */
@@ -9616,13 +9676,23 @@ function render(){
           +'align-self:stretch;display:flex;flex-direction:column;justify-content:center;align-items:flex-end;'
           +'background:linear-gradient(270deg,rgba(8,11,20,.72) 0%,rgba(8,11,20,.40) 55%,transparent 100%);'
           +'text-shadow:0 1px 4px rgba(0,0,0,.95),0 0 10px rgba(0,0,0,.7);">'
-          +'<div style="font-size:14px;font-weight:800;color:'+pColor+';">'+fmt(profit)+'</div>'
+          +_ecuFond
+          +'<div style="position:relative;z-index:2;font-size:14px;font-weight:800;color:'+pColor+';">'+fmt(profit)+'</div>'
+          /* TROIS LIGNES (02/09, demande d'Antoine) : total, puis domicile, puis
+             exterieur. Les deux details tenaient sur une seule ligne separes par
+             un point median — lisible a 92 px de haut, mais tasse et illogique
+             une fois la carte montee, alors que les series a gauche sont
+             desormais ventilees ligne par ligne. Les deux colonnes se lisent
+             maintenant de la meme facon.
+             `opacity:.35` reste la marque d'un lieu sans aucun pari : le montant
+             a zero doit se distinguer d'un vrai equilibre a zero. */
           + ((_dom.n||_ext.n)
-              ? ('<div style="font-size:9px;font-weight:700;white-space:nowrap;">'
-                  +'<span style="color:'+(_dom.p>=0?'var(--g)':'var(--r)')+';opacity:'+(_dom.n?'1':'.35')+';">\ud83c\udfe0 '+fmt(_dom.p)+'</span>'
-                  +'<span style="color:var(--t3);"> · </span>'
-                  +'<span style="color:'+(_ext.p>=0?'var(--g)':'var(--r)')+';opacity:'+(_ext.n?'1':'.35')+';">\u2708\ufe0f '+fmt(_ext.p)+'</span>'
-                +'</div>')
+              ? ('<div style="position:relative;z-index:2;font-size:9px;font-weight:700;white-space:nowrap;'
+                  +'color:'+(_dom.p>=0?'var(--g)':'var(--r)')+';opacity:'+(_dom.n?'1':'.35')+';margin-top:1px;">'
+                  +'\ud83c\udfe0 '+fmt(_dom.p)+'</div>'
+                +'<div style="position:relative;z-index:2;font-size:9px;font-weight:700;white-space:nowrap;'
+                  +'color:'+(_ext.p>=0?'var(--g)':'var(--r)')+';opacity:'+(_ext.n?'1':'.35')+';">'
+                  +'\u2708\ufe0f '+fmt(_ext.p)+'</div>')
               : '')
         +'</div>'
         +'</div>';
