@@ -21405,15 +21405,34 @@ function renderSaisonsChart(el, results, nom) {
         var qs = window._quickStats || ['O2.5','BTS'];
         var allOk = qs.every(function(k){ return MATCH_CHECKS[k]!==undefined ? MATCH_CHECKS[k] : true; });
         var barColor = allOk ? '#1ed760' : '#ff4545';
-        html += '<div onclick="toggleSaisonMatchDetail(this)" data-eid="'+(m.espnId||'')+'" data-lg="'+((m.competition&&m.competition.code)||'')+'" style="display:grid;grid-template-columns:32px 1fr auto 1fr 36px;gap:4px;align-items:center;padding:5px 8px;background:'+(isOurHome?'rgba(16,21,38,.78)':'rgba(16,21,38,.70)')+';border-radius:6px;border-left:3px solid '+barColor+';cursor:pointer;" onmouseover="this.style.opacity=\'0.8\'" onmouseout="this.style.opacity=\'1\'">';
+        /* VOILES AJUSTES AU CONTENU (02/09, retour d'Antoine : « un seul cache
+           actuellement, ce qui gache l'image de fond »). Le voile couvrait toute
+           la largeur de la ligne, donc le fond aux couleurs du club ne se voyait
+           que dans les 4 px de gouttiere entre deux lignes.
+           Chaque element porte desormais SON voile, et le fond passe entre eux.
+           Point important : le voile est pose sur les NOMS, pas sur les cellules
+           de la grille. Une cellule fait toute la largeur de sa colonne, on
+           serait revenu au meme probleme ; un nom, lui, epouse son texte. La
+           grille et ses colonnes fixes sont conservees telles quelles, donc la
+           colonne des scores reste parfaitement alignee d'une ligne a l'autre —
+           ce qui se serait perdu en centrant un bloc unique sur le contenu.
+           Meme logique que le voile ajuste au contenu des cartes du mur. */
+        var _vl = isOurHome ? 'rgba(16,21,38,.80)' : 'rgba(16,21,38,.72)';
+        html += '<div onclick="toggleSaisonMatchDetail(this)" data-eid="'+(m.espnId||'')+'" data-lg="'+((m.competition&&m.competition.code)||'')+'" style="display:grid;grid-template-columns:32px 1fr auto 1fr 36px;gap:6px;align-items:center;padding:2px 0;cursor:pointer;" onmouseover="this.style.opacity=\'0.8\'" onmouseout="this.style.opacity=\'1\'">';
         // Date
-        html += '<div style="font-size:9px;color:var(--t3);text-align:center;">'+dateStr+'</div>';
+        html += '<div style="font-size:9px;color:var(--t3);text-align:center;background:'+_vl+';border-radius:6px;border-left:3px solid '+barColor+';padding:4px 3px;">'+dateStr+'</div>';
         // Equipe dom
-        html += '<div style="font-size:10px;font-weight:'+(isOurHome?'800':'400')+';color:'+(isOurHome?'var(--t1)':'var(--t2)')+';text-align:right;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;">'+(isOurHome?_scMark:'')+homeName+'</div>';
+        html += '<div style="text-align:right;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;">'
+          +'<span style="display:inline-block;max-width:100%;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;vertical-align:middle;'
+          +'background:'+_vl+';border-radius:6px;padding:4px 8px;font-size:10px;font-weight:'+(isOurHome?'800':'400')+';color:'+(isOurHome?'var(--t1)':'var(--t2)')+';">'
+          +(isOurHome?_scMark:'')+homeName+'</span></div>';
         // Score
-        html += '<div style="font-size:11px;font-weight:800;color:'+rc+';text-align:center;min-width:40px;">'+hg+' - '+ag+'</div>';
+        html += '<div style="font-size:11px;font-weight:800;color:'+rc+';text-align:center;min-width:40px;background:'+_vl+';border-radius:6px;padding:4px 6px;">'+hg+' - '+ag+'</div>';
         // Equipe ext
-        html += '<div style="font-size:10px;font-weight:'+(!isOurHome?'800':'400')+';color:'+(!isOurHome?'var(--t1)':'var(--t2)')+';overflow:hidden;white-space:nowrap;text-overflow:ellipsis;">'+(!isOurHome?_scMark:'')+awayName+'</div>';
+        html += '<div style="overflow:hidden;white-space:nowrap;text-overflow:ellipsis;">'
+          +'<span style="display:inline-block;max-width:100%;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;vertical-align:middle;'
+          +'background:'+_vl+';border-radius:6px;padding:4px 8px;font-size:10px;font-weight:'+(!isOurHome?'800':'400')+';color:'+(!isOurHome?'var(--t1)':'var(--t2)')+';">'
+          +(!isOurHome?_scMark:'')+awayName+'</span></div>';
         // Over/BTS
         var badges = '';
         var qs = window._quickStats || ['O2.5','BTS'];
@@ -21442,7 +21461,7 @@ function renderSaisonsChart(el, results, nom) {
         var _coteMatch = (typeof _g45CoteDuMatch === 'function')
           ? _g45CoteDuMatch(m.espnId, isDom) : null;
         if (_coteMatch) badges += '<span style="color:#9fb0c7;">@' + _coteMatch.toFixed(2) + '</span> ';
-        html += '<div style="font-size:8px;text-align:right;min-width:40px;">'+compIco+'<br>'+badges+'</div>';
+        html += '<div style="font-size:8px;text-align:right;min-width:40px;background:'+_vl+';border-radius:6px;padding:3px 4px;">'+compIco+'<br>'+badges+'</div>';
         html += '</div>';
         html += '<div class="smd-panel" style="display:none;"></div>';
       });
