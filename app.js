@@ -2076,7 +2076,10 @@ function render(){
       +'<td style="color:var(--gold);font-weight:700;">'+h.m+'€</td>'
       +'<td style="text-align:right;white-space:nowrap"><button data-id="'+h.id+'" onclick="openBetLive(this.dataset.id)" title="Voir le match live" style="display:inline-flex;align-items:center;padding:5px 7px;background:rgba(167,139,250,.12);border:1px solid rgba(167,139,250,.3);border-radius:4px;color:#a78bfa;font-size:11px;font-weight:700;cursor:pointer;margin-right:3px;">\ud83d\udce1</button><a href="https://www.google.com/search?q='+encodeURIComponent(h.target+' sofascore résumé')+'" target="_blank" style="display:inline-flex;align-items:center;padding:5px 7px;background:rgba(77,132,255,.1);border:1px solid rgba(77,132,255,.25);border-radius:4px;color:#4d84ff;font-size:11px;font-weight:700;text-decoration:none;margin-right:3px;" title="Résumé">🔍</a><button class="sbtn sw" data-id="'+h.id+'" onclick="result(this.dataset.id,true)" style="margin-right:3px">✅</button><button class="sbtn sl" data-id="'+h.id+'" onclick="result(this.dataset.id,false)" style="margin-right:3px">❌</button><button data-id="'+h.id+'" onclick="editBet(this.dataset.id)" style="background:none;border:1px solid rgba(77,132,255,.25);color:var(--a);font-size:11px;font-weight:700;padding:5px 8px;border-radius:4px;cursor:pointer;margin-right:3px">✏️</button><button data-id="'+h.id+'" onclick="cancelBet(this.dataset.id)" style="background:none;border:1px solid rgba(255,69,69,.25);color:var(--r);font-size:11px;font-weight:700;padding:5px 8px;border-radius:4px;cursor:pointer">✕</button></td>'
       +'</tr>';
-  }).join('')||'<tr><td colspan="5" class="empty">Aucun pari en cours</td></tr>';
+  /* ETAT VIDE QUI INVITE (02/09). « Aucun pari en cours » constatait sans rien
+     proposer. C'est pourtant le tout premier ecran que verra quelqu'un qui
+     ouvre l'appli pour la premiere fois : autant qu'il dise quoi faire. */
+  }).join('')||'<tr><td colspan="5" class="empty">Aucun pari en cours.<br><span style="color:var(--t3);font-size:12px;">Renseigne un match ci-dessus pour lancer ta première montante.</span></td></tr>';
 
   $i('live-norm').innerHTML=state.h.filter(function(x){return !x.isS;}).map(function(h){
     return '<tr>'
@@ -2086,7 +2089,7 @@ function render(){
       +'<td style="color:var(--gold);font-weight:700;">'+h.m+'€</td>'
       +'<td style="text-align:right;white-space:nowrap"><button data-id="'+h.id+'" onclick="openBetLive(this.dataset.id)" title="Voir le match live" style="display:inline-flex;align-items:center;padding:5px 7px;background:rgba(167,139,250,.12);border:1px solid rgba(167,139,250,.3);border-radius:4px;color:#a78bfa;font-size:11px;font-weight:700;cursor:pointer;margin-right:3px;">\ud83d\udce1</button><a href="https://www.google.com/search?q='+encodeURIComponent(h.target+' sofascore résumé')+'" target="_blank" style="display:inline-flex;align-items:center;padding:5px 7px;background:rgba(77,132,255,.1);border:1px solid rgba(77,132,255,.25);border-radius:4px;color:#4d84ff;font-size:11px;font-weight:700;text-decoration:none;margin-right:3px;" title="Résumé">🔍</a><button class="sbtn sw" data-id="'+h.id+'" onclick="result(this.dataset.id,true)" style="margin-right:3px">✅</button><button class="sbtn sl" data-id="'+h.id+'" onclick="result(this.dataset.id,false)" style="margin-right:3px">❌</button><button data-id="'+h.id+'" onclick="editBet(this.dataset.id)" style="background:none;border:1px solid rgba(77,132,255,.25);color:var(--a);font-size:11px;font-weight:700;padding:5px 8px;border-radius:4px;cursor:pointer;margin-right:3px">✏️</button><button data-id="'+h.id+'" onclick="cancelBet(this.dataset.id)" style="background:none;border:1px solid rgba(255,69,69,.25);color:var(--r);font-size:11px;font-weight:700;padding:5px 8px;border-radius:4px;cursor:pointer">✕</button></td>'
       +'</tr>';
-  }).join('')||'<tr><td colspan="3" class="empty">Aucun pari en cours</td></tr>';
+  }).join('')||'<tr><td colspan="3" class="empty">Aucun pari en cours.<br><span style="color:var(--t3);font-size:12px;">Les paris simples et combinés enregistrés s\'afficheront ici.</span></td></tr>';
 
   /* dash units */
   $i('dash-units').innerHTML=state.u.length?state.u.map(function(u){
@@ -4695,6 +4698,22 @@ var mmRows=[
 ];
 var MM_TYPES=['Victoire','Nul','Défaite','Domicile ou nul','Extérieur ou nul','BTS Oui','BTS Non','Over 1.5','Over 2.5','Under 2.5','HC -1','HC +1','Mi-temps','Buteur','Passeur','Décisif'];
 
+/* MARCHES GROUPES PAR FAMILLE (02/09, refonte de la page Pari). Les seize
+   marches etaient affiches a plat, en seize pastilles identiques. Ils ne sont
+   pourtant pas equivalents : on cherche un resultat, OU un nombre de buts, OU
+   une performance de joueur. Il fallait donc balayer les seize a chaque fois.
+   Les familles rendent la recherche directe.
+   IMPORTANT : `MM_TYPES` reste la liste de reference, utilisee ailleurs dans le
+   fichier ; ce regroupement ne fait que decrire l'ORDRE D'AFFICHAGE. Les
+   libelles enregistres ne changent pas d'un caractere — un pari deja en base
+   reste lisible, et rien ne casse dans le bilan ni dans les archives. */
+var MM_GROUPES=[
+  {g:'Résultat', t:['Victoire','Nul','Défaite','Domicile ou nul','Extérieur ou nul','Mi-temps']},
+  {g:'Buts',     t:['BTS Oui','BTS Non','Over 1.5','Over 2.5','Under 2.5']},
+  {g:'Handicap', t:['HC -1','HC +1']},
+  {g:'Joueur',   t:['Buteur','Passeur','Décisif']}
+];
+
 function renderMmRows(){
   var sel=$i('mm-sel');if(!sel)return;
   sel.innerHTML=mmRows.map(function(r,i){
@@ -4705,8 +4724,14 @@ function renderMmRows(){
       +'</div>';
   }).join('');
   var types=$i('mm-types');
-  if(types)types.innerHTML=MM_TYPES.map(function(t){
-    return '<button class="mm-type" onclick="addMmType(\''+t+'\')">'+ t+'</button>';
+  if(types)types.innerHTML=MM_GROUPES.map(function(f){
+    /* Un marche deja choisi est grise : le proposer encore alors qu'`addMmType`
+       le refuse silencieusement laissait croire a un clic sans effet. */
+    return '<div class="mm-fam"><span>'+f.g+'</span></div>'
+      + '<div class="mm-types-g">' + f.t.map(function(t){
+          var pris = mmRows.some(function(r){ return r.type===t; });
+          return '<button class="mm-type'+(pris?' pris':'')+'" onclick="addMmType(\''+t+'\')">'+t+'</button>';
+        }).join('') + '</div>';
   }).join('');
   renderMmCote();
 }
@@ -9458,7 +9483,10 @@ function render(){
       +'<td style="color:var(--gold);font-weight:700;">'+h.m+'€</td>'
       +'<td style="text-align:right;white-space:nowrap"><button data-id="'+h.id+'" onclick="openBetLive(this.dataset.id)" title="Voir le match live" style="display:inline-flex;align-items:center;padding:5px 7px;background:rgba(167,139,250,.12);border:1px solid rgba(167,139,250,.3);border-radius:4px;color:#a78bfa;font-size:11px;font-weight:700;cursor:pointer;margin-right:3px;">\ud83d\udce1</button><a href="https://www.google.com/search?q='+encodeURIComponent(h.target+' sofascore résumé')+'" target="_blank" style="display:inline-flex;align-items:center;padding:5px 7px;background:rgba(77,132,255,.1);border:1px solid rgba(77,132,255,.25);border-radius:4px;color:#4d84ff;font-size:11px;font-weight:700;text-decoration:none;margin-right:3px;" title="Résumé">🔍</a><button class="sbtn sw" data-id="'+h.id+'" onclick="result(this.dataset.id,true)" style="margin-right:3px">✅</button><button class="sbtn sl" data-id="'+h.id+'" onclick="result(this.dataset.id,false)" style="margin-right:3px">❌</button><button data-id="'+h.id+'" onclick="editBet(this.dataset.id)" style="background:none;border:1px solid rgba(77,132,255,.25);color:var(--a);font-size:11px;font-weight:700;padding:5px 8px;border-radius:4px;cursor:pointer;margin-right:3px">✏️</button><button data-id="'+h.id+'" onclick="cancelBet(this.dataset.id)" style="background:none;border:1px solid rgba(255,69,69,.25);color:var(--r);font-size:11px;font-weight:700;padding:5px 8px;border-radius:4px;cursor:pointer">✕</button></td>'
       +'</tr>';
-  }).join('')||'<tr><td colspan="5" class="empty">Aucun pari en cours</td></tr>';
+  /* ETAT VIDE QUI INVITE (02/09). « Aucun pari en cours » constatait sans rien
+     proposer. C'est pourtant le tout premier ecran que verra quelqu'un qui
+     ouvre l'appli pour la premiere fois : autant qu'il dise quoi faire. */
+  }).join('')||'<tr><td colspan="5" class="empty">Aucun pari en cours.<br><span style="color:var(--t3);font-size:12px;">Renseigne un match ci-dessus pour lancer ta première montante.</span></td></tr>';
 
   $i('live-norm').innerHTML=state.h.filter(function(x){return !x.isS;}).map(function(h){
     return '<tr>'
@@ -9468,7 +9496,7 @@ function render(){
       +'<td style="color:var(--gold);font-weight:700;">'+h.m+'€</td>'
       +'<td style="text-align:right;white-space:nowrap"><button data-id="'+h.id+'" onclick="openBetLive(this.dataset.id)" title="Voir le match live" style="display:inline-flex;align-items:center;padding:5px 7px;background:rgba(167,139,250,.12);border:1px solid rgba(167,139,250,.3);border-radius:4px;color:#a78bfa;font-size:11px;font-weight:700;cursor:pointer;margin-right:3px;">\ud83d\udce1</button><a href="https://www.google.com/search?q='+encodeURIComponent(h.target+' sofascore résumé')+'" target="_blank" style="display:inline-flex;align-items:center;padding:5px 7px;background:rgba(77,132,255,.1);border:1px solid rgba(77,132,255,.25);border-radius:4px;color:#4d84ff;font-size:11px;font-weight:700;text-decoration:none;margin-right:3px;" title="Résumé">🔍</a><button class="sbtn sw" data-id="'+h.id+'" onclick="result(this.dataset.id,true)" style="margin-right:3px">✅</button><button class="sbtn sl" data-id="'+h.id+'" onclick="result(this.dataset.id,false)" style="margin-right:3px">❌</button><button data-id="'+h.id+'" onclick="editBet(this.dataset.id)" style="background:none;border:1px solid rgba(77,132,255,.25);color:var(--a);font-size:11px;font-weight:700;padding:5px 8px;border-radius:4px;cursor:pointer;margin-right:3px">✏️</button><button data-id="'+h.id+'" onclick="cancelBet(this.dataset.id)" style="background:none;border:1px solid rgba(255,69,69,.25);color:var(--r);font-size:11px;font-weight:700;padding:5px 8px;border-radius:4px;cursor:pointer">✕</button></td>'
       +'</tr>';
-  }).join('')||'<tr><td colspan="3" class="empty">Aucun pari en cours</td></tr>';
+  }).join('')||'<tr><td colspan="3" class="empty">Aucun pari en cours.<br><span style="color:var(--t3);font-size:12px;">Les paris simples et combinés enregistrés s\'afficheront ici.</span></td></tr>';
 
   /* dash units */
   $i('dash-units').innerHTML=state.u.length?state.u.map(function(u){
@@ -11778,6 +11806,22 @@ var mmRows=[
 ];
 var MM_TYPES=['Victoire','Nul','Défaite','Domicile ou nul','Extérieur ou nul','BTS Oui','BTS Non','Over 1.5','Over 2.5','Under 2.5','HC -1','HC +1','Mi-temps','Buteur','Passeur','Décisif'];
 
+/* MARCHES GROUPES PAR FAMILLE (02/09, refonte de la page Pari). Les seize
+   marches etaient affiches a plat, en seize pastilles identiques. Ils ne sont
+   pourtant pas equivalents : on cherche un resultat, OU un nombre de buts, OU
+   une performance de joueur. Il fallait donc balayer les seize a chaque fois.
+   Les familles rendent la recherche directe.
+   IMPORTANT : `MM_TYPES` reste la liste de reference, utilisee ailleurs dans le
+   fichier ; ce regroupement ne fait que decrire l'ORDRE D'AFFICHAGE. Les
+   libelles enregistres ne changent pas d'un caractere — un pari deja en base
+   reste lisible, et rien ne casse dans le bilan ni dans les archives. */
+var MM_GROUPES=[
+  {g:'Résultat', t:['Victoire','Nul','Défaite','Domicile ou nul','Extérieur ou nul','Mi-temps']},
+  {g:'Buts',     t:['BTS Oui','BTS Non','Over 1.5','Over 2.5','Under 2.5']},
+  {g:'Handicap', t:['HC -1','HC +1']},
+  {g:'Joueur',   t:['Buteur','Passeur','Décisif']}
+];
+
 function renderMmRows(){
   var sel=$i('mm-sel');if(!sel)return;
   sel.innerHTML=mmRows.map(function(r,i){
@@ -11788,8 +11832,14 @@ function renderMmRows(){
       +'</div>';
   }).join('');
   var types=$i('mm-types');
-  if(types)types.innerHTML=MM_TYPES.map(function(t){
-    return '<button class="mm-type" onclick="addMmType(\''+t+'\')">'+ t+'</button>';
+  if(types)types.innerHTML=MM_GROUPES.map(function(f){
+    /* Un marche deja choisi est grise : le proposer encore alors qu'`addMmType`
+       le refuse silencieusement laissait croire a un clic sans effet. */
+    return '<div class="mm-fam"><span>'+f.g+'</span></div>'
+      + '<div class="mm-types-g">' + f.t.map(function(t){
+          var pris = mmRows.some(function(r){ return r.type===t; });
+          return '<button class="mm-type'+(pris?' pris':'')+'" onclick="addMmType(\''+t+'\')">'+t+'</button>';
+        }).join('') + '</div>';
   }).join('');
   renderMmCote();
 }

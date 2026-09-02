@@ -299,9 +299,13 @@ input[type="date"],input[type="time"]{color-scheme:dark;}
 
 /* MYMATCH */
 .mm-wrap{background:var(--bg2);border:1px solid var(--card-border,rgba(77,132,255,.3));border-radius:var(--r8);padding:13px;margin-bottom:10px;box-shadow:var(--card-glow,0 0 12px rgba(77,132,255,.15),0 0 3px rgba(77,132,255,.25));}
-.mm-title{font-size:9px;font-weight:700;letter-spacing:1px;color:var(--t3);text-transform:uppercase;margin-bottom:10px;display:flex;align-items:center;justify-content:space-between;}
+/* Meme correction que `.sec` : la hierarchie passe par la taille et la famille
+   condensee, plus par des capitales interlettrees. */
+.mm-title{font-family:var(--ff-t);font-size:19px;font-weight:600;letter-spacing:.2px;color:var(--t1);margin-bottom:11px;display:flex;align-items:center;justify-content:space-between;gap:10px;line-height:1.1;}
 .mm-sel{display:flex;flex-direction:column;gap:6px;margin-bottom:10px;}
-.mm-row{display:flex;align-items:center;gap:7px;background:var(--bg3);border-radius:var(--r6);padding:8px 10px;border:1px solid rgba(77,132,255,.2);}
+/* Le cadre bleu complet devient un filet or a gauche : il signale la ligne
+   sans l'enfermer, et laisse le bleu aux commandes. */
+.mm-row{display:flex;align-items:center;gap:7px;background:rgba(255,255,255,.05);border-radius:var(--r4);padding:7px 9px;border:1px solid var(--b1);border-left:2px solid var(--or);}
 .mm-lbl{flex:1;font-size:12px;font-weight:600;color:var(--t1);background:var(--bg2);border:1px solid var(--b2);border-radius:var(--r4);padding:5px 8px;}
 .mm-cote{width:65px;padding:5px 8px;background:var(--bg);border:1px solid var(--b2);border-radius:var(--r4);color:var(--a);font-weight:700;font-size:12px;text-align:center;}
 .mm-del{background:none;border:none;color:var(--t3);cursor:pointer;font-size:14px;padding:0 3px;}
@@ -312,7 +316,17 @@ input[type="date"],input[type="time"]{color-scheme:dark;}
    de rangee. En grille, toutes font la meme largeur et les colonnes s'alignent.
    Le nombre de colonnes suit la largeur disponible — quatre sur telephone,
    davantage sur PC — sans media query. */
-.mm-types{display:grid;grid-template-columns:repeat(auto-fill,minmax(88px,1fr));gap:6px;margin-bottom:11px;}
+/* Le conteneur n'est plus une grille : il empile des familles, et c'est
+   CHAQUE famille qui porte sa grille. Sans ca, les intitules de famille
+   auraient ete traites comme des cases de la grille. */
+.mm-types{margin-bottom:11px;}
+.mm-types-g{display:grid;grid-template-columns:repeat(auto-fill,minmax(88px,1fr));gap:5px;}
+.mm-fam{display:flex;align-items:center;gap:9px;margin:13px 0 6px;}
+.mm-fam:first-child{margin-top:0;}
+.mm-fam span{font-family:var(--ff-t);font-size:14px;font-weight:600;color:var(--t1);}
+.mm-fam::after{content:'';flex:1;height:1px;background:var(--b1);}
+/* Marche deja pris : visible mais manifestement inactif. */
+.mm-type.pris{opacity:.34;}
 .mm-type{padding:4px 10px;border-radius:12px;border:1px solid var(--b2);background:none;color:var(--t3);font-size:10px;font-weight:700;cursor:pointer;transition:all .12s;}
 .mm-type.on{background:var(--a);border-color:var(--a);color:#fff;}
 .mm-cote-total{background:var(--bg3);border-radius:var(--r4);padding:9px 12px;display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;}
@@ -373,6 +387,11 @@ input[type="date"],input[type="time"]{color-scheme:dark;}
   #t-chat{display:none !important;}
   .main{max-width:100%;padding:14px 20px;}
 }
+/* Formulaires bornes sur grand ecran (02/09). Voir `g45-form` dans les pages. */
+@media(min-width:1100px){
+  .g45-form{max-width:640px;}
+}
+
 @media(min-width:1400px){
   body{padding-left:280px;padding-right:320px;}
   .note-sidebar{width:280px;}
