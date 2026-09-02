@@ -2300,7 +2300,7 @@ function render(){
         +forme
         +serieFeu
         +'</div>'
-        +'<div style="position:relative;margin-left:auto;text-align:right;line-height:1.25;padding:4px 9px 4px 18px;border-radius:10px;'
+        +'<div class="g45-murval" style="position:relative;margin-left:auto;text-align:right;line-height:1.25;padding:4px 9px 4px 18px;border-radius:10px;'
           +'align-self:stretch;display:flex;flex-direction:column;justify-content:center;align-items:flex-end;'
           +'background:linear-gradient(270deg,rgba(8,11,20,.72) 0%,rgba(8,11,20,.40) 55%,transparent 100%);'
           +'text-shadow:0 1px 4px rgba(0,0,0,.95),0 0 10px rgba(0,0,0,.7);">'
@@ -9682,7 +9682,7 @@ function render(){
         +forme
         +serieFeu
         +'</div>'
-        +'<div style="position:relative;margin-left:auto;text-align:right;line-height:1.25;padding:4px 9px 4px 18px;border-radius:10px;'
+        +'<div class="g45-murval" style="position:relative;margin-left:auto;text-align:right;line-height:1.25;padding:4px 9px 4px 18px;border-radius:10px;'
           +'align-self:stretch;display:flex;flex-direction:column;justify-content:center;align-items:flex-end;'
           +'background:linear-gradient(270deg,rgba(8,11,20,.72) 0%,rgba(8,11,20,.40) 55%,transparent 100%);'
           +'text-shadow:0 1px 4px rgba(0,0,0,.95),0 0 10px rgba(0,0,0,.7);">'
@@ -43030,7 +43030,16 @@ function _g45MurHStyle() {
     + '.g45-ecu,.g45-ecu-halo{width:var(--g45-ecut);height:var(--g45-ecut);}'
     + '.g45-ecu{opacity:.18;}'
     + '.g45-ecu-halo{opacity:.45;}'
+    /* PLEINE HAUTEUR : GRAND ECRAN SEULEMENT (02/09, retour d'Antoine : « a cette
+       allure sur tel on va remplir l'image »). Etirer les deux blocs du haut en
+       bas encadre joliment une carte de 1580 px de large, ou le bloc texte ne
+       prend que 45 %. Sur telephone il en prend 72 %, et le meme etirement
+       transforme le voile en rideau qui recouvre presque toute la photo.
+       On revient donc au comportement d'origine — blocs centres verticalement —
+       en dessous de 700 px. */
+    + '.g45-murtxt,.g45-murval{align-self:center !important;}'
     + '@media(min-width:700px){'
+      + '.g45-murtxt,.g45-murval{align-self:stretch !important;}'
       + ':root{--g45-ecut:clamp(86px,calc(var(--g45-murh,92px) * .55),200px);}'
       + '.g45-murtxt{max-width:45% !important;}'
       + '.g45-ecu{opacity:.30;}'
