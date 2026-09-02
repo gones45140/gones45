@@ -573,3 +573,13 @@ input[type="date"],input[type="time"]{color-scheme:dark;}
 .g45-nu-tbl .ltbl td{background:rgba(11,16,26,.74);}
 .g45-nu-tbl .ltbl th{background:none;text-shadow:0 1px 4px rgba(0,0,0,.85);}
 .g45-nu-tbl .ltbl .empty{background:rgba(11,16,26,.62);}
+
+/* Options d'un pari (freebet, lay, boost, notifications) — 02/09.
+   Chacune etait un pave pleine largeur avec sa propre couleur de fond, son
+   emoji et une mention grise a droite : quatre couleurs concurrentes dans le
+   pari simple, pour quatre cases a cocher. Une case a cocher se voit deja
+   toute seule. Seule la couleur de la COCHE est conservee — elle distingue les
+   options d'un coup d'oeil sans peser sur la mise en page. */
+.g45-opt{display:flex;align-items:center;gap:9px;cursor:pointer;padding:7px 2px;font-size:13px;color:var(--t1);}
+.g45-opt + .g45-opt{border-top:1px solid var(--b1);}
+.g45-nu .g45-opt{text-shadow:0 1px 4px rgba(0,0,0,.85);}
