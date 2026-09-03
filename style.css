@@ -707,11 +707,19 @@ input[type="date"],input[type="time"]{color-scheme:dark;}
 /* L'equipe suivie ressort — on la repere sans lire. */
 .g45-mt-li.moi>span{color:var(--or);font-weight:600;}
 
+/* Les images-cles sont declarees HORS media query : a l'interieur, certains
+   navigateurs ne les retrouvent pas quand l'animation est appliquee ailleurs.
+   Le defilement va de la droite vers la gauche — la piste glisse vers les
+   valeurs negatives, donc le contenu entre par la droite. */
+@keyframes g45def{from{transform:translateX(0);}to{transform:translateX(-50%);}}
 @media (hover:hover) and (min-width:1100px){
   .g45-band{overflow:hidden;}
-  .g45-band-track{animation:g45def linear infinite;}
+  /* DUREE PAR DEFAUT (03/09). Elle etait absente ici et posee uniquement en
+     JavaScript : la forme courte `animation` la ramenait donc a 0s, et il
+     suffisait que le calcul echoue pour que la bande reste figee. Les 30s sont
+     un repli ; le JavaScript ajuste ensuite selon le nombre de matchs. */
+  .g45-band-track{animation:g45def 30s linear infinite;}
   .g45-band:hover .g45-band-track{animation-play-state:paused;}
-  @keyframes g45def{from{transform:translateX(0);}to{transform:translateX(-50%);}}
 }
 /* Un mouvement continu gene une partie des lecteurs ; le systeme sait le dire. */
 @media (prefers-reduced-motion:reduce){

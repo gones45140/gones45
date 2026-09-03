@@ -44289,7 +44289,7 @@ function _g45BandTuile(ev, monNom) {
   var etat = live
     ? '<span class="g45-mt-st live"><span class="g45-mt-pt"></span>' + (st.shortDetail || 'En direct') + '</span>'
     : (fin ? '<span class="g45-mt-st">Terminé</span>'
-           : '<span class="g45-mt-st soon">' + _g45BandHeure(ev.date) + '</span>');
+           : '<span class="g45-mt-st soon">' + _g45BandQuand(ev.date) + '</span>');
 
   /* Domicile en bas, comme sur les tableaux de scores : c'est la convention
      americaine d'ESPN et celle des chaines sportives. */
@@ -44315,6 +44315,19 @@ function _g45BandTuile(ev, monNom) {
     + etat
     + '<span class="g45-mt-eq">' + ligne(ext, dom) + ligne(dom, ext) + '</span>'
     + '</button>';
+}
+
+/* « 19:00 » tout seul laisserait croire a un match du soir meme. On prefixe donc
+   par « Demain » des que la date n'est pas celle du jour — et on descend a
+   l'heure seule pour aujourd'hui, ou la precision suffit. */
+function _g45BandQuand(iso) {
+  try {
+    var d = new Date(iso), n = new Date();
+    var meme = d.toDateString() === n.toDateString();
+    var lend = d.toDateString() === new Date(Date.now() + 86400000).toDateString();
+    var h = _g45BandHeure(iso);
+    return meme ? h : (lend ? 'Demain ' + h : d.getDate() + '/' + (d.getMonth() + 1) + ' ' + h);
+  } catch (e) { return _g45BandHeure(iso); }
 }
 
 function _g45BandHeure(iso) {
@@ -44347,6 +44360,7 @@ async function g45BandeauMaj() {
 
   var auj = _g45BandJour(new Date());
   var hier = _g45BandJour(new Date(Date.now() - 86400000));
+  var demain = _g45BandJour(new Date(Date.now() + 86400000));
 
   var trouves = [], enCours = false;
   var passe = async function (jour) {
@@ -44377,8 +44391,17 @@ async function g45BandeauMaj() {
     return out;
   };
 
+  /* AUJOURD'HUI, PUIS HIER, PUIS DEMAIN (03/09).
+     Un bandeau de scores parle d'abord du present : tant qu'un match du jour
+     existe, rien d'autre ne s'affiche. Sans match aujourd'hui on regarde hier —
+     c'est le matin qu'on ouvre l'appli pour voir ce qui s'est passe. Et si les
+     deux sont vides, on annonce le prochain rendez-vous plutot que de masquer le
+     bandeau : Antoine suit une poignee d'equipes qui ne jouent pas tous les
+     jours, la bande serait absente la plupart du temps.
+     L'ordre compte : jamais de futur quand il y a du present. */
   trouves = await passe(auj);
   if (!trouves.length) trouves = await passe(hier);
+  if (!trouves.length) trouves = await passe(demain);
   if (!trouves.length) { box.style.display = 'none'; return; }
 
   /* En cours d'abord, puis a venir, puis termines : l'ordre d'interet. */
