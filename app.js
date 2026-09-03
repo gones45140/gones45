@@ -44284,7 +44284,7 @@ function _g45BandTuile(ev, monNom) {
   var cs = comp.competitors || [];
   if (cs.length < 2) return '';
   var st = (ev.status && ev.status.type) || {};
-  var live = st.state === 'in', fin = st.state === 'post';
+  var live = st.state === 'in', fin = st.state === 'post', pre = st.state === 'pre';
 
   var etat = live
     ? '<span class="g45-mt-st live"><span class="g45-mt-pt"></span>' + (st.shortDetail || 'En direct') + '</span>'
@@ -44298,7 +44298,11 @@ function _g45BandTuile(ev, monNom) {
 
   var ligne = function (c, autre) {
     var n = (c.team && (c.team.shortDisplayName || c.team.displayName || c.team.abbreviation)) || '';
-    var sc = (c.score != null && c.score !== '') ? c.score : '';
+    /* AUCUN SCORE AVANT LE COUP D'ENVOI (corrige le 03/09). ESPN renvoie « 0 »
+       pour un match a venir ; affiche tel quel, cela ressemblait a un 0-0 en
+       cours alors que la rencontre commence a 3h40. On n'affiche un chiffre que
+       si le match a demarre. */
+    var sc = (!pre && c.score != null && c.score !== '') ? c.score : '';
     var perd = (fin || live) && sc !== '' && autre.score !== '' &&
                parseFloat(sc) < parseFloat(autre.score);
     var moi = _g45BandMeme(n, monNom) ||
@@ -44347,17 +44351,27 @@ async function g45BandeauMaj() {
   var trouves = [], enCours = false;
   var passe = async function (jour) {
     var out = [];
+    /* DEDUPLICATION PAR IDENTIFIANT (corrige le 03/09 : « Athletics-Mariners »
+       apparaissait trois fois). Antoine suit les deux equipes d'un meme match,
+       et la boucle poussait une entree par equipe reconnue. Le test portait sur
+       `out.indexOf(ev)` alors qu'`out` contient des objets `{ev, n}` — il ne
+       trouvait donc jamais rien. On indexe desormais par `ev.id`, et la premiere
+       equipe reconnue est celle qui sera mise en avant dans la tuile. */
+    var vus = {};
     var lots = await Promise.all(chemins.map(function (ch) { return _g45BandScores(ch, jour); }));
     lots.forEach(function (evs, i) {
       var noms = parChemin[chemins[i]];
       (evs || []).forEach(function (ev) {
+        var id = ev.id || ev.uid || '';
+        if (vus[id]) return;
         var comp = (ev.competitions && ev.competitions[0]) || {};
+        var trouve = null;
         (comp.competitors || []).forEach(function (c) {
+          if (trouve) return;
           var dn = (c.team && (c.team.displayName || c.team.shortDisplayName)) || '';
-          noms.forEach(function (n) {
-            if (_g45BandMeme(dn, n) && out.indexOf(ev) < 0) out.push({ ev: ev, n: n });
-          });
+          noms.forEach(function (n) { if (!trouve && _g45BandMeme(dn, n)) trouve = n; });
         });
+        if (trouve) { vus[id] = 1; out.push({ ev: ev, n: trouve }); }
       });
     });
     return out;
