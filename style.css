@@ -214,7 +214,9 @@ input[type="date"],input[type="time"]{color-scheme:dark;}
 /* BOOKS */
 .bgrid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px;}
 .btile{background:var(--s1);border:1px solid var(--card-border,rgba(77,132,255,.25));border-radius:var(--r8);padding:11px 13px;border-left:3px solid var(--bc,var(--a));box-shadow:var(--card-glow,0 0 10px rgba(77,132,255,.12));}
-.btile-n{font-size:9px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;color:var(--t2);margin-bottom:3px;}
+/* Nom de compte : ni capitales ni interlettrage, comme partout ailleurs depuis
+   le 02/09. La couleur du compte reste portee par le lisere et la pastille. */
+.btile-n{font-size:12.5px;font-weight:600;letter-spacing:0;color:var(--t1);margin-bottom:3px;}
 .btile-v{font-size:17px;font-weight:800;}
 .btile-acts{display:flex;gap:5px;margin-top:7px;}
 
@@ -286,7 +288,12 @@ input[type="date"],input[type="time"]{color-scheme:dark;}
    reste de l'interface. */
 .calc-tabs{display:flex;gap:2px;border-bottom:1px solid var(--b1);margin-bottom:15px;overflow-x:auto;scrollbar-width:none;}
 .calc-tabs::-webkit-scrollbar{display:none;}
-.ctbtn{flex:1 0 auto;padding:8px 13px;font-size:12.5px;font-weight:500;text-align:center;border-radius:0;cursor:pointer;color:var(--t3);border:0;border-bottom:2px solid transparent;margin-bottom:-1px;background:none;transition:color .2s,border-color .2s;letter-spacing:0;white-space:nowrap;}
+/* CONTRASTE (03/09, retour d'Antoine : « le type de calculatrice est très peu
+   visible sur tel »). Depuis que le panneau opaque a disparu, ces onglets sont
+   poses directement sur la photo de fond : le gris `--t3`, calcule pour un aplat
+   sombre, s'y effacait completement. Teinte plus claire et ombre portee — la
+   meme correction que sur les autres libelles passes au-dessus du fond. */
+.ctbtn{flex:1 0 auto;padding:8px 13px;font-size:12.5px;font-weight:500;text-align:center;border-radius:0;cursor:pointer;color:var(--t2);text-shadow:0 1px 4px rgba(0,0,0,.9);border:0;border-bottom:2px solid transparent;margin-bottom:-1px;background:none;transition:color .2s,border-color .2s;letter-spacing:0;white-space:nowrap;}
 .ctbtn.on{color:var(--t1);border-bottom-color:var(--or);}
 
 /* Le chiffre que l'on vient chercher — profit garanti, cash garanti — avait
@@ -389,16 +396,20 @@ input[type="date"],input[type="time"]{color-scheme:dark;}
   /* BLOC-NOTE — gauche */
   .note-sidebar{
     width:260px;position:fixed;left:0;top:52px;bottom:68px;
-    background:var(--bg2);border-right:1px solid rgba(77,132,255,.35);
-    box-shadow:2px 0 16px rgba(77,132,255,.12);
+    background:linear-gradient(90deg,rgba(9,13,22,.88) 0%,rgba(9,13,22,.74) 100%);
+    backdrop-filter:blur(3px);-webkit-backdrop-filter:blur(3px);
+    border-right:1px solid var(--b1);
+    box-shadow:none;
     display:flex !important;flex-direction:column;padding:12px;z-index:100;box-sizing:border-box;
     overflow:hidden;
   }
   /* CHAT — droite */
   .chat-sidebar{
     width:300px;position:fixed;right:0;top:52px;bottom:68px;
-    background:var(--bg2);border-left:1px solid rgba(77,132,255,.35);
-    box-shadow:-2px 0 16px rgba(77,132,255,.12);
+    background:linear-gradient(270deg,rgba(9,13,22,.88) 0%,rgba(9,13,22,.74) 100%);
+    backdrop-filter:blur(3px);-webkit-backdrop-filter:blur(3px);
+    border-left:1px solid var(--b1);
+    box-shadow:none;
     display:flex !important;flex-direction:column;padding:12px;z-index:100;box-sizing:border-box;
     overflow:hidden;
   }
@@ -418,32 +429,48 @@ input[type="date"],input[type="time"]{color-scheme:dark;}
 }
 /* NAV VERTICALE dans sidebar gauche sur PC */
 @media(min-width:1100px){
+  /* COLONNE VOILEE (03/09, retour d'Antoine : « un poil trop transparent a
+     gauche, pourtant ce côté est très important »). Elle etait un aplat plein,
+     cerne d'un halo bleu — le plus gros bloc opaque de l'interface, sur toute la
+     hauteur de l'ecran, au milieu de pages devenues transparentes.
+     Elle garde sa presence, indispensable pour une navigation, mais par un
+     degrade sombre : on devine la photo derriere sans que la lecture en
+     souffre. Le halo bleu laisse place a un simple filet — un trait separe
+     aussi bien qu'une lueur, sans imiter une barre de salons. */
   .nav{
     position:fixed;left:0;top:52px;width:260px;
     bottom:0;height:auto;
     border-top:none;border-bottom:none;
-    border-right:1px solid rgba(77,132,255,.35);
-    box-shadow:2px 0 16px rgba(77,132,255,.12);
-    background:var(--bg2);
+    border-right:1px solid var(--b1);
+    box-shadow:none;
+    background:linear-gradient(90deg,rgba(9,13,22,.88) 0%,rgba(9,13,22,.74) 100%);
+    backdrop-filter:blur(3px);-webkit-backdrop-filter:blur(3px);
     display:flex;flex-direction:column;align-items:stretch;
     padding:8px 0;gap:2px;z-index:101;
   }
+  /* L'entree active portait DEUX marques : le trait or herite de la barre
+     mobile, et un pave bleu. Une seule suffit — le filet or, a gauche, comme
+     les puces de filtre et les lignes de selection depuis le 02/09. */
   .ni{
-    flex-direction:row;align-items:center;gap:10px;
-    padding:10px 16px;border-radius:8px;margin:0 8px;
-    font-size:11px;font-weight:700;letter-spacing:.3px;
+    flex-direction:row;align-items:center;gap:11px;
+    padding:9px 15px;border-radius:0;margin:0;
+    border-top:0;border-left:2px solid transparent;
+    font-size:13px;font-weight:500;letter-spacing:0;
     text-align:left;width:auto;height:auto;
     justify-content:flex-start;
   }
   .ni i{font-size:16px;width:20px;text-align:center;}
-  .ni.on{background:rgba(77,132,255,.15);color:var(--a);}
+  .ni.on{background:rgba(255,255,255,.06);color:var(--t1);border-left-color:var(--or);border-top-color:transparent;}
+  .ni.on i{color:inherit;}
   /* Séparateur avant le pense-bête */
+  /* Capitales interlettrees : dernier vestige du style d'avant le 02/09 dans
+     la barre laterale. */
   .nav::after{
-    content:'PENSE-BÊTE';
+    content:'Pense-bête';
     display:block;
-    font-size:9px;font-weight:700;letter-spacing:1px;
-    color:var(--t3);padding:12px 16px 6px;
-    text-transform:uppercase;
+    font-size:11.5px;font-weight:500;letter-spacing:0;
+    color:var(--t3);padding:13px 16px 6px;
+    text-transform:none;
     border-top:1px solid var(--b1);
     margin-top:8px;
   }
@@ -631,3 +658,16 @@ input[type="date"],input[type="time"]{color-scheme:dark;}
   .mm-cote-total{flex-wrap:wrap;row-gap:10px;}
   .mm-cote-total>button{width:100%;}
 }
+
+
+/* Titre de section portant une valeur a droite (total du capital dans Bank). */
+.sec>b{margin-left:auto;color:var(--t1);}
+/* Les trois actions d'une carte de compte sont maintenant des mots, pas des
+   symboles : elles ont besoin de place et doivent pouvoir passer a la ligne. */
+.btile-acts{flex-wrap:wrap;}
+.btile-acts .ba{flex:1 1 auto;white-space:nowrap;}
+
+/* Puce de filtre retenue (Tendances). Filet or a gauche plutot qu'aplat dore :
+   avec six filtres actifs simultanement, le remplissage saturait la barre au
+   point qu'aucun ne se distinguait. */
+.sfbtn.g45-tr-on{border-color:var(--or);color:var(--t1);box-shadow:inset 2px 0 0 var(--or);}

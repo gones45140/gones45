@@ -2409,17 +2409,42 @@ function render(){
      Le `setTimeout` laisse le canvas prendre ses dimensions : dessiner dans un
      onglet encore masque donne un graphique de taille nulle. */
   try{ setTimeout(function(){ try{ renderBooksChart(); }catch(e){} }, 60); }catch(e){}
+  /* TOTAL DANS LE TITRE (03/09). Quatorze montants s'affichaient sans jamais
+     etre additionnes, alors que leur somme EST le capital — la valeur affichee
+     en haut de chaque ecran. La voir a cote de la liste permet de reperer tout
+     de suite un solde saisi de travers. */
+  try{
+    var _tb=document.getElementById('bank-titre');
+    if(_tb){
+      var _st=Object.values(state.b).reduce(function(a,v){ return a+(parseFloat(v)||0); },0);
+      _tb.innerHTML='Mes comptes<b style="margin-left:auto;font-family:var(--ff-t);font-size:20px;font-weight:600;font-variant-numeric:tabular-nums;">'+_st.toFixed(2)+'€</b>';
+    }
+  }catch(e){}
   $i('books-grid').innerHTML=Object.entries(state.b).map(function(e){
     var b=bki(e[0]);
+    /* ═══ TUILE DE COMPTE — REVUE LE 03/09 ═══
+       Quatre corrections, toutes issues des captures d'Antoine :
+       1. La COULEUR etait dite trois fois — bordure gauche, nom colore, pastille
+          du pied de carte. Le nom repasse en blanc ; le liseré et la pastille
+          suffisent, et la pastille est de toute facon le CONTROLE qui la change.
+       2. La ligne freebet s'affichait sur les quatorze cartes, dont douze a
+          « 0.00€ » : elle repetait qu'il n'y a rien. Elle n'apparait plus que
+          s'il y a effectivement un freebet.
+       3. Deux boutons sur trois n'avaient pas de libelle. Le 🎟 ouvre la cagnotte
+          freebet, mais rendu dans la police d'Antoine il ressemble a un crayon —
+          on le prenait pour un doublon de « Modifier ». Trois boutons, trois mots.
+       4. Le nom n'est plus en capitales interlettrees, comme partout ailleurs. */
+    var _fbv = parseFloat(state.fb && state.fb[e[0]]) || 0;
     return '<div class="btile" style="--bc:'+b.c+';">'
-      +'<div class="btile-n" style="color:'+b.c+';display:flex;align-items:center;gap:5px;">'+bkFavicon(e[0],14)+b.n+'</div>'
+      +'<div class="btile-n" style="display:flex;align-items:center;gap:6px;">'+bkFavicon(e[0],14)+b.n
+        +(_fbv>0?'<span style="margin-left:auto;font-size:11px;font-weight:700;color:var(--gold);">🎟 '+_fbv.toFixed(2)+'€</span>':'')
+      +'</div>'
       +'<div class="btile-v">'+parseFloat(e[1]).toFixed(2)+'€</div>'
-      +'<div class="btile-fb" style="font-size:11px;font-weight:700;color:var(--gold);margin-top:1px;">🎟 '+(parseFloat(state.fb&&state.fb[e[0]])||0).toFixed(2)+'€</div>'
       +'<div class="btile-acts" style="align-items:center;">'
-      +'<input type="color" value="'+b.c+'" title="Couleur" data-bk="'+e[0]+'" onchange="changeBookColor(this)" style="width:20px;height:20px;border-radius:50%;border:none;padding:0;cursor:pointer;background:none;flex-shrink:0;">'
-      +'<button class="ba" data-bk="'+e[0]+'" onclick="editBook(this.dataset.bk)">Modifier</button> '
-      +'<button class="ba" data-bk="'+e[0]+'" title="Cagnotte freebet" onclick="editFb(this.dataset.bk)" style="color:var(--gold);border-color:rgba(240,176,32,.4);">🎟</button> '
-      +'<button class="ba del" data-bk="'+e[0]+'" onclick="delBook(this.dataset.bk)">✕</button>'
+      +'<input type="color" value="'+b.c+'" title="Couleur du compte" data-bk="'+e[0]+'" onchange="changeBookColor(this)" style="width:20px;height:20px;border-radius:50%;border:none;padding:0;cursor:pointer;background:none;flex-shrink:0;">'
+      +'<button class="ba" data-bk="'+e[0]+'" onclick="editBook(this.dataset.bk)">Modifier</button>'
+      +'<button class="ba" data-bk="'+e[0]+'" onclick="editFb(this.dataset.bk)" style="color:var(--gold);border-color:rgba(240,176,32,.35);">Freebet</button>'
+      +'<button class="ba del" data-bk="'+e[0]+'" onclick="delBook(this.dataset.bk)">Supprimer</button>'
       +'</div></div>';
   }).join('');
 
@@ -9951,17 +9976,42 @@ function render(){
      Le `setTimeout` laisse le canvas prendre ses dimensions : dessiner dans un
      onglet encore masque donne un graphique de taille nulle. */
   try{ setTimeout(function(){ try{ renderBooksChart(); }catch(e){} }, 60); }catch(e){}
+  /* TOTAL DANS LE TITRE (03/09). Quatorze montants s'affichaient sans jamais
+     etre additionnes, alors que leur somme EST le capital — la valeur affichee
+     en haut de chaque ecran. La voir a cote de la liste permet de reperer tout
+     de suite un solde saisi de travers. */
+  try{
+    var _tb=document.getElementById('bank-titre');
+    if(_tb){
+      var _st=Object.values(state.b).reduce(function(a,v){ return a+(parseFloat(v)||0); },0);
+      _tb.innerHTML='Mes comptes<b style="margin-left:auto;font-family:var(--ff-t);font-size:20px;font-weight:600;font-variant-numeric:tabular-nums;">'+_st.toFixed(2)+'€</b>';
+    }
+  }catch(e){}
   $i('books-grid').innerHTML=Object.entries(state.b).map(function(e){
     var b=bki(e[0]);
+    /* ═══ TUILE DE COMPTE — REVUE LE 03/09 ═══
+       Quatre corrections, toutes issues des captures d'Antoine :
+       1. La COULEUR etait dite trois fois — bordure gauche, nom colore, pastille
+          du pied de carte. Le nom repasse en blanc ; le liseré et la pastille
+          suffisent, et la pastille est de toute facon le CONTROLE qui la change.
+       2. La ligne freebet s'affichait sur les quatorze cartes, dont douze a
+          « 0.00€ » : elle repetait qu'il n'y a rien. Elle n'apparait plus que
+          s'il y a effectivement un freebet.
+       3. Deux boutons sur trois n'avaient pas de libelle. Le 🎟 ouvre la cagnotte
+          freebet, mais rendu dans la police d'Antoine il ressemble a un crayon —
+          on le prenait pour un doublon de « Modifier ». Trois boutons, trois mots.
+       4. Le nom n'est plus en capitales interlettrees, comme partout ailleurs. */
+    var _fbv = parseFloat(state.fb && state.fb[e[0]]) || 0;
     return '<div class="btile" style="--bc:'+b.c+';">'
-      +'<div class="btile-n" style="color:'+b.c+';display:flex;align-items:center;gap:5px;">'+bkFavicon(e[0],14)+b.n+'</div>'
+      +'<div class="btile-n" style="display:flex;align-items:center;gap:6px;">'+bkFavicon(e[0],14)+b.n
+        +(_fbv>0?'<span style="margin-left:auto;font-size:11px;font-weight:700;color:var(--gold);">🎟 '+_fbv.toFixed(2)+'€</span>':'')
+      +'</div>'
       +'<div class="btile-v">'+parseFloat(e[1]).toFixed(2)+'€</div>'
-      +'<div class="btile-fb" style="font-size:11px;font-weight:700;color:var(--gold);margin-top:1px;">🎟 '+(parseFloat(state.fb&&state.fb[e[0]])||0).toFixed(2)+'€</div>'
       +'<div class="btile-acts" style="align-items:center;">'
-      +'<input type="color" value="'+b.c+'" title="Couleur" data-bk="'+e[0]+'" onchange="changeBookColor(this)" style="width:20px;height:20px;border-radius:50%;border:none;padding:0;cursor:pointer;background:none;flex-shrink:0;">'
-      +'<button class="ba" data-bk="'+e[0]+'" onclick="editBook(this.dataset.bk)">Modifier</button> '
-      +'<button class="ba" data-bk="'+e[0]+'" title="Cagnotte freebet" onclick="editFb(this.dataset.bk)" style="color:var(--gold);border-color:rgba(240,176,32,.4);">🎟</button> '
-      +'<button class="ba del" data-bk="'+e[0]+'" onclick="delBook(this.dataset.bk)">✕</button>'
+      +'<input type="color" value="'+b.c+'" title="Couleur du compte" data-bk="'+e[0]+'" onchange="changeBookColor(this)" style="width:20px;height:20px;border-radius:50%;border:none;padding:0;cursor:pointer;background:none;flex-shrink:0;">'
+      +'<button class="ba" data-bk="'+e[0]+'" onclick="editBook(this.dataset.bk)">Modifier</button>'
+      +'<button class="ba" data-bk="'+e[0]+'" onclick="editFb(this.dataset.bk)" style="color:var(--gold);border-color:rgba(240,176,32,.35);">Freebet</button>'
+      +'<button class="ba del" data-bk="'+e[0]+'" onclick="delBook(this.dataset.bk)">Supprimer</button>'
       +'</div></div>';
   }).join('');
 
@@ -25441,23 +25491,45 @@ function loadTendancesTab(){
      regroupement label->options. On garde le flex-wrap mais chaque sous-
      groupe est isole dans son propre segment arrondi, pour que l'oeil separe
      "Jour" de "Cote mini" de "Proba mini" au lieu d'une ligne continue. */
-  var chip=function(lbl,on,fn){ return '<button onclick="'+fn+'" class="sfbtn"'+(on?' style="background:#f0c828;border-color:#f0c828;color:#221b00;"':'')+'>'+lbl+'</button>'; };
-  var seg=function(label,inner){ return '<div style="display:inline-flex;align-items:center;gap:5px;background:rgba(255,255,255,.035);border:1px solid rgba(255,255,255,.08);border-radius:10px;padding:5px 7px 5px 9px;">'
-    +(label?'<span style="font-size:9px;color:var(--t3);font-weight:700;white-space:nowrap;">'+label+'</span>':'')
+  /* ═══ BARRE DE FILTRES — REVUE LE 03/09 ═══
+     Retour d'Antoine sur capture. Trois defauts se cumulaient :
+     1. L'OR SERVAIT A TOUT. Competition retenue, jour, cote mini, proba mini,
+        Buteurs, et jusqu'au bouton d'analyse : six aplats dores d'affilee, donc
+        plus rien qui ressorte. L'etat actif se signale desormais par un filet
+        or a gauche de la puce — le meme repere que partout ailleurs depuis le
+        02/09 — et l'or cesse d'etre une couleur de remplissage.
+     2. LES GROUPES NE SE RESSEMBLAIENT PAS : « Jour » avait son intitule a
+        gauche et ses options empilees, les autres aussi mais differemment.
+        Intitule au-dessus, options en ligne, pour les trois.
+     3. « Analyser les matchs » etait un degrade dore pleine largeur qui se
+        fondait dans la photo. Il repasse en bleu, la couleur des commandes. */
+  var chip=function(lbl,on,fn){
+    return '<button onclick="'+fn+'" class="sfbtn'+(on?' g45-tr-on':'')+'">'+lbl+'</button>'; };
+  var seg=function(label,inner){ return '<div style="min-width:0;">'
+    +(label?'<label class="fl">'+label+'</label>':'')
     +'<div style="display:flex;gap:5px;flex-wrap:wrap;">'+inner+'</div></div>'; };
-  var h='<div class="sec" style="margin-top:0;">🔥 Tendances du jour</div>'
-    +'<div style="font-size:9px;color:var(--t3);line-height:1.6;margin-bottom:9px;">Les tendances sont classées par <b>écart avec la cote</b>, pas par pourcentage brut : une série à 100% ne vaut rien si le bookmaker l\'a déjà intégrée. Les cotes sont dévigorisées avant comparaison.</div>'
+  var h='<div class="sec" style="margin-top:0;">Tendances du jour</div>'
+    /* 9px en gris pale sur une photo : la phrase etait presente mais illisible.
+       Elle passe a 12px avec ombre portee, et la mention sur la devigorisation
+       part — c'est un detail de methode, pas une introduction. */
+    +'<div style="font-size:12px;color:var(--t2);line-height:1.5;margin-bottom:13px;max-width:640px;text-shadow:0 1px 4px rgba(0,0,0,.85);">Classées par <b style="color:var(--t1);">écart avec la cote</b>, pas par pourcentage brut : une série à 100 % ne vaut rien si le bookmaker l\'a déjà intégrée.</div>'
     +'<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(110px,1fr));gap:6px;margin-bottom:9px;">'
     +G.map(function(g,i){ return chip(g.grp, !!_G45_TR.sel[i], "g45TrSel("+i+")"); }).join('')+'</div>'
-    +'<div style="display:flex;gap:7px;flex-wrap:wrap;margin-bottom:9px;align-items:center;">'
+    +'<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(168px,1fr));gap:4px 16px;margin-bottom:11px;">'
     +seg('Jour', chip("Aujourd'hui", _G45_TR.day===0, "g45TrDay(0)")+chip('Demain', _G45_TR.day===1, "g45TrDay(1)"))
     +seg('Cote mini', chip('Toutes', !_G45_TR.min, "g45TrMin(0)")+chip('1.30', _G45_TR.min===1.3, "g45TrMin(1.3)")+chip('1.50', _G45_TR.min===1.5, "g45TrMin(1.5)"))
     +seg('Proba mini', chip('40%', _G45_TR.pmin===0.40, "g45TrPMin(0.40)")+chip('50%', _G45_TR.pmin===0.50, "g45TrPMin(0.50)")+chip('60%', _G45_TR.pmin===0.60, "g45TrPMin(0.60)"))
-    +seg('', '<button onclick="g45ButeursView()" class="sfbtn" style="background:rgba(240,200,40,.16);border-color:rgba(240,200,40,.35);color:#f0c828;">⚽ Buteurs</button>'
-      +'<button onclick="g45ClvView()" class="sfbtn" style="background:rgba(46,204,113,.16);border-color:rgba(46,204,113,.35);color:#2ecc71;">📏 CLV</button>')
+    +'</div>'
+    /* Buteurs et CLV ne sont PAS des filtres : ce sont deux boutons qui ouvrent
+       d'autres vues. Melanges aux puces, ils se lisaient comme des options a
+       cocher. Ils sortent de la grille et prennent l'aspect de commandes
+       secondaires, avec le chevron qui annonce un changement d'ecran. */
+    +'<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:11px;">'
+      +'<button onclick="g45ButeursView()" class="ba">Voir les buteurs ›</button>'
+      +'<button onclick="g45ClvView()" class="ba">Voir le CLV ›</button>'
     +'</div>';
   if(!_G45_TR.res){
-    h+='<button onclick="g45TrRun()" style="width:100%;border:none;cursor:pointer;border-radius:9px;padding:11px;font-size:11px;font-weight:800;background:rgba(240,200,40,.16);color:#f0c828;">⚡ Analyser les matchs</button>'
+    h+='<button onclick="g45TrRun()" class="btn btn-p" style="padding:11px 24px;font-size:13.5px;">Analyser les matchs</button>'
       +'<div id="g45tr-prog" style="font-size:10px;color:#8aa0ff;text-align:center;padding:9px;"></div>';
   } else {
     h+=_g45TrRender();

@@ -10,8 +10,8 @@
      chemin est volontairement RELATIF : il se resout en `/gones45/favicon.ico`
      sur les Pages de projet et en `/favicon.ico` sur bet45.fr, sans avoir a
      maintenir deux valeurs differentes. -->
-<link rel="icon" href="favicon.ico?v=20260903b" sizes="any">
-<link rel="apple-touch-icon" href="apple-touch-icon.png?v=20260903b">
+<link rel="icon" href="favicon.ico?v=20260903e" sizes="any">
+<link rel="apple-touch-icon" href="apple-touch-icon.png?v=20260903e">
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; frame-src https://www.youtube.com https://www.youtube-nocookie.com; script-src 'self' 'unsafe-eval' 'unsafe-inline' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com; worker-src 'self' blob:; connect-src 'self' data: blob: https://tessdata.projectnaptha.com https://site.api.espn.com https://site.web.api.espn.com https://sports.core.api.espn.com https://fantasy.premierleague.com https://api.dropbox.com https://content.dropboxapi.com https://api.dropboxapi.com https://api.groq.com https://generativelanguage.googleapis.com https://api.mistral.ai https://api.tavily.com https://fd-proxy.touraine-antoine.workers.dev https://media.api-sports.io https://api.football-data.org https://api-web.nhle.com https://statsapi.mlb.com https://www.thesportsdb.com https://cdn.jsdelivr.net https://api.openf1.org https://racecenter.letour.fr https://racecenter.lavuelta.es https://racecenter.letourfemmes.fr https://racecenter.paris-nice.fr https://racecenter.tour-auvergne-rhone-alpes.fr https://racecenter.paris-roubaix.fr https://racecenter.liege-bastogne-liege.be https://racecenter.la-fleche-wallonne.be https://racecenter.paris-tours.fr https://api.jolpi.ca https://en.wikipedia.org https://api.github.com https://raw.githubusercontent.com https://gones45140.github.io https://vbsdewuvycaekfkixynh.supabase.co wss://vbsdewuvycaekfkixynh.supabase.co; img-src 'self' data: https: blob: https://flagcdn.com; style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com https://fonts.googleapis.com; font-src 'self' data: https://fonts.gstatic.com;">
 <meta http-equiv="Content-Security-Policy" content="default-src 'self' 'unsafe-inline' 'unsafe-eval' https: data: blob:;">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
@@ -20,7 +20,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600;700;800&family=Barlow+Condensed:wght@500;600;700&display=swap">
-<link rel="stylesheet" href="style.css?v=20260903b">
+<link rel="stylesheet" href="style.css?v=20260903e">
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js" crossorigin="anonymous"></script>
 <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js" crossorigin="anonymous"></script>
 <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
@@ -1105,7 +1105,7 @@
       <button class="sfbtn" style="flex:1;text-align:center;border-color:rgba(255,69,69,.3);color:var(--r);" onclick="fund(false)">− Retrait</button>
     </div>
   </div>
-  <div class="sec">Mes bookmakers</div>
+  <div class="sec" id="bank-titre">Mes comptes</div>
   <div id="books-grid" class="bgrid"></div>
   <div class="fc">
     <label class="fl">Ajouter un bookmaker</label>
@@ -1113,7 +1113,12 @@
       <input id="new-bk" class="fi" placeholder="Nom du bookmaker…">
       <label class="fl">Couleur</label>
       <div style="display:flex;flex-wrap:wrap;gap:6px;" id="bk-color-row"></div>
-      <input type="color" id="new-bk-color" style="height:36px;width:100%;padding:2px 4px;border-radius:var(--r4);border:1px solid var(--b2);background:var(--bg);cursor:pointer;">
+      <!-- 03/09 : ce selecteur de couleur libre s'etalait sur toute la largeur en
+           aplat bleu. Il ressemblait a un bouton — plus gros que le vrai bouton
+           « Ajouter » juste en dessous — et poussait celui-ci hors de vue. Reduit
+           a une pastille, il se range au bout de la rangee de couleurs, la ou on
+           le cherche. -->
+      <input type="color" id="new-bk-color" title="Autre couleur" style="height:30px;width:44px;padding:2px;border-radius:var(--r4);border:1px solid var(--b2);background:var(--bg);cursor:pointer;align-self:flex-start;">
       <button class="btn btn-p" onclick="addBook()">+ Ajouter</button>
     </div>
   </div>
@@ -1271,7 +1276,7 @@
 
   <div style="flex:1;display:flex;flex-direction:column;padding:0 8px 8px;min-height:0;" class="pc-note-area">
     <div id="pc-note" contenteditable="true" style="flex:1;min-height:100px;background:var(--bg3);border:1px solid var(--b1);border-radius:var(--r6);color:var(--t1);font-size:11px;line-height:1.6;padding:10px;outline:none;font-family:inherit;overflow-y:auto;word-break:break-word;" data-placeholder="Notes, cotes, screenshots…" oninput="saveNote()"></div>
-    <button onclick="clearNote()" style="margin-top:6px;background:none;border:1px solid var(--b1);border-radius:var(--r4);color:var(--t3);font-size:9px;font-weight:700;cursor:pointer;padding:4px;letter-spacing:.5px;">EFFACER</button>
+    <button onclick="clearNote()" style="margin-top:6px;background:none;border:1px solid var(--b1);border-radius:var(--r4);color:var(--t3);font-size:11.5px;font-weight:400;cursor:pointer;padding:4px;letter-spacing:0;text-decoration:underline;">Effacer</button>
   </div>
 
   <!-- MENU PLUS MOBILE -->
@@ -1292,7 +1297,7 @@
      worker servaient indefiniment l'ancien fichier sur mobile : rouvrir
      l'application ne changeait rien puisque l'URL demandee etait la meme.
      A INCREMENTER A CHAQUE DEPLOIEMENT, comme sur fenotte45. -->
-<script src="app.js?v=20260903b"></script>
+<script src="app.js?v=20260903e"></script>
 <script src="social.js"></script>
 
 
@@ -1301,7 +1306,7 @@
 <div class="note-sidebar" id="pc-note-sidebar" style="display:none;">
   <div class="sec" style="margin-top:0;font-size:10px;display:flex;align-items:center;justify-content:space-between;">
     <span>📝 Pense-bête</span>
-    <button onclick="clearNote()" style="background:none;border:none;color:var(--t3);font-size:9px;cursor:pointer;font-weight:700;">EFFACER</button>
+    <button onclick="clearNote()" style="background:none;border:none;color:var(--t3);font-size:11.5px;cursor:pointer;font-weight:400;text-decoration:underline;">Effacer</button>
   </div>
   <textarea id="pc-note2" style="flex:1;background:var(--bg3);border:1px solid var(--b1);border-radius:var(--r6);color:var(--t1);font-size:12px;line-height:1.6;padding:10px;resize:none;outline:none;font-family:inherit;" placeholder="Notes, cotes à surveiller, stratégie…" oninput="saveNote()"></textarea>
 </div>
