@@ -2918,7 +2918,12 @@ function renderChartTypeBen(){
     type:'bar',data:{labels:labels,datasets:[{data:data,backgroundColor:colors,borderRadius:5,borderSkipped:false}]},
     options:{animation:false,responsive:true,maintainAspectRatio:false,
       plugins:{legend:{display:false},tooltip:{callbacks:{label:function(i){return (i.raw>=0?'+':'')+i.raw.toFixed(2)+'€';}}}},
-      scales:{x:{ticks:{color:'#e8ecfa',font:{size:9},maxRotation:30},grid:{display:false}},y:{grid:{color:'rgba(255,255,255,.03)'},ticks:{color:'#e8ecfa',font:{size:9},callback:function(v){return v+'€';}}}}}
+      /* ETIQUETTES D'AXE RACCOURCIES (03/09). « Gagne le 1er set et le match »
+         ou « Victoire + Under 3.5 » inclines a 30 degres sur un telephone se
+         chevauchaient et debordaient du cadre. On tronque a 14 caracteres —
+         l'infobulle donne le libelle complet — et `autoSkip` laisse Chart.js
+         retirer les etiquettes restantes s'il en manque encore la place. */
+      scales:{x:{ticks:{color:'#e8ecfa',font:{size:9},maxRotation:38,autoSkip:true,callback:function(v,i){var t=String(this.getLabelForValue(v)||'');return t.length>14?t.slice(0,13)+'…':t;}},grid:{display:false}},y:{grid:{color:'rgba(255,255,255,.03)'},ticks:{color:'#e8ecfa',font:{size:9},callback:function(v){return v+'€';}}}}}
   });
 }
 
@@ -4799,7 +4804,13 @@ function renderRadarChart(){
     options:{
       responsive:true,maintainAspectRatio:false,
       plugins:{legend:{display:true,labels:{color:'#8b97c4',font:{size:10},boxWidth:10}}},
-      scales:{r:{ticks:{color:'#e8ecfa',font:{size:9},backdropColor:'transparent'},grid:{color:'rgba(255,255,255,.07)'},pointLabels:{color:'#8b97c4',font:{size:9}}}}
+      /* AXE EXPLICITE (03/09, retour d'Antoine : « -50 on se demande a quoi ca
+         correspond »). Les deux series sont en POURCENTAGE mais ne couvrent pas
+         la meme plage : la reussite va de 0 a 100, le ROI peut etre negatif.
+         D'ou une graduation a −50 qui n'a de sens que pour l'une des deux, sans
+         que rien ne le dise. Le suffixe % au moins nomme l'unite ; le libelle
+         complet reste dans l'infobulle et dans la legende. */
+      scales:{r:{ticks:{color:'#e8ecfa',font:{size:9},backdropColor:'transparent',callback:function(v){return v+' %';}},grid:{color:'rgba(255,255,255,.07)'},pointLabels:{color:'#8b97c4',font:{size:9},callback:function(t){t=String(t||'');return t.length>16?t.slice(0,15)+'…':t;}}}}
     }
   });
 }
@@ -10449,7 +10460,12 @@ function renderChartTypeBen(){
     type:'bar',data:{labels:labels,datasets:[{data:data,backgroundColor:colors,borderRadius:5,borderSkipped:false}]},
     options:{animation:false,responsive:true,maintainAspectRatio:false,
       plugins:{legend:{display:false},tooltip:{callbacks:{label:function(i){return (i.raw>=0?'+':'')+i.raw.toFixed(2)+'€';}}}},
-      scales:{x:{ticks:{color:'#e8ecfa',font:{size:9},maxRotation:30},grid:{display:false}},y:{grid:{color:'rgba(255,255,255,.03)'},ticks:{color:'#e8ecfa',font:{size:9},callback:function(v){return v+'€';}}}}}
+      /* ETIQUETTES D'AXE RACCOURCIES (03/09). « Gagne le 1er set et le match »
+         ou « Victoire + Under 3.5 » inclines a 30 degres sur un telephone se
+         chevauchaient et debordaient du cadre. On tronque a 14 caracteres —
+         l'infobulle donne le libelle complet — et `autoSkip` laisse Chart.js
+         retirer les etiquettes restantes s'il en manque encore la place. */
+      scales:{x:{ticks:{color:'#e8ecfa',font:{size:9},maxRotation:38,autoSkip:true,callback:function(v,i){var t=String(this.getLabelForValue(v)||'');return t.length>14?t.slice(0,13)+'…':t;}},grid:{display:false}},y:{grid:{color:'rgba(255,255,255,.03)'},ticks:{color:'#e8ecfa',font:{size:9},callback:function(v){return v+'€';}}}}}
   });
 }
 
@@ -12031,7 +12047,13 @@ function renderRadarChart(){
     options:{
       responsive:true,maintainAspectRatio:false,
       plugins:{legend:{display:true,labels:{color:'#8b97c4',font:{size:10},boxWidth:10}}},
-      scales:{r:{ticks:{color:'#e8ecfa',font:{size:9},backdropColor:'transparent'},grid:{color:'rgba(255,255,255,.07)'},pointLabels:{color:'#8b97c4',font:{size:9}}}}
+      /* AXE EXPLICITE (03/09, retour d'Antoine : « -50 on se demande a quoi ca
+         correspond »). Les deux series sont en POURCENTAGE mais ne couvrent pas
+         la meme plage : la reussite va de 0 a 100, le ROI peut etre negatif.
+         D'ou une graduation a −50 qui n'a de sens que pour l'une des deux, sans
+         que rien ne le dise. Le suffixe % au moins nomme l'unite ; le libelle
+         complet reste dans l'infobulle et dans la legende. */
+      scales:{r:{ticks:{color:'#e8ecfa',font:{size:9},backdropColor:'transparent',callback:function(v){return v+' %';}},grid:{color:'rgba(255,255,255,.07)'},pointLabels:{color:'#8b97c4',font:{size:9},callback:function(t){t=String(t||'');return t.length>16?t.slice(0,15)+'…':t;}}}}
     }
   });
 }
@@ -30532,8 +30554,15 @@ async function g45LoadScorers(slug, sportPath, box){
         + (m.l?('<img src="'+m.l+'" alt="" loading="lazy" onerror="this.style.visibility=\'hidden\'" '
             + 'style="position:absolute;right:-10px;bottom:-10px;width:56px;height:56px;object-fit:contain;opacity:.20;pointer-events:none;">'):'')
         + '<div style="position:relative;font-size:15px;line-height:1;">'+med+'</div>'
+        /* NOM SUR DEUX LIGNES (03/09, retour d'Antoine : « le nom est coupé »).
+           Le podium tient trois tuiles a un tiers de largeur : sur un telephone
+           de 350 px, cela laisse une centaine de pixels par nom, et
+           `white-space:nowrap` tronquait tout le monde a « Esteban… ». Le nom
+           peut desormais passer a la ligne, deux au maximum, avec une hauteur
+           minimale pour que les trois tuiles restent alignees meme quand un seul
+           des trois noms deborde. */
         + '<div style="position:relative;font-size:11px;font-weight:800;color:var(--t1);margin-top:5px;'
-          + 'white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">'+nameOf(L)+'</div>'
+          + 'line-height:1.15;min-height:2.3em;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;word-break:break-word;">'+nameOf(L)+'</div>'
         + '<div style="position:relative;font-size:8.5px;font-weight:700;color:rgba(255,255,255,.62);letter-spacing:.4px;">'+(m.a||teamOf(L))+'</div>'
         + '<div style="position:relative;font-size:20px;font-weight:900;color:#f0c828;margin-top:3px;">'+(L.value!=null?Math.round(L.value):'')+'</div>'
       + '</div>';
@@ -44059,20 +44088,39 @@ var G45_VAL_BARRES = {
     ctx.save();
     ctx.font = '600 11px ' + (getComputedStyle(document.documentElement).getPropertyValue('--ff') || 'sans-serif');
     ctx.textAlign = 'center';
+    /* ANTI-CHEVAUCHEMENT (03/09, retour d'Antoine : « une catastrophe » sur le
+       graphique par type de pari, telephone). Avec douze barres sur 350 px de
+       large, les etiquettes se superposaient au point de former une bouillie
+       illisible — pire que l'absence d'etiquette qu'elles etaient censees
+       corriger.
+       On dessine donc de gauche a droite en gardant la position du bord droit
+       de la derniere etiquette ecrite, et on saute celles qui empieteraient.
+       Les barres restent toutes lisibles au survol, et sur un graphique aere
+       (deux ou trois mois) rien n'est saute. */
+    var occupePos = -Infinity, occupeNeg = -Infinity;
     chart.data.datasets.forEach(function (ds, di) {
       var meta = chart.getDatasetMeta(di);
       if (meta.hidden) return;
-      meta.data.forEach(function (bar, i) {
-        var v = ds.data[i];
+      /* Tri par abscisse : l'ordre du tableau ne suit pas forcement l'ordre
+         visuel des barres. */
+      var pts = meta.data.map(function (bar, i) { return { bar: bar, v: ds.data[i] }; })
+                         .sort(function (a, b) { return a.bar.x - b.bar.x; });
+      pts.forEach(function (o) {
+        var v = o.v, bar = o.bar;
         if (v === null || v === undefined) return;
         var txt = (v > 0 ? '+' : '') + v + suf;
+        var demi = ctx.measureText(txt).width / 2;
         var pos = v >= 0;
+        /* Deux couloirs separes : une etiquette au-dessus de l'axe ne peut pas
+           heurter une etiquette placee en dessous. */
+        var ref = pos ? occupePos : occupeNeg;
+        if (bar.x - demi < ref + 4) return;
         var y = pos ? bar.y - 6 : bar.y + 15;
-        /* Repli vers l'interieur quand l'etiquette sortirait du cadre. */
         if (pos && y < chart.chartArea.top + 11) y = bar.y + 15;
         if (!pos && y > chart.chartArea.bottom - 4) y = bar.y - 6;
         ctx.fillStyle = '#eef1fb';
         ctx.fillText(txt, bar.x, y);
+        if (pos) occupePos = bar.x + demi; else occupeNeg = bar.x + demi;
       });
     });
     ctx.restore();

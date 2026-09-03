@@ -599,3 +599,35 @@ input[type="date"],input[type="time"]{color-scheme:dark;}
 .g45-opt{display:flex;align-items:center;gap:9px;cursor:pointer;padding:7px 2px;font-size:13px;color:var(--t1);}
 .g45-opt + .g45-opt{border-top:1px solid var(--b1);}
 .g45-nu .g45-opt{text-shadow:0 1px 4px rgba(0,0,0,.85);}
+
+
+/* ═══════════════════════════════════════════════════════════════════════
+   CORRECTIONS TELEPHONE — 03/09
+   Retours d'Antoine sur captures Android : plusieurs blocs debordaient a
+   droite, coupes net par le bord de l'ecran.
+   ═══════════════════════════════════════════════════════════════════════ */
+
+@media(max-width:699px){
+  /* « Par bookmaker » : le nom, la mention « 32 paris · 66 % » et le montant
+     etaient sur une seule ligne avec des largeurs minimales fixees pour
+     l'alignement en colonnes sur grand ecran. Sur 350 px, la somme depassait
+     et le montant sortait du cadre — la seule valeur qu'on vient lire. La
+     ligne passe donc sur deux niveaux : identite au-dessus, chiffres en
+     dessous, alignes a droite. */
+  .bkrow{flex-wrap:wrap;row-gap:2px;}
+  .bkrow>span:nth-child(2){flex:1 1 100%;order:1;}
+  .bkrow>span:nth-child(3){order:2;flex:1;min-width:0 !important;text-align:left !important;}
+  .bkrow>span:nth-child(4){order:3;min-width:0 !important;}
+  .bkrow>img,.bkrow>svg{order:0;}
+
+  /* Le bandeau sous le graphique d'evolution enumere le detail par bookmaker
+     sur une seule ligne : « Global −15.29€ · Piwi +14.25€ · Unibet… ». Il etait
+     tronque au bord. Il passe a la ligne. */
+  .gc-cap,.chart-legend-txt{white-space:normal !important;overflow:visible !important;text-overflow:clip !important;line-height:1.5;}
+
+  /* La zone de total du MyMatch empilait cote combinee, cote reelle et bouton
+     sur une ligne : sur telephone le bouton se retrouvait a cheval sur le
+     champ. */
+  .mm-cote-total{flex-wrap:wrap;row-gap:10px;}
+  .mm-cote-total>button{width:100%;}
+}
