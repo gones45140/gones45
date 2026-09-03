@@ -44202,3 +44202,207 @@ var G45_VAL_BARRES = {
    graphiques, courbes et camemberts compris, et notamment au graphique Paliers
    qui a deja son propre plugin de dessin. Chaque graphique concerne le declare
    dans son tableau `plugins`. */
+
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   GONES45 — BANDEAU DE SCORES DES EQUIPES SUIVIES (03/09)
+   ───────────────────────────────────────────────────────────────────────────
+   Demande d'Antoine : « tu ouvres l'appli, tu as l'info ». Les matchs du jour
+   de ses equipes, en haut de chaque ecran, cliquables.
+
+   D'OU VIENNENT LES DONNEES : de l'API ESPN deja utilisee partout ailleurs. On
+   ne demande PAS un match par equipe — ce serait quinze requetes — mais un
+   tableau de scores par CHAMPIONNAT, puis on filtre. Antoine suit une poignee
+   de clubs repartis sur cinq ou six competitions : trois a six requetes
+   suffisent, et le resultat est mis en cache.
+
+   HIER SI RIEN AUJOURD'HUI : sans ce repli, le bandeau serait vide tous les
+   matins — c'est-a-dire au moment ou l'on ouvre l'appli pour voir ce qui s'est
+   passe. Des qu'un match du jour existe, la journee d'hier disparait.
+
+   RAFRAICHISSEMENT : toutes les 45 secondes, mais UNIQUEMENT s'il y a un match
+   en cours ET si l'onglet est visible. Sans ces deux conditions on taperait
+   l'API en continu dans la poche de l'utilisateur, sans que personne regarde.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+var _G45_BAND_TTL = 90000;      /* cache d'un tableau de scores */
+var _G45_BAND_REFRESH = 45000;  /* boucle quand un match est en cours */
+var _g45BandCache = {};
+var _g45BandTimer = null;
+
+/* Chemin ESPN d'une equipe. Le football passe par `espnLeagueOf`, deja garni ;
+   les autres sports se deduisent de l'emoji porte par l'equipe, seule
+   information de discipline dont on dispose sur le mur. */
+var _G45_BAND_SPORTS = {
+  '\ud83c\udfd2': 'hockey/nhl',
+  '\u26be':       'baseball/mlb',
+  '\ud83c\udfc0': 'basketball/nba',
+  '\ud83c\udfc8': 'football/nfl'
+};
+
+function _g45BandChemin(u) {
+  try {
+    var lg = (typeof espnLeagueOf === 'function') ? espnLeagueOf(u.n) : null;
+    if (lg) return 'soccer/' + lg;
+    return _G45_BAND_SPORTS[u.sport] || null;
+  } catch (e) { return null; }
+}
+
+function _g45BandJour(d) {
+  var z = function (n) { return (n < 10 ? '0' : '') + n; };
+  return d.getFullYear() + z(d.getMonth() + 1) + z(d.getDate());
+}
+
+/* Comparaison souple des noms : ESPN ecrit « Paris Saint-Germain » la ou le mur
+   dit « PSG ». On reutilise la normalisation de l'appli et on accepte
+   l'inclusion dans un sens comme dans l'autre. */
+function _g45BandMeme(a, b) {
+  try {
+    var x = _g45SgNorm(a || ''), y = _g45SgNorm(b || '');
+    if (!x || !y) return false;
+    return x === y || (x.length > 3 && y.indexOf(x) >= 0) || (y.length > 3 && x.indexOf(y) >= 0);
+  } catch (e) { return false; }
+}
+
+async function _g45BandScores(chemin, jour) {
+  var cle = chemin + ':' + jour;
+  var c = _g45BandCache[cle];
+  if (c && (Date.now() - c.t) < _G45_BAND_TTL) return c.v;
+  try {
+    var r = await fetch('https://site.api.espn.com/apis/site/v2/sports/' + chemin +
+                        '/scoreboard?dates=' + jour);
+    if (!r.ok) return [];
+    var j = await r.json();
+    var ev = j.events || [];
+    _g45BandCache[cle] = { t: Date.now(), v: ev };
+    return ev;
+  } catch (e) { return []; }
+}
+
+function _g45BandTuile(ev, monNom) {
+  var comp = (ev.competitions && ev.competitions[0]) || {};
+  var cs = comp.competitors || [];
+  if (cs.length < 2) return '';
+  var st = (ev.status && ev.status.type) || {};
+  var live = st.state === 'in', fin = st.state === 'post';
+
+  var etat = live
+    ? '<span class="g45-mt-st live"><span class="g45-mt-pt"></span>' + (st.shortDetail || 'En direct') + '</span>'
+    : (fin ? '<span class="g45-mt-st">Terminé</span>'
+           : '<span class="g45-mt-st soon">' + _g45BandHeure(ev.date) + '</span>');
+
+  /* Domicile en bas, comme sur les tableaux de scores : c'est la convention
+     americaine d'ESPN et celle des chaines sportives. */
+  var dom = cs.filter(function (x) { return x.homeAway === 'home'; })[0] || cs[0];
+  var ext = cs.filter(function (x) { return x.homeAway === 'away'; })[0] || cs[1];
+
+  var ligne = function (c, autre) {
+    var n = (c.team && (c.team.shortDisplayName || c.team.displayName || c.team.abbreviation)) || '';
+    var sc = (c.score != null && c.score !== '') ? c.score : '';
+    var perd = (fin || live) && sc !== '' && autre.score !== '' &&
+               parseFloat(sc) < parseFloat(autre.score);
+    var moi = _g45BandMeme(n, monNom) ||
+              _g45BandMeme((c.team && c.team.displayName) || '', monNom);
+    return '<span class="g45-mt-li' + (perd ? ' perd' : '') + (moi ? ' moi' : '') + '">'
+      + '<span>' + n + '</span><b>' + sc + '</b></span>';
+  };
+
+  return '<button class="g45-mt" onclick="openClubFromDash(' + JSON.stringify(monNom).replace(/"/g, '&quot;') + ')">'
+    + etat
+    + '<span class="g45-mt-eq">' + ligne(ext, dom) + ligne(dom, ext) + '</span>'
+    + '</button>';
+}
+
+function _g45BandHeure(iso) {
+  try {
+    var d = new Date(iso);
+    var z = function (n) { return (n < 10 ? '0' : '') + n; };
+    return z(d.getHours()) + ':' + z(d.getMinutes());
+  } catch (e) { return ''; }
+}
+
+async function g45BandeauMaj() {
+  var box = document.getElementById('g45-bandeau');
+  if (!box) return;
+  var track = box.querySelector('.g45-band-track');
+  if (!track) return;
+
+  var us = [];
+  try { us = (state.u || []).filter(function (u) { return u && u.n; }); } catch (e) { return; }
+  if (!us.length) { box.style.display = 'none'; return; }
+
+  /* Une requete par CHEMIN, pas par equipe. */
+  var parChemin = {};
+  us.forEach(function (u) {
+    var ch = _g45BandChemin(u);
+    if (!ch) return;
+    (parChemin[ch] = parChemin[ch] || []).push(u.n);
+  });
+  var chemins = Object.keys(parChemin);
+  if (!chemins.length) { box.style.display = 'none'; return; }
+
+  var auj = _g45BandJour(new Date());
+  var hier = _g45BandJour(new Date(Date.now() - 86400000));
+
+  var trouves = [], enCours = false;
+  var passe = async function (jour) {
+    var out = [];
+    var lots = await Promise.all(chemins.map(function (ch) { return _g45BandScores(ch, jour); }));
+    lots.forEach(function (evs, i) {
+      var noms = parChemin[chemins[i]];
+      (evs || []).forEach(function (ev) {
+        var comp = (ev.competitions && ev.competitions[0]) || {};
+        (comp.competitors || []).forEach(function (c) {
+          var dn = (c.team && (c.team.displayName || c.team.shortDisplayName)) || '';
+          noms.forEach(function (n) {
+            if (_g45BandMeme(dn, n) && out.indexOf(ev) < 0) out.push({ ev: ev, n: n });
+          });
+        });
+      });
+    });
+    return out;
+  };
+
+  trouves = await passe(auj);
+  if (!trouves.length) trouves = await passe(hier);
+  if (!trouves.length) { box.style.display = 'none'; return; }
+
+  /* En cours d'abord, puis a venir, puis termines : l'ordre d'interet. */
+  var rang = function (o) {
+    var st = (o.ev.status && o.ev.status.type) || {};
+    return st.state === 'in' ? 0 : (st.state === 'pre' ? 1 : 2);
+  };
+  trouves.sort(function (a, b) { return rang(a) - rang(b); });
+  trouves.forEach(function (o) {
+    var st = (o.ev.status && o.ev.status.type) || {};
+    if (st.state === 'in') enCours = true;
+  });
+
+  var html = trouves.map(function (o) { return _g45BandTuile(o.ev, o.n); }).join('');
+  /* Le contenu est double pour que le defilement boucle sans a-coup : la
+     translation de -50 % ramene exactement au debut de la copie. */
+  track.innerHTML = html + html;
+  box.style.display = '';
+
+  /* La duree suit le nombre de tuiles, sinon deux matchs defileraient aussi vite
+     que douze — soit illisible, soit interminable. */
+  try { track.style.animationDuration = Math.max(18, trouves.length * 6) + 's'; } catch (e) {}
+
+  if (_g45BandTimer) { clearTimeout(_g45BandTimer); _g45BandTimer = null; }
+  if (enCours) {
+    _g45BandTimer = setTimeout(function () {
+      if (document.visibilityState === 'visible') g45BandeauMaj();
+      else _g45BandTimer = null;
+    }, _G45_BAND_REFRESH);
+  }
+}
+window.g45BandeauMaj = g45BandeauMaj;
+
+/* Relance en revenant sur l'onglet : si la boucle s'est arretee parce que la
+   page etait cachee, les scores affiches datent du moment ou l'on est parti. */
+document.addEventListener('visibilitychange', function () {
+  if (document.visibilityState === 'visible' && !_g45BandTimer) {
+    setTimeout(g45BandeauMaj, 300);
+  }
+});
+setTimeout(function () { try { g45BandeauMaj(); } catch (e) {} }, 1200);
