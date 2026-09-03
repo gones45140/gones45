@@ -26755,6 +26755,17 @@ async function g45RenderTennisDetail(panel, matchId){
 }
 window.g45RenderTennisDetail=g45RenderTennisDetail;
 function _g45ymd(d){ return ''+d.getFullYear()+String(d.getMonth()+1).padStart(2,'0')+String(d.getDate()).padStart(2,'0'); }
+/* DEUX FORMATS DE DATE, DEUX USAGES (03/09, retour d'Antoine : « Invalid Date »
+   sur les puces de jour de la vue Direct).
+   `_g45ymd` produit `20260903`, la forme qu'attend l'API ESPN dans son parametre
+   `dates`. Les puces de jour, elles, faisaient `new Date(iso + 'T00:00:00')` —
+   ce qui suppose `2026-09-03`. « 20260903T00:00:00 » n'est une date pour aucun
+   navigateur, d'ou l'etiquette « Invalid Date » sur chaque puce et sur l'entete.
+   Le commentaire du regroupement annoncait d'ailleurs `YYYY-MM-DD` : c'est la
+   fonction qui ne suivait pas.
+   On separe donc clairement : `_g45ymd` reste pour l'API, `_g45iso` sert de cle
+   de jour et se relit correctement. */
+function _g45iso(d){ return ''+d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); }
 /* ESPN ne donne pas d'horloge rugby fiable (clock:0, displayClock figé) → on affiche la mi-temps via period */
 function _rugbyLiveLabel(status){
   var st=status||{}; var tn=(st.type&&st.type.name)||'';
@@ -26859,12 +26870,12 @@ async function g45LoadLeagueMatches(slug, btn, dayOffset, sportPath){
     var byDay={}, order=[];
     events.forEach(function(e){
       var d=new Date(e.date);
-      var iso=_g45ymd(d);
+      var iso=_g45iso(d);
       if(!byDay[iso]){ byDay[iso]=[]; order.push(iso); }
       byDay[iso].push(e);
     });
     window._g45LiveByDay=byDay; window._g45LiveOrder=order; window._g45LiveNav=nav; window._g45LiveSlugRow=slug; window._g45LiveSportRow=sportPath;
-    var todayIso=_g45ymd(new Date());
+    var todayIso=_g45iso(new Date());
     window._g45LiveSelDay = (order.indexOf(todayIso)>=0) ? todayIso : order[0];
     _g45RenderLiveDay();
     _g45StartListRefresh();
@@ -26873,7 +26884,7 @@ async function g45LoadLeagueMatches(slug, btn, dayOffset, sportPath){
 function _g45RenderLiveDay(){
   var list=document.getElementById(window._g45ListId||'g45-live-list'); if(!list) return;
   var byDay=window._g45LiveByDay||{}, order=window._g45LiveOrder||[], sel=window._g45LiveSelDay;
-  var todayIso=_g45ymd(new Date());
+  var todayIso=_g45iso(new Date());
   var chips='<div style="display:flex;gap:5px;overflow-x:auto;padding-bottom:6px;margin-bottom:8px;-webkit-overflow-scrolling:touch;">'
     +order.map(function(iso){
       var d=new Date(iso+'T00:00:00');
@@ -40209,12 +40220,16 @@ async function loadSuiviesTab() {
           ? 'Matchs termin\u00e9s des 7 derniers jours, du plus r\u00e9cent au plus ancien.'
           : 'Mur ET \u00e9quipes suivies, tous sports. Les matchs jou\u00e9s basculent dans \u00ab R\u00e9sultats \u00bb.')
     + '</div>'
-    + '<div id="g45-direct-body" class="fc" style="margin-bottom:14px;"></div>'
+    /* 03/09 : panneau retire (« pourquoi l'image fait plus tout l'ecran ? »).
+       Les cartes de match portent deja leur propre image plein cadre ; les
+       enfermer dans une carte `.fc` bordee de bleu ajoutait une marge tout
+       autour, si bien que la photo s'arretait avant le bord de l'ecran. */
+    + '<div id="g45-direct-body" class="fc g45-nu g45-dir" style="margin-bottom:14px;"></div>'
     + '<div class="sec" style="margin-top:0;">\u2b50 \u00c9quipes suivies</div>'
     + '<div style="font-size:10px;color:var(--t3);line-height:1.6;margin-bottom:10px;">'
     + 'Suivi de consultation, ind\u00e9pendant du mur : aucun pari, aucun palier, aucune statistique. '
     + 'L\'\u00e9toile \u2606 se trouve dans Comp\u00e9titions \u2192 \u00c9quipes.</div>'
-    + '<div id="g45-suivies-body" class="fc"></div>';
+    + '<div id="g45-suivies-body" class="fc g45-nu"></div>';
   await g45SuiviEqRender(document.getElementById('g45-suivies-body'));
   g45DirectMesEquipes();          /* asynchrone : la liste s'affiche sans attendre */
 }
@@ -41215,7 +41230,11 @@ async function g45DirectMesEquipes(silencieux) {
       + 'text-shadow:0 1px 3px rgba(0,0,0,.95),0 0 12px rgba(0,0,0,.85),0 0 26px rgba(0,0,0,.6);">'
       + '<div style="font-size:9px;font-weight:800;letter-spacing:.5px;color:' + colBadge + ';margin-bottom:3px;">'
       + badge + (live ? ' <span style="display:inline-block;width:6px;height:6px;border-radius:50%;background:#ff4545;animation:g45pulse 1.4s infinite;"></span>' : '') + '</div>'
-      + '<div style="font-size:13px;font-weight:900;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">'
+      /* DEUX LIGNES (03/09) : « Mariners vs Athl… ». Sur un telephone, deux noms
+         d'equipe plus le separateur depassent largement la largeur disponible,
+         et `nowrap` tronquait systematiquement le second. */
+      + '<div style="font-size:13px;font-weight:900;color:#fff;line-height:1.2;'
+      + 'display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;">'
       + m.moi + ' <span style="color:#c2ccdb;font-weight:600;">' + (m.dom ? 'vs' : '@') + '</span> ' + m.adv + '</div>'
       + '<div style="font-size:22px;font-weight:900;color:#fff;line-height:1.25;letter-spacing:-.5px;">' + score + '</div>'
       /* ═══ BAS DE CARTE EN PASTILLES ═══
@@ -43803,7 +43822,13 @@ function _g45CompetFond(slug) {
   if (_g45CmpfEnCours[k]) return '';
   _g45CmpfEnCours[k] = 1;
 
-  var exts = ['.jpg', '.png', '.jpeg', '.webp'], i = 0;
+  /* DEUX EXTENSIONS, PAS QUATRE (03/09, apres la console d'Antoine : des
+     dizaines de « Failed to load resource » sur images/ligues). Sonder quatre
+     extensions pour cinquante-quatre competitions, c'est plus de deux cents
+     requetes vouees a echouer a la premiere ouverture de l'onglet — bruyant
+     dans la console et inutile sur un reseau mobile. `.jpg` et `.png` couvrent
+     ce qu'Antoine depose ; le resultat negatif reste memorise trois heures. */
+  var exts = ['.jpg', '.png'], i = 0;
   var suivant = function () {
     if (i >= exts.length) {
       try { localStorage.setItem(_G45_CMPF_CLE + k, JSON.stringify({ u: '', t: Date.now() })); } catch (e) {}
@@ -44279,7 +44304,7 @@ async function _g45BandScores(chemin, jour) {
   } catch (e) { return []; }
 }
 
-function _g45BandTuile(ev, monNom) {
+function _g45BandTuile(ev, monNom, estMoi) {
   var comp = (ev.competitions && ev.competitions[0]) || {};
   var cs = comp.competitors || [];
   if (cs.length < 2) return '';
@@ -44311,7 +44336,12 @@ function _g45BandTuile(ev, monNom) {
       + '<span>' + n + '</span><b>' + sc + '</b></span>';
   };
 
-  return '<button class="g45-mt" onclick="openClubFromDash(' + JSON.stringify(monNom).replace(/"/g, '&quot;') + ')">'
+  /* Sans equipe suivie dans le match, la tuile n'ouvre aucune fiche : elle est la
+     pour informer, pas pour mener vers un club qu'on ne suit pas. */
+  var act = monNom
+    ? ' onclick="openClubFromDash(' + JSON.stringify(monNom).replace(/"/g, '&quot;') + ')"'
+    : ' disabled style="cursor:default;"';
+  return '<button class="g45-mt' + (estMoi ? ' g45-mt-moi' : '') + '"' + act + '>'
     + etat
     + '<span class="g45-mt-eq">' + ligne(ext, dom) + ligne(dom, ext) + '</span>'
     + '</button>';
@@ -44338,6 +44368,71 @@ function _g45BandHeure(iso) {
   } catch (e) { return ''; }
 }
 
+/* ═══ SOURCE DU BANDEAU (03/09) ═══
+   Antoine : « mettre le long d'une journee de championnat les resultats, le
+   direct et les matchs a venir de la Ligue 1 par exemple ».
+   Ce qui rend l'idee gratuite : on interroge deja l'API par CHAMPIONNAT, pas par
+   equipe. La reponse contient donc toute la journee — on n'en affichait que les
+   deux matchs qui concernaient l'utilisateur. Montrer la journee entiere ne
+   coute pas une requete de plus.
+   Reste qu'une journee fait dix rencontres, et quatre championnats en feraient
+   quarante : plusieurs minutes pour un tour complet. D'ou UN SEUL championnat a
+   la fois, choisi par l'utilisateur.
+   C'etait la bonne idee de filtre — pas un tri entre resultats et matchs a venir
+   (une information courte qui tient deja), mais le choix de la SOURCE. */
+
+function _g45BandSource() {
+  try { return localStorage.getItem('g45_band_src') || 'moi'; } catch (e) { return 'moi'; }
+}
+function g45BandSource(v) {
+  try { localStorage.setItem('g45_band_src', v || 'moi'); } catch (e) {}
+  g45BandeauMaj();
+}
+window.g45BandSource = g45BandSource;
+
+/* Les championnats proposes sont ceux ou l'utilisateur a des equipes : ils
+   n'ajoutent aucune requete, puisqu'ils sont deja interroges. */
+function _g45BandChampionnats() {
+  var out = [];
+  try {
+    var vus = {};
+    (state.u || []).forEach(function (u) {
+      if (!u || !u.n) return;
+      var ch = _g45BandChemin(u);
+      if (!ch || vus[ch]) return;
+      vus[ch] = 1;
+      out.push({ ch: ch, nom: _g45BandNomChampionnat(ch) });
+    });
+  } catch (e) {}
+  return out;
+}
+
+/* Nom lisible d'un chemin ESPN, pioche dans la table des competitions — seule
+   source de libelles francais de l'appli. */
+function _g45BandNomChampionnat(ch) {
+  var slug = ch.indexOf('soccer/') === 0 ? ch.slice(7) : ch;
+  try {
+    var trouve = null;
+    (G45_LEAGUE_GROUPS || []).forEach(function (g) {
+      (g.leagues || []).forEach(function (l) { if (!trouve && l.slug === slug) trouve = l.name; });
+    });
+    if (trouve) return trouve;
+  } catch (e) {}
+  var court = { 'hockey/nhl': 'NHL', 'baseball/mlb': 'MLB',
+                'basketball/nba': 'NBA', 'football/nfl': 'NFL' };
+  return court[ch] || slug.toUpperCase();
+}
+
+function _g45BandSelecteur() {
+  var src = _g45BandSource();
+  var opts = '<option value="moi"' + (src === 'moi' ? ' selected' : '') + '>Mes équipes</option>'
+    + _g45BandChampionnats().map(function (c) {
+        return '<option value="' + c.ch + '"' + (src === c.ch ? ' selected' : '') + '>' + c.nom + '</option>';
+      }).join('');
+  return '<select class="g45-band-src" onchange="g45BandSource(this.value)" '
+    + 'aria-label="Source du bandeau">' + opts + '</select>';
+}
+
 async function g45BandeauMaj() {
   var box = document.getElementById('g45-bandeau');
   if (!box) return;
@@ -44357,6 +44452,12 @@ async function g45BandeauMaj() {
   });
   var chemins = Object.keys(parChemin);
   if (!chemins.length) { box.style.display = 'none'; return; }
+
+  var src = _g45BandSource();
+  /* Le championnat choisi peut ne plus figurer parmi les equipes suivies — une
+     equipe supprimee, par exemple. On revient alors a « Mes equipes » plutot que
+     d'interroger un championnat dont plus personne ne fait partie. */
+  if (src !== 'moi' && chemins.indexOf(src) < 0) src = 'moi';
 
   var auj = _g45BandJour(new Date());
   var hier = _g45BandJour(new Date(Date.now() - 86400000));
@@ -44385,7 +44486,11 @@ async function g45BandeauMaj() {
           var dn = (c.team && (c.team.displayName || c.team.shortDisplayName)) || '';
           noms.forEach(function (n) { if (!trouve && _g45BandMeme(dn, n)) trouve = n; });
         });
-        if (trouve) { vus[id] = 1; out.push({ ev: ev, n: trouve }); }
+        if (trouve) { vus[id] = 1; out.push({ ev: ev, n: trouve, moi: true }); }
+        /* Le championnat retenu passe en entier ; les autres n'apportent que les
+           equipes suivies, qui restent donc visibles quel que soit le
+           championnat affiche — c'est l'information qu'on ne veut jamais rater. */
+        else if (src !== 'moi' && chemins[i] === src) { vus[id] = 1; out.push({ ev: ev, n: '', moi: false }); }
       });
     });
     return out;
@@ -44399,8 +44504,18 @@ async function g45BandeauMaj() {
      bandeau : Antoine suit une poignee d'equipes qui ne jouent pas tous les
      jours, la bande serait absente la plupart du temps.
      L'ordre compte : jamais de futur quand il y a du present. */
-  trouves = await passe(auj);
-  if (!trouves.length) trouves = await passe(hier);
+  /* AUJOURD'HUI *ET* HIER (revu le 03/09 : « il n'affiche que les matchs a
+     venir, pas les resultats »). La regle precedente etait exclusive — des qu'un
+     match du jour existait, hier disparaissait, resultats compris. Les deux
+     interessent : ce qui vient et ce qui s'est joue. Plutot qu'un filtre a
+     manipuler sur un bandeau fait pour se lire d'un coup d'oeil, on fusionne.
+     Demain ne sert que de repli, sinon on annoncerait du futur en masquant du
+     present. */
+  var aj = await passe(auj);
+  var hr = await passe(hier);
+  trouves = aj.concat(hr.filter(function (o) {
+    return !aj.some(function (x) { return (x.ev.id || '') === (o.ev.id || ''); });
+  }));
   if (!trouves.length) trouves = await passe(demain);
   if (!trouves.length) { box.style.display = 'none'; return; }
 
@@ -44409,21 +44524,85 @@ async function g45BandeauMaj() {
     var st = (o.ev.status && o.ev.status.type) || {};
     return st.state === 'in' ? 0 : (st.state === 'pre' ? 1 : 2);
   };
-  trouves.sort(function (a, b) { return rang(a) - rang(b); });
+  trouves.sort(function (a, b) {
+    /* Les matchs des equipes suivies passent devant, meme termines : noyes au
+       milieu de dix rencontres de Ligue 1, ils seraient manques. */
+    if (!!a.moi !== !!b.moi) return a.moi ? -1 : 1;
+    var d = rang(a) - rang(b);
+    if (d) return d;
+    var ta = new Date(a.ev.date).getTime() || 0, tb = new Date(b.ev.date).getTime() || 0;
+    /* Les matchs termines du plus recent au plus ancien ; les autres dans
+       l'ordre chronologique. */
+    return rang(a) === 2 ? (tb - ta) : (ta - tb);
+  });
+  /* Plafond plus haut pour une journee entiere, mais un plafond quand meme :
+     au-dela, le tour complet dure plusieurs minutes. */
+  var plafond = (src === 'moi') ? 12 : 22;
+  if (trouves.length > plafond) trouves = trouves.slice(0, plafond);
   trouves.forEach(function (o) {
     var st = (o.ev.status && o.ev.status.type) || {};
     if (st.state === 'in') enCours = true;
   });
 
-  var html = trouves.map(function (o) { return _g45BandTuile(o.ev, o.n); }).join('');
+  var html = trouves.map(function (o) { return _g45BandTuile(o.ev, o.n, o.moi); }).join('');
   /* Le contenu est double pour que le defilement boucle sans a-coup : la
      translation de -50 % ramene exactement au debut de la copie. */
   track.innerHTML = html + html;
+  /* Le selecteur est place HORS de la piste : dans le flux, il defilerait avec
+     les matchs et deviendrait impossible a atteindre. */
+  try {
+    var sel = box.querySelector('.g45-band-src-wrap');
+    if (!sel) {
+      sel = document.createElement('div');
+      sel.className = 'g45-band-src-wrap';
+      box.insertBefore(sel, box.firstChild);
+    }
+    sel.innerHTML = _g45BandSelecteur();
+  } catch (e) {}
   box.style.display = '';
 
   /* La duree suit le nombre de tuiles, sinon deux matchs defileraient aussi vite
      que douze — soit illisible, soit interminable. */
-  try { track.style.animationDuration = Math.max(18, trouves.length * 6) + 's'; } catch (e) {}
+  /* LARGEUR DE PISTE (03/09 : « il demarre au milieu et pas totalement a
+     droite »). Le defilement translate la piste de -50 %, ce qui suppose deux
+     copies remplissant CHACUNE plus que la largeur visible. Avec trois matchs,
+     une copie est plus etroite que l'ecran : la boucle repartait alors n'importe
+     ou. On repete donc le contenu jusqu'a depasser la largeur, et on met
+     l'animation en pause si tout tient deja — faire glisser ce qui est
+     entierement lisible n'apporte rien. */
+  try {
+    var large = box.clientWidth || 0;
+    var uneCopie = track.scrollWidth / 2;
+    if (uneCopie > 0 && large > 0) {
+      /* CORRECTION DU 03/09 — « ça commence au milieu, la moitié droite est
+         vide ».
+         L'animation translate la piste de -50 % : elle suppose donc que la
+         piste contienne EXACTEMENT DEUX copies, et que CHACUNE soit plus large
+         que l'ecran. Ma version precedente ajoutait des copies (4, 6, 8...) en
+         laissant le -50 % en dur : la translation ne parcourait plus que la
+         premiere moitie de la piste, d'ou une bande a moitie remplie et un saut
+         a chaque tour.
+         La regle est donc : on ne depasse JAMAIS deux copies. Pour qu'une copie
+         couvre l'ecran, on repete les TUILES a l'interieur de la copie autant de
+         fois qu'il faut, puis on double le tout. Une moitie de piste est alors
+         toujours plus large que le bandeau, et la boucle se referme sans trou. */
+      var parCopie = 1;
+      while (uneCopie * parCopie < large * 1.15 && parCopie < 12) parCopie++;
+      if (parCopie > 1) {
+        var copie = '';
+        for (var i = 0; i < parCopie; i++) copie += html;
+        track.innerHTML = copie + copie;
+      }
+      /* Rien a faire glisser si tout tient deja a l'ecran... sauf que ce cas ne
+         se produit plus : on vient justement de garantir le contraire. La pause
+         ne sert donc qu'au repli ou la mesure echoue. */
+      track.style.animationPlayState = (track.scrollWidth / 2 <= large) ? 'paused' : '';
+    }
+    /* La duree suit la largeur d'UNE copie — celle reellement parcourue par la
+       translation — et non la piste entiere, sinon doubler le contenu diviserait
+       la vitesse par deux. */
+    track.style.animationDuration = Math.max(18, Math.round((track.scrollWidth / 2) / 90)) + 's';
+  } catch (e) {}
 
   if (_g45BandTimer) { clearTimeout(_g45BandTimer); _g45BandTimer = null; }
   if (enCours) {

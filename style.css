@@ -726,3 +726,36 @@ input[type="date"],input[type="time"]{color-scheme:dark;}
   .g45-band-track{animation:none !important;}
   .g45-band{overflow-x:auto;}
 }
+
+/* Selecteur de source du bandeau, fixe a gauche et HORS de la piste animee. */
+.g45-band{display:flex;align-items:stretch;}
+.g45-band-src-wrap{flex:none;display:flex;align-items:center;padding:0 8px;
+  border-right:1px solid var(--b1);background:rgba(9,13,22,.55);z-index:2;}
+.g45-band-src{background:none;border:0;color:var(--t2);font:inherit;font-size:11.5px;
+  padding:4px 2px;cursor:pointer;max-width:100px;}
+.g45-band-src option{background:var(--bg2);color:var(--t1);}
+.g45-band>.g45-band-track{min-width:0;}
+
+/* Equipe suivie : filet or et voile leger. Le FOND de la tuile ne pouvait pas
+   servir a ca — le vert et le rouge y disent deja gagne/perdu, et le rouge
+   signale le direct. Une troisieme couleur de fond serait entree en collision
+   avec les deux autres. */
+.g45-mt-moi{border-left:2px solid var(--or);background:rgba(242,178,60,.10);}
+.g45-mt-moi:hover{background:rgba(242,178,60,.16);}
+/* Un match sans equipe suivie n'ouvre rien : pas d'effet de survol trompeur. */
+.g45-mt[disabled]{opacity:1;}
+.g45-mt[disabled]:hover{background:none;}
+
+/* PLEIN CADRE SUR TELEPHONE (03/09, demande d'Antoine : « fais en sorte que
+   l'image du club suivi remplisse bien de gauche a droite sur tel »).
+   `.main` applique 14px de marge laterale a tout le contenu — c'est ce qu'on
+   veut pour du texte, pas pour une photo de club. Les cartes du direct
+   annulent donc cette marge par un retrait negatif de meme valeur, et perdent
+   leurs coins arrondis puisqu'elles touchent les bords.
+   Uniquement sur telephone : sur grand ecran, une image etiree sur 1500px
+   serait recadree a l'exces, et la carte a de toute facon la place de
+   respirer. */
+@media(max-width:699px){
+  .g45-dir{margin-left:-14px;margin-right:-14px;}
+  .g45-dir>div{border-radius:0 !important;border-left:0 !important;border-right:0 !important;}
+}
