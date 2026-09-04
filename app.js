@@ -35708,6 +35708,13 @@ function _g45NrlMsg(h, c) {
    equipe (17 requetes, dedoublonnees sur l'identifiant d'evenement). */
 async function g45NrlCharger(annee) {
   annee = annee || new Date().getFullYear();
+  /* CORRECTION DU 04/09 — « pourquoi ça reste bloqué » sur « Équipe 18/18 ».
+     Ce tampon recueille les bornes de journee publiees par ESPN. Je l'avais
+     declare APRES la boucle des equipes alors qu'il est rempli DEDANS : chaque
+     iteration levait une ReferenceError, la fonction s'interrompait, et le
+     message de progression restait fige sur le dernier compteur affiche.
+     Une declaration en tete de fonction, avant tout usage. */
+  var _g45NrlCal = [];
   _g45NrlMsg('⏳ Chargement du calendrier ' + annee + '…');
   var equipes = await g45CoreTeams(_g45NrlCtx.sport, _g45NrlCtx.ligue);
   var ids = {};
@@ -35768,7 +35775,6 @@ async function g45NrlCharger(annee) {
      renvoie 500 sur le NRL — d'ou « 0 matchs sur 0 journees ». Le scoreboard
      accepte une plage de dates et porte les bons identifiants. */
   if (!out.length) {
-    var _g45NrlCal = [];
     var civil = ['bra.1','usa.1','arg.1','3','mlb'].indexOf(_g45NrlCtx.ligue) >= 0;
     var moisDeb = civil ? 0 : 7;
     var fjour = function (d) {
@@ -44871,3 +44877,100 @@ function _g45MajEquipeJouee(u) {
   }
 }
 window._g45MajEquipeJouee = _g45MajEquipeJouee;
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   GONES45 — CONVERSION DE COTES (04/09)
+   ───────────────────────────────────────────────────────────────────────────
+   Les quatre formats ne sont que la meme information ecrite autrement. Tout se
+   deduit de la DECIMALE, prise comme pivot : c'est le format qu'Antoine emploie,
+   et le seul ou la conversion est exacte dans les deux sens.
+
+   FRACTIONNAIRE : « 10/11 » signifie « 10 gagnes pour 11 mises », donc
+   decimale = 10/11 + 1. C'est le format de Bet365 dans la reponse ESPN, y
+   compris pour les buteurs.
+   AMERICAINE : au-dessus de 2.00 la cote s'ecrit +X avec X = (dec-1)*100 ; en
+   dessous, -X avec X = 100/(dec-1). C'est le format de DraftKings.
+   PROBABILITE : 1/decimale. Attention, c'est la probabilite DU BOOKMAKER, marge
+   incluse — la somme des probabilites d'un match depasse toujours 100 %. Elle
+   surestime donc systematiquement les chances reelles, ce que l'interface dit
+   explicitement plutot que de laisser croire a une vraie probabilite.
+
+   Le champ en cours de saisie n'est jamais reecrit : reformater « 1.4 » en
+   « 1.40 » pendant la frappe empecherait de taper « 1.45 ».
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+function _g45DecDepuis(src) {
+  var v = function (id) {
+    var e = document.getElementById(id);
+    return e ? String(e.value || '').trim().replace(',', '.') : '';
+  };
+  if (src === 'dec') {
+    var d = parseFloat(v('cv-dec'));
+    return (d > 1) ? d : 0;
+  }
+  if (src === 'frac') {
+    var t = v('cv-frac');
+    var m = t.match(/^(\d+(?:\.\d+)?)\s*[\/\-:]\s*(\d+(?:\.\d+)?)$/);
+    if (m && parseFloat(m[2]) > 0) return parseFloat(m[1]) / parseFloat(m[2]) + 1;
+    /* « 4/1 » s'ecrit aussi « 4 » chez certains bookmakers britanniques. */
+    var seul = parseFloat(t);
+    return (seul > 0) ? seul + 1 : 0;
+  }
+  if (src === 'us') {
+    var a = parseFloat(v('cv-us'));
+    if (!a) return 0;
+    return (a > 0) ? (a / 100 + 1) : (100 / Math.abs(a) + 1);
+  }
+  if (src === 'prob') {
+    var pr = parseFloat(v('cv-prob').replace('%', ''));
+    return (pr > 0 && pr < 100) ? (100 / pr) : 0;
+  }
+  return 0;
+}
+
+/* Fraction la plus simple approchant le gain net, denominateur plafonne a 100 :
+   au-dela, « 37/40 » deviendrait illisible sans gagner en precision. */
+function _g45Fraction(net) {
+  var meilleur = { n: 1, d: 1, err: Infinity };
+  for (var d = 1; d <= 100; d++) {
+    var n = Math.round(net * d);
+    if (n < 1) continue;
+    var err = Math.abs(net - n / d);
+    if (err < meilleur.err - 1e-9) meilleur = { n: n, d: d, err: err };
+    if (err < 1e-9) break;
+  }
+  return meilleur.n + '/' + meilleur.d;
+}
+
+function g45Conv(src) {
+  var dec = _g45DecDepuis(src);
+  var mettre = function (id, val) {
+    if (id === 'cv-' + src) return;   /* jamais le champ en cours de frappe */
+    var e = document.getElementById(id);
+    if (e) e.value = val;
+  };
+  if (!(dec > 1)) {
+    ['cv-dec', 'cv-frac', 'cv-us', 'cv-prob'].forEach(function (id) { mettre(id, ''); });
+    return;
+  }
+  var net = dec - 1;
+  mettre('cv-dec', dec.toFixed(2));
+  mettre('cv-frac', _g45Fraction(net));
+  mettre('cv-us', (dec >= 2 ? '+' + Math.round(net * 100)
+                            : '-' + Math.round(100 / net)));
+  mettre('cv-prob', (100 / dec).toFixed(1).replace('.', ',') + ' %');
+}
+window.g45Conv = g45Conv;
+
+/* Report vers la calculatrice Value. La probabilite estimee n'est PAS
+   pre-remplie avec celle du bookmaker : ce serait circulaire — on obtiendrait
+   toujours un edge nul, et l'outil ne servirait plus a rien. C'est a
+   l'utilisateur d'apporter sa propre estimation. */
+function g45ConvVersValue() {
+  var d = parseFloat(String((document.getElementById('cv-dec') || {}).value || '').replace(',', '.'));
+  if (!(d > 1)) return;
+  var c = document.getElementById('vb-cote');
+  if (c) { c.value = d.toFixed(2); }
+  try { calcVb(); } catch (e) {}
+}
+window.g45ConvVersValue = g45ConvVersValue;
