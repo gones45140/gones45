@@ -35407,6 +35407,37 @@ async function g45CoreTeams(sportPath, ligue) {
   } catch (e) {}
 
   var out = {};
+
+  /* ═══ VOIE RAPIDE PAR LE PROXY (04/09) ═══
+     Le commentaire ci-dessus reste vrai : `site.api.espn.com/.../teams` ne
+     renvoie pas d'en-tete CORS, donc le navigateur ne peut pas l'appeler.
+     Mais le Worker `fd-proxy`, LUI, le peut — il tourne cote serveur, ou le CORS
+     n'existe pas, et il relaie la reponse avec les bons en-tetes. Il met meme le
+     resultat en cache 10 minutes pour tous les appareils.
+     Une requete au lieu d'une centaine (la voie `sports.core.api` demande une
+     requete PAR CLUB), et la console cesse d'etre noyee sous les erreurs CORS.
+     La voie `core` reste en repli si le proxy est indisponible. */
+  try {
+    var rp = await fetch(FD_PROXY + '?host=espn&path=' +
+      encodeURIComponent('/apis/site/v2/sports/' + sportPath + '/' + ligue + '/teams?limit=100'));
+    if (rp.ok) {
+      var dp = await rp.json();
+      var lst = (((dp.sports || [])[0] || {}).leagues || [])[0];
+      var eq = (lst && lst.teams) || [];
+      eq.forEach(function (w) {
+        var t = w && (w.team || w);
+        if (!t || !t.id) return;
+        [t.displayName, t.name, t.shortDisplayName, t.nickname, t.location, t.abbreviation]
+          .filter(Boolean).forEach(function (n) { out[_g45Norm(n)] = String(t.id); });
+      });
+      if (Object.keys(out).length) {
+        _g45CoreCache[cle] = out;
+        try { localStorage.setItem(cle, JSON.stringify(out)); } catch (e) {}
+        return out;
+      }
+    }
+  } catch (e) {}
+
   try {
     var url = 'https://sports.core.api.espn.com/v2/sports/' + sportPath +
               '/leagues/' + ligue + '/teams?limit=100';
