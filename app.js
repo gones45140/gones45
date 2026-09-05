@@ -5217,7 +5217,35 @@ function searchAdv(q,targetId,resId){
   var db=(ADV_DB[sport]||ADV_DB['⚽'])
     .concat(state.a.map(function(h){return h.target||'';}).filter(Boolean))
     .concat(_g45AdversairesConnus());
-  var seen={};var uniq=db.filter(function(v){return v&&!seen[v]&&(seen[v]=1);});
+
+  /* ═══ NETTOYAGE DES SUGGESTIONS (04/09) ═══
+     Retour d'Antoine : « quand je choisis une équipe, Paris vs Monaco… c'est un
+     peu casse-pied ».
+     La liste agrege les adversaires des paris passes. Or ce champ a parfois
+     recu un INTITULE DE MATCH complet — « Paris Saint-Germain vs AS Monaco » —
+     qui revenait ensuite comme s'il s'agissait d'une equipe.
+     Plutot que de jeter ces entrees, on les COUPE : un intitule contient deux
+     noms d'equipe parfaitement utilisables. « A vs B » fournit donc A et B.
+     Et la deduplication comparait les chaines a l'identique : un espace en trop
+     ou une casse differente creait un doublon. Elle porte desormais sur une
+     forme normalisee, tout en conservant l'ecriture d'origine pour l'affichage. */
+  var eclate = [];
+  db.forEach(function(v){
+    if(!v) return;
+    /* Le tiret simple est inclus, mais SEULEMENT entoure d'espaces : sans cette
+       precaution, « Paris Saint-Germain » et « Saint-Étienne » seraient coupes
+       en deux. « Lyon - Auxerre » l'est, eux non. */
+    var parts = String(v).split(/\s+(?:vs?\.?|v\.|contre|@|—|–|-)\s+/i);
+    if(parts.length > 1) parts.forEach(function(x){ x=x.trim(); if(x) eclate.push(x); });
+    else eclate.push(String(v).trim());
+  });
+  var seen={};
+  var uniq=eclate.filter(function(v){
+    if(!v) return false;
+    var k=v.toLowerCase().replace(/\s+/g,' ').trim();
+    if(seen[k]) return false;
+    seen[k]=1; return true;
+  });
   var ql=q.toLowerCase();
   var filtered=uniq.filter(function(v){return v.toLowerCase().includes(ql);}).slice(0,8);
   if(!filtered.length){res.style.display='none';return;}
@@ -12519,7 +12547,35 @@ function searchAdv(q,targetId,resId){
   var db=(ADV_DB[sport]||ADV_DB['⚽'])
     .concat(state.a.map(function(h){return h.target||'';}).filter(Boolean))
     .concat(_g45AdversairesConnus());
-  var seen={};var uniq=db.filter(function(v){return v&&!seen[v]&&(seen[v]=1);});
+
+  /* ═══ NETTOYAGE DES SUGGESTIONS (04/09) ═══
+     Retour d'Antoine : « quand je choisis une équipe, Paris vs Monaco… c'est un
+     peu casse-pied ».
+     La liste agrege les adversaires des paris passes. Or ce champ a parfois
+     recu un INTITULE DE MATCH complet — « Paris Saint-Germain vs AS Monaco » —
+     qui revenait ensuite comme s'il s'agissait d'une equipe.
+     Plutot que de jeter ces entrees, on les COUPE : un intitule contient deux
+     noms d'equipe parfaitement utilisables. « A vs B » fournit donc A et B.
+     Et la deduplication comparait les chaines a l'identique : un espace en trop
+     ou une casse differente creait un doublon. Elle porte desormais sur une
+     forme normalisee, tout en conservant l'ecriture d'origine pour l'affichage. */
+  var eclate = [];
+  db.forEach(function(v){
+    if(!v) return;
+    /* Le tiret simple est inclus, mais SEULEMENT entoure d'espaces : sans cette
+       precaution, « Paris Saint-Germain » et « Saint-Étienne » seraient coupes
+       en deux. « Lyon - Auxerre » l'est, eux non. */
+    var parts = String(v).split(/\s+(?:vs?\.?|v\.|contre|@|—|–|-)\s+/i);
+    if(parts.length > 1) parts.forEach(function(x){ x=x.trim(); if(x) eclate.push(x); });
+    else eclate.push(String(v).trim());
+  });
+  var seen={};
+  var uniq=eclate.filter(function(v){
+    if(!v) return false;
+    var k=v.toLowerCase().replace(/\s+/g,' ').trim();
+    if(seen[k]) return false;
+    seen[k]=1; return true;
+  });
   var ql=q.toLowerCase();
   var filtered=uniq.filter(function(v){return v.toLowerCase().includes(ql);}).slice(0,8);
   if(!filtered.length){res.style.display='none';return;}
@@ -40563,6 +40619,7 @@ var _G45_PERSO_IMG = 'g45_img_perso_';
 var _G45_PERSO_DIR = 'images/equipes/';
 
 function _g45ImgPersoLire(nom) {
+  if (typeof nom !== 'string' || !nom.trim()) return '';
   try {
     var o = JSON.parse(localStorage.getItem(_G45_PERSO_IMG + _g45SgNorm(nom)) || 'null');
     if (!o) return undefined;
@@ -40579,6 +40636,18 @@ function _g45ImgPersoLire(nom) {
    "atleticomadrid.png" que ce code construit — le nom de fichier doit rester
    tout en minuscules, sans espace ni accent (`_g45SgNorm`). */
 function _g45ImgPersoTester(nom) {
+  /* GARDE-FOU (04/09) : la console d'Antoine reclamait
+     « images/equipes/objectobject.jpg ». Un appelant passe ici un OBJET au lieu
+     d'un nom ; converti en texte il donne « [object Object] », que la
+     normalisation reduit a « objectobject ».
+     On refuse donc tout ce qui n'est pas une chaine exploitable : deux requetes
+     404 en moins, et surtout plus d'entree de cache parasite sous ce nom.
+     L'avertissement en console sert a retrouver l'appelant fautif — la pile
+     d'appels y est visible. */
+  if (typeof nom !== 'string' || !nom.trim() || nom.indexOf('[object') >= 0) {
+    try { console.warn('visuel perso : nom invalide', nom); } catch (e) {}
+    return Promise.resolve('');
+  }
   var base = _G45_PERSO_DIR + _g45SgNorm(nom);
   var exts = ['jpg', 'png'];
   return new Promise(function (res) {
@@ -44527,8 +44596,10 @@ function _g45BandTuile(ev, monNom, estMoi) {
     : (fin ? '<span class="g45-mt-st">Terminé</span>'
            : '<span class="g45-mt-st soon">' + _g45BandQuand(ev.date) + '</span>');
 
-  /* Domicile en bas, comme sur les tableaux de scores : c'est la convention
-     americaine d'ESPN et celle des chaines sportives. */
+  /* DOMICILE EN PREMIER (corrige le 04/09). J'avais repris la convention des
+     tableaux de scores AMERICAINS, qui placent le visiteur en haut — d'ou
+     « Monaco / PSG » pour un match joue au Parc des Princes. En football
+     europeen on ecrit toujours le receveur d'abord. */
   var dom = cs.filter(function (x) { return x.homeAway === 'home'; })[0] || cs[0];
   var ext = cs.filter(function (x) { return x.homeAway === 'away'; })[0] || cs[1];
 
@@ -44554,7 +44625,7 @@ function _g45BandTuile(ev, monNom, estMoi) {
     : ' disabled style="cursor:default;"';
   return '<button class="g45-mt' + (estMoi ? ' g45-mt-moi' : '') + '"' + act + '>'
     + etat
-    + '<span class="g45-mt-eq">' + ligne(ext, dom) + ligne(dom, ext) + '</span>'
+    + '<span class="g45-mt-eq">' + ligne(dom, ext) + ligne(ext, dom) + '</span>'
     + '</button>';
 }
 
@@ -44790,7 +44861,14 @@ async function _g45BandMesEquipes() {
     });
   }
   _g45BandTrier(out);
-  return out.slice(0, 14);
+  /* PLAFOND RELEVE (04/09) : « le bandeau se coupe net… il manque les matchs du
+     Bayern et de l'AS Roma, sans compter ceux de MLB cette nuit ».
+     A 14, la limite mordait sur les equipes suivies elles-memes — or c'est
+     exactement ce qu'on veut voir, et elles ne sont pas si nombreuses. On monte
+     a 40, ce qui couvre une journee complete de football plus une soiree de
+     baseball. La borne subsiste uniquement pour empecher un tour de bande
+     interminable en cas de configuration inattendue. */
+  return out.slice(0, 40);
 }
 
 /* ─── MODE « CHAMPIONNAT » ────────────────────────────────────────────────
