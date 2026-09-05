@@ -10,8 +10,8 @@
      chemin est volontairement RELATIF : il se resout en `/gones45/favicon.ico`
      sur les Pages de projet et en `/favicon.ico` sur bet45.fr, sans avoir a
      maintenir deux valeurs differentes. -->
-<link rel="icon" href="favicon.ico?v=20260904r" sizes="any">
-<link rel="apple-touch-icon" href="apple-touch-icon.png?v=20260904r">
+<link rel="icon" href="favicon.ico?v=20260904t" sizes="any">
+<link rel="apple-touch-icon" href="apple-touch-icon.png?v=20260904t">
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; frame-src https://www.youtube.com https://www.youtube-nocookie.com; script-src 'self' 'unsafe-eval' 'unsafe-inline' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com; worker-src 'self' blob:; connect-src 'self' data: blob: https://tessdata.projectnaptha.com https://site.api.espn.com https://site.web.api.espn.com https://sports.core.api.espn.com https://fantasy.premierleague.com https://api.dropbox.com https://content.dropboxapi.com https://api.dropboxapi.com https://api.groq.com https://generativelanguage.googleapis.com https://api.mistral.ai https://api.tavily.com https://fd-proxy.touraine-antoine.workers.dev https://media.api-sports.io https://api.football-data.org https://api-web.nhle.com https://statsapi.mlb.com https://www.thesportsdb.com https://cdn.jsdelivr.net https://api.openf1.org https://racecenter.letour.fr https://racecenter.lavuelta.es https://racecenter.letourfemmes.fr https://racecenter.paris-nice.fr https://racecenter.tour-auvergne-rhone-alpes.fr https://racecenter.paris-roubaix.fr https://racecenter.liege-bastogne-liege.be https://racecenter.la-fleche-wallonne.be https://racecenter.paris-tours.fr https://api.jolpi.ca https://en.wikipedia.org https://api.github.com https://raw.githubusercontent.com https://gones45140.github.io https://vbsdewuvycaekfkixynh.supabase.co wss://vbsdewuvycaekfkixynh.supabase.co; img-src 'self' data: https: blob: https://flagcdn.com; style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com https://fonts.googleapis.com; font-src 'self' data: https://fonts.gstatic.com;">
 <meta http-equiv="Content-Security-Policy" content="default-src 'self' 'unsafe-inline' 'unsafe-eval' https: data: blob:;">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
@@ -20,7 +20,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600;700;800&family=Barlow+Condensed:wght@500;600;700&display=swap">
-<link rel="stylesheet" href="style.css?v=20260904r">
+<link rel="stylesheet" href="style.css?v=20260904t">
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js" crossorigin="anonymous"></script>
 <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js" crossorigin="anonymous"></script>
 <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
@@ -1349,7 +1349,7 @@
      worker servaient indefiniment l'ancien fichier sur mobile : rouvrir
      l'application ne changeait rien puisque l'URL demandee etait la meme.
      A INCREMENTER A CHAQUE DEPLOIEMENT, comme sur fenotte45. -->
-<script src="app.js?v=20260904r"></script>
+<script src="app.js?v=20260904t"></script>
 <script src="social.js"></script>
 
 
@@ -1484,6 +1484,14 @@
       <input type="hidden" id="edit-domicile" value="">
     </div>
     <div class="fg" style="margin-bottom:14px;"><label class="fl">Notes</label><input id="edit-notes" class="fi" placeholder="Notes…"></div>
+    <!-- OPTIONS AJOUTEES LE 04/09 (retour d'Antoine : « dans le screen 1 il manque
+         les selections du screen 2 »). Le formulaire de CREATION propose Freebet,
+         Lay et FlashBoost, mais pas celui de MODIFICATION : un pari saisi sans
+         cocher Freebet ne pouvait plus etre corrige, alors que ces trois options
+         changent le calcul du gain. -->
+    <label class="g45-opt"><input type="checkbox" id="edit-freebet"> Freebet — mise non engagée</label>
+    <label class="g45-opt"><input type="checkbox" id="edit-lay"> Lay — parier contre</label>
+    <label class="g45-opt" style="margin-bottom:14px;"><input type="checkbox" id="edit-flash"> FlashBoost</label>
     <button class="btn btn-p" style="width:100%;" onclick="saveEditBet()">💾 Enregistrer</button>
   </div>
 </div>
