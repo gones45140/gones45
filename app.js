@@ -1550,9 +1550,39 @@ function buildSbRows(light){
         retour=s1*c1;
       }
     }
+    /* ═══ MISE 1 IMPOSEE (04/09) ═══
+       Quand le premier bookmaker plafonne la mise, on ne repartit plus un total :
+       on part de cette mise et on calcule les autres pour EGALISER les retours.
+       s1·c1 = sj·cj  donc  sj = s1·c1/cj.
+       La mise totale devient alors la somme obtenue, et non plus une consigne —
+       elle est reaffichee dans son champ pour que le chiffre reste coherent.
+       Compatible avec « Gagner ou Rembourse » : la promo est calculee d'abord,
+       et on remet simplement les mises a l'echelle pour que la premiere tombe
+       sur le montant impose. Le rapport entre les mises est conserve, donc le
+       profit garanti reste garanti. */
+    var fix1=parseFloat((($i('sb-fix1')&&$i('sb-fix1').value)||'').toString().replace(',','.'));
+    var impose=(fix1>0);
+
     if(!mises.length){
-      mises=sbRows.map(function(r){ return tot/impl*(1/(r.c||1)); });
-      retour=tot/impl;
+      if(impose){
+        var c1f=sbRows[0].c||1;
+        mises=sbRows.map(function(r,i){ return i===0 ? fix1 : fix1*c1f/(r.c||1); });
+        retour=fix1*c1f;
+      } else {
+        mises=sbRows.map(function(r){ return tot/impl*(1/(r.c||1)); });
+        retour=tot/impl;
+      }
+    } else if(impose && mises[0]>0){
+      /* Cas « Gagner ou Rembourse » : on met la repartition a l'echelle. */
+      var k=fix1/mises[0];
+      mises=mises.map(function(m){ return m*k; });
+      retour=retour*k;
+    }
+
+    if(impose){
+      tot=mises.reduce(function(a,m){ return a+m; },0);
+      var ti=$i('sb-tot');
+      if(ti && document.activeElement!==ti) ti.value=tot.toFixed(2);
     }
     profit=retour-tot;
     sbRows.forEach(function(r,i){
@@ -9204,9 +9234,39 @@ function buildSbRows(light){
         retour=s1*c1;
       }
     }
+    /* ═══ MISE 1 IMPOSEE (04/09) ═══
+       Quand le premier bookmaker plafonne la mise, on ne repartit plus un total :
+       on part de cette mise et on calcule les autres pour EGALISER les retours.
+       s1·c1 = sj·cj  donc  sj = s1·c1/cj.
+       La mise totale devient alors la somme obtenue, et non plus une consigne —
+       elle est reaffichee dans son champ pour que le chiffre reste coherent.
+       Compatible avec « Gagner ou Rembourse » : la promo est calculee d'abord,
+       et on remet simplement les mises a l'echelle pour que la premiere tombe
+       sur le montant impose. Le rapport entre les mises est conserve, donc le
+       profit garanti reste garanti. */
+    var fix1=parseFloat((($i('sb-fix1')&&$i('sb-fix1').value)||'').toString().replace(',','.'));
+    var impose=(fix1>0);
+
     if(!mises.length){
-      mises=sbRows.map(function(r){ return tot/impl*(1/(r.c||1)); });
-      retour=tot/impl;
+      if(impose){
+        var c1f=sbRows[0].c||1;
+        mises=sbRows.map(function(r,i){ return i===0 ? fix1 : fix1*c1f/(r.c||1); });
+        retour=fix1*c1f;
+      } else {
+        mises=sbRows.map(function(r){ return tot/impl*(1/(r.c||1)); });
+        retour=tot/impl;
+      }
+    } else if(impose && mises[0]>0){
+      /* Cas « Gagner ou Rembourse » : on met la repartition a l'echelle. */
+      var k=fix1/mises[0];
+      mises=mises.map(function(m){ return m*k; });
+      retour=retour*k;
+    }
+
+    if(impose){
+      tot=mises.reduce(function(a,m){ return a+m; },0);
+      var ti=$i('sb-tot');
+      if(ti && document.activeElement!==ti) ti.value=tot.toFixed(2);
     }
     profit=retour-tot;
     sbRows.forEach(function(r,i){
@@ -26590,8 +26650,45 @@ async function g45F1AI(btn){
     var rows=(data&&data.DriverStandings)||[];
     if(rows.length) facts.push('Classement championnat : '+rows.slice(0,8).map(function(x){ var D=x.Driver||{}; return x.position+'. '+(D.familyName||'')+' ('+(x.points||0)+' pts)'; }).join(' · '));
   }catch(e){}
+  /* ═══ GRILLE DE DEPART (04/09) ═══
+     Retour d'Antoine : « si Anto gagne je m'en coupe une… il a eu une penalite
+     et part dernier, l'IA ne le prend pas en compte ».
+     Les trois modeles donnaient Antonelli favori parce qu'il MENE LE
+     CHAMPIONNAT — seule information de forme qu'on leur transmettait. Or en F1,
+     la grille est de loin le meilleur predicteur d'un resultat : partir 1er ou
+     18e change tout, et le classement de saison n'en dit rien.
+     On ajoute donc les qualifications quand elles ont eu lieu. Les positions
+     viennent du champ `order`, celui-la meme qu'affiche l'onglet Qual. */
+  try{
+    var _q=(ev.competitions||[]).filter(function(c){
+      var t=String((c.type&&(c.type.abbreviation||c.type.text))||'').toLowerCase();
+      var st=(c.status&&c.status.type&&c.status.type.state)||'';
+      return /qual/.test(t) && !/sprint|shoot/.test(t) && st==='post';
+    }).pop();
+    if(_q){
+      var _g=(_q.competitors||[]).slice()
+        .sort(function(a,b){ return (a.order||99)-(b.order||99); })
+        .slice(0,12)
+        .map(function(c){
+          var n=(c.athlete&&(c.athlete.shortName||c.athlete.displayName))||'';
+          /* La position vient de `order`, JAMAIS du rang dans la liste : un
+             pilote penalise porte l'ordre 18 tout en etant 6e de la liste
+             tronquee. Renumeroter par l'index aurait affiche « 6. Antonelli »
+             et reproduit exactement l'erreur qu'on cherche a corriger. */
+          return (c.order||'?')+'. '+n;
+        }).filter(function(x){ return x.length>3; });
+      if(_g.length) facts.push('GRILLE DE DEPART (qualifications, ordre reel de depart) : '+_g.join(' · '));
+    } else {
+      /* Le dire explicitement vaut mieux que laisser le modele se rabattre en
+         silence sur le championnat, ce qui produit une reponse assuree et fausse. */
+      facts.push('GRILLE DE DEPART : pas encore connue (qualifications non disputees). Ne pas deviner l\'ordre de depart.');
+    }
+  }catch(e){}
+
   try{ if(typeof g45StatsForEvent==='function'){ g45StatsForEvent(_g45F1Ev(ev)).slice(0,4).forEach(function(st){ facts.push('Note perso de l\'utilisateur : '+st.text); }); } }catch(e){}
-  var sys='Tu es un analyste paris F1 francophone, concis et prudent. Reponds STRICTEMENT dans ce format, sans rien avant ni apres:\n🎯 FAVORI : <pilote> — podium probable <P1, P2, P3>\n💎 OUTSIDER / VALUE : <pilote(s) potentiellement sous-cotes et pourquoi>\n🔑 POINTS CLES :\n- <point 1>\n- <point 2>\n- <point 3>\n⚠️ <principale incertitude en 1 phrase>\nAppuie-toi sur les faits fournis (forme, championnat, notes, circuit) et tes connaissances des circuits. REGLE ABSOLUE : ne cite JAMAIS une forme recente, une serie, un historique de confrontations, un score passe, une blessure ou un classement qui ne figure PAS dans les FAITS fournis. Si une info te manque, raisonne au conditionnel ou dis que la donnee manque, sans l\'inventer.';
+  /* Consigne ajoutee le 04/09 : sans elle, le modele continue de raisonner sur
+     le championnat meme quand la grille lui est fournie. */
+  var sys='Tu es un analyste paris F1 francophone, concis et prudent. Si une GRILLE DE DEPART est fournie, elle prime sur le classement du championnat : un pilote partant loin ne peut pas etre donne favori sur la seule foi de ses points. Si la grille n\'est pas connue, dis-le au lieu de la deviner. Reponds STRICTEMENT dans ce format, sans rien avant ni apres:\n🎯 FAVORI : <pilote> — podium probable <P1, P2, P3>\n💎 OUTSIDER / VALUE : <pilote(s) potentiellement sous-cotes et pourquoi>\n🔑 POINTS CLES :\n- <point 1>\n- <point 2>\n- <point 3>\n⚠️ <principale incertitude en 1 phrase>\nAppuie-toi sur les faits fournis (forme, championnat, notes, circuit) et tes connaissances des circuits. REGLE ABSOLUE : ne cite JAMAIS une forme recente, une serie, un historique de confrontations, un score passe, une blessure ou un classement qui ne figure PAS dans les FAITS fournis. Si une info te manque, raisonne au conditionnel ou dis que la donnee manque, sans l\'inventer.';
   await _g45MultiAI(box, btn.dataset.box, sys, facts, ev.name||'GP');
   btn.disabled=false;
 }
@@ -40583,17 +40680,32 @@ window._g45Visible = _g45Visible;
    LIMITE ASSUMEE : un match precis peut etre sur une autre chaine du groupe
    (multiplex, affiche du dimanche soir). On affiche donc le diffuseur du
    CHAMPIONNAT, pas une garantie pour ce match-la. */
+/* MISE A JOUR DU 04/09/2026 (retour d'Antoine : « sur les matchs de Serie A cela
+   me dit beIN, sauf qu'en France c'est DAZN »).
+   Les droits ont ete ENTIEREMENT redistribues pour 2026-2027, et cette table
+   datait de la saison precedente. Trois erreurs, pas une :
+   · SERIE A : beIN → DAZN
+   · LIGA : beIN → DAZN (apres quatorze ans chez beIN), Disney+ en second
+   · LIGUE 1 : Ligue 1+ devient l'UNIQUE diffuseur (9 matchs sur 9)
+   La Ligue des champions n'est plus co-diffusee : Canal+ seul, avec la finale en
+   clair sur M6. beIN conserve la Ligue 2, la Bundesliga et la Coupe de France.
+   La F1 reste un monopole Canal+.
+   Verifie le 04/09/2026 — a revoir chaque ete, c'est le seul entretien. */
 var G45_TV_FR = {
   'fra.1':'Ligue 1+', 'fra.2':'beIN SPORTS', 'fra.coupe_de_france':'beIN SPORTS / France TV',
-  'eng.1':'Canal+', 'esp.1':'beIN SPORTS', 'ita.1':'beIN SPORTS', 'ger.1':'beIN SPORTS',
+  'eng.1':'Canal+', 'esp.1':'DAZN / Disney+', 'ita.1':'DAZN', 'ger.1':'beIN SPORTS',
   'por.1':'Canal+', 'ned.1':'Canal+',
-  'uefa.champions':'Canal+ / beIN SPORTS', 'uefa.europa':'Canal+', 'uefa.europa.conf':'Canal+',
+  'uefa.champions':'Canal+', 'uefa.europa':'Canal+', 'uefa.europa.conf':'Canal+',
   'uefa.super_cup':'Canal+', 'fifa.world':'TF1 / M6', 'uefa.euro':'TF1 / M6',
+  'uefa.nations':'La chaîne L\'Équipe',
   'club.friendly':'\u2014',
   'nba':'beIN SPORTS', 'nfl':'beIN SPORTS',
   /* Corrige le 15/08 : la MLB et la NHL passent bien en France, sur les chaines
      beIN SPORTS MAX — je les avais classees « non diffusees » a tort. */
   'nhl':'beIN SPORTS MAX', 'mlb':'beIN SPORTS MAX',
+  /* Formule 1 : monopole Canal+. Le slug ESPN de la F1 est `f1`, mais la vue
+     course transmet parfois le chemin complet — les deux sont couverts. */
+  'f1':'Canal+', 'racing/f1':'Canal+',
   '3':'\u2014', '270559':'Canal+', '271937':'beIN SPORTS'
 };
 function _g45TvDe(slug) {
