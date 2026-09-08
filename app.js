@@ -1529,22 +1529,75 @@ function renderCrash(){
 }
 
 /* ── SUREBET ── */
-var sbRows=[{c:2.10},{c:2.05}];
+/* `d` = cette ligne PORTE le profit. Toutes a `true` : comportement historique,
+   les retours sont egalises et le profit est identique quelle que soit l'issue.
+   Decochee, une ligne est calculee pour rendre EXACTEMENT la mise totale : elle
+   rembourse, sans plus, et son benefice se reporte sur les lignes marquees.
+   C'est la colonne « D » de surebet.com, et c'est ce qu'Antoine appelle
+   « gagner ou rembourse » : cote 1 passe, je gagne ; cote 2 passe, je recupere
+   ma mise. A ne pas confondre avec la case OFFRE BOOKMAKER plus haut, qui elle
+   suppose un remboursement paye par le bookmaker en freebet. */
+var sbRows=[{c:2.10,d:true,k:0},{c:2.05,d:true,k:0}];
+/* ═══ COMMISSION PAR COTE (06/09) ═══
+   Piwi247 donne acces a Betfair : la commission y porte sur le GAIN NET, pas
+   sur la mise ni sur le retour. Une cote c a k % vaut donc reellement
+       1 + (c − 1)·(1 − k/100)
+   — a 3 %, une 2.18 n'est plus qu'une 2.145. C'est loin d'etre cosmetique :
+   sur 2.18/1.9 la marge tombe de 1,5 % a 0,19 %, l'arbitrage disparait presque.
+   Tout le calculateur travaille donc sur la cote EFFECTIVE ; la cote saisie
+   n'est plus qu'un affichage. */
+function sbCote(r){
+  var c=(r&&r.c)||1, k=(r&&parseFloat(r.k))||0;
+  if(!(k>0)) return c;
+  if(k>=100) k=99;
+  var e=1+(c-1)*(1-k/100);
+  return e>1?e:1;
+}
+/* Les cotes changent a chaque pari, la commission non : c'est une propriete du
+   bookmaker. On la retient donc d'une session a l'autre, ligne par ligne. */
+try{
+  var _sbK=JSON.parse(localStorage.getItem('g45_sb_com_v1')||'null');
+  if(_sbK&&_sbK.length) sbRows.forEach(function(r,i){ if(_sbK[i]!=null) r.k=_sbK[i]; });
+}catch(e){}
+function sbSetCom(i,v){
+  var r=sbRows[i]; if(!r) return;
+  r.k=parseFloat(String(v).replace(',','.'))||0;
+  try{ localStorage.setItem('g45_sb_com_v1', JSON.stringify(sbRows.map(function(x){ return x.k||0; }))); }catch(e){}
+  buildSbRows(true);
+}
+function toggleSbD(i){
+  var r=sbRows[i]; if(!r) return;
+  r.d = (r.d===false);
+  /* Au moins une ligne doit porter le profit, sinon plus rien n'a de solution :
+     decocher la derniere marquee remet tout le monde a l'egalisation. */
+  if(!sbRows.some(function(x){ return x.d!==false; })) sbRows.forEach(function(x){ x.d=true; });
+  buildSbRows();
+}
 function buildSbRows(light){
   var tot=parseFloat((($i('sb-tot')&&$i('sb-tot').value)||100).toString().replace(',','.'));
   var gorr=$i('sb-gorr')&&$i('sb-gorr').checked;
-  var impl=sbRows.reduce(function(a,r){return a+1/(r.c||1);},0);
+  var impl=sbRows.reduce(function(a,r){return a+1/sbCote(r);},0);
   var dr=$i('sb-rows');if(!dr)return;
+  /* La repartition de l'offre bookmaker a deja sa propre logique : les deux
+     mecaniques se marcheraient dessus, donc les cibles disparaissent. */
+  var cibles=!gorr && sbRows.length>=2;
   if(!light) dr.innerHTML=sbRows.map(function(r,i){
+    var on=(r.d!==false);
+    /* ETIQUETTE VISIBLE (02/09) : le `placeholder` « Cote 1 » ne s'affiche que
+       tant que le champ est vide — donc jamais ici, puisqu'il porte toujours
+       une valeur. Deux grands champs cote a cote sans rien pour les
+       distinguer, alors que le resultat plus bas parle de « Mise 1 (@2.1) ». */
     return '<div class="dutch-row">'
-      /* ETIQUETTE VISIBLE (02/09) : le `placeholder` « Cote 1 » ne s'affiche que
-         tant que le champ est vide — donc jamais ici, puisqu'il porte toujours
-         une valeur. Deux grands champs cote a cote sans rien pour les
-         distinguer, alors que le resultat plus bas parle de « Mise 1 (@2.1) ». */
       +'<span class="dutch-lbl">Cote '+(i+1)+'</span>'
       +'<input type="text" inputmode="decimal" class="fi" value="'+r.c+'" placeholder="Cote '+(i+1)+'" data-idx="'+i+'" oninput="sbRows[this.dataset.idx].c=parseFloat(this.value.replace(\',\',\'.\'))||1;buildSbRows(true);">'
+      +'<input type="text" inputmode="decimal" class="fi" value="'+(r.k||0)+'" title="Commission du bookmaker, en % du gain net" data-idx="'+i+'" style="width:52px;flex:none;text-align:center;color:'+((r.k>0)?'var(--gold)':'var(--t3)')+';" oninput="sbSetCom(this.dataset.idx,this.value)">'
+      +'<span style="font-size:11px;color:var(--t3);">%</span>'
+      +(cibles?('<button data-idx="'+i+'" onclick="toggleSbD(this.dataset.idx)" title="Concentrer le profit sur cette cote" style="border:1px solid '+(on?'rgba(30,215,96,.55)':'rgba(255,255,255,.12)')+';background:'+(on?'rgba(30,215,96,.16)':'transparent')+';color:'+(on?'var(--g)':'var(--t3)')+';border-radius:8px;padding:7px 9px;font-size:11px;white-space:nowrap;cursor:pointer;">🎯</button>'):'')
       +(sbRows.length>2?'<button class="udel" data-idx="'+i+'" onclick="sbRows.splice(this.dataset.idx,1);buildSbRows();">✕</button>':'')
-      +'</div>';
+      +'</div>'
+      /* La ligne d'explication n'apparait qu'a partir d'une commission saisie :
+         a 0 %, elle n'apprendrait rien et alourdirait l'ecran du telephone. */
+      +((r.k>0)?('<div style="font-size:10px;color:var(--gold);margin:-2px 0 6px 52px;">commission '+r.k+' % → cote effective '+sbCote(r).toFixed(3)+'</div>'):'');
   }).join('');
   var isSure=impl<1;
   var marge=((1-impl)*100).toFixed(2);
@@ -1555,17 +1608,17 @@ function buildSbRows(light){
      On égalise les retours : s1·c1 = sj·cj + v·s1, d'où sj = s1(c1−v)/cj et
      s1 = T / [1 + (c1−v)·Σ(1/cj)]. À v=0 on retombe exactement sur le surebet classique. */
   var misesHtml='';
-  var profit=0, retour=0, mises=[];
+  var profit=0, retour=0, mises=[], gains=[], toutesCibles=true, impossible=false;
   if(impl>0&&sbRows.length){
     if(gorr&&sbRows.length>=2){
       var v=parseFloat((($i('sb-gorr-val')&&$i('sb-gorr-val').value)||70).toString().replace(',','.'))/100;
       if(!(v>0)||v>1) v=0.7;
-      var c1=sbRows[0].c||1;
-      var reste=sbRows.slice(1).reduce(function(a,r){ return a+1/(r.c||1); },0);
+      var c1=sbCote(sbRows[0]);
+      var reste=sbRows.slice(1).reduce(function(a,r){ return a+1/sbCote(r); },0);
       var den=1+(c1-v)*reste;
       if(den>0&&c1>v){
         var s1=tot/den;
-        mises=[s1].concat(sbRows.slice(1).map(function(r){ return s1*(c1-v)/(r.c||1); }));
+        mises=[s1].concat(sbRows.slice(1).map(function(r){ return s1*(c1-v)/sbCote(r); }));
         retour=s1*c1;
       }
     }
@@ -1583,14 +1636,36 @@ function buildSbRows(light){
     var impose=(fix1>0);
 
     if(!mises.length){
-      if(impose){
-        var c1f=sbRows[0].c||1;
-        mises=sbRows.map(function(r,i){ return i===0 ? fix1 : fix1*c1f/(r.c||1); });
-        retour=fix1*c1f;
-      } else {
-        mises=sbRows.map(function(r){ return tot/impl*(1/(r.c||1)); });
-        retour=tot/impl;
+      /* ═══ PROFIT CONCENTRE (06/09) ═══
+         Notons D les lignes marquees et N les autres. Une ligne de N doit rendre
+         la mise totale : s_i = T/c_i. Les lignes de D partagent un meme retour R,
+         donc s_i = R/c_i. En sommant :
+             T = R·Σ_D(1/c) + T·Σ_N(1/c)
+         d'ou R = T·(1 − Σ_N) / Σ_D, et reciproquement T = R·Σ_D / (1 − Σ_N).
+         Toutes les lignes marquees : Σ_N = 0, R = T/impl — exactement l'ancienne
+         formule, l'egalisation reste donc le comportement par defaut. */
+      var oc=sbRows.map(function(r){ return sbCote(r); });
+      var dF=sbRows.map(function(r){ return r.d!==false; });
+      if(!dF.some(function(x){ return x; })) dF=dF.map(function(){ return true; });
+      toutesCibles=dF.every(function(x){ return x; });
+      var sumN=0,sumD=0;
+      dF.forEach(function(on,i){ if(on) sumD+=1/oc[i]; else sumN+=1/oc[i]; });
+      /* Σ_N ≥ 1 : les lignes non marquees coutent deja plus que ce qu'elles
+         rendent, aucun montant ne peut les rembourser. On le dit plutot que
+         d'afficher un resultat negatif incomprehensible. */
+      if(sumD<=0||sumN>=1){
+        impossible=!toutesCibles;
+        dF=dF.map(function(){ return true; }); toutesCibles=true;
+        sumN=0; sumD=impl;
       }
+      var R=0, T=0;
+      if(impose){
+        if(dF[0]){ R=fix1*oc[0]; T=R*sumD/(1-sumN); }
+        else { T=fix1*oc[0]; R=T*(1-sumN)/sumD; }
+      } else { T=tot; R=T*(1-sumN)/sumD; }
+      mises=oc.map(function(c,i){ return (dF[i]?R:T)/c; });
+      gains=oc.map(function(c,i){ return (dF[i]?R:T)-T; });
+      retour=R; tot=T;
     } else if(impose && mises[0]>0){
       /* Cas « Gagner ou Rembourse » : on met la repartition a l'echelle. */
       var k=fix1/mises[0];
@@ -1605,9 +1680,15 @@ function buildSbRows(light){
     }
     profit=retour-tot;
     sbRows.forEach(function(r,i){
-      misesHtml+='<div class="cres-row"><span class="cres-l">Mise '+(i+1)+' (@'+(r.c||1)+')'+((gorr&&i===0)?' 🎁':'')+'</span><span class="cres-v" style="color:var(--a)">'+mises[i].toFixed(2)+'€</span></div>';
+      var on=(r.d!==false);
+      var g=gains.length?gains[i]:profit;
+      misesHtml+='<div class="cres-row"><span class="cres-l">Mise '+(i+1)+' (@'+(r.c||1)+((r.k>0)?(' → '+sbCote(r).toFixed(3)):'')+')'+((gorr&&i===0)?' 🎁':'')+((!toutesCibles&&on)?' 🎯':'')+'</span><span class="cres-v" style="color:var(--a)">'+mises[i].toFixed(2)+'€'
+        +(toutesCibles?'':' <span style="color:'+(g>0.005?'var(--g)':'var(--t3)')+';">('+(g>0.005?'+':'')+g.toFixed(2)+'€)</span>')
+        +'</span></div>';
     });
     if(gorr&&sbRows.length>=2) misesHtml+='<div style="font-size:9px;color:var(--gold);padding:4px 0;line-height:1.5;">🎁 Si la sélection 1 perd, une partie du retour arrive en freebet, pas en cash.</div>';
+    if(impossible) misesHtml+='<div style="font-size:9px;color:var(--r);padding:4px 0;line-height:1.5;">🎯 Impossible de rembourser ces cotes-là : profit réparti sur toutes les lignes.</div>';
+    else if(!toutesCibles) misesHtml+='<div style="font-size:9px;color:var(--t3);padding:4px 0;line-height:1.5;">🎯 Les lignes sans cible rendent la mise totale — remboursé, ni gain ni perte.</div>';
   }
   /* Cote équivalente : ce que devient la mise totale, exprimé comme une cote unique.
      1/impl, soit exactement l'inverse de la somme des probabilités implicites. */
@@ -1619,12 +1700,16 @@ function buildSbRows(light){
   }
   var pr=$i('sb-retour');
   if(pr){ pr.innerText=(retour>0)?(retour.toFixed(2)+'€'):'—'; }
+  /* Les intitules mentent des que le profit est concentre : il n'est plus garanti
+     puisqu'il ne tombe que sur les lignes marquees. */
+  var lr=$i('sb-retour-l'); if(lr) lr.innerText=toutesCibles?'Retour garanti':'Retour si 🎯';
+  var lp=$i('sb-profit-l'); if(lp) lp.innerText=toutesCibles?'Profit garanti':'Profit si 🎯 (0 sinon)';
   var pm=$i('sb-mises');if(pm)pm.innerHTML=misesHtml;
   var pp=$i('sb-profit');
   if(pp){pp.innerText=(retour>0)?fmt(profit):'—';if(pp.innerText!=='—')pp.style.color=profit>=0?'var(--g)':'var(--r)';}
 }
 function calcSb(){buildSbRows();}
-function addSbRow(){sbRows.push({c:2.0});buildSbRows();}
+function addSbRow(){sbRows.push({c:2.0,d:true,k:0});buildSbRows();}
 
 /* ── DUTCHING (sans boucle) ── */
 function buildDtRows(light){
@@ -9219,22 +9304,75 @@ function renderCrash(){
 }
 
 /* ── SUREBET ── */
-var sbRows=[{c:2.10},{c:2.05}];
+/* `d` = cette ligne PORTE le profit. Toutes a `true` : comportement historique,
+   les retours sont egalises et le profit est identique quelle que soit l'issue.
+   Decochee, une ligne est calculee pour rendre EXACTEMENT la mise totale : elle
+   rembourse, sans plus, et son benefice se reporte sur les lignes marquees.
+   C'est la colonne « D » de surebet.com, et c'est ce qu'Antoine appelle
+   « gagner ou rembourse » : cote 1 passe, je gagne ; cote 2 passe, je recupere
+   ma mise. A ne pas confondre avec la case OFFRE BOOKMAKER plus haut, qui elle
+   suppose un remboursement paye par le bookmaker en freebet. */
+var sbRows=[{c:2.10,d:true,k:0},{c:2.05,d:true,k:0}];
+/* ═══ COMMISSION PAR COTE (06/09) ═══
+   Piwi247 donne acces a Betfair : la commission y porte sur le GAIN NET, pas
+   sur la mise ni sur le retour. Une cote c a k % vaut donc reellement
+       1 + (c − 1)·(1 − k/100)
+   — a 3 %, une 2.18 n'est plus qu'une 2.145. C'est loin d'etre cosmetique :
+   sur 2.18/1.9 la marge tombe de 1,5 % a 0,19 %, l'arbitrage disparait presque.
+   Tout le calculateur travaille donc sur la cote EFFECTIVE ; la cote saisie
+   n'est plus qu'un affichage. */
+function sbCote(r){
+  var c=(r&&r.c)||1, k=(r&&parseFloat(r.k))||0;
+  if(!(k>0)) return c;
+  if(k>=100) k=99;
+  var e=1+(c-1)*(1-k/100);
+  return e>1?e:1;
+}
+/* Les cotes changent a chaque pari, la commission non : c'est une propriete du
+   bookmaker. On la retient donc d'une session a l'autre, ligne par ligne. */
+try{
+  var _sbK=JSON.parse(localStorage.getItem('g45_sb_com_v1')||'null');
+  if(_sbK&&_sbK.length) sbRows.forEach(function(r,i){ if(_sbK[i]!=null) r.k=_sbK[i]; });
+}catch(e){}
+function sbSetCom(i,v){
+  var r=sbRows[i]; if(!r) return;
+  r.k=parseFloat(String(v).replace(',','.'))||0;
+  try{ localStorage.setItem('g45_sb_com_v1', JSON.stringify(sbRows.map(function(x){ return x.k||0; }))); }catch(e){}
+  buildSbRows(true);
+}
+function toggleSbD(i){
+  var r=sbRows[i]; if(!r) return;
+  r.d = (r.d===false);
+  /* Au moins une ligne doit porter le profit, sinon plus rien n'a de solution :
+     decocher la derniere marquee remet tout le monde a l'egalisation. */
+  if(!sbRows.some(function(x){ return x.d!==false; })) sbRows.forEach(function(x){ x.d=true; });
+  buildSbRows();
+}
 function buildSbRows(light){
   var tot=parseFloat((($i('sb-tot')&&$i('sb-tot').value)||100).toString().replace(',','.'));
   var gorr=$i('sb-gorr')&&$i('sb-gorr').checked;
-  var impl=sbRows.reduce(function(a,r){return a+1/(r.c||1);},0);
+  var impl=sbRows.reduce(function(a,r){return a+1/sbCote(r);},0);
   var dr=$i('sb-rows');if(!dr)return;
+  /* La repartition de l'offre bookmaker a deja sa propre logique : les deux
+     mecaniques se marcheraient dessus, donc les cibles disparaissent. */
+  var cibles=!gorr && sbRows.length>=2;
   if(!light) dr.innerHTML=sbRows.map(function(r,i){
+    var on=(r.d!==false);
+    /* ETIQUETTE VISIBLE (02/09) : le `placeholder` « Cote 1 » ne s'affiche que
+       tant que le champ est vide — donc jamais ici, puisqu'il porte toujours
+       une valeur. Deux grands champs cote a cote sans rien pour les
+       distinguer, alors que le resultat plus bas parle de « Mise 1 (@2.1) ». */
     return '<div class="dutch-row">'
-      /* ETIQUETTE VISIBLE (02/09) : le `placeholder` « Cote 1 » ne s'affiche que
-         tant que le champ est vide — donc jamais ici, puisqu'il porte toujours
-         une valeur. Deux grands champs cote a cote sans rien pour les
-         distinguer, alors que le resultat plus bas parle de « Mise 1 (@2.1) ». */
       +'<span class="dutch-lbl">Cote '+(i+1)+'</span>'
       +'<input type="text" inputmode="decimal" class="fi" value="'+r.c+'" placeholder="Cote '+(i+1)+'" data-idx="'+i+'" oninput="sbRows[this.dataset.idx].c=parseFloat(this.value.replace(\',\',\'.\'))||1;buildSbRows(true);">'
+      +'<input type="text" inputmode="decimal" class="fi" value="'+(r.k||0)+'" title="Commission du bookmaker, en % du gain net" data-idx="'+i+'" style="width:52px;flex:none;text-align:center;color:'+((r.k>0)?'var(--gold)':'var(--t3)')+';" oninput="sbSetCom(this.dataset.idx,this.value)">'
+      +'<span style="font-size:11px;color:var(--t3);">%</span>'
+      +(cibles?('<button data-idx="'+i+'" onclick="toggleSbD(this.dataset.idx)" title="Concentrer le profit sur cette cote" style="border:1px solid '+(on?'rgba(30,215,96,.55)':'rgba(255,255,255,.12)')+';background:'+(on?'rgba(30,215,96,.16)':'transparent')+';color:'+(on?'var(--g)':'var(--t3)')+';border-radius:8px;padding:7px 9px;font-size:11px;white-space:nowrap;cursor:pointer;">🎯</button>'):'')
       +(sbRows.length>2?'<button class="udel" data-idx="'+i+'" onclick="sbRows.splice(this.dataset.idx,1);buildSbRows();">✕</button>':'')
-      +'</div>';
+      +'</div>'
+      /* La ligne d'explication n'apparait qu'a partir d'une commission saisie :
+         a 0 %, elle n'apprendrait rien et alourdirait l'ecran du telephone. */
+      +((r.k>0)?('<div style="font-size:10px;color:var(--gold);margin:-2px 0 6px 52px;">commission '+r.k+' % → cote effective '+sbCote(r).toFixed(3)+'</div>'):'');
   }).join('');
   var isSure=impl<1;
   var marge=((1-impl)*100).toFixed(2);
@@ -9245,17 +9383,17 @@ function buildSbRows(light){
      On égalise les retours : s1·c1 = sj·cj + v·s1, d'où sj = s1(c1−v)/cj et
      s1 = T / [1 + (c1−v)·Σ(1/cj)]. À v=0 on retombe exactement sur le surebet classique. */
   var misesHtml='';
-  var profit=0, retour=0, mises=[];
+  var profit=0, retour=0, mises=[], gains=[], toutesCibles=true, impossible=false;
   if(impl>0&&sbRows.length){
     if(gorr&&sbRows.length>=2){
       var v=parseFloat((($i('sb-gorr-val')&&$i('sb-gorr-val').value)||70).toString().replace(',','.'))/100;
       if(!(v>0)||v>1) v=0.7;
-      var c1=sbRows[0].c||1;
-      var reste=sbRows.slice(1).reduce(function(a,r){ return a+1/(r.c||1); },0);
+      var c1=sbCote(sbRows[0]);
+      var reste=sbRows.slice(1).reduce(function(a,r){ return a+1/sbCote(r); },0);
       var den=1+(c1-v)*reste;
       if(den>0&&c1>v){
         var s1=tot/den;
-        mises=[s1].concat(sbRows.slice(1).map(function(r){ return s1*(c1-v)/(r.c||1); }));
+        mises=[s1].concat(sbRows.slice(1).map(function(r){ return s1*(c1-v)/sbCote(r); }));
         retour=s1*c1;
       }
     }
@@ -9273,14 +9411,36 @@ function buildSbRows(light){
     var impose=(fix1>0);
 
     if(!mises.length){
-      if(impose){
-        var c1f=sbRows[0].c||1;
-        mises=sbRows.map(function(r,i){ return i===0 ? fix1 : fix1*c1f/(r.c||1); });
-        retour=fix1*c1f;
-      } else {
-        mises=sbRows.map(function(r){ return tot/impl*(1/(r.c||1)); });
-        retour=tot/impl;
+      /* ═══ PROFIT CONCENTRE (06/09) ═══
+         Notons D les lignes marquees et N les autres. Une ligne de N doit rendre
+         la mise totale : s_i = T/c_i. Les lignes de D partagent un meme retour R,
+         donc s_i = R/c_i. En sommant :
+             T = R·Σ_D(1/c) + T·Σ_N(1/c)
+         d'ou R = T·(1 − Σ_N) / Σ_D, et reciproquement T = R·Σ_D / (1 − Σ_N).
+         Toutes les lignes marquees : Σ_N = 0, R = T/impl — exactement l'ancienne
+         formule, l'egalisation reste donc le comportement par defaut. */
+      var oc=sbRows.map(function(r){ return sbCote(r); });
+      var dF=sbRows.map(function(r){ return r.d!==false; });
+      if(!dF.some(function(x){ return x; })) dF=dF.map(function(){ return true; });
+      toutesCibles=dF.every(function(x){ return x; });
+      var sumN=0,sumD=0;
+      dF.forEach(function(on,i){ if(on) sumD+=1/oc[i]; else sumN+=1/oc[i]; });
+      /* Σ_N ≥ 1 : les lignes non marquees coutent deja plus que ce qu'elles
+         rendent, aucun montant ne peut les rembourser. On le dit plutot que
+         d'afficher un resultat negatif incomprehensible. */
+      if(sumD<=0||sumN>=1){
+        impossible=!toutesCibles;
+        dF=dF.map(function(){ return true; }); toutesCibles=true;
+        sumN=0; sumD=impl;
       }
+      var R=0, T=0;
+      if(impose){
+        if(dF[0]){ R=fix1*oc[0]; T=R*sumD/(1-sumN); }
+        else { T=fix1*oc[0]; R=T*(1-sumN)/sumD; }
+      } else { T=tot; R=T*(1-sumN)/sumD; }
+      mises=oc.map(function(c,i){ return (dF[i]?R:T)/c; });
+      gains=oc.map(function(c,i){ return (dF[i]?R:T)-T; });
+      retour=R; tot=T;
     } else if(impose && mises[0]>0){
       /* Cas « Gagner ou Rembourse » : on met la repartition a l'echelle. */
       var k=fix1/mises[0];
@@ -9295,9 +9455,15 @@ function buildSbRows(light){
     }
     profit=retour-tot;
     sbRows.forEach(function(r,i){
-      misesHtml+='<div class="cres-row"><span class="cres-l">Mise '+(i+1)+' (@'+(r.c||1)+')'+((gorr&&i===0)?' 🎁':'')+'</span><span class="cres-v" style="color:var(--a)">'+mises[i].toFixed(2)+'€</span></div>';
+      var on=(r.d!==false);
+      var g=gains.length?gains[i]:profit;
+      misesHtml+='<div class="cres-row"><span class="cres-l">Mise '+(i+1)+' (@'+(r.c||1)+((r.k>0)?(' → '+sbCote(r).toFixed(3)):'')+')'+((gorr&&i===0)?' 🎁':'')+((!toutesCibles&&on)?' 🎯':'')+'</span><span class="cres-v" style="color:var(--a)">'+mises[i].toFixed(2)+'€'
+        +(toutesCibles?'':' <span style="color:'+(g>0.005?'var(--g)':'var(--t3)')+';">('+(g>0.005?'+':'')+g.toFixed(2)+'€)</span>')
+        +'</span></div>';
     });
     if(gorr&&sbRows.length>=2) misesHtml+='<div style="font-size:9px;color:var(--gold);padding:4px 0;line-height:1.5;">🎁 Si la sélection 1 perd, une partie du retour arrive en freebet, pas en cash.</div>';
+    if(impossible) misesHtml+='<div style="font-size:9px;color:var(--r);padding:4px 0;line-height:1.5;">🎯 Impossible de rembourser ces cotes-là : profit réparti sur toutes les lignes.</div>';
+    else if(!toutesCibles) misesHtml+='<div style="font-size:9px;color:var(--t3);padding:4px 0;line-height:1.5;">🎯 Les lignes sans cible rendent la mise totale — remboursé, ni gain ni perte.</div>';
   }
   /* Cote équivalente : ce que devient la mise totale, exprimé comme une cote unique.
      1/impl, soit exactement l'inverse de la somme des probabilités implicites. */
@@ -9309,12 +9475,16 @@ function buildSbRows(light){
   }
   var pr=$i('sb-retour');
   if(pr){ pr.innerText=(retour>0)?(retour.toFixed(2)+'€'):'—'; }
+  /* Les intitules mentent des que le profit est concentre : il n'est plus garanti
+     puisqu'il ne tombe que sur les lignes marquees. */
+  var lr=$i('sb-retour-l'); if(lr) lr.innerText=toutesCibles?'Retour garanti':'Retour si 🎯';
+  var lp=$i('sb-profit-l'); if(lp) lp.innerText=toutesCibles?'Profit garanti':'Profit si 🎯 (0 sinon)';
   var pm=$i('sb-mises');if(pm)pm.innerHTML=misesHtml;
   var pp=$i('sb-profit');
   if(pp){pp.innerText=(retour>0)?fmt(profit):'—';if(pp.innerText!=='—')pp.style.color=profit>=0?'var(--g)':'var(--r)';}
 }
 function calcSb(){buildSbRows();}
-function addSbRow(){sbRows.push({c:2.0});buildSbRows();}
+function addSbRow(){sbRows.push({c:2.0,d:true,k:0});buildSbRows();}
 
 /* ── DUTCHING (sans boucle) ── */
 function buildDtRows(light){

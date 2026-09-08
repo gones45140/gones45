@@ -611,7 +611,12 @@
              ne vaut pas 10 € puisqu'on n'en recupere que le gain. Le calcul est
              inchange (`(c1 - v)` dans `buildSbRows`), seul le libelle est corrige.
              Mettre 100 revient donc a dire « remboursement en argent reel ». -->
-        <span style="font-size:13px;color:var(--t1)">Gagner ou remboursé sur la cote 1</span>
+        <!-- 06/09 : le libelle « Gagner ou rembourse » decrivait ici une OFFRE DU
+             BOOKMAKER (mise 1 rendue en freebet si elle perd), alors qu'Antoine
+             entendait par la « je gagne sur la 1, je recupere ma mise sur la 2 » —
+             ce qui est desormais le bouton 🎯 sur les lignes de cotes, et ne
+             suppose aucune promo. Deux mecaniques distinctes, deux noms distincts. -->
+        <span style="font-size:13px;color:var(--t1)">🎁 Offre bookmaker : mise 1 remboursée si elle perd</span>
         <span style="margin-left:auto;display:flex;align-items:center;gap:5px;"><span style="font-size:11.5px;color:var(--t3);">remboursement valorisé à</span><input type="number" id="sb-gorr-val" class="fi" style="width:58px;padding:3px 5px;font-size:11px;" value="70" min="1" max="100" oninput="calcSb()"><span style="font-size:10px;color:var(--t3);">%</span></span>
       </label>
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
@@ -636,8 +641,8 @@
       <div class="calc-res" style="margin-top:10px;">
         <div class="cres-row"><span class="cres-l">Marge</span><span class="cres-v" id="sb-marge">—</span></div>
         <div class="cres-row"><span class="cres-l">Cote équivalente</span><span class="cres-v" id="sb-cote">—</span></div>
-        <div class="cres-row"><span class="cres-l">Retour garanti</span><span class="cres-v" id="sb-retour">—</span></div>
-        <div class="cres-row cres-hero"><span class="cres-l">Profit garanti</span><span class="cres-v" id="sb-profit">—</span></div>
+        <div class="cres-row"><span class="cres-l" id="sb-retour-l">Retour garanti</span><span class="cres-v" id="sb-retour">—</span></div>
+        <div class="cres-row cres-hero"><span class="cres-l" id="sb-profit-l">Profit garanti</span><span class="cres-v" id="sb-profit">—</span></div>
       </div>
       <div id="sb-mises" style="margin-top:8px;"></div>
     </div>
