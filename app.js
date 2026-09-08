@@ -2113,16 +2113,42 @@ function renderBilanTab(){
       var clabels=_g45Chrono(paris).map(function(h){var adv2=h.target&&h.target!=='-'?h.target:'';return (h.date||'')+(h.heure?' '+h.heure:'')+(adv2?' vs '+adv2:'')+'||'+(h.win?(h.m*h.cote-h.m>=0?'+':'')+parseFloat(h.m*h.cote-h.m).toFixed(2)+'€':'-'+parseFloat(h.m).toFixed(2)+'€');});
       var color=bilanMode==='flash'?'#f0b020':bilanMode==='cockpit'?'#4d84ff':bilanMode==='simple'?'#22d3ee':'#1ed760';
       var ct=ctx.getContext('2d');
+      /* ═══ LA COURBE ETAIT ILLISIBLE SUR TELEPHONE (08/09) ═══
+         Un point etait dessine sur CHAQUE pari. Sur 50 paris tasses dans 300 px,
+         les marqueurs se touchent et forment une chenille : on ne voit plus la
+         trajectoire, seulement une masse verte (releve par Antoine).
+         Le point disparait donc des que la densite depasse un point tous les
+         ~8 px, ou sur ecran etroit. Il reste au SURVOL et au TOUCHER, ou il est
+         justement utile puisqu'il designe un pari precis.
+         Le degrade suit la meme logique : 0x99 tient sur un grand graphique, il
+         noie une courbe haute de 160 px sur telephone. */
+      var _largeurG = 0;
+      try { _largeurG = ctx.clientWidth || ctx.parentNode.clientWidth || 0; } catch (e) {}
+      var _etroitG = (typeof window !== 'undefined' && window.innerWidth < 700);
+      var _dense = _largeurG ? (curve.length > _largeurG / 8) : (curve.length > 40);
+      var _pr = (_etroitG || _dense) ? 0 : 2;
       var g=ct.createLinearGradient(0,0,0,150);
-      g.addColorStop(0,color+'99');g.addColorStop(1,color+'00');   // degrade renforce (01/09, inspire de FlashBooost)
+      g.addColorStop(0,color+(_etroitG?'55':'99'));g.addColorStop(1,color+'00');   // degrade renforce (01/09, inspire de FlashBooost), allege sur telephone (08/09)
 
       // Courbes par bookmaker
-      var datasets = [{label:'Global',data:curve,borderColor:color,backgroundColor:g,borderWidth:2,fill:true,tension:.4,pointRadius:2,pointBackgroundColor:color,pointHoverRadius:5,pointHoverBorderColor:'#fff',pointHoverBorderWidth:2}];
+      var datasets = [{label:'Global',data:curve,borderColor:color,backgroundColor:g,borderWidth:2,fill:true,tension:.4,pointRadius:_pr,pointBackgroundColor:color,pointHoverRadius:5,pointHoverBorderColor:'#fff',pointHoverBorderWidth:2}];
+      /* ═══ COMBIEN DE COURBES DE BOOKMAKER AFFICHER (08/09) ═══
+         Chaque compte ajoute un pointille : a six, le telephone est illisible,
+         et le PC le deviendra au meme rythme — le fouillis suit le nombre de
+         BOOKMAKERS, pas celui des paris.
+         Sur telephone, on ne trace donc que la courbe Global. Sur grand ecran on
+         ne touche a RIEN : la legende y est deja cliquable, Antoine masque ce
+         qu'il veut, un plafond de plus n'apporterait que de la contrainte.
+         Masque, pas supprime : le nom reste dans la legende, barre, et un appui
+         rallume la courbe. */
       var bkColors = ['#ff4545','#4d84ff','#f0b020','#1ed760','#a78bfa','#ff7b54','#22d3ee','#e879f9'];
-      var bkList = Object.keys(state.b);
-      bkList.forEach(function(bk, i){
-        var bkParis = paris.filter(function(h){return h.b===bk;});
-        if(!bkParis.length) return;
+      var bkRangs = Object.keys(state.b).map(function(bk){
+        return { bk: bk, n: paris.filter(function(h){ return h.b===bk; }).length };
+      }).filter(function(x){ return x.n > 0; })
+        .sort(function(a,b){ return b.n - a.n; });
+      var _maxCourbes = _etroitG ? 0 : bkRangs.length;   /* aucun plafond sur grand ecran */
+      bkRangs.forEach(function(e, i){
+        var bk = e.bk;
         var bkCum=0;
         // Aligner sur les mêmes labels (indices)
         var bkCurve = _g45Chrono(paris).map(function(h){
@@ -2130,7 +2156,7 @@ function renderBilanTab(){
           return parseFloat(bkCum.toFixed(2));
         });
         var bkCol = bki(bk).c || bkColors[i%bkColors.length];
-        datasets.push({label:bki(bk).n,data:bkCurve,borderColor:bkCol,backgroundColor:'transparent',borderWidth:1.5,fill:false,tension:.4,pointRadius:0,pointHoverRadius:4,borderDash:[4,3]});
+        datasets.push({label:bki(bk).n,data:bkCurve,borderColor:bkCol,backgroundColor:'transparent',borderWidth:1.5,fill:false,tension:.4,pointRadius:0,pointHoverRadius:4,borderDash:[4,3],hidden:(i>=_maxCourbes)});
       });
 
       var _lastDateShown=null;
@@ -10078,16 +10104,42 @@ function renderBilanTab(){
       var clabels=_g45Chrono(paris).map(function(h){var adv2=h.target&&h.target!=='-'?h.target:'';return (h.date||'')+(h.heure?' '+h.heure:'')+(adv2?' vs '+adv2:'')+'||'+(h.win?(h.m*h.cote-h.m>=0?'+':'')+parseFloat(h.m*h.cote-h.m).toFixed(2)+'€':'-'+parseFloat(h.m).toFixed(2)+'€');});
       var color=bilanMode==='flash'?'#f0b020':bilanMode==='cockpit'?'#4d84ff':bilanMode==='simple'?'#22d3ee':'#1ed760';
       var ct=ctx.getContext('2d');
+      /* ═══ LA COURBE ETAIT ILLISIBLE SUR TELEPHONE (08/09) ═══
+         Un point etait dessine sur CHAQUE pari. Sur 50 paris tasses dans 300 px,
+         les marqueurs se touchent et forment une chenille : on ne voit plus la
+         trajectoire, seulement une masse verte (releve par Antoine).
+         Le point disparait donc des que la densite depasse un point tous les
+         ~8 px, ou sur ecran etroit. Il reste au SURVOL et au TOUCHER, ou il est
+         justement utile puisqu'il designe un pari precis.
+         Le degrade suit la meme logique : 0x99 tient sur un grand graphique, il
+         noie une courbe haute de 160 px sur telephone. */
+      var _largeurG = 0;
+      try { _largeurG = ctx.clientWidth || ctx.parentNode.clientWidth || 0; } catch (e) {}
+      var _etroitG = (typeof window !== 'undefined' && window.innerWidth < 700);
+      var _dense = _largeurG ? (curve.length > _largeurG / 8) : (curve.length > 40);
+      var _pr = (_etroitG || _dense) ? 0 : 2;
       var g=ct.createLinearGradient(0,0,0,150);
-      g.addColorStop(0,color+'99');g.addColorStop(1,color+'00');   // degrade renforce (01/09, inspire de FlashBooost)
+      g.addColorStop(0,color+(_etroitG?'55':'99'));g.addColorStop(1,color+'00');   // degrade renforce (01/09, inspire de FlashBooost), allege sur telephone (08/09)
 
       // Courbes par bookmaker
-      var datasets = [{label:'Global',data:curve,borderColor:color,backgroundColor:g,borderWidth:2,fill:true,tension:.4,pointRadius:2,pointBackgroundColor:color,pointHoverRadius:5,pointHoverBorderColor:'#fff',pointHoverBorderWidth:2}];
+      var datasets = [{label:'Global',data:curve,borderColor:color,backgroundColor:g,borderWidth:2,fill:true,tension:.4,pointRadius:_pr,pointBackgroundColor:color,pointHoverRadius:5,pointHoverBorderColor:'#fff',pointHoverBorderWidth:2}];
+      /* ═══ COMBIEN DE COURBES DE BOOKMAKER AFFICHER (08/09) ═══
+         Chaque compte ajoute un pointille : a six, le telephone est illisible,
+         et le PC le deviendra au meme rythme — le fouillis suit le nombre de
+         BOOKMAKERS, pas celui des paris.
+         Sur telephone, on ne trace donc que la courbe Global. Sur grand ecran on
+         ne touche a RIEN : la legende y est deja cliquable, Antoine masque ce
+         qu'il veut, un plafond de plus n'apporterait que de la contrainte.
+         Masque, pas supprime : le nom reste dans la legende, barre, et un appui
+         rallume la courbe. */
       var bkColors = ['#ff4545','#4d84ff','#f0b020','#1ed760','#a78bfa','#ff7b54','#22d3ee','#e879f9'];
-      var bkList = Object.keys(state.b);
-      bkList.forEach(function(bk, i){
-        var bkParis = paris.filter(function(h){return h.b===bk;});
-        if(!bkParis.length) return;
+      var bkRangs = Object.keys(state.b).map(function(bk){
+        return { bk: bk, n: paris.filter(function(h){ return h.b===bk; }).length };
+      }).filter(function(x){ return x.n > 0; })
+        .sort(function(a,b){ return b.n - a.n; });
+      var _maxCourbes = _etroitG ? 0 : bkRangs.length;   /* aucun plafond sur grand ecran */
+      bkRangs.forEach(function(e, i){
+        var bk = e.bk;
         var bkCum=0;
         // Aligner sur les mêmes labels (indices)
         var bkCurve = _g45Chrono(paris).map(function(h){
@@ -10095,7 +10147,7 @@ function renderBilanTab(){
           return parseFloat(bkCum.toFixed(2));
         });
         var bkCol = bki(bk).c || bkColors[i%bkColors.length];
-        datasets.push({label:bki(bk).n,data:bkCurve,borderColor:bkCol,backgroundColor:'transparent',borderWidth:1.5,fill:false,tension:.4,pointRadius:0,pointHoverRadius:4,borderDash:[4,3]});
+        datasets.push({label:bki(bk).n,data:bkCurve,borderColor:bkCol,backgroundColor:'transparent',borderWidth:1.5,fill:false,tension:.4,pointRadius:0,pointHoverRadius:4,borderDash:[4,3],hidden:(i>=_maxCourbes)});
       });
 
       var _lastDateShown=null;
