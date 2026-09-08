@@ -16964,11 +16964,20 @@ async function loadNhlSaisons(el, nom) {
       // Résultats complets
       html += '<div class="cwrap">';
       var nhlMatchOk=0; allGames.forEach(function(g){var idN=g.homeTeam&&g.homeTeam.abbrev===teamInfo.abbr;var tsN=idN?(g.homeTeam.score||0):(g.awayTeam.score||0);var osN=idN?(g.awayTeam.score||0):(g.homeTeam.score||0);var totN=tsN+osN;var cN={'O4.5':totN>4.5,'O5.5':totN>5.5,'O6.5':totN>6.5,'O7.5':totN>7.5,'U5.5':totN<=5.5,'U6.5':totN<=6.5,'U7.5':totN<=7.5,'BTS':g.homeTeam.score>0&&g.awayTeam.score>0,'WIN':tsN>osN,'LOSE':tsN<osN};if((window._nhlQuickStats||['O5.5']).every(function(k){return cN[k]!==undefined?cN[k]:true;}))nhlMatchOk++;});
-      html += '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">';
+      /* Le blason vient du calendrier NHL lui-meme (`logo` sur chaque equipe),
+         donc il fonctionne aussi pour une equipe absente du mur. */
+      var _nhlCrest='';
+      try{ (allGames||[]).some(function(g){
+        if(g.homeTeam&&g.homeTeam.abbrev===teamInfo.abbr) _nhlCrest=g.homeTeam.logo||'';
+        else if(g.awayTeam&&g.awayTeam.abbrev===teamInfo.abbr) _nhlCrest=g.awayTeam.logo||'';
+        return !!_nhlCrest;
+      }); }catch(e){}
+      html += g45UsPanneauOuvrir(nom, _nhlCrest);
+      html += '<div style="position:relative;z-index:1;display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">';
       html += '<div style="font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#4f5d88;">📅 Résultats ('+n+')</div>';
       html += '<div style="font-size:10px;font-weight:800;color:'+(nhlMatchOk>0?'#1ed760':'#ff4545')+';">✅ '+nhlMatchOk+'/'+n+' — '+(window._nhlQuickStats||['O5.5']).join(' + ')+'</div>';
       html += '</div>';
-      html += '<div style="display:flex;flex-direction:column;gap:3px;">';
+      html += '<div style="position:relative;z-index:1;display:flex;flex-direction:column;gap:3px;">';
       allGames.slice().reverse().forEach(function(g){
         var isDom = g.homeTeam&&g.homeTeam.abbrev===teamInfo.abbr;
         var ts=isDom?(g.homeTeam.score||0):(g.awayTeam.score||0);
@@ -16991,20 +17000,19 @@ async function loadNhlSaisons(el, nom) {
         var nhlChk={'O4.5':total>4.5,'O5.5':total>5.5,'O6.5':total>6.5,'O7.5':total>7.5,'U5.5':total<=5.5,'U6.5':total<=6.5,'U7.5':total<=7.5,'BTS':g.homeTeam.score>0&&g.awayTeam.score>0,'WIN':ts>os,'LOSE':ts<os};
         var nhlAllOk=nqlqs.every(function(k){return nhlChk[k]!==undefined?nhlChk[k]:true;});
         var nhlBar=nhlAllOk?'#1ed760':'#ff4545';
-        html += '<div onclick="_callUS(\''+nKey+'\')" style="display:grid;grid-template-columns:32px 1fr auto 1fr 50px;gap:4px;align-items:center;padding:5px 8px;background:'+(isDom?'rgba(255,255,255,.04)':'rgba(255,255,255,.02)')+';border-radius:6px;border-left:3px solid '+nhlBar+';cursor:pointer;">';
-        html += '<div style="font-size:9px;color:var(--t3);text-align:center;">'+ds2+'</div>';
-        html += '<div style="font-size:10px;font-weight:'+(isDom?'800':'400')+';color:'+(isDom?'var(--t1)':'var(--t2)')+';text-align:right;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;">'+hName+'</div>';
-        html += '<div style="font-size:11px;font-weight:800;color:'+rc+';text-align:center;min-width:40px;">'+g.homeTeam.score+' - '+g.awayTeam.score+'</div>';
-        html += '<div style="font-size:10px;font-weight:'+(!isDom?'800':'400')+';color:'+(!isDom?'var(--t1)':'var(--t2)')+';overflow:hidden;white-space:nowrap;text-overflow:ellipsis;">'+aName+'</div>';
+
         var nhlBadges='';
         var nqs2 = window._nhlQuickStats||['O5.5','O6.5','BTS'];
         var NHL_CHK={'O4.5':total>4.5,'O5.5':total>5.5,'O6.5':total>6.5,'O7.5':total>7.5,'U5.5':total<=5.5,'U6.5':total<=6.5,'U7.5':total<=7.5,'BTS':g.homeTeam.score>0&&g.awayTeam.score>0,'WIN':ts>os,'LOSE':ts<os};
         var NHL_COL={'O4.5':'#4d84ff','O5.5':'#1ed760','O6.5':'#f0b020','O7.5':'#ff7b54','U5.5':'#22d3ee','U6.5':'#67e8f9','U7.5':'#a5f3fc','BTS':'#a78bfa','WIN':'#1ed760','LOSE':'#ff4545'};
         nqs2.forEach(function(k){if(NHL_CHK[k])nhlBadges+='<span style="color:'+NHL_COL[k]+';">'+k+'</span><br>';});
-        html += '<div style="font-size:8px;text-align:right;">🏒<br>'+nhlBadges+'</div>';
-        html += '</div>';
+        html += g45UsLigne({clic:"_callUS('"+nKey+"')", date:ds2, hNom:hName, aNom:aName,
+          score:g.homeTeam.score+' - '+g.awayTeam.score, isDom:isDom, barre:nhlBar,
+          coulScore:rc, ico:'🏒', badges:nhlBadges});
       });
-      html += '</div></div>';
+      html += '</div>';
+      html += g45UsPanneauFermer();
+      html += '</div>';
     }
 
     // Prochain match
@@ -17157,8 +17165,11 @@ async function loadMlbSaisons(el, nom) {
 
       // Résultats complets
       html += '<div class="cwrap">';
-      html += '<div style="font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#4f5d88;margin-bottom:8px;">📅 Résultats ('+n+' matchs)</div>';
-      html += '<div style="display:flex;flex-direction:column;gap:3px;">';
+      /* L'API MLB ne sert pas de blason : `g45FondClubHtml` retombe alors sur
+         `g45LogoUrlDe`, donc sur le mur, et a defaut sur le degrade seul. */
+      html += g45UsPanneauOuvrir(nom, '');
+      html += '<div style="position:relative;z-index:1;font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#4f5d88;margin-bottom:8px;">📅 Résultats ('+n+' matchs)</div>';
+      html += '<div style="position:relative;z-index:1;display:flex;flex-direction:column;gap:3px;">';
       allGames.slice().reverse().forEach(function(g){
         var isDom=g.teams&&g.teams.home&&g.teams.home.team&&g.teams.home.team.id===teamInfo.id;
         var ts=isDom?(g.teams.home.score||0):(g.teams.away.score||0);
@@ -17173,15 +17184,13 @@ async function loadMlbSaisons(el, nom) {
         var mlbChk={'O6':total>6,'O7':total>7,'O8':total>8,'O9':total>9,'U7':total<=7,'U8':total<=8,'U9':total<=9,'BTS':ts>0&&os>0,'WIN':ts>os,'LOSE':ts<os};
         var mlbAllOk=mqlqs.every(function(k){return mlbChk[k]!==undefined?mlbChk[k]:true;});
         var mlbBar=mlbAllOk?'#1ed760':'#ff4545';
-        html += '<div onclick="_callUS(\''+mKey+'\')" style="display:grid;grid-template-columns:32px 1fr auto 1fr 36px;gap:4px;align-items:center;padding:5px 8px;background:'+(isDom?'rgba(255,255,255,.04)':'rgba(255,255,255,.02)')+';border-radius:6px;border-left:3px solid '+mlbBar+';cursor:pointer;">';
-        html += '<div style="font-size:9px;color:var(--t3);text-align:center;">'+ds2+'</div>';
-        html += '<div style="font-size:10px;font-weight:'+(isDom?'800':'400')+';color:'+(isDom?'var(--t1)':'var(--t2)')+';text-align:right;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;">'+hName+'</div>';
-        html += '<div style="font-size:11px;font-weight:800;color:'+rc+';text-align:center;min-width:40px;">'+g.teams.home.score+' - '+g.teams.away.score+'</div>';
-        html += '<div style="font-size:10px;font-weight:'+(!isDom?'800':'400')+';color:'+(!isDom?'var(--t1)':'var(--t2)')+';overflow:hidden;white-space:nowrap;text-overflow:ellipsis;">'+aName+'</div>';
-        html += '<div style="font-size:8px;text-align:right;">⚾<br>'+(total>8?'<span style="color:#f0b020;">O8</span>':'')+'</div>';
-        html += '</div>';
+        html += g45UsLigne({clic:"_callUS('"+mKey+"')", date:ds2, hNom:hName, aNom:aName,
+          score:g.teams.home.score+' - '+g.teams.away.score, isDom:isDom, barre:mlbBar,
+          coulScore:rc, ico:'⚾', badges:(total>8?'<span style="color:#f0b020;">O8</span>':'')});
       });
-      html += '</div></div>';
+      html += '</div>';
+      html += g45UsPanneauFermer();
+      html += '</div>';
     }
 
     // Prochain match MLB
@@ -17766,8 +17775,10 @@ async function loadNbaSaisons(el, nom) {
 
       // Résultats complets
       html += '<div class="cwrap" style="margin-bottom:10px;">';
-      html += '<div style="font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#4f5d88;margin-bottom:8px;">📅 Résultats ('+n+' matchs)</div>';
-      html += '<div style="display:flex;flex-direction:column;gap:3px;">';
+      /* balldontlie ne sert pas de blason non plus — meme repli que pour la MLB. */
+      html += g45UsPanneauOuvrir(nom, '');
+      html += '<div style="position:relative;z-index:1;font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#4f5d88;margin-bottom:8px;">📅 Résultats ('+n+' matchs)</div>';
+      html += '<div style="position:relative;z-index:1;display:flex;flex-direction:column;gap:3px;">';
       allGames.slice().reverse().forEach(function(g){
         var isDom=g.home_team&&g.home_team.id===bdlId;
         var ts=isDom?g.home_team_score:g.visitor_team_score;
@@ -17782,15 +17793,13 @@ async function loadNbaSaisons(el, nom) {
         var nbaChk={'O200':tot>200,'O210':tot>210,'O220':tot>220,'O230':tot>230,'U210':tot<=210,'U220':tot<=220,'U230':tot<=230,'WIN':ts>os,'LOSE':ts<os};
         var nbaAllOk=bqlqs.every(function(k){return nbaChk[k]!==undefined?nbaChk[k]:true;});
         var nbaBar=nbaAllOk?'#1ed760':'#ff4545';
-        html += '<div onclick="_callUS(\''+bKey+'\')" style="display:grid;grid-template-columns:32px 1fr auto 1fr 40px;gap:4px;align-items:center;padding:5px 8px;background:'+(isDom?'rgba(255,255,255,.04)':'rgba(255,255,255,.02)')+';border-radius:6px;border-left:3px solid '+nbaBar+';cursor:pointer;">';
-        html += '<div style="font-size:9px;color:var(--t3);text-align:center;">'+ds+'</div>';
-        html += '<div style="font-size:10px;font-weight:'+(isDom?'800':'400')+';color:'+(isDom?'var(--t1)':'var(--t2)')+';text-align:right;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;">'+hName+'</div>';
-        html += '<div style="font-size:11px;font-weight:800;color:'+rc+';text-align:center;min-width:50px;">'+g.home_team_score+' - '+g.visitor_team_score+'</div>';
-        html += '<div style="font-size:10px;font-weight:'+(!isDom?'800':'400')+';color:'+(!isDom?'var(--t1)':'var(--t2)')+';overflow:hidden;white-space:nowrap;text-overflow:ellipsis;">'+aName+'</div>';
-        html += '<div style="font-size:8px;text-align:right;">🏀<br>'+(tot>220?'<span style="color:#f0b020;">O220</span>':'')+'</div>';
-        html += '</div>';
+        html += g45UsLigne({clic:"_callUS('"+bKey+"')", date:ds, hNom:hName, aNom:aName,
+          score:g.home_team_score+' - '+g.visitor_team_score, isDom:isDom, barre:nbaBar,
+          coulScore:rc, ico:'🏀', badges:(tot>220?'<span style="color:#f0b020;">O220</span>':'')});
       });
-      html += '</div></div>';
+      html += '</div>';
+      html += g45UsPanneauFermer();
+      html += '</div>';
     }
 
     // Prochain match NBA
@@ -34027,7 +34036,7 @@ var _G45_CACHE_PREFIXES=['g45rcP_','g45rcD_','g45rcY_','g45rc_','g45dcm_','g45dc
      competition, qui restait bloque sur « Toutes »). Les cartes de tirs sont
      les plus lourdes : plusieurs Ko par match, gardees indefiniment. */
   'g45butA2_','g45gl3_','g45gl2_','g45gl_','g45_tirs2_','g45_fanart2_','g45_fanart_','g45_img_perso_','g45_tv_prog','g45_mqnom_','g45_mqteam_','g45_mqfond_','g45trv4_','g45_catimg_','g45_catfmt2_','g45_catfmt_','g45nrlcal3_','g45nrlcal2_','g45_lglogo_','g45compet3_','g45compet2_','g45compet_','g45tmeta_','g45histo_','g45ld2_','g45ld_',
-  'g45nrlcal2_','g45_fx_faits','g45_veille_','g45_compet_logos','g45_groq_modele','g45_gemini_modeles',
+  'g45nrlcal2_','g45core2_','g45core_','g45_fx_faits','g45_veille_','g45_compet_logos','g45_groq_modele','g45_gemini_modeles',
   /* MESURE DU 20/08 sur le stockage reel d'Antoine (5,1 Mo, sature) :
        fpl_bootstrap_cache ... 1951 Ko  <- a lui seul 38 % du total
        g45itf_*            ... 1779 Ko  <- tennis ITF/Challenger, par date
@@ -35746,7 +35755,9 @@ window.g45NotifTest = g45NotifTest;
 
 var _g45CoreCache = {};
 
-function _g45CoreCle(sportPath, ligue) { return 'g45core_' + sportPath + '_' + ligue; }
+/* v2 (08/09) : la table porte desormais AUSSI les noms d'affichage, sous des
+   cles prefixees « # ». Les entrees v1 n'en ont pas, d'ou la nouvelle cle. */
+function _g45CoreCle(sportPath, ligue) { return 'g45core2_' + sportPath + '_' + ligue; }
 
 function _g45Norm(s) {
   return String(s || '').toLowerCase()
@@ -35786,6 +35797,16 @@ async function g45CoreTeams(sportPath, ligue) {
         if (!t || !t.id) return;
         [t.displayName, t.name, t.shortDisplayName, t.nickname, t.location, t.abbreviation]
           .filter(Boolean).forEach(function (n) { out[_g45Norm(n)] = String(t.id); });
+        /* ═══ LE NOM D'AFFICHAGE, ET PLUS SEULEMENT SA FORME NORMALISEE (08/09) ═══
+           La table ne servait qu'a retrouver un id A PARTIR d'un nom, donc seules
+           les cles normalisees etaient gardees : « castresolympique », « stadetou ».
+           Or `_g45CompetEquipes` s'en sert en repli quand la competition n'a pas de
+           classement — le rugby a XV depuis 2022-23 — et affichait ces cles telles
+           quelles a l'ecran (releve par Antoine sur Toulon).
+           Le sens id → nom est donc enregistre ici, sous une cle prefixee « # » que
+           `_g45Norm` ne peut jamais produire : aucune collision possible avec un
+           nom d'equipe, et la table garde son usage d'origine. */
+        if (t.displayName || t.name) out['#' + t.id] = String(t.displayName || t.name);
       });
       if (Object.keys(out).length) {
         _g45CoreCache[cle] = out;
@@ -35816,6 +35837,7 @@ async function g45CoreTeams(sportPath, ligue) {
         if (!t || !t.id) return;
         [t.displayName, t.name, t.shortDisplayName, t.nickname, t.location]
           .filter(Boolean).forEach(function (n) { out[_g45Norm(n)] = String(t.id); });
+        if (t.displayName || t.name) out['#' + t.id] = String(t.displayName || t.name);
       });
     }
     _g45CoreCache[cle] = out;
@@ -35834,7 +35856,9 @@ async function g45CoreTeamId(sportPath, ligue, nom) {
   var n = _g45Norm(nom);
   if (!n) return null;
   if (table[n]) return table[n];
-  var cles = Object.keys(table);
+  /* Les cles « # » portent un NOM, pas un id : les inclure ici rendrait un nom
+     d'equipe la ou l'appelant attend un identifiant. */
+  var cles = Object.keys(table).filter(function (k) { return k.charAt(0) !== '#'; });
   for (var i = 0; i < cles.length; i++) {
     if (cles[i].indexOf(n) >= 0 || n.indexOf(cles[i]) >= 0) return table[cles[i]];
   }
@@ -36162,7 +36186,7 @@ async function g45NrlCharger(annee) {
   _g45NrlMsg('⏳ Chargement du calendrier ' + annee + '…');
   var equipes = await g45CoreTeams(_g45NrlCtx.sport, _g45NrlCtx.ligue);
   var ids = {};
-  Object.keys(equipes).forEach(function (k) { ids[equipes[k]] = 1; });
+  Object.keys(equipes).forEach(function (k) { if (k.charAt(0) !== '#') ids[equipes[k]] = 1; });
   var listeIds = Object.keys(ids);
   if (!listeIds.length) { _g45NrlMsg('❌ Impossible de charger la liste des équipes de cette compétition.', '#ff6b6b'); return []; }
 
@@ -36733,9 +36757,16 @@ async function _g45CompetEquipes(c) {
       var tb = await g45CoreTeams(c.sp, c.s);
       var vus = {};
       Object.keys(tb).forEach(function (k) {
+        if (k.charAt(0) === '#') return;          /* entree de nom, lue via tb['#'+id] */
         var id = tb[k];
         if (vus[id]) return; vus[id] = 1;
-        out.push({ id: String(id), nom: k, court: '', logo: '', j:0,v:0,n:0,p:0,bp:0,bc:0,diff:0,pts:0,rang:0 });
+        /* `k` est une cle NORMALISEE (« castresolympique ») : elle ne doit servir
+           que de dernier recours, jamais de libelle par defaut. Le logo suit le
+           meme motif de CDN que la voie classement, sinon les vignettes de la vue
+           Equipes resteraient vides pour ces competitions. */
+        out.push({ id: String(id), nom: tb['#' + id] || k, court: '',
+          logo: id ? ('https://a.espncdn.com/i/teamlogos/' + c.sp + '/500/' + id + '.png') : '',
+          j:0,v:0,n:0,p:0,bp:0,bc:0,diff:0,pts:0,rang:0 });
       });
     } catch (e) {}
   }
@@ -38570,8 +38601,19 @@ async function _g45SaisonsGen(el, nom, perso) {
     var col = m.res === 'V' ? '#1ed760' : (m.res === 'N' ? '#f0b020' : '#ff4545');
     var d = new Date(m.t);
     var passes = coches.filter(function (k) { return _g45SgCompte([m], k) === 1; });
+    /* ═══ LA BARRE SUIT LE COMBINE, PAS LE RESULTAT (08/09) ═══
+       Elle etait coloree sur `m.res` : un match gagne 28-20 ressortait en VERT
+       alors que le combine coche etait « O49.5 + WIN » et que le total, a 48,
+       ne passait pas (releve par Antoine). Deux informations differentes se
+       disputaient la meme barre.
+       Elle dit desormais la meme chose que la pastille de l'en-tete : vert si
+       TOUS les marches coches passent, rouge sinon — exactement la regle du
+       panneau football. La lettre V/N/D et le score gardent, eux, la couleur
+       du resultat : c'est leur role.
+       Aucun marche coche : rien a verifier, on retombe sur le resultat. */
+    var barre = coches.length ? ((passes.length === coches.length) ? '#1ed760' : '#ff4545') : col;
     html += '<div ' + (m.id ? 'onclick="_g45SgMatch(\'' + m.id + '\')" ' : '')
-      + 'style="display:flex;align-items:center;gap:8px;padding:7px 2px;border-left:3px solid ' + col + ';padding-left:8px;margin-bottom:3px;background:rgba(255,255,255,.02);border-radius:0 6px 6px 0;font-size:11.5px;' + (m.id ? 'cursor:pointer;' : '') + '">'
+      + 'style="display:flex;align-items:center;gap:8px;padding:7px 2px;border-left:3px solid ' + barre + ';padding-left:8px;margin-bottom:3px;background:rgba(255,255,255,.02);border-radius:0 6px 6px 0;font-size:11.5px;' + (m.id ? 'cursor:pointer;' : '') + '">'
       + '<div style="width:38px;color:var(--t3);font-size:10px;">' + String(d.getDate()).padStart(2, '0') + '/' + String(d.getMonth() + 1).padStart(2, '0') + '</div>'
       + '<div style="width:16px;font-size:10px;">' + (m.dom ? '\ud83c\udfe0' : '\ud83d\ude8c') + '</div>'
       + '<div style="flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">' + (noms[m.advId] || m.adv || '?')
@@ -43144,6 +43186,40 @@ window.g45FondMatch = g45FondMatch;
    luminosite reste une modification a un seul endroit.
    Le visuel prime largement sur la couleur : l'objectif d'Antoine est de
    remplir le vide, et une photo de club remplit infiniment mieux qu'un aplat. */
+/* ═══ LES LISTES US ADOPTENT LA PRESENTATION DU FOOT (08/09) ═══
+   Antoine a compare les deux et prefere celle du foot : noms en pastilles,
+   score au MILIEU, et le fond aux couleurs du club derriere la liste.
+   Les trois sports US (NHL, MLB, NBA) rendaient chacun leur ligne dans leur
+   coin, avec le meme code recopie trois fois. Tout passe ici : une seule
+   ligne a corriger le jour ou la presentation rebouge, et le foot ne peut
+   plus diverger silencieusement des sports US.
+   Le voile est pose sur les PASTILLES et non sur les cellules de la grille :
+   une cellule occupe toute la largeur de sa colonne et masquerait le fond,
+   une pastille epouse son texte et le laisse passer entre les elements. */
+function g45UsPanneauOuvrir(nom, blason){
+  return '<div style="position:relative;border-radius:10px;padding:8px 10px 10px;overflow:hidden;">'
+    + g45FondClubHtml(nom, 0.2, blason);
+}
+function g45UsPanneauFermer(){ return '</div>'; }
+/* o = {clic, date, hNom, aNom, score, isDom, barre, coulScore, ico, badges} */
+function g45UsLigne(o){
+  var vl = o.isDom ? 'rgba(16,21,38,.80)' : 'rgba(16,21,38,.72)';
+  var pastille = function(txt, gras, droite){
+    return '<div style="'+(droite?'text-align:right;':'')+'overflow:hidden;white-space:nowrap;text-overflow:ellipsis;">'
+      +'<span style="display:inline-block;max-width:100%;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;vertical-align:middle;'
+      +'background:'+vl+';border-radius:6px;padding:4px 8px;font-size:10px;font-weight:'+(gras?'800':'400')+';color:'+(gras?'var(--t1)':'var(--t2)')+';">'
+      +txt+'</span></div>';
+  };
+  return '<div onclick="'+(o.clic||'')+'" style="display:grid;grid-template-columns:32px 1fr auto 1fr 40px;gap:6px;align-items:center;padding:2px 0;cursor:pointer;" onmouseover="this.style.opacity=\'0.8\'" onmouseout="this.style.opacity=\'1\'">'
+    +'<div style="font-size:9px;color:var(--t3);text-align:center;background:'+vl+';border-radius:6px;border-left:3px solid '+o.barre+';padding:4px 3px;">'+o.date+'</div>'
+    +pastille(o.hNom, o.isDom, true)
+    +'<div style="font-size:11px;font-weight:800;color:'+o.coulScore+';text-align:center;min-width:40px;background:'+vl+';border-radius:6px;padding:4px 6px;">'+o.score+'</div>'
+    +pastille(o.aNom, !o.isDom, false)
+    +'<div style="font-size:8px;text-align:right;min-width:40px;background:'+vl+';border-radius:6px;padding:3px 4px;">'+(o.ico||'')+'<br>'+(o.badges||'')+'</div>'
+    +'</div>';
+}
+window.g45UsLigne=g45UsLigne; window.g45UsPanneauOuvrir=g45UsPanneauOuvrir; window.g45UsPanneauFermer=g45UsPanneauFermer;
+
 function g45FondSolo(coul, vis) {
   var c = _g45CoulFond(coul || '#4d84ff'), N = _G45_FOND_NIV;
   if (vis) {
