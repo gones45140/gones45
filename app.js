@@ -4339,7 +4339,13 @@ function combiAddType(i, kw){
   combiRows[i].type=nv;
   if(inp){ inp.value=nv; inp.focus(); }
 }
-/* ═══ LA LISTE DES SPORTS, EN UN SEUL ENDROIT (08/09) ═══
+/* ═══ LA LISTE DES SPORTS DE PARI, EN UN SEUL ENDROIT (08/09) ═══
+   NOM AU PLURIEL PRECIS — `G45_SPORTS_PARI` et surtout PAS `G45_SPORTS` :
+   ce dernier existe deja plus bas pour la navigation des Competitions, avec des
+   entrees d'une tout autre forme ({key, name, ico, groups}). Deux `var` de meme
+   nom dans le meme fichier : la derniere declaree gagne, et les selecteurs de
+   sport ont affiche « undefined undefined » (bug introduit puis corrige le
+   08/09). Ne jamais reprendre ce nom ici.
    Elle etait recopiee a SIX endroits : trois `<select>` en dur dans index.html
    (pari, edition, ajout au mur), deux tableaux ici pour les combines, un sixieme
    dans la Memoire stats. Ajouter le biathlon demandait donc six modifications,
@@ -4354,7 +4360,7 @@ function combiAddType(i, kw){
 
    Un sport ajoute ici sert d'ETIQUETTE : filtres du Bilan, montante, capital.
    Il n'apporte ni score automatique ni fiche equipe — comme le WRC aujourd'hui. */
-var G45_SPORTS = [
+var G45_SPORTS_PARI = [
   { v:'⚽',    n:'Football' },
   { v:'🏀',    n:'Basket' },
   { v:'🎾',    n:'Tennis' },
@@ -4381,12 +4387,12 @@ var G45_SPORTS = [
   { v:'🏅',    n:'Autre — préciser dans Compétition' }
 ];
 function g45SportsOptions(sel){
-  return G45_SPORTS.map(function(s){
+  return G45_SPORTS_PARI.map(function(s){
     return '<option value="'+s.v+'"'+((sel!=null&&sel===s.v)?' selected':'')+'>'+s.v+' '+s.n+'</option>';
   }).join('');
 }
 /* Etiquettes « emoji + nom », pour les listes deroulantes des combines. */
-function g45SportsLabels(){ return G45_SPORTS.map(function(s){ return s.v+' '+s.n; }); }
+function g45SportsLabels(){ return G45_SPORTS_PARI.map(function(s){ return s.v+' '+s.n; }); }
 /* Remplit les selecteurs poses en dur dans la page, en CONSERVANT la valeur
    choisie : la fonction peut donc etre rappelee sans rien perdre. */
 function g45SportsRemplir(){
@@ -4397,7 +4403,7 @@ function g45SportsRemplir(){
     if(av) el.value=av;
   });
 }
-window.G45_SPORTS=G45_SPORTS; window.g45SportsOptions=g45SportsOptions; window.g45SportsRemplir=g45SportsRemplir;
+window.G45_SPORTS_PARI=G45_SPORTS_PARI; window.g45SportsOptions=g45SportsOptions; window.g45SportsRemplir=g45SportsRemplir;
 if (typeof document!=='undefined') {
   if (document.readyState==='loading') document.addEventListener('DOMContentLoaded', g45SportsRemplir);
   else g45SportsRemplir();
