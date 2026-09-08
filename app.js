@@ -3876,14 +3876,118 @@ function cancelBet(id){
    pari. html2canvas transforme la carte (construite hors-ecran) en image ;
    partage natif sur mobile (WhatsApp/Discord/SMS via le menu du telephone),
    telechargement en repli sur PC ou si le partage natif echoue. */
-function _g45CarteResultatHTML(h){
-  var isSimpleC=(h.n==='SIMPLE');
-  var adversaireC=(h.target&&h.target!=='-'&&!isSimpleC)?h.target:'';
-  var titreC=isSimpleC?(h.target&&h.target!=='-'?h.target.split(/\s+vs\s+/i)[0]:(h.n||'—')):(h.n||h.target||'—');
-  var u1=(state.u||[]).filter(function(x){return x&&x.n===titreC;})[0];
-  var coul1=(u1&&u1.color)||'#4d84ff';
-  var abbr1=(u1&&u1.abbr)||titreC.replace(/[^a-zA-Z]/g,'').substring(0,3).toUpperCase()||'—';
-  var abbr2=adversaireC?adversaireC.replace(/[^a-zA-Z]/g,'').substring(0,3).toUpperCase():'';
+/* ══════════ CARTE DE RESULTAT PARTAGEABLE — REFONTE DU 08/09 ══════════
+   Quatre corrections d'un coup, toutes venues des cartes qu'Antoine a relues :
+
+   1. L'ADVERSAIRE ETAIT PERDU. Sur un pari simple, le titre coupait « A vs B »
+      et ne gardait que A : la carte d'un « over 2.5 sets » Osaka-Rybakina ne
+      nommait qu'une joueuse. Les deux sont desormais affichees.
+   2. COULEUR IDENTITAIRE. Tout ce qui n'etait pas une equipe du mur sortait
+      dans le meme bleu par defaut. Trois sources dans l'ordre : la couleur du
+      mur, la couleur d'ecurie F1 relevee par OpenF1, sinon une teinte DERIVEE
+      DU NOM — stable, donc un meme combattant garde sa carte, et deux
+      combattants n'ont pas la meme.
+   3. VIGNETTE. Initiales quand il y a deux camps (il faut les distinguer),
+      emoji du sport quand il n'y en a qu'un et qu'aucun club n'est identifie
+      (« GAS » ne disait rien).
+   4. VRAI ECUSSON quand on l'a. Attention, c'est la partie delicate : html2canvas
+      REFUSE d'exporter un canvas contenant une image d'un autre domaine. On ne
+      pose donc jamais une URL directement — elle est telechargee, convertie en
+      donnee integree, et n'est utilisee que si l'operation a reussi. Sinon on
+      retombe sur les initiales : jamais de carte cassee.
+      La tuile est CLAIRE et non aux couleurs du club : un ecusson sombre sur
+      son propre fond disparait (le PSG marine sur du marine). */
+
+/* Teinte stable calculee sur le nom. Rendue en HEX et non en hsl(), parce que
+   le fond de la carte lui concatene une opacite hexadecimale (`coul+'59'`). */
+function _g45TeinteNom(nom){
+  var x = 0, t = String(nom || '');
+  for (var i = 0; i < t.length; i++) x = (x * 31 + t.charCodeAt(i)) % 360;
+  var h = x / 360, s = 0.62, l = 0.52;
+  var f = function (n) {
+    var k = (n + h * 12) % 12, a = s * Math.min(l, 1 - l);
+    var v = l - a * Math.max(-1, Math.min(Math.min(k - 3, 9 - k), 1));
+    return Math.round(v * 255).toString(16).padStart(2, '0');
+  };
+  return '#' + f(0) + f(8) + f(4);
+}
+/* Couleurs d'ecurie F1 : remplies au fil des consultations du module F1, qui
+   telecharge deja la liste des pilotes. Aucune requete supplementaire ici. */
+function _g45PiloteCoul(nom){
+  try {
+    var t = JSON.parse(localStorage.getItem('g45_pilote_coul') || '{}');
+    return t[String(nom || '').toLowerCase().replace(/[^a-z0-9]/g, '')] || '';
+  } catch (e) { return ''; }
+}
+function g45CoulIdentite(nom){
+  try {
+    var u = ((typeof state !== 'undefined' && state && state.u) || []).filter(function (x) { return x && x.n === nom; })[0];
+    if (u && u.color) return u.color;
+    var f = _g45PiloteCoul(nom);
+    if (f) return f;
+  } catch (e) {}
+  return _g45TeinteNom(nom);
+}
+window.g45CoulIdentite = g45CoulIdentite;
+
+/* Les deux camps d'un pari, lus au meme endroit par le rendu et par le
+   pre-chargement des ecussons — sinon les deux se contrediraient. */
+function _g45CarteNoms(h){
+  var simple = (h.n === 'SIMPLE');
+  var parts = (h.target && h.target !== '-') ? String(h.target).split(/\s+vs\s+/i) : [];
+  if (simple) return { titre: String(parts[0] || h.n || '—').trim(), adv: String(parts[1] || '').trim() };
+  return { titre: String(h.n || h.target || '—').trim(), adv: (h.target && h.target !== '-') ? String(h.target).trim() : '' };
+}
+/* L'adresse d'un ecusson : le mur et la table LOGOS d'abord, puis le CDN ESPN
+   des que la table perso nous donne l'identifiant — c'est elle qui alimente
+   deja les vignettes de la vue Classement. */
+function _g45CarteLogoUrl(nom){
+  try {
+    var l = (typeof g45LogoUrlDe === 'function') ? g45LogoUrlDe(nom) : '';
+    if (l) return l;
+    if (typeof g45TeamsPerso === 'function') {
+      var e = g45TeamsPerso()[String(nom || '').toLowerCase().trim()];
+      if (e && e.id) return 'https://a.espncdn.com/i/teamlogos/' + (e.sport || 'soccer') + '/500/' + e.id + '.png';
+    }
+  } catch (e2) {}
+  return '';
+}
+/* Telechargement puis conversion en donnee integree. En memoire seulement :
+   ces chaines pesent plusieurs Ko et le localStorage d'Antoine a deja sature
+   une fois. Un echec (serveur sans en-tetes CORS, reseau) rend '' et la carte
+   retombe sur les initiales. */
+var _g45CarteLogoCache = {};
+async function _g45CarteLogoData(url){
+  if (!url) return '';
+  if (_g45CarteLogoCache[url] !== undefined) return _g45CarteLogoCache[url];
+  var out = '';
+  try {
+    var r = await fetch(url, { mode: 'cors' });
+    if (r.ok) {
+      var b = await r.blob();
+      if (b.size && b.size < 500000) {
+        out = await new Promise(function (res) {
+          var fr = new FileReader();
+          fr.onload = function () { res(String(fr.result || '')); };
+          fr.onerror = function () { res(''); };
+          fr.readAsDataURL(b);
+        });
+      }
+    }
+  } catch (e) { out = ''; }
+  _g45CarteLogoCache[url] = out;
+  return out;
+}
+
+function _g45CarteResultatHTML(h, logos){
+  logos = logos || {};
+  var nomsC = _g45CarteNoms(h);
+  var titreC = nomsC.titre, adversaireC = nomsC.adv;
+  var u1 = (state.u || []).filter(function (x) { return x && x.n === titreC; })[0];
+  var coul1 = g45CoulIdentite(titreC);
+  var coul2 = adversaireC ? g45CoulIdentite(adversaireC) : '';
+  var abbr1 = (u1 && u1.abbr) || titreC.replace(/[^a-zA-Z]/g, '').substring(0, 3).toUpperCase() || '—';
+  var abbr2 = adversaireC ? (adversaireC.replace(/[^a-zA-Z]/g, '').substring(0, 3).toUpperCase() || '—') : '';
   var isPend=!!h.isPending;
   var gain=isPend?0:(h.win?(parseFloat(h.m)*parseFloat(h.cote)-parseFloat(h.m)):-parseFloat(h.m));
   var verdictTxt=isPend?'⏳ En cours':(h.win?'✅ Gagné':'❌ Perdu');
@@ -3891,8 +3995,35 @@ function _g45CarteResultatHTML(h){
   var score=(typeof _g45ScoreTexte==='function')?(_g45ScoreTexte(h)||''):'';
   var typeTxtC=h.type||'';
   if(/^victoire\b/i.test(typeTxtC) && titreC.toLowerCase().indexOf(' vs ')===-1){ typeTxtC=titreC+' '+typeTxtC.replace(/^victoire\b/i,'gagne'); }
+
+  var sportIco1 = h.sport || '⚽';
+  var vign = function (abbr, coul, logo, solo, club) {
+    var base = 'width:64px;height:64px;border-radius:16px;display:flex;align-items:center;justify-content:center;';
+    if (logo) {
+      return '<div style="' + base + 'background:rgba(255,255,255,.92);box-shadow:inset 0 0 0 1px rgba(0,0,0,.10);">'
+        + '<img src="' + logo + '" style="width:44px;height:44px;object-fit:contain;" alt="">'
+        + '</div>';
+    }
+    if (solo && !club) {
+      return '<div style="' + base + 'font-size:32px;line-height:1;background:linear-gradient(145deg,' + coul + '4d,' + coul + '12);box-shadow:inset 0 0 0 1px rgba(255,255,255,.14);">' + sportIco1 + '</div>';
+    }
+    return '<div style="' + base + 'font-size:20px;font-weight:900;color:#fff;background:linear-gradient(145deg,' + coul + ',' + coul + '80);box-shadow:inset 0 0 0 1px rgba(255,255,255,.18);">' + abbr + '</div>';
+  };
+  var vignette1 = vign(abbr1, coul1, logos.a || '', !adversaireC, !!(u1 && u1.color));
+  var vignette2 = adversaireC ? vign(abbr2, coul2, logos.b || '', false, true) : '';
+
+  /* Le titre porte les deux noms tant qu'il tient sur une ligne. Au-dela, on
+     garde le premier : deux clubs longs deborderaient de la carte. */
+  var titreHtml = (adversaireC && (titreC + ' vs ' + adversaireC).length <= 30)
+    ? (titreC + ' <span style="color:#4f5d88;font-size:12px;">vs</span> ' + adversaireC)
+    : titreC;
+
+  var halo = coul2
+    ? ('radial-gradient(circle at 30% 18%,' + coul1 + '4d 0%,' + coul1 + '00 55%),radial-gradient(circle at 70% 18%,' + coul2 + '4d 0%,' + coul2 + '00 55%)')
+    : ('radial-gradient(circle at 50% 18%,' + coul1 + '59 0%,' + coul1 + '00 55%)');
+
   return '<div style="width:340px;border-radius:20px;overflow:hidden;position:relative;'
-    +'background:radial-gradient(circle at 50% 18%,'+coul1+'59 0%,'+coul1+'00 55%),repeating-linear-gradient(135deg,rgba(255,255,255,.025) 0px,rgba(255,255,255,.025) 1px,transparent 1px,transparent 14px),linear-gradient(160deg,#151b30 0%,#0a0e1a 65%);'
+    +'background:'+halo+',repeating-linear-gradient(135deg,rgba(255,255,255,.025) 0px,rgba(255,255,255,.025) 1px,transparent 1px,transparent 14px),linear-gradient(160deg,#151b30 0%,#0a0e1a 65%);'
     +'border:1px solid rgba(255,255,255,.08);font-family:-apple-system,BlinkMacSystemFont,\'Segoe UI\',Roboto,sans-serif;">'
     +'<div style="position:absolute;right:-20px;bottom:-40px;font-size:210px;opacity:.13;line-height:1;transform:rotate(-8deg);">'+(h.sport||'⚽')+'</div>'
     +'<div style="position:relative;padding:20px 22px 16px;display:flex;justify-content:space-between;align-items:center;">'
@@ -3900,10 +4031,10 @@ function _g45CarteResultatHTML(h){
       +'<div style="font-size:11px;font-weight:800;padding:5px 12px;border-radius:20px;background:'+verdictCls+'26;color:'+verdictCls+';">'+verdictTxt+'</div>'
     +'</div>'
     +'<div style="position:relative;display:flex;align-items:center;justify-content:center;gap:18px;padding:6px 22px 22px;">'
-      +'<div style="width:64px;height:64px;border-radius:16px;display:flex;align-items:center;justify-content:center;font-size:20px;font-weight:900;color:#fff;background:'+coul1+';">'+abbr1+'</div>'
-      +(abbr2?'<div style="color:#4f5d88;font-size:13px;font-weight:700;">VS</div><div style="width:64px;height:64px;border-radius:16px;display:flex;align-items:center;justify-content:center;font-size:20px;font-weight:900;color:#fff;background:#5b6690;">'+abbr2+'</div>':'')
+      +vignette1
+      +(vignette2?('<div style="color:#4f5d88;font-size:13px;font-weight:700;">VS</div>'+vignette2):'')
     +'</div>'
-    +'<div style="position:relative;text-align:center;padding:0 22px;font-size:16px;font-weight:800;color:#fff;">'+(titreC||'')+'</div>'
+    +'<div style="position:relative;text-align:center;padding:0 22px;font-size:16px;font-weight:800;color:#fff;">'+titreHtml+'</div>'
     +'<div style="position:relative;text-align:center;padding:4px 22px 16px;font-size:11px;color:#8b97c4;">'+(h.comp?('<span style="display:inline-block;font-size:9px;font-weight:900;letter-spacing:.06em;color:#c9d2f0;border:1px solid rgba(255,255,255,.16);padding:3px 8px;border-radius:6px;background:rgba(255,255,255,.05);margin-right:6px;">'+h.comp.toUpperCase()+'</span>'):'')+(h.date||'')+'</div>'
     +(score?('<div style="position:relative;text-align:center;padding:0 22px 10px;"><span style="font-size:26px;font-weight:900;color:#fff;">'+score+'</span></div>'):'')
     +'<div style="position:relative;text-align:center;padding:0 22px 18px;font-size:11px;color:#8b97c4;">'+(typeTxtC||'')+'</div>'
@@ -3921,9 +4052,20 @@ async function g45PartagerPari(id){
   var h=(state.a||[]).concat(state.h||[]).filter(function(x){return x.id===id;})[0];
   if(!h){ alert('Pari introuvable.'); return; }
   if(typeof html2canvas==='undefined'){ alert('Génération d\'image indisponible pour le moment.'); return; }
+  /* Les ecussons sont resolus AVANT le rendu : la capture ne doit contenir que
+     des donnees integrees, jamais une URL externe. Un echec rend '' et la
+     vignette repasse en initiales. */
+  var _nm=_g45CarteNoms(h), _lg={};
+  try {
+    var _r = await Promise.all([
+      _g45CarteLogoData(_g45CarteLogoUrl(_nm.titre)),
+      _nm.adv ? _g45CarteLogoData(_g45CarteLogoUrl(_nm.adv)) : Promise.resolve('')
+    ]);
+    _lg = { a: _r[0], b: _r[1] };
+  } catch (e) { _lg = {}; }
   var wrap=document.createElement('div');
   wrap.style.cssText='position:fixed;left:-9999px;top:0;';
-  wrap.innerHTML=_g45CarteResultatHTML(h);
+  wrap.innerHTML=_g45CarteResultatHTML(h, _lg);
   document.body.appendChild(wrap);
   try{
     var canvas=await html2canvas(wrap.firstChild, {backgroundColor:null, scale:2});
@@ -4171,11 +4313,75 @@ function combiAddType(i, kw){
   combiRows[i].type=nv;
   if(inp){ inp.value=nv; inp.focus(); }
 }
+/* ═══ LA LISTE DES SPORTS, EN UN SEUL ENDROIT (08/09) ═══
+   Elle etait recopiee a SIX endroits : trois `<select>` en dur dans index.html
+   (pari, edition, ajout au mur), deux tableaux ici pour les combines, un sixieme
+   dans la Memoire stats. Ajouter le biathlon demandait donc six modifications,
+   et en oublier une passait inapercu.
+   Tout part maintenant de cette table. Les `<select>` statiques sont remplis au
+   demarrage : leur contenu HTML sert de repli si le script ne tourne pas.
+
+   LA VALEUR EST L'EMOJI, et elle est ECRITE DANS LES PARIS DEJA ENREGISTRES :
+   ne JAMAIS changer celle d'un sport existant, un pari MMA archive sous 🥊
+   deviendrait un pari de boxe. C'est pour cette raison que la boxe prend 👊 et
+   non 🥊, deja pris par le MMA depuis le debut.
+
+   Un sport ajoute ici sert d'ETIQUETTE : filtres du Bilan, montante, capital.
+   Il n'apporte ni score automatique ni fiche equipe — comme le WRC aujourd'hui. */
+var G45_SPORTS = [
+  { v:'⚽',    n:'Football' },
+  { v:'🏀',    n:'Basket' },
+  { v:'🎾',    n:'Tennis' },
+  { v:'🏈',    n:'NFL' },
+  { v:'⚾',    n:'Baseball' },
+  { v:'🏒',    n:'Hockey' },
+  { v:'🏉',    n:'Rugby' },
+  { v:'🏉🇦🇺', n:'NRL' },
+  { v:'🏎',    n:'F1' },
+  { v:'🥊',    n:'MMA' },
+  { v:'🚗',    n:'WRC' },
+  { v:'🚴',    n:'Cyclisme' },
+  { v:'🎿',    n:'Biathlon' },
+  { v:'⛷',    n:'Ski alpin' },
+  { v:'🏊',    n:'Natation' },
+  { v:'🏃',    n:'Athlétisme' },
+  { v:'🤾',    n:'Handball' },
+  { v:'🏐',    n:'Volley' },
+  { v:'👊',    n:'Boxe' },
+  { v:'⛳',    n:'Golf' },
+  { v:'🎯',    n:'Fléchettes' },
+  { v:'🏓',    n:'Tennis de table' },
+  { v:'🎮',    n:'e-sport' },
+  { v:'🏅',    n:'Autre — préciser dans Compétition' }
+];
+function g45SportsOptions(sel){
+  return G45_SPORTS.map(function(s){
+    return '<option value="'+s.v+'"'+((sel!=null&&sel===s.v)?' selected':'')+'>'+s.v+' '+s.n+'</option>';
+  }).join('');
+}
+/* Etiquettes « emoji + nom », pour les listes deroulantes des combines. */
+function g45SportsLabels(){ return G45_SPORTS.map(function(s){ return s.v+' '+s.n; }); }
+/* Remplit les selecteurs poses en dur dans la page, en CONSERVANT la valeur
+   choisie : la fonction peut donc etre rappelee sans rien perdre. */
+function g45SportsRemplir(){
+  ['c-sport','p-sport','u-sport','gms-sport'].forEach(function(id){
+    var el=document.getElementById(id); if(!el) return;
+    var av=el.value;
+    el.innerHTML=g45SportsOptions();
+    if(av) el.value=av;
+  });
+}
+window.G45_SPORTS=G45_SPORTS; window.g45SportsOptions=g45SportsOptions; window.g45SportsRemplir=g45SportsRemplir;
+if (typeof document!=='undefined') {
+  if (document.readyState==='loading') document.addEventListener('DOMContentLoaded', g45SportsRemplir);
+  else g45SportsRemplir();
+}
+
 function renderCombiRows() {
   var el = document.getElementById('combi-rows');
   if(!el) return;
   if(!combiRows.length) { el.innerHTML=''; updateCombiCote(); return; }
-  var sports = ['⚽ Football','🏀 Basket','🎾 Tennis','🏈 NFL','🏒 Hockey','⚾ Baseball','🏉 Rugby','🏎 F1','🥊 MMA','🚗 WRC','🚴 Cyclisme'];
+  var sports = g45SportsLabels();   /* source unique : G45_SPORTS */
   var html = '';
   combiRows.forEach(function(row, i) {
     html += '<div style="background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.07);border-radius:10px;padding:12px;margin-bottom:10px;">';
@@ -11627,7 +11833,7 @@ function renderCombiRows() {
   var el = document.getElementById('combi-rows');
   if(!el) return;
   if(!combiRows.length) { el.innerHTML=''; updateCombiCote(); return; }
-  var sports = ['⚽ Football','🏀 Basket','🎾 Tennis','🏈 NFL','🏒 Hockey','⚾ Baseball','🏉 Rugby','🏎 F1','🥊 MMA','🚗 WRC','🚴 Cyclisme'];
+  var sports = g45SportsLabels();   /* source unique : G45_SPORTS */
   var html = '';
   combiRows.forEach(function(row, i) {
     html += '<div style="background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.07);border-radius:10px;padding:12px;margin-bottom:10px;">';
@@ -24251,6 +24457,11 @@ async function _renderSaisonDetail(el, eventId, league){
     var r=await fetch('https://site.api.espn.com/apis/site/v2/sports/soccer/'+(league||'eng.1')+'/summary?event='+eventId+'&lang=fr&region=fr');
     var data=await r.json();
     el._data=data;   // pour le sélecteur de marché (re-rendu sans re-fetch)
+    /* Le resume est aussi mis de cote pour l'ANALYSE IA (08/09) : elle ne
+       recevait que le nom des deux equipes et la date, d'ou trois avis
+       identiques disant « donnees manquantes » (releve par Antoine sur
+       Real Madrid - Internazionale). Tout ce qu'il lui faut est deja ICI. */
+    try { _g45ResumeIA[String(eventId)] = data; } catch (e) {}
     /* CARTE DES TIRS (20/08) : elle n'existait que dans le detail GENERIQUE,
        celui des sports US. Le football a son propre rendu — celui-ci — donc la
        carte n'apparaissait jamais par l'interface, seulement en console.
@@ -24308,7 +24519,7 @@ async function _renderSaisonDetail(el, eventId, league){
       h+='<div style="margin-top:8px;"><button onclick="g45LoadOdds(this)" data-h="'+_eaAdv(hN)+'" data-a="'+_eaAdv(aN)+'" data-comp="'+_eaAdv(_compName||league||'')+'" data-box="'+_oddsId+'" style="width:100%;box-sizing:border-box;font-size:12px;font-weight:800;padding:9px 12px;border-radius:9px;cursor:pointer;border:1.5px solid rgba(46,204,113,.5);background:rgba(46,204,113,.12);color:#2ecc71;">💰 Cotes réelles (bookmakers FR)</button><div id="'+_oddsId+'" style="margin-top:8px;"></div></div>';
       var _moreId='g45more_'+(eventId||Math.random().toString(36).slice(2));
       h+='<div style="margin-top:8px;"><button onclick="g45LoadMoreOdds(this)" data-h="'+_eaAdv(hN)+'" data-a="'+_eaAdv(aN)+'" data-comp="'+_eaAdv(_compName||league||'')+'" data-box="'+_moreId+'" style="width:100%;box-sizing:border-box;font-size:12px;font-weight:800;padding:9px 12px;border-radius:9px;cursor:pointer;border:1.5px solid rgba(155,89,182,.5);background:rgba(155,89,182,.12);color:#b07cd6;">📋 Plus de marchés (O/U · BTTS · buteur)</button><div id="'+_moreId+'" style="margin-top:8px;"></div></div>';
-      h+='<div style="margin-top:8px;"><button onclick="g45LoadMatchAI(this)" data-date="'+_eaAdv(comp.date||'')+'" data-h="'+_eaAdv(hN)+'" data-a="'+_eaAdv(aN)+'" data-comp="'+_eaAdv(_compName||league||'')+'" data-box="'+_oddsId+'ai" style="width:100%;box-sizing:border-box;font-size:12px;font-weight:800;padding:9px 12px;border-radius:9px;cursor:pointer;border:1.5px solid rgba(176,124,214,.5);background:rgba(176,124,214,.10);color:#b07cd6;">🧠 Analyse IA du match</button><div id="'+_oddsId+'ai" style="margin-top:8px;"></div></div>';
+      h+='<div style="margin-top:8px;"><button onclick="g45LoadMatchAI(this)" data-eid="'+_eaAdv(eventId||'')+'" data-date="'+_eaAdv(comp.date||'')+'" data-h="'+_eaAdv(hN)+'" data-a="'+_eaAdv(aN)+'" data-comp="'+_eaAdv(_compName||league||'')+'" data-box="'+_oddsId+'ai" style="width:100%;box-sizing:border-box;font-size:12px;font-weight:800;padding:9px 12px;border-radius:9px;cursor:pointer;border:1.5px solid rgba(176,124,214,.5);background:rgba(176,124,214,.10);color:#b07cd6;">🧠 Analyse IA du match</button><div id="'+_oddsId+'ai" style="margin-top:8px;"></div></div>';
       added=true;
     }catch(e){}
     if(typeof _renderEspnMatchPitch==='function'){ try{ var pi=_renderEspnMatchPitch(data, '#4d84ff', function(x){return x;}); if(pi){ h+=pi; added=true; } }catch(e){} }
@@ -26574,6 +26785,107 @@ function _g45RenderOdds(ev, hN, aN, remain){
     +_valueBlock
     +'</div>';
 }
+/* ══════════ LES FAITS ENVOYES AUX IA (08/09) ══════════
+   Constat d'Antoine : les trois modeles rendaient le meme avis vague. Normal —
+   ils recevaient une seule ligne (« Match: A vs B — le 2026-09-08 ») des que
+   The Odds API et Sofascore ne repondaient pas, et la consigne systeme leur
+   INTERDIT d'inventer une forme ou un classement. Ils repondaient donc
+   « donnees manquantes », ce qui etait exact et sans interet.
+   Or le resume ESPN du match, deja telecharge pour le bloc avant-match, porte
+   la forme, les statistiques d'equipe, le classement, la probabilite ESPN et
+   les absences. On le relit ici : AUCUNE requete supplementaire, aucun quota.
+   Avec de vrais faits, les trois modeles peuvent enfin diverger — et c'est
+   leur desaccord qui a de la valeur, pas trois fois la meme prudence. */
+var _g45ResumeIA = {};
+function _g45FaitsDuResume(eid, hN, aN){
+  var out = [];
+  var d = _g45ResumeIA[String(eid || '')];
+  if (!d) return out;
+  var txt = function (x) { return String(x == null ? '' : x).replace(/\s+/g, ' ').trim(); };
+  try {
+    var comp = (d.header && d.header.competitions && d.header.competitions[0]) || {};
+    var cs = comp.competitors || [];
+    var home = cs.filter(function (c) { return c.homeAway === 'home'; })[0] || cs[0] || {};
+    var away = cs.filter(function (c) { return c.homeAway === 'away'; })[0] || cs[1] || {};
+
+    /* Forme : adversaire ET score, pas seulement une suite de V/D — « battu 0-4
+       par le leader » et « battu 0-1 par le dernier » ne valent pas pareil. */
+    var forme = function (tid, nom) {
+      try {
+        var lf = d.lastFiveGames || [], e = null;
+        for (var i = 0; i < lf.length; i++) { if (String(lf[i].team && lf[i].team.id) === String(tid)) { e = lf[i]; break; } }
+        if (!e) return '';
+        var evs = (e.events || e.games || []).slice(-5);
+        if (!evs.length) return '';
+        return nom + ' — 5 derniers matchs : ' + evs.map(function (x) {
+          var gr = String(x.gameResult || x.result || '').toUpperCase();
+          var r = gr === 'W' ? 'gagné' : (gr === 'L' ? 'perdu' : 'nul');
+          var o = x.opponent || {};
+          return r + ' ' + txt(x.score || '') + ' contre ' + txt(o.displayName || o.shortDisplayName || o.abbreviation || '?');
+        }).join(' ; ');
+      } catch (e2) { return ''; }
+    };
+    var f1 = forme(home.id, hN), f2 = forme(away.id, aN);
+    if (f1) out.push(f1);
+    if (f2) out.push(f2);
+
+    /* Statistiques d'equipe de la saison (buts marques, encaisses, difference…). */
+    try {
+      var bt = d.boxscore && d.boxscore.teams;
+      if (bt && bt.length >= 2) {
+        [0, 1].forEach(function (i) {
+          var t = bt[i], nom = (String(t.team && t.team.id) === String(home.id)) ? hN : aN;
+          var st = (t.statistics || []).map(function (x) {
+            return txt(x.label || x.name) + ' ' + txt(x.displayValue != null ? x.displayValue : x.value);
+          }).filter(Boolean).slice(0, 8);
+          if (st.length) out.push('Statistiques de la saison — ' + nom + ' : ' + st.join(', '));
+        });
+      }
+    } catch (e3) {}
+
+    /* Classement : uniquement les DEUX equipes concernees, pas la table entiere. */
+    try {
+      var grps = (d.standings && d.standings.groups) || [];
+      grps.forEach(function (g) {
+        ((g.standings && g.standings.entries) || []).forEach(function (e) {
+          var tid = (typeof _g45EntId === 'function') ? _g45EntId(e) : String((e.team && e.team.id) || '');
+          if (tid !== String(home.id) && tid !== String(away.id)) return;
+          var nom = (tid === String(home.id)) ? hN : aN;
+          var st = (e.stats || []).map(function (x) {
+            return txt(x.shortDisplayName || x.abbreviation || x.name) + ' ' + txt(x.displayValue != null ? x.displayValue : x.value);
+          }).filter(Boolean).slice(0, 8);
+          if (st.length) out.push('Classement — ' + nom + ' : ' + st.join(', '));
+        });
+      });
+    } catch (e4) {}
+
+    /* Probabilite ESPN : un avis chiffre de plus, a confronter aux cotes. */
+    try {
+      var pr = d.predictor;
+      if (pr && (pr.homeTeam || pr.awayTeam)) {
+        var ph = pr.homeTeam && (pr.homeTeam.gameProjection || pr.homeTeam.teamChanceLoss);
+        var pa = pr.awayTeam && pr.awayTeam.gameProjection;
+        if (ph || pa) out.push('Probabilité de victoire selon ESPN : ' + hN + ' ' + txt(ph || '?') + '%, ' + aN + ' ' + txt(pa || '?') + '%');
+      }
+    } catch (e5) {}
+
+    /* Absences : forfaits et incertains, deja distingues par le bloc avant-match. */
+    try {
+      var inj = d.injuries || [];
+      inj.forEach(function (bloc) {
+        var nom = (String(bloc.team && bloc.team.id) === String(home.id)) ? hN : aN;
+        var l = (bloc.injuries || []).map(function (x) {
+          var a = x.athlete || {};
+          return txt(a.displayName || a.shortName) + (x.status ? (' (' + txt(x.status) + ')') : '');
+        }).filter(Boolean).slice(0, 6);
+        if (l.length) out.push('Absents ou incertains — ' + nom + ' : ' + l.join(', '));
+      });
+    } catch (e6) {}
+  } catch (e7) {}
+  return out;
+}
+window._g45FaitsDuResume = _g45FaitsDuResume;
+
 async function g45LoadMatchAI(btn){
   var box=document.getElementById(btn.dataset.box); if(!box) return;
   if(box.getAttribute('data-loaded')==='1'){ box.style.display=(box.style.display==='none'?'':'none'); return; }
@@ -26586,6 +26898,10 @@ async function g45LoadMatchAI(btn){
   var _neutral=/coupe du monde|world cup|mondial|euro\b|championnat d'europe|copa am|copa america|can\b|coupe d'afrique|africa cup|gold cup|nations league finals|olymp|jeux olympiques|club world cup|supercoupe|super cup|finale/i.test(comp||'');
   facts.push('Match: '+hN+(_neutral?' vs ':' (domicile) vs ')+aN+(_neutral?'':' (extérieur)')+(comp?(' — '+comp):'')+(iso?(' — le '+iso.slice(0,10)):''));
   if(_neutral) facts.push('TERRAIN NEUTRE : ce match se joue sur terrain neutre (aucune des deux équipes ne reçoit). Il n\'y a PAS d\'avantage du terrain. Les libellés "1"/"2" désignent seulement la 1re et la 2e équipe, pas domicile/extérieur.');
+  /* Faits du resume ESPN — poses en premier : ce sont les plus denses. */
+  try {
+    if (btn.dataset.eid) _g45FaitsDuResume(btn.dataset.eid, hN, aN).forEach(function (f) { facts.push(f); });
+  } catch (e) {}
   // Cotes réelles (Worker, cache 15 min → souvent zéro quota)
   try{
     var sport=_g45OddsSportKey(comp);
@@ -26716,8 +27032,26 @@ async function _g45MultiAI(box, boxId, sys, facts, title){
     if(mk){
       box.innerHTML+='<div id="'+boxId+'-ms" style="font-size:10px;color:var(--t3);padding:6px;text-align:center;">🇫🇷 Mistral réfléchit…</div>';
       try{
-        var rm=await fetch('https://api.mistral.ai/v1/chat/completions',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+mk},body:JSON.stringify({model:'mistral-small-latest',messages:[{role:'system',content:sys},{role:'user',content:facts.join('\n')}],temperature:0.4,max_tokens:450})});
+        /* ═══ MISTRAL EST LE 4e APPEL D'UNE RAFALE (08/09) ═══
+           Le plan gratuit limite le DEBIT, pas seulement le volume : arrive en
+           dernier d'une salve, Mistral repondait « Rate limit exceeded » et
+           l'avis manquait a chaque fois (releve par Antoine). On lui laisse
+           donc respirer, puis on retente UNE fois — au-dela ce n'est plus une
+           rafale mais un vrai plafond, et insister ne servirait qu'a faire
+           patienter devant un message identique. */
+        var _mBody=JSON.stringify({model:'mistral-small-latest',messages:[{role:'system',content:sys},{role:'user',content:facts.join('\n')}],temperature:0.4,max_tokens:450});
+        var _mAppel=function(){ return fetch('https://api.mistral.ai/v1/chat/completions',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+mk},body:_mBody}); };
+        var _mLimite=function(o){ return !!(o && ((o.error && /rate limit|429|too many/i.test(String(o.error.message||o.error))) || /rate limit|429|too many/i.test(String(o.message||'')))); };
+        await new Promise(function(r){ setTimeout(r, 1200); });
+        var rm=await _mAppel();
         var dm=await rm.json();
+        if(rm.status===429 || _mLimite(dm)){
+          var _ms0=document.getElementById(boxId+'-ms');
+          if(_ms0) _ms0.textContent='🇫🇷 Mistral surchargé — nouvelle tentative…';
+          await new Promise(function(r){ setTimeout(r, 4000); });
+          rm=await _mAppel();
+          dm=await rm.json();
+        }
         var mt=((dm.choices&&dm.choices[0]&&dm.choices[0].message&&dm.choices[0].message.content)||'').trim();
         var msBox=document.getElementById(boxId+'-ms');
         if(mt && msBox){
@@ -32977,7 +33311,7 @@ async function g45StatsDeleteUI(id){ if(!confirm('Supprimer cette stat ?'))retur
 function _g45StatsTabHTML(){
   var bg3='rgba(0,0,0,.22)', b2='rgba(255,255,255,.1)';
   var fi='width:100%;box-sizing:border-box;background:'+bg3+';border:1px solid '+b2+';border-radius:8px;color:#e8ecf5;font-size:12px;padding:7px;';
-  var sportOpts='<option value="⚽">⚽ Football</option><option value="🏀">🏀 Basket</option><option value="🎾">🎾 Tennis</option><option value="🏈">🏈 NFL</option><option value="🏒">🏒 Hockey</option><option value="⚾">⚾ Baseball</option><option value="🏉">🏉 Rugby</option><option value="🏉🇦🇺">🏉🇦🇺 NRL</option><option value="🏎">🏎 F1</option><option value="🥊">🥊 MMA</option><option value="🚗">🚗 WRC</option><option value="🚴">🚴 Cyclisme</option>';
+  var sportOpts=g45SportsOptions();   /* source unique : G45_SPORTS */
   function fld(lbl,inner){ return '<div><label style="font-size:9px;color:#8b97c4;text-transform:uppercase;">'+lbl+'</label>'+inner+'</div>'; }
   return '<div style="max-width:600px;margin:0 auto;background:rgba(13,17,28,.9);border:1px solid rgba(255,255,255,.08);border-radius:14px;padding:18px;">'
     +'<div style="font-size:16px;font-weight:800;color:#e8ecf5;margin-bottom:4px;">🧠 Mémoire stats</div>'
@@ -33106,6 +33440,19 @@ async function _g45OF1Drivers(sk){
     if(!r.ok) return null;
     var a=await r.json(); var m={};
     a.forEach(function(d){ m[d.driver_number]={n:d.last_name||d.broadcast_name||('#'+d.driver_number), ac:d.name_acronym||'', team:d.team_name||'', col:(d.team_colour?('#'+d.team_colour):'#8b97c4')}; });
+    /* On profite de cette reponse — deja telechargee pour le direct — pour
+       retenir la couleur d'ecurie de chaque pilote : la carte partageable la
+       reutilise ensuite sans une seule requete de plus. */
+    try{
+      var _pc=JSON.parse(localStorage.getItem('g45_pilote_coul')||'{}');
+      a.forEach(function(d){
+        if(!d.team_colour) return;
+        [d.last_name, d.full_name, d.broadcast_name, d.name_acronym].filter(Boolean).forEach(function(n){
+          _pc[String(n).toLowerCase().replace(/[^a-z0-9]/g,'')]='#'+d.team_colour;
+        });
+      });
+      localStorage.setItem('g45_pilote_coul', JSON.stringify(_pc));
+    }catch(e){}
     _g45OF1.drv[sk]=m; return m;
   }catch(e){ return null; }
 }
