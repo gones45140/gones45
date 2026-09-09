@@ -23515,9 +23515,22 @@ function _renderMatchPression(s, homeId, awayId){
     var nomD = (dom.team && (dom.team.displayName || dom.team.name)) || '';
     var nomE = (ext.team && (ext.team.displayName || ext.team.name)) || '';
     if (!nomD || !nomE) return '';
-    var cD = (dom.team && dom.team.color) ? ('#' + String(dom.team.color).replace('#','')) : '#4d84ff';
-    var cE = (ext.team && ext.team.color) ? ('#' + String(ext.team.color).replace('#','')) : '#f0b020';
-    if (typeof _g45CoulFond === 'function') { cD = _g45CoulFond(cD); cE = _g45CoulFond(cE); }
+    /* ═══ DEUX JAUNES INDISTINGUABLES (09/09) ═══
+       Dortmund et Villarreal jouent tous deux en jaune : la legende affichait
+       deux carres identiques et les barres etaient illisibles (capture
+       d'Antoine). `g45CoulPaire` existe justement pour ca — elle bascule la
+       seconde equipe sur sa couleur alternative quand l'ecart est trop faible,
+       et sur l'ambre si l'alternative est elle-meme trop claire. Elle sert deja
+       a la carte des tirs et aux compositions ; ce bloc-ci ne l'appelait pas. */
+    var cD, cE;
+    if (typeof g45CoulPaire === 'function') {
+      var _paire = g45CoulPaire(dom, ext);
+      cD = _paire[0]; cE = _paire[1];
+    } else {
+      cD = (dom.team && dom.team.color) ? ('#' + String(dom.team.color).replace('#','')) : '#4d84ff';
+      cE = (ext.team && ext.team.color) ? ('#' + String(ext.team.color).replace('#','')) : '#f0b020';
+      if (typeof _g45CoulFond === 'function') { cD = _g45CoulFond(cD); cE = _g45CoulFond(cE); }
+    }
 
     /* UNE BARRE PAR MINUTE (26/08). Les tranches de trois minutes lissaient trop :
        la ou ESPN montre un temps fort de trois minutes consecutives, on ne voyait
@@ -24594,6 +24607,19 @@ async function _renderSaisonDetail(el, eventId, league){
     var _mstate=(comp.status&&comp.status.type&&comp.status.type.state)||'';
     if(_mstate==='pre' && !isLive){ try{ var _pm=_g45PreMatchBlock(data); if(_pm){ h+=_pm; added=true; } }catch(e){} }
     if(typeof _renderEspnMatchStats==='function'){ try{ var st=_renderEspnMatchStats(data, homeId, awayId, '#4d84ff'); if(st){ h+=st; added=true; } }catch(e){} }
+    /* ═══ PRESSION DU MATCH, ENFIN ICI (09/09) ═══
+       Elle etait branchee sur le direct d'une equipe et sur le detail generique
+       des sports US, mais pas sur ce rendu-la — celui qu'on ouvre depuis la
+       liste des resultats en football, et depuis les journees d'une
+       competition. D'ou la question d'Antoine : « pourquoi je ne l'ai que dans
+       le suivi ». Meme oubli que la carte des tirs le 20/08.
+       PIEGE EVITE : une premiere version l'ajoutait apres coup avec
+       `appendChild`. Sans effet — ce rendu finit par `el.innerHTML = h`, qui
+       remplace tout ce qui a ete ajoute entre-temps. Elle est donc posee DANS
+       la chaine, a cote des statistiques, la ou elle se lit avec elles.
+       La fonction se protege seule : commentaire absent ou trop maigre, elle
+       rend une chaine vide. */
+    try{ if(typeof _renderMatchPression==='function'){ var _pr=_renderMatchPression(data, homeId, awayId); if(_pr){ h+=_pr; added=true; } } }catch(e){}
     // Bouton stats avancées Sofascore (xG, tirs dans/hors surface…) — à la demande via Worker→RapidAPI
     try{
       function _eaAdv(x){return String(x==null?'':x).replace(/&/g,'&amp;').replace(/"/g,'&quot;');}
@@ -45060,8 +45086,12 @@ window.g45CouleursDe = g45CouleursDe;
    Sans blason connu, on renvoie le degrade seul : jamais de trou visuel. */
 /* 46 px : un blason couvrait une ligne entiere sur telephone et passait devant
    les noms (capture d'Antoine du 09/09). La tuile suit desormais l'ecran. */
-var _G45_FOND_TUILE = 110;   /* ajuste a 84 sur ecran etroit, voir g45FondClubHtml */
-var _G45_FOND_MOSAIQUE = 0.26; /* opacite du blason ; baisser vers 0.14 pour plus discret */
+/* 110 px paraissait bon en maquette, ou le blason etait une forme fine. Avec un
+   vrai ecusson dense — le BVB, capture du 09/09 — la mosaique couvre le texte :
+   `background-size` fixe la hauteur du LOGO, pas celle d'une case avec marge.
+   72 px, et l'opacite retombe de 0.26 a 0.16. */
+var _G45_FOND_TUILE = 72;    /* ajuste a 56 sur ecran etroit, voir g45FondClubHtml */
+var _G45_FOND_MOSAIQUE = 0.16; /* opacite du blason ; monter vers 0.26 pour plus marque */
 function g45FondClubHtml(nom, opac, blason) {
   var c = g45CouleursDe(nom);
   var base = '<div style="position:absolute;inset:0;pointer-events:none;z-index:0;'
@@ -45070,7 +45100,7 @@ function g45FondClubHtml(nom, opac, blason) {
   /* Un blason fourni par l'appelant passe en premier : il vient des donnees du
      match affiche, donc il vaut pour TOUTE equipe, pas seulement celles du mur
      que connait `g45LogoUrlDe`. */
-  var _tuile = (typeof g45Etroit === 'function' && g45Etroit()) ? 84 : _G45_FOND_TUILE;
+  var _tuile = (typeof g45Etroit === 'function' && g45Etroit()) ? 56 : _G45_FOND_TUILE;
   var logo = (typeof blason === 'string' && blason) ? blason : '';
   try { if (!logo && typeof g45LogoUrlDe === 'function') logo = g45LogoUrlDe(nom) || ''; } catch (e) {}
   /* Une URL comportant une apostrophe casserait l'attribut style ; on la refuse
