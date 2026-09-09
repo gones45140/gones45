@@ -23574,6 +23574,12 @@ function _renderMatchPression(s, homeId, awayId){
        qu'une seule barre moyennee. La comparaison avec leur graphique l'a rendu
        evident. Il y a assez de matiere dans le commentaire pour descendre a la
        minute sans que ca devienne du bruit. */
+    /* Diagnostic temporaire : nombre d'actions datees et derniere minute vue. */
+    var _dgN = 0, _dgMax = 0;
+    com.forEach(function (c) {
+      var mm = _g45MinuteAction(c);
+      if (!isNaN(mm)) { _dgN++; if (mm > _dgMax) _dgMax = mm; }
+    });
     var PAS = 1, MAXMIN = 96;
     var n = Math.ceil(MAXMIN / PAS);
     var bD = new Array(n).fill(0), bE = new Array(n).fill(0);
@@ -23665,7 +23671,9 @@ function _renderMatchPression(s, homeId, awayId){
       + '<div style="font-size:8.5px;color:var(--t3);margin-top:7px;line-height:1.5;">'
         + '\u26bd but \u00b7 \ud83d\udfe8 carton \u00b7 \ud83d\udfe5 expulsion \u00b7 \ud83d\udd01 remplacement<br>'
         + 'Reconstruite \u00e0 partir des actions du match \u2014 tirs, corners, buts, fautes. '
-        + 'Indicateur maison, non comparable aux valeurs d\'ESPN ou de Sofascore.</div>'
+        + 'Indicateur maison, non comparable aux valeurs d\'ESPN ou de Sofascore.'
+        + '<br><span style="color:#f0b020;">diag : ' + _dgN + ' actions datees, derniere minute ' + _dgMax
+        + ' \u00b7 source ' + (window._g45PressDiag || 'directe') + '</span></div>'
     + '</div>';
   } catch (e) { return ''; }
 }
@@ -24617,15 +24625,24 @@ async function _renderSaisonDetail(el, eventId, league){
           'https://site.api.espn.com' + _chemin
         ].filter(Boolean);
         var _meilleur = (data.commentary || []);
+        var _src = 'fr (' + _meilleur.length + ')';
         for (var _i = 0; _i < _essais.length; _i++) {
           try {
             var r2 = await fetch(_essais[_i]);
             var d2 = await r2.json();
             var c2 = (d2 && d2.commentary) || [];
+            _src += ' | ' + (_i === 0 ? 'worker' : 'direct') + ' ' + r2.status + ' (' + c2.length + ')';
             if (c2.length > _meilleur.length) _meilleur = c2;
             if (_meilleur.length > 60) break;   /* assez pour couvrir un match */
-          } catch (e2) {}
+          } catch (e2) { _src += ' | ' + (_i === 0 ? 'worker' : 'direct') + ' ECHEC'; }
         }
+        /* ═══ AFFICHAGE DE DIAGNOSTIC, A RETIRER (09/09) ═══
+           Trois correctifs a l'aveugle n'ont pas suffi : le graphique reste
+           tasse ici alors qu'il est juste ailleurs, avec la meme fonction. On
+           montre donc, sous le graphique, d'ou vient le commentaire, combien
+           d'actions il porte et jusqu'a quelle minute. Une ligne grise, le
+           temps de trancher. */
+        window._g45PressDiag = _src;
         if (_meilleur.length > ((data.commentary || []).length)) { _g45ComVO[_ck] = _meilleur; data.commentary = _meilleur; }
       }
     } catch (e) {}
