@@ -2113,6 +2113,72 @@ function renderAdvancedCharts(paris, bankroll) {
    CUMULEE, regrouper ne deforme rien — un point hebdomadaire vaut le capital
    atteint en fin de semaine, on perd le detail intermediaire, pas la
    trajectoire. Ce serait faux pour un indicateur de pointe. */
+/* ═══════════ SONDE MOMENTUM ESPN (09/09) — OUTIL DE DIAGNOSTIC ═══════════
+   Ma note du 26/08 affirmait « ESPN ne publie pas de momentum, verifie par
+   sonde ». La sonde n'avait interroge QU'UN endroit : le `summary` de
+   site.api.espn.com. Or Antoine a montre que le graphique de momentum vient
+   d'ESPN — leur site web s'alimente sur site.web.api.espn.com, un hote que le
+   Worker sait deja servir sous le nom `espnweb` et qu'on n'a jamais essaye.
+   Cette sonde interroge plusieurs points d'entree pour un match donne et
+   affiche les cles de premier niveau de chaque reponse. On saura en une minute
+   si la donnee existe, au lieu de la reconstruire a la main.
+   Elle s'ajoute d'elle-meme en bas des Outils : aucun HTML a redeployer. */
+function g45SondeUI(){
+  try {
+    var zone = document.getElementById('t-outils');
+    if (!zone || document.getElementById('g45-sonde')) return;
+    var d = document.createElement('div');
+    d.id = 'g45-sonde';
+    d.innerHTML = '<div class="sec">\ud83d\udd2c Sonde ESPN (diagnostic)</div>'
+      + '<div class="fc">'
+      + '<div style="font-size:10px;color:var(--t3);margin-bottom:8px;">Colle l\'identifiant d\'un match ESPN et la ligue. La sonde liste ce que chaque point d\'entr\u00e9e renvoie \u2014 on cherche un champ de type momentum ou win probability.</div>'
+      + '<div style="display:flex;gap:6px;margin-bottom:8px;">'
+      + '<input id="g45-sonde-eid" class="fi" placeholder="id du match" style="flex:1;font-size:11px;">'
+      + '<input id="g45-sonde-lg" class="fi" value="uefa.champions" style="flex:1;font-size:11px;">'
+      + '</div>'
+      + '<button class="btn btn-p" style="font-size:12px;" onclick="g45SondeMomentum()">\ud83d\udd0d Sonder</button>'
+      + '<pre id="g45-sonde-out" style="margin-top:9px;font-size:10px;color:var(--t2);white-space:pre-wrap;word-break:break-word;max-height:280px;overflow:auto;"></pre>'
+      + '</div>';
+    zone.appendChild(d);
+  } catch (e) {}
+}
+async function g45SondeMomentum(){
+  var out = document.getElementById('g45-sonde-out');
+  var eid = (document.getElementById('g45-sonde-eid') || {}).value || '';
+  var lg = (document.getElementById('g45-sonde-lg') || {}).value || 'uefa.champions';
+  if (!eid) { if (out) out.textContent = 'Donne un identifiant de match.'; return; }
+  if (out) out.textContent = 'Sondage\u2026';
+  var P = (typeof FD_PROXY !== 'undefined' && FD_PROXY) ? FD_PROXY : '';
+  var essais = [
+    ['espnweb  gamepackage', 'espnweb', '/apis/site/v2/sports/soccer/' + lg + '/summary?event=' + eid],
+    ['espnweb  matchstats',  'espnweb', '/apis/v2/scoreboard/header?sport=soccer&league=' + lg + '&event=' + eid],
+    ['espn     summary',     'espn',    '/apis/site/v2/sports/soccer/' + lg + '/summary?event=' + eid],
+    ['espnweb  probability', 'espnweb', '/apis/site/v2/sports/soccer/' + lg + '/summary?event=' + eid + '&enable=probability,momentum,winprobability']
+  ];
+  var lignes = [];
+  for (var i = 0; i < essais.length; i++) {
+    var e = essais[i];
+    try {
+      var u = P ? (P + '?host=' + e[1] + '&path=' + encodeURIComponent(e[2])) : ('https://site.api.espn.com' + e[2]);
+      var r = await fetch(u);
+      var t = await r.text();
+      var j = null; try { j = JSON.parse(t); } catch (x) {}
+      if (!j) { lignes.push(e[0] + ' \u2192 ' + r.status + ' (r\u00e9ponse non JSON)'); continue; }
+      var cles = Object.keys(j);
+      var interessant = cles.filter(function(k){ return /momentum|probab|winprob|pressure|graph|chart|tick/i.test(k); });
+      lignes.push(e[0] + ' \u2192 ' + r.status + ' \u00b7 ' + cles.length + ' cl\u00e9s');
+      lignes.push('   ' + cles.join(', '));
+      if (interessant.length) lignes.push('   \u2b50 PISTE : ' + interessant.join(', '));
+    } catch (x2) { lignes.push(e[0] + ' \u2192 \u00c9CHEC'); }
+  }
+  if (out) out.textContent = lignes.join('\n');
+}
+window.g45SondeMomentum = g45SondeMomentum;
+if (typeof document !== 'undefined') {
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', g45SondeUI);
+  else g45SondeUI();
+}
+
 function _g45CleUnite(h, mode){
   var d = String((h && h.date) || '');
   if (mode === 'jour')  return d;
