@@ -24590,28 +24590,28 @@ async function _renderSaisonDetail(el, eventId, league){
     var r=await fetch('https://site.api.espn.com/apis/site/v2/sports/soccer/'+(league||'eng.1')+'/summary?event='+eventId+'&lang=fr&region=fr');
     var data=await r.json();
     /* ═══ LE COMMENTAIRE FRANCAIS EST TRONQUE (09/09) ═══
-       Ce rendu-ci demande `lang=fr&region=fr`, les deux autres non. Or ESPN ne
-       traduit qu'une PARTIE des actions : la pression du match s'arretait donc
-       vers la 20e minute alors que l'axe allait jusqu'a 96 (capture d'Antoine).
-       On recharge le meme resume sans la langue UNIQUEMENT quand le commentaire
-       parait incomplet, et on n'en garde que les actions. Le reste de la page
-       demeure en francais. Une requete de plus, seulement dans ce cas, chez un
-       fournisseur gratuit et sans quota. */
+       Ce rendu demande `lang=fr&region=fr`, le suivi d'une equipe non. Or ESPN
+       ne traduit qu'une PETITE PARTIE des actions : la pression du match
+       s'arretait vers la 15e minute ici, alors qu'elle couvrait tout le match
+       dans le suivi — meme match, meme fonction, donnees differentes (Antoine
+       a mis les deux captures cote a cote).
+       Une premiere version ne rechargeait qu'en cas de commentaire « trop
+       court » ; le seuil etait mal choisi et le probleme touchait en realite
+       TOUS les matchs. On recharge donc sans condition, et on ne reprend que
+       les actions : les libelles de statistiques restent en francais.
+       Le resultat est garde en memoire par match, donc replier puis rouvrir un
+       compte rendu ne redemande rien. ESPN est gratuit et sans quota, mais
+       autant ne pas repeter l'appel pour rien. */
     try {
-      var _com = (data && data.commentary) || [];
-      var _derniere = 0;
-      _com.forEach(function (c) {
-        var mn = parseInt((c && c.time && (c.time.displayValue || c.time.value)) || 0, 10);
-        if (mn > _derniere) _derniere = mn;
-      });
-      var _fini = ((((data.header || {}).competitions || [])[0] || {}).status || {}).type;
-      if ((_fini && _fini.completed) && _derniere < 80) {
+      var _ck = String(eventId);
+      if (_g45ComVO[_ck]) { data.commentary = _g45ComVO[_ck]; }
+      else {
         var r2 = await fetch('https://site.api.espn.com/apis/site/v2/sports/soccer/' + (league || 'eng.1') + '/summary?event=' + eventId);
         var d2 = await r2.json();
-        if (d2 && d2.commentary && d2.commentary.length > _com.length) data.commentary = d2.commentary;
+        var c2 = (d2 && d2.commentary) || [];
+        if (c2.length > ((data.commentary || []).length)) { _g45ComVO[_ck] = c2; data.commentary = c2; }
       }
     } catch (e) {}
-    el._data=data;   // pour le sélecteur de marché (re-rendu sans re-fetch)
     /* Le resume est aussi mis de cote pour l'ANALYSE IA (08/09) : elle ne
        recevait que le nom des deux equipes et la date, d'ou trois avis
        identiques disant « donnees manquantes » (releve par Antoine sur
@@ -26965,6 +26965,8 @@ function _g45RenderOdds(ev, hN, aN, remain){
    Avec de vrais faits, les trois modeles peuvent enfin diverger — et c'est
    leur desaccord qui a de la valeur, pas trois fois la meme prudence. */
 var _g45ResumeIA = {};
+/* Commentaires non localises, par identifiant de match (voir _renderSaisonDetail). */
+var _g45ComVO = {};
 function _g45FaitsDuResume(eid, hN, aN){
   var out = [];
   var d = _g45ResumeIA[String(eid || '')];
