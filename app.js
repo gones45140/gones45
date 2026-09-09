@@ -22486,7 +22486,7 @@ function renderSaisonsChart(el, results, nom) {
         var _vl = 'rgba(16,21,38,.82)';
         var _nomCell = function(txt, mien, droite, crest){
           var img = crest ? ('<img src="'+crest+'" alt="" style="width:15px;height:15px;object-fit:contain;vertical-align:middle;flex:none;" onerror="this.style.display=\'none\'">') : '';
-          return '<div style="background:'+_vl+';border-radius:6px;padding:5px '+(g45Etroit()?'6px':'9px')+';font-size:'+(g45Etroit()?'10.5px':'11.5px')+';font-weight:800;'
+          return '<div style="background:'+_vl+';border-radius:6px;padding:5px '+(_etr?'6px':'9px')+';font-size:'+(_etr?'10.5px':'11.5px')+';font-weight:800;'
             +'color:'+(mien?'#f5c542':'var(--t1)')+';display:flex;align-items:center;gap:6px;'
             +'justify-content:'+(droite?'flex-end':'flex-start')+';overflow:hidden;">'
             +(droite?'':img)
@@ -22535,7 +22535,7 @@ function renderSaisonsChart(el, results, nom) {
            `minmax(0,1fr)` les autorise a retrecir, l'ecusson disparait sous
            700 px — la mosaique de fond dit deja de quelle equipe il s'agit —
            et le score se resserre. */
-        var _etr = g45Etroit();
+        var _etr = g45Etroit(el);
         html += '<div style="display:grid;grid-template-columns:minmax(0,1fr) '+(_etr?'54px':'68px')+' minmax(0,1fr);gap:'+(_etr?'4px':'6px')+';align-items:center;">'
           +_nomCell((isOurHome?_scMark:'')+homeName, isOurHome, true, _etr?'':((m.homeTeam&&m.homeTeam.crest)||''))
           +'<div style="font-size:12px;font-weight:800;color:'+rc+';text-align:center;background:'+_vl+';border-radius:6px;padding:5px 3px;">'+hg+' - '+ag+'</div>'
@@ -38752,7 +38752,22 @@ function _g45SgLignes(moy) {
 /* Ecran etroit : un seul endroit ou le decider, pour que les deux panneaux de
    resultats repondent pareil. Le seuil de 700 px est celui deja utilise
    ailleurs dans l'app, on n'en invente pas un autre. */
-function g45Etroit(){ try { return window.innerWidth < 700; } catch (e) { return false; } }
+function g45Etroit(el){
+  /* ═══ MESURER LE CONTENEUR, PAS LA FENETRE (09/09) ═══
+     Premiere version basee sur `window.innerWidth` : sans effet chez Antoine.
+     Cause : Chrome en mode « site pour ordinateur » IGNORE le viewport de la
+     page et annonce ~980 px de large sur un telephone de 393 px. La fenetre
+     mentait donc, pas le telephone.
+     On mesure desormais la LARGEUR REELLE du panneau qui va recevoir les
+     lignes : elle est juste dans tous les cas, mode ordinateur compris, ecran
+     partage compris. La fenetre ne sert plus que de repli quand l'element
+     n'est pas encore dans la page (largeur nulle). */
+  try {
+    var w = (el && (el.clientWidth || (el.parentNode && el.parentNode.clientWidth))) || 0;
+    if (w) return w < 560;
+    return window.innerWidth < 700;
+  } catch (e) { return false; }
+}
 window.g45Etroit = g45Etroit;
 
 /* ═══ COULEUR D'UN MARCHE, COMMUNE AUX DEUX PANNEAUX (09/09) ═══
@@ -39107,6 +39122,7 @@ async function _g45SaisonsGen(el, nom, perso) {
        ne connait que NOTRE equipe et son adversaire, pas la paire domicile /
        exterieur nommee ; l'icone 🏠/🚌 porte donc l'information du lieu. Et le
        nom de notre equipe n'est pas dans `m`, il vient de `nomEquipe`. */
+    var _etrG = g45Etroit(el);
     var _vlG = 'rgba(16,21,38,.82)';
     /* L'ecusson est place du cote du SCORE — a droite pour l'equipe de gauche,
        a gauche pour celle de droite — donc les deux encadrent le score au lieu
@@ -39114,7 +39130,7 @@ async function _g45SaisonsGen(el, nom, perso) {
        reste. */
     var _cellG = function (txt, mien, droite, crest) {
       var img = crest ? ('<img src="' + crest + '" alt="" style="width:15px;height:15px;object-fit:contain;vertical-align:middle;flex:none;" onerror="this.style.display=\'none\'">') : '';
-      return '<div style="background:' + _vlG + ';border-radius:6px;padding:5px ' + (g45Etroit() ? '6px' : '9px') + ';font-size:' + (g45Etroit() ? '10.5px' : '11.5px') + ';font-weight:800;'
+      return '<div style="background:' + _vlG + ';border-radius:6px;padding:5px ' + (_etrG ? '6px' : '9px') + ';font-size:' + (_etrG ? '10.5px' : '11.5px') + ';font-weight:800;'
         + 'color:' + (mien ? '#f5c542' : 'var(--t1)') + ';display:flex;align-items:center;gap:6px;'
         + 'justify-content:' + (droite ? 'flex-end' : 'flex-start') + ';overflow:hidden;">'
         + (droite ? '' : img)
@@ -39124,8 +39140,8 @@ async function _g45SaisonsGen(el, nom, perso) {
     };
     /* Ecussons masques sous 700 px : ils coutaient 21 px par nom et faisaient
        tomber « Minnesota Wild » a « M… ». */
-    var _crestMoi = (!g45Etroit() && _g45SgCtx && _g45SgCtx.id) ? (logos[String(_g45SgCtx.id)] || '') : '';
-    var _crestAdv = g45Etroit() ? '' : (logos[String(m.advId)] || '');
+    var _crestMoi = (!_etrG && _g45SgCtx && _g45SgCtx.id) ? (logos[String(_g45SgCtx.id)] || '') : '';
+    var _crestAdv = _etrG ? '' : (logos[String(m.advId)] || '');
     var _advG = (noms[m.advId] || m.adv || '?')
       + (m.po ? ' <span style="font-size:8px;font-weight:800;color:#f0b020;border:1px solid rgba(240,176,32,.4);border-radius:6px;padding:0 4px;">PO</span>' : '');
     var _moiG = _g45SgNomCourant || 'Mon équipe';
@@ -39141,7 +39157,7 @@ async function _g45SaisonsGen(el, nom, perso) {
       + '</div>'
       /* Notre equipe est ecrite a gauche quand elle recoit, a droite sinon :
          le score se lit alors dans le sens du match. */
-      + '<div style="display:grid;grid-template-columns:minmax(0,1fr) ' + (g45Etroit() ? '54px' : '68px') + ' minmax(0,1fr);gap:' + (g45Etroit() ? '4px' : '6px') + ';align-items:center;">'
+      + '<div style="display:grid;grid-template-columns:minmax(0,1fr) ' + (_etrG ? '54px' : '68px') + ' minmax(0,1fr);gap:' + (_etrG ? '4px' : '6px') + ';align-items:center;">'
         + _cellG(m.dom ? _moiG : _advG, !!m.dom, true, m.dom ? _crestMoi : _crestAdv)
         + '<div style="font-size:12px;font-weight:800;color:' + col + ';text-align:center;background:' + _vlG + ';border-radius:6px;padding:5px 3px;">'
           + (m.dom ? (m.pour + ' - ' + m.contre) : (m.contre + ' - ' + m.pour)) + '</div>'
@@ -45044,7 +45060,7 @@ window.g45CouleursDe = g45CouleursDe;
    Sans blason connu, on renvoie le degrade seul : jamais de trou visuel. */
 /* 46 px : un blason couvrait une ligne entiere sur telephone et passait devant
    les noms (capture d'Antoine du 09/09). La tuile suit desormais l'ecran. */
-var _G45_FOND_TUILE = (typeof window !== 'undefined' && window.innerWidth < 700) ? 84 : 110;
+var _G45_FOND_TUILE = 110;   /* ajuste a 84 sur ecran etroit, voir g45FondClubHtml */
 var _G45_FOND_MOSAIQUE = 0.26; /* opacite du blason ; baisser vers 0.14 pour plus discret */
 function g45FondClubHtml(nom, opac, blason) {
   var c = g45CouleursDe(nom);
@@ -45054,6 +45070,7 @@ function g45FondClubHtml(nom, opac, blason) {
   /* Un blason fourni par l'appelant passe en premier : il vient des donnees du
      match affiche, donc il vaut pour TOUTE equipe, pas seulement celles du mur
      que connait `g45LogoUrlDe`. */
+  var _tuile = (typeof g45Etroit === 'function' && g45Etroit()) ? 84 : _G45_FOND_TUILE;
   var logo = (typeof blason === 'string' && blason) ? blason : '';
   try { if (!logo && typeof g45LogoUrlDe === 'function') logo = g45LogoUrlDe(nom) || ''; } catch (e) {}
   /* Une URL comportant une apostrophe casserait l'attribut style ; on la refuse
@@ -45062,7 +45079,7 @@ function g45FondClubHtml(nom, opac, blason) {
   return base
     + '<div style="position:absolute;inset:0;pointer-events:none;z-index:0;border-radius:10px;'
     + 'opacity:' + _G45_FOND_MOSAIQUE + ';background-image:url(\'' + logo + '\');'
-    + 'background-size:auto ' + _G45_FOND_TUILE + 'px;background-repeat:space;'
+    + 'background-size:auto ' + _tuile + 'px;background-repeat:space;'
     + 'background-position:center top;"></div>';
 }
 window.g45FondClubHtml = g45FondClubHtml;
