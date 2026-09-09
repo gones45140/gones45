@@ -22484,10 +22484,15 @@ function renderSaisonsChart(el, results, nom) {
            Toulouse-Lyon. L'adversaire est en blanc gras. Scores et pastilles
            gardent leurs couleurs, en gras. */
         var _vl = 'rgba(16,21,38,.82)';
-        var _nomCell = function(txt, mien, droite){
+        var _nomCell = function(txt, mien, droite, crest){
+          var img = crest ? ('<img src="'+crest+'" alt="" style="width:15px;height:15px;object-fit:contain;vertical-align:middle;flex:none;" onerror="this.style.display=\'none\'">') : '';
           return '<div style="background:'+_vl+';border-radius:6px;padding:5px 9px;font-size:11.5px;font-weight:800;'
-            +'color:'+(mien?'#f5c542':'var(--t1)')+';text-align:'+(droite?'right':'left')+';'
-            +'overflow:hidden;white-space:nowrap;text-overflow:ellipsis;">'+txt+'</div>';
+            +'color:'+(mien?'#f5c542':'var(--t1)')+';display:flex;align-items:center;gap:6px;'
+            +'justify-content:'+(droite?'flex-end':'flex-start')+';overflow:hidden;">'
+            +(droite?'':img)
+            +'<span style="overflow:hidden;white-space:nowrap;text-overflow:ellipsis;">'+txt+'</span>'
+            +(droite?img:'')
+            +'</div>';
         };
         // Over/BTS
         var badges = '';
@@ -22502,14 +22507,10 @@ function renderSaisonsChart(el, results, nom) {
              beaucoup ces marches, ils manquaient aux selecteurs. */
           '1N': tg>=og, 'N2': tg<=og
         };
-        var BADGE_COLORS = {
-          'O0.5':'#1ed760','O1.5':'#4d84ff','O2.5':'#f0b020','O3.5':'#ff7b54','O4.5':'#ff4545',
-          'U0.5':'#22d3ee','U1.5':'#67e8f9','U2.5':'#a5f3fc','U3.5':'#bae6fd','U4.5':'#e0f2fe',
-          'BTS':'#a78bfa','CS':'#1ed760','WIN':'#1ed760','LOSE':'#ff4545',
-          '1N':'#7ee787','N2':'#ffa198'
-        };
+        /* Table deplacee dans `G45_BADGE_COULS` : les deux panneaux doivent
+           colorer un marche de la meme facon, sinon ils divergent en silence. */
         qs.forEach(function(k){
-          if(MATCH_CHECKS[k]) badges += '<span style="color:'+BADGE_COLORS[k]+';margin-left:7px;">'+k+'</span>';
+          if(MATCH_CHECKS[k]) badges += '<span style="color:'+g45CoulMarche(k)+';margin-left:7px;">'+k+'</span>';
         });
         /* Pastille de cote : la cote d'avant-match de NOTRE equipe, saisie dans
            le panneau Cotes. Affichee comme les autres indicateurs, en gris pour
@@ -22528,9 +22529,9 @@ function renderSaisonsChart(el, results, nom) {
         +'</div>';
         /* Ligne du bas : le match. Score a largeur fixe, donc aligne partout. */
         html += '<div style="display:grid;grid-template-columns:1fr 68px 1fr;gap:6px;align-items:center;">'
-          +_nomCell((isOurHome?_scMark:'')+homeName, isOurHome, true)
+          +_nomCell((isOurHome?_scMark:'')+homeName, isOurHome, true, (m.homeTeam&&m.homeTeam.crest)||'')
           +'<div style="font-size:12px;font-weight:800;color:'+rc+';text-align:center;background:'+_vl+';border-radius:6px;padding:5px 3px;">'+hg+' - '+ag+'</div>'
-          +_nomCell((!isOurHome?_scMark:'')+awayName, !isOurHome, false)
+          +_nomCell((!isOurHome?_scMark:'')+awayName, !isOurHome, false, (m.awayTeam&&m.awayTeam.crest)||'')
         +'</div>';
         html += '</div>';
         html += '<div class="smd-panel" style="display:none;"></div>';
@@ -38740,6 +38741,35 @@ function _g45SgLignes(moy) {
 }
 
 /* Calcul pur : aucune requete, testable hors navigateur. */
+/* ═══ COULEUR D'UN MARCHE, COMMUNE AUX DEUX PANNEAUX (09/09) ═══
+   Le football colorait ses pastilles marche par marche, le panneau generique
+   les sortait toutes en bleu (releve par Antoine sur les Bills). Impossible de
+   recopier sa table telle quelle : ici les seuils sont CALCULES par sport —
+   O49.5 au rugby, O220 au basket, O5.5 en hockey — donc une table figee par
+   cle ne couvrirait jamais tout.
+   D'ou deux etages : la table exacte du football d'abord, pour garder ses
+   nuances par seuil, puis une regle par FAMILLE (Over, Under, victoire…) qui
+   accepte n'importe quel nombre. Un marche invente demain sera colore sans
+   qu'on ait rien a ajouter. */
+var G45_BADGE_COULS = {
+  'O0.5':'#1ed760','O1.5':'#4d84ff','O2.5':'#f0b020','O3.5':'#ff7b54','O4.5':'#ff4545',
+  'U0.5':'#22d3ee','U1.5':'#67e8f9','U2.5':'#a5f3fc','U3.5':'#bae6fd','U4.5':'#e0f2fe',
+  'BTS':'#a78bfa','CS':'#1ed760','WIN':'#1ed760','LOSE':'#ff4545',
+  '1N':'#7ee787','N2':'#ffa198'
+};
+function g45CoulMarche(k){
+  k = String(k || '');
+  if (G45_BADGE_COULS[k]) return G45_BADGE_COULS[k];
+  if (/^O\d/.test(k)) return '#f0b020';   /* Over : dore, comme O2.5 en football */
+  if (/^U\d/.test(k)) return '#22d3ee';   /* Under : cyan */
+  if (k === 'WIN') return '#1ed760';
+  if (k === 'LOSE') return '#ff4545';
+  if (k === 'BTS') return '#a78bfa';
+  if (k === 'CS') return '#1ed760';
+  return '#7aaaff';
+}
+window.g45CoulMarche = g45CoulMarche;
+
 function _g45SgCalc(ms, monId, monNom) {
   var st = { j:0, v:0, n:0, d:0, bp:0, bc:0, cs:0, sansMarquer:0, po:0, liste:[],
              dom:{j:0,v:0,n:0,d:0,bp:0,bc:0}, ext:{j:0,v:0,n:0,d:0,bp:0,bc:0} };
@@ -38810,7 +38840,11 @@ async function _g45SaisonsGen(el, nom, perso) {
       + '<span id="sg-prog">Chargement de la saison ' + an + '\u2026</span></div>';
   }
   try { eq = await _g45CompetEquipes({ sp: sp, s: lg }); } catch (e) {}
-  var noms = {}; eq.forEach(function (t) { noms[String(t.id)] = t.nom; });
+  var noms = {}, logos = {};
+  /* Les ecussons viennent de la MEME source que les noms (`_g45CompetEquipes`),
+     celle qui alimente deja le classement — donc aucune requete de plus, et ils
+     existent pour toute equipe classee, pas seulement celles du mur. */
+  eq.forEach(function (t) { noms[String(t.id)] = t.nom; if (t.logo) logos[String(t.id)] = t.logo; });
   if (!ms) {
     try {
       ms = await _g45CompetMatchs(sp, lg, an, eq.map(function (t) { return t.id; }).filter(Boolean),
@@ -39060,11 +39094,22 @@ async function _g45SaisonsGen(el, nom, perso) {
        exterieur nommee ; l'icone 🏠/🚌 porte donc l'information du lieu. Et le
        nom de notre equipe n'est pas dans `m`, il vient de `nomEquipe`. */
     var _vlG = 'rgba(16,21,38,.82)';
-    var _cellG = function (txt, mien, droite) {
+    /* L'ecusson est place du cote du SCORE — a droite pour l'equipe de gauche,
+       a gauche pour celle de droite — donc les deux encadrent le score au lieu
+       de border la ligne. Image absente ou en echec : elle disparait, le nom
+       reste. */
+    var _cellG = function (txt, mien, droite, crest) {
+      var img = crest ? ('<img src="' + crest + '" alt="" style="width:15px;height:15px;object-fit:contain;vertical-align:middle;flex:none;" onerror="this.style.display=\'none\'">') : '';
       return '<div style="background:' + _vlG + ';border-radius:6px;padding:5px 9px;font-size:11.5px;font-weight:800;'
-        + 'color:' + (mien ? '#f5c542' : 'var(--t1)') + ';text-align:' + (droite ? 'right' : 'left') + ';'
-        + 'overflow:hidden;white-space:nowrap;text-overflow:ellipsis;">' + txt + '</div>';
+        + 'color:' + (mien ? '#f5c542' : 'var(--t1)') + ';display:flex;align-items:center;gap:6px;'
+        + 'justify-content:' + (droite ? 'flex-end' : 'flex-start') + ';overflow:hidden;">'
+        + (droite ? '' : img)
+        + '<span style="overflow:hidden;white-space:nowrap;text-overflow:ellipsis;">' + txt + '</span>'
+        + (droite ? img : '')
+        + '</div>';
     };
+    var _crestMoi = (_g45SgCtx && _g45SgCtx.id) ? (logos[String(_g45SgCtx.id)] || '') : '';
+    var _crestAdv = logos[String(m.advId)] || '';
     var _advG = (noms[m.advId] || m.adv || '?')
       + (m.po ? ' <span style="font-size:8px;font-weight:800;color:#f0b020;border:1px solid rgba(240,176,32,.4);border-radius:6px;padding:0 4px;">PO</span>' : '');
     var _moiG = _g45SgNomCourant || 'Mon équipe';
@@ -39074,15 +39119,17 @@ async function _g45SaisonsGen(el, nom, perso) {
       + '<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:5px;">'
         + '<span style="font-size:10px;font-weight:800;color:#c2cee6;white-space:nowrap;">' + _dG
         + ' <span style="font-weight:400;">' + (m.dom ? '\ud83c\udfe0' : '\ud83d\ude8c') + '</span></span>'
-        + '<span style="font-size:9px;font-weight:800;color:#7aaaff;white-space:nowrap;">' + passes.join(' ') + '</span>'
+        + '<span style="font-size:9px;font-weight:800;white-space:nowrap;">'
+          + passes.map(function (k) { return '<span style="color:' + g45CoulMarche(k) + ';margin-left:7px;">' + k + '</span>'; }).join('')
+        + '</span>'
       + '</div>'
       /* Notre equipe est ecrite a gauche quand elle recoit, a droite sinon :
          le score se lit alors dans le sens du match. */
       + '<div style="display:grid;grid-template-columns:1fr 68px 1fr;gap:6px;align-items:center;">'
-        + _cellG(m.dom ? _moiG : _advG, !!m.dom, true)
+        + _cellG(m.dom ? _moiG : _advG, !!m.dom, true, m.dom ? _crestMoi : _crestAdv)
         + '<div style="font-size:12px;font-weight:800;color:' + col + ';text-align:center;background:' + _vlG + ';border-radius:6px;padding:5px 3px;">'
           + (m.dom ? (m.pour + ' - ' + m.contre) : (m.contre + ' - ' + m.pour)) + '</div>'
-        + _cellG(m.dom ? _advG : _moiG, !m.dom, false)
+        + _cellG(m.dom ? _advG : _moiG, !m.dom, false, m.dom ? _crestAdv : _crestMoi)
       + '</div></div>';
   });
 
