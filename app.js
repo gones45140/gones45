@@ -22486,11 +22486,11 @@ function renderSaisonsChart(el, results, nom) {
         var _vl = 'rgba(16,21,38,.82)';
         var _nomCell = function(txt, mien, droite, crest){
           var img = crest ? ('<img src="'+crest+'" alt="" style="width:15px;height:15px;object-fit:contain;vertical-align:middle;flex:none;" onerror="this.style.display=\'none\'">') : '';
-          return '<div style="background:'+_vl+';border-radius:6px;padding:5px 9px;font-size:11.5px;font-weight:800;'
+          return '<div style="background:'+_vl+';border-radius:6px;padding:5px '+(g45Etroit()?'6px':'9px')+';font-size:'+(g45Etroit()?'10.5px':'11.5px')+';font-weight:800;'
             +'color:'+(mien?'#f5c542':'var(--t1)')+';display:flex;align-items:center;gap:6px;'
             +'justify-content:'+(droite?'flex-end':'flex-start')+';overflow:hidden;">'
             +(droite?'':img)
-            +'<span style="overflow:hidden;white-space:nowrap;text-overflow:ellipsis;">'+txt+'</span>'
+            +'<span style="min-width:0;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;">'+txt+'</span>'
             +(droite?img:'')
             +'</div>';
         };
@@ -22528,10 +22528,18 @@ function renderSaisonsChart(el, results, nom) {
           +'<span style="font-size:9px;font-weight:800;white-space:nowrap;">'+badges+'</span>'
         +'</div>';
         /* Ligne du bas : le match. Score a largeur fixe, donc aligne partout. */
-        html += '<div style="display:grid;grid-template-columns:1fr 68px 1fr;gap:6px;align-items:center;">'
-          +_nomCell((isOurHome?_scMark:'')+homeName, isOurHome, true, (m.homeTeam&&m.homeTeam.crest)||'')
+        /* ═══ REGLAGE TELEPHONE (09/09) ═══
+           `1fr` ne descend jamais sous la largeur de son CONTENU : avec deux
+           noms longs et un ecusson, les colonnes se disputaient la place et
+           les deux noms tombaient a « M… » (capture d'Antoine).
+           `minmax(0,1fr)` les autorise a retrecir, l'ecusson disparait sous
+           700 px — la mosaique de fond dit deja de quelle equipe il s'agit —
+           et le score se resserre. */
+        var _etr = g45Etroit();
+        html += '<div style="display:grid;grid-template-columns:minmax(0,1fr) '+(_etr?'54px':'68px')+' minmax(0,1fr);gap:'+(_etr?'4px':'6px')+';align-items:center;">'
+          +_nomCell((isOurHome?_scMark:'')+homeName, isOurHome, true, _etr?'':((m.homeTeam&&m.homeTeam.crest)||''))
           +'<div style="font-size:12px;font-weight:800;color:'+rc+';text-align:center;background:'+_vl+';border-radius:6px;padding:5px 3px;">'+hg+' - '+ag+'</div>'
-          +_nomCell((!isOurHome?_scMark:'')+awayName, !isOurHome, false, (m.awayTeam&&m.awayTeam.crest)||'')
+          +_nomCell((!isOurHome?_scMark:'')+awayName, !isOurHome, false, _etr?'':((m.awayTeam&&m.awayTeam.crest)||''))
         +'</div>';
         html += '</div>';
         html += '<div class="smd-panel" style="display:none;"></div>';
@@ -38741,6 +38749,12 @@ function _g45SgLignes(moy) {
 }
 
 /* Calcul pur : aucune requete, testable hors navigateur. */
+/* Ecran etroit : un seul endroit ou le decider, pour que les deux panneaux de
+   resultats repondent pareil. Le seuil de 700 px est celui deja utilise
+   ailleurs dans l'app, on n'en invente pas un autre. */
+function g45Etroit(){ try { return window.innerWidth < 700; } catch (e) { return false; } }
+window.g45Etroit = g45Etroit;
+
 /* ═══ COULEUR D'UN MARCHE, COMMUNE AUX DEUX PANNEAUX (09/09) ═══
    Le football colorait ses pastilles marche par marche, le panneau generique
    les sortait toutes en bleu (releve par Antoine sur les Bills). Impossible de
@@ -39100,16 +39114,18 @@ async function _g45SaisonsGen(el, nom, perso) {
        reste. */
     var _cellG = function (txt, mien, droite, crest) {
       var img = crest ? ('<img src="' + crest + '" alt="" style="width:15px;height:15px;object-fit:contain;vertical-align:middle;flex:none;" onerror="this.style.display=\'none\'">') : '';
-      return '<div style="background:' + _vlG + ';border-radius:6px;padding:5px 9px;font-size:11.5px;font-weight:800;'
+      return '<div style="background:' + _vlG + ';border-radius:6px;padding:5px ' + (g45Etroit() ? '6px' : '9px') + ';font-size:' + (g45Etroit() ? '10.5px' : '11.5px') + ';font-weight:800;'
         + 'color:' + (mien ? '#f5c542' : 'var(--t1)') + ';display:flex;align-items:center;gap:6px;'
         + 'justify-content:' + (droite ? 'flex-end' : 'flex-start') + ';overflow:hidden;">'
         + (droite ? '' : img)
-        + '<span style="overflow:hidden;white-space:nowrap;text-overflow:ellipsis;">' + txt + '</span>'
+        + '<span style="min-width:0;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;">' + txt + '</span>'
         + (droite ? img : '')
         + '</div>';
     };
-    var _crestMoi = (_g45SgCtx && _g45SgCtx.id) ? (logos[String(_g45SgCtx.id)] || '') : '';
-    var _crestAdv = logos[String(m.advId)] || '';
+    /* Ecussons masques sous 700 px : ils coutaient 21 px par nom et faisaient
+       tomber « Minnesota Wild » a « M… ». */
+    var _crestMoi = (!g45Etroit() && _g45SgCtx && _g45SgCtx.id) ? (logos[String(_g45SgCtx.id)] || '') : '';
+    var _crestAdv = g45Etroit() ? '' : (logos[String(m.advId)] || '');
     var _advG = (noms[m.advId] || m.adv || '?')
       + (m.po ? ' <span style="font-size:8px;font-weight:800;color:#f0b020;border:1px solid rgba(240,176,32,.4);border-radius:6px;padding:0 4px;">PO</span>' : '');
     var _moiG = _g45SgNomCourant || 'Mon équipe';
@@ -39125,7 +39141,7 @@ async function _g45SaisonsGen(el, nom, perso) {
       + '</div>'
       /* Notre equipe est ecrite a gauche quand elle recoit, a droite sinon :
          le score se lit alors dans le sens du match. */
-      + '<div style="display:grid;grid-template-columns:1fr 68px 1fr;gap:6px;align-items:center;">'
+      + '<div style="display:grid;grid-template-columns:minmax(0,1fr) ' + (g45Etroit() ? '54px' : '68px') + ' minmax(0,1fr);gap:' + (g45Etroit() ? '4px' : '6px') + ';align-items:center;">'
         + _cellG(m.dom ? _moiG : _advG, !!m.dom, true, m.dom ? _crestMoi : _crestAdv)
         + '<div style="font-size:12px;font-weight:800;color:' + col + ';text-align:center;background:' + _vlG + ';border-radius:6px;padding:5px 3px;">'
           + (m.dom ? (m.pour + ' - ' + m.contre) : (m.contre + ' - ' + m.pour)) + '</div>'
