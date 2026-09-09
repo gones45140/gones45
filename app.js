@@ -2149,25 +2149,45 @@ async function g45SondeMomentum(){
   if (!eid) { if (out) out.textContent = 'Donne un identifiant de match.'; return; }
   if (out) out.textContent = 'Sondage\u2026';
   var P = (typeof FD_PROXY !== 'undefined' && FD_PROXY) ? FD_PROXY : '';
+  /* Deuxieme passe (09/09) : les quatre premiers points d'entree rendent tous
+     les MEMES 19 cles, sans momentum. Reste `sports.core`, l'API ou vivent deja
+     les tirs et leur xG — c'est la qu'on avait trouve ce que `site.api` ne
+     donnait pas. On y sonde les sous-ressources d'une competition. */
   var essais = [
     ['espnweb  gamepackage', 'espnweb', '/apis/site/v2/sports/soccer/' + lg + '/summary?event=' + eid],
-    ['espnweb  matchstats',  'espnweb', '/apis/v2/scoreboard/header?sport=soccer&league=' + lg + '&event=' + eid],
     ['espn     summary',     'espn',    '/apis/site/v2/sports/soccer/' + lg + '/summary?event=' + eid],
-    ['espnweb  probability', 'espnweb', '/apis/site/v2/sports/soccer/' + lg + '/summary?event=' + eid + '&enable=probability,momentum,winprobability']
+    ['core     competition', 'core',    '/v2/sports/soccer/leagues/' + lg + '/events/' + eid + '/competitions/' + eid],
+    ['core     probabilities','core',   '/v2/sports/soccer/leagues/' + lg + '/events/' + eid + '/competitions/' + eid + '/probabilities?limit=5'],
+    ['core     powerindex',  'core',    '/v2/sports/soccer/leagues/' + lg + '/events/' + eid + '/competitions/' + eid + '/powerindex'],
+    ['core     predictor',   'core',    '/v2/sports/soccer/leagues/' + lg + '/events/' + eid + '/competitions/' + eid + '/predictor']
   ];
   var lignes = [];
   for (var i = 0; i < essais.length; i++) {
     var e = essais[i];
     try {
-      var u = P ? (P + '?host=' + e[1] + '&path=' + encodeURIComponent(e[2])) : ('https://site.api.espn.com' + e[2]);
+      /* `core` n'est pas un hote declare dans le Worker — on l'appelle donc en
+         direct. Ces adresses repondent depuis un navigateur, contrairement au
+         commentaire du summary. */
+      var u = (e[1] === 'core')
+        ? ('https://sports.core.api.espn.com' + e[2])
+        : (P ? (P + '?host=' + e[1] + '&path=' + encodeURIComponent(e[2])) : ('https://site.api.espn.com' + e[2]));
       var r = await fetch(u);
       var t = await r.text();
       var j = null; try { j = JSON.parse(t); } catch (x) {}
       if (!j) { lignes.push(e[0] + ' \u2192 ' + r.status + ' (r\u00e9ponse non JSON)'); continue; }
       var cles = Object.keys(j);
-      var interessant = cles.filter(function(k){ return /momentum|probab|winprob|pressure|graph|chart|tick/i.test(k); });
+      var interessant = cles.filter(function(k){ return /momentum|probab|winprob|pressure|graph|chart|tick|index/i.test(k); });
       lignes.push(e[0] + ' \u2192 ' + r.status + ' \u00b7 ' + cles.length + ' cl\u00e9s');
       lignes.push('   ' + cles.join(', '));
+      /* Sur `core`, tout est en `$ref` : les noms de sous-ressources sont plus
+         parlants que les cles de premier niveau. */
+      cles.forEach(function(k){
+        var v = j[k];
+        if (v && typeof v === 'object' && v.$ref && /momentum|probab|pressure|index/i.test(k)) {
+          lignes.push('   \u2b50 lien : ' + k + ' \u2192 ' + String(v.$ref).slice(0, 110));
+        }
+      });
+      if (Array.isArray(j.items)) lignes.push('   items : ' + j.items.length + (j.items[0] ? (' \u00b7 1er = ' + Object.keys(j.items[0]).join(', ')) : ''));
       if (interessant.length) lignes.push('   \u2b50 PISTE : ' + interessant.join(', '));
     } catch (x2) { lignes.push(e[0] + ' \u2192 \u00c9CHEC'); }
   }
