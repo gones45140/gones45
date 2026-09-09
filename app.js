@@ -19956,8 +19956,8 @@ function _momentsTimeline(data){
         ico='⚽'; col='#1ed760';
         label = '<b style="color:var(--t1);">'+(p0||'But')+'</b>'
               + (own?' <span style="color:#ff8a8a;font-size:8.5px;">(csc)</span>':'')
-              + (pen?' <span style="color:var(--t3);font-size:8.5px;">(pen)</span>':'')
-              + (p1 && !own ? ' <span style="color:var(--t3);font-size:9px;">👟 '+p1+'</span>' : '');
+              + (pen?' <span style="color:var(--t2);font-size:9px;">(pen)</span>':'')
+              + (p1 && !own ? ' <span style="color:var(--t2);font-size:9px;">👟 '+p1+'</span>' : '');
       } else if(/red card|carton rouge/.test(tt)){
         ico='🟥'; label='<span style="color:var(--t1);">'+(p0||'')+'</span>';
       } else if(/yellow card|carton jaune|booked/.test(tt)){
@@ -19976,7 +19976,11 @@ function _momentsTimeline(data){
       h += '<div style="display:flex;gap:8px;align-items:flex-start;padding:5px 0;border-bottom:1px solid rgba(255,255,255,.04);font-size:10px;">';
       h += '<span style="color:'+it.col+';font-weight:800;min-width:34px;flex-shrink:0;">'+(it.min||'')+'</span>';
       h += '<span style="flex-shrink:0;">'+it.ico+'</span>';
-      h += '<div style="line-height:1.35;">'+it.label+(it.team?(' <span style="color:var(--t3);font-size:8.5px;">· '+it.team+'</span>'):'')+'</div>';
+      /* Le club, le passeur et les mentions (csc)/(pen) etaient en `--t3`, la
+         teinte la plus pale de la palette. Lisible sur un fond uni, plus du tout
+         depuis que le panneau porte une mosaique de blasons (Antoine les a
+         soulignes en rouge sur sa capture). On remonte d'un cran, en `--t2`. */
+      h += '<div style="line-height:1.35;">'+it.label+(it.team?(' <span style="color:var(--t2);font-size:9px;">· '+it.team+'</span>'):'')+'</div>';
       h += '</div>';
     });
     h += '</div>';
@@ -23491,6 +23495,31 @@ function _g45PressPoids(t){
   return 0;
 }
 
+/* ═══ LA MINUTE D'UNE ACTION (09/09) ═══
+   La pression lisait `play.clock.displayValue`. Chez ESPN, l'horloge d'une
+   action de football ne porte pas toujours la minute de jeu — c'est
+   `commentary[].time` qui la porte —, d'ou des barres et des buts tasses sur le
+   premier quart d'heure alors que les buts etaient a la 53e et au-dela
+   (capture d'Antoine).
+   On lit donc les deux sources, dans l'ordre, et on couvre les trois ecritures
+   rencontrees : « 53' », « 12:34 » (minutes:secondes) et « 90'+3 ». Le rattrapage
+   de seconde periode est conserve : certains matchs remettent l'horloge a zero
+   a la 46e. */
+function _g45MinuteAction(c){
+  var p = (c && c.play) || null;
+  var src = (c && c.time && (c.time.displayValue || c.time.value))
+         || (p && p.clock && (p.clock.displayValue || p.clock.value)) || '';
+  src = String(src);
+  var mn;
+  if (/^\d+:\d+$/.test(src)) mn = parseInt(src.split(':')[0], 10);
+  else { var m = src.match(/(\d+)/); mn = m ? parseInt(m[1], 10) : NaN; }
+  if (isNaN(mn)) return NaN;
+  var add = src.match(/\+\s*(\d+)/);
+  if (add) mn += Math.min(9, parseInt(add[1], 10));
+  if (p && p.period && p.period.number === 2 && mn <= 45) mn += 45;
+  return mn;
+}
+
 function _renderMatchPression(s, homeId, awayId){
   try {
     var com = (s && s.commentary) || [];
@@ -23553,11 +23582,8 @@ function _renderMatchPression(s, homeId, awayId){
 
     com.forEach(function(c){
       var p = c.play; if (!p || !p.team) return;
-      var mn = parseInt(String((p.clock && p.clock.displayValue) || '').replace(/[^0-9]/g,''), 10);
+      var mn = _g45MinuteAction(c);
       if (isNaN(mn)) return;
-      /* ESPN remet l'horloge a zero en seconde periode sur certains matchs :
-         on rattrape avec le numero de periode. */
-      if (p.period && p.period.number === 2 && mn <= 45) mn += 45;
       var i = Math.min(n - 1, Math.floor(mn / PAS));
       var w = _g45PressPoids(p.type && p.type.text);
       if (!w) return;
@@ -23581,7 +23607,7 @@ function _renderMatchPression(s, homeId, awayId){
       else if (tt.indexOf('yellow') >= 0) ico = '\ud83d\udfe8';
       else if (tt.indexOf('substitut') >= 0) ico = '\ud83d\udd01';
       if (!ico) return;
-      var mn = parseInt(String((p.clock && p.clock.displayValue) || '').replace(/[^0-9]/g,''), 10);
+      var mn = _g45MinuteAction(c);
       if (isNaN(mn)) return;
       if (p.period && p.period.number === 2 && mn <= 45) mn += 45;
       reperes.push({ i: Math.min(n - 1, Math.floor(mn / PAS)), ico: ico,
