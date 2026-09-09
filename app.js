@@ -1994,23 +1994,25 @@ function renderAdvancedCharts(paris, bankroll) {
 
   // ── 1. Bankroll totale ──
   var bkTotal = Object.values(bankroll||{}).reduce(function(s,v){return s+parseFloat(v||0);},0);
+  /* Points regroupes (09/09) : les marqueurs se touchaient deja et formaient
+     une chenille sur 80 paris. Un marqueur porte desormais le bilan de sa
+     JOURNEE — d'ou sa couleur : vert si la journee est positive, rouge sinon.
+     Au detail par pari, il garde son sens d'origine, gagne ou perdu. */
+  var _uBk = _g45UnitesBilan(sorted, false);
   var cumProfits = [], cum=0;
-  sorted.forEach(function(h){cum+=(h.win?(h.m*h.cote-h.m):-h.m);cumProfits.push(parseFloat(cum.toFixed(2)));});
+  _uBk.unites.forEach(function(u){ cum += u.b; cumProfits.push(parseFloat(cum.toFixed(2))); });
   var startBk = bkTotal - cum;
   var bkCurve = cumProfits.map(function(p){return parseFloat((startBk+p).toFixed(2));});
   var ctx1 = document.getElementById('chart-bankroll');
   if(ctx1){
     var g1=ctx1.getContext('2d').createLinearGradient(0,0,0,150);
     g1.addColorStop(0,'rgba(240,176,32,.3)');g1.addColorStop(1,'rgba(240,176,32,0)');
-    var bkLabels = sorted.map(function(h){
-      var adv = h.target&&h.target!=='-'?h.target:'';
-      return (h.date||'')+(adv?' · '+adv:'');
+    var bkLabels = _uBk.unites.map(function(u){
+      return u.quand + (u.adv ? ' · ' + u.adv : '') + (u.n > 1 ? ' · ' + u.n + ' paris' : '');
     });
-    var bkGains = sorted.map(function(h){
-      return h.win ? '+'+(h.m*h.cote-h.m).toFixed(2)+'€' : '-'+parseFloat(h.m).toFixed(2)+'€';
-    });
+    var bkGains = _uBk.unites.map(function(u){ return (u.b >= 0 ? '+' : '') + u.b.toFixed(2) + '\u20ac'; });
     _advCharts.bk=new Chart(ctx1,{type:'line',
-      data:{labels:bkLabels,datasets:[{data:bkCurve,borderColor:'#f0b020',backgroundColor:g1,borderWidth:2,fill:true,tension:.4,pointRadius:3,pointBackgroundColor:sorted.map(function(h){return h.win?'#1ed760':'#ff4545';}),pointRadius:4,pointHoverRadius:7}]},
+      data:{labels:bkLabels,datasets:[{data:bkCurve,borderColor:'#f0b020',backgroundColor:g1,borderWidth:2,fill:true,tension:.4,pointRadius:3,pointBackgroundColor:_uBk.unites.map(function(u){return u.b>=0?'#1ed760':'#ff4545';}),pointRadius:(_uBk.unites.length>60?0:4),pointHoverRadius:7}]},
       options:{responsive:true,maintainAspectRatio:false,
         interaction:{mode:'nearest',intersect:false},
         plugins:{legend:{display:false},
@@ -2089,6 +2091,159 @@ function renderAdvancedCharts(paris, bankroll) {
     ]},options:{responsive:true,maintainAspectRatio:false,interaction:{mode:'nearest',intersect:false},plugins:{legend:{position:'bottom',labels:{color:'#4f5d88',font:{size:9},boxWidth:12}}},scales:{x:{display:true,grid:{display:false},ticks:{color:'#e8ecfa',font:{size:8},maxTicksLimit:6,maxRotation:0,autoSkip:true,callback:(function(){var last=null;return function(v,index){var d=roiLabels[index]||'';if(!d||d===last)return '';last=d;return d;};})()}},y:{ticks:{color:'#e8ecfa',font:{size:9},callback:function(v){return v+'%';}},grid:{color:'rgba(255,255,255,.03)'}}}}});
   }
 }
+/* ═══════════ SERIE DU BILAN : PAR PARI OU PAR JOURNEE (09/09) ═══════════
+   Un point par PARI ne tient pas dans la duree : a 5000 paris, la courbe
+   devient une bande et six series de 5000 points a recalculer figent l'onglet
+   sur telephone. Regroupees par JOURNEE, six mois font 180 points que l'on ait
+   500 ou 5000 paris — la vraie correction, pas un sous-echantillonnage.
+
+   Choix arretes avec Antoine le 09/09 :
+     - 1J et 1S gardent le detail par pari : peu de points, et l'infobulle peut
+       encore nommer le match ;
+     - 1M, 1A et Tout regroupent par journee ;
+     - les jours SANS pari sont SAUTES (pas de plat) — l'axe ne montre que les
+       journees jouees ;
+     - l'infobulle donne le benefice ou la perte DU JOUR, la date et le nombre
+       de paris ; le cumul reste lisible a droite, ou Chart.js affiche la valeur
+       de chaque courbe.
+
+   Au-dela de 300 journees, on passe a la SEMAINE, puis au MOIS au-dela de 300
+   semaines. Regle automatique plutot que seuil fige : « Tout » grandit sans
+   limite, et on ne veut pas se reposer la question dans un an. La courbe etant
+   CUMULEE, regrouper ne deforme rien — un point hebdomadaire vaut le capital
+   atteint en fin de semaine, on perd le detail intermediaire, pas la
+   trajectoire. Ce serait faux pour un indicateur de pointe. */
+function _g45CleUnite(h, mode){
+  var d = String((h && h.date) || '');
+  if (mode === 'jour')  return d;
+  if (mode === 'mois')  return d.slice(0, 7);
+  if (mode === 'semaine') {
+    var t = new Date(d);
+    if (isNaN(t.getTime())) return d;
+    t.setDate(t.getDate() - ((t.getDay() + 6) % 7));   /* lundi de la semaine */
+    return t.toISOString().slice(0, 10);
+  }
+  return '';
+}
+function _g45DateFr(iso){
+  var m = String(iso || '').match(/^(\d{4})-(\d{2})-(\d{2})/);
+  return m ? (m[3] + '/' + m[2]) : String(iso || '');
+}
+/* Unites d'une courbe CUMULEE, sans mise en forme : la courbe du Bilan, la
+   Bankroll totale et l'Evolution bankroll s'en servent toutes les trois.
+   `parPeriode` : le Bilan suit les chips 1J/1S, ou le detail par pari a du sens.
+   Les deux graphiques avances n'ont PAS de selecteur (verifie avec Antoine), le
+   decoupage s'y decide donc au VOLUME : en dessous de 80 paris on garde le
+   detail, au-dela on regroupe par journee, puis par semaine et par mois selon
+   les memes seuils que le Bilan.
+   Ne convient qu'aux courbes CUMULEES. Le drawdown, lui, est un CREUX MAXIMAL :
+   regrouper par cloture y effacerait les pointes, c'est-a-dire precisement ce
+   qu'il sert a montrer. */
+function _g45UnitesBilan(chrono, parPeriode){
+  var gain = function(h){ return h.win ? (h.m * h.cote - h.m) : -h.m; };
+  var mode;
+  if (parPeriode) {
+    var per = (window._bilanPeriode || 'all');
+    mode = (per === '1j' || per === '1s') ? 'pari' : 'jour';
+  } else {
+    mode = (chrono.length <= 80) ? 'pari' : 'jour';
+  }
+  if (mode !== 'pari') {
+    var cpt = function(md){ var o = {}; chrono.forEach(function(h){ o[_g45CleUnite(h, md)] = 1; }); return Object.keys(o).length; };
+    if (cpt('jour') > 300) mode = (cpt('semaine') > 300) ? 'mois' : 'semaine';
+  }
+  if (mode === 'pari') {
+    return { mode: mode, libelle: '', unites: chrono.map(function(h){
+      var adv = (h.target && h.target !== '-') ? h.target : '';
+      return { cle: null, quand: (h.date || '') + (h.heure ? ' ' + h.heure : ''), adv: adv, n: 1, b: gain(h), h: h };
+    }) };
+  }
+  var ordre = [], par = {};
+  chrono.forEach(function(h){
+    var k = _g45CleUnite(h, mode);
+    if (!par[k]) { par[k] = { cle: k, n: 0, b: 0 }; ordre.push(k); }
+    par[k].n++; par[k].b += gain(h);
+  });
+  var unites = ordre.map(function(k){
+    var u = par[k];
+    u.quand = (mode === 'mois') ? (String(k).slice(5, 7) + '/' + String(k).slice(0, 4))
+            : ((mode === 'semaine' ? 'sem. ' : '') + _g45DateFr(k));
+    u.court = (mode === 'mois') ? (String(k).slice(5, 7) + '/' + String(k).slice(2, 4)) : _g45DateFr(k);
+    u.adv = '';
+    return u;
+  });
+  var lib = { jour: 'regroup\u00e9 par jour', semaine: 'regroup\u00e9 par semaine', mois: 'regroup\u00e9 par mois' }[mode] || '';
+  return { mode: mode, libelle: lib, unites: unites };
+}
+
+function _g45SerieBilan(paris){
+  var chrono = (typeof _g45Chrono === 'function') ? _g45Chrono(paris) : paris.slice();
+  var gain = function(h){ return h.win ? (h.m * h.cote - h.m) : -h.m; };
+  var per = (window._bilanPeriode || 'all');
+  var mode = (per === '1j' || per === '1s') ? 'pari' : 'jour';
+
+  if (mode !== 'pari') {
+    var cpt = function(md){ var o = {}; chrono.forEach(function(h){ o[_g45CleUnite(h, md)] = 1; }); return Object.keys(o).length; };
+    if (cpt('jour') > 300) mode = (cpt('semaine') > 300) ? 'mois' : 'semaine';
+  }
+
+  var curve = [], clabels = [], xdates = [], cles = [], cum = 0;
+
+  if (mode === 'pari') {
+    chrono.forEach(function(h){
+      cum += gain(h);
+      curve.push(parseFloat(cum.toFixed(2)));
+      var adv = (h.target && h.target !== '-') ? h.target : '';
+      var g = gain(h);
+      clabels.push((h.date || '') + (h.heure ? ' ' + h.heure : '') + (adv ? ' vs ' + adv : '')
+        + '||' + (g >= 0 ? '+' : '') + g.toFixed(2) + '\u20ac');
+      xdates.push(h.date || '');
+      cles.push(null);
+    });
+    return { curve: curve, clabels: clabels, xdates: xdates, cles: cles, mode: mode, libelle: '' };
+  }
+
+  var ordre = [], par = {};
+  chrono.forEach(function(h){
+    var k = _g45CleUnite(h, mode);
+    if (!par[k]) { par[k] = { n: 0, b: 0, k: k }; ordre.push(k); }
+    par[k].n++; par[k].b += gain(h);
+  });
+  ordre.forEach(function(k){
+    var u = par[k];
+    cum += u.b;
+    curve.push(parseFloat(cum.toFixed(2)));
+    var quand = (mode === 'mois')
+      ? (String(k).slice(5, 7) + '/' + String(k).slice(0, 4))
+      : ((mode === 'semaine' ? 'sem. ' : '') + _g45DateFr(k));
+    clabels.push(quand + ' \u00b7 ' + u.n + ' pari' + (u.n > 1 ? 's' : '')
+      + ' \u00b7 ' + (u.b >= 0 ? '+' : '') + u.b.toFixed(2) + '\u20ac'
+      + '||' + (u.b >= 0 ? '+' : '') + u.b.toFixed(2) + '\u20ac');
+    xdates.push(mode === 'mois' ? (String(k).slice(5, 7) + '/' + String(k).slice(2, 4)) : _g45DateFr(k));
+    cles.push(k);
+  });
+  var lib = { jour: 'regroup\u00e9 par jour', semaine: 'regroup\u00e9 par semaine', mois: 'regroup\u00e9 par mois' }[mode] || '';
+  return { curve: curve, clabels: clabels, xdates: xdates, cles: cles, mode: mode, libelle: lib };
+}
+/* Une courbe de bookmaker, alignee sur les MEMES unites que la courbe globale :
+   sans ca, les points ne correspondraient pas d'une serie a l'autre. */
+function _g45SerieBook(paris, bk, serie){
+  var chrono = (typeof _g45Chrono === 'function') ? _g45Chrono(paris) : paris.slice();
+  var gain = function(h){ return h.win ? (h.m * h.cote - h.m) : -h.m; };
+  var cum = 0;
+  if (serie.mode === 'pari') {
+    return chrono.map(function(h){ if (h.b === bk) cum += gain(h); return parseFloat(cum.toFixed(2)); });
+  }
+  var parCle = {};
+  chrono.forEach(function(h){
+    if (h.b !== bk) return;
+    var k = _g45CleUnite(h, serie.mode);
+    parCle[k] = (parCle[k] || 0) + gain(h);
+  });
+  return serie.cles.map(function(k){ cum += (parCle[k] || 0); return parseFloat(cum.toFixed(2)); });
+}
+window._g45SerieBilan = _g45SerieBilan;
+
 function renderBilanTab(){
   renderSportFilter();
   try{_renderBilanPeriodeChips();}catch(e){}
@@ -2108,9 +2263,8 @@ function renderBilanTab(){
   if(ctx){
     if(_bilanChart){try{_bilanChart.destroy();}catch(e){}}
     if(paris.length){
-      var cum=0;
-      var curve=_g45Chrono(paris).map(function(h){cum+=(h.win?(h.m*h.cote)-h.m:-h.m);return parseFloat(cum.toFixed(2));});
-      var clabels=_g45Chrono(paris).map(function(h){var adv2=h.target&&h.target!=='-'?h.target:'';return (h.date||'')+(h.heure?' '+h.heure:'')+(adv2?' vs '+adv2:'')+'||'+(h.win?(h.m*h.cote-h.m>=0?'+':'')+parseFloat(h.m*h.cote-h.m).toFixed(2)+'€':'-'+parseFloat(h.m).toFixed(2)+'€');});
+      var _serie=_g45SerieBilan(paris);
+      var curve=_serie.curve, clabels=_serie.clabels, xdates=_serie.xdates;
       var color=bilanMode==='flash'?'#f0b020':bilanMode==='cockpit'?'#4d84ff':bilanMode==='simple'?'#22d3ee':'#1ed760';
       var ct=ctx.getContext('2d');
       /* ═══ LA COURBE ETAIT ILLISIBLE SUR TELEPHONE (08/09) ═══
@@ -2149,12 +2303,7 @@ function renderBilanTab(){
       var _maxCourbes = _etroitG ? 0 : bkRangs.length;   /* aucun plafond sur grand ecran */
       bkRangs.forEach(function(e, i){
         var bk = e.bk;
-        var bkCum=0;
-        // Aligner sur les mêmes labels (indices)
-        var bkCurve = _g45Chrono(paris).map(function(h){
-          if(h.b===bk) bkCum+=(h.win?(h.m*h.cote)-h.m:-h.m);
-          return parseFloat(bkCum.toFixed(2));
-        });
+        var bkCurve = _g45SerieBook(paris, bk, _serie);
         var bkCol = bki(bk).c || bkColors[i%bkColors.length];
         datasets.push({label:bki(bk).n,data:bkCurve,borderColor:bkCol,backgroundColor:'transparent',borderWidth:1.5,fill:false,tension:.4,pointRadius:0,pointHoverRadius:4,borderDash:[4,3],hidden:(i>=_maxCourbes)});
       });
@@ -2180,12 +2329,25 @@ function renderBilanTab(){
                l'adversaire/le `||`) et on limite le nombre d'etiquettes affichees
                (`maxTicksLimit`) — pas besoin d'une date par pari, juste des reperes
                espaces dans le temps. */
-            scales:{x:{display:true,grid:{display:false},ticks:{color:'#e8ecfa',font:{size:8},maxTicksLimit:6,maxRotation:0,autoSkip:true,callback:function(v,index){ var lbl=clabels[index]; var dOnly=lbl?lbl.split(' ')[0]:''; /* PAS DE DATE REPETEE (01/09, retour d'Antoine : "19 23 23 27..."). Chart.js
+            scales:{x:{display:true,grid:{display:false},ticks:{color:'#e8ecfa',font:{size:8},maxTicksLimit:6,maxRotation:0,autoSkip:true,callback:function(v,index){ var dOnly=xdates[index]||''; /* PAS DE DATE REPETEE (01/09, retour d'Antoine : "19 23 23 27..."). Chart.js
                  choisit les INDEX a etiqueter par intervalle regulier, pas par date —
                  deux index differents peuvent tomber sur la meme journee si plusieurs
                  paris partagent une date. On saute silencieusement toute etiquette
                  identique a la precedente affichee. */
 if(!dOnly || dOnly===_lastDateShown) return ''; _lastDateShown=dOnly; return dOnly; }}},y:{grid:{color:'rgba(255,255,255,.03)'},ticks:{color:'#e8ecfa',font:{size:9},callback:function(v){return v+'€';}}}}}});
+        /* La bascule doit se VOIR : en passant de 1S a 1M, la courbe change de
+           nature, pas seulement d'echelle. Une mention discrete sous le
+           graphique dit toujours ce qu'on lit. */
+        try {
+          var _mBloc = document.getElementById('bilan-groupe');
+          if (!_mBloc && ctx.parentNode) {
+            _mBloc = document.createElement('div');
+            _mBloc.id = 'bilan-groupe';
+            _mBloc.style.cssText = 'font-size:9px;color:var(--t3);text-align:right;margin-top:4px;';
+            ctx.parentNode.appendChild(_mBloc);
+          }
+          if (_mBloc) _mBloc.textContent = _serie.libelle ? (_serie.libelle + ' \u00b7 ' + _serie.curve.length + ' points') : '';
+        } catch (e) {}
         attachTouchTooltip('bilan-chart',function(){return _bilanChart;},'cib-bilan','cib-bilan-txt','cib-bilan-val');
     }
   }
@@ -3210,15 +3372,21 @@ function renderGlobalChart(){
   var gz=$i('global-zone');if(!gz)return;
   var ap=_bilanSrc().slice().reverse().sort(function(a,b){var ta=new Date((a.date||"")+" "+(a.heure||"00:00")).getTime();var tb=new Date((b.date||"")+" "+(b.heure||"00:00")).getTime();if(isNaN(ta))ta=Infinity;if(isNaN(tb))tb=Infinity;return ta-tb;});
   var startBk=state.start_bk||0;
+  /* Meme regroupement que la Bankroll totale (09/09) : au-dela de 80 paris, un
+     point par JOURNEE. Le point « Depart » reste en tete, il porte le capital
+     initial et non un pari. */
+  var _uEv = _g45UnitesBilan(ap, false);
   var cum=startBk;
   var glabels=['Départ'];
   var curve=[startBk];
-  ap.forEach(function(h){
-    cum+=(h.win?(h.m*h.cote)-h.m:-h.m);
+  _uEv.unites.forEach(function(u){
+    cum += u.b;
     curve.push(parseFloat(cum.toFixed(2)));
-    var gain=(h.win?(h.m*h.cote)-h.m:-h.m);
-    var adv3=h.target&&h.target!=='-'?h.target:'';var lbl=(h.date||'')+(h.n?' '+h.n:'')+(adv3?' vs '+adv3:'')+(h.l?' P'+h.l:'');
-    glabels.push(lbl+'||'+(gain>=0?'+':'')+gain.toFixed(2)+'€');
+    var h = u.h || {};
+    var lbl = (u.mode === 'pari' || u.h)
+      ? ((h.date||'')+(h.n?' '+h.n:'')+(u.adv?' vs '+u.adv:'')+(h.l?' P'+h.l:''))
+      : (u.quand + ' \u00b7 ' + u.n + ' pari' + (u.n>1?'s':''));
+    glabels.push(lbl+'||'+(u.b>=0?'+':'')+u.b.toFixed(2)+'€');
   });
   var tot=cum-startBk;
   var wins=_bilanSrc().filter(function(h){return h.win&&!h.isCashout;}).length,n=_bilanSrc().filter(function(h){return !h.isCashout;}).length;
@@ -9991,23 +10159,25 @@ function renderAdvancedCharts(paris, bankroll) {
 
   // ── 1. Bankroll totale ──
   var bkTotal = Object.values(bankroll||{}).reduce(function(s,v){return s+parseFloat(v||0);},0);
+  /* Points regroupes (09/09) : les marqueurs se touchaient deja et formaient
+     une chenille sur 80 paris. Un marqueur porte desormais le bilan de sa
+     JOURNEE — d'ou sa couleur : vert si la journee est positive, rouge sinon.
+     Au detail par pari, il garde son sens d'origine, gagne ou perdu. */
+  var _uBk = _g45UnitesBilan(sorted, false);
   var cumProfits = [], cum=0;
-  sorted.forEach(function(h){cum+=(h.win?(h.m*h.cote-h.m):-h.m);cumProfits.push(parseFloat(cum.toFixed(2)));});
+  _uBk.unites.forEach(function(u){ cum += u.b; cumProfits.push(parseFloat(cum.toFixed(2))); });
   var startBk = bkTotal - cum;
   var bkCurve = cumProfits.map(function(p){return parseFloat((startBk+p).toFixed(2));});
   var ctx1 = document.getElementById('chart-bankroll');
   if(ctx1){
     var g1=ctx1.getContext('2d').createLinearGradient(0,0,0,150);
     g1.addColorStop(0,'rgba(240,176,32,.3)');g1.addColorStop(1,'rgba(240,176,32,0)');
-    var bkLabels = sorted.map(function(h){
-      var adv = h.target&&h.target!=='-'?h.target:'';
-      return (h.date||'')+(adv?' · '+adv:'');
+    var bkLabels = _uBk.unites.map(function(u){
+      return u.quand + (u.adv ? ' · ' + u.adv : '') + (u.n > 1 ? ' · ' + u.n + ' paris' : '');
     });
-    var bkGains = sorted.map(function(h){
-      return h.win ? '+'+(h.m*h.cote-h.m).toFixed(2)+'€' : '-'+parseFloat(h.m).toFixed(2)+'€';
-    });
+    var bkGains = _uBk.unites.map(function(u){ return (u.b >= 0 ? '+' : '') + u.b.toFixed(2) + '\u20ac'; });
     _advCharts.bk=new Chart(ctx1,{type:'line',
-      data:{labels:bkLabels,datasets:[{data:bkCurve,borderColor:'#f0b020',backgroundColor:g1,borderWidth:2,fill:true,tension:.4,pointRadius:3,pointBackgroundColor:sorted.map(function(h){return h.win?'#1ed760':'#ff4545';}),pointRadius:4,pointHoverRadius:7}]},
+      data:{labels:bkLabels,datasets:[{data:bkCurve,borderColor:'#f0b020',backgroundColor:g1,borderWidth:2,fill:true,tension:.4,pointRadius:3,pointBackgroundColor:_uBk.unites.map(function(u){return u.b>=0?'#1ed760':'#ff4545';}),pointRadius:(_uBk.unites.length>60?0:4),pointHoverRadius:7}]},
       options:{responsive:true,maintainAspectRatio:false,
         interaction:{mode:'nearest',intersect:false},
         plugins:{legend:{display:false},
@@ -10105,9 +10275,8 @@ function renderBilanTab(){
   if(ctx){
     if(_bilanChart){try{_bilanChart.destroy();}catch(e){}}
     if(paris.length){
-      var cum=0;
-      var curve=_g45Chrono(paris).map(function(h){cum+=(h.win?(h.m*h.cote)-h.m:-h.m);return parseFloat(cum.toFixed(2));});
-      var clabels=_g45Chrono(paris).map(function(h){var adv2=h.target&&h.target!=='-'?h.target:'';return (h.date||'')+(h.heure?' '+h.heure:'')+(adv2?' vs '+adv2:'')+'||'+(h.win?(h.m*h.cote-h.m>=0?'+':'')+parseFloat(h.m*h.cote-h.m).toFixed(2)+'€':'-'+parseFloat(h.m).toFixed(2)+'€');});
+      var _serie=_g45SerieBilan(paris);
+      var curve=_serie.curve, clabels=_serie.clabels, xdates=_serie.xdates;
       var color=bilanMode==='flash'?'#f0b020':bilanMode==='cockpit'?'#4d84ff':bilanMode==='simple'?'#22d3ee':'#1ed760';
       var ct=ctx.getContext('2d');
       /* ═══ LA COURBE ETAIT ILLISIBLE SUR TELEPHONE (08/09) ═══
@@ -10146,12 +10315,7 @@ function renderBilanTab(){
       var _maxCourbes = _etroitG ? 0 : bkRangs.length;   /* aucun plafond sur grand ecran */
       bkRangs.forEach(function(e, i){
         var bk = e.bk;
-        var bkCum=0;
-        // Aligner sur les mêmes labels (indices)
-        var bkCurve = _g45Chrono(paris).map(function(h){
-          if(h.b===bk) bkCum+=(h.win?(h.m*h.cote)-h.m:-h.m);
-          return parseFloat(bkCum.toFixed(2));
-        });
+        var bkCurve = _g45SerieBook(paris, bk, _serie);
         var bkCol = bki(bk).c || bkColors[i%bkColors.length];
         datasets.push({label:bki(bk).n,data:bkCurve,borderColor:bkCol,backgroundColor:'transparent',borderWidth:1.5,fill:false,tension:.4,pointRadius:0,pointHoverRadius:4,borderDash:[4,3],hidden:(i>=_maxCourbes)});
       });
@@ -10177,12 +10341,25 @@ function renderBilanTab(){
                l'adversaire/le `||`) et on limite le nombre d'etiquettes affichees
                (`maxTicksLimit`) — pas besoin d'une date par pari, juste des reperes
                espaces dans le temps. */
-            scales:{x:{display:true,grid:{display:false},ticks:{color:'#e8ecfa',font:{size:8},maxTicksLimit:6,maxRotation:0,autoSkip:true,callback:function(v,index){ var lbl=clabels[index]; var dOnly=lbl?lbl.split(' ')[0]:''; /* PAS DE DATE REPETEE (01/09, retour d'Antoine : "19 23 23 27..."). Chart.js
+            scales:{x:{display:true,grid:{display:false},ticks:{color:'#e8ecfa',font:{size:8},maxTicksLimit:6,maxRotation:0,autoSkip:true,callback:function(v,index){ var dOnly=xdates[index]||''; /* PAS DE DATE REPETEE (01/09, retour d'Antoine : "19 23 23 27..."). Chart.js
                  choisit les INDEX a etiqueter par intervalle regulier, pas par date —
                  deux index differents peuvent tomber sur la meme journee si plusieurs
                  paris partagent une date. On saute silencieusement toute etiquette
                  identique a la precedente affichee. */
 if(!dOnly || dOnly===_lastDateShown) return ''; _lastDateShown=dOnly; return dOnly; }}},y:{grid:{color:'rgba(255,255,255,.03)'},ticks:{color:'#e8ecfa',font:{size:9},callback:function(v){return v+'€';}}}}}});
+        /* La bascule doit se VOIR : en passant de 1S a 1M, la courbe change de
+           nature, pas seulement d'echelle. Une mention discrete sous le
+           graphique dit toujours ce qu'on lit. */
+        try {
+          var _mBloc = document.getElementById('bilan-groupe');
+          if (!_mBloc && ctx.parentNode) {
+            _mBloc = document.createElement('div');
+            _mBloc.id = 'bilan-groupe';
+            _mBloc.style.cssText = 'font-size:9px;color:var(--t3);text-align:right;margin-top:4px;';
+            ctx.parentNode.appendChild(_mBloc);
+          }
+          if (_mBloc) _mBloc.textContent = _serie.libelle ? (_serie.libelle + ' \u00b7 ' + _serie.curve.length + ' points') : '';
+        } catch (e) {}
         attachTouchTooltip('bilan-chart',function(){return _bilanChart;},'cib-bilan','cib-bilan-txt','cib-bilan-val');
     }
   }
@@ -11207,15 +11384,21 @@ function renderGlobalChart(){
   var gz=$i('global-zone');if(!gz)return;
   var ap=_bilanSrc().slice().reverse().sort(function(a,b){var ta=new Date((a.date||"")+" "+(a.heure||"00:00")).getTime();var tb=new Date((b.date||"")+" "+(b.heure||"00:00")).getTime();if(isNaN(ta))ta=Infinity;if(isNaN(tb))tb=Infinity;return ta-tb;});
   var startBk=state.start_bk||0;
+  /* Meme regroupement que la Bankroll totale (09/09) : au-dela de 80 paris, un
+     point par JOURNEE. Le point « Depart » reste en tete, il porte le capital
+     initial et non un pari. */
+  var _uEv = _g45UnitesBilan(ap, false);
   var cum=startBk;
   var glabels=['Départ'];
   var curve=[startBk];
-  ap.forEach(function(h){
-    cum+=(h.win?(h.m*h.cote)-h.m:-h.m);
+  _uEv.unites.forEach(function(u){
+    cum += u.b;
     curve.push(parseFloat(cum.toFixed(2)));
-    var gain=(h.win?(h.m*h.cote)-h.m:-h.m);
-    var adv3=h.target&&h.target!=='-'?h.target:'';var lbl=(h.date||'')+(h.n?' '+h.n:'')+(adv3?' vs '+adv3:'')+(h.l?' P'+h.l:'');
-    glabels.push(lbl+'||'+(gain>=0?'+':'')+gain.toFixed(2)+'€');
+    var h = u.h || {};
+    var lbl = (u.mode === 'pari' || u.h)
+      ? ((h.date||'')+(h.n?' '+h.n:'')+(u.adv?' vs '+u.adv:'')+(h.l?' P'+h.l:''))
+      : (u.quand + ' \u00b7 ' + u.n + ' pari' + (u.n>1?'s':''));
+    glabels.push(lbl+'||'+(u.b>=0?'+':'')+u.b.toFixed(2)+'€');
   });
   var tot=cum-startBk;
   var wins=_bilanSrc().filter(function(h){return h.win&&!h.isCashout;}).length,n=_bilanSrc().filter(function(h){return !h.isCashout;}).length;
