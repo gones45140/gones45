@@ -24589,60 +24589,29 @@ async function _renderSaisonDetail(el, eventId, league){
   try{
     var r=await fetch('https://site.api.espn.com/apis/site/v2/sports/soccer/'+(league||'eng.1')+'/summary?event='+eventId+'&lang=fr&region=fr');
     var data=await r.json();
-    /* ═══ LE COMMENTAIRE FRANCAIS EST TRONQUE (09/09) ═══
-       Ce rendu demande `lang=fr&region=fr`, le suivi d'une equipe non. Or ESPN
-       ne traduit qu'une PETITE PARTIE des actions : la pression du match
-       s'arretait vers la 15e minute ici, alors qu'elle couvrait tout le match
-       dans le suivi — meme match, meme fonction, donnees differentes (Antoine
-       a mis les deux captures cote a cote).
-       CE N'ETAIT PAS LA LANGUE. Deuxieme tentative, sans `lang=fr` : toujours
-       tronque. La vraie difference est le CHEMIN. Le suivi passe par le WORKER
-       (`FD_PROXY?host=espn`), ce rendu appelait ESPN en direct. Depuis une
-       adresse francaise, ESPN sert un commentaire ampute ; depuis l'edge
-       Cloudflare, il le sert entier. On emprunte donc le meme chemin que le
-       suivi, et on ne reprend que les actions : les libelles de statistiques
-       restent en francais.
-       Repli en cascade : Worker, puis appel direct sans langue, et si les deux
-       rendent moins que la version francaise on garde celle-ci. Un Worker
-       indisponible ne doit pas faire disparaitre le graphique.
-       Le resultat est garde en memoire par match, donc replier puis rouvrir un
-       compte rendu ne redemande rien. */
+    /* ═══ LE RESUME DU SUIVI, TEL QUEL (09/09) ═══
+       Trois tentatives pour rien : la langue, un seuil de repli, puis un tri par
+       couverture. La bonne idee est d'Antoine — « prends celui du suivi et
+       colle-le ici ». C'est la meme FONCTION aux deux endroits, seules les
+       DONNEES differaient : le suivi demande le resume au WORKER, ce rendu le
+       demandait a ESPN en direct. Depuis une adresse francaise, ESPN sert un
+       commentaire minute par minute du seul debut de match — 300 actions sur 20
+       minutes ; par l'edge Cloudflare il sert le releve complet, 126 actions sur
+       tout le match.
+       On recupere donc le meme objet que le suivi et on le passe TEL QUEL a la
+       pression : plus de recollage de champs, plus d'heuristique a maintenir.
+       L'affichage garde la version francaise pour ses libelles.
+       Mis en cache par match : replier puis rouvrir ne redemande rien. */
+    var _dataPress = null;
     try {
       var _ck = String(eventId);
-      if (_g45ComVO[_ck]) { data.commentary = _g45ComVO[_ck]; }
-      else {
-        var _chemin = '/apis/site/v2/sports/soccer/' + (league || 'eng.1') + '/summary?event=' + eventId;
-        var _essais = [
-          (typeof FD_PROXY !== 'undefined' && FD_PROXY) ? (FD_PROXY + '?host=espn&path=' + encodeURIComponent(_chemin)) : '',
-          'https://site.api.espn.com' + _chemin
-        ].filter(Boolean);
-        /* ═══ ON CHOISIT LA COUVERTURE, PAS LA LONGUEUR (09/09) ═══
-           Le diagnostic pose sous le graphique a tranche : ESPN rend 300 actions
-           en francais et 126 par le Worker. Ma regle gardait la plus LONGUE,
-           donc les 300 — sauf qu'elles s'arretent a la 20e minute, quand les 126
-           du Worker couvrent tout le match jusqu'a la 96e. Le flux francais est
-           un commentaire minute par minute du DEBUT de match, pas un resume
-           complet : nombreux et courts contre peu et etales.
-           On compare donc la DERNIERE MINUTE atteinte, et le nombre d'actions ne
-           sert plus qu'a departager a couverture egale. */
-        var _couv = function (arr) {
-          var mx = 0;
-          (arr || []).forEach(function (c) { var m = _g45MinuteAction(c); if (!isNaN(m) && m > mx) mx = m; });
-          return mx;
-        };
-        var _meilleur = (data.commentary || []);
-        var _mCouv = _couv(_meilleur);
-        for (var _i = 0; _i < _essais.length; _i++) {
-          try {
-            var r2 = await fetch(_essais[_i]);
-            var d2 = await r2.json();
-            var c2 = (d2 && d2.commentary) || [];
-            var k2 = _couv(c2);
-            if (k2 > _mCouv || (k2 === _mCouv && c2.length > _meilleur.length)) { _meilleur = c2; _mCouv = k2; }
-            if (_mCouv >= 85) break;   /* le match est couvert, inutile d'essayer l'autre voie */
-          } catch (e2) {}
+      if (_g45SumWorker[_ck]) { _dataPress = _g45SumWorker[_ck]; }
+      else if (typeof FD_PROXY !== 'undefined' && FD_PROXY) {
+        var _rw = await fetch(FD_PROXY + '?host=espn&path=' + encodeURIComponent('/apis/site/v2/sports/soccer/' + (league || 'eng.1') + '/summary?event=' + eventId));
+        if (_rw.ok) {
+          var _dw = await _rw.json();
+          if (_dw && (_dw.commentary || []).length) { _g45SumWorker[_ck] = _dw; _dataPress = _dw; }
         }
-        if (_meilleur !== (data.commentary || [])) { _g45ComVO[_ck] = _meilleur; data.commentary = _meilleur; }
       }
     } catch (e) {}
     /* Le resume est aussi mis de cote pour l'ANALYSE IA (08/09) : elle ne
@@ -24708,7 +24677,7 @@ async function _renderSaisonDetail(el, eventId, league){
        la chaine, a cote des statistiques, la ou elle se lit avec elles.
        La fonction se protege seule : commentaire absent ou trop maigre, elle
        rend une chaine vide. */
-    try{ if(typeof _renderMatchPression==='function'){ var _pr=_renderMatchPression(data, homeId, awayId); if(_pr){ h+=_pr; added=true; } } }catch(e){}
+    try{ if(typeof _renderMatchPression==='function'){ var _pr=_renderMatchPression(_dataPress || data, homeId, awayId); if(_pr){ h+=_pr; added=true; } } }catch(e){}
     // Bouton stats avancées Sofascore (xG, tirs dans/hors surface…) — à la demande via Worker→RapidAPI
     try{
       function _eaAdv(x){return String(x==null?'':x).replace(/&/g,'&amp;').replace(/"/g,'&quot;');}
@@ -26998,8 +26967,9 @@ function _g45RenderOdds(ev, hN, aN, remain){
    Avec de vrais faits, les trois modeles peuvent enfin diverger — et c'est
    leur desaccord qui a de la valeur, pas trois fois la meme prudence. */
 var _g45ResumeIA = {};
-/* Commentaires non localises, par identifiant de match (voir _renderSaisonDetail). */
-var _g45ComVO = {};
+/* Resumes ESPN obtenus par le Worker, par identifiant de match : c'est la
+   source du suivi, la seule qui porte le match entier (voir _renderSaisonDetail). */
+var _g45SumWorker = {};
 function _g45FaitsDuResume(eid, hN, aN){
   var out = [];
   var d = _g45ResumeIA[String(eid || '')];
