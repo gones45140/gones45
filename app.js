@@ -23526,6 +23526,14 @@ function _renderMatchPression(s, homeId, awayId){
     if (typeof g45CoulPaire === 'function') {
       var _paire = g45CoulPaire(dom, ext);
       cD = _paire[0]; cE = _paire[1];
+      /* `g45CoulPaire` garantit qu'on DISTINGUE les deux equipes, pas qu'on les
+         VOIE : la couleur ESPN de Dortmund est le noir, invisible sur le fond
+         sombre de l'app (capture d'Antoine, barres grises). `_g45CoulFond`
+         eclaircit jusqu'a un seuil lisible — l'etape que j'avais supprimee en
+         passant a `g45CoulPaire`. Si les deux se rapprochent en s'eclaircissant,
+         la seconde bascule sur l'ambre. */
+      if (typeof _g45CoulFond === 'function') { cD = _g45CoulFond(cD); cE = _g45CoulFond(cE); }
+      if (typeof _g45Ecart === 'function' && _g45Ecart(cD, cE) < 90) cE = '#f0b020';
     } else {
       cD = (dom.team && dom.team.color) ? ('#' + String(dom.team.color).replace('#','')) : '#4d84ff';
       cE = (ext.team && ext.team.color) ? ('#' + String(ext.team.color).replace('#','')) : '#f0b020';
@@ -24555,6 +24563,28 @@ async function _renderSaisonDetail(el, eventId, league){
   try{
     var r=await fetch('https://site.api.espn.com/apis/site/v2/sports/soccer/'+(league||'eng.1')+'/summary?event='+eventId+'&lang=fr&region=fr');
     var data=await r.json();
+    /* ═══ LE COMMENTAIRE FRANCAIS EST TRONQUE (09/09) ═══
+       Ce rendu-ci demande `lang=fr&region=fr`, les deux autres non. Or ESPN ne
+       traduit qu'une PARTIE des actions : la pression du match s'arretait donc
+       vers la 20e minute alors que l'axe allait jusqu'a 96 (capture d'Antoine).
+       On recharge le meme resume sans la langue UNIQUEMENT quand le commentaire
+       parait incomplet, et on n'en garde que les actions. Le reste de la page
+       demeure en francais. Une requete de plus, seulement dans ce cas, chez un
+       fournisseur gratuit et sans quota. */
+    try {
+      var _com = (data && data.commentary) || [];
+      var _derniere = 0;
+      _com.forEach(function (c) {
+        var mn = parseInt((c && c.time && (c.time.displayValue || c.time.value)) || 0, 10);
+        if (mn > _derniere) _derniere = mn;
+      });
+      var _fini = ((((data.header || {}).competitions || [])[0] || {}).status || {}).type;
+      if ((_fini && _fini.completed) && _derniere < 80) {
+        var r2 = await fetch('https://site.api.espn.com/apis/site/v2/sports/soccer/' + (league || 'eng.1') + '/summary?event=' + eventId);
+        var d2 = await r2.json();
+        if (d2 && d2.commentary && d2.commentary.length > _com.length) data.commentary = d2.commentary;
+      }
+    } catch (e) {}
     el._data=data;   // pour le sélecteur de marché (re-rendu sans re-fetch)
     /* Le resume est aussi mis de cote pour l'ANALYSE IA (08/09) : elle ne
        recevait que le nom des deux equipes et la date, d'ou trois avis
