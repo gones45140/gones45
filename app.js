@@ -2113,132 +2113,11 @@ function renderAdvancedCharts(paris, bankroll) {
    CUMULEE, regrouper ne deforme rien — un point hebdomadaire vaut le capital
    atteint en fin de semaine, on perd le detail intermediaire, pas la
    trajectoire. Ce serait faux pour un indicateur de pointe. */
-/* ═══════════ SONDE MOMENTUM ESPN (09/09) — OUTIL DE DIAGNOSTIC ═══════════
-   Ma note du 26/08 affirmait « ESPN ne publie pas de momentum, verifie par
-   sonde ». La sonde n'avait interroge QU'UN endroit : le `summary` de
-   site.api.espn.com. Or Antoine a montre que le graphique de momentum vient
-   d'ESPN — leur site web s'alimente sur site.web.api.espn.com, un hote que le
-   Worker sait deja servir sous le nom `espnweb` et qu'on n'a jamais essaye.
-   Cette sonde interroge plusieurs points d'entree pour un match donne et
-   affiche les cles de premier niveau de chaque reponse. On saura en une minute
-   si la donnee existe, au lieu de la reconstruire a la main.
-   Elle s'ajoute d'elle-meme en bas des Outils : aucun HTML a redeployer. */
-function g45SondeUI(){
-  try {
-    var zone = document.getElementById('t-outils');
-    if (!zone || document.getElementById('g45-sonde')) return;
-    var d = document.createElement('div');
-    d.id = 'g45-sonde';
-    d.innerHTML = '<div class="sec">\ud83d\udd2c Sonde ESPN (diagnostic)</div>'
-      + '<div class="fc">'
-      + '<div style="font-size:10px;color:var(--t3);margin-bottom:8px;">Colle l\'identifiant d\'un match ESPN et la ligue. La sonde liste ce que chaque point d\'entr\u00e9e renvoie \u2014 on cherche un champ de type momentum ou win probability.</div>'
-      + '<div style="display:flex;gap:6px;margin-bottom:8px;">'
-      + '<input id="g45-sonde-eid" class="fi" placeholder="id du match" style="flex:1;font-size:11px;">'
-      + '<input id="g45-sonde-lg" class="fi" value="uefa.champions" style="flex:1;font-size:11px;">'
-      + '</div>'
-      + '<button class="btn btn-p" style="font-size:12px;" onclick="g45SondeMomentum()">\ud83d\udd0d Sonder</button>'
-      + '<pre id="g45-sonde-out" style="margin-top:9px;font-size:10px;color:var(--t2);white-space:pre-wrap;word-break:break-word;max-height:280px;overflow:auto;"></pre>'
-      + '</div>';
-    zone.appendChild(d);
-  } catch (e) {}
-}
-async function g45SondeMomentum(){
-  var out = document.getElementById('g45-sonde-out');
-  var eid = (document.getElementById('g45-sonde-eid') || {}).value || '';
-  var lg = (document.getElementById('g45-sonde-lg') || {}).value || 'uefa.champions';
-  if (!eid) { if (out) out.textContent = 'Donne un identifiant de match.'; return; }
-  if (out) out.textContent = 'Sondage\u2026';
-  var P = (typeof FD_PROXY !== 'undefined' && FD_PROXY) ? FD_PROXY : '';
-  /* Deuxieme passe (09/09) : les quatre premiers points d'entree rendent tous
-     les MEMES 19 cles, sans momentum. Reste `sports.core`, l'API ou vivent deja
-     les tirs et leur xG — c'est la qu'on avait trouve ce que `site.api` ne
-     donnait pas. On y sonde les sous-ressources d'une competition. */
-  var essais = [
-    ['espnweb  gamepackage', 'espnweb', '/apis/site/v2/sports/soccer/' + lg + '/summary?event=' + eid],
-    ['espn     summary',     'espn',    '/apis/site/v2/sports/soccer/' + lg + '/summary?event=' + eid],
-    ['core     competition', 'core',    '/v2/sports/soccer/leagues/' + lg + '/events/' + eid + '/competitions/' + eid],
-    /* probabilities, powerindex et predictor : 400 sur les trois, retires. */
-    ['core     plays',       'core',    '/v2/sports/soccer/leagues/' + lg + '/events/' + eid + '/competitions/' + eid + '/plays?limit=2'],
-    /* Le terrain anime est sur leur page de direct : c'est `espnweb` qui la
-       sert, avec des blocs absents du resume classique. */
-    ['espnweb  gamecast',    'espnweb', '/apis/site/v2/sports/soccer/' + lg + '/summary?event=' + eid + '&enable=situation,gamecast,pitch,field']
-  ];
-  var lignes = [];
-  for (var i = 0; i < essais.length; i++) {
-    var e = essais[i];
-    try {
-      /* `core` n'est pas un hote declare dans le Worker — on l'appelle donc en
-         direct. Ces adresses repondent depuis un navigateur, contrairement au
-         commentaire du summary. */
-      var u = (e[1] === 'core')
-        ? ('https://sports.core.api.espn.com' + e[2])
-        : (P ? (P + '?host=' + e[1] + '&path=' + encodeURIComponent(e[2])) : ('https://site.api.espn.com' + e[2]));
-      var r = await fetch(u);
-      var t = await r.text();
-      var j = null; try { j = JSON.parse(t); } catch (x) {}
-      if (!j) { lignes.push(e[0] + ' \u2192 ' + r.status + ' (r\u00e9ponse non JSON)'); continue; }
-      var cles = Object.keys(j);
-      var interessant = cles.filter(function(k){ return /momentum|probab|winprob|pressure|graph|chart|tick|index/i.test(k); });
-      lignes.push(e[0] + ' \u2192 ' + r.status + ' \u00b7 ' + cles.length + ' cl\u00e9s');
-      lignes.push('   ' + cles.join(', '));
-      /* Sur `core`, tout est en `$ref` : les noms de sous-ressources sont plus
-         parlants que les cles de premier niveau. */
-      cles.forEach(function(k){
-        var v = j[k];
-        if (v && typeof v === 'object' && v.$ref && /momentum|probab|pressure|index/i.test(k)) {
-          lignes.push('   \u2b50 lien : ' + k + ' \u2192 ' + String(v.$ref).slice(0, 110));
-        }
-      });
-      if (Array.isArray(j.items)) lignes.push('   items : ' + j.items.length + (j.items[0] ? (' \u00b7 1er = ' + Object.keys(j.items[0]).join(', ')) : ''));
-      /* ═══ ON SUIT LE LIEN `momentum` (09/09) ═══
-         La sonde precedente l'a trouve sur la competition, dans `sports.core`.
-         Chez ESPN, un `$ref` ne porte jamais la donnee : il faut aller la
-         chercher. On affiche donc la forme de la reponse et les deux premieres
-         entrees, de quoi savoir quoi lire avant d'ecrire une seule ligne de
-         rendu. */
-      /* ═══ `situation` : L'ETAT COURANT DU JEU (09/09) ═══
-         Il figurait parmi les 47 cles de la competition et je l'avais laisse
-         passer. C'est le premier endroit ou chercher ce qui alimente le terrain
-         anime d'ESPN. Attention : ce champ decrit l'instant present, il sera
-         probablement VIDE sur un match termine — a sonder pendant un match en
-         cours. On affiche son contenu entier, il est court. */
-      if (j.situation) {
-        try {
-          var sit = j.situation;
-          if (sit.$ref) {
-            var rs2 = await fetch(String(sit.$ref).replace(/^http:/, 'https:'));
-            sit = await rs2.json();
-            lignes.push('   \u2192 situation : ' + rs2.status + ' (lien suivi)');
-          }
-          lignes.push('   \u2192 situation \u00b7 cl\u00e9s : ' + Object.keys(sit).join(', '));
-          lignes.push('   \u2192 ' + JSON.stringify(sit).slice(0, 400));
-        } catch (xs) { lignes.push('   \u2192 situation : \u00c9CHEC'); }
-      }
-      if (j.momentum && j.momentum.$ref) {
-        try {
-          var rm = await fetch(String(j.momentum.$ref).replace(/^http:/, 'https:'));
-          var jm = await rm.json();
-          lignes.push('   \u2192 momentum : ' + rm.status + ' \u00b7 cl\u00e9s ' + Object.keys(jm).join(', '));
-          var arr = jm.items || jm.momentum || jm.events || [];
-          if (Array.isArray(arr) && arr.length) {
-            lignes.push('   \u2192 ' + arr.length + ' entr\u00e9es \u00b7 champs : ' + Object.keys(arr[0]).join(', '));
-            lignes.push('   \u2192 1re : ' + JSON.stringify(arr[0]).slice(0, 220));
-            lignes.push('   \u2192 2e  : ' + JSON.stringify(arr[1] || {}).slice(0, 220));
-          } else {
-            lignes.push('   \u2192 contenu : ' + JSON.stringify(jm).slice(0, 300));
-          }
-        } catch (xm) { lignes.push('   \u2192 momentum : \u00c9CHEC (' + String(xm && xm.message || xm).slice(0, 60) + ')'); }
-      }
-      if (interessant.length) lignes.push('   \u2b50 PISTE : ' + interessant.join(', '));
-    } catch (x2) { lignes.push(e[0] + ' \u2192 \u00c9CHEC'); }
-  }
-  if (out) out.textContent = lignes.join('\n');
-}
-window.g45SondeMomentum = g45SondeMomentum;
-if (typeof document !== 'undefined') {
-  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', g45SondeUI);
-  else g45SondeUI();
-}
+/* La sonde ESPN posee ici le 09/09 a ete retiree une fois sa reponse obtenue :
+   le momentum existe sur `sports.core` (branche), `situation` est vide en
+   football meme en plein match (donc le terrain anime d'ESPN vient d'ailleurs),
+   et `espnweb` ne rend rien de plus que `site.api`. Inutile de la reconstruire
+   pour ces questions-la — la reponse est ici. */
 
 function _g45CleUnite(h, mode){
   var d = String((h && h.date) || '');
@@ -23771,12 +23650,18 @@ async function _espnMatchLiveData(nom){
   return {resolved:resolved, event:ev, summary:summary, league:lg};
 }
 
-/* ═══ PRESSION DU MATCH (26/08) ═══
-   Equivalent du « Match Momentum » d'ESPN et de Sofascore. Ni l'un ni l'autre ne
-   publie sa courbe : ESPN ne l'expose dans aucun point d'entree du compte rendu
-   — verifie par sonde, ni `momentum` ni `winprobability`. Elle est donc
-   RECONSTRUITE a partir du commentaire minute par minute, qui porte pour chaque
-   action son type, sa minute et surtout son EQUIPE dans un champ dedie.
+/* ═══ PRESSION DU MATCH (26/08, corrige le 09/09) ═══
+   Equivalent du « Match Momentum » d'ESPN et de Sofascore.
+   CETTE NOTE AFFIRMAIT QU'ESPN NE PUBLIAIT PAS SA COURBE, « verifie par sonde ».
+   C'ETAIT FAUX : la sonde n'avait interroge que `site.api`, et le momentum vit
+   sur `sports.core`, en lien `$ref` de la competition. Il est desormais utilise
+   quand il existe (voir `_g45MomentumEspn`), y compris pendant le match.
+   Le calcul ci-dessous reste en REPLI : toutes les competitions ne servent pas
+   ce champ. Il RECONSTRUIT la pression a partir du commentaire minute par
+   minute, qui porte pour chaque action son type, sa minute et son EQUIPE.
+   Lecon retenue : une sonde qui n'interroge qu'un hote ne prouve pas une
+   absence — `sports.core` et `site.api` n'exposent pas les memes champs, on
+   l'avait deja vu en aout avec les tirs et leur xG.
    Nommee « Pression » et non « Momentum » : la forme est comparable, les valeurs
    sont les notres. Annoncer un momentum laisserait croire a un calcul identique.
    Ponderation : un but pese beaucoup, un tir cadre nettement, un tir bloque ou
