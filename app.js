@@ -24595,21 +24595,38 @@ async function _renderSaisonDetail(el, eventId, league){
        s'arretait vers la 15e minute ici, alors qu'elle couvrait tout le match
        dans le suivi — meme match, meme fonction, donnees differentes (Antoine
        a mis les deux captures cote a cote).
-       Une premiere version ne rechargeait qu'en cas de commentaire « trop
-       court » ; le seuil etait mal choisi et le probleme touchait en realite
-       TOUS les matchs. On recharge donc sans condition, et on ne reprend que
-       les actions : les libelles de statistiques restent en francais.
+       CE N'ETAIT PAS LA LANGUE. Deuxieme tentative, sans `lang=fr` : toujours
+       tronque. La vraie difference est le CHEMIN. Le suivi passe par le WORKER
+       (`FD_PROXY?host=espn`), ce rendu appelait ESPN en direct. Depuis une
+       adresse francaise, ESPN sert un commentaire ampute ; depuis l'edge
+       Cloudflare, il le sert entier. On emprunte donc le meme chemin que le
+       suivi, et on ne reprend que les actions : les libelles de statistiques
+       restent en francais.
+       Repli en cascade : Worker, puis appel direct sans langue, et si les deux
+       rendent moins que la version francaise on garde celle-ci. Un Worker
+       indisponible ne doit pas faire disparaitre le graphique.
        Le resultat est garde en memoire par match, donc replier puis rouvrir un
-       compte rendu ne redemande rien. ESPN est gratuit et sans quota, mais
-       autant ne pas repeter l'appel pour rien. */
+       compte rendu ne redemande rien. */
     try {
       var _ck = String(eventId);
       if (_g45ComVO[_ck]) { data.commentary = _g45ComVO[_ck]; }
       else {
-        var r2 = await fetch('https://site.api.espn.com/apis/site/v2/sports/soccer/' + (league || 'eng.1') + '/summary?event=' + eventId);
-        var d2 = await r2.json();
-        var c2 = (d2 && d2.commentary) || [];
-        if (c2.length > ((data.commentary || []).length)) { _g45ComVO[_ck] = c2; data.commentary = c2; }
+        var _chemin = '/apis/site/v2/sports/soccer/' + (league || 'eng.1') + '/summary?event=' + eventId;
+        var _essais = [
+          (typeof FD_PROXY !== 'undefined' && FD_PROXY) ? (FD_PROXY + '?host=espn&path=' + encodeURIComponent(_chemin)) : '',
+          'https://site.api.espn.com' + _chemin
+        ].filter(Boolean);
+        var _meilleur = (data.commentary || []);
+        for (var _i = 0; _i < _essais.length; _i++) {
+          try {
+            var r2 = await fetch(_essais[_i]);
+            var d2 = await r2.json();
+            var c2 = (d2 && d2.commentary) || [];
+            if (c2.length > _meilleur.length) _meilleur = c2;
+            if (_meilleur.length > 60) break;   /* assez pour couvrir un match */
+          } catch (e2) {}
+        }
+        if (_meilleur.length > ((data.commentary || []).length)) { _g45ComVO[_ck] = _meilleur; data.commentary = _meilleur; }
       }
     } catch (e) {}
     /* Le resume est aussi mis de cote pour l'ANALYSE IA (08/09) : elle ne
