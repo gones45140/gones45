@@ -2158,7 +2158,10 @@ async function g45SondeMomentum(){
     ['espn     summary',     'espn',    '/apis/site/v2/sports/soccer/' + lg + '/summary?event=' + eid],
     ['core     competition', 'core',    '/v2/sports/soccer/leagues/' + lg + '/events/' + eid + '/competitions/' + eid],
     /* probabilities, powerindex et predictor : 400 sur les trois, retires. */
-    ['core     plays',       'core',    '/v2/sports/soccer/leagues/' + lg + '/events/' + eid + '/competitions/' + eid + '/plays?limit=2']
+    ['core     plays',       'core',    '/v2/sports/soccer/leagues/' + lg + '/events/' + eid + '/competitions/' + eid + '/plays?limit=2'],
+    /* Le terrain anime est sur leur page de direct : c'est `espnweb` qui la
+       sert, avec des blocs absents du resume classique. */
+    ['espnweb  gamecast',    'espnweb', '/apis/site/v2/sports/soccer/' + lg + '/summary?event=' + eid + '&enable=situation,gamecast,pitch,field']
   ];
   var lignes = [];
   for (var i = 0; i < essais.length; i++) {
@@ -2193,6 +2196,24 @@ async function g45SondeMomentum(){
          chercher. On affiche donc la forme de la reponse et les deux premieres
          entrees, de quoi savoir quoi lire avant d'ecrire une seule ligne de
          rendu. */
+      /* ═══ `situation` : L'ETAT COURANT DU JEU (09/09) ═══
+         Il figurait parmi les 47 cles de la competition et je l'avais laisse
+         passer. C'est le premier endroit ou chercher ce qui alimente le terrain
+         anime d'ESPN. Attention : ce champ decrit l'instant present, il sera
+         probablement VIDE sur un match termine — a sonder pendant un match en
+         cours. On affiche son contenu entier, il est court. */
+      if (j.situation) {
+        try {
+          var sit = j.situation;
+          if (sit.$ref) {
+            var rs2 = await fetch(String(sit.$ref).replace(/^http:/, 'https:'));
+            sit = await rs2.json();
+            lignes.push('   \u2192 situation : ' + rs2.status + ' (lien suivi)');
+          }
+          lignes.push('   \u2192 situation \u00b7 cl\u00e9s : ' + Object.keys(sit).join(', '));
+          lignes.push('   \u2192 ' + JSON.stringify(sit).slice(0, 400));
+        } catch (xs) { lignes.push('   \u2192 situation : \u00c9CHEC'); }
+      }
       if (j.momentum && j.momentum.$ref) {
         try {
           var rm = await fetch(String(j.momentum.$ref).replace(/^http:/, 'https:'));
@@ -23809,7 +23830,45 @@ function _g45MinuteAction(c){
   return mn;
 }
 
-function _renderMatchPression(s, homeId, awayId){
+/* ═══════════ MOMENTUM ESPN (09/09) ═══════════
+   Ma note du 26/08 disait qu'ESPN ne publiait pas de momentum. C'etait faux :
+   la sonde l'a trouve sur `sports.core`, en lien `$ref` de la competition, la
+   ou vivent deja les tirs et leur xG. `site.api` ne le montre pas, d'ou
+   l'erreur — la sonde de l'epoque n'avait interroge que celui-la.
+   Chaque entree porte `clock` en secondes, `probability`, et l'equipe dans un
+   lien dont il suffit d'extraire l'identifiant : pas besoin de le suivre.
+   La reponse est PAGINEE par 25, il faut donc dérouler les pages, sinon un
+   match s'arrete a la 25e minute — exactement le symptome qu'on vient de
+   passer la matinee a corriger ailleurs.
+   Cache definitif par match : un match termine ne bouge plus. */
+var _g45MomCache = {};
+async function _g45MomentumEspn(lg, eid){
+  var cle = String(lg || '') + '|' + String(eid || '');
+  if (_g45MomCache[cle]) return _g45MomCache[cle];
+  var base = 'https://sports.core.api.espn.com/v2/sports/soccer/leagues/' + (lg || 'eng.1')
+           + '/events/' + eid + '/competitions/' + eid + '/momentum?limit=100';
+  var out = [], page = 1, pages = 1;
+  try {
+    while (page <= pages && page <= 4) {
+      var r = await fetch(base + '&page=' + page);
+      if (!r.ok) break;
+      var j = await r.json();
+      pages = j.pageCount || 1;
+      (j.items || []).forEach(function(it){
+        var m = String((it.competitor && it.competitor.$ref) || '').match(/competitors\/(\d+)/);
+        var mn = Math.round(((it.clock || 0) + (it.addedClock || 0)) / 60);
+        if (it.period && it.period.number === 2 && mn <= 45) mn += 45;
+        out.push({ min: mn, p: Math.abs(it.probability || 0), tid: m ? m[1] : '' });
+      });
+      page++;
+    }
+  } catch (e) { return []; }
+  if (out.length) _g45MomCache[cle] = out;
+  return out;
+}
+window._g45MomentumEspn = _g45MomentumEspn;
+
+function _renderMatchPression(s, homeId, awayId, momEspn){
   try {
     var com = (s && s.commentary) || [];
 
@@ -23869,7 +23928,24 @@ function _renderMatchPression(s, homeId, awayId){
     var buts = [], reperes = [];
     var vus = 0;
 
-    com.forEach(function(c){
+    /* ═══ LA VALEUR D'ESPN QUAND ON L'A (09/09) ═══
+       Fournie, elle remplace le calcul maison : c'est celle qu'affiche leur
+       site, donc coherente avec ce qu'Antoine voit ailleurs, et je n'ai plus a
+       assumer une reconstruction dans la note du bas.
+       Le calcul maison reste, en repli : toutes les competitions ne servent pas
+       ce champ, et un match trop recent peut n'avoir aucune entree. */
+    var sourceEspn = false;
+    if (momEspn && momEspn.length) {
+      var idD = String((dom.team && dom.team.id) || homeId || '');
+      momEspn.forEach(function(e){
+        if (!e || isNaN(e.min)) return;
+        var i = Math.min(n - 1, Math.max(0, Math.floor(e.min / PAS)));
+        if (String(e.tid) === idD) bD[i] += e.p; else bE[i] += e.p;
+        vus++;
+      });
+      sourceEspn = vus > 0;
+    }
+    if (!sourceEspn) com.forEach(function(c){
       var p = c.play; if (!p || !p.team) return;
       var mn = _g45MinuteAction(c);
       if (isNaN(mn)) return;
@@ -23882,6 +23958,17 @@ function _renderMatchPression(s, homeId, awayId){
       else       { if (estDom) bE[i] += -w * 0.5; else bD[i] += -w * 0.5; }
       var tt = String((p.type && p.type.text) || '').toLowerCase();
       if (tt.indexOf('goal') >= 0) buts.push({ i: i, dom: estDom });
+    });
+    /* Les buts restent lus dans le commentaire : le momentum d'ESPN ne porte
+       qu'une valeur, pas les evenements. */
+    if (sourceEspn) com.forEach(function(c){
+      var p = c.play; if (!p || !p.team) return;
+      var tt = String((p.type && p.type.text) || '').toLowerCase();
+      if (tt.indexOf('goal') < 0) return;
+      var mn = _g45MinuteAction(c);
+      if (isNaN(mn)) return;
+      buts.push({ i: Math.min(n - 1, Math.floor(mn / PAS)),
+                  dom: (String(p.team.displayName || '') === nomD) });
     });
 
     /* REPERES (26/08) : cartons et remplacements, comme les pastilles et les
@@ -23953,8 +24040,10 @@ function _renderMatchPression(s, homeId, awayId){
         + '<span>' + Math.round(nAff * PAS) + '\'</span></div>'
       + '<div style="font-size:8.5px;color:var(--t3);margin-top:7px;line-height:1.5;">'
         + '\u26bd but \u00b7 \ud83d\udfe8 carton \u00b7 \ud83d\udfe5 expulsion \u00b7 \ud83d\udd01 remplacement<br>'
-        + 'Reconstruite \u00e0 partir des actions du match \u2014 tirs, corners, buts, fautes. '
-        + 'Indicateur maison, non comparable aux valeurs d\'ESPN ou de Sofascore.</div>'
+        + (sourceEspn
+            ? 'Momentum publi\u00e9 par ESPN, une valeur par minute.'
+            : 'Reconstruite \u00e0 partir des actions du match \u2014 tirs, corners, buts, fautes. Indicateur maison, non comparable aux valeurs d\'ESPN ou de Sofascore.')
+        + '</div>'
     + '</div>';
   } catch (e) { return ''; }
 }
@@ -24341,10 +24430,42 @@ async function loadEspnMatchLive(el, nom, col){
   html+='<div style="font-size:26px;font-weight:800;min-width:74px;text-align:center;">'+(tscore(home)!==''?tscore(home):'–')+' : '+(tscore(away)!==''?tscore(away):'–')+'</div>';
   html+='<div style="flex:1;text-align:center;min-width:0;">'+(tlogo(away)?'<img src="'+tlogo(away)+'" style="width:38px;height:38px;object-fit:contain;">':'')+'<div style="font-size:12px;font-weight:700;margin-top:4px;overflow:hidden;text-overflow:ellipsis;">'+tname(away)+'</div></div>';
   html+='</div>';
+  /* ═══ RETARD REEL SUR LE DIRECT (09/09) ═══
+     J'ai avance « une a deux minutes » sans l'avoir mesure. Autant le mesurer :
+     chaque action ESPN porte `wallclock`, l'heure REELLE de l'evenement. La
+     comparer a l'heure du telephone au moment ou on l'affiche donne le retard
+     exact, sans chronometre ni television.
+     Trois delais s'additionnent et cette mesure les contient tous : celui
+     d'ESPN entre l'action et sa publication, le cache de 60 s du Worker sur les
+     resumes, et l'intervalle de rafraichissement de l'app.
+     Affiche uniquement pendant un match EN COURS : sur un match termine, la
+     derniere action date de la fin du match et le chiffre n'aurait aucun sens. */
+  if (stState === 'in') {
+    try {
+      var _der = 0;
+      ((s && s.commentary) || []).forEach(function (c) {
+        var w = (c && (c.wallclock || (c.play && c.play.wallclock))) || '';
+        var t = w ? new Date(w).getTime() : NaN;
+        if (!isNaN(t) && t > _der) _der = t;
+      });
+      if (_der) {
+        var _sec = Math.max(0, Math.round((Date.now() - _der) / 1000));
+        var _c = _sec < 90 ? 'var(--g)' : (_sec < 180 ? 'var(--gold)' : 'var(--r)');
+        html += '<div style="text-align:center;margin-top:8px;font-size:10px;color:var(--t3);">'
+          + 'derni\u00e8re action re\u00e7ue il y a <span style="color:' + _c + ';font-weight:800;">'
+          + (_sec < 60 ? (_sec + ' s') : (Math.floor(_sec / 60) + ' min ' + (_sec % 60) + ' s')) + '</span>'
+          + '<br><span style="font-size:9px;">retard total sur le terrain, cache et rafra\u00eechissement compris</span></div>';
+      }
+    } catch (e) {}
+  }
   html+='<div style="text-align:center;margin-top:10px;"><button onclick="loadTeamLive()" style="background:rgba(255,255,255,.06);border:1px solid var(--b2);color:var(--t2);font-size:11px;padding:6px 14px;border-radius:6px;cursor:pointer;">🔄 Rafraîchir</button></div>';
   html+='</div>';
   var homeId=(home.team&&home.team.id), awayId=(away.team&&away.team.id);
-  try{ html+=_renderMatchPression(s, homeId, awayId); }catch(e){}
+  try{
+    var _momL = [];
+    try { if (typeof _g45MomentumEspn === 'function' && data.event && data.event.id) _momL = await _g45MomentumEspn(data.league || 'eng.1', data.event.id); } catch(e2){}
+    html+=_renderMatchPression(s, homeId, awayId, _momL);
+  }catch(e){}
   html+=_renderEspnMatchStats(s, homeId, awayId, col);
   var _compo=_renderEspnMatchPitch(s, col); html+=_compo||_renderEspnMatchLineups(s, col);
   el.innerHTML=html;
@@ -24966,7 +25087,14 @@ async function _renderSaisonDetail(el, eventId, league){
        la chaine, a cote des statistiques, la ou elle se lit avec elles.
        La fonction se protege seule : commentaire absent ou trop maigre, elle
        rend une chaine vide. */
-    try{ if(typeof _renderMatchPression==='function'){ var _pr=_renderMatchPression(_dataPress || data, homeId, awayId); if(_pr){ h+=_pr; added=true; } } }catch(e){}
+    try{
+      if(typeof _renderMatchPression==='function'){
+        var _mom = [];
+        try { if (typeof _g45MomentumEspn === 'function') _mom = await _g45MomentumEspn(league || 'eng.1', eventId); } catch(e2){}
+        var _pr=_renderMatchPression(_dataPress || data, homeId, awayId, _mom);
+        if(_pr){ h+=_pr; added=true; }
+      }
+    }catch(e){}
     // Bouton stats avancées Sofascore (xG, tirs dans/hors surface…) — à la demande via Worker→RapidAPI
     try{
       function _eaAdv(x){return String(x==null?'':x).replace(/&/g,'&amp;').replace(/"/g,'&quot;');}
