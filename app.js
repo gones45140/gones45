@@ -3119,6 +3119,14 @@ function renderArchive(){
           +'<div style="position:relative;font-size:12px;font-weight:700;color:var(--t1);overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;word-break:break-word;line-height:1.25;">'+titre+'</div>'
           +(_scoreA?'<div style="position:relative;font-size:10px;font-weight:800;color:var(--t1);background:rgba(255,255,255,.10);display:inline-block;padding:1px 6px;border-radius:5px;margin:1px 0;max-width:100%;white-space:normal;word-break:break-word;">📊 '+_scoreA+'</div>':'')
           +'<div style="position:relative;font-size:10px;color:var(--t3);overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;word-break:break-word;line-height:1.3;">'+sous+'</div>'
+          /* ═══ LA NOTE S'AFFICHE ENFIN (09/09) ═══
+             Elle etait enregistree mais montree NULLE PART : ni ici, ni dans le
+             bilan, ni dans l'archive. Il fallait rouvrir la fenetre d'edition
+             pour la revoir, d'ou l'impression qu'elle disparaissait.
+             Antoine y met systematiquement le buteur ou le passeur : sur la
+             ligne, ca transforme ses paris joueurs en memoire consultable. */
+          +(function(){ var _n=(typeof g45NoteDe==='function')?g45NoteDe(h):'';
+             return _n ? ('<div style="position:relative;font-size:10px;color:var(--gold);font-style:italic;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;margin-top:2px;">\ud83d\udcdd '+_n.replace(/</g,'&lt;')+'</div>') : ''; })()
           +'</div>'
           +'<div style="position:relative;text-align:right;flex-shrink:0;">'
           +'<div style="font-size:11px;font-weight:800;color:'+winC+';">'+(h.isPending?'⏳':(h.win?'✅':'❌'))+'</div>'
@@ -6981,7 +6989,7 @@ function editBet(id){
   $i('edit-bk').value=h.b||'';
   $i('edit-date').value=h.date||'';
   $i('edit-heure').value=h.heure||'';
-  $i('edit-notes').value=h.notes||'';
+  $i('edit-notes').value=g45NoteDe(h);
   /* Les trois options relues a l'ouverture (04/09) : sans ca, la fenetre les
      afficherait toujours decochees et le premier enregistrement les effacerait. */
   var _oc=function(id,v){ var e=$i(id); if(e) e.checked=!!v; };
@@ -7009,7 +7017,7 @@ function saveEditBet(){
   h.b=$i('edit-bk').value.trim();
   h.date=$i('edit-date').value;
   h.heure=$i('edit-heure').value;
-  h.notes=$i('edit-notes').value.trim();
+  g45NoteSet(h, $i('edit-notes').value);
   var _ck=function(id){ var e=$i(id); return !!(e&&e.checked); };
   h.isFreebet=_ck('edit-freebet'); h.isLay=_ck('edit-lay'); h.isFlash=_ck('edit-flash');
   h.domicile=$i('edit-domicile').value;
@@ -11131,6 +11139,14 @@ function renderArchive(){
           +'<div style="position:relative;font-size:12px;font-weight:700;color:var(--t1);overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;word-break:break-word;line-height:1.25;">'+titre+'</div>'
           +(_scoreA?'<div style="position:relative;font-size:10px;font-weight:800;color:var(--t1);background:rgba(255,255,255,.10);display:inline-block;padding:1px 6px;border-radius:5px;margin:1px 0;max-width:100%;white-space:normal;word-break:break-word;">📊 '+_scoreA+'</div>':'')
           +'<div style="position:relative;font-size:10px;color:var(--t3);overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;word-break:break-word;line-height:1.3;">'+sous+'</div>'
+          /* ═══ LA NOTE S'AFFICHE ENFIN (09/09) ═══
+             Elle etait enregistree mais montree NULLE PART : ni ici, ni dans le
+             bilan, ni dans l'archive. Il fallait rouvrir la fenetre d'edition
+             pour la revoir, d'ou l'impression qu'elle disparaissait.
+             Antoine y met systematiquement le buteur ou le passeur : sur la
+             ligne, ca transforme ses paris joueurs en memoire consultable. */
+          +(function(){ var _n=(typeof g45NoteDe==='function')?g45NoteDe(h):'';
+             return _n ? ('<div style="position:relative;font-size:10px;color:var(--gold);font-style:italic;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;margin-top:2px;">\ud83d\udcdd '+_n.replace(/</g,'&lt;')+'</div>') : ''; })()
           +'</div>'
           +'<div style="position:relative;text-align:right;flex-shrink:0;">'
           +'<div style="font-size:11px;font-weight:800;color:'+winC+';">'+(h.isPending?'⏳':(h.win?'✅':'❌'))+'</div>'
@@ -14473,7 +14489,7 @@ function editBet(id){
   $i('edit-bk').value=h.b||'';
   $i('edit-date').value=h.date||'';
   $i('edit-heure').value=h.heure||'';
-  $i('edit-notes').value=h.notes||'';
+  $i('edit-notes').value=g45NoteDe(h);
   /* Les trois options relues a l'ouverture (04/09) : sans ca, la fenetre les
      afficherait toujours decochees et le premier enregistrement les effacerait. */
   var _oc=function(id,v){ var e=$i(id); if(e) e.checked=!!v; };
@@ -14501,7 +14517,7 @@ function saveEditBet(){
   h.b=$i('edit-bk').value.trim();
   h.date=$i('edit-date').value;
   h.heure=$i('edit-heure').value;
-  h.notes=$i('edit-notes').value.trim();
+  g45NoteSet(h, $i('edit-notes').value);
   var _ck=function(id){ var e=$i(id); return !!(e&&e.checked); };
   h.isFreebet=_ck('edit-freebet'); h.isLay=_ck('edit-lay'); h.isFlash=_ck('edit-flash');
   h.domicile=$i('edit-domicile').value;
@@ -30123,6 +30139,151 @@ async function g45RcFavAI(raceId, stage){
 }
 window.g45RcFavAI=g45RcFavAI;
 /* Dispatcher : racecenter si la course en a un, sinon ancien parsing HTML */
+/* ═══════════════════ BIATHLON — IBU (09/09/2026) ═══════════════════
+   L'IBU expose une API JSON publique sur biathlonresults.com : pas de cle, pas
+   de quota. Sondee avant d'ecrire une ligne — endpoints, champs et formats
+   verifies sur une vraie course.
+     Seasons                      → saisons disponibles
+     Events?SeasonId&Level        → etapes (Level 1 = Coupe du monde)
+     Competitions?EventId         → courses d'une etape, avec leur RaceId
+     Results?RaceId               → resultats detailles
+     CupResults?CupId             → classements generaux
+   La saison s'ecrit en QUATRE chiffres : « 2627 » pour 2026-27, et elle bascule
+   a l'automne, pas en janvier.
+   CE QUI VAUT POUR PARIER, et qu'aucune autre source ne donne aussi proprement :
+   `Shootings` (« 0+2 0+0 », les fautes seance par seance) et `ShootingTotal`.
+   Un sprint se joue la, pas sur le temps de ski.
+   PASSAGE PAR LE WORKER : rien ne garantit que le site accepte les requetes
+   depuis gones45140.github.io. On emprunte donc `?host=ibu`, comme pour ASO et
+   tv-sports, avec repli en appel direct si le Worker ne connait pas encore cet
+   hote — l'ajout cote Worker est fourni a part. */
+var _g45BiaCache = {};
+async function _g45BiaJ(chemin){
+  if (_g45BiaCache[chemin] !== undefined) return _g45BiaCache[chemin];
+  var essais = [];
+  if (typeof FD_PROXY !== 'undefined' && FD_PROXY) essais.push(FD_PROXY + '?host=ibu&path=' + encodeURIComponent(chemin));
+  essais.push('https://biathlonresults.com' + chemin);
+  for (var i = 0; i < essais.length; i++) {
+    try {
+      var r = await fetch(essais[i]);
+      if (!r.ok) continue;
+      var j = await r.json();
+      if (j) { _g45BiaCache[chemin] = j; return j; }
+    } catch (e) {}
+  }
+  return null;
+}
+/* Saison IBU en cours : bascule a l'automne. En septembre 2026 on vise 2627. */
+function _g45BiaSaison(){
+  var d = new Date(), a = d.getFullYear(), m = d.getMonth() + 1;
+  var deb = (m >= 9) ? a : (a - 1);
+  return String(deb).slice(2) + String(deb + 1).slice(2);
+}
+function _g45BiaRetour(){
+  return '<button onclick="loadResultatsTab()" style="border:none;cursor:pointer;background:rgba(255,255,255,.06);border-radius:8px;color:var(--t2);padding:7px 12px;font-size:11px;font-weight:700;margin-bottom:10px;">\u2190 Sports</button>';
+}
+/* Les fautes, mises en couleur : le zero pointe est ce qu'on cherche. */
+function _g45BiaTir(t){
+  var txt = String(t || '').trim();
+  if (!txt) return '<span style="color:var(--t3);">\u2013</span>';
+  var tot = txt.split(/[\s+]+/).reduce(function(a, x){ return a + (parseInt(x, 10) || 0); }, 0);
+  var col = tot === 0 ? 'var(--g)' : (tot <= 2 ? 'var(--gold)' : 'var(--r)');
+  return '<span style="color:' + col + ';font-weight:800;">' + txt + '</span>';
+}
+async function g45BiaOpen(saison){
+  var el = document.getElementById('t-resultats'); if (!el) return;
+  var sa = saison || _g45BiaSaison();
+  el.innerHTML = _g45BiaRetour() + '<div style="color:var(--t3);font-size:11px;padding:16px;text-align:center;">\u23f3 Chargement de la saison\u2026</div>';
+  var evs = await _g45BiaJ('/modules/sportapi/api/Events?SeasonId=' + sa + '&Level=1');
+  /* Une saison qui n'a pas commence rend une liste vide : on recule d'un an
+     plutot que d'afficher un ecran mort — la Coupe du monde ne reprend qu'en
+     novembre, et entre avril et novembre il n'y a rien a montrer d'autre. */
+  if (!Array.isArray(evs) || !evs.length) {
+    var pre = String(parseInt(sa.slice(0, 2), 10) - 1) + sa.slice(0, 2);
+    var evs2 = await _g45BiaJ('/modules/sportapi/api/Events?SeasonId=' + pre + '&Level=1');
+    if (Array.isArray(evs2) && evs2.length) { evs = evs2; sa = pre; }
+  }
+  if (!Array.isArray(evs) || !evs.length) {
+    el.innerHTML = _g45BiaRetour() + '<div style="color:#ff6b6b;font-size:11px;padding:14px;text-align:center;">Biathlon indisponible pour le moment.</div>';
+    return;
+  }
+  var an = '20' + sa.slice(0, 2) + '-' + sa.slice(2);
+  var h = _g45BiaRetour()
+    + '<div class="sec" style="margin-top:0;">\ud83c\udfbf Biathlon \u00b7 Coupe du monde ' + an + '</div>'
+    + '<div style="font-size:11px;color:var(--t3);margin-bottom:10px;">Choisis une \u00e9tape, puis une course. Les fautes au tir sont d\u00e9taill\u00e9es s\u00e9ance par s\u00e9ance.</div>'
+    + '<div style="display:flex;flex-direction:column;gap:6px;">';
+  evs.slice().reverse().forEach(function(e){
+    var d1 = String(e.StartDate || '').slice(0, 10).split('-').reverse().slice(0, 2).join('/');
+    h += '<button onclick="g45BiaEtape(\'' + e.EventId + '\')" style="text-align:left;border:none;cursor:pointer;background:rgba(255,255,255,.05);border-radius:10px;padding:11px 13px;color:#e6ecf5;display:flex;justify-content:space-between;align-items:center;gap:8px;">'
+      + '<span style="font-weight:700;font-size:12.5px;">' + (e.ShortDescription || e.Description || '?') + '</span>'
+      + '<span style="font-size:10px;color:var(--t3);">' + (e.Nat || '') + ' \u00b7 ' + d1 + '</span></button>';
+  });
+  el.innerHTML = h + '</div>';
+}
+async function g45BiaEtape(eventId){
+  var el = document.getElementById('t-resultats'); if (!el) return;
+  el.innerHTML = _g45BiaRetour() + '<div style="color:var(--t3);font-size:11px;padding:16px;text-align:center;">\u23f3 Chargement des courses\u2026</div>';
+  var cs = await _g45BiaJ('/modules/sportapi/api/Competitions?EventId=' + eventId);
+  var back = '<button onclick="g45BiaOpen()" style="border:none;cursor:pointer;background:rgba(255,255,255,.06);border-radius:8px;color:var(--t2);padding:7px 12px;font-size:11px;font-weight:700;margin-bottom:10px;">\u2190 \u00c9tapes</button>';
+  if (!Array.isArray(cs) || !cs.length) {
+    el.innerHTML = back + '<div style="color:var(--t3);font-size:11px;padding:14px;text-align:center;">Aucune course pour cette \u00e9tape.</div>';
+    return;
+  }
+  var h = back + '<div class="sec" style="margin-top:0;">\ud83c\udfbf Courses</div><div style="display:flex;flex-direction:column;gap:6px;">';
+  cs.forEach(function(c){
+    var quand = String(c.StartTime || '').slice(0, 10).split('-').reverse().slice(0, 2).join('/');
+    var fini = (c.StatusId === 11) || /final/i.test(String(c.StatusText || ''));
+    h += '<button onclick="g45BiaCourse(\'' + c.RaceId + '\')" style="text-align:left;border:none;cursor:pointer;background:rgba(255,255,255,.05);border-radius:10px;padding:11px 13px;color:#e6ecf5;display:flex;justify-content:space-between;align-items:center;gap:8px;">'
+      + '<span style="font-weight:700;font-size:12.5px;">' + (c.Description || c.ShortDescription || '?') + '</span>'
+      + '<span style="font-size:10px;color:' + (fini ? 'var(--g)' : 'var(--t3)') + ';">' + (fini ? 'termin\u00e9e' : quand) + '</span></button>';
+  });
+  el.innerHTML = h + '</div>';
+}
+async function g45BiaCourse(raceId){
+  var el = document.getElementById('t-resultats'); if (!el) return;
+  el.innerHTML = _g45BiaRetour() + '<div style="color:var(--t3);font-size:11px;padding:16px;text-align:center;">\u23f3 Chargement des r\u00e9sultats\u2026</div>';
+  var j = await _g45BiaJ('/modules/sportapi/api/Results?RaceId=' + raceId);
+  var evId = String(raceId).slice(0, 14);
+  var back = '<button onclick="g45BiaEtape(\'' + evId + '\')" style="border:none;cursor:pointer;background:rgba(255,255,255,.06);border-radius:8px;color:var(--t2);padding:7px 12px;font-size:11px;font-weight:700;margin-bottom:10px;">\u2190 Courses</button>';
+  var res = (j && j.Results) || [];
+  if (!res.length) {
+    el.innerHTML = back + '<div style="color:var(--t3);font-size:11px;padding:14px;text-align:center;">R\u00e9sultats pas encore publi\u00e9s.</div>';
+    return;
+  }
+  var comp = (j && j.Competition) || {};
+  /* Sur un relais, chaque relayeur a sa ligne EN PLUS de celle de l'equipe :
+     on ne garde que les equipes, sinon la liste triple de longueur et le
+     classement devient illisible. */
+  var relais = res.some(function(r){ return r.IsTeam; });
+  var lignes = relais ? res.filter(function(r){ return r.IsTeam; }) : res;
+  var h = back
+    + '<div class="sec" style="margin-top:0;">' + (comp.Description || 'R\u00e9sultats') + '</div>'
+    + '<div style="font-size:11px;color:var(--t3);margin-bottom:10px;">'
+      + ((j.SportEvt && (j.SportEvt.ShortDescription || j.SportEvt.Description)) || '')
+      + (comp.Location ? (' \u00b7 ' + comp.Location) : '') + '</div>'
+    + '<div style="display:flex;flex-direction:column;gap:3px;">';
+  lignes.forEach(function(r, i){
+    var irm = r.IRM ? String(r.IRM) : '';
+    var rang = irm || (r.Rank || '');
+    var podium = (rang === '1' || rang === '2' || rang === '3');
+    var col = rang === '1' ? '#f5c542' : (rang === '2' ? '#c7cdd8' : (rang === '3' ? '#cd7f32' : 'var(--t3)'));
+    h += '<div style="display:grid;grid-template-columns:30px 1fr auto auto;gap:8px;align-items:center;padding:7px 9px;border-radius:6px;background:rgba(255,255,255,' + (i % 2 ? '.02' : '.045') + ');">'
+      + '<span style="font-size:11px;font-weight:800;color:' + col + ';">' + (rang || '\u2013') + '</span>'
+      + '<span style="font-size:12px;font-weight:' + (podium ? '800' : '600') + ';color:var(--t1);overflow:hidden;white-space:nowrap;text-overflow:ellipsis;">'
+        + (r.ShortName || r.Name || '?')
+        + '<span style="color:var(--t3);font-weight:400;font-size:10px;"> \u00b7 ' + (r.Nat || '') + '</span></span>'
+      + '<span style="font-size:11px;">' + _g45BiaTir(r.Shootings || r.ShootingTotal) + '</span>'
+      + '<span style="font-size:11px;font-weight:700;color:var(--t2);min-width:64px;text-align:right;">' + (r.Result || r.TotalTime || '') + '</span>'
+      + '</div>';
+  });
+  h += '</div><div style="font-size:9px;color:var(--t3);margin-top:8px;line-height:1.5;">'
+    + 'Tir : fautes par s\u00e9ance \u00b7 vert = sans faute, or = 1 ou 2, rouge au-del\u00e0.'
+    + (relais ? '<br>Relais : seules les \u00e9quipes sont list\u00e9es.' : '')
+    + '<br>Source : IBU (biathlonresults.com)</div>';
+  el.innerHTML = h;
+}
+window.g45BiaOpen = g45BiaOpen; window.g45BiaEtape = g45BiaEtape; window.g45BiaCourse = g45BiaCourse;
+
 async function g45CyclingOpen(raceId){
   var race=_g45RcRace(raceId);
   if(race&&race.rc) return g45RcOpen(race.id, 0);
@@ -31174,7 +31335,7 @@ function openBetEdit(id){
     +fld('Compétition','<input id="be-comp" value="'+esc(b.comp)+'" style="'+ins+'">')
     +fld('Bookmaker','<select id="be-b" style="'+ins+'">'+books.map(function(k){return '<option value="'+k+'"'+(b.b===k?' selected':'')+'>'+bki(k).n+'</option>';}).join('')+'</select>')
     +fld('Résultat',resSel)
-    +fld('📝 Note','<textarea id="be-note" rows="4" placeholder="Tes notes sur ce pari…" style="'+ins+'resize:vertical;font-family:inherit;line-height:1.4;">'+((b.note==null?'':(''+b.note)).replace(/</g,'&lt;'))+'</textarea>')
+    +fld('📝 Note','<textarea id="be-note" rows="4" placeholder="Tes notes sur ce pari…" style="'+ins+'resize:vertical;font-family:inherit;line-height:1.4;">'+(g45NoteDe(b).replace(/</g,'&lt;'))+'</textarea>')
     +'<div style="display:flex;gap:8px;margin-top:6px;"><button onclick="saveBetEdit(\''+id+'\')" style="flex:2;background:#4d84ff;border:none;border-radius:10px;padding:12px;color:#fff;font-size:14px;font-weight:800;cursor:pointer;">💾 Enregistrer</button><button onclick="if(confirm(\'Supprimer ce pari ?\')){var o=document.getElementById(\'bet-edit-ov\');if(o)o.remove();deleteArchived(\''+id+'\');}" style="flex:1;background:rgba(255,69,69,.15);border:none;border-radius:10px;padding:12px;color:#ff6b6b;font-size:13px;font-weight:700;cursor:pointer;">🗑</button></div>'
     +'</div>';
   document.body.appendChild(ov);
@@ -31182,6 +31343,30 @@ function openBetEdit(id){
   setTimeout(_g45FixNumberInputs,50);
 }
 window.openBetEdit=openBetEdit;
+/* ═══ UN SEUL CHAMP DE NOTE (09/09) ═══
+   L'app a DEUX fenetres d'edition d'un pari : celle construite en JavaScript
+   (`be-note`) ecrivait dans `note`, celle du formulaire de l'onglet Pari
+   (`edit-notes`) dans `notes`. Chacune ne voyait que son propre champ — Antoine
+   tapait le buteur dans l'une et retrouvait la case vide dans l'autre, d'ou
+   l'impression que rien ne s'enregistrait.
+   `note` (singulier) devient LE champ. Ces deux lecteurs acceptent les deux
+   ecritures, donc les notes deja saisies sous `notes` sont reprises telles
+   quelles, sans migration ni perte. A l'ecriture, `notes` est supprime pour ne
+   pas laisser deux verites dans l'objet. */
+function g45NoteDe(b){
+  if (!b) return '';
+  var n = (b.note != null && String(b.note).trim()) ? String(b.note) : '';
+  if (!n && b.notes != null && String(b.notes).trim()) n = String(b.notes);
+  return n;
+}
+function g45NoteSet(b, v){
+  if (!b) return;
+  var t = String(v == null ? '' : v).trim();
+  if (t) b.note = t; else delete b.note;
+  delete b.notes;   /* l'ancien champ ne doit plus jamais etre relu */
+}
+window.g45NoteDe = g45NoteDe;
+
 function saveBetEdit(id){
   var f=_betFind(id); if(!f) return;
   var b=f.bet;
@@ -31200,7 +31385,7 @@ function saveBetEdit(id){
   b.cote=parseFloat((v('be-cote')+'').replace(',','.'))||b.cote;
   b.m=parseFloat((v('be-m')+'').replace(',','.'))||b.m;
   b.comp=v('be-comp').trim();
-  b.note=v('be-note');
+  g45NoteSet(b, v('be-note'));
   b.b=v('be-b')||b.b;
   var nowPending=(res==='p'), win=(res==='w');
   // 3) transitions état + bankroll
@@ -37682,7 +37867,8 @@ async function loadCompetTab() {
       ['g45F1Open()', '\ud83c\udfce', 'F1'],
       ['g45MmaOpen(0)', '\ud83e\udd4a', 'MMA / UFC'],
       ['g45MotoOpen()', '\ud83c\udfcd', 'MotoGP'],
-      ["g45CyclingOpen('tdf')", '\ud83d\udeb4', 'Cyclisme']
+      ["g45CyclingOpen('tdf')", '\ud83d\udeb4', 'Cyclisme'],
+      ['g45BiaOpen()', '\ud83c\udfbf', 'Biathlon']
     ].map(function (x) {
       return '<button onclick="g45CompetVersResultats(function(){ ' + x[0] + ' });" style="border:none;cursor:pointer;background:rgba(255,255,255,.05);border-radius:12px;padding:16px 8px;display:flex;flex-direction:column;align-items:center;gap:7px;color:#e6ecf5;">'
         + '<span style="font-size:26px;">' + x[1] + '</span>'
