@@ -22468,22 +22468,27 @@ function renderSaisonsChart(el, results, nom) {
            colonne des scores reste parfaitement alignee d'une ligne a l'autre —
            ce qui se serait perdu en centrant un bloc unique sur le contenu.
            Meme logique que le voile ajuste au contenu des cartes du mur. */
-        var _vl = isOurHome ? 'rgba(16,21,38,.80)' : 'rgba(16,21,38,.72)';
-        html += '<div onclick="toggleSaisonMatchDetail(this)" data-eid="'+(m.espnId||'')+'" data-lg="'+((m.competition&&m.competition.code)||'')+'" style="display:grid;grid-template-columns:32px 1fr auto 1fr 36px;gap:6px;align-items:center;padding:2px 0;cursor:pointer;" onmouseover="this.style.opacity=\'0.8\'" onmouseout="this.style.opacity=\'1\'">';
-        // Date
-        html += '<div style="font-size:9px;color:var(--t3);text-align:center;background:'+_vl+';border-radius:6px;border-left:3px solid '+barColor+';padding:4px 3px;">'+dateStr+'</div>';
-        // Equipe dom
-        html += '<div style="text-align:right;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;">'
-          +'<span style="display:inline-block;max-width:100%;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;vertical-align:middle;'
-          +'background:'+_vl+';border-radius:6px;padding:4px 8px;font-size:10px;font-weight:'+(isOurHome?'800':'400')+';color:'+(isOurHome?'var(--t1)':'var(--t2)')+';">'
-          +(isOurHome?_scMark:'')+homeName+'</span></div>';
-        // Score
-        html += '<div style="font-size:11px;font-weight:800;color:'+rc+';text-align:center;min-width:40px;background:'+_vl+';border-radius:6px;padding:4px 6px;">'+hg+' - '+ag+'</div>';
-        // Equipe ext
-        html += '<div style="overflow:hidden;white-space:nowrap;text-overflow:ellipsis;">'
-          +'<span style="display:inline-block;max-width:100%;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;vertical-align:middle;'
-          +'background:'+_vl+';border-radius:6px;padding:4px 8px;font-size:10px;font-weight:'+(!isOurHome?'800':'400')+';color:'+(!isOurHome?'var(--t1)':'var(--t2)')+';">'
-          +(!isOurHome?_scMark:'')+awayName+'</span></div>';
+        /* ═══ LIGNE DE MATCH SUR DEUX NIVEAUX (09/09) ═══
+           Avant : une seule ligne de cinq colonnes. Deux defauts releves par
+           Antoine. Les pastilles epousaient leur texte, donc rien n'etait
+           aligne d'une ligne a l'autre — les scores « dansaient ». Et sur
+           telephone, cinq colonnes dans 380 px reduisaient les noms a « Min… »,
+           « Lo… », illisibles.
+           Desormais : date et competition en haut a gauche, marches valides en
+           haut a droite, le match en dessous sur toute la largeur. Les noms
+           recuperent la place des colonnes laterales, et chaque pastille
+           REMPLIT sa colonne au lieu d'epouser son texte — d'ou un alignement
+           parfait, score compris. Meme structure sur PC et sur telephone.
+           L'equipe suivie est en OR des deux cotes : l'ancien code mettait en
+           gras l'equipe A DOMICILE, donc Toulouse ressortait sur un
+           Toulouse-Lyon. L'adversaire est en blanc gras. Scores et pastilles
+           gardent leurs couleurs, en gras. */
+        var _vl = 'rgba(16,21,38,.82)';
+        var _nomCell = function(txt, mien, droite){
+          return '<div style="background:'+_vl+';border-radius:6px;padding:5px 9px;font-size:11.5px;font-weight:800;'
+            +'color:'+(mien?'#f5c542':'var(--t1)')+';text-align:'+(droite?'right':'left')+';'
+            +'overflow:hidden;white-space:nowrap;text-overflow:ellipsis;">'+txt+'</div>';
+        };
         // Over/BTS
         var badges = '';
         var qs = window._quickStats || ['O2.5','BTS'];
@@ -22504,15 +22509,29 @@ function renderSaisonsChart(el, results, nom) {
           '1N':'#7ee787','N2':'#ffa198'
         };
         qs.forEach(function(k){
-          if(MATCH_CHECKS[k]) badges += '<span style="color:'+BADGE_COLORS[k]+';">'+k+'</span> ';
+          if(MATCH_CHECKS[k]) badges += '<span style="color:'+BADGE_COLORS[k]+';margin-left:7px;">'+k+'</span>';
         });
         /* Pastille de cote : la cote d'avant-match de NOTRE equipe, saisie dans
            le panneau Cotes. Affichee comme les autres indicateurs, en gris pour
            ne pas concurrencer les O2.5/BTS qui, eux, sont des resultats. */
         var _coteMatch = (typeof _g45CoteDuMatch === 'function')
           ? _g45CoteDuMatch(m.espnId, isDom) : null;
-        if (_coteMatch) badges += '<span style="color:#9fb0c7;">@' + _coteMatch.toFixed(2) + '</span> ';
-        html += '<div style="font-size:8px;text-align:right;min-width:40px;background:'+_vl+';border-radius:6px;padding:3px 4px;">'+compIco+'<br>'+badges+'</div>';
+        if (_coteMatch) badges += '<span style="color:#9fb0c7;margin-left:7px;">@' + _coteMatch.toFixed(2) + '</span>';
+        html += '<div onclick="toggleSaisonMatchDetail(this)" data-eid="'+(m.espnId||'')+'" data-lg="'+((m.competition&&m.competition.code)||'')+'" style="border-left:3px solid '+barColor+';border-radius:0 8px 8px 0;background:rgba(16,21,38,.42);padding:6px 9px;margin-bottom:6px;cursor:pointer;" onmouseover="this.style.opacity=\'0.8\'" onmouseout="this.style.opacity=\'1\'">';
+        /* Ligne du haut : date, competition, marches valides. La place gagnee
+           permet d'ecrire la COMPETITION, que rien ne distinguait jusqu'ici —
+           un resultat de Ligue Europa ne se lit pas comme un resultat de
+           championnat. */
+        html += '<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:5px;">'
+          +'<span style="font-size:10px;font-weight:800;color:#c2cee6;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">'+dateStr+' <span style="color:var(--t3);font-weight:400;">'+compIco+'</span></span>'
+          +'<span style="font-size:9px;font-weight:800;white-space:nowrap;">'+badges+'</span>'
+        +'</div>';
+        /* Ligne du bas : le match. Score a largeur fixe, donc aligne partout. */
+        html += '<div style="display:grid;grid-template-columns:1fr 68px 1fr;gap:6px;align-items:center;">'
+          +_nomCell((isOurHome?_scMark:'')+homeName, isOurHome, true)
+          +'<div style="font-size:12px;font-weight:800;color:'+rc+';text-align:center;background:'+_vl+';border-radius:6px;padding:5px 3px;">'+hg+' - '+ag+'</div>'
+          +_nomCell((!isOurHome?_scMark:'')+awayName, !isOurHome, false)
+        +'</div>';
         html += '</div>';
         html += '<div class="smd-panel" style="display:none;"></div>';
       });
@@ -38818,7 +38837,7 @@ async function _g45SaisonsGen(el, nom, perso) {
     return await _g45SaisonsGen(el, nom, perso);
   }
 
-  _g45SgCtx = { sp: sp, lg: lg };   /* lu par _g45SgMatch au clic */
+  _g45SgCtx = { sp: sp, lg: lg, id: (perso && perso.id) || '' };   /* lu par _g45SgMatch au clic, et pour le blason de fond */
   var pct = function (a, b) { return b ? Math.round(a / b * 100) : 0; };
 
   var chips = '<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px;">'
@@ -38998,6 +39017,19 @@ async function _g45SaisonsGen(el, nom, perso) {
   var combPc = pct(combN, nF);
   var combCol = combPc >= 60 ? '#1ed760' : (combPc >= 40 ? '#f0b020' : '#ff7b54');
 
+  /* ═══ MEME FOND QU'EN FOOTBALL (09/09) ═══
+     Le blason vient du CDN ESPN, construit sur le sport et l'identifiant que ce
+     panneau connait deja — donc il marche pour toute equipe, du mur ou non.
+     Si l'image manque, `g45FondClubHtml` ne pose que le degrade : jamais de trou. */
+  var _crestG = '';
+  try {
+    if (_g45SgCtx && _g45SgCtx.sp && _g45SgCtx.id) {
+      _crestG = 'https://a.espncdn.com/i/teamlogos/' + _g45SgCtx.sp + '/500/' + _g45SgCtx.id + '.png';
+    }
+  } catch (e) {}
+  html += '<div style="position:relative;border-radius:10px;padding:8px 10px 10px;overflow:hidden;margin-top:6px;">';
+  if (typeof g45FondClubHtml === 'function') html += g45FondClubHtml(_g45SgNomCourant || '', 0.2, _crestG);
+  html += '<div style="position:relative;z-index:1;">';
   html += '<div style="display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;margin-bottom:6px;">'
     + '<div style="font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#4f5d88;">R\u00e9sultats (' + nF + ' matchs)</div>'
     + '<div style="font-size:11px;font-weight:800;color:' + combCol + ';background:' + combCol + '1a;border:1px solid ' + combCol + '55;border-radius:12px;padding:3px 10px;">'
@@ -39017,17 +39049,44 @@ async function _g45SaisonsGen(el, nom, perso) {
        du resultat : c'est leur role.
        Aucun marche coche : rien a verifier, on retombe sur le resultat. */
     var barre = coches.length ? ((passes.length === coches.length) ? '#1ed760' : '#ff4545') : col;
+    /* ═══ MEME LIGNE QUE LE FOOTBALL (09/09) ═══
+       Le football et les sports US affichaient la meme information de deux
+       facons differentes, sans raison — pastilles et score au milieu d'un cote,
+       ligne plate de l'autre (releve par Antoine, captures a l'appui).
+       Ce panneau sert le hockey, le baseball, le basket, le rugby et le NRL :
+       une seule conversion aligne les cinq.
+       Deux differences avec le football, imposees par les donnees : ce panneau
+       ne connait que NOTRE equipe et son adversaire, pas la paire domicile /
+       exterieur nommee ; l'icone 🏠/🚌 porte donc l'information du lieu. Et le
+       nom de notre equipe n'est pas dans `m`, il vient de `nomEquipe`. */
+    var _vlG = 'rgba(16,21,38,.82)';
+    var _cellG = function (txt, mien, droite) {
+      return '<div style="background:' + _vlG + ';border-radius:6px;padding:5px 9px;font-size:11.5px;font-weight:800;'
+        + 'color:' + (mien ? '#f5c542' : 'var(--t1)') + ';text-align:' + (droite ? 'right' : 'left') + ';'
+        + 'overflow:hidden;white-space:nowrap;text-overflow:ellipsis;">' + txt + '</div>';
+    };
+    var _advG = (noms[m.advId] || m.adv || '?')
+      + (m.po ? ' <span style="font-size:8px;font-weight:800;color:#f0b020;border:1px solid rgba(240,176,32,.4);border-radius:6px;padding:0 4px;">PO</span>' : '');
+    var _moiG = _g45SgNomCourant || 'Mon équipe';
+    var _dG = String(d.getDate()).padStart(2, '0') + '/' + String(d.getMonth() + 1).padStart(2, '0');
     html += '<div ' + (m.id ? 'onclick="_g45SgMatch(\'' + m.id + '\')" ' : '')
-      + 'style="display:flex;align-items:center;gap:8px;padding:7px 2px;border-left:3px solid ' + barre + ';padding-left:8px;margin-bottom:3px;background:rgba(255,255,255,.02);border-radius:0 6px 6px 0;font-size:11.5px;' + (m.id ? 'cursor:pointer;' : '') + '">'
-      + '<div style="width:38px;color:var(--t3);font-size:10px;">' + String(d.getDate()).padStart(2, '0') + '/' + String(d.getMonth() + 1).padStart(2, '0') + '</div>'
-      + '<div style="width:16px;font-size:10px;">' + (m.dom ? '\ud83c\udfe0' : '\ud83d\ude8c') + '</div>'
-      + '<div style="flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">' + (noms[m.advId] || m.adv || '?')
-      + (m.po ? ' <span style="font-size:8px;font-weight:800;color:#f0b020;border:1px solid rgba(240,176,32,.4);border-radius:6px;padding:0 4px;">PO</span>' : '') + '</div>'
-      + '<div style="font-size:9px;color:#7aaaff;white-space:nowrap;">' + passes.join(' ') + '</div>'
-      + '<div style="width:52px;text-align:right;font-weight:700;">' + m.pour + '-' + m.contre + '</div>'
-      + '<div style="width:16px;text-align:right;font-weight:800;color:' + col + ';">' + m.res + '</div></div>';
+      + 'style="border-left:3px solid ' + barre + ';border-radius:0 8px 8px 0;background:rgba(16,21,38,.42);padding:6px 9px;margin-bottom:6px;' + (m.id ? 'cursor:pointer;' : '') + '">'
+      + '<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:5px;">'
+        + '<span style="font-size:10px;font-weight:800;color:#c2cee6;white-space:nowrap;">' + _dG
+        + ' <span style="font-weight:400;">' + (m.dom ? '\ud83c\udfe0' : '\ud83d\ude8c') + '</span></span>'
+        + '<span style="font-size:9px;font-weight:800;color:#7aaaff;white-space:nowrap;">' + passes.join(' ') + '</span>'
+      + '</div>'
+      /* Notre equipe est ecrite a gauche quand elle recoit, a droite sinon :
+         le score se lit alors dans le sens du match. */
+      + '<div style="display:grid;grid-template-columns:1fr 68px 1fr;gap:6px;align-items:center;">'
+        + _cellG(m.dom ? _moiG : _advG, !!m.dom, true)
+        + '<div style="font-size:12px;font-weight:800;color:' + col + ';text-align:center;background:' + _vlG + ';border-radius:6px;padding:5px 3px;">'
+          + (m.dom ? (m.pour + ' - ' + m.contre) : (m.contre + ' - ' + m.pour)) + '</div>'
+        + _cellG(m.dom ? _advG : _moiG, !m.dom, false)
+      + '</div></div>';
   });
 
+  html += '</div></div>';        /* ferme le voile puis l'enveloppe au blason */
   html += '</div></div>';
   el.innerHTML = html;
 }
@@ -42141,6 +42200,24 @@ async function g45DirectMesEquipes(silencieux) {
       js = await r.json();
     } catch (e) { continue; }
 
+    /* ═══ RETROUVER LA VRAIE COMPETITION (09/09) ═══
+       Avec le slug `all`, la reponse porte un tableau `leagues` decrivant TOUTES
+       les competitions du jour. On l'indexe par identifiant, car un evenement ne
+       nomme pas toujours la sienne : il la designe seulement dans son `uid`, de
+       la forme « s:600~l:2310~e:... ». Sans cette table, une affiche de Ligue des
+       Champions ressortait etiquetee « esp.1 » ou « eng.1 » — le championnat de
+       l'equipe suivie (releve par Antoine sur Barcelone-Feyenoord). */
+    var lgParId = {};
+    ((js && js.leagues) || []).forEach(function (L) {
+      if (!L) return;
+      var idL = String(L.id || '');
+      if (idL) lgParId[idL] = { nom: L.name || L.shortName || '', slug: L.slug || L.abbreviation || '' };
+    });
+    var lgDuUid = function (uid) {
+      var m = String(uid || '').match(/~l:(\d+)/);
+      return (m && lgParId[m[1]]) || null;
+    };
+
     ((js && js.events) || []).forEach(function (e) {
       var cp = (e.competitions && e.competitions[0]) || {};
       var cps = cp.competitors || [];
@@ -42172,10 +42249,13 @@ async function g45DirectMesEquipes(silencieux) {
       var lg2 = function (x) { return (x.team && (x.team.logo || (x.team.logos && x.team.logos[0] && x.team.logos[0].href))) || ''; };
       /* Avec le slug `all`, le championnat reel est porte par l'EVENEMENT.
          Sans ca, toutes les cartes de football afficheraient « all ». */
+      var lgUid = lgDuUid(e.uid) || lgDuUid(cp.uid);
       var lgReel = (e.league && (e.league.slug || e.league.abbreviation))
                 || (cp.league && (cp.league.slug || cp.league.abbreviation))
+                || (lgUid && lgUid.slug)
                 || g.lg;
       var lgNom = (e.league && e.league.name) || (cp.league && cp.league.name)
+                || (lgUid && lgUid.nom)
                 || (cp.notes && cp.notes[0] && cp.notes[0].headline) || '';
       /* Avec le slug generique, `lgReel` vaut litteralement « all » : l'afficher
          n'apprend rien. Sans nom de competition, on prefere ne RIEN ecrire. */
@@ -42384,8 +42464,12 @@ async function g45DirectMesEquipes(silencieux) {
           };
           var p = [];
 
-          var comp = m.lgNom || '';
-          p.push(pastille((SPORT_ICO[m.sp] || '') + ' ' + (comp || m.lgTv || m.sp), 'rgba(255,255,255,.80)'));
+          /* `lgTv` est le championnat de l'EQUIPE, garde pour deviner le
+             diffuseur. L'utiliser ici affichait « esp.1 » sur une affiche de
+             Ligue des Champions : mieux vaut le sport seul qu'une competition
+             fausse. */
+          var comp = m.lgNom || ((m.lg && m.lg !== 'all') ? m.lg : '');
+          p.push(pastille((SPORT_ICO[m.sp] || '') + ' ' + (comp || m.sp), 'rgba(255,255,255,.80)'));
 
           var dd = new Date(m.date);
           if (!isNaN(dd)) {
@@ -44895,7 +44979,9 @@ window.g45CouleursDe = g45CouleursDe;
    les tuiles au lieu de les coller, et `auto 46px` cale sur la hauteur pour ne
    deformer aucun logo, carre ou non.
    Sans blason connu, on renvoie le degrade seul : jamais de trou visuel. */
-var _G45_FOND_TUILE = 46;      /* hauteur d'une tuile, en px */
+/* 46 px : un blason couvrait une ligne entiere sur telephone et passait devant
+   les noms (capture d'Antoine du 09/09). La tuile suit desormais l'ecran. */
+var _G45_FOND_TUILE = (typeof window !== 'undefined' && window.innerWidth < 700) ? 84 : 110;
 var _G45_FOND_MOSAIQUE = 0.26; /* opacite du blason ; baisser vers 0.14 pour plus discret */
 function g45FondClubHtml(nom, opac, blason) {
   var c = g45CouleursDe(nom);
