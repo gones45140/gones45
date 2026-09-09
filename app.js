@@ -2157,9 +2157,8 @@ async function g45SondeMomentum(){
     ['espnweb  gamepackage', 'espnweb', '/apis/site/v2/sports/soccer/' + lg + '/summary?event=' + eid],
     ['espn     summary',     'espn',    '/apis/site/v2/sports/soccer/' + lg + '/summary?event=' + eid],
     ['core     competition', 'core',    '/v2/sports/soccer/leagues/' + lg + '/events/' + eid + '/competitions/' + eid],
-    ['core     probabilities','core',   '/v2/sports/soccer/leagues/' + lg + '/events/' + eid + '/competitions/' + eid + '/probabilities?limit=5'],
-    ['core     powerindex',  'core',    '/v2/sports/soccer/leagues/' + lg + '/events/' + eid + '/competitions/' + eid + '/powerindex'],
-    ['core     predictor',   'core',    '/v2/sports/soccer/leagues/' + lg + '/events/' + eid + '/competitions/' + eid + '/predictor']
+    /* probabilities, powerindex et predictor : 400 sur les trois, retires. */
+    ['core     plays',       'core',    '/v2/sports/soccer/leagues/' + lg + '/events/' + eid + '/competitions/' + eid + '/plays?limit=2']
   ];
   var lignes = [];
   for (var i = 0; i < essais.length; i++) {
@@ -2188,6 +2187,27 @@ async function g45SondeMomentum(){
         }
       });
       if (Array.isArray(j.items)) lignes.push('   items : ' + j.items.length + (j.items[0] ? (' \u00b7 1er = ' + Object.keys(j.items[0]).join(', ')) : ''));
+      /* ═══ ON SUIT LE LIEN `momentum` (09/09) ═══
+         La sonde precedente l'a trouve sur la competition, dans `sports.core`.
+         Chez ESPN, un `$ref` ne porte jamais la donnee : il faut aller la
+         chercher. On affiche donc la forme de la reponse et les deux premieres
+         entrees, de quoi savoir quoi lire avant d'ecrire une seule ligne de
+         rendu. */
+      if (j.momentum && j.momentum.$ref) {
+        try {
+          var rm = await fetch(String(j.momentum.$ref).replace(/^http:/, 'https:'));
+          var jm = await rm.json();
+          lignes.push('   \u2192 momentum : ' + rm.status + ' \u00b7 cl\u00e9s ' + Object.keys(jm).join(', '));
+          var arr = jm.items || jm.momentum || jm.events || [];
+          if (Array.isArray(arr) && arr.length) {
+            lignes.push('   \u2192 ' + arr.length + ' entr\u00e9es \u00b7 champs : ' + Object.keys(arr[0]).join(', '));
+            lignes.push('   \u2192 1re : ' + JSON.stringify(arr[0]).slice(0, 220));
+            lignes.push('   \u2192 2e  : ' + JSON.stringify(arr[1] || {}).slice(0, 220));
+          } else {
+            lignes.push('   \u2192 contenu : ' + JSON.stringify(jm).slice(0, 300));
+          }
+        } catch (xm) { lignes.push('   \u2192 momentum : \u00c9CHEC (' + String(xm && xm.message || xm).slice(0, 60) + ')'); }
+      }
       if (interessant.length) lignes.push('   \u2b50 PISTE : ' + interessant.join(', '));
     } catch (x2) { lignes.push(e[0] + ' \u2192 \u00c9CHEC'); }
   }
