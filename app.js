@@ -23969,7 +23969,15 @@ function _renderMatchPression(s, homeId, awayId, momEspn){
     });
     if (vus < MINI) return '';
 
-    var maxi = Math.max(1, Math.max.apply(null, bD.concat(bE)));
+    /* ═══ PLANCHER RETIRE (10/09) ═══
+       La hauteur est normalisee sur le maximum de la serie, avec un minimum de
+       1 herite du calcul maison, dont les valeurs vont de 1 a 10. Les valeurs
+       d'ESPN sont des PROBABILITES, autour de 0,05 : tout se retrouvait ecrase
+       a 5 % de la hauteur et le graphique paraissait plat (capture d'Antoine).
+       On normalise donc sur le vrai maximum, quel que soit son ordre de
+       grandeur, avec un garde-fou seulement si la serie est entierement nulle. */
+    var maxi = Math.max.apply(null, bD.concat(bE));
+    if (!(maxi > 0)) maxi = 1;
     var H = 46;
     /* En direct, on s'arrete a la minute atteinte : dessiner les tranches a
        venir donnerait un graphique aux trois quarts vide, comme si les deux
