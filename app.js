@@ -27082,7 +27082,7 @@ function _g45RenderSofaStats(st, match, hN, aN){
     if(!per||!per.groups) return '<div style="color:var(--t3);font-size:11px;padding:8px;">Pas de stats.</div>';
     var swap=_g45SofaNorm(match.homeTeam&&match.homeTeam.name)!==_g45SofaNorm(hN);
     var col='#ffb13d';
-    var out='<div class="fc" style="padding:14px;margin-top:8px;border:1px solid rgba(255,165,60,.25);"><div style="font-size:11px;font-weight:800;letter-spacing:.5px;color:#ffb13d;margin-bottom:4px;">📊 STATS AVANCÉES</div><div style="font-size:9px;color:var(--t3);margin-bottom:12px;">via Sofascore · '+(swap?aN:hN)+' (G) / '+(swap?hN:aN)+' (D)</div>';
+    var out='<div class="fc" style="padding:14px;margin-top:8px;border:1px solid rgba(255,165,60,.25);"><div style="font-size:11px;font-weight:800;letter-spacing:.5px;color:#ffb13d;margin-bottom:4px;">📊 STATS AVANCÉES</div><div style="font-size:9px;color:var(--t3);margin-bottom:12px;">via Sofascore · '+hN+' (dom.) / '+aN+' (ext.)</div>';
     // on remet hN à gauche / aN à droite quelle que soit l'orientation Sofascore
     per.groups.forEach(function(g){
       var items=(g.statisticsItems||[]).filter(function(it){ return it && (it.homeValue!=null||it.awayValue!=null); });
@@ -27093,7 +27093,12 @@ function _g45RenderSofaStats(st, match, hN, aN){
         var ln=swap?it.awayValue:it.homeValue, rn=swap?it.homeValue:it.awayValue;
         ln=(typeof ln==='number')?ln:(parseFloat(String(ln).replace(',','.'))||0);
         rn=(typeof rn==='number')?rn:(parseFloat(String(rn).replace(',','.'))||0);
-        var tot=ln+rn, lp=tot>0?Math.round(ln/tot*100):50, rp=100-lp;
+        /* ═══ 0 CONTRE 0 (10/09) ═══
+           Sans donnee, la barre partait a 50/50 et ressemblait a un match
+           serre : Antoine a vu « 0 cartons rouges partout » avec une barre a
+           moitie remplie. Une ligne vide doit rester VIDE. */
+        var tot=ln+rn, vide=(tot<=0);
+        var lp=vide?0:Math.round(ln/tot*100), rp=vide?0:(100-lp);
         var lab=_G45_SOFA_FRMAP[it.key]||(it.name&&_G45_SOFA_NAMEMAP[String(it.name).toLowerCase()])||it.name||it.key||'';
         out+='<div style="margin-bottom:9px;"><div style="display:flex;justify-content:space-between;align-items:center;font-size:11px;margin-bottom:3px;"><b style="color:var(--t1);min-width:46px;">'+(lv!=null?lv:ln)+'</b><span style="color:var(--t3);text-align:center;flex:1;padding:0 6px;">'+lab+'</span><b style="color:var(--t1);min-width:46px;text-align:right;">'+(rv!=null?rv:rn)+'</b></div><div style="display:flex;height:5px;border-radius:3px;overflow:hidden;background:rgba(255,255,255,.06);"><div style="width:'+lp+'%;background:'+col+';"></div><div style="width:'+rp+'%;background:var(--t3);opacity:.55;"></div></div></div>';
       });
@@ -31701,6 +31706,17 @@ function openBetEdit(id){
     +fld('Compétition','<input id="be-comp" value="'+esc(b.comp)+'" style="'+ins+'">')
     +fld('Bookmaker','<select id="be-b" style="'+ins+'">'+books.map(function(k){return '<option value="'+k+'"'+(b.b===k?' selected':'')+'>'+bki(k).n+'</option>';}).join('')+'</select>')
     +fld('Résultat',resSel)
+    /* ═══ FLASHBOOST, FREEBET ET LAY (10/09) ═══
+       Cette fenetre ne les proposait pas, l'autre si : un flashboost oublie a
+       la saisie ne pouvait plus etre coche depuis ici (cas d'Antoine sur
+       PSG-Slovan). Trois cases, memes champs que le formulaire de l'onglet
+       Pari — `isFlash`, `isFreebet`, `isLay` — donc les filtres du Bilan les
+       reconnaissent immediatement. */
+    +'<div style="display:flex;gap:14px;flex-wrap:wrap;margin:2px 0 10px;font-size:12px;color:var(--t2);">'
+      +'<label style="display:flex;align-items:center;gap:6px;cursor:pointer;"><input type="checkbox" id="be-flash"'+(b.isFlash?' checked':'')+' style="width:16px;height:16px;accent-color:#f0b020;"> \u26a1 Flashboost</label>'
+      +'<label style="display:flex;align-items:center;gap:6px;cursor:pointer;"><input type="checkbox" id="be-freebet"'+(b.isFreebet?' checked':'')+' style="width:16px;height:16px;accent-color:#1ed760;"> \ud83c\udf81 Freebet</label>'
+      +'<label style="display:flex;align-items:center;gap:6px;cursor:pointer;"><input type="checkbox" id="be-lay"'+(b.isLay?' checked':'')+' style="width:16px;height:16px;accent-color:#a78bfa;"> \ud83d\udd04 Lay</label>'
+    +'</div>'
     +fld('📝 Note','<textarea id="be-note" rows="4" placeholder="Tes notes sur ce pari…" style="'+ins+'resize:vertical;font-family:inherit;line-height:1.4;">'+(g45NoteDe(b).replace(/</g,'&lt;'))+'</textarea>')
     +'<div style="display:flex;gap:8px;margin-top:6px;"><button onclick="saveBetEdit(\''+id+'\')" style="flex:2;background:#4d84ff;border:none;border-radius:10px;padding:12px;color:#fff;font-size:14px;font-weight:800;cursor:pointer;">💾 Enregistrer</button><button onclick="if(confirm(\'Supprimer ce pari ?\')){var o=document.getElementById(\'bet-edit-ov\');if(o)o.remove();deleteArchived(\''+id+'\');}" style="flex:1;background:rgba(255,69,69,.15);border:none;border-radius:10px;padding:12px;color:#ff6b6b;font-size:13px;font-weight:700;cursor:pointer;">🗑</button></div>'
     +'</div>';
@@ -31752,6 +31768,8 @@ function saveBetEdit(id){
   b.m=parseFloat((v('be-m')+'').replace(',','.'))||b.m;
   b.comp=v('be-comp').trim();
   g45NoteSet(b, v('be-note'));
+  var _ck = function(id){ var e = document.getElementById(id); return !!(e && e.checked); };
+  b.isFlash = _ck('be-flash'); b.isFreebet = _ck('be-freebet'); b.isLay = _ck('be-lay');
   b.b=v('be-b')||b.b;
   var nowPending=(res==='p'), win=(res==='w');
   // 3) transitions état + bankroll
@@ -33268,7 +33286,16 @@ function _g45ScoreTexte(h) {
   } else if (h.target && h.target !== '-') {
     nomAdverse = String(h.target).trim();
   }
-  var ck = 'g45_score_' + h.id;
+  /* ═══ CLE VERSIONNEE (10/09) ═══
+     Le negatif « score introuvable » est garde 2 h par pari. Ceux ecrits AVANT
+     le correctif du jour — qui va desormais chercher les coupes d'Europe par le
+     slug `all` — bloquaient la nouvelle recherche : sur cinq paris du meme
+     Real Madrid - Inter, un seul affichait son score, celui resolu apres coup
+     (releve par Antoine).
+     On change la cle plutot que de purger : les anciennes entrees expirent
+     seules, et on ne relit plus un « pas trouve » obtenu avec l'ancien code.
+     Meme remede que pour le cache des tirs le 20/08. */
+  var ck = 'g45_score2_' + h.id;
   var raw = null;
   try { raw = localStorage.getItem(ck); } catch(e) {}
   if (raw) {
@@ -33493,6 +33520,50 @@ function _g45ScoreTexte(h) {
     return '';
   }
 
+  if (h.sport === '🏉') {
+    /* ═══ RUGBY A XV (10/09) ═══
+       Seul le NRL etait couvert ; le rugby a XV ne l'a jamais ete, donc aucun
+       pari Top 14 ou Coupe d'Europe n'affichait son score (demande d'Antoine).
+       Le calendrier par equipe rend parfois une 500 sur ce sport — deja
+       documente pour le NRL — donc on interroge le SCOREBOARD du jour, et sur
+       PLUSIEURS competitions puisque le pari ne dit pas laquelle : Top 14,
+       Champions Cup, Challenge Cup, Premiership, URC, Six Nations. On s'arrete
+       des qu'un match colle. */
+    (async function() {
+      var hs = null, as = null;
+      try {
+        var jour = betDay.replace(/-/g, '');
+        var nrm = function(x){ return String(x || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]/g, ''); };
+        var cibles = [nrm(nomEquipe), nrm(nomAdverse)].filter(function(x){ return x.length > 3; });
+        var ligues = ['270559', '271937', '272073', '270557', '267979', '242041', '270555'];
+        for (var li = 0; li < ligues.length && hs == null; li++) {
+          try {
+            var r = await fetch(FD_PROXY + '?host=espn&path=' + encodeURIComponent('/apis/site/v2/sports/rugby/' + ligues[li] + '/scoreboard?dates=' + jour));
+            if (!r.ok) continue;
+            var d = await r.json();
+            ((d && d.events) || []).forEach(function(e) {
+              if (hs != null) return;
+              var cp = (e.competitions && e.competitions[0]) || {};
+              var st = (cp.status && cp.status.type) || {};
+              if (!st.completed) return;
+              var cps = cp.competitors || [];
+              var noms = cps.map(function(c){ return nrm((c.team && (c.team.displayName || c.team.shortDisplayName || c.team.name)) || ''); });
+              var colle = function(c){ return noms.some(function(n){ return n && (n.indexOf(c) >= 0 || c.indexOf(n) >= 0); }); };
+              var ok = (cibles.length >= 2) ? cibles.every(colle) : cibles.some(colle);
+              if (!ok) return;
+              var dom = cps.filter(function(c){ return c.homeAway === 'home'; })[0] || cps[0] || {};
+              var ext = cps.filter(function(c){ return c.homeAway === 'away'; })[0] || cps[1] || {};
+              var a1 = parseInt(dom.score, 10), a2 = parseInt(ext.score, 10);
+              if (!isNaN(a1) && !isNaN(a2)) { hs = a1; as = a2; }
+            });
+          } catch (e2) {}
+        }
+      } catch (e) {}
+      finir(hs, as);
+    })();
+    return '';
+  }
+
   if (h.sport === '🏉🇦🇺') {
     /* NRL : ESPN rugby-league (league '3'), meme resolveur generique que
        g45BetTeams. Le calendrier par equipe renvoie parfois une 500 sur ce
@@ -33548,7 +33619,20 @@ function _g45ScoreTexte(h) {
         if (nomEquipe && nomAdverse) {
           var jour = betDay.replace(/-/g, '');
           var norm = function(s) { return String(s || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, ''); };
-          var n1 = norm(nomEquipe), n2 = norm(nomAdverse);
+          /* ═══ INITIALE COLLEE (10/09) ═══
+             Antoine ecrit « N.Osaka », ESPN dit « Naomi Osaka » : la recherche
+             par inclusion echouait sur le point, et aucun de ses paris tennis
+             n'affichait de score.
+             On compare donc sur le NOM DE FAMILLE — le dernier morceau apres un
+             point, un espace ou un tiret —, present des deux cotes quelle que
+             soit l'ecriture. « Fils » ou « Tiafoe », qui n'ont pas d'initiale,
+             passent par le meme chemin sans changement. */
+          var famille = function(s) {
+            var t = norm(s).replace(/[^a-z\s.\-']/g, ' ').trim();
+            var bouts = t.split(/[.\s]+/).filter(function(x){ return x.length > 1; });
+            return bouts.length ? bouts[bouts.length - 1] : t;
+          };
+          var n1 = famille(nomEquipe), n2 = famille(nomAdverse);
           var ligues = ['atp', 'wta'];
           for (var li = 0; li < ligues.length && !txt; li++) {
             var r = await fetch(FD_PROXY + '?host=espn&path=' + encodeURIComponent('/apis/site/v2/sports/tennis/' + ligues[li] + '/scoreboard?dates=' + jour));
@@ -35456,7 +35540,7 @@ var _G45_CACHE_PREFIXES=['g45rcP_','g45rcD_','g45rcY_','g45rc_','g45dcm_','g45dc
      explosait et des ecritures LEGITIMES echouaient en silence (le filtre par
      competition, qui restait bloque sur « Toutes »). Les cartes de tirs sont
      les plus lourdes : plusieurs Ko par match, gardees indefiniment. */
-  'g45butA2_','g45gl3_','g45gl2_','g45gl_','g45_tirs2_','g45_fanart2_','g45_fanart_','g45_img_perso_','g45_tv_prog','g45_mqnom_','g45_mqteam_','g45_mqfond_','g45trv4_','g45_catimg_','g45_catfmt2_','g45_catfmt_','g45nrlcal3_','g45nrlcal2_','g45_lglogo_','g45compet3_','g45compet2_','g45compet_','g45tmeta_','g45histo_','g45ld2_','g45ld_',
+  'g45butA2_','g45gl3_','g45gl2_','g45gl_','g45_tirs2_','g45_fanart2_','g45_fanart_','g45_img_perso_','g45_tv_prog','g45_mqnom_','g45_mqteam_','g45_mqfond_','g45trv4_','g45_catimg_','g45_catfmt2_','g45_catfmt_','g45nrlcal3_','g45nrlcal2_','g45_score2_','g45_score_','g45_lglogo_','g45compet3_','g45compet2_','g45compet_','g45tmeta_','g45histo_','g45ld2_','g45ld_',
   'g45nrlcal2_','g45core2_','g45core_','g45_fx_faits','g45_veille_','g45_compet_logos','g45_groq_modele','g45_gemini_modeles',
   /* MESURE DU 20/08 sur le stockage reel d'Antoine (5,1 Mo, sature) :
        fpl_bootstrap_cache ... 1951 Ko  <- a lui seul 38 % du total
