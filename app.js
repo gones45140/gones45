@@ -30207,7 +30207,7 @@ function _g45BiaCourseFr(txt){
   /* PIEGE : « Women's » CONTIENT « Men's ». Remplacer Men's d'abord donnait
      « WoHommes » — attrape par le test avant livraison. Toujours du plus long
      au plus court, comme pour « quarterfinals » qui contient « final ». */
-  t = t.replace(/Women's/gi, 'Dames').replace(/Men's/gi, 'Hommes')
+  t = t.replace(/Women'?s?\b/gi, 'Dames').replace(/Men'?s?\b/gi, 'Hommes')
        .replace(/Single Mixed Relay/gi, 'Relais mixte simple')
        .replace(/Mixed Relay/gi, 'Relais mixte')
        .replace(/\bRelay\b/gi, 'Relais').replace(/\bSprint\b/gi, 'Sprint')
@@ -30265,6 +30265,93 @@ function _g45BiaTir(t){
   var col = tot === 0 ? 'var(--g)' : (tot <= 2 ? 'var(--gold)' : 'var(--r)');
   return '<span style="color:' + col + ';font-weight:800;">' + txt + '</span>';
 }
+/* Fond du panneau, teinte aux couleurs du pays de l'etape. Les LIGNES gardent
+   leur propre fond sombre : sans ca, un classement colore derriere devient
+   illisible des la troisieme ligne. */
+function _g45BiaFondPanneau(code){
+  var k = _G45_BIA_PAYS[String(code || '').toUpperCase()];
+  if (!k) return 'linear-gradient(150deg,#1b2547 0%,#141a2e 55%,#101733 100%)';
+  return 'linear-gradient(150deg,' + k[0] + '4d 0%,rgba(20,26,46,.96) 45%,' + k[2] + '59 100%)';
+}
+/* La notation du tir n'etait expliquee nulle part — evident pour Antoine, pas
+   pour ceux a qui il partage l'app. Le nombre de seances et le cout d'une faute
+   changent selon la discipline : deux seances sur un sprint, quatre sur une
+   poursuite, une individuelle ou un depart groupe, et sur l'individuelle une
+   faute coute UNE MINUTE au lieu d'un tour de penalite. */
+function _g45BiaLegendeTir(desc){
+  var t = String(desc || '').toLowerCase();
+  var quatre = /pursuit|poursuite|mass start|depart group|individual|individuelle/.test(t);
+  var ordre = quatre
+    ? 'Quatre s\u00e9ances : couch\u00e9, couch\u00e9, debout, debout.'
+    : 'Deux s\u00e9ances : couch\u00e9 puis debout.';
+  var cout = /individual|individuelle/.test(t)
+    ? 'Sur l\'individuelle, chaque faute ajoute <b>une minute</b> au temps.'
+    : 'Chaque faute co\u00fbte un tour de p\u00e9nalit\u00e9 de 150 m, environ 23 s.';
+  return '<div style="background:rgba(255,255,255,.07);border-radius:8px;padding:8px 10px;font-size:9.5px;color:#dbe3f4;line-height:1.55;margin-bottom:10px;">'
+    + '<b style="color:#fff;">Tir : couch\u00e9 + debout</b> \u00b7 ' + ordre
+    + '<br><b>0+1</b> = z\u00e9ro faute couch\u00e9, une debout. ' + cout + '</div>';
+}
+/* ═══ FICHE ATHLETE (09/09) ═══
+   `AllResults?IBUId=` rend TOUTE la carriere d'un athlete : chaque course, son
+   rang et ses fautes. On en tire ce qui manque pour parier — le pourcentage de
+   reussite au tir, et surtout COUCHE et DEBOUT separement, parce que ce sont
+   deux exercices differents et qu'un athlete regulier couche peut s'ecrouler
+   debout.
+   L'identifiant vient du classement quand il y figure ; sinon la ligne n'est
+   pas cliquable, plutot qu'un clic qui ne menerait nulle part. */
+async function g45BiaAthlete(ibuId, nom){
+  var el = document.getElementById('t-resultats'); if (!el) return;
+  var back = '<button onclick="history.back()" style="border:none;cursor:pointer;background:rgba(255,255,255,.06);border-radius:8px;color:var(--t2);padding:7px 12px;font-size:11px;font-weight:700;margin-bottom:10px;">\u2190 Retour</button>';
+  el.innerHTML = back + '<div style="color:var(--t3);font-size:11px;padding:16px;text-align:center;">\u23f3 Chargement de la fiche\u2026</div>';
+  var j = await _g45BiaJ('/modules/sportapi/api/AllResults?IBUId=' + encodeURIComponent(ibuId));
+  var lignes = (j && (j.Results || j)) || [];
+  if (!Array.isArray(lignes) || !lignes.length) {
+    el.innerHTML = back + '<div style="color:var(--t3);font-size:11px;padding:14px;text-align:center;">Aucun r\u00e9sultat pour cet athl\u00e8te.</div>';
+    return;
+  }
+  /* Le detail « 0+1 0+2 » se lit seance par seance : les rangs pairs sont
+     couche, les impairs debout — c'est l'ordre officiel, quel que soit le
+     nombre de seances. */
+  var tC = 0, fC = 0, tD = 0, fD = 0, courses = 0, podiums = 0, top10 = 0;
+  lignes.forEach(function(r){
+    var sh = String(r.Shootings || '').trim();
+    if (sh) {
+      sh.split(/\s+/).forEach(function(bloc, i){
+        var f = bloc.split('+').reduce(function(a, x){ return a + (parseInt(x, 10) || 0); }, 0);
+        if (i % 2 === 0) { tC += 5; fC += f; } else { tD += 5; fD += f; }
+      });
+    }
+    var rg = parseInt(r.Rank, 10);
+    if (!isNaN(rg)) { courses++; if (rg <= 3) podiums++; if (rg <= 10) top10++; }
+  });
+  var pc = function(t, f){ return t ? Math.round((t - f) / t * 100) : 0; };
+  var carte = function(lab, val, col){
+    return '<div style="flex:1;min-width:96px;background:rgba(10,14,26,.45);border-radius:10px;padding:10px;text-align:center;">'
+      + '<div style="font-size:17px;font-weight:800;color:' + col + ';">' + val + '</div>'
+      + '<div style="font-size:9px;color:#b9c5e0;margin-top:2px;">' + lab + '</div></div>';
+  };
+  var h = back
+    + '<div class="sec" style="margin-top:0;">\ud83c\udfbf ' + (nom || 'Athl\u00e8te') + '</div>'
+    + '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px;">'
+      + carte('Tir couch\u00e9', pc(tC, fC) + '%', pc(tC, fC) >= 85 ? 'var(--g)' : 'var(--gold)')
+      + carte('Tir debout', pc(tD, fD) + '%', pc(tD, fD) >= 85 ? 'var(--g)' : 'var(--gold)')
+      + carte('Podiums', podiums, '#f5c542')
+      + carte('Top 10', top10 + '/' + courses, 'var(--a)')
+    + '</div>'
+    + '<div style="font-size:9px;color:var(--t3);margin-bottom:8px;line-height:1.5;">Couch\u00e9 et debout compt\u00e9s s\u00e9par\u00e9ment : ce sont deux exercices diff\u00e9rents, et c\'est souvent le debout qui d\u00e9cide une course.</div>'
+    + '<div style="display:flex;flex-direction:column;gap:3px;">';
+  lignes.slice(0, 40).forEach(function(r, i){
+    var rg = r.Rank || (r.IRM || '\u2013');
+    h += '<div style="display:grid;grid-template-columns:32px 1fr 52px;gap:8px;align-items:center;padding:7px 9px;border-radius:6px;background:rgba(255,255,255,' + (i % 2 ? '.02' : '.045') + ');">'
+      + '<span style="font-size:11px;font-weight:800;color:' + (String(rg) === '1' ? '#f5c542' : 'var(--t3)') + ';">' + rg + '</span>'
+      + '<span style="font-size:11px;color:var(--t1);overflow:hidden;white-space:nowrap;text-overflow:ellipsis;">' + _g45BiaCourseFr(r.Description || r.Comp || '?') + '</span>'
+      + '<span style="font-size:11px;text-align:right;">' + _g45BiaTir(r.Shootings || r.ShootingTotal) + '</span>'
+      + '</div>';
+  });
+  el.innerHTML = h + '</div><div style="font-size:9px;color:var(--t3);margin-top:8px;">Source : IBU</div>';
+}
+window.g45BiaAthlete = g45BiaAthlete;
+
 async function g45BiaOpen(saison){
   var el = document.getElementById('t-resultats'); if (!el) return;
   var sa = saison || _g45BiaSaison();
@@ -30367,30 +30454,47 @@ async function g45BiaCourse(raceId){
      classement devient illisible. */
   var relais = res.some(function(r){ return r.IsTeam; });
   var lignes = relais ? res.filter(function(r){ return r.IsTeam; }) : res;
+  /* ═══ PANNEAU LISIBLE (09/09) ═══
+     Le classement n'avait AUCUN fond : le visuel de l'app traversait les lignes
+     et le rendait illisible (capture d'Antoine). Fond teinte aux couleurs du
+     pays de l'etape, lignes sur leur propre fond sombre, et un en-tete de
+     colonnes qui manquait. */
   var h = back
-    + '<div class="sec" style="margin-top:0;">' + _g45BiaCourseFr(comp.Description || 'R\u00e9sultats') + '</div>'
-    + '<div style="font-size:11px;color:var(--t3);margin-bottom:10px;">'
+    + '<div style="background:' + _g45BiaFondPanneau(_g45BiaPays) + ';border:1px solid rgba(255,255,255,.08);border-radius:12px;padding:12px 14px;">'
+    + '<div style="font-size:13.5px;font-weight:800;color:#fff;">' + _g45BiaCourseFr(comp.Description || 'R\u00e9sultats') + '</div>'
+    + '<div style="font-size:10px;color:#c9d4ea;margin:3px 0 10px;display:flex;align-items:center;gap:5px;">'
+      + _g45BiaDrapeau(_g45BiaPays)
       + ((j.SportEvt && (j.SportEvt.ShortDescription || j.SportEvt.Description)) || '')
       + (comp.Location ? (' \u00b7 ' + comp.Location) : '') + '</div>'
+    + _g45BiaLegendeTir(comp.Description || '')
+    + '<div style="display:grid;grid-template-columns:26px 1fr 46px 62px;gap:8px;font-size:9px;color:#a9b6d4;text-transform:uppercase;letter-spacing:.05em;padding:0 8px 5px;">'
+      + '<span>#</span><span>' + (relais ? '\u00c9quipe' : 'Athl\u00e8te') + '</span><span style="text-align:center;">Tir</span><span style="text-align:right;">Temps</span></div>'
     + '<div style="display:flex;flex-direction:column;gap:3px;">';
   lignes.forEach(function(r, i){
     var irm = r.IRM ? String(r.IRM) : '';
     var rang = irm || (r.Rank || '');
     var podium = (rang === '1' || rang === '2' || rang === '3');
-    var col = rang === '1' ? '#f5c542' : (rang === '2' ? '#c7cdd8' : (rang === '3' ? '#cd7f32' : 'var(--t3)'));
-    h += '<div style="display:grid;grid-template-columns:30px 1fr auto auto;gap:8px;align-items:center;padding:7px 9px;border-radius:6px;background:rgba(255,255,255,' + (i % 2 ? '.02' : '.045') + ');">'
+    var col = rang === '1' ? '#f5c542' : (rang === '2' ? '#dfe6f5' : (rang === '3' ? '#e2a06a' : '#b9c5e0'));
+    /* Cliquable seulement si l'IBU nous donne l'identifiant : un clic qui ne
+       mene nulle part vaut moins qu'une ligne inerte. */
+    var ibu = r.IBUId || r.Ibuid || '';
+    var nomA = (r.ShortName || r.Name || '?');
+    var clic = (ibu && !relais)
+      ? (' onclick="g45BiaAthlete(\'' + ibu + '\',\'' + String(nomA).replace(/'/g, "\\'") + '\')" style="cursor:pointer;')
+      : (' style="');
+    h += '<div' + clic + 'display:grid;grid-template-columns:26px 1fr 46px 62px;gap:8px;align-items:center;padding:7px 8px;border-radius:6px;background:rgba(10,14,26,' + (i % 2 ? '.30' : '.45') + ');">'
       + '<span style="font-size:11px;font-weight:800;color:' + col + ';">' + (rang || '\u2013') + '</span>'
-      + '<span style="font-size:12px;font-weight:' + (podium ? '800' : '600') + ';color:var(--t1);overflow:hidden;white-space:nowrap;text-overflow:ellipsis;">'
-        + (r.ShortName || r.Name || '?')
-        + '<span style="color:var(--t3);font-weight:400;font-size:10px;"> \u00b7 ' + (r.Nat || '') + '</span></span>'
-      + '<span style="font-size:11px;">' + _g45BiaTir(r.Shootings || r.ShootingTotal) + '</span>'
-      + '<span style="font-size:11px;font-weight:700;color:var(--t2);min-width:64px;text-align:right;">' + (r.Result || r.TotalTime || '') + '</span>'
+      + '<span style="font-size:11.5px;font-weight:' + (podium ? '800' : '600') + ';color:#fff;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;">'
+        + nomA + '<span style="color:#b9c5e0;font-weight:400;font-size:9.5px;"> \u00b7 ' + (r.Nat || '') + '</span></span>'
+      + '<span style="font-size:11px;text-align:center;">' + _g45BiaTir(r.Shootings || r.ShootingTotal) + '</span>'
+      + '<span style="font-size:11px;font-weight:700;color:#e3e9f7;text-align:right;">' + (r.Result || r.TotalTime || '') + '</span>'
       + '</div>';
   });
-  h += '</div><div style="font-size:9px;color:var(--t3);margin-top:8px;line-height:1.5;">'
-    + 'Tir : fautes par s\u00e9ance \u00b7 vert = sans faute, or = 1 ou 2, rouge au-del\u00e0.'
-    + (relais ? '<br>Relais : seules les \u00e9quipes sont list\u00e9es.' : '')
-    + '<br>Source : IBU (biathlonresults.com)</div>';
+  h += '</div>';
+  h += '<div style="font-size:9px;color:#a9b6d4;margin-top:9px;line-height:1.5;">'
+    + 'Vert = sans faute, or = 1 ou 2, rouge au-del\u00e0.'
+    + (relais ? '<br>Relais : seules les \u00e9quipes sont list\u00e9es.' : '<br>Touche un athl\u00e8te pour voir sa fiche.')
+    + '<br>Source : IBU (biathlonresults.com)</div></div>';
   el.innerHTML = h;
 }
 window.g45BiaOpen = g45BiaOpen; window.g45BiaEtape = g45BiaEtape; window.g45BiaCourse = g45BiaCourse;
@@ -37635,7 +37739,41 @@ function g45NrlRender() {
   var parJr = {};
   _g45NrlMatchs.forEach(function (m) { (parJr[m.jr] = parJr[m.jr] || []).push(m); });
 
-  el.innerHTML = Object.keys(parJr).sort(function (a, b) { return b - a; }).map(function (jr) {
+  /* ═══ SENS DE LECTURE DES JOURNEES (09/09) ═══
+     L'ordre etait toujours decroissant : pertinent en cours de saison, ou l'on
+     veut les derniers resultats en tete. Absurde sur une saison qui n'a pas
+     commence — Antoine ouvrait la NFL 2026 et tombait sur la journee 18, vide,
+     avec la premiere tout en bas de dix-huit blocs.
+     Le sens s'adapte donc a l'etat de la saison, et un bouton permet de le
+     retourner : le reglage est retenu tant que la page reste ouverte, sinon il
+     serait perdu a chaque changement d'onglet. */
+  var _jrCles = Object.keys(parJr).map(Number).filter(function (x) { return !isNaN(x); });
+  var _joues = _g45NrlMatchs.filter(function (m) { return m.joue; }).length;
+  /* La journee EN COURS : la plus avancee qui compte au moins un match joue.
+     « Derniere journee » ne veut pas dire la 18e — sur une saison en cours,
+     celle-la est vide et n'interesse personne (remarque d'Antoine). */
+  var _jrCourante = 0;
+  _g45NrlMatchs.forEach(function (m) { if (m.joue && Number(m.jr) > _jrCourante) _jrCourante = Number(m.jr); });
+
+  if (window._g45JrSens == null) window._g45JrSens = _joues ? 'cours' : 'asc';
+  var _sens = window._g45JrSens;
+  var _ordre;
+  if (_sens === 'asc' || !_jrCourante) {
+    _ordre = _jrCles.slice().sort(function (a, b) { return a - b; });
+  } else {
+    /* La journee en cours d'abord, puis les precedentes en remontant le temps,
+       et les a venir a la suite dans l'ordre du calendrier. On voit donc ce qui
+       vient de se jouer sans perdre l'acces au reste. */
+    var _passees = _jrCles.filter(function (x) { return x <= _jrCourante; }).sort(function (a, b) { return b - a; });
+    var _venir = _jrCles.filter(function (x) { return x > _jrCourante; }).sort(function (a, b) { return a - b; });
+    _ordre = _passees.concat(_venir);
+  }
+  var _btnSens = '<button onclick="window._g45JrSens=(window._g45JrSens===\'asc\'?\'cours\':\'asc\');g45NrlRender();" '
+    + 'style="border:none;cursor:pointer;background:rgba(255,255,255,.06);color:var(--t2);border-radius:8px;padding:6px 11px;font-size:10.5px;font-weight:700;margin-bottom:10px;">'
+    + (_sens === 'asc' ? '\u2191 Calendrier, 1re journ\u00e9e en haut'
+                       : '\u25c9 Journ\u00e9e en cours en haut' + (_jrCourante ? (' (J' + _jrCourante + ')') : '')) + '</button>';
+
+  el.innerHTML = _btnSens + _ordre.map(function (jr) {
     var lst = parJr[jr];
     var nJoues = lst.filter(function (m) { return m.joue; }).length;
     return '<div style="margin-bottom:16px;">'
@@ -38205,7 +38343,7 @@ async function loadCompetTab() {
       + '<button id="btn-admin-lock-journees" onclick="g45AdminBascule()" title="Mode administrateur" style="padding:12px 13px;border-radius:10px;border:1px solid rgba(255,255,255,.15);background:rgba(255,255,255,.07);color:var(--t2);font-size:14px;cursor:pointer;">'
         + (g45EstAdmin() ? '\ud83d\udd13' : '\ud83d\udd12') + '</button>'
       + '</div>'
-      + '<div style="font-size:10px;color:var(--t3);line-height:1.6;margin-bottom:10px;">R\u00e9sultats group\u00e9s par journ\u00e9e, de la plus r\u00e9cente \u00e0 la plus ancienne. <b>Clique sur un match</b> pour son compte rendu complet.</div>'
+      + '<div style="font-size:10px;color:var(--t3);line-height:1.6;margin-bottom:10px;">R\u00e9sultats group\u00e9s par journ\u00e9e. <b>Clique sur un match</b> pour son compte rendu complet.</div>'
       + '<div id="g45-nrl-msg" style="font-size:11.5px;font-weight:600;min-height:16px;color:#9fb0c7;background:rgba(0,0,0,.25);border-radius:8px;padding:10px 12px;margin-bottom:12px;">\u23f3\u2026</div>'
 
       + '<div id="g45-nrl-liste"></div>';
