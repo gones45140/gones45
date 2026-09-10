@@ -30183,7 +30183,11 @@ var _G45_BIA_PAYS = {
 function _g45BiaFond(code){
   var k = _G45_BIA_PAYS[String(code || '').toUpperCase()];
   if (!k) return 'rgba(255,255,255,.05)';
-  var a = '59';   /* 35 % : le pays se reconnait sans que la liste ne devienne une fete foraine */
+  /* 35 % paraissait raisonnable en maquette, sur trois lignes et un fond uni.
+     Sur une saison entiere — onze etapes empilees devant le visuel de fond de
+     l'app — l'ecran vire au patchwork (capture d'Antoine, 09/09). 22 %, et le
+     pays reste parfaitement identifiable grace au petit drapeau a droite. */
+  var a = '38';
   return 'linear-gradient(100deg,' + k[0] + a + ' 0%,' + k[0] + a + ' 33%,'
        + k[1] + a + ' 33%,' + k[1] + a + ' 66%,' + k[2] + a + ' 66%,' + k[2] + a + ' 100%)';
 }
@@ -30234,6 +30238,22 @@ function _g45BiaSaison(){
   var deb = (m >= 9) ? a : (a - 1);
   return String(deb).slice(2) + String(deb + 1).slice(2);
 }
+/* ═══ ANNEE REELLE D'UNE SAISON IBU (09/09) ═══
+   Les identifiants sont en DEUX chiffres : « 2627 » = 2026-27, « 9900 » =
+   1999-2000. Trier ces textes met donc « 9900 » en tete et mon affichage le
+   relisait « 2099-00 » — Antoine a vu passer des saisons ou il serait
+   centenaire. Il faut convertir en annee pleine AVANT de trier.
+   Regle de bascule : deux chiffres au-dela de 50 designent les annees 1900. */
+function _g45BiaAnnee(sa){
+  var d = parseInt(String(sa || '').slice(0, 2), 10);
+  if (isNaN(d)) return 0;
+  return (d >= 50) ? (1900 + d) : (2000 + d);
+}
+function _g45BiaLib(sa){
+  var a = _g45BiaAnnee(sa);
+  return a ? (a + '-' + String((a + 1) % 100).padStart(2, '0')) : String(sa || '');
+}
+
 function _g45BiaRetour(){
   return '<button onclick="loadResultatsTab()" style="border:none;cursor:pointer;background:rgba(255,255,255,.06);border-radius:8px;color:var(--t2);padding:7px 12px;font-size:11px;font-weight:700;margin-bottom:10px;">\u2190 Sports</button>';
 }
@@ -30265,7 +30285,7 @@ async function g45BiaOpen(saison){
     el.innerHTML = _g45BiaRetour() + '<div style="color:#ff6b6b;font-size:11px;padding:14px;text-align:center;">Biathlon indisponible pour le moment.</div>';
     return;
   }
-  var an = '20' + sa.slice(0, 2) + '-' + sa.slice(2);
+  var an = _g45BiaLib(sa);
   /* ═══ SAISONS PASSEES (09/09) ═══
      `Seasons` les liste toutes, jusqu'aux annees 2000. On n'en propose que les
      douze dernieres : au-dela, les donnees existent mais n'apprennent rien sur
@@ -30281,17 +30301,20 @@ async function g45BiaOpen(saison){
     }
   } catch (e) {}
   if (!saisons.length) {
-    var d0 = parseInt(sa.slice(0, 2), 10);
-    for (var k = 0; k < 12; k++) { var y = d0 - k; saisons.push(String(y).padStart(2, '0') + String(y + 1).padStart(2, '0')); }
+    var d0 = _g45BiaAnnee(sa);
+    for (var k = 0; k < 12; k++) {
+      var y = d0 - k;
+      saisons.push(String(y % 100).padStart(2, '0') + String((y + 1) % 100).padStart(2, '0'));
+    }
   }
-  saisons = saisons.sort().reverse().slice(0, 12);
+  saisons = saisons.sort(function(x, y){ return _g45BiaAnnee(y) - _g45BiaAnnee(x); }).slice(0, 12);
   if (saisons.indexOf(sa) < 0) saisons.unshift(sa);
   var chips = '<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px;">'
     + saisons.map(function(x){
         var on = (x === sa);
         return '<button onclick="g45BiaOpen(\'' + x + '\')" style="border:none;cursor:pointer;border-radius:8px;padding:6px 11px;font-size:11px;font-weight:700;'
           + 'background:' + (on ? 'var(--a)' : 'rgba(255,255,255,.06)') + ';color:' + (on ? '#0b1020' : 'var(--t2)') + ';">'
-          + '20' + x.slice(0, 2) + '-' + x.slice(2) + '</button>';
+          + _g45BiaLib(x) + '</button>';
       }).join('')
     + '</div>';
   var h = _g45BiaRetour()
