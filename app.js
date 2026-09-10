@@ -30157,6 +30157,61 @@ window.g45RcFavAI=g45RcFavAI;
    depuis gones45140.github.io. On emprunte donc `?host=ibu`, comme pour ASO et
    tv-sports, avec repli en appel direct si le Worker ne connait pas encore cet
    hote — l'ajout cote Worker est fourni a part. */
+/* ═══ COULEURS DU PAYS (09/09) ═══
+   Le code pays est deja dans la donnee de l'etape : trois bandes NETTES a ses
+   couleurs, un tiers chacune. Antoine avait releve que le blanc n'occupait
+   qu'une frange quand le degrade le traversait — d'ou les arrets francs.
+   Les courses d'une etape heritent du pays de celle-ci : elles s'y deroulent
+   toutes, et ca garde le fil quand on descend d'un ecran.
+   PAS D'EMOJI DRAPEAU, des bandes de couleur : Chrome sous Windows rend les
+   emoji drapeaux en petites lettres grises (piege deja rencontre dans
+   l'onglet Competitions).
+   Ombre portee sur le texte, obligatoire : un nom en blanc sur la bande blanche
+   d'un drapeau francais ou italien disparaitrait sans elle. */
+var _G45_BIA_PAYS = {
+  NOR:['#ba0c2f','#ffffff','#00205b'], SWE:['#006aa7','#fecc00','#006aa7'], GER:['#000000','#dd0000','#ffce00'],
+  FRA:['#0055a4','#ffffff','#ef4135'], ITA:['#008c45','#f4f5f0','#cd212a'], AUT:['#ed2939','#ffffff','#ed2939'],
+  CZE:['#11457e','#d7141a','#ffffff'], FIN:['#003580','#ffffff','#003580'], SUI:['#d52b1e','#ffffff','#d52b1e'],
+  USA:['#3c3b6e','#ffffff','#b31942'], CAN:['#d52b1e','#ffffff','#d52b1e'], SLO:['#005da4','#ffffff','#ed1c24'],
+  EST:['#0072ce','#000000','#ffffff'], POL:['#ffffff','#dc143c','#ffffff'], SVK:['#ffffff','#0b4ea2','#ee1c25'],
+  LAT:['#9e3039','#ffffff','#9e3039'], LTU:['#fdb913','#006a44','#c1272d'], UKR:['#005bbb','#ffd500','#005bbb'],
+  BUL:['#ffffff','#00966e','#d62612'], ROU:['#002b7f','#fcd116','#ce1126'], KOR:['#ffffff','#cd2e3a','#0047a0'],
+  CHN:['#de2910','#ffde00','#de2910'], JPN:['#ffffff','#bc002d','#ffffff'], BLR:['#ffffff','#c8313e','#ffffff'],
+  KAZ:['#00afca','#fec50c','#00afca'], MDA:['#0046ae','#ffd200','#cc092f'], GBR:['#012169','#ffffff','#c8102e'],
+  BEL:['#000000','#fdda24','#ef3340'], NED:['#ae1c28','#ffffff','#21468b'], ESP:['#aa151b','#f1bf00','#aa151b']
+};
+function _g45BiaFond(code){
+  var k = _G45_BIA_PAYS[String(code || '').toUpperCase()];
+  if (!k) return 'rgba(255,255,255,.05)';
+  var a = '59';   /* 35 % : le pays se reconnait sans que la liste ne devienne une fete foraine */
+  return 'linear-gradient(100deg,' + k[0] + a + ' 0%,' + k[0] + a + ' 33%,'
+       + k[1] + a + ' 33%,' + k[1] + a + ' 66%,' + k[2] + a + ' 66%,' + k[2] + a + ' 100%)';
+}
+function _g45BiaDrapeau(code){
+  var k = _G45_BIA_PAYS[String(code || '').toUpperCase()];
+  if (!k) return '';
+  return '<span style="display:inline-flex;border-radius:3px;overflow:hidden;height:10px;width:16px;vertical-align:middle;box-shadow:0 0 0 1px rgba(255,255,255,.20);">'
+    + k.map(function(x){ return '<i style="flex:1;background:' + x + ';"></i>'; }).join('') + '</span>';
+}
+var _G45_BIA_OMBRE = 'text-shadow:0 1px 4px rgba(0,0,0,.95);';
+/* Le pays de l'etape ouverte, pour que ses courses en heritent. */
+var _g45BiaPays = '';
+/* Libelles de l'IBU, en anglais. Traduits ici plutot qu'affiches tels quels. */
+function _g45BiaCourseFr(txt){
+  var t = String(txt || '');
+  var ico = /relay/i.test(t) ? '\ud83d\udd01' : (/pursuit/i.test(t) ? '\ud83c\udfaf' : (/mass start/i.test(t) ? '\ud83d\udc65' : (/individual/i.test(t) ? '\u23f1\ufe0f' : '\ud83c\udfbf')));
+  /* PIEGE : « Women's » CONTIENT « Men's ». Remplacer Men's d'abord donnait
+     « WoHommes » — attrape par le test avant livraison. Toujours du plus long
+     au plus court, comme pour « quarterfinals » qui contient « final ». */
+  t = t.replace(/Women's/gi, 'Dames').replace(/Men's/gi, 'Hommes')
+       .replace(/Single Mixed Relay/gi, 'Relais mixte simple')
+       .replace(/Mixed Relay/gi, 'Relais mixte')
+       .replace(/\bRelay\b/gi, 'Relais').replace(/\bSprint\b/gi, 'Sprint')
+       .replace(/\bPursuit\b/gi, 'Poursuite').replace(/\bMass Start\b/gi, 'D\u00e9part group\u00e9')
+       .replace(/\bIndividual\b/gi, 'Individuelle').replace(/\bShort Individual\b/gi, 'Individuelle courte');
+  return ico + ' ' + t;
+}
+
 var _g45BiaCache = {};
 async function _g45BiaJ(chemin){
   if (_g45BiaCache[chemin] !== undefined) return _g45BiaCache[chemin];
@@ -30197,8 +30252,11 @@ async function g45BiaOpen(saison){
   var evs = await _g45BiaJ('/modules/sportapi/api/Events?SeasonId=' + sa + '&Level=1');
   /* Une saison qui n'a pas commence rend une liste vide : on recule d'un an
      plutot que d'afficher un ecran mort — la Coupe du monde ne reprend qu'en
-     novembre, et entre avril et novembre il n'y a rien a montrer d'autre. */
-  if (!Array.isArray(evs) || !evs.length) {
+     novembre, et entre avril et novembre il n'y a rien a montrer d'autre.
+     UNIQUEMENT en mode automatique : des qu'Antoine CHOISIT une saison, son
+     choix est respecte, sinon il croirait consulter une annee en en voyant une
+     autre — meme regle que le selecteur de saison des Competitions. */
+  if (!saison && (!Array.isArray(evs) || !evs.length)) {
     var pre = String(parseInt(sa.slice(0, 2), 10) - 1) + sa.slice(0, 2);
     var evs2 = await _g45BiaJ('/modules/sportapi/api/Events?SeasonId=' + pre + '&Level=1');
     if (Array.isArray(evs2) && evs2.length) { evs = evs2; sa = pre; }
@@ -30208,21 +30266,51 @@ async function g45BiaOpen(saison){
     return;
   }
   var an = '20' + sa.slice(0, 2) + '-' + sa.slice(2);
+  /* ═══ SAISONS PASSEES (09/09) ═══
+     `Seasons` les liste toutes, jusqu'aux annees 2000. On n'en propose que les
+     douze dernieres : au-dela, les donnees existent mais n'apprennent rien sur
+     des athletes qui ne courent plus.
+     Repli sur une liste calculee si l'endpoint ne repond pas — le sélecteur ne
+     doit pas disparaitre parce qu'une requete secondaire a echoue. */
+  var saisons = [];
+  try {
+    var js = await _g45BiaJ('/modules/sportapi/api/Seasons');
+    if (Array.isArray(js)) {
+      saisons = js.map(function(x){ return String(x.SeasonId || x.seasonId || ''); })
+                  .filter(function(x){ return /^\d{4}$/.test(x); });
+    }
+  } catch (e) {}
+  if (!saisons.length) {
+    var d0 = parseInt(sa.slice(0, 2), 10);
+    for (var k = 0; k < 12; k++) { var y = d0 - k; saisons.push(String(y).padStart(2, '0') + String(y + 1).padStart(2, '0')); }
+  }
+  saisons = saisons.sort().reverse().slice(0, 12);
+  if (saisons.indexOf(sa) < 0) saisons.unshift(sa);
+  var chips = '<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px;">'
+    + saisons.map(function(x){
+        var on = (x === sa);
+        return '<button onclick="g45BiaOpen(\'' + x + '\')" style="border:none;cursor:pointer;border-radius:8px;padding:6px 11px;font-size:11px;font-weight:700;'
+          + 'background:' + (on ? 'var(--a)' : 'rgba(255,255,255,.06)') + ';color:' + (on ? '#0b1020' : 'var(--t2)') + ';">'
+          + '20' + x.slice(0, 2) + '-' + x.slice(2) + '</button>';
+      }).join('')
+    + '</div>';
   var h = _g45BiaRetour()
     + '<div class="sec" style="margin-top:0;">\ud83c\udfbf Biathlon \u00b7 Coupe du monde ' + an + '</div>'
+    + chips
     + '<div style="font-size:11px;color:var(--t3);margin-bottom:10px;">Choisis une \u00e9tape, puis une course. Les fautes au tir sont d\u00e9taill\u00e9es s\u00e9ance par s\u00e9ance.</div>'
     + '<div style="display:flex;flex-direction:column;gap:6px;">';
   evs.slice().reverse().forEach(function(e){
     var d1 = String(e.StartDate || '').slice(0, 10).split('-').reverse().slice(0, 2).join('/');
-    h += '<button onclick="g45BiaEtape(\'' + e.EventId + '\')" style="text-align:left;border:none;cursor:pointer;background:rgba(255,255,255,.05);border-radius:10px;padding:11px 13px;color:#e6ecf5;display:flex;justify-content:space-between;align-items:center;gap:8px;">'
-      + '<span style="font-weight:700;font-size:12.5px;">' + (e.ShortDescription || e.Description || '?') + '</span>'
-      + '<span style="font-size:10px;color:var(--t3);">' + (e.Nat || '') + ' \u00b7 ' + d1 + '</span></button>';
+    h += '<button onclick="g45BiaEtape(\'' + e.EventId + '\',\'' + (e.Nat || '') + '\')" style="text-align:left;border:none;cursor:pointer;background:' + _g45BiaFond(e.Nat) + ';border-radius:10px;padding:11px 13px;color:#fff;display:flex;justify-content:space-between;align-items:center;gap:8px;">'
+      + '<span style="font-weight:800;font-size:12.5px;' + _G45_BIA_OMBRE + 'overflow:hidden;white-space:nowrap;text-overflow:ellipsis;">' + (e.ShortDescription || e.Description || '?') + '</span>'
+      + '<span style="font-size:10px;color:#fff;' + _G45_BIA_OMBRE + 'white-space:nowrap;display:flex;align-items:center;gap:5px;">' + _g45BiaDrapeau(e.Nat) + (e.Nat || '') + ' \u00b7 ' + d1 + '</span></button>';
   });
   el.innerHTML = h + '</div>';
 }
-async function g45BiaEtape(eventId){
+async function g45BiaEtape(eventId, nat){
   var el = document.getElementById('t-resultats'); if (!el) return;
   el.innerHTML = _g45BiaRetour() + '<div style="color:var(--t3);font-size:11px;padding:16px;text-align:center;">\u23f3 Chargement des courses\u2026</div>';
+  if (nat) _g45BiaPays = nat;
   var cs = await _g45BiaJ('/modules/sportapi/api/Competitions?EventId=' + eventId);
   var back = '<button onclick="g45BiaOpen()" style="border:none;cursor:pointer;background:rgba(255,255,255,.06);border-radius:8px;color:var(--t2);padding:7px 12px;font-size:11px;font-weight:700;margin-bottom:10px;">\u2190 \u00c9tapes</button>';
   if (!Array.isArray(cs) || !cs.length) {
@@ -30233,9 +30321,9 @@ async function g45BiaEtape(eventId){
   cs.forEach(function(c){
     var quand = String(c.StartTime || '').slice(0, 10).split('-').reverse().slice(0, 2).join('/');
     var fini = (c.StatusId === 11) || /final/i.test(String(c.StatusText || ''));
-    h += '<button onclick="g45BiaCourse(\'' + c.RaceId + '\')" style="text-align:left;border:none;cursor:pointer;background:rgba(255,255,255,.05);border-radius:10px;padding:11px 13px;color:#e6ecf5;display:flex;justify-content:space-between;align-items:center;gap:8px;">'
-      + '<span style="font-weight:700;font-size:12.5px;">' + (c.Description || c.ShortDescription || '?') + '</span>'
-      + '<span style="font-size:10px;color:' + (fini ? 'var(--g)' : 'var(--t3)') + ';">' + (fini ? 'termin\u00e9e' : quand) + '</span></button>';
+    h += '<button onclick="g45BiaCourse(\'' + c.RaceId + '\')" style="text-align:left;border:none;cursor:pointer;background:' + _g45BiaFond(_g45BiaPays) + ';border-radius:10px;padding:11px 13px;color:#fff;display:flex;justify-content:space-between;align-items:center;gap:8px;">'
+      + '<span style="font-weight:800;font-size:12.5px;' + _G45_BIA_OMBRE + 'overflow:hidden;white-space:nowrap;text-overflow:ellipsis;">' + _g45BiaCourseFr(c.Description || c.ShortDescription || '?') + '</span>'
+      + '<span style="font-size:10px;color:#fff;' + _G45_BIA_OMBRE + 'white-space:nowrap;">' + (fini ? 'termin\u00e9e' : quand) + '</span></button>';
   });
   el.innerHTML = h + '</div>';
 }
@@ -30257,7 +30345,7 @@ async function g45BiaCourse(raceId){
   var relais = res.some(function(r){ return r.IsTeam; });
   var lignes = relais ? res.filter(function(r){ return r.IsTeam; }) : res;
   var h = back
-    + '<div class="sec" style="margin-top:0;">' + (comp.Description || 'R\u00e9sultats') + '</div>'
+    + '<div class="sec" style="margin-top:0;">' + _g45BiaCourseFr(comp.Description || 'R\u00e9sultats') + '</div>'
     + '<div style="font-size:11px;color:var(--t3);margin-bottom:10px;">'
       + ((j.SportEvt && (j.SportEvt.ShortDescription || j.SportEvt.Description)) || '')
       + (comp.Location ? (' \u00b7 ' + comp.Location) : '') + '</div>'
