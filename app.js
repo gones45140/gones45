@@ -30270,8 +30270,16 @@ function _g45BiaTir(t){
    illisible des la troisieme ligne. */
 function _g45BiaFondPanneau(code){
   var k = _G45_BIA_PAYS[String(code || '').toUpperCase()];
-  if (!k) return 'linear-gradient(150deg,#1b2547 0%,#141a2e 55%,#101733 100%)';
-  return 'linear-gradient(150deg,' + k[0] + '4d 0%,rgba(20,26,46,.96) 45%,' + k[2] + '59 100%)';
+  var base = '#141a2e';   /* base OPAQUE, indispensable */
+  if (!k) return 'linear-gradient(150deg,#1b2547 0%,' + base + ' 55%,#101733 100%)';
+  /* ═══ DEUX COUCHES, PAS UNE (09/09) ═══
+     Premiere version : un seul degrade aux couleurs du pays, en semi-
+     transparent. Resultat, le visuel de fond de l'app remontait entre les
+     lignes et le classement restait delave (capture d'Antoine).
+     On empile donc la teinte SUR une base opaque : la couleur du pays se voit,
+     mais plus rien ne passe derriere. Meme principe que le voile des cartes du
+     direct. */
+  return 'linear-gradient(150deg,' + k[0] + '40 0%,transparent 42%,' + k[2] + '4d 100%), ' + base;
 }
 /* La notation du tir n'etait expliquee nulle part — evident pour Antoine, pas
    pour ceux a qui il partage l'app. Le nombre de seances et le cout d'une faute
@@ -30482,7 +30490,7 @@ async function g45BiaCourse(raceId){
     var clic = (ibu && !relais)
       ? (' onclick="g45BiaAthlete(\'' + ibu + '\',\'' + String(nomA).replace(/'/g, "\\'") + '\')" style="cursor:pointer;')
       : (' style="');
-    h += '<div' + clic + 'display:grid;grid-template-columns:26px 1fr 46px 62px;gap:8px;align-items:center;padding:7px 8px;border-radius:6px;background:rgba(10,14,26,' + (i % 2 ? '.30' : '.45') + ');">'
+    h += '<div' + clic + 'display:grid;grid-template-columns:26px 1fr 46px 62px;gap:8px;align-items:center;padding:7px 8px;border-radius:6px;background:rgba(10,14,26,' + (i % 2 ? '.62' : '.76') + ');">'
       + '<span style="font-size:11px;font-weight:800;color:' + col + ';">' + (rang || '\u2013') + '</span>'
       + '<span style="font-size:11.5px;font-weight:' + (podium ? '800' : '600') + ';color:#fff;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;">'
         + nomA + '<span style="color:#b9c5e0;font-weight:400;font-size:9.5px;"> \u00b7 ' + (r.Nat || '') + '</span></span>'
