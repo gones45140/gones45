@@ -30188,8 +30188,10 @@ function _g45BiaFond(code){
      l'app — l'ecran vire au patchwork (capture d'Antoine, 09/09). 22 %, et le
      pays reste parfaitement identifiable grace au petit drapeau a droite. */
   var a = '38';
+  /* Base opaque sous la teinte, sinon le visuel de l'app remonte entre les
+     lignes — meme correctif que sur le panneau de resultats. */
   return 'linear-gradient(100deg,' + k[0] + a + ' 0%,' + k[0] + a + ' 33%,'
-       + k[1] + a + ' 33%,' + k[1] + a + ' 66%,' + k[2] + a + ' 66%,' + k[2] + a + ' 100%)';
+       + k[1] + a + ' 33%,' + k[1] + a + ' 66%,' + k[2] + a + ' 66%,' + k[2] + a + ' 100%), #161d33';
 }
 function _g45BiaDrapeau(code){
   var k = _G45_BIA_PAYS[String(code || '').toUpperCase()];
@@ -30268,6 +30270,18 @@ function _g45BiaTir(t){
 /* Fond du panneau, teinte aux couleurs du pays de l'etape. Les LIGNES gardent
    leur propre fond sombre : sans ca, un classement colore derriere devient
    illisible des la troisieme ligne. */
+/* ═══ CACHE OPAQUE (09/09) ═══
+   Les trois ecrans du biathlon s'affichaient directement sur le visuel de fond
+   de l'app : le classement restait delave et les etapes flottaient (captures
+   d'Antoine). Une carte opaque les englobe desormais, du bouton de retour
+   jusqu'a la derniere ligne.
+   Le liseré et l'ombre portee ne sont pas decoratifs : sans eux, la carte se
+   confond avec le fond au lieu de se poser dessus. */
+function _g45BiaCarte(contenu){
+  return '<div style="background:#0f1526;border:1px solid rgba(255,255,255,.09);border-radius:14px;'
+    + 'padding:14px;box-shadow:0 10px 30px rgba(0,0,0,.45);">' + contenu + '</div>';
+}
+
 function _g45BiaFondPanneau(code){
   var k = _G45_BIA_PAYS[String(code || '').toUpperCase()];
   var base = '#141a2e';   /* base OPAQUE, indispensable */
@@ -30310,11 +30324,11 @@ function _g45BiaLegendeTir(desc){
 async function g45BiaAthlete(ibuId, nom){
   var el = document.getElementById('t-resultats'); if (!el) return;
   var back = '<button onclick="history.back()" style="border:none;cursor:pointer;background:rgba(255,255,255,.06);border-radius:8px;color:var(--t2);padding:7px 12px;font-size:11px;font-weight:700;margin-bottom:10px;">\u2190 Retour</button>';
-  el.innerHTML = back + '<div style="color:var(--t3);font-size:11px;padding:16px;text-align:center;">\u23f3 Chargement de la fiche\u2026</div>';
+  el.innerHTML = _g45BiaCarte(back + '<div style="color:var(--t3);font-size:11px;padding:16px;text-align:center;">\u23f3 Chargement de la fiche\u2026</div>');
   var j = await _g45BiaJ('/modules/sportapi/api/AllResults?IBUId=' + encodeURIComponent(ibuId));
   var lignes = (j && (j.Results || j)) || [];
   if (!Array.isArray(lignes) || !lignes.length) {
-    el.innerHTML = back + '<div style="color:var(--t3);font-size:11px;padding:14px;text-align:center;">Aucun r\u00e9sultat pour cet athl\u00e8te.</div>';
+    el.innerHTML = _g45BiaCarte(back + '<div style="color:var(--t3);font-size:11px;padding:14px;text-align:center;">Aucun r\u00e9sultat pour cet athl\u00e8te.</div>');
     return;
   }
   /* Le detail « 0+1 0+2 » se lit seance par seance : les rangs pairs sont
@@ -30356,14 +30370,14 @@ async function g45BiaAthlete(ibuId, nom){
       + '<span style="font-size:11px;text-align:right;">' + _g45BiaTir(r.Shootings || r.ShootingTotal) + '</span>'
       + '</div>';
   });
-  el.innerHTML = h + '</div><div style="font-size:9px;color:var(--t3);margin-top:8px;">Source : IBU</div>';
+  el.innerHTML = _g45BiaCarte(h + '</div><div style="font-size:9px;color:var(--t3);margin-top:8px;">Source : IBU</div>');
 }
 window.g45BiaAthlete = g45BiaAthlete;
 
 async function g45BiaOpen(saison){
   var el = document.getElementById('t-resultats'); if (!el) return;
   var sa = saison || _g45BiaSaison();
-  el.innerHTML = _g45BiaRetour() + '<div style="color:var(--t3);font-size:11px;padding:16px;text-align:center;">\u23f3 Chargement de la saison\u2026</div>';
+  el.innerHTML = _g45BiaCarte(_g45BiaRetour() + '<div style="color:var(--t3);font-size:11px;padding:16px;text-align:center;">\u23f3 Chargement de la saison\u2026</div>');
   var evs = await _g45BiaJ('/modules/sportapi/api/Events?SeasonId=' + sa + '&Level=1');
   /* Une saison qui n'a pas commence rend une liste vide : on recule d'un an
      plutot que d'afficher un ecran mort — la Coupe du monde ne reprend qu'en
@@ -30377,7 +30391,7 @@ async function g45BiaOpen(saison){
     if (Array.isArray(evs2) && evs2.length) { evs = evs2; sa = pre; }
   }
   if (!Array.isArray(evs) || !evs.length) {
-    el.innerHTML = _g45BiaRetour() + '<div style="color:#ff6b6b;font-size:11px;padding:14px;text-align:center;">Biathlon indisponible pour le moment.</div>';
+    el.innerHTML = _g45BiaCarte(_g45BiaRetour() + '<div style="color:#ff6b6b;font-size:11px;padding:14px;text-align:center;">Biathlon indisponible pour le moment.</div>');
     return;
   }
   var an = _g45BiaLib(sa);
@@ -30423,16 +30437,16 @@ async function g45BiaOpen(saison){
       + '<span style="font-weight:800;font-size:12.5px;' + _G45_BIA_OMBRE + 'overflow:hidden;white-space:nowrap;text-overflow:ellipsis;">' + (e.ShortDescription || e.Description || '?') + '</span>'
       + '<span style="font-size:10px;color:#fff;' + _G45_BIA_OMBRE + 'white-space:nowrap;display:flex;align-items:center;gap:5px;">' + _g45BiaDrapeau(e.Nat) + (e.Nat || '') + ' \u00b7 ' + d1 + '</span></button>';
   });
-  el.innerHTML = h + '</div>';
+  el.innerHTML = _g45BiaCarte(h + '</div>');
 }
 async function g45BiaEtape(eventId, nat){
   var el = document.getElementById('t-resultats'); if (!el) return;
-  el.innerHTML = _g45BiaRetour() + '<div style="color:var(--t3);font-size:11px;padding:16px;text-align:center;">\u23f3 Chargement des courses\u2026</div>';
+  el.innerHTML = _g45BiaCarte(_g45BiaRetour() + '<div style="color:var(--t3);font-size:11px;padding:16px;text-align:center;">\u23f3 Chargement des courses\u2026</div>');
   if (nat) _g45BiaPays = nat;
   var cs = await _g45BiaJ('/modules/sportapi/api/Competitions?EventId=' + eventId);
   var back = '<button onclick="g45BiaOpen()" style="border:none;cursor:pointer;background:rgba(255,255,255,.06);border-radius:8px;color:var(--t2);padding:7px 12px;font-size:11px;font-weight:700;margin-bottom:10px;">\u2190 \u00c9tapes</button>';
   if (!Array.isArray(cs) || !cs.length) {
-    el.innerHTML = back + '<div style="color:var(--t3);font-size:11px;padding:14px;text-align:center;">Aucune course pour cette \u00e9tape.</div>';
+    el.innerHTML = _g45BiaCarte(back + '<div style="color:var(--t3);font-size:11px;padding:14px;text-align:center;">Aucune course pour cette \u00e9tape.</div>');
     return;
   }
   var h = back + '<div class="sec" style="margin-top:0;">\ud83c\udfbf Courses</div><div style="display:flex;flex-direction:column;gap:6px;">';
@@ -30443,17 +30457,17 @@ async function g45BiaEtape(eventId, nat){
       + '<span style="font-weight:800;font-size:12.5px;' + _G45_BIA_OMBRE + 'overflow:hidden;white-space:nowrap;text-overflow:ellipsis;">' + _g45BiaCourseFr(c.Description || c.ShortDescription || '?') + '</span>'
       + '<span style="font-size:10px;color:#fff;' + _G45_BIA_OMBRE + 'white-space:nowrap;">' + (fini ? 'termin\u00e9e' : quand) + '</span></button>';
   });
-  el.innerHTML = h + '</div>';
+  el.innerHTML = _g45BiaCarte(h + '</div>');
 }
 async function g45BiaCourse(raceId){
   var el = document.getElementById('t-resultats'); if (!el) return;
-  el.innerHTML = _g45BiaRetour() + '<div style="color:var(--t3);font-size:11px;padding:16px;text-align:center;">\u23f3 Chargement des r\u00e9sultats\u2026</div>';
+  el.innerHTML = _g45BiaCarte(_g45BiaRetour() + '<div style="color:var(--t3);font-size:11px;padding:16px;text-align:center;">\u23f3 Chargement des r\u00e9sultats\u2026</div>');
   var j = await _g45BiaJ('/modules/sportapi/api/Results?RaceId=' + raceId);
   var evId = String(raceId).slice(0, 14);
   var back = '<button onclick="g45BiaEtape(\'' + evId + '\')" style="border:none;cursor:pointer;background:rgba(255,255,255,.06);border-radius:8px;color:var(--t2);padding:7px 12px;font-size:11px;font-weight:700;margin-bottom:10px;">\u2190 Courses</button>';
   var res = (j && j.Results) || [];
   if (!res.length) {
-    el.innerHTML = back + '<div style="color:var(--t3);font-size:11px;padding:14px;text-align:center;">R\u00e9sultats pas encore publi\u00e9s.</div>';
+    el.innerHTML = _g45BiaCarte(back + '<div style="color:var(--t3);font-size:11px;padding:14px;text-align:center;">R\u00e9sultats pas encore publi\u00e9s.</div>');
     return;
   }
   var comp = (j && j.Competition) || {};
@@ -30503,7 +30517,7 @@ async function g45BiaCourse(raceId){
     + 'Vert = sans faute, or = 1 ou 2, rouge au-del\u00e0.'
     + (relais ? '<br>Relais : seules les \u00e9quipes sont list\u00e9es.' : '<br>Touche un athl\u00e8te pour voir sa fiche.')
     + '<br>Source : IBU (biathlonresults.com)</div></div>';
-  el.innerHTML = h;
+  el.innerHTML = _g45BiaCarte(h);
 }
 window.g45BiaOpen = g45BiaOpen; window.g45BiaEtape = g45BiaEtape; window.g45BiaCourse = g45BiaCourse;
 
