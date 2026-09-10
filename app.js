@@ -38611,6 +38611,9 @@ async function loadCompetTab() {
       return;
     }
     if (c.s === '3') { await g45StatsIndRender(c, body); return; }
+    /* Top 14 : la LNR publie ses classements individuels tout faits, la ou
+       ESPN n'en a aucun et ou la reconstruction couterait ~200 requetes. */
+    if (c.s === '270559') { await g45LnrRender(body); return; }
     await g45LeadersGen(c, body, _g45CompetAnnee(c.s));
     return;
   }
@@ -39717,6 +39720,109 @@ async function _g45Feuille(sportPath, slug, eventId) {
     return out;
   } catch (e) { return null; }
 }
+
+/* ═══════════ CLASSEMENTS INDIVIDUELS LNR — TOP 14 (10/09/2026) ═══════════
+   ESPN ne publie aucun classement individuel en rugby : le NRL avait ete
+   reconstruit en cumulant les feuilles de match, ce qui coute ~200 requetes
+   pour une saison. Le site de la LNR, lui, les publie tout faits.
+   VERIFIE AVANT D'ECRIRE UNE LIGNE : les donnees sont dans le HTML rendu cote
+   serveur, pas chargees ensuite par du JavaScript — une lecture de page suffit.
+   On s'accroche a l'IDENTIFIANT du joueur (`/joueur/331-maxime-lucu`) et au
+   slug du club dans l'URL de son logo, jamais a une classe CSS : c'est ce qui
+   avait sauve l'analyseur de tv-sports.fr lors de leur refonte.
+   Passage OBLIGATOIRE par le Worker : lecture d'un site tiers depuis le
+   navigateur, donc bloquee sans lui. Sans le Worker a jour, le bloc affiche un
+   message clair plutot qu'un ecran vide.
+   RESERVE HONNETE : une partie des statistiques du site est reservee aux
+   comptes MyRugby. On lit ce que voit un visiteur non connecte, rien de plus. */
+var _G45_LNR_CATS = [
+  { s:'meilleurs-realisateurs',        n:'Meilleurs r\u00e9alisateurs', u:'points' },
+  { s:'meilleurs-marqueurs-dessais',   n:'Marqueurs d\'essais',        u:'essais' },
+  { s:'meilleurs-taux-de-transformation', n:'Taux de transformation',  u:'%' },
+  { s:'temps-de-jeu',                  n:'Temps de jeu',               u:'min' },
+  { s:'nombre-de-cartons',             n:'Cartons',                    u:'cartons' }
+];
+var _g45LnrCache = {};
+async function _g45LnrPage(chemin){
+  if (_g45LnrCache[chemin]) return _g45LnrCache[chemin];
+  if (typeof FD_PROXY === 'undefined' || !FD_PROXY) return null;
+  try {
+    var r = await fetch(FD_PROXY + '?host=lnr&lnrhost=top14.lnr.fr&path=' + encodeURIComponent(chemin));
+    if (!r.ok) return null;
+    var t = await r.text();
+    if (t && t.length > 500) { _g45LnrCache[chemin] = t; return t; }
+  } catch (e) {}
+  return null;
+}
+/* Analyse d'une page de classement. On part de chaque lien joueur, on remonte
+   au bloc qui le contient, et on y cherche le nombre. Le rang vient de l'ordre
+   d'apparition : il est parfois dans un element separe que la remontee
+   n'attrape pas, alors que l'ordre, lui, est toujours juste. */
+function _g45LnrParse(html){
+  var out = [];
+  try {
+    var doc = new DOMParser().parseFromString(html, 'text/html');
+    var vus = {};
+    doc.querySelectorAll('a[href*="/joueur/"]').forEach(function(a){
+      var m = String(a.getAttribute('href') || '').match(/\/joueur\/(\d+)-([a-z0-9\-]+)/i);
+      if (!m) return;
+      var id = m[1];
+      if (vus[id]) return;
+      var bloc = a, prof = 0;
+      while (bloc && prof < 5 && !/\d/.test((bloc.textContent || '').replace(a.textContent || '', ''))) { bloc = bloc.parentElement; prof++; }
+      if (!bloc) return;
+      var txt = (bloc.textContent || '').replace(/\s+/g, ' ').trim();
+      /* Le nombre recherche est le DERNIER de la ligne : le premier est le rang. */
+      var nums = txt.match(/\d+(?:[.,]\d+)?/g) || [];
+      if (!nums.length) return;
+      var club = '';
+      var img = bloc.querySelector('img[src*="/club/"]');
+      if (img) { var mc = String(img.getAttribute('src') || '').match(/\/club\/([a-z0-9\-]+)\//i); if (mc) club = mc[1].replace(/-/g, ' '); }
+      vus[id] = 1;
+      out.push({ id: id, nom: (a.textContent || '').replace(/\s+/g, ' ').trim(), club: club, val: nums[nums.length - 1] });
+    });
+  } catch (e) {}
+  return out;
+}
+async function g45LnrRender(box, cat){
+  cat = cat || _G45_LNR_CATS[0].s;
+  var chips = '<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px;">'
+    + _G45_LNR_CATS.map(function(c){
+        var on = (c.s === cat);
+        return '<button onclick="g45LnrRender(this.closest(\'[data-lnr]\'),\'' + c.s + '\')" style="border:none;cursor:pointer;border-radius:8px;padding:6px 11px;font-size:11px;font-weight:700;'
+          + 'background:' + (on ? 'var(--a)' : 'rgba(255,255,255,.06)') + ';color:' + (on ? '#0b1020' : 'var(--t2)') + ';">' + c.n + '</button>';
+      }).join('') + '</div>';
+  box.setAttribute('data-lnr', '1');
+  box.innerHTML = chips + '<div style="color:var(--t3);font-size:11px;padding:12px;text-align:center;">\u23f3 Chargement\u2026</div>';
+  var html = await _g45LnrPage('/classement/joueurs/' + cat);
+  if (!html) {
+    box.innerHTML = chips + '<div style="color:#ffb13d;font-size:11px;padding:12px;line-height:1.6;">'
+      + 'Classement indisponible. Ces donn\u00e9es viennent du site de la LNR et passent par le Worker : '
+      + 'v\u00e9rifie que l\'h\u00f4te <b>lnr</b> y est bien d\u00e9clar\u00e9.</div>';
+    return;
+  }
+  var lignes = _g45LnrParse(html);
+  if (!lignes.length) {
+    box.innerHTML = chips + '<div style="color:#ffb13d;font-size:11px;padding:12px;line-height:1.6;">'
+      + 'Page re\u00e7ue mais illisible \u2014 la LNR a sans doute chang\u00e9 sa mise en page. '
+      + 'C\'est le risque assum\u00e9 d\'une lecture de page.</div>';
+    return;
+  }
+  var unite = (_G45_LNR_CATS.filter(function(c){ return c.s === cat; })[0] || {}).u || '';
+  var h = chips + '<div style="display:flex;flex-direction:column;gap:3px;">';
+  lignes.slice(0, 40).forEach(function(r, i){
+    var col = i === 0 ? '#f5c542' : (i === 1 ? '#dfe6f5' : (i === 2 ? '#e2a06a' : 'var(--t3)'));
+    h += '<div style="display:grid;grid-template-columns:28px 1fr auto;gap:8px;align-items:center;padding:7px 9px;border-radius:6px;background:rgba(255,255,255,' + (i % 2 ? '.02' : '.045') + ');">'
+      + '<span style="font-size:11px;font-weight:800;color:' + col + ';">' + (i + 1) + '</span>'
+      + '<span style="font-size:11.5px;font-weight:' + (i < 3 ? '800' : '600') + ';color:var(--t1);overflow:hidden;white-space:nowrap;text-overflow:ellipsis;">'
+        + r.nom + (r.club ? ('<span style="color:var(--t3);font-weight:400;font-size:10px;"> \u00b7 ' + r.club + '</span>') : '') + '</span>'
+      + '<span style="font-size:12px;font-weight:800;color:var(--a);">' + r.val + '<span style="font-size:9px;color:var(--t3);font-weight:400;"> ' + unite + '</span></span>'
+      + '</div>';
+  });
+  box.innerHTML = h + '</div><div style="font-size:9px;color:var(--t3);margin-top:8px;line-height:1.5;">'
+    + 'Source : LNR (top14.lnr.fr). Certaines statistiques du site sont r\u00e9serv\u00e9es aux comptes MyRugby et ne sont pas reprises ici.</div>';
+}
+window.g45LnrRender = g45LnrRender;
 
 async function g45StatsIndRender(c, box) {
   if (!_g45NrlMatchs || !_g45NrlMatchs.length) {
