@@ -6708,6 +6708,15 @@ async function getValidToken(){
   return localStorage.getItem('gones45_dbx_token')||_dbxConfig.refreshToken||null;
 }
 async function saveToDropbox(){
+  /* 12/09/2026 : sur fenotte45, Supabase est la reference. Laisser Dropbox
+     ecrire le meme `state` en parallele, c'est deux systemes qui se disputent
+     la meme donnee — et le perdant s'ecrase en silence. `_g45User` est pose par
+     auth-guard.js quand une session est active : sa presence suffit a trancher.
+     On coupe ICI plutot que dans les appelants : `save()` existe en double et
+     appelle saveToDropbox a chaque enregistrement. Un seul garde-fou, au bon
+     endroit, couvre les deux. La sauvegarde MANUELLE vers Dropbox n'est pas
+     touchee — elle passe par un autre bouton. */
+  try { if (typeof window !== 'undefined' && window._g45User) return; } catch(e){}
   if(_dbxSaving)return;
   _dbxSaving=true;
   try{
@@ -14318,6 +14327,15 @@ async function getValidToken(){
   return localStorage.getItem('gones45_dbx_token')||_dbxConfig.refreshToken||null;
 }
 async function saveToDropbox(){
+  /* 12/09/2026 : sur fenotte45, Supabase est la reference. Laisser Dropbox
+     ecrire le meme `state` en parallele, c'est deux systemes qui se disputent
+     la meme donnee — et le perdant s'ecrase en silence. `_g45User` est pose par
+     auth-guard.js quand une session est active : sa presence suffit a trancher.
+     On coupe ICI plutot que dans les appelants : `save()` existe en double et
+     appelle saveToDropbox a chaque enregistrement. Un seul garde-fou, au bon
+     endroit, couvre les deux. La sauvegarde MANUELLE vers Dropbox n'est pas
+     touchee — elle passe par un autre bouton. */
+  try { if (typeof window !== 'undefined' && window._g45User) return; } catch(e){}
   if(_dbxSaving)return;
   _dbxSaving=true;
   try{
@@ -44473,23 +44491,31 @@ window._g45DeplacerLanceurs = _g45DeplacerLanceurs;
 
 /* ═══════════ LES BOUTONS GITHUB SUIVENT LE MEME SORT (12/09/2026) ═══════════
    Le bloc « Synchro GitHub » melange deux choses de nature differente :
-   l'etat et la sauvegarde EN FICHIER, qui sont a l'utilisateur et lui servent
-   vraiment, et le va-et-vient avec le depot GitHub, qui ne fonctionne qu'avec un
-   jeton desormais invisible. Masquer le bloc entier retirerait la sauvegarde en
-   fichier a tout le monde ; on ne masque donc que les trois boutons devenus
-   inutilisables, en les reperant par la fonction qu'ils appellent.
-   Idempotent : relance sans effet, la fonction est rejouee a chaque ouverture. */
-var _G45_SYNC_ADMIN = ['g45SyncCharger', 'g45SyncEnvoyer', 'g45SyncBascule'];
+   l'etat et la sauvegarde EN FICHIER, qui sont a l'utilisateur, et le va-et-vient
+   avec le depot GitHub, qui ne fonctionne qu'avec un jeton desormais invisible.
+   PREMIERE VERSION : on ne masquait que les trois boutons GitHub. Retour
+   d'Antoine sur capture — il restait un cadre intitule « Synchro GitHub » qui ne
+   synchronisait plus rien, ce qui est pire qu'absent : ca promet une sauvegarde
+   distante qui n'existe pas. On masque donc le bloc ENTIER pour les non-admins.
+   La sauvegarde en fichier n'est pas perdue pour autant : « Backup & Config »,
+   juste en dessous, porte deja Exporter et Importer.
+   Idempotent : rejoue a chaque ouverture des Outils, sans effet cumulatif. */
 function g45SyncMasquerAdmin() {
   if (typeof g45EstAdmin === 'function' && g45EstAdmin()) return;
   var hote = document.getElementById('t-outils');
   if (!hote) return;
-  Array.prototype.forEach.call(hote.querySelectorAll('button[onclick]'), function (b) {
-    var f = b.getAttribute('onclick') || '';
-    for (var i = 0; i < _G45_SYNC_ADMIN.length; i++) {
-      if (f.indexOf(_G45_SYNC_ADMIN[i]) >= 0) { b.style.display = 'none'; return; }
+  var panneau = document.getElementById('g45-sync-msg');
+  /* Le bloc est fait de DEUX noeuds freres, le titre puis le panneau — comme
+     tous les blocs de l'appli. On remonte au fils direct de #t-outils, puis on
+     masque aussi le titre qui le precede, sinon il resterait orphelin. */
+  while (panneau && panneau.parentNode !== hote) panneau = panneau.parentNode;
+  if (panneau) {
+    panneau.style.display = 'none';
+    var titre = panneau.previousElementSibling;
+    if (titre && titre.className && String(titre.className).indexOf('sec') >= 0) {
+      titre.style.display = 'none';
     }
-  });
+  }
 }
 window.g45SyncMasquerAdmin = g45SyncMasquerAdmin;
 
