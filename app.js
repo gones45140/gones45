@@ -21828,6 +21828,14 @@ async function loadTeamSaisons() {
       if(_finA.length) { results[keyA] = _finA.map(function(mm){ return espnToFdMatch(mm, espNameA, teamId); }); espnOk = true; }
       var _finB = (espB && espB.matches) ? espB.matches.filter(function(mm){ return mm.completed; }) : [];
       if(_finB.length) { results[keyB] = _finB.map(function(mm){ return espnToFdMatch(mm, espNameB, teamId); }); espnOk = true; }
+      /* DIAGNOSTIC (12/09/2026) : releve par Antoine sur le PSG, qui tombe
+         sur l'ecran de secours alors que ses identifiants (football-data ET
+         ESPN) sont corrects dans le code. La panne est donc reseau, pas de
+         configuration — ce journal dira, la prochaine fois, si ESPN a repondu
+         sans aucun match, ou pas repondu du tout. */
+      if(!espnOk) console.warn('Saisons ESPN vide pour "'+nom+'" ('+lg+') — annees '+yA+'/'+yB
+        +' : espA='+(espA?(espA.matches?espA.matches.length+' matchs recus':'pas de champ matches'):'reponse nulle')
+        +', espB='+(espB?(espB.matches?espB.matches.length+' matchs recus':'pas de champ matches'):'reponse nulle'));
       /* Les matchs à venir sont déjà dans la réponse ESPN : on les met de côté pour les
          afficher, au lieu de les jeter comme depuis le filtre `completed`. */
       var _espnT=(espA&&espA.team)||(espB&&espB.team)||null;
@@ -21988,7 +21996,10 @@ async function loadTeamSaisons() {
       ]);
       if(dataA && dataA.matches && dataA.matches.length) results[String(_sA)] = dataA.matches;
       if(dataB && dataB.matches && dataB.matches.length) results[String(_sB)] = dataB.matches;
-    } catch(fdErr) {}
+      if(!Object.keys(results).length) console.warn('Saisons football-data vide pour "'+nom+'" (id '+teamId+') — annees '+_sA+'/'+_sB
+        +' : dataA='+(dataA?(dataA.matches?dataA.matches.length+' matchs recus':'pas de champ matches'):'reponse nulle')
+        +', dataB='+(dataB?(dataB.matches?dataB.matches.length+' matchs recus':'pas de champ matches'):'reponse nulle'));
+    } catch(fdErr) { console.warn('Saisons football-data en erreur pour "'+nom+'" :', fdErr); }
   }
   
   var saisons = Object.keys(results).sort().reverse();
