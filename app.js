@@ -4222,6 +4222,24 @@ function injectRefreshButton() {
 }
 if(document.readyState==='loading'){ document.addEventListener('DOMContentLoaded', injectRefreshButton); } else { injectRefreshButton(); }
 
+/* ═══════════ MASQUER « JEU » POUR LES NON-ADMINISTRATEURS (12/09/2026) ═══════════
+   Demande d'Antoine, redite plusieurs fois — deux boutons y menaient
+   (le menu principal ET le menu « plus » du mobile), et une correction
+   passee n'avait probablement touche que l'un des deux, d'ou la repetition
+   de la demande. Les deux sont masques ici ensemble, au meme endroit,
+   pour que ca ne se reproduise plus. Meme principe que le masquage
+   d'Outils/Cles : verifie au demarrage, pas de verrou cote serveur — il n'y
+   a rien de sensible derriere, juste une fonctionnalite qu'Antoine ne veut
+   montrer qu'a lui-meme pour l'instant. */
+function g45JeuMasquerAdmin() {
+  if (typeof g45EstAdmin === 'function' && g45EstAdmin()) return;
+  ['btn-jeu-sidebar', 'btn-jeu-plus'].forEach(function (id) {
+    var b = document.getElementById(id);
+    if (b) b.style.display = 'none';
+  });
+}
+if(document.readyState==='loading'){ document.addEventListener('DOMContentLoaded', g45JeuMasquerAdmin); } else { g45JeuMasquerAdmin(); }
+
 /* ── PARIS ── */
 function pari(isS){
   var n,b,c,m,target,type,l=1,sport='',comp='',heure='',date='';
