@@ -35827,7 +35827,7 @@ var _G45_CACHE_PREFIXES=['g45rcP_','g45rcD_','g45rcY_','g45rc_','g45dcm_','g45dc
   'g45nrlcal2_','g45core2_','g45core_','g45_fx_faits','g45_veille_','g45_compet_logos','g45_groq_modele','g45_groq_modele3','g45_groq_vision','g45_gemini_modeles',
   /* 12/09 : g45nrlcal6_ rejoint la liste, remplace par g45nrlcal7_ ci-dessus —
      meme raison que g45nrlcal2_ et g45nrlcal3_ avant lui. */
-  'g45nrlcal6_','g45nrlcal7_',
+  'g45nrlcal6_','g45nrlcal7_','g45nrlcal8_','g45nrlcal9_',
   /* MESURE DU 20/08 sur le stockage reel d'Antoine (5,1 Mo, sature) :
        fpl_bootstrap_cache ... 1951 Ko  <- a lui seul 38 % du total
        g45itf_*            ... 1779 Ko  <- tennis ITF/Challenger, par date
@@ -42079,7 +42079,10 @@ function _g45NrlCleCache(annee) {
      Forest/Palace/Spurs : « toujours pareil » apres deploiement. */
   /* Cle changee le 12/09 (bis) : le diagnostic ajoute dans _g45FdAssocier ne
      doit pas attendre 6 h derriere le cache pose par la version precedente. */
-  return 'g45nrlcal8_' + _g45NrlCtx.sport + '_' + _g45NrlCtx.ligue + '_' + annee;
+  /* Cle changee le 12/09 (ter) : l'alias Rennes/Stade Rennais doit s'appliquer
+     tout de suite, pas dans 6 h. */
+  /* Cle changee le 12/09 (quater) : alias Spurs/Palace/Forest/AZ/Cologne. */
+  return 'g45nrlcal10_' + _g45NrlCtx.sport + '_' + _g45NrlCtx.ligue + '_' + annee;
 }
 
 var _g45NrlChargerOrig = (typeof g45NrlCharger === 'function') ? g45NrlCharger : null;
@@ -48075,9 +48078,38 @@ function _g45FdSigle(nom) {
   return mots.map(function (w) { return w[0]; }).join('').toLowerCase();
 }
 
+/* ═══ ALIAS EXPLICITES (12/09/2026, etendu le 12/09 par lot) ═══
+   Rennes/Stade Rennais est confirme par la console d'Antoine (aucun sous-mot
+   commun). Les cinq suivants — Spurs, Palace, Forest, AZ Alkmaar, Cologne —
+   sont signales par Antoine mais PAS encore confirmes par un releve de
+   console : ce sont des propositions raisonnees, pas des certitudes. Chaque
+   valeur est un TABLEAU de formes possibles plutot qu'une seule, faute de
+   savoir laquelle football-data utilise reellement (« Tottenham » seul, ou
+   « Tottenham Hotspur » complet ?). Si une des variantes est fausse, le
+   diagnostic ci-dessous l'aurait de toute facon signalee au prochain passage —
+   c'est le filet qui rend ces suppositions sans risque : au pire elles ne
+   servent a rien, elles ne peuvent pas faire matcher le mauvais club sauf
+   coincidence de nom quasi impossible en pratique.
+   Cologne est un cas different des quatre autres : pas un raccourci ESPN mais
+   le nom ANGLAIS de la ville, quand le club n'est connu partout ailleurs que
+   sous son nom allemand (Köln) — aucun rapport de sous-mot possible entre
+   « cologne » et « koln », quelle que soit la regle generique. */
+var _G45_FD_ALIAS = {
+  'rennes': ['staderennais'],
+  'spurs': ['tottenham', 'tottenhamhotspur'],
+  'cpalace': ['crystalpalace'],
+  'nottmforest': ['nottinghamforest', 'nottmforest', 'nottforest'],
+  'az': ['azalkmaar'],
+  'cologne': ['koln', 'fckoln', '1fckoln']
+};
 function _g45FdMemeEquipe(espn, court, complet) {
   if (_g45BandMeme(espn, court) || _g45BandMeme(espn, complet)) return true;
   var e = _g45SgNorm(espn || '');
+  var alias = _G45_FD_ALIAS[e];
+  if (alias) {
+    var c = _g45SgNorm(court), k = _g45SgNorm(complet);
+    for (var i = 0; i < alias.length; i++) { if (alias[i] === c || alias[i] === k) return true; }
+  }
   if (e.length >= 2 && e.length <= 5) {
     if (e === _g45FdSigle(court) || e === _g45FdSigle(complet)) return true;
   }
