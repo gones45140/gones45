@@ -35825,6 +35825,9 @@ var _G45_CACHE_PREFIXES=['g45rcP_','g45rcD_','g45rcY_','g45rc_','g45dcm_','g45dc
      les plus lourdes : plusieurs Ko par match, gardees indefiniment. */
   'g45butA2_','g45gl3_','g45gl2_','g45gl_','g45_tirs2_','g45_fanart2_','g45_fanart_','g45_img_perso_','g45_tv_prog','g45_mqnom_','g45_mqteam_','g45_mqfond_','g45trv4_','g45_catimg_','g45_catfmt2_','g45_catfmt_','g45nrlcal3_','g45nrlcal2_','g45_score2_','g45_score_','g45_lglogo_','g45compet3_','g45compet2_','g45compet_','g45tmeta_','g45histo_','g45ld2_','g45ld_',
   'g45nrlcal2_','g45core2_','g45core_','g45_fx_faits','g45_veille_','g45_compet_logos','g45_groq_modele','g45_groq_modele3','g45_groq_vision','g45_gemini_modeles',
+  /* 12/09 : g45nrlcal6_ rejoint la liste, remplace par g45nrlcal7_ ci-dessus —
+     meme raison que g45nrlcal2_ et g45nrlcal3_ avant lui. */
+  'g45nrlcal6_',
   /* MESURE DU 20/08 sur le stockage reel d'Antoine (5,1 Mo, sature) :
        fpl_bootstrap_cache ... 1951 Ko  <- a lui seul 38 % du total
        g45itf_*            ... 1779 Ko  <- tennis ITF/Challenger, par date
@@ -42066,7 +42069,15 @@ function _g45NrlCleCache(annee) {
   /* Cle changee le 04/09 : les caches precedents contiennent des numeros de
      journee errones (deduits des dates). Ils doivent etre reconstruits une fois
      avec la numerotation officielle de football-data. */
-  return 'g45nrlcal6_' + _g45NrlCtx.sport + '_' + _g45NrlCtx.ligue + '_' + annee;
+  /* Cle changee le 12/09 : MEME CAUSE, ENCORE MANQUEE UNE FOIS — j'ai corrige
+     la resolution des journees (verrou tout-ou-rien retire, Europa/Conference
+     ajoutees) sans suivre la regle que les trois commentaires ci-dessus avaient
+     deja posee trois fois : tout changement de cette logique doit changer la cle
+     de cache, sinon les navigateurs ayant deja une saison en memoire depuis
+     moins de 6 h rejouent les anciens numeros (ou leur absence) sans jamais
+     retenter la resolution. C'est exactement ce qu'a signale Antoine avec
+     Forest/Palace/Spurs : « toujours pareil » apres deploiement. */
+  return 'g45nrlcal7_' + _g45NrlCtx.sport + '_' + _g45NrlCtx.ligue + '_' + annee;
 }
 
 var _g45NrlChargerOrig = (typeof g45NrlCharger === 'function') ? g45NrlCharger : null;
