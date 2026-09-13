@@ -38104,13 +38104,26 @@ async function g45NrlCharger(annee) {
       }
     });
   }
-  /* SOURCE PRIORITAIRE POUR LE FOOTBALL : football-data.org (04/09).
-     Une requete pour toute la saison, mise en cache 6 h. Le numero est
+  /* SOURCE PRIORITAIRE POUR LE FOOTBALL : football-data.org (04/09, corrige le
+     12/09). Une requete pour toute la saison, mise en cache 6 h. Le numero est
      OFFICIEL, donc un match avance ou reporte est classe correctement — ce
-     qu'aucune deduction fondee sur les dates ne peut garantir. Sans cle
-     enregistree, ou hors des championnats couverts, on retombe simplement sur
-     les methodes suivantes. */
-  if (!out.some(function (m) { return m.jr; })) {
+     qu'aucune deduction fondee sur les dates ne peut garantir.
+
+     BUG CORRIGE LE 12/09 (releve par Antoine — Rennes reste « non precisee »
+     alors que les autres equipes sont bonnes) : cette source ne se declenchait
+     QUE si AUCUN match de la ligue n'avait de journee. Pour la Ligue 1, ESPN en
+     fournit la plupart directement, donc la condition etait fausse et la
+     source la plus fiable ne s'executait JAMAIS — y compris pour les quelques
+     matchs, comme ceux de Rennes, qu'ESPN seul ne resolvait pas. Le mot
+     « prioritaire » du commentaire d'origine ne decrivait donc pas ce que
+     faisait le code : en pratique c'etait un dernier recours, pas une priorite.
+
+     Desormais on tente TOUJOURS football-data pour les championnats couverts,
+     et `_g45FdAssocier` ne comble que les trous — un match deja resolu par
+     ESPN ou par le calendrier n'est jamais touche. Sans cle enregistree, ou
+     hors des championnats couverts, `_g45FdMatchdays` renvoie null et rien ne
+     change par rapport a avant. */
+  if (out.some(function (m) { return !m.jr; })) {
     try {
       var refs = await _g45FdMatchdays(_g45NrlCtx.ligue, annee);
       var n = _g45FdAssocier(out, refs);
@@ -47945,7 +47958,14 @@ window.g45ConvVersValue = g45ConvVersValue;
 var _G45_FD_CODES = {
   'fra.1': 'FL1', 'esp.1': 'PD', 'ita.1': 'SA',
   'eng.1': 'PL',  'ger.1': 'BL1',
-  'uefa.champions': 'CL', 'por.1': 'PPL', 'ned.1': 'DED', 'bra.1': 'BSA'
+  'uefa.champions': 'CL', 'por.1': 'PPL', 'ned.1': 'DED', 'bra.1': 'BSA',
+  /* 12/09 : manquaient ici alors qu'elles sont dans la table soeur du calendrier
+     mensuel (`_g45MatchdayMap`, ligne ~32241) — deux endroits qui devraient
+     toujours dire la meme chose et avaient diverge. Forest, Palace et Spurs
+     jouent l'Europa ou la Conference League, pas la Champions League : sans ces
+     deux lignes, `_g45FdMatchdays` renvoyait null avant meme de tenter quoi que
+     ce soit, quel que soit l'etat des deux corrections precedentes. */
+  'uefa.europa': 'EL', 'uefa.europa.conf': 'ECL'
 };
 
 /* Cache long : le calendrier d'une saison ne bouge quasiment pas, et l'offre
@@ -47989,6 +48009,11 @@ function _g45FdAssocier(matchs, refs) {
   if (!refs || !refs.length) return 0;
   var n = 0;
   matchs.forEach(function (m) {
+    /* 12/09 : on ne comble que les trous. Le declenchement n'exige plus l'echec
+       total de la ligue (voir plus haut) — sans cette garde, football-data
+       ecraserait aussi les journees qu'ESPN avait deja correctement fournies,
+       ce qui n'a jamais ete demande et introduirait un risque pour rien. */
+    if (m.jr) return;
     var jour = String(m.date || '').slice(0, 10);
     var t = new Date(jour).getTime();
     for (var i = 0; i < refs.length; i++) {
