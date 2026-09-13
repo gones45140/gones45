@@ -35827,7 +35827,7 @@ var _G45_CACHE_PREFIXES=['g45rcP_','g45rcD_','g45rcY_','g45rc_','g45dcm_','g45dc
   'g45nrlcal2_','g45core2_','g45core_','g45_fx_faits','g45_veille_','g45_compet_logos','g45_groq_modele','g45_groq_modele3','g45_groq_vision','g45_gemini_modeles',
   /* 12/09 : g45nrlcal6_ rejoint la liste, remplace par g45nrlcal7_ ci-dessus —
      meme raison que g45nrlcal2_ et g45nrlcal3_ avant lui. */
-  'g45nrlcal6_',
+  'g45nrlcal6_','g45nrlcal7_',
   /* MESURE DU 20/08 sur le stockage reel d'Antoine (5,1 Mo, sature) :
        fpl_bootstrap_cache ... 1951 Ko  <- a lui seul 38 % du total
        g45itf_*            ... 1779 Ko  <- tennis ITF/Challenger, par date
@@ -42077,7 +42077,9 @@ function _g45NrlCleCache(annee) {
      moins de 6 h rejouent les anciens numeros (ou leur absence) sans jamais
      retenter la resolution. C'est exactement ce qu'a signale Antoine avec
      Forest/Palace/Spurs : « toujours pareil » apres deploiement. */
-  return 'g45nrlcal7_' + _g45NrlCtx.sport + '_' + _g45NrlCtx.ligue + '_' + annee;
+  /* Cle changee le 12/09 (bis) : le diagnostic ajoute dans _g45FdAssocier ne
+     doit pas attendre 6 h derriere le cache pose par la version precedente. */
+  return 'g45nrlcal8_' + _g45NrlCtx.sport + '_' + _g45NrlCtx.ligue + '_' + annee;
 }
 
 var _g45NrlChargerOrig = (typeof g45NrlCharger === 'function') ? g45NrlCharger : null;
@@ -48019,23 +48021,40 @@ async function _g45FdMatchdays(ligue, annee) {
 function _g45FdAssocier(matchs, refs) {
   if (!refs || !refs.length) return 0;
   var n = 0;
+  /* 12/09 : Antoine a confirme sur Premier League que des matchs restent
+     « non precisee » malgre le comblement (26/37 combles selon la console — le
+     reste a echoue en silence). Deux fois de suite j'ai devine une cause de
+     nommage sans preuve et je me suis trompe. Plutot qu'une troisieme
+     hypothese, ce bloc journalise EXACTEMENT pourquoi chaque match resiste :
+     soit aucune reference football-data n'existe a sa date (probleme de
+     couverture), soit une existe mais les noms ne se reconnaissent pas
+     (probleme de correspondance) — et dans ce cas les deux ecritures
+     apparaissent cote a cote dans la console, lisibles directement. */
+  var echecs = [];
   matchs.forEach(function (m) {
-    /* 12/09 : on ne comble que les trous. Le declenchement n'exige plus l'echec
-       total de la ligue (voir plus haut) — sans cette garde, football-data
-       ecraserait aussi les journees qu'ESPN avait deja correctement fournies,
-       ce qui n'a jamais ete demande et introduirait un risque pour rien. */
     if (m.jr) return;
     var jour = String(m.date || '').slice(0, 10);
     var t = new Date(jour).getTime();
+    var candidats = [];
     for (var i = 0; i < refs.length; i++) {
       var r = refs[i];
       var ecart = Math.abs(new Date(r.d).getTime() - t);
       if (!(ecart <= 86400000)) continue;
+      candidats.push(r);
       var okD = _g45FdMemeEquipe(m.dom, r.h, r.hl);
       var okE = _g45FdMemeEquipe(m.ext, r.a, r.al);
-      if (okD && okE) { m.jr = r.jr; n++; break; }
+      if (okD && okE) { m.jr = r.jr; n++; candidats = null; break; }
+    }
+    if (candidats) {
+      echecs.push('  ESPN: "' + m.dom + '" vs "' + m.ext + '" (' + jour + ')  |  '
+        + (candidats.length
+            ? 'football-data proposait : ' + candidats.map(function (c) { return '"' + c.h + '" vs "' + c.a + '"'; }).join(', ')
+            : 'AUCUNE reference football-data a cette date (+/- 1 jour)'));
     }
   });
+  if (echecs.length) {
+    console.warn('journees non resolues malgre football-data (' + echecs.length + ') :\n' + echecs.join('\n'));
+  }
   return n;
 }
 
