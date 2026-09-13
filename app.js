@@ -26970,6 +26970,38 @@ window.g45TrSel=g45TrSel; window.g45TrDay=g45TrDay;
 
 function loadTendancesTab(){
   var el=document.getElementById('t-tend'); if(!el) return;
+  /* ═══ TENDANCES RESERVEE AUX COMPTES (12/09/2026, corrige le meme jour) ═══
+     Decide par Antoine : contrairement au reste de l'appli, gouverne par le
+     seul mur des 15 paris, Tendances est bloquee des le depart pour un
+     visiteur SUR FENOTTE45 — pas de tolerance, pas de compteur. C'est la
+     fonction qui tape le plus dans les quotas Groq/Gemini/Mistral, et un
+     visiteur qui ne place jamais de pari pourrait sinon l'utiliser
+     indefiniment sans jamais toucher le mur general.
+
+     BUG CORRIGE LE MEME JOUR : app.js est PARTAGE entre deux depots — fenotte45
+     (Supabase, ou `auth-guard.js` pose `window._g45User`) et gones45, la
+     version perso d'Antoine, qui n'a NI Supabase NI `auth-guard.js` du tout.
+     Sur ce second depot, `window._g45User` n'est jamais ni `null` ni un objet
+     — il n'existe simplement JAMAIS. La condition `if (!window._g45User)`
+     etait donc vraie EN PERMANENCE sur gones45, bloquant Tendances pour
+     Antoine lui-meme sur son propre site, qui n'a meme pas de login.html vers
+     lequel renvoyer. On distingue desormais deux etats bien differents :
+     `undefined` (aucune notion de compte sur ce depot — ne pas bloquer) et
+     `null` (auth-guard.js a tourne, verifie, et confirme qu'il n'y a
+     personne — bloquer, c'est le vrai cas visiteur). Seul `null` declenche
+     le mur ; `undefined` laisse Tendances ouvert, exactement comme avant
+     qu'on invente cette regle. */
+  if (window._g45User === null) {
+    el.innerHTML = '<div style="padding:40px 20px;text-align:center;">'
+      + '<div style="font-size:32px;margin-bottom:12px;">🔒</div>'
+      + '<div style="font-weight:700;margin-bottom:8px;color:var(--t1);">Tendances réservé aux comptes</div>'
+      + '<div style="color:var(--t3);font-size:13px;line-height:1.6;max-width:320px;margin:0 auto 18px;">'
+      + 'Cette fonction s\'appuie sur plusieurs IA — elle est réservée aux comptes créés, gratuitement.</div>'
+      + '<a href="./login.html" style="display:inline-block;padding:11px 22px;border-radius:9px;'
+      + 'background:#2563eb;color:#fff;text-decoration:none;font-weight:700;font-size:14px;">'
+      + 'Créer mon compte</a></div>';
+    return;
+  }
   var G=_g45TrGroups();
   if(!_G45_TR.sel){ _G45_TR.sel={}; G.forEach(function(g,i){ if(/Grands championnats|Coupes d/i.test(g.grp)) _G45_TR.sel[i]=true; }); }
   /* LIFTING DU 27/08 (meme demande que le Bilan : "comme le screen 2"). Les
@@ -38709,6 +38741,32 @@ window.g45CompetOuvrir = g45CompetOuvrir;
 async function loadCompetTab() {
   var el = document.getElementById('t-compet');
   if (!el) return;
+
+  /* ═══ COMPETITIONS : 30 JOURS APRES CREATION DE COMPTE, PUIS SOUTIEN (12/09/2026) ═══
+     Regle differente de Tendances : un VISITEUR (pas de compte) garde acces a
+     Competitions, gouverne par le seul mur general des 15 paris — comme avant.
+     La restriction ne s'active qu'UNE FOIS UN COMPTE CREE : `window._g45User`
+     porte alors `created_at`, la date d'inscription telle que Supabase l'a
+     enregistree (pas modifiable depuis le navigateur, contrairement a un
+     compteur local). 30 jours pleins a partir de cette date, puis fermeture
+     sauf statut « soutien » — un simple drapeau qu'Antoine active a la main
+     apres verification manuelle d'un don, `window._g45Soutien` pose par
+     auth-guard.js au demarrage (voir la-bas pour le detail et ses limites). */
+  if (window._g45User && window._g45User.created_at && !window._g45Soutien) {
+    var joursDepuis = (Date.now() - new Date(window._g45User.created_at).getTime()) / 86400000;
+    if (joursDepuis > 30) {
+      el.innerHTML = '<div style="padding:40px 20px;text-align:center;">'
+        + '<div style="font-size:32px;margin-bottom:12px;">🏆</div>'
+        + '<div style="font-weight:700;margin-bottom:8px;color:var(--t1);">Mois gratuit terminé</div>'
+        + '<div style="color:var(--t3);font-size:13px;line-height:1.6;max-width:340px;margin:0 auto 18px;">'
+        + 'Compétitions était gratuit pendant 30 jours. Pour continuer à l\'utiliser, '
+        + 'un petit soutien du projet suffit.</div>'
+        + '<a href="https://paypal.me/touraineantoine" target="_blank" rel="noopener" style="display:inline-block;padding:11px 22px;border-radius:9px;'
+        + 'background:#2563eb;color:#fff;text-decoration:none;font-weight:700;font-size:14px;">'
+        + 'Soutenir le projet</a></div>';
+      return;
+    }
+  }
 
   /* NAVIGATION A DEUX NIVEAUX, reprise de l'onglet Resultats : sport puis
      competition. Les chips a plat atteignaient 21 entrees sur quatre lignes,
