@@ -35827,7 +35827,7 @@ var _G45_CACHE_PREFIXES=['g45rcP_','g45rcD_','g45rcY_','g45rc_','g45dcm_','g45dc
   'g45nrlcal2_','g45core2_','g45core_','g45_fx_faits','g45_veille_','g45_compet_logos','g45_groq_modele','g45_groq_modele3','g45_groq_vision','g45_gemini_modeles',
   /* 12/09 : g45nrlcal6_ rejoint la liste, remplace par g45nrlcal7_ ci-dessus —
      meme raison que g45nrlcal2_ et g45nrlcal3_ avant lui. */
-  'g45nrlcal6_','g45nrlcal7_','g45nrlcal8_','g45nrlcal9_',
+  'g45nrlcal6_','g45nrlcal7_','g45nrlcal8_','g45nrlcal9_','g45nrlcal10_',
   /* MESURE DU 20/08 sur le stockage reel d'Antoine (5,1 Mo, sature) :
        fpl_bootstrap_cache ... 1951 Ko  <- a lui seul 38 % du total
        g45itf_*            ... 1779 Ko  <- tennis ITF/Challenger, par date
@@ -40394,8 +40394,17 @@ var _g45SgReplie = false;    /* un seul repli automatique sur la saison preceden
 var _g45SgNomCourant = '';   /* equipe affichee, pour reinitialiser les filtres */
 var _g45SgPhase = 'tout';    /* 'tout' | 'reg' | 'po' */
 
+/* 12/09/2026 : "ø" (et quelques autres lettres latines qui ne se decomposent
+   PAS en NFD, car ce sont des lettres a part entiere, pas des lettres
+   accentuees) disparaissaient au lieu de se simplifier — "Bodø" devenait "bod"
+   au lieu de "bodo", ne correspondant plus a l'ecriture anglicisee "Bodo" que
+   les autres sources utilisent. Ca touche potentiellement tout club nordique
+   (norvegien, danois, islandais...), pas seulement celui qui l'a revele. La
+   table reste courte : seulement les lettres du football europeen. */
+var _G45_TRANSLIT = { 'ø':'o','Ø':'o','å':'a','Å':'a','æ':'ae','Æ':'ae','œ':'oe','Œ':'oe','ß':'ss','đ':'d','Đ':'d','ł':'l','Ł':'l' };
 function _g45SgNorm(s) {
-  return String(s || '').toLowerCase()
+  s = String(s || '').replace(/[øØåÅæÆœŒßđĐłŁ]/g, function (c) { return _G45_TRANSLIT[c] || c; });
+  return s.toLowerCase()
     .normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]/g, '');
 }
 function _g45SgCle(n) { return String(n || '').toLowerCase().trim(); }
@@ -42082,7 +42091,9 @@ function _g45NrlCleCache(annee) {
   /* Cle changee le 12/09 (ter) : l'alias Rennes/Stade Rennais doit s'appliquer
      tout de suite, pas dans 6 h. */
   /* Cle changee le 12/09 (quater) : alias Spurs/Palace/Forest/AZ/Cologne. */
-  return 'g45nrlcal10_' + _g45NrlCtx.sport + '_' + _g45NrlCtx.ligue + '_' + annee;
+  /* Cle changee le 12/09 (quinquies) : correction ø, alias bidirectionnels,
+     AEK/Bratislava/Prague ajoutes. */
+  return 'g45nrlcal11_' + _g45NrlCtx.sport + '_' + _g45NrlCtx.ligue + '_' + annee;
 }
 
 var _g45NrlChargerOrig = (typeof g45NrlCharger === 'function') ? g45NrlCharger : null;
@@ -48094,21 +48105,42 @@ function _g45FdSigle(nom) {
    le nom ANGLAIS de la ville, quand le club n'est connu partout ailleurs que
    sous son nom allemand (Köln) — aucun rapport de sous-mot possible entre
    « cologne » et « koln », quelle que soit la regle generique. */
-var _G45_FD_ALIAS = {
-  'rennes': ['staderennais'],
-  'spurs': ['tottenham', 'tottenhamhotspur'],
-  'cpalace': ['crystalpalace'],
-  'nottmforest': ['nottinghamforest', 'nottmforest', 'nottforest'],
-  'az': ['azalkmaar'],
-  'cologne': ['koln', 'fckoln', '1fckoln']
-};
+/* ═══ ALIAS EXPLICITES (12/09/2026, revu apres retour d'Antoine) ═══
+   Deux corrections par rapport a la version precedente :
+
+   1. DIRECTION ABANDONNEE. J'avais suppose qu'ESPN est toujours le raccourci
+      et football-data toujours la forme longue. Faux pour AZ Alkmaar : c'est
+      football-data qui dit juste « AZ », ESPN qui garde le nom complet — donc
+      ma table, indexee sur le nom ESPN, ne pouvait pas la trouver. Les groupes
+      ci-dessous sont desormais des ENSEMBLES de formes equivalentes, verifies
+      dans les deux sens : peu importe laquelle des deux sources est la plus
+      courte.
+   2. TROIS PAIRES AJOUTEES, confirmees par la console d'Antoine sur les
+      matchs de Ligue des Champions (AEK Athenes, Bratislava, Prague) — memes
+      causes que Rennes et Cologne : sigle grec translitere differemment
+      (PAE = Podosfairiki Anonymi Etaireia), et noms de ville en deux langues.
+
+   « Nottingham » seul (sans « Forest ») et « AZ » seul sont maintenant dans
+   leurs groupes respectifs, confirmes par Antoine — retires les variantes que
+   j'avais devinees et qui ne servaient a rien. */
+var _G45_FD_GROUPES = [
+  ['rennes', 'staderennais'],
+  ['spurs', 'tottenham', 'tottenhamhotspur'],
+  ['cpalace', 'crystalpalace'],
+  ['nottmforest', 'nottingham', 'nottforest'],
+  ['az', 'azalkmaar'],
+  ['cologne', 'koln', 'fckoln', '1fckoln'],
+  ['aekathens', 'paeaek', 'aek'],
+  ['sbratislava', 'slbratislava', 'slovanbratislava'],
+  ['slaviaprague', 'slaviapraha']
+];
 function _g45FdMemeEquipe(espn, court, complet) {
   if (_g45BandMeme(espn, court) || _g45BandMeme(espn, complet)) return true;
-  var e = _g45SgNorm(espn || '');
-  var alias = _G45_FD_ALIAS[e];
-  if (alias) {
-    var c = _g45SgNorm(court), k = _g45SgNorm(complet);
-    for (var i = 0; i < alias.length; i++) { if (alias[i] === c || alias[i] === k) return true; }
+  var e = _g45SgNorm(espn || ''), c = _g45SgNorm(court), k = _g45SgNorm(complet);
+  for (var g = 0; g < _G45_FD_GROUPES.length; g++) {
+    var groupe = _G45_FD_GROUPES[g];
+    if (groupe.indexOf(e) < 0) continue;
+    if (groupe.indexOf(c) >= 0 || groupe.indexOf(k) >= 0) return true;
   }
   if (e.length >= 2 && e.length <= 5) {
     if (e === _g45FdSigle(court) || e === _g45FdSigle(complet)) return true;
