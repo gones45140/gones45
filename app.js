@@ -22013,9 +22013,20 @@ async function loadTeamSaisons() {
     // Compléter avec les coupes football-data SANS bloquer (years alignées sur ESPN)
     var keys = Object.keys(results);
     (async function(){
-      try {
-        for(var ki=0; ki<keys.length; ki++){
-          var yr = keys[ki];
+      /* CORRIGE LE 12/09/2026 (releve par Antoine — coupe et boutons manquants
+         precisement quand la page met longtemps a charger, uniquement sur PC
+         gones45, jamais sur telephone ni sur bet45.fr) : tout ce bloc etait
+         entoure d'UN SEUL catch, qui avalait silencieusement N'IMPORTE QUELLE
+         erreur sur N'IMPORTE QUELLE annee — un simple ralentissement reseau ou
+         un 429 passager sur la PREMIERE annee arretait la boucle net, sans
+         jamais tenter la seconde, et sans la moindre trace dans la console.
+         Un chargement lent augmente mecaniquement les chances de toucher ce
+         genre d'alea, d'ou la correlation qu'Antoine a remarquee. Chaque annee
+         a desormais son propre filet : l'echec de l'une n'empeche plus
+         l'autre d'aboutir, et l'echec est enfin visible plutot que muet. */
+      for(var ki=0; ki<keys.length; ki++){
+        var yr = keys[ki];
+        try {
           var data = await fdFetch('/v4/teams/'+teamId+'/matches?status=FINISHED&season='+yr);
           if(data && data.matches && data.matches.length){
             var cups = data.matches.filter(function(m){
@@ -22034,8 +22045,8 @@ async function loadTeamSaisons() {
               renderSaisonsChart(el, results, nom); // re-render avec les coupes
             }
           }
-        }
-      } catch(e){ /* coupes non chargées, pas grave */ }
+        } catch(e){ console.warn('coupe football-data non chargee pour "'+nom+'" annee '+yr+' :', e); }
+      }
     })();
     return; // on a déjà affiché ESPN
   }
