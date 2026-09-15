@@ -6,21 +6,6 @@
    On redirige donc vers ESPN les appels qui passaient par le proxy.
    Les 28 autres appels ESPN d'app.js sont déjà en direct.
    Les deux hôtes sont déjà autorisés dans le connect-src du CSP.
-
-   EXCEPTION AJOUTEE LE 12/09/2026 (releve par Antoine, capture de
-   console a l'appui) : `/teams` — la liste des equipes d'un
-   championnat, utilisee par `_espnLoadLeagueTeams` pour resoudre un
-   club par son nom — ne renvoie AUCUN en-tete CORS quand on l'appelle
-   en direct depuis le navigateur. Le reseau reussit (200, visible
-   dans la console), mais le navigateur bloque quand meme la lecture
-   de la reponse : ni le Worker (403 Akamai) ni le direct (CORS) ne
-   fonctionnent pour CET endpoint precis, alors que les 28 autres s'en
-   sortent tres bien en direct.
-   Ce test suppose que le blocage Akamai du 05/08 ne s'appliquait pas
-   a /teams specifiquement — a verifier : si ce changement fait
-   ressortir un 403 au lieu du CORS actuel, c'est que /teams est
-   AUSSI bloque cote Worker, et il faudra revenir en arriere (retirer
-   la ligne juste en dessous) le temps de trouver une autre solution.
    ═══════════════════════════════════════════════════════════════ */
 (function(){
   var _f = window.fetch;
@@ -29,16 +14,7 @@
       if (typeof u === 'string' && u.indexOf('host=espn') >= 0 && u.indexOf('workers.dev') >= 0) {
         var p = new URLSearchParams(u.slice(u.indexOf('?') + 1));
         var path = p.get('path');
-        /* CORRECTION DU MEME JOUR : un premier essai testait la simple PRESENCE
-           de "/teams" dans l'URL, qui matchait AUSSI /teams/{id}/schedule (le
-           calendrier d'un club precis) — resultat, ce dernier restait
-           incorrectement sur le Worker au lieu de partir en direct comme les
-           27 autres endpoints. Seule la liste BRUTE des equipes d'un
-           championnat (/soccer/{ligue}/teams, RIEN apres) pose le probleme
-           CORS ; on ne l'exclut qu'elle, en verifiant la FIN exacte du chemin
-           decode plutot qu'une simple sous-chaine. */
-        var estListeEquipes = path && /\/teams\/?$/.test(path);
-        if (path && !estListeEquipes) u = (p.get('host') === 'espnweb'
+        if (path) u = (p.get('host') === 'espnweb'
               ? 'https://site.web.api.espn.com'
               : 'https://site.api.espn.com') + path;
       }
@@ -148,26 +124,13 @@ function espnLeagueOf(nom) {
 // Résoudre l'ID ESPN d'une équipe via la liste des équipes de son championnat
 // Charge (et cache) la liste des équipes d'un championnat ESPN
 async function _espnLoadLeagueTeams(league) {
-  /* Un tableau vide est VRAI en JavaScript ([] est truthy) : mettre en cache un
-     echec sous cette forme le rend indiscernable d'un vrai « championnat sans
-     equipes » (hors-saison, par exemple) — la prochaine tentative de la meme
-     session ne retente jamais, elle relit juste ce [] fige. Trouve en meme
-     temps que le diagnostic ci-dessous, meme jour, meme cause racine. */
-  if(_espnTeamsCache[league] && _espnTeamsCache[league].length) return _espnTeamsCache[league];
+  if(_espnTeamsCache[league]) return _espnTeamsCache[league];
   try {
     var r = await fetch(FD_PROXY+'?host=espn&path='+encodeURIComponent('/apis/site/v2/sports/soccer/'+league+'/teams'));
     var d = await r.json();
     var list = (d.sports && d.sports[0] && d.sports[0].leagues && d.sports[0].leagues[0] && d.sports[0].leagues[0].teams) ? d.sports[0].leagues[0].teams : [];
     _espnTeamsCache[league] = list.map(function(t){ return t.team; });
-    /* DIAGNOSTIC (12/09/2026) : releve par Antoine sur l'Atletico Madrid, qui
-       echoue completement (espA/espB nulles) sans jamais expliquer pourquoi.
-       Meme defaut que le catch trouve plus tot le meme jour sur les coupes —
-       une erreur ici (Worker en retard, reponse malformee) etait avalee en
-       silence, transformant un aleas passager en « equipe introuvable » pour
-       de bon. Ce console.warn dit desormais explicitement quand la liste
-       recue est vide alors qu'un vrai championnat a ete demande. */
-    if(!_espnTeamsCache[league].length) console.warn('_espnLoadLeagueTeams : 0 equipe recue pour "'+league+'" — reponse : '+JSON.stringify(d).slice(0,200));
-  } catch(e) { console.warn('_espnLoadLeagueTeams en erreur pour "'+league+'" :', e); return []; }
+  } catch(e) { _espnTeamsCache[league] = []; }
   return _espnTeamsCache[league];
 }
 
@@ -212,13 +175,6 @@ var ESPN_TEAM_ID_FIX = {
   'inter miami cf':{id:'20232', league:'usa.1'},
   'palmeiras':     {id:'2029',  league:'bra.1'},
   'se palmeiras':  {id:'2029',  league:'bra.1'},
-  /* Atletico Madrid — meme defaut CORS sur /esp.1/teams, releve par Antoine
-     le 12/09 (fonctionnait sur son telephone, qui avait deja une resolution
-     reussie et permanente en cache, jamais sur son PC qui retentait a chaque
-     fois le meme appel casse). Identifiant confirme via la page officielle
-     ESPN (espn.in/football/team/_/id/1068/atletico-madrid). */
-  'atletico madrid': {id:'1068', league:'esp.1'},
-  'atletico':        {id:'1068', league:'esp.1'},
   'france':        {id:'478',   league:'fifa.world'},
   'inter milan':   {id:'110',   league:'ita.1'},
   'lyon':          {id:'167',   league:'fra.1'},
@@ -2173,20 +2129,7 @@ function renderAdvancedCharts(paris, bankroll) {
    du fichier le rappelle, et un avertissement s'affiche a l'export. */
 var _G45_CLES = ['gones45_apisports_key','gones45_apifootball_key','gones45_fdorg_key',
   'gones45_rapidapi_key','gones45_gemini_key','gones45_google_key','gones45_mistral_key',
-  'gones45_tavily_key','gones45_admin',
-  /* 12/09/2026, demande d'Antoine : le token GitHub vivait a part, oblige de
-     passer par la console ou par le champ dedie dans Cles — desormais inclus
-     dans la meme sauvegarde/restauration que les autres cles. */
-  'gones45_github_token'];
-  /* RETIRES LE MEME JOUR : 'gones45_groq_key' et 'gones45_odds_key'. Aucun
-     champ de l'interface n'ecrit dans l'une ou l'autre — 'gones45_odds_key'
-     n'est meme lue nulle part (les cotes passent par le Worker sans
-     condition depuis avant ce chantier). 'gones45_groq_key' est lue par
-     `g45IaCle()` plus bas, mais toujours vide en pratique puisque rien ne
-     l'alimente : la vraie cle Groq d'un utilisateur avance vit dans
-     'gones45_gemini_key' (nom trompeur, voir son commentaire). Les garder
-     ici n'exportait ni ne restaurait jamais rien de reel — seulement du
-     bruit dans le fichier telecharge. */
+  'gones45_tavily_key','gones45_groq_key','gones45_odds_key','gones45_admin'];
 function g45ClesExport(){
   var o = {}, n = 0;
   _G45_CLES.forEach(function(k){
@@ -2252,18 +2195,7 @@ if (typeof document !== 'undefined') {
    ON NE CHANGE QUE L'ADRESSE, pas la forme des appels : une premiere tentative
    de reecrire les dix-huit appels d'un coup a casse leur structure. L'en-tete
    Authorization part donc toujours, vide quand il n'y a pas de cle locale — le
-   Worker l'ignore et met la sienne.
-
-   CONSTAT DU 12/09 : cette « cle locale prioritaire » ne se declenche en
-   pratique JAMAIS. `gones45_groq_key`, lue ci-dessous, n'est ecrite par AUCUN
-   champ de l'interface — la vraie cle qu'un utilisateur avance saisit vit dans
-   'gones45_gemini_key' (nom trompeur, servait a l'origine a Gemini avant que
-   Groq ne la recupere). Consequence : meme un utilisateur avec une cle Groq
-   personnelle passe toujours par le Worker, jamais en direct. Ce n'est pas
-   dangereux — le Worker fonctionne tres bien pour tout le monde — mais ce
-   n'est pas non plus ce que ce commentaire annonce. Non corrige pour l'instant
-   faute de demande en ce sens ; le signaler ici pour la prochaine fois que
-   quelqu'un se demande pourquoi ca ne bascule jamais en direct. */
+   Worker l'ignore et met la sienne. */
 function g45IaCle(){ try { return localStorage.getItem('gones45_groq_key') || ''; } catch (e) { return ''; } }
 
 /* ═══════════ CLES SPORTIVES : LE WORKER PREND LE RELAIS (11/09/2026) ═══════════
@@ -4158,7 +4090,7 @@ function openClub(nom,idx){
           var b2=bki(h.b);var dd=h.date?'📅 '+h.date+' ':'';var hh=h.heure?'⏰ '+h.heure+' ':'';
           return '<div class="brow '+(h.win?'w':'l')+'">'
             +'<div class="brow-main"><div class="brow-title">'+(h.sport||'')+' '+h.target+'</div>'
-            +'<div class="brow-meta">'+h.t+' '+dd+hh+'· '+(h.type||'—')+' · '+parseFloat(h.m).toFixed(2)+'€'+(h.isS?' · P'+(h.l||1):'')+' · @'+h.cote+' · <span style="color:'+b2.c+';">'+b2.n+'</span>'+(h.debrief?'<br><i>'+h.debrief+'</i>':'')+'</div></div>'
+            +'<div class="brow-meta">'+h.t+' '+dd+hh+'· '+(h.type||'—')+' · @'+h.cote+' · <span style="color:'+b2.c+';">'+b2.n+'</span>'+(h.debrief?'<br><i>'+h.debrief+'</i>':'')+'</div></div>'
             +'<div class="brow-right"><div class="brow-amt" style="color:'+(h.win?'var(--g)':'var(--r)')+';">'+(h.win?'+'+(h.m*h.cote).toFixed(2):'-'+h.m)+'€</div>'
             +'<div class="brow-tag" style="color:'+(h.win?'var(--g)':'var(--r)')+';">'+(h.win?'WIN':'LOSS')+'</div></div></div>';
         }).join('');
@@ -4290,60 +4222,6 @@ function injectRefreshButton() {
 }
 if(document.readyState==='loading'){ document.addEventListener('DOMContentLoaded', injectRefreshButton); } else { injectRefreshButton(); }
 
-/* ═══════════ MASQUER « JEU » POUR LES NON-ADMINISTRATEURS (12/09/2026) ═══════════
-   Demande d'Antoine, redite plusieurs fois — deux boutons y menaient
-   (le menu principal ET le menu « plus » du mobile), et une correction
-   passee n'avait probablement touche que l'un des deux, d'ou la repetition
-   de la demande. Les deux sont masques ici ensemble, au meme endroit,
-   pour que ca ne se reproduise plus. Meme principe que le masquage
-   d'Outils/Cles : verifie au demarrage, pas de verrou cote serveur — il n'y
-   a rien de sensible derriere, juste une fonctionnalite qu'Antoine ne veut
-   montrer qu'a lui-meme pour l'instant. */
-/* ═══════════ MASQUER « JEU » (12/09/2026, corrige le meme jour) ═══════════
-   Demande d'Antoine, redite plusieurs fois. Deux boutons y menaient (menu
-   principal + menu « plus » mobile) — masques ensemble ici pour que ca ne
-   se reproduise plus.
-   PREMIERE VERSION : reserve a l'administrateur, comme Outils/Cles. Mais
-   Antoine le voyait encore CHEZ LUI, precisement parce qu'il est deja
-   reconnu administrateur sur son propre navigateur — la fonction marchait
-   comme concue, pas comme voulue. Ce n'est pas « cacher aux autres », c'est
-   « faire disparaitre », lui compris : masque desormais SANS AUCUNE
-   CONDITION, pour tout le monde. */
-function g45JeuMasquerAdmin() {
-  ['btn-jeu-sidebar', 'btn-jeu-plus'].forEach(function (id) {
-    var b = document.getElementById(id);
-    if (b) b.style.display = 'none';
-  });
-}
-if(document.readyState==='loading'){ document.addEventListener('DOMContentLoaded', g45JeuMasquerAdmin); } else { g45JeuMasquerAdmin(); }
-
-/* ═══════════ REPARATION DES CLES CORROMPUES PAR LE TEXTE D'AFFICHAGE (12/09/2026) ═══════════
-   Trouve par Antoine sur le PSG puis l'Inter Milan : football-data, api-football,
-   RapidAPI et le token GitHub pouvaient enregistrer LITTERALEMENT le texte
-   d'affichage « (clé enregistrée) » / « (token enregistré) » comme si c'etait la
-   vraie valeur, faute d'un garde-fou que Google et Mistral avaient deja (voir
-   `saveFdorgKey` etc. plus haut, desormais corrigees). Corriger ces fonctions
-   n'efface pas ce qui est deja enregistre — cette verification, executee une
-   fois au demarrage, retire ces valeurs devenues du texte inutilisable. Une
-   cle ainsi nettoyee redevient simplement absente : `g45CleOuWorker` retombe
-   alors sur le Worker, exactement comme si elle n'avait jamais ete saisie. */
-(function () {
-  var placeholders = {
-    'gones45_fdorg_key':      '(clé enregistrée)',
-    'gones45_apifootball_key':'(clé enregistrée)',
-    'gones45_rapidapi_key':   '(clé enregistrée)',
-    'gones45_github_token':   '(token enregistré)'
-  };
-  Object.keys(placeholders).forEach(function (k) {
-    try {
-      if (localStorage.getItem(k) === placeholders[k]) {
-        localStorage.removeItem(k);
-        console.warn('cle corrompue retiree : ' + k + ' contenait le texte d\'affichage au lieu d\'une vraie cle');
-      }
-    } catch (e) {}
-  });
-})();
-
 /* ── PARIS ── */
 function pari(isS){
   var n,b,c,m,target,type,l=1,sport='',comp='',heure='',date='';
@@ -4386,15 +4264,7 @@ function pari(isS){
        au formulaire de pari simple et vaut « dom » en dur, ce qui aurait range
        tous les paris de montante dans l'echelle domicile. */
     var domicile=isS?(($i('c-lieu')&&$i('c-lieu').value)||'')
-                    :(($i('n-lieu')&&$i('n-lieu').value)||($i('p-domicile')?$i('p-domicile').value:''));
-    /* CORRIGE LE 12/09 : `l=u.l` (plus haut) lit la reference GLOBALE, decrite
-       dans les commentaires de `_g45Pal` comme non fiable des qu'une echelle
-       separee domicile/exterieur existe pour cette competition — exactement
-       le cas normal aujourd'hui, confirme par Antoine. Le pari doit lire la
-       MEME fonction que tout le reste de l'appli utilise pour afficher le
-       palier courant, avec le lieu qu'on vient de determiner juste au-dessus. */
-    if(isS && typeof _g45Pal==='function') l=_g45Pal(u, comp, domicile);
-    state.h.unshift({id:Date.now().toString(),n:n,target:target,eq:(typeof _eqJ!=='undefined'?_eqJ:''),b:b,l:l,m:m,cote:c,isS:isS,isFlash:isFlash,isFreebet:isFreebet,isLay:isLay,t:t,sport:sport,type:type,comp:comp,heure:heure,date:date,notes:notes||'',domicile:domicile,notif:notif});
+                    :(($i('n-lieu')&&$i('n-lieu').value)||($i('p-domicile')?$i('p-domicile').value:''));state.h.unshift({id:Date.now().toString(),n:n,target:target,eq:(typeof _eqJ!=='undefined'?_eqJ:''),b:b,l:l,m:m,cote:c,isS:isS,isFlash:isFlash,isFreebet:isFreebet,isLay:isLay,t:t,sport:sport,type:type,comp:comp,heure:heure,date:date,notes:notes||'',domicile:domicile,notif:notif});
     save();
     if(isS){$i('c-target').value='';$i('c-comp').value='';if($i('c-notes'))$i('c-notes').value='';}
     else{$i('n-comp').value='';$i('n-type').value='';$i('n-analysis').value='';if($i('n-notes'))$i('n-notes').value='';if($i('n-team'))$i('n-team').value='';if($i('n-flashboost'))$i('n-flashboost').checked=false;if($i('n-freebet'))$i('n-freebet').checked=false;if($i('n-lay'))$i('n-lay').checked=false;if($i('n-notif'))$i('n-notif').checked=true;mmRowsSimple=[{type:'',cote:1.50}];renderMmRowsSimple();}
@@ -7588,8 +7458,6 @@ function getApiFootballKey(){ return g45CleOuWorker('gones45_apifootball_key'); 
 
 function saveGithubToken(){
   var v = ($i('github-token-input')||{}).value||'';
-  /* 12/09/2026 : meme garde-fou manquant, avec le texte propre a ce champ. */
-  if(v==='(token enregistré)'){ document.getElementById('github-token-status').textContent='✓ Token enregistré'; document.getElementById('github-token-status').style.color='#1ed760'; return; }
   if(!v){ document.getElementById('github-token-status').textContent='Token vide'; return; }
   localStorage.setItem('gones45_github_token', v.trim());
   document.getElementById('github-token-status').textContent='✓ Token enregistré';
@@ -7731,8 +7599,6 @@ async function saveStatToGithub(key, value) {
 
 function saveRapidApiKey(){
   var v = ($i('rapidapi-key-input')||{}).value||'';
-  /* 12/09/2026 : meme garde-fou manquant que football-data, meme cause. */
-  if(v==='(clé enregistrée)'){ document.getElementById('rapidapi-key-status').textContent='✓ Clé enregistrée'; document.getElementById('rapidapi-key-status').style.color='#1ed760'; return; }
   if(!v){ document.getElementById('rapidapi-key-status').textContent='Clé vide'; return; }
   localStorage.setItem('gones45_rapidapi_key', v.trim());
   document.getElementById('rapidapi-key-status').textContent='✓ Clé enregistrée';
@@ -7741,8 +7607,6 @@ function saveRapidApiKey(){
 
 function saveApiFootballKey(){
   var v = ($i('apifootball-key-input')||{}).value||'';
-  /* 12/09/2026 : meme garde-fou manquant que football-data, meme cause. */
-  if(v==='(clé enregistrée)'){ document.getElementById('apifootball-key-status').textContent='✓ Clé sauvegardée'; document.getElementById('apifootball-key-status').style.color='#1ed760'; return; }
   if(!v){ document.getElementById('apifootball-key-status').textContent='Clé vide'; return; }
   localStorage.setItem('gones45_apifootball_key', v.trim());
   document.getElementById('apifootball-key-status').textContent='✓ Clé sauvegardée';
@@ -8007,15 +7871,6 @@ async function fdFetch(path) {
 
 function saveFdorgKey(){
   var v = ($i('fdorg-key-input')||{}).value||'';
-  /* 12/09/2026 : garde-fou manquant, exactement celui que g45SaveGoogleKey et
-     g45SaveMistralKey ont deja. Sans lui, cliquer Enregistrer sans avoir rien
-     retape sauvegardait le texte d'affichage « (clé enregistrée) » COMME SI
-     c'etait la vraie cle — ecrasant la veritable cle par du texte inutilisable.
-     C'est exactement ce qui est arrive : ce texte est parti tel quel vers le
-     Worker, qui l'a refuse (400), et football-data s'est retrouve injoignable
-     jusqu'a ce qu'on le retrouve via un vrai journal d'erreurs (PSG, puis
-     Inter Milan, releves par Antoine). */
-  if(v==='(clé enregistrée)'){ showFdorgStatus('✓ Clé sauvegardée','#1ed760'); return; }
   if(!v){ showFdorgStatus('Clé vide','#ff4545'); return; }
   localStorage.setItem('gones45_fdorg_key', v.trim());
   showFdorgStatus('✓ Clé sauvegardée','#1ed760');
@@ -12213,7 +12068,7 @@ function openClub(nom,idx){
           var b2=bki(h.b);var dd=h.date?'📅 '+h.date+' ':'';var hh=h.heure?'⏰ '+h.heure+' ':'';
           return '<div class="brow '+(h.win?'w':'l')+'">'
             +'<div class="brow-main"><div class="brow-title">'+(h.sport||'')+' '+h.target+'</div>'
-            +'<div class="brow-meta">'+h.t+' '+dd+hh+'· '+(h.type||'—')+' · '+parseFloat(h.m).toFixed(2)+'€'+(h.isS?' · P'+(h.l||1):'')+' · @'+h.cote+' · <span style="color:'+b2.c+';">'+b2.n+'</span>'+(h.debrief?'<br><i>'+h.debrief+'</i>':'')+'</div></div>'
+            +'<div class="brow-meta">'+h.t+' '+dd+hh+'· '+(h.type||'—')+' · @'+h.cote+' · <span style="color:'+b2.c+';">'+b2.n+'</span>'+(h.debrief?'<br><i>'+h.debrief+'</i>':'')+'</div></div>'
             +'<div class="brow-right"><div class="brow-amt" style="color:'+(h.win?'var(--g)':'var(--r)')+';">'+(h.win?'+'+(h.m*h.cote).toFixed(2):'-'+h.m)+'€</div>'
             +'<div class="brow-tag" style="color:'+(h.win?'var(--g)':'var(--r)')+';">'+(h.win?'WIN':'LOSS')+'</div></div></div>';
         }).join('');
@@ -12327,15 +12182,7 @@ function pari(isS){
        au formulaire de pari simple et vaut « dom » en dur, ce qui aurait range
        tous les paris de montante dans l'echelle domicile. */
     var domicile=isS?(($i('c-lieu')&&$i('c-lieu').value)||'')
-                    :(($i('n-lieu')&&$i('n-lieu').value)||($i('p-domicile')?$i('p-domicile').value:''));
-    /* CORRIGE LE 12/09 : `l=u.l` (plus haut) lit la reference GLOBALE, decrite
-       dans les commentaires de `_g45Pal` comme non fiable des qu'une echelle
-       separee domicile/exterieur existe pour cette competition — exactement
-       le cas normal aujourd'hui, confirme par Antoine. Le pari doit lire la
-       MEME fonction que tout le reste de l'appli utilise pour afficher le
-       palier courant, avec le lieu qu'on vient de determiner juste au-dessus. */
-    if(isS && typeof _g45Pal==='function') l=_g45Pal(u, comp, domicile);
-    state.h.unshift({id:Date.now().toString(),n:n,target:target,eq:(typeof _eqJ!=='undefined'?_eqJ:''),b:b,l:l,m:m,cote:c,isS:isS,isFlash:isFlash,isFreebet:isFreebet,isLay:isLay,t:t,sport:sport,type:type,comp:comp,heure:heure,date:date,notes:notes||'',domicile:domicile,notif:notif});
+                    :(($i('n-lieu')&&$i('n-lieu').value)||($i('p-domicile')?$i('p-domicile').value:''));state.h.unshift({id:Date.now().toString(),n:n,target:target,eq:(typeof _eqJ!=='undefined'?_eqJ:''),b:b,l:l,m:m,cote:c,isS:isS,isFlash:isFlash,isFreebet:isFreebet,isLay:isLay,t:t,sport:sport,type:type,comp:comp,heure:heure,date:date,notes:notes||'',domicile:domicile,notif:notif});
     save();
     if(isS){$i('c-target').value='';$i('c-comp').value='';if($i('c-notes'))$i('c-notes').value='';}
     else{$i('n-comp').value='';$i('n-type').value='';$i('n-analysis').value='';if($i('n-notes'))$i('n-notes').value='';if($i('n-team'))$i('n-team').value='';if($i('n-flashboost'))$i('n-flashboost').checked=false;if($i('n-freebet'))$i('n-freebet').checked=false;if($i('n-lay'))$i('n-lay').checked=false;if($i('n-notif'))$i('n-notif').checked=true;mmRowsSimple=[{type:'',cote:1.50}];renderMmRowsSimple();}
@@ -15230,8 +15077,6 @@ function getApiFootballKey(){ return g45CleOuWorker('gones45_apifootball_key'); 
 
 function saveGithubToken(){
   var v = ($i('github-token-input')||{}).value||'';
-  /* 12/09/2026 : meme garde-fou manquant, avec le texte propre a ce champ. */
-  if(v==='(token enregistré)'){ document.getElementById('github-token-status').textContent='✓ Token enregistré'; document.getElementById('github-token-status').style.color='#1ed760'; return; }
   if(!v){ document.getElementById('github-token-status').textContent='Token vide'; return; }
   localStorage.setItem('gones45_github_token', v.trim());
   document.getElementById('github-token-status').textContent='✓ Token enregistré';
@@ -15305,8 +15150,6 @@ async function saveStatToGithub(key, value) {
 
 function saveRapidApiKey(){
   var v = ($i('rapidapi-key-input')||{}).value||'';
-  /* 12/09/2026 : meme garde-fou manquant que football-data, meme cause. */
-  if(v==='(clé enregistrée)'){ document.getElementById('rapidapi-key-status').textContent='✓ Clé enregistrée'; document.getElementById('rapidapi-key-status').style.color='#1ed760'; return; }
   if(!v){ document.getElementById('rapidapi-key-status').textContent='Clé vide'; return; }
   localStorage.setItem('gones45_rapidapi_key', v.trim());
   document.getElementById('rapidapi-key-status').textContent='✓ Clé enregistrée';
@@ -15315,8 +15158,6 @@ function saveRapidApiKey(){
 
 function saveApiFootballKey(){
   var v = ($i('apifootball-key-input')||{}).value||'';
-  /* 12/09/2026 : meme garde-fou manquant que football-data, meme cause. */
-  if(v==='(clé enregistrée)'){ document.getElementById('apifootball-key-status').textContent='✓ Clé sauvegardée'; document.getElementById('apifootball-key-status').style.color='#1ed760'; return; }
   if(!v){ document.getElementById('apifootball-key-status').textContent='Clé vide'; return; }
   localStorage.setItem('gones45_apifootball_key', v.trim());
   document.getElementById('apifootball-key-status').textContent='✓ Clé sauvegardée';
@@ -15402,15 +15243,6 @@ async function fdFetch(path) {
 
 function saveFdorgKey(){
   var v = ($i('fdorg-key-input')||{}).value||'';
-  /* 12/09/2026 : garde-fou manquant, exactement celui que g45SaveGoogleKey et
-     g45SaveMistralKey ont deja. Sans lui, cliquer Enregistrer sans avoir rien
-     retape sauvegardait le texte d'affichage « (clé enregistrée) » COMME SI
-     c'etait la vraie cle — ecrasant la veritable cle par du texte inutilisable.
-     C'est exactement ce qui est arrive : ce texte est parti tel quel vers le
-     Worker, qui l'a refuse (400), et football-data s'est retrouve injoignable
-     jusqu'a ce qu'on le retrouve via un vrai journal d'erreurs (PSG, puis
-     Inter Milan, releves par Antoine). */
-  if(v==='(clé enregistrée)'){ showFdorgStatus('✓ Clé sauvegardée','#1ed760'); return; }
   if(!v){ showFdorgStatus('Clé vide','#ff4545'); return; }
   localStorage.setItem('gones45_fdorg_key', v.trim());
   showFdorgStatus('✓ Clé sauvegardée','#1ed760');
@@ -16725,25 +16557,6 @@ async function runFbrefGroq(uid, nom, b64, groqKey, mode, comp) {
      ou déjà sourcées ESPN sont (re)remplies → rafraîchissable à chaque journée.
    - écrit uniquement dans manual_stats_{saison}_… → les autres saisons restent intactes.
    - matching joueurs par nom (même logique que l'import FBref). */
-/* Renvoie l'horodatage (ms) du dernier jour de rafraichissement PASSE ou EGAL
-   a maintenant : le lundi le plus recent pour un championnat, le vendredi le
-   plus recent pour l'Europe — minuit locale ce jour-la. Comparer un dernier
-   remplissage a cette valeur dit s'il faut relancer : plus vieux que le
-   seuil → au moins un jour-repere s'est ecoule depuis, on rafraichit. */
-function _g45DernierJourRafraichissement(cmp) {
-  /* Championnat : mardi et non lundi (12/09, releve par Antoine) — certains
-     championnats jouent desormais un match le lundi soir. Se declencher le
-     lundi a minuit tomberait AVANT ce match, et le rafraichissement manquerait
-     purement et simplement la derniere rencontre de la journee. Le mardi
-     laisse au lundi soir le temps de se terminer. */
-  var jourVoulu = (cmp === 'euro') ? 5 : 2;   // 5 = vendredi, 2 = mardi (0 = dimanche)
-  var d = new Date();
-  var ecart = (d.getDay() - jourVoulu + 7) % 7;
-  d.setDate(d.getDate() - ecart);
-  d.setHours(0, 0, 0, 0);
-  return d.getTime();
-}
-
 async function autoEspnFillSquad(uid, nom, silencieux) {
   /* MODE SILENCIEUX (25/08) : depuis le 25/08 cette fonction est aussi
      declenchee TOUTE SEULE a l'ouverture d'un effectif. Ses alertes, ecrites
@@ -17325,34 +17138,22 @@ async function loadFdSquad(el, nom, teamId, noTerrain, terrainOnly) {
     html += '<div style="font-size:9px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;color:var(--t3);">👤 Squad · '+nom+' <span style="color:var(--t2);font-weight:500;">('+squad.length+')</span></div>';
     html += '<div style="display:flex;align-items:center;gap:8px;">';
     html += '<div style="font-size:9px;color:var(--t3);">'+(usingSofa?'sofascore':'api-football · 2024-25')+'</div>';
-    /* ═══ REMPLISSAGE AUTOMATIQUE PERIODIQUE (25/08, transforme en hebdo le 12/09) ═══
+    /* ═══ REMPLISSAGE AUTOMATIQUE (25/08) ═══
        Antoine veut que le tableau se remplisse seul, sans cliquer. On reutilise
        `autoEspnFillSquad` — appariement de noms robuste, gestion des gardiens,
        et surtout refus d'ecraser une saisie manuelle deja presente.
-
-       PASSAGE A UN VRAI RYTHME HEBDOMADAIRE (12/09) : la version du 25/08 ne se
-       declenchait qu'UNE FOIS pour toujours par equipe/saison/competition — un
-       simple drapeau '1', jamais reexamine ensuite. Les stats se figeaient donc
-       au premier remplissage, journee zero, et ne bougeaient plus jamais meme
-       apres des mois de championnat (releve par Antoine).
-       On memorise desormais la DATE du dernier remplissage plutot qu'un simple
-       drapeau, et on la compare au dernier jour de rafraichissement PASSE :
-       le lundi le plus recent pour un championnat (la plupart des journees se
-       jouent le week-end, tout est joue le lundi matin), le vendredi le plus
-       recent pour l'Europe (les matchs se jouent en semaine, le mardi au
-       jeudi generalement — vendredi laisse le temps a tout d'etre termine).
-       Si ce jour-repere est plus recent que le dernier remplissage enregistre,
-       on relance — au maximum une fois par passage de ce jour, jamais a
-       chaque ouverture. */
+       UNE SEULE FOIS par equipe, saison et competition : c'est une trentaine de
+       requetes, hors de question de les relancer a chaque ouverture. Le drapeau
+       est pose AVANT l'appel, sinon deux rendus rapproches partiraient en
+       double. Et on attend deux secondes, le temps que l'effectif soit
+       reellement en place — la fonction en a besoin pour apparier. */
     (function(){
       try{
         var _cmp = window['_compMode_'+uid] || 'league';
         var _fl  = 'g45autoespn_' + saisonKey((sofaId||afId||nom||'0') + '_' + _cmp);
-        var _seuil = _g45DernierJourRafraichissement(_cmp);
-        var _dernier = parseInt(localStorage.getItem(_fl) || '0', 10) || 0;
-        if(_dernier >= _seuil) return;
+        if(localStorage.getItem(_fl) === '1') return;
         if(typeof autoEspnFillSquad !== 'function') return;
-        localStorage.setItem(_fl, String(Date.now()));
+        localStorage.setItem(_fl, '1');
         setTimeout(function(){
           try{ autoEspnFillSquad(uid, nom, true); }catch(e){}
         }, 2000);
@@ -17363,14 +17164,7 @@ async function loadFdSquad(el, nom, teamId, noTerrain, terrainOnly) {
       /* Une requete pour tout l'effectif, championnat ET Europe (14/08/2026). */
       html += '<button id="btn-apis-auto-'+uid+'" onclick="autoApiSportsFillSquad(\''+uid+'\',\''+nom+'\')" style="display:flex;align-items:center;gap:4px;padding:4px 8px;border-radius:6px;border:1px solid rgba(167,139,250,.35);background:rgba(167,139,250,.12);color:#a78bfa;font-size:9px;font-weight:700;cursor:pointer;" title="Remplit tout l\'effectif en 1 requete api-sports (championnat et Europe separes)">\u26a1 Auto api-sports</button>';
       html += '<button id="btn-espn-auto-'+uid+'" onclick="autoEspnFillSquad(\''+uid+'\',\''+nom+'\')" style="display:flex;align-items:center;gap:4px;padding:4px 8px;border-radius:6px;border:1px solid rgba(30,215,96,.3);background:rgba(30,215,96,.12);color:#1ed760;font-size:9px;font-weight:700;cursor:pointer;" title="Remplir auto depuis ESPN (saison sélectionnée, Championnat) — n\'écrase pas une équipe déjà saisie">⚡ Auto ESPN</button>';
-    /* IMPORT FBREF RETIRE (12/09/2026, demande d'Antoine) : bouton + zone de
-       depot de capture d'ecran, deja reserves a l'admin, maintenant masques
-       meme pour lui — l'auto-remplissage api-sports/ESPN suffit desormais
-       pour toutes les equipes. Fonctions JS (`importFbrefStats`,
-       `toggleFbrefComp`, `toggleFbrefMode`, `handleFbrefDrop`,
-       `handleFbrefFileInput`) laissees intactes mais inatteignables : rien
-       n'y mene plus, aucun risque a les avoir gardees. */
-    }
+    html += '<button id="btn-fbref-import-'+uid+'" onclick="importFbrefStats(\''+uid+'\',\''+nom+'\')" style="display:flex;align-items:center;gap:4px;padding:4px 8px;border-radius:6px;border:1px solid rgba(255,255,255,.15);background:rgba(255,255,255,.07);color:var(--t2);font-size:9px;font-weight:700;cursor:pointer;">📸 Import FBref</button>';}
     html += '<button id="btn-admin-lock-'+uid+'" onclick="toggleAdminLock(\''+uid+'\')" style="padding:4px 7px;border-radius:6px;border:1px solid rgba(255,255,255,.15);background:rgba(255,255,255,.07);color:var(--t2);font-size:12px;cursor:pointer;" title="Mode admin">'+(localStorage.getItem('gones45_admin')==='1'?'🔓':'🔒')+'</button>';
     html += '<button onclick="refreshSquadCache(\''+nom+'\')" style="display:flex;align-items:center;gap:4px;padding:4px 8px;border-radius:6px;border:1px solid rgba(255,255,255,.15);background:rgba(255,255,255,.07);color:var(--t2);font-size:9px;font-weight:700;cursor:pointer;" title="Vider le cache et recharger le squad depuis l\'API">🔄</button>';
     if(localStorage.getItem('gones45_admin')==='1'){
@@ -17420,9 +17214,21 @@ async function loadFdSquad(el, nom, teamId, noTerrain, terrainOnly) {
       +'<button onclick="setCompMode(\''+uid+'\',\'euro\')" style="padding:4px 12px;border-radius:6px;border:1px solid '+(curComp==='euro'?'rgba(240,180,32,.5)':'rgba(255,255,255,.12)')+';background:'+(curComp==='euro'?'rgba(240,180,32,.2)':'rgba(255,255,255,.05)')+';color:'+(curComp==='euro'?'#f0b420':'var(--t3)')+';font-size:11px;font-weight:700;cursor:pointer;">Europe</button>'
       +'</div>';
 
-    // ZONE ADMIN — RETIREE (12/09/2026) : ne contenait que les reglages et la
-    // zone de depot propres a l'import FBref, retire juste au-dessus. Rien
-    // d'autre ne s'y trouvait, donc rien d'autre a preserver.
+    // ZONE ADMIN - visible seulement en mode admin
+    var isAdmin = localStorage.getItem('gones45_admin') === '1';
+    html += '<div id="fbref-admin-zone-'+uid+'" style="'+(isAdmin?'':'display:none;') +'">';
+    html += '<div style="margin-bottom:8px;display:flex;align-items:center;gap:6px;flex-wrap:wrap;">'
+      +'<span style="font-size:10px;color:var(--t3);">Comp :</span>'
+      +'<button id="fbref-comp-'+uid+'" data-comp="'+(window['_compMode_'+uid]||'league')+'" onclick="toggleFbrefComp(\''+uid+'\')" style="padding:3px 10px;border-radius:6px;border:1px solid '+(window['_compMode_'+uid]==='euro'?'rgba(240,180,32,.4)':'rgba(77,132,255,.4)')+';background:'+(window['_compMode_'+uid]==='euro'?'rgba(240,180,32,.15)':'rgba(77,132,255,.15)')+';color:'+(window['_compMode_'+uid]==='euro'?'#f0b420':'#4d84ff')+';font-size:10px;font-weight:700;cursor:pointer;">'+(window['_compMode_'+uid]==='euro'?'Europe':'Champ')+'</button>'
+      +'<span style="font-size:10px;color:var(--t3);margin-left:4px;">Mode :</span>'
+      +'<button id="fbref-mode-'+uid+'" data-mode="replace" onclick="toggleFbrefMode(\''+uid+'\')" style="padding:3px 10px;border-radius:6px;border:1px solid rgba(255,120,80,.4);background:rgba(255,120,80,.15);color:#ff7850;font-size:10px;font-weight:700;cursor:pointer;">Remplacer</button>'
+      +'<span style="font-size:9px;color:var(--t3);" id="fbref-mode-hint-'+uid+'">Championnat - saison complete</span>'
+      +'</div>';
+    html += '<div id="fbref-paste-zone-'+uid+'" onclick="document.getElementById(\'fbref-file-'+uid+'\').click()" ondragover="event.preventDefault();this.style.borderColor=\'var(--a)\'" ondragleave="this.style.borderColor=\'rgba(255,255,255,.1)\'" ondrop="handleFbrefDrop(event,\''+uid+'\',\''+nom+'\')" style="border:1.5px dashed rgba(255,255,255,.1);border-radius:8px;padding:10px 14px;margin-bottom:12px;text-align:center;cursor:pointer;transition:border-color .2s;display:flex;align-items:center;justify-content:center;gap:8px;">'
+      +'<span style="font-size:11px;color:var(--t3);">📸 Colle ou glisse un screenshot FBref ici pour importer les stats automatiquement</span>'
+      +'</div>'
+      +'<input type="file" id="fbref-file-'+uid+'" accept="image/*" style="display:none" onchange="handleFbrefFileInput(event,\''+uid+'\',\''+nom+'\')">';
+    html += '</div>'; // fin fbref-admin-zone
     } // fin if(!terrainOnly)
 
     // TERRAIN + FICHE
@@ -21929,14 +21735,6 @@ async function loadTeamSaisons() {
       if(_finA.length) { results[keyA] = _finA.map(function(mm){ return espnToFdMatch(mm, espNameA, teamId); }); espnOk = true; }
       var _finB = (espB && espB.matches) ? espB.matches.filter(function(mm){ return mm.completed; }) : [];
       if(_finB.length) { results[keyB] = _finB.map(function(mm){ return espnToFdMatch(mm, espNameB, teamId); }); espnOk = true; }
-      /* DIAGNOSTIC (12/09/2026) : releve par Antoine sur le PSG, qui tombe
-         sur l'ecran de secours alors que ses identifiants (football-data ET
-         ESPN) sont corrects dans le code. La panne est donc reseau, pas de
-         configuration — ce journal dira, la prochaine fois, si ESPN a repondu
-         sans aucun match, ou pas repondu du tout. */
-      if(!espnOk) console.warn('Saisons ESPN vide pour "'+nom+'" ('+lg+') — annees '+yA+'/'+yB
-        +' : espA='+(espA?(espA.matches?espA.matches.length+' matchs recus':'pas de champ matches'):'reponse nulle')
-        +', espB='+(espB?(espB.matches?espB.matches.length+' matchs recus':'pas de champ matches'):'reponse nulle'));
       /* Les matchs à venir sont déjà dans la réponse ESPN : on les met de côté pour les
          afficher, au lieu de les jeter comme depuis le filtre `completed`. */
       var _espnT=(espA&&espA.team)||(espB&&espB.team)||null;
@@ -22057,20 +21855,9 @@ async function loadTeamSaisons() {
     // Compléter avec les coupes football-data SANS bloquer (years alignées sur ESPN)
     var keys = Object.keys(results);
     (async function(){
-      /* CORRIGE LE 12/09/2026 (releve par Antoine — coupe et boutons manquants
-         precisement quand la page met longtemps a charger, uniquement sur PC
-         gones45, jamais sur telephone ni sur bet45.fr) : tout ce bloc etait
-         entoure d'UN SEUL catch, qui avalait silencieusement N'IMPORTE QUELLE
-         erreur sur N'IMPORTE QUELLE annee — un simple ralentissement reseau ou
-         un 429 passager sur la PREMIERE annee arretait la boucle net, sans
-         jamais tenter la seconde, et sans la moindre trace dans la console.
-         Un chargement lent augmente mecaniquement les chances de toucher ce
-         genre d'alea, d'ou la correlation qu'Antoine a remarquee. Chaque annee
-         a desormais son propre filet : l'echec de l'une n'empeche plus
-         l'autre d'aboutir, et l'echec est enfin visible plutot que muet. */
-      for(var ki=0; ki<keys.length; ki++){
-        var yr = keys[ki];
-        try {
+      try {
+        for(var ki=0; ki<keys.length; ki++){
+          var yr = keys[ki];
           var data = await fdFetch('/v4/teams/'+teamId+'/matches?status=FINISHED&season='+yr);
           if(data && data.matches && data.matches.length){
             var cups = data.matches.filter(function(m){
@@ -22089,8 +21876,8 @@ async function loadTeamSaisons() {
               renderSaisonsChart(el, results, nom); // re-render avec les coupes
             }
           }
-        } catch(e){ console.warn('coupe football-data non chargee pour "'+nom+'" annee '+yr+' :', e); }
-      }
+        }
+      } catch(e){ /* coupes non chargées, pas grave */ }
     })();
     return; // on a déjà affiché ESPN
   }
@@ -22108,10 +21895,7 @@ async function loadTeamSaisons() {
       ]);
       if(dataA && dataA.matches && dataA.matches.length) results[String(_sA)] = dataA.matches;
       if(dataB && dataB.matches && dataB.matches.length) results[String(_sB)] = dataB.matches;
-      if(!Object.keys(results).length) console.warn('Saisons football-data vide pour "'+nom+'" (id '+teamId+') — annees '+_sA+'/'+_sB
-        +' : dataA='+(dataA?(dataA.matches?dataA.matches.length+' matchs recus':'pas de champ matches'):'reponse nulle')
-        +', dataB='+(dataB?(dataB.matches?dataB.matches.length+' matchs recus':'pas de champ matches'):'reponse nulle'));
-    } catch(fdErr) { console.warn('Saisons football-data en erreur pour "'+nom+'" :', fdErr); }
+    } catch(fdErr) {}
   }
   
   var saisons = Object.keys(results).sort().reverse();
@@ -22292,7 +22076,6 @@ function calcSaisonStats(matchesRaw, teamId) {
   var matches = matchesRaw.slice().sort(function(a,b){ return new Date(b.utcDate)-new Date(a.utcDate); });
   var stats = {
     n:0, over05:0, over15:0, over25:0, over35:0, over45:0, bts:0,
-    handM15:0, handP15:0,
     domW:0, domD:0, domL:0, domN:0, extW:0, extD:0, extL:0, extN:0,
     butsM:0, butsE:0,
     cleanSheet:0, failedToScore:0, scoredFirst:0,
@@ -22330,19 +22113,6 @@ function calcSaisonStats(matchesRaw, teamId) {
     }
     stats.butsM += teamGoals;
     stats.butsE += oppGoals;
-    /* ═══ HANDICAP (12/09/2026, demande d'Antoine) ═══
-       Rien a recuperer de plus : `teamGoals` et `oppGoals` existaient deja par
-       match dans cette meme boucle, juste au-dessus. L'ecart entre les deux
-       EST le handicap — on ne fait que le lire.
-       Deux lignes seulement, sur le meme modele que Over/Under (.5 partout
-       pour eviter le push, le cas ou le score exact tombe pile sur la ligne) :
-         Hand -1.5 : l'equipe gagne avec 2 buts d'ecart ou plus (couvre un
-                     handicap donne favori de -1.5).
-         Hand +1.5 : l'equipe ne perd pas de plus d'un but (couvre un handicap
-                     donne outsider de +1.5) — victoire, nul, ou defaite d'1 but. */
-    var ecart = teamGoals - oppGoals;
-    if (ecart >= 2) stats.handM15++;
-    if (ecart >= -1) stats.handP15++;
 
     // Menait à la pause (approximation de « a marqué en premier »)
     if(_fh){
@@ -22364,8 +22134,6 @@ function calcSaisonStats(matchesRaw, teamId) {
       if(total>3.5) stats.domOver35=(stats.domOver35||0)+1; else stats.domUnder35=(stats.domUnder35||0)+1;
       if(total>4.5) stats.domOver45=(stats.domOver45||0)+1; else stats.domUnder45=(stats.domUnder45||0)+1;
       if(hg>0&&ag>0) stats.domBts=(stats.domBts||0)+1;
-      if(ecart>=2) stats.domHandM15=(stats.domHandM15||0)+1;
-      if(ecart>=-1) stats.domHandP15=(stats.domHandP15||0)+1;
     } else {
       stats.extN++;
       if(won) stats.extW++; else if(draw) stats.extD++; else stats.extL++;
@@ -22375,8 +22143,6 @@ function calcSaisonStats(matchesRaw, teamId) {
       if(total>3.5) stats.extOver35=(stats.extOver35||0)+1; else stats.extUnder35=(stats.extUnder35||0)+1;
       if(total>4.5) stats.extOver45=(stats.extOver45||0)+1; else stats.extUnder45=(stats.extUnder45||0)+1;
       if(hg>0&&ag>0) stats.extBts=(stats.extBts||0)+1;
-      if(ecart>=2) stats.extHandM15=(stats.extHandM15||0)+1;
-      if(ecart>=-1) stats.extHandP15=(stats.extHandP15||0)+1;
     }
 
     // 5 derniers matchs
@@ -23004,7 +22770,7 @@ function renderSaisonsChart(el, results, nom) {
     html += '<div style="font-size:10px;color:var(--t3);">'+st.n+' matchs'+(stC?' · '+champMatches.length+' champ.':'')+'</div>';
     html += '</div>';
     // Sélecteur stats rapides
-    var QUICK_STATS = ['O0.5','O1.5','O2.5','O3.5','O4.5','U0.5','U1.5','U2.5','U3.5','U4.5','BTS','CS','H-1.5','H+1.5','WIN','LOSE','1N','N2'];
+    var QUICK_STATS = ['O0.5','O1.5','O2.5','O3.5','O4.5','U0.5','U1.5','U2.5','U3.5','U4.5','BTS','CS','WIN','LOSE','1N','N2'];
     if(!window._quickStats) window._quickStats = ['O2.5','BTS'];
     html += '<div style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:10px;">';
     QUICK_STATS.forEach(function(qs){
@@ -23051,8 +22817,8 @@ function renderSaisonsChart(el, results, nom) {
     });
     html += '</div>';
     // Stats filtrées
-    var sf = _statFilter==='dom' ? {n:st.domN, over05:st.domOver05||0, over15:st.domOver15||0, over25:st.domOver25||0, over35:st.domOver35||0, over45:st.domOver45||0, under05:st.domUnder05||0, under15:st.domUnder15||0, under25:st.domUnder25||0, under35:st.domUnder35||0, under45:st.domUnder45||0, bts:st.domBts||0, handM15:st.domHandM15||0, handP15:st.domHandP15||0}
-           : _statFilter==='ext' ? {n:st.extN, over05:st.extOver05||0, over15:st.extOver15||0, over25:st.extOver25||0, over35:st.extOver35||0, over45:st.extOver45||0, under05:st.extUnder05||0, under15:st.extUnder15||0, under25:st.extUnder25||0, under35:st.extUnder35||0, under45:st.extUnder45||0, bts:st.extBts||0, handM15:st.extHandM15||0, handP15:st.extHandP15||0}
+    var sf = _statFilter==='dom' ? {n:st.domN, over05:st.domOver05||0, over15:st.domOver15||0, over25:st.domOver25||0, over35:st.domOver35||0, over45:st.domOver45||0, under05:st.domUnder05||0, under15:st.domUnder15||0, under25:st.domUnder25||0, under35:st.domUnder35||0, under45:st.domUnder45||0, bts:st.domBts||0}
+           : _statFilter==='ext' ? {n:st.extN, over05:st.extOver05||0, over15:st.extOver15||0, over25:st.extOver25||0, over35:st.extOver35||0, over45:st.extOver45||0, under05:st.extUnder05||0, under15:st.extUnder15||0, under25:st.extUnder25||0, under35:st.extUnder35||0, under45:st.extUnder45||0, bts:st.extBts||0}
            : st;
     var sfN = sf.n||1;
 
@@ -23070,8 +22836,6 @@ function renderSaisonsChart(el, results, nom) {
       {key:'U4.5',  label:'Under 4.5', v:pct(sf.under45||0,sfN),     color:'#e0f2fe'},
       {key:'BTS',   label:'BTS Oui',   v:pct(sf.bts,sfN),            color:'#a78bfa'},
       {key:'CS',    label:'Clean Sheet',v:pct(st.cleanSheet,st.n),   color:'#1ed760'},
-      {key:'H-1.5', label:'Hand -1.5', v:pct(sf.handM15,sfN),        color:'#f472b6'},
-      {key:'H+1.5', label:'Hand +1.5', v:pct(sf.handP15,sfN),        color:'#38bdf8'},
     ];
     var activeRows = ALL_STAT_ROWS.filter(function(r){ return !window._quickStats || window._quickStats.length===0 || window._quickStats.indexOf(r.key)>=0; });
     html += '<div style="font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#4f5d88;margin-bottom:8px;">Stats sélectionnées</div>';
@@ -23359,23 +23123,6 @@ function renderSaisonsChart(el, results, nom) {
 async function loadTeamAI(nom) {
   var box = document.getElementById('team-ai-content');
   if (!box) return;
-  /* ═══ MEME ACCES PREMIUM PARTAGE (12/09/2026, unifie le meme jour) ═══
-     Trouve par Antoine : cette carte se declenche automatiquement a
-     l'ouverture de N'IMPORTE QUELLE fiche club (Mur, Suivies, bandeau de
-     scores) et tape dans Tavily ET Groq. Suit desormais la meme regle que
-     Tendances et Competitions — voir `_g45AccesPremium()`, plus bas dans le
-     fichier mais declaree une fois pour les trois (les fonctions se hissent
-     en haut de leur portee en JavaScript, l'ordre d'ecriture n'a pas
-     d'importance ici). VISITEUR BLOQUE ICI : `_g45AccesPremium()` renvoie
-     `null` pour lui, et `!== true` l'attrape avec `false` — jamais `!x`, qui
-     traiterait `null` comme faux ET vrai selon le contexte de facon
-     incoherente entre les trois fonctions (piege releve en testant). */
-  if (_g45AccesPremium() !== true) {
-    box.innerHTML = '<div style="color:#8899aa;font-size:12px;line-height:1.6;">'
-      + '🔒 Analyse IA — gratuite 30 jours après création de compte, puis avec un petit soutien du projet. '
-      + _g45BlocPremium() + '</div>';
-    return;
-  }
   // Brancher le bouton refresh
   var btn = document.getElementById('team-ai-refresh');
   if (btn) { btn.onclick = function(){ loadTeamAI(nom); }; }
@@ -27221,66 +26968,8 @@ window.g45TrPMin=g45TrPMin;
 window.g45TrMin=g45TrMin;
 window.g45TrSel=g45TrSel; window.g45TrDay=g45TrDay;
 
-/* ═══ ACCES « PREMIUM » PARTAGE — TENDANCES, ANALYSE IA DES FICHES, COMPETITIONS (12/09/2026) ═══
-   Trois fonctions differentes verifiaient la meme regle avec trois copies de la
-   meme logique. Unifiees ici pour la partie qui EST commune : une fois un
-   compte cree, 30 jours pleins, puis statut « soutien » requis. Sur gones45
-   (`window._g45User === undefined`, aucune notion de compte sur ce depot),
-   jamais de restriction.
-
-   LE CAS VISITEUR N'EST PAS TRANCHE ICI, et c'est volontaire : premiere
-   version, j'avais mis `true` (ouvert) en supposant que le mur general des
-   paris finirait par l'arreter — faux pour quelqu'un qui n'ouvre jamais un
-   pari et se contente de parcourir des fiches club en boucle, ce que le
-   mur ne compte jamais (Antoine, releve le jour meme). Or Competitions et les
-   deux fonctions IA n'ont PAS la meme bonne reponse pour ce visiteur :
-   Competitions doit rester ouvert (choix explicite d'Antoine, peu couteux,
-   cache par contenu), Tendances et l'IA des fiches doivent rester FERMEES
-   (c'est exactement ce qu'elles existent pour empecher — un visiteur qui ne
-   parie jamais ne doit pas pouvoir consommer Tavily/Groq indefiniment).
-   La fonction renvoie donc `null` pour un visiteur : chaque appelant decide
-   ce que ce cas veut dire chez lui, au lieu qu'un seul choix soit impose aux
-   trois. */
-function _g45AccesPremium() {
-  if (window._g45User === undefined) return true;   // gones45 : pas de compte, pas de mur
-  if (window._g45User === null) return null;         // visiteur : chaque appelant decide, voir plus bas
-  if (window._g45Soutien) return true;                // statut soutien : jamais de limite
-  if (!window._g45User.created_at) return true;       // donnee manquante : ne jamais bloquer par erreur
-  var jours = (Date.now() - new Date(window._g45User.created_at).getTime()) / 86400000;
-  return jours <= 30;
-}
-
-/* Le message differe selon POURQUOI l'acces est ferme : un visiteur n'a pas de
-   compte (mais _g45AccesPremium() renvoie true pour lui, donc ce cas n'arrive
-   jamais en pratique via cette fonction — gardee pour un futur mur plus
-   strict) ; un compte de plus de 30 jours sans soutien doit voir un don, pas
-   « cree un compte », puisqu'il en a deja un. */
-function _g45BlocPremium() {
-  if (window._g45User) {
-    return '<a href="https://paypal.me/touraineantoine" target="_blank" rel="noopener" style="display:inline-block;padding:11px 22px;border-radius:9px;'
-      + 'background:#2563eb;color:#fff;text-decoration:none;font-weight:700;font-size:14px;">Soutenir le projet</a>';
-  }
-  return '<a href="./login.html" style="display:inline-block;padding:11px 22px;border-radius:9px;'
-    + 'background:#2563eb;color:#fff;text-decoration:none;font-weight:700;font-size:14px;">Créer mon compte</a>';
-}
-
 function loadTendancesTab(){
   var el=document.getElementById('t-tend'); if(!el) return;
-  /* ═══ TENDANCES SUIT L'ACCES PREMIUM PARTAGE (12/09/2026, corrige le meme jour) ═══
-     PAS la meme regle que Competitions pour le visiteur : ici il est BLOQUE des
-     le depart (c'est le but de cette fonction), la-bas il reste ouvert. Voir
-     `_g45AccesPremium()` : `null` pour un visiteur, tranche ici avec `!== true`
-     plutot qu'une simple negation, qui traiterait `null` de facon incoherente
-     d'une fonction a l'autre (piege trouve en testant). */
-  if (_g45AccesPremium() !== true) {
-    el.innerHTML = '<div style="padding:40px 20px;text-align:center;">'
-      + '<div style="font-size:32px;margin-bottom:12px;">🔒</div>'
-      + '<div style="font-weight:700;margin-bottom:8px;color:var(--t1);">Tendances réservé aux comptes</div>'
-      + '<div style="color:var(--t3);font-size:13px;line-height:1.6;max-width:320px;margin:0 auto 18px;">'
-      + 'Cette fonction s\'appuie sur plusieurs IA — gratuite 30 jours après création de compte, puis avec un petit soutien du projet.</div>'
-      + _g45BlocPremium() + '</div>';
-    return;
-  }
   var G=_g45TrGroups();
   if(!_G45_TR.sel){ _G45_TR.sel={}; G.forEach(function(g,i){ if(/Grands championnats|Coupes d/i.test(g.grp)) _G45_TR.sel[i]=true; }); }
   /* LIFTING DU 27/08 (meme demande que le Bilan : "comme le screen 2"). Les
@@ -28140,23 +27829,6 @@ window.g45LoadMatchAI=g45LoadMatchAI;
 function g45YT(q){ window.open('https://www.youtube.com/results?search_query='+encodeURIComponent(q),'_blank'); }
 window.g45YT=g45YT;
 async function _g45MultiAI(box, boxId, sys, facts, title){
-  /* ═══ QUATRIEME PORTE FERMEE (12/09/2026) ═══
-     Trouvee par Antoine sur bet45.fr : le bouton « Analyse IA du match »
-     declenchait la cascade Groq → Gemini → Qwen sans jamais passer par aucune
-     des trois gardes posees aujourd'hui (Tendances, l'IA des fiches club,
-     Competitions). Au moins deux boutons differents y menent
-     (`g45LoadMatchAI` pour le foot, `g45LoadUsAI` pour les sports US et le
-     tennis) — plutot que d'en fermer un et de rater le suivant, le mur est
-     pose ICI, dans la fonction UNIQUE ou part le premier appel reel. Meme
-     regle que les trois autres : visiteur bloque des le depart (voir
-     `_g45AccesPremium()`, `!== true` et non `!x`, memes raisons qu'ailleurs). */
-  if (_g45AccesPremium() !== true) {
-    box.innerHTML = '<div style="background:rgba(10,14,24,.93);border:1px solid rgba(176,124,214,.4);border-radius:10px;padding:16px;text-align:center;">'
-      + '<div style="font-size:12px;color:var(--t3);line-height:1.6;">🔒 Analyse IA — gratuite 30 jours après création de compte, puis avec un petit soutien du projet.</div>'
-      + '<div style="margin-top:10px;">' + _g45BlocPremium() + '</div></div>';
-    box.setAttribute('data-loaded', '1');
-    return;
-  }
   var key=(typeof getGeminiKey==='function')?getGeminiKey():localStorage.getItem('gones45_gemini_key');
   var eaf=function(x){return String(x).replace(/&/g,'&amp;').replace(/</g,'&lt;');};
   try{
@@ -36153,9 +35825,6 @@ var _G45_CACHE_PREFIXES=['g45rcP_','g45rcD_','g45rcY_','g45rc_','g45dcm_','g45dc
      les plus lourdes : plusieurs Ko par match, gardees indefiniment. */
   'g45butA2_','g45gl3_','g45gl2_','g45gl_','g45_tirs2_','g45_fanart2_','g45_fanart_','g45_img_perso_','g45_tv_prog','g45_mqnom_','g45_mqteam_','g45_mqfond_','g45trv4_','g45_catimg_','g45_catfmt2_','g45_catfmt_','g45nrlcal3_','g45nrlcal2_','g45_score2_','g45_score_','g45_lglogo_','g45compet3_','g45compet2_','g45compet_','g45tmeta_','g45histo_','g45ld2_','g45ld_',
   'g45nrlcal2_','g45core2_','g45core_','g45_fx_faits','g45_veille_','g45_compet_logos','g45_groq_modele','g45_groq_modele3','g45_groq_vision','g45_gemini_modeles',
-  /* 12/09 : g45nrlcal6_ rejoint la liste, remplace par g45nrlcal7_ ci-dessus —
-     meme raison que g45nrlcal2_ et g45nrlcal3_ avant lui. */
-  'g45nrlcal6_','g45nrlcal7_','g45nrlcal8_','g45nrlcal9_','g45nrlcal10_',
   /* MESURE DU 20/08 sur le stockage reel d'Antoine (5,1 Mo, sature) :
        fpl_bootstrap_cache ... 1951 Ko  <- a lui seul 38 % du total
        g45itf_*            ... 1779 Ko  <- tennis ITF/Challenger, par date
@@ -38435,26 +38104,13 @@ async function g45NrlCharger(annee) {
       }
     });
   }
-  /* SOURCE PRIORITAIRE POUR LE FOOTBALL : football-data.org (04/09, corrige le
-     12/09). Une requete pour toute la saison, mise en cache 6 h. Le numero est
+  /* SOURCE PRIORITAIRE POUR LE FOOTBALL : football-data.org (04/09).
+     Une requete pour toute la saison, mise en cache 6 h. Le numero est
      OFFICIEL, donc un match avance ou reporte est classe correctement — ce
-     qu'aucune deduction fondee sur les dates ne peut garantir.
-
-     BUG CORRIGE LE 12/09 (releve par Antoine — Rennes reste « non precisee »
-     alors que les autres equipes sont bonnes) : cette source ne se declenchait
-     QUE si AUCUN match de la ligue n'avait de journee. Pour la Ligue 1, ESPN en
-     fournit la plupart directement, donc la condition etait fausse et la
-     source la plus fiable ne s'executait JAMAIS — y compris pour les quelques
-     matchs, comme ceux de Rennes, qu'ESPN seul ne resolvait pas. Le mot
-     « prioritaire » du commentaire d'origine ne decrivait donc pas ce que
-     faisait le code : en pratique c'etait un dernier recours, pas une priorite.
-
-     Desormais on tente TOUJOURS football-data pour les championnats couverts,
-     et `_g45FdAssocier` ne comble que les trous — un match deja resolu par
-     ESPN ou par le calendrier n'est jamais touche. Sans cle enregistree, ou
-     hors des championnats couverts, `_g45FdMatchdays` renvoie null et rien ne
-     change par rapport a avant. */
-  if (out.some(function (m) { return !m.jr; })) {
+     qu'aucune deduction fondee sur les dates ne peut garantir. Sans cle
+     enregistree, ou hors des championnats couverts, on retombe simplement sur
+     les methodes suivantes. */
+  if (!out.some(function (m) { return m.jr; })) {
     try {
       var refs = await _g45FdMatchdays(_g45NrlCtx.ligue, annee);
       var n = _g45FdAssocier(out, refs);
@@ -39037,25 +38693,6 @@ window.g45CompetOuvrir = g45CompetOuvrir;
 async function loadCompetTab() {
   var el = document.getElementById('t-compet');
   if (!el) return;
-
-  /* ═══ COMPETITIONS SUIT L'ACCES PREMIUM PARTAGE (12/09/2026, unifie le meme jour) ═══
-     Meme regle desormais que Tendances et l'analyse IA des fiches pour un
-     COMPTE — voir `_g45AccesPremium()` pour le detail unique. Mais PAS pour
-     un visiteur : ici il reste ouvert (choix explicite d'Antoine, couvert par
-     le mur general des paris), a l'inverse de Tendances qui le bloque des le
-     depart. `_g45AccesPremium()` renvoie `null` pour ce cas ; on ne teste
-     donc que l'egalite stricte a `false` — jamais `!x`, qui traiterait `null`
-     comme un blocage ici aussi, exactement l'inverse de ce qui est voulu. */
-  if (_g45AccesPremium() === false) {
-    el.innerHTML = '<div style="padding:40px 20px;text-align:center;">'
-      + '<div style="font-size:32px;margin-bottom:12px;">🏆</div>'
-      + '<div style="font-weight:700;margin-bottom:8px;color:var(--t1);">Mois gratuit terminé</div>'
-      + '<div style="color:var(--t3);font-size:13px;line-height:1.6;max-width:340px;margin:0 auto 18px;">'
-      + 'Compétitions était gratuit pendant 30 jours. Pour continuer à l\'utiliser, '
-      + 'un petit soutien du projet suffit.</div>'
-      + _g45BlocPremium() + '</div>';
-    return;
-  }
 
   /* NAVIGATION A DEUX NIVEAUX, reprise de l'onglet Resultats : sport puis
      competition. Les chips a plat atteignaient 21 entrees sur quatre lignes,
@@ -40741,17 +40378,8 @@ var _g45SgReplie = false;    /* un seul repli automatique sur la saison preceden
 var _g45SgNomCourant = '';   /* equipe affichee, pour reinitialiser les filtres */
 var _g45SgPhase = 'tout';    /* 'tout' | 'reg' | 'po' */
 
-/* 12/09/2026 : "ø" (et quelques autres lettres latines qui ne se decomposent
-   PAS en NFD, car ce sont des lettres a part entiere, pas des lettres
-   accentuees) disparaissaient au lieu de se simplifier — "Bodø" devenait "bod"
-   au lieu de "bodo", ne correspondant plus a l'ecriture anglicisee "Bodo" que
-   les autres sources utilisent. Ca touche potentiellement tout club nordique
-   (norvegien, danois, islandais...), pas seulement celui qui l'a revele. La
-   table reste courte : seulement les lettres du football europeen. */
-var _G45_TRANSLIT = { 'ø':'o','Ø':'o','å':'a','Å':'a','æ':'ae','Æ':'ae','œ':'oe','Œ':'oe','ß':'ss','đ':'d','Đ':'d','ł':'l','Ł':'l' };
 function _g45SgNorm(s) {
-  s = String(s || '').replace(/[øØåÅæÆœŒßđĐłŁ]/g, function (c) { return _G45_TRANSLIT[c] || c; });
-  return s.toLowerCase()
+  return String(s || '').toLowerCase()
     .normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]/g, '');
 }
 function _g45SgCle(n) { return String(n || '').toLowerCase().trim(); }
@@ -42425,22 +42053,7 @@ function _g45NrlCleCache(annee) {
   /* Cle changee le 04/09 : les caches precedents contiennent des numeros de
      journee errones (deduits des dates). Ils doivent etre reconstruits une fois
      avec la numerotation officielle de football-data. */
-  /* Cle changee le 12/09 : MEME CAUSE, ENCORE MANQUEE UNE FOIS — j'ai corrige
-     la resolution des journees (verrou tout-ou-rien retire, Europa/Conference
-     ajoutees) sans suivre la regle que les trois commentaires ci-dessus avaient
-     deja posee trois fois : tout changement de cette logique doit changer la cle
-     de cache, sinon les navigateurs ayant deja une saison en memoire depuis
-     moins de 6 h rejouent les anciens numeros (ou leur absence) sans jamais
-     retenter la resolution. C'est exactement ce qu'a signale Antoine avec
-     Forest/Palace/Spurs : « toujours pareil » apres deploiement. */
-  /* Cle changee le 12/09 (bis) : le diagnostic ajoute dans _g45FdAssocier ne
-     doit pas attendre 6 h derriere le cache pose par la version precedente. */
-  /* Cle changee le 12/09 (ter) : l'alias Rennes/Stade Rennais doit s'appliquer
-     tout de suite, pas dans 6 h. */
-  /* Cle changee le 12/09 (quater) : alias Spurs/Palace/Forest/AZ/Cologne. */
-  /* Cle changee le 12/09 (quinquies) : correction ø, alias bidirectionnels,
-     AEK/Bratislava/Prague ajoutes. */
-  return 'g45nrlcal11_' + _g45NrlCtx.sport + '_' + _g45NrlCtx.ligue + '_' + annee;
+  return 'g45nrlcal6_' + _g45NrlCtx.sport + '_' + _g45NrlCtx.ligue + '_' + annee;
 }
 
 var _g45NrlChargerOrig = (typeof g45NrlCharger === 'function') ? g45NrlCharger : null;
@@ -44318,7 +43931,7 @@ async function g45DirectMesEquipes(silencieux) {
   var jour = _fj(new Date(Date.now() - JOURS * 86400000)) + '-'
            + _fj(new Date(Date.now() + (MODE === 'resultats' ? 0 : 1) * 86400000));
   var LIMITE = Date.now() - JOURS * 24 * 3600000;
-  var trouves = [], enCours = 0, bientot = 0;
+  var trouves = [], enCours = 0;
 
   /* ═══ FOOTBALL : UNE SEULE REQUETE, TOUTES COMPETITIONS ═══
      PIEGE TROUVE LE 15/08 : on n'interrogeait que le CHAMPIONNAT de l'equipe
@@ -44390,16 +44003,6 @@ async function g45DirectMesEquipes(silencieux) {
       var etat = st.state || '';
       if (etat === 'in') enCours++;
       var tMatch = Date.parse(e.date);
-      /* CORRIGE LE 12/09/2026 (releve par Antoine sur Real Madrid) : la liste ne
-         se relancait QUE si un match etait DEJA en cours au moment precis de la
-         verification. Ouvrir Suivies avant le coup d'envoi, meme quelques
-         minutes avant, arretait le rafraichissement pour de bon — la bascule
-         vers le direct n'etait alors jamais vue, contrairement au bandeau du
-         haut, qui n'a pas cette limite. On compte desormais aussi les matchs
-         qui demarrent dans l'heure : la liste continue de se rafraichir jusqu'a
-         ce qu'un match soit reellement en cours, pas seulement s'il l'est deja
-         au premier passage. */
-      if (etat === 'pre' && !isNaN(tMatch) && tMatch - Date.now() < 3600000 && tMatch - Date.now() > -600000) bientot++;
       if (!isNaN(tMatch) && etat === 'post' && tMatch < LIMITE) return;   /* plus vieux que 24 h */
       var nm = function (x) { return (x.team && (x.team.shortDisplayName || x.team.displayName)) || '?'; };
       var sc = function (x) { var v = x.score; if (v && typeof v === 'object') v = v.value; return (v == null ? '' : v); };
@@ -44678,7 +44281,7 @@ async function g45DirectMesEquipes(silencieux) {
       + '</div></div>';
   }).join('')
   + '<div style="font-size:9px;color:var(--t3);text-align:center;margin-top:6px;">'
-  + aInterroger.length + ' requ\u00eate(s) \u00b7 ' + (enCours ? 'rafra\u00eechissement auto toutes les 45 s' : bientot ? 'coup d\u2019envoi imminent \u00b7 rafra\u00eechissement auto toutes les 45 s' : 'aucun match en cours, rafra\u00eechissement arr\u00eat\u00e9') + '</div>';
+  + aInterroger.length + ' requ\u00eate(s) \u00b7 ' + (enCours ? 'rafra\u00eechissement auto toutes les 45 s' : 'aucun match en cours, rafra\u00eechissement arr\u00eat\u00e9') + '</div>';
 
   /* Programme TV : charge en arriere-plan, mis en cache 3 h. Si le Worker n'a
      pas l'hote « tvsports », la fonction echoue en silence et on retombe sur la
@@ -44706,7 +44309,7 @@ async function g45DirectMesEquipes(silencieux) {
   _g45DirStop();
   /* Et jamais en mode Resultats : un historique ne bouge pas, relancer une
      requete toutes les 45 secondes serait du gaspillage pur. */
-  if ((enCours || bientot) && MODE !== 'resultats') _g45DirTimer = setTimeout(function () {
+  if (enCours && MODE !== 'resultats') _g45DirTimer = setTimeout(function () {
     if (_g45Visible('t-suivies') && document.visibilityState === 'visible') g45DirectMesEquipes(true);
     else _g45DirStop();
   }, 45000);
@@ -44920,25 +44523,10 @@ function g45OutilsRanger() {
   _g45DeplacerLanceurs();   /* avant tout classement, sinon on masquerait un bloc parti */
   g45SyncMasquerAdmin();
   var hote = document.getElementById('t-outils');
-  if (!hote) return;
-  var navExistant = document.getElementById('g45-outils-nav');
-  var estAdminMtn = (typeof g45EstAdmin === 'function') && g45EstAdmin();
-  /* BUG CORRIGE LE 12/09 : le garde-fou d'origine sautait la reconstruction des
-     qu'un nav existait deja, quel que soit le statut admin — pose pour eviter
-     de reconstruire (et de reinitialiser la section affichee) a CHAQUE clic
-     dans Outils, cette fonction etant rejouee toutes les 120 ms des qu'on y
-     est. Effet de bord trouve par Antoine : debloquer l'admin PENDANT que
-     Outils etait deja ouvert (ou avait deja ete ouvert une fois dans la
-     session) ne faisait jamais apparaitre Cles — seul un rechargement complet
-     de la page forcait une vraie reconstruction. On memorise desormais le
-     statut au moment de la construction (`dataset.admin`) et on ne saute que
-     si RIEN n'a change, admin y compris. */
-  if (navExistant && navExistant.dataset.admin === String(estAdminMtn)) return;
-  if (navExistant) navExistant.remove();
+  if (!hote || document.getElementById('g45-outils-nav')) return;
 
   var nav = document.createElement('div');
   nav.id = 'g45-outils-nav';
-  nav.dataset.admin = String(estAdminMtn);
   nav.style.cssText = 'display:flex;gap:5px;flex-wrap:wrap;margin:0 0 14px;';
   nav.innerHTML = _G45_OUTILS_SEC.filter(_g45SecVisible).map(function (s) {
     return '<button data-sec="' + s.id + '" onclick="g45OutilsSection(\'' + s.id + '\')" '
@@ -44951,11 +44539,8 @@ function g45OutilsRanger() {
   try { mem = localStorage.getItem('g45_outils_sec'); } catch (e) {}
   /* Un non-administrateur qui avait « Clés » en memoire (ou qui l'a encore d'une
      version precedente) retombe sur Application : sans ca il ouvrirait les Outils
-     sur une section dont aucun onglet n'existe plus, donc sur du vide. Meme
-     chose si l'admin vient d'etre REVOQUE en cours de session : la section
-     actuellement affichee peut avoir disparu, il faut retomber sur Application. */
+     sur une section dont aucun onglet n'existe plus, donc sur du vide. */
   if (mem && !_g45SecVisible({ id: mem })) mem = null;
-  if (!mem && _g45OutilsSec && _g45SecVisible({ id: _g45OutilsSec })) mem = _g45OutilsSec;
   g45OutilsSection(mem || 'app');
 }
 window.g45OutilsRanger = g45OutilsRanger;
@@ -48360,14 +47945,7 @@ window.g45ConvVersValue = g45ConvVersValue;
 var _G45_FD_CODES = {
   'fra.1': 'FL1', 'esp.1': 'PD', 'ita.1': 'SA',
   'eng.1': 'PL',  'ger.1': 'BL1',
-  'uefa.champions': 'CL', 'por.1': 'PPL', 'ned.1': 'DED', 'bra.1': 'BSA',
-  /* 12/09 : manquaient ici alors qu'elles sont dans la table soeur du calendrier
-     mensuel (`_g45MatchdayMap`, ligne ~32241) — deux endroits qui devraient
-     toujours dire la meme chose et avaient diverge. Forest, Palace et Spurs
-     jouent l'Europa ou la Conference League, pas la Champions League : sans ces
-     deux lignes, `_g45FdMatchdays` renvoyait null avant meme de tenter quoi que
-     ce soit, quel que soit l'etat des deux corrections precedentes. */
-  'uefa.europa': 'EL', 'uefa.europa.conf': 'ECL'
+  'uefa.champions': 'CL', 'por.1': 'PPL', 'ned.1': 'DED', 'bra.1': 'BSA'
 };
 
 /* Cache long : le calendrier d'une saison ne bouge quasiment pas, et l'offre
@@ -48410,40 +47988,18 @@ async function _g45FdMatchdays(ligue, annee) {
 function _g45FdAssocier(matchs, refs) {
   if (!refs || !refs.length) return 0;
   var n = 0;
-  /* 12/09 : Antoine a confirme sur Premier League que des matchs restent
-     « non precisee » malgre le comblement (26/37 combles selon la console — le
-     reste a echoue en silence). Deux fois de suite j'ai devine une cause de
-     nommage sans preuve et je me suis trompe. Plutot qu'une troisieme
-     hypothese, ce bloc journalise EXACTEMENT pourquoi chaque match resiste :
-     soit aucune reference football-data n'existe a sa date (probleme de
-     couverture), soit une existe mais les noms ne se reconnaissent pas
-     (probleme de correspondance) — et dans ce cas les deux ecritures
-     apparaissent cote a cote dans la console, lisibles directement. */
-  var echecs = [];
   matchs.forEach(function (m) {
-    if (m.jr) return;
     var jour = String(m.date || '').slice(0, 10);
     var t = new Date(jour).getTime();
-    var candidats = [];
     for (var i = 0; i < refs.length; i++) {
       var r = refs[i];
       var ecart = Math.abs(new Date(r.d).getTime() - t);
       if (!(ecart <= 86400000)) continue;
-      candidats.push(r);
       var okD = _g45FdMemeEquipe(m.dom, r.h, r.hl);
       var okE = _g45FdMemeEquipe(m.ext, r.a, r.al);
-      if (okD && okE) { m.jr = r.jr; n++; candidats = null; break; }
-    }
-    if (candidats) {
-      echecs.push('  ESPN: "' + m.dom + '" vs "' + m.ext + '" (' + jour + ')  |  '
-        + (candidats.length
-            ? 'football-data proposait : ' + candidats.map(function (c) { return '"' + c.h + '" vs "' + c.a + '"'; }).join(', ')
-            : 'AUCUNE reference football-data a cette date (+/- 1 jour)'));
+      if (okD && okE) { m.jr = r.jr; n++; break; }
     }
   });
-  if (echecs.length) {
-    console.warn('journees non resolues malgre football-data (' + echecs.length + ') :\n' + echecs.join('\n'));
-  }
   return n;
 }
 
@@ -48464,59 +48020,9 @@ function _g45FdSigle(nom) {
   return mots.map(function (w) { return w[0]; }).join('').toLowerCase();
 }
 
-/* ═══ ALIAS EXPLICITES (12/09/2026, etendu le 12/09 par lot) ═══
-   Rennes/Stade Rennais est confirme par la console d'Antoine (aucun sous-mot
-   commun). Les cinq suivants — Spurs, Palace, Forest, AZ Alkmaar, Cologne —
-   sont signales par Antoine mais PAS encore confirmes par un releve de
-   console : ce sont des propositions raisonnees, pas des certitudes. Chaque
-   valeur est un TABLEAU de formes possibles plutot qu'une seule, faute de
-   savoir laquelle football-data utilise reellement (« Tottenham » seul, ou
-   « Tottenham Hotspur » complet ?). Si une des variantes est fausse, le
-   diagnostic ci-dessous l'aurait de toute facon signalee au prochain passage —
-   c'est le filet qui rend ces suppositions sans risque : au pire elles ne
-   servent a rien, elles ne peuvent pas faire matcher le mauvais club sauf
-   coincidence de nom quasi impossible en pratique.
-   Cologne est un cas different des quatre autres : pas un raccourci ESPN mais
-   le nom ANGLAIS de la ville, quand le club n'est connu partout ailleurs que
-   sous son nom allemand (Köln) — aucun rapport de sous-mot possible entre
-   « cologne » et « koln », quelle que soit la regle generique. */
-/* ═══ ALIAS EXPLICITES (12/09/2026, revu apres retour d'Antoine) ═══
-   Deux corrections par rapport a la version precedente :
-
-   1. DIRECTION ABANDONNEE. J'avais suppose qu'ESPN est toujours le raccourci
-      et football-data toujours la forme longue. Faux pour AZ Alkmaar : c'est
-      football-data qui dit juste « AZ », ESPN qui garde le nom complet — donc
-      ma table, indexee sur le nom ESPN, ne pouvait pas la trouver. Les groupes
-      ci-dessous sont desormais des ENSEMBLES de formes equivalentes, verifies
-      dans les deux sens : peu importe laquelle des deux sources est la plus
-      courte.
-   2. TROIS PAIRES AJOUTEES, confirmees par la console d'Antoine sur les
-      matchs de Ligue des Champions (AEK Athenes, Bratislava, Prague) — memes
-      causes que Rennes et Cologne : sigle grec translitere differemment
-      (PAE = Podosfairiki Anonymi Etaireia), et noms de ville en deux langues.
-
-   « Nottingham » seul (sans « Forest ») et « AZ » seul sont maintenant dans
-   leurs groupes respectifs, confirmes par Antoine — retires les variantes que
-   j'avais devinees et qui ne servaient a rien. */
-var _G45_FD_GROUPES = [
-  ['rennes', 'staderennais'],
-  ['spurs', 'tottenham', 'tottenhamhotspur'],
-  ['cpalace', 'crystalpalace'],
-  ['nottmforest', 'nottingham', 'nottforest'],
-  ['az', 'azalkmaar'],
-  ['cologne', 'koln', 'fckoln', '1fckoln'],
-  ['aekathens', 'paeaek', 'aek'],
-  ['sbratislava', 'slbratislava', 'slovanbratislava'],
-  ['slaviaprague', 'slaviapraha']
-];
 function _g45FdMemeEquipe(espn, court, complet) {
   if (_g45BandMeme(espn, court) || _g45BandMeme(espn, complet)) return true;
-  var e = _g45SgNorm(espn || ''), c = _g45SgNorm(court), k = _g45SgNorm(complet);
-  for (var g = 0; g < _G45_FD_GROUPES.length; g++) {
-    var groupe = _G45_FD_GROUPES[g];
-    if (groupe.indexOf(e) < 0) continue;
-    if (groupe.indexOf(c) >= 0 || groupe.indexOf(k) >= 0) return true;
-  }
+  var e = _g45SgNorm(espn || '');
   if (e.length >= 2 && e.length <= 5) {
     if (e === _g45FdSigle(court) || e === _g45FdSigle(complet)) return true;
   }
