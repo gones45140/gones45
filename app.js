@@ -124,13 +124,26 @@ function espnLeagueOf(nom) {
 // Résoudre l'ID ESPN d'une équipe via la liste des équipes de son championnat
 // Charge (et cache) la liste des équipes d'un championnat ESPN
 async function _espnLoadLeagueTeams(league) {
-  if(_espnTeamsCache[league]) return _espnTeamsCache[league];
+  /* Un tableau vide est VRAI en JavaScript ([] est truthy) : mettre en cache un
+     echec sous cette forme le rend indiscernable d'un vrai « championnat sans
+     equipes » (hors-saison, par exemple) — la prochaine tentative de la meme
+     session ne retente jamais, elle relit juste ce [] fige. Trouve en meme
+     temps que le diagnostic ci-dessous, meme jour, meme cause racine. */
+  if(_espnTeamsCache[league] && _espnTeamsCache[league].length) return _espnTeamsCache[league];
   try {
     var r = await fetch(FD_PROXY+'?host=espn&path='+encodeURIComponent('/apis/site/v2/sports/soccer/'+league+'/teams'));
     var d = await r.json();
     var list = (d.sports && d.sports[0] && d.sports[0].leagues && d.sports[0].leagues[0] && d.sports[0].leagues[0].teams) ? d.sports[0].leagues[0].teams : [];
     _espnTeamsCache[league] = list.map(function(t){ return t.team; });
-  } catch(e) { _espnTeamsCache[league] = []; }
+    /* DIAGNOSTIC (12/09/2026) : releve par Antoine sur l'Atletico Madrid, qui
+       echoue completement (espA/espB nulles) sans jamais expliquer pourquoi.
+       Meme defaut que le catch trouve plus tot le meme jour sur les coupes —
+       une erreur ici (Worker en retard, reponse malformee) etait avalee en
+       silence, transformant un aleas passager en « equipe introuvable » pour
+       de bon. Ce console.warn dit desormais explicitement quand la liste
+       recue est vide alors qu'un vrai championnat a ete demande. */
+    if(!_espnTeamsCache[league].length) console.warn('_espnLoadLeagueTeams : 0 equipe recue pour "'+league+'" — reponse : '+JSON.stringify(d).slice(0,200));
+  } catch(e) { console.warn('_espnLoadLeagueTeams en erreur pour "'+league+'" :', e); return []; }
   return _espnTeamsCache[league];
 }
 
