@@ -12,8 +12,39 @@
      maintenir deux valeurs differentes. -->
 <link rel="icon" href="favicon.ico?v=20260904t" sizes="any">
 <link rel="apple-touch-icon" href="apple-touch-icon.png?v=20260904t">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; frame-src https://www.youtube.com https://www.youtube-nocookie.com; script-src 'self' 'unsafe-eval' 'unsafe-inline' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com; worker-src 'self' blob:; connect-src 'self' data: blob: https://tessdata.projectnaptha.com https://site.api.espn.com https://site.web.api.espn.com https://sports.core.api.espn.com https://fantasy.premierleague.com https://api.dropbox.com https://content.dropboxapi.com https://api.dropboxapi.com https://api.groq.com https://generativelanguage.googleapis.com https://api.mistral.ai https://api.tavily.com https://fd-proxy.touraine-antoine.workers.dev https://media.api-sports.io https://api.football-data.org https://api-web.nhle.com https://statsapi.mlb.com https://www.thesportsdb.com https://cdn.jsdelivr.net https://api.openf1.org https://racecenter.letour.fr https://racecenter.lavuelta.es https://racecenter.letourfemmes.fr https://racecenter.paris-nice.fr https://racecenter.tour-auvergne-rhone-alpes.fr https://racecenter.paris-roubaix.fr https://racecenter.liege-bastogne-liege.be https://racecenter.la-fleche-wallonne.be https://racecenter.paris-tours.fr https://api.jolpi.ca https://en.wikipedia.org https://api.github.com https://raw.githubusercontent.com https://gones45140.github.io https://vbsdewuvycaekfkixynh.supabase.co wss://vbsdewuvycaekfkixynh.supabase.co; img-src 'self' data: https: blob: https://flagcdn.com; style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com https://fonts.googleapis.com; font-src 'self' data: https://fonts.gstatic.com;">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self' 'unsafe-inline' 'unsafe-eval' https: data: blob:;">
+  <title>BET45 — Dashboard Sport & Tracking</title>
+<meta name="description" content="Accède à tes statistiques sportives, suivis de matchs et outils d'analyse en direct sur BET45.">
+  <script>
+  // Nettoie l'URL pour afficher bet45.fr/ au lieu de /indexfenotte.html sans recharger la page
+  if (window.location.pathname.endsWith('indexfenotte.html')) {
+    window.history.replaceState({}, document.title, '/' + window.location.search + window.location.hash);
+  }
+</script>
+  <script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  "mainEntity": [
+    {
+      "@type": "Question",
+      "name": "Quel est le meilleur outil pour gérer ma bankroll de paris sportifs ?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "BET 45 (bet45.fr) propose un suivi de bankroll avancé, des analyses statistiques en temps réel et une centralisation sur mesure pour les parieurs exigeants."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "Pourquoi utiliser un logiciel de suivi de paris ?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Il calcule automatiquement vos profits et pertes, affiche votre taux de réussite réel et vous aide à respecter votre capital de départ sans risquer trop d'argent."
+      }
+    }
+  ]
+}
+</script>
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; frame-src https://www.youtube.com https://www.youtube-nocookie.com; script-src 'self' 'unsafe-eval' 'unsafe-inline' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com https://cloud.umami.is; worker-src 'self' blob:; connect-src 'self' data: blob: https://cloud.umami.is https://gateway.umami.is https://api-gateway.umami.dev https://tessdata.projectnaptha.com https://site.api.espn.com https://site.web.api.espn.com https://sports.core.api.espn.com https://fantasy.premierleague.com https://api.dropbox.com https://content.dropboxapi.com https://api.dropboxapi.com https://api.groq.com https://generativelanguage.googleapis.com https://api.mistral.ai https://api.tavily.com https://fd-proxy.touraine-antoine.workers.dev https://media.api-sports.io https://api.football-data.org https://api-web.nhle.com https://statsapi.mlb.com https://www.thesportsdb.com https://cdn.jsdelivr.net https://api.openf1.org https://racecenter.letour.fr https://racecenter.lavuelta.es https://racecenter.letourfemmes.fr https://racecenter.paris-nice.fr https://racecenter.tour-auvergne-rhone-alpes.fr https://racecenter.paris-roubaix.fr https://racecenter.liege-bastogne-liege.be https://racecenter.la-fleche-wallonne.be https://racecenter.paris-tours.fr https://api.jolpi.ca https://en.wikipedia.org https://api.github.com https://raw.githubusercontent.com https://gones45140.github.io https://ofcizjaynonjtiusdwgi.supabase.co wss://ofcizjaynonjtiusdwgi.supabase.co; img-src 'self' data: https: blob: https://flagcdn.com; style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com https://fonts.googleapis.com; font-src 'self' data: https://fonts.gstatic.com;">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
 <title>BET45</title>
 
@@ -25,10 +56,28 @@
 <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js" crossorigin="anonymous"></script>
 <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script defer src="https://cloud.umami.is/script.js" data-website-id="b6bf9373-afdd-491a-b27e-6b0f18b46d82"></script>
+ 
 </head>
 <body>
 
-<header class="topbar">
+<header class="topbar" style="position:relative;">
+  <!-- 12/09/2026 : point d'entree vers login.html, absent partout ailleurs dans
+       l'appli — sans lui, personne ne peut se creer un compte volontairement
+       avant de tomber sur le mur d'essai. Position absolue plutot que dans le
+       flux : le style de .topbar est defini dans style.css, inconnu d'ici, et
+       un lien absolu ne depend d'aucune de ses regles de mise en page.
+       Si la personne est DEJA connectee, cliquer ne fait rien de genant :
+       login.html detecte la session active et renvoie aussitot vers
+       index.html — pas besoin de cacher le lien selon l'etat de connexion. -->
+  <!-- 12/09/2026 (corrige le meme jour) : premiere version en position:absolute
+       DANS le header, sans z-index — invisible en pratique, cachee derriere la
+       barre laterale qui se dessine par-dessus (elle a forcement un z-index,
+       le mien valait 0 par defaut). Fixe au VIEWPORT plutot qu'au header, avec
+       un z-index tres eleve : independant de tout ce que fait .topbar ou la
+       barre laterale, ce lien reste au-dessus de tout, toujours au meme endroit
+       a l'ecran quel que soit le defilement. -->
+  <a href="./login.html" title="Se connecter / créer un compte" style="position:fixed;left:10px;top:14px;z-index:999999;font-size:11px;font-weight:700;color:#fff;text-decoration:none;padding:6px 10px;border-radius:8px;background:rgba(0,0,0,.55);border:1px solid rgba(255,255,255,.25);white-space:nowrap;">👤 Connexion</a>
   <div class="logo">BET<em>45</em></div>
   <div class="top-cap"><div class="lbl">Capital</div><div class="val" id="top-val">0 €</div><div id="top-fb" style="display:none;font-size:11px;color:var(--gold);font-weight:700;line-height:1.1;margin-top:2px;">🎟 0 €</div></div>
 </header>
@@ -442,12 +491,6 @@
   </div>
   <!-- Courbe capital -->
   <div class="sec">Évolution des gains</div>
-  <!-- PERIODE (01/09, inspire de FlashBooost, retour d'Antoine) : filtre rapide
-       1j/1s/1m/1a au lieu d'une navigation mois par mois pour voir la courbe
-       recente. La section "Par mois" plus haut reste disponible a part pour
-       parcourir l'historique par mois precis — les deux sont complementaires,
-       pas redondants (meme organisation que FlashBooost : puces de periode
-       pour le graphique, calendrier separe pour le detail). -->
   <div id="bilan-periode-chips" style="display:flex;gap:6px;margin-bottom:8px;"></div>
   <div class="cwrap" style="max-width:100%;overflow-x:hidden;"><div style="height:160px;position:relative;max-width:100%;"><canvas id="bilan-chart"></canvas></div><div class="chart-info-bar" id="cib-bilan" style="display:none;"><span class="cib-main" id="cib-bilan-txt"></span><span class="cib-val" id="cib-bilan-val"></span></div></div>
   <!-- Par bookmaker -->
@@ -1255,6 +1298,10 @@
     <a href="https://surebetfinder.com" target="_blank" style="display:flex;align-items:center;gap:10px;padding:13px 12px;background:var(--s1);border-radius:var(--r8);text-decoration:none;color:var(--t1);font-size:12px;font-weight:700;border:1px solid rgba(77,132,255,.3);box-shadow:0 0 10px rgba(77,132,255,.12);border-left:3px solid #1ed760;">
       <span style="font-size:16px;">🔁</span>Surebet Finder
     </a>
+    <a href="javascript:void(0);" onclick="navigator.clipboard.writeText('contact@bet45.fr'); alert('Adresse contact@bet45.fr copiée dans le presse-papier !');" style="display:flex; align-items:center; gap:10px; padding:13px 12px; background:var(--s1); border-radius:var(--r8); text-decoration:none; color:var(--t1); font-size:12px; font-weight:700; cursor:pointer;">
+  <span style="font-size:16px;">✉</span> Contact (Copier l'e-mail)
+</a>
+    
   </div>
   <div class="sec">Mes liens personnels</div>
   <div id="custom-links-list" style="margin-bottom:12px;"></div>
@@ -1323,7 +1370,6 @@
   <button class="ni" onclick="showTab('t-compet',this);loadCompetTab();"><span>🏆</span>Compétitions</button>
   <button class="ni" onclick="showTab('t-suivies',this);loadSuiviesTab()"><span>⭐</span>Suivies</button>
   <button class="ni" onclick="showTab('t-cal',this);loadCalendrier()"><span>📅</span>Agenda</button>
-  <button class="ni" onclick="showTab('t-tend',this);loadTendancesTab()"><span>🔥</span>Tendances</button>
   <button class="ni pc-only" onclick="showTab('t-outils',this)"><span>🔧</span>Outils</button>
   <button class="ni pc-only" onclick="showTab('t-social',this);loadSocialTab();"><span>🤝</span>Social</button>
   <button class="ni pc-only" onclick="showTab('t-stats',this);loadStatsTab();"><span>🧠</span>Stats</button>
@@ -1350,12 +1396,10 @@
 </nav>
 
 
-<!-- PARAMETRE DE VERSION (22/08). Sans lui, le cache HTTP et le service
-     worker servaient indefiniment l'ancien fichier sur mobile : rouvrir
-     l'application ne changeait rien puisque l'URL demandee etait la meme.
-     A INCREMENTER A CHAQUE DEPLOIEMENT, comme sur fenotte45. -->
-<script src="app.js?v=20260912g"></script>
-<script src="social.js"></script>
+<!-- FENOTTE45 : app.js est injecte par auth-guard.js APRES authentification.
+     Le ?v= doit changer a CHAQUE deploiement. -->
+<script src="social.js?v=20260826n"></script>
+<script type="module" src="auth-guard.js?v=20260912g"></script>
 
 
 
