@@ -6,6 +6,21 @@
    On redirige donc vers ESPN les appels qui passaient par le proxy.
    Les 28 autres appels ESPN d'app.js sont déjà en direct.
    Les deux hôtes sont déjà autorisés dans le connect-src du CSP.
+
+   EXCEPTION AJOUTEE LE 12/09/2026 (releve par Antoine, capture de
+   console a l'appui) : `/teams` — la liste des equipes d'un
+   championnat, utilisee par `_espnLoadLeagueTeams` pour resoudre un
+   club par son nom — ne renvoie AUCUN en-tete CORS quand on l'appelle
+   en direct depuis le navigateur. Le reseau reussit (200, visible
+   dans la console), mais le navigateur bloque quand meme la lecture
+   de la reponse : ni le Worker (403 Akamai) ni le direct (CORS) ne
+   fonctionnent pour CET endpoint precis, alors que les 28 autres s'en
+   sortent tres bien en direct.
+   Ce test suppose que le blocage Akamai du 05/08 ne s'appliquait pas
+   a /teams specifiquement — a verifier : si ce changement fait
+   ressortir un 403 au lieu du CORS actuel, c'est que /teams est
+   AUSSI bloque cote Worker, et il faudra revenir en arriere (retirer
+   la ligne juste en dessous) le temps de trouver une autre solution.
    ═══════════════════════════════════════════════════════════════ */
 (function(){
   var _f = window.fetch;
@@ -14,7 +29,16 @@
       if (typeof u === 'string' && u.indexOf('host=espn') >= 0 && u.indexOf('workers.dev') >= 0) {
         var p = new URLSearchParams(u.slice(u.indexOf('?') + 1));
         var path = p.get('path');
-        if (path) u = (p.get('host') === 'espnweb'
+        /* CORRECTION DU MEME JOUR : un premier essai testait la simple PRESENCE
+           de "/teams" dans l'URL, qui matchait AUSSI /teams/{id}/schedule (le
+           calendrier d'un club precis) — resultat, ce dernier restait
+           incorrectement sur le Worker au lieu de partir en direct comme les
+           27 autres endpoints. Seule la liste BRUTE des equipes d'un
+           championnat (/soccer/{ligue}/teams, RIEN apres) pose le probleme
+           CORS ; on ne l'exclut qu'elle, en verifiant la FIN exacte du chemin
+           decode plutot qu'une simple sous-chaine. */
+        var estListeEquipes = path && /\/teams\/?$/.test(path);
+        if (path && !estListeEquipes) u = (p.get('host') === 'espnweb'
               ? 'https://site.web.api.espn.com'
               : 'https://site.api.espn.com') + path;
       }
@@ -124,13 +148,26 @@ function espnLeagueOf(nom) {
 // Résoudre l'ID ESPN d'une équipe via la liste des équipes de son championnat
 // Charge (et cache) la liste des équipes d'un championnat ESPN
 async function _espnLoadLeagueTeams(league) {
-  if(_espnTeamsCache[league]) return _espnTeamsCache[league];
+  /* Un tableau vide est VRAI en JavaScript ([] est truthy) : mettre en cache un
+     echec sous cette forme le rend indiscernable d'un vrai « championnat sans
+     equipes » (hors-saison, par exemple) — la prochaine tentative de la meme
+     session ne retente jamais, elle relit juste ce [] fige. Trouve en meme
+     temps que le diagnostic ci-dessous, meme jour, meme cause racine. */
+  if(_espnTeamsCache[league] && _espnTeamsCache[league].length) return _espnTeamsCache[league];
   try {
     var r = await fetch(FD_PROXY+'?host=espn&path='+encodeURIComponent('/apis/site/v2/sports/soccer/'+league+'/teams'));
     var d = await r.json();
     var list = (d.sports && d.sports[0] && d.sports[0].leagues && d.sports[0].leagues[0] && d.sports[0].leagues[0].teams) ? d.sports[0].leagues[0].teams : [];
     _espnTeamsCache[league] = list.map(function(t){ return t.team; });
-  } catch(e) { _espnTeamsCache[league] = []; }
+    /* DIAGNOSTIC (12/09/2026) : releve par Antoine sur l'Atletico Madrid, qui
+       echoue completement (espA/espB nulles) sans jamais expliquer pourquoi.
+       Meme defaut que le catch trouve plus tot le meme jour sur les coupes —
+       une erreur ici (Worker en retard, reponse malformee) etait avalee en
+       silence, transformant un aleas passager en « equipe introuvable » pour
+       de bon. Ce console.warn dit desormais explicitement quand la liste
+       recue est vide alors qu'un vrai championnat a ete demande. */
+    if(!_espnTeamsCache[league].length) console.warn('_espnLoadLeagueTeams : 0 equipe recue pour "'+league+'" — reponse : '+JSON.stringify(d).slice(0,200));
+  } catch(e) { console.warn('_espnLoadLeagueTeams en erreur pour "'+league+'" :', e); return []; }
   return _espnTeamsCache[league];
 }
 
@@ -175,6 +212,13 @@ var ESPN_TEAM_ID_FIX = {
   'inter miami cf':{id:'20232', league:'usa.1'},
   'palmeiras':     {id:'2029',  league:'bra.1'},
   'se palmeiras':  {id:'2029',  league:'bra.1'},
+  /* Atletico Madrid — meme defaut CORS sur /esp.1/teams, releve par Antoine
+     le 12/09 (fonctionnait sur son telephone, qui avait deja une resolution
+     reussie et permanente en cache, jamais sur son PC qui retentait a chaque
+     fois le meme appel casse). Identifiant confirme via la page officielle
+     ESPN (espn.in/football/team/_/id/1068/atletico-madrid). */
+  'atletico madrid': {id:'1068', league:'esp.1'},
+  'atletico':        {id:'1068', league:'esp.1'},
   'france':        {id:'478',   league:'fifa.world'},
   'inter milan':   {id:'110',   league:'ita.1'},
   'lyon':          {id:'167',   league:'fra.1'},
@@ -22013,9 +22057,20 @@ async function loadTeamSaisons() {
     // Compléter avec les coupes football-data SANS bloquer (years alignées sur ESPN)
     var keys = Object.keys(results);
     (async function(){
-      try {
-        for(var ki=0; ki<keys.length; ki++){
-          var yr = keys[ki];
+      /* CORRIGE LE 12/09/2026 (releve par Antoine — coupe et boutons manquants
+         precisement quand la page met longtemps a charger, uniquement sur PC
+         gones45, jamais sur telephone ni sur bet45.fr) : tout ce bloc etait
+         entoure d'UN SEUL catch, qui avalait silencieusement N'IMPORTE QUELLE
+         erreur sur N'IMPORTE QUELLE annee — un simple ralentissement reseau ou
+         un 429 passager sur la PREMIERE annee arretait la boucle net, sans
+         jamais tenter la seconde, et sans la moindre trace dans la console.
+         Un chargement lent augmente mecaniquement les chances de toucher ce
+         genre d'alea, d'ou la correlation qu'Antoine a remarquee. Chaque annee
+         a desormais son propre filet : l'echec de l'une n'empeche plus
+         l'autre d'aboutir, et l'echec est enfin visible plutot que muet. */
+      for(var ki=0; ki<keys.length; ki++){
+        var yr = keys[ki];
+        try {
           var data = await fdFetch('/v4/teams/'+teamId+'/matches?status=FINISHED&season='+yr);
           if(data && data.matches && data.matches.length){
             var cups = data.matches.filter(function(m){
@@ -22034,8 +22089,8 @@ async function loadTeamSaisons() {
               renderSaisonsChart(el, results, nom); // re-render avec les coupes
             }
           }
-        }
-      } catch(e){ /* coupes non chargées, pas grave */ }
+        } catch(e){ console.warn('coupe football-data non chargee pour "'+nom+'" annee '+yr+' :', e); }
+      }
     })();
     return; // on a déjà affiché ESPN
   }
@@ -44263,7 +44318,7 @@ async function g45DirectMesEquipes(silencieux) {
   var jour = _fj(new Date(Date.now() - JOURS * 86400000)) + '-'
            + _fj(new Date(Date.now() + (MODE === 'resultats' ? 0 : 1) * 86400000));
   var LIMITE = Date.now() - JOURS * 24 * 3600000;
-  var trouves = [], enCours = 0;
+  var trouves = [], enCours = 0, bientot = 0;
 
   /* ═══ FOOTBALL : UNE SEULE REQUETE, TOUTES COMPETITIONS ═══
      PIEGE TROUVE LE 15/08 : on n'interrogeait que le CHAMPIONNAT de l'equipe
@@ -44335,6 +44390,16 @@ async function g45DirectMesEquipes(silencieux) {
       var etat = st.state || '';
       if (etat === 'in') enCours++;
       var tMatch = Date.parse(e.date);
+      /* CORRIGE LE 12/09/2026 (releve par Antoine sur Real Madrid) : la liste ne
+         se relancait QUE si un match etait DEJA en cours au moment precis de la
+         verification. Ouvrir Suivies avant le coup d'envoi, meme quelques
+         minutes avant, arretait le rafraichissement pour de bon — la bascule
+         vers le direct n'etait alors jamais vue, contrairement au bandeau du
+         haut, qui n'a pas cette limite. On compte desormais aussi les matchs
+         qui demarrent dans l'heure : la liste continue de se rafraichir jusqu'a
+         ce qu'un match soit reellement en cours, pas seulement s'il l'est deja
+         au premier passage. */
+      if (etat === 'pre' && !isNaN(tMatch) && tMatch - Date.now() < 3600000 && tMatch - Date.now() > -600000) bientot++;
       if (!isNaN(tMatch) && etat === 'post' && tMatch < LIMITE) return;   /* plus vieux que 24 h */
       var nm = function (x) { return (x.team && (x.team.shortDisplayName || x.team.displayName)) || '?'; };
       var sc = function (x) { var v = x.score; if (v && typeof v === 'object') v = v.value; return (v == null ? '' : v); };
@@ -44613,7 +44678,7 @@ async function g45DirectMesEquipes(silencieux) {
       + '</div></div>';
   }).join('')
   + '<div style="font-size:9px;color:var(--t3);text-align:center;margin-top:6px;">'
-  + aInterroger.length + ' requ\u00eate(s) \u00b7 ' + (enCours ? 'rafra\u00eechissement auto toutes les 45 s' : 'aucun match en cours, rafra\u00eechissement arr\u00eat\u00e9') + '</div>';
+  + aInterroger.length + ' requ\u00eate(s) \u00b7 ' + (enCours ? 'rafra\u00eechissement auto toutes les 45 s' : bientot ? 'coup d\u2019envoi imminent \u00b7 rafra\u00eechissement auto toutes les 45 s' : 'aucun match en cours, rafra\u00eechissement arr\u00eat\u00e9') + '</div>';
 
   /* Programme TV : charge en arriere-plan, mis en cache 3 h. Si le Worker n'a
      pas l'hote « tvsports », la fonction echoue en silence et on retombe sur la
@@ -44641,7 +44706,7 @@ async function g45DirectMesEquipes(silencieux) {
   _g45DirStop();
   /* Et jamais en mode Resultats : un historique ne bouge pas, relancer une
      requete toutes les 45 secondes serait du gaspillage pur. */
-  if (enCours && MODE !== 'resultats') _g45DirTimer = setTimeout(function () {
+  if ((enCours || bientot) && MODE !== 'resultats') _g45DirTimer = setTimeout(function () {
     if (_g45Visible('t-suivies') && document.visibilityState === 'visible') g45DirectMesEquipes(true);
     else _g45DirStop();
   }, 45000);
