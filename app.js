@@ -293,6 +293,12 @@ async function espnResolveTeam(nom) {
   var guess = espnLeagueOf(nom);
   if(guess) order.push(guess);
   try { for(var k in ESPN_TEAM_LEAGUE){ var lg=ESPN_TEAM_LEAGUE[k]; if(order.indexOf(lg)<0) order.push(lg); } } catch(e){}
+  /* 16/09/2026 : deuxiemes divisions ajoutees EN FIN de liste (demande
+     d'Antoine, Girona en esp.2). ESPN_TEAM_LEAGUE ne contient que des D1 :
+     un club relegue n'etait donc jamais trouve a froid. Placees en dernier,
+     elles ne ralentissent pas la resolution d'un club de D1. Appels en direct
+     navigateur (classement avec CORS), aucun passage par le Worker. */
+  ['esp.2','eng.2','fra.2','ger.2','ita.2'].forEach(function(lg){ if(order.indexOf(lg)<0) order.push(lg); });
 
   /* CORRIGE LE 12/09/2026 (releve par Antoine, tableau de bord Cloudflare a
      l'appui — 29 510 appels au Worker en 24 h, +2428 %) : la structure a deux
@@ -21924,6 +21930,25 @@ async function loadTeamSaisons() {
      football-data est impossible pour ce club. */
   var fdTeamOk = !!teamId;
   if(!teamId) {
+    /* 16/09/2026 : un club absent de TEAM_IDS ET de ESPN_TEAM_LEAGUE (Girona,
+       ajoute a la main dans le mur) s'arretait ici sans jamais tenter ESPN.
+       espnResolveTeam sait maintenant le trouver via le classement en direct :
+       on l'appelle, et on ENREGISTRE le resultat dans la table perso (meme
+       mecanisme que g45CompetOuvrir) pour que espnLeagueOf le connaisse
+       ensuite partout — Saisons, paris, notifications. */
+    if(!(typeof espnLeagueOf==='function' && espnLeagueOf(nom)) && typeof espnResolveTeam==='function') {
+      try {
+        el.innerHTML = '<div class="fc" style="text-align:center;color:var(--t3);padding:20px;">Recherche du club sur ESPN...</div>';
+        var _rs = await espnResolveTeam(nom);
+        if(_rs && _rs.id && _rs.league && typeof g45TeamsPerso === 'function') {
+          var _pp = g45TeamsPerso(), _ck = String(nom).toLowerCase().trim();
+          if(!_pp[_ck]) {
+            _pp[_ck] = { nom: nom, id: String(_rs.id), league: _rs.league, sport: 'soccer', logo: _rs.logo || '' };
+            try { localStorage.setItem('g45_teams_perso', JSON.stringify(_pp)); } catch(e) {}
+          }
+        }
+      } catch(e) { console.warn('Saisons : resolution ESPN impossible pour "'+nom+'"', e); }
+    }
     if(typeof espnLeagueOf==='function' && espnLeagueOf(nom)) {
       teamId = 'espn_' + String(nom).toLowerCase().replace(/[^a-z0-9]/g,'');
     } else {
