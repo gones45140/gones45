@@ -641,7 +641,11 @@ var BK={
   "unibet":     {n:"Unibet",     c:"#4ebe48", d:"unibet.fr"},
   "pmu antoine":{n:"PMU Antoine",c:"#3a6fd8", d:"pmu.fr"},
   "pmu laura":  {n:"PMU Laura",  c:"#3a6fd8", d:"pmu.fr"},
-  "piwi":       {n:"Piwi",       c:"#a855f7", d:""},
+  /* "pmu" generique (16/09) : c'est lui qu'on propose sur bet45.fr, jamais les
+     comptes nommes d'Antoine — voir DEF_BK juste dessous. */
+  "pmu":        {n:"PMU",        c:"#3a6fd8", d:"pmu.fr"},
+  /* Piwi247 n'a pas de favicon exploitable : logo depose dans le depot (16/09). */
+  "piwi":       {n:"Piwi",       c:"#a855f7", d:"", logo:"images/books/piwi.png"},
   "betsson":    {n:"Betsson",    c:"#f0b020", d:"betsson.com"},
   "betify":     {n:"Betify",     c:"#22d3ee", d:"betify.com"},
   "bet365":     {n:"Bet365",     c:"#d4b006", d:"bet365.com"}
@@ -649,6 +653,11 @@ var BK={
 function bkFavicon(k,sz){
   var b=bki(k);
   sz=sz||20;
+  if(b.logo){
+    return '<img src="'+b.logo+'" '
+      +'style="width:'+sz+'px;height:'+sz+'px;border-radius:4px;object-fit:cover;" '
+      +'onerror="logoErr(this)" loading="lazy">';
+  }
   if(b.d){
     return '<img src="https://www.google.com/s2/favicons?domain='+b.d+'&sz=32" '
       +'style="width:'+sz+'px;height:'+sz+'px;border-radius:4px;object-fit:contain;" '
@@ -656,7 +665,16 @@ function bkFavicon(k,sz){
   }
   return '<span style="width:'+sz+'px;height:'+sz+'px;border-radius:4px;background:'+b.c+'22;display:inline-flex;align-items:center;justify-content:center;font-size:8px;font-weight:800;color:'+b.c+';">'+b.n.substring(0,2)+'</span>';
 }
-var DEF_BK=Object.keys(BK);
+/* COMPTES PAR DEFAUT SELON LE SITE (16/09/2026, releve par Antoine sur fenotte45) :
+   un compte neuf sur bet45.fr recevait « PMU Antoine » et « PMU Laura » — les
+   comptes PERSONNELS d'Antoine et de sa femme. Sur bet45.fr (window._g45User
+   defini par auth-guard.js, meme a null pour un visiteur) on propose donc un
+   « PMU » generique ; sur gones45 (perso, _g45User indefini) rien ne change. */
+var _G45_BK_PERSO=['pmu antoine','pmu laura'];
+var DEF_BK=Object.keys(BK).filter(function(k){
+  var surBet45=(typeof window!=='undefined' && typeof window._g45User!=='undefined');
+  return surBet45 ? _G45_BK_PERSO.indexOf(k)<0 : k!=='pmu';
+});
 function bki(k){var lk=(k||'').toLowerCase();var cc=state.bkColors&&state.bkColors[lk];var base=BK[lk]||{n:(k||'').toUpperCase()||'—',c:'#4f5d88'};if(cc)base=Object.assign({},base,{c:cc});return base;}
 function bbadge(k){
   var b=bki(k);
@@ -1552,6 +1570,21 @@ if(state&&!state.fb)state.fb={};
 if(!state.ugoals)state.ugoals={};
 if(!state.notes)state.notes={};
 DEF_BK.forEach(function(k){if(state.b[k]===undefined)state.b[k]=0;});
+/* NETTOYAGE bet45.fr (16/09) : les comptes au nom d'Antoine ou de Laura deja
+   poses chez un utilisateur (« PMU Laura », « Unibet Antoine »...) sont retires
+   s'ils sont VIDES et n'ont servi a AUCUN pari. Un compte utilise n'est jamais
+   touche : ce serait perdre l'historique de la personne. */
+(function(){
+  if(typeof window._g45User==='undefined' || !state || !state.b) return;
+  var sert=function(k){
+    return (state.h||[]).concat(state.a||[]).some(function(x){ return x && String(x.b||'').toLowerCase()===k; });
+  };
+  Object.keys(state.b).forEach(function(k){
+    if(!/\b(antoine|laura)\b/i.test(k)) return;
+    if(parseFloat(state.b[k]||0)!==0 || (state.fb && parseFloat(state.fb[k]||0)!==0) || sert(String(k).toLowerCase())) return;
+    delete state.b[k]; if(state.fb) delete state.fb[k]; if(state.bkColors) delete state.bkColors[k];
+  });
+})();
 (function(){function _num(x){var n=parseFloat(x);return isNaN(n)?0:n;}for(var _k in state.b){state.b[_k]=_num(state.b[_k]).toFixed(2);}if(state.fb)for(var _f in state.fb){state.fb[_f]=_num(state.fb[_f]).toFixed(2);}state.start_bk=_num(state.start_bk);})();
 /* PIEGE : ce bloc re-ajoutait les equipes PRESET manquantes a CHAQUE demarrage.
    Supprimer une equipe pre-configuree du mur marchait donc parfaitement... et
@@ -3524,7 +3557,7 @@ function renderArchive(){
         var _idLogo=isSimpleA?'':((typeof g45LogoUrlDe==='function')?g45LogoUrlDe(h.n):'');
         var _idFilig=_idLogo
           ?('<img src="'+_idLogo+'" alt="" loading="lazy" onerror="this.style.display=\'none\'" style="position:absolute;right:2px;top:50%;transform:translateY(-50%);height:32px;width:32px;object-fit:contain;opacity:.5;filter:drop-shadow(0 1px 3px rgba(0,0,0,.5));pointer-events:none;">')
-          :((isSimpleA&&b2.d)?('<img src="https://www.google.com/s2/favicons?domain='+b2.d+'&sz=64" alt="" loading="lazy" onerror="this.style.display=\'none\'" style="position:absolute;right:2px;top:50%;transform:translateY(-50%);height:24px;width:24px;object-fit:contain;opacity:.55;border-radius:6px;filter:drop-shadow(0 1px 3px rgba(0,0,0,.5));pointer-events:none;">'):'');
+          :((isSimpleA&&(b2.logo||b2.d))?('<img src="'+(b2.logo||('https://www.google.com/s2/favicons?domain='+b2.d+'&sz=64'))+'" alt="" loading="lazy" onerror="this.style.display=\'none\'" style="position:absolute;right:2px;top:50%;transform:translateY(-50%);height:24px;width:24px;object-fit:contain;opacity:.55;border-radius:6px;filter:drop-shadow(0 1px 3px rgba(0,0,0,.5));pointer-events:none;">'):'');
         /* FOND TEINTE PAR LE RESULTAT (02/09, demande d'Antoine : « pari gagné
            vert, pari perdu rouge, pari en cours jaune »). Le degrade partait de
            `_idColor`, la couleur du CLUB — d'ou un fond vert sur Athletics et
@@ -9337,6 +9370,11 @@ function fileToBase64(file) {
 function bkFavicon(k,sz){
   var b=bki(k);
   sz=sz||20;
+  if(b.logo){
+    return '<img src="'+b.logo+'" '
+      +'style="width:'+sz+'px;height:'+sz+'px;border-radius:4px;object-fit:cover;" '
+      +'onerror="logoErr(this)" loading="lazy">';
+  }
   if(b.d){
     return '<img src="https://www.google.com/s2/favicons?domain='+b.d+'&sz=32" '
       +'style="width:'+sz+'px;height:'+sz+'px;border-radius:4px;object-fit:contain;" '
@@ -9344,7 +9382,16 @@ function bkFavicon(k,sz){
   }
   return '<span style="width:'+sz+'px;height:'+sz+'px;border-radius:4px;background:'+b.c+'22;display:inline-flex;align-items:center;justify-content:center;font-size:8px;font-weight:800;color:'+b.c+';">'+b.n.substring(0,2)+'</span>';
 }
-var DEF_BK=Object.keys(BK);
+/* COMPTES PAR DEFAUT SELON LE SITE (16/09/2026, releve par Antoine sur fenotte45) :
+   un compte neuf sur bet45.fr recevait « PMU Antoine » et « PMU Laura » — les
+   comptes PERSONNELS d'Antoine et de sa femme. Sur bet45.fr (window._g45User
+   defini par auth-guard.js, meme a null pour un visiteur) on propose donc un
+   « PMU » generique ; sur gones45 (perso, _g45User indefini) rien ne change. */
+var _G45_BK_PERSO=['pmu antoine','pmu laura'];
+var DEF_BK=Object.keys(BK).filter(function(k){
+  var surBet45=(typeof window!=='undefined' && typeof window._g45User!=='undefined');
+  return surBet45 ? _G45_BK_PERSO.indexOf(k)<0 : k!=='pmu';
+});
 function bki(k){var lk=(k||'').toLowerCase();var cc=state.bkColors&&state.bkColors[lk];var base=BK[lk]||{n:(k||'').toUpperCase()||'—',c:'#4f5d88'};if(cc)base=Object.assign({},base,{c:cc});return base;}
 function bbadge(k){
   var b=bki(k);
@@ -10145,6 +10192,21 @@ if(state&&!state.fb)state.fb={};
 if(!state.ugoals)state.ugoals={};
 if(!state.notes)state.notes={};
 DEF_BK.forEach(function(k){if(state.b[k]===undefined)state.b[k]=0;});
+/* NETTOYAGE bet45.fr (16/09) : les comptes au nom d'Antoine ou de Laura deja
+   poses chez un utilisateur (« PMU Laura », « Unibet Antoine »...) sont retires
+   s'ils sont VIDES et n'ont servi a AUCUN pari. Un compte utilise n'est jamais
+   touche : ce serait perdre l'historique de la personne. */
+(function(){
+  if(typeof window._g45User==='undefined' || !state || !state.b) return;
+  var sert=function(k){
+    return (state.h||[]).concat(state.a||[]).some(function(x){ return x && String(x.b||'').toLowerCase()===k; });
+  };
+  Object.keys(state.b).forEach(function(k){
+    if(!/\b(antoine|laura)\b/i.test(k)) return;
+    if(parseFloat(state.b[k]||0)!==0 || (state.fb && parseFloat(state.fb[k]||0)!==0) || sert(String(k).toLowerCase())) return;
+    delete state.b[k]; if(state.fb) delete state.fb[k]; if(state.bkColors) delete state.bkColors[k];
+  });
+})();
 (function(){function _num(x){var n=parseFloat(x);return isNaN(n)?0:n;}for(var _k in state.b){state.b[_k]=_num(state.b[_k]).toFixed(2);}if(state.fb)for(var _f in state.fb){state.fb[_f]=_num(state.fb[_f]).toFixed(2);}state.start_bk=_num(state.start_bk);})();
 /* PIEGE : ce bloc re-ajoutait les equipes PRESET manquantes a CHAQUE demarrage.
    Supprimer une equipe pre-configuree du mur marchait donc parfaitement... et
@@ -11741,7 +11803,7 @@ function renderArchive(){
         var _idLogo=isSimpleA?'':((typeof g45LogoUrlDe==='function')?g45LogoUrlDe(h.n):'');
         var _idFilig=_idLogo
           ?('<img src="'+_idLogo+'" alt="" loading="lazy" onerror="this.style.display=\'none\'" style="position:absolute;right:2px;top:50%;transform:translateY(-50%);height:32px;width:32px;object-fit:contain;opacity:.5;filter:drop-shadow(0 1px 3px rgba(0,0,0,.5));pointer-events:none;">')
-          :((isSimpleA&&b2.d)?('<img src="https://www.google.com/s2/favicons?domain='+b2.d+'&sz=64" alt="" loading="lazy" onerror="this.style.display=\'none\'" style="position:absolute;right:2px;top:50%;transform:translateY(-50%);height:24px;width:24px;object-fit:contain;opacity:.55;border-radius:6px;filter:drop-shadow(0 1px 3px rgba(0,0,0,.5));pointer-events:none;">'):'');
+          :((isSimpleA&&(b2.logo||b2.d))?('<img src="'+(b2.logo||('https://www.google.com/s2/favicons?domain='+b2.d+'&sz=64'))+'" alt="" loading="lazy" onerror="this.style.display=\'none\'" style="position:absolute;right:2px;top:50%;transform:translateY(-50%);height:24px;width:24px;object-fit:contain;opacity:.55;border-radius:6px;filter:drop-shadow(0 1px 3px rgba(0,0,0,.5));pointer-events:none;">'):'');
         /* FOND TEINTE PAR LE RESULTAT (02/09, demande d'Antoine : « pari gagné
            vert, pari perdu rouge, pari en cours jaune »). Le degrade partait de
            `_idColor`, la couleur du CLUB — d'ou un fond vert sur Athletics et
@@ -34645,7 +34707,7 @@ function _g45BetRowMini(h){
   var _idLogo=isSimple?'':((typeof g45LogoUrlDe==='function')?g45LogoUrlDe(h.n):'');
   var _idFilig=_idLogo
     ?('<img src="'+_idLogo+'" alt="" loading="lazy" onerror="this.style.display=\'none\'" style="position:absolute;right:2px;top:50%;transform:translateY(-50%);height:38px;width:38px;object-fit:contain;opacity:.55;filter:drop-shadow(0 1px 3px rgba(0,0,0,.5));pointer-events:none;">')
-    :((isSimple&&b2.d)?('<img src="https://www.google.com/s2/favicons?domain='+b2.d+'&sz=64" alt="" loading="lazy" onerror="this.style.display=\'none\'" style="position:absolute;right:2px;top:50%;transform:translateY(-50%);height:28px;width:28px;object-fit:contain;opacity:.6;border-radius:6px;filter:drop-shadow(0 1px 3px rgba(0,0,0,.5));pointer-events:none;">'):'');
+    :((isSimple&&(b2.logo||b2.d))?('<img src="'+(b2.logo||('https://www.google.com/s2/favicons?domain='+b2.d+'&sz=64'))+'" alt="" loading="lazy" onerror="this.style.display=\'none\'" style="position:absolute;right:2px;top:50%;transform:translateY(-50%);height:28px;width:28px;object-fit:contain;opacity:.6;border-radius:6px;filter:drop-shadow(0 1px 3px rgba(0,0,0,.5));pointer-events:none;">'):'');
   /* Le filigrane est CONFINE au bloc titre/sous-titre (position:relative sur
      ce div precis), pas sur toute la ligne. Sur une ligne compacte comme
      celle-ci, ancrer le logo par rapport a toute la largeur de la carte
