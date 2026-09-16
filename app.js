@@ -241,14 +241,25 @@ async function espnResolveTeam(nom) {
   if(guess) order.push(guess);
   try { for(var k in ESPN_TEAM_LEAGUE){ var lg=ESPN_TEAM_LEAGUE[k]; if(order.indexOf(lg)<0) order.push(lg); } } catch(e){}
 
-  // 2 passes : match exact sur tous les championnats, puis match partiel sur tous
-  for(var pass=0; pass<2; pass++){
-    var mode = pass===0 ? 'exact' : 'partial';
-    for(var i=0;i<order.length;i++){
-      var teams = await _espnLoadLeagueTeams(order[i]);
-      var resolved = _espnMatchTeam(nom, teams, order[i], mode);
-      if(resolved){ try { localStorage.setItem('espn_teamid_any_'+nomKey, JSON.stringify(resolved)); } catch(e){} return resolved; }
-    }
+  /* CORRIGE LE 12/09/2026 (releve par Antoine, tableau de bord Cloudflare a
+     l'appui — 29 510 appels au Worker en 24 h, +2428 %) : la structure a deux
+     boucles refaisait un VRAI appel reseau par championnat a CHAQUE passe,
+     puisqu'un echec n'est plus mis en cache comme une reussite depuis hier
+     (corrige a raison, pour permettre de reessayer plus tard — mais deux fois
+     PENDANT LA MEME visite, ca double le trafic pour rien). On ne recupere
+     desormais chaque championnat qu'UNE fois, et on tente les deux modes sur
+     le meme resultat deja recu — deux appels reseau au lieu de vingt sur un
+     echec complet, pas vingt.
+     COMPROMIS ASSUME : l'ancien ordre garantissait qu'un match EXACT trouve
+     tard passait toujours avant un match PARTIEL trouve tot. Desormais, un
+     partiel trouve dans le premier championnat teste l'emporte sur un exact
+     qui aurait ete trouve plus loin. Rare en pratique (le championnat devine
+     est toujours teste en premier), mais reel — a garder en tete si un club
+     se met a se resoudre vers le mauvais club de meme nom un jour. */
+  for(var i=0;i<order.length;i++){
+    var teams = await _espnLoadLeagueTeams(order[i]);
+    var resolved = _espnMatchTeam(nom, teams, order[i], 'exact') || _espnMatchTeam(nom, teams, order[i], 'partial');
+    if(resolved){ try { localStorage.setItem('espn_teamid_any_'+nomKey, JSON.stringify(resolved)); } catch(e){} return resolved; }
   }
   return null;
 }
@@ -29172,7 +29183,17 @@ async function _g45H2HFromScoreboard(sport, lg, hid, aid, matchDate){
     var d=new Date(matchDate); if(isNaN(d)) d=new Date();
     function ymd(x){ return ''+x.getFullYear()+String(x.getMonth()+1).padStart(2,'0')+String(x.getDate()).padStart(2,'0'); }
     var from=new Date(d.getTime()-110*864e5), to=new Date(d.getTime()+2*864e5);
-    var r=await fetch('https://site.api.espn.com/apis/site/v2/sports/'+sport+'/'+lg+'/scoreboard?dates='+ymd(from)+'-'+ymd(to)+'&limit=1000');
+    /* RAMENE DE 1000 A 400 LE 13/09/2026 (capture de console a l'appui — de
+       vrais 400 repetes, sur plusieurs jours de suite, avec exactement ce
+       chiffre dans l'URL). Meme correctif applique ici qu'aux trois appels
+       deja corriges la veille sur le slug `all` : cette fois etendu aux DIX
+       autres appels du fichier qui utilisaient encore &limit=1000, sans
+       distinction de sport — mon hypothese de la veille comme quoi les
+       endpoints a un seul championnat (MLB, NRL) seraient epargnes ne
+       tenait pas, cette capture le montre. Non teste en conditions reelles
+       pour chacun individuellement, mais le meme changement mecanique
+       partout plutot que de deviner lesquels sont sûrs et lesquels non. */
+    var r=await fetch('https://site.api.espn.com/apis/site/v2/sports/'+sport+'/'+lg+'/scoreboard?dates='+ymd(from)+'-'+ymd(to)+'&limit=400');
     if(!r.ok) return null;
     var j=await r.json(); var events=j.events||[];
     if(!events.length) return null;
@@ -29285,7 +29306,7 @@ async function _g45EspnUsOdds(sport, lg, eid, dateISO, hN, aN){
     var tries=[ymd(d), ymd(new Date(d.getTime()+86400000)), ymd(new Date(d.getTime()-86400000))];
     var od=null;
     for(var i=0;i<tries.length && !od;i++){
-      var r=await fetch('https://site.api.espn.com/apis/site/v2/sports/'+sport+'/'+lg+'/scoreboard?dates='+tries[i]+'&limit=1000');
+      var r=await fetch('https://site.api.espn.com/apis/site/v2/sports/'+sport+'/'+lg+'/scoreboard?dates='+tries[i]+'&limit=400');
       if(!r.ok) continue;
       var j=await r.json();
       var ev=(j.events||[]).find(function(e){return String(e.id)===String(eid);});
@@ -32645,7 +32666,7 @@ async function g45LoadCalendar(slug, btn, monthOffset, sportPath){
        seulement a ne plus EN RATER un a la frontiere. */
     var _pad0=new Date(mb.first); _pad0.setDate(_pad0.getDate()-1);
     var _pad1=new Date(mb.last); _pad1.setDate(_pad1.getDate()+1);
-    var r=await fetch('https://site.api.espn.com/apis/site/v2/sports/'+sportPath+'/'+slug+'/scoreboard?dates='+_g45ymd(_pad0)+'-'+_g45ymd(_pad1)+'&limit=1000');
+    var r=await fetch('https://site.api.espn.com/apis/site/v2/sports/'+sportPath+'/'+slug+'/scoreboard?dates='+_g45ymd(_pad0)+'-'+_g45ymd(_pad1)+'&limit=400');
     var data=await r.json();
     var events=(data.events||[]);
     /* LOGO DE COMPETITION MEMORISE (25/08). ESPN ne le renvoie PAS a chaque
@@ -33176,7 +33197,7 @@ async function _g45LoadUsBracket(slug, sportPath, box){
   try{
     var now=new Date(), y=now.getFullYear();
     var W={basketball:['0412','0701'],hockey:['0412','0701'],baseball:['0928','1120'],football:['0108','0216'],'rugby-league':['0820','1015']}[sportPath]||['0401','0701'];
-    async function fetchWin(yr){ try{ var r=await fetch('https://site.api.espn.com/apis/site/v2/sports/'+sportPath+'/'+slug+'/scoreboard?dates='+yr+W[0]+'-'+yr+W[1]+'&limit=1000&seasontype=3'); return r.ok?(await r.json()):null; }catch(e){ return null; } }
+    async function fetchWin(yr){ try{ var r=await fetch('https://site.api.espn.com/apis/site/v2/sports/'+sportPath+'/'+slug+'/scoreboard?dates='+yr+W[0]+'-'+yr+W[1]+'&limit=400&seasontype=3'); return r.ok?(await r.json()):null; }catch(e){ return null; } }
     var data=await fetchWin(y), evs=(data&&data.events)||[];
     if(!evs.length){ data=await fetchWin(y-1); evs=(data&&data.events)||[]; }
     evs=evs.filter(function(e){ var st=(e.season&&e.season.type); return st==null||st===3||st==='3'; });
@@ -33985,7 +34006,12 @@ function _g45ScoreTexte(h) {
            reconnait le match par ses deux noms. */
         if (hs == null) {
           var jour = String(betDay).replace(/-/g, '');
-          var chemin = '/apis/site/v2/sports/soccer/all/scoreboard?dates=' + jour + '&limit=1000';
+          /* RAMENE DE 1000 A 400 LE 12/09/2026, meme jour que les deux autres
+             occurrences sur ce meme slug `all` : si ESPN refuse la VALEUR du
+             parametre plutot que de rejeter selon le volume reel de donnees,
+             cet appel — pourtant limite a une seule journee — y est expose
+             pareil. Non teste en conditions reelles. */
+          var chemin = '/apis/site/v2/sports/soccer/all/scoreboard?dates=' + jour + '&limit=400';
           var urls = [];
           if (typeof FD_PROXY !== 'undefined' && FD_PROXY) urls.push(FD_PROXY + '?host=espn&path=' + encodeURIComponent(chemin));
           urls.push('https://site.api.espn.com' + chemin);
@@ -38372,7 +38398,7 @@ async function g45NrlCharger(annee) {
       var da = new Date(annee, moisDeb + mo, 1), db = new Date(annee, moisDeb + mo + 1, 0);
       try {
         var rr = await fetch('https://site.api.espn.com/apis/site/v2/sports/' + _g45NrlCtx.sport +
-                             '/' + _g45NrlCtx.ligue + '/scoreboard?dates=' + fjour(da) + '-' + fjour(db) + '&limit=1000');
+                             '/' + _g45NrlCtx.ligue + '/scoreboard?dates=' + fjour(da) + '-' + fjour(db) + '&limit=400');
         if (!rr.ok) continue;
         var jj = await rr.json();
         /* CALENDRIER DES JOURNEES (04/09). Pour le NRL et le NFL, chaque
@@ -39671,7 +39697,7 @@ async function _g45CompetMatchs(sportPath, slug, an, ids, progres) {
     var p1 = new Date(maxT - 21 * 86400000), p2 = new Date(maxT + 120 * 86400000);
     try {
       var rp = await fetch('https://site.api.espn.com/apis/site/v2/sports/' + sportPath + '/' + slug +
-                           '/scoreboard?dates=' + fmtP(p1) + '-' + fmtP(p2) + '&limit=1000&seasontype=3');
+                           '/scoreboard?dates=' + fmtP(p1) + '-' + fmtP(p2) + '&limit=400&seasontype=3');
       if (rp.ok) {
         var jp = await rp.json();
         ((jp && jp.events) || []).forEach(function (e) {
@@ -39718,7 +39744,7 @@ async function _g45CompetMatchs(sportPath, slug, an, ids, progres) {
       };
       try {
         var rs = await fetch('https://site.api.espn.com/apis/site/v2/sports/' + sportPath + '/' + slug +
-                             '/scoreboard?dates=' + fmt(d1) + '-' + fmt(d2) + '&limit=1000');
+                             '/scoreboard?dates=' + fmt(d1) + '-' + fmt(d2) + '&limit=400');
         if (!rs.ok) continue;
         var js = await rs.json();
         ((js && js.events) || []).forEach(function (e) {
@@ -40141,7 +40167,7 @@ async function _g45LanceurHisto(nom, an, progres) {
     var d1 = new Date(an, _g45MoisMlb[i], 1), d2 = new Date(an, _g45MoisMlb[i] + 1, 0);
     var f = function (d) { return d.getFullYear() + String(d.getMonth() + 1).padStart(2, '0') + String(d.getDate()).padStart(2, '0'); };
     try {
-      var r = await fetch('https://site.api.espn.com/apis/site/v2/sports/baseball/mlb/scoreboard?dates=' + f(d1) + '-' + f(d2) + '&limit=1000');
+      var r = await fetch('https://site.api.espn.com/apis/site/v2/sports/baseball/mlb/scoreboard?dates=' + f(d1) + '-' + f(d2) + '&limit=400');
       if (!r.ok) continue;
       var j = await r.json();
       (j.events || []).forEach(function (e) {
@@ -40179,7 +40205,7 @@ async function _g45LanceurProchain(nom) {
   var d1 = new Date(), d2 = new Date(); d2.setDate(d2.getDate() + 7);
   var f = function (d) { return d.getFullYear() + String(d.getMonth() + 1).padStart(2, '0') + String(d.getDate()).padStart(2, '0'); };
   try {
-    var r = await fetch('https://site.api.espn.com/apis/site/v2/sports/baseball/mlb/scoreboard?dates=' + f(d1) + '-' + f(d2) + '&limit=1000');
+    var r = await fetch('https://site.api.espn.com/apis/site/v2/sports/baseball/mlb/scoreboard?dates=' + f(d1) + '-' + f(d2) + '&limit=400');
     if (!r.ok) return null;
     var j = await r.json();
     var trouve = null;
@@ -42613,7 +42639,7 @@ async function _g45CotesEspnPour(lst, etiquette, btn) {
     if (!j) {
       try {
         var r = await fetch('https://site.api.espn.com/apis/site/v2/sports/' + _g45NrlCtx.sport +
-                            '/' + _g45NrlCtx.ligue + '/scoreboard?dates=' + jours[i] + '&limit=1000');
+                            '/' + _g45NrlCtx.ligue + '/scoreboard?dates=' + jours[i] + '&limit=400');
         if (!r.ok) continue;
         j = await r.json();
         _g45OddsJourMem[memK] = j;
@@ -44318,7 +44344,7 @@ async function g45DirectMesEquipes(silencieux) {
   var jour = _fj(new Date(Date.now() - JOURS * 86400000)) + '-'
            + _fj(new Date(Date.now() + (MODE === 'resultats' ? 0 : 1) * 86400000));
   var LIMITE = Date.now() - JOURS * 24 * 3600000;
-  var trouves = [], enCours = 0, bientot = 0;
+  var trouves = [], enCours = 0, bientot = 0, loin = 0;
 
   /* ═══ FOOTBALL : UNE SEULE REQUETE, TOUTES COMPETITIONS ═══
      PIEGE TROUVE LE 15/08 : on n'interrogeait que le CHAMPIONNAT de l'equipe
@@ -44347,12 +44373,19 @@ async function g45DirectMesEquipes(silencieux) {
   if (aDuFoot) aInterroger.unshift(grpFoot);
 
   for (var i = 0; i < aInterroger.length; i++) {
-    var g = aInterroger[i], js = null;
+    var g = aInterroger[i], js = null, r;
     try {
-      var r = await fetch('https://site.api.espn.com/apis/site/v2/sports/' + g.sp + '/' + g.lg + '/scoreboard?dates=' + jour + '&limit=1000');
-      if (!r.ok) continue;
+      /* RAMENE DE 1000 A 400 LE 12/09/2026 (releve par Antoine — Real Madrid et
+         Arsenal absents de Resultats malgre des matchs bien joues). Meme
+         defaut que le limit=900 corrige plus haut le meme jour : aucun
+         commentaire n'expliquait ce chiffre, et un echec ici disparaissait
+         en silence (`continue`), sans jamais dire pourquoi une equipe entiere
+         manquait. Non teste en conditions reelles — a confirmer que Real
+         Madrid et Arsenal reapparaissent vraiment avec cette valeur. */
+      r = await fetch('https://site.api.espn.com/apis/site/v2/sports/' + g.sp + '/' + g.lg + '/scoreboard?dates=' + jour + '&limit=400');
+      if (!r.ok) { console.warn('Suivies scoreboard en erreur pour "' + g.lg + '" (' + g.sp + ') : statut ' + r.status); continue; }
       js = await r.json();
-    } catch (e) { continue; }
+    } catch (e) { console.warn('Suivies scoreboard en erreur pour "' + g.lg + '" (' + g.sp + ') :', e); continue; }
 
     /* ═══ RETROUVER LA VRAIE COMPETITION (09/09) ═══
        Avec le slug `all`, la reponse porte un tableau `leagues` decrivant TOUTES
@@ -44400,6 +44433,16 @@ async function g45DirectMesEquipes(silencieux) {
          ce qu'un match soit reellement en cours, pas seulement s'il l'est deja
          au premier passage. */
       if (etat === 'pre' && !isNaN(tMatch) && tMatch - Date.now() < 3600000 && tMatch - Date.now() > -600000) bientot++;
+      /* CORRIGE UNE DEUXIEME FOIS LE MEME JOUR : ma premiere version ne
+         couvrait que la derniere heure avant le coup d'envoi. Ouvrir Suivies
+         plus tot — le matin pour un match du soir — voyait « plus d'une heure
+         a attendre », ne programmait rien, et s'arretait pour de bon avant
+         meme d'entrer dans cette fenetre : le meme trou, juste plus tot dans
+         la journee. On distingue desormais un match LOIN (aujourd'hui, mais
+         pas dans l'heure) d'un match IMMINENT ou EN COURS — le premier
+         maintient une verification tres espacee, juste assez pour ne jamais
+         s'arreter avant d'entrer dans la fenetre serree. */
+      if (etat === 'pre' && !isNaN(tMatch) && tMatch - Date.now() >= 3600000 && tMatch - Date.now() < 43200000) loin++;
       if (!isNaN(tMatch) && etat === 'post' && tMatch < LIMITE) return;   /* plus vieux que 24 h */
       var nm = function (x) { return (x.team && (x.team.shortDisplayName || x.team.displayName)) || '?'; };
       var sc = function (x) { var v = x.score; if (v && typeof v === 'object') v = v.value; return (v == null ? '' : v); };
@@ -44678,7 +44721,7 @@ async function g45DirectMesEquipes(silencieux) {
       + '</div></div>';
   }).join('')
   + '<div style="font-size:9px;color:var(--t3);text-align:center;margin-top:6px;">'
-  + aInterroger.length + ' requ\u00eate(s) \u00b7 ' + (enCours ? 'rafra\u00eechissement auto toutes les 45 s' : bientot ? 'coup d\u2019envoi imminent \u00b7 rafra\u00eechissement auto toutes les 45 s' : 'aucun match en cours, rafra\u00eechissement arr\u00eat\u00e9') + '</div>';
+  + aInterroger.length + ' requ\u00eate(s) \u00b7 ' + (enCours ? 'rafra\u00eechissement auto toutes les 45 s' : bientot ? 'coup d\u2019envoi imminent \u00b7 rafra\u00eechissement auto toutes les 45 s' : loin ? 'match plus tard aujourd\u2019hui \u00b7 v\u00e9rification toutes les 10 min' : 'aucun match en cours, rafra\u00eechissement arr\u00eat\u00e9') + '</div>';
 
   /* Programme TV : charge en arriere-plan, mis en cache 3 h. Si le Worker n'a
      pas l'hote « tvsports », la fonction echoue en silence et on retombe sur la
@@ -44702,14 +44745,22 @@ async function g45DirectMesEquipes(silencieux) {
     });
   } catch (e) {}
 
-  /* On ne relance QUE s'il y a du direct : sinon on interrogerait ESPN pour rien. */
+  /* On ne relance QUE s'il reste quelque chose a surveiller aujourd'hui :
+     sinon on interrogerait ESPN pour rien. Trois vitesses : serre (45 s) des
+     qu'un match est en cours ou dans l'heure — c'est la que l'affichage doit
+     suivre en direct. Lache (10 min) s'il reste un match plus tard dans la
+     journee — juste assez pour ne jamais s'arreter avant d'entrer dans la
+     fenetre serree, sans harceler l'API pour un match encore loin. */
   _g45DirStop();
   /* Et jamais en mode Resultats : un historique ne bouge pas, relancer une
-     requete toutes les 45 secondes serait du gaspillage pur. */
-  if ((enCours || bientot) && MODE !== 'resultats') _g45DirTimer = setTimeout(function () {
-    if (_g45Visible('t-suivies') && document.visibilityState === 'visible') g45DirectMesEquipes(true);
-    else _g45DirStop();
-  }, 45000);
+     requete serait du gaspillage pur. */
+  if ((enCours || bientot || loin) && MODE !== 'resultats') {
+    var _delai = (enCours || bientot) ? 45000 : 600000;
+    _g45DirTimer = setTimeout(function () {
+      if (_g45Visible('t-suivies') && document.visibilityState === 'visible') g45DirectMesEquipes(true);
+      else _g45DirStop();
+    }, _delai);
+  }
 }
 window.g45DirectMesEquipes = g45DirectMesEquipes;
 
@@ -46895,7 +46946,15 @@ async function g45EquipesDeCompet(champComp, dlEquipe) {
     var sp2 = info.sport || 'soccer';
     var lg2 = (sp2 === 'soccer') ? 'all' : info.slug;
     var r2 = await fetch('https://site.api.espn.com/apis/site/v2/sports/' + sp2 + '/' + lg2
-      + '/scoreboard?dates=' + f(new Date(Date.now() - 2*864e5)) + '-' + f(new Date(Date.now() + 12*864e5)) + '&limit=900');
+      + '/scoreboard?dates=' + f(new Date(Date.now() - 2*864e5)) + '-' + f(new Date(Date.now() + 12*864e5))
+      /* RAMENE DE 900 A 400 LE 12/09/2026 (releve par Antoine, capture de
+         console a l'appui — ce meme appel echouait avec un 400). Aucun
+         commentaire n'expliquait pourquoi 900 avait ete choisi a l'origine ;
+         rien ne garantit qu'ESPN accepte une valeur aussi haute sur ce slug
+         generique « all », qui couvre deja toutes les competitions de
+         football a la fois. Non teste en conditions reelles — a confirmer
+         que le 400 disparait vraiment avec cette valeur plus prudente. */
+      + '&limit=400');
     if (r2.ok) {
       var j2 = await r2.json();
       var vus = {};
