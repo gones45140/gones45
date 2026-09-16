@@ -43,8 +43,68 @@
               : 'https://site.api.espn.com') + path;
       }
     }catch(e){}
+    /* PLAGES DE DATES ESPN (16/09/2026). Teste par Antoine dans la console :
+       /scoreboard?dates=AAAAMMJJ-AAAAMMJJ repond desormais 400 (« Failed to get
+       events endpoint ») sur TOUS les sports, alors que dates=AAAAMMJJ (un
+       jour), dates=AAAAMM (un mois) et dates=AAAA repondent 200. Plutot que de
+       toucher chaque appelant, on intercepte ici : la plage est decoupee en
+       jours (plage courte) ou en mois (plage longue), les evenements sont
+       fusionnes sans doublon et renvoyes dans UNE reponse au format ESPN
+       habituel — les appelants ne voient aucune difference. */
+    try{
+      if (typeof u === 'string' && /espn\.com\/apis\/.*\/scoreboard\?/.test(u)) {
+        var mm = u.match(/[?&]dates=(\d{8})-(\d{8})/);
+        if (mm) return _g45EspnPlage(_f, u, o, mm[1], mm[2]);
+      }
+    }catch(e){}
     return _f.call(this, u, o);
   };
+
+  function _jour(s){ return new Date(Date.UTC(+s.slice(0,4), +s.slice(4,6)-1, +s.slice(6,8))); }
+  function _fmt(d){ return d.getUTCFullYear()+String(d.getUTCMonth()+1).padStart(2,'0')+String(d.getUTCDate()).padStart(2,'0'); }
+
+  async function _g45EspnPlage(_f, u, o, a, b){
+    var d0 = _jour(a), d1 = _jour(b);
+    if (d1 < d0) { var tmp = d0; d0 = d1; d1 = tmp; }
+    var nbJours = Math.round((d1 - d0) / 86400000) + 1;
+    var sansDates = u.replace(/([?&])dates=\d{8}-\d{8}&?/, '$1').replace(/[?&]$/, '');
+    var sep = sansDates.indexOf('?') >= 0 ? '&' : '?';
+    var urls = [], parMois = nbJours > 4;
+    if (!parMois) {
+      for (var d = new Date(d0); d <= d1; d.setUTCDate(d.getUTCDate() + 1)) urls.push(sansDates + sep + 'dates=' + _fmt(d));
+    } else {
+      /* Un mois entier peut depasser la limite par defaut (MLB : ~400 matchs) :
+         on demande large si l'appelant n'a pas fixe de limite. */
+      var base = /[?&]limit=/.test(sansDates) ? sansDates.replace(/([?&]limit=)\d+/, '$11000') : sansDates + sep + 'limit=1000';
+      var sep2 = base.indexOf('?') >= 0 ? '&' : '?';
+      var m = new Date(Date.UTC(d0.getUTCFullYear(), d0.getUTCMonth(), 1));
+      while (m <= d1) { urls.push(base + sep2 + 'dates=' + _fmt(m).slice(0,6)); m.setUTCMonth(m.getUTCMonth() + 1); }
+    }
+    var reps = await Promise.all(urls.map(function(x){
+      return _f.call(window, x, o).then(function(r){ return r.ok ? r.json() : { __status: r.status }; })
+        .catch(function(){ return { __status: 0 }; });
+    }));
+    var ok = reps.filter(function(j){ return j && !j.__status; });
+    if (!ok.length) {
+      var st = (reps[0] && reps[0].__status) || 502;
+      return new Response(JSON.stringify({ code: st, message: 'plage ESPN : aucune tranche disponible' }), { status: st, headers: { 'Content-Type': 'application/json' } });
+    }
+    /* Marge d'un jour de chaque cote : ESPN date les matchs en heure US, un
+       match du soir tombe le lendemain en UTC — mieux vaut un match de trop
+       qu'un match perdu, les appelants filtrent deja par date. */
+    var tMin = d0.getTime() - 86400000, tMax = d1.getTime() + 2 * 86400000;
+    var vus = {}, events = [];
+    ok.forEach(function(j){
+      (j.events || []).forEach(function(ev){
+        var id = ev && (ev.id || ev.uid); if (!id || vus[id]) return;
+        if (parMois && ev.date) { var t = Date.parse(ev.date); if (!isNaN(t) && (t < tMin || t >= tMax)) return; }
+        vus[id] = 1; events.push(ev);
+      });
+    });
+    events.sort(function(x, y){ return String(x.date || '').localeCompare(String(y.date || '')); });
+    var out = ok[0]; out.events = events;
+    return new Response(JSON.stringify(out), { status: 200, headers: { 'Content-Type': 'application/json' } });
+  }
 })();
 
 var TEAM_IDS = {
