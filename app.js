@@ -96,9 +96,26 @@
     var vus = {}, events = [];
     ok.forEach(function(j){
       (j.events || []).forEach(function(ev){
-        var id = ev && (ev.id || ev.uid); if (!id || vus[id]) return;
-        if (parMois && ev.date) { var t = Date.parse(ev.date); if (!isNaN(t) && (t < tMin || t >= tMax)) return; }
-        vus[id] = 1; events.push(ev);
+        var id = ev && (ev.id || ev.uid); if (!id) return;
+        /* Tennis : un tournoi est UN evenement dont les matchs vivent dans
+           `groupings` — chaque tranche (jour ou mois) n'en porte qu'une partie.
+           On FUSIONNE ces matchs au lieu de garder la premiere tranche seule.
+           Pas de filtre de date sur un tournoi : sa date est celle de son debut. */
+        if (vus[id]) {
+          var deja = vus[id];
+          if (deja !== 1 && ev.groupings && deja.groupings) {
+            ev.groupings.forEach(function (g) {
+              var nomG = (g.grouping && (g.grouping.id || g.grouping.displayName)) || '';
+              var cible = deja.groupings.filter(function (x) { return ((x.grouping && (x.grouping.id || x.grouping.displayName)) || '') === nomG; })[0];
+              if (!cible) { deja.groupings.push(g); return; }
+              var ids = {}; (cible.competitions || []).forEach(function (c) { if (c && c.id) ids[c.id] = 1; });
+              (g.competitions || []).forEach(function (c) { if (c && c.id && !ids[c.id]) { ids[c.id] = 1; (cible.competitions = cible.competitions || []).push(c); } });
+            });
+          }
+          return;
+        }
+        if (parMois && ev.date && !ev.groupings) { var t = Date.parse(ev.date); if (!isNaN(t) && (t < tMin || t >= tMax)) return; }
+        vus[id] = ev.groupings ? ev : 1; events.push(ev);
       });
     });
     events.sort(function(x, y){ return String(x.date || '').localeCompare(String(y.date || '')); });
@@ -3496,7 +3513,8 @@ function renderArchive(){
         if(/^victoire\b/i.test(typeTxtA) && titre.toLowerCase().indexOf(' vs ')===-1){
           typeTxtA=titre+' '+typeTxtA.replace(/^victoire\b/i,'gagne');
         }
-        var sous=(typeTxtA?typeTxtA+' · ':'')+'<span style="color:#7aa2ff;font-weight:800;font-size:11px;background:rgba(77,132,255,.16);padding:1px 7px;border-radius:5px;">@'+parseFloat(h.cote).toFixed(2)+'</span>'+(h.comp?' · '+h.comp:'')+(adversaireA?' · vs '+adversaireA:'');
+        var _lgA=_g45LigneMatch(h, titre, typeTxtA, parseFloat(h.cote));
+        var sous=_lgA.sous;
         /* IDENTITE VISUELLE + SCORE (28/08) : port de ce qui existe deja sur la
            liste du Bilan (`_g45BetRowMini`) — cette liste-ci (onglet PARI) ne
            les avait jamais eus. Meme logique : couleur+logo du club pour une
@@ -3524,9 +3542,9 @@ function renderArchive(){
           +bkBadge+sportIco
           +'<div data-aid="'+h.id+'" onclick="openBetEdit(this.dataset.aid)" style="position:relative;flex:1;min-width:0;overflow:hidden;cursor:pointer;">'
           +_idFilig
-          +'<div style="position:relative;font-size:12px;font-weight:700;color:var(--t1);overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;word-break:break-word;line-height:1.25;">'+titre+'</div>'
-          +(_scoreA?'<div style="position:relative;font-size:10px;font-weight:800;color:var(--t1);background:rgba(255,255,255,.10);display:inline-block;padding:1px 6px;border-radius:5px;margin:1px 0;max-width:100%;white-space:normal;word-break:break-word;">📊 '+_scoreA+'</div>':'')
-          +'<div style="position:relative;font-size:10px;color:var(--t3);overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;word-break:break-word;line-height:1.3;">'+sous+'</div>'
+          +'<div style="position:relative;font-size:12px;font-weight:700;color:var(--t1);overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;word-break:break-word;line-height:1.25;">'+_lgA.titre(_scoreA)+'</div>'
+          +(_scoreA&&!_lgA.integre?'<div style="position:relative;font-size:10px;font-weight:800;color:var(--t1);background:rgba(255,255,255,.10);display:inline-block;padding:1px 6px;border-radius:5px;margin:1px 0;max-width:100%;white-space:normal;word-break:break-word;">📊 '+_scoreA+'</div>':'')
+          +'<div style="position:relative;font-size:10px;color:var(--t3);overflow:hidden;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;word-break:break-word;line-height:1.35;">'+sous+'</div>'
           /* ═══ LA NOTE S'AFFICHE ENFIN (09/09) ═══
              Elle etait enregistree mais montree NULLE PART : ni ici, ni dans le
              bilan, ni dans l'archive. Il fallait rouvrir la fenetre d'edition
@@ -3542,7 +3560,7 @@ function renderArchive(){
           +'<div style="font-size:10px;color:var(--t3);">'+parseFloat(h.m).toFixed(2)+'€</div>'
           +'</div>'
           +'<div style="position:relative;display:flex;flex-direction:column;gap:3px;flex-shrink:0;">'
-          +'<a href="https://www.google.com/search?q='+encodeURIComponent(titre+' sofascore')+'" target="_blank" style="background:none;border:none;color:#ff7b54;font-size:13px;cursor:pointer;padding:0;text-decoration:none;" title="Sofascore">⚡</a>'
+          +'<button data-aid="'+h.id+'" onclick="g45EclairPari(this.dataset.aid)" style="background:none;border:none;color:#f0b020;font-size:13px;cursor:pointer;padding:0;" title="Ouvrir le match">⚡</button>'
           +'<button data-titre="'+titre.replace(/"/g,'&quot;')+'" data-date="'+(h.date||'')+'" data-comp="'+(h.comp||'')+'" onclick="var d=this.dataset;ouvrirYouTubeAvecScore(d.titre,d.date,d.comp)" style="background:none;border:none;color:#ff0000;font-size:13px;cursor:pointer;padding:0;" title="YouTube highlights">▶️</button>'
           +'<button data-aid="'+h.id+'" onclick="g45PartagerPari(this.dataset.aid)" style="background:none;border:none;color:#4d84ff;font-size:14px;cursor:pointer;padding:0;" title="Partager ce pari en image">📤</button>'
           +'<button data-aid="'+h.id+'" onclick="openBetEdit(this.dataset.aid)" style="background:none;border:none;color:var(--t3);font-size:14px;cursor:pointer;padding:0;">✏️</button>'
@@ -11712,7 +11730,8 @@ function renderArchive(){
         if(/^victoire\b/i.test(typeTxtA) && titre.toLowerCase().indexOf(' vs ')===-1){
           typeTxtA=titre+' '+typeTxtA.replace(/^victoire\b/i,'gagne');
         }
-        var sous=(typeTxtA?typeTxtA+' · ':'')+'<span style="color:#7aa2ff;font-weight:800;font-size:11px;background:rgba(77,132,255,.16);padding:1px 7px;border-radius:5px;">@'+parseFloat(h.cote).toFixed(2)+'</span>'+(h.comp?' · '+h.comp:'')+(adversaireA?' · vs '+adversaireA:'');
+        var _lgA=_g45LigneMatch(h, titre, typeTxtA, parseFloat(h.cote));
+        var sous=_lgA.sous;
         /* IDENTITE VISUELLE + SCORE (28/08) : port de ce qui existe deja sur la
            liste du Bilan (`_g45BetRowMini`) — cette liste-ci (onglet PARI) ne
            les avait jamais eus. Meme logique : couleur+logo du club pour une
@@ -11740,9 +11759,9 @@ function renderArchive(){
           +bkBadge+sportIco
           +'<div data-aid="'+h.id+'" onclick="openBetEdit(this.dataset.aid)" style="position:relative;flex:1;min-width:0;overflow:hidden;cursor:pointer;">'
           +_idFilig
-          +'<div style="position:relative;font-size:12px;font-weight:700;color:var(--t1);overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;word-break:break-word;line-height:1.25;">'+titre+'</div>'
-          +(_scoreA?'<div style="position:relative;font-size:10px;font-weight:800;color:var(--t1);background:rgba(255,255,255,.10);display:inline-block;padding:1px 6px;border-radius:5px;margin:1px 0;max-width:100%;white-space:normal;word-break:break-word;">📊 '+_scoreA+'</div>':'')
-          +'<div style="position:relative;font-size:10px;color:var(--t3);overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;word-break:break-word;line-height:1.3;">'+sous+'</div>'
+          +'<div style="position:relative;font-size:12px;font-weight:700;color:var(--t1);overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;word-break:break-word;line-height:1.25;">'+_lgA.titre(_scoreA)+'</div>'
+          +(_scoreA&&!_lgA.integre?'<div style="position:relative;font-size:10px;font-weight:800;color:var(--t1);background:rgba(255,255,255,.10);display:inline-block;padding:1px 6px;border-radius:5px;margin:1px 0;max-width:100%;white-space:normal;word-break:break-word;">📊 '+_scoreA+'</div>':'')
+          +'<div style="position:relative;font-size:10px;color:var(--t3);overflow:hidden;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;word-break:break-word;line-height:1.35;">'+sous+'</div>'
           /* ═══ LA NOTE S'AFFICHE ENFIN (09/09) ═══
              Elle etait enregistree mais montree NULLE PART : ni ici, ni dans le
              bilan, ni dans l'archive. Il fallait rouvrir la fenetre d'edition
@@ -11758,7 +11777,7 @@ function renderArchive(){
           +'<div style="font-size:10px;color:var(--t3);">'+parseFloat(h.m).toFixed(2)+'€</div>'
           +'</div>'
           +'<div style="position:relative;display:flex;flex-direction:column;gap:3px;flex-shrink:0;">'
-          +'<a href="https://www.google.com/search?q='+encodeURIComponent(titre+' sofascore')+'" target="_blank" style="background:none;border:none;color:#ff7b54;font-size:13px;cursor:pointer;padding:0;text-decoration:none;" title="Sofascore">⚡</a>'
+          +'<button data-aid="'+h.id+'" onclick="g45EclairPari(this.dataset.aid)" style="background:none;border:none;color:#f0b020;font-size:13px;cursor:pointer;padding:0;" title="Ouvrir le match">⚡</button>'
           +'<button data-titre="'+titre.replace(/"/g,'&quot;')+'" data-date="'+(h.date||'')+'" data-comp="'+(h.comp||'')+'" onclick="var d=this.dataset;ouvrirYouTubeAvecScore(d.titre,d.date,d.comp)" style="background:none;border:none;color:#ff0000;font-size:13px;cursor:pointer;padding:0;" title="YouTube highlights">▶️</button>'
           +'<button data-aid="'+h.id+'" onclick="g45PartagerPari(this.dataset.aid)" style="background:none;border:none;color:#4d84ff;font-size:14px;cursor:pointer;padding:0;" title="Partager ce pari en image">📤</button>'
           +'<button data-aid="'+h.id+'" onclick="openBetEdit(this.dataset.aid)" style="background:none;border:none;color:var(--t3);font-size:14px;cursor:pointer;padding:0;">✏️</button>'
@@ -32355,10 +32374,21 @@ async function g45TennisBracket(key,year){
   var atp=await f('atp'), wta=await f('wta');
   var evs=atp.concat(wta).filter(function(e){ return _g45EspnMajorPass(e.name||e.shortName||'', key); });
   var rounds={}, rSeen={};
+  /* 16/09/2026 (releve par Antoine sur la finale Zverev-Shelton, affichee DEUX
+     fois et « Detail indisponible (match absent du cache) ») :
+     - DOUBLON : sur un Grand Chelem, les scoreboards ESPN `atp` ET `wta` rendent
+       le MEME tournoi avec tous ses tableaux — chaque match arrivait deux fois.
+       On ne garde qu'une fois chaque match, par son identifiant.
+     - DETAIL VIDE : le clic lit `_g45EspnTennisCache`, que seule la liste du jour
+       (`_g45RenderTennisRes`) remplissait. Le tableau le remplit desormais aussi,
+       avec les memes champs `__grp` / `__tour`. */
+  var cacheT=window._g45EspnTennisCache||(window._g45EspnTennisCache={});
   evs.forEach(function(ev){
     (ev.groupings||[]).forEach(function(g){
       var gn=(g.grouping&&g.grouping.displayName)||'';
       (g.competitions||[]).forEach(function(c){
+        if(!c) return;
+        if(c.id){ if(rSeen[c.id]) return; rSeen[c.id]=1; c.__grp=gn; c.__tour=(ev.name||ev.shortName||''); cacheT[c.id]=c; }
         var rn=(c.round&&c.round.displayName)||'Autre';
         var cle=rn+'|'+gn;
         if(!rounds[cle]){ rounds[cle]={round:rn, grp:gn, matches:[]}; }
@@ -32474,6 +32504,19 @@ function openBetEdit(id){
     +fld('Type de pari','<input id="be-type" value="'+esc(b.type)+'" list="be-type-list" placeholder="Buteur, Passeur, Over 1.5…" style="'+ins+'"><datalist id="be-type-list"><option>Buteur</option><option>Passeur</option><option>Décisif</option><option>Over 1.5</option><option>Over 2.5</option><option>Victoire</option><option>Double chance</option><option>Les deux marquent</option></datalist>')
     +'<div style="display:flex;gap:8px;"><div style="flex:1;">'+fld('Cote','<input id="be-cote" inputmode="decimal" value="'+esc(b.cote)+'" style="'+ins+'">')+'</div><div style="flex:1;">'+fld('Mise (€)','<input id="be-m" inputmode="decimal" value="'+esc(b.m)+'" style="'+ins+'">')+'</div></div>'
     +fld('Compétition','<input id="be-comp" value="'+esc(b.comp)+'" style="'+ins+'">')
+    /* ═══ LIEU (16/09/2026, demande d'Antoine) ═══
+       Cette fenetre n'avait pas le choix Domicile / Exterieur / Global que propose
+       celle de l'onglet Pari : un pari corrige ici ne pouvait pas etre range dans
+       la bonne montante. Meme champ `domicile` ('dom' / 'ext' / '').
+       FORMULE 1 : domicile/exterieur n'a pas de sens. On demande le GRAND PRIX
+       (`gp`), purement informatif mais affiche sur la ligne du pari. */
+    +(_g45SansDomicile(b)
+      ? fld(_g45EstF1(b)?'Grand Prix':'Lieu','<input id="be-lieu" value="'+esc(b.lieu||'')+'" '+(_g45EstF1(b)?'list="be-gp-list" placeholder="GP d\'Espagne · Madrid"':'placeholder="Trouvé automatiquement si vide"')+' style="'+ins+'">'+(_g45EstF1(b)?'<datalist id="be-gp-list">'+G45_F1_GP.map(function(g){ return '<option>'+g+'</option>'; }).join('')+'</datalist>':''))
+      : fld('Lieu','<input type="hidden" id="be-dom" value="'+esc(b.domicile||'')+'"><div style="display:flex;gap:6px;">'
+          +[['dom','\ud83c\udfe0 Domicile'],['ext','\ud83d\ude8c Ext\u00e9rieur'],['','\ud83c\udf0d Global']].map(function(o){
+              var on=(b.domicile||'')===o[0];
+              return '<button type="button" class="be-dom-btn" data-v="'+o[0]+'" onclick="_g45BeDom(this)" style="flex:1;padding:9px 4px;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;border:2px solid '+(on?'#4d84ff':'rgba(255,255,255,.1)')+';background:'+(on?'rgba(77,132,255,.18)':'rgba(255,255,255,.06)')+';color:'+(on?'#fff':'var(--t2)')+';">'+o[1]+'</button>';
+            }).join('')+'</div>'))
     +fld('Bookmaker','<select id="be-b" style="'+ins+'">'+books.map(function(k){return '<option value="'+k+'"'+(b.b===k?' selected':'')+'>'+bki(k).n+'</option>';}).join('')+'</select>')
     +fld('Résultat',resSel)
     /* ═══ FLASHBOOST, FREEBET ET LAY (10/09) ═══
@@ -32495,6 +32538,42 @@ function openBetEdit(id){
   setTimeout(_g45FixNumberInputs,50);
 }
 window.openBetEdit=openBetEdit;
+/* Un pari est de la F1 si son sport, son format ou sa competition le dit. */
+function _g45EstF1(b){
+  if (!b) return false;
+  if (String(b.sport||'').indexOf('\ud83c\udfce')>=0) return true;
+  return /formule\s*1|formula\s*1|\bf1\b/i.test(String(b.n||'')+' '+String(b.comp||''));
+}
+window._g45EstF1=_g45EstF1;
+/* Sports ou le lieu change a chaque evenement et ou domicile/exterieur n'a
+   pas de sens : F1, tennis, golf, MMA/boxe, cyclisme, moto. */
+function _g45SansDomicile(b){
+  if (!b) return false;
+  if (_g45EstF1(b)) return true;
+  return /\ud83c\udfbe|\u26f3|\ud83e\udd4a|\ud83d\udeb4|\ud83c\udfcd/.test(String(b.sport||''));
+}
+window._g45SansDomicile=_g45SansDomicile;
+function _g45BeDom(btn){
+  var inp=document.getElementById('be-dom'); if(inp) inp.value=btn.getAttribute('data-v')||'';
+  document.querySelectorAll('.be-dom-btn').forEach(function(x){
+    var on=(x===btn);
+    x.style.borderColor=on?'#4d84ff':'rgba(255,255,255,.1)';
+    x.style.background=on?'rgba(77,132,255,.18)':'rgba(255,255,255,.06)';
+    x.style.color=on?'#fff':'var(--t2)';
+  });
+}
+window._g45BeDom=_g45BeDom;
+/* Suggestions seulement (saisie libre acceptee) : calendrier 2026 connu au
+   moment de l'ecriture, susceptible d'avoir bouge — d'ou le champ libre. */
+var G45_F1_GP=[
+  "GP d'Australie · Melbourne","GP de Chine · Shanghai","GP du Japon · Suzuka","GP de Bahreïn · Sakhir",
+  "GP d'Arabie saoudite · Djeddah","GP de Miami","GP du Canada · Montréal","GP de Monaco",
+  "GP de Barcelone-Catalogne","GP d'Autriche · Spielberg","GP de Grande-Bretagne · Silverstone",
+  "GP de Belgique · Spa","GP de Hongrie · Budapest","GP des Pays-Bas · Zandvoort","GP d'Italie · Monza",
+  "GP d'Espagne · Madrid","GP d'Azerbaïdjan · Bakou","GP de Singapour","GP des États-Unis · Austin",
+  "GP du Mexique · Mexico","GP du Brésil · São Paulo","GP de Las Vegas","GP du Qatar · Lusail","GP d'Abou Dhabi · Yas Marina"
+];
+window.G45_F1_GP=G45_F1_GP;
 /* ═══ UN SEUL CHAMP DE NOTE (09/09) ═══
    L'app a DEUX fenetres d'edition d'un pari : celle construite en JavaScript
    (`be-note`) ecrivait dans `note`, celle du formulaire de l'onglet Pari
@@ -32537,6 +32616,8 @@ function saveBetEdit(id){
   b.cote=parseFloat((v('be-cote')+'').replace(',','.'))||b.cote;
   b.m=parseFloat((v('be-m')+'').replace(',','.'))||b.m;
   b.comp=v('be-comp').trim();
+  if (document.getElementById('be-dom')) b.domicile = v('be-dom');
+  if (document.getElementById('be-lieu')) { var _li = v('be-lieu').trim(); if (_li) b.lieu = _li; else delete b.lieu; }
   g45NoteSet(b, v('be-note'));
   var _ck = function(id){ var e = document.getElementById(id); return !!(e && e.checked); };
   b.isFlash = _ck('be-flash'); b.isFreebet = _ck('be-freebet'); b.isLay = _ck('be-lay');
@@ -34065,7 +34146,7 @@ function _g45ScoreTexte(h) {
      On change la cle plutot que de purger : les anciennes entrees expirent
      seules, et on ne relit plus un « pas trouve » obtenu avec l'ancien code.
      Meme remede que pour le cache des tirs le 20/08. */
-  var ck = 'g45_score2_' + h.id;
+  var ck = (h.sport === '🎾' ? 'g45_tennis4_' : 'g45_score2_') + h.id;   // tennis4 : + lieu (16/09)   // tennis : cle a part depuis le 16/09 (nouveau format)
   var raw = null;
   try { raw = localStorage.getItem(ck); } catch(e) {}
   if (raw) {
@@ -34097,8 +34178,8 @@ function _g45ScoreTexte(h) {
       try { if (typeof renderArchive === 'function') renderArchive(); } catch(e) {}
     }
   };
-  var finirTxt = function(txt) {
-    var payload = txt ? {txt: txt} : {neg: true, t: Date.now()};
+  var finirTxt = function(txt, ven) {
+    var payload = txt ? {txt: txt, ven: ven || ''} : {neg: true, t: Date.now()};
     try { localStorage.setItem(ck, JSON.stringify(payload)); } catch(e) {}
     if (!_g45ScoreVus[ck]) {
       _g45ScoreVus[ck] = 1;
@@ -34381,66 +34462,95 @@ function _g45ScoreTexte(h) {
   }
 
   if (h.sport === '🎾') {
-    /* TENNIS (28/08, demande d'Antoine — le score d'un match, ce sont des
-       SETS, pas un simple nombre : "6-4, 3-6, 6-2", jamais hs/as. D'ou le
-       chemin `finirTxt` a part, sur le meme scoreboard ESPN tennis deja
-       utilise par `g45TennisResults` (site.api.espn.com/.../tennis/{atp|wta}
-       /scoreboard?dates=...). Les noms sont souvent des noms de famille
-       seuls ("Fils", "Tiafoe") : on matche par inclusion, pas egalite exacte,
-       sur les deux joueurs de l'affiche. */
+    /* TENNIS — REFAIT LE 16/09/2026 (demande d'Antoine sur Zverev-Shelton,
+       format voulu : « Zverev 3-1 · 40 jeux  6-4 3-6 7-5 6-3 »).
+       BUG DE FOND : l'ancienne version lisait `event.competitions`, or le
+       scoreboard ESPN tennis range les matchs UN NIVEAU PLUS BAS, dans
+       `event.groupings[].competitions[]` (simple messieurs, dames, doubles —
+       c'est deja ce que lit `_g45RenderTennisRes`). Aucun score tennis n'etait
+       donc jamais trouve. On lit maintenant les deux emplacements.
+       + tolerance d'un jour (date du pari, veille, lendemain) : un match du
+         soir cote americain ou saisi le lendemain retombait a cote.
+       + un seul nom suffit si le pari ne precise pas l'adversaire.
+       Cache sur une CLE DISTINCTE (voir `ck` plus haut) : les anciens negatifs
+       et l'ancien format « 6-4, 3-6 » ne bloquent pas la nouvelle recherche. */
     (async function() {
-      var txt = '';
+      var txt = '', venT = '';
       try {
-        if (nomEquipe && nomAdverse) {
-          var jour = betDay.replace(/-/g, '');
-          var norm = function(s) { return String(s || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, ''); };
-          /* ═══ INITIALE COLLEE (10/09) ═══
-             Antoine ecrit « N.Osaka », ESPN dit « Naomi Osaka » : la recherche
-             par inclusion echouait sur le point, et aucun de ses paris tennis
-             n'affichait de score.
-             On compare donc sur le NOM DE FAMILLE — le dernier morceau apres un
-             point, un espace ou un tiret —, present des deux cotes quelle que
-             soit l'ecriture. « Fils » ou « Tiafoe », qui n'ont pas d'initiale,
-             passent par le meme chemin sans changement. */
-          var famille = function(s) {
-            var t = norm(s).replace(/[^a-z\s.\-']/g, ' ').trim();
-            var bouts = t.split(/[.\s]+/).filter(function(x){ return x.length > 1; });
-            return bouts.length ? bouts[bouts.length - 1] : t;
-          };
-          var n1 = famille(nomEquipe), n2 = famille(nomAdverse);
+        var norm = function(s) { return String(s || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, ''); };
+        /* Nom de famille : dernier morceau apres un point, un espace (garde les
+           tirets : « Auger-Aliassime »). Couvre « N.Osaka » comme « Naomi Osaka ». */
+        var famille = function(s) {
+          var t = norm(s).replace(/[^a-z\s.\-']/g, ' ').trim();
+          var bouts = t.split(/[.\s]+/).filter(function(x){ return x.length > 1; });
+          return bouts.length ? bouts[bouts.length - 1] : t;
+        };
+        var nomAffiche = function(c) {
+          var n = (c.athlete && (c.athlete.displayName || c.athlete.shortName)) || c.displayName || '';
+          var bouts = String(n).trim().split(/\s+/);
+          return bouts[bouts.length - 1] || n;
+        };
+        var n1 = famille(nomEquipe), n2 = nomAdverse ? famille(nomAdverse) : '';
+        if (n1) {
+          var jours = [betDay];
+          try {
+            var _dj = new Date(betDay + 'T00:00:00Z');
+            _dj.setUTCDate(_dj.getUTCDate() - 1); jours.push(_dj.toISOString().slice(0, 10));
+            _dj.setUTCDate(_dj.getUTCDate() + 2); jours.push(_dj.toISOString().slice(0, 10));
+          } catch(e) {}
           var ligues = ['atp', 'wta'];
-          for (var li = 0; li < ligues.length && !txt; li++) {
-            var r = await fetch(FD_PROXY + '?host=espn&path=' + encodeURIComponent('/apis/site/v2/sports/tennis/' + ligues[li] + '/scoreboard?dates=' + jour));
-            var d = await r.json();
-            var evs = d.events || [];
-            for (var i = 0; i < evs.length; i++) {
-              var e = evs[i];
-              var comp = (e.competitions && e.competitions[0]) || null;
-              if (!comp) continue;
-              var st = (comp.status && comp.status.type) || {};
-              if (!st.completed) continue;
-              var cps = comp.competitors || [];
-              if (cps.length < 2) continue;
-              var noms = cps.map(function(c) { return norm((c.athlete && (c.athlete.displayName || c.athlete.shortName)) || c.displayName || ''); });
-              var okA = noms.some(function(nn) { return nn.indexOf(n1) >= 0; });
-              var okB = noms.some(function(nn) { return nn.indexOf(n2) >= 0; });
-              if (!okA || !okB) continue;
-              var p0 = cps[0], p1 = cps[1];
-              var s0 = p0.linescores || [], s1 = p1.linescores || [];
-              if (!s0.length) continue;
-              var sets = [];
-              for (var k = 0; k < s0.length; k++) {
-                var v0 = s0[k] && s0[k].value != null ? s0[k].value : '';
-                var v1 = s1[k] && s1[k].value != null ? s1[k].value : '';
-                if (v0 === '' && v1 === '') continue;
-                sets.push(v0 + '-' + v1);
+          for (var ji = 0; ji < jours.length && !txt; ji++) {
+            var jour = jours[ji].replace(/-/g, '');
+            for (var li = 0; li < ligues.length && !txt; li++) {
+              var r = await fetch(FD_PROXY + '?host=espn&path=' + encodeURIComponent('/apis/site/v2/sports/tennis/' + ligues[li] + '/scoreboard?dates=' + jour));
+              if (!r.ok) continue;
+              var d = await r.json();
+              var comps = [];
+              (d.events || []).forEach(function(ev) {
+                (ev.competitions || []).forEach(function(c) { comps.push(c); });
+                (ev.groupings || []).forEach(function(g) { (g.competitions || []).forEach(function(c) { comps.push(c); }); });
+              });
+              for (var i = 0; i < comps.length; i++) {
+                var comp = comps[i];
+                var st = (comp.status && comp.status.type) || {};
+                if (!st.completed) continue;
+                var cps = comp.competitors || [];
+                if (cps.length < 2) continue;
+                var noms = cps.map(function(c) { return norm((c.athlete && (c.athlete.displayName || c.athlete.shortName)) || c.displayName || ''); });
+                if (!noms.some(function(nn) { return nn.indexOf(n1) >= 0; })) continue;
+                if (n2 && !noms.some(function(nn) { return nn.indexOf(n2) >= 0; })) continue;
+                var s0 = cps[0].linescores || [], s1 = cps[1].linescores || [];
+                if (!s0.length) continue;
+                var sets = [], g0 = 0, g1 = 0, w0 = 0, w1 = 0;
+                for (var k = 0; k < s0.length; k++) {
+                  var v0 = s0[k] && s0[k].value != null ? Number(s0[k].value) : NaN;
+                  var v1 = s1[k] && s1[k].value != null ? Number(s1[k].value) : NaN;
+                  if (isNaN(v0) || isNaN(v1)) continue;
+                  sets.push([v0, v1]); g0 += v0; g1 += v1;
+                  if (v0 > v1) w0++; else if (v1 > v0) w1++;
+                }
+                if (!sets.length) continue;
+                /* Vainqueur : drapeau ESPN d'abord, sinon le plus de sets. Tout est
+                   ensuite ecrit DE SON POINT DE VUE (3-1, 6-4 3-6...). */
+                var gagne0 = cps[0].winner === true ? true : cps[1].winner === true ? false : (w0 >= w1);
+                var vainq = gagne0 ? cps[0] : cps[1];
+                var sw = gagne0 ? w0 : w1, sl = gagne0 ? w1 : w0;
+                var detail = sets.map(function(p) { return gagne0 ? (p[0] + '-' + p[1]) : (p[1] + '-' + p[0]); }).join(' ');
+                txt = nomAffiche(vainq) + ' ' + sw + '-' + sl + ' · ' + (g0 + g1) + ' jeux'
+                  + '<span style="font-weight:600;opacity:.7;margin-left:8px;font-size:.92em;">' + detail + '</span>';
+                /* Lieu (16/09) : `competition.venue.fullName` (« New York, USA »), sinon
+                   celui du tournoi. Verifie par Antoine dans la console. */
+                var _evT = (d.events || []).filter(function (ev) {
+                  return (ev.groupings || []).some(function (g) { return (g.competitions || []).indexOf(comp) >= 0; }) || (ev.competitions || []).indexOf(comp) >= 0;
+                })[0] || {};
+                venT = (comp.venue && (comp.venue.fullName || comp.venue.displayName)) || (_evT.venue && (_evT.venue.displayName || _evT.venue.fullName)) || '';
+                break;
               }
-              if (sets.length) { txt = sets.join(', '); break; }
             }
           }
         }
-      } catch(e) {}
-      finirTxt(txt);
+      } catch(e) { console.warn('score tennis', e && e.message); }
+      finirTxt(txt, venT);
     })();
     return '';
   }
@@ -34473,7 +34583,8 @@ function _g45ScoreTexteCombi(h) {
     var sc = (typeof _g45ScoreTexte === 'function') ? _g45ScoreTexte(fakeH) : '';
     if (sc) {
       var nomCourt = (r.team || r.adv || '?').split(' ')[0];
-      segs.push(nomCourt + ' ' + sc);
+      /* Le score tennis porte deja le nom du vainqueur : pas de prefixe en double. */
+      segs.push((r.sport === '🎾') ? sc : (nomCourt + ' ' + sc));
     }
   });
   return segs.join(' · ');
@@ -34512,6 +34623,7 @@ function _g45BetRowMini(h){
   }
   var parts=[]; if(typeTxt) parts.push(typeTxt); if(adversaire) parts.push('vs '+adversaire);
   parts.push('@'+cote.toFixed(2)); if(h.comp) parts.push(h.comp);
+  var _lgM=_g45LigneMatch(h, titre, typeTxt, cote);
   /* SCORE SORTI DES "parts" LE 28/08 (retour d'Antoine : "un peu dans les
      types de pari, faudrait le separer"). Il etait noye au milieu du type de
      pari/adversaire/cote/competition — desormais sa propre petite ligne,
@@ -34542,18 +34654,18 @@ function _g45BetRowMini(h){
      titre et ne touche jamais les chiffres. */
   return '<div data-aid="'+h.id+'" onclick="try{openBetEdit(this.dataset.aid)}catch(e){}" style="position:relative;overflow:hidden;display:flex;align-items:center;padding:9px 10px;background:linear-gradient(100deg,'+_idColor+'45 0%,'+etatColor+'26 60%,var(--s1) 100%);border-radius:8px;margin-bottom:4px;border-left:4px solid '+etatColor+';gap:8px;cursor:pointer;">'
     +'<div style="position:relative;font-size:10px;font-weight:600;color:var(--t2);min-width:50px;flex-shrink:0;text-align:center;line-height:1.3;">'+(h.date||'')+(h.heure?'<br>'+h.heure:'')+'</div>'
-    +'<div style="position:relative;width:22px;height:22px;border-radius:5px;background:'+b2.c+';color:#fff;font-size:9px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0;">'+((b2.n||'?').charAt(0).toUpperCase())+'</div>'
+    +'<span style="position:relative;display:inline-flex;flex-shrink:0;">'+((typeof bkFavicon==='function')?bkFavicon(h.b,22):'')+'</span>'
     +'<div style="position:relative;flex:1;min-width:0;overflow:hidden;">'
     +_idFilig
-    +'<div style="position:relative;font-size:12px;font-weight:700;color:var(--t1);overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;word-break:break-word;line-height:1.25;">'+titre+'</div>'
-    +(_score?'<div style="position:relative;font-size:11px;font-weight:800;color:var(--t1);background:rgba(255,255,255,.10);display:inline-block;padding:1px 6px;border-radius:5px;margin:2px 0;max-width:100%;white-space:normal;word-break:break-word;">📊 '+_score+'</div>':'')
+    +'<div style="position:relative;font-size:12px;font-weight:700;color:var(--t1);overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;word-break:break-word;line-height:1.25;">'+_lgM.titre(_score)+'</div>'
+    +(_score&&!_lgM.integre?'<div style="position:relative;font-size:11px;font-weight:800;color:var(--t1);background:rgba(255,255,255,.10);display:inline-block;padding:1px 6px;border-radius:5px;margin:2px 0;max-width:100%;white-space:normal;word-break:break-word;">📊 '+_score+'</div>':'')
     /* TROIS LIGNES (04/09, retour d'Antoine : « le texte est coupé »). Le
        sous-titre reunit le type de pari, l'adversaire, la cote et la competition
        — sur un telephone, « Défaite · vs Seattle Mariners · @1.45 · MLB » ne
        tient pas en deux lignes, et c'est la competition qui sautait. Trois
        lignes suffisent dans tous les cas observes ; au-dela on tronque encore,
        mais le detail complet reste accessible en ouvrant le pari. */
-    +'<div style="position:relative;font-size:10.5px;font-weight:600;color:var(--t2);overflow:hidden;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;word-break:break-word;line-height:1.3;">'+parts.join(' · ')+'</div>'
+    +'<div style="position:relative;font-size:10.5px;font-weight:600;color:var(--t2);overflow:hidden;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;word-break:break-word;line-height:1.3;">'+_lgM.sous+'</div>'
     +'</div>'
     +'<div style="position:relative;text-align:right;flex-shrink:0;">'
     +'<div style="font-size:12px;font-weight:800;">'+resIcon+'</div>'
@@ -36307,7 +36419,7 @@ window.g45F1Session=g45F1Session;
    et les données utilisateur n'étaient JAMAIS écrites — l'ajout apparaissait à l'écran puis
    disparaissait au rechargement. Ce n'était ni la synchro GitHub, ni Dropbox, ni le cache
    du navigateur. Tous ces caches sont reconstructibles : ils cèdent la place aux données. */
-var _G45_CACHE_PREFIXES=['g45rcP_','g45rcD_','g45rcY_','g45rc_','g45dcm_','g45dcf_','g45dc_',
+var _G45_CACHE_PREFIXES=['g45_mmeta1_','g45_tennis4_','g45_tennis3_',/* 16/09 : meta de match (domicile/lieu) et score tennis, reconstructibles */'g45rcP_','g45rcD_','g45rcY_','g45rc_','g45dcm_','g45dcf_','g45dc_',
   'g45trv3_','g45trv2_','g45trOdds_','g45tr_','g45but_st_','g45butL_','g45butA_','g45but_mur_',
   '_g45clv','g45clv_snaps','g45_saisons_cache_v3_','g45_saisons_cache_v2_',
   /* Ajoutes le 20/08 : ces caches, tous reconstructibles, n'etaient PAS declares
@@ -48719,3 +48831,304 @@ function _g45FdMemeEquipe(espn, court, complet) {
   }
   return false;
 }
+
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   ⚡ DANS ARCHIVES : OUVRIR LE MATCH DU PARI (16/09/2026, demande d'Antoine)
+   ───────────────────────────────────────────────────────────────────────────
+   L'eclair ouvrait une recherche Google « ... sofascore ». Il ouvre maintenant
+   le DETAIL DE MATCH de l'appli — le meme que dans Competitions / Suivies
+   (`_g45SgMatch` : cotes, analyse IA, public, resume, buteurs, carte des tirs).
+
+   POURQUOI PAS `openBetLive` (deja existant) : il cherche le match autour
+   d'AUJOURD'HUI, pas a la date du pari — inutilisable sur un pari archive —,
+   lit l'adversaire comme equipe sur une montante, et ne connait que foot/rugby.
+
+   RECHERCHE : scoreboard ESPN du JOUR du pari (puis veille, lendemain), une
+   date simple a la fois. Football via le slug `all`, pour trouver aussi les
+   coupes d'Europe ; la vraie competition est relue dans l'`uid` de l'evenement
+   (meme methode que le direct des Suivies). Sports US et rugby : leur ligue.
+   Sports sans detail de match dans l'appli (tennis, F1...) : repli sur
+   l'ancienne recherche Sofascore, pour ne rien perdre.
+   ═══════════════════════════════════════════════════════════════════════════ */
+function _g45EclairCibles(h) {
+  var cible = function (team, adv, sport, comp) {
+    return { nom: String(team || '').trim(), adv: String(adv || '').trim(), sport: sport || '\u26bd', comp: comp || '' };
+  };
+  if (h.isCombi && h.combiRows && h.combiRows.length) {
+    return h.combiRows.map(function (r) { return cible(r.team, r.adv, r.sport || h.sport, r.comp || h.comp); })
+      .filter(function (c) { return c.nom || c.adv; });
+  }
+  var seg = String(h.target || '').split(/\s+vs\.?\s+/i);
+  var nom = (h.eq && String(h.eq).trim()) || ((h.n && h.n !== 'SIMPLE') ? h.n : seg[0]);
+  var adv = (h.n === 'SIMPLE') ? (seg[1] || '') : ((h.target && h.target !== '-') ? h.target : '');
+  return [cible(nom, adv, h.sport, h.comp)];
+}
+
+function _g45EclairSport(emoji, comp) {
+  var e = String(emoji || ''), c = String(comp || '').toLowerCase();
+  if (e.indexOf('\u26bd') >= 0) return { sp: 'soccer', lg: 'all' };
+  if (e.indexOf('\ud83c\udfc0') >= 0) return { sp: 'basketball', lg: 'nba' };
+  if (e.indexOf('\ud83c\udfd2') >= 0) return { sp: 'hockey', lg: 'nhl' };
+  if (e.indexOf('\u26be') >= 0) return { sp: 'baseball', lg: 'mlb' };
+  if (e.indexOf('\ud83c\udfc8') >= 0) return { sp: 'football', lg: 'nfl' };
+  if (e.indexOf('\ud83c\udfc9') >= 0) {
+    if (e.indexOf('\ud83c\udde6\ud83c\uddfa') >= 0 || /\bnrl\b|rugby.?league|treize|xiii/.test(c)) return { sp: 'rugby-league', lg: '3' };
+    var rl = (typeof _g45RugbyLeagueId === 'function') ? _g45RugbyLeagueId(comp) : null;
+    return rl ? { sp: 'rugby', lg: rl } : null;
+  }
+  return null;   // tennis, F1, MMA, cyclisme... : pas de detail de match dans l'appli
+}
+
+async function _g45EclairTrouver(c, jourPari) {
+  var spl = _g45EclairSport(c.sport, c.comp);
+  if (!spl) return null;
+  var nrm = function (x) { return String(x || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]/g, ''); };
+  var n1 = nrm(c.nom), n2 = nrm(c.adv);
+  var idFoot = '', lgFoot = '';
+  if (spl.sp === 'soccer' && typeof espnResolveTeam === 'function') {
+    try {
+      var rs = await espnResolveTeam(c.nom);
+      if (!rs && c.adv) rs = await espnResolveTeam(c.adv);
+      if (rs) { idFoot = String(rs.id || ''); lgFoot = rs.league || ''; }
+    } catch (e) {}
+  }
+  var correspond = function (team, cle) {
+    if (!cle || !team) return false;
+    var noms = [team.displayName, team.shortDisplayName, team.name, team.location, team.abbreviation].map(nrm).filter(Boolean);
+    return noms.some(function (x) { return x === cle || (x.length >= 4 && cle.length >= 4 && (x.indexOf(cle) >= 0 || cle.indexOf(x) >= 0)); });
+  };
+  var jours = [jourPari];
+  try {
+    var d = new Date(jourPari + 'T00:00:00Z');
+    d.setUTCDate(d.getUTCDate() - 1); jours.push(d.toISOString().slice(0, 10));
+    d.setUTCDate(d.getUTCDate() + 2); jours.push(d.toISOString().slice(0, 10));
+  } catch (e) {}
+  for (var j = 0; j < jours.length; j++) {
+    var js = null;
+    try {
+      var _u = 'https://site.api.espn.com/apis/site/v2/sports/' + spl.sp + '/' + spl.lg + '/scoreboard?dates=' + jours[j].replace(/-/g, '') + '&limit=400';
+      var _mem = window._g45SbMem || (window._g45SbMem = {});
+      if (!_mem[_u]) _mem[_u] = fetch(_u).then(function (x) { return x.ok ? x.json() : null; }).catch(function () { return null; });
+      js = await _mem[_u];
+      if (!js) { delete _mem[_u]; continue; }
+    } catch (e) { continue; }
+    var lgParId = {};
+    (js.leagues || []).forEach(function (L) { if (L && L.id) lgParId[String(L.id)] = L.slug || ''; });
+    var meilleur = null, score = 0;
+    (js.events || []).forEach(function (ev) {
+      var cps = ((ev.competitions && ev.competitions[0]) || {}).competitors || [];
+      var pts = 0;
+      cps.forEach(function (x) {
+        var t = x.team || {};
+        if ((idFoot && String(t.id) === idFoot) || correspond(t, n1)) pts += 2;
+        else if (n2 && correspond(t, n2)) pts += 1;
+      });
+      if (pts > score) { score = pts; meilleur = ev; }
+    });
+    if (meilleur && score >= 2) {
+      var lg = spl.lg;
+      if (spl.sp === 'soccer') {
+        var m = String(meilleur.uid || '').match(/~l:(\d+)/);
+        lg = (m && lgParId[m[1]]) || lgFoot || 'all';
+      }
+      return { eid: String(meilleur.id), sp: spl.sp, lg: lg, ev: meilleur };
+    }
+  }
+  return { introuvable: true };
+}
+
+async function g45EclairOuvrirCible(betId, i) {
+  var h = (state.h || []).find(function (x) { return String(x.id) === String(betId); });
+  if (!h) return;
+  try { var ch = document.getElementById('g45-eclair-choix'); if (ch) ch.remove(); } catch (e) {}
+  var c = _g45EclairCibles(h)[i || 0];
+  if (!c) return;
+  var titre = String(h.target || h.n || '').trim();
+  if (!_g45EclairSport(c.sport, c.comp)) {
+    window.open('https://www.google.com/search?q=' + encodeURIComponent(titre + ' sofascore'), '_blank');
+    return;
+  }
+  document.body.style.cursor = 'progress';
+  var res = null;
+  try { res = await _g45EclairTrouver(c, String(h.date || '').slice(0, 10)); } catch (e) {}
+  document.body.style.cursor = '';
+  if (res && res.eid && typeof _g45SgMatchDepuisDirect === 'function') {
+    _g45SgMatchDepuisDirect(res.eid, res.sp, res.lg);
+  } else {
+    alert('Match introuvable sur ESPN pour « ' + (c.nom || c.adv) + ' » le ' + String(h.date || '').slice(0, 10) + '.');
+  }
+}
+window.g45EclairOuvrirCible = g45EclairOuvrirCible;
+
+function g45EclairPari(betId) {
+  var h = (state.h || []).find(function (x) { return String(x.id) === String(betId); });
+  if (!h) return;
+  var cibles = _g45EclairCibles(h);
+  if (cibles.length <= 1) { g45EclairOuvrirCible(betId, 0); return; }
+  /* Combine : on demande quel match ouvrir. */
+  var mo = document.createElement('div');
+  mo.id = 'g45-eclair-choix';
+  mo.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:9999;display:flex;align-items:center;justify-content:center;padding:14px;';
+  mo.onclick = function (e) { if (e.target === mo) mo.remove(); };
+  mo.innerHTML = '<div style="background:var(--s1);border:1px solid var(--b2);border-radius:14px;max-width:420px;width:100%;padding:16px;">'
+    + '<div style="font-size:13px;font-weight:800;color:var(--a);margin-bottom:12px;">\u26a1 Quel match ouvrir ?</div>'
+    + cibles.map(function (c, i) {
+        var lib = (c.nom || '?') + (c.adv ? ' vs ' + c.adv : '');
+        return '<button onclick="g45EclairOuvrirCible(\'' + String(betId).replace(/'/g, "\\'") + '\',' + i + ')" style="display:block;width:100%;text-align:left;padding:11px 12px;margin-bottom:8px;border-radius:9px;border:1px solid rgba(240,176,32,.35);background:rgba(240,176,32,.08);color:var(--t1);font-size:12px;font-weight:700;cursor:pointer;">'
+          + (c.sport || '') + ' ' + lib.replace(/</g, '&lt;') + '</button>';
+      }).join('')
+    + '</div>';
+  document.body.appendChild(mo);
+}
+window.g45EclairPari = g45EclairPari;
+
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   LIGNE DE PARI « DOMICILE · SCORE · EXTERIEUR » (16/09/2026, maquette validee
+   par Antoine, Bilan ET Archives)
+   ───────────────────────────────────────────────────────────────────────────
+   Ligne 1 : equipe a domicile   📊 score   equipe a l'exterieur
+             — MON equipe (celle du mur / du cockpit / jouee) en OR, l'autre en blanc
+   Ligne 2 : le type de pari
+   Ligne 3 : la cote, puis un peu plus loin la competition (+ 📍 lieu)
+
+   QUI EST A DOMICILE, par ordre de confiance :
+     1. le match reel ESPN (meta en cache, voir _g45MatchMeta) ;
+     2. le choix Domicile/Exterieur du pari ;
+     3. a defaut, mon equipe a gauche.
+   Le score en cache est TOUJOURS domicile-exterieur : il se lit donc enfin dans
+   le bon sens (« Brest 0-1 PSG » au lieu d'un « 0-1 » sous le PSG).
+
+   LIEU : saisi a la main (`lieu`, fenetre ✏️) > tennis (lieu ESPN du match) >
+   terrain NEUTRE signale par ESPN (finale, Coupe du monde...). Jamais le stade
+   d'un match normal : domicile/exterieur le dit deja.
+
+   Hors perimetre, affichage inchange : combines (plusieurs matchs).
+   ═══════════════════════════════════════════════════════════════════════════ */
+var _G45_OR = '#f0c828';
+function _g45NrmNom(x){ return String(x||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9]/g,''); }
+function _g45MemeNom(a,b){
+  a=_g45NrmNom(a); b=_g45NrmNom(b);
+  if(!a||!b) return false;
+  return a===b || (a.length>=4 && b.length>=4 && (a.indexOf(b)>=0 || b.indexOf(a)>=0));
+}
+function _g45Esc(x){ return String(x==null?'':x).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/"/g,'&quot;'); }
+
+/* Meta du match (domicile, exterieur, terrain neutre, lieu). Cache definitif si
+   trouve ; un echec n'est garde que 6 h (regle du projet). Recherche en file,
+   une a la fois, et un seul re-rendu groupe a la fin. */
+var _G45_META_CLE = 'g45_mmeta1_';
+var _g45MetaFile = [], _g45MetaEnCours = false, _g45MetaDemande = {}, _g45MetaRendu = null;
+function _g45MatchMeta(h){
+  if (!h || !h.id || !h.date || h.isCombi) return null;
+  var ck = _G45_META_CLE + h.id;
+  try {
+    var raw = localStorage.getItem(ck);
+    if (raw) {
+      var o = JSON.parse(raw);
+      if (o && o.hn) return o;
+      if (o && o.neg && (Date.now() - (o.t || 0)) < 6 * 3600000) return null;
+    }
+  } catch (e) {}
+  if (typeof _g45EclairSport !== 'function' || !_g45EclairSport(h.sport, h.comp)) return null;
+  if (!_g45MetaDemande[ck]) { _g45MetaDemande[ck] = 1; _g45MetaFile.push(h); _g45MetaSuivant(); }
+  return null;
+}
+async function _g45MetaSuivant(){
+  if (_g45MetaEnCours) return;
+  _g45MetaEnCours = true;
+  var trouves = 0;
+  while (_g45MetaFile.length) {
+    var h = _g45MetaFile.shift(), ck = _G45_META_CLE + h.id, out = null;
+    try {
+      var c = _g45EclairCibles(h)[0];
+      var r = c ? await _g45EclairTrouver(c, String(h.date).slice(0, 10)) : null;
+      if (r && r.ev) {
+        var cp = (r.ev.competitions && r.ev.competitions[0]) || {};
+        var cps = cp.competitors || [];
+        var dom = cps.filter(function (x) { return x.homeAway === 'home'; })[0] || cps[0] || {};
+        var ext = cps.filter(function (x) { return x.homeAway === 'away'; })[0] || cps[1] || {};
+        var nomDe = function (x) { var t = x.team || {}; return t.displayName || t.shortDisplayName || t.name || ''; };
+        var v = cp.venue || r.ev.venue || {};
+        var ville = v.address ? [v.address.city, v.address.country].filter(Boolean).join(', ') : '';
+        if (nomDe(dom) && nomDe(ext)) {
+          out = { hn: nomDe(dom), an: nomDe(ext), neutre: !!cp.neutralSite,
+                  ven: [v.fullName || v.displayName || '', ville].filter(Boolean).join(' · ') };
+        }
+      }
+    } catch (e) {}
+    try { localStorage.setItem(ck, JSON.stringify(out || { neg: true, t: Date.now() })); } catch (e) {}
+    if (out) trouves++;
+  }
+  _g45MetaEnCours = false;
+  if (trouves) {
+    clearTimeout(_g45MetaRendu);
+    _g45MetaRendu = setTimeout(function () {
+      try { if (typeof renderBilanTab === 'function') renderBilanTab(); } catch (e) {}
+      try { if (typeof renderArchive === 'function') renderArchive(); } catch (e) {}
+    }, 400);
+  }
+}
+
+function _g45LieuDe(h, meta){
+  if (h.lieu) return h.lieu;
+  if (h.sport === '\ud83c\udfbe') {
+    try { var t = JSON.parse(localStorage.getItem('g45_tennis4_' + h.id) || 'null'); if (t && t.ven) return t.ven; } catch (e) {}
+  }
+  if (meta && meta.neutre && meta.ven) return meta.ven;
+  return '';
+}
+
+/* Renvoie { titre: function(score) -> html, integre: bool, sous: html }.
+   `integre` vrai = le score est place DANS la ligne 1 (l'appelant ne l'affiche
+   plus en dessous). `titre` est une fonction car le score est calcule par
+   l'appelant apres coup. */
+function _g45LigneMatch(h, titreDefaut, typeTxt, cote){
+  var coteNum = parseFloat(cote);
+  var coteTxt = isNaN(coteNum) ? '' : '@' + coteNum.toFixed(2);
+  var meta = (typeof _g45MatchMeta === 'function') ? _g45MatchMeta(h) : null;
+  var lieu = _g45LieuDe(h, meta);
+  var sous = (typeTxt ? typeTxt + '<br>' : '')
+    + '<span style="color:#7aa2ff;font-weight:800;font-size:11px;background:rgba(77,132,255,.16);padding:1px 7px;border-radius:5px;">' + coteTxt + '</span>'
+    + '<span style="margin-left:14px;">' + _g45Esc(h.comp || '') + (lieu ? (h.comp ? ' · ' : '') + '\ud83d\udccd ' + _g45Esc(lieu) : '') + '</span>';
+
+  if (h.isCombi) return { titre: function () { return titreDefaut; }, integre: false, sous: sous };
+
+  var cib = _g45EclairCibles(h)[0] || { nom: titreDefaut, adv: '' };
+  var moi = cib.nom || '', autre = cib.adv || '';
+  var or = function (n) { return '<span style="color:' + _G45_OR + ';">' + _g45Esc(n) + '</span>'; };
+  var blanc = function (n) { return '<span style="color:#fff;">' + _g45Esc(n) + '</span>'; };
+  var badge = function (sc) { return sc ? ' <span style="font-size:10.5px;font-weight:800;color:var(--t1);background:rgba(255,255,255,.10);padding:1px 6px;border-radius:5px;margin:0 4px;white-space:nowrap;">\ud83d\udcca ' + sc + '</span> ' : ' <span style="font-size:10px;color:var(--t3);margin:0 4px;">vs</span> '; };
+
+  /* Pari sans adversaire identifiable (F1, « FORMULE 1 », « AU NRL »...) : nom en or. */
+  if ((!autre && !(meta && meta.hn)) || _g45EstF1(h)) {
+    return { titre: function (sc) { return or(moi || titreDefaut) + (sc ? badge(sc) : ''); }, integre: true, sous: sous };
+  }
+
+  /* Tennis : pas de domicile. Mon joueur en or a gauche, l'autre en blanc. */
+  if (_g45SansDomicile(h)) {
+    return { titre: function (sc) { return or(moi) + badge(sc) + (autre ? blanc(autre) : ''); }, integre: true, sous: sous };
+  }
+
+  var gauche, droite, moiAGauche;
+  if (meta && meta.hn) {
+    if (_g45MemeNom(moi, meta.an) || (!_g45MemeNom(moi, meta.hn) && _g45MemeNom(autre, meta.hn))) moiAGauche = false;
+    else moiAGauche = true;
+    /* Noms tels que le PARI les ecrit quand ils collent, sinon ceux d'ESPN. */
+    gauche = moiAGauche ? moi : (autre || meta.hn);
+    droite = moiAGauche ? (autre || meta.an) : moi;
+  } else {
+    moiAGauche = (h.domicile !== 'ext');
+    gauche = moiAGauche ? moi : autre;
+    droite = moiAGauche ? autre : moi;
+  }
+  return {
+    titre: function (sc) {
+      return (moiAGauche ? or(gauche) : blanc(gauche)) + badge(sc) + (moiAGauche ? blanc(droite) : or(droite));
+    },
+    integre: true,
+    sous: sous
+  };
+}
+window._g45LigneMatch = _g45LigneMatch;
