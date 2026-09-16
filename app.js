@@ -145,6 +145,57 @@ function espnLeagueOf(nom) {
   return null;
 }
 
+/* LISTE DES EQUIPES VIA LE CLASSEMENT (16/09/2026).
+   /soccer/{ligue}/teams est inutilisable : 403 Akamai depuis le Worker
+   Cloudflare ET depuis une Edge Function Supabase (teste le 16/09, meme page
+   « Access Denied » — Akamai filtre les IP d'hebergeurs cloud en general),
+   et pas d'en-tete CORS en direct depuis le navigateur.
+   Teste le meme jour dans la console de l'appli : /apis/v2/sports/soccer/{ligue}/standings
+   repond 200 AVEC CORS en direct. Chaque ligne du classement porte l'objet
+   `team` complet (id, displayName, name, shortDisplayName, location,
+   abbreviation, logos) — exactement ce qu'utilise _espnMatchTeam.
+   On parcourt TOUT l'arbre (children / standings / entries) pour couvrir les
+   championnats a groupes ou a conferences (Coupe du monde, MLS...).
+   Ordre : classement en direct, puis repli sur l'ancien chemin Worker.
+   Aucun echec n'est mis en cache. */
+function _espnEquipesDuClassement(d) {
+  var vues = {}, out = [];
+  (function parcourir(n, prof) {
+    if (!n || typeof n !== 'object' || prof > 8) return;
+    if (Array.isArray(n)) { for (var i = 0; i < n.length; i++) parcourir(n[i], prof + 1); return; }
+    if (Array.isArray(n.entries)) {
+      n.entries.forEach(function (e) {
+        var t = e && e.team;
+        if (t && t.id && !vues[t.id]) { vues[t.id] = 1; out.push(t); }
+      });
+    }
+    if (n.children) parcourir(n.children, prof + 1);
+    if (n.standings) parcourir(n.standings, prof + 1);
+  })(d, 0);
+  return out;
+}
+
+async function _espnTeamsViaClassement(league) {
+  var base = 'https://site.api.espn.com/apis/v2/sports/soccer/' + encodeURIComponent(league) + '/standings';
+  /* Hors-saison, ESPN peut servir la saison a venir VIDE (meme piege que
+     /schedule) : on retente alors l'annee precedente, une seule fois. */
+  var urls = [base, base + '?season=' + (new Date().getFullYear() - 1)];
+  for (var i = 0; i < urls.length; i++) {
+    try {
+      var r = await fetch(urls[i]);
+      if (!r.ok) continue;
+      var equipes = _espnEquipesDuClassement(await r.json());
+      if (equipes.length) {
+        console.info('_espnLoadLeagueTeams : "' + league + '" via classement ESPN direct (' + equipes.length + ' equipes)');
+        return equipes;
+      }
+    } catch (e) {
+      console.warn('_espnLoadLeagueTeams : classement indisponible pour "' + league + '" :', e);
+    }
+  }
+  return null;
+}
+
 // Résoudre l'ID ESPN d'une équipe via la liste des équipes de son championnat
 // Charge (et cache) la liste des équipes d'un championnat ESPN
 async function _espnLoadLeagueTeams(league) {
@@ -154,6 +205,8 @@ async function _espnLoadLeagueTeams(league) {
      session ne retente jamais, elle relit juste ce [] fige. Trouve en meme
      temps que le diagnostic ci-dessous, meme jour, meme cause racine. */
   if(_espnTeamsCache[league] && _espnTeamsCache[league].length) return _espnTeamsCache[league];
+  var viaClassement = await _espnTeamsViaClassement(league);
+  if (viaClassement && viaClassement.length) { _espnTeamsCache[league] = viaClassement; return viaClassement; }
   try {
     var r = await fetch(FD_PROXY+'?host=espn&path='+encodeURIComponent('/apis/site/v2/sports/soccer/'+league+'/teams'));
     var d = await r.json();
