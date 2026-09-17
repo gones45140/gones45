@@ -3005,8 +3005,12 @@ function render(){
       if(!_vis && _jv && _jv.fan) _vis=_jv.fan;
       if(!_vis && _jv && (_jv.cut||_jv.thumb)){
         _couche='<img src="'+(_jv.cut||_jv.thumb)+'" alt="" loading="lazy" onerror="this.style.display=\'none\'" '
-          +'style="position:absolute;right:5%;bottom:0;height:96%;max-width:48%;object-fit:contain;'
-          +'object-position:bottom right;pointer-events:none;filter:drop-shadow(0 6px 14px rgba(0,0,0,.55));">';
+          /* CENTRE (17/09, retour d'Antoine) : a droite, le joueur passait
+             derriere le bloc des montants. Au centre, il a la carte pour lui —
+             le texte est a gauche, les montants a droite. */
+          +'style="position:absolute;left:50%;transform:translateX(-50%);bottom:0;height:96%;max-width:42%;'
+          +'object-fit:contain;object-position:bottom center;pointer-events:none;'
+          +'filter:drop-shadow(0 6px 14px rgba(0,0,0,.55));">';
       }
       if(_vis){
         var _vl=(typeof _G45_FOND_NIV!=='undefined')?_G45_FOND_NIV.voileVis:0.30;
@@ -11275,8 +11279,12 @@ function render(){
       if(!_vis && _jv && _jv.fan) _vis=_jv.fan;
       if(!_vis && _jv && (_jv.cut||_jv.thumb)){
         _couche='<img src="'+(_jv.cut||_jv.thumb)+'" alt="" loading="lazy" onerror="this.style.display=\'none\'" '
-          +'style="position:absolute;right:5%;bottom:0;height:96%;max-width:48%;object-fit:contain;'
-          +'object-position:bottom right;pointer-events:none;filter:drop-shadow(0 6px 14px rgba(0,0,0,.55));">';
+          /* CENTRE (17/09, retour d'Antoine) : a droite, le joueur passait
+             derriere le bloc des montants. Au centre, il a la carte pour lui —
+             le texte est a gauche, les montants a droite. */
+          +'style="position:absolute;left:50%;transform:translateX(-50%);bottom:0;height:96%;max-width:42%;'
+          +'object-fit:contain;object-position:bottom center;pointer-events:none;'
+          +'filter:drop-shadow(0 6px 14px rgba(0,0,0,.55));">';
       }
       if(_vis){
         var _vl=(typeof _G45_FOND_NIV!=='undefined')?_G45_FOND_NIV.voileVis:0.30;
