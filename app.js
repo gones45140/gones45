@@ -49614,7 +49614,14 @@ async function g45KhlApi(fichier, params) {
     }).filter(Boolean).join('&');
     var chemin = '/' + fichier + '.json?locale=en' + (qs ? '&' + qs : '');
     var base = (typeof FD_PROXY !== 'undefined' && FD_PROXY) ? FD_PROXY : 'https://fd-proxy.touraine-antoine.workers.dev/';
-    var r = await fetch(base + '?host=khl&path=' + encodeURIComponent(chemin));
+    /* Delai de 12 s : webcaster peut mettre ~20 s avant un 522 (constate le
+       17/09 sur players_v2 page 1 et sur une semaine vide d'aout). Sans delai,
+       l'ecran restait « Chargement » tout ce temps. */
+    var ctrl = (typeof AbortController !== 'undefined') ? new AbortController() : null;
+    var minuteur = ctrl ? setTimeout(function () { try { ctrl.abort(); } catch (e) {} }, (fichier === 'players_v2' ? 45000 : 12000)) : null;
+    var r;
+    try { r = await fetch(base + '?host=khl&path=' + encodeURIComponent(chemin), ctrl ? { signal: ctrl.signal } : undefined); }
+    finally { if (minuteur) clearTimeout(minuteur); }
     if (!r.ok) return null;
     var t = await r.text();
     if (!/^\s*[\[{]/.test(t)) return null;
@@ -49749,6 +49756,11 @@ async function _g45KhlMatchsPlage(de, a) {
     var fige = (t1 < Date.now() - 86400000);
     var lu = null;
     if (fige) { try { lu = JSON.parse(localStorage.getItem(cle) || 'null'); } catch (e) {} }
+    /* Semaine passee sans resultat : memorisee 6 h seulement (jamais pour
+       toujours, regle du projet), pour ne pas repayer un 522 a chaque ouverture. */
+    if (fige && !lu) {
+      try { var vide = JSON.parse(localStorage.getItem(cle + '_vide') || 'null'); if (vide && Date.now() - vide < 6 * 3600000) lu = []; } catch (e) {}
+    }
     if (!lu) {
       lu = []; var vus = {};
       for (var page = 1; page <= 8; page++) {
@@ -49761,6 +49773,7 @@ async function _g45KhlMatchsPlage(de, a) {
         if (!neufs) break;
       }
       if (fige && lu.length) { try { localStorage.setItem(cle, JSON.stringify(lu)); } catch (e) {} }
+      else if (fige) { try { localStorage.setItem(cle + '_vide', JSON.stringify(Date.now())); } catch (e) {} }
     }
     out = out.concat(lu);
   }
@@ -49768,7 +49781,10 @@ async function _g45KhlMatchsPlage(de, a) {
 }
 function _g45KhlDebutSaison() {
   var d = new Date(), an = (d.getMonth() + 1 >= 8) ? d.getFullYear() : d.getFullYear() - 1;
-  return Date.UTC(an, 7, 15);
+  /* 1er septembre : la saison reguliere KHL commence debut septembre. Partir du
+     15 aout faisait interroger des semaines VIDES, auxquelles webcaster repond
+     par un 522 au bout de ~20 s (constate le 17/09). */
+  return Date.UTC(an, 8, 1);
 }
 
 /* Fiche d'un match reduite a ce qui sert : buts et joueurs. Match fini = cache
@@ -50192,16 +50208,50 @@ function _g45KhlJoueur(x) {
 async function _g45KhlJoueurs() {
   var stage = await g45KhlStageActuel(), cle = 'g45khl_joueurs_' + stage;
   try { var c = JSON.parse(localStorage.getItem(cle) || 'null'); if (c && c.l && c.l.length && Date.now() - c.t < 3 * 3600000) return c.l; } catch (e) {}
-  var tous = [], vus = {};
-  /* Pagination inconnue : on avance tant que la page apporte des joueurs neufs. */
-  for (var page = 1; page <= 60; page++) {
-    var j = await g45KhlApi('players_v2', { stage_id: stage, page: page });
-    if (!Array.isArray(j) || !j.length) break;
-    var neufs = 0;
-    j.forEach(function (x) { var p = _g45KhlJoueur(x); if (p.id != null && !vus[p.id]) { vus[p.id] = 1; tous.push(p); neufs++; } });
-    if (!neufs) break;
+  /* CHARGEMENT EN TROIS TEMPS (17/09/2026, mesures d'Antoine) :
+     - players_v2_light : 668 joueurs en <1 s, sans stats, meme ordre que
+       players_v2 (verifie : page 3 commence au 33e nom de la liste light) ;
+     - players_v2 par pages de 16 : pages 2 et suivantes en 1 a 3 s ;
+     - la PAGE 1 ne repond jamais (522 apres ~20 s, deux essais). Ses 16
+       joueurs sont redemandes par identifiants (q[id_in][]) ; si ca echoue
+       aussi, ils restent sans stats plutot que de bloquer tout l'ecran. */
+  var light = await g45KhlApi('players_v2_light', { stage_id: stage });
+  if (!Array.isArray(light) || !light.length) return [];
+  var parId = {}, tous = [];
+  var ajouter = function (j) {
+    (Array.isArray(j) ? j : []).forEach(function (x) {
+      var p = _g45KhlJoueur(x);
+      if (p.id != null && !parId[p.id]) { parId[p.id] = p; tous.push(p); }
+    });
+  };
+  var nbPages = Math.ceil(light.length / 16) + 1;   /* +1 : marge si l'effectif bouge */
+  var pages = [];
+  for (var pg = 2; pg <= nbPages; pg++) pages.push(pg);
+  /* Par lots de 4 en parallele. Mesure d'Antoine : une page met de 1 a 43 s
+     selon la charge de webcaster — d'ou un delai de 45 s pour players_v2, et
+     pas plus de 4 requetes simultanees pour ne pas l'engorger davantage. Le
+     Worker garde chaque page 3 h (+ copie de secours 48 h). */
+  for (var i = 0; i < pages.length; i += 4) {
+    var lot = pages.slice(i, i + 4).map(function (n) { return g45KhlApi('players_v2', { stage_id: stage, page: n }); });
+    (await Promise.all(lot)).forEach(ajouter);
   }
-  if (tous.length) { try { localStorage.setItem(cle, JSON.stringify({ t: Date.now(), l: tous })); } catch (e) {} }
+  var manquants = light.map(function (x) { return x && x.id; }).filter(function (id) { return id != null && !parId[id]; });
+  if (manquants.length) {
+    for (var k = 0; k < manquants.length; k += 16) {
+      ajouter(await g45KhlApi('players_v2', { stage_id: stage, 'q[id_in][]': manquants.slice(k, k + 16) }));
+    }
+  }
+  /* Ceux qui manquent encore : identite seule (pas de stats, donc absents des
+     classements, mais l'effectif reste juste). */
+  light.forEach(function (x) {
+    if (x && x.id != null && !parId[x.id]) {
+      var p = { id: x.id, kid: x.khl_id, n: x.name, num: x.shirt_number, r: '', img: x.image, eq: x.team ? x.team.id : null, st: {} };
+      parId[p.id] = p; tous.push(p);
+    }
+  });
+  var avecStats = tous.filter(function (p) { return p.st && p.st.gp != null; }).length;
+  /* On ne met en cache que si l'essentiel est la : sinon on retentera. */
+  if (avecStats >= light.length * 0.9) { try { localStorage.setItem(cle, JSON.stringify({ t: Date.now(), l: tous })); } catch (e) {} }
   return tous;
 }
 function _g45KhlFmt(v, f) {
