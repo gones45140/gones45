@@ -49523,3 +49523,554 @@ function _g45LigneMatch(h, titreDefaut, typeTxt, cote){
   };
 }
 window._g45LigneMatch = _g45LigneMatch;
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   KHL — SOCLE (17/09/2026)
+   ───────────────────────────────────────────────────────────────────────────
+   Source : API interne de l'appli mobile KHL (khl.api.webcaster.pro), lue via
+   le Worker (`?host=khl`) — la fiche de match refuse tout fetch navigateur
+   (403), la liste l'accepte mais la CSP de l'appli ne la connait pas. Tout
+   passer par le Worker garde un seul chemin et profite du cache D1.
+   Liste des 22 equipes 2026/27 relevee par Antoine le 17/09 (teams_v2.json,
+   stage 407) : id webcaster, khl_id, nom KHL, ville, conference, division,
+   logo officiel. Noms AFFICHES en francais (choix d'Antoine) ; les alias
+   servent a reconnaitre les ecritures des books (Winamax, Betclic...).
+   Ce module est en fin de fichier, HORS de la region dupliquee : il ajoute
+   ses entrees aux tables globales (COMP_DB, ADV_DB, LOGOS) au chargement au
+   lieu de modifier leurs deux copies.
+   ═══════════════════════════════════════════════════════════════════════════ */
+var G45_KHL_STAGE_DEFAUT = 407; /* saison reguliere 2026/27, relue dans data.json */
+var G45_KHL_EQUIPES = [
+  {id:26, kid:1,   en:'Lokomotiv',      fr:'Lokomotiv Iaroslavl',        ville:'Yaroslavl',          conf:'Ouest', div:'Tarassov',   al:['Lokomotiv Yaroslavl','Lokomotiv Jaroslavl'], logo:'https://thumbs.webcaster.pro/rec-1-4.webcaster.pro/fc/sdl/team_pics/26/original/lokomotiv_2022__200x200.png'},
+  {id:44, kid:24,  en:'SKA',            fr:'SKA Saint-Pétersbourg',      ville:'Saint Petersburg',   conf:'Ouest', div:'Bobrov',     al:['SKA St. Petersburg','SKA Saint Petersburg','SKA St Petersburg'], logo:'https://thumbs.webcaster.pro/rec-1-4.webcaster.pro/fc/sda/team_pics/44/original/SKA_logo_2025_RU_200x200_NEW.png'},
+  {id:40, kid:53,  en:'Ak Bars',        fr:'Ak Bars Kazan',              ville:'Kazan',              conf:'Est',   div:'Kharlamov',  al:['Ak Bars'], logo:'https://thumbs.webcaster.pro/rec-2-3.webcaster.pro/fc/sdc/team_pics/40/original/ak_bars_2022__200x200.png'},
+  {id:36, kid:71,  en:'Neftekhimik',    fr:'Neftekhimik Nijnekamsk',     ville:'Nizhnekamsk',        conf:'Est',   div:'Kharlamov',  al:['Neftekhimik Nizhnekamsk'], logo:'https://thumbs.webcaster.pro/rec-1-7.webcaster.pro/fc/sdj/team_pics/36/original/neftekhimik_2022__200x200.png'},
+  {id:8,  kid:719, en:'Dynamo Msk',     fr:'Dynamo Moscou',              ville:'Moscow',             conf:'Ouest', div:'Tarassov',   al:['Dynamo Moscow','Dinamo Moscow','HC Dynamo Moscow'], logo:'https://thumbs.webcaster.pro/rec-1-2.webcaster.pro/fc/sda/team_pics/8/original/dynamo_msk_2019__200x200.png'},
+  {id:18, kid:7,   en:'Spartak',        fr:'Spartak Moscou',             ville:'Moscow',             conf:'Ouest', div:'Bobrov',     al:['Spartak Moscow'], logo:'https://thumbs.webcaster.pro/rec-1-7.webcaster.pro/fc/sdj/team_pics/18/original/spartak_2015__200x200.png'},
+  {id:22, kid:26,  en:'Torpedo',        fr:'Torpedo Nijni Novgorod',     ville:'Nizhny Novgorod',    conf:'Ouest', div:'Bobrov',     al:['Torpedo Nizhny Novgorod'], logo:'https://thumbs.webcaster.pro/rec-2-10.webcaster.pro/fc/sdc/team_pics/22/original/Torpedo_2025_200x200_NEW.png'},
+  {id:30, kid:37,  en:'Metallurg Mg',   fr:'Metallourg Magnitogorsk',    ville:'Magnitogorsk',       conf:'Est',   div:'Kharlamov',  al:['Metallurg Magnitogorsk','Metallurg'], logo:'https://thumbs.webcaster.pro/rec-1-4.webcaster.pro/fc/sdn/team_pics/30/original/metallurg_mg_2020__200x200.png'},
+  {id:10, kid:34,  en:'Avangard',       fr:'Avangard Omsk',              ville:'Omsk Region',        conf:'Est',   div:'Tchernychev',al:['Avangard Omsk'], logo:'https://thumbs.webcaster.pro/rec-1-2.webcaster.pro/fc/sdb/team_pics/10/original/Avangard_2026_500x500_NEW.png'},
+  {id:56, kid:190, en:'Avtomobilist',   fr:'Avtomobilist Iekaterinbourg',ville:'Ekaterinburg',       conf:'Est',   div:'Kharlamov',  al:['Avtomobilist Yekaterinburg','Avtomobilist Ekaterinburg'], logo:'https://thumbs.webcaster.pro/rec-1-2.webcaster.pro/fc/sda/team_pics/56/original/avtomobilist__200x200.png'},
+  {id:46, kid:198, en:'Barys',          fr:'Barys Astana',               ville:'Astana',             conf:'Est',   div:'Tchernychev',al:['Barys Nur-Sultan','Barys Astana'], logo:'https://thumbs.webcaster.pro/rec-1-7.webcaster.pro/fc/sdj/team_pics/46/original/barys_2022_head_only__200x200.png'},
+  {id:32, kid:38,  en:'Salavat Yulaev', fr:'Salavat Ioulaïev Oufa',      ville:'Ufa',                conf:'Est',   div:'Tchernychev',al:['Salavat Yulaev Ufa','Salavat Yulaev'], logo:'https://thumbs.webcaster.pro/rec-1-2.webcaster.pro/fc/sdc/team_pics/32/original/salavat_yulaev_2020__200x200.png'},
+  {id:315,kid:568, en:'Dragons',        fr:'Shanghai Dragons',           ville:'Shanghai',           conf:'Ouest', div:'Tarassov',   al:['Shanghai Dragons','Kunlun Red Star','Kunlun Shanghai'], logo:'https://thumbs.webcaster.pro/rec-1-4.webcaster.pro/fc/sdm/team_pics/315/original/Shanghai_Dragons_2026_500x500_NEW_(1).png'},
+  {id:105,kid:66,  en:'Lada',           fr:'Lada Togliatti',             ville:'Togliatti',          conf:'Ouest', div:'Bobrov',     al:['Lada Togliatti','Lada Tolyatti'], logo:'https://thumbs.webcaster.pro/rec-2-3.webcaster.pro/fc/sdn/team_pics/105/original/Lada_logo_2026_200x200_NEW.png'},
+  {id:16, kid:2,   en:'CSKA',           fr:'CSKA Moscou',                ville:'Moscow',             conf:'Ouest', div:'Tarassov',   al:['CSKA Moscow'], logo:'https://thumbs.webcaster.pro/rec-2-3.webcaster.pro/fc/sdc/team_pics/16/original/cska_2016_rus__200x200.png'},
+  {id:61, kid:418, en:'Admiral',        fr:'Admiral Vladivostok',        ville:'Vladivostok',        conf:'Est',   div:'Tchernychev',al:['Admiral Vladivostok'], logo:'https://thumbs.webcaster.pro/rec-1-4.webcaster.pro/fc/sdn/team_pics/61/original/admiral_2024_200x200.png'},
+  {id:12, kid:54,  en:'Amur',           fr:'Amour Khabarovsk',           ville:'Khabarovsk',         conf:'Est',   div:'Tchernychev',al:['Amur Khabarovsk'], logo:'https://thumbs.webcaster.pro/rec-2-2.webcaster.pro/fc/sdc/team_pics/12/original/amur_2015__200x200.png'},
+  {id:38, kid:207, en:'Dinamo Mn',      fr:'Dinamo Minsk',               ville:'Minsk',              conf:'Ouest', div:'Tarassov',   al:['Dinamo Minsk','Dynamo Minsk'], logo:'https://thumbs.webcaster.pro/rec-2-16.webcaster.pro/fc/sdd/team_pics/38/original/dinamo_mn_2019_alternative__200x200.png'},
+  {id:42, kid:56,  en:'Severstal',      fr:'Severstal Tcherepovets',     ville:'Cherepovets',        conf:'Ouest', div:'Tarassov',   al:['Severstal Cherepovets'], logo:'https://thumbs.webcaster.pro/rec-1-4.webcaster.pro/fc/sdn/team_pics/42/original/severstal_2021__200x200.png'},
+  {id:24, kid:29,  en:'Sibir',          fr:'Sibir Novossibirsk',         ville:'Novosibirsk Region', conf:'Est',   div:'Tchernychev',al:['Sibir Novosibirsk'], logo:'https://thumbs.webcaster.pro/rec-2-16.webcaster.pro/fc/sdd/team_pics/24/original/sibir_rus__200x200.png'},
+  {id:28, kid:25,  en:'Traktor',        fr:'Traktor Tcheliabinsk',       ville:'Chelyabinsk',        conf:'Est',   div:'Kharlamov',  al:['Traktor Chelyabinsk','Tractor Chelyabinsk'], logo:'https://thumbs.webcaster.pro/rec-2-3.webcaster.pro/fc/sdb/team_pics/28/original/traktor_2020__200x200.png'},
+  {id:113,kid:451, en:'HC Sochi',       fr:'HC Sotchi',                  ville:'Sochi',              conf:'Ouest', div:'Bobrov',     al:['HC Sochi','Sochi'], logo:'https://thumbs.webcaster.pro/rec-1-4.webcaster.pro/fc/sdn/team_pics/113/original/hc_sochi_2024__200x200_new.png'}
+];
+
+function _g45KhlNorm(s) {
+  return String(s == null ? '' : s).normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase().replace(/[^a-z0-9]/g, '');
+}
+
+/* Retrouve une equipe par id webcaster, khl_id, nom KHL, nom francais ou alias.
+   Comparaison EXACTE sur forme normalisee : pas de « contient », sinon
+   « Dynamo » seul tomberait indifferemment sur Moscou ou Minsk (piege deja vu
+   avec PSG/Paris FC). */
+var _g45KhlIndex = null;
+function g45KhlEquipe(x) {
+  if (x == null || x === '') return null;
+  if (typeof x === 'object') x = x.id != null ? x.id : x.name;
+  if (!_g45KhlIndex) {
+    _g45KhlIndex = { id: {}, nom: {} };
+    G45_KHL_EQUIPES.forEach(function (e) {
+      _g45KhlIndex.id[e.id] = e;
+      [e.en, e.fr].concat(e.al || []).forEach(function (n) {
+        var k = _g45KhlNorm(n);
+        if (k && !_g45KhlIndex.nom[k]) _g45KhlIndex.nom[k] = e;
+      });
+    });
+  }
+  if (typeof x === 'number' || /^\d+$/.test(String(x))) return _g45KhlIndex.id[+x] || null;
+  return _g45KhlIndex.nom[_g45KhlNorm(x)] || null;
+}
+function g45KhlNomFr(x) { var e = g45KhlEquipe(x); return e ? e.fr : (typeof x === 'object' && x ? (x.name || '') : String(x || '')); }
+function g45KhlLogo(x) { var e = g45KhlEquipe(x); return e ? e.logo : ((x && x.image) || ''); }
+
+/* Minute d'un but, choix d'Antoine : dans la periode (« P2 3:30 »).
+   `time` KHL = secondes depuis le debut du match (1410 → P2 3:30, verifie sur
+   Admiral - Dynamo Moscou). Periodes de 20 min ; au-dela : prolongation. */
+function g45KhlMinute(tempsSec, periode) {
+  var t = Math.max(0, +tempsSec || 0);
+  var p = +periode || (Math.floor(t / 1200) + 1);
+  var fmt = function (s) { s = Math.max(0, Math.round(s)); return Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0'); };
+  if (p >= 4) return 'Prol. ' + fmt(t - 3600);
+  return 'P' + p + ' ' + fmt(t - (p - 1) * 1200);
+}
+
+/* Appel via le Worker. Retourne le JSON ou null (jamais d'exception). */
+async function g45KhlApi(fichier, params) {
+  try {
+    var qs = Object.keys(params || {}).map(function (k) {
+      var v = params[k];
+      return (Array.isArray(v) ? v : [v]).map(function (x) { return encodeURIComponent(k) + '=' + encodeURIComponent(x); }).join('&');
+    }).filter(Boolean).join('&');
+    var chemin = '/' + fichier + '.json?locale=en' + (qs ? '&' + qs : '');
+    var base = (typeof FD_PROXY !== 'undefined' && FD_PROXY) ? FD_PROXY : 'https://fd-proxy.touraine-antoine.workers.dev/';
+    var r = await fetch(base + '?host=khl&path=' + encodeURIComponent(chemin));
+    if (!r.ok) return null;
+    var t = await r.text();
+    if (!/^\s*[\[{]/.test(t)) return null;
+    return JSON.parse(t);
+  } catch (e) { console.warn('KHL :', e && e.message); return null; }
+}
+
+/* Saison en cours lue dans data.json (403 en navigateur, OK via Worker).
+   Cache 12 h ; un echec n'est PAS mis en cache (regle du projet) : repli sur
+   la valeur par defaut pour cette fois seulement. */
+async function g45KhlStageActuel() {
+  try {
+    var c = JSON.parse(localStorage.getItem('g45khl_stage') || 'null');
+    if (c && c.id && (Date.now() - c.t) < 12 * 3600 * 1000) return c.id;
+  } catch (e) {}
+  var d = await g45KhlApi('data', {});
+  var id = d && +d.current_stage_id;
+  if (id) {
+    try { localStorage.setItem('g45khl_stage', JSON.stringify({ id: id, t: Date.now() })); } catch (e) {}
+    return id;
+  }
+  return G45_KHL_STAGE_DEFAUT;
+}
+
+/* Inscription dans les tables existantes du formulaire de pari et des logos. */
+(function _g45KhlInscrire() {
+  var HOCKEY = '\ud83c\udfd2';
+  try {
+    if (typeof COMP_DB !== 'undefined' && COMP_DB) {
+      if (!COMP_DB[HOCKEY]) COMP_DB[HOCKEY] = [];
+      if (COMP_DB[HOCKEY].indexOf('KHL') < 0) COMP_DB[HOCKEY].push('KHL');
+    }
+  } catch (e) {}
+  try {
+    if (typeof ADV_DB !== 'undefined' && ADV_DB) {
+      if (!ADV_DB[HOCKEY]) ADV_DB[HOCKEY] = [];
+      G45_KHL_EQUIPES.forEach(function (e) { if (ADV_DB[HOCKEY].indexOf(e.fr) < 0) ADV_DB[HOCKEY].push(e.fr); });
+    }
+  } catch (e) {}
+  try {
+    if (typeof LOGOS !== 'undefined' && LOGOS) {
+      G45_KHL_EQUIPES.forEach(function (e) {
+        [e.fr, e.en].concat(e.al || []).forEach(function (n) { if (n && !LOGOS[n]) LOGOS[n] = e.logo; });
+      });
+    }
+  } catch (e) {}
+  try {
+    if (typeof _G45_CACHE_PREFIXES !== 'undefined' && _G45_CACHE_PREFIXES.indexOf('g45khl_') < 0) _G45_CACHE_PREFIXES.push('g45khl_');
+  } catch (e) {}
+})();
+
+window.G45_KHL_EQUIPES = G45_KHL_EQUIPES;
+window.g45KhlEquipe = g45KhlEquipe;
+window.g45KhlNomFr = g45KhlNomFr;
+window.g45KhlLogo = g45KhlLogo;
+window.g45KhlMinute = g45KhlMinute;
+window.g45KhlApi = g45KhlApi;
+window.g45KhlStageActuel = g45KhlStageActuel;
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   KHL — VUE COMPETITIONS (17/09/2026, etape 1b, maquette validee par Antoine)
+   ───────────────────────────────────────────────────────────────────────────
+   La KHL n'est pas chez ESPN : toutes les vues ESPN de loadCompetTab
+   (g45LoadStandings, g45LoadLeagueMatches...) sont inutilisables. On ajoute
+   donc la tuile « KHL » a la carte Hockey, et on INTERCEPTE loadCompetTab
+   quand elle est choisie, pour rendre nos propres vues. La NHL et tous les
+   autres sports passent par la fonction d'origine, sans aucun changement.
+   Vues : Equipes, Direct/jour, Calendrier, Classement, Forme. Individuel
+   viendra apres une sonde de players_v2 (pas encore verifie).
+   Donnees KHL reperees par sonde, a ne pas re-deviner :
+   - events_v2 : team_a = DOMICILE, score "a:b", game_state_key
+     not_yet_started / finished (autre = en cours), period -1 si fini,
+     scores.{first_period..third_period, overtime, bullitt}. type_id 18 = match,
+     24 = retransmission (meme match possible) → dedoublonnage par khl_id.
+   - event_v2 (fiche) : goals[] du PLUS RECENT au plus ancien, time en secondes
+     depuis le debut, author.team_id, assistants[].name ; team_x.players[] avec
+     match_stats (goals, shots, toi, hits...).
+   ═══════════════════════════════════════════════════════════════════════════ */
+var _g45KhlVue = 'direct';
+var _g45KhlJour = 0;            /* decalage en jours depuis aujourd'hui */
+var _g45KhlConf = 'Ouest';
+var _g45KhlFormeN = 5, _g45KhlFormeLieu = '';
+var _g45KhlOuverts = {};        /* fiches « Stats joueurs » depliees */
+
+function _g45KhlEsc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]; }); }
+
+/* Match normalise, leger (il est mis en cache par semaines entieres). */
+function _g45KhlMatch(ev) {
+  var e = ev && ev.event ? ev.event : ev;
+  if (!e || !e.team_a || !e.team_b) return null;
+  var s = e.scores || {};
+  return { id: e.id, kid: e.khl_id, t: +e.start_at || 0, etat: e.game_state_key || '', per: e.period,
+           a: e.team_a.id, b: e.team_b.id, an: e.team_a.name, bn: e.team_b.name,
+           sc: e.score || '', p: [s.first_period, s.second_period, s.third_period], ot: s.overtime, so: s.bullitt,
+           lieu: e.location || '', ty: e.type_id };
+}
+function _g45KhlDedoublonne(liste) {
+  var par = {};
+  liste.forEach(function (m) {
+    if (!m) return;
+    var k = m.kid || ('i' + m.id), old = par[k];
+    if (!old || (old.ty !== 18 && m.ty === 18)) par[k] = m;
+  });
+  return Object.keys(par).map(function (k) { return par[k]; }).sort(function (x, y) { return x.t - y.t; });
+}
+function _g45KhlFini(m) { return m.etat === 'finished'; }
+function _g45KhlAVenir(m) { return m.etat === 'not_yet_started'; }
+function _g45KhlButs(m) {
+  var p = String(m.sc || '').split(':');
+  return { a: parseInt(p[0], 10) || 0, b: parseInt(p[1], 10) || 0 };
+}
+/* Vainqueur d'un match fini, et s'il s'est joue en prolongation / tirs au but.
+   Si le score final ne departage pas (tirs au but non comptes), on lit bullitt. */
+function _g45KhlIssue(m) {
+  var s = _g45KhlButs(m), g = null;
+  if (s.a !== s.b) g = s.a > s.b ? 'a' : 'b';
+  else if (m.so) { var q = String(m.so).split(':'); g = (+q[0] > +q[1]) ? 'a' : ((+q[1] > +q[0]) ? 'b' : null); }
+  return { g: g, prol: !!(m.ot || m.so), tab: !!m.so, a: s.a, b: s.b };
+}
+
+/* Matchs sur une plage [de, a] (ms). Decoupe par semaines ; chaque page est
+   lue jusqu'a ce qu'elle n'apporte plus rien de neuf (taille de page inconnue).
+   Une semaine ENTIEREMENT passee depuis plus d'un jour est figee : cache
+   definitif. La semaine en cours n'est jamais mise en cache cote appli (le
+   Worker la garde 60 s). Resultat vide : jamais mis en cache. */
+async function _g45KhlMatchsPlage(de, a) {
+  var stage = await g45KhlStageActuel();
+  var SEM = 7 * 86400000, out = [];
+  var debut = Math.floor(de / 86400000) * 86400000;
+  for (var t0 = debut; t0 < a; t0 += SEM) {
+    var t1 = Math.min(t0 + SEM, a), cle = 'g45khl_sem_' + stage + '_' + t0 + '_' + t1;
+    var fige = (t1 < Date.now() - 86400000);
+    var lu = null;
+    if (fige) { try { lu = JSON.parse(localStorage.getItem(cle) || 'null'); } catch (e) {} }
+    if (!lu) {
+      lu = []; var vus = {};
+      for (var page = 1; page <= 8; page++) {
+        var j = await g45KhlApi('events_v2', { stage_id: stage, order_direction: 'asc', page: page,
+          'q[start_at_gt_time_from_unixtime]': Math.floor(t0 / 1000) - 1,
+          'q[start_at_lt_time_from_unixtime]': Math.floor(t1 / 1000) });
+        if (!Array.isArray(j) || !j.length) break;
+        var neufs = 0;
+        j.forEach(function (x) { var m = _g45KhlMatch(x); if (m && !vus[m.id]) { vus[m.id] = 1; lu.push(m); neufs++; } });
+        if (!neufs) break;
+      }
+      if (fige && lu.length) { try { localStorage.setItem(cle, JSON.stringify(lu)); } catch (e) {} }
+    }
+    out = out.concat(lu);
+  }
+  return _g45KhlDedoublonne(out);
+}
+function _g45KhlDebutSaison() {
+  var d = new Date(), an = (d.getMonth() + 1 >= 8) ? d.getFullYear() : d.getFullYear() - 1;
+  return Date.UTC(an, 7, 15);
+}
+
+/* Fiche d'un match reduite a ce qui sert : buts et joueurs. Match fini = cache
+   definitif ; en cours = memoire 60 s. */
+var _g45KhlFichesMem = {};
+async function _g45KhlFiche(m) {
+  var cle = 'g45khl_fiche_' + m.id;
+  if (_g45KhlFini(m)) { try { var c = JSON.parse(localStorage.getItem(cle) || 'null'); if (c) return c; } catch (e) {} }
+  var mem = _g45KhlFichesMem[m.id];
+  if (mem && Date.now() - mem.t < 60000) return mem.f;
+  var d = await g45KhlApi('event_v2', { id: m.id });
+  var e = d && (d.event || d);
+  if (!e || !Array.isArray(e.goals)) return null;
+  var joueurs = function (tm) {
+    return ((tm && tm.players) || []).map(function (p) {
+      var st = {}; (p.match_stats || []).forEach(function (s) { st[s.id] = s.val; });
+      return { n: p.name, num: p.shirt_number, r: p.role_key, g: st.goals || 0, tirs: st.shots || 0, toi: st.toi || 0, hits: st.hits || 0 };
+    });
+  };
+  var f = {
+    arene: e.arena ? e.arena.name + (e.arena.city ? ', ' + e.arena.city : '') : '',
+    buts: e.goals.slice().reverse().map(function (g) {
+      return { t: g.time, p: g.period, sc: g.score, st: g.status_abbr || '', eq: g.author && g.author.team_id,
+               n: g.author && g.author.name, pa: (g.assistants || []).map(function (x) { return x.name; }) };
+    }),
+    ja: joueurs(e.team_a), jb: joueurs(e.team_b)
+  };
+  if (_g45KhlFini(m)) { try { localStorage.setItem(cle, JSON.stringify(f)); } catch (e2) {} }
+  _g45KhlFichesMem[m.id] = { t: Date.now(), f: f };
+  return f;
+}
+
+function _g45KhlNomCourt(n) { /* « Zborovsky Sergei » → « Zborovsky » */ return String(n || '').split(' ')[0]; }
+function _g45KhlHeure(t) {
+  try { return new Date(t).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Paris' }); } catch (e) { return ''; }
+}
+function _g45KhlJourTxt(t) {
+  try { return new Date(t).toLocaleDateString('fr-FR', { weekday: 'short', day: 'numeric', month: 'short', timeZone: 'Europe/Paris' }); } catch (e) { return ''; }
+}
+function _g45KhlLogoHtml(id, nom, taille) {
+  var s = taille || 30, lo = g45KhlLogo(id);
+  var ini = _g45KhlEsc(String(g45KhlNomFr(id) || nom || '?').slice(0, 3).toUpperCase());
+  return '<span style="width:' + s + 'px;height:' + s + 'px;flex:none;display:inline-flex;align-items:center;justify-content:center;border-radius:50%;background:rgba(255,255,255,.06);font-size:10px;font-weight:800;color:#9fb0c7;">'
+    + (lo ? '<img src="' + _g45KhlEsc(lo) + '" alt="" loading="lazy" style="width:100%;height:100%;object-fit:contain;" onerror="this.parentNode.textContent=\'' + ini + '\'">' : ini) + '</span>';
+}
+function _g45KhlChip(libelle, actif, onclick) {
+  return '<button onclick="' + onclick + '" style="padding:7px 12px;font-size:11.5px;font-weight:800;cursor:pointer;border-radius:8px;'
+    + (actif ? 'background:rgba(30,215,96,.14);border:1px solid rgba(30,215,96,.5);color:#1ed760;' : 'background:#1a2235;border:1px solid rgba(255,255,255,.14);color:#9fb0c7;')
+    + '">' + libelle + '</button>';
+}
+
+/* Carte de match (maquette) : score, periodes, buteurs de chaque cote. */
+function _g45KhlCarte(m, f) {
+  var fini = _g45KhlFini(m), avenir = _g45KhlAVenir(m), iss = _g45KhlIssue(m);
+  var etat = fini ? ('Termin\u00e9' + (iss.tab ? ' (TAB)' : (iss.prol ? ' (prol.)' : '')))
+           : avenir ? ('\u00c0 venir \u00b7 ' + _g45KhlHeure(m.t))
+           : ('<span style="color:#ff4545;">\u25cf En cours' + (m.per > 0 ? ' \u00b7 P' + m.per : '') + '</span>');
+  var coulEtat = fini ? '#8a93ad' : (avenir ? '#f0b020' : '#ff4545');
+  var gA = fini && iss.g === 'b' ? 'color:#8a93ad;' : '', gB = fini && iss.g === 'a' ? 'color:#8a93ad;' : '';
+  var h = '<div style="background:#141d33;border:1px solid rgba(255,255,255,.08);border-radius:12px;padding:10px 12px;margin-bottom:10px;">'
+    + '<div style="display:flex;justify-content:space-between;gap:8px;margin-bottom:8px;font-size:11px;color:#8a93ad;">'
+    + '<span>KHL \u00b7 ' + _g45KhlEsc((f && f.arene) || g45KhlEquipe(m.a) && g45KhlEquipe(m.a).ville || m.lieu) + '</span>'
+    + '<span style="color:' + coulEtat + ';white-space:nowrap;">' + etat + '</span></div>'
+    + '<div style="display:flex;align-items:center;gap:10px;">'
+    + _g45KhlLogoHtml(m.a, m.an) + '<div style="flex:1;min-width:0;font-weight:700;' + gA + '">' + _g45KhlEsc(g45KhlNomFr(m.a) || m.an) + '</div>'
+    + (avenir ? '<div style="font-size:14px;color:#8a93ad;">vs</div>'
+              : '<div style="font-size:20px;font-weight:800;letter-spacing:1px;white-space:nowrap;"><span style="' + gA + '">' + iss.a + '</span> \u2013 <span style="' + gB + '">' + iss.b + '</span></div>')
+    + '<div style="flex:1;min-width:0;text-align:right;font-weight:700;' + gB + '">' + _g45KhlEsc(g45KhlNomFr(m.b) || m.bn) + '</div>' + _g45KhlLogoHtml(m.b, m.bn)
+    + '</div>';
+  if (!avenir) {
+    var per = m.p.map(function (x, i) { return x ? '<span style="padding:3px 8px;border-radius:6px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);font-size:11px;color:#aab3cc;">P' + (i + 1) + ' ' + _g45KhlEsc(String(x).replace(':', '-')) + '</span>' : ''; }).join('');
+    if (m.ot) per += '<span style="padding:3px 8px;border-radius:6px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);font-size:11px;color:#aab3cc;">Prol. ' + _g45KhlEsc(String(m.ot).replace(':', '-')) + '</span>';
+    if (m.so) per += '<span style="padding:3px 8px;border-radius:6px;background:rgba(240,176,32,.1);border:1px solid rgba(240,176,32,.3);font-size:11px;color:#f0b020;">TAB ' + _g45KhlEsc(String(m.so).replace(':', '-')) + '</span>';
+    if (per) h += '<div style="display:flex;justify-content:center;flex-wrap:wrap;gap:6px;margin:8px 0;">' + per + '</div>';
+  }
+  if (f && f.buts && f.buts.length) {
+    var ligne = function (g) {
+      var pa = g.pa.length ? ' <span style="color:#8a93ad;">(' + g.pa.map(function (x) { return _g45KhlEsc(_g45KhlNomCourt(x)); }).join(', ') + ')</span>' : '';
+      var sit = (g.st && g.st !== 'ES') ? ' <span style="color:#f0b020;font-size:10px;">' + _g45KhlEsc(g.st === 'PP' ? 'sup.' : (g.st === 'SH' ? 'inf.' : g.st)) + '</span>' : '';
+      return '<span style="color:#8a93ad;">' + g45KhlMinute(g.t, g.p) + '</span> <b>' + _g45KhlEsc(_g45KhlNomCourt(g.n)) + '</b>' + sit + pa;
+    };
+    var colA = f.buts.filter(function (g) { return g.eq === m.a; }).map(ligne);
+    var colB = f.buts.filter(function (g) { return g.eq === m.b; }).map(ligne);
+    h += '<div style="border-top:1px solid rgba(255,255,255,.07);padding-top:8px;display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:4px 14px;font-size:11.5px;line-height:1.5;">'
+      + '<div>' + colA.join('<br>') + '</div><div style="text-align:right;">' + colB.join('<br>') + '</div></div>';
+  }
+  if (f && !avenir) {
+    var ouvert = !!_g45KhlOuverts[m.id];
+    h += '<div style="margin-top:8px;">' + _g45KhlChip('\ud83d\udcca Stats joueurs', ouvert, 'g45KhlBasculeStats(' + m.id + ')') + '</div>';
+    if (ouvert) h += _g45KhlTableJoueurs(m, f);
+  } else if (!avenir && !f) {
+    h += '<div style="margin-top:6px;font-size:10.5px;color:#8a93ad;">\u23f3 buteurs\u2026</div>';
+  }
+  return h + '</div>';
+}
+function _g45KhlTableJoueurs(m, f) {
+  var passes = {};
+  f.buts.forEach(function (g) { g.pa.forEach(function (n) { passes[n] = (passes[n] || 0) + 1; }); });
+  var bloc = function (liste, idEq) {
+    var lignes = liste.filter(function (p) { return p.r !== 'goaltender'; })
+      .map(function (p) { p.a = passes[p.n] || 0; return p; })
+      .sort(function (x, y) { return (y.g + y.a) - (x.g + x.a) || y.g - x.g || y.tirs - x.tirs; })
+      .map(function (p) {
+        return '<tr><td style="padding:3px 4px;">' + _g45KhlEsc(p.n) + '</td><td style="text-align:center;">' + p.g + '</td><td style="text-align:center;">' + p.a
+          + '</td><td style="text-align:center;">' + p.tirs + '</td><td style="text-align:center;">' + Math.round(p.toi) + '\'</td><td style="text-align:center;">' + p.hits + '</td></tr>';
+      }).join('');
+    return '<div style="font-weight:800;margin:10px 0 4px;display:flex;align-items:center;gap:6px;">' + _g45KhlLogoHtml(idEq, '', 18) + _g45KhlEsc(g45KhlNomFr(idEq)) + '</div>'
+      + '<div style="overflow-x:auto;"><table style="width:100%;border-collapse:collapse;font-size:11px;color:#e8ecfa;">'
+      + '<tr style="color:#8a93ad;"><td style="padding:3px 4px;">Joueur</td><td style="text-align:center;">B</td><td style="text-align:center;">A</td><td style="text-align:center;">Tirs</td><td style="text-align:center;">Glace</td><td style="text-align:center;">M.\u00e9ch.</td></tr>'
+      + lignes + '</table></div>';
+  };
+  return bloc(f.ja, m.a) + bloc(f.jb, m.b);
+}
+function g45KhlBasculeStats(id) { _g45KhlOuverts[id] = !_g45KhlOuverts[id]; loadCompetTab(); }
+window.g45KhlBasculeStats = g45KhlBasculeStats;
+
+/* ─── VUES ─── */
+async function _g45KhlVueDirect(body) {
+  var j0 = new Date(); j0.setHours(0, 0, 0, 0);
+  var jours = '';
+  for (var k = -3; k <= 3; k++) {
+    var dj = new Date(j0.getTime() + k * 86400000);
+    var lib = k === 0 ? 'Aujourd\u2019hui' : dj.toLocaleDateString('fr-FR', { weekday: 'short', day: 'numeric' });
+    jours += _g45KhlChip(lib, k === _g45KhlJour, 'g45KhlJour(' + k + ')');
+  }
+  var de = j0.getTime() + _g45KhlJour * 86400000;
+  body.innerHTML = '<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px;">' + jours + '</div><div id="g45-khl-cartes" style="color:#9fb0c7;font-size:11.5px;">\u23f3 Chargement\u2026</div>';
+  var ms = await _g45KhlMatchsPlage(de, de + 86400000);
+  ms = ms.filter(function (m) { return m.t >= de && m.t < de + 86400000; });
+  var zone = document.getElementById('g45-khl-cartes');
+  if (!zone) return;
+  if (!ms.length) { zone.innerHTML = 'Aucun match KHL ce jour-l\u00e0.'; return; }
+  var fiches = {};
+  var rendre = function () {
+    var z = document.getElementById('g45-khl-cartes');
+    if (z) z.innerHTML = ms.map(function (m) { return _g45KhlCarte(m, fiches[m.id]); }).join('');
+  };
+  rendre();
+  for (var i = 0; i < ms.length; i++) {
+    if (_g45KhlAVenir(ms[i])) continue;
+    fiches[ms[i].id] = await _g45KhlFiche(ms[i]);
+    if (_g45KhlVue !== 'direct' || !document.getElementById('g45-khl-cartes')) return; /* l'utilisateur est parti */
+    rendre();
+  }
+}
+function g45KhlJour(k) { _g45KhlJour = k; loadCompetTab(); }
+window.g45KhlJour = g45KhlJour;
+
+async function _g45KhlVueCalendrier(body) {
+  var j0 = new Date(); j0.setHours(0, 0, 0, 0);
+  var ms = (await _g45KhlMatchsPlage(j0.getTime(), j0.getTime() + 14 * 86400000)).filter(function (m) { return !_g45KhlFini(m); });
+  if (!ms.length) { body.innerHTML = '<div style="color:#9fb0c7;font-size:11.5px;">Aucun match KHL dans les 14 prochains jours.</div>'; return; }
+  var h = '', jourCourant = '';
+  ms.forEach(function (m) {
+    var j = _g45KhlJourTxt(m.t);
+    if (j !== jourCourant) { jourCourant = j; h += '<div style="font-size:10px;font-weight:800;letter-spacing:.6px;text-transform:uppercase;color:#c3cfe6;margin:12px 0 6px;">' + _g45KhlEsc(j) + '</div>'; }
+    h += '<div style="display:flex;align-items:center;gap:8px;padding:7px 8px;border-bottom:1px solid rgba(255,255,255,.06);font-size:12px;">'
+      + '<span style="width:42px;color:#f0b020;font-weight:700;">' + _g45KhlHeure(m.t) + '</span>'
+      + _g45KhlLogoHtml(m.a, m.an, 20) + '<span style="flex:1;min-width:0;">' + _g45KhlEsc(g45KhlNomFr(m.a)) + '</span>'
+      + '<span style="color:#8a93ad;">vs</span>'
+      + '<span style="flex:1;min-width:0;text-align:right;">' + _g45KhlEsc(g45KhlNomFr(m.b)) + '</span>' + _g45KhlLogoHtml(m.b, m.bn, 20) + '</div>';
+  });
+  body.innerHTML = h;
+}
+
+/* Classement recalcule depuis les matchs finis : 2 pts la victoire (quelle
+   qu'elle soit), 1 pt la defaite en prolongation ou aux tirs au but. */
+function _g45KhlClassement(ms) {
+  var t = {};
+  G45_KHL_EQUIPES.forEach(function (e) { t[e.id] = { e: e, mj: 0, v: 0, vp: 0, dp: 0, d: 0, bp: 0, bc: 0, pts: 0 }; });
+  ms.filter(_g45KhlFini).forEach(function (m) {
+    var iss = _g45KhlIssue(m); if (!iss.g) return;
+    [['a', m.a, iss.a, iss.b], ['b', m.b, iss.b, iss.a]].forEach(function (x) {
+      var r = t[x[1]]; if (!r) return;
+      r.mj++; r.bp += x[2]; r.bc += x[3];
+      if (iss.g === x[0]) { r.pts += 2; if (iss.prol) r.vp++; else r.v++; }
+      else if (iss.prol) { r.pts += 1; r.dp++; }
+      else r.d++;
+    });
+  });
+  return Object.keys(t).map(function (k) { return t[k]; }).sort(function (x, y) {
+    return y.pts - x.pts || (x.mj - y.mj) || (y.v - x.v) || ((y.bp - y.bc) - (x.bp - x.bc));
+  });
+}
+async function _g45KhlVueClassement(body) {
+  var ms = await _g45KhlMatchsPlage(_g45KhlDebutSaison(), Date.now());
+  var cl = _g45KhlClassement(ms).filter(function (r) { return r.e.conf === _g45KhlConf; });
+  var h = '<div style="display:flex;gap:6px;margin-bottom:10px;">' + _g45KhlChip('Ouest', _g45KhlConf === 'Ouest', "g45KhlConf('Ouest')") + _g45KhlChip('Est', _g45KhlConf === 'Est', "g45KhlConf('Est')") + '</div>'
+    + '<div style="overflow-x:auto;"><table style="width:100%;border-collapse:collapse;font-size:12px;color:#e8ecfa;">'
+    + '<tr style="color:#8a93ad;font-size:11px;"><td style="padding:5px 4px;">#</td><td>\u00c9quipe</td><td style="text-align:center;">MJ</td><td style="text-align:center;">V</td><td style="text-align:center;">VP</td><td style="text-align:center;">DP</td><td style="text-align:center;">D</td><td style="text-align:center;">+/-</td><td style="text-align:right;padding-right:4px;">PTS</td></tr>';
+  cl.forEach(function (r, i) {
+    h += '<tr style="border-top:1px solid rgba(255,255,255,.06);' + (i === 8 ? 'border-top:1px dashed rgba(240,176,32,.6);' : '') + '">'
+      + '<td style="padding:6px 4px;color:#8a93ad;">' + (i + 1) + '</td>'
+      + '<td><span style="display:inline-flex;align-items:center;gap:6px;">' + _g45KhlLogoHtml(r.e.id, '', 20) + _g45KhlEsc(r.e.fr) + '</span></td>'
+      + '<td style="text-align:center;">' + r.mj + '</td><td style="text-align:center;">' + r.v + '</td><td style="text-align:center;">' + r.vp + '</td><td style="text-align:center;">' + r.dp + '</td><td style="text-align:center;">' + r.d + '</td>'
+      + '<td style="text-align:center;">' + (r.bp - r.bc > 0 ? '+' : '') + (r.bp - r.bc) + '</td>'
+      + '<td style="text-align:right;padding-right:4px;font-weight:800;color:' + (i === 0 ? '#1ed760' : '#e8ecfa') + ';">' + r.pts + '</td></tr>';
+  });
+  h += '</table></div><div style="font-size:10.5px;color:#8a93ad;margin-top:8px;line-height:1.5;">VP = victoire en prolongation ou aux tirs au but \u00b7 DP = d\u00e9faite en prolongation ou aux tirs au but (1 pt). Pointill\u00e9 = limite des 8 qualifi\u00e9s pour les play-offs. Classement recalcul\u00e9 depuis les r\u00e9sultats.</div>';
+  body.innerHTML = h;
+}
+function g45KhlConf(c) { _g45KhlConf = c; loadCompetTab(); }
+window.g45KhlConf = g45KhlConf;
+
+async function _g45KhlVueForme(body) {
+  var ms = (await _g45KhlMatchsPlage(_g45KhlDebutSaison(), Date.now())).filter(_g45KhlFini).reverse(); /* recent d'abord */
+  var filtres = '<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px;">'
+    + _g45KhlChip('Global', _g45KhlFormeLieu === '', "g45KhlForme(null,'')") + _g45KhlChip('Domicile', _g45KhlFormeLieu === 'dom', "g45KhlForme(null,'dom')") + _g45KhlChip('Ext\u00e9rieur', _g45KhlFormeLieu === 'ext', "g45KhlForme(null,'ext')")
+    + '</div><div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px;">'
+    + [5, 10, 15, 20].map(function (n) { return _g45KhlChip(n + ' matchs', _g45KhlFormeN === n, 'g45KhlForme(' + n + ',null)'); }).join('') + '</div>';
+  var pastille = function (r) {
+    var c = { V: '#1ed760', VP: '#7bd88f', DP: '#f0b020', D: '#ff4545' }[r];
+    return '<span title="' + r + '" style="display:inline-flex;width:22px;height:22px;border-radius:5px;align-items:center;justify-content:center;font-size:9.5px;font-weight:800;color:#0d1426;background:' + c + ';">' + r + '</span>';
+  };
+  var lignes = G45_KHL_EQUIPES.map(function (e) {
+    var res = [];
+    for (var i = 0; i < ms.length && res.length < _g45KhlFormeN; i++) {
+      var m = ms[i], cote = m.a === e.id ? 'a' : (m.b === e.id ? 'b' : null);
+      if (!cote) continue;
+      if (_g45KhlFormeLieu === 'dom' && cote !== 'a') continue;
+      if (_g45KhlFormeLieu === 'ext' && cote !== 'b') continue;
+      var iss = _g45KhlIssue(m); if (!iss.g) continue;
+      res.push(iss.g === cote ? (iss.prol ? 'VP' : 'V') : (iss.prol ? 'DP' : 'D'));
+    }
+    var gagnes = res.filter(function (r) { return r === 'V' || r === 'VP'; }).length;
+    return { e: e, res: res, pct: res.length ? Math.round(100 * gagnes / res.length) : 0 };
+  }).sort(function (x, y) { return y.pct - x.pct; });
+  body.innerHTML = filtres + lignes.map(function (l) {
+    return '<div style="display:flex;align-items:center;gap:8px;padding:6px 4px;border-bottom:1px solid rgba(255,255,255,.06);font-size:12px;">'
+      + _g45KhlLogoHtml(l.e.id, '', 22) + '<span style="flex:1;min-width:0;">' + _g45KhlEsc(l.e.fr) + '</span>'
+      + '<span style="display:flex;gap:3px;">' + l.res.map(pastille).join('') + '</span>'
+      + '<span style="width:42px;text-align:right;font-weight:800;">' + l.pct + '%</span></div>';
+  }).join('') + '<div style="font-size:10.5px;color:#8a93ad;margin-top:8px;">R\u00e9sultat le plus r\u00e9cent \u00e0 gauche \u00b7 %V = victoires, prolongation comprise.</div>';
+}
+function g45KhlForme(n, lieu) { if (n) _g45KhlFormeN = n; if (lieu !== null && lieu !== undefined) _g45KhlFormeLieu = lieu; loadCompetTab(); }
+window.g45KhlForme = g45KhlForme;
+
+function _g45KhlVueEquipes(body) {
+  var h = '';
+  ['Ouest', 'Est'].forEach(function (conf) {
+    h += '<div style="font-size:10px;font-weight:800;letter-spacing:.6px;text-transform:uppercase;color:#c3cfe6;margin:4px 0 8px;">Conf\u00e9rence ' + conf + '</div>'
+      + '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px;margin-bottom:14px;">';
+    G45_KHL_EQUIPES.filter(function (e) { return e.conf === conf; })
+      .sort(function (x, y) { return x.div.localeCompare(y.div) || x.fr.localeCompare(y.fr, 'fr'); })
+      .forEach(function (e) {
+        h += '<div style="display:flex;align-items:center;gap:8px;background:#141d33;border:1px solid rgba(255,255,255,.08);border-radius:10px;padding:8px;">'
+          + _g45KhlLogoHtml(e.id, '', 32) + '<div style="min-width:0;"><div style="font-size:12px;font-weight:700;">' + _g45KhlEsc(e.fr) + '</div>'
+          + '<div style="font-size:10px;color:#8a93ad;">Div. ' + _g45KhlEsc(e.div) + '</div></div></div>';
+      });
+    h += '</div>';
+  });
+  body.innerHTML = h;
+}
+
+async function _g45KhlRendre(el) {
+  var vues = [['equipes', '\ud83d\udc65 \u00c9quipes'], ['direct', '\ud83d\udd34 Direct / jour'], ['calendrier', '\ud83d\udcc5 Calendrier'],
+              ['classement', '\ud83d\udcca Classement'], ['forme', '\ud83d\udcc8 Forme']];
+  if (!vues.some(function (v) { return v[0] === _g45KhlVue; })) _g45KhlVue = 'direct';
+  var onglets = vues.map(function (v) {
+    var on = v[0] === _g45KhlVue;
+    return '<button onclick="g45KhlVue(\'' + v[0] + '\')" style="flex:1;min-width:96px;padding:10px;font-size:11.5px;font-weight:800;cursor:pointer;border-radius:9px;'
+      + (on ? 'background:#2563eb;border:1px solid #3b82f6;color:#fff;' : 'background:#1a2235;border:1px solid rgba(255,255,255,.14);color:#9fb0c7;') + '">' + v[1] + '</button>';
+  }).join('');
+  el.innerHTML = '<button onclick="g45CompetSel(null)" style="border:none;background:rgba(255,255,255,.06);color:var(--t2);border-radius:8px;padding:6px 12px;font-size:11px;font-weight:700;cursor:pointer;margin-bottom:10px;">\u2190 Hockey</button>'
+    + '<div class="sec" style="margin-top:0;">\ud83c\udfd2 KHL</div>'
+    + '<div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap;">' + onglets + '</div>'
+    + '<div id="g45-compet-body" class="fc"><div style="color:#9fb0c7;font-size:11.5px;">\u23f3 Chargement\u2026</div></div>';
+  var body = document.getElementById('g45-compet-body');
+  try {
+    if (_g45KhlVue === 'equipes') _g45KhlVueEquipes(body);
+    else if (_g45KhlVue === 'calendrier') await _g45KhlVueCalendrier(body);
+    else if (_g45KhlVue === 'classement') await _g45KhlVueClassement(body);
+    else if (_g45KhlVue === 'forme') await _g45KhlVueForme(body);
+    else await _g45KhlVueDirect(body);
+  } catch (e) {
+    if (body) body.innerHTML = '<div style="color:#ff6b6b;font-size:11.5px;">\u274c KHL indisponible pour le moment (' + _g45KhlEsc(e && e.message || 'erreur') + ')</div>';
+  }
+}
+function g45KhlVue(v) { _g45KhlVue = v; loadCompetTab(); }
+window.g45KhlVue = g45KhlVue;
+
+/* Branchement : tuile KHL dans la carte Hockey + interception de loadCompetTab. */
+(function _g45KhlBrancherCompet() {
+  try {
+    var hk = (typeof G45_SPORTS !== 'undefined') && G45_SPORTS.filter(function (s) { return s.key === 'hockey'; })[0];
+    if (hk && hk.groups && hk.groups[0] && !hk.groups[0].leagues.some(function (l) { return l.slug === 'khl'; })) {
+      hk.groups[0].leagues.push({ name: 'KHL', slug: 'khl', ico: '\ud83c\udfd2' });
+    }
+  } catch (e) {}
+  if (typeof loadCompetTab === 'function' && !loadCompetTab._g45Khl) {
+    var origine = loadCompetTab;
+    var enveloppe = async function () {
+      if (typeof _g45CompetSport !== 'undefined' && _g45CompetSport === 'hockey' && _g45CompetSel === 'khl') {
+        var el = document.getElementById('t-compet');
+        if (!el) return;
+        if (typeof _g45AccesPremium === 'function' && _g45AccesPremium() === false) return origine.apply(this, arguments);
+        return _g45KhlRendre(el);
+      }
+      return origine.apply(this, arguments);
+    };
+    enveloppe._g45Khl = true;
+    loadCompetTab = enveloppe;
+    window.loadCompetTab = enveloppe;
+  }
+})();
