@@ -17194,7 +17194,38 @@ function sortSquad(uid, col) {
   loadTeamCompo && loadTeamCompo();
 }
 
-function toggleAdminLock(uid) {
+/* ═══════════ CODE ADMIN VERIFIE PAR HASH (17/09/2026) ═══════════
+   Avant : le code etait ecrit en clair ici (depot public) et recopie en clair
+   dans localStorage (`gones45_admin_pwd`). Desormais seul un hash PBKDF2-SHA256
+   (600 000 iterations, sel aleatoire) vit dans le code ; le code saisi n'est
+   jamais memorise. Pour changer de code : recalculer SEL/HASH dans la console
+   avec le meme algorithme, et remplacer les deux constantes.
+   RAPPEL : c'est un masquage d'interface, pas un verrou (gones45_admin='1'
+   reste posable a la main dans la console). */
+var G45_ADMIN_SEL  = '0c1265400d9f69cdc6965485a63d9079';
+var G45_ADMIN_HASH = '97af2fe8e8a17138c12dbcb9e45e2051f784bc3b8c3909c950ef9adb6a1de13f';
+var G45_ADMIN_ITER = 600000;
+
+/* Purge de l'ancienne copie en clair laissee par les versions precedentes. */
+try { localStorage.removeItem('gones45_admin_pwd'); } catch (e) {}
+
+async function g45VerifAdmin(pwd) {
+  try {
+    if (!pwd || !window.crypto || !crypto.subtle) return false;
+    var sel = new Uint8Array(G45_ADMIN_SEL.match(/../g).map(function (h) { return parseInt(h, 16); }));
+    var cle = await crypto.subtle.importKey('raw', new TextEncoder().encode(pwd), 'PBKDF2', false, ['deriveBits']);
+    var bits = await crypto.subtle.deriveBits({ name: 'PBKDF2', hash: 'SHA-256', salt: sel, iterations: G45_ADMIN_ITER }, cle, 256);
+    var hex = Array.prototype.map.call(new Uint8Array(bits), function (x) { return x.toString(16).padStart(2, '0'); }).join('');
+    /* Comparaison sur toute la longueur (pas d'arret au premier ecart). */
+    if (hex.length !== G45_ADMIN_HASH.length) return false;
+    var diff = 0;
+    for (var i = 0; i < hex.length; i++) diff |= hex.charCodeAt(i) ^ G45_ADMIN_HASH.charCodeAt(i);
+    return diff === 0;
+  } catch (e) { return false; }
+}
+window.g45VerifAdmin = g45VerifAdmin;
+
+async function toggleAdminLock(uid) {
   var isAdmin = localStorage.getItem('gones45_admin') === '1';
   if(isAdmin) {
     // Verrouiller
@@ -17204,15 +17235,11 @@ function toggleAdminLock(uid) {
     var zone = document.getElementById('fbref-admin-zone-'+uid);
     if(zone) zone.style.display = 'none';
   } else {
-    // Deverrouiller - demander le mot de passe
+    // Deverrouiller - demander le code, verifie par hash
     var pwd = prompt('Code admin :');
     if(!pwd) return;
-    if(pwd === localStorage.getItem('gones45_admin_pwd') || pwd === 'Laurajtm45') {
+    if(await g45VerifAdmin(pwd)) {
       localStorage.setItem('gones45_admin', '1');
-      // Sauvegarder le mot de passe si premier usage
-      if(!localStorage.getItem('gones45_admin_pwd')) {
-        localStorage.setItem('gones45_admin_pwd', pwd);
-      }
       var btn = document.getElementById('btn-admin-lock-'+uid);
       if(btn) btn.textContent = '\uD83D\uDD13';
       var zone = document.getElementById('fbref-admin-zone-'+uid);
@@ -43339,14 +43366,15 @@ function g45EstAdmin() {
 }
 window.g45EstAdmin = g45EstAdmin;
 
-function g45AdminBascule() {
-  /* toggleAdminLock gere le prompt, la verification et la memorisation du code.
-     Elle cherche ensuite des elements par identifiant : le cadenas de cette vue
-     porte justement `btn-admin-lock-journees`, il se met donc a jour tout seul. */
-  if (typeof toggleAdminLock === 'function') toggleAdminLock('journees');
-  else {
-    var p = prompt('Code admin :');
-    if (p && p === localStorage.getItem('gones45_admin_pwd')) localStorage.setItem('gones45_admin', '1');
+async function g45AdminBascule() {
+  /* toggleAdminLock gere le prompt et la verification (par hash depuis le
+     17/09/2026). Elle cherche ensuite des elements par identifiant : le cadenas
+     de cette vue porte justement `btn-admin-lock-journees`, il se met donc a
+     jour tout seul. La verification etant async, on ATTEND sa fin avant de
+     redessiner — sinon la vue se redessinerait encore verrouillee. Le repli qui
+     comparait un code en clair est supprime. */
+  if (typeof toggleAdminLock === 'function') {
+    try { await toggleAdminLock('journees'); } catch (e) {}
   }
   /* On redessine la vue pour faire apparaitre ou disparaitre les boutons. */
   if (typeof loadCompetTab === 'function') loadCompetTab();
