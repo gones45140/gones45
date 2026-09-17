@@ -44377,6 +44377,7 @@ var _g45FanEnCours = 0;
 var _G45_PERSO_TTLNEG = 3 * 3600000;
 var _G45_PERSO_IMG = 'g45_img_perso_';
 var _G45_PERSO_DIR = 'images/equipes/';
+var _G45_PERSO_DIR_JOUEURS = 'images/joueurs/';
 
 function _g45ImgPersoLire(nom) {
   if (typeof nom !== 'string' || !nom.trim()) return '';
@@ -44408,8 +44409,14 @@ function _g45ImgPersoTester(nom) {
     try { console.warn('visuel perso : nom invalide', nom); } catch (e) {}
     return Promise.resolve('');
   }
-  var base = _G45_PERSO_DIR + _g45SgNorm(nom);
-  var exts = ['jpg', 'png'];
+  /* DOSSIER `images/joueurs/` (17/09/2026, demande d'Antoine) : il est teste
+     AVANT `images/equipes/`, pour ranger les portraits a part sans rien
+     deplacer de l'existant. Quatre URL possibles au total (deux dossiers x
+     deux extensions), toutes en minuscules sans accent — GitHub distingue la
+     casse. L'echec des quatre reste memorise 3 h seulement. */
+  var cheminsBase = [_G45_PERSO_DIR_JOUEURS, _G45_PERSO_DIR];
+  var exts = [];
+  cheminsBase.forEach(function (d) { ['png', 'jpg'].forEach(function (e) { exts.push(d + _g45SgNorm(nom) + '.' + e); }); });
   return new Promise(function (res) {
     var essayer = function (i) {
       if (i >= exts.length) {
@@ -44417,7 +44424,7 @@ function _g45ImgPersoTester(nom) {
         res('');
         return;
       }
-      var url = base + '.' + exts[i];
+      var url = exts[i];
       var im = new Image();
       im.onload = function () {
         try { localStorage.setItem(_G45_PERSO_IMG + _g45SgNorm(nom), JSON.stringify({ u: url, t: Date.now() })); } catch (e) {}
@@ -44850,9 +44857,11 @@ window.g45VisuelInfo = function (nom) {
   /* LES DEUX EXTENSIONS (01/09) : la commande annoncait `.jpg` en dur alors que
      `_g45ImgPersoTester` accepte aussi `.png` depuis le 27/08. Un outil de
      diagnostic qui ment sur ce qu'il attend est pire que pas d'outil du tout. */
-  var f = _G45_PERSO_DIR + _g45SgNorm(nom) + '.png';
+  var f = _G45_PERSO_DIR_JOUEURS + _g45SgNorm(nom) + '.png';
+  var f2 = _G45_PERSO_DIR + _g45SgNorm(nom) + '.png';
   console.log('Equipe   : ' + nom);
-  console.log('Fichier a deposer : ' + f + '  (ou .jpg)');
+  console.log('Fichier a deposer : ' + f + '  (ou .jpg) — joueur');
+  console.log('        ou        : ' + f2 + '  (ou .jpg) — club');
   console.log('ATTENTION : nom EXACT, minuscules, sans espace ni accent — GitHub distingue la casse.');
   console.log('Image perso       : ' + (_g45ImgPersoLire(nom) || '(aucune)'));
   console.log('TheSportsDB       : ' + (_g45FanLire(nom) || '(aucun)'));
@@ -49652,7 +49661,8 @@ async function g45KhlApi(fichier, params) {
        17/09 sur players_v2 page 1 et sur une semaine vide d'aout). Sans delai,
        l'ecran restait « Chargement » tout ce temps. */
     var ctrl = (typeof AbortController !== 'undefined') ? new AbortController() : null;
-    var minuteur = ctrl ? setTimeout(function () { try { ctrl.abort(); } catch (e) {} }, (fichier === 'players_v2' ? 45000 : 12000)) : null;
+    var minuteur = ctrl ? setTimeout(function () { try { ctrl.abort(); } catch (e) {} },
+      (fichier === 'players_v2' ? 45000 : (fichier === 'events_v2' ? 30000 : 12000))) : null;
     var r;
     try { r = await fetch(base + '?host=khl&path=' + encodeURIComponent(chemin), ctrl ? { signal: ctrl.signal } : undefined); }
     finally { if (minuteur) clearTimeout(minuteur); }
@@ -49786,7 +49796,10 @@ function _g45KhlIssue(m) {
    Une semaine ENTIEREMENT passee depuis plus d'un jour est figee : cache
    definitif. La semaine en cours n'est jamais mise en cache cote appli (le
    Worker la garde 60 s). Resultat vide : jamais mis en cache. */
+var _g45KhlEchecs = 0;   /* semaines non lues au dernier chargement */
+var _g45KhlDerniers = {};  /* dernier resultat REUSSI par plage, en memoire */
 async function _g45KhlMatchsPlage(de, a) {
+  _g45KhlEchecs = 0;
   var stage = await g45KhlStageActuel();
   var SEM = 7 * 86400000, out = [];
   var debut = Math.floor(de / 86400000) * 86400000;
@@ -49803,9 +49816,16 @@ async function _g45KhlMatchsPlage(de, a) {
     if (!lu) {
       lu = []; var vus = {};
       for (var page = 1; page <= 8; page++) {
-        var j = await g45KhlApi('events_v2', { stage_id: stage, order_direction: 'asc', page: page,
+        var params = { stage_id: stage, order_direction: 'asc', page: page,
           'q[start_at_gt_time_from_unixtime]': Math.floor(t0 / 1000) - 1,
-          'q[start_at_lt_time_from_unixtime]': Math.floor(t1 / 1000) });
+          'q[start_at_lt_time_from_unixtime]': Math.floor(t1 / 1000) };
+        var j = await g45KhlApi('events_v2', params);
+        /* Delai depasse sur la PREMIERE page d'une semaine : le Worker, lui, va
+           au bout et met en cache (ctx.waitUntil). Un second essai tombe donc
+           souvent sur le cache. Au-dela, on compte la semaine comme non lue
+           plutot que de faire croire qu'elle est vide. */
+        if (j === null && page === 1) j = await g45KhlApi('events_v2', params);
+        if (j === null) { if (page === 1) _g45KhlEchecs++; break; }
         if (!Array.isArray(j) || !j.length) break;
         var neufs = 0;
         j.forEach(function (x) { var m = _g45KhlMatch(x); if (m && !vus[m.id]) { vus[m.id] = 1; lu.push(m); neufs++; } });
@@ -49816,7 +49836,15 @@ async function _g45KhlMatchsPlage(de, a) {
     }
     out = out.concat(lu);
   }
-  return _g45KhlDedoublonne(out);
+  var res = _g45KhlDedoublonne(out);
+  /* NE JAMAIS REMPLACER UNE LISTE VALABLE PAR UN VIDE (17/09, constate par
+     Antoine : la vue affichait le match, puis une seconde lecture depassait le
+     delai et « Aucun match » effacait tout). Un vide n'est retenu que s'il est
+     SUR, c'est-a-dire si toutes les semaines ont repondu. Sinon on rend le
+     dernier resultat reussi de la meme plage. */
+  var cle = de + '_' + a;
+  if (res.length || !_g45KhlEchecs) { _g45KhlDerniers[cle] = res; return res; }
+  return _g45KhlDerniers[cle] || res;
 }
 function _g45KhlDebutSaison() {
   var d = new Date(), an = (d.getMonth() + 1 >= 8) ? d.getFullYear() : d.getFullYear() - 1;
@@ -49955,7 +49983,7 @@ async function _g45KhlVueDirect(body) {
   ms = ms.filter(function (m) { return m.t >= de && m.t < de + 86400000; });
   var zone = document.getElementById('g45-khl-cartes');
   if (!zone) return;
-  if (!ms.length) { zone.innerHTML = 'Aucun match KHL ce jour-l\u00e0.'; return; }
+  if (!ms.length) { zone.innerHTML = _g45KhlMsgVide('Aucun match KHL ce jour-l\u00e0.'); return; }
   var fiches = {};
   var rendre = function () {
     var z = document.getElementById('g45-khl-cartes');
@@ -49969,13 +49997,24 @@ async function _g45KhlVueDirect(body) {
     rendre();
   }
 }
+/* Message d'absence HONNETE : « aucun match » et « je n'ai pas pu lire »
+   ne sont pas la meme chose. Quand des semaines n'ont pas repondu, on le dit
+   et on propose de reessayer, au lieu d'annoncer une saison vide. */
+function _g45KhlMsgVide(txt) {
+  if (!_g45KhlEchecs) return '<div style="color:#9fb0c7;font-size:11.5px;">' + txt + '</div>';
+  return '<div style="color:#f0b020;font-size:11.5px;line-height:1.6;">\u26a0\ufe0f ' + _g45KhlEchecs + ' semaine'
+    + (_g45KhlEchecs > 1 ? 's' : '') + ' n\'a' + (_g45KhlEchecs > 1 ? 'ont' : '') + ' pas pu \u00eatre lue'
+    + (_g45KhlEchecs > 1 ? 's' : '') + ' (serveur KHL trop lent).<br>Le Worker termine la lecture en arri\u00e8re-plan : '
+    + 'r\u00e9essaie dans quelques secondes.'
+    + '<div style="margin-top:8px;">' + _g45KhlChip('\ud83d\udd04 R\u00e9essayer', false, 'loadCompetTab()') + '</div></div>';
+}
 function g45KhlJour(k) { _g45KhlJour = k; loadCompetTab(); }
 window.g45KhlJour = g45KhlJour;
 
 async function _g45KhlVueCalendrier(body) {
   var j0 = new Date(); j0.setHours(0, 0, 0, 0);
   var ms = (await _g45KhlMatchsPlage(j0.getTime(), j0.getTime() + 14 * 86400000)).filter(function (m) { return !_g45KhlFini(m); });
-  if (!ms.length) { body.innerHTML = '<div style="color:#9fb0c7;font-size:11.5px;">Aucun match KHL dans les 14 prochains jours.</div>'; return; }
+  if (!ms.length) { body.innerHTML = _g45KhlMsgVide('Aucun match KHL dans les 14 prochains jours.'); return; }
   var h = '', jourCourant = '';
   ms.forEach(function (m) {
     var j = _g45KhlJourTxt(m.t);
@@ -50160,7 +50199,7 @@ async function _g45KhlVueJournees(body) {
   var debut = _g45KhlDebutSaison();
   var fin = Date.now() + 21 * 86400000;
   var ms = await _g45KhlMatchsPlage(debut, fin);
-  if (!ms.length) { body.innerHTML = '<div style="color:#9fb0c7;font-size:11.5px;">Aucun match KHL trouv\u00e9 pour cette saison.</div>'; return; }
+  if (!ms.length) { body.innerHTML = _g45KhlMsgVide('Aucun match KHL trouv\u00e9 pour cette saison.'); return; }
   var sem = {}, lundiCourant = _g45KhlLundi(Date.now());
   ms.forEach(function (m) { var k = _g45KhlLundi(m.t); (sem[k] = sem[k] || []).push(m); });
   var cles = Object.keys(sem).map(Number).sort(function (a, b) { return a - b; });
@@ -50577,7 +50616,13 @@ window.g45KhlDirectSuivies = g45KhlDirectSuivies;
           .forEach(function (e) {
             var etoile = (typeof g45SuiviEqEtoile === 'function')
               ? g45SuiviEqEtoile({ nom: e.fr, id: e.id, logo: e.logo }, { s: 'khl', sp: 'hockey', ico: '\ud83c\udfd2' }) : '';
-            h += '<div style="display:flex;align-items:center;gap:8px;background:#141d33;border:1px solid rgba(255,255,255,.08);border-radius:10px;padding:8px;">'
+            /* CARTE CLIQUABLE, comme les autres championnats (17/09) : on passe
+               par g45CompetOuvrir, qui enregistre l'equipe dans
+               `g45_teams_perso` puis bascule sur l'onglet Bilan avant d'ouvrir
+               la fiche — sans cette bascule, la fiche s'affichait PAR-DESSUS la
+               grille. L'etoile garde son propre clic (stopPropagation). */
+            var argOuv = "'" + String(e.fr).replace(/'/g, "\\'") + "','" + e.id + "','khl','hockey',true";
+            h += '<div onclick="g45CompetOuvrir(' + argOuv + ')" title="Ouvrir la fiche" style="cursor:pointer;display:flex;align-items:center;gap:8px;background:#141d33;border:1px solid rgba(255,255,255,.08);border-radius:10px;padding:8px;">'
               + _g45KhlLogoHtml(e.id, '', 32) + '<div style="min-width:0;"><div style="font-size:12px;font-weight:700;">' + _g45KhlEsc(e.fr) + '</div>'
               + '<div style="font-size:10px;color:#8a93ad;">Div. ' + _g45KhlEsc(e.div) + '</div></div>' + etoile + '</div>';
           });
@@ -50729,4 +50774,284 @@ window.g45VisuelJoueur = async function (nom) {
   };
   env._g45Joueur = true;
   window.g45VisuelInfo = env;
+})();
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   PORTRAITS D'EFFECTIF — COMPLEMENT THESPORTSDB (17/09/2026)
+   ───────────────────────────────────────────────────────────────────────────
+   Constat d'Antoine sur le Real : api-sports rend 0 photo (quota, cle ou club
+   non trouve) et ESPN n'en a qu'une — l'effectif s'affichait donc en pastilles
+   numerotees. TheSportsDB a un point d'acces PAR EQUIPE
+   (`lookup_all_players`), UNE requete pour tout le club, gratuit et sans
+   quota : il a rendu 10 joueurs, tous avec detoure.
+   La cle gratuite ne rend qu'une PARTIE de l'effectif (10 sur 35 au Real) :
+   c'est un complement, pas un remplacement. On garde donc api-sports en
+   premier, TheSportsDB comble les trous, et la pastille numerotee reste pour
+   le reste. On reutilise au passage les detoures deja cherches joueur par
+   joueur pour les cartes du mur.
+   Cache 30 jours, echec 3 jours (jamais definitif).
+   ═══════════════════════════════════════════════════════════════════════════ */
+async function _g45PhotosTsdb(nom) {
+  var cle = 'g45photostsdb_' + _g45SgNorm(nom);
+  try {
+    var o = JSON.parse(localStorage.getItem(cle) || 'null');
+    if (o) {
+      var duree = (o.l && o.l.length) ? 30 * 86400000 : 3 * 86400000;
+      if (Date.now() - (o.t || 0) < duree) return o.l || [];
+    }
+  } catch (e) {}
+  var liste = [];
+  try {
+    var essais = (typeof _g45FanVariantes === 'function') ? _g45FanVariantes(nom) : [nom];
+    var id = '';
+    for (var v = 0; v < essais.length && !id; v++) {
+      var r = await fetch('https://www.thesportsdb.com/api/v1/json/3/searchteams.php?t=' + encodeURIComponent(essais[v]));
+      if (!r.ok) continue;
+      var eq = ((await r.json()) || {}).teams || [];
+      /* Football uniquement, et jamais une equipe feminine ou reserve a la
+         place de l'equipe premiere (meme garde-fou que pour les visuels). */
+      var bon = eq.filter(function (t) {
+        return /soccer|football/i.test(t.strSport || '')
+          && !/(femenin|feminin|women|ladies|youth|academy|reserve|\bii\b|\bu\s?1[4-9]\b|\bu\s?2[0-3]\b)/i.test(t.strTeam || '');
+      })[0];
+      if (bon) id = bon.idTeam;
+    }
+    if (id) {
+      var r2 = await fetch('https://www.thesportsdb.com/api/v1/json/3/lookup_all_players.php?id=' + encodeURIComponent(id));
+      var js = (r2.ok ? ((await r2.json()) || {}).player : null) || [];
+      js.forEach(function (j) {
+        var u = j && (j.strCutout || j.strThumb);
+        if (!u || !j.strPlayer) return;
+        var mots = String(j.strPlayer).trim().split(/\s+/);
+        liste.push({ n: _g45SgNorm(j.strPlayer), f: _g45SgNorm(mots[mots.length - 1]), i: _g45SgNorm(mots[0]).charAt(0), u: u });
+      });
+    }
+  } catch (e) {}
+  try { localStorage.setItem(cle, JSON.stringify({ t: Date.now(), l: liste })); } catch (e) {}
+  return liste;
+}
+window._g45PhotosTsdb = _g45PhotosTsdb;
+
+(function _g45BrancherPhotosEffectif() {
+  if (typeof _g45PhotosFoot !== 'function' || _g45PhotosFoot._g45Tsdb) return;
+  var origine = _g45PhotosFoot;
+  var env = async function (nom) {
+    var liste = [];
+    try { liste = (await origine.apply(this, arguments)) || []; } catch (e) {}
+    try {
+      var vus = {};
+      liste.forEach(function (x) { vus[x.n] = 1; });
+      var sup = await _g45PhotosTsdb(nom);
+      sup.forEach(function (x) { if (!vus[x.n]) { vus[x.n] = 1; liste.push(x); } });
+    } catch (e) {}
+    return liste;
+  };
+  env._g45Tsdb = true;
+  _g45PhotosFoot = env; window._g45PhotosFoot = env;
+})();
+
+/* Diagnostic : g45PhotosInfo('Real Madrid') */
+window.g45PhotosInfo = async function (nom) {
+  try { localStorage.removeItem('g45photos_' + _g45SgNorm(nom)); } catch (e) {}
+  try { localStorage.removeItem('g45photostsdb_' + _g45SgNorm(nom)); } catch (e) {}
+  var t = await _g45PhotosTsdb(nom);
+  var tout = await _g45PhotosFoot(nom);
+  console.log('Club            :', nom);
+  console.log('TheSportsDB     :', t.length, 'portraits');
+  console.log('Total disponible:', tout.length);
+  console.log('Exemples        :', tout.slice(0, 5).map(function (x) { return x.n; }).join(', '));
+  return tout.length;
+};
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   INDEX DES IMAGES DU DEPOT (17/09/2026, demande d'Antoine)
+   ───────────────────────────────────────────────────────────────────────────
+   Antoine veut ranger ses images par championnat puis par club :
+   `images/joueurs/liga/realmadrid/kylianmbappe.png`. Construire une telle URL
+   supposerait de DEVINER le championnat et le club de chaque joueur — ce que
+   l'appli ne sait pas toujours, et chaque tentative ratee coute un 404.
+   On lit donc l'arborescence complete du depot en UNE requete
+   (api.github.com, deja autorise par la CSP, 60 requetes/h sans jeton), et on
+   retrouve un fichier par son NOM, ou qu'il soit range. Antoine peut donc
+   reorganiser ses dossiers sans rien casser.
+   Cache 6 h ; un echec n'est jamais fige (repli sur l'ancien test direct).
+   Bonus : l'index donne les vrais noms de fichiers, donc la casse cesse d'etre
+   un piege — « ErlingHaaland.PNG » est retrouve aussi.
+   ═══════════════════════════════════════════════════════════════════════════ */
+var _G45_DEPOT_ARBRE = 'https://api.github.com/repos/gones45140/gones45/git/trees/main?recursive=1';
+var _g45IdxImages = null, _g45IdxEnCours = null;
+
+function _g45IdxCleNom(chemin) {
+  var f = String(chemin).split('/').pop();
+  return _g45SgNorm(f.replace(/\.(png|jpg|jpeg|webp)$/i, ''));
+}
+async function g45IndexImages(forcer) {
+  if (_g45IdxImages && !forcer) return _g45IdxImages;
+  if (!forcer) {
+    try {
+      var c = JSON.parse(localStorage.getItem('g45_idx_images') || 'null');
+      if (c && c.m && Date.now() - c.t < 6 * 3600000) { _g45IdxImages = c.m; return _g45IdxImages; }
+    } catch (e) {}
+  }
+  if (_g45IdxEnCours) return _g45IdxEnCours;        /* une seule requete a la fois */
+  _g45IdxEnCours = (async function () {
+    var map = null;
+    try {
+      var r = await fetch(_G45_DEPOT_ARBRE);
+      if (r.ok) {
+        var d = await r.json();
+        map = {};
+        ((d && d.tree) || []).forEach(function (n) {
+          if (!n || n.type !== 'blob' || !/^images\//i.test(n.path)) return;
+          if (!/\.(png|jpg|jpeg|webp)$/i.test(n.path)) return;
+          var k = _g45IdxCleNom(n.path);
+          /* `joueurs/` d'abord, comme dans la recherche directe. */
+          if (!map[k] || (/^images\/joueurs\//i.test(n.path) && !/^images\/joueurs\//i.test(map[k]))) map[k] = n.path;
+        });
+      }
+    } catch (e) {}
+    if (map && Object.keys(map).length) {
+      _g45IdxImages = map;
+      try { localStorage.setItem('g45_idx_images', JSON.stringify({ t: Date.now(), m: map })); } catch (e) {}
+    }
+    _g45IdxEnCours = null;
+    return _g45IdxImages;
+  })();
+  return _g45IdxEnCours;
+}
+window.g45IndexImages = g45IndexImages;
+
+/* La recherche d'image perso consulte l'index AVANT d'essayer des URL. Si
+   l'index n'est pas disponible (hors ligne, limite GitHub atteinte), on retombe
+   sur l'ancien comportement : `images/joueurs/` puis `images/equipes/`. */
+(function _g45BrancherIndexImages() {
+  if (typeof _g45ImgPersoTester !== 'function' || _g45ImgPersoTester._g45Idx) return;
+  var origine = _g45ImgPersoTester;
+  var env = function (nom) {
+    if (typeof nom !== 'string' || !nom.trim() || nom.indexOf('[object') >= 0) return origine.apply(this, arguments);
+    return (async function () {
+      var map = null;
+      try { map = await g45IndexImages(); } catch (e) {}
+      var chemin = map && map[_g45SgNorm(nom)];
+      if (chemin) {
+        try { localStorage.setItem(_G45_PERSO_IMG + _g45SgNorm(nom), JSON.stringify({ u: chemin, t: Date.now() })); } catch (e) {}
+        return chemin;
+      }
+      if (map) {   /* index lisible et nom absent : inutile de tenter des URL */
+        try { localStorage.setItem(_G45_PERSO_IMG + _g45SgNorm(nom), JSON.stringify({ u: '', t: Date.now() })); } catch (e) {}
+        return '';
+      }
+      return origine.call(null, nom);
+    })();
+  };
+  env._g45Idx = true;
+  _g45ImgPersoTester = env; window._g45ImgPersoTester = env;
+})();
+
+/* Diagnostic : g45ImagesDepot() liste ce que l'appli voit dans le depot. */
+window.g45ImagesDepot = async function (filtre) {
+  var m = await g45IndexImages(true);
+  if (!m) { console.warn('Index indisponible (limite GitHub ou hors ligne) — repli sur la recherche directe.'); return 0; }
+  var cles = Object.keys(m).filter(function (k) { return !filtre || k.indexOf(_g45SgNorm(filtre)) >= 0; }).sort();
+  console.log(cles.length + ' image(s) trouvee(s)' + (filtre ? ' pour « ' + filtre + ' »' : ''));
+  cles.slice(0, 60).forEach(function (k) { console.log('  ' + k + '  ->  ' + m[k]); });
+  try { if (typeof render === 'function') render(); } catch (e) {}
+  return cles.length;
+};
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   KHL — ONGLET SAISONS D'UNE EQUIPE (17/09/2026)
+   ───────────────────────────────────────────────────────────────────────────
+   La fiche d'equipe passe par ESPN, qui ne connait que la NHL : ouvrir Dinamo
+   Minsk affichait « Equipe introuvable dans le classement hockey/nhl ». On
+   intercepte donc `loadTeamSaisons` pour les 22 clubs KHL et on rend le
+   panneau depuis nos propres donnees (memes matchs que le Classement, donc
+   aucune requete de plus quand la vue Competitions a deja ete ouverte).
+   Les autres onglets de la fiche (Live, Compo, News) restent a faire.
+   ═══════════════════════════════════════════════════════════════════════════ */
+var _g45KhlSaisonLieu = '';   /* '' | 'dom' | 'ext' */
+
+async function g45KhlSaisonsFiche(el, e) {
+  el.innerHTML = '<div class="fc" style="display:flex;align-items:center;gap:10px;padding:20px;color:var(--t3);font-size:12px;">'
+    + '<div style="width:16px;height:16px;border:2px solid rgba(77,132,255,.2);border-top-color:#4d84ff;border-radius:50%;animation:spin .8s linear infinite;"></div>'
+    + 'Chargement de la saison KHL\u2026</div>';
+  var tous = await _g45KhlMatchsPlage(_g45KhlDebutSaison(), Date.now() + 21 * 86400000);
+  var siens = tous.filter(function (m) { return m.a === e.id || m.b === e.id; });
+  if (!siens.length) {
+    el.innerHTML = '<div class="fc" style="padding:18px;">' + _g45KhlMsgVide('Aucun match KHL trouv\u00e9 pour ' + _g45KhlEsc(e.fr) + '.') + '</div>';
+    return;
+  }
+  var lieu = _g45KhlSaisonLieu;
+  var filtres = siens.filter(function (m) {
+    if (lieu === 'dom') return m.a === e.id;
+    if (lieu === 'ext') return m.b === e.id;
+    return true;
+  });
+  var joues = filtres.filter(_g45KhlFini);
+  var st = { mj: 0, v: 0, vp: 0, dp: 0, d: 0, bp: 0, bc: 0, pts: 0 };
+  joues.forEach(function (m) {
+    var iss = _g45KhlIssue(m); if (!iss.g) return;
+    var moi = (m.a === e.id) ? 'a' : 'b';
+    st.mj++; st.bp += (moi === 'a' ? iss.a : iss.b); st.bc += (moi === 'a' ? iss.b : iss.a);
+    if (iss.g === moi) { st.pts += 2; if (iss.prol) st.vp++; else st.v++; }
+    else if (iss.prol) { st.pts += 1; st.dp++; }
+    else st.d++;
+  });
+  var cell = function (lib, val, coul) {
+    return '<div style="flex:1;min-width:64px;text-align:center;background:#141d33;border:1px solid rgba(255,255,255,.08);border-radius:10px;padding:8px 6px;">'
+      + '<div style="font-size:17px;font-weight:800;color:' + (coul || '#e8ecfa') + ';">' + val + '</div>'
+      + '<div style="font-size:9.5px;color:#8a93ad;text-transform:uppercase;letter-spacing:.5px;">' + lib + '</div></div>';
+  };
+  var h = '<div class="fc">'
+    + '<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px;">'
+    + _g45KhlChip('Global', lieu === '', "g45KhlSaisonLieu('')")
+    + _g45KhlChip('Domicile', lieu === 'dom', "g45KhlSaisonLieu('dom')")
+    + _g45KhlChip('Ext\u00e9rieur', lieu === 'ext', "g45KhlSaisonLieu('ext')") + '</div>'
+    + '<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px;">'
+    + cell('Matchs', st.mj) + cell('V', st.v, '#1ed760') + cell('VP', st.vp, '#7bd88f')
+    + cell('DP', st.dp, '#f0b020') + cell('D', st.d, '#ff4545') + cell('Points', st.pts, '#4d84ff')
+    + cell('Buts', st.bp + ':' + st.bc) + cell('Diff.', (st.bp - st.bc > 0 ? '+' : '') + (st.bp - st.bc))
+    + '</div>'
+    + '<div style="font-size:10px;font-weight:800;letter-spacing:.6px;text-transform:uppercase;color:#c3cfe6;margin-bottom:8px;">'
+    + filtres.length + ' match' + (filtres.length > 1 ? 's' : '') + ' \u00b7 saison 2026/27</div>';
+  filtres.slice().reverse().forEach(function (m) {
+    var moi = (m.a === e.id) ? 'a' : 'b', adv = (moi === 'a') ? m.b : m.a;
+    var iss = _g45KhlIssue(m), fini = _g45KhlFini(m), avenir = _g45KhlAVenir(m);
+    var lib = '', coul = '#8a93ad';
+    if (fini && iss.g) {
+      if (iss.g === moi) { lib = iss.prol ? 'VP' : 'V'; coul = '#1ed760'; }
+      else { lib = iss.prol ? 'DP' : 'D'; coul = iss.prol ? '#f0b020' : '#ff4545'; }
+    }
+    var score = avenir ? _g45KhlHeure(m.t)
+      : ((moi === 'a' ? iss.a : iss.b) + ' \u2013 ' + (moi === 'a' ? iss.b : iss.a)
+         + (iss.tab ? ' <span style="font-size:9px;color:#f0b020;">TAB</span>' : (iss.prol ? ' <span style="font-size:9px;color:#f0b020;">p.</span>' : '')));
+    h += '<div style="display:flex;align-items:center;gap:8px;padding:7px 4px;border-bottom:1px solid rgba(255,255,255,.06);font-size:12px;">'
+      + '<span style="width:44px;color:#8a93ad;font-size:10.5px;">' + new Date(m.t).toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit' }) + '</span>'
+      + '<span style="width:22px;color:#8a93ad;font-size:10.5px;" title="' + (moi === 'a' ? 'domicile' : 'ext\u00e9rieur') + '">' + (moi === 'a' ? '\ud83c\udfe0' : '\u2708\ufe0f') + '</span>'
+      + _g45KhlLogoHtml(adv, '', 20) + '<span style="flex:1;min-width:0;">' + _g45KhlEsc(g45KhlNomFr(adv)) + '</span>'
+      + '<span style="font-weight:800;white-space:nowrap;">' + score + '</span>'
+      + '<span style="width:26px;text-align:right;font-weight:800;font-size:11px;color:' + coul + ';">' + lib + '</span></div>';
+  });
+  h += '<div style="font-size:10.5px;color:#8a93ad;margin-top:10px;">VP / DP = victoire ou d\u00e9faite en prolongation ou aux tirs au but. 2 points la victoire, 1 point la d\u00e9faite en prolongation.</div></div>';
+  el.innerHTML = h;
+}
+function g45KhlSaisonLieu(l) { _g45KhlSaisonLieu = l; if (typeof loadTeamSaisons === 'function') loadTeamSaisons(); }
+window.g45KhlSaisonLieu = g45KhlSaisonLieu;
+window.g45KhlSaisonsFiche = g45KhlSaisonsFiche;
+
+(function _g45KhlBrancherFiche() {
+  if (typeof loadTeamSaisons !== 'function' || loadTeamSaisons._g45Khl) return;
+  var origine = loadTeamSaisons;
+  var env = async function () {
+    try {
+      var nom = (typeof _currentTeam !== 'undefined' ? _currentTeam : '')
+             || (typeof _currentUnitNom !== 'undefined' ? _currentUnitNom : '') || '';
+      var e = g45KhlEquipe(nom);
+      var el = document.getElementById('ip-saisons');
+      if (e && el) return await g45KhlSaisonsFiche(el, e);
+    } catch (err) { console.warn('KHL saisons fiche :', err && err.message); }
+    return origine.apply(this, arguments);
+  };
+  env._g45Khl = true;
+  loadTeamSaisons = env; window.loadTeamSaisons = env;
 })();
