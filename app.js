@@ -2995,6 +2995,19 @@ function render(){
       var _fond=(typeof g45FondSolo==='function')?g45FondSolo(u.color,'')
               :('linear-gradient(100deg,'+(u.color||'#4d84ff')+'2e 0%,transparent 55%)');
       var _couche='';
+      /* JOUEUR SEUL (17/09/2026) : une unite comme « Erling Haaland » n'est pas
+         un club, `searchteams` ne trouve rien et la carte restait VIDE (signale
+         par Antoine). On lit alors le visuel de joueur (TheSportsDB) : un
+         fanart passe en fond plein cadre comme pour un club (cas A), un joueur
+         DETOURE est pose a droite sur le degrade (cas B) — un detoure en
+         `cover` serait agrandi jusqu'a ne montrer qu'un fragment de visage. */
+      var _jv=(!_vis && typeof _g45JoueurVisLire==='function')?_g45JoueurVisLire(u.n):null;
+      if(!_vis && _jv && _jv.fan) _vis=_jv.fan;
+      if(!_vis && _jv && (_jv.cut||_jv.thumb)){
+        _couche='<img src="'+(_jv.cut||_jv.thumb)+'" alt="" loading="lazy" onerror="this.style.display=\'none\'" '
+          +'style="position:absolute;right:5%;bottom:0;height:96%;max-width:48%;object-fit:contain;'
+          +'object-position:bottom right;pointer-events:none;filter:drop-shadow(0 6px 14px rgba(0,0,0,.55));">';
+      }
       if(_vis){
         var _vl=(typeof _G45_FOND_NIV!=='undefined')?_G45_FOND_NIV.voileVis:0.30;
         _couche='<img src="'+_vis+'" alt="" loading="lazy" onerror="this.style.display=\'none\'" '
@@ -11252,6 +11265,19 @@ function render(){
       var _fond=(typeof g45FondSolo==='function')?g45FondSolo(u.color,'')
               :('linear-gradient(100deg,'+(u.color||'#4d84ff')+'2e 0%,transparent 55%)');
       var _couche='';
+      /* JOUEUR SEUL (17/09/2026) : une unite comme « Erling Haaland » n'est pas
+         un club, `searchteams` ne trouve rien et la carte restait VIDE (signale
+         par Antoine). On lit alors le visuel de joueur (TheSportsDB) : un
+         fanart passe en fond plein cadre comme pour un club (cas A), un joueur
+         DETOURE est pose a droite sur le degrade (cas B) — un detoure en
+         `cover` serait agrandi jusqu'a ne montrer qu'un fragment de visage. */
+      var _jv=(!_vis && typeof _g45JoueurVisLire==='function')?_g45JoueurVisLire(u.n):null;
+      if(!_vis && _jv && _jv.fan) _vis=_jv.fan;
+      if(!_vis && _jv && (_jv.cut||_jv.thumb)){
+        _couche='<img src="'+(_jv.cut||_jv.thumb)+'" alt="" loading="lazy" onerror="this.style.display=\'none\'" '
+          +'style="position:absolute;right:5%;bottom:0;height:96%;max-width:48%;object-fit:contain;'
+          +'object-position:bottom right;pointer-events:none;filter:drop-shadow(0 6px 14px rgba(0,0,0,.55));">';
+      }
       if(_vis){
         var _vl=(typeof _G45_FOND_NIV!=='undefined')?_G45_FOND_NIV.voileVis:0.30;
         _couche='<img src="'+_vis+'" alt="" loading="lazy" onerror="this.style.display=\'none\'" '
@@ -50555,3 +50581,93 @@ window.g45KhlDirectSuivies = g45KhlDirectSuivies;
     _g45KhlVueEquipes = vue; window._g45KhlVueEquipes = vue;
   }
 })();
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   VISUELS DE JOUEUR (17/09/2026)
+   ───────────────────────────────────────────────────────────────────────────
+   Une unite du mur qui est un JOUEUR (« Erling Haaland ») n'a pas de visuel :
+   `_g45FanChercher` interroge `searchteams`, ne trouve aucun club et la carte
+   reste vide. On enchaine donc sur `searchplayers` de TheSportsDB (deja utilise
+   pour les clubs, gratuit, deja autorise par la CSP).
+   Couverture mesuree par Antoine sur 6 joueurs : cutout et portrait pour les 6,
+   fanart pour AUCUN — le cas B (joueur detoure) sera donc la regle, le cas A
+   (fanart plein cadre) l'exception, conformement a son choix « A sinon B ».
+   Cache 30 jours ; un echec est memorise 7 jours seulement (jamais pour
+   toujours : un joueur peut etre ajoute a la base plus tard).
+   ═══════════════════════════════════════════════════════════════════════════ */
+var _G45_JOUEUR_VIS = 'g45jv_';
+function _g45JoueurVisCle(nom) {
+  return _G45_JOUEUR_VIS + (typeof _g45SgNorm === 'function' ? _g45SgNorm(nom) : String(nom || '').toLowerCase());
+}
+function _g45JoueurVisLire(nom) {
+  try {
+    var c = JSON.parse(localStorage.getItem(_g45JoueurVisCle(nom)) || 'null');
+    /* undefined = jamais teste ou a retester ; null = echec RECENT, on n'appelle
+       pas la base a chaque affichage du mur. */
+    if (!c) return undefined;
+    var age = Date.now() - (c.t || 0);
+    if (!c.cut && !c.thumb && !c.fan) return (age < 7 * 86400000) ? null : undefined;  /* undefined = a retester */
+    if (age > 30 * 86400000) return undefined;
+    return c;
+  } catch (e) { return undefined; }
+}
+window._g45JoueurVisLire = _g45JoueurVisLire;
+
+async function _g45JoueurVisChercher(nom) {
+  var n = String(nom || '').trim();
+  if (n.length < 4 || n.indexOf(' ') < 0) return null;   /* un prenom + un nom, au minimum */
+  try {
+    var r = await fetch('https://www.thesportsdb.com/api/v1/json/3/searchplayers.php?p=' + encodeURIComponent(n));
+    if (!r.ok) return null;
+    var j = await r.json();
+    var liste = (j && j.player) || [];
+    /* On ne garde que le football et on preferera une correspondance de nom. */
+    var norm = function (x) { return (typeof _g45SgNorm === 'function' ? _g45SgNorm(x) : String(x || '').toLowerCase()); };
+    var cible = norm(n);
+    var bons = liste.filter(function (p) { return !p.strSport || /soccer|football/i.test(p.strSport); });
+    var p0 = bons.filter(function (p) { return norm(p.strPlayer) === cible; })[0] || bons[0] || null;
+    var val = { t: Date.now(), fan: (p0 && p0.strFanart1) || '', cut: (p0 && p0.strCutout) || '',
+                thumb: (p0 && p0.strThumb) || '', club: (p0 && p0.strTeam) || '' };
+    try { localStorage.setItem(_g45JoueurVisCle(n), JSON.stringify(val)); } catch (e) {}
+    return (val.fan || val.cut || val.thumb) ? val : null;
+  } catch (e) { return null; }
+}
+window._g45JoueurVisChercher = _g45JoueurVisChercher;
+
+/* Enchainement : quand la recherche de CLUB ne rend rien, on tente le JOUEUR. */
+(function _g45BrancherVisuelJoueur() {
+  if (typeof _g45FanChercher !== 'function' || _g45FanChercher._g45Joueur) return;
+  var origine = _g45FanChercher;
+  var env = async function (nom, sport) {
+    var url = '';
+    try { url = await origine.apply(this, arguments); } catch (e) {}
+    if (url) return url;
+    if (sport && sport !== 'soccer') return url;          /* joueurs de foot seulement */
+    var dejaVu = _g45JoueurVisLire(nom);
+    if (dejaVu === null) return url;                      /* echec recent : on ne rappelle pas */
+    if (dejaVu && (dejaVu.fan || dejaVu.cut || dejaVu.thumb)) return dejaVu.fan || url;  /* deja connu */
+    var v = await _g45JoueurVisChercher(nom);
+    /* Un fanart se comporte comme un visuel de club : on le range au meme
+       endroit, la carte le prend alors en fond plein cadre sans autre code. */
+    if (v && v.fan && typeof _G45_FANART !== 'undefined') {
+      try { localStorage.setItem(_G45_FANART + _g45SgNorm(nom), JSON.stringify({ u: v.fan, t: Date.now() })); } catch (e) {}
+      return v.fan;
+    }
+    return url;
+  };
+  env._g45Joueur = true;
+  _g45FanChercher = env; window._g45FanChercher = env;
+})();
+
+/* Diagnostic, comme g45ReparerVisuel pour les clubs : g45VisuelJoueur('Erling Haaland') */
+window.g45VisuelJoueur = async function (nom) {
+  try { localStorage.removeItem(_g45JoueurVisCle(nom)); } catch (e) {}
+  var v = await _g45JoueurVisChercher(nom);
+  console.log('Joueur   :', nom);
+  console.log('Club     :', (v && v.club) || '(inconnu)');
+  console.log('Fanart   :', (v && v.fan) || '(aucun)');
+  console.log('D\u00e9tour\u00e9 :', (v && v.cut) || '(aucun)');
+  console.log('Portrait :', (v && v.thumb) || '(aucun)');
+  try { if (typeof render === 'function') render(); } catch (e) {}
+  return v;
+};
