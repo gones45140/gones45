@@ -41459,7 +41459,7 @@ function _g45SgCle(n) { return String(n || '').toLowerCase().trim(); }
    fait 2025-26 : on croit consulter une saison et on en voit une autre. */
 function _g45SgLabel(lg, y) {
   if (['3', 'mlb'].indexOf(lg) >= 0) return String(y);                 /* annee civile */
-  if (['nhl', 'nba', 'wnba'].indexOf(lg) >= 0)                         /* annee de FIN */
+  if (['nhl', 'nba', 'wnba', 'khl'].indexOf(lg) >= 0)                  /* annee de FIN */
     return (y - 1) + '-' + String(y).slice(2);
   return y + '-' + String(y + 1).slice(2);                             /* annee de DEBUT */
 }
@@ -41476,7 +41476,7 @@ function _g45SgLabel(lg, y) {
 function _g45SgAnAuto(lg) {
   var d = new Date(), y = d.getFullYear(), m = d.getMonth() + 1;
   if (['3', 'mlb'].indexOf(lg) >= 0) return y;                          /* annee civile */
-  if (['nhl', 'nba', 'wnba'].indexOf(lg) >= 0) return (m >= 9) ? (y + 1) : y;
+  if (['nhl', 'nba', 'wnba', 'khl'].indexOf(lg) >= 0) return (m >= 9) ? (y + 1) : y;
   if (['nfl', 'college-football'].indexOf(lg) >= 0) return (m >= 9) ? y : (y - 1);
   return (m >= 8) ? y : (y - 1);                                        /* football, rugby */
 }
@@ -51054,4 +51054,147 @@ window.g45KhlSaisonsFiche = g45KhlSaisonsFiche;
   };
   env._g45Khl = true;
   loadTeamSaisons = env; window.loadTeamSaisons = env;
+})();
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   KHL — ADAPTATEUR VERS LE PANNEAU SAISONS GENERIQUE (17/09/2026)
+   ───────────────────────────────────────────────────────────────────────────
+   Mon panneau maison etait bien plus pauvre que `_g45SaisonsGen` (marches O/U,
+   compteur de combine, forme recente, domicile/exterieur, detail de match).
+   Plutot que de le reecrire pour la KHL, on NOURRIT le panneau generique : on
+   intercepte ses deux sources, `_g45CompetEquipes` et `_g45CompetMatchs`, pour
+   le couple hockey/khl. La KHL heritera donc automatiquement de toute
+   amelioration future du panneau.
+   Format attendu par `_g45SgCalc`, releve dans le code :
+     { id, h, a, hg, ag, t, hn, an, po }   (po = phase finale)
+   Saisons : `khl` est numerotee par l'annee de FIN, comme la NHL (2027 =
+   2026-27). Les `stage_id` des saisons passees et des play-offs sont lus dans
+   data.json ; sans eux, seule la saison en cours est disponible.
+   ═══════════════════════════════════════════════════════════════════════════ */
+var _g45KhlStagesCache = null;
+
+/* Parcourt data.json a la recherche des objets { id, name } dont le libelle
+   ressemble a « Regular 2026/2027 » ou « Playoff 2025/2026 ». On ne suppose pas
+   la structure : on descend recursivement, c'est plus robuste qu'un chemin en
+   dur qui casserait au premier changement. */
+async function g45KhlStages() {
+  if (_g45KhlStagesCache) return _g45KhlStagesCache;
+  try {
+    var c = JSON.parse(localStorage.getItem('g45khl_stages') || 'null');
+    if (c && c.m && Date.now() - c.t < 24 * 3600000) { _g45KhlStagesCache = c.m; return c.m; }
+  } catch (e) {}
+  var d = await g45KhlApi('data', {});
+  var par = {};
+  var vu = 0;
+  (function descendre(o) {
+    if (!o || typeof o !== 'object' || vu++ > 20000) return;
+    if (Array.isArray(o)) { o.forEach(descendre); return; }
+    var id = o.id, nom = o.name || o.title;
+    if (id && typeof nom === 'string') {
+      var m = nom.match(/(\d{4})\s*\/\s*(\d{4})/);
+      if (m) {
+        var an = +m[2], po = /play\s*-?\s*off|\bpo\b|cup/i.test(nom), reg = /regular/i.test(nom);
+        if (po || reg) {
+          par[an] = par[an] || {};
+          par[an][po ? 'po' : 'reg'] = +id;
+        }
+      }
+    }
+    Object.keys(o).forEach(function (k) { if (o[k] && typeof o[k] === 'object') descendre(o[k]); });
+  })(d);
+  /* Filet : la saison en cours est connue meme si data.json change de forme. */
+  var anCourant = _g45SgAnAuto('khl');
+  par[anCourant] = par[anCourant] || {};
+  if (!par[anCourant].reg) par[anCourant].reg = await g45KhlStageActuel();
+  if (Object.keys(par).length) {
+    _g45KhlStagesCache = par;
+    try { localStorage.setItem('g45khl_stages', JSON.stringify({ t: Date.now(), m: par })); } catch (e) {}
+  }
+  return par;
+}
+window.g45KhlStages = g45KhlStages;
+
+/* Tous les matchs d'un stage, par pages de 16. Une saison TERMINEE ne bouge
+   plus : cache definitif. La saison en cours est relue toutes les 10 min. */
+async function _g45KhlMatchsStage(stage, enCours, progres) {
+  if (!stage) return [];
+  var cle = 'g45khl_stage_' + stage;
+  try {
+    var c = JSON.parse(localStorage.getItem(cle) || 'null');
+    if (c && c.l && c.l.length && (!enCours || Date.now() - c.t < 10 * 60000)) return c.l;
+  } catch (e) {}
+  var out = [], vus = {};
+  for (var page = 1; page <= 80; page++) {
+    var j = await g45KhlApi('events_v2', { stage_id: stage, order_direction: 'asc', page: page });
+    if (j === null && page === 1) j = await g45KhlApi('events_v2', { stage_id: stage, order_direction: 'asc', page: page });
+    if (!Array.isArray(j) || !j.length) break;
+    var neufs = 0;
+    j.forEach(function (x) { var m = _g45KhlMatch(x); if (m && !vus[m.id]) { vus[m.id] = 1; out.push(m); neufs++; } });
+    if (!neufs) break;
+    if (typeof progres === 'function') progres(out.length, 0);
+  }
+  out = _g45KhlDedoublonne(out);
+  if (out.length) { try { localStorage.setItem(cle, JSON.stringify({ t: Date.now(), l: out })); } catch (e) {} }
+  return out;
+}
+
+/* Conversion vers le format du panneau generique. */
+function _g45KhlVersSg(m, po) {
+  var s = _g45KhlButs(m);
+  return { id: String(m.id), h: m.a, a: m.b, hg: s.a, ag: s.b, t: m.t,
+           hn: g45KhlNomFr(m.a), an: g45KhlNomFr(m.b), po: po ? 1 : 0 };
+}
+
+(function _g45KhlBrancherSaisonsGen() {
+  /* Equipes : le panneau s'en sert pour les noms et les ecussons. */
+  if (typeof _g45CompetEquipes === 'function' && !_g45CompetEquipes._g45Khl) {
+    var origEq = _g45CompetEquipes;
+    var envEq = async function (ctx) {
+      if (ctx && ctx.sp === 'hockey' && ctx.s === 'khl') {
+        return G45_KHL_EQUIPES.map(function (e) { return { id: e.id, nom: e.fr, logo: e.logo }; });
+      }
+      return origEq.apply(this, arguments);
+    };
+    envEq._g45Khl = true;
+    _g45CompetEquipes = envEq; window._g45CompetEquipes = envEq;
+  }
+  /* Matchs : saison reguliere + play-offs de l'annee demandee. */
+  if (typeof _g45CompetMatchs === 'function' && !_g45CompetMatchs._g45Khl) {
+    var origMs = _g45CompetMatchs;
+    var envMs = async function (sp, lg, an, ids, progres) {
+      if (sp !== 'hockey' || lg !== 'khl') return origMs.apply(this, arguments);
+      var stages = await g45KhlStages();
+      var st = stages[an] || {};
+      var enCours = (an === _g45SgAnAuto('khl'));
+      var dire = function (n) { if (typeof progres === 'function') progres(n, 0); };
+      var reg = await _g45KhlMatchsStage(st.reg, enCours, dire);
+      var po = st.po ? await _g45KhlMatchsStage(st.po, enCours, dire) : [];
+      return reg.filter(_g45KhlFini).map(function (m) { return _g45KhlVersSg(m, 0); })
+        .concat(po.filter(_g45KhlFini).map(function (m) { return _g45KhlVersSg(m, 1); }));
+    };
+    envMs._g45Khl = true;
+    _g45CompetMatchs = envMs; window._g45CompetMatchs = envMs;
+  }
+  /* La fiche d'equipe envoie desormais la KHL vers le panneau generique, au
+     lieu de mon panneau maison (conserve sous g45KhlSaisonsFiche au cas ou). */
+  if (typeof loadTeamSaisons === 'function' && !loadTeamSaisons._g45KhlGen) {
+    var orig = loadTeamSaisons;
+    var env = async function () {
+      try {
+        var nom = (typeof _currentTeam !== 'undefined' ? _currentTeam : '')
+               || (typeof _currentUnitNom !== 'undefined' ? _currentUnitNom : '') || '';
+        var e = g45KhlEquipe(nom);
+        var el = document.getElementById('ip-saisons');
+        if (e && el && typeof _g45SaisonsGen === 'function') {
+          if (typeof _g45SgNomCourant !== 'undefined' && _g45SgNomCourant !== nom) {
+            _g45SgNomCourant = nom; _g45SgAn = null; _g45SgPhase = 'tout';
+          }
+          return await _g45SaisonsGen(el, e.fr, { sport: 'hockey', league: 'khl', id: e.id });
+        }
+      } catch (err) { console.warn('KHL saisons :', err && err.message); }
+      return orig.apply(this, arguments);
+    };
+    env._g45KhlGen = true; env._g45Khl = true;
+    loadTeamSaisons = env; window.loadTeamSaisons = env;
+  }
 })();
