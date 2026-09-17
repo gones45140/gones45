@@ -50671,3 +50671,54 @@ window.g45VisuelJoueur = async function (nom) {
   try { if (typeof render === 'function') render(); } catch (e) {}
   return v;
 };
+
+/* Passe du mur : les unites SANS visuel doivent aussi tenter la base des
+   JOUEURS. Sans ce branchement, une carte comme « Erling Haaland » restait
+   vide pour toujours — `_g45FanCompleter` ignore les noms dont l'echec CLUB est
+   deja memorise, donc la recherche joueur n'etait jamais atteinte (constate le
+   17/09 : g45VisuelInfo affichait « TheSportsDB : (aucun) »). */
+(function _g45BrancherMurJoueur() {
+  if (typeof _g45FanCompleter !== 'function' || _g45FanCompleter._g45Joueur) return;
+  var origine = _g45FanCompleter;
+  var env = async function (noms) {
+    var maj = false;
+    try { maj = !!(await origine.apply(this, arguments)); } catch (e) {}
+    try {
+      var aFaire = (noms || []).filter(function (n) {
+        var nm = (n && n.nom) || n;
+        if (!nm || typeof nm !== 'string') return false;
+        if (n && n.sp && n.sp !== 'soccer') return false;
+        if (typeof _g45ImgPersoLire === 'function' && _g45ImgPersoLire(nm)) return false;
+        if (typeof _g45FanLire === 'function' && _g45FanLire(nm)) return false;   /* visuel de club trouve */
+        return _g45JoueurVisLire(nm) === undefined;                               /* jamais teste */
+      }).slice(0, 3);
+      for (var i = 0; i < aFaire.length; i++) {
+        var v = await _g45JoueurVisChercher((aFaire[i] && aFaire[i].nom) || aFaire[i]);
+        if (v) maj = true;
+      }
+    } catch (e) {}
+    return maj;
+  };
+  env._g45Joueur = true;
+  _g45FanCompleter = env; window._g45FanCompleter = env;
+})();
+
+/* g45VisuelInfo ne parlait que des clubs : on y ajoute le volet joueur, sinon
+   le diagnostic conclut « aucun visuel » alors qu'un detoure existe. */
+(function _g45InfoJoueur() {
+  if (typeof window.g45VisuelInfo !== 'function' || window.g45VisuelInfo._g45Joueur) return;
+  var origine = window.g45VisuelInfo;
+  var env = function (nom) {
+    var r = origine.apply(this, arguments);
+    try {
+      var v = _g45JoueurVisLire(nom);
+      console.log('Joueur (TheSportsDB) : ' + (v === undefined ? '(pas encore cherche)'
+        : (v === null ? '(cherche recemment, rien trouve)'
+          : ((v.fan ? 'fanart' : '') + (v.cut ? ' detoure' : '') + (v.thumb ? ' portrait' : '')).trim() + ' \u2014 ' + (v.club || ''))));
+      console.log('Forcer la recherche  : g45VisuelJoueur(\'' + nom + '\')');
+    } catch (e) {}
+    return r;
+  };
+  env._g45Joueur = true;
+  window.g45VisuelInfo = env;
+})();
