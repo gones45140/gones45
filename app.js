@@ -38597,10 +38597,16 @@ function _g45Norm(s) {
 /* Charge (et met en cache) la liste { nom -> id } d'un championnat. */
 async function g45CoreTeams(sportPath, ligue) {
   var cle = _g45CoreCle(sportPath, ligue);
-  if (_g45CoreCache[cle]) return _g45CoreCache[cle];
+  if (_g45CoreCache[cle] && Object.keys(_g45CoreCache[cle]).length) return _g45CoreCache[cle];
   try {
     var brut = localStorage.getItem(cle);
-    if (brut) { _g45CoreCache[cle] = JSON.parse(brut); return _g45CoreCache[cle]; }
+    if (brut) {
+      var dej = JSON.parse(brut);
+      /* Une entree vide laissee par une version precedente est ignoree ET
+         effacee, sinon elle survivrait a la correction. */
+      if (dej && Object.keys(dej).length) { _g45CoreCache[cle] = dej; return dej; }
+      try { localStorage.removeItem(cle); } catch (e2) {}
+    }
   } catch (e) {}
 
   var out = {};
@@ -38669,8 +38675,14 @@ async function g45CoreTeams(sportPath, ligue) {
         if (t.displayName || t.name) out['#' + t.id] = String(t.displayName || t.name);
       });
     }
-    _g45CoreCache[cle] = out;
-    try { localStorage.setItem(cle, JSON.stringify(out)); } catch (e) {}
+    /* NE JAMAIS METTRE EN CACHE UN RESULTAT VIDE (regle du projet, re-appliquee
+       le 18/09) : un seul raté d'ESPN figeait « 0 equipe » POUR TOUJOURS, et
+       les Journees de Ligue 1, Premier League et Liga affichaient « Impossible
+       de charger la liste des equipes » meme quand ESPN repondait. */
+    if (Object.keys(out).length) {
+      _g45CoreCache[cle] = out;
+      try { localStorage.setItem(cle, JSON.stringify(out)); } catch (e) {}
+    }
     console.log('✅ ' + Object.keys(out).length + ' noms d\'équipes chargés pour ' + sportPath + '/' + ligue);
   } catch (e) {
     console.warn('core teams', e && e.message);
