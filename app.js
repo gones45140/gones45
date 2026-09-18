@@ -33489,14 +33489,20 @@ function g45RenderStandings(data, season, sportPath, slug){
       return ra-rb;
     });
     if(multi){ out+='<div style="font-size:11px;font-weight:800;color:var(--t1);margin:10px 0 4px;">'+(g.name||g.abbreviation||'Groupe')+'</div>'; }
+    /* LISIBILITE (18/09/2026) : Antoine lit mal les petits caracteres gris.
+       Toutes les colonnes passent en chiffres a largeur fixe (tabular-nums),
+       le nom du club en 13,5 px blanc, les lignes deviennent des bandes
+       arrondies alternees, les zeros sont estompes et les points passent en
+       pastille. Aucun calcul ne change : c'est le meme rendu commun pour la
+       Ligue 1, la NBA, la NFL, la MLB, le NRL et la KHL. */
     out+='<div style="overflow-x:auto;-webkit-overflow-scrolling:touch;">';
-    out+='<table style="width:100%;border-collapse:collapse;font-size:11px;min-width:340px;">';
-    out+='<thead><tr style="color:var(--t3);font-weight:700;">'
-      +'<th style="text-align:left;padding:4px 3px;">#</th>'
-      +'<th style="text-align:left;padding:4px 3px;">Équipe</th>'
-      +'<th style="padding:4px 3px;">J</th><th style="padding:4px 3px;">V</th><th style="padding:4px 3px;">N</th><th style="padding:4px 3px;">D</th>'
-      +'<th style="padding:4px 3px;">BP</th><th style="padding:4px 3px;">BC</th><th style="padding:4px 3px;">Diff</th>'
-      +'<th style="padding:4px 3px;color:var(--t1);">'+(usePct?'% V':'Pts')+'</th></tr></thead><tbody>';
+    out+='<table style="width:100%;border-collapse:separate;border-spacing:0 4px;font-size:12.5px;min-width:360px;">';
+    out+='<thead><tr style="color:#7c89a8;font-weight:800;font-size:9.5px;letter-spacing:.9px;text-transform:uppercase;">'
+      +'<th style="text-align:left;padding:0 6px 6px;">#</th>'
+      +'<th style="text-align:left;padding:0 6px 6px;">Équipe</th>'
+      +'<th style="padding:0 6px 6px;">J</th><th style="padding:0 6px 6px;">V</th><th style="padding:0 6px 6px;">N</th><th style="padding:0 6px 6px;">D</th>'
+      +'<th style="padding:0 6px 6px;">BP</th><th style="padding:0 6px 6px;">BC</th><th style="padding:0 6px 6px;">Diff</th>'
+      +'<th style="padding:0 6px 6px;color:var(--t1);">'+(usePct?'% V':'Pts')+'</th></tr></thead><tbody>';
     entries.forEach(function(e,idx){
       var t=e.team||{}, st=e.stats||[];
       var _z=(e.note && _g45ZoneFromNote(e.note.description)) || _g45ZoneByPos(slug, sportPath, idx+1, entries.length);
@@ -33514,17 +33520,26 @@ function g45RenderStandings(data, season, sportPath, slug){
         if(!isNaN(WP)){ lastCol=(WP<=1?WP*100:WP).toFixed(1)+'%'; }
         else { var vv=parseFloat(V)||0, dd=parseFloat(D)||0; lastCol=(vv+dd>0)?((vv/(vv+dd)*100).toFixed(1)+'%'):'-'; }
       }
-      out+='<tr style="border-top:1px solid rgba(255,255,255,.05);'+_rowbg+'">'
-        +'<td style="padding:5px 3px 5px 7px;'+_bd+'color:var(--t3);font-weight:700;">'+(idx+1)+'</td>'
-        +'<td style="padding:5px 3px;"><div style="display:flex;align-items:center;gap:6px;">'+(logo?'<img src="'+logo+'" style="width:16px;height:16px;object-fit:contain;" onerror="this.style.display=\'none\'">':'')+'<span style="color:var(--t1);font-weight:600;white-space:nowrap;">'+nm+'</span></div></td>'
-        +'<td style="padding:5px 3px;text-align:center;color:var(--t2);">'+(J!==''?J:'-')+'</td>'
-        +'<td style="padding:5px 3px;text-align:center;color:var(--t2);">'+(V!==''?V:'-')+'</td>'
-        +'<td style="padding:5px 3px;text-align:center;color:var(--t2);">'+(N!==''?N:'-')+'</td>'
-        +'<td style="padding:5px 3px;text-align:center;color:var(--t2);">'+(D!==''?D:'-')+'</td>'
-        +'<td style="padding:5px 3px;text-align:center;color:var(--t3);">'+(BP!==''?BP:'-')+'</td>'
-        +'<td style="padding:5px 3px;text-align:center;color:var(--t3);">'+(BC!==''?BC:'-')+'</td>'
-        +'<td style="padding:5px 3px;text-align:center;color:var(--t2);">'+(DF!==''?DF:'-')+'</td>'
-        +'<td style="padding:5px 3px;text-align:center;color:var(--t1);font-weight:800;">'+lastCol+'</td></tr>';
+      /* La barre de qualification passe en LISERE INTERNE : un vrai
+         border-left casserait les coins arrondis de la bande. */
+      var _cell='padding:8px 6px;text-align:center;font-variant-numeric:tabular-nums;font-weight:700;'
+        + 'background:' + (_z ? _g45Hex2rgba(_z.color,.13) : (idx%2 ? 'rgba(255,255,255,.045)' : 'rgba(255,255,255,.022)')) + ';';
+      var _val=function(v, coul){
+        var vide=(v===''||v==='-'), nul=(String(v)==='0');
+        return '<td style="'+_cell+'color:'+(vide||nul?'#5c6785':(coul||'#dbe3f5'))+';">'+(vide?'-':v)+'</td>';
+      };
+      var _dfNum=parseFloat(DF);
+      out+='<tr>'
+        +'<td style="'+_cell+'text-align:left;border-radius:10px 0 0 10px;box-shadow:inset 3px 0 0 '+(_z?_z.color:'transparent')+';'
+          +'color:'+(idx===0?'#f0b020':'var(--t3)')+';padding-left:10px;">'+(idx+1)+'</td>'
+        +'<td style="'+_cell+'text-align:left;"><div style="display:flex;align-items:center;gap:8px;">'
+          +(logo?'<img src="'+logo+'" style="width:20px;height:20px;object-fit:contain;flex:none;" loading="lazy" onerror="this.style.display=\'none\'">':'')
+          +'<span style="color:#fff;font-weight:800;font-size:13.5px;white-space:nowrap;">'+nm+'</span></div></td>'
+        +_val(J)+_val(V)+_val(N)+_val(D)+_val(BP)+_val(BC)
+        +_val(DF, isNaN(_dfNum)?null:(_dfNum>0?'#1ed760':(_dfNum<0?'#ff6b6b':null)))
+        +'<td style="'+_cell+'border-radius:0 10px 10px 0;">'
+          +'<span style="display:inline-block;min-width:34px;padding:3px 8px;border-radius:8px;font-weight:800;font-variant-numeric:tabular-nums;'
+          +(lastCol==='-'?'background:rgba(255,255,255,.06);color:#9fb0c7;':'background:rgba(77,132,255,.16);color:#8ab4ff;')+'">'+lastCol+'</span></td></tr>';
     });
     out+='</tbody></table></div>';
   });
@@ -49842,9 +49857,45 @@ async function _g45KhlMatchsPlage(de, a) {
      delai et « Aucun match » effacait tout). Un vide n'est retenu que s'il est
      SUR, c'est-a-dire si toutes les semaines ont repondu. Sinon on rend le
      dernier resultat reussi de la meme plage. */
-  var cle = de + '_' + a;
-  if (res.length || !_g45KhlEchecs) { _g45KhlDerniers[cle] = res; return res; }
-  return _g45KhlDerniers[cle] || res;
+  var cle = _g45KhlClePlage(de, a);
+  if (res.length || !_g45KhlEchecs) { _g45KhlDerniers[cle] = res; _g45KhlRangerPlage(cle, res); return res; }
+  return _g45KhlDerniers[cle] || _g45KhlLirePlage(cle) || res;
+}
+
+/* AFFICHAGE IMMEDIAT PUIS RAFRAICHISSEMENT (18/09, demande d'Antoine : « 3
+   plombes a chaque fois »). Les vues longues (classement, forme, journees)
+   relisaient toute la saison avant d'afficher quoi que ce soit. On garde donc
+   le dernier resultat de chaque plage sur le disque : il est rendu tout de
+   suite, la lecture continue en arriere-plan, et l'ecran est redessine
+   seulement si quelque chose a change. */
+/* CLE DE PLAGE : « aujourd'hui » vaut Date.now(), qui change a chaque appel —
+   une cle brute ne retombait donc JAMAIS sur le cache de la fois precedente
+   (bug attrape en simulation). On arrondit : jour de depart + nombre de jours
+   couverts. */
+function _g45KhlClePlage(de, a) {
+  return Math.floor(de / 86400000) + '_' + Math.max(1, Math.round((a - de) / 86400000));
+}
+function _g45KhlRangerPlage(cle, liste) {
+  try { localStorage.setItem('g45khl_plage_' + cle, JSON.stringify({ t: Date.now(), l: liste })); } catch (e) {}
+}
+function _g45KhlLirePlage(cle) {
+  try {
+    var c = JSON.parse(localStorage.getItem('g45khl_plage_' + cle) || 'null');
+    return (c && Array.isArray(c.l) && c.l.length) ? c.l : null;
+  } catch (e) { return null; }
+}
+function _g45KhlEmpreinte(ms) {
+  return (ms || []).map(function (m) { return m.id + ':' + m.sc + ':' + m.etat; }).join('|');
+}
+/* `rendre(ms, ancien)` est appele une fois avec les donnees en cache (si elles
+   existent), puis une seconde fois avec les donnees fraiches si elles different. */
+async function _g45KhlPlageAffiche(de, a, rendre) {
+  var cle = _g45KhlClePlage(de, a);
+  var vieux = _g45KhlDerniers[cle] || _g45KhlLirePlage(cle);
+  if (vieux && vieux.length) rendre(vieux, true);
+  var frais = await _g45KhlMatchsPlage(de, a);
+  if (!vieux || _g45KhlEmpreinte(frais) !== _g45KhlEmpreinte(vieux)) rendre(frais, false);
+  return frais;
 }
 function _g45KhlDebutSaison() {
   var d = new Date(), an = (d.getMonth() + 1 >= 8) ? d.getFullYear() : d.getFullYear() - 1;
@@ -50013,7 +50064,11 @@ window.g45KhlJour = g45KhlJour;
 
 async function _g45KhlVueCalendrier(body) {
   var j0 = new Date(); j0.setHours(0, 0, 0, 0);
-  var ms = (await _g45KhlMatchsPlage(j0.getTime(), j0.getTime() + 14 * 86400000)).filter(function (m) { return !_g45KhlFini(m); });
+  await _g45KhlPlageAffiche(j0.getTime(), j0.getTime() + 14 * 86400000, function (liste, ancien) {
+    _g45KhlRendreCalendrier(body, liste.filter(function (m) { return !_g45KhlFini(m); }), ancien);
+  });
+}
+function _g45KhlRendreCalendrier(body, ms, ancien) {
   if (!ms.length) { body.innerHTML = _g45KhlMsgVide('Aucun match KHL dans les 14 prochains jours.'); return; }
   var h = '', jourCourant = '';
   ms.forEach(function (m) {
@@ -50025,7 +50080,7 @@ async function _g45KhlVueCalendrier(body) {
       + '<span style="color:#8a93ad;">vs</span>'
       + '<span style="flex:1;min-width:0;text-align:right;">' + _g45KhlEsc(g45KhlNomFr(m.b)) + '</span>' + _g45KhlLogoHtml(m.b, m.bn, 20) + '</div>';
   });
-  body.innerHTML = h;
+  body.innerHTML = (ancien ? '<div style="font-size:10.5px;color:#f0b020;margin-bottom:8px;">\u21bb Donn\u00e9es pr\u00e9c\u00e9dentes, mise \u00e0 jour en cours\u2026</div>' : '') + h;
 }
 
 /* Classement recalcule depuis les matchs finis : 2 pts la victoire (quelle
@@ -50048,7 +50103,11 @@ function _g45KhlClassement(ms) {
   });
 }
 async function _g45KhlVueClassement(body) {
-  var ms = await _g45KhlMatchsPlage(_g45KhlDebutSaison(), Date.now());
+  await _g45KhlPlageAffiche(_g45KhlDebutSaison(), Date.now(), function (ms, ancien) {
+    if (document.getElementById('g45-compet-body') === body || body) _g45KhlRendreClassement(body, ms, ancien);
+  });
+}
+function _g45KhlRendreClassement(body, ms, ancien) {
   var cl = _g45KhlClassement(ms).filter(function (r) { return r.e.conf === _g45KhlConf; });
   var h = '<div style="display:flex;gap:6px;margin-bottom:10px;">' + _g45KhlChip('Ouest', _g45KhlConf === 'Ouest', "g45KhlConf('Ouest')") + _g45KhlChip('Est', _g45KhlConf === 'Est', "g45KhlConf('Est')") + '</div>'
     + '<div style="overflow-x:auto;"><table style="width:100%;border-collapse:collapse;font-size:12px;color:#e8ecfa;">'
@@ -50061,14 +50120,19 @@ async function _g45KhlVueClassement(body) {
       + '<td style="text-align:center;">' + (r.bp - r.bc > 0 ? '+' : '') + (r.bp - r.bc) + '</td>'
       + '<td style="text-align:right;padding-right:4px;font-weight:800;color:' + (i === 0 ? '#1ed760' : '#e8ecfa') + ';">' + r.pts + '</td></tr>';
   });
-  h += '</table></div><div style="font-size:10.5px;color:#8a93ad;margin-top:8px;line-height:1.5;">VP = victoire en prolongation ou aux tirs au but \u00b7 DP = d\u00e9faite en prolongation ou aux tirs au but (1 pt). Pointill\u00e9 = limite des 8 qualifi\u00e9s pour les play-offs. Classement recalcul\u00e9 depuis les r\u00e9sultats.</div>';
+  h += '</table></div>'
+    + (ancien ? '<div style="font-size:10.5px;color:#f0b020;margin-top:8px;">\u21bb Classement pr\u00e9c\u00e9dent affich\u00e9, mise \u00e0 jour en cours\u2026</div>' : '')
+    + '<div style="font-size:10.5px;color:#8a93ad;margin-top:8px;line-height:1.5;">VP = victoire en prolongation ou aux tirs au but \u00b7 DP = d\u00e9faite en prolongation ou aux tirs au but (1 pt). Pointill\u00e9 = limite des 8 qualifi\u00e9s pour les play-offs. Classement recalcul\u00e9 depuis les r\u00e9sultats.</div>';
   body.innerHTML = h;
 }
 function g45KhlConf(c) { _g45KhlConf = c; loadCompetTab(); }
 window.g45KhlConf = g45KhlConf;
 
 async function _g45KhlVueForme(body) {
-  var ms = (await _g45KhlMatchsPlage(_g45KhlDebutSaison(), Date.now())).filter(_g45KhlFini).reverse(); /* recent d'abord */
+  await _g45KhlPlageAffiche(_g45KhlDebutSaison(), Date.now(), function (liste, ancien) { _g45KhlRendreForme(body, liste, ancien); });
+}
+function _g45KhlRendreForme(body, liste0, ancien) {
+  var ms = liste0.filter(_g45KhlFini).slice().reverse(); /* recent d'abord */
   var filtres = '<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px;">'
     + _g45KhlChip('Global', _g45KhlFormeLieu === '', "g45KhlForme(null,'')") + _g45KhlChip('Domicile', _g45KhlFormeLieu === 'dom', "g45KhlForme(null,'dom')") + _g45KhlChip('Ext\u00e9rieur', _g45KhlFormeLieu === 'ext', "g45KhlForme(null,'ext')")
     + '</div><div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px;">'
@@ -50095,7 +50159,8 @@ async function _g45KhlVueForme(body) {
       + _g45KhlLogoHtml(l.e.id, '', 22) + '<span style="flex:1;min-width:0;">' + _g45KhlEsc(l.e.fr) + '</span>'
       + '<span style="display:flex;gap:3px;">' + l.res.map(pastille).join('') + '</span>'
       + '<span style="width:42px;text-align:right;font-weight:800;">' + l.pct + '%</span></div>';
-  }).join('') + '<div style="font-size:10.5px;color:#8a93ad;margin-top:8px;">R\u00e9sultat le plus r\u00e9cent \u00e0 gauche \u00b7 %V = victoires, prolongation comprise.</div>';
+  }).join('') + (ancien ? '<div style="font-size:10.5px;color:#f0b020;margin-top:8px;">\u21bb Donn\u00e9es pr\u00e9c\u00e9dentes, mise \u00e0 jour en cours\u2026</div>' : '')
+    + '<div style="font-size:10.5px;color:#8a93ad;margin-top:8px;">R\u00e9sultat le plus r\u00e9cent \u00e0 gauche \u00b7 %V = victoires, prolongation comprise.</div>';
 }
 function g45KhlForme(n, lieu) { if (n) _g45KhlFormeN = n; if (lieu !== null && lieu !== undefined) _g45KhlFormeLieu = lieu; loadCompetTab(); }
 window.g45KhlForme = g45KhlForme;
@@ -50198,7 +50263,9 @@ function _g45KhlLundi(t) {
 async function _g45KhlVueJournees(body) {
   var debut = _g45KhlDebutSaison();
   var fin = Date.now() + 21 * 86400000;
-  var ms = await _g45KhlMatchsPlage(debut, fin);
+  await _g45KhlPlageAffiche(debut, fin, function (liste, ancien) { _g45KhlRendreJournees(body, liste, ancien); });
+}
+function _g45KhlRendreJournees(body, ms, ancien) {
   if (!ms.length) { body.innerHTML = _g45KhlMsgVide('Aucun match KHL trouv\u00e9 pour cette saison.'); return; }
   var sem = {}, lundiCourant = _g45KhlLundi(Date.now());
   ms.forEach(function (m) { var k = _g45KhlLundi(m.t); (sem[k] = sem[k] || []).push(m); });
@@ -50240,7 +50307,7 @@ async function _g45KhlVueJournees(body) {
     }
     h += '</div>';
   });
-  body.innerHTML = h;
+  body.innerHTML = (ancien ? '<div style="font-size:10.5px;color:#f0b020;margin-bottom:8px;">\u21bb Donn\u00e9es pr\u00e9c\u00e9dentes, mise \u00e0 jour en cours\u2026</div>' : '') + h;
   /* Fiches des matchs deplies, chargees apres coup. */
   Object.keys(_g45KhlJrOuvert).forEach(async function (id) {
     if (!_g45KhlJrOuvert[id]) return;
@@ -51265,37 +51332,77 @@ async function g45KhlCompoFiche(el, e) {
   }
   var pastilles = function (p) {
     var par = perMatch[_g45KhlNorm(p.n)] || {};
-    return '<span style="display:inline-flex;gap:2px;">' + siens.map(function (m) {
+    return '<span style="display:inline-flex;gap:3px;">' + siens.map(function (m) {
       var d = par[m.id];
       var t = new Date(m.t).toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit' });
-      var fond = 'rgba(255,255,255,.06)', txt = '#5c6785', lib = '\u00b7', info = 'pas sur la feuille';
-      if (d && d.joue) { fond = 'rgba(255,255,255,.1)'; txt = '#9fb0c7'; lib = '\u2013'; info = 'a jou\u00e9'; }
-      if (d && d.a) { fond = 'rgba(77,132,255,.25)'; txt = '#8ab4ff'; lib = 'A' + (d.a > 1 ? d.a : ''); info = d.a + ' passe(s)'; }
-      if (d && d.b) { fond = 'rgba(30,215,96,.25)'; txt = '#1ed760'; lib = 'B' + (d.b > 1 ? d.b : ''); info = d.b + ' but(s)' + (d.a ? ' + ' + d.a + ' passe(s)' : ''); }
-      return '<span title="' + t + ' \u00b7 ' + info + '" style="width:17px;height:17px;border-radius:4px;display:inline-flex;align-items:center;justify-content:center;'
-        + 'font-size:8.5px;font-weight:800;background:' + fond + ';color:' + txt + ';">' + lib + '</span>';
+      /* Degrades plutot que des aplats transparents : un but et une passe se
+         distinguent d'un coup d'oeil, meme sur telephone. */
+      var fond = 'rgba(255,255,255,.03)', txt = '#3c465e', lib = '\u00b7', info = 'pas sur la feuille';
+      if (d && d.joue) { fond = 'rgba(255,255,255,.09)'; txt = '#7c89a8'; lib = '\u2013'; info = 'a jou\u00e9'; }
+      if (d && d.a) { fond = 'linear-gradient(145deg,#8ab4ff,#4d84ff)'; txt = '#08132b'; lib = 'A' + (d.a > 1 ? d.a : ''); info = d.a + ' passe(s)'; }
+      if (d && d.b) { fond = 'linear-gradient(145deg,#1ed760,#12a049)'; txt = '#06210f'; lib = 'B' + (d.b > 1 ? d.b : ''); info = d.b + ' but(s)' + (d.a ? ' + ' + d.a + ' passe(s)' : ''); }
+      return '<span title="' + t + ' \u00b7 ' + info + '" style="width:20px;height:20px;border-radius:6px;display:inline-flex;align-items:center;justify-content:center;'
+        + 'font-size:9px;font-weight:800;background:' + fond + ';color:' + txt + ';">' + lib + '</span>';
     }).join('') + '</span>';
   };
   var st = function (v, dec) { return (v == null || isNaN(v)) ? '\u2013' : (dec ? (Math.round(v * 100) / 100).toFixed(dec) : Math.round(v)); };
   var mmss = function (v) { if (!v) return '\u2013'; var s = Math.round(v * 60); return Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0'); };
-  var ligne = function (p, gardien) {
-    var cols = gardien
-      ? [st(p.st.gp), st(p.st.w), st(p.st.sv), (p.st.sv_pct != null ? st(p.st.sv_pct, 1) : '\u2013'), (p.st.gaa != null ? st(p.st.gaa, 2) : '\u2013'), st(p.st.so)]
-      : [st(p.st.gp), st(p.st.g), st(p.st.a), st(p.st.pts), ((p.st.pm > 0 ? '+' : '') + st(p.st.pm)), mmss(p.st.toi_avg)];
-    return '<div style="display:flex;align-items:center;gap:9px;padding:7px 4px;border-bottom:1px solid rgba(255,255,255,.06);font-size:12px;">'
+  /* RELOOKAGE (18/09, retours d'Antoine : « cette ecriture basique grise me
+     saoule ») — variante D validee : ligne pays/age/poste en BLANC, nom
+     agrandi pour garder la hierarchie, lignes alternees, points et +/- en
+     pastilles, zeros estompes, chiffres a largeur fixe (tabular-nums) pour que
+     les colonnes s'alignent vraiment. */
+  var PAYS = { Russia: '\ud83c\uddf7\ud83c\uddfa', Belarus: '\ud83c\udde7\ud83c\uddfe', Kazakhstan: '\ud83c\uddf0\ud83c\uddff',
+               Canada: '\ud83c\udde8\ud83c\udde6', USA: '\ud83c\uddfa\ud83c\uddf8', Sweden: '\ud83c\uddf8\ud83c\uddea',
+               Finland: '\ud83c\uddeb\ud83c\uddee', Czechia: '\ud83c\udde8\ud83c\uddff', 'Czech Republic': '\ud83c\udde8\ud83c\uddff',
+               Slovakia: '\ud83c\uddf8\ud83c\uddf0', Latvia: '\ud83c\uddf1\ud83c\uddfb', China: '\ud83c\udde8\ud83c\uddf3',
+               Norway: '\ud83c\uddf3\ud83c\uddf4', Denmark: '\ud83c\udde9\ud83c\uddf0', Germany: '\ud83c\udde9\ud83c\uddea',
+               Switzerland: '\ud83c\udde8\ud83c\udded', France: '\ud83c\uddeb\ud83c\uddf7' };
+  var POSTE_FR = { g: 'gardien', d: 'd\u00e9fenseur', f: 'attaquant' };
+  var cel = function (v, largeur) {
+    var nul = (v === '0' || v === 0 || v === '\u2013');
+    return '<span style="width:' + (largeur || 38) + 'px;text-align:center;font-size:12px;font-weight:700;font-variant-numeric:tabular-nums;'
+      + 'color:' + (nul ? '#5c6785' : '#dbe3f5') + ';">' + v + '</span>';
+  };
+  var past = function (v, fond, coul) {
+    return '<span style="width:38px;text-align:center;font-size:12px;font-weight:800;border-radius:7px;padding:3px 0;'
+      + 'font-variant-numeric:tabular-nums;background:' + fond + ';color:' + coul + ';">' + v + '</span>';
+  };
+  var ligne = function (p, gardien, rang) {
+    var cols;
+    if (gardien) {
+      var pct = (p.st.sv_pct != null) ? st(p.st.sv_pct, 1) : '\u2013';
+      cols = cel(st(p.st.gp)) + cel(st(p.st.w)) + cel(st(p.st.sv))
+        + past(pct, pct === '\u2013' ? 'transparent' : 'rgba(30,215,96,.14)', pct === '\u2013' ? '#5c6785' : '#1ed760')
+        + cel(p.st.gaa != null ? st(p.st.gaa, 2) : '\u2013')
+        + cel(st(p.st.so));
+    } else {
+      var pts = p.st.pts || 0, pm = p.st.pm || 0;
+      cols = cel(st(p.st.gp)) + cel(st(p.st.g)) + cel(st(p.st.a))
+        + past(pts, pts ? 'rgba(77,132,255,.16)' : 'transparent', pts ? '#8ab4ff' : '#5c6785')
+        + past((pm > 0 ? '+' : (pm < 0 ? '\u2212' : '')) + Math.abs(pm),
+               pm > 0 ? 'rgba(30,215,96,.14)' : (pm < 0 ? 'rgba(255,69,69,.14)' : 'transparent'),
+               pm > 0 ? '#1ed760' : (pm < 0 ? '#ff6b6b' : '#5c6785'))
+        + cel(mmss(p.st.toi_avg), 44);
+    }
+    var drapeau = PAYS[p.pays] ? (PAYS[p.pays] + ' ') : '';
+    return '<div style="display:flex;align-items:center;gap:6px;padding:8px 6px;border-radius:11px;margin-bottom:4px;'
+      + 'background:rgba(255,255,255,' + (rang % 2 ? '.055' : '.028') + ');font-size:12px;">'
       + '<span style="width:36px;height:36px;border-radius:9px;overflow:hidden;background:#26324d;flex:none;position:relative;display:inline-flex;align-items:center;justify-content:center;">'
       + (p.img ? '<img src="' + _g45KhlEsc(p.img) + '" alt="" loading="lazy" style="width:100%;height:100%;object-fit:cover;" onerror="this.remove()">' : '')
       + (p.num != null ? '<span style="position:absolute;left:-2px;top:-2px;background:#0f1729;border:1px solid rgba(255,255,255,.2);border-radius:5px;font-size:8.5px;font-weight:800;padding:0 3px;color:#dbe3f5;">' + p.num + '</span>' : '')
       + '</span>'
-      + '<div style="flex:1;min-width:0;"><div style="font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">' + _g45KhlEsc(p.n) + '</div>'
-      + '<div style="font-size:10.5px;color:#8a93ad;">' + _g45KhlEsc(p.pays || '') + (p.age ? ' \u00b7 ' + p.age + ' ans' : '') + '</div></div>'
-      + cols.map(function (c, i) { return '<span style="width:34px;text-align:center;font-size:11.5px;color:' + (i === 3 && !gardien ? '#e8ecfa' : '#aab3cc') + ';">' + c + '</span>'; }).join('')
+      + '<div style="flex:1;min-width:0;"><div style="font-weight:800;font-size:13.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">' + _g45KhlEsc(p.n) + '</div>'
+      + '<div style="font-size:11px;color:#fff;">' + drapeau + _g45KhlEsc(p.pays || '') + (p.age ? ' \u00b7 ' + p.age + ' ans' : '')
+      + ' \u00b7 ' + POSTE_FR[_g45KhlPoste(p.r)] + '</div></div>'
+      + cols
       + '<span style="min-width:0;">' + pastilles(p) + '</span></div>';
   };
   var entete = function (libs) {
-    return '<div style="display:flex;gap:9px;padding:4px;color:#8a93ad;font-size:10.5px;"><span style="width:36px;"></span><span style="flex:1;">Joueur</span>'
-      + libs.map(function (l) { return '<span style="width:34px;text-align:center;">' + l + '</span>'; }).join('')
-      + '<span>' + siens.length + ' derniers matchs</span></div>';
+    return '<div style="display:flex;gap:6px;padding:0 6px 6px;color:#7c89a8;font-size:9px;font-weight:800;letter-spacing:.8px;text-transform:uppercase;">'
+      + '<span style="width:36px;"></span><span style="flex:1;">Joueur</span>'
+      + libs.map(function (l, i) { return '<span style="width:' + (i === libs.length - 1 ? 44 : 38) + 'px;text-align:center;">' + l + '</span>'; }).join('')
+      + '<span style="text-align:center;">' + siens.length + ' derniers</span></div>';
   };
   var champ = eff.filter(function (p) { return _g45KhlPoste(p.r) !== 'g'; })
     .sort(function (x, y) { return (y.st.pts || 0) - (x.st.pts || 0) || (y.st.toi_avg || 0) - (x.st.toi_avg || 0); });
@@ -51314,11 +51421,11 @@ async function g45KhlCompoFiche(el, e) {
     + '<div style="overflow-x:auto;"><div style="min-width:560px;">';
   if (_g45KhlCompoPoste !== 'g' && champ.length) {
     h += '<div style="font-size:10px;font-weight:800;letter-spacing:.6px;text-transform:uppercase;color:#c3cfe6;margin:10px 0 4px;">Joueurs de champ (' + champ.length + ')</div>'
-      + entete(['MJ', 'B', 'A', 'PTS', '+/-', 'Glace']) + champ.map(function (p) { return ligne(p, false); }).join('');
+      + entete(['MJ', 'B', 'A', 'PTS', '+/\u2212', 'Glace']) + champ.map(function (p, i) { return ligne(p, false, i); }).join('');
   }
   if ((_g45KhlCompoPoste === 'tous' || _g45KhlCompoPoste === 'g') && gardiens.length) {
     h += '<div style="font-size:10px;font-weight:800;letter-spacing:.6px;text-transform:uppercase;color:#c3cfe6;margin:14px 0 4px;">Gardiens (' + gardiens.length + ')</div>'
-      + entete(['MJ', 'V', 'Arr.', '%Arr', 'Moy.', 'BL']) + gardiens.map(function (p) { return ligne(p, true); }).join('');
+      + entete(['MJ', 'V', 'Arr.', '%Arr', 'Moy.', 'BL']) + gardiens.map(function (p, i) { return ligne(p, true, i); }).join('');
   }
   h += '</div></div><div style="font-size:10.5px;color:#8a93ad;margin-top:10px;line-height:1.6;">'
     + 'Pastilles : <b style="color:#1ed760;">B</b> but \u00b7 <b style="color:#8ab4ff;">A</b> passe \u00b7 <b>\u2013</b> a jou\u00e9 \u00b7 <b>\u00b7</b> absent de la feuille. '
@@ -51366,10 +51473,15 @@ async function _g45KhlIndexButeurs(e) {
   if (_g45KhlSgIndex && _g45KhlSgIndex.cle === cle) return _g45KhlSgIndex.joueurs;
   var saison = await _g45KhlMatchsPlage(_g45KhlDebutSaison(), Date.now());
   var siens = saison.filter(function (m) { return (m.a === e.id || m.b === e.id) && _g45KhlFini(m); });
-  var joueurs = {};
+  var joueurs = {}, lus = 0, manques = [];
   for (var i = 0; i < siens.length; i++) {
     var m = siens[i], f = await _g45KhlFiche(m);
-    if (!f) continue;
+    /* Une fiche qui ne repond pas etait ignoree EN SILENCE : le selecteur
+       affichait alors « 1 buteur » pour une equipe qui en avait deux (constate
+       par Antoine sur HC Sotchi). On compte desormais les fiches manquantes et
+       on le dit. */
+    if (!f) { manques.push(m.id); continue; }
+    lus++;
     (f.buts || []).forEach(function (g) {
       if (g.eq !== e.id) return;
       var ajoute = function (nom, champ) {
@@ -51383,7 +51495,7 @@ async function _g45KhlIndexButeurs(e) {
       (g.pa || []).forEach(function (p) { ajoute(p, 'a'); });
     });
   }
-  _g45KhlSgIndex = { cle: cle, joueurs: joueurs };
+  _g45KhlSgIndex = { cle: cle, joueurs: joueurs, lus: lus, total: siens.length, manques: manques };
   return joueurs;
 }
 
@@ -51400,12 +51512,15 @@ async function g45KhlSgBarre(el, e) {
       return '<option value="' + ech(n) + '"' + (actif === n ? ' selected' : '') + '>' + ech(n) + ' (' + joueurs[n][champ] + ')</option>';
     }).join('');
   };
+  var etat = _g45KhlSgIndex || {};
+  var incomplet = (etat.total && etat.lus < etat.total);
   var h = '<div style="display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin:0 0 10px;">'
     + '<select onchange="g45KhlSgFiltrer(\'g\',this.value)" style="' + style + 'border-color:rgba(30,215,96,.35);">'
     + '<option value="">\ud83c\udfd2 Buteur\u2026</option>' + opt(buteurs, 'g', f && f.type === 'g' ? f.nom : '') + '</select>'
     + '<select onchange="g45KhlSgFiltrer(\'a\',this.value)" style="' + style + 'border-color:rgba(167,139,250,.35);">'
     + '<option value="">\ud83c\udfaf Passeur\u2026</option>' + opt(passeurs, 'a', f && f.type === 'a' ? f.nom : '') + '</select>'
     + (f ? '<button onclick="g45KhlSgFiltrer(null,\'\')" style="padding:5px 10px;border-radius:10px;border:1px solid rgba(255,69,69,.4);background:rgba(255,69,69,.12);color:#ff6b6b;font-size:11px;font-weight:800;cursor:pointer;">\u2715</button>' : '')
+    + (incomplet ? '<button onclick="g45KhlSgRelire()" title="Des feuilles de match n\'ont pas r\u00e9pondu" style="padding:5px 10px;border-radius:10px;border:1px solid rgba(240,176,32,.45);background:rgba(240,176,32,.12);color:#f0b020;font-size:11px;font-weight:800;cursor:pointer;">\u26a0\ufe0f ' + etat.lus + '/' + etat.total + ' matchs lus \u00b7 compl\u00e9ter</button>' : '')
     + '</div>';
   /* La barre se place juste au-dessus de la liste des resultats. */
   var hote = document.createElement('div');
@@ -51454,6 +51569,13 @@ async function g45KhlSgBarre(el, e) {
     + (f.type === 'g' ? ' avec au moins un but' : ' avec au moins une passe');
   hote.appendChild(info);
 }
+/* Relecture des feuilles manquantes : on vide l'index (les fiches deja lues
+   restent en cache, donc seules les manquantes repartent au reseau). */
+function g45KhlSgRelire() {
+  _g45KhlSgIndex = null;
+  if (typeof loadTeamSaisons === 'function') loadTeamSaisons();
+}
+window.g45KhlSgRelire = g45KhlSgRelire;
 function g45KhlSgFiltrer(type, nom) {
   _g45KhlSgFiltre = (type && nom) ? { type: type, nom: nom } : null;
   if (typeof loadTeamSaisons === 'function') loadTeamSaisons();
