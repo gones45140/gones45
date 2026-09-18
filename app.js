@@ -40444,7 +40444,17 @@ async function _g45CompetMatchs(sportPath, slug, an, ids, progres) {
         var t = Date.parse(e.date);
         if (isNaN(hg) || isNaN(ag) || !hid || !aid || isNaN(t)) return;
         vus[e.id] = 1;
-        ms.push({ id: String(e.id), h: hid, a: aid, hg: hg, ag: ag, t: t });
+        /* PERIODES (18/09/2026) : conservees telles qu'ESPN les donne, pour
+           pouvoir recalculer le score du TEMPS REGLEMENTAIRE (bouton du
+           panneau Saisons). Aucune requete de plus : c'est dans la meme
+           reponse. Le NRL numerote sa prolongation « 20 », d'ou le stockage
+           du NUMERO de periode et pas seulement de la valeur. */
+        var per = function (x) {
+          return ((x && x.linescores) || []).map(function (l, i) {
+            return { p: (l.period != null ? +l.period : i + 1), v: (l.value != null ? +l.value : parseInt(l.displayValue, 10) || 0) };
+          });
+        };
+        ms.push({ id: String(e.id), h: hid, a: aid, hg: hg, ag: ag, t: t, hp: per(ho), ap: per(aw) });
       });
     } catch (e) {}
   }
@@ -40486,7 +40496,12 @@ async function _g45CompetMatchs(sportPath, slug, an, ids, progres) {
           var tp = Date.parse(e.date);
           if (isNaN(hgp) || isNaN(agp) || !hidp || !aidp || isNaN(tp)) return;
           vus[e.id] = 1;
-          ms.push({
+          var perp = function (x) {
+            return ((x && x.linescores) || []).map(function (l, k) {
+              return { p: (l.period != null ? +l.period : k + 1), v: (l.value != null ? +l.value : parseInt(l.displayValue, 10) || 0) };
+            });
+          };
+          ms.push({ hp: perp(hop), ap: perp(awp),
             id: String(e.id), h: hidp, a: aidp, hg: hgp, ag: agp, t: tp,
             po: 1,   /* marque « phase finale » : exploitable a l'affichage */
             hn: (hop.team && (hop.team.shortDisplayName || hop.team.displayName)) || '',
@@ -41860,6 +41875,19 @@ async function _g45SaisonsGen(el, nom, perso) {
   });
   html += '</div>';
 
+  /* ── Bouton TEMPS REGLEMENTAIRE (18/09/2026) ──
+     Hockey d'abord : un 3-4 en prolongation est un 3-3 en temps reglementaire,
+     et les books ne cotent pas la meme chose. Le bouton n'apparait que sur les
+     sports concernes, pour ne pas encombrer le football de championnat. */
+  if (typeof g45SportTR === 'function' && g45SportTR(_g45SgCtx && _g45SgCtx.sp) && (_g45SgTRDispo || _g45SgTR)) {
+    html += '<div style="display:flex;gap:6px;margin-bottom:14px;">'
+      + '<button onclick="_g45SgTRBascule()" style="flex:1;padding:7px 6px;border-radius:6px;cursor:pointer;font-size:10px;font-weight:'
+      + (_g45SgTR ? '800' : '400') + ';border:1px solid ' + (_g45SgTR ? 'rgba(240,176,32,.55)' : 'rgba(255,255,255,.08)') + ';'
+      + 'background:' + (_g45SgTR ? 'rgba(240,176,32,.16)' : 'rgba(255,255,255,.04)') + ';color:' + (_g45SgTR ? '#f0b020' : 'var(--t3)') + ';">'
+      + '\u23f1\ufe0f ' + g45LibelleTR(_g45SgCtx && _g45SgCtx.sp) + (_g45SgTR ? ' \u00b7 actif' : '') + '</button></div>'
+      + (_g45SgTR ? '<div style="font-size:10px;color:#f0b020;margin:-8px 0 12px;">Prolongations retir\u00e9es : les nuls r\u00e9apparaissent et les totaux baissent.</div>' : '');
+  }
+
   /* ── Barres des marches coches ── */
   html += '<div style="font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#4f5d88;margin-bottom:8px;">'
     + 'Stats s\u00e9lectionn\u00e9es <span style="color:var(--t3);font-weight:400;text-transform:none;letter-spacing:0;">\u00b7 ' + nF + ' matchs</span></div>';
@@ -42229,6 +42257,9 @@ window._g45SgOuvrirTirs = _g45SgOuvrirTirs;
 function _g45SgRefresh() { if (typeof loadTeamSaisons === 'function') loadTeamSaisons(); }
 function _g45SgSaison(y) { _g45SgAn = y; _g45SgRefresh(); }
 function _g45SgLieu(f) { _g45SgFiltre = f; _g45SgRefresh(); }
+var _g45SgTR = false;
+function _g45SgTRBascule() { _g45SgTR = !_g45SgTR; _g45SgRefresh(); }
+window._g45SgTRBascule = _g45SgTRBascule;
 function _g45SgPhaseSet(f) { _g45SgPhase = f; _g45SgRefresh(); }
 window._g45SgPhaseSet = _g45SgPhaseSet;
 function _g45SgToggle(k) {
@@ -51300,8 +51331,25 @@ async function _g45KhlMatchsStage(stage, enCours, progres) {
 /* Conversion vers le format du panneau generique. */
 function _g45KhlVersSg(m, po) {
   var s = _g45KhlButs(m);
+  /* Periodes au format commun (hp/ap) pour le bouton « temps reglementaire » :
+     1 a 3 reglementaires, 4 prolongation, 5 tirs au but. */
+  var hp = [], ap = [];
+  (m.p || []).forEach(function (x, i) {
+    if (!x) return;
+    var q = String(x).split(':');
+    if (q.length !== 2) return;
+    hp.push({ p: i + 1, v: parseInt(q[0], 10) || 0 });
+    ap.push({ p: i + 1, v: parseInt(q[1], 10) || 0 });
+  });
+  [[m.ot, 4], [m.so, 5]].forEach(function (x) {
+    if (!x[0]) return;
+    var q = String(x[0]).split(':');
+    if (q.length !== 2) return;
+    hp.push({ p: x[1], v: parseInt(q[0], 10) || 0 });
+    ap.push({ p: x[1], v: parseInt(q[1], 10) || 0 });
+  });
   return { id: String(m.id), h: m.a, a: m.b, hg: s.a, ag: s.b, t: m.t,
-           hn: g45KhlNomFr(m.a), an: g45KhlNomFr(m.b), po: po ? 1 : 0 };
+           hn: g45KhlNomFr(m.a), an: g45KhlNomFr(m.b), po: po ? 1 : 0, hp: hp, ap: ap };
 }
 
 (function _g45KhlBrancherSaisonsGen() {
@@ -51632,6 +51680,7 @@ async function g45KhlSgBarre(el, e) {
     el.insertBefore(hote, el.firstChild);
   }
 
+  g45KhlMarquerProlongations(el);
   if (!f) return;
   var j = joueurs[f.nom];
   if (!j) return;
@@ -51750,4 +51799,146 @@ window.g45KhlDetailMatch = g45KhlDetailMatch;
   };
   env._g45Khl = true;
   _g45SgMatch = env; window._g45SgMatch = env;
+})();
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   KHL — SIGNALER LES PROLONGATIONS DANS LA LISTE DES RESULTATS (18/09/2026)
+   ───────────────────────────────────────────────────────────────────────────
+   Signale par Antoine, et c'est capital pour parier : un 3-4 arrache en
+   prolongation est un 3-3 en temps reglementaire. Le panneau generique n'a
+   qu'un score, sans notion de prolongation. On decore donc ses lignes apres
+   coup : badge « prol. » ou « TAB », et score du temps reglementaire, calcule
+   en additionnant les trois periodes.
+   ═══════════════════════════════════════════════════════════════════════════ */
+function _g45KhlScoreTR(m) {
+  var a = 0, b = 0, vu = 0;
+  (m.p || []).forEach(function (x) {
+    if (!x) return;
+    var q = String(x).split(':');
+    if (q.length !== 2) return;
+    a += parseInt(q[0], 10) || 0; b += parseInt(q[1], 10) || 0; vu++;
+  });
+  return vu ? (a + '-' + b) : '';
+}
+function g45KhlMarquerProlongations(el) {
+  try {
+    var lignes = (el || document).querySelectorAll('[onclick^="_g45SgMatch("]');
+    Array.prototype.forEach.call(lignes, function (ln) {
+      if (ln.getAttribute('data-khl-prol') === '1') return;
+      var mid = (ln.getAttribute('onclick') || '').replace(/^[^']*'/, '').replace(/'.*$/, '');
+      var m = _g45KhlMatchConnu(mid);
+      if (!m) return;
+      ln.setAttribute('data-khl-prol', '1');
+      if (!m.ot && !m.so) return;
+      var tr = _g45KhlScoreTR(m);
+      var lib = m.so ? 'TAB' : 'prol.';
+      var b = document.createElement('span');
+      b.style.cssText = 'display:inline-block;margin-left:6px;padding:1px 6px;border-radius:6px;font-size:9.5px;font-weight:800;'
+        + 'background:rgba(240,176,32,.16);color:#f0b020;white-space:nowrap;';
+      b.textContent = lib + (tr ? ' \u00b7 ' + tr + ' TR' : '');
+      b.title = 'Prolongation ou tirs au but' + (tr ? ' \u2014 score en temps r\u00e9glementaire : ' + tr : '');
+      var cible = ln.querySelector('span') || ln;
+      cible.appendChild(b);
+    });
+  } catch (e) {}
+}
+window.g45KhlMarquerProlongations = g45KhlMarquerProlongations;
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   SCORE AU TEMPS REGLEMENTAIRE (18/09/2026, demande d'Antoine)
+   ───────────────────────────────────────────────────────────────────────────
+   Un 3-4 arrache en prolongation est un 3-3 en temps reglementaire : pour
+   parier, ce n'est pas le meme match. Les books distinguent d'ailleurs le
+   marche « 1X2 » (temps reglementaire, nul possible) du « vainqueur » (avec
+   prolongation). On recalcule donc a partir des periodes, disponibles sans
+   requete supplementaire : `linescores` chez ESPN (verifie le 18/09 : NHL 5
+   periodes avec tirs au but, MLB 10 manches, NRL prolongation numerotee 20) et
+   `scores` chez la KHL.
+   HOCKEY D'ABORD, les autres sports viendront ensuite.
+   GARDE-FOU : si la somme des periodes reglementaires ne colle pas au score
+   final alors qu'il n'y a PAS eu de prolongation, on garde le score officiel —
+   mieux vaut la valeur d'origine qu'un chiffre invente.
+   ═══════════════════════════════════════════════════════════════════════════ */
+var G45_TR_PERIODES = { hockey: 3, basketball: 4, football: 4, baseball: 9, 'rugby-league': 2, soccer: 2 };
+/* Libelle adapte : « temps reglementaire » n'a pas de sens au baseball. */
+var G45_TR_LIBELLE = { hockey: 'Temps r\u00e9glementaire', basketball: 'Sans prolongation', football: 'Sans prolongation',
+                       baseball: 'Apr\u00e8s 9 manches', 'rugby-league': 'Temps r\u00e9glementaire', soccer: '90 minutes' };
+function g45LibelleTR(sp) {
+  return G45_TR_LIBELLE[String(sp || '').split('/')[0]] || 'Temps r\u00e9glementaire';
+}
+window.g45LibelleTR = g45LibelleTR;
+/* Vrai si la derniere liste chargee contient au moins un match prolonge : le
+   bouton ne s'affiche que la, sinon il encombrerait une Ligue 1 ou aucune
+   rencontre ne va au-dela des 90 minutes. */
+var _g45SgTRDispo = false;
+
+function g45SportTR(sp) {
+  var k = String(sp || '').split('/')[0];
+  return G45_TR_PERIODES[k] || 0;
+}
+/* Somme des periodes dont le NUMERO est <= n (le NRL numerote sa prolongation
+   « 20 » : filtrer sur l'ordre donnerait une 3e mi-temps). */
+function _g45SommePeriodes(liste, n) {
+  var tot = 0, vu = 0;
+  (liste || []).forEach(function (x) {
+    if (!x || x.p == null || x.p > n) return;
+    tot += (+x.v || 0); vu++;
+  });
+  return vu ? tot : null;
+}
+/* Rend { hg, ag, ok, prol } au temps reglementaire, ou null si impossible. */
+function g45ScoreTR(m, sp) {
+  var n = g45SportTR(sp);
+  if (!n || !m) return null;
+  var h = _g45SommePeriodes(m.hp, n), a = _g45SommePeriodes(m.ap, n);
+  if (h == null || a == null) return null;
+  /* GARDE-FOU renforce : on n'accepte un ecart avec le score final QUE si
+     des periodes au-dela du temps reglementaire existent vraiment. Sinon
+     c'est que la liste des periodes est incomplete (cas rencontre en test :
+     3 periodes fournies pour un 9-1) et on renonce plutot que d'afficher un
+     score faux. */
+  var sup = (m.hp || []).concat(m.ap || []).some(function (x) { return x && x.p > n; });
+  var ecart = (h !== +m.hg || a !== +m.ag);
+  if (ecart && !sup) return null;
+  var prol = ecart;
+  return { hg: h, ag: a, prol: prol };
+}
+window.g45ScoreTR = g45ScoreTR;
+window.g45SportTR = g45SportTR;
+
+/* Application du mode « temps reglementaire » : on transforme la liste de
+   matchs A LA SOURCE, juste apres _g45CompetMatchs. Tout le panneau (victoires,
+   nuls, over, BTTS, forme, resultats) travaille alors sur les scores recalcules
+   sans qu'une seule de ses formules ne change. Un match dont les periodes
+   manquent garde son score final : jamais de chiffre invente. */
+(function _g45BrancherTempsReglementaire() {
+  if (typeof _g45CompetMatchs !== 'function' || _g45CompetMatchs._g45TR) return;
+  var origine = _g45CompetMatchs;
+  var env = async function (sp, lg, an, ids, progres) {
+    var ms = await origine.apply(this, arguments);
+    /* `typeof` plutot qu'un acces direct : ce module est charge en fin de
+       fichier et doit rester inoffensif si l'etat n'existe pas encore. */
+    var actif = (typeof _g45SgTR !== 'undefined') && _g45SgTR;
+    if (!Array.isArray(ms)) return ms;
+    /* On repere les matchs prolonges a chaque chargement, meme mode inactif :
+       c'est ce qui decide de l'affichage du bouton. */
+    var n = g45SportTR(sp), dispo = false;
+    if (n) {
+      dispo = ms.some(function (m) {
+        return ((m.hp || []).concat(m.ap || [])).some(function (x) { return x && x.p > n; });
+      });
+    }
+    _g45SgTRDispo = dispo;
+    if (!actif) return ms;
+    return ms.map(function (m) {
+      var tr = g45ScoreTR(m, sp);
+      if (!tr) return m;
+      var c = {};
+      Object.keys(m).forEach(function (k) { c[k] = m[k]; });
+      c.hg = tr.hg; c.ag = tr.ag; c.trProl = tr.prol ? 1 : 0;
+      return c;
+    });
+  };
+  env._g45TR = true; env._g45Khl = origine._g45Khl;
+  _g45CompetMatchs = env; window._g45CompetMatchs = env;
 })();
