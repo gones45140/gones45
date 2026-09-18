@@ -24941,6 +24941,54 @@ function _renderEspnMatchLineups(s, col, nameFn){
   } catch(e){ return ''; }
 }
 
+/* ═══ PHOTOS SUR LE TERRAIN (18/09/2026, valide avec Antoine) ═══
+   Ordre des sources, le meme que partout ailleurs dans l'appli : image perso
+   du depot (retrouvee par l'index GitHub), puis portrait d'effectif
+   (api-sports, complete par TheSportsDB), puis le maillot SVG actuel — jamais
+   de trou, et la ligne ne se decale pas puisque la photo occupe exactement la
+   meme place. Les photos sont PRE-CHARGEES par equipe avant le rendu : aucune
+   requete par joueur. */
+var _G45_PITCH_PHOTOS = {};
+function _g45PitchPhoto(nom) {
+  try {
+    var k = _g45SgNorm(nom);
+    return _G45_PITCH_PHOTOS[k] || '';
+  } catch (e) { return ''; }
+}
+/* Pose les photos arrivees apres coup, sans redessiner le terrain. */
+function g45PitchPhotosAppliquer() {
+  try {
+    var n = document.querySelectorAll('.g45-pitch-ph[data-nom]');
+    Array.prototype.forEach.call(n, function (sp) {
+      if (sp.getAttribute('data-fait') === '1') return;
+      var url = _G45_PITCH_PHOTOS[sp.getAttribute('data-nom')];
+      if (!url) return;
+      var num = sp.getAttribute('data-num') || '', c = sp.getAttribute('data-col') || '#4d84ff';
+      sp.setAttribute('data-fait', '1');
+      sp.innerHTML = '<span style="position:relative;display:inline-flex;width:clamp(26px,3.4vw,38px);height:clamp(26px,3.4vw,38px);">'
+        + '<img src="' + url + '" alt="" loading="lazy" style="width:100%;height:100%;object-fit:cover;border-radius:22%;border:2px solid ' + c + ';'
+        + 'background:#26324d;filter:drop-shadow(0 1px 3px rgba(0,0,0,.6));">'
+        + '<span style="position:absolute;left:-3px;top:-3px;background:rgba(0,0,0,.75);color:#fff;border-radius:5px;padding:0 3px;'
+        + 'font-size:clamp(7px,0.85vw,9px);font-weight:800;">' + num + '</span></span>';
+    });
+  } catch (e) {}
+}
+window.g45PitchPhotosAppliquer = g45PitchPhotosAppliquer;
+
+async function _g45PitchPrecharger(noms) {
+  for (var i = 0; i < noms.length; i++) {
+    var club = noms[i];
+    if (!club) continue;
+    try {
+      var liste = (typeof _g45PhotosFoot === 'function') ? await _g45PhotosFoot(club) : [];
+      (liste || []).forEach(function (p) { if (p && p.n && p.u && !_G45_PITCH_PHOTOS[p.n]) _G45_PITCH_PHOTOS[p.n] = p.u; });
+      g45PitchPhotosAppliquer();
+    } catch (e) {}
+  }
+  g45PitchPhotosAppliquer();
+}
+window._g45PitchPrecharger = _g45PitchPrecharger;
+
 function _renderEspnMatchPitch(s, col, nameFn){
   try {
     var rosters = s.rosters||[];
@@ -24949,6 +24997,14 @@ function _renderEspnMatchPitch(s, col, nameFn){
     var aR = rosters.find(function(r){return r.homeAway==='away';})||rosters[1];
     if(!hR||!aR) return '';
     function tName(r){ var n=(r&&r.team&&(r.team.displayName||r.team.shortDisplayName||r.team.name))||''; return (typeof nameFn==='function')?(nameFn(n)||n):n; }
+    /* Pre-chargement des photos des DEUX equipes : une requete par club, en
+       cache 30 jours, puis pose differee sur le terrain deja affiche. */
+    try {
+      var _clubs = ((s && s.rosters) || []).map(function (r) {
+        return (r && r.team && (r.team.displayName || r.team.name)) || '';
+      }).filter(Boolean);
+      if (_clubs.length) setTimeout(function () { _g45PitchPrecharger(_clubs); }, 0);
+    } catch (e) {}
     function lastName(full){ if(!full) return '?'; var p=String(full).trim().split(' '); return p.length>1?p[p.length-1]:p[0]; }
     function getLines(r){
       var players=(r&&r.roster)||[];
@@ -25093,10 +25149,28 @@ function _renderEspnMatchPitch(s, col, nameFn){
            Le col est une couche noire translucide plutot qu'une teinte calculee :
            une opacite fonctionne sur n'importe quelle couleur, claire ou sombre,
            sans avoir a convertir chaque code hexadecimal. */
-        +'<svg viewBox="0 0 24 24" style="width:clamp(26px,3.4vw,38px);height:clamp(26px,3.4vw,38px);filter:drop-shadow(0 1px 3px rgba(0,0,0,.6));">'
-        +'<path d="M8 2 L4 4 L2 8 L5 9.5 L5 22 L19 22 L19 9.5 L22 8 L20 4 L16 2 L14.5 3.6 A3.2 3.2 0 0 1 9.5 3.6 Z" fill="'+c+'" stroke="rgba(0,0,0,.45)" stroke-width="1"/>'
-        +'<path d="M8 2 L9.5 3.6 A3.2 3.2 0 0 0 14.5 3.6 L16 2 L14 1.4 A4.6 4.6 0 0 1 10 1.4 Z" fill="rgba(0,0,0,.35)"/>'
-        +'<text x="12" y="16.5" text-anchor="middle" font-size="9" font-weight="800" fill="#fff" stroke="rgba(0,0,0,.55)" stroke-width="0.5" paint-order="stroke">'+num+'</text></svg>'
+        +(function(){
+           /* PHOTO si on en a une, maillot sinon : meme taille dans les deux
+              cas, la ligne ne bouge donc pas selon la couverture. L'enveloppe
+              porte le nom normalise pour que les photos arrivant APRES le
+              rendu soient posees sans redessiner le terrain. */
+           var nomComplet=(p.athlete&&(p.athlete.displayName||p.athlete.shortName))||'';
+           var ph=_g45PitchPhoto(nomComplet);
+           var enveloppe=function(contenu){
+             return '<span class="g45-pitch-ph" data-nom="'+_g45SgNorm(nomComplet)+'" data-num="'+num+'" data-col="'+c+'" style="display:inline-flex;">'+contenu+'</span>';
+           };
+           if(ph){
+             return enveloppe('<span style="position:relative;display:inline-flex;width:clamp(26px,3.4vw,38px);height:clamp(26px,3.4vw,38px);">'
+               +'<img src="'+ph+'" alt="" loading="lazy" style="width:100%;height:100%;object-fit:cover;border-radius:22%;border:2px solid '+c+';'
+               +'background:#26324d;filter:drop-shadow(0 1px 3px rgba(0,0,0,.6));" onerror="this.parentNode.style.display=\'none\'">'
+               +'<span style="position:absolute;left:-3px;top:-3px;background:rgba(0,0,0,.75);color:#fff;border-radius:5px;padding:0 3px;'
+               +'font-size:clamp(7px,0.85vw,9px);font-weight:800;">'+num+'</span></span>');
+           }
+           return enveloppe('<svg viewBox="0 0 24 24" style="width:clamp(26px,3.4vw,38px);height:clamp(26px,3.4vw,38px);filter:drop-shadow(0 1px 3px rgba(0,0,0,.6));">'
+            +'<path d="M8 2 L4 4 L2 8 L5 9.5 L5 22 L19 22 L19 9.5 L22 8 L20 4 L16 2 L14.5 3.6 A3.2 3.2 0 0 1 9.5 3.6 Z" fill="'+c+'" stroke="rgba(0,0,0,.45)" stroke-width="1"/>'
+            +'<path d="M8 2 L9.5 3.6 A3.2 3.2 0 0 0 14.5 3.6 L16 2 L14 1.4 A4.6 4.6 0 0 1 10 1.4 Z" fill="rgba(0,0,0,.35)"/>'
+            +'<text x="12" y="16.5" text-anchor="middle" font-size="9" font-weight="800" fill="#fff" stroke="rgba(0,0,0,.55)" stroke-width="0.5" paint-order="stroke">'+num+'</text></svg>');
+         })()
         +'<div style="font-size:clamp(7.5px,0.95vw,11px);font-weight:700;color:#fff;text-shadow:0 1px 2px rgba(0,0,0,.95);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:'+(maxW||44)+'px;text-align:center;">'+nm+'</div>'+row+'</div>';
     }
     function placeTeam(r,c,fromTop){
@@ -50648,7 +50722,11 @@ async function g45KhlDirectSuivies() {
   var a = resultats ? Date.now() : j0.getTime() + 3 * 86400000;
   var ms = (await _g45KhlMatchsPlage(de, a)).filter(function (m) {
     if (ids.indexOf(m.a) < 0 && ids.indexOf(m.b) < 0) return false;
-    return resultats ? _g45KhlFini(m) : !_g45KhlFini(m) || m.t > Date.now() - 6 * 3600000;
+    /* CORRIGE le 18/09 : l'onglet « A venir / direct » gardait les matchs
+       TERMINES depuis moins de 6 h — Antoine voyait donc un 4-1 acheve a
+       18 h 10 y rester toute la soiree. Un match fini appartient aux
+       Resultats, point. Ici : uniquement a venir ou en cours. */
+    return resultats ? _g45KhlFini(m) : !_g45KhlFini(m);
   });
   if (resultats) ms.reverse();
   if (!ms.length) return;
@@ -51613,4 +51691,63 @@ window.g45KhlSgBarre = g45KhlSgBarre;
   };
   env._g45KhlBar = true; env._g45Khl = true; env._g45KhlGen = true;
   loadTeamSaisons = env; window.loadTeamSaisons = env;
+})();
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   KHL — DETAIL DE MATCH (18/09/2026)
+   ───────────────────────────────────────────────────────────────────────────
+   Cliquer un resultat KHL ouvrait la fenetre generique, qui interroge ESPN :
+   ESPN ne connait pas la KHL, d'ou un « ? - ? » et des boutons inutiles
+   (YouTube, classement). On intercepte donc l'ouverture pour nos matchs et on
+   affiche notre propre carte : score par periode, buteurs et passeurs, et le
+   tableau des stats joueurs. Tout vient de la fiche deja en cache.
+   ═══════════════════════════════════════════════════════════════════════════ */
+function _g45KhlMatchConnu(eid) {
+  var id = String(eid);
+  var trouve = null;
+  try {
+    Object.keys(_g45KhlDerniers).forEach(function (k) {
+      (_g45KhlDerniers[k] || []).forEach(function (m) { if (String(m.id) === id) trouve = m; });
+    });
+    if (!trouve) {
+      for (var i = 0; i < localStorage.length; i++) {
+        var cle = localStorage.key(i);
+        if (!cle || cle.indexOf('g45khl_plage_') !== 0) continue;
+        var c = JSON.parse(localStorage.getItem(cle) || 'null');
+        (c && c.l || []).forEach(function (m) { if (String(m.id) === id) trouve = m; });
+        if (trouve) break;
+      }
+    }
+  } catch (e) {}
+  return trouve;
+}
+async function g45KhlDetailMatch(panel, m) {
+  panel.innerHTML = '<div style="padding:24px;text-align:center;color:var(--t3);font-size:12px;">\u23f3 Ouverture du match KHL\u2026</div>';
+  var f = await _g45KhlFiche(m);
+  _g45KhlOuverts[m.id] = true;   /* stats joueurs depliees d'office dans la fenetre */
+  panel.innerHTML = '<div style="padding:4px;">' + _g45KhlCarte(m, f) + '</div>'
+    + (f ? '' : '<div style="padding:0 8px 10px;color:#f0b020;font-size:11px;">Feuille de match non re\u00e7ue (serveur KHL lent) \u2014 rouvre dans quelques secondes.</div>');
+}
+window.g45KhlDetailMatch = g45KhlDetailMatch;
+
+(function _g45KhlBrancherDetail() {
+  if (typeof _g45SgMatch !== 'function' || _g45SgMatch._g45Khl) return;
+  var origine = _g45SgMatch;
+  var env = async function (eid) {
+    var m = _g45KhlMatchConnu(eid);
+    if (!m) return origine.apply(this, arguments);
+    _g45SgFermerMatch();
+    var mo = document.createElement('div');
+    mo.id = 'g45-sg-modal';
+    mo.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.82);z-index:9999;display:flex;align-items:flex-start;justify-content:center;padding:14px;overflow:auto;';
+    mo.onclick = function (e) { if (e.target === mo) _g45SgFermerMatch(); };
+    mo.innerHTML = '<div style="background:var(--s1);border:1px solid var(--b2);border-radius:14px;max-width:560px;width:100%;position:relative;margin:auto;">'
+      + '<button onclick="_g45SgFermerMatch()" style="position:absolute;top:8px;right:12px;background:none;border:none;color:var(--t2);font-size:22px;cursor:pointer;z-index:2;">\u00d7</button>'
+      + '<div id="g45-sg-panel" style="padding:10px;"></div></div>';
+    document.body.appendChild(mo);
+    try { await g45KhlDetailMatch(document.getElementById('g45-sg-panel'), m); }
+    catch (e) { console.warn('KHL detail :', e && e.message); }
+  };
+  env._g45Khl = true;
+  _g45SgMatch = env; window._g45SgMatch = env;
 })();
