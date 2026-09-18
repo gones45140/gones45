@@ -41839,7 +41839,7 @@ async function _g45SaisonsGen(el, nom, perso) {
   if (typeof g45FondClubHtml === 'function') html += g45FondClubHtml(_g45SgNomCourant || '', 0.2, _crestG);
   html += '<div style="position:relative;z-index:1;">';
   html += '<div style="display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;margin-bottom:6px;">'
-    + '<div style="font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#4f5d88;">R\u00e9sultats (' + nF + ' matchs)</div>'
+    + '<div id="g45-sg-titre-resultats" style="font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#4f5d88;">R\u00e9sultats (' + nF + ' matchs)</div>'
     + '<div style="font-size:11px;font-weight:800;color:' + combCol + ';background:' + combCol + '1a;border:1px solid ' + combCol + '55;border-radius:12px;padding:3px 10px;">'
     + '\u2705 ' + combN + '/' + nF + ' \u2014 ' + coches.join(' + ') + ' \u00b7 ' + combPc + '%</div></div>';
   liste.forEach(function (m) {
@@ -50283,7 +50283,8 @@ function _g45KhlJoueur(x) {
   (p.stats || []).forEach(function (s) { if (s && s.id != null) st[s.id] = s.val; });
   return { id: p.id, kid: p.khl_id, n: p.name, num: p.shirt_number, r: p.role_key, age: p.age, pays: p.country, img: p.image, eq: p.team ? p.team.id : null, st: st };
 }
-async function _g45KhlJoueurs() {
+async function _g45KhlJoueurs(progres) {
+  var dire = function (n, tot) { try { if (typeof progres === 'function') progres(n, tot); } catch (e) {} };
   var stage = await g45KhlStageActuel(), cle = 'g45khl_joueurs_' + stage;
   try { var c = JSON.parse(localStorage.getItem(cle) || 'null'); if (c && c.l && c.l.length && Date.now() - c.t < 3 * 3600000) return c.l; } catch (e) {}
   /* CHARGEMENT EN TROIS TEMPS (17/09/2026, mesures d'Antoine) :
@@ -50314,6 +50315,7 @@ async function _g45KhlJoueurs() {
     var nums = pages.slice(i, i + 4);
     var res = await Promise.all(nums.map(function (n) { return g45KhlApi('players_v2', { stage_id: stage, page: n }); }));
     res.forEach(function (j, k) { if (Array.isArray(j)) ajouter(j); else ratees.push(nums[k]); });
+    dire(tous.length, light.length);
   }
   /* Seconde passe sur les pages coupees : entre-temps le Worker a pu finir de
      les lire et de les mettre en cache (ctx.waitUntil). */
@@ -51220,13 +51222,23 @@ function _g45KhlPoste(r) {
   return 'f';
 }
 async function g45KhlCompoFiche(el, e) {
+  /* PROGRESSION (18/09, signale par Antoine) : le premier chargement lit 42
+     pages de 16 joueurs et peut prendre une minute quand webcaster est lent.
+     Sans compteur, l'ecran semblait bloque sur « Chargement ». */
+  var dire = function (n, tot) {
+    var z = document.getElementById('g45-khl-compo-etat');
+    if (z) z.textContent = 'Chargement de l\'effectif KHL\u2026 ' + n + (tot ? ' / ' + tot : '') + ' joueurs';
+  };
   el.innerHTML = '<div class="fc" style="display:flex;align-items:center;gap:10px;padding:20px;color:var(--t3);font-size:12px;">'
     + '<div style="width:16px;height:16px;border:2px solid rgba(77,132,255,.2);border-top-color:#4d84ff;border-radius:50%;animation:spin .8s linear infinite;"></div>'
-    + 'Chargement de l\'effectif KHL\u2026</div>';
-  var tous = await _g45KhlJoueurs();
+    + '<span id="g45-khl-compo-etat">Chargement de l\'effectif KHL\u2026</span></div>';
+  var tous = await _g45KhlJoueurs(dire);
   var eff = (tous || []).filter(function (p) { return String(p.eq) === String(e.id); });
   if (!eff.length) {
-    el.innerHTML = '<div class="fc" style="text-align:center;color:var(--t3);padding:18px;font-size:12px;">Effectif KHL indisponible pour ' + _g45KhlEsc(e.fr) + '.</div>';
+    el.innerHTML = '<div class="fc" style="text-align:center;color:#f0b020;padding:18px;font-size:12px;line-height:1.6;">'
+      + '\u26a0\ufe0f Effectif KHL non re\u00e7u pour ' + _g45KhlEsc(e.fr) + '.<br>'
+      + 'Le serveur KHL est lent ou indisponible ; le Worker termine la lecture en arri\u00e8re-plan.'
+      + '<div style="margin-top:10px;">' + _g45KhlChip('\ud83d\udd04 R\u00e9essayer', false, 'loadTeamCompo()') + '</div></div>';
     return;
   }
   /* Derniers matchs termines de l'equipe, pour les pastilles. */
@@ -51401,7 +51413,19 @@ async function g45KhlSgBarre(el, e) {
   hote.innerHTML = h;
   var ancien = document.getElementById('g45-khl-sgbar');
   if (ancien && ancien.parentNode) ancien.parentNode.removeChild(ancien);
-  el.insertBefore(hote, el.firstChild);
+  /* PLACEMENT (18/09, corrige apres retour d'Antoine) : la barre doit se
+     trouver au-dessus de la LISTE DES RESULTATS, pas en haut de l'onglet ou
+     elle surplombait les stats d'equipe. On vise le titre « Resultats (n
+     matchs) » du panneau generique et on s'insere dans son bloc, juste avant
+     lui. Repli en haut de l'onglet si ce titre n'existe pas. */
+  var titre = document.getElementById('g45-sg-titre-resultats');
+  var conteneur = titre && titre.parentNode ? titre.parentNode : null;
+  if (conteneur && conteneur.parentNode) {
+    hote.style.width = '100%';
+    conteneur.parentNode.insertBefore(hote, conteneur);
+  } else {
+    el.insertBefore(hote, el.firstChild);
+  }
 
   if (!f) return;
   var j = joueurs[f.nom];
