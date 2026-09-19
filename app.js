@@ -34693,7 +34693,14 @@ function _g45ScoreTexte(h) {
      On change la cle plutot que de purger : les anciennes entrees expirent
      seules, et on ne relit plus un « pas trouve » obtenu avec l'ancien code.
      Meme remede que pour le cache des tirs le 20/08. */
-  var ck = (h.sport === '🎾' ? 'g45_tennis4_' : 'g45_score2_') + h.id;   // tennis4 : + lieu (16/09)   // tennis : cle a part depuis le 16/09 (nouveau format)
+  /* CLE VERSIONNEE A g45_score3_ LE 19/09/2026 — MEME REMEDE QU'AU 10/09.
+     Les branches KHL et NFL ajoutees ce jour ne servaient a rien sur un poste
+     qui avait deja consulte ces paris : le negatif « score introuvable », garde
+     2 h, avait ete ecrit par l'ANCIEN code, incapable de les resoudre. Releve
+     par Antoine — resultat KHL visible sur son telephone, rien sur son PC.
+     On change la cle plutot que de purger : les anciennes entrees expirent
+     seules et on ne relit plus un « pas trouve » obtenu avant le correctif. */
+  var ck = (h.sport === '🎾' ? 'g45_tennis4_' : 'g45_score3_') + h.id;   // tennis4 : + lieu (16/09)   // tennis : cle a part depuis le 16/09 (nouveau format)
   var raw = null;
   try { raw = localStorage.getItem(ck); } catch(e) {}
   if (raw) {
@@ -37021,7 +37028,7 @@ var _G45_CACHE_PREFIXES=['g45_mmeta1_','g45_tennis4_','g45_tennis3_',/* 16/09 : 
      explosait et des ecritures LEGITIMES echouaient en silence (le filtre par
      competition, qui restait bloque sur « Toutes »). Les cartes de tirs sont
      les plus lourdes : plusieurs Ko par match, gardees indefiniment. */
-  'g45butA2_','g45gl3_','g45gl2_','g45gl_','g45_tirs2_','g45_fanart2_','g45_fanart_','g45_img_perso_','g45_tv_prog','g45_mqnom_','g45_mqteam_','g45_mqfond_','g45trv4_','g45_catimg_','g45_catfmt2_','g45_catfmt_','g45nrlcal3_','g45nrlcal2_','g45_score2_','g45_score_','g45_lglogo_','g45compet3_','g45compet2_','g45compet_','g45tmeta_','g45histo_','g45ld2_','g45ld_',
+  'g45butA2_','g45gl3_','g45gl2_','g45gl_','g45_tirs2_','g45_fanart2_','g45_fanart_','g45_img_perso_','g45_tv_prog','g45_mqnom_','g45_mqteam_','g45_mqfond_','g45trv4_','g45_catimg_','g45_catfmt2_','g45_catfmt_','g45nrlcal3_','g45nrlcal2_','g45_score3_','g45_score2_','g45_score_','g45_lglogo_','g45compet3_','g45compet2_','g45compet_','g45tmeta_','g45histo_','g45ld2_','g45ld_',
   'g45nrlcal2_','g45core2_','g45core_','g45_fx_faits','g45_veille_','g45_compet_logos','g45_groq_modele','g45_groq_modele3','g45_groq_vision','g45_gemini_modeles',
   /* 12/09 : g45nrlcal6_ rejoint la liste, remplace par g45nrlcal7_ ci-dessus —
      meme raison que g45nrlcal2_ et g45nrlcal3_ avant lui. */
