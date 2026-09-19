@@ -34651,6 +34651,30 @@ function _g45NflScoreDepuisEvents(events, jours, nomEquipe, nomAdverse) {
 }
 window._g45NflScoreDepuisEvents = _g45NflScoreDepuisEvents;
 
+/* ═══ FILE D'ATTENTE DES RECHERCHES DE SCORE (19/09/2026) ══════════════════
+   `ERR_INSUFFICIENT_RESOURCES` releve par Antoine : Chrome REFUSE d'ouvrir de
+   nouvelles connexions quand trop de requetes partent ensemble. Avec 107 paris
+   filtres a l'ecran, un rendu lançait 107 recherches simultanees — dont des
+   tableaux de scores a 400 evenements.
+   Le defaut existait depuis toujours ; c'est le changement de cle de cache du
+   jour qui l'a revele, en invalidant d'un coup tous les negatifs et en faisant
+   repartir tout le monde en meme temps.
+   Quatre a la fois : assez pour que la page se remplisse vite, assez peu pour
+   que le navigateur ne rende jamais la main. */
+var _g45ScoreQ = [], _g45ScoreActifs = 0, _G45_SCORE_MAX = 4, _g45ScoreEnVol = {};
+function _g45ScorePompe() {
+  while (_g45ScoreActifs < _G45_SCORE_MAX && _g45ScoreQ.length) {
+    var fn = _g45ScoreQ.shift();
+    _g45ScoreActifs++;
+    Promise.resolve().then(fn).catch(function () {}).then(function () {
+      _g45ScoreActifs--;
+      _g45ScorePompe();
+    });
+  }
+}
+function _g45ScoreTache(fn) { _g45ScoreQ.push(fn); _g45ScorePompe(); }
+window._g45ScoreTache = _g45ScoreTache;
+
 function _g45ScoreTexte(h) {
   /* ELARGI AU PARI SIMPLE (28/08). Une montante a son equipe dans `h.n` ; un
      pari simple (h.n==='SIMPLE') l'a dans `h.target`, sous la forme "Equipe
@@ -34700,7 +34724,13 @@ function _g45ScoreTexte(h) {
      par Antoine — resultat KHL visible sur son telephone, rien sur son PC.
      On change la cle plutot que de purger : les anciennes entrees expirent
      seules et on ne relit plus un « pas trouve » obtenu avant le correctif. */
-  var ck = (h.sport === '🎾' ? 'g45_tennis4_' : 'g45_score3_') + h.id;   // tennis4 : + lieu (16/09)   // tennis : cle a part depuis le 16/09 (nouveau format)
+  /* score4_ LE MEME JOUR QUE score3_, ET POUR UNE AUTRE RAISON : la version g
+     a fait partir 107 recherches d'un coup, Chrome a refuse d'ouvrir les
+     connexions (ERR_INSUFFICIENT_RESOURCES) et chaque refus a ete enregistre
+     comme « score introuvable » pour 2 h. Ces negatifs sont FAUX — ils disent
+     un echec du navigateur, pas une absence de donnees. On les jette. La file
+     d'attente posee juste au-dessus empeche que la relance recommence. */
+  var ck = (h.sport === '🎾' ? 'g45_tennis4_' : 'g45_score4_') + h.id;   // tennis4 : + lieu (16/09)   // tennis : cle a part depuis le 16/09 (nouveau format)
   var raw = null;
   try { raw = localStorage.getItem(ck); } catch(e) {}
   if (raw) {
@@ -34718,8 +34748,14 @@ function _g45ScoreTexte(h) {
       if (c && c.neg && (Date.now() - (c.t || 0)) < 2 * 3600000) return '';   // negatif encore frais
     } catch(e) { /* ancien format brut : on retente ci-dessous */ }
   }
+  /* DEJA EN VOL (19/09) : le Bilan et l'archive rendent le MEME pari, et chaque
+     rendu relançait sa propre recherche. Deux requetes pour un seul score, et
+     autant de connexions inutiles. */
+  if (_g45ScoreEnVol[ck]) return '';
+  _g45ScoreEnVol[ck] = 1;
   var betDay = String(h.date).slice(0, 10);
   var finir = function(hs, as) {
+    delete _g45ScoreEnVol[ck];
     var payload = (hs != null && as != null) ? {hs: hs, as: as} : {neg: true, t: Date.now()};
     try { localStorage.setItem(ck, JSON.stringify(payload)); } catch(e) {}
     if (!_g45ScoreVus[ck]) {
@@ -34733,6 +34769,7 @@ function _g45ScoreTexte(h) {
     }
   };
   var finirTxt = function(txt, ven) {
+    delete _g45ScoreEnVol[ck];
     var payload = txt ? {txt: txt, ven: ven || ''} : {neg: true, t: Date.now()};
     try { localStorage.setItem(ck, JSON.stringify(payload)); } catch(e) {}
     if (!_g45ScoreVus[ck]) {
@@ -34756,7 +34793,7 @@ function _g45ScoreTexte(h) {
   } catch(e) {}
 
   if (h.sport === '⚽') {
-    (async function() {
+    _g45ScoreTache(async function() {
       var hs = null, as = null;
       try {
         var cible = nomEquipe;
@@ -34824,7 +34861,7 @@ function _g45ScoreTexte(h) {
         }
       } catch(e) {}
       finir(hs, as);
-    })();
+    });
     return '';
   }
 
@@ -34838,7 +34875,7 @@ function _g45ScoreTexte(h) {
        pari avant d'accepter le score ; si l'adversaire n'est pas resoluble
        (nom inhabituel), on retombe sur l'ancien comportement plutot que de
        n'afficher aucun score. */
-    (async function() {
+    _g45ScoreTache(async function() {
       var hs = null, as = null;
       try {
         var info = (typeof MLB_TEAMS !== 'undefined') ? (MLB_TEAMS[nomEquipe] || MLB_TEAMS[nomAdverse]) : null;
@@ -34868,7 +34905,7 @@ function _g45ScoreTexte(h) {
         }
       } catch(e) {}
       finir(hs, as);
-    })();
+    });
     return '';
   }
 
@@ -34877,7 +34914,7 @@ function _g45ScoreTexte(h) {
        juste un sportPath different — on ne reutilise pas espnClubSchedule
        (hardcodee sur /sports/soccer/) pour ne prendre aucun risque sur le
        football, on refait le meme parsing ici avec le bon chemin. */
-    (async function() {
+    _g45ScoreTache(async function() {
       var hs = null, as = null;
       try {
         var cle = (typeof resolveNbaTeam === 'function') ? (resolveNbaTeam(nomEquipe) || resolveNbaTeam(nomAdverse)) : null;
@@ -34902,7 +34939,7 @@ function _g45ScoreTexte(h) {
         }
       } catch(e) {}
       finir(hs, as);
-    })();
+    });
     return '';
   }
 
@@ -34910,7 +34947,7 @@ function _g45ScoreTexte(h) {
      fie pas qu'au libelle de competition — un pari peut l'avoir laisse vide —
      mais aussi au fait que le nom de club soit reconnu par la table KHL. */
   if (h.sport === '🏒' && (/khl/i.test(String(h.comp || '')) || _g45KhlClubDe(nomEquipe) || _g45KhlClubDe(nomAdverse))) {
-    (async function() {
+    _g45ScoreTache(async function() {
       var hs = null, as = null;
       try {
         var j0 = new Date(betDay + 'T00:00:00');
@@ -34920,14 +34957,14 @@ function _g45ScoreTexte(h) {
         if (r) { hs = r.hs; as = r.as; }
       } catch(e) {}
       finir(hs, as);
-    })();
+    });
     return '';
   }
 
   if (h.sport === '🏒') {
     /* NHL : api-web.nhle.com, endpoint different de tous les autres —
        `club-schedule-season` renvoie la saison complete, filtree par date. */
-    (async function() {
+    _g45ScoreTache(async function() {
       var hs = null, as = null;
       try {
         var info = (typeof NHL_TEAMS !== 'undefined') ? (NHL_TEAMS[nomEquipe] || NHL_TEAMS[nomAdverse]) : null;
@@ -34944,7 +34981,7 @@ function _g45ScoreTexte(h) {
         }
       } catch(e) {}
       finir(hs, as);
-    })();
+    });
     return '';
   }
 
@@ -34952,7 +34989,7 @@ function _g45ScoreTexte(h) {
      veille aussi — un match joue dimanche soir aux Etats-Unis tombe lundi en
      heure europeenne, meme decalage que MLB, NBA et NHL. */
   if (h.sport === '🏈' || h.sport === '🏈🇺🇸') {
-    (async function() {
+    _g45ScoreTache(async function() {
       var hs = null, as = null;
       try {
         for (var k = 0; k < joursUS.length && hs == null; k++) {
@@ -34973,7 +35010,7 @@ function _g45ScoreTexte(h) {
         }
       } catch(e) {}
       finir(hs, as);
-    })();
+    });
     return '';
   }
 
@@ -34986,7 +35023,7 @@ function _g45ScoreTexte(h) {
        PLUSIEURS competitions puisque le pari ne dit pas laquelle : Top 14,
        Champions Cup, Challenge Cup, Premiership, URC, Six Nations. On s'arrete
        des qu'un match colle. */
-    (async function() {
+    _g45ScoreTache(async function() {
       var hs = null, as = null;
       try {
         var jour = betDay.replace(/-/g, '');
@@ -35017,7 +35054,7 @@ function _g45ScoreTexte(h) {
         }
       } catch (e) {}
       finir(hs, as);
-    })();
+    });
     return '';
   }
 
@@ -35026,7 +35063,7 @@ function _g45ScoreTexte(h) {
        g45BetTeams. Le calendrier par equipe renvoie parfois une 500 sur ce
        sport (deja documente ailleurs dans le code) — on interroge donc le
        SCOREBOARD du jour du pari directement, plus fiable. */
-    (async function() {
+    _g45ScoreTache(async function() {
       var hs = null, as = null;
       try {
         var resolved = (typeof _g45ResolveEspnTeam === 'function')
@@ -35058,7 +35095,7 @@ function _g45ScoreTexte(h) {
         }
       } catch(e) {}
       finir(hs, as);
-    })();
+    });
     return '';
   }
 
@@ -35075,7 +35112,7 @@ function _g45ScoreTexte(h) {
        + un seul nom suffit si le pari ne precise pas l'adversaire.
        Cache sur une CLE DISTINCTE (voir `ck` plus haut) : les anciens negatifs
        et l'ancien format « 6-4, 3-6 » ne bloquent pas la nouvelle recherche. */
-    (async function() {
+    _g45ScoreTache(async function() {
       var txt = '', venT = '';
       try {
         var norm = function(s) { return String(s || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, ''); };
@@ -35152,7 +35189,7 @@ function _g45ScoreTexte(h) {
         }
       } catch(e) { console.warn('score tennis', e && e.message); }
       finirTxt(txt, venT);
-    })();
+    });
     return '';
   }
 
@@ -37028,7 +37065,7 @@ var _G45_CACHE_PREFIXES=['g45_mmeta1_','g45_tennis4_','g45_tennis3_',/* 16/09 : 
      explosait et des ecritures LEGITIMES echouaient en silence (le filtre par
      competition, qui restait bloque sur « Toutes »). Les cartes de tirs sont
      les plus lourdes : plusieurs Ko par match, gardees indefiniment. */
-  'g45butA2_','g45gl3_','g45gl2_','g45gl_','g45_tirs2_','g45_fanart2_','g45_fanart_','g45_img_perso_','g45_tv_prog','g45_mqnom_','g45_mqteam_','g45_mqfond_','g45trv4_','g45_catimg_','g45_catfmt2_','g45_catfmt_','g45nrlcal3_','g45nrlcal2_','g45_score3_','g45_score2_','g45_score_','g45_lglogo_','g45compet3_','g45compet2_','g45compet_','g45tmeta_','g45histo_','g45ld2_','g45ld_',
+  'g45butA2_','g45gl3_','g45gl2_','g45gl_','g45_tirs2_','g45_fanart2_','g45_fanart_','g45_img_perso_','g45_tv_prog','g45_mqnom_','g45_mqteam_','g45_mqfond_','g45trv4_','g45_catimg_','g45_catfmt2_','g45_catfmt_','g45nrlcal3_','g45nrlcal2_','g45_score4_','g45_score3_','g45_score2_','g45_score_','g45_lglogo_','g45compet3_','g45compet2_','g45compet_','g45tmeta_','g45histo_','g45ld2_','g45ld_',
   'g45nrlcal2_','g45core2_','g45core_','g45_fx_faits','g45_veille_','g45_compet_logos','g45_groq_modele','g45_groq_modele3','g45_groq_vision','g45_gemini_modeles',
   /* 12/09 : g45nrlcal6_ rejoint la liste, remplace par g45nrlcal7_ ci-dessus —
      meme raison que g45nrlcal2_ et g45nrlcal3_ avant lui. */
@@ -49820,6 +49857,63 @@ function _g45LieuDe(h, meta){
    `integre` vrai = le score est place DANS la ligne 1 (l'appelant ne l'affiche
    plus en dessous). `titre` est une fonction car le score est calcule par
    l'appelant apres coup. */
+/* ═══ BOUTON VERS L'EPREUVE (19/09/2026, idee d'Antoine) ═══════════════════
+   F1, cyclisme, MMA, moto : la recherche de score ne peut RIEN trouver — une
+   course ou un combat n'a pas de « 2-1 ». Ces paris affichaient donc un « vs »
+   vide, qui ressemble a un bug alors que c'est structurel. On met a la place un
+   bouton qui ouvre l'epreuve dans Competitions.
+   Ce jour : le cyclisme vise la COURSE (g45CyclingOpen accepte deja son
+   identifiant) ; la F1 et le MMA ouvrent leur vue d'accueil, faute d'entree par
+   epreuve — a affiner module par module, chacun ayant son propre calendrier. */
+function _g45CyCourseDe(txt) {
+  var t = (typeof _g45SgNorm === 'function') ? _g45SgNorm(txt || '') : String(txt || '').toLowerCase();
+  if (!t || typeof _G45_CY_RACES === 'undefined') return null;
+  /* LES ALIAS D'ABORD, ET C'EST L'ORDRE QUI COMPTE. Deux raisons :
+     · les books n'ecrivent pas les noms comme ASO (« Vuelta a Espana » contre
+       « La Vuelta ») ;
+     · la table nomme la course « Tour Femmes », donc « Tour de France Femmes »
+       ne peut PAS etre reconnu par le nom — et la reconnaissance par nom, elle,
+       y trouve « Tour de France » et envoie le pari sur la course des hommes.
+     « femmes » est donc teste avant tout le reste. */
+  var a = [['femmes', 'tdff'], ['tourdefrance|letour', 'tdf'], ['vuelta', 'vuelta'],
+           ['parisnice', 'pn'], ['dauphine', 'dauphine'], ['roubaix', 'roubaix'],
+           ['liege|bastogne', 'liege'], ['fleche|wallonne', 'fleche'], ['paristours', 'ptours']];
+  for (var i = 0; i < a.length; i++) {
+    if (new RegExp(a[i][0]).test(t)) return _g45RcRace(a[i][1]);
+  }
+  /* Repli par nom exact de la table, la plus longue correspondance gagnant. */
+  var best = null, bestLen = 0;
+  _G45_CY_RACES.forEach(function (r) {
+    var n = (typeof _g45SgNorm === 'function') ? _g45SgNorm(r.n) : String(r.n).toLowerCase();
+    if (n.length > 3 && (t.indexOf(n) >= 0 || n.indexOf(t) >= 0) && n.length > bestLen) { best = r; bestLen = n.length; }
+  });
+  return best;
+}
+window._g45CyCourseDe = _g45CyCourseDe;
+
+function _g45EpreuveBouton(h) {
+  if (!h) return '';
+  var sp = String(h.sport || ''), lbl = '', act = '';
+  if (sp.indexOf('\ud83d\udeb4') >= 0) {                                  /* 🚴 cyclisme */
+    var r = _g45CyCourseDe((h.comp || '') + ' ' + (h.n || '') + ' ' + (h.target || ''));
+    lbl = r ? (r.flag + ' ' + r.n) : '\ud83d\udeb4 Cyclisme';
+    act = "g45CyclingOpen('" + (r ? r.id : 'tdf') + "')";
+  } else if (typeof _g45EstF1 === 'function' && _g45EstF1(h)) {            /* 🏎 F1 */
+    lbl = '\ud83c\udfc1 Formule 1'; act = 'g45F1Open()';
+  } else if (sp.indexOf('\ud83c\udfcd') >= 0) {                            /* 🏍 moto */
+    lbl = '\ud83c\udfcd\ufe0f MotoGP'; act = 'g45MotoOpen()';
+  } else if (sp.indexOf('\ud83e\udd4a') >= 0) {                            /* 🥊 MMA */
+    lbl = '\ud83e\udd4a MMA'; act = 'g45MmaOpen()';
+  }
+  if (!lbl) return '';
+  /* stopPropagation : la ligne entiere ouvre deja la fenetre d'edition du pari. */
+  return ' <button onclick="event.stopPropagation();' + act + '" style="display:inline-flex;align-items:center;gap:5px;'
+    + 'height:23px;padding:0 9px;margin:0 4px;border-radius:7px;border:1px solid rgba(34,211,238,.55);'
+    + 'background:rgba(34,211,238,.13);color:#22d3ee;font-family:inherit;font-size:11.5px;font-weight:800;'
+    + 'cursor:pointer;vertical-align:middle;white-space:nowrap;">' + lbl + ' \u2192</button> ';
+}
+window._g45EpreuveBouton = _g45EpreuveBouton;
+
 function _g45LigneMatch(h, titreDefaut, typeTxt, cote){
   var coteNum = parseFloat(cote);
   var coteTxt = isNaN(coteNum) ? '' : '@' + coteNum.toFixed(2);
@@ -49839,11 +49933,14 @@ function _g45LigneMatch(h, titreDefaut, typeTxt, cote){
   var moi = cib.nom || '', autre = cib.adv || '';
   var or = function (n) { return '<span style="color:' + _G45_OR + ';">' + _g45Esc(n) + '</span>'; };
   var blanc = function (n) { return '<span style="color:#fff;">' + _g45Esc(n) + '</span>'; };
-  var badge = function (sc) { return sc ? ' <span style="font-size:10.5px;font-weight:800;color:var(--t1);background:rgba(255,255,255,.10);padding:1px 6px;border-radius:5px;margin:0 4px;white-space:nowrap;">\ud83d\udcca ' + sc + '</span> ' : ' <span style="font-size:10px;color:var(--t3);margin:0 4px;">vs</span> '; };
+  var badge = function (sc) {
+    if (sc) return ' <span style="font-size:10.5px;font-weight:800;color:var(--t1);background:rgba(255,255,255,.10);padding:1px 6px;border-radius:5px;margin:0 4px;white-space:nowrap;">\ud83d\udcca ' + sc + '</span> ';
+    return _g45EpreuveBouton(h) || ' <span style="font-size:10px;color:var(--t3);margin:0 4px;">vs</span> ';
+  };
 
   /* Pari sans adversaire identifiable (F1, « FORMULE 1 », « AU NRL »...) : nom en or. */
   if ((!autre && !(meta && meta.hn)) || _g45EstF1(h)) {
-    return { titre: function (sc) { return or(moi || titreDefaut) + (sc ? badge(sc) : ''); }, integre: true, sous: sous };
+    return { titre: function (sc) { return or(moi || titreDefaut) + (sc ? badge(sc) : _g45EpreuveBouton(h)); }, integre: true, sous: sous };
   }
 
   /* Tennis : pas de domicile. Mon joueur en or a gauche, l'autre en blanc. */
