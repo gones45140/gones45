@@ -1531,7 +1531,7 @@ function logoHtml(name,color,abbr,sz){
   if(!sportEmoji){
     var uMatch=(typeof state!=='undefined'&&state.u)?state.u.find(function(u){return u.n===name;}):null;
     if(uMatch&&uMatch.sport){
-      var sportMap={'🏀':'🏀','🎾':'🎾','🏎':'🏎️','🏎️':'🏎️','🏉':'🏉','🏉🇦🇺':'🏉','🏒':'🏒','⚾':'⚾','🏈':'🏈','⚽':'⚽','🥊':'🥊','🚗':'🚗','🚴':'🚴'};
+      var sportMap={'🏀':'🏀','🎾':'🎾','🏎':'🏎️','🏎️':'🏎️','🏉':'🏉','🏉🇦🇺':'🏉','🏒':'🏒','⚾':'⚾','🏈':'🏈','🏍':'🏍️','🏍️':'🏍️','⚽':'⚽','🥊':'🥊','🚗':'🚗','🚴':'🚴'};
       sportEmoji=sportMap[uMatch.sport];
     }
   }
@@ -2110,7 +2110,7 @@ function calcFreebet(){
 }
 
 function renderSportFilter(){
-  var sports=['ALL','⚽','🏀','🎾','🏈','⚾','🏒','🏉','🏉🇦🇺','🏎','🥊','🚗','🚴'];
+  var sports=['ALL','⚽','🏀','🎾','🏈','⚾','🏒','🏉','🏉🇦🇺','🏎','🏍','🥊','🚗','🚴'];
   var labels={'ALL':'Tous','⚽':'Football','🏀':'Basket','🎾':'Tennis','🏈':'NFL','⚾':'Baseball','🏒':'Hockey','🏉':'Rugby','🏉🇦🇺':'NRL','🏎':'F1','🥊':'MMA','🚗':'WRC','🚴':'Cyclisme'};
   var used=new Set(state.a.map(function(h){return h.sport||'';}));
   var sf=$i('sport-filter');if(!sf)return;
@@ -3594,6 +3594,7 @@ function renderArchive(){
           +_idFilig
           +'<div style="position:relative;font-size:12px;font-weight:700;color:var(--t1);overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;word-break:break-word;line-height:1.25;">'+_lgA.titre(_scoreA)+'</div>'
           +(_scoreA&&!_lgA.integre?'<div style="position:relative;font-size:10px;font-weight:800;color:var(--t1);background:rgba(255,255,255,.10);display:inline-block;padding:1px 6px;border-radius:5px;margin:1px 0;max-width:100%;white-space:normal;word-break:break-word;">📊 '+_scoreA+'</div>':'')
+          +((typeof _g45GarantieBandeau==='function')?_g45GarantieBandeau(h):'')
           +'<div style="position:relative;font-size:10px;color:var(--t3);overflow:hidden;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;word-break:break-word;line-height:1.35;">'+sous+'</div>'
           /* ═══ LA NOTE S'AFFICHE ENFIN (09/09) ═══
              Elle etait enregistree mais montree NULLE PART : ni ici, ni dans le
@@ -5090,6 +5091,7 @@ var G45_SPORTS_PARI = [
   { v:'🏉',    n:'Rugby' },
   { v:'🏉🇦🇺', n:'NRL' },
   { v:'🏎',    n:'F1' },
+  { v:'🏍',    n:'MotoGP' },   /* 19/09/2026 : manquait, donc aucun pari moto saisissable */
   { v:'🥊',    n:'MMA' },
   { v:'🚗',    n:'WRC' },
   { v:'🚴',    n:'Cyclisme' },
@@ -10170,7 +10172,7 @@ function logoHtml(name,color,abbr,sz){
   if(!sportEmoji){
     var uMatch=(typeof state!=='undefined'&&state.u)?state.u.find(function(u){return u.n===name;}):null;
     if(uMatch&&uMatch.sport){
-      var sportMap={'🏀':'🏀','🎾':'🎾','🏎':'🏎️','🏎️':'🏎️','🏉':'🏉','🏉🇦🇺':'🏉','🏒':'🏒','⚾':'⚾','🏈':'🏈','⚽':'⚽','🥊':'🥊','🚗':'🚗','🚴':'🚴'};
+      var sportMap={'🏀':'🏀','🎾':'🎾','🏎':'🏎️','🏎️':'🏎️','🏉':'🏉','🏉🇦🇺':'🏉','🏒':'🏒','⚾':'⚾','🏈':'🏈','🏍':'🏍️','🏍️':'🏍️','⚽':'⚽','🥊':'🥊','🚗':'🚗','🚴':'🚴'};
       sportEmoji=sportMap[uMatch.sport];
     }
   }
@@ -10749,7 +10751,7 @@ function calcFreebet(){
 }
 
 function renderSportFilter(){
-  var sports=['ALL','⚽','🏀','🎾','🏈','⚾','🏒','🏉','🏉🇦🇺','🏎','🥊','🚗','🚴'];
+  var sports=['ALL','⚽','🏀','🎾','🏈','⚾','🏒','🏉','🏉🇦🇺','🏎','🏍','🥊','🚗','🚴'];
   var labels={'ALL':'Tous','⚽':'Football','🏀':'Basket','🎾':'Tennis','🏈':'NFL','⚾':'Baseball','🏒':'Hockey','🏉':'Rugby','🏉🇦🇺':'NRL','🏎':'F1','🥊':'MMA','🚗':'WRC','🚴':'Cyclisme'};
   var used=new Set(state.a.map(function(h){return h.sport||'';}));
   var sf=$i('sport-filter');if(!sf)return;
@@ -11857,6 +11859,7 @@ function renderArchive(){
           +_idFilig
           +'<div style="position:relative;font-size:12px;font-weight:700;color:var(--t1);overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;word-break:break-word;line-height:1.25;">'+_lgA.titre(_scoreA)+'</div>'
           +(_scoreA&&!_lgA.integre?'<div style="position:relative;font-size:10px;font-weight:800;color:var(--t1);background:rgba(255,255,255,.10);display:inline-block;padding:1px 6px;border-radius:5px;margin:1px 0;max-width:100%;white-space:normal;word-break:break-word;">📊 '+_scoreA+'</div>':'')
+          +((typeof _g45GarantieBandeau==='function')?_g45GarantieBandeau(h):'')
           +'<div style="position:relative;font-size:10px;color:var(--t3);overflow:hidden;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;word-break:break-word;line-height:1.35;">'+sous+'</div>'
           /* ═══ LA NOTE S'AFFICHE ENFIN (09/09) ═══
              Elle etait enregistree mais montree NULLE PART : ni ici, ni dans le
@@ -35297,6 +35300,7 @@ function _g45BetRowMini(h){
     +_idFilig
     +'<div style="position:relative;font-size:12px;font-weight:700;color:var(--t1);overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;word-break:break-word;line-height:1.25;">'+_lgM.titre(_score)+'</div>'
     +(_score&&!_lgM.integre?'<div style="position:relative;font-size:11px;font-weight:800;color:var(--t1);background:rgba(255,255,255,.10);display:inline-block;padding:1px 6px;border-radius:5px;margin:2px 0;max-width:100%;white-space:normal;word-break:break-word;">📊 '+_score+'</div>':'')
+    +((typeof _g45GarantieBandeau==='function')?_g45GarantieBandeau(h):'')
     /* TROIS LIGNES (04/09, retour d'Antoine : « le texte est coupé »). Le
        sous-titre reunit le type de pari, l'adversaire, la cote et la competition
        — sur un telephone, « Défaite · vs Seattle Mariners · @1.45 · MLB » ne
@@ -37057,7 +37061,7 @@ window.g45F1Session=g45F1Session;
    et les données utilisateur n'étaient JAMAIS écrites — l'ajout apparaissait à l'écran puis
    disparaissait au rechargement. Ce n'était ni la synchro GitHub, ni Dropbox, ni le cache
    du navigateur. Tous ces caches sont reconstructibles : ils cèdent la place aux données. */
-var _G45_CACHE_PREFIXES=['g45_mmeta1_','g45_tennis4_','g45_tennis3_',/* 16/09 : meta de match (domicile/lieu) et score tennis, reconstructibles */'g45rcP_','g45rcD_','g45rcY_','g45rc_','g45dcm_','g45dcf_','g45dc_',
+var _G45_CACHE_PREFIXES=['g45_mmeta2_','g45_mmeta1_','g45_tennis4_','g45_tennis3_',/* 16/09 : meta de match (domicile/lieu) et score tennis, reconstructibles */'g45rcP_','g45rcD_','g45rcY_','g45rc_','g45dcm_','g45dcf_','g45dc_',
   'g45trv3_','g45trv2_','g45trOdds_','g45tr_','g45but_st_','g45butL_','g45butA_','g45but_mur_',
   '_g45clv','g45clv_snaps','g45_saisons_cache_v3_','g45_saisons_cache_v2_',
   /* Ajoutes le 20/08 : ces caches, tous reconstructibles, n'etaient PAS declares
@@ -37065,7 +37069,7 @@ var _G45_CACHE_PREFIXES=['g45_mmeta1_','g45_tennis4_','g45_tennis3_',/* 16/09 : 
      explosait et des ecritures LEGITIMES echouaient en silence (le filtre par
      competition, qui restait bloque sur « Toutes »). Les cartes de tirs sont
      les plus lourdes : plusieurs Ko par match, gardees indefiniment. */
-  'g45butA2_','g45gl3_','g45gl2_','g45gl_','g45_tirs2_','g45_fanart2_','g45_fanart_','g45_img_perso_','g45_tv_prog','g45_mqnom_','g45_mqteam_','g45_mqfond_','g45trv4_','g45_catimg_','g45_catfmt2_','g45_catfmt_','g45nrlcal3_','g45nrlcal2_','g45_score4_','g45_score3_','g45_score2_','g45_score_','g45_lglogo_','g45compet3_','g45compet2_','g45compet_','g45tmeta_','g45histo_','g45ld2_','g45ld_',
+  'g45butA2_','g45gl3_','g45gl2_','g45gl_','g45_tirs2_','g45_fanart2_','g45_fanart_','g45_img_perso_','g45_tv_prog','g45_mqnom_','g45_mqteam_','g45_mqfond_','g45trv4_','g45_catimg_','g45_catfmt2_','g45_catfmt_','g45_gar1_','g45_epr1_','g45nrlcal3_','g45nrlcal2_','g45_score4_','g45_score3_','g45_score2_','g45_score_','g45_lglogo_','g45compet3_','g45compet2_','g45compet_','g45tmeta_','g45histo_','g45ld2_','g45ld_',
   'g45nrlcal2_','g45core2_','g45core_','g45_fx_faits','g45_veille_','g45_compet_logos','g45_groq_modele','g45_groq_modele3','g45_groq_vision','g45_gemini_modeles',
   /* 12/09 : g45nrlcal6_ rejoint la liste, remplace par g45nrlcal7_ ci-dessus —
      meme raison que g45nrlcal2_ et g45nrlcal3_ avant lui. */
@@ -49791,7 +49795,7 @@ function _g45Esc(x){ return String(x==null?'':x).replace(/&/g,'&amp;').replace(/
 /* Meta du match (domicile, exterieur, terrain neutre, lieu). Cache definitif si
    trouve ; un echec n'est garde que 6 h (regle du projet). Recherche en file,
    une a la fois, et un seul re-rendu groupe a la fin. */
-var _G45_META_CLE = 'g45_mmeta1_';
+var _G45_META_CLE = 'g45_mmeta2_';   /* 19/09/2026 : la meta porte en plus eid/sp/lg/moiDom (garanties) */
 var _g45MetaFile = [], _g45MetaEnCours = false, _g45MetaDemande = {}, _g45MetaRendu = null;
 function _g45MatchMeta(h){
   if (!h || !h.id || !h.date || h.isCombi) return null;
@@ -49826,7 +49830,18 @@ async function _g45MetaSuivant(){
         var v = cp.venue || r.ev.venue || {};
         var ville = v.address ? [v.address.city, v.address.country].filter(Boolean).join(', ') : '';
         if (nomDe(dom) && nomDe(ext)) {
+          /* IDENTIFIANT DU MATCH GARDE (19/09/2026). La recherche le trouvait
+             deja puis le jetait : seuls les noms etaient conserves. Les
+             garanties ont besoin du DEROULE du match, pas du score final —
+             l'ecart maximum atteint ne se lit nulle part ailleurs. On note
+             aussi de quel cote on est, sinon impossible de savoir si l'ecart
+             etait en notre faveur. */
+          var spl2 = _g45EclairSport(h.sport, h.comp) || {};
+          var nrm2 = function (x) { return String(x || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]/g, ''); };
+          var moi2 = nrm2(c && c.nom), hdom = nrm2(nomDe(dom));
           out = { hn: nomDe(dom), an: nomDe(ext), neutre: !!cp.neutralSite,
+                  eid: String(r.ev.id || ''), sp: spl2.sp || '', lg: spl2.lg || '',
+                  moiDom: !!(moi2 && hdom && (hdom.indexOf(moi2) >= 0 || moi2.indexOf(hdom) >= 0)),
                   ven: [v.fullName || v.displayName || '', ville].filter(Boolean).join(' · ') };
         }
       }
@@ -49843,6 +49858,135 @@ async function _g45MetaSuivant(){
     }, 400);
   }
 }
+
+/* ═══ GARANTIE « X D'ECART » (19/09/2026) ══════════════════════════════════
+   Winamax PAIE le pari des que l'equipe jouee a mene de X, meme si elle perd
+   au final (confirme par Antoine). Le score final ne suffit donc pas : il faut
+   l'ecart MAXIMUM atteint en cours de match.
+   Source commune aux cinq sports : les actions du resume ESPN portent le score
+   courant (`homeScore`/`awayScore`) a chaque point marque. On balaie, on garde
+   le plus grand ecart en notre faveur. */
+var _G45_ECART_SEUIL = { soccer: 2, hockey: 3, basketball: 20, rugby: 15, 'rugby-league': 15, football: 17 };
+
+function _g45EcartMax(actions, moiDom) {
+  var max = 0, quand = '';
+  (actions || []).forEach(function (p) {
+    if (!p) return;
+    var hs = parseInt(p.homeScore, 10), as = parseInt(p.awayScore, 10);
+    if (isNaN(hs) || isNaN(as)) return;
+    var e = moiDom ? (hs - as) : (as - hs);
+    if (e > max) {
+      max = e;
+      var per = (p.period && (p.period.displayValue || p.period.number)) || '';
+      var hor = (p.clock && p.clock.displayValue) || '';
+      quand = [hor, per ? ('période ' + per) : ''].filter(Boolean).join(' · ');
+      quand = quand ? (quand + ' — ' + (moiDom ? hs + '-' + as : as + '-' + hs)) : ((moiDom ? hs + '-' + as : as + '-' + hs));
+    }
+  });
+  return { max: max, quand: quand };
+}
+window._g45EcartMax = _g45EcartMax;
+
+/* ═══ VERDICT DE LA GARANTIE, ET REQUALIFICATION (19/09/2026) ══════════════
+   Winamax PAIE le pari des que l'equipe jouee a mene de X, meme si elle perd au
+   final (confirme par Antoine). Regle d'affichage validee sur maquette : le
+   bandeau n'apparait QUE sur un pari perdu dont la garantie est acquise, et
+   rien ne bouge sans un clic — une requalification d'office fausserait le
+   capital sans qu'il le voie. */
+var _G45_GAR_CLE = 'g45_gar1_';
+var _g45GarVus = {}, _g45GarEnVol = {};
+
+function _g45GarLire(h) {
+  try {
+    var c = JSON.parse(localStorage.getItem(_G45_GAR_CLE + h.id) || 'null');
+    if (c && c.fait) return c;
+    if (c && c.neg && (Date.now() - (c.t || 0)) < 12 * 3600000) return null;
+  } catch (e) {}
+  return undefined;   /* undefined = jamais evalue ; null = evalue sans resultat */
+}
+
+function _g45GarCherche(h, meta) {
+  var k = _G45_GAR_CLE + h.id;
+  if (_g45GarEnVol[k]) return;
+  _g45GarEnVol[k] = 1;
+  _g45ScoreTache(async function () {
+    var res = null;
+    try {
+      var seuil = _G45_ECART_SEUIL[meta.sp];
+      var r = await fetch('https://site.api.espn.com/apis/site/v2/sports/' + meta.sp + '/' + meta.lg + '/summary?event=' + meta.eid);
+      if (r.ok && seuil) {
+        var d = await r.json();
+        /* Selon le sport, les scores courants vivent dans `plays`, dans
+           `scoringPlays` (NFL) ou dans `keyEvents` (football). On retient le
+           premier tableau qui en porte vraiment, plutot que de coder un chemin
+           par sport — c'est la lecon des sondes du jour. */
+        var src = [];
+        [d.plays, d.scoringPlays, d.keyEvents].forEach(function (a) {
+          if (!src.length && Array.isArray(a) && a.some(function (p) { return p && p.homeScore != null; })) src = a;
+        });
+        var e = _g45EcartMax(src, !!meta.moiDom);
+        res = { fait: 1, max: e.max, seuil: seuil, quand: e.quand, ok: e.max >= seuil };
+      }
+    } catch (e) {}
+    delete _g45GarEnVol[k];
+    try { localStorage.setItem(k, JSON.stringify(res || { neg: true, t: Date.now() })); } catch (e) {}
+    if (!_g45GarVus[k]) {
+      _g45GarVus[k] = 1;
+      try { if (typeof renderBilanTab === 'function') renderBilanTab(); } catch (e) {}
+      try { if (typeof renderArchive === 'function') renderArchive(); } catch (e) {}
+    }
+  });
+}
+
+function _g45GarantieBandeau(h) {
+  if (!h || h.isCombi || h.isPending) return '';
+  if (h.win !== false || h.garIgnore) return '';          /* uniquement un pari PERDU */
+  if (h.garantie !== 'ecart') return '';                  /* les autres garanties viendront ensuite */
+  var meta = (typeof _g45MatchMeta === 'function') ? _g45MatchMeta(h) : null;
+  if (!meta || !meta.eid || !meta.sp) return '';          /* match pas encore resolu */
+  var v = _g45GarLire(h);
+  if (v === undefined) { _g45GarCherche(h, meta); return ''; }
+  if (!v || !v.ok) return '';
+  var gain = (parseFloat(h.m) || 0) * (parseFloat(h.cote) || 0);
+  return '<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:6px 0 2px;padding:10px 13px;border-radius:9px;'
+    + 'background:rgba(30,215,96,.10);border:1px solid rgba(30,215,96,.32);">'
+    + '<div style="flex:1;min-width:210px;font-size:12px;font-weight:600;color:var(--t1);line-height:1.45;">'
+    + '<span style="font-weight:800;color:#1ed760;">\ud83d\udee1\ufe0f Garantie acquise</span> \u2014 '
+    + _g45Esc(meta.moiDom ? meta.hn : meta.an) + ' a men\u00e9 de ' + v.max
+    + (v.quand ? (' (' + _g45Esc(v.quand) + ')') : '') + '. Le book paie.</div>'
+    + '<button data-gid="' + h.id + '" onclick="event.stopPropagation();g45GarantieGagne(this.dataset.gid)" '
+    + 'style="height:32px;padding:0 14px;border-radius:9px;border:1.5px solid rgba(30,215,96,.6);background:rgba(30,215,96,.16);'
+    + 'color:#1ed760;font-size:12.5px;font-weight:800;cursor:pointer;">Marquer gagn\u00e9 (+' + gain.toFixed(2) + '\u20ac)</button>'
+    + '<button data-gid="' + h.id + '" onclick="event.stopPropagation();g45GarantieIgnorer(this.dataset.gid)" '
+    + 'style="height:32px;padding:0 12px;border-radius:9px;border:1px solid rgba(159,176,199,.4);background:none;'
+    + 'color:var(--t2);font-size:12.5px;font-weight:700;cursor:pointer;">Ignorer</button></div>';
+}
+window._g45GarantieBandeau = _g45GarantieBandeau;
+
+function g45GarantieGagne(id) {
+  var h = (state.a || []).filter(function (x) { return x && x.id === id; })[0];
+  if (!h || h.win) return;
+  /* La mise a ete debitee a la pose du pari et RIEN n'a ete recredite a la
+     perte : on ajoute donc le gain brut, exactement comme `result()`. */
+  var g = h.isFreebet ? ((h.m || 0) * ((h.cote || 0) - 1)) : ((h.m || 0) * (h.cote || 0));
+  try { state.b[h.b] = (parseFloat(state.b[h.b] || 0) + g).toFixed(2); } catch (e) {}
+  h.win = true; h.garRequalif = 1;
+  try { save(); } catch (e) {}
+  try { if (typeof renderBilanTab === 'function') renderBilanTab(); } catch (e) {}
+  try { if (typeof renderArchive === 'function') renderArchive(); } catch (e) {}
+  try { if (typeof updMise === 'function') updMise(); } catch (e) {}
+}
+window.g45GarantieGagne = g45GarantieGagne;
+
+function g45GarantieIgnorer(id) {
+  var h = (state.a || []).filter(function (x) { return x && x.id === id; })[0];
+  if (!h) return;
+  h.garIgnore = 1;
+  try { save(); } catch (e) {}
+  try { if (typeof renderBilanTab === 'function') renderBilanTab(); } catch (e) {}
+  try { if (typeof renderArchive === 'function') renderArchive(); } catch (e) {}
+}
+window.g45GarantieIgnorer = g45GarantieIgnorer;
 
 function _g45LieuDe(h, meta){
   if (h.lieu) return h.lieu;
@@ -49891,6 +50035,216 @@ function _g45CyCourseDe(txt) {
 }
 window._g45CyCourseDe = _g45CyCourseDe;
 
+/* ═══ RESOLUTION DE L'EPREUVE, EN TACHE DE FOND ════════════════════════════
+   Le bouton doit porter le NOM du Grand Prix — « GP d'Italie » dit tout de
+   suite si l'appli a vu juste, « Formule 1 » ne dit rien. Mais le calendrier
+   arrive par le reseau, alors que la ligne de pari se dessine tout de suite.
+   Meme mecanique que les scores : on rend la discipline maintenant, on cherche
+   dans la file d'attente partagee, on met en cache, on redessine. */
+function _g45EprCle(h) { return 'g45_epr1_' + (h && h.id); }
+var _g45EprVus = {}, _g45EprEnVol = {};
+
+function _g45EprLire(h) {
+  try {
+    var c = JSON.parse(localStorage.getItem(_g45EprCle(h)) || 'null');
+    if (c && c.lbl && c.act) return c;
+    if (c && c.neg && (Date.now() - (c.t || 0)) < 12 * 3600000) return null;   /* negatif frais */
+  } catch (e) {}
+  return undefined;   /* undefined = jamais cherche ; null = cherche, rien trouve */
+}
+
+function _g45EprFinir(h, trouve) {
+  delete _g45EprEnVol[_g45EprCle(h)];
+  try { localStorage.setItem(_g45EprCle(h), JSON.stringify(trouve || { neg: true, t: Date.now() })); } catch (e) {}
+  var k = _g45EprCle(h);
+  if (!_g45EprVus[k]) {
+    _g45EprVus[k] = 1;
+    try { if (typeof renderBilanTab === 'function') renderBilanTab(); } catch (e) {}
+    try { if (typeof renderArchive === 'function') renderArchive(); } catch (e) {}
+  }
+}
+
+/* Le GP dont la date est la plus proche de celle du pari, dans une fenetre de
+   4 jours : un week-end de Grand Prix s'etale du vendredi au dimanche, et le
+   pari peut etre pose n'importe quand dedans. */
+function _g45EprF1Trouve(events, betDay) {
+  var t = new Date(String(betDay) + 'T12:00:00').getTime();
+  if (isNaN(t)) return null;
+  var best = null, dmin = 4 * 86400000;
+  (events || []).forEach(function (ev) {
+    var d = new Date(ev && ev.date).getTime();
+    if (isNaN(d)) return;
+    var ecart = Math.abs(d - t);
+    if (ecart <= dmin) { dmin = ecart; best = ev; }
+  });
+  return best;
+}
+window._g45EprF1Trouve = _g45EprF1Trouve;
+
+/* Un GP MotoGP couvre plusieurs jours (`date_start` a `date_end`) : le pari
+   tombe dedans, on ne cherche donc pas le plus proche mais celui qui CONTIENT
+   la date, avec un jour de marge de chaque cote. */
+function _g45EprMotoTrouve(events, betDay) {
+  var t = new Date(String(betDay) + 'T12:00:00').getTime();
+  if (isNaN(t)) return null;
+  var trouve = null;
+  (events || []).forEach(function (e) {
+    if (trouve || !e) return;
+    var d1 = new Date(e.date_start || e.date_end || 0).getTime();
+    var d2 = new Date(e.date_end || e.date_start || 0).getTime();
+    if (isNaN(d1) || isNaN(d2)) return;
+    if (t >= d1 - 86400000 && t <= d2 + 86400000) trouve = e;
+  });
+  return trouve;
+}
+window._g45EprMotoTrouve = _g45EprMotoTrouve;
+
+/* Le gala qui tombe le jour du pari. Un jour de marge : un UFC commence le
+   samedi soir aux Etats-Unis et se termine le dimanche matin en France, donc
+   la date du pari et celle d'ESPN peuvent differer d'un cran. */
+function _g45EprMmaTrouve(events, betDay) {
+  var t = new Date(String(betDay) + 'T12:00:00').getTime();
+  if (isNaN(t)) return null;
+  var best = null, dmin = 36 * 3600000;
+  (events || []).forEach(function (ev) {
+    var d = new Date(ev && ev.date).getTime();
+    if (isNaN(d)) return;
+    var ecart = Math.abs(d - t);
+    if (ecart <= dmin) { dmin = ecart; best = ev; }
+  });
+  return best;
+}
+window._g45EprMmaTrouve = _g45EprMmaTrouve;
+
+/* `g45MmaOpen` affiche une fenetre glissante de 100 jours, pas un gala : on
+   cherche le decalage qui contient la date voulue. La fenetre va de -40 a +60
+   jours autour de `maintenant + off*100`, elle n'est donc pas centree — d'ou
+   l'ajustement par essais plutot qu'un simple arrondi. */
+function _g45MmaDecalage(cible) {
+  var now = Date.now(), J = 86400000;
+  var off = Math.round((cible - now) / J / 100);
+  for (var k = 0; k < 6; k++) {
+    var base = now + off * 100 * J;
+    if (cible >= base - 40 * J && cible <= base + 60 * J) return off;
+    off += (cible < base) ? -1 : 1;
+  }
+  return off;
+}
+
+/* Ouvre le MMA sur la bonne periode, puis descend jusqu'au combattant s'il est
+   reconnu dans la carte, sinon jusqu'au gala. Le nom peut etre ecrit autrement
+   chez le book que chez l'UFC : on se rabat proprement sur le gala. */
+async function g45MmaOpenDate(ymd, nomEv, combattant) {
+  try {
+    var cible = new Date(String(ymd) + 'T12:00:00').getTime();
+    if (isNaN(cible)) { g45MmaOpen(0); return; }
+    await g45MmaOpen(_g45MmaDecalage(cible));
+    var zone = document.getElementById('t-resultats');
+    if (!zone) return;
+    var nrm = function (x) { return String(x || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]/g, ''); };
+    var vise = null;
+    var c = nrm(combattant);
+    if (c.length > 3) {
+      var tous = zone.querySelectorAll('div');
+      for (var i = 0; i < tous.length && !vise; i++) {
+        if (tous[i].children.length <= 6 && nrm(tous[i].textContent).indexOf(c) >= 0) vise = tous[i];
+      }
+    }
+    if (!vise && nomEv) {
+      var n = nrm(nomEv), tt = zone.querySelectorAll('div');
+      for (var j = 0; j < tt.length && !vise; j++) {
+        if (tt[j].children.length <= 6 && nrm(tt[j].textContent).indexOf(n) >= 0) vise = tt[j];
+      }
+    }
+    if (vise) setTimeout(function () { try { vise.scrollIntoView({ behavior: 'smooth', block: 'center' }); } catch (e) {} }, 300);
+  } catch (e) {}
+}
+window.g45MmaOpenDate = g45MmaOpenDate;
+
+/* `g45MotoEvent` deplie un accordeon DANS la liste : il lui faut la ligne du GP
+   et son conteneur, qui n'existent qu'une fois le module affiche. On ouvre donc
+   le module, puis on declenche l'ouverture du bon GP. */
+async function g45MotoOpenEvent(eid) {
+  try {
+    await g45MotoOpen();
+    var box = document.getElementById('mgpev-' + eid);
+    if (!box) return;                                   /* GP absent de la saison affichee */
+    var row = box.previousElementSibling;
+    if (row && typeof g45MotoEvent === 'function') g45MotoEvent(eid, row);
+    setTimeout(function () { try { box.scrollIntoView({ behavior: 'smooth', block: 'center' }); } catch (e) {} }, 300);
+  } catch (e) {}
+}
+window.g45MotoOpenEvent = g45MotoOpenEvent;
+
+function _g45EprCherche(h) {
+  var k = _g45EprCle(h);
+  if (_g45EprEnVol[k]) return;
+  _g45EprEnVol[k] = 1;
+  var betDay = String(h.date || '').slice(0, 10);
+  if (!betDay) { _g45EprFinir(h, null); return; }
+  var an = betDay.slice(0, 4);
+  var estMoto = String(h.sport || '').indexOf('\ud83c\udfcd') >= 0;
+  var estMma = String(h.sport || '').indexOf('\ud83e\udd4a') >= 0;
+  var combattant = String(h.eq || '') || String(h.n === 'SIMPLE' ? (h.target || '') : (h.n || '')).split(/\s+vs\s+/i)[0];
+  _g45ScoreTache(async function () {
+    var trouve = null;
+    if (estMma) {
+      try {
+        var y = function (ms) { var d = new Date(ms); return '' + d.getFullYear() + String(d.getMonth() + 1).padStart(2, '0') + String(d.getDate()).padStart(2, '0'); };
+        var tj = new Date(betDay + 'T12:00:00').getTime();
+        var rr = await fetch('https://site.api.espn.com/apis/site/v2/sports/mma/ufc/scoreboard?dates='
+          + y(tj - 3 * 86400000) + '-' + y(tj + 3 * 86400000) + '&limit=50');
+        if (rr.ok) {
+          var jj = await rr.json();
+          var gala = _g45EprMmaTrouve((jj && jj.events) || [], betDay);
+          if (gala) {
+            var gn = gala.shortName || gala.name || 'UFC';
+            trouve = { lbl: '\ud83e\udd4a ' + gn,
+                       act: "g45MmaOpenDate('" + betDay + "','" + String(gn).replace(/'/g, '') + "','" + String(combattant).replace(/'/g, '') + "')" };
+          }
+        }
+      } catch (e) {}
+      _g45EprFinir(h, trouve);
+      return;
+    }
+    if (estMoto) {
+      try {
+        var seas = await _g45MotoJ('/results/seasons');
+        var sa = (Array.isArray(seas) ? seas : []).filter(function (x) { return String(x && x.year) === an; })[0];
+        if (sa && sa.id) {
+          var mevs = await _g45MotoJ('/results/events?seasonUuid=' + encodeURIComponent(sa.id));
+          var me = _g45EprMotoTrouve(Array.isArray(mevs) ? mevs : [], betDay);
+          var mid = me && (me.id || me.toad_api_uuid);
+          if (mid) {
+            var mnom = me.sponsored_name || me.name || (me.country && me.country.name) || 'Grand Prix';
+            trouve = { lbl: '\ud83c\udfcd\ufe0f ' + String(mnom).replace(/\u2122/g, ''),
+                       act: "g45MotoOpenEvent('" + String(mid).replace(/'/g, '') + "')" };
+          }
+        }
+      } catch (e) {}
+      _g45EprFinir(h, trouve);
+      return;
+    }
+    try {
+      var evs = [];
+      if (typeof _g45F1Cache !== 'undefined' && _g45F1Cache && String(_g45F1Cache.year) === an && (_g45F1Cache.events || []).length) {
+        evs = _g45F1Cache.events;                       /* deja charge par le module */
+      } else {
+        var r = await fetch('https://site.api.espn.com/apis/site/v2/sports/racing/f1/scoreboard?dates=' + an);
+        if (r.ok) { var j = await r.json(); evs = (j && j.events) || []; }
+      }
+      var ev = _g45EprF1Trouve(evs, betDay);
+      if (ev && ev.id) {
+        var ad = (ev.circuit && ev.circuit.address) || {};
+        var pays = (typeof _g45F1CountryFR === 'function' ? _g45F1CountryFR(ad.country) : '') || ad.country || '';
+        var nom = pays ? ('GP ' + pays) : (ev.shortName || ev.name || 'Grand Prix');
+        trouve = { lbl: '\ud83c\udfc1 ' + nom, act: "g45F1Detail('" + String(ev.id).replace(/'/g, '') + "')" };
+      }
+    } catch (e) {}
+    _g45EprFinir(h, trouve);
+  });
+}
+
 function _g45EpreuveBouton(h) {
   if (!h) return '';
   var sp = String(h.sport || ''), lbl = '', act = '';
@@ -49900,10 +50254,20 @@ function _g45EpreuveBouton(h) {
     act = "g45CyclingOpen('" + (r ? r.id : 'tdf') + "')";
   } else if (typeof _g45EstF1 === 'function' && _g45EstF1(h)) {            /* 🏎 F1 */
     lbl = '\ud83c\udfc1 Formule 1'; act = 'g45F1Open()';
+    var ep = _g45EprLire(h);
+    if (ep === undefined) _g45EprCherche(h);            /* jamais cherche : on lance */
+    else if (ep) { lbl = ep.lbl; act = ep.act; }        /* trouve : on vise le GP */
+    /* null = cherche sans succes : on garde l'ouverture de la discipline */
   } else if (sp.indexOf('\ud83c\udfcd') >= 0) {                            /* 🏍 moto */
     lbl = '\ud83c\udfcd\ufe0f MotoGP'; act = 'g45MotoOpen()';
+    var em = _g45EprLire(h);
+    if (em === undefined) _g45EprCherche(h);
+    else if (em) { lbl = em.lbl; act = em.act; }
   } else if (sp.indexOf('\ud83e\udd4a') >= 0) {                            /* 🥊 MMA */
-    lbl = '\ud83e\udd4a MMA'; act = 'g45MmaOpen()';
+    lbl = '\ud83e\udd4a MMA'; act = 'g45MmaOpen(0)';
+    var eu = _g45EprLire(h);
+    if (eu === undefined) _g45EprCherche(h);
+    else if (eu) { lbl = eu.lbl; act = eu.act; }
   }
   if (!lbl) return '';
   /* stopPropagation : la ligne entiere ouvre deja la fenetre d'edition du pari. */
