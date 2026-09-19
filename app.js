@@ -52025,8 +52025,16 @@ var _G45_JOU_TABLE = {
     { k: 'hr', lab: 'Home run',    col: '#1ed760', ico: '\u26BE',       cols: [['HR']], mode: 'first' },
     { k: 'r',  lab: 'Run inscrit', col: '#4d84ff', lettre: 'R',           cols: [['R']],  mode: 'first' }
   ]},
-  rugby: { cats: null, roles: [
-    { k: 't', lab: 'Marqueur', col: '#1ed760', ico: '\uD83C\uDFC9', cols: [['T', 'TR', 'TRIES', 'TRY']], mode: 'first' }
+  /* RUGBY / NRL : structure TOTALEMENT differente, sondee le 19/09 sur un
+     match des Roosters. Pas de tableau `stats` aligne sur des `labels`, mais
+     un objet par statistique portant son propre nom et sa valeur. D'ou le
+     drapeau `parStat`, qui aiguille vers un autre lecteur.
+     PIEGE MAJEUR evite de justesse : trois statistiques partagent
+     l'abreviation « T » — `tackles`, `territory` ET `tries`. Une lecture par
+     abreviation aurait credite les PLAQUAGES comme des essais (25 au lieu de
+     0 sur le match sonde). On lit donc le `name`, jamais l'abreviation. */
+  rugby: { parStat: true, roles: [
+    { k: 't', lab: 'Marqueur', col: '#1ed760', ico: '\uD83C\uDFC9', stats: ['tries'] }
   ]}
 };
 _G45_JOU_TABLE['rugby-league'] = _G45_JOU_TABLE.rugby;
@@ -52123,10 +52131,49 @@ function _g45JouMonBloc(sum, teamId, nomNorm) {
   return null;
 }
 
+/* Lecteur du rugby : les stats sont des OBJETS nommes, pas un tableau indexe.
+   On construit d'abord la table nom -> statistique du joueur, puis chaque role
+   y pioche ce qu'il lui faut. */
+function _g45JouLireMatchStats(cfg, mien, idx) {
+  var res = {};
+  (mien.statistics || []).forEach(function (cat) {
+    (cat.athletes || []).forEach(function (a) {
+      var ath = a.athlete || {};
+      var aid = String(ath.id || ath.displayName || '');
+      if (!aid) return;
+      var table = {};
+      (a.statistics || []).forEach(function (g) {
+        (g.stats || []).forEach(function (st) {
+          var n = String(st.name || st.type || '');
+          if (n) table[n] = st;
+        });
+      });
+      cfg.roles.forEach(function (role) {
+        var v = 0, trouve = false;
+        (role.stats || []).forEach(function (n) {
+          var st = table[n];
+          if (!st) return;
+          var x = _g45JouNum(st.value != null ? st.value : st.displayValue);
+          if (x != null) { v += x; trouve = true; }
+        });
+        if (!trouve) return;
+        if (!idx.joueurs[aid]) idx.joueurs[aid] = { nom: ath.displayName || ath.shortName || ath.fullName || '?', tot: {} };
+        if (v > 0) {
+          if (!res[role.k]) res[role.k] = {};
+          res[role.k][aid] = (res[role.k][aid] || 0) + v;
+          idx.joueurs[aid].tot[role.k] = (idx.joueurs[aid].tot[role.k] || 0) + v;
+        }
+      });
+    });
+  });
+  return res;
+}
+
 /* Lecture d'un match : rend {role: {idJoueur: nombre}} et enrichit l'index. */
 function _g45JouLireMatch(cfg, sum, teamId, nomNorm, idx) {
   var mien = _g45JouMonBloc(sum, teamId, nomNorm);
   if (!mien) return {};
+  if (cfg.parStat) return _g45JouLireMatchStats(cfg, mien, idx);
   var res = {};
   cfg.roles.forEach(function (role) {
     var cats = _g45JouCats(mien, role.cats || cfg.cats);
@@ -52158,6 +52205,71 @@ function _g45JouLireMatch(cfg, sum, teamId, nomNorm, idx) {
   });
   return res;
 }
+
+/* Notre equipe a-t-elle des statistiques joueur dans ce boxscore ? */
+function _g45JouADesStats(sum, teamId, nomNorm) {
+  var mien = _g45JouMonBloc(sum, teamId, nomNorm);
+  if (!mien) return false;
+  return (mien.statistics || []).some(function (c) { return (c.athletes || []).length; });
+}
+
+/* REPLI DU RUGBY A XV (19/09/2026) ────────────────────────────────────────
+   ESPN ne publie AUCUNE statistique joueur sur le Top 14 : deux matchs sondes,
+   les equipes sont la, `statistics` est vide. Mais les marqueurs existent —
+   l'appli les affiche deja dans la fenetre de match, via `_rugbyScorersFromPlays`,
+   qui ne lit PAS le boxscore mais les ACTIONS de l'API core.
+   On reprend ce chemin : 1 requete de plus, et seulement pour les matchs dont le
+   boxscore est muet. Le NRL, qui a ses feuilles, reste a une seule requete.
+   Les noms viennent de `rosters` du resume deja telecharge — l'effectif de NOTRE
+   equipe uniquement, ce qui sert aussi a ecarter les essais adverses sans avoir
+   a lire l'equipe de l'action. */
+async function _g45JouRugbyPlays(sp, lg, eid, sum, teamId, nomNorm) {
+  var mien = {};
+  (((sum || {}).rosters) || []).forEach(function (rt) {
+    var t = rt.team || {};
+    var ok = (teamId && String(t.id) === String(teamId))
+          || (nomNorm && _g45SgNorm(t.displayName || t.name || t.shortDisplayName || '') === nomNorm);
+    if (!ok) return;
+    (rt.roster || []).forEach(function (p) {
+      var a = p.athlete || {};
+      if (a.id) mien[String(a.id)] = a.displayName || a.fullName || a.shortName || '?';
+    });
+  });
+  if (!Object.keys(mien).length) return null;
+
+  var j = null;
+  try {
+    var r = await fetch('https://sports.core.api.espn.com/v2/sports/' + sp + '/leagues/' + lg
+      + '/events/' + eid + '/competitions/' + eid + '/plays?limit=400');
+    if (!r.ok) return null;
+    j = await r.json();
+  } catch (e) { return null; }
+
+  var items = (j && j.items) || [];
+  if (!items.length) return null;
+  items = items.slice().sort(function (a, b) {
+    return (parseInt(a.sequenceNumber, 10) || 0) - (parseInt(b.sequenceNumber, 10) || 0);
+  });
+
+  var out = {}, prev = 0, n = 0;
+  items.forEach(function (p) {
+    var tot = (parseInt(p.homeScore, 10) || 0) + (parseInt(p.awayScore, 10) || 0);
+    var delta = tot - prev; prev = tot;
+    if (delta <= 0) return;                       /* transformation ratee, remplacement... */
+    var t = ((p.type && p.type.text) || '').toLowerCase();
+    if (t.indexOf('conversion') >= 0) return;     /* AVANT le test « try » : un libelle
+                                                     « try conversion » serait sinon compte
+                                                     comme un essai */
+    if (t.indexOf('try') < 0) return;
+    var ref = p.participants && p.participants[0] && p.participants[0].athlete && p.participants[0].athlete.$ref;
+    var aid = ref ? ((String(ref).match(/athletes\/(\d+)/) || [])[1]) : '';
+    if (!aid || !mien[aid]) return;               /* essai adverse, ou penalite d'essai
+                                                     sans marqueur individuel */
+    out[aid] = (out[aid] || 0) + 1; n++;
+  });
+  return n ? { tries: out, noms: mien } : null;
+}
+window._g45JouRugbyPlays = _g45JouRugbyPlays;
 
 async function _g45JouSummary(sp, lg, eid) {
   for (var a = 0; a < 3; a++) {
@@ -52191,8 +52303,25 @@ async function _g45JouConstruire(sp, lg, an, teamId, nom, liste, cb) {
       var d = await _g45JouSummary(sp, lg, m.id);
       if (d) {
         ok++;
-        try { idx.parMatch[String(m.id)] = _g45JouLireMatch(cfg, d, teamId, nomNorm, idx); }
-        catch (e) { idx.parMatch[String(m.id)] = {}; }
+        var res = {};
+        try { res = _g45JouLireMatch(cfg, d, teamId, nomNorm, idx) || {}; } catch (e) { res = {}; }
+        /* Boxscore muet (rugby a XV) : on va chercher les essais dans les actions. */
+        if (cfg.parStat && !Object.keys(res).length) {
+          var sansStats = true;
+          try { sansStats = !_g45JouADesStats(d, teamId, nomNorm); } catch (e) {}
+          if (sansStats) {
+            var pl = null;
+            try { pl = await _g45JouRugbyPlays(sp, lg, m.id, d, teamId, nomNorm); } catch (e) {}
+            if (pl) {
+              Object.keys(pl.tries).forEach(function (aid) {
+                if (!idx.joueurs[aid]) idx.joueurs[aid] = { nom: pl.noms[aid] || '?', tot: {} };
+                idx.joueurs[aid].tot.t = (idx.joueurs[aid].tot.t || 0) + pl.tries[aid];
+              });
+              res = { t: pl.tries };
+            }
+          }
+        }
+        idx.parMatch[String(m.id)] = res;
       } else {
         idx.parMatch[String(m.id)] = {};
       }
@@ -52298,6 +52427,19 @@ function _g45JouBarre(sp, lg, an, teamId, nom, liste) {
   var h = '<div style="display:flex;flex-wrap:wrap;align-items:flex-end;gap:10px;margin:2px 0 12px;">';
 
   if (!aDesJoueurs) {
+    /* TOUS les matchs ont repondu et AUCUN joueur n'en sort : la competition
+       n'a pas de feuille de match chez ESPN. Verifie le 19/09 sur deux matchs
+       de Top 14 — les equipes sont la, `statistics` est absent. Reproposer le
+       bouton inviterait a relancer N requetes pour le meme vide, donc on dit
+       pourquoi et on retire le bouton. Si des matchs ont ECHOUE (n < total),
+       c'est un autre cas : la le bouton garde tout son sens. */
+    if (idx && (idx.total || 0) > 0 && (idx.n || 0) >= idx.total) {
+      h += '<div style="font-size:13px;font-weight:600;color:var(--t2);line-height:1.5;'
+        + 'padding:10px 14px;border-radius:10px;background:rgba(240,176,32,.09);border:1px solid rgba(240,176,32,.30);">'
+        + 'Aucune feuille de match ici \u2014 ESPN ne publie pas les statistiques joueur sur cette comp\u00e9tition.</div>';
+      h += '</div>';
+      return h;
+    }
     var lbl = idx
       ? ('\u21bb Relancer l\'analyse (' + (idx.n || 0) + '/' + (idx.total || fin.length) + ')')
       : ('\uD83D\uDC64 Analyser les joueurs \u00b7 ' + fin.length + ' matchs');
