@@ -23543,7 +23543,7 @@ function renderSaisonsChart(el, results, nom) {
             _scHit = _scF.type==='g' ? _cnt(_bm.s) : (_scF.type==='a' ? _cnt(_bm.a) : (_cnt(_bm.s)+_cnt(_bm.a)));
           }
         }
-        var _scMark = _scHit ? '<span style="font-size:13px;vertical-align:middle;">'+(_scF.type==='g'?'⚽':(_scF.type==='a'?'👟':'🎯'))+'</span>'+(_scHit>1?'<span style="font-size:8px;font-weight:800;color:var(--t2);vertical-align:middle;">×'+_scHit+'</span>':'')+' ' : '';
+        var _scMark = _scHit ? '<span style="font-size:13px;vertical-align:middle;">'+(_scF.type==='g'?'⚽':(_scF.type==='a'?'🎯':'⭐'))+'</span>'+(_scHit>1?'<span style="font-size:8px;font-weight:800;color:var(--t2);vertical-align:middle;">×'+_scHit+'</span>':'')+' ' : '';
 
         var mid = m.id||'';
         // Barre combinée — vert si TOUTES les conditions cochées sont vraies
@@ -52013,9 +52013,9 @@ window.g45SportTR = g45SportTR;
    à la course ET à la réception dans le même match). */
 var _G45_JOU_TABLE = {
   hockey: { cats: ['forwards', 'defenses', 'skaters'], roles: [
-    { k: 'g', lab: 'Buteur',   col: '#1ed760', ico: '\uD83C\uDFD2', cols: [['G']],       mode: 'first' },
-    { k: 'a', lab: 'Passeur',  col: '#a78bfa', ico: '\uD83D\uDC5F', cols: [['A']],       mode: 'first' },
-    { k: 'p', lab: 'Pointeur', col: '#22d3ee', ico: '\u2728',       cols: [['G'], ['A']], mode: 'first' }
+    { k: 'g', lab: 'Buteur',   col: '#1ed760', ico: '\uD83E\uDD45', cols: [['G']],       mode: 'first' },
+    { k: 'a', lab: 'Passeur',  col: '#a78bfa', ico: '\uD83C\uDFAF', cols: [['A']],       mode: 'first' },
+    { k: 'p', lab: 'Pointeur', col: '#22d3ee', ico: '\u2B50',       cols: [['G'], ['A']], mode: 'first' }
   ]},
   football: { cats: ['rushing', 'receiving', 'passing'], roles: [
     { k: 'td',  lab: 'Touchdown',   col: '#1ed760', ico: '\uD83C\uDFC8', cols: [['TD']], cats: ['rushing', 'receiving'], mode: 'sum' },
@@ -52023,13 +52023,32 @@ var _G45_JOU_TABLE = {
   ]},
   baseball: { cats: ['batting'], roles: [
     { k: 'hr', lab: 'Home run',    col: '#1ed760', ico: '\u26BE',       cols: [['HR']], mode: 'first' },
-    { k: 'r',  lab: 'Run inscrit', col: '#4d84ff', ico: '\uD83C\uDFC3', cols: [['R']],  mode: 'first' }
+    { k: 'r',  lab: 'Run inscrit', col: '#4d84ff', lettre: 'R',           cols: [['R']],  mode: 'first' }
   ]},
   rugby: { cats: null, roles: [
     { k: 't', lab: 'Marqueur', col: '#1ed760', ico: '\uD83C\uDFC9', cols: [['T', 'TR', 'TRIES', 'TRY']], mode: 'first' }
   ]}
 };
 _G45_JOU_TABLE['rugby-league'] = _G45_JOU_TABLE.rugby;
+
+/* UNE BALLE AVEC UNE LETTRE (19/09/2026, demande d'Antoine pour le run).
+   Unicode n'a pas ce caractere : la batte de baseball n'existe pas seule
+   (🏏 est celle du CRICKET, deja utilise dans l'appli) et le coureur 🏃 dit un
+   deplacement, pas un point marque. On la DESSINE donc.
+   Choix de rendu valide sur maquette : disque plein a la couleur du role,
+   coutures seulement suggerees, lettre bien grasse au centre. La balle blanche
+   realiste etait plus jolie en grand mais illisible a 16 px, seule taille ou
+   elle sera reellement vue. Le SVG reste net au zoom, contrairement a un emoji.
+   Extensible a n'importe quelle lettre : HR, TD, E... si le sujet revient. */
+function _g45JouBalle(lettre, coul) {
+  return '<svg width="16" height="16" viewBox="0 0 24 24" style="vertical-align:middle;" aria-label="' + lettre + '">'
+    + '<circle cx="12" cy="12" r="11" fill="' + coul + '"></circle>'
+    + '<path d="M5.6 4 Q8.8 12 5.6 20" fill="none" stroke="#16203a" stroke-width="1.1" stroke-linecap="round" opacity=".45"></path>'
+    + '<path d="M18.4 4 Q15.2 12 18.4 20" fill="none" stroke="#16203a" stroke-width="1.1" stroke-linecap="round" opacity=".45"></path>'
+    + '<text x="12" y="16.6" text-anchor="middle" font-family="system-ui,-apple-system,sans-serif" font-size="13.5" font-weight="800" fill="#0b101d">'
+    + lettre + '</text></svg>';
+}
+window._g45JouBalle = _g45JouBalle;
 
 var _g45JouF = null;          /* filtre actif : {cle, role, id, nom} */
 window._g45JouCtx = null;     /* contexte du panneau en cours d'affichage */
@@ -52245,9 +52264,12 @@ function _g45JouMarque(eid) {
   if (!pm) return '';
   var n = ((pm[f.role] || {})[f.id]) || 0;
   if (!n) return '';
-  var ico = '\u2b50', cfg = _g45JouCfg((window._g45JouCtx || {}).sp);
-  if (cfg) cfg.roles.forEach(function (r) { if (r.k === f.role) ico = r.ico; });
-  return '<span style="font-size:12px;vertical-align:middle;">' + ico + '</span>'
+  var role = null, cfg = _g45JouCfg((window._g45JouCtx || {}).sp);
+  if (cfg) cfg.roles.forEach(function (r) { if (r.k === f.role) role = r; });
+  var ico = (role && role.lettre)
+    ? _g45JouBalle(role.lettre, role.col)
+    : '<span style="font-size:12px;vertical-align:middle;">' + ((role && role.ico) || '\u2b50') + '</span>';
+  return ico
     + (n > 1 ? '<span style="font-size:9px;font-weight:800;color:var(--t2);vertical-align:middle;">\u00d7' + n + '</span>' : '')
     + ' ';
 }
