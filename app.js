@@ -34564,6 +34564,93 @@ window.loadTeamNews=loadTeamNews;
    cache si deja teste, sinon recherche en tache de fond puis un seul
    redessin quand le resultat arrive — jamais de blocage du rendu en cours. */
 var _g45ScoreVus = {};
+/* ═══ SCORE DES PARIS KHL ET NFL (19/09/2026) ══════════════════════════════
+   Releve par Antoine : la pastille « 📊 score » de l'onglet Pari s'affiche en
+   MLB et en football, pas sur ses paris KHL. Mesure dans le code : la recherche
+   couvrait ⚽, ⚾, 🏀, 🏒, 🏉, 🏉🇦🇺 et 🎾.
+     · la KHL portait bien l'icone 🏒 et tombait donc dans la branche NHL, qui
+       interroge api-web.nhle.com avec une table nord-americaine — l'Ak Bars
+       Kazan n'y figurera jamais ;
+     · la NFL n'avait AUCUNE branche, personne ne l'avait remarque.
+   La correspondance est isolee dans des fonctions PURES, testables sans reseau :
+   c'est la partie ou l'on se trompe, pas l'appel HTTP. */
+
+/* Nom de club -> entree de G45_KHL_EQUIPES. Le nom saisi dans un pari peut etre
+   le francais, l'anglais, la ville ou un alias. L'inclusion n'est admise qu'au
+   dela de 3 caracteres : « SKA » ne doit pas se retrouver dans « Spartak ». */
+function _g45KhlClubDe(nom) {
+  var n = (typeof _g45SgNorm === 'function') ? _g45SgNorm(nom || '') : String(nom || '').toLowerCase();
+  if (!n || typeof G45_KHL_EQUIPES === 'undefined') return null;
+  var exact = null, partiel = null;
+  G45_KHL_EQUIPES.forEach(function (e) {
+    [e.fr, e.en, e.ville].concat(e.al || []).forEach(function (c) {
+      var cn = (typeof _g45SgNorm === 'function') ? _g45SgNorm(c || '') : String(c || '').toLowerCase();
+      if (!cn) return;
+      if (cn === n) { if (!exact) exact = e; return; }
+      if (cn.length > 3 && n.length > 3 && (cn.indexOf(n) >= 0 || n.indexOf(cn) >= 0)) { if (!partiel) partiel = e; }
+    });
+  });
+  return exact || partiel;
+}
+window._g45KhlClubDe = _g45KhlClubDe;
+
+/* Choisit le match KHL du bon jour et du bon club. Pure : on lui passe la liste
+   deja telechargee. `m.a` est le domicile (convention du module KHL), donc le
+   score rendu est bien domicile-exterieur, comme pour les autres sports. */
+function _g45KhlScoreDuJour(matchs, betDay, nomEquipe, nomAdverse) {
+  var c1 = _g45KhlClubDe(nomEquipe), c2 = _g45KhlClubDe(nomAdverse);
+  if (!c1 && !c2) return null;
+  var jour = function (t) {
+    var d = new Date(t);
+    return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+  };
+  var bons = (matchs || []).filter(function (m) {
+    if (!m || !_g45KhlFini(m)) return false;
+    if (jour(m.t) !== betDay) return false;
+    var a = String(m.a), b = String(m.b);
+    var t1 = c1 ? (a === String(c1.id) || b === String(c1.id)) : false;
+    var t2 = c2 ? (a === String(c2.id) || b === String(c2.id)) : false;
+    /* Les DEUX camps doivent coller quand on connait les deux : un soir de KHL
+       a huit affiches, un seul nom finirait par attraper une autre rencontre.
+       Meme garde-fou que sur le football depuis le 10/09. */
+    return (c1 && c2) ? (t1 && t2) : (t1 || t2);
+  });
+  if (!bons.length) return null;
+  var iss = _g45KhlIssue(bons[0]);
+  if (iss == null || iss.a == null || iss.b == null) return null;
+  return { hs: iss.a, as: iss.b };
+}
+window._g45KhlScoreDuJour = _g45KhlScoreDuJour;
+
+/* Choisit le match NFL parmi les evenements d'un tableau de scores ESPN. Pure. */
+function _g45NflScoreDepuisEvents(events, jours, nomEquipe, nomAdverse) {
+  var nrm = function (x) { return String(x || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]/g, ''); };
+  var cibles = [nrm(nomEquipe), nrm(nomAdverse)].filter(function (x) { return x.length > 3; });
+  if (!cibles.length) return null;
+  var res = null;
+  (events || []).forEach(function (ev) {
+    if (res) return;
+    var cp = (ev.competitions && ev.competitions[0]) || {};
+    var st = (cp.status && cp.status.type) || {};
+    if (!st.completed) return;
+    if (jours && jours.length) {
+      var d = String(ev.date || cp.date || '').slice(0, 10);
+      if (d && jours.indexOf(d) < 0) return;
+    }
+    var cps = cp.competitors || [];
+    var noms = cps.map(function (c) { return nrm((c.team && (c.team.displayName || c.team.shortDisplayName || c.team.name)) || ''); });
+    var colle = function (c) { return noms.some(function (n) { return n && (n.indexOf(c) >= 0 || c.indexOf(n) >= 0); }); };
+    var ok = (cibles.length > 1) ? (colle(cibles[0]) && colle(cibles[1])) : colle(cibles[0]);
+    if (!ok) return;
+    var dom = cps.filter(function (c) { return c.homeAway === 'home'; })[0];
+    var ext = cps.filter(function (c) { return c.homeAway === 'away'; })[0];
+    if (!dom || !ext || dom.score == null || ext.score == null) return;
+    res = { hs: parseInt(dom.score, 10), as: parseInt(ext.score, 10) };
+  });
+  return res;
+}
+window._g45NflScoreDepuisEvents = _g45NflScoreDepuisEvents;
+
 function _g45ScoreTexte(h) {
   /* ELARGI AU PARI SIMPLE (28/08). Une montante a son equipe dans `h.n` ; un
      pari simple (h.n==='SIMPLE') l'a dans `h.target`, sous la forme "Equipe
@@ -34812,6 +34899,24 @@ function _g45ScoreTexte(h) {
     return '';
   }
 
+  /* KHL AVANT la NHL : meme icone 🏒, source totalement differente. On ne se
+     fie pas qu'au libelle de competition — un pari peut l'avoir laisse vide —
+     mais aussi au fait que le nom de club soit reconnu par la table KHL. */
+  if (h.sport === '🏒' && (/khl/i.test(String(h.comp || '')) || _g45KhlClubDe(nomEquipe) || _g45KhlClubDe(nomAdverse))) {
+    (async function() {
+      var hs = null, as = null;
+      try {
+        var j0 = new Date(betDay + 'T00:00:00');
+        var de = j0.getTime() - 86400000, aa = j0.getTime() + 2 * 86400000;
+        var ms = await _g45KhlMatchsPlage(de, aa);
+        var r = _g45KhlScoreDuJour(ms, betDay, nomEquipe, nomAdverse);
+        if (r) { hs = r.hs; as = r.as; }
+      } catch(e) {}
+      finir(hs, as);
+    })();
+    return '';
+  }
+
   if (h.sport === '🏒') {
     /* NHL : api-web.nhle.com, endpoint different de tous les autres —
        `club-schedule-season` renvoie la saison complete, filtree par date. */
@@ -34828,6 +34933,35 @@ function _g45ScoreTexte(h) {
           })[0];
           if (jeu && jeu.gameState && /OFF|FINAL/i.test(jeu.gameState) && jeu.homeTeam && jeu.awayTeam) {
             hs = jeu.homeTeam.score; as = jeu.awayTeam.score;
+          }
+        }
+      } catch(e) {}
+      finir(hs, as);
+    })();
+    return '';
+  }
+
+  /* NFL (19/09) : aucune branche n'existait. Tableau des scores du jour, et la
+     veille aussi — un match joue dimanche soir aux Etats-Unis tombe lundi en
+     heure europeenne, meme decalage que MLB, NBA et NHL. */
+  if (h.sport === '🏈' || h.sport === '🏈🇺🇸') {
+    (async function() {
+      var hs = null, as = null;
+      try {
+        for (var k = 0; k < joursUS.length && hs == null; k++) {
+          var jour = String(joursUS[k]).replace(/-/g, '');
+          var chemin = '/apis/site/v2/sports/football/nfl/scoreboard?dates=' + jour + '&limit=100';
+          var urls = [];
+          if (typeof FD_PROXY !== 'undefined' && FD_PROXY) urls.push(FD_PROXY + '?host=espn&path=' + encodeURIComponent(chemin));
+          urls.push('https://site.api.espn.com' + chemin);
+          for (var u = 0; u < urls.length && hs == null; u++) {
+            try {
+              var rr = await fetch(urls[u]);
+              if (!rr.ok) continue;
+              var jj = await rr.json();
+              var r = _g45NflScoreDepuisEvents((jj && jj.events) || [], null, nomEquipe, nomAdverse);
+              if (r) { hs = r.hs; as = r.as; }
+            } catch(e) {}
           }
         }
       } catch(e) {}
