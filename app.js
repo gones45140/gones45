@@ -35017,6 +35017,17 @@ function _g45ScoreTexte(h) {
     return '';
   }
 
+  /* NRL RECONNU PAR LA COMPETITION (20/09/2026) ──────────────────────────
+     Releve par Antoine : un pari Sydney Roosters portait le sport « 🏉 » seul
+     — rugby a XV — avec la competition « 🏉🇦🇺 NRL ». Il partait donc dans la
+     branche rugby union et n'y trouvait evidemment rien, alors que l'equipe se
+     resolvait parfaitement (289204) et que le match etait bien la.
+     Meme lecon que la KHL le 19/09 : l'icone du sport ne suffit pas a decider,
+     la COMPETITION doit avoir le dernier mot. */
+  if (h.sport === '🏉' && /\bnrl\b|rugby.?league/i.test(String(h.comp || ''))) {
+    h = Object.assign({}, h, { sport: '🏉🇦🇺' });
+  }
+
   if (h.sport === '🏉') {
     /* ═══ RUGBY A XV (10/09) ═══
        Seul le NRL etait couvert ; le rugby a XV ne l'a jamais ete, donc aucun
