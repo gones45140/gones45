@@ -37102,7 +37102,7 @@ var _G45_CACHE_PREFIXES=['g45_mmeta2_','g45_mmeta1_','g45_tennis4_','g45_tennis3
      explosait et des ecritures LEGITIMES echouaient en silence (le filtre par
      competition, qui restait bloque sur « Toutes »). Les cartes de tirs sont
      les plus lourdes : plusieurs Ko par match, gardees indefiniment. */
-  'g45butA2_','g45gl3_','g45gl2_','g45gl_','g45_tirs2_','g45_fanart2_','g45_fanart_','g45_img_perso_','g45_tv_prog','g45_mqnom_','g45_mqteam_','g45_mqfond_','g45trv4_','g45_catimg_','g45_catfmt2_','g45_catfmt_','g45_gar1_','g45_epr1_','g45nrlcal3_','g45nrlcal2_','g45_score4_','g45_score3_','g45_score2_','g45_score_','g45_lglogo_','g45compet3_','g45compet2_','g45compet_','g45tmeta_','g45histo_','g45ld2_','g45ld_',
+  'g45butA2_','g45gl3_','g45gl2_','g45gl_','g45_tirs2_','g45_fanart2_','g45_fanart_','g45_img_perso_','g45_tv_prog','g45_mqnom_','g45_mqteam_','g45_mqfond_','g45trv4_','g45_catimg_','g45_catfmt2_','g45_catfmt_','g45_t14e_','g45_t14bo_','g45_gar1_','g45_epr1_','g45nrlcal3_','g45nrlcal2_','g45_score4_','g45_score3_','g45_score2_','g45_score_','g45_lglogo_','g45compet3_','g45compet2_','g45compet_','g45tmeta_','g45histo_','g45ld2_','g45ld_',
   'g45nrlcal2_','g45core2_','g45core_','g45_fx_faits','g45_veille_','g45_compet_logos','g45_groq_modele','g45_groq_modele3','g45_groq_vision','g45_gemini_modeles',
   /* 12/09 : g45nrlcal6_ rejoint la liste, remplace par g45nrlcal7_ ci-dessus —
      meme raison que g45nrlcal2_ et g45nrlcal3_ avant lui. */
@@ -41485,6 +41485,191 @@ async function _g45Feuille(sportPath, slug, eventId) {
    RESERVE : Sofascore filtre les clients non-navigateurs par empreinte TLS.
    L'appel par le Worker peut etre refuse — le bloc l'explique alors au lieu de
    rester vide. */
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   CLASSEMENT TOP 14 CALCULE SUR PLACE (20/09/2026, idee d'Antoine)
+   ───────────────────────────────────────────────────────────────────────────
+   ESPN ne publie pas de classement pour le rugby a XV, et Sofascore se fait
+   filtrer une fois sur deux. Mais depuis que les matchs fantomes sont ecartes,
+   les RESULTATS sont fiables — et un classement, ce n'est qu'une addition.
+
+   Bareme officiel LNR, verifie le 20/09/2026 (systeme propre au Top 14 depuis
+   2007-2008, a ne pas confondre avec le bonus a quatre essais des autres
+   competitions) :
+     victoire 4 · nul 2 · defaite 0
+     bonus offensif  +1 : 3 essais inscrits de plus que l'adversaire
+     bonus defensif  +1 : defaite par 5 points d'ecart ou moins
+
+   LE BONUS DEFENSIF EST GRATUIT : il se lit dans le score final.
+   LE BONUS OFFENSIF COUTE UNE REQUETE PAR MATCH : il faut le nombre d'essais,
+   qu'ESPN ne donne pas dans le resume du Top 14. On le compte donc dans les
+   ACTIONS de l'API core — le meme endpoint que `_g45JouRugbyPlays` utilise
+   deja pour le filtre Marqueur. D'ou l'affichage en deux temps : le classement
+   s'affiche tout de suite sans les bonus offensifs, un bouton les complete.
+   ═══════════════════════════════════════════════════════════════════════════ */
+var _G45_T14_ESSAIS = 'g45_t14e_';
+
+/* Essais des DEUX equipes sur un match. On ne lit pas l'equipe de l'action —
+   on regarde quel cote du score a bouge. Plus robuste que de resoudre des
+   references d'equipe, et ca evite une requete de plus.
+   PIEGE : « Try Conversion » contient le mot « try ». Le test de conversion
+   passe donc en premier, comme dans `_g45JouRugbyPlays`. */
+async function _g45T14Essais(sp, lg, eid) {
+  try {
+    var c = JSON.parse(localStorage.getItem(_G45_T14_ESSAIS + eid) || 'null');
+    if (c && c.h != null) return c;
+  } catch (e) {}
+  var j = null;
+  try {
+    var r = await fetch('https://sports.core.api.espn.com/v2/sports/' + sp + '/leagues/' + lg
+      + '/events/' + eid + '/competitions/' + eid + '/plays?limit=400');
+    if (!r.ok) return null;
+    j = await r.json();
+  } catch (e) { return null; }
+  var items = (j && j.items) || [];
+  if (!items.length) return null;
+  items = items.slice().sort(function (a, b) {
+    return (parseInt(a.sequenceNumber, 10) || 0) - (parseInt(b.sequenceNumber, 10) || 0);
+  });
+  var ph = 0, pa = 0, h = 0, a = 0;
+  items.forEach(function (p) {
+    var nh = parseInt(p.homeScore, 10), na = parseInt(p.awayScore, 10);
+    if (isNaN(nh) || isNaN(na)) return;
+    var dh = nh - ph, da = na - pa; ph = nh; pa = na;
+    var t = ((p.type && p.type.text) || '').toLowerCase();
+    if (t.indexOf('conversion') >= 0) return;
+    if (t.indexOf('try') < 0) return;
+    if (dh > 0) h++; else if (da > 0) a++;
+  });
+  var val = { h: h, a: a };
+  try { localStorage.setItem(_G45_T14_ESSAIS + eid, JSON.stringify(val)); } catch (e) {}
+  return val;
+}
+
+/* Table des equipes a partir des matchs joues. `essais` est optionnel :
+   sans lui, les bonus offensifs restent a zero et on le dit. */
+function _g45T14Calcul(matchs, essais) {
+  var t = {};
+  var ligne = function (nom) {
+    if (!t[nom]) t[nom] = { nom: nom, j: 0, g: 0, n: 0, p: 0, pp: 0, pc: 0, bo: 0, bd: 0 };
+    return t[nom];
+  };
+  (matchs || []).forEach(function (m) {
+    if (!m || !m.joue) return;
+    var d = ligne(m.dom), e = ligne(m.ext);
+    var sd = parseInt(m.sDom, 10) || 0, se = parseInt(m.sExt, 10) || 0;
+    d.j++; e.j++;
+    d.pp += sd; d.pc += se; e.pp += se; e.pc += sd;
+    if (sd > se) { d.g++; e.p++; if (sd - se <= 5) e.bd++; }
+    else if (se > sd) { e.g++; d.p++; if (se - sd <= 5) d.bd++; }
+    else { d.n++; e.n++; }
+    var es = essais && essais[String(m.id)];
+    if (es && es.h != null) {
+      if (es.h - es.a >= 3) d.bo++;
+      if (es.a - es.h >= 3) e.bo++;
+    }
+  });
+  var out = Object.keys(t).map(function (k) {
+    var x = t[k];
+    x.diff = x.pp - x.pc;
+    x.pts = x.g * 4 + x.n * 2 + x.bo + x.bd;
+    return x;
+  });
+  /* Tri : points, puis difference generale, puis points marques. La LNR
+     departage d'abord sur les confrontations directes ; on s'en approche sans
+     le pretendre, et le bloc le signale. */
+  out.sort(function (a, b) { return (b.pts - a.pts) || (b.diff - a.diff) || (b.pp - a.pp); });
+  return out;
+}
+
+/* Complete les bonus offensifs : une requete par match joue, en cache
+   definitif. Trois en parallele, avec la progression sur le bouton. */
+async function g45T14Bonus() {
+  var box = document.getElementById('g45-t14-cl');
+  var b = document.getElementById('g45-t14-btn');
+  var ms = (window._g45NrlMatchs || []).filter(function (m) { return m && m.joue && m.id; });
+  if (!ms.length) return;
+  var ctx = window._g45NrlCtx || { sport: 'rugby', ligue: '270559' };
+  var qi = 0, done = 0, essais = {};
+  if (b) { b.disabled = true; b.style.opacity = '.7'; }
+  async function ouvrier() {
+    while (qi < ms.length) {
+      var m = ms[qi++];
+      var e = await _g45T14Essais(ctx.sport, ctx.ligue, m.id);
+      if (e) essais[String(m.id)] = e;
+      done++;
+      if (b) b.textContent = '\u23f3 ' + done + '/' + ms.length;
+      await new Promise(function (r) { setTimeout(r, 60); });
+    }
+  }
+  var w = [];
+  for (var i = 0; i < Math.min(3, ms.length); i++) w.push(ouvrier());
+  await Promise.all(w);
+  try { localStorage.setItem('g45_t14bo_' + ctx.ligue, JSON.stringify({ t: Date.now(), e: essais })); } catch (e) {}
+  if (box) g45T14Classement(box, true);
+}
+window.g45T14Bonus = g45T14Bonus;
+
+function _g45T14EssaisConnus(ligue) {
+  try {
+    var c = JSON.parse(localStorage.getItem('g45_t14bo_' + ligue) || 'null');
+    return (c && c.e) || null;
+  } catch (e) { return null; }
+}
+
+function g45T14Classement(box, force) {
+  if (!box) return false;
+  var ctx = window._g45NrlCtx || { sport: 'rugby', ligue: '270559' };
+  var ms = (window._g45NrlMatchs || []).filter(function (m) { return m && m.joue; });
+  if (!ms.length) return false;                      /* calendrier pas encore charge */
+  var essais = _g45T14EssaisConnus(ctx.ligue);
+  var rows = _g45T14Calcul(ms, essais);
+  if (!rows.length) return false;
+  var complet = !!essais && Object.keys(essais).length >= ms.length;
+
+  var col = '26px 1fr 26px 26px 26px 26px 44px 30px 30px 38px';
+  var h = '<div id="g45-t14-cl">'
+    + '<div style="display:flex;align-items:center;gap:9px;flex-wrap:wrap;margin:0 0 9px;">'
+    + '<span style="font-size:10.5px;font-weight:700;color:var(--t2);">Calcul\u00e9 depuis les r\u00e9sultats \u00b7 '
+    + ms.length + ' matchs jou\u00e9s</span>';
+  if (!complet) {
+    h += '<button id="g45-t14-btn" onclick="g45T14Bonus()" style="padding:7px 13px;border-radius:9px;'
+      + 'border:1.5px solid rgba(240,176,32,.55);background:rgba(240,176,32,.12);color:#f0b020;'
+      + 'font-size:11.5px;font-weight:800;cursor:pointer;">\ud83c\udfc9 Compter les essais (bonus offensifs)</button>';
+  }
+  h += '</div>'
+    + '<div style="display:grid;grid-template-columns:' + col + ';gap:6px;font-size:9px;color:var(--t3);text-transform:uppercase;letter-spacing:.05em;padding:0 9px 5px;">'
+    + '<span>#</span><span>Club</span><span style="text-align:center;">J</span><span style="text-align:center;">G</span>'
+    + '<span style="text-align:center;">N</span><span style="text-align:center;">P</span>'
+    + '<span style="text-align:right;">Diff</span><span style="text-align:center;">BO</span>'
+    + '<span style="text-align:center;">BD</span><span style="text-align:right;">Pts</span></div>'
+    + '<div style="display:flex;flex-direction:column;gap:3px;">';
+  rows.forEach(function (r, i) {
+    var rang = i + 1;
+    var bord = (rang <= 6) ? 'var(--g)' : ((rang >= 13) ? 'var(--r)' : 'transparent');
+    h += '<div style="display:grid;grid-template-columns:' + col + ';gap:6px;align-items:center;padding:7px 9px;'
+      + 'border-radius:6px;border-left:3px solid ' + bord + ';background:rgba(255,255,255,' + (i % 2 ? '.02' : '.045') + ');">'
+      + '<span style="font-size:11px;font-weight:800;color:var(--t3);">' + rang + '</span>'
+      + '<span style="font-size:13.5px;font-weight:700;color:var(--t1);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + _g45Esc(r.nom) + '</span>'
+      + '<span style="font-size:12px;text-align:center;color:var(--t2);font-variant-numeric:tabular-nums;">' + r.j + '</span>'
+      + '<span style="font-size:12px;text-align:center;color:var(--t2);font-variant-numeric:tabular-nums;">' + r.g + '</span>'
+      + '<span style="font-size:12px;text-align:center;color:var(--t2);font-variant-numeric:tabular-nums;">' + r.n + '</span>'
+      + '<span style="font-size:12px;text-align:center;color:var(--t2);font-variant-numeric:tabular-nums;">' + r.p + '</span>'
+      + '<span style="font-size:12px;text-align:right;color:' + (r.diff > 0 ? 'var(--g)' : (r.diff < 0 ? 'var(--r)' : 'var(--t2)')) + ';font-variant-numeric:tabular-nums;">' + (r.diff > 0 ? '+' : '') + r.diff + '</span>'
+      + '<span style="font-size:12px;text-align:center;color:' + (r.bo ? '#f0b020' : 'var(--t3)') + ';font-variant-numeric:tabular-nums;">' + r.bo + '</span>'
+      + '<span style="font-size:12px;text-align:center;color:' + (r.bd ? '#22d3ee' : 'var(--t3)') + ';font-variant-numeric:tabular-nums;">' + r.bd + '</span>'
+      + '<span style="font-size:13.5px;text-align:right;font-weight:800;color:var(--t1);font-variant-numeric:tabular-nums;">' + r.pts + '</span></div>';
+  });
+  h += '</div><div style="font-size:10.5px;color:var(--t3);line-height:1.6;margin-top:9px;">'
+    + 'Victoire 4 \u00b7 nul 2 \u00b7 bonus offensif +1 (3 essais d\u2019\u00e9cart) \u00b7 bonus d\u00e9fensif +1 (d\u00e9faite de 5 points ou moins).'
+    + (complet ? '' : '<br><b style="color:#f0b020;">Bonus offensifs non compt\u00e9s</b> \u2014 le classement peut diff\u00e9rer de l\u2019officiel tant qu\u2019ils manquent.')
+    + '<br>\u00c9galit\u00e9s d\u00e9partag\u00e9es \u00e0 la diff\u00e9rence g\u00e9n\u00e9rale ; la LNR regarde d\u2019abord les confrontations directes.'
+    + '</div></div>';
+  box.innerHTML = h;
+  return true;
+}
+window.g45T14Classement = g45T14Classement;
+
 var _G45_SOFA_TOURNOIS = { '270559': 420 };   /* Top 14 ESPN → tournoi Sofascore */
 var _g45SofaCache = {};
 async function _g45SofaJ(chemin){
@@ -41499,6 +41684,11 @@ async function _g45SofaJ(chemin){
   return null;
 }
 async function g45SofaClassement(box, slugEspn){
+  /* CALCUL LOCAL D'ABORD (20/09/2026) : instantane, et il ne depend ni d'ESPN
+     ni de Sofascore — qui filtre les appels hors navigateur une fois sur deux.
+     Il n'aboutit que si le calendrier est deja charge ; sinon on retombe sur
+     Sofascore comme avant. */
+  try { if (g45T14Classement(box)) return true; } catch (e) {}
   var tid = _G45_SOFA_TOURNOIS[String(slugEspn)];
   if (!tid) { return false; }
   box.innerHTML = '<div style="color:var(--t3);font-size:11px;padding:14px;text-align:center;">\u23f3 Chargement du classement\u2026</div>';
@@ -41507,6 +41697,15 @@ async function g45SofaClassement(box, slugEspn){
   var j = sid ? await _g45SofaJ('/api/v1/unique-tournament/' + tid + '/season/' + sid + '/standings/total') : null;
   var rows = (j && j.standings && j.standings[0] && j.standings[0].rows) || [];
   if (!rows.length) {
+    /* Sofascore muet : plutot que d'afficher un bloc d'excuses, on va chercher
+       le calendrier et on calcule. */
+    try {
+      if (typeof g45NrlCharger === 'function' && !(window._g45NrlMatchs || []).length) {
+        box.innerHTML = '<div style="color:var(--t3);font-size:11px;padding:14px;text-align:center;">\u23f3 Calcul du classement depuis les r\u00e9sultats\u2026</div>';
+        await g45NrlCharger(new Date().getFullYear());
+      }
+      if (g45T14Classement(box)) return true;
+    } catch (e) {}
     box.innerHTML = '<div style="text-align:center;padding:18px;">'
       + '<div style="color:var(--t2);font-size:12px;font-weight:700;margin-bottom:6px;">Classement non disponible</div>'
       + '<div style="color:var(--t3);font-size:10.5px;line-height:1.6;max-width:460px;margin:0 auto;">'
@@ -41569,6 +41768,11 @@ async function _g45SofaJ(chemin){
   return null;
 }
 async function g45SofaClassement(box, slugEspn){
+  /* CALCUL LOCAL D'ABORD (20/09/2026) : instantane, et il ne depend ni d'ESPN
+     ni de Sofascore — qui filtre les appels hors navigateur une fois sur deux.
+     Il n'aboutit que si le calendrier est deja charge ; sinon on retombe sur
+     Sofascore comme avant. */
+  try { if (g45T14Classement(box)) return true; } catch (e) {}
   var tid = _G45_SOFA_TOURNOIS[String(slugEspn)];
   if (!tid) { return false; }
   box.innerHTML = '<div style="color:var(--t3);font-size:11px;padding:14px;text-align:center;">\u23f3 Chargement du classement\u2026</div>';
@@ -41577,6 +41781,15 @@ async function g45SofaClassement(box, slugEspn){
   var j = sid ? await _g45SofaJ('/api/v1/unique-tournament/' + tid + '/season/' + sid + '/standings/total') : null;
   var rows = (j && j.standings && j.standings[0] && j.standings[0].rows) || [];
   if (!rows.length) {
+    /* Sofascore muet : plutot que d'afficher un bloc d'excuses, on va chercher
+       le calendrier et on calcule. */
+    try {
+      if (typeof g45NrlCharger === 'function' && !(window._g45NrlMatchs || []).length) {
+        box.innerHTML = '<div style="color:var(--t3);font-size:11px;padding:14px;text-align:center;">\u23f3 Calcul du classement depuis les r\u00e9sultats\u2026</div>';
+        await g45NrlCharger(new Date().getFullYear());
+      }
+      if (g45T14Classement(box)) return true;
+    } catch (e) {}
     box.innerHTML = '<div style="text-align:center;padding:18px;">'
       + '<div style="color:var(--t2);font-size:12px;font-weight:700;margin-bottom:6px;">Classement non disponible</div>'
       + '<div style="color:var(--t3);font-size:10.5px;line-height:1.6;max-width:460px;margin:0 auto;">'
