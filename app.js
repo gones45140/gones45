@@ -39453,6 +39453,50 @@ async function g45NrlCharger(annee) {
   }
 
   out.sort(function (a, b) { return new Date(a.date) - new Date(b.date); });
+
+  /* ═══ MATCHS FANTOMES D'ESPN (20/09/2026) ════════════════════════════════
+     Releve par Antoine sur le Top 14. ESPN publie DEUX entrees pour une meme
+     rencontre, a cinq minutes d'ecart, avec domicile et exterieur inverses :
+       604732 « Bordeaux - Stade Toulousain »        13/09 19:00  annonce
+       604373 « Stade Toulousain - Bordeaux Begles » 13/09 19:05  TERMINE
+     Le dedoublonnage sur l'identifiant ne pouvait rien : ce sont deux
+     identifiants differents, dans des plages distinctes.
+     Trois degats en un : le match s'affichait a l'envers, une rencontre jouee
+     passait pour « a venir », et surtout le COMPTAGE PAR EQUIPE — qui donne les
+     numeros de journee — creditait Toulouse de deux matchs au lieu d'un. D'ou
+     Vannes classe en J5 au lieu de J3.
+     On ecarte donc le fantome, en le reconnaissant a trois signes, dans cet
+     ordre : le match JOUE l'emporte sur l'annonce ; a defaut celui qui porte
+     des LOGOS (la fiche du fantome n'a que des ecussons gris) ; en dernier
+     recours le premier vu.
+     Les noms different aussi entre les deux entrees (« Bordeaux » contre
+     « Bordeaux Begles », « RC Vannes » contre « Vannes ») : la comparaison se
+     fait donc par inclusion, pas par egalite. */
+  (function () {
+    var nrm = function (x) { return String(x || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]/g, ''); };
+    var jour = function (d) { return String(d || '').slice(0, 10); };
+    var colle = function (a, b) { a = nrm(a); b = nrm(b); return !!a && !!b && (a.indexOf(b) >= 0 || b.indexOf(a) >= 0); };
+    var note = function (m) { return (m.joue ? 4 : 0) + ((m.lD || m.lE) ? 2 : 0) + ((m.sDom || m.sExt) ? 1 : 0); };
+    var garder = [], retires = 0;
+    out.forEach(function (m) {
+      var pos = -1;
+      for (var i = 0; i < garder.length && pos < 0; i++) {
+        var g = garder[i];
+        if (jour(g.date) !== jour(m.date)) continue;
+        if ((colle(g.dom, m.dom) && colle(g.ext, m.ext)) ||
+            (colle(g.dom, m.ext) && colle(g.ext, m.dom))) pos = i;
+      }
+      if (pos < 0) { garder.push(m); return; }
+      retires++;
+      if (note(m) > note(garder[pos])) garder[pos] = m;
+    });
+    if (retires) {
+      try { console.log('matchs fantômes écartés :', retires, 'sur', out.length); } catch (e) {}
+      out.length = 0;
+      garder.forEach(function (m) { out.push(m); });
+    }
+  })();
+
   /* Deuxieme source : les bornes de journee publiees par ESPN. Un match tombant
      dans un intervalle recoit SON numero, quelle que soit sa date — c'est ce qui
      rattrape les rencontres avancees ou reportees, que le decoupage temporel
@@ -51553,12 +51597,29 @@ window.g45KhlDirectSuivies = g45KhlDirectSuivies;
    toujours : un joueur peut etre ajoute a la base plus tard).
    ═══════════════════════════════════════════════════════════════════════════ */
 var _G45_JOUEUR_VIS = 'g45jv_';
-function _g45JoueurVisCle(nom) {
-  return _G45_JOUEUR_VIS + (typeof _g45SgNorm === 'function' ? _g45SgNorm(nom) : String(nom || '').toLowerCase());
+
+/* ELARGI AU RUGBY ET AU HOCKEY (20/09/2026, demande d'Antoine) ─────────────
+   La recherche etait reservee au football. Le filtre d'origine etait d'ailleurs
+   trop large : `/soccer|football/i` attrapait aussi « American Football ». On
+   passe donc a une expression PAR SPORT, ancree, et on la choisit d'apres le
+   sport du contexte — sinon un footballeur homonyme finirait sur une carte de
+   hockey. TheSportsDB ecrit : « Soccer », « Ice Hockey », « Rugby »,
+   « Rugby League ». */
+var _G45_VIS_SPORT = {
+  soccer:         /^(soccer|football)$/i,
+  hockey:         /ice ?hockey/i,
+  rugby:          /rugby/i,
+  'rugby-league': /rugby/i
+};
+/* La cle porte le SPORT : sans ca, un echec en hockey empecherait pour sept
+   jours la recherche du meme nom en football, et inversement. */
+function _g45JoueurVisCle(nom, sport) {
+  return _G45_JOUEUR_VIS + (sport && sport !== 'soccer' ? sport + '_' : '')
+    + (typeof _g45SgNorm === 'function' ? _g45SgNorm(nom) : String(nom || '').toLowerCase());
 }
-function _g45JoueurVisLire(nom) {
+function _g45JoueurVisLire(nom, sport) {
   try {
-    var c = JSON.parse(localStorage.getItem(_g45JoueurVisCle(nom)) || 'null');
+    var c = JSON.parse(localStorage.getItem(_g45JoueurVisCle(nom, sport)) || 'null');
     /* undefined = jamais teste ou a retester ; null = echec RECENT, on n'appelle
        pas la base a chaque affichage du mur. */
     if (!c) return undefined;
@@ -51570,7 +51631,7 @@ function _g45JoueurVisLire(nom) {
 }
 window._g45JoueurVisLire = _g45JoueurVisLire;
 
-async function _g45JoueurVisChercher(nom) {
+async function _g45JoueurVisChercher(nom, sport) {
   var n = String(nom || '').trim();
   if (n.length < 4 || n.indexOf(' ') < 0) return null;   /* un prenom + un nom, au minimum */
   try {
@@ -51578,14 +51639,15 @@ async function _g45JoueurVisChercher(nom) {
     if (!r.ok) return null;
     var j = await r.json();
     var liste = (j && j.player) || [];
-    /* On ne garde que le football et on preferera une correspondance de nom. */
+    /* On ne garde que le sport demande, et on prefere une correspondance de nom. */
+    var rx = _G45_VIS_SPORT[sport || 'soccer'] || _G45_VIS_SPORT.soccer;
     var norm = function (x) { return (typeof _g45SgNorm === 'function' ? _g45SgNorm(x) : String(x || '').toLowerCase()); };
     var cible = norm(n);
-    var bons = liste.filter(function (p) { return !p.strSport || /soccer|football/i.test(p.strSport); });
+    var bons = liste.filter(function (p) { return !p.strSport || rx.test(p.strSport); });
     var p0 = bons.filter(function (p) { return norm(p.strPlayer) === cible; })[0] || bons[0] || null;
     var val = { t: Date.now(), fan: (p0 && p0.strFanart1) || '', cut: (p0 && p0.strCutout) || '',
                 thumb: (p0 && p0.strThumb) || '', club: (p0 && p0.strTeam) || '' };
-    try { localStorage.setItem(_g45JoueurVisCle(n), JSON.stringify(val)); } catch (e) {}
+    try { localStorage.setItem(_g45JoueurVisCle(n, sport), JSON.stringify(val)); } catch (e) {}
     return (val.fan || val.cut || val.thumb) ? val : null;
   } catch (e) { return null; }
 }
@@ -51599,11 +51661,11 @@ window._g45JoueurVisChercher = _g45JoueurVisChercher;
     var url = '';
     try { url = await origine.apply(this, arguments); } catch (e) {}
     if (url) return url;
-    if (sport && sport !== 'soccer') return url;          /* joueurs de foot seulement */
-    var dejaVu = _g45JoueurVisLire(nom);
+    if (sport && !_G45_VIS_SPORT[sport]) return url;      /* sport sans base de joueurs */
+    var dejaVu = _g45JoueurVisLire(nom, sport);
     if (dejaVu === null) return url;                      /* echec recent : on ne rappelle pas */
     if (dejaVu && (dejaVu.fan || dejaVu.cut || dejaVu.thumb)) return dejaVu.fan || url;  /* deja connu */
-    var v = await _g45JoueurVisChercher(nom);
+    var v = await _g45JoueurVisChercher(nom, sport);
     /* Un fanart se comporte comme un visuel de club : on le range au meme
        endroit, la carte le prend alors en fond plein cadre sans autre code. */
     if (v && v.fan && typeof _G45_FANART !== 'undefined') {
@@ -51617,10 +51679,10 @@ window._g45JoueurVisChercher = _g45JoueurVisChercher;
 })();
 
 /* Diagnostic, comme g45ReparerVisuel pour les clubs : g45VisuelJoueur('Erling Haaland') */
-window.g45VisuelJoueur = async function (nom) {
-  try { localStorage.removeItem(_g45JoueurVisCle(nom)); } catch (e) {}
-  var v = await _g45JoueurVisChercher(nom);
-  console.log('Joueur   :', nom);
+window.g45VisuelJoueur = async function (nom, sport) {
+  try { localStorage.removeItem(_g45JoueurVisCle(nom, sport)); } catch (e) {}
+  var v = await _g45JoueurVisChercher(nom, sport);
+  console.log('Joueur   :', nom, sport ? ('(' + sport + ')') : '(football)');
   console.log('Club     :', (v && v.club) || '(inconnu)');
   console.log('Fanart   :', (v && v.fan) || '(aucun)');
   console.log('D\u00e9tour\u00e9 :', (v && v.cut) || '(aucun)');
