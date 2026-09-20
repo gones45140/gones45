@@ -39817,6 +39817,24 @@ function g45NrlRender() {
           var cD = m.cD || '#4d84ff', cE = m.cE || '#f0b020';
           var fond = (typeof g45FondMatch === 'function') ? g45FondMatch(cD, cE, '')
                    : ('linear-gradient(100deg,' + cD + '55 0%,rgba(12,17,29,.94) 42%,rgba(12,17,29,.94) 58%,' + cE + '55 100%)');
+          /* IMAGE PERSO PRIORITAIRE (20/09/2026) ────────────────────────────
+             Les cartes de journee affichaient le logo d'ESPN sans jamais
+             consulter le depot d'Antoine — d'ou le drapeau du VANUATU sur
+             Vannes et celui des ETATS-UNIS sur Perpignan, qui resistaient a un
+             fichier pourtant depose.
+             `_g45ImgPersoLire` est synchrone et ne lit que le cache : si le nom
+             n'a pas encore ete teste on garde le logo d'ESPN pour ce tour, et
+             `_g45ImgPersoTester` le cherche en tache de fond pour le tour
+             suivant. Aucune requete bloquante, aucun rendu retarde. */
+          var perso = function (nom, url) {
+            if (typeof _g45ImgPersoLire !== 'function') return url;
+            var p = _g45ImgPersoLire(nom);
+            if (p) return p;
+            if (p === undefined && typeof _g45ImgPersoTester === 'function') {
+              try { _g45ImgPersoTester(nom); } catch (e) {}
+            }
+            return url;
+          };
           var lg2 = function (url, cote) {
             if (!url) return '';
             return '<img src="' + url + '" loading="lazy" onerror="this.style.display=\'none\'" '
@@ -39835,7 +39853,7 @@ function g45NrlRender() {
             + 'border:1px solid rgba(255,255,255,.08);background:' + fond + ';padding:10px 56px;min-height:58px;'
             + 'display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;'
             + (m.joue ? '' : 'opacity:.72;') + '">'
-            + lg2(m.lD, 'left') + lg2(m.lE, 'right')
+            + lg2(perso(m.dom, m.lD), 'left') + lg2(perso(m.ext, m.lE), 'right')
             + '<div style="position:relative;font-size:9px;color:rgba(255,255,255,.62);font-weight:700;">' + d + '</div>'
             + '<div style="position:relative;font-size:11.5px;font-weight:800;text-align:center;">'
               + '<span style="color:' + ct(cD) + ';">' + m.dom + '</span>'
