@@ -33515,6 +33515,23 @@ async function g45LoadStandings(slug, sportPath, box){
          On nomme donc la cause et on donne le lien officiel, pour ne pas y
          reperdre du temps dans six mois. */
       var _xv = (sportPath === 'rugby');
+      /* AVANT DE RENONCER (20/09/2026) : on sait calculer le classement du
+         Top 14 nous-memes depuis les resultats. Ce bloc etait le dernier point
+         de sortie et il court-circuitait tout le reste — le message s'affichait
+         alors que la donnee etait disponible. */
+      if (_xv && typeof g45T14Classement === 'function') {
+        try {
+          if (g45T14Classement(box)) return;
+          /* Le contexte vaut le NRL par defaut : sans ce calage on chargerait
+             le calendrier australien pour batir le classement francais. */
+          _g45NrlCtx = { sport: sportPath, ligue: String(slug) };
+          if (typeof g45NrlCharger === 'function' && !(window._g45NrlMatchs || []).length) {
+            box.innerHTML = '<div style="color:var(--t3);font-size:11px;padding:14px;text-align:center;">\u23f3 Calcul du classement depuis les r\u00e9sultats\u2026</div>';
+            await g45NrlCharger(new Date().getFullYear());
+            if (g45T14Classement(box)) return;
+          }
+        } catch (e) {}
+      }
       box.innerHTML = _xv
         ? '<div style="padding:14px;text-align:center;line-height:1.6;">'
           + '<div style="font-size:12px;color:var(--t2);margin-bottom:4px;">Classement non disponible</div>'
@@ -41620,6 +41637,11 @@ function _g45T14EssaisConnus(ligue) {
 function g45T14Classement(box, force) {
   if (!box) return false;
   var ctx = window._g45NrlCtx || { sport: 'rugby', ligue: '270559' };
+  /* Les matchs en memoire sont GLOBAUX : sans cette verification, le calendrier
+     du NRL servirait a construire le classement du Top 14. Meme piege que celui
+     deja corrige le 04/09 sur l'affichage des journees. */
+  var cle = ctx.sport + '|' + ctx.ligue;
+  if (window._g45NrlMatchsCle && String(window._g45NrlMatchsCle).indexOf(cle + '|') !== 0) return false;
   var ms = (window._g45NrlMatchs || []).filter(function (m) { return m && m.joue; });
   if (!ms.length) return false;                      /* calendrier pas encore charge */
   var essais = _g45T14EssaisConnus(ctx.ligue);
