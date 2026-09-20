@@ -34835,6 +34835,27 @@ function _g45ScoreTexte(h) {
               var rr = await fetch(urls[u]);
               if (!rr.ok) continue;
               var jj = await rr.json();
+              /* DEUX PASSES (20/09/2026) ────────────────────────────────────
+                 Releve par Antoine : un pari « Real Madrid vs Inter milan »
+                 restait sans score alors que le match etait bien dans la
+                 reponse — ESPN l'appelle « Internazionale at Real Madrid ».
+                 « intermilan » et « internazionale » ne se contiennent pas, la
+                 regle des DEUX camps rejetait donc un match evident.
+                 On garde ce garde-fou, indispensable sur une soiree a dix-huit
+                 matchs, mais on ajoute un repli : si UN SEUL match de la
+                 journee implique mon equipe, l'adversaire n'a plus besoin de
+                 coller. L'ambiguite qu'il servait a ecarter n'existe pas. */
+              var _cand = [];
+              ((jj && jj.events) || []).forEach(function(ev) {
+                var cp = (ev.competitions && ev.competitions[0]) || {};
+                var st = (cp.status && cp.status.type) || {};
+                if (!st.completed) return;
+                var cps = cp.competitors || [];
+                var noms = cps.map(function(c){ return nrm((c.team && (c.team.displayName || c.team.shortDisplayName || c.team.name)) || ''); });
+                var c0 = function(c){ return noms.some(function(n){ return n && (n.indexOf(c) >= 0 || c.indexOf(n) >= 0); }); };
+                if (cibles.length && c0(cibles[0])) _cand.push(ev);
+              });
+              var _replis = (_cand.length === 1) ? _cand : null;
               ((jj && jj.events) || []).forEach(function(ev) {
                 if (hs != null) return;
                 var cp = (ev.competitions && ev.competitions[0]) || {};
@@ -34853,6 +34874,7 @@ function _g45ScoreTexte(h) {
                    on l'accepte, faute de mieux. */
                 var colle = function(c){ return noms.some(function(n){ return n && (n.indexOf(c) >= 0 || c.indexOf(n) >= 0); }); };
                 var ok = (cibles.length >= 2) ? cibles.every(colle) : cibles.some(colle);
+                if (!ok && _replis && _replis.indexOf(ev) >= 0) ok = true;   /* seul match de mon equipe ce jour-la */
                 if (!ok) return;
                 var dom = cps.filter(function(c){ return c.homeAway === 'home'; })[0] || cps[0] || {};
                 var ext = cps.filter(function(c){ return c.homeAway === 'away'; })[0] || cps[1] || {};
