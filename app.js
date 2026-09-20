@@ -49887,6 +49887,43 @@ function _g45EcartMax(actions, moiDom) {
 }
 window._g45EcartMax = _g45EcartMax;
 
+/* FOOTBALL : il faut RECONSTRUIRE la sequence (sonde du 19/09/2026).
+   Les `keyEvents` d'ESPN ne portent AUCUN score courant — verifie sur
+   Atalanta-AS Roma : `homeScore` absent de tous les evenements. Sans ce
+   constat, la garantie d'ecart n'aurait jamais rien declenche en football, et
+   surtout SANS RIEN DIRE. On rejoue donc les buts dans l'ordre.
+   Deux precautions :
+   · un csc est credite a l'equipe du BUTEUR dans `team`, pas a celle qui
+     marque le point — on inverse ;
+   · on recompte le score final et on le compare a celui de la feuille. S'ils
+     divergent, la reconstruction est fausse quelque part et on REND NULL. Un
+     pari paye a tort vaut bien pire qu'une garantie non detectee. */
+function _g45EcartMaxFoot(keyEvents, idDom, moiDom, finDom, finExt) {
+  var h = 0, a = 0, max = 0, quand = '';
+  var evs = (keyEvents || []).filter(function (p) { return p && p.scoringPlay; });
+  if (!evs.length) return null;
+  for (var i = 0; i < evs.length; i++) {
+    var p = evs[i];
+    var tid = String((p.team && (p.team.id || p.team)) || '');
+    if (!tid) return null;
+    var pourDom = (tid === String(idDom));
+    var t = String((p.type && p.type.text) || '') + ' ' + String(p.text || '');
+    if (/own goal|contre son camp|csc/i.test(t)) pourDom = !pourDom;
+    if (/penalty shootout|shootout/i.test(t) || p.shootout === true) continue;   /* tirs au but : hors temps de jeu */
+    if (pourDom) h++; else a++;
+    var e = moiDom ? (h - a) : (a - h);
+    if (e > max) {
+      max = e;
+      var hor = (p.clock && p.clock.displayValue) || '';
+      quand = (hor ? hor + ' — ' : '') + (moiDom ? h + '-' + a : a + '-' + h);
+    }
+  }
+  /* Garde-fou : la reconstruction DOIT retomber sur le score officiel. */
+  if (finDom != null && finExt != null && (h !== finDom || a !== finExt)) return null;
+  return { max: max, quand: quand };
+}
+window._g45EcartMaxFoot = _g45EcartMaxFoot;
+
 /* ═══ VERDICT DE LA GARANTIE, ET REQUALIFICATION (19/09/2026) ══════════════
    Winamax PAIE le pari des que l'equipe jouee a mene de X, meme si elle perd au
    final (confirme par Antoine). Regle d'affichage validee sur maquette : le
@@ -49924,8 +49961,17 @@ function _g45GarCherche(h, meta) {
         [d.plays, d.scoringPlays, d.keyEvents].forEach(function (a) {
           if (!src.length && Array.isArray(a) && a.some(function (p) { return p && p.homeScore != null; })) src = a;
         });
-        var e = _g45EcartMax(src, !!meta.moiDom);
-        res = { fait: 1, max: e.max, seuil: seuil, quand: e.quand, ok: e.max >= seuil };
+        var e = src.length ? _g45EcartMax(src, !!meta.moiDom) : null;
+        if (!e && meta.sp === 'soccer') {
+          /* Pas de score courant : on rejoue les buts. */
+          var cps = ((((d.header || {}).competitions) || [])[0] || {}).competitors || [];
+          var dm = cps.filter(function (x) { return x.homeAway === 'home'; })[0] || {};
+          var ex = cps.filter(function (x) { return x.homeAway === 'away'; })[0] || {};
+          var fh = parseInt(dm.score, 10), fa = parseInt(ex.score, 10);
+          e = _g45EcartMaxFoot(d.keyEvents || [], (dm.team && dm.team.id) || (dm.id || ''), !!meta.moiDom,
+                               isNaN(fh) ? null : fh, isNaN(fa) ? null : fa);
+        }
+        if (e) res = { fait: 1, max: e.max, seuil: seuil, quand: e.quand, ok: e.max >= seuil };
       }
     } catch (e) {}
     delete _g45GarEnVol[k];
