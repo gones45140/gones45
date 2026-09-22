@@ -26165,6 +26165,7 @@ async function toggleSaisonMatchDetail(rowEl){
 }
 // Rendu du détail Saisons — même traitement live que la Coupe du Monde, re-jouable pour le rafraîchissement
 async function _renderSaisonDetail(el, eventId, league){
+  window._g45DernierLigue = String(league || '');   /* lu par le bouton domicile/exterieur */
   try{
     var r=await fetch('https://site.api.espn.com/apis/site/v2/sports/soccer/'+(league||'eng.1')+'/summary?event='+eventId+'&lang=fr&region=fr');
     var data=await r.json();
@@ -26284,6 +26285,15 @@ async function _renderSaisonDetail(el, eventId, league){
     var _yr=''; try{ if(comp.date) _yr=new Date(comp.date).getFullYear()||''; }catch(e){}
     try{ if(typeof _videoBlock==='function') h+=_videoBlock(data, hN, aN, ('résumé '+_yr).trim()); }catch(e){}
     h+='</div>';
+    /* FOND PLEIN SOUS TOUTE LA FENETRE DE MATCH (22/09/2026) ────────────────
+       Releve par Antoine : statistiques, face-a-face, forme, classement et
+       boutons flottaient tous sur la photo de fond de l'appli. Les boutons
+       n'avaient qu'une teinte a 10 %, donc aucun fond reel.
+       Plutot que de doubler chaque panneau, on protege le CONTENEUR : tout ce
+       qu'il contient en profite d'un coup, et les panneaux gardent leurs
+       propres teintes par-dessus. Le voile global, lui, est revenu a zero :
+       il eteignait les blasons de club sur les ecrans qui les montrent. */
+    h = '<div style="background:rgba(11,16,29,.90);border-radius:12px;padding:10px 10px 12px;">' + h + '</div>';
     el.innerHTML=h;
     if(_mstate==='pre'){ try{ _g45FillForm(el, 'soccer/'+league); _g45FillStandings(el, 'soccer/'+league); }catch(e){} }
 
@@ -30050,6 +30060,7 @@ function _g45BaseballRecap(data){
     +rows+'</div>';
 }
 async function _renderGenericDetail(el, sport, lg, eid){
+  window._g45DernierLigue = '';   /* hors football : pas de bouton domicile/exterieur */
   try{
     var r=await fetch('https://site.api.espn.com/apis/site/v2/sports/'+sport+'/'+lg+'/summary?event='+eid);
     var data=await r.json();
@@ -30150,7 +30161,10 @@ async function _renderGenericDetail(el, sport, lg, eid){
     try{ h+=_genericLineups(data, sport); }catch(e){}
     try{ if((stT.state==='in'||stT.state==='post') && typeof _videoBlock==='function'){ var _vyr=''; try{ if(comp.date)_vyr=new Date(comp.date).getFullYear()||''; }catch(_e){} h+=_videoBlock(data, hN, aN, ('résumé '+_vyr).trim()); } }catch(e){}
     h+='</div>';
-    el.innerHTML=_rugbyBanner+h;
+    /* Meme fond plein que la fenetre football (22/09/2026) : les deux rendus
+       doivent se lire pareil, sinon on retombe dans deux styles pour une meme
+       chose — piege deja corrige ailleurs sur ce projet. */
+    el.innerHTML='<div style="background:rgba(11,16,29,.90);border-radius:12px;padding:10px 10px 12px;">'+_rugbyBanner+h+'</div>';
     if(stT.state==='pre'){ try{ _g45FillForm(el, sport+'/'+lg); _g45FillStandings(el, sport+'/'+lg); }catch(e){} }
     if(isLive){ if(!el._refresh){ el._refresh=setInterval(function(){ if(el.getAttribute('data-open')!=='1'){ clearInterval(el._refresh); el._refresh=null; return; } if(document.hidden||el.offsetParent===null) return; _renderGenericDetail(el,sport,lg,eid); },30000); } } else if(el._refresh){ clearInterval(el._refresh); el._refresh=null; }
   }catch(e){ el.innerHTML='<div style="padding:12px;color:#ff6b6b;font-size:11px;text-align:center;">Détail indisponible.</div>'; }
@@ -35666,12 +35680,15 @@ function _g45JJMM(d) {
 function _g45LigneMatchH2H(g) {
   var res = g.pour > g.contre ? 'G' : (g.pour < g.contre ? 'P' : 'N');
   var col = res === 'G' ? '#1ed760' : (res === 'P' ? '#ff4545' : '#f0b020');
-  var corps = '<span style="font-size:10.5px;font-weight:700;color:var(--t3);width:44px;flex:none;">' + _g45JJMM(g.date) + '</span>'
-    + '<span style="font-size:10px;font-weight:700;color:var(--t3);width:20px;flex:none;">' + (g.domicile ? '🏠' : '🚌') + '</span>'
-    + '<span style="flex:1;font-size:12px;font-weight:700;color:var(--t1);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + _g45Esc(g.advNom) + '</span>'
-    + '<span style="font-size:12px;font-weight:800;color:var(--t2);width:34px;text-align:right;flex:none;font-variant-numeric:tabular-nums;">' + g.pour + '-' + g.contre + '</span>'
+  /* LISIBILITE (22/09/2026) : le premier rendu mettait dates et lieu en
+     `--t3`, le gris le plus pale, sur la photo de fond de l'appli. Illisible
+     pour Antoine. Tout passe en clair, un cran plus grand. */
+  var corps = '<span style="font-size:12px;font-weight:700;color:#c8d3ea;width:48px;flex:none;">' + _g45JJMM(g.date) + '</span>'
+    + '<span style="font-size:12px;width:22px;flex:none;">' + (g.domicile ? '🏠' : '🚌') + '</span>'
+    + '<span style="flex:1;font-size:13.5px;font-weight:800;color:#ffffff;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + _g45Esc(g.advNom) + '</span>'
+    + '<span style="font-size:13.5px;font-weight:800;color:#ffffff;width:40px;text-align:right;flex:none;font-variant-numeric:tabular-nums;">' + g.pour + '-' + g.contre + '</span>'
     + '<span style="width:18px;height:18px;line-height:18px;text-align:center;border-radius:4px;flex:none;background:' + col + ';color:#0b101d;font-size:10px;font-weight:800;">' + res + '</span>';
-  var sty = 'display:flex;align-items:center;gap:7px;padding:6px 8px;border-radius:6px;background:rgba(255,255,255,.04);text-decoration:none;';
+  var sty = 'display:flex;align-items:center;gap:8px;padding:8px 10px;border-radius:7px;background:rgba(11,16,29,.62);text-decoration:none;';
   return g.lien
     ? '<a href="' + _g45Esc(g.lien) + '" target="_blank" rel="noopener" style="' + sty + '">' + corps + '</a>'
     : '<div style="' + sty + '">' + corps + '</div>';
@@ -35686,10 +35703,10 @@ function _g45BarresMarches(c) {
   rows.forEach(function (m) {
     var v = Math.round((c[m.key] || 0) * 100 / c._n);
     h += '<div style="display:flex;align-items:center;gap:7px;margin-bottom:4px;">'
-      + '<div style="font-size:9.5px;font-weight:700;color:var(--t2);width:66px;flex:none;">' + m.label + '</div>'
+      + '<div style="font-size:12px;font-weight:800;color:#ffffff;width:78px;flex:none;">' + m.label + '</div>'
       + '<div style="flex:1;height:7px;background:rgba(255,255,255,.06);border-radius:4px;">'
       + '<div style="height:7px;border-radius:4px;background:' + m.color + ';width:' + v + '%;transition:width .4s;"></div></div>'
-      + '<div style="font-size:10.5px;font-weight:800;color:' + m.color + ';width:44px;text-align:right;flex:none;">'
+      + '<div style="font-size:12.5px;font-weight:800;color:' + m.color + ';width:48px;text-align:right;flex:none;">'
       + (c[m.key] || 0) + '/' + c._n + '</div></div>';
   });
   return h;
@@ -35715,8 +35732,10 @@ function _g45FaceAFaceBloc(data, ligue) {
     var e5 = _g45CinqDerniers(data, idE, ligue);
     if (!h2h && !d5 && !e5) return '';
 
-    var h = '<div style="margin-bottom:11px;">'
-      + '<div style="font-size:9px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;color:#8aa0ff;margin-bottom:7px;">⚔️ Face-à-face</div>';
+    /* FOND PLEIN (22/09/2026) : le bloc etait transparent sur la photo de
+       l'appli. Un fond sombre a 88 % isole le contenu sans casser l'ambiance. */
+    var h = '<div style="margin-bottom:11px;padding:13px 14px;border-radius:12px;background:rgba(11,16,29,.88);border:1px solid rgba(255,255,255,.08);">'
+      + '<div style="font-size:11px;font-weight:800;letter-spacing:.6px;text-transform:uppercase;color:#9fb6ff;margin-bottom:9px;">⚔️ Face-à-face</div>';
 
     if (h2h) {
       var g = 0, n = 0, p = 0;
@@ -35724,11 +35743,11 @@ function _g45FaceAFaceBloc(data, ligue) {
       var tot = h2h.length;
       h += '<div style="display:flex;align-items:center;gap:10px;margin-bottom:7px;">'
         + '<div style="flex:1;text-align:center;"><div style="font-size:19px;font-weight:800;color:' + cD + ';">' + g + '</div>'
-        + '<div style="font-size:10px;font-weight:700;color:var(--t2);">' + _g45Esc(nD) + '</div></div>'
-        + '<div style="flex:1;text-align:center;"><div style="font-size:19px;font-weight:800;color:var(--t2);">' + n + '</div>'
-        + '<div style="font-size:10px;font-weight:700;color:var(--t2);">Nuls</div></div>'
+        + '<div style="font-size:12px;font-weight:800;color:#ffffff;">' + _g45Esc(nD) + '</div></div>'
+        + '<div style="flex:1;text-align:center;"><div style="font-size:19px;font-weight:800;color:#c8d3ea;">' + n + '</div>'
+        + '<div style="font-size:12px;font-weight:800;color:#ffffff;">Nuls</div></div>'
         + '<div style="flex:1;text-align:center;"><div style="font-size:19px;font-weight:800;color:' + cE + ';">' + p + '</div>'
-        + '<div style="font-size:10px;font-weight:700;color:var(--t2);">' + _g45Esc(nE) + '</div></div></div>'
+        + '<div style="font-size:12px;font-weight:800;color:#ffffff;">' + _g45Esc(nE) + '</div></div></div>'
         + '<div style="display:flex;height:6px;border-radius:3px;overflow:hidden;background:rgba(255,255,255,.06);margin-bottom:7px;">'
         + '<div style="width:' + Math.round(g * 100 / tot) + '%;background:' + cD + ';"></div>'
         + '<div style="width:' + Math.round(n * 100 / tot) + '%;background:rgba(159,176,199,.45);"></div>'
@@ -35743,8 +35762,10 @@ function _g45FaceAFaceBloc(data, ligue) {
       var col = function (nom, coul, r) {
         if (!r) return '<div style="flex:1;min-width:150px;"></div>';
         return '<div style="flex:1;min-width:150px;">'
-          + '<div style="font-size:11px;font-weight:800;color:' + coul + ';margin-bottom:2px;">' + _g45Esc(nom) + '</div>'
-          + '<div style="font-size:9px;font-weight:700;color:var(--t3);margin-bottom:5px;">'
+          /* Nom en BLANC, souligne de la couleur du club : le rouge de Lens sur la
+             photo bleue de l'appli etait illisible en couleur de texte. */
+          + '<div style="font-size:14px;font-weight:800;color:#ffffff;margin-bottom:3px;padding-bottom:3px;border-bottom:2px solid ' + coul + ';display:inline-block;">' + _g45Esc(nom) + '</div>'
+          + '<div style="font-size:11.5px;font-weight:700;color:#c8d3ea;margin-bottom:6px;">'
           + r.liste.length + ' dernier' + (r.liste.length > 1 ? 's' : '')
           + (r.filtre ? ' · même compétition' : ' · toutes compétitions') + '</div>'
           + '<div style="display:flex;flex-direction:column;gap:3px;margin-bottom:6px;">'
@@ -35762,6 +35783,158 @@ window._g45FaceAFaceBloc = _g45FaceAFaceBloc;
 window._g45MarchesCalc = _g45MarchesCalc;
 window._g45CinqDerniers = _g45CinqDerniers;
 window._g45H2HDepuisResume = _g45H2HDepuisResume;
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   DOMICILE CONTRE EXTERIEUR, DEUX SAISONS (22/09/2026, idee d'Antoine)
+   ───────────────────────────────────────────────────────────────────────────
+   Le match se joue chez l'equipe qui recoit : ce qui compte, c'est l'hote CHEZ
+   LUI et le visiteur EN DEPLACEMENT, pas leurs bilans globaux.
+   Choix valides :
+   · DERRIERE UN BOUTON — l'appli sert Antoine et ses abonnes, rien ne part
+     tant qu'on ne clique pas ;
+   · LA SAISON PASSEE A COTE, pas en option : en debut de saison le decoupage
+     domicile/exterieur n'a que deux ou trois matchs, c'est elle qui porte
+     l'echantillon jusqu'en novembre ;
+   · le NOMBRE DE MATCHS partout.
+   Reutilise la mecanique existante : `espnClubSchedule` pour les resultats,
+   `espnToFdMatch` pour le format, `calcSaisonStats` pour les tuiles.
+
+   MI-TEMPS VOLONTAIREMENT ABSENTES. `_g45FdHalfTime` interroge football-data
+   avec l'identifiant FOOTBALL-DATA de l'equipe, que cette fenetre ne connait
+   pas — elle n'a que ceux d'ESPN. Et la fonction apparie les matchs par DATE :
+   avec un mauvais identifiant, elle collerait les mi-temps d'une AUTRE equipe
+   sur les notres des que deux dates coincident. Erreur invisible et credible.
+   Tant qu'on n'a pas l'identifiant football-data de facon sure, on s'abstient.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* Saison ESPN d'un match : le football europeen demarre en ete, donc un match
+   de septembre 2026 appartient a la saison « 2026 » (2026-27). */
+function _g45SaisonDe(date) {
+  var d = new Date(date || Date.now());
+  if (isNaN(d)) d = new Date();
+  return d.getMonth() >= 6 ? d.getFullYear() : d.getFullYear() - 1;
+}
+
+async function _g45DomExtCharger(nom, espnId, saison, lg) {
+  var cle = 'g45_domext1_' + espnId + '_' + saison + '_' + lg;
+  var courante = (saison === _g45SaisonDe());
+  try {
+    var c = JSON.parse(localStorage.getItem(cle) || 'null');
+    /* Saison passee : definitive, elle ne changera plus. Saison en cours :
+       douze heures, le temps qu'une nouvelle journee se joue. */
+    if (c && c.m && (!courante || Date.now() - c.t < 12 * 3600000)) return c.m;
+  } catch (e) {}
+  var r = null;
+  try { r = await espnClubSchedule(nom, saison, lg); } catch (e) { return null; }
+  /* GARDE-FOU : `espnClubSchedule` resout l'equipe par son NOM. Si le nom
+     designe un autre club, on refuse plutot que d'afficher ses statistiques
+     sous le nom du notre. */
+  if (!r || !r.team || String(r.team.id) !== String(espnId)) return null;
+  var fd = (r.matches || []).filter(function (m) { return m && m.completed; })
+    .map(function (m) { return espnToFdMatch(m, nom, espnId); })
+    .filter(Boolean);
+  try { localStorage.setItem(cle, JSON.stringify({ t: Date.now(), m: fd })); } catch (e) {}
+  return fd;
+}
+
+/* Ne garde que les matchs ou l'equipe joue du bon cote. */
+function _g45DomExtFiltre(matchs, espnId, domicile) {
+  return (matchs || []).filter(function (m) {
+    var cote = domicile ? m.homeTeam : m.awayTeam;
+    return cote && String(cote.id) === String(espnId);
+  });
+}
+
+function _g45DomExtTuiles(st, complet) {
+  if (!st || !st.n) {
+    return '<div style="font-size:12px;font-weight:700;color:#c8d3ea;padding:10px;">Aucun match dans cette configuration.</div>';
+  }
+  var pc = function (v) { return Math.round((v || 0) * 100 / st.n); };
+  var w = 0, n = 0, l = 0;
+  if (st.domN) { w = st.domW; n = st.domD; l = st.domL; }
+  else { w = st.extW; n = st.extD; l = st.extL; }
+  var tuile = function (val, lib, detail, coul) {
+    return '<div style="flex:1;min-width:0;display:flex;flex-direction:column;align-items:center;gap:2px;'
+      + 'padding:9px 5px;border-radius:9px;background:rgba(255,255,255,.05);">'
+      + '<span style="font-size:18px;font-weight:800;color:' + coul + ';">' + val + '</span>'
+      + '<span style="font-size:11px;font-weight:700;color:#c8d3ea;text-align:center;line-height:1.25;">' + lib + '</span>'
+      + (detail ? '<span style="font-size:10.5px;font-weight:700;color:#8e9dbd;">' + detail + '</span>' : '')
+      + '</div>';
+  };
+  var peu = st.n < 5;
+  var h = '<div style="font-size:12px;font-weight:800;color:' + (peu ? '#f5bf47' : '#c8d3ea') + ';margin-bottom:5px;">'
+    + (peu ? '⚠ ' : '') + st.n + ' match' + (st.n > 1 ? 's' : '') + (peu ? ' seulement' : '') + '</div>'
+    + '<div style="display:flex;gap:5px;margin-bottom:5px;">'
+    + tuile(w + 'V ' + n + 'N ' + l + 'D', 'Bilan', '', '#3ddf78')
+    + tuile(peu ? (st.over25 + '/' + st.n) : (pc(st.over25) + ' %'), 'Over 2.5', peu ? '' : (st.over25 + '/' + st.n), '#f0b020')
+    + tuile(peu ? (st.bts + '/' + st.n) : (pc(st.bts) + ' %'), 'BTS', peu ? '' : (st.bts + '/' + st.n), '#a78bfa')
+    + '</div>';
+  /* Sur deux ou trois matchs, empiler six pourcentages serait du bruit : les
+     tuiles detaillees n'apparaissent qu'a partir de cinq rencontres. */
+  if (complet && !peu) {
+    h += '<div style="display:flex;gap:5px;">'
+      + tuile(pc(st.cleanSheet) + ' %', 'Clean sheets', st.cleanSheet + '/' + st.n, '#1ed760')
+      + tuile(pc(st.failedToScore) + ' %', 'Sans marquer', st.failedToScore + '/' + st.n, '#ff6b6b')
+      + tuile((st.butsM / st.n).toFixed(1) + ' – ' + (st.butsE / st.n).toFixed(1), 'Buts marqués – encaissés', 'par match', '#4d84ff')
+      + '</div>';
+  }
+  return h;
+}
+
+async function g45DomExtLancer(btn) {
+  var box = document.getElementById(btn.getAttribute('data-box'));
+  if (!box) return;
+  var hN = btn.getAttribute('data-hn'), hId = btn.getAttribute('data-hid');
+  var aN = btn.getAttribute('data-an'), aId = btn.getAttribute('data-aid');
+  var lg = btn.getAttribute('data-lg'), date = btn.getAttribute('data-date');
+  var s0 = _g45SaisonDe(date), s1 = s0 - 1;
+  btn.disabled = true; btn.style.opacity = '.7';
+  box.innerHTML = '<div style="font-size:12px;font-weight:700;color:#c8d3ea;padding:10px;text-align:center;">\u23f3 Chargement des deux saisons\u2026</div>';
+  var res = [];
+  try {
+    res = await Promise.all([
+      _g45DomExtCharger(hN, hId, s0, lg), _g45DomExtCharger(hN, hId, s1, lg),
+      _g45DomExtCharger(aN, aId, s0, lg), _g45DomExtCharger(aN, aId, s1, lg)
+    ]);
+  } catch (e) {}
+  if (!res.some(function (x) { return x && x.length; })) {
+    box.innerHTML = '<div style="font-size:12px;font-weight:700;color:#ff8a8a;padding:10px;text-align:center;">'
+      + 'Calendrier introuvable pour ces deux équipes.</div>';
+    btn.disabled = false; btn.style.opacity = '1';
+    return;
+  }
+  var st = function (liste, id, dom) {
+    var f = _g45DomExtFiltre(liste, id, dom);
+    return f.length ? calcSaisonStats(f, id) : { n: 0 };
+  };
+  var cellule = function (liste, id, dom, complet) { return _g45DomExtTuiles(st(liste, id, dom), complet); };
+  var ligne = function (lib, sous, coulSous, a, b) {
+    return '<div style="display:grid;grid-template-columns:96px 1fr 1fr;gap:9px;align-items:start;margin-bottom:9px;">'
+      + '<div style="display:flex;flex-direction:column;gap:2px;padding-top:2px;">'
+      + '<span style="font-size:13.5px;font-weight:800;color:#fff;">' + lib + '</span>'
+      + '<span style="font-size:11px;font-weight:700;color:' + coulSous + ';">' + sous + '</span></div>'
+      + '<div>' + a + '</div><div>' + b + '</div></div>';
+  };
+  var tete = '<div style="display:grid;grid-template-columns:96px 1fr 1fr;gap:9px;margin-bottom:9px;">'
+    + '<div></div>'
+    + '<div style="font-size:14px;font-weight:800;color:#fff;padding-bottom:4px;border-bottom:2px solid #6d9dff;">🏠 ' + _g45Esc(hN) + ' à domicile</div>'
+    + '<div style="font-size:14px;font-weight:800;color:#fff;padding-bottom:4px;border-bottom:2px solid #f5c542;">🚌 ' + _g45Esc(aN) + ' à l\'extérieur</div></div>';
+  box.innerHTML = '<div style="padding:12px;border-radius:11px;background:rgba(11,16,29,.88);border:1px solid rgba(70,220,240,.35);">'
+    + tete
+    + ligne(s0 + '-' + String(s0 + 1).slice(2), 'saison en cours', '#f5bf47',
+            cellule(res[0], hId, true, false), cellule(res[2], aId, false, false))
+    + '<div style="height:1px;background:rgba(255,255,255,.08);margin:3px 0 11px;"></div>'
+    + ligne(s1 + '-' + String(s1 + 1).slice(2), 'saison complète', '#3ddf78',
+            cellule(res[1], hId, true, true), cellule(res[3], aId, false, true))
+    + '<div style="font-size:11px;font-weight:600;color:#9fb0c7;line-height:1.5;margin-top:4px;">'
+    + 'Même championnat pour les deux. Les statistiques de mi-temps ne sont pas affichées ici : '
+    + 'elles demandent un identifiant que cette fenêtre ne peut pas garantir.</div></div>';
+  btn.style.display = 'none';
+}
+window.g45DomExtLancer = g45DomExtLancer;
+window._g45SaisonDe = _g45SaisonDe;
+window._g45DomExtFiltre = _g45DomExtFiltre;
+window._g45DomExtTuiles = _g45DomExtTuiles;
 
 function _g45PreMatchBlock(data){
   try{
@@ -35853,6 +36026,25 @@ function _g45PreMatchBlock(data){
       if (!_lgFF) { try { _lgFF = ((data.header||{}).competitions||[])[0].type && '' ; } catch(e){ _lgFF=''; } }
       _ffBloc = _g45FaceAFaceBloc(data, _lgFF);
     } catch(e){}
+    /* Bouton domicile/exterieur : FOOTBALL seulement, le chargeur de calendrier
+       ne sert que ce sport. La ligue vient de la fenetre football qui nous
+       appelle ; ailleurs elle est vide et le bouton n'apparait pas. */
+    try {
+      var _lgDE = window._g45DernierLigue || '';
+      if (_lgDE && hId && aId) {
+        var _hFull = (home.team && (home.team.displayName || home.team.shortDisplayName)) || '';
+        var _aFull = (away.team && (away.team.displayName || away.team.shortDisplayName)) || '';
+        var _boxDE = 'domext-' + hId + '-' + aId;
+        var _q = function (x) { return String(x || '').replace(/"/g, '&quot;'); };
+        _ffBloc += '<div style="margin-bottom:11px;">'
+          + '<button onclick="g45DomExtLancer(this)" data-box="' + _boxDE + '" data-hn="' + _q(_hFull) + '" data-hid="' + hId + '"'
+          + ' data-an="' + _q(_aFull) + '" data-aid="' + aId + '" data-lg="' + _q(_lgDE) + '" data-date="' + _q(comp.date || '') + '"'
+          + ' style="width:100%;box-sizing:border-box;min-height:44px;font-size:13px;font-weight:800;padding:10px 12px;border-radius:10px;'
+          + 'cursor:pointer;border:1.5px solid rgba(70,220,240,.55);background:rgba(70,220,240,.13);color:#46dcf0;">'
+          + '🏠 ' + _g45Esc(_hFull) + ' à domicile · 🚌 ' + _g45Esc(_aFull) + ' à l\'extérieur — comparer les saisons</button>'
+          + '<div id="' + _boxDE + '" style="margin-top:8px;"></div></div>';
+      }
+    } catch(e){}
 
     // ── Forme + bilan ──
     function formStr(c){ return (c.form||(c.team&&c.team.form)||'').toString().toUpperCase(); }
@@ -35942,8 +36134,8 @@ function _g45PreMatchBlock(data){
     var standCont = (hId&&aId) ? '<div class="g45-standings" data-h="'+hId+'" data-a="'+aId+'" style="margin-top:9px;">'+standHtml+'</div>' : (standHtml?'<div style="margin-top:9px;">'+standHtml+'</div>':'');
 
     if(!probHtml&&!statsHtml&&!formHtml&&!standHtml&&!(hId&&aId)) return '';
-    return '<div style="background:rgba(255,255,255,.02);border-radius:8px;padding:10px;margin-bottom:8px;">'
-      +'<div style="font-size:9px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;color:#8aa0ff;margin-bottom:8px;">📊 Avant-match</div>'
+    return '<div style="background:rgba(11,16,29,.72);border-radius:10px;padding:11px;margin-bottom:8px;border:1px solid rgba(255,255,255,.06);">'
+      +'<div style="font-size:11px;font-weight:800;letter-spacing:.6px;text-transform:uppercase;color:#9fb6ff;margin-bottom:9px;">📊 Avant-match</div>'
       +probHtml+statsHtml+_ffBloc+formHtml+standCont+'</div>';
   }catch(e){ return ''; }
 }
@@ -37458,7 +37650,7 @@ var _G45_CACHE_PREFIXES=['g45_mmeta2_','g45_mmeta1_','g45_tennis4_','g45_tennis3
      explosait et des ecritures LEGITIMES echouaient en silence (le filtre par
      competition, qui restait bloque sur « Toutes »). Les cartes de tirs sont
      les plus lourdes : plusieurs Ko par match, gardees indefiniment. */
-  'g45butA2_','g45gl3_','g45gl2_','g45gl_','g45_tirs2_','g45_fanart2_','g45_fanart_','g45_img_perso_','g45_tv_prog','g45_mqnom_','g45_mqteam_','g45_mqfond_','g45trv4_','g45_catimg_','g45_catfmt2_','g45_catfmt_','g45_t14e_','g45_t14bo_','g45_gar1_','g45_epr1_','g45nrlcal3_','g45nrlcal2_','g45_score4_','g45_score3_','g45_score2_','g45_score_','g45_lglogo_','g45compet3_','g45compet2_','g45compet_','g45tmeta_','g45histo_','g45ld2_','g45ld_',
+  'g45butA2_','g45gl3_','g45gl2_','g45gl_','g45_tirs2_','g45_fanart2_','g45_fanart_','g45_img_perso_','g45_tv_prog','g45_mqnom_','g45_mqteam_','g45_mqfond_','g45trv4_','g45_catimg_','g45_catfmt2_','g45_catfmt_','g45_domext1_','g45_t14e_','g45_t14bo_','g45_gar1_','g45_epr1_','g45nrlcal3_','g45nrlcal2_','g45_score4_','g45_score3_','g45_score2_','g45_score_','g45_lglogo_','g45compet3_','g45compet2_','g45compet_','g45tmeta_','g45histo_','g45ld2_','g45ld_',
   'g45nrlcal2_','g45core2_','g45core_','g45_fx_faits','g45_veille_','g45_compet_logos','g45_groq_modele','g45_groq_modele3','g45_groq_vision','g45_gemini_modeles',
   /* 12/09 : g45nrlcal6_ rejoint la liste, remplace par g45nrlcal7_ ci-dessus —
      meme raison que g45nrlcal2_ et g45nrlcal3_ avant lui. */
@@ -49185,7 +49377,7 @@ var _G45_FOND_MOSAIQUE = 0.16; /* opacite du blason ; monter vers 0.26 pour plus
    loin. */
 var _G45_FOND_VOILE = (function () {
   try { var v = parseFloat(localStorage.getItem('g45_fond_voile')); if (!isNaN(v)) return v; } catch (e) {}
-  return 0.45;
+  return 0;          /* 22/09 : zero par defaut, choix d'Antoine — il eteignait les blasons */
 })();
 window.g45Voile = function (v) {
   if (v == null) { console.log('Voile actuel :', _G45_FOND_VOILE, '— essaie g45Voile(0.6) pour assombrir, g45Voile(0.25) pour alleger.'); return _G45_FOND_VOILE; }
