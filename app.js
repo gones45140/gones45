@@ -35520,6 +35520,249 @@ function _g45EntId(e){
   return '';
 }
 window._g45EntName=_g45EntName; window._g45EntId=_g45EntId;
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   FACE-À-FACE ET CINQ DERNIERS (22/09/2026, demande d'Antoine)
+   ───────────────────────────────────────────────────────────────────────────
+   Constat : la fenetre d'avant-match n'avait AUCUNE confrontation directe. Or
+   `seasonseries` et `lastFiveGames` arrivent deja dans le resume — on les
+   telechargeait puis on les jetait. Sonde du 22/09 : date, les deux equipes,
+   le score, le vainqueur, et pour les cinq derniers `leagueAbbreviation`.
+
+   TROIS CHOIX D'ANTOINE, tous justifies :
+   · les cinq derniers sont FILTRES sur la competition du match affiche. Sans
+     ca les cinq de Lyon melent Ligue 1 et Europe, et la comparaison ne veut
+     rien dire. Quand il en reste moins de cinq, le titre le dit.
+   · les marches reutilisent `_quickStats` et la meme table de cles que le
+     panneau Saisons — deux definitions d'« Over 2.5 » auraient fini par
+     diverger.
+   · aucun seuil ne coute de requete : les scores sont en memoire, tester cinq
+     lignes revient au meme qu'en tester une.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* Meme table que le panneau Saisons : cles, libelles et couleurs identiques. */
+var _G45_MARCHES = [
+  { key: 'O0.5', label: 'Over 0.5', color: '#1ed760' },
+  { key: 'O1.5', label: 'Over 1.5', color: '#4d84ff' },
+  { key: 'O2.5', label: 'Over 2.5', color: '#f0b020' },
+  { key: 'O3.5', label: 'Over 3.5', color: '#ff7b54' },
+  { key: 'O4.5', label: 'Over 4.5', color: '#ff4545' },
+  { key: 'U0.5', label: 'Under 0.5', color: '#22d3ee' },
+  { key: 'U1.5', label: 'Under 1.5', color: '#67e8f9' },
+  { key: 'U2.5', label: 'Under 2.5', color: '#a5f3fc' },
+  { key: 'U3.5', label: 'Under 3.5', color: '#bae6fd' },
+  { key: 'U4.5', label: 'Under 4.5', color: '#e0f2fe' },
+  { key: 'BTS',   label: 'BTS Oui',     color: '#a78bfa' },
+  { key: 'CS',    label: 'Clean Sheet', color: '#1ed760' },
+  { key: 'H-1.5', label: 'Hand -1.5',   color: '#f472b6' },
+  { key: 'H+1.5', label: 'Hand +1.5',   color: '#38bdf8' }
+];
+
+/* Compte les marches sur une liste de {pour, contre}. `pour` et `contre` sont
+   vus DEPUIS l'equipe de reference : c'est ce qui donne un sens au clean sheet
+   et au handicap, qui n'en ont aucun sur une rencontre neutre. */
+function _g45MarchesCalc(list) {
+  var n = (list || []).length;
+  if (!n) return null;
+  var c = {};
+  _G45_MARCHES.forEach(function (m) { c[m.key] = 0; });
+  list.forEach(function (g) {
+    var a = parseInt(g.pour, 10), b = parseInt(g.contre, 10);
+    if (isNaN(a) || isNaN(b)) return;
+    var t = a + b;
+    [0.5, 1.5, 2.5, 3.5, 4.5].forEach(function (s) {
+      if (t > s) c['O' + s]++; else c['U' + s]++;
+    });
+    if (a > 0 && b > 0) c.BTS++;
+    if (b === 0) c.CS++;
+    if (a - b > 1.5) c['H-1.5']++;
+    if (a - b > -1.5) c['H+1.5']++;
+  });
+  c._n = n;
+  return c;
+}
+
+/* Confrontations directes tirees de `seasonseries`. */
+function _g45H2HDepuisResume(data, monId) {
+  try {
+    var ss = data && data.seasonseries;
+    if (!Array.isArray(ss)) return null;
+    var bloc = ss.filter(function (x) { return /head/i.test(String(x && x.type || '')); })[0] || ss[0];
+    var evs = (bloc && bloc.events) || [];
+    if (!evs.length) return null;
+    var out = [];
+    evs.forEach(function (e) {
+      var st = (e.statusType || {});
+      if (!st.completed) return;
+      var cps = e.competitors || [];
+      var moi = null, adv = null;
+      cps.forEach(function (c) {
+        if (String((c.team || {}).id) === String(monId)) moi = c; else adv = c;
+      });
+      if (!moi || !adv) return;
+      out.push({
+        date: e.date, pour: moi.score, contre: adv.score,
+        domicile: moi.homeAway === 'home',
+        advNom: (adv.team || {}).displayName || (adv.team || {}).abbreviation || '?',
+        moiNom: (moi.team || {}).displayName || '?',
+        lien: ((e.links || [])[0] || {}).href || ''
+      });
+    });
+    return out.length ? out : null;
+  } catch (e) { return null; }
+}
+
+/* Cinq derniers, FILTRES sur la competition du match affiche. */
+function _g45CinqDerniers(data, teamId, ligue) {
+  try {
+    var lf = (data && data.lastFiveGames) || [];
+    var entry = null;
+    for (var i = 0; i < lf.length; i++) {
+      if (String((lf[i].team || {}).id) === String(teamId)) { entry = lf[i]; break; }
+    }
+    if (!entry) return null;
+    var evs = entry.events || entry.games || [];
+    if (!evs.length) return null;
+    var nrm = function (x) { return String(x || '').toLowerCase().replace(/[^a-z0-9]/g, ''); };
+    var cible = nrm(ligue);
+    var gardes = evs;
+    if (cible) {
+      var f = evs.filter(function (e) {
+        var a = nrm(e.leagueAbbreviation), b = nrm(e.leagueName), c = nrm(e.competitionName);
+        return (a && (a === cible || cible.indexOf(a) >= 0 || a.indexOf(cible) >= 0))
+          || (b && (b.indexOf(cible) >= 0 || cible.indexOf(b) >= 0))
+          || (c && c.indexOf(cible) >= 0);
+      });
+      /* On ne filtre que si ca laisse quelque chose : mieux vaut cinq matchs
+         melanges, en le disant, que zero ligne. */
+      if (f.length) gardes = f;
+      else cible = '';
+    }
+    var out = [];
+    gardes.slice(-5).forEach(function (e) {
+      var dom = String(e.homeTeamId) === String(teamId);
+      var a = parseInt(dom ? e.homeTeamScore : e.awayTeamScore, 10);
+      var b = parseInt(dom ? e.awayTeamScore : e.homeTeamScore, 10);
+      if (isNaN(a) || isNaN(b)) return;
+      out.push({
+        date: e.gameDate, pour: a, contre: b, domicile: dom,
+        advNom: (e.opponent || {}).abbreviation || (e.opponent || {}).displayName || '?',
+        compet: e.leagueAbbreviation || e.leagueName || '',
+        lien: ((e.links || [])[0] || {}).href || ''
+      });
+    });
+    return out.length ? { liste: out, filtre: !!cible } : null;
+  } catch (e) { return null; }
+}
+
+function _g45JJMM(d) {
+  try {
+    var x = new Date(d);
+    if (isNaN(x)) return '';
+    return String(x.getDate()).padStart(2, '0') + '/' + String(x.getMonth() + 1).padStart(2, '0');
+  } catch (e) { return ''; }
+}
+
+function _g45LigneMatchH2H(g) {
+  var res = g.pour > g.contre ? 'G' : (g.pour < g.contre ? 'P' : 'N');
+  var col = res === 'G' ? '#1ed760' : (res === 'P' ? '#ff4545' : '#f0b020');
+  var corps = '<span style="font-size:10.5px;font-weight:700;color:var(--t3);width:44px;flex:none;">' + _g45JJMM(g.date) + '</span>'
+    + '<span style="font-size:10px;font-weight:700;color:var(--t3);width:20px;flex:none;">' + (g.domicile ? '🏠' : '🚌') + '</span>'
+    + '<span style="flex:1;font-size:12px;font-weight:700;color:var(--t1);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + _g45Esc(g.advNom) + '</span>'
+    + '<span style="font-size:12px;font-weight:800;color:var(--t2);width:34px;text-align:right;flex:none;font-variant-numeric:tabular-nums;">' + g.pour + '-' + g.contre + '</span>'
+    + '<span style="width:18px;height:18px;line-height:18px;text-align:center;border-radius:4px;flex:none;background:' + col + ';color:#0b101d;font-size:10px;font-weight:800;">' + res + '</span>';
+  var sty = 'display:flex;align-items:center;gap:7px;padding:6px 8px;border-radius:6px;background:rgba(255,255,255,.04);text-decoration:none;';
+  return g.lien
+    ? '<a href="' + _g45Esc(g.lien) + '" target="_blank" rel="noopener" style="' + sty + '">' + corps + '</a>'
+    : '<div style="' + sty + '">' + corps + '</div>';
+}
+
+function _g45BarresMarches(c) {
+  if (!c) return '';
+  var sel = window._quickStats || ['O2.5', 'BTS'];
+  var rows = _G45_MARCHES.filter(function (m) { return sel.indexOf(m.key) >= 0; });
+  if (!rows.length) rows = _G45_MARCHES.filter(function (m) { return m.key === 'O2.5' || m.key === 'BTS'; });
+  var h = '';
+  rows.forEach(function (m) {
+    var v = Math.round((c[m.key] || 0) * 100 / c._n);
+    h += '<div style="display:flex;align-items:center;gap:7px;margin-bottom:4px;">'
+      + '<div style="font-size:9.5px;font-weight:700;color:var(--t2);width:66px;flex:none;">' + m.label + '</div>'
+      + '<div style="flex:1;height:7px;background:rgba(255,255,255,.06);border-radius:4px;">'
+      + '<div style="height:7px;border-radius:4px;background:' + m.color + ';width:' + v + '%;transition:width .4s;"></div></div>'
+      + '<div style="font-size:10.5px;font-weight:800;color:' + m.color + ';width:44px;text-align:right;flex:none;">'
+      + (c[m.key] || 0) + '/' + c._n + '</div></div>';
+  });
+  return h;
+}
+
+/* Le bloc complet. Rend une chaine vide si rien n'est exploitable. */
+function _g45FaceAFaceBloc(data, ligue) {
+  try {
+    var cp = (((data.header || {}).competitions) || [])[0] || {};
+    var cps = cp.competitors || [];
+    var dom = cps.filter(function (c) { return c.homeAway === 'home'; })[0] || cps[0];
+    var ext = cps.filter(function (c) { return c.homeAway === 'away'; })[0] || cps[1];
+    if (!dom || !ext) return '';
+    var idD = String((dom.team || {}).id || ''), idE = String((ext.team || {}).id || '');
+    var nD = (dom.team || {}).shortDisplayName || (dom.team || {}).displayName || 'Dom';
+    var nE = (ext.team || {}).shortDisplayName || (ext.team || {}).displayName || 'Ext';
+    var cD = '#' + String((dom.team || {}).color || '4d84ff').replace('#', '');
+    var cE = '#' + String((ext.team || {}).color || 'f0b020').replace('#', '');
+    if (cD.toLowerCase() === cE.toLowerCase()) cE = '#f0b020';
+
+    var h2h = _g45H2HDepuisResume(data, idD);
+    var d5 = _g45CinqDerniers(data, idD, ligue);
+    var e5 = _g45CinqDerniers(data, idE, ligue);
+    if (!h2h && !d5 && !e5) return '';
+
+    var h = '<div style="margin-bottom:11px;">'
+      + '<div style="font-size:9px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;color:#8aa0ff;margin-bottom:7px;">⚔️ Face-à-face</div>';
+
+    if (h2h) {
+      var g = 0, n = 0, p = 0;
+      h2h.forEach(function (x) { if (x.pour > x.contre) g++; else if (x.pour < x.contre) p++; else n++; });
+      var tot = h2h.length;
+      h += '<div style="display:flex;align-items:center;gap:10px;margin-bottom:7px;">'
+        + '<div style="flex:1;text-align:center;"><div style="font-size:19px;font-weight:800;color:' + cD + ';">' + g + '</div>'
+        + '<div style="font-size:10px;font-weight:700;color:var(--t2);">' + _g45Esc(nD) + '</div></div>'
+        + '<div style="flex:1;text-align:center;"><div style="font-size:19px;font-weight:800;color:var(--t2);">' + n + '</div>'
+        + '<div style="font-size:10px;font-weight:700;color:var(--t2);">Nuls</div></div>'
+        + '<div style="flex:1;text-align:center;"><div style="font-size:19px;font-weight:800;color:' + cE + ';">' + p + '</div>'
+        + '<div style="font-size:10px;font-weight:700;color:var(--t2);">' + _g45Esc(nE) + '</div></div></div>'
+        + '<div style="display:flex;height:6px;border-radius:3px;overflow:hidden;background:rgba(255,255,255,.06);margin-bottom:7px;">'
+        + '<div style="width:' + Math.round(g * 100 / tot) + '%;background:' + cD + ';"></div>'
+        + '<div style="width:' + Math.round(n * 100 / tot) + '%;background:rgba(159,176,199,.45);"></div>'
+        + '<div style="width:' + Math.round(p * 100 / tot) + '%;background:' + cE + ';"></div></div>'
+        + '<div style="display:flex;flex-direction:column;gap:3px;margin-bottom:7px;">'
+        + h2h.slice().reverse().map(_g45LigneMatchH2H).join('') + '</div>'
+        + _g45BarresMarches(_g45MarchesCalc(h2h));
+    }
+
+    /* Les deux colonnes de forme, sur la MEME competition. */
+    if (d5 || e5) {
+      var col = function (nom, coul, r) {
+        if (!r) return '<div style="flex:1;min-width:150px;"></div>';
+        return '<div style="flex:1;min-width:150px;">'
+          + '<div style="font-size:11px;font-weight:800;color:' + coul + ';margin-bottom:2px;">' + _g45Esc(nom) + '</div>'
+          + '<div style="font-size:9px;font-weight:700;color:var(--t3);margin-bottom:5px;">'
+          + r.liste.length + ' dernier' + (r.liste.length > 1 ? 's' : '')
+          + (r.filtre ? ' · même compétition' : ' · toutes compétitions') + '</div>'
+          + '<div style="display:flex;flex-direction:column;gap:3px;margin-bottom:6px;">'
+          + r.liste.slice().reverse().map(_g45LigneMatchH2H).join('') + '</div>'
+          + _g45BarresMarches(_g45MarchesCalc(r.liste)) + '</div>';
+      };
+      h += '<div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:9px;padding-top:8px;border-top:1px solid rgba(255,255,255,.06);">'
+        + col(nD, cD, d5) + col(nE, cE, e5) + '</div>';
+    }
+
+    return h + '</div>';
+  } catch (e) { return ''; }
+}
+window._g45FaceAFaceBloc = _g45FaceAFaceBloc;
+window._g45MarchesCalc = _g45MarchesCalc;
+window._g45CinqDerniers = _g45CinqDerniers;
+window._g45H2HDepuisResume = _g45H2HDepuisResume;
+
 function _g45PreMatchBlock(data){
   try{
     var comp=(data.header&&data.header.competitions&&data.header.competitions[0])||{};
@@ -35575,8 +35818,20 @@ function _g45PreMatchBlock(data){
             var wa=(tot>0&&na!=null)?Math.round(na/tot*100):50;
             /* LE FRANCAIS D'ABORD (22/09/2026). L'ordre etait inverse : le
                libelle anglais d'ESPN ecrasait systematiquement la traduction,
-               qui ne servait donc jamais. */
-            var label=frMap[n]||lbl[n]||n;
+               qui ne servait donc jamais.
+               Et on traduit AUSSI d'apres le libelle anglais, pas seulement
+               d'apres la cle interne : « Goals Against » resistait parce que sa
+               cle n'etait pas celle qu'on avait supposee. Deviner un nom de
+               champ est fragile ; le libelle affiche, lui, est sous les yeux. */
+            var _angFr={'goals against':'Buts encaissés','goals for':'Buts marqués','goal difference':'Différence de buts',
+              'total goals':'Buts marqués','assists':'Passes décisives','goal assists':'Passes décisives',
+              'clean sheets':'Clean sheets','appearances':'Matchs joués','wins':'Victoires','losses':'Défaites',
+              'draws':'Nuls','points':'Points','possession':'Possession','shots':'Tirs','shots on target':'Tirs cadrés',
+              'fouls':'Fautes','fouls committed':'Fautes','offsides':'Hors-jeu','corners':'Corners',
+              'yellow cards':'Cartons jaunes','red cards':'Cartons rouges','saves':'Arrêts',
+              'own goals':'Buts contre son camp','penalty kicks taken':'Penaltys tirés','sub ins':'Entrées en jeu'};
+            var _brut=lbl[n]||n;
+            var label=frMap[n]||_angFr[String(_brut).trim().toLowerCase()]||_brut;
             rowsT+='<div style="margin-bottom:6px;">'
               +'<div style="display:grid;grid-template-columns:1fr auto 1fr;gap:6px;align-items:center;font-size:10px;font-weight:800;color:var(--t1);"><span style="text-align:left;">'+va+'</span><span style="font-size:10.5px;font-weight:700;color:var(--t1);letter-spacing:.2px;text-align:center;">'+label+'</span><span style="text-align:right;">'+vb+'</span></div>'
               +'<div style="display:flex;height:4px;border-radius:2px;overflow:hidden;background:rgba(255,255,255,.06);margin-top:2px;"><div style="width:'+wa+'%;background:#4d84ff;"></div><div style="width:'+(100-wa)+'%;background:#ff7b54;"></div></div>'
@@ -35586,6 +35841,18 @@ function _g45PreMatchBlock(data){
         }
       }
     }catch(e){}
+
+    /* ── Face-à-face (22/09/2026) ─────────────────────────────────────────
+       Place APRES les statistiques d'equipe et AVANT la forme : on regarde
+       d'abord ce que les deux equipes valent, puis ce qu'elles se sont fait
+       l'une a l'autre, puis leur etat du moment. */
+    var _ffBloc = '';
+    try {
+      var _lgFF = '';
+      try { _lgFF = (((data.header||{}).league)||{}).abbreviation || (((data.header||{}).league)||{}).name || ''; } catch(e){}
+      if (!_lgFF) { try { _lgFF = ((data.header||{}).competitions||[])[0].type && '' ; } catch(e){ _lgFF=''; } }
+      _ffBloc = _g45FaceAFaceBloc(data, _lgFF);
+    } catch(e){}
 
     // ── Forme + bilan ──
     function formStr(c){ return (c.form||(c.team&&c.team.form)||'').toString().toUpperCase(); }
@@ -35677,7 +35944,7 @@ function _g45PreMatchBlock(data){
     if(!probHtml&&!statsHtml&&!formHtml&&!standHtml&&!(hId&&aId)) return '';
     return '<div style="background:rgba(255,255,255,.02);border-radius:8px;padding:10px;margin-bottom:8px;">'
       +'<div style="font-size:9px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;color:#8aa0ff;margin-bottom:8px;">📊 Avant-match</div>'
-      +probHtml+statsHtml+formHtml+standCont+'</div>';
+      +probHtml+statsHtml+_ffBloc+formHtml+standCont+'</div>';
   }catch(e){ return ''; }
 }
 /* ── 🔁 SCORE DU MATCH ALLER (confrontations aller-retour) ──
