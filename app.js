@@ -7556,6 +7556,15 @@ function saveEditBet(){
   var id=$i('edit-bet-id').value;
   var idx=state.h.findIndex(function(x){return x.id===id;});if(idx===-1)return;
   var h=state.h[idx];
+  /* ═══ COMPTABILITE DE LA MODIFICATION (22/09/2026) ═══════════════════════
+     Releve par Antoine : freebet Unibet oublie a la saisie, coche APRES coup.
+     Le pari a bien change d'etat, mais la mise est restee prelevee sur le
+     solde et la cagnotte freebet n'a pas bouge.
+     Cette fonction ne touche QUE `state.h`, des paris en cours : aucun gain
+     n'a encore ete credite, la seule ecriture a passer est le prelevement de
+     la mise. On rend donc l'ancien, puis on refait le nouveau.
+     Trois champs le declenchent : le bookmaker, la mise et le freebet. */
+  var _anB = h.b, _anM = parseFloat(h.m) || 0, _anF = !!h.isFreebet;
   h.target=$i('edit-target').value.trim();
   h.n=$i('edit-equipe').value.trim();
   h.cote=parseFloat($i('edit-cote').value)||h.cote;
@@ -7570,6 +7579,24 @@ function saveEditBet(){
   var _ck=function(id){ var e=$i(id); return !!(e&&e.checked); };
   h.isFreebet=_ck('edit-freebet'); h.isLay=_ck('edit-lay'); h.isFlash=_ck('edit-flash');
   h.domicile=$i('edit-domicile').value;
+
+  var _nvB = h.b, _nvM = parseFloat(h.m) || 0, _nvF = !!h.isFreebet;
+  if (_anB !== _nvB || _anM !== _nvM || _anF !== _nvF) {
+    if (!state.fb) state.fb = {};
+    var _rendre  = function (bk, mt, fb) { var o = fb ? state.fb : state.b; o[bk] = ((parseFloat(o[bk]) || 0) + mt).toFixed(2); };
+    var _prendre = function (bk, mt, fb) { var o = fb ? state.fb : state.b; o[bk] = ((parseFloat(o[bk]) || 0) - mt).toFixed(2); };
+    _rendre(_anB, _anM, _anF);
+    var _dispo = _nvF ? (parseFloat(state.fb[_nvB]) || 0) : (parseFloat(state.b[_nvB]) || 0);
+    if (_dispo < _nvM) {
+      /* Pas de quoi payer la nouvelle version : on remet l'ancienne ecriture et
+         on garde l'ancien trio, sans perdre les autres modifications. */
+      _prendre(_anB, _anM, _anF);
+      h.b = _anB; h.m = _anM; h.isFreebet = _anF;
+      alert((_nvF ? 'Cagnotte freebet insuffisante sur ' : 'Solde insuffisant sur ') + bki(_nvB).n + ' — mise et compte inchangés.');
+    } else {
+      _prendre(_nvB, _nvM, _nvF);
+    }
+  }
   save();render();closeEditBet();
 }
 function togglePlusMenu(){
@@ -15246,6 +15273,15 @@ function saveEditBet(){
   var id=$i('edit-bet-id').value;
   var idx=state.h.findIndex(function(x){return x.id===id;});if(idx===-1)return;
   var h=state.h[idx];
+  /* ═══ COMPTABILITE DE LA MODIFICATION (22/09/2026) ═══════════════════════
+     Releve par Antoine : freebet Unibet oublie a la saisie, coche APRES coup.
+     Le pari a bien change d'etat, mais la mise est restee prelevee sur le
+     solde et la cagnotte freebet n'a pas bouge.
+     Cette fonction ne touche QUE `state.h`, des paris en cours : aucun gain
+     n'a encore ete credite, la seule ecriture a passer est le prelevement de
+     la mise. On rend donc l'ancien, puis on refait le nouveau.
+     Trois champs le declenchent : le bookmaker, la mise et le freebet. */
+  var _anB = h.b, _anM = parseFloat(h.m) || 0, _anF = !!h.isFreebet;
   h.target=$i('edit-target').value.trim();
   h.n=$i('edit-equipe').value.trim();
   h.cote=parseFloat($i('edit-cote').value)||h.cote;
@@ -15260,6 +15296,24 @@ function saveEditBet(){
   var _ck=function(id){ var e=$i(id); return !!(e&&e.checked); };
   h.isFreebet=_ck('edit-freebet'); h.isLay=_ck('edit-lay'); h.isFlash=_ck('edit-flash');
   h.domicile=$i('edit-domicile').value;
+
+  var _nvB = h.b, _nvM = parseFloat(h.m) || 0, _nvF = !!h.isFreebet;
+  if (_anB !== _nvB || _anM !== _nvM || _anF !== _nvF) {
+    if (!state.fb) state.fb = {};
+    var _rendre  = function (bk, mt, fb) { var o = fb ? state.fb : state.b; o[bk] = ((parseFloat(o[bk]) || 0) + mt).toFixed(2); };
+    var _prendre = function (bk, mt, fb) { var o = fb ? state.fb : state.b; o[bk] = ((parseFloat(o[bk]) || 0) - mt).toFixed(2); };
+    _rendre(_anB, _anM, _anF);
+    var _dispo = _nvF ? (parseFloat(state.fb[_nvB]) || 0) : (parseFloat(state.b[_nvB]) || 0);
+    if (_dispo < _nvM) {
+      /* Pas de quoi payer la nouvelle version : on remet l'ancienne ecriture et
+         on garde l'ancien trio, sans perdre les autres modifications. */
+      _prendre(_anB, _anM, _anF);
+      h.b = _anB; h.m = _anM; h.isFreebet = _anF;
+      alert((_nvF ? 'Cagnotte freebet insuffisante sur ' : 'Solde insuffisant sur ') + bki(_nvB).n + ' — mise et compte inchangés.');
+    } else {
+      _prendre(_nvB, _nvM, _nvF);
+    }
+  }
   save();render();closeEditBet();
 }
 function togglePlusMenu(){
@@ -30052,6 +30106,14 @@ async function _renderGenericDetail(el, sport, lg, eid){
     var _hid=(home.team&&home.team.id)||'', _aid=(away.team&&away.team.id)||'';
     if(_hid&&_aid) h+='<div style="margin-top:8px;"><button onclick="g45RugbyH2H(this)" data-sport="'+sport+'" data-lg="'+lg+'" data-hid="'+_hid+'" data-aid="'+_aid+'" data-date="'+(comp.date||'')+'" data-h="'+String(hN).replace(/"/g,'&quot;')+'" data-a="'+String(aN).replace(/"/g,'&quot;')+'" data-box="rh2h-'+eid+'" style="width:100%;box-sizing:border-box;font-size:12px;font-weight:800;padding:9px 12px;border-radius:9px;cursor:pointer;border:1.5px solid rgba(138,160,255,.5);background:rgba(138,160,255,.10);color:#8aa0ff;">⚔️ Confrontations &amp; forme</button><div id="rh2h-'+eid+'" style="margin-top:8px;"></div></div>';
     if(lg) h+='<div style="margin-top:8px;"><button onclick="g45DetailStandings(this)" data-lg="'+lg+'" data-sport="'+sport+'" data-box="rstd-'+eid+'" style="width:100%;box-sizing:border-box;font-size:12px;font-weight:800;padding:9px 12px;border-radius:9px;cursor:pointer;border:1.5px solid rgba(240,176,32,.4);background:rgba(240,176,32,.10);color:#f0b020;">🏆 Classement</button><div id="rstd-'+eid+'" style="margin-top:8px;"></div></div>';
+    /* DEROULE DES POINTS ET STATS D'EQUIPE (22/09/2026) : places AVANT les
+       meilleurs joueurs, c'est-a-dire la ou le rugby les met deja. Les deux
+       fonctions se protegent seules et rendent une chaine vide quand la donnee
+       manque, donc les appeler sur n'importe quel sport ne coute rien. */
+    if (!_isRugbyFamily(sport)) {
+      try { h += _g45UsDeroule(data, sport); } catch (e) {}
+      try { h += _g45UsTeamStats(data); } catch (e) {}
+    }
     // Meilleurs joueurs
     try{
       var L=data.leaders||[];
@@ -35497,16 +35559,26 @@ function _g45PreMatchBlock(data){
         var s0={},s1={},lbl={};
         (bH.statistics||[]).forEach(function(s){ s0[s.name]=s.displayValue; if(s.label)lbl[s.name]=s.label; });
         (bA.statistics||[]).forEach(function(s){ s1[s.name]=s.displayValue; if(s.label)lbl[s.name]=s.label; });
-        var frMap={possessionPct:'Possession',avgGoals:'Buts marqués (moy.)',avgGoalsConceded:'Buts encaissés (moy.)',avgGoalDifferential:'Diff. buts (moy.)',avgExpectedGoals:'xG (moy.)',avgExpectedGoalsAgainst:'xG concédés (moy.)',avgExpectedGoalDifferential:'Diff. xG (moy.)',savePct:'% arrêts',cleanSheet:'Clean sheets',totalShots:'Tirs',shotsOnTarget:'Tirs cadrés',wonCorners:'Corners',foulsCommitted:'Fautes'};
+        /* Complete le 22/09/2026 : ces quatre lignes-la s'affichaient en anglais
+           (« GOAL DIFFERENCE », « TOTAL GOALS », « ASSISTS », « GOALS AGAINST »)
+           parce qu'elles manquaient a la table. Ce sont des statistiques de
+           SAISON, legitimes sur un avant-match. */
+        var frMap={possessionPct:'Possession',avgGoals:'Buts marqués (moy.)',avgGoalsConceded:'Buts encaissés (moy.)',avgGoalDifferential:'Diff. buts (moy.)',avgExpectedGoals:'xG (moy.)',avgExpectedGoalsAgainst:'xG concédés (moy.)',avgExpectedGoalDifferential:'Diff. xG (moy.)',savePct:'% arrêts',cleanSheet:'Clean sheets',totalShots:'Tirs',shotsOnTarget:'Tirs cadrés',wonCorners:'Corners',foulsCommitted:'Fautes',
+          goalDifference:'Différence de buts',totalGoals:'Buts marqués',goalsFor:'Buts marqués',goalsAgainst:'Buts encaissés',assists:'Passes décisives',goalAssists:'Passes décisives',
+          appearances:'Matchs joués',wins:'Victoires',losses:'Défaites',draws:'Nuls',ties:'Nuls',points:'Points',
+          yellowCards:'Cartons jaunes',redCards:'Cartons rouges',saves:'Arrêts',offsides:'Hors-jeu',fouls:'Fautes'};
         var names=Object.keys(s0).filter(function(n){return s1[n]!==undefined;});
         if(names.length){
           var rowsT='';
           names.slice(0,12).forEach(function(n){
             var va=s0[n], vb=s1[n], na=num(va), nb=num(vb), tot=(na!=null?na:0)+(nb!=null?nb:0);
             var wa=(tot>0&&na!=null)?Math.round(na/tot*100):50;
-            var label=lbl[n]||frMap[n]||n;
+            /* LE FRANCAIS D'ABORD (22/09/2026). L'ordre etait inverse : le
+               libelle anglais d'ESPN ecrasait systematiquement la traduction,
+               qui ne servait donc jamais. */
+            var label=frMap[n]||lbl[n]||n;
             rowsT+='<div style="margin-bottom:6px;">'
-              +'<div style="display:grid;grid-template-columns:1fr auto 1fr;gap:6px;align-items:center;font-size:10px;font-weight:800;color:var(--t1);"><span style="text-align:left;">'+va+'</span><span style="font-size:8px;font-weight:600;color:var(--t3);text-transform:uppercase;letter-spacing:.3px;text-align:center;">'+label+'</span><span style="text-align:right;">'+vb+'</span></div>'
+              +'<div style="display:grid;grid-template-columns:1fr auto 1fr;gap:6px;align-items:center;font-size:10px;font-weight:800;color:var(--t1);"><span style="text-align:left;">'+va+'</span><span style="font-size:10.5px;font-weight:700;color:var(--t1);letter-spacing:.2px;text-align:center;">'+label+'</span><span style="text-align:right;">'+vb+'</span></div>'
               +'<div style="display:flex;height:4px;border-radius:2px;overflow:hidden;background:rgba(255,255,255,.06);margin-top:2px;"><div style="width:'+wa+'%;background:#4d84ff;"></div><div style="width:'+(100-wa)+'%;background:#ff7b54;"></div></div>'
               +'</div>';
           });
@@ -47335,6 +47407,197 @@ window.g45FondMatch = g45FondMatch;
    Le voile est pose sur les PASTILLES et non sur les cellules de la grille :
    une cellule occupe toute la largeur de sa colonne et masquerait le fond,
    une pastille epouse son texte et le laisse passer entre les elements. */
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   FENETRE DE MATCH US — DEROULE DES POINTS ET STATS D'EQUIPE (22/09/2026)
+   ───────────────────────────────────────────────────────────────────────────
+   Releve par Antoine sur Chiefs-Colts : la fenetre passait des boutons aux
+   meilleurs joueurs, sans jamais dire QUI avait inscrit les touchdowns. Le
+   rugby a ces deux blocs depuis le 10/09 ; les sports US n'en avaient aucun.
+   Tout est pourtant dans la reponse deja telechargee : `scoringPlays` en NFL,
+   `plays` en NHL et MLB, `boxscore.teams[].statistics` partout.
+   Choix d'Antoine : NBA = statistiques d'equipe SEULEMENT. Un derole complet
+   y ferait deux cents lignes pour un interet nul.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* Libelles d'ESPN traduits. Ce qui n'est pas dans la table passe tel quel :
+   mieux vaut un terme anglais qu'un trou. */
+var _G45_US_STATS_FR = {
+  'total yards': 'Yards totaux', 'first downs': 'First downs',
+  'passing': 'Yards à la passe', 'rushing': 'Yards à la course',
+  'net passing yards': 'Yards à la passe', 'rushing yards': 'Yards à la course',
+  'turnovers': 'Ballons perdus', 'possession': 'Possession',
+  'possession time': 'Possession', 'penalties': 'Pénalités',
+  'sacks': 'Sacks', 'third down efficiency': 'Réussite au 3e essai',
+  'fourth down efficiency': 'Réussite au 4e essai', 'red zone': 'Zone rouge',
+  'field goals': 'Coups de pied placés', 'fg': 'Tirs réussis',
+  'shots': 'Tirs', 'shots on goal': 'Tirs cadrés', 'saves': 'Arrêts',
+  'power play': 'Supériorité', 'faceoffs won': 'Engagements gagnés',
+  'hits': 'Mises en échec', 'blocked shots': 'Tirs bloqués',
+  'points in paint': 'Points dans la raquette', 'fast break points': 'Points en contre',
+  'rebounds': 'Rebonds', 'assists': 'Passes décisives', 'steals': 'Interceptions',
+  'blocks': 'Contres', 'field goal pct': '% aux tirs', 'three point pct': '% à 3 points',
+  'free throw pct': '% aux lancers francs', 'fouls': 'Fautes',
+  'runs': 'Points', 'errors': 'Erreurs', 'left on base': 'Laissés sur base',
+  'strikeouts': 'Retraits au bâton', 'home runs': 'Home runs'
+};
+function _g45UsStatFr(lib) {
+  var k = String(lib || '').trim().toLowerCase();
+  return _G45_US_STATS_FR[k] || String(lib || '');
+}
+
+/* Traduction d'une action marquante. Chaque motif est ancre sur la formulation
+   d'ESPN, verifiee sur des reponses reelles ; le texte d'origine est rendu si
+   rien ne correspond, plutot qu'une phrase a moitie traduite. */
+function _g45UsActionFr(txt, sport) {
+  var t = String(txt || '').trim();
+  if (!t) return '';
+  var m;
+  if (sport === 'football') {
+    m = t.match(/^(.+?)\s+(\d+)\s*Yd\s+pass\s+from\s+(.+?)(?:\s*\((.+?)\))?\.?$/i);
+    if (m) return '<b>' + _g45Esc(m[1]) + '</b> · passe de ' + m[2] + ' yards de <b>' + _g45Esc(m[3]) + '</b>'
+      + (m[4] ? ' <span class="g45us-x">(' + _g45Esc(_g45UsExtraFr(m[4])) + ')</span>' : '');
+    m = t.match(/^(.+?)\s+(\d+)\s*Yd\s+(?:Rush|Run)(?:\s*\((.+?)\))?\.?$/i);
+    if (m) return '<b>' + _g45Esc(m[1]) + '</b> · course de ' + m[2] + ' yards'
+      + (m[3] ? ' <span class="g45us-x">(' + _g45Esc(_g45UsExtraFr(m[3])) + ')</span>' : '');
+    m = t.match(/^(.+?)\s+(\d+)\s*Yd\s+Field\s+Goal\.?$/i);
+    if (m) return '<b>' + _g45Esc(m[1]) + '</b> · coup de pied de ' + m[2] + ' yards';
+    m = t.match(/^(.+?)\s+(\d+)\s*Yd\s+(?:Interception|Fumble)\s+Return(?:\s*\((.+?)\))?\.?$/i);
+    if (m) return '<b>' + _g45Esc(m[1]) + '</b> · retour de ' + m[2] + ' yards après interception';
+    if (/safety/i.test(t)) return 'Safety · ' + _g45Esc(t.replace(/safety/i, '').trim());
+  }
+  if (sport === 'baseball') {
+    m = t.match(/^(.+?)\s+homered\s+to\s+(.+?)(?:\s*\((.+?)\))?\.?$/i);
+    if (m) return '<b>' + _g45Esc(m[1]) + '</b> · home run ' + _g45Esc(_g45UsChampFr(m[2]))
+      + (m[3] ? ' <span class="g45us-x">(' + _g45Esc(m[3]) + ')</span>' : '');
+    m = t.match(/^(.+?)\s+(singled|doubled|tripled)\s+to\s+(.+?),\s*(.+?)\s+scored/i);
+    if (m) {
+      var coup = { singled: 'coup sûr', doubled: 'double', tripled: 'triple' }[m[2].toLowerCase()];
+      return '<b>' + _g45Esc(m[1]) + '</b> · ' + coup + ' ' + _g45Esc(_g45UsChampFr(m[3]))
+        + ' <span class="g45us-x">— <b>' + _g45Esc(m[4]) + '</b> marque</span>';
+    }
+  }
+  return _g45Esc(t);
+}
+function _g45UsExtraFr(x) {
+  var t = String(x || '');
+  if (/kick/i.test(t)) return 'transformation ' + t.replace(/\s*kick\s*/i, '').trim();
+  if (/two[- ]point|2[- ]?pt/i.test(t)) return 'conversion à 2 points';
+  if (/failed|no good|blocked/i.test(t)) return 'transformation manquée';
+  return t;
+}
+function _g45UsChampFr(z) {
+  return String(z || '')
+    .replace(/left center/i, 'au champ gauche-centre').replace(/right center/i, 'au champ droit-centre')
+    .replace(/\bleft\b/i, 'au champ gauche').replace(/\bright\b/i, 'au champ droit')
+    .replace(/\bcenter\b/i, 'au champ centre');
+}
+
+function _g45UsPeriodeFr(n, sport, total) {
+  var i = parseInt(n, 10) || 0;
+  if (sport === 'baseball') return i + (i === 1 ? 're' : 'e') + ' manche';
+  if (sport === 'hockey') return i <= 3 ? (i + (i === 1 ? 're' : 'e') + ' période') : 'Prolongation';
+  var reg = (sport === 'basketball') ? 4 : 4;
+  if (i > reg) return 'Prolongation';
+  return i + (i === 1 ? 'er' : 'e') + ' quart-temps';
+}
+
+/* Déroulé des points. NBA volontairement absent (choix d'Antoine). */
+function _g45UsDeroule(data, sport) {
+  try {
+    if (sport === 'basketball') return '';
+    var cps = ((((data.header || {}).competitions) || [])[0] || {}).competitors || [];
+    var abr = {}, coul = {};
+    cps.forEach(function (c) {
+      var t = c.team || {};
+      abr[String(t.id)] = t.abbreviation || t.shortDisplayName || '';
+      coul[String(t.id)] = '#' + String(t.color || '4d84ff').replace('#', '');
+      if (t.abbreviation) abr[t.abbreviation] = t.abbreviation;
+    });
+    var src = [];
+    if (Array.isArray(data.scoringPlays) && data.scoringPlays.length) src = data.scoringPlays;
+    else if (Array.isArray(data.plays)) src = data.plays.filter(function (p) { return p && p.scoringPlay; });
+    if (!src.length) return '';
+
+    var h = '<style>.g45us-x{color:var(--t3);}</style>'
+      + '<div style="margin-top:10px;border-top:1px solid rgba(255,255,255,.06);padding-top:8px;">'
+      + '<div style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:#8aa0ff;margin-bottom:6px;">Déroulé des points</div>';
+    var perCourante = null;
+    src.forEach(function (p) {
+      var per = (p.period && (p.period.number != null ? p.period.number : p.period)) || 0;
+      if (per !== perCourante) {
+        perCourante = per;
+        h += '<div style="font-size:9.5px;font-weight:800;letter-spacing:.8px;text-transform:uppercase;color:var(--t3);margin:9px 0 4px;">'
+          + _g45Esc(_g45UsPeriodeFr(per, sport)) + '</div>';
+      }
+      var tid = String((p.team && (p.team.id || p.team.abbreviation || p.team)) || '');
+      var ab = abr[tid] || tid || '';
+      var c = coul[tid] || '#8aa0ff';
+      var hs = parseInt(p.homeScore, 10), as = parseInt(p.awayScore, 10);
+      var score = (!isNaN(hs) && !isNaN(as)) ? (hs + ' - ' + as) : '';
+      var hor = (p.clock && p.clock.displayValue) || '';
+      h += '<div style="display:flex;align-items:center;gap:8px;padding:6px 8px;border-radius:7px;background:rgba(255,255,255,.04);margin-bottom:3px;">'
+        + '<span style="font-size:10px;font-weight:800;width:32px;flex:none;text-align:center;border-radius:4px;padding:2px 0;'
+        + 'background:' + c + '33;color:' + c + ';">' + _g45Esc(ab) + '</span>'
+        + '<span style="flex:1;font-size:11.5px;font-weight:600;color:var(--t2);line-height:1.4;">'
+        + _g45UsActionFr(p.text || p.shortText, sport) + '</span>'
+        + (hor ? '<span style="font-size:10px;color:var(--t3);width:40px;text-align:right;flex:none;">' + _g45Esc(hor) + '</span>' : '')
+        + (score ? '<span style="font-size:11.5px;font-weight:800;color:var(--t1);width:44px;text-align:right;flex:none;font-variant-numeric:tabular-nums;">' + score + '</span>' : '')
+        + '</div>';
+    });
+    return h + '</div>';
+  } catch (e) { return ''; }
+}
+
+/* Statistiques d'equipe, tous sports US confondus : les lignes viennent
+   d'ESPN, on ne fait que traduire les libelles connus. */
+function _g45UsTeamStats(data) {
+  try {
+    var eq = ((data.boxscore || {}).teams) || [];
+    if (eq.length < 2) return '';
+    var A = eq[0], B = eq[1];
+    var sa = A.statistics || [], sb = B.statistics || [];
+    if (!sa.length || !sb.length) return '';
+    var cA = '#' + String((A.team || {}).color || '4d84ff').replace('#', '');
+    var cB = '#' + String((B.team || {}).color || 'f0b020').replace('#', '');
+    if (cA.toLowerCase() === cB.toLowerCase()) cB = '#f0b020';
+    var num = function (v) {
+      var s = String(v == null ? '' : v);
+      var m = s.match(/^(\d+):(\d+)$/);               /* possession « 32:41 » */
+      if (m) return parseInt(m[1], 10) * 60 + parseInt(m[2], 10);
+      m = s.match(/^(\d+)\s*[-\/]\s*(\d+)$/);         /* « 5-12 » : on garde le premier */
+      if (m) return parseFloat(m[1]);
+      var f = parseFloat(s.replace(/[^\d.-]/g, ''));
+      return isNaN(f) ? null : f;
+    };
+    var lignes = '';
+    sa.forEach(function (st, i) {
+      var st2 = sb.filter(function (x) { return x.name === st.name; })[0] || sb[i];
+      if (!st2) return;
+      var va = st.displayValue, vb = st2.displayValue;
+      if (va == null || vb == null) return;
+      var na = num(va), nb = num(vb), pa = 50;
+      if (na != null && nb != null && (na + nb) > 0) pa = Math.round(na * 100 / (na + nb));
+      var lib = _g45UsStatFr(st.label || st.name);
+      lignes += '<div style="display:flex;align-items:center;gap:10px;margin-bottom:7px;">'
+        + '<span style="font-size:12px;font-weight:800;color:' + cA + ';width:56px;text-align:right;flex:none;font-variant-numeric:tabular-nums;">' + _g45Esc(va) + '</span>'
+        + '<div style="flex:1;">'
+        + '<div style="font-size:10px;font-weight:700;color:var(--t2);text-align:center;margin-bottom:3px;">' + _g45Esc(lib) + '</div>'
+        + '<div style="display:flex;height:6px;border-radius:3px;overflow:hidden;background:rgba(255,255,255,.07);">'
+        + '<div style="width:' + pa + '%;background:' + cA + ';"></div>'
+        + '<div style="width:' + (100 - pa) + '%;background:' + cB + ';"></div></div></div>'
+        + '<span style="font-size:12px;font-weight:800;color:' + cB + ';width:56px;flex:none;font-variant-numeric:tabular-nums;">' + _g45Esc(vb) + '</span>'
+        + '</div>';
+    });
+    if (!lignes) return '';
+    return '<div style="margin-top:10px;border-top:1px solid rgba(255,255,255,.06);padding-top:8px;">'
+      + '<div style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:#8aa0ff;margin-bottom:8px;">Statistiques d\'équipe</div>'
+      + lignes + '</div>';
+  } catch (e) { return ''; }
+}
+window._g45UsDeroule = _g45UsDeroule;
+window._g45UsTeamStats = _g45UsTeamStats;
+
 function g45UsPanneauOuvrir(nom, blason){
   return '<div style="position:relative;border-radius:10px;padding:8px 10px 10px;overflow:hidden;">'
     + g45FondClubHtml(nom, 0.2, blason);
@@ -48645,6 +48908,26 @@ window.g45CouleursDe = g45CouleursDe;
    72 px, et l'opacite retombe de 0.26 a 0.16. */
 var _G45_FOND_TUILE = 72;    /* ajuste a 56 sur ecran etroit, voir g45FondClubHtml */
 var _G45_FOND_MOSAIQUE = 0.16; /* opacite du blason ; monter vers 0.26 pour plus marque */
+/* VOILE SOMBRE ENTRE LE FOND ET LE TEXTE (22/09/2026) ─────────────────────
+   Releve par Antoine sur le panneau xG de Lyon : les blasons montaient
+   directement derriere les chiffres, « a peine visible ». Il n'y avait aucune
+   couche entre la mosaique et le contenu.
+   Le voile assombrit le motif sans effacer l'identite du club. Reglable en
+   direct par `g45Voile(0.45)` — Antoine juge sur SON ecran, pas sur une
+   maquette : c'est exactement le genre de valeur qui ne se decide pas de
+   loin. */
+var _G45_FOND_VOILE = (function () {
+  try { var v = parseFloat(localStorage.getItem('g45_fond_voile')); if (!isNaN(v)) return v; } catch (e) {}
+  return 0.45;
+})();
+window.g45Voile = function (v) {
+  if (v == null) { console.log('Voile actuel :', _G45_FOND_VOILE, '— essaie g45Voile(0.6) pour assombrir, g45Voile(0.25) pour alleger.'); return _G45_FOND_VOILE; }
+  _G45_FOND_VOILE = Math.max(0, Math.min(0.85, parseFloat(v) || 0));
+  try { localStorage.setItem('g45_fond_voile', String(_G45_FOND_VOILE)); } catch (e) {}
+  try { if (typeof render === 'function') render(); } catch (e) {}
+  console.log('Voile :', _G45_FOND_VOILE, '— rouvre le panneau pour voir.');
+  return _G45_FOND_VOILE;
+};
 function g45FondClubHtml(nom, opac, blason) {
   var c = g45CouleursDe(nom);
   var base = '<div style="position:absolute;inset:0;pointer-events:none;z-index:0;'
@@ -48658,12 +48941,19 @@ function g45FondClubHtml(nom, opac, blason) {
   try { if (!logo && typeof g45LogoUrlDe === 'function') logo = g45LogoUrlDe(nom) || ''; } catch (e) {}
   /* Une URL comportant une apostrophe casserait l'attribut style ; on la refuse
      plutot que de l'echapper, le repli degrade etant deja propre. */
-  if (!logo || /['"\\]/.test(logo)) return base;
+  /* Pose PAR-DESSUS la mosaique et SOUS le contenu : meme z-index que les deux
+     autres couches, mais ecrit en dernier. */
+  var voile = _G45_FOND_VOILE > 0
+    ? ('<div style="position:absolute;inset:0;pointer-events:none;z-index:0;border-radius:10px;'
+       + 'background:rgba(11,16,29,' + _G45_FOND_VOILE + ');"></div>')
+    : '';
+  if (!logo || /['"\\]/.test(logo)) return base + voile;
   return base
     + '<div style="position:absolute;inset:0;pointer-events:none;z-index:0;border-radius:10px;'
     + 'opacity:' + _G45_FOND_MOSAIQUE + ';background-image:url(\'' + logo + '\');'
     + 'background-size:auto ' + _tuile + 'px;background-repeat:space;'
-    + 'background-position:center top;"></div>';
+    + 'background-position:center top;"></div>'
+    + voile;
 }
 window.g45FondClubHtml = g45FondClubHtml;
 
