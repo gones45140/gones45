@@ -52063,6 +52063,26 @@ window._g45PhotosTsdb = _g45PhotosTsdb;
       var sup = await _g45PhotosTsdb(nom);
       sup.forEach(function (x) { if (!vus[x.n]) { vus[x.n] = 1; liste.push(x); } });
     } catch (e) {}
+    /* LE DEPOT D'ANTOINE PASSE DEVANT (20/09/2026) ─────────────────────────
+       Constat : douze portraits d'Auxerre deposes, aucun affiche. La chaine
+       interrogeait api-sports puis TheSportsDB et ne regardait JAMAIS le
+       depot — meme oubli que sur les logos des cartes de journee.
+       L'index est deja en memoire et ne coute rien. On verse ses entrees EN
+       TETE de liste pour qu'elles gagnent sur les sources distantes : une
+       image choisie par Antoine vaut mieux qu'un detoure automatique.
+       Les entrees qui ne concernent pas ce club ne genent pas — la
+       correspondance se fait sur le nom normalise du joueur, donc elles ne
+       rencontreront jamais personne. */
+    try {
+      if (typeof g45IndexImages === 'function') {
+        var idx = await g45IndexImages();
+        var perso = [];
+        Object.keys(idx || {}).forEach(function (k) {
+          perso.push({ n: k, f: '', i: '', u: idx[k], perso: 1 });
+        });
+        if (perso.length) liste = perso.concat(liste);
+      }
+    } catch (e) {}
     return liste;
   };
   env._g45Tsdb = true;
