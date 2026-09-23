@@ -412,6 +412,22 @@ function _espnAmDec(am){ am=parseFloat(am); if(isNaN(am)) return null; var d=am>
 
 // Récupérer résultats + cotes d'un club via ESPN
 // season : année de début de saison (2025 = saison 2025-26). Par défaut saison courante.
+/* Competitions de selections en francais. Les QUALIFICATIONS passent avant
+   la phase finale : « World Cup Qualifying » contient « World Cup ». */
+function _g45CompNatFr(n) {
+  var t = String(n || '').trim();
+  if (/wcq|world\s*cup\s*qualif/i.test(t)) return 'Qualifs Coupe du monde';
+  if (/world\s*cup/i.test(t)) return 'Coupe du monde';
+  if (/euro(pean\s*championship)?\s*qualif|euroq/i.test(t)) return 'Qualifs Euro';
+  if (/european\s*championship|^euro\b|uefa\s*euro/i.test(t)) return 'Euro';
+  if (/nations\s*league/i.test(t)) return 'Ligue des nations';
+  if (/friendl/i.test(t)) return 'Amical';
+  if (/copa\s*am[eé]rica/i.test(t)) return 'Copa América';
+  if (/africa\s*cup|afcon/i.test(t)) return 'CAN';
+  return t;
+}
+window._g45CompNatFr = _g45CompNatFr;
+
 async function espnClubSchedule(nom, season, leagueSlug) {
   var resolved = await espnResolveTeam(nom);
   if(!resolved) return null;
@@ -460,8 +476,18 @@ async function espnClubSchedule(nom, season, leagueSlug) {
         homeId: home.team ? String(home.team.id) : null,
         awayId: away.team ? String(away.team.id) : null,
         homeScore: hS, awayScore: aS,
-        competition: (e.season && e.season.slug) ? e.season.slug : (leagueSlug||resolved.league),
-        competitionName: (e.season && e.season.name) ? e.season.name : '',
+        /* COMPETITION PAR MATCH (23/09/2026). Pour un club, le calendrier est
+           celui d'UNE ligue et le nom de saison suffit. Avec `soccer/all`
+           (selections nationales), les matchs viennent de plusieurs
+           competitions : la saison porte le meme nom pour tous, et la vraie
+           competition est dans `e.league` — « FIFA World Cup », « WCQ - UEFA ».
+           Sans ce champ, tout tombait dans « Championnat » et le filtre
+           n'offrait rien d'autre. Les clubs gardent leur comportement exact. */
+        competition: (leagueSlug === 'all' && e.league && e.league.slug) ? e.league.slug
+          : ((e.season && e.season.slug) ? e.season.slug : (leagueSlug||resolved.league)),
+        competitionName: (leagueSlug === 'all' && e.league && (e.league.name || e.league.abbreviation))
+          ? _g45CompNatFr(e.league.name || e.league.abbreviation)
+          : ((e.season && e.season.name) ? e.season.name : ''),
         odds: odds,
         venue: (comp.venue && comp.venue.fullName) ? comp.venue.fullName : ''
       };
