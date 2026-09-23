@@ -22356,10 +22356,34 @@ async function loadTeamSaisons() {
         yA = seasonStartY; yB = seasonStartY - 1;
       }
 
-      var [espA, espB] = await Promise.all([
-        espnClubSchedule(nom, yA),
-        espnClubSchedule(nom, yB)
-      ]);
+      /* SELECTIONS NATIONALES (23/09/2026, sonde d'Antoine sur le Portugal).
+         Une selection n'a pas de championnat : `fifa.world` ne donne que la
+         Coupe du monde, `uefa.nations` rien du tout. `soccer/all` donne TOUT
+         (25 matchs : Coupe du monde, qualifications, Ligue des nations,
+         amicaux) — mais IGNORE le parametre de saison : 2025 et 2026 renvoient
+         les memes 25 matchs. L'appeler deux fois ferait tout compter DOUBLE.
+         On l'appelle donc une fois, et on repartit les matchs nous-memes selon
+         leur date, avec la frontiere du 1er aout des clubs : la Coupe du monde
+         de juin-juillet 2026 tombe ainsi dans la saison 2025-26. */
+      var _natSel = null;
+      try { _natSel = (typeof _g45NatByAlias !== 'undefined') && _g45NatByAlias[_g45norm(nom)]; } catch(e){}
+      var espA, espB;
+      if (_natSel) {
+        var _tout = null;
+        try { _tout = await espnClubSchedule(nom, null, 'all'); } catch(e){}
+        var _saisonDe = function (d) {
+          var x = new Date(d); if (isNaN(x)) return null;
+          return (x.getMonth() + 1 >= 8) ? x.getFullYear() : x.getFullYear() - 1;
+        };
+        var _part = function (an) {
+          if (!_tout) return null;
+          return Object.assign({}, _tout, { matches: (_tout.matches || []).filter(function (m) { return _saisonDe(m.date) === an; }) });
+        };
+        espA = _part(yA); espB = _part(yB);
+      } else {
+        var _pair = await Promise.all([ espnClubSchedule(nom, yA), espnClubSchedule(nom, yB) ]);
+        espA = _pair[0]; espB = _pair[1];
+      }
       var espNameA = (espA && espA.team && espA.team.name) ? espA.team.name : nom;
       var espNameB = (espB && espB.team && espB.team.name) ? espB.team.name : nom;
       // Clé de résultat = année de la saison récente / précédente
@@ -22559,14 +22583,27 @@ async function loadTeamSaisons() {
     var sofaFb = SOFASCORE_LINKS[nom] || ('https://www.sofascore.com/search#q=' + encodeURIComponent(nom));
     var flashFb = FAV_LINKS[nom] || ('https://www.flashscore.fr/recherche/?q=' + encodeURIComponent(nom));
     var ls = 'display:flex;align-items:center;gap:10px;padding:10px 14px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:8px;margin-bottom:6px;text-decoration:none;';
-    el.innerHTML = '<div style="padding:4px 0;">'
+    /* PLUS D'ECRASEMENT (23/09/2026). Mouchard d'Antoine sur le Portugal : dans
+       UNE SEULE execution, `renderSaisonsChart` dessinait d'abord les prochains
+       matchs et le bloc de saison (ecran utile), puis cette branche remplacait
+       tout par le cul-de-sac « Acces direct ». Si des matchs a venir sont
+       connus, on garde l'ecran et on ajoute les liens DESSOUS. */
+    var _avConnus = [];
+    try { _avConnus = (typeof _g45AVenir !== 'undefined' && _g45AVenir[nom]) || []; } catch(e){}
+    var _liensHtml = '<div style="padding:4px 0;">'
       +'<div class="cwrap" style="margin-bottom:10px;">'
-      +'<div style="font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#4f5d88;margin-bottom:6px;">⚽ ' + nom + ' — Accès direct</div>'
-      +'<div style="font-size:10px;color:var(--t3);margin-bottom:12px;">Données non disponibles via football-data.org. Consulter directement :</div>'
+      +'<div style="font-size:11px;font-weight:800;letter-spacing:.6px;text-transform:uppercase;color:#9fb6ff;margin-bottom:6px;">⚽ ' + nom + ' — ' + (_avConnus.length ? 'Résultats ailleurs' : 'Accès direct') + '</div>'
+      +'<div style="font-size:12px;font-weight:700;color:#c8d3ea;margin-bottom:12px;">' + (_avConnus.length ? 'Aucun résultat de saison trouvé chez ESPN. Historique complet :' : 'Données non disponibles via football-data.org. Consulter directement :') + '</div>'
       +'<a href="'+sofaFb+'" target="_blank" style="'+ls+'"><div style="font-size:12px;font-weight:700;color:#ff7b54;flex:1;">⚡ Sofascore — Stats & résultats</div><div style="color:var(--t3);">→</div></a>'
       +'<a href="'+flashFb+'" target="_blank" style="'+ls+'"><div style="font-size:12px;font-weight:700;color:#f0b020;flex:1;">⚡ Flashscore — Résultats live</div><div style="color:var(--t3);">→</div></a>'
       +'<a href="https://fbref.com/fr/search/search.fcgi?search='+encodeURIComponent(nom)+'" target="_blank" style="'+ls+'"><div style="font-size:12px;font-weight:700;color:#4d84ff;flex:1;">📊 FBref — Stats avancées</div><div style="color:var(--t3);">→</div></a>'
       +'</div></div>';
+    if (_avConnus.length) {
+      try { renderSaisonsChart(el, results, nom); } catch(e){}
+      el.insertAdjacentHTML('beforeend', _liensHtml);
+    } else {
+      el.innerHTML = _liensHtml;
+    }
     return;
   }
 
@@ -25871,6 +25908,15 @@ var G45_NATIONS=[
   G45_NATIONS.forEach(function(n){ (en[n.id]||[]).forEach(function(x){ if((n.a||[]).indexOf(x)<0) (n.a=n.a||[]).push(x); }); });
 })();
 var _g45NatByAlias=(function(){var m={};G45_NATIONS.forEach(function(n){m[_g45norm(n.fr)]=n;(n.a||[]).forEach(function(a){m[_g45norm(a)]=n;});});return m;})();
+/* SELECTIONS HORS COUPE DU MONDE (23/09/2026). G45_NATIONS liste les 48
+   qualifies et sert aussi a l'onglet Mondial : y ajouter l'Italie la ferait
+   apparaitre parmi les qualifies. On l'ajoute donc SEULEMENT a la
+   reconnaissance, pour que le panneau Saisons la traite comme une selection.
+   Identifiant releve par Antoine sur espn.co.uk/football/team/_/id/162/italy. */
+(function(){
+  var hors=[{id:'162',fr:'Italie',a:['italie','italy']}];
+  hors.forEach(function(n){ _g45NatByAlias[_g45norm(n.fr)]=n; (n.a||[]).forEach(function(a){ _g45NatByAlias[_g45norm(a)]=n; }); });
+})();
 function _g45NationId(nom){var n=_g45NatByAlias[_g45norm(nom)];return n?n.id:null;}
 var _G45_INTL_RE=/coupe du monde|mondial|world cup|fifa|euro|nations|qualif|amical|copa|afcon|\bcan\b/;
 /* Pêche TOUTES les nations citées dans un texte de pari international (n + target), même mal orthographiées/sans accents */
