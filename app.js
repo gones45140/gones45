@@ -362,6 +362,13 @@ var ESPN_TEAM_ID_FIX = {
 async function espnResolveTeam(nom) {
   var _fix = ESPN_TEAM_ID_FIX[String(nom||'').toLowerCase().trim()];
   if(_fix) return {id:_fix.id, league:_fix.league, name:nom, logo:''};
+  /* SELECTION NATIONALE (23/09/2026) : reconnue AVANT le cache et la recherche
+     par nom. Le cache a pu memoriser une mauvaise resolution — on le court-
+     circuite. Meme ligue que la France, dont l'entree fonctionne. */
+  try {
+    var _nat = (typeof _g45NatByAlias !== 'undefined') && _g45NatByAlias[_g45norm(nom)];
+    if (_nat && _nat.id) return {id:String(_nat.id), league:'fifa.world', name:nom, logo:''};
+  } catch(e){}
   var nomKey = (nom||'').toLowerCase().replace(/\s+/g,'_');
   try { var cached = localStorage.getItem('espn_teamid_any_'+nomKey); if(cached){ var ci=JSON.parse(cached); if(ci&&ci.id) return ci; } } catch(e){}
 
@@ -25842,6 +25849,27 @@ var G45_NATIONS=[
 {id:'212',fr:'Uruguay',a:['uruguay']},
 {id:'2570',fr:'Ouzb\u00e9kistan',a:['ouzbekistan']}
 ];
+/* NOMS ANGLAIS DES SELECTIONS (23/09/2026). Les alias n'etaient qu'en
+   francais (« espagne », « angleterre ») alors que le mur nomme les selections
+   comme ESPN, en anglais. « Spain » n'etait donc jamais reconnue et retombait
+   sur la recherche par nom — qui envoyait « England » vers les New England
+   Patriots (NFL) et ne trouvait rien pour l'Espagne, championne du monde.
+   Les IDENTIFIANTS ne changent pas : ce sont ceux de cette liste. Seule
+   l'orthographe anglaise du pays est ajoutee. */
+(function(){
+  var en={'624':['algeria'],'202':['argentina'],'628':['australia'],'474':['austria'],'459':['belgium'],
+    '452':['bosnia and herzegovina','bosnia'],'205':['brazil'],'206':['canada'],'2597':['cape verde','cabo verde'],
+    '208':['colombia'],'2850':['dr congo','congo dr'],'477':['croatia'],'11678':['curacao'],
+    '450':['czechia','czech republic'],'209':['ecuador'],'2620':['egypt'],'448':['england'],'478':['france'],
+    '481':['germany'],'4469':['ghana'],'2654':['haiti'],'469':['iran'],'4375':['iraq'],
+    '4789':['ivory coast','cote d ivoire'],'627':['japan'],'2917':['jordan'],'203':['mexico'],'2869':['morocco'],
+    '449':['netherlands','holland'],'2666':['new zealand'],'464':['norway'],'2659':['panama'],'210':['paraguay'],
+    '482':['portugal'],'4398':['qatar'],'655':['saudi arabia'],'580':['scotland'],'654':['senegal'],
+    '467':['south africa'],'451':['south korea','korea republic'],'164':['spain'],'466':['sweden'],
+    '475':['switzerland'],'659':['tunisia'],'465':['turkey','turkiye'],'660':['united states','usa'],
+    '212':['uruguay'],'2570':['uzbekistan']};
+  G45_NATIONS.forEach(function(n){ (en[n.id]||[]).forEach(function(x){ if((n.a||[]).indexOf(x)<0) (n.a=n.a||[]).push(x); }); });
+})();
 var _g45NatByAlias=(function(){var m={};G45_NATIONS.forEach(function(n){m[_g45norm(n.fr)]=n;(n.a||[]).forEach(function(a){m[_g45norm(a)]=n;});});return m;})();
 function _g45NationId(nom){var n=_g45NatByAlias[_g45norm(nom)];return n?n.id:null;}
 var _G45_INTL_RE=/coupe du monde|mondial|world cup|fifa|euro|nations|qualif|amical|copa|afcon|\bcan\b/;
@@ -43596,7 +43624,13 @@ window.loadTeamSaisons = async function () {
      presence au mur. `_g45CompoCtx` resout sport + ligue + identifiant ESPN
      depuis l'entree perso, sinon depuis le classement de la competition. */
   try {
-    var ctx = await _g45CompoCtx(nom);
+    /* Une SELECTION reste au football (23/09/2026). Les selections n'ont pas de
+       championnat : cherchees dans les classements, « England » ne trouvait que
+       les New England Patriots. Une seule piste, donc pas d'ambiguite detectee,
+       et l'Angleterre partait en NFL. */
+    var _estNation = false;
+    try { _estNation = !!((typeof _g45NatByAlias !== 'undefined') && _g45NatByAlias[_g45norm(nom)]); } catch(e){}
+    var ctx = _estNation ? null : await _g45CompoCtx(nom);
     if (ctx && ctx.via === 'ambigu') {
       el.innerHTML = '<div class="fc" style="text-align:center;color:var(--t3);padding:18px;font-size:12px;">'
         + 'Nom trop g\u00e9n\u00e9rique : <b>' + nom + '</b> correspond \u00e0 plusieurs sports ('
