@@ -19815,6 +19815,25 @@ async function g45MurJoueurPanel(){
       +'<span style="font-size:9.5px;">Ajoute son club au mur, ou saisis-le dans la note de cette entrée (Outils → Équipes / Unités).</span></div>';
     return;
   }
+  /* COMPETITION DE SELECTION (24/09/2026, releve d'Antoine sur Mbappe). Un
+     joueur rattache a une SELECTION a pour « ligue » `fifa.world` : le premier
+     bloc s'intitulait pourtant toujours « Championnat », et la Coupe du monde de
+     juin-juillet 2026 apparaissait comme la « saison 2026/2027 » — ESPN range
+     le tournoi dans sa saison « 2026 ». Pour un pari, on croyait lire la forme
+     actuelle. Un TOURNOI s'appelle par son edition : verifie pour `fifa.world`
+     (sonde du 23/09, saison 2026 = les 5 matchs de la Coupe du monde). Pour les
+     autres, la numerotation ESPN n'est pas mesuree : on garde l'affichage
+     d'avant et on ne change que le TITRE. */
+  var _lgSel = ({
+    'fifa.world':        { nom:'Coupe du monde',           tournoi:true },
+    'uefa.euro':         { nom:'Euro',                     tournoi:true },
+    'conmebol.america':  { nom:'Copa América',             tournoi:true },
+    'caf.nations':       { nom:'CAN',                      tournoi:true },
+    'uefa.nations':      { nom:'Ligue des nations',        tournoi:false },
+    'fifa.worldq.uefa':  { nom:'Qualifs Coupe du monde',   tournoi:false },
+    'uefa.euroq':        { nom:'Qualifs Euro',             tournoi:false },
+    'fifa.friendly':     { nom:'Amicaux',                  tournoi:false }
+  })[String(id.lg||'')] || null;
   var y=_g45TrSeason(), an=y, d=null;
   try{ d=await _g45ButStats({lg:id.lg}, id, y); }catch(e){}
   if(!d){ try{ d=await _g45ButStats({lg:id.lg}, id, y-1); }catch(e){} if(d) an=y-1; }
@@ -19850,11 +19869,11 @@ async function g45MurJoueurPanel(){
   el.innerHTML='<div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;">'
       +'<img src="https://a.espncdn.com/i/headshots/soccer/players/full/'+id.aid+'.png" loading="lazy" onerror="this.style.display=\'none\'" style="width:46px;height:46px;border-radius:50%;object-fit:cover;background:rgba(255,255,255,.07);flex:none;">'
       +'<div><div style="font-size:13px;font-weight:800;color:var(--t1);">'+_g45CyEa(id.pname)+'</div>'
-      +'<div style="font-size:9px;color:var(--t2);">'+_g45CyEa(id.tname||'')+' · saison '+an+'/'+(an+1)
+      +'<div style="font-size:9px;color:var(--t2);">'+_g45CyEa(id.tname||'')+' · '+((_lgSel && _lgSel.tournoi) ? ('édition '+an) : ('saison '+an+'/'+(an+1)))
         +(_p!=='tout'?(' · <span style="color:'+(_p==='ucl'?'#8aa0ff':(_p==='int'?'#2ecc71':'#f0c828'))+';font-weight:800;">'
-          +(_p==='ucl'?'Ligue des Champions':(_p==='int'?'Sélection':'Championnat'))+' uniquement</span>'):'')
+          +(_p==='ucl'?'Ligue des Champions':(_p==='int'?'Sélection':(_lgSel?_lgSel.nom:'Championnat')))+' uniquement</span>'):'')
         +'</div></div></div>'
-    +((_p==='tout'||_p==='lg')?carte(d,'🏆 Championnat','#f0c828', id.lg):'')
+    +((_p==='tout'||_p==='lg')?carte(d,(_lgSel?('🌍 '+_lgSel.nom):'🏆 Championnat'),'#f0c828', id.lg):'')
     +((dC&&(_p==='tout'||_p==='ucl'))?carte(dC,'⭐ Ligue des Champions','#8aa0ff','uefa.champions'):'')
     +((dI&&(_p==='tout'||_p==='int'))?(carte(dI,'🌍 Sélection','#2ecc71', _G45_INTER.map(function(x){return x.s;}).join(','))
         +'<div style="font-size:8px;color:var(--t3);margin:-4px 0 9px 2px;">'+_g45CyEa(dI.comps.join(' · '))+'</div>'):'')
@@ -23030,6 +23049,68 @@ async function _scFetchSummary(lg, eid){
   }
   return null;
 }
+
+/* ═══ TEMPS DE JEU DU JOUEUR FILTRE (24/09/2026) ════════════════════════════ */
+function _g45TempsJeuBadge(p) {
+  var sty = function (bg, c) { return '<span style="display:inline-block;margin-left:8px;padding:2px 8px;border-radius:6px;font-size:10.5px;font-weight:800;background:' + bg + ';color:' + c + ';">'; };
+  if (!p) return sty('rgba(255,69,69,.16)', '#ff8a8a') + '🚫 Absent</span>';
+  if (p.st === 'B') return sty('rgba(240,176,32,.16)', '#f5c542') + '🪑 Banc</span>';
+  if (p.st === 'E') return sty('rgba(77,132,255,.20)', '#8ab4ff') + '🔄 Entré' + (p.i != null ? ' ' + p.i + "'" : '') + (p.o != null ? ' → ' + p.o + "'" : '') + '</span>';
+  return sty('rgba(61,223,120,.16)', '#3ddf78') + '✅ Titulaire' + (p.o != null ? ' → ' + p.o + "'" : " 90'") + '</span>';
+}
+
+/* Minutes jouees, bornees a 90 : on ne cherche pas la precision des arrets de
+   jeu, seulement un ordre de grandeur honnete. */
+function _g45TempsJeuMinutes(p) {
+  if (!p) return 0;
+  if (p.st === 'T') return p.o != null ? Math.min(p.o, 90) : 90;
+  if (p.st === 'E') { var i = p.i != null ? p.i : 75; var o = p.o != null ? p.o : 90; return Math.max(1, Math.min(o, 90) - Math.min(i, 90)); }
+  return 0;
+}
+
+function _g45TempsJeuSynthese(idx, matchs, f) {
+  if (!idx || !idx.byMatch || !f || !f.player) return '';
+  var T = 0, E = 0, B = 0, A = 0, buts = 0, pass = 0, min = 0, n = 0;
+  (matchs || []).forEach(function (m) {
+    var bm = m && m.espnId && idx.byMatch[m.espnId];
+    if (!bm || !bm.pOk) return;
+    n++;
+    var p = bm.p && bm.p[f.player];
+    buts += (bm.s || []).filter(function (x) { return x === f.player; }).length;
+    pass += (bm.a || []).filter(function (x) { return x === f.player; }).length;
+    if (!p) A++; else if (p.st === 'T') T++; else if (p.st === 'E') E++; else B++;
+    min += _g45TempsJeuMinutes(p);
+  });
+  if (!n) {
+    return '<div style="margin:8px 0;padding:10px 12px;border-radius:9px;background:rgba(11,16,29,.86);font-size:12px;font-weight:700;color:#f5c542;">'
+      + '⏳ Relance « Analyser buteurs / passeurs » pour voir le temps de jeu de ' + _g45Esc(f.player) + '.</div>';
+  }
+  var joues = T + E;
+  var act = f.type === 'g' ? buts : (f.type === 'a' ? pass : buts + pass);
+  var lib = f.type === 'g' ? 'but' : (f.type === 'a' ? 'passe' : 'action décisive');
+  var pl = function (x, s) { return x + ' ' + s + (x > 1 ? 's' : ''); };
+  var rythme = act ? ('1 ' + lib + ' / ' + Math.round(min / act) + "'") : '—';
+  var case_ = function (val, sous, c) {
+    return '<div style="flex:1;min-width:120px;display:flex;flex-direction:column;align-items:center;gap:2px;padding:9px 6px;border-radius:9px;background:rgba(255,255,255,.05);">'
+      + '<span style="font-size:18px;font-weight:800;color:' + c + ';">' + val + '</span>'
+      + '<span style="font-size:11.5px;font-weight:700;color:#c8d3ea;text-align:center;">' + sous + '</span></div>';
+  };
+  return '<div style="margin:8px 0 10px;padding:12px 13px;border-radius:11px;background:rgba(11,16,29,.88);border:1px solid rgba(61,223,120,.35);">'
+    + '<div style="font-size:11px;font-weight:800;letter-spacing:.6px;text-transform:uppercase;color:#3ddf78;margin-bottom:8px;">⏱️ ' + _g45Esc(f.player) + ' · temps de jeu</div>'
+    + '<div style="display:flex;gap:7px;flex-wrap:wrap;">'
+    + case_(pl(act, lib), 'en ' + pl(joues, 'match') + ' joué' + (joues > 1 ? 's' : ''), '#3ddf78')
+    + case_(T + ' · ' + E, 'titulaire · entré', '#ffffff')
+    + case_(B + ' · ' + A, 'banc · absent', '#f5c542')
+    + case_(rythme, 'sur ' + min + "' jouées", '#46dcf0')
+    + '</div>'
+    + (n < (matchs || []).filter(function (m) { return m && m.status === 'FINISHED' && m.espnId; }).length
+      ? '<div style="font-size:11px;font-weight:700;color:#9fb0c7;margin-top:7px;">Sur ' + n + ' matchs dont la feuille est connue.</div>' : '')
+    + '</div>';
+}
+window._g45TempsJeuBadge = _g45TempsJeuBadge;
+window._g45TempsJeuSynthese = _g45TempsJeuSynthese;
+window._g45TempsJeuMinutes = _g45TempsJeuMinutes;
+
 async function buildSaisonScorerIndex(teamId, saison, nom, matches, progressCb){
   var finished = matches.filter(function(m){ return m.status==='FINISHED' && m.espnId; });
   var index = { builtAt: Date.now(), n:0, total: finished.length, players:{}, byMatch:{} };
@@ -23061,7 +23142,44 @@ async function buildSaisonScorerIndex(teamId, saison, nom, matches, progressCb){
           if(scorer){ sc.push(scorer); pinc(scorer,'g'); }
           if(assist){ as.push(assist); pinc(assist,'a'); }
         });
-        index.byMatch[m.espnId]={s:sc,a:as};
+        /* FEUILLE DE MATCH GARDEE (24/09/2026, idee d'Antoine). Le resume
+           etait deja telecharge pour les buteurs, et ses `rosters` jetes. Or
+           « 6 buts » ne dit pas la meme chose sur six matchs pleins ou sur
+           quatre dont deux en entrant a la 70e. Sonde du 23/09 : `starter`,
+           `subbedIn` et la minute d'entree dans `plays` ; la minute de sortie
+           dans les remplacements (« X replaces Y », participants [entrant,
+           sortant]). Absent = pas sur la feuille. Aucune requete de plus. */
+        var part = {}, mine = null;
+        try {
+          (d.rosters||[]).forEach(function(r){
+            var tid = (r.team && r.team.id != null) ? String(r.team.id) : '';
+            if (!mine && ourEspnId && tid === ourEspnId) mine = r;
+          });
+          if (!mine) (d.rosters||[]).forEach(function(r){
+            if (!mine && _scorerTeamIsOurs((r.team&&r.team.displayName)||'', ourName)) mine = r;
+          });
+          if (mine) {
+            var minDe = function(c){ var x = String((c && c.displayValue) || '').match(/(\d+)/); return x ? parseInt(x[1], 10) : null; };
+            var sortie = {};
+            (d.keyEvents||[]).forEach(function(e){
+              var tt = ((e.type&&e.type.text)||'').toLowerCase();
+              if (tt.indexOf('substitut') < 0) return;
+              var pp = e.participants || [];
+              var sort = (pp[1] && pp[1].athlete) ? pp[1].athlete.displayName : '';
+              if (sort) sortie[sort] = minDe(e.clock);
+            });
+            (mine.roster||[]).forEach(function(pl){
+              var nm = pl.athlete && pl.athlete.displayName; if (!nm) return;
+              if (pl.starter) part[nm] = { st:'T', o: pl.subbedOut ? (sortie[nm] || null) : null };
+              else if (pl.subbedIn) {
+                var mi = null;
+                (pl.plays||[]).forEach(function(x){ if (x && x.substitution && mi == null) mi = minDe(x.clock); });
+                part[nm] = { st:'E', i: mi, o: pl.subbedOut ? (sortie[nm] || null) : null };
+              } else part[nm] = { st:'B' };
+            });
+          }
+        } catch(_pe){}
+        index.byMatch[m.espnId]={s:sc,a:as,p:part,pOk:!!mine};
       } else {
         index.byMatch[m.espnId]={s:[],a:[],err:1};
       }
@@ -23072,7 +23190,7 @@ async function buildSaisonScorerIndex(teamId, saison, nom, matches, progressCb){
   var ws=[]; for(var w=0; w<Math.min(CONC, finished.length||1); w++) ws.push(worker());
   await Promise.all(ws);
   index.n = ok;
-  try{ localStorage.setItem('g45_scorers_v3_'+teamId+'_'+saison, JSON.stringify(index)); }catch(_e){}
+  try{ localStorage.setItem('g45_scorers_v4_'+teamId+'_'+saison, JSON.stringify(index)); }catch(_e){}
   return index;
 }
 
@@ -23680,7 +23798,7 @@ function renderSaisonsChart(el, results, nom) {
     // ── Résultats complets de la saison ──
     var allMatchesSorted = filteredMatches.slice().sort(function(a,b){ return new Date(b.utcDate)-new Date(a.utcDate); });
     // ── Buteur / Passeur (index keyEvents) ──
-    var _scKey='g45_scorers_v3_'+teamId+'_'+s, _scIdx=null; try{_scIdx=JSON.parse(localStorage.getItem(_scKey)||'null');}catch(_e){}
+    var _scKey='g45_scorers_v4_'+teamId+'_'+s, _scIdx=null; try{_scIdx=JSON.parse(localStorage.getItem(_scKey)||'null');}catch(_e){}
     var _finCount = allMatchesSorted.filter(function(m){ return m.status==='FINISHED' && m.espnId; }).length;
     var _scF = window._saisonScorerFilter;
     var _scActive = !!(_scF && _scF.s===s && _scF.player && _scIdx);
@@ -23725,6 +23843,7 @@ function renderSaisonsChart(el, results, nom) {
       html += '<div style="font-size:10px;font-weight:800;color:'+(matchCount>0?'#1ed760':'#ff4545')+';">✅ '+matchCount+'/'+allMatchesSorted.length+' — '+condLabel+'</div>';
       html += '</div>';
       html += _scoreBarHtml;
+      if (_scActive) { try { html += _g45TempsJeuSynthese(_scIdx, allMatchesSorted, _scF); } catch(_se){} }
       html += '<div style="position:relative;z-index:1;display:flex;flex-direction:column;gap:3px;">';
       allMatchesSorted.forEach(function(m){
         var hg = (m.score&&m.score.regularTime?m.score.regularTime.home:m.score&&m.score.fullTime?m.score.fullTime.home:0)||0;
@@ -23753,6 +23872,12 @@ function renderSaisonsChart(el, results, nom) {
             /* decisif = buts + passes du meme match */
             _scHit = _scF.type==='g' ? _cnt(_bm.s) : (_scF.type==='a' ? _cnt(_bm.a) : (_cnt(_bm.s)+_cnt(_bm.a)));
           }
+        }
+        /* Badge de temps de jeu du joueur filtre, a cote de la date. */
+        var _tjBadge = '';
+        if (_scActive) {
+          var _bmT = _scIdx.byMatch && _scIdx.byMatch[m.espnId];
+          if (_bmT && _bmT.pOk) _tjBadge = _g45TempsJeuBadge(_bmT.p && _bmT.p[_scF.player]);
         }
         var _scMark = _scHit ? '<span style="font-size:13px;vertical-align:middle;">'+(_scF.type==='g'?'⚽':(_scF.type==='a'?'🎯':'⭐'))+'</span>'+(_scHit>1?'<span style="font-size:8px;font-weight:800;color:var(--t2);vertical-align:middle;">×'+_scHit+'</span>':'')+' ' : '';
 
@@ -23835,7 +23960,7 @@ function renderSaisonsChart(el, results, nom) {
            un resultat de Ligue Europa ne se lit pas comme un resultat de
            championnat. */
         html += '<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:5px;">'
-          +'<span style="font-size:10px;font-weight:800;color:#c2cee6;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">'+dateStr+' <span style="color:var(--t3);font-weight:400;">'+compIco+'</span></span>'
+          +'<span style="font-size:10px;font-weight:800;color:#c2cee6;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">'+dateStr+' <span style="color:var(--t3);font-weight:400;">'+compIco+'</span>'+_tjBadge+'</span>'
           +'<span style="font-size:9px;font-weight:800;white-space:nowrap;">'+badges+'</span>'
         +'</div>';
         /* Ligne du bas : le match. Score a largeur fixe, donc aligne partout. */
@@ -26339,6 +26464,33 @@ window.g45TestNotif=g45TestNotif;
 })();
 
 /* ═══════════ Résumé de match dépliable dans Saison (terrain + stats, façon Mondial) ═══════════ */
+/* ENVELOPPE DE LA FENETRE DE MATCH (24/09/2026, demande d'Antoine) : le blason
+   du club en fond, comme dans la liste des resultats. Le fond de base reste
+   sombre sous la mosaique : les blocs de la fenetre ont chacun leur propre
+   fond, mais les boutons n'en ont pas — sur un fond clair ils redeviendraient
+   illisibles. Principe valide le 22/09 : le blason derriere, le texte protege.
+   Le blason vient des donnees du match, donc il vaut pour toute equipe, meme
+   absente du mur. */
+function _g45EnveloppeMatch(h, nom, data) {
+  var crest = '';
+  try {
+    var cps = ((((data || {}).header || {}).competitions || [])[0] || {}).competitors || [];
+    var n0 = String(nom || '').toLowerCase();
+    cps.forEach(function (c) {
+      var t = c.team || {};
+      var dn = String(t.displayName || t.name || '').toLowerCase();
+      if (!crest && n0 && dn && (dn === n0 || dn.indexOf(n0) >= 0 || n0.indexOf(dn) >= 0)) {
+        crest = t.logo || ((t.logos || [])[0] || {}).href || '';
+      }
+    });
+  } catch (e) {}
+  var fond = '';
+  try { if (nom && typeof g45FondClubHtml === 'function') fond = g45FondClubHtml(nom, 0.2, crest); } catch (e) {}
+  return '<div style="position:relative;overflow:hidden;border-radius:12px;padding:10px 10px 12px;background:rgba(11,16,29,.80);">'
+    + fond + '<div style="position:relative;z-index:1;">' + h + '</div></div>';
+}
+window._g45EnveloppeMatch = _g45EnveloppeMatch;
+
 async function toggleSaisonMatchDetail(rowEl){
   var el = rowEl && rowEl.nextElementSibling;
   if(!el || el.className!=='smd-panel') return;
@@ -26486,7 +26638,7 @@ async function _renderSaisonDetail(el, eventId, league){
        qu'il contient en profite d'un coup, et les panneaux gardent leurs
        propres teintes par-dessus. Le voile global, lui, est revenu a zero :
        il eteignait les blasons de club sur les ecrans qui les montrent. */
-    h = '<div style="background:rgba(11,16,29,.90);border-radius:12px;padding:10px 10px 12px;">' + h + '</div>';
+    h = _g45EnveloppeMatch(h, (typeof _currentTeam !== 'undefined' ? _currentTeam : ''), data);
     el.innerHTML=h;
     if(_mstate==='pre'){ try{ _g45FillForm(el, 'soccer/'+league); _g45FillStandings(el, 'soccer/'+league); }catch(e){} }
 
@@ -30357,7 +30509,7 @@ async function _renderGenericDetail(el, sport, lg, eid){
     /* Meme fond plein que la fenetre football (22/09/2026) : les deux rendus
        doivent se lire pareil, sinon on retombe dans deux styles pour une meme
        chose — piege deja corrige ailleurs sur ce projet. */
-    el.innerHTML='<div style="background:rgba(11,16,29,.90);border-radius:12px;padding:10px 10px 12px;">'+_rugbyBanner+h+'</div>';
+    el.innerHTML=_g45EnveloppeMatch(_rugbyBanner+h, (typeof _g45SgNomCourant !== 'undefined' ? _g45SgNomCourant : ''), data);
     if(stT.state==='pre'){ try{ _g45FillForm(el, sport+'/'+lg); _g45FillStandings(el, sport+'/'+lg); }catch(e){} }
     if(isLive){ if(!el._refresh){ el._refresh=setInterval(function(){ if(el.getAttribute('data-open')!=='1'){ clearInterval(el._refresh); el._refresh=null; return; } if(document.hidden||el.offsetParent===null) return; _renderGenericDetail(el,sport,lg,eid); },30000); } } else if(el._refresh){ clearInterval(el._refresh); el._refresh=null; }
   }catch(e){ el.innerHTML='<div style="padding:12px;color:#ff6b6b;font-size:11px;text-align:center;">Détail indisponible.</div>'; }
@@ -37875,7 +38027,7 @@ var _G45_CACHE_PREFIXES=['g45_mmeta2_','g45_mmeta1_','g45_tennis4_','g45_tennis3
      explosait et des ecritures LEGITIMES echouaient en silence (le filtre par
      competition, qui restait bloque sur « Toutes »). Les cartes de tirs sont
      les plus lourdes : plusieurs Ko par match, gardees indefiniment. */
-  'g45butA2_','g45gl3_','g45gl2_','g45gl_','g45_tirs2_','g45_fanart2_','g45_fanart_','g45_img_perso_','g45_tv_prog','g45_mqnom_','g45_mqteam_','g45_mqfond_','g45trv4_','g45_catimg_','g45_catfmt2_','g45_catfmt_','g45cm5_','g45cm4_','g45_domext1_','g45_t14e_','g45_t14bo_','g45_gar1_','g45_epr1_','g45nrlcal3_','g45nrlcal2_','g45_score4_','g45_score3_','g45_score2_','g45_score_','g45_lglogo_','g45compet3_','g45compet2_','g45compet_','g45tmeta_','g45histo_','g45ld2_','g45ld_',
+  'g45butA2_','g45gl3_','g45gl2_','g45gl_','g45_tirs2_','g45_fanart2_','g45_fanart_','g45_img_perso_','g45_tv_prog','g45_mqnom_','g45_mqteam_','g45_mqfond_','g45trv4_','g45_catimg_','g45_catfmt2_','g45_catfmt_','g45_scorers_v4_','g45cm5_','g45cm4_','g45_domext1_','g45_t14e_','g45_t14bo_','g45_gar1_','g45_epr1_','g45nrlcal3_','g45nrlcal2_','g45_score4_','g45_score3_','g45_score2_','g45_score_','g45_lglogo_','g45compet3_','g45compet2_','g45compet_','g45tmeta_','g45histo_','g45ld2_','g45ld_',
   'g45nrlcal2_','g45core2_','g45core_','g45_fx_faits','g45_veille_','g45_compet_logos','g45_groq_modele','g45_groq_modele3','g45_groq_vision','g45_gemini_modeles',
   /* 12/09 : g45nrlcal6_ rejoint la liste, remplace par g45nrlcal7_ ci-dessus —
      meme raison que g45nrlcal2_ et g45nrlcal3_ avant lui. */
