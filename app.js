@@ -41741,7 +41741,13 @@ function _g45ProchainsHtml(sp, lg, an, monId, monNom, n) {
     var d = new Date(m.t);
     var dom = (id && m.h === id) || (nn && _g45SgNorm(m.hn) === nn);
     var adv = dom ? m.an : m.hn;
-    h += '<div style="display:flex;align-items:center;gap:11px;padding:7px 4px;border-bottom:1px solid rgba(255,255,255,.05);">'
+    /* CLIQUABLE (23/09/2026) : ouvre la meme fenetre que les resultats du
+       panneau, via `_g45SgMatch`. Pour un match pas encore joue, cette fenetre
+       affiche l'avant-match — face-a-face, forme, statistiques — c'est-a-dire
+       exactement ce qui sert a preparer un pari. */
+    var _clic = m.id ? ' onclick="_g45SgMatch(\'' + String(m.id).replace(/[^0-9]/g, '') + '\')"' : '';
+    h += '<div' + _clic + ' style="display:flex;align-items:center;gap:11px;padding:8px 6px;border-bottom:1px solid rgba(255,255,255,.05);'
+      + (m.id ? 'cursor:pointer;border-radius:8px;" onmouseover="this.style.background=\'rgba(77,132,255,.12)\'" onmouseout="this.style.background=\'transparent\'"' : '"') + '>'
       + '<div style="width:78px;flex:none;line-height:1.25;">'
       + '<div style="font-size:12.5px;font-weight:800;color:#ffffff;">' + jours[d.getDay()] + ' ' + d.getDate() + ' ' + mois[d.getMonth()] + '</div>'
       + '<div style="font-size:11.5px;font-weight:700;color:#c8d3ea;">' + String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0') + '</div></div>'
@@ -41749,6 +41755,7 @@ function _g45ProchainsHtml(sp, lg, an, monId, monNom, n) {
       + '<div style="flex:1;overflow:hidden;"><span style="font-size:13.5px;font-weight:800;color:#ffffff;display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + _g45Esc(adv) + '</span>'
       + (m.comp ? '<span style="font-size:10.5px;font-weight:700;color:#9fb0c7;">' + _g45Esc(m.comp) + '</span>' : '')
       + '</div>'
+      + (m.id ? '<span style="font-size:18px;font-weight:800;color:#9fb6ff;flex:none;padding-left:4px;">›</span>' : '')
       + '</div>';
   });
   return h + '</div>';
