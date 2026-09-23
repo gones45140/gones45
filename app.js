@@ -23379,9 +23379,9 @@ function renderSaisonsChart(el, results, nom) {
     if(premier){
       try{ dateStr=new Date(premier.date).toLocaleDateString('fr-FR',{weekday:'long',day:'numeric',month:'long'}); }catch(e){}
     }
-    html+='<div style="background:rgba(77,132,255,.06);border:1px dashed rgba(77,132,255,.35);border-radius:10px;padding:14px;margin-bottom:12px;text-align:center;">'
-      +'<div style="font-size:12px;font-weight:800;color:var(--t1);letter-spacing:.5px;">Saison '+curY+'-'+(curY+1)+'</div>'
-      +'<div style="font-size:10px;color:var(--t3);margin-top:5px;line-height:1.6;">'
+    html+='<div style="background:rgba(11,16,29,.86);border:1px dashed rgba(77,132,255,.45);border-radius:10px;padding:14px;margin-bottom:12px;text-align:center;">'
+      +'<div style="font-size:14px;font-weight:800;color:#ffffff;letter-spacing:.5px;">Saison '+curY+'-'+(curY+1)+'</div>'
+      +'<div style="font-size:12px;font-weight:700;color:#c8d3ea;margin-top:6px;line-height:1.6;">'
       +(dateStr?('Premier match : '+_g45CyEa(dateStr)+'.'):'Aucun match encore programmé.')
       +'<br>Les statistiques s\'afficheront ici dès que la 1re journée aura été jouée.</div>'
     +'</div>';
@@ -25438,7 +25438,16 @@ async function loadEspnMatchLive(el, nom, col){
   var data = await _espnMatchLiveData(nom);
   if(!data || !data.event || !data.summary){
     var sofaUrl=(typeof SOFASCORE_LINKS!=='undefined'&&SOFASCORE_LINKS[nom])||('https://www.sofascore.com/search#q='+encodeURIComponent(nom));
-    el.innerHTML='<div class="fc" style="text-align:center;padding:30px 16px;"><div style="font-size:40px;margin-bottom:12px;">📡</div><div style="font-size:13px;font-weight:700;color:'+col+';margin-bottom:4px;">'+nom+'</div><div style="font-size:11px;color:var(--t3);margin-bottom:18px;">Aucun match trouvé via ESPN pour le moment.</div><a href="'+sofaUrl+'" target="_blank" style="display:inline-flex;align-items:center;gap:6px;background:'+col+';color:#fff;padding:11px 22px;border-radius:var(--r8);font-size:12px;font-weight:700;text-decoration:none;">📊 Voir sur Sofascore</a></div>';
+    /* MESSAGE CORRIGE (23/09/2026). Ce bloc cherche le match EN COURS ou le
+       plus RECENT. Pour une equipe au repos (l'Italie entre deux treves), il ne
+       trouvait rien et affichait « Aucun match trouve via ESPN » avec une grande
+       antenne — alors que six matchs a venir s'affichaient juste dessous. Ca
+       ressemblait a une panne. C'est simplement une periode sans match. */
+    el.innerHTML='<div class="fc" style="--card-alpha:.9;display:flex;align-items:center;gap:12px;flex-wrap:wrap;padding:12px 14px;">'
+      +'<span style="font-size:20px;">⏸️</span>'
+      +'<div style="flex:1;min-width:180px;"><div style="font-size:13px;font-weight:800;color:#ffffff;">'+nom+'</div>'
+      +'<div style="font-size:12px;font-weight:700;color:#c8d3ea;">Pas de match en cours ni récent.</div></div>'
+      +'<a href="'+sofaUrl+'" target="_blank" style="display:inline-flex;align-items:center;gap:6px;background:'+col+';color:#fff;padding:9px 16px;border-radius:var(--r8);font-size:12px;font-weight:800;text-decoration:none;">📊 Sofascore</a></div>';
     return;
   }
   var s=data.summary;
@@ -35744,7 +35753,7 @@ function _g45CinqDerniers(data, teamId, ligue) {
       if (isNaN(a) || isNaN(b)) return;
       out.push({
         date: e.gameDate, pour: a, contre: b, domicile: dom,
-        advNom: (e.opponent || {}).abbreviation || (e.opponent || {}).displayName || '?',
+        advNom: (e.opponent || {}).displayName || (e.opponent || {}).abbreviation || '?',   /* nom complet : la ligne a maintenant la place */
         compet: e.leagueAbbreviation || e.leagueName || '',
         lien: ((e.links || [])[0] || {}).href || ''
       });
@@ -35753,11 +35762,15 @@ function _g45CinqDerniers(data, teamId, ligue) {
   } catch (e) { return null; }
 }
 
+/* ANNEE AJOUTEE (23/09/2026, demande d'Antoine) : « 26/06 » ne dit pas si
+   c'est cette annee ou l'an dernier, alors que les confrontations remontent
+   souvent a deux ou trois saisons. */
 function _g45JJMM(d) {
   try {
     var x = new Date(d);
     if (isNaN(x)) return '';
-    return String(x.getDate()).padStart(2, '0') + '/' + String(x.getMonth() + 1).padStart(2, '0');
+    return String(x.getDate()).padStart(2, '0') + '/' + String(x.getMonth() + 1).padStart(2, '0')
+      + '/' + String(x.getFullYear()).slice(2);
   } catch (e) { return ''; }
 }
 
@@ -35767,10 +35780,16 @@ function _g45LigneMatchH2H(g) {
   /* LISIBILITE (22/09/2026) : le premier rendu mettait dates et lieu en
      `--t3`, le gris le plus pale, sur la photo de fond de l'appli. Illisible
      pour Antoine. Tout passe en clair, un cran plus grand. */
-  var corps = '<span style="font-size:12px;font-weight:700;color:#c8d3ea;width:48px;flex:none;">' + _g45JJMM(g.date) + '</span>'
-    + '<span style="font-size:12px;width:22px;flex:none;">' + (g.domicile ? '🏠' : '🚌') + '</span>'
-    + '<span style="flex:1;font-size:13.5px;font-weight:800;color:#ffffff;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + _g45Esc(g.advNom) + '</span>'
-    + '<span style="font-size:13.5px;font-weight:800;color:#ffffff;width:40px;text-align:right;flex:none;font-variant-numeric:tabular-nums;">' + g.pour + '-' + g.contre + '</span>'
+  /* DEUX NIVEAUX (23/09/2026). Sur une seule ligne, date + lieu + score +
+     pastille prenaient ~160 px de largeur fixe : sur telephone il ne restait
+     rien au nom, reduit a UNE lettre (« L », « F »), alors que sur PC tout
+     tenait. Le nom a maintenant toute la largeur en haut, la date complete et
+     le lieu en petit dessous. */
+  var corps = '<div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:2px;">'
+    + '<span style="font-size:13.5px;font-weight:800;color:#ffffff;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + _g45Esc(g.advNom) + '</span>'
+    + '<span style="font-size:11px;font-weight:700;color:#c8d3ea;white-space:nowrap;">' + _g45JJMM(g.date)
+    + ' · ' + (g.domicile ? '🏠 domicile' : '🚌 extérieur') + '</span></div>'
+    + '<span style="font-size:14px;font-weight:800;color:#ffffff;flex:none;padding-left:6px;font-variant-numeric:tabular-nums;">' + g.pour + '-' + g.contre + '</span>'
     + '<span style="width:18px;height:18px;line-height:18px;text-align:center;border-radius:4px;flex:none;background:' + col + ';color:#0b101d;font-size:10px;font-weight:800;">' + res + '</span>';
   var sty = 'display:flex;align-items:center;gap:8px;padding:8px 10px;border-radius:7px;background:rgba(11,16,29,.62);text-decoration:none;';
   return g.lien
@@ -41536,6 +41555,44 @@ async function _g45CompetMatchs(sportPath, slug, an, ids, progres) {
   }
 
   /* Une collecte vide n'est pas un resultat, c'est un echec : on ne la cache pas. */
+  /* TOUTES COMPETITIONS (22/09/2026) : le calendrier de ligue ne renvoie que
+     la competition principale (ex. Ligue 1 sans Coupe de France ni Europe).
+     `soccer/all` sur le meme endpoint retourne toutes les competitions en une
+     requete de plus, mais uniquement pour les matchs A VENIR — on ne touche
+     pas aux matchs joues, deja consolides et mis en cache. */
+  if (sportPath === 'soccer' && slug !== 'all') {
+    try {
+      var allMs = [], allVus = {};
+      for (var ia = 0; ia < ids.length; ia++) {
+        var ra = await fetch('https://site.api.espn.com/apis/site/v2/sports/soccer/all/teams/' + ids[ia] + '/schedule');
+        if (!ra.ok) continue;
+        var ja = await ra.json();
+        ((ja && ja.events) || []).forEach(function (e) {
+          var c2a = (e.competitions && e.competitions[0]) || {};
+          var sta = (c2a.status && c2a.status.type) || (e.status && e.status.type) || {};
+          if (sta.completed || sta.state !== 'pre' || allVus['av' + e.id]) return;
+          var cs0 = c2a.competitors || [];
+          var h0 = cs0.filter(function (x) { return x.homeAway === 'home'; })[0];
+          var a0 = cs0.filter(function (x) { return x.homeAway === 'away'; })[0];
+          var t0 = Date.parse(e.date);
+          if (h0 && a0 && !isNaN(t0)) {
+            allVus['av' + e.id] = 1;
+            var lg0 = (e.league && (e.league.abbreviation || e.league.name)) || '';
+            allMs.push({ id: String(e.id), t: t0,
+              h: String((h0.team && h0.team.id) || ''), a: String((a0.team && a0.team.id) || ''),
+              hn: (h0.team && (h0.team.displayName || h0.team.shortDisplayName)) || '',
+              an: (a0.team && (a0.team.displayName || a0.team.shortDisplayName)) || '',
+              comp: lg0 });
+          }
+        });
+      }
+      if (allMs.length > avenir.length) {
+        avenir = allMs;
+        avenir.sort(function (x, y) { return x.t - y.t; });
+      }
+    } catch (e) {}
+  }
+
   avenir.sort(function (x, y) { return x.t - y.t; });
   _g45CompetAVenir[sportPath + '|' + slug + '|' + an] = avenir;
   if (ms.length) { try { localStorage.setItem(ck, JSON.stringify({ t: Date.now(), d: ms, av: avenir })); } catch (e) {} }
@@ -41569,7 +41626,9 @@ function _g45ProchainsHtml(sp, lg, an, monId, monNom, n) {
       + '<div style="font-size:12.5px;font-weight:800;color:#ffffff;">' + jours[d.getDay()] + ' ' + d.getDate() + ' ' + mois[d.getMonth()] + '</div>'
       + '<div style="font-size:11.5px;font-weight:700;color:#c8d3ea;">' + String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0') + '</div></div>'
       + '<span style="font-size:15px;flex:none;">' + (dom ? '🏠' : '✈️') + '</span>'
-      + '<span style="flex:1;font-size:13.5px;font-weight:800;color:#ffffff;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + _g45Esc(adv) + '</span>'
+      + '<div style="flex:1;overflow:hidden;"><span style="font-size:13.5px;font-weight:800;color:#ffffff;display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + _g45Esc(adv) + '</span>'
+      + (m.comp ? '<span style="font-size:10.5px;font-weight:700;color:#9fb0c7;">' + _g45Esc(m.comp) + '</span>' : '')
+      + '</div>'
       + '</div>';
   });
   return h + '</div>';
