@@ -37875,7 +37875,7 @@ var _G45_CACHE_PREFIXES=['g45_mmeta2_','g45_mmeta1_','g45_tennis4_','g45_tennis3
      explosait et des ecritures LEGITIMES echouaient en silence (le filtre par
      competition, qui restait bloque sur « Toutes »). Les cartes de tirs sont
      les plus lourdes : plusieurs Ko par match, gardees indefiniment. */
-  'g45butA2_','g45gl3_','g45gl2_','g45gl_','g45_tirs2_','g45_fanart2_','g45_fanart_','g45_img_perso_','g45_tv_prog','g45_mqnom_','g45_mqteam_','g45_mqfond_','g45trv4_','g45_catimg_','g45_catfmt2_','g45_catfmt_','g45cm4_','g45_domext1_','g45_t14e_','g45_t14bo_','g45_gar1_','g45_epr1_','g45nrlcal3_','g45nrlcal2_','g45_score4_','g45_score3_','g45_score2_','g45_score_','g45_lglogo_','g45compet3_','g45compet2_','g45compet_','g45tmeta_','g45histo_','g45ld2_','g45ld_',
+  'g45butA2_','g45gl3_','g45gl2_','g45gl_','g45_tirs2_','g45_fanart2_','g45_fanart_','g45_img_perso_','g45_tv_prog','g45_mqnom_','g45_mqteam_','g45_mqfond_','g45trv4_','g45_catimg_','g45_catfmt2_','g45_catfmt_','g45cm5_','g45cm4_','g45_domext1_','g45_t14e_','g45_t14bo_','g45_gar1_','g45_epr1_','g45nrlcal3_','g45nrlcal2_','g45_score4_','g45_score3_','g45_score2_','g45_score_','g45_lglogo_','g45compet3_','g45compet2_','g45compet_','g45tmeta_','g45histo_','g45ld2_','g45ld_',
   'g45nrlcal2_','g45core2_','g45core_','g45_fx_faits','g45_veille_','g45_compet_logos','g45_groq_modele','g45_groq_modele3','g45_groq_vision','g45_gemini_modeles',
   /* 12/09 : g45nrlcal6_ rejoint la liste, remplace par g45nrlcal7_ ci-dessus —
      meme raison que g45nrlcal2_ et g45nrlcal3_ avant lui. */
@@ -41485,7 +41485,7 @@ window.g45FormeN = g45FormeN;
    parametre — la vue Forme marche donc aussi en NBA, NHL, NFL, MLB et rugby.
    Cache 12 h par sport+ligue+saison, car c'est une requete par equipe. */
 async function _g45CompetMatchs(sportPath, slug, an, ids, progres) {
-  var ck = 'g45cm4_' + sportPath + '_' + slug + '_' + an;   /* v4 (22/09) : + matchs a venir, canal separe */
+  var ck = 'g45cm5_' + sportPath + '_' + slug + '_' + an;   /* v5 (23/09) : + matchs a venir du repli rugby/NRL */
   try {
     var cc = JSON.parse(localStorage.getItem(ck) || 'null');
     if (cc && (Date.now() - cc.t) < 12 * 3600000) {
@@ -41631,7 +41631,27 @@ async function _g45CompetMatchs(sportPath, slug, an, ids, progres) {
           if (vus[e.id]) return;
           var c3 = (e.competitions && e.competitions[0]) || {};
           var st3 = (c3.status && c3.status.type) || (e.status && e.status.type) || {};
-          if (st3.completed !== true) return;
+          /* MATCHS A VENIR DU REPLI (23/09/2026). Ce chemin — rugby a XV et
+             NRL, dont le calendrier par equipe renvoie 500 — jetait les matchs
+             non joues, comme l'autre avant le 22/09. Ces deux sports n'avaient
+             donc jamais leurs prochains matchs. Meme canal separe : ils ne se
+             melent pas aux resultats. */
+          if (st3.completed !== true) {
+            if (st3.state === 'pre' && !vus['av' + e.id]) {
+              var cp3 = c3.competitors || [];
+              var hp3 = cp3.filter(function (x) { return x.homeAway === 'home'; })[0];
+              var ap3 = cp3.filter(function (x) { return x.homeAway === 'away'; })[0];
+              var tp3 = Date.parse(e.date);
+              if (hp3 && ap3 && !isNaN(tp3)) {
+                vus['av' + e.id] = 1;
+                avenir.push({ id: String(e.id), t: tp3,
+                  h: String((hp3.team && hp3.team.id) || ''), a: String((ap3.team && ap3.team.id) || ''),
+                  hn: (hp3.team && (hp3.team.displayName || hp3.team.shortDisplayName)) || '',
+                  an: (ap3.team && (ap3.team.displayName || ap3.team.shortDisplayName)) || '' });
+              }
+            }
+            return;
+          }
           var cs3 = c3.competitors || []; if (cs3.length < 2) return;
           var ho3 = cs3.filter(function (x) { return x.homeAway === 'home'; })[0];
           var aw3 = cs3.filter(function (x) { return x.homeAway === 'away'; })[0];
