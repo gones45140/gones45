@@ -23289,6 +23289,20 @@ async function _g45AVenirLigue(slug, espnId, espnNom){
      (sans underscore), et l'application le manquait — Claude avait conclu à tort à HTTP 400. */
   var pays=String(slug).split('.')[0];
   var slugs=[slug, 'club.friendly', 'uefa.super_cup'];
+  /* SELECTIONS NATIONALES (24/09/2026, releve d'Antoine sur la France). Pour
+     une selection, cette liste est la mauvaise : `fifa.world` n'a plus de match
+     avant 2030, `club.friendly` et la Supercoupe ne concernent que les clubs.
+     La Ligue des nations, ou jouent les Bleus cet automne, n'etait jamais
+     interrogee. Le Portugal s'en sortait par un autre chemin, la France non —
+     elle est rattachee en dur a `fifa.world` dans ESPN_TEAM_ID_FIX. On cherche
+     donc dans les competitions de selections ; un slug inconnu renvoie une
+     erreur deja interceptee plus bas, sans consequence. */
+  var _estSel=false;
+  try{ _estSel = slug==='all' || /^fifa\.|^uefa\.(nations|euro)|^conmebol\.|^caf\.nations|^concacaf\.(gold|nations)/.test(String(slug))
+    || !!((typeof _g45NatByAlias!=='undefined') && _g45NatByAlias[_g45norm(espnNom)]); }catch(e){}
+  if(_estSel){
+    slugs=['uefa.nations','fifa.friendly','fifa.worldq.uefa','uefa.euroq','uefa.euro','fifa.world'];
+  }
   var SUP={fra:'fra.super_cup', ita:'ita.super_cup', ger:'ger.super_cup', esp:'esp.super_cup', ned:'ned.supercup'};
   if(SUP[pays]) slugs.push(SUP[pays]);
   var f=function(d){ return d.getFullYear()+String(d.getMonth()+1).padStart(2,'0')+String(d.getDate()).padStart(2,'0'); };
