@@ -22885,15 +22885,18 @@ var _G45_PILLS_FIXES = ['BTS', 'CS', 'WIN', 'LOSE', '1N', 'N2'];
 var _G45_CURS_L = {
   butsFT: [0.5, 1.5, 2.5, 3.5, 4.5], butsHT: [0.5, 1.5, 2.5, 3.5],
   eq: [0.5, 1.5, 2.5, 3.5],
-  hand: [-3.5, -2.5, -1.5, 1.5, 2.5, 3.5]
+  /* 0 ajoute le 24/09 (Antoine) : « remboursé si nul ». */
+  hand: [-3.5, -2.5, -1.5, 0, 1.5, 2.5, 3.5]
 };
+/* Ancienne liste, sans 0 : sert a convertir une position deja enregistree. */
+var _G45_CURS_HAND_V1 = [-3.5, -2.5, -1.5, 1.5, 2.5, 3.5];
 
 function _g45CursEtat() {
   var e = null;
   try { e = JSON.parse(localStorage.getItem('g45_curseurs') || 'null'); } catch (x) {}
   if (!e) {
     e = { per: 'FT', buts: { i: 2, s: 'A', on: true }, eq: { w: 'E', i: 1, s: 'A', on: false },
-          hand: { i: 2, s: 'A', on: false }, p1: { s: 'E', on: false } };
+          hand: { i: 2, s: 'A', on: false, v: 2 }, p1: { s: 'E', on: false } };
     /* MIGRATION : reprendre une selection O/U ou handicap deja faite avec les
        anciens boutons, pour ne rien perdre au passage. */
     var q = window._quickStats || [];
@@ -22901,25 +22904,47 @@ function _g45CursEtat() {
       var m = String(k).match(/^([OU])(\d\.5)$/);
       if (m) { var ix = _G45_CURS_L.butsFT.indexOf(+m[2]); if (ix >= 0) e.buts = { i: ix, s: m[1] === 'O' ? 'A' : 'B', on: true }; }
       m = String(k).match(/^H([+-]\d\.5)$/);
-      if (m) { var ih = _G45_CURS_L.hand.indexOf(+m[1]); if (ih >= 0) e.hand = { i: ih, s: 'A', on: true }; }
+      if (m) { var ih = _G45_CURS_L.hand.indexOf(+m[1]); if (ih >= 0) e.hand = { i: ih, s: 'A', on: true, v: 2 }; }
     });
+  }
+  return _g45CursMigrer(e);
+}
+function _g45CursSauver(e) { try { localStorage.setItem('g45_curseurs', JSON.stringify(e)); } catch (x) {} }
+/* Le reglage est enregistre par POSITION : l'insertion de 0 au milieu aurait
+   decale +1,5 d'un cran, et le curseur aurait saute tout seul sur une autre
+   valeur. On convertit une fois, par la valeur de la ligne. */
+function _g45CursMigrer(e) {
+  if (e && e.hand && e.hand.v !== 2) {
+    var ancienne = _G45_CURS_HAND_V1[e.hand.i];
+    var ix = (ancienne === undefined) ? -1 : _G45_CURS_L.hand.indexOf(ancienne);
+    e.hand.i = ix >= 0 ? ix : 2;
+    e.hand.v = 2;
   }
   return e;
 }
-function _g45CursSauver(e) { try { localStorage.setItem('g45_curseurs', JSON.stringify(e)); } catch (x) {} }
 
-function _g45Ligne(v) { return (v > 0 ? '+' : '') + Number(v).toFixed(1); }
-function _g45LigneFr(v) { return (v > 0 ? '+' : (v < 0 ? '\u2212' : '')) + Math.abs(v).toFixed(1).replace('.', ','); }
+function _g45Ligne(v) { v = Number(v); if (v === 0) return '0'; return (v > 0 ? '+' : '') + v.toFixed(1); }
+function _g45LigneFr(v) { v = Number(v); if (v === 0) return '0'; return (v > 0 ? '+' : '\u2212') + Math.abs(v).toFixed(1).replace('.', ','); }
 
 /* Cles produites par l'etat des curseurs. */
-function _g45CursCles(e) {
+function _g45CursCles(e) { return _g45CursDetail(e).map(function (x) { return x.k; }); }
+/* « Dans le calcul » decoche (24/09/2026, demande d'Antoine) : l'etiquette
+   reste sur chaque match, mais le marche ne compte plus dans le compteur
+   « ✅ x/n » ni dans la couleur de la barre. */
+function _g45CursHorsCalcul(e) {
+  var h = {};
+  _g45CursDetail(e).forEach(function (x) { if (x.hors) h[x.k] = 1; });
+  return h;
+}
+function _g45CursDetail(e) {
   e = e || _g45CursEtat();
   var pre = e.per === 'HT' ? 'MT:' : '', out = [];
+  var ajout = function (carte, k) { out.push({ c: carte, k: k, hors: e[carte].calc === false }); };
   var LB = e.per === 'HT' ? _G45_CURS_L.butsHT : _G45_CURS_L.butsFT;
-  if (e.buts.on) { var lb = LB[Math.min(e.buts.i, LB.length - 1)]; out.push(pre + (e.buts.s === 'A' ? 'O' : 'U') + lb.toFixed(1)); }
-  if (e.eq.on) { var le = _G45_CURS_L.eq[Math.min(e.eq.i, 3)]; out.push(pre + (e.eq.w === 'E' ? 'E' : 'A') + (e.eq.s === 'A' ? 'O' : 'U') + le.toFixed(1)); }
-  if (e.hand.on) { var lh = _G45_CURS_L.hand[e.hand.i]; out.push(pre + (e.hand.s === 'A' ? 'H' + _g45Ligne(lh) : 'X' + _g45Ligne(-lh))); }
-  if (e.p1.on) out.push(e.p1.s === 'E' ? 'P1' : (e.p1.s === 'A' ? 'P2' : 'P0'));
+  if (e.buts.on) { var lb = LB[Math.min(e.buts.i, LB.length - 1)]; ajout('buts', pre + (e.buts.s === 'A' ? 'O' : 'U') + lb.toFixed(1)); }
+  if (e.eq.on) { var le = _G45_CURS_L.eq[Math.min(e.eq.i, 3)]; ajout('eq', pre + (e.eq.w === 'E' ? 'E' : 'A') + (e.eq.s === 'A' ? 'O' : 'U') + le.toFixed(1)); }
+  if (e.hand.on) { var lh = _G45_CURS_L.hand[e.hand.i]; ajout('hand', pre + (e.hand.s === 'A' ? 'H' + _g45Ligne(lh) : 'X' + _g45Ligne(-lh))); }
+  if (e.p1.on) ajout('p1', e.p1.s === 'E' ? 'P1' : (e.p1.s === 'A' ? 'P2' : 'P0'));
   return out;
 }
 
@@ -22956,7 +22981,12 @@ function _g45MarcheEval(k, x) {
   var m;
   if ((m = k.match(/^([OU])(\d+(?:\.\d)?)$/))) { var t = tg + og, l = +m[2]; return m[1] === 'O' ? t > l : t < l; }
   if ((m = k.match(/^([EA])([OU])(\d+(?:\.\d)?)$/))) { var g = m[1] === 'E' ? tg : og, l2 = +m[3]; return m[2] === 'O' ? g > l2 : g < l2; }
-  if ((m = k.match(/^([HX])([+-]\d+(?:\.\d)?)$/))) { var h = +m[2]; return m[1] === 'H' ? (tg - og + h > 0) : (og - tg + h > 0); }
+  if ((m = k.match(/^([HX])([+-]?\d+(?:\.\d)?)$/))) {
+    var h = +m[2];
+    /* Handicap 0 : un nul est REMBOURSE — ni gagne ni perdu, donc exclu. */
+    if (h === 0 && tg === og) return null;
+    return m[1] === 'H' ? (tg - og + h > 0) : (og - tg + h > 0);
+  }
   if (k === 'BTS') return tg > 0 && og > 0;
   if (k === 'CS') return og === 0;
   if (k === 'WIN') return tg > og;
@@ -23015,11 +23045,17 @@ function _g45CursHtml(matchs, estNous, fgDe, nomEq) {
       + ' oninput="g45CursInput(this)" onchange="g45CursCommit(this)" style="width:100%;accent-color:#46dcf0;margin:4px 0 0;">'
       + '<div style="display:flex;justify-content:space-between;font-size:11.5px;font-weight:700;color:#9fb0c7;margin-top:1px;">' + ticks + '</div>';
   };
-  var carteH = function (titre, sous, corps) {
+  var carteH = function (titre, sous, corps, carte) {
+    var cc = carte && e[carte];
+    var caseCalc = (cc && cc.on)
+      ? '<label onclick="event.stopPropagation()" style="display:inline-flex;align-items:center;gap:5px;cursor:pointer;font-size:11.5px;font-weight:800;color:' + (cc.calc === false ? '#9fb0c7' : '#3ddf78') + ';">'
+        + '<input type="checkbox" ' + (cc.calc === false ? '' : 'checked') + ' onchange="g45CursCalc(\'' + carte + '\',this.checked)" style="accent-color:#3ddf78;width:15px;height:15px;">dans le calcul</label>'
+      : '';
     return '<div style="display:flex;flex-direction:column;gap:8px;padding:11px 12px;border-radius:12px;background:rgba(11,16,29,.72);border:1px solid rgba(255,255,255,.08);margin-bottom:8px;">'
-      + '<div style="display:flex;justify-content:space-between;align-items:baseline;gap:8px;"><span style="font-size:13.5px;font-weight:800;color:#fff;">' + titre + '</span>'
-      + '<span style="font-size:11px;font-weight:700;color:#9fb0c7;">' + sous + '</span></div>' + corps + '</div>';
+      + '<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;"><span style="font-size:13.5px;font-weight:800;color:#fff;">' + titre + '</span>'
+      + '<span style="display:inline-flex;align-items:center;gap:10px;"><span style="font-size:11px;font-weight:700;color:#9fb0c7;">' + sous + '</span>' + caseCalc + '</span></div>' + corps + '</div>';
   };
+  var carteHc = function (k, t, s2, c) { return carteH(t, s2, c, k); };
   var pack = function (lignes, fn) { return _g45Esc(JSON.stringify(lignes.map(fn))); };
   var h = '';
 
@@ -23037,7 +23073,7 @@ function _g45CursHtml(matchs, estNous, fgDe, nomEq) {
   var valsB = pack(LB, function (l) { var a = fmt(compte(pre + 'O' + l.toFixed(1))), b = fmt(compte(pre + 'U' + l.toFixed(1)));
     return { la: 'Plus de ' + l.toFixed(1).replace('.', ','), va: a.v, pa: a.p, lb: 'Moins de ' + l.toFixed(1).replace('.', ','), vb: b.v, pb: b.p }; });
   var rbA = fmt(compte(pre + 'O' + LB[ib].toFixed(1))), rbB = fmt(compte(pre + 'U' + LB[ib].toFixed(1)));
-  h += '<div data-vals="' + valsB + '" id="g45c-buts">' + carteH('Nombre de buts', HT ? '1re mi-temps' : xs.length + ' matchs',
+  h += '<div data-vals="' + valsB + '" id="g45c-buts">' + carteHc('buts', 'Nombre de buts', HT ? '1re mi-temps' : xs.length + ' matchs',
       '<div style="display:flex;gap:8px;">' + boite('buts', 'A', 'Plus de ' + LB[ib].toFixed(1).replace('.', ','), rbA, '#f5c542', e.buts.on && e.buts.s === 'A')
       + boite('buts', 'B', 'Moins de ' + LB[ib].toFixed(1).replace('.', ','), rbB, '#9fe7f5', e.buts.on && e.buts.s === 'B') + '</div>'
       + curseur('buts', LB, ib, function (v) { return v.toFixed(1).replace('.', ','); })) + '</div>';
@@ -23051,7 +23087,7 @@ function _g45CursHtml(matchs, estNous, fgDe, nomEq) {
   var bascule = '<div style="display:flex;gap:6px;">'
     + '<span onclick="g45CursEq(\'E\')" style="cursor:pointer;padding:5px 12px;border-radius:12px;font-size:12px;font-weight:800;' + (W === 'E' ? 'background:rgba(70,220,240,.18);color:#46dcf0;border:1px solid rgba(70,220,240,.55);' : 'color:#c8d3ea;border:1px solid rgba(255,255,255,.16);') + '">' + nomC + '</span>'
     + '<span onclick="g45CursEq(\'A\')" style="cursor:pointer;padding:5px 12px;border-radius:12px;font-size:12px;font-weight:800;' + (W === 'A' ? 'background:rgba(70,220,240,.18);color:#46dcf0;border:1px solid rgba(70,220,240,.55);' : 'color:#c8d3ea;border:1px solid rgba(255,255,255,.16);') + '">Adversaire</span></div>';
-  h += '<div data-vals="' + valsE + '" id="g45c-eq">' + carteH('Buts par équipe', HT ? '1re mi-temps' : '',
+  h += '<div data-vals="' + valsE + '" id="g45c-eq">' + carteHc('eq', 'Buts par équipe', HT ? '1re mi-temps' : '',
       bascule + '<div style="display:flex;gap:8px;">' + boite('eq', 'A', quiLib + ' plus de ' + LE[ie].toFixed(1).replace('.', ','), reA, '#46dcf0', e.eq.on && e.eq.s === 'A')
       + boite('eq', 'B', quiLib + ' moins de ' + LE[ie].toFixed(1).replace('.', ','), reB, '#9fe7f5', e.eq.on && e.eq.s === 'B') + '</div>'
       + curseur('eq', LE, ie, function (v) { return v.toFixed(1).replace('.', ','); })) + '</div>';
@@ -23059,17 +23095,18 @@ function _g45CursHtml(matchs, estNous, fgDe, nomEq) {
   /* 3. Handicap */
   var LH = _G45_CURS_L.hand, ih = e.hand.i;
   var valsH = pack(LH, function (l) { var a = fmt(compte(pre + 'H' + _g45Ligne(l))), b = fmt(compte(pre + 'X' + _g45Ligne(-l)));
-    return { la: nomC + ' ' + _g45LigneFr(l), va: a.v, pa: a.p, lb: 'Adversaire ' + _g45LigneFr(-l), vb: b.v, pb: b.p }; });
+    var nr = (l === 0) ? ' · nul remboursé' : '';
+    return { la: nomC + ' ' + _g45LigneFr(l) + nr, va: a.v, pa: a.p, lb: 'Adversaire ' + _g45LigneFr(-l) + nr, vb: b.v, pb: b.p }; });
   var rhA = fmt(compte(pre + 'H' + _g45Ligne(LH[ih]))), rhB = fmt(compte(pre + 'X' + _g45Ligne(-LH[ih])));
-  h += '<div data-vals="' + valsH + '" id="g45c-hand">' + carteH('Handicap', HT ? '1re mi-temps' : '',
-      '<div style="display:flex;gap:8px;">' + boite('hand', 'A', nomC + ' ' + _g45LigneFr(LH[ih]), rhA, '#f472b6', e.hand.on && e.hand.s === 'A')
-      + boite('hand', 'B', 'Adversaire ' + _g45LigneFr(-LH[ih]), rhB, '#9fe7f5', e.hand.on && e.hand.s === 'B') + '</div>'
+  h += '<div data-vals="' + valsH + '" id="g45c-hand">' + carteHc('hand', 'Handicap', HT ? '1re mi-temps' : '',
+      '<div style="display:flex;gap:8px;">' + boite('hand', 'A', nomC + ' ' + _g45LigneFr(LH[ih]) + (LH[ih] === 0 ? ' · nul remboursé' : ''), rhA, '#f472b6', e.hand.on && e.hand.s === 'A')
+      + boite('hand', 'B', 'Adversaire ' + _g45LigneFr(-LH[ih]) + (LH[ih] === 0 ? ' · nul remboursé' : ''), rhB, '#9fe7f5', e.hand.on && e.hand.s === 'B') + '</div>'
       + curseur('hand', LH, ih, _g45LigneFr)) + '</div>';
 
   /* 4. Premier but (pas de version mi-temps : c'est le premier but du match) */
   var p1 = compte('P1'), p2 = compte('P2'), p0 = compte('P0');
   if (p1.n) {
-    h += carteH('Premier but', p1.n + ' match' + (p1.n > 1 ? 's' : '') + ' analysé' + (p1.n > 1 ? 's' : ''),
+    h += carteHc('p1', 'Premier but', p1.n + ' match' + (p1.n > 1 ? 's' : '') + ' analysé' + (p1.n > 1 ? 's' : ''),
       '<div style="display:flex;gap:8px;">'
       + boite('p1', 'E', nomC + ' d\'abord', fmt(p1), '#3ddf78', e.p1.on && e.p1.s === 'E')
       + boite('p1', 'A', 'Adversaire d\'abord', fmt(p2), '#ff8a8a', e.p1.on && e.p1.s === 'A')
@@ -23136,6 +23173,11 @@ function g45CursCase(carte, cote) {
   else { c.s = cote; c.on = true; }
   _g45CursSauver(e); _g45CursReconstruire('#g45c-' + carte);
 }
+function g45CursCalc(carte, oui) {
+  var e = _g45CursEtat(); if (!e[carte]) return;
+  e[carte].calc = !!oui; _g45CursSauver(e); _g45CursReconstruire('#g45c-' + carte);
+}
+window.g45CursCalc = g45CursCalc;
 function g45CursEq(w) { var e = _g45CursEtat(); e.eq.w = w; _g45CursSauver(e); _g45CursReconstruire('#g45c-eq'); }
 function g45CursPer(p) { var e = _g45CursEtat(); e.per = p; _g45CursSauver(e); _g45CursReconstruire('#g45c-buts'); }
 
@@ -24217,6 +24259,10 @@ function renderSaisonsChart(el, results, nom) {
     if(allMatchesSorted.length) {
       // Calculer le compteur de matchs qui remplissent TOUTES les conditions cochées
       var qs0 = window._quickStats || ['O2.5','BTS'];
+      /* Marches affiches mais HORS CALCUL (24/09) : ni dans le compteur, ni dans
+         la couleur de la barre. */
+      var _hc0 = {}; try { _hc0 = _g45CursHorsCalcul(); } catch(e){}
+      var qsCalc = qs0.filter(function(k){ return !_hc0[k]; });
       var matchCount = 0;
       allMatchesSorted.forEach(function(m){
         var hg0 = (m.score&&m.score.regularTime?m.score.regularTime.home:m.score&&m.score.fullTime?m.score.fullTime.home:0)||0;
@@ -24226,13 +24272,15 @@ function renderSaisonsChart(el, results, nom) {
         var tot0 = hg0+ag0;
         var CHK0 = {'O0.5':tot0>0.5,'O1.5':tot0>1.5,'O2.5':tot0>2.5,'O3.5':tot0>3.5,'O4.5':tot0>4.5,'U0.5':tot0<=0.5,'U1.5':tot0<=1.5,'U2.5':tot0<=2.5,'U3.5':tot0<=3.5,'U4.5':tot0<=4.5,'BTS':hg0>0&&ag0>0,'CS':tg0===0||og0===0,'WIN':tg0>og0,'LOSE':tg0<og0};
         var x0 = null;
-        if(qs0.every(function(k){
+        if(qsCalc.every(function(k){
           if (CHK0[k]!==undefined) return CHK0[k];
           if (!x0) x0 = _g45MarcheX(m, function(t){ return t && t.id===teamId; }, (_scIdx && _scIdx.byMatch && _scIdx.byMatch[m.espnId] && _scIdx.byMatch[m.espnId].fg) || null);
           var v0 = _g45MarcheEval(k, x0); return v0 == null ? true : v0;
         })) matchCount++;
       });
-      var condLabel = qs0.map(function(k){ return _g45MarcheCourt(k); }).join(' + ');
+      var condLabel = qsCalc.length ? qsCalc.map(function(k){ return _g45MarcheCourt(k); }).join(' + ') : 'aucune condition';
+      var _hcL = qs0.filter(function(k){ return _hc0[k]; });
+      if (_hcL.length) condLabel += ' <span style="color:#9fb0c7;font-weight:700;">(affiché : ' + _hcL.map(function(k){ return _g45MarcheCourt(k); }).join(', ') + ')</span>';
       /* ENVELOPPE AUX COULEURS DU CLUB (02/09). Le fond raye est pose ici, sur
          un conteneur qui englobe l'entete ET la liste : il couvre donc toute la
          hauteur quel que soit le nombre de matchs — 5 comme 38 — sans qu'aucune
@@ -24307,7 +24355,8 @@ function renderSaisonsChart(el, results, nom) {
         var qs = window._quickStats || ['O2.5','BTS'];
         var _xRow = _g45MarcheX(m, function(t){ return t===m.homeTeam ? isDom : !isDom; },
           (_scIdx && _scIdx.byMatch && _scIdx.byMatch[m.espnId] && _scIdx.byMatch[m.espnId].fg) || null);
-        var allOk = qs.every(function(k){
+        var _hcR = (typeof _hc0 !== 'undefined' && _hc0) || {};
+        var allOk = qs.filter(function(k){ return !_hcR[k]; }).every(function(k){
           if (MATCH_CHECKS[k]!==undefined) return MATCH_CHECKS[k];
           var v1 = _g45MarcheEval(k, _xRow); return v1 == null ? true : v1;
         });
