@@ -17175,7 +17175,27 @@ function _g45RemplProgres(uid, fait, total, fini) {
     if (!tab || !tab.parentNode) return;
     var id = 'g45-rempl-' + uid;
     var el = document.getElementById(id);
-    if (fini) { if (el) el.remove(); return; }
+    if (fini) {
+      /* PLUS DE SAUT A LA FIN DU REMPLISSAGE (24/09/2026). Retirer cette ligne
+         faisait remonter d'un coup tout ce qui suit, de sa hauteur — Antoine
+         perdait sa position dans le tableau au moment ou le remplissage finit.
+         Meme parade que pour les pastilles (22/09) : mesurer AVANT de retirer,
+         puis rendre au defilement la hauteur qui vient de disparaitre, dans le
+         bon conteneur (celui qui defile reellement, pas forcement la fenetre). */
+      if (el) {
+        var h = el.getBoundingClientRect().height;
+        el.remove();
+        if (h > 0) {
+          var cont = null;
+          for (var q = tab.parentElement; q; q = q.parentElement) {
+            var oy = getComputedStyle(q).overflowY;
+            if ((oy === 'auto' || oy === 'scroll') && q.scrollHeight > q.clientHeight) { cont = q; break; }
+          }
+          if (cont) cont.scrollTop -= h; else window.scrollBy(0, -h);
+        }
+      }
+      return;
+    }
     if (!el) {
       el = document.createElement('div');
       el.id = id;
@@ -38570,7 +38590,7 @@ var _G45_CACHE_PREFIXES=['g45_mmeta2_','g45_mmeta1_','g45_tennis4_','g45_tennis3
      explosait et des ecritures LEGITIMES echouaient en silence (le filtre par
      competition, qui restait bloque sur « Toutes »). Les cartes de tirs sont
      les plus lourdes : plusieurs Ko par match, gardees indefiniment. */
-  'g45butA2_','g45gl3_','g45gl2_','g45gl_','g45_tirs2_','g45_fanart2_','g45_fanart_','g45_img_perso_','g45_tv_prog','g45_mqnom_','g45_mqteam_','g45_mqfond_','g45trv4_','g45_catimg_','g45_catfmt2_','g45_catfmt_','g45_scorers_v4_','g45cm6_','g45cm5_','g45cm4_','g45_domext1_','g45_t14e_','g45_t14bo_','g45_gar1_','g45_epr1_','g45nrlcal3_','g45nrlcal2_','g45_score4_','g45_score3_','g45_score2_','g45_score_','g45_lglogo_','g45compet3_','g45compet2_','g45compet_','g45tmeta_','g45histo_','g45ld2_','g45ld_',
+  'g45butA2_','g45gl3_','g45gl2_','g45gl_','g45_tirs2_','g45_fanart2_','g45_fanart_','g45_img_perso_','g45_tv_prog','g45_mqnom_','g45_mqteam_','g45_mqfond_','g45trv4_','g45_catimg_','g45_catfmt2_','g45_catfmt_','g45_scorers_v4_','g45cm7_','g45cm6_','g45cm5_','g45cm4_','g45_domext1_','g45_t14e_','g45_t14bo_','g45_gar1_','g45_epr1_','g45nrlcal3_','g45nrlcal2_','g45_score4_','g45_score3_','g45_score2_','g45_score_','g45_lglogo_','g45compet3_','g45compet2_','g45compet_','g45tmeta_','g45histo_','g45ld2_','g45ld_',
   'g45nrlcal2_','g45core2_','g45core_','g45_fx_faits','g45_veille_','g45_compet_logos','g45_groq_modele','g45_groq_modele3','g45_groq_vision','g45_gemini_modeles',
   /* 12/09 : g45nrlcal6_ rejoint la liste, remplace par g45nrlcal7_ ci-dessus —
      meme raison que g45nrlcal2_ et g45nrlcal3_ avant lui. */
@@ -42180,7 +42200,7 @@ window.g45FormeN = g45FormeN;
    parametre — la vue Forme marche donc aussi en NBA, NHL, NFL, MLB et rugby.
    Cache 12 h par sport+ligue+saison, car c'est une requete par equipe. */
 async function _g45CompetMatchs(sportPath, slug, an, ids, progres) {
-  var ck = 'g45cm6_' + sportPath + '_' + slug + '_' + an;   /* v6 (24/09) : presaison NHL/NFL/NBA/MLB exclue, resultats et prochains matchs */
+  var ck = 'g45cm7_' + sportPath + '_' + slug + '_' + an;   /* v7 (24/09 soir) : presaison lue dans e.seasonType (le v6 la laissait passer) */
   try {
     var cc = JSON.parse(localStorage.getItem(ck) || 'null');
     if (cc && (Date.now() - cc.t) < 12 * 3600000) {
@@ -42204,8 +42224,14 @@ async function _g45CompetMatchs(sportPath, slug, an, ids, progres) {
            3 en series. Sans ce filtre, les amicaux de fin septembre
            apparaissaient comme des resultats ET comme prochains matchs, alors
            qu'ils ne comptent pour aucune stat de la vraie saison. */
-        var _styp = e.season && e.season.type;
-        if (_styp === 1 || _styp === '1') return;
+        /* CORRIGE le 24/09 au soir (sonde d'Antoine sur le calendrier d'equipe) :
+           ici `e.season` ne porte QUE l'annee — le type est dans `e.seasonType`
+           ({type:2, name:"Regular Season"}). Le type n'est dans `e.season` que
+           sur l'adresse scoreboard, sondee le matin. Deux adresses ESPN, deux
+           rangements : on lit les deux, plus le libelle par securite. */
+        var _stO = e.seasonType || {};
+        var _styp = (e.season && e.season.type != null) ? e.season.type : (_stO.type != null ? _stO.type : _stO.id);
+        if (+_styp === 1 || /pre\s*-?\s*season/i.test(String(_stO.name || ''))) return;
         var c2 = (e.competitions && e.competitions[0]) || {};
         var st = (c2.status && c2.status.type) || (e.status && e.status.type) || {};
         /* MATCHS A VENIR GARDES A PART (22/09/2026). Ils etaient ecartes ici,
