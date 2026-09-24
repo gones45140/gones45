@@ -22754,6 +22754,20 @@ function getCompIcon(name) {
 
 function filterMatchesByComp(matches, filters) {
   if(!filters || filters.all) return matches;
+  /* FILTRE PAR NOM (24/09/2026) : pour une selection, chaque competition a sa
+     propre case (« sf-n:<nom> ») au lieu des familles club — championnat,
+     coupe nationale, coupes d'Europe. Le filtre est memorise pour TOUTES les
+     equipes : des cases cochees sur la France ne doivent pas vider la fiche de
+     Lyon, ou aucun match ne s'appelle « Amical ». Si les cases par nom ne
+     correspondent a rien ici, on les ignore. */
+  var _nz = function(x){ return String(x||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9]/g,''); };
+  var _cles = Object.keys(filters).filter(function(k){ return k.indexOf('sf-n:')===0 && filters[k]; });
+  if (_cles.length) {
+    var _parNom = matches.filter(function(m){ return !!filters['sf-n:' + _nz(m.competition && m.competition.name)]; });
+    if (_parNom.length) return _parNom;
+    var _autres = Object.keys(filters).some(function(k){ return k !== 'all' && k.indexOf('sf-n:') !== 0 && filters[k]; });
+    if (!_autres) return matches;
+  }
   return matches.filter(function(m){
     var ct = m.competition&&m.competition.type||'';
     var cn = m.competition&&m.competition.name||'';
@@ -23599,6 +23613,25 @@ function renderSaisonsChart(el, results, nom) {
   var allActive = !_saisonFilters || _saisonFilters.all;
   html += '<label style="display:flex;align-items:center;gap:5px;padding:5px 10px;border-radius:12px;border:1px solid '+(allActive?'rgba(77,132,255,.5)':'rgba(255,255,255,.1)')+';background:'+(allActive?'rgba(77,132,255,.12)':'none')+';cursor:pointer;font-size:10px;font-weight:700;color:'+(allActive?'#7aaaff':'var(--t3)')+';">'
     +'<input type="checkbox" id="sf-all" '+(allActive?'checked':'')+' onchange="updateSaisonFilter(\'sf-all\')" style="accent-color:var(--a);">Toutes</label>';
+
+  /* SELECTION : une case par competition, comme le bloc « Par competition »
+     (24/09/2026, demande d'Antoine). Les familles club n'ont aucun sens pour
+     une selection : tout tombait dans « Championnat » ou « Coupe Nationale ». */
+  var _selF = false;
+  try { _selF = !!((typeof _g45NatByAlias !== 'undefined') && _g45NatByAlias[_g45norm(nom)]); } catch(e){}
+  if (_selF) {
+    var _pal = ['#1ed760','#f0b020','#4d84ff','#ff7b54','#22d3ee','#a78bfa','#f472b6'];
+    var _nzF = function(x){ return String(x||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9]/g,''); };
+    Object.keys(allComps).sort(function(a,b){ return allComps[b].count - allComps[a].count; }).forEach(function(cn, i){
+      var key = 'sf-n:' + _nzF(cn);
+      var active = !!_saisonFilters[key];
+      var col = _pal[i % _pal.length];
+      html += '<label style="display:flex;align-items:center;gap:5px;padding:6px 11px;border-radius:12px;border:1px solid '+(active?col:'rgba(255,255,255,.14)')+';background:'+(active?'rgba(77,132,255,.10)':'none')+';cursor:pointer;font-size:11.5px;font-weight:800;color:'+(active?col:'#c8d3ea')+';">'
+        +'<input type="checkbox" id="'+key+'" '+(active?'checked':'')+' onchange="updateSaisonFilter(\''+key+'\')" style="accent-color:'+col+';">'
+        + _g45Esc(cn) + ' <span style="font-weight:600;opacity:.75;">(' + allComps[cn].count + ')</span></label>';
+    });
+    compGroups = {};   /* les familles club ne s'affichent pas */
+  }
 
   // Chips par groupe
   var groupColors = {'Championnat':'#1ed760','Ligue des Champions':'#4d84ff','Ligue Europa':'#f0b020','Conference League':'#22d3ee','Coupe Nationale':'#ff7b54','Autre':'#a78bfa'};
