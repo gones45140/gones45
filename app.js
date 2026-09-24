@@ -17163,6 +17163,35 @@ function _g45DernierJourRafraichissement(cmp) {
   return d.getTime();
 }
 
+/* AVANCEMENT DU REMPLISSAGE (24/09/2026). Pendant le remplissage, le tableau
+   affichait des ZEROS : un « 0 match » ressemble a une vraie donnee alors qu'il
+   veut dire « pas encore charge ». Releve par Antoine sur la Roma. La ligne se
+   place juste au-dessus du tableau — present pour tout le monde, alors que le
+   bouton n'existe qu'en mode administrateur — et disparait avec le
+   rafraichissement final du tableau. */
+function _g45RemplProgres(uid, fait, total, fini) {
+  try {
+    var tab = document.getElementById('squad-table-' + uid);
+    if (!tab || !tab.parentNode) return;
+    var id = 'g45-rempl-' + uid;
+    var el = document.getElementById(id);
+    if (fini) { if (el) el.remove(); return; }
+    if (!el) {
+      el = document.createElement('div');
+      el.id = id;
+      el.style.cssText = 'margin:0 0 8px;padding:9px 12px;border-radius:9px;background:rgba(11,16,29,.9);'
+        + 'border:1px solid rgba(30,215,96,.35);font-size:12.5px;font-weight:800;color:#ffffff;';
+      tab.parentNode.insertBefore(el, tab);
+    }
+    var pc = total ? Math.round(fait * 100 / total) : 0;
+    el.innerHTML = '⏳ Remplissage depuis ESPN… <span style="color:#1ed760;">' + fait + '/' + total + '</span>'
+      + '<span style="font-weight:600;color:#c8d3ea;"> — les zéros ne sont pas encore de vraies valeurs</span>'
+      + '<div style="margin-top:6px;height:5px;border-radius:3px;background:rgba(255,255,255,.08);">'
+      + '<div style="height:5px;border-radius:3px;background:#1ed760;width:' + pc + '%;transition:width .3s;"></div></div>';
+  } catch (e) {}
+}
+window._g45RemplProgres = _g45RemplProgres;
+
 async function autoEspnFillSquad(uid, nom, silencieux) {
   /* MODE SILENCIEUX (25/08) : depuis le 25/08 cette fonction est aussi
      declenchee TOUTE SEULE a l'ouverture d'un effectif. Ses alertes, ecrites
@@ -17292,7 +17321,11 @@ async function autoEspnFillSquad(uid, nom, silencieux) {
       statsLeague = foundEuro;
     }
 
+    var _totRempl = pairs.length, _faitRempl = 0;
+    _g45RemplProgres(uid, 0, _totRempl);
     for (var b = 0; b < pairs.length; b += 6) {
+      _faitRempl = Math.min(b, _totRempl);
+      _g45RemplProgres(uid, _faitRempl, _totRempl);
       await Promise.all(pairs.slice(b, b + 6).map(async function (pair) {
         try {
           var u = 'https://sports.core.api.espn.com/v2/sports/soccer/leagues/' + statsLeague + '/seasons/' + season + '/types/0/athletes/' + pair.espnId + '/statistics?lang=en&region=us';
@@ -17330,7 +17363,9 @@ async function autoEspnFillSquad(uid, nom, silencieux) {
     //    recherche ESPN par nom, puis on récupère leurs stats du championnat.
     var matchedIds = {}; pairs.forEach(function (p) { if (p.target && p.target.id != null) matchedIds[p.target.id] = 1; });
     var unmatched = squadData.filter(function (p) { return p && p.id != null && !matchedIds[p.id] && (p.name || p.shortName); });
+    var _nbRech = Math.min(unmatched.length, 25);
     for (var u = 0; u < unmatched.length && u < 25; u++) {
+      _g45RemplProgres(uid, _totRempl + u, _totRempl + _nbRech);
       var tp = unmatched[u];
       try {
         var sr = await fetch('https://site.web.api.espn.com/apis/search/v2?query=' + encodeURIComponent(tp.name || tp.shortName) + '&limit=10&region=us&lang=en');
@@ -17383,11 +17418,13 @@ async function autoEspnFillSquad(uid, nom, silencieux) {
     }
 
     localStorage.setItem(srcFlag, '1'); // équipe marquée source ESPN (rafraîchissable)
+    _g45RemplProgres(uid, 0, 0, true);
     if (btn) btn.textContent = '✅ ' + updated + ' MAJ';
     setTimeout(function () { loadTeamLive(); }, 600);
   } catch (err) {
+    _g45RemplProgres(uid, 0, 0, true);
     if (btn) { btn.disabled = false; btn.textContent = '⚡ Auto ESPN'; }
-    alert('❌ Auto ESPN : ' + err.message);
+    if (!silencieux) alert('❌ Auto ESPN : ' + err.message);
   }
 }
 
@@ -17998,8 +18035,13 @@ async function loadFdSquad(el, nom, teamId, noTerrain, terrainOnly) {
           var color = active?'#4d84ff':'var(--t3)';
           return '<th data-sort="'+col+'" data-uid="'+uid+'" onclick="sortSquad(this.dataset.uid,this.dataset.sort)" style="font-size:8px;color:'+color+';font-weight:700;text-align:center;padding:3px 4px;white-space:nowrap;cursor:pointer;" title="'+(title||lbl)+'">'+lbl+arrow+'</th>';
         };
-        html += '<div style="overflow-x:auto;" id="squad-table-'+uid+'">';
-        html += '<table style="width:100%;border-collapse:collapse;table-layout:fixed;min-width:680px;">';
+        /* BLASON EN FOND (24/09/2026, demande d'Antoine), comme les autres
+           panneaux. Fond de base sombre SOUS la mosaique : douze colonnes de
+           petits chiffres ne supporteraient pas un fond clair. */
+        var _fondSq = '';
+        try { if (typeof g45FondClubHtml === 'function') _fondSq = g45FondClubHtml(nom, 0.2); } catch(e){}
+        html += '<div style="overflow-x:auto;position:relative;border-radius:10px;background:rgba(11,16,29,.80);" id="squad-table-'+uid+'">' + _fondSq;
+        html += '<table style="width:100%;border-collapse:collapse;table-layout:fixed;min-width:680px;position:relative;z-index:1;">';
         html += '<colgroup><col style="width:22px"><col style="width:150px"><col style="width:32px"><col style="width:30px"><col style="width:30px"><col style="width:42px"><col style="width:auto"><col style="width:auto"><col style="width:auto"><col style="width:auto"><col style="width:auto"><col style="width:auto"><col style="width:auto"><col style="width:auto"><col style="width:30px"></colgroup>';
         html += '<thead><tr>';
         html += '<th style="'+tc+'"></th>';
@@ -22822,6 +22864,287 @@ async function _g45FdHalfTime(teamId, results){
   }
   return total;
 }
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   CURSEURS DE MARCHES (24/09/2026, demande d'Antoine)
+   ───────────────────────────────────────────────────────────────────────────
+   Dix boutons O/U et deux handicaps remplaces par des curseurs, comme chez son
+   book : nombre de buts, buts par equipe, handicap de -3,5 a +3,5, premier
+   but — et un selecteur « Match entier / 1re mi-temps » qui recalcule tout sur
+   le score a la pause.
+   La selection reste portee par `window._quickStats` : les curseurs y ecrivent
+   des CLES (« O2.5 », « MT:EO1.5 », « H-1.5 », « P1 »…). Les tables figees
+   existantes (compteur, barre, etiquettes) gardent leur calcul pour les cles
+   qu'elles connaissent, et n'appellent ce moteur que pour les autres.
+   Cout : buts, equipes et handicaps se lisent dans le score, aucune requete.
+   Mi-temps : score a la pause venu de football-data, dix competitions.
+   Premier but : ordre des buts, garde par « Analyser buteurs ».
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+var _G45_PILLS_FIXES = ['BTS', 'CS', 'WIN', 'LOSE', '1N', 'N2'];
+var _G45_CURS_L = {
+  butsFT: [0.5, 1.5, 2.5, 3.5, 4.5], butsHT: [0.5, 1.5, 2.5, 3.5],
+  eq: [0.5, 1.5, 2.5, 3.5],
+  hand: [-3.5, -2.5, -1.5, 1.5, 2.5, 3.5]
+};
+
+function _g45CursEtat() {
+  var e = null;
+  try { e = JSON.parse(localStorage.getItem('g45_curseurs') || 'null'); } catch (x) {}
+  if (!e) {
+    e = { per: 'FT', buts: { i: 2, s: 'A', on: true }, eq: { w: 'E', i: 1, s: 'A', on: false },
+          hand: { i: 2, s: 'A', on: false }, p1: { s: 'E', on: false } };
+    /* MIGRATION : reprendre une selection O/U ou handicap deja faite avec les
+       anciens boutons, pour ne rien perdre au passage. */
+    var q = window._quickStats || [];
+    q.forEach(function (k) {
+      var m = String(k).match(/^([OU])(\d\.5)$/);
+      if (m) { var ix = _G45_CURS_L.butsFT.indexOf(+m[2]); if (ix >= 0) e.buts = { i: ix, s: m[1] === 'O' ? 'A' : 'B', on: true }; }
+      m = String(k).match(/^H([+-]\d\.5)$/);
+      if (m) { var ih = _G45_CURS_L.hand.indexOf(+m[1]); if (ih >= 0) e.hand = { i: ih, s: 'A', on: true }; }
+    });
+  }
+  return e;
+}
+function _g45CursSauver(e) { try { localStorage.setItem('g45_curseurs', JSON.stringify(e)); } catch (x) {} }
+
+function _g45Ligne(v) { return (v > 0 ? '+' : '') + Number(v).toFixed(1); }
+function _g45LigneFr(v) { return (v > 0 ? '+' : (v < 0 ? '\u2212' : '')) + Math.abs(v).toFixed(1).replace('.', ','); }
+
+/* Cles produites par l'etat des curseurs. */
+function _g45CursCles(e) {
+  e = e || _g45CursEtat();
+  var pre = e.per === 'HT' ? 'MT:' : '', out = [];
+  var LB = e.per === 'HT' ? _G45_CURS_L.butsHT : _G45_CURS_L.butsFT;
+  if (e.buts.on) { var lb = LB[Math.min(e.buts.i, LB.length - 1)]; out.push(pre + (e.buts.s === 'A' ? 'O' : 'U') + lb.toFixed(1)); }
+  if (e.eq.on) { var le = _G45_CURS_L.eq[Math.min(e.eq.i, 3)]; out.push(pre + (e.eq.w === 'E' ? 'E' : 'A') + (e.eq.s === 'A' ? 'O' : 'U') + le.toFixed(1)); }
+  if (e.hand.on) { var lh = _G45_CURS_L.hand[e.hand.i]; out.push(pre + (e.hand.s === 'A' ? 'H' + _g45Ligne(lh) : 'X' + _g45Ligne(-lh))); }
+  if (e.p1.on) out.push(e.p1.s === 'E' ? 'P1' : (e.p1.s === 'A' ? 'P2' : 'P0'));
+  return out;
+}
+
+/* _quickStats = boutons restants coches + cles des curseurs. */
+function _g45QuickSync() {
+  var anciens = window._quickStats || ['O2.5', 'BTS'];
+  var e = _g45CursEtat(); _g45CursSauver(e);
+  var pills = anciens.filter(function (k) { return _G45_PILLS_FIXES.indexOf(k) >= 0; });
+  window._quickStats = pills.concat(_g45CursCles(e));
+  return window._quickStats;
+}
+
+/* Donnees d'un match vues depuis NOTRE equipe. */
+function _g45MarcheX(m, estNous, fg) {
+  var sc = (m && m.score) || {};
+  var ft = sc.regularTime || sc.fullTime || {}, ht = sc.halfTime || {};
+  var dom = estNous ? !!estNous(m.homeTeam) : false;
+  var num = function (v) { var n = parseInt(v, 10); return isNaN(n) ? null : n; };
+  var hg = num(ft.home), ag = num(ft.away), hh = num(ht.home), ha = num(ht.away);
+  return { tg: dom ? hg : ag, og: dom ? ag : hg,
+           htg: (hh == null || ha == null) ? null : (dom ? hh : ha),
+           hog: (hh == null || ha == null) ? null : (dom ? ha : hh), fg: fg || null };
+}
+
+/* Vrai / faux / null (inconnu : pas de mi-temps, ordre des buts non analyse). */
+function _g45MarcheEval(k, x) {
+  if (!x) return null;
+  k = String(k || '');
+  var ht = false;
+  if (k.indexOf('MT:') === 0) { ht = true; k = k.slice(3); }
+  if (/^P[120]$/.test(k)) { if (!x.fg) return null; return k === 'P1' ? x.fg === 'E' : (k === 'P2' ? x.fg === 'A' : x.fg === '0'); }
+  var tg = ht ? x.htg : x.tg, og = ht ? x.hog : x.og;
+  if (tg == null || og == null) return null;
+  var m;
+  if ((m = k.match(/^([OU])(\d+(?:\.\d)?)$/))) { var t = tg + og, l = +m[2]; return m[1] === 'O' ? t > l : t < l; }
+  if ((m = k.match(/^([EA])([OU])(\d+(?:\.\d)?)$/))) { var g = m[1] === 'E' ? tg : og, l2 = +m[3]; return m[2] === 'O' ? g > l2 : g < l2; }
+  if ((m = k.match(/^([HX])([+-]\d+(?:\.\d)?)$/))) { var h = +m[2]; return m[1] === 'H' ? (tg - og + h > 0) : (og - tg + h > 0); }
+  if (k === 'BTS') return tg > 0 && og > 0;
+  if (k === 'CS') return og === 0;
+  if (k === 'WIN') return tg > og;
+  if (k === 'LOSE') return tg < og;
+  if (k === '1N') return tg >= og;
+  if (k === 'N2') return tg <= og;
+  return null;
+}
+
+/* Etiquette courte pour les lignes de match. */
+function _g45MarcheCourt(k) {
+  var s = String(k || ''), mt = '';
+  if (s.indexOf('MT:') === 0) { mt = 'MT '; s = s.slice(3); }
+  var m;
+  if (s === 'P1') return '1er but';
+  if (s === 'P2') return '1er but adv.';
+  if (s === 'P0') return '0-0';
+  if ((m = s.match(/^E([OU])(.+)$/))) return mt + 'Éq ' + m[1] + m[2];
+  if ((m = s.match(/^A([OU])(.+)$/))) return mt + 'Adv ' + m[1] + m[2];
+  if ((m = s.match(/^X(.+)$/))) return mt + 'Adv ' + m[1];
+  return mt + s;
+}
+function _g45MarcheCoul(k) {
+  var s = String(k || '').replace(/^MT:/, '');
+  if (/^P/.test(s)) return '#3ddf78';
+  if (/^[EA][OU]/.test(s)) return '#46dcf0';
+  if (/^[HX]/.test(s)) return '#f472b6';
+  if (/^U/.test(s)) return '#9fe7f5';
+  return '#f0b020';
+}
+
+/* ── Rendu des curseurs ─────────────────────────────────────────────────── */
+function _g45CursHtml(matchs, estNous, fgDe, nomEq) {
+  var e = _g45CursEtat();
+  var HT = e.per === 'HT';
+  var xs = (matchs || []).map(function (m) { return _g45MarcheX(m, estNous, fgDe ? fgDe(m) : null); });
+  var compte = function (cle) {
+    var ok = 0, n = 0;
+    xs.forEach(function (x) { var v = _g45MarcheEval(cle, x); if (v == null) return; n++; if (v) ok++; });
+    return { ok: ok, n: n };
+  };
+  var fmt = function (c) { return c.n ? { v: c.ok + '/' + c.n, p: Math.round(c.ok * 100 / c.n) + ' %' } : { v: '—', p: 'aucun match' }; };
+  var pre = HT ? 'MT:' : '';
+  var nomC = _g45Esc(nomEq || 'Équipe');
+  var ON = 'background:rgba(240,176,32,.16);border:2px solid rgba(240,176,32,.8);';
+  var OFF = 'background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.16);';
+  var boite = function (carte, cote, lib, r, coul, actif) {
+    return '<div onclick="g45CursCase(\'' + carte + '\',\'' + cote + '\')" data-c="' + carte + '" data-cote="' + cote + '" style="flex:1;min-width:0;display:flex;flex-direction:column;align-items:center;gap:1px;padding:9px 5px;border-radius:11px;cursor:pointer;' + (actif ? ON : OFF) + '">'
+      + '<span class="g45c-l" style="font-size:12px;font-weight:700;color:#e8ecfa;text-align:center;">' + lib + '</span>'
+      + '<span class="g45c-v" style="font-size:19px;font-weight:800;color:' + coul + ';">' + r.v + '</span>'
+      + '<span class="g45c-p" style="font-size:11.5px;font-weight:700;color:#c8d3ea;">' + r.p + '</span></div>';
+  };
+  var curseur = function (carte, lignes, idx, lib) {
+    var ticks = lignes.map(function (v, i) { return '<span style="' + (i === idx ? 'color:#fff;font-weight:800;' : '') + '">' + lib(v) + '</span>'; }).join('');
+    return '<input type="range" min="0" max="' + (lignes.length - 1) + '" step="1" value="' + idx + '" data-c="' + carte + '"'
+      + ' oninput="g45CursInput(this)" onchange="g45CursCommit(this)" style="width:100%;accent-color:#46dcf0;margin:4px 0 0;">'
+      + '<div style="display:flex;justify-content:space-between;font-size:11.5px;font-weight:700;color:#9fb0c7;margin-top:1px;">' + ticks + '</div>';
+  };
+  var carteH = function (titre, sous, corps) {
+    return '<div style="display:flex;flex-direction:column;gap:8px;padding:11px 12px;border-radius:12px;background:rgba(11,16,29,.72);border:1px solid rgba(255,255,255,.08);margin-bottom:8px;">'
+      + '<div style="display:flex;justify-content:space-between;align-items:baseline;gap:8px;"><span style="font-size:13.5px;font-weight:800;color:#fff;">' + titre + '</span>'
+      + '<span style="font-size:11px;font-weight:700;color:#9fb0c7;">' + sous + '</span></div>' + corps + '</div>';
+  };
+  var pack = function (lignes, fn) { return _g45Esc(JSON.stringify(lignes.map(fn))); };
+  var h = '';
+
+  /* Match entier / mi-temps */
+  var nHT = xs.filter(function (x) { return x.htg != null; }).length;
+  h += '<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:2px 0 9px;">'
+    + '<div style="display:flex;border-radius:10px;overflow:hidden;border:1.5px solid rgba(70,220,240,.5);">'
+    + '<span onclick="g45CursPer(\'FT\')" style="cursor:pointer;padding:7px 13px;font-size:12.5px;font-weight:800;' + (HT ? 'color:#c8d3ea;' : 'background:rgba(70,220,240,.2);color:#46dcf0;') + '">Match entier</span>'
+    + '<span onclick="g45CursPer(\'HT\')" style="cursor:pointer;padding:7px 13px;font-size:12.5px;font-weight:800;' + (HT ? 'background:rgba(70,220,240,.2);color:#46dcf0;' : 'color:#c8d3ea;') + '">1re mi-temps</span></div>'
+    + (HT ? '<span style="font-size:11.5px;font-weight:700;color:' + (nHT ? '#c8d3ea' : '#f5c542') + ';">' + (nHT ? ('score à la pause connu sur ' + nHT + ' match' + (nHT > 1 ? 's' : '')) : 'aucun score à la pause pour ces matchs') + '</span>' : '')
+    + '</div>';
+
+  /* 1. Nombre de buts */
+  var LB = HT ? _G45_CURS_L.butsHT : _G45_CURS_L.butsFT, ib = Math.min(e.buts.i, LB.length - 1);
+  var valsB = pack(LB, function (l) { var a = fmt(compte(pre + 'O' + l.toFixed(1))), b = fmt(compte(pre + 'U' + l.toFixed(1)));
+    return { la: 'Plus de ' + l.toFixed(1).replace('.', ','), va: a.v, pa: a.p, lb: 'Moins de ' + l.toFixed(1).replace('.', ','), vb: b.v, pb: b.p }; });
+  var rbA = fmt(compte(pre + 'O' + LB[ib].toFixed(1))), rbB = fmt(compte(pre + 'U' + LB[ib].toFixed(1)));
+  h += '<div data-vals="' + valsB + '" id="g45c-buts">' + carteH('Nombre de buts', HT ? '1re mi-temps' : xs.length + ' matchs',
+      '<div style="display:flex;gap:8px;">' + boite('buts', 'A', 'Plus de ' + LB[ib].toFixed(1).replace('.', ','), rbA, '#f5c542', e.buts.on && e.buts.s === 'A')
+      + boite('buts', 'B', 'Moins de ' + LB[ib].toFixed(1).replace('.', ','), rbB, '#9fe7f5', e.buts.on && e.buts.s === 'B') + '</div>'
+      + curseur('buts', LB, ib, function (v) { return v.toFixed(1).replace('.', ','); })) + '</div>';
+
+  /* 2. Buts par equipe */
+  var W = e.eq.w === 'A' ? 'A' : 'E', LE = _G45_CURS_L.eq, ie = Math.min(e.eq.i, 3);
+  var quiLib = W === 'E' ? nomC : 'Adversaire';
+  var valsE = pack(LE, function (l) { var a = fmt(compte(pre + W + 'O' + l.toFixed(1))), b = fmt(compte(pre + W + 'U' + l.toFixed(1)));
+    return { la: quiLib + ' plus de ' + l.toFixed(1).replace('.', ','), va: a.v, pa: a.p, lb: quiLib + ' moins de ' + l.toFixed(1).replace('.', ','), vb: b.v, pb: b.p }; });
+  var reA = fmt(compte(pre + W + 'O' + LE[ie].toFixed(1))), reB = fmt(compte(pre + W + 'U' + LE[ie].toFixed(1)));
+  var bascule = '<div style="display:flex;gap:6px;">'
+    + '<span onclick="g45CursEq(\'E\')" style="cursor:pointer;padding:5px 12px;border-radius:12px;font-size:12px;font-weight:800;' + (W === 'E' ? 'background:rgba(70,220,240,.18);color:#46dcf0;border:1px solid rgba(70,220,240,.55);' : 'color:#c8d3ea;border:1px solid rgba(255,255,255,.16);') + '">' + nomC + '</span>'
+    + '<span onclick="g45CursEq(\'A\')" style="cursor:pointer;padding:5px 12px;border-radius:12px;font-size:12px;font-weight:800;' + (W === 'A' ? 'background:rgba(70,220,240,.18);color:#46dcf0;border:1px solid rgba(70,220,240,.55);' : 'color:#c8d3ea;border:1px solid rgba(255,255,255,.16);') + '">Adversaire</span></div>';
+  h += '<div data-vals="' + valsE + '" id="g45c-eq">' + carteH('Buts par équipe', HT ? '1re mi-temps' : '',
+      bascule + '<div style="display:flex;gap:8px;">' + boite('eq', 'A', quiLib + ' plus de ' + LE[ie].toFixed(1).replace('.', ','), reA, '#46dcf0', e.eq.on && e.eq.s === 'A')
+      + boite('eq', 'B', quiLib + ' moins de ' + LE[ie].toFixed(1).replace('.', ','), reB, '#9fe7f5', e.eq.on && e.eq.s === 'B') + '</div>'
+      + curseur('eq', LE, ie, function (v) { return v.toFixed(1).replace('.', ','); })) + '</div>';
+
+  /* 3. Handicap */
+  var LH = _G45_CURS_L.hand, ih = e.hand.i;
+  var valsH = pack(LH, function (l) { var a = fmt(compte(pre + 'H' + _g45Ligne(l))), b = fmt(compte(pre + 'X' + _g45Ligne(-l)));
+    return { la: nomC + ' ' + _g45LigneFr(l), va: a.v, pa: a.p, lb: 'Adversaire ' + _g45LigneFr(-l), vb: b.v, pb: b.p }; });
+  var rhA = fmt(compte(pre + 'H' + _g45Ligne(LH[ih]))), rhB = fmt(compte(pre + 'X' + _g45Ligne(-LH[ih])));
+  h += '<div data-vals="' + valsH + '" id="g45c-hand">' + carteH('Handicap', HT ? '1re mi-temps' : '',
+      '<div style="display:flex;gap:8px;">' + boite('hand', 'A', nomC + ' ' + _g45LigneFr(LH[ih]), rhA, '#f472b6', e.hand.on && e.hand.s === 'A')
+      + boite('hand', 'B', 'Adversaire ' + _g45LigneFr(-LH[ih]), rhB, '#9fe7f5', e.hand.on && e.hand.s === 'B') + '</div>'
+      + curseur('hand', LH, ih, _g45LigneFr)) + '</div>';
+
+  /* 4. Premier but (pas de version mi-temps : c'est le premier but du match) */
+  var p1 = compte('P1'), p2 = compte('P2'), p0 = compte('P0');
+  if (p1.n) {
+    h += carteH('Premier but', p1.n + ' match' + (p1.n > 1 ? 's' : '') + ' analysé' + (p1.n > 1 ? 's' : ''),
+      '<div style="display:flex;gap:8px;">'
+      + boite('p1', 'E', nomC + ' d\'abord', fmt(p1), '#3ddf78', e.p1.on && e.p1.s === 'E')
+      + boite('p1', 'A', 'Adversaire d\'abord', fmt(p2), '#ff8a8a', e.p1.on && e.p1.s === 'A')
+      + boite('p1', 'Z', 'Aucun but', fmt(p0), '#c8d3ea', e.p1.on && e.p1.s === 'Z') + '</div>');
+  } else {
+    h += carteH('Premier but', '', '<div style="font-size:12px;font-weight:700;color:#f5c542;">⏳ Lance « Analyser buteurs / passeurs » : l\'ordre des buts vient de cette analyse.</div>');
+  }
+  return h;
+}
+
+/* Mise a jour instantanee pendant le glissement, sans reconstruire. */
+function g45CursInput(el) {
+  try {
+    var carte = el.getAttribute('data-c');
+    var bloc = document.getElementById('g45c-' + carte);
+    var vals = JSON.parse(bloc.getAttribute('data-vals') || '[]');
+    var v = vals[+el.value]; if (!v) return;
+    var bx = bloc.querySelectorAll('[data-c="' + carte + '"][data-cote]');
+    if (bx[0]) { bx[0].querySelector('.g45c-l').textContent = v.la; bx[0].querySelector('.g45c-v').textContent = v.va; bx[0].querySelector('.g45c-p').textContent = v.pa; }
+    if (bx[1]) { bx[1].querySelector('.g45c-l').textContent = v.lb; bx[1].querySelector('.g45c-v').textContent = v.vb; bx[1].querySelector('.g45c-p').textContent = v.pb; }
+  } catch (x) {}
+}
+
+/* Reconstruction en gardant la fenetre de match ouverte et la position. */
+async function _g45CursReconstruire(ancreSel) {
+  var eid = '', haut0 = 0, ancre = null;
+  try {
+    var ouvert = document.querySelector('.smd-panel[data-open="1"]');
+    var ligne = ouvert && ouvert.previousElementSibling;
+    if (ligne && ligne.getAttribute('data-eid')) { eid = ligne.getAttribute('data-eid'); ancre = ligne; }
+    else ancre = document.querySelector(ancreSel);
+    if (ancre) haut0 = ancre.getBoundingClientRect().top;
+  } catch (x) {}
+  _g45QuickSync();
+  try { await loadTeamSaisons(); } catch (x) {}
+  try {
+    var n = eid ? document.querySelector('[data-eid="' + eid + '"]') : document.querySelector(ancreSel);
+    if (eid && n && typeof toggleSaisonMatchDetail === 'function') {
+      var p = n.nextElementSibling;
+      if (p && p.getAttribute('data-open') !== '1') await toggleSaisonMatchDetail(n);
+    }
+    if (n && ancre) {
+      var d = n.getBoundingClientRect().top - haut0;
+      if (Math.abs(d) > 1) {
+        var c = null;
+        for (var q = n.parentElement; q; q = q.parentElement) {
+          var oy = getComputedStyle(q).overflowY;
+          if ((oy === 'auto' || oy === 'scroll') && q.scrollHeight > q.clientHeight) { c = q; break; }
+        }
+        if (c) c.scrollTop += d; else window.scrollBy(0, d);
+      }
+    }
+  } catch (x) {}
+}
+
+function g45CursCommit(el) {
+  var carte = el.getAttribute('data-c'), e = _g45CursEtat();
+  if (e[carte]) { e[carte].i = +el.value; e[carte].on = true; }
+  _g45CursSauver(e); _g45CursReconstruire('#g45c-' + carte);
+}
+function g45CursCase(carte, cote) {
+  var e = _g45CursEtat(), c = e[carte]; if (!c) return;
+  if (c.on && c.s === cote) c.on = false;            /* retoucher la case active la desactive */
+  else { c.s = cote; c.on = true; }
+  _g45CursSauver(e); _g45CursReconstruire('#g45c-' + carte);
+}
+function g45CursEq(w) { var e = _g45CursEtat(); e.eq.w = w; _g45CursSauver(e); _g45CursReconstruire('#g45c-eq'); }
+function g45CursPer(p) { var e = _g45CursEtat(); e.per = p; _g45CursSauver(e); _g45CursReconstruire('#g45c-buts'); }
+
+window._g45MarcheEval = _g45MarcheEval; window._g45MarcheX = _g45MarcheX;
+window._g45MarcheCourt = _g45MarcheCourt; window._g45MarcheCoul = _g45MarcheCoul;
+window._g45CursHtml = _g45CursHtml; window._g45CursCles = _g45CursCles; window._g45QuickSync = _g45QuickSync;
+window.g45CursInput = g45CursInput; window.g45CursCommit = g45CursCommit; window.g45CursCase = g45CursCase;
+window.g45CursEq = g45CursEq; window.g45CursPer = g45CursPer;
+
 function calcSaisonStats(matchesRaw, teamId) {
   // Trier du plus récent au plus ancien
   var matches = matchesRaw.slice().sort(function(a,b){ return new Date(b.utcDate)-new Date(a.utcDate); });
@@ -23193,7 +23516,29 @@ async function buildSaisonScorerIndex(teamId, saison, nom, matches, progressCb){
             });
           }
         } catch(_pe){}
-        index.byMatch[m.espnId]={s:sc,a:as,p:part,pOk:!!mine};
+        /* PREMIER BUT (24/09/2026) : pour le curseur « Premier but ». Les
+           evenements sont chronologiques ; un csc compte pour l'AUTRE equipe
+           que celle portee par l'evenement. 'E' = nous, 'A' = adversaire,
+           '0' = aucun but. Tirs au but exclus. */
+        var fg = null;
+        try {
+          var _prem = null;
+          (d.keyEvents||[]).forEach(function(e){
+            if (_prem) return;
+            var tt = ((e.type&&e.type.text)||'').toLowerCase();
+            if (!(e.scoringPlay===true || tt.indexOf('goal')>=0)) return;
+            if (e.shootout === true || tt.indexOf('shootout') >= 0) return;
+            _prem = e;
+          });
+          if (_prem) {
+            var _tp = (_prem.team && _prem.team.id != null) ? String(_prem.team.id) : '';
+            var _nous = (ourEspnId && _tp) ? (_tp === ourEspnId) : _scorerTeamIsOurs((_prem.team&&_prem.team.displayName)||'', ourName);
+            var _tt = ((_prem.type&&_prem.type.text)||'').toLowerCase();
+            if (_tt.indexOf('own') >= 0) _nous = !_nous;
+            fg = _nous ? 'E' : 'A';
+          } else if ((d.keyEvents||[]).length) fg = '0';
+        } catch(_fe){}
+        index.byMatch[m.espnId]={s:sc,a:as,p:part,pOk:!!mine,fg:fg};
       } else {
         index.byMatch[m.espnId]={s:[],a:[],err:1};
       }
@@ -23687,8 +24032,14 @@ function renderSaisonsChart(el, results, nom) {
     html += '<div style="font-size:10px;color:var(--t3);">'+st.n+' matchs'+(stC?' · '+champMatches.length+' champ.':'')+'</div>';
     html += '</div>';
     // Sélecteur stats rapides
-    var QUICK_STATS = ['O0.5','O1.5','O2.5','O3.5','O4.5','U0.5','U1.5','U2.5','U3.5','U4.5','BTS','CS','H-1.5','H+1.5','WIN','LOSE','1N','N2'];
+    /* CURSEURS (24/09/2026) : les dix boutons O/U et les deux handicaps sont
+       remplaces par des curseurs. Restent en boutons les marches sans ligne. */
     if(!window._quickStats) window._quickStats = ['O2.5','BTS'];
+    _g45QuickSync();
+    var _scIx0 = null; try { _scIx0 = JSON.parse(localStorage.getItem('g45_scorers_v4_'+teamId+'_'+s)||'null'); } catch(e){}
+    var _fgDe = function(m){ var b = _scIx0 && _scIx0.byMatch && _scIx0.byMatch[m.espnId]; return (b && b.fg) || null; };
+    try { html += _g45CursHtml(filteredMatches, _estNous, _fgDe, (typeof _currentTeam !== 'undefined' && _currentTeam) || nom); } catch(e){}
+    var QUICK_STATS = _G45_PILLS_FIXES;
     html += '<div style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:10px;">';
     QUICK_STATS.forEach(function(qs){
       var isOn = window._quickStats.indexOf(qs)>=0;
@@ -23759,6 +24110,18 @@ function renderSaisonsChart(el, results, nom) {
     var activeRows = ALL_STAT_ROWS.filter(function(r){ return !window._quickStats || window._quickStats.length===0 || window._quickStats.indexOf(r.key)>=0; });
     html += '<div style="font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#4f5d88;margin-bottom:8px;">Stats sélectionnées</div>';
     html += '<div style="display:flex;flex-direction:column;gap:6px;margin-bottom:14px;">';
+    /* Cles des curseurs inconnues de la table : calculees par le moteur, sur
+       les matchs affiches. Un marche sans donnee (mi-temps absente, ordre des
+       buts non analyse) est simplement omis plutot qu'affiche a 0 %. */
+    (window._quickStats||[]).forEach(function(k){
+      if (ALL_STAT_ROWS.some(function(r){ return r.key===k; })) return;
+      var okE = 0, nE = 0;
+      (filteredMatches||[]).forEach(function(m){
+        var v = _g45MarcheEval(k, _g45MarcheX(m, _estNous, _fgDe(m)));
+        if (v == null) return; nE++; if (v) okE++;
+      });
+      if (nE) activeRows.push({ key:k, label:_g45MarcheCourt(k), v:Math.round(okE*100/nE), color:_g45MarcheCoul(k) });
+    });
     activeRows.forEach(function(o){
       html += '<div style="display:flex;align-items:center;gap:8px;">';
       html += '<div style="font-size:10px;font-weight:700;color:var(--t2);width:78px;flex-shrink:0;">'+o.label+'</div>';
@@ -23862,9 +24225,14 @@ function renderSaisonsChart(el, results, nom) {
         var tg0 = isDom0?hg0:ag0, og0 = isDom0?ag0:hg0;
         var tot0 = hg0+ag0;
         var CHK0 = {'O0.5':tot0>0.5,'O1.5':tot0>1.5,'O2.5':tot0>2.5,'O3.5':tot0>3.5,'O4.5':tot0>4.5,'U0.5':tot0<=0.5,'U1.5':tot0<=1.5,'U2.5':tot0<=2.5,'U3.5':tot0<=3.5,'U4.5':tot0<=4.5,'BTS':hg0>0&&ag0>0,'CS':tg0===0||og0===0,'WIN':tg0>og0,'LOSE':tg0<og0};
-        if(qs0.every(function(k){ return CHK0[k]!==undefined ? CHK0[k] : true; })) matchCount++;
+        var x0 = null;
+        if(qs0.every(function(k){
+          if (CHK0[k]!==undefined) return CHK0[k];
+          if (!x0) x0 = _g45MarcheX(m, function(t){ return t && t.id===teamId; }, (_scIdx && _scIdx.byMatch && _scIdx.byMatch[m.espnId] && _scIdx.byMatch[m.espnId].fg) || null);
+          var v0 = _g45MarcheEval(k, x0); return v0 == null ? true : v0;
+        })) matchCount++;
       });
-      var condLabel = qs0.join(' + ');
+      var condLabel = qs0.map(function(k){ return _g45MarcheCourt(k); }).join(' + ');
       /* ENVELOPPE AUX COULEURS DU CLUB (02/09). Le fond raye est pose ici, sur
          un conteneur qui englobe l'entete ET la liste : il couvre donc toute la
          hauteur quel que soit le nombre de matchs — 5 comme 38 — sans qu'aucune
@@ -23937,7 +24305,12 @@ function renderSaisonsChart(el, results, nom) {
           'BTS': hg>0&&ag>0, 'CS': tg===0||og===0, 'WIN': tg>og, 'LOSE': tg<og
         };
         var qs = window._quickStats || ['O2.5','BTS'];
-        var allOk = qs.every(function(k){ return MATCH_CHECKS[k]!==undefined ? MATCH_CHECKS[k] : true; });
+        var _xRow = _g45MarcheX(m, function(t){ return t===m.homeTeam ? isDom : !isDom; },
+          (_scIdx && _scIdx.byMatch && _scIdx.byMatch[m.espnId] && _scIdx.byMatch[m.espnId].fg) || null);
+        var allOk = qs.every(function(k){
+          if (MATCH_CHECKS[k]!==undefined) return MATCH_CHECKS[k];
+          var v1 = _g45MarcheEval(k, _xRow); return v1 == null ? true : v1;
+        });
         var barColor = allOk ? '#1ed760' : '#ff4545';
         /* VOILES AJUSTES AU CONTENU (02/09, retour d'Antoine : « un seul cache
            actuellement, ce qui gache l'image de fond »). Le voile couvrait toute
@@ -23994,6 +24367,8 @@ function renderSaisonsChart(el, results, nom) {
            colorer un marche de la meme facon, sinon ils divergent en silence. */
         qs.forEach(function(k){
           if(MATCH_CHECKS[k]) badges += '<span style="color:'+g45CoulMarche(k)+';margin-left:7px;">'+k+'</span>';
+          else if (MATCH_CHECKS[k]===undefined && _g45MarcheEval(k, _xRow)===true)
+            badges += '<span style="color:'+_g45MarcheCoul(k)+';margin-left:7px;">'+_g45MarcheCourt(k)+'</span>';
         });
         /* Pastille de cote : la cote d'avant-match de NOTRE equipe, saisie dans
            le panneau Cotes. Affichee comme les autres indicateurs, en gris pour
@@ -36096,12 +36471,34 @@ function _g45LigneMatchH2H(g) {
     : '<div style="' + sty + '">' + corps + '</div>';
 }
 
-function _g45BarresMarches(c) {
+function _g45BarresMarches(c, liste) {
   if (!c) return '';
   var sel = window._quickStats || ['O2.5', 'BTS'];
   var rows = _G45_MARCHES.filter(function (m) { return sel.indexOf(m.key) >= 0; });
-  if (!rows.length) rows = _G45_MARCHES.filter(function (m) { return m.key === 'O2.5' || m.key === 'BTS'; });
+  /* Cles des curseurs (24/09) : evaluees sur les scores de la liste. Mi-temps
+     et premier but n'existent pas dans ces listes : ils sont omis. */
+  var extra = [];
+  if (liste && typeof _g45MarcheEval === 'function') {
+    sel.forEach(function (k) {
+      if (_G45_MARCHES.some(function (m) { return m.key === k; })) return;
+      var ok = 0, n = 0;
+      liste.forEach(function (g) {
+        var v = _g45MarcheEval(k, { tg: parseInt(g.pour, 10), og: parseInt(g.contre, 10), htg: null, hog: null, fg: null });
+        if (v == null) return; n++; if (v) ok++;
+      });
+      if (n) extra.push({ key: k, label: _g45MarcheCourt(k), color: _g45MarcheCoul(k), ok: ok, n: n });
+    });
+  }
+  if (!rows.length && !extra.length) rows = _G45_MARCHES.filter(function (m) { return m.key === 'O2.5' || m.key === 'BTS'; });
   var h = '';
+  extra.forEach(function (x) {
+    var v = Math.round(x.ok * 100 / x.n);
+    h += '<div style="display:flex;align-items:center;gap:7px;margin-bottom:4px;">'
+      + '<div style="font-size:12px;font-weight:800;color:#ffffff;width:78px;flex:none;">' + x.label + '</div>'
+      + '<div style="flex:1;height:7px;background:rgba(255,255,255,.06);border-radius:4px;">'
+      + '<div style="height:7px;border-radius:4px;background:' + x.color + ';width:' + v + '%;"></div></div>'
+      + '<div style="font-size:12.5px;font-weight:800;color:' + x.color + ';width:48px;text-align:right;flex:none;">' + x.ok + '/' + x.n + '</div></div>';
+  });
   rows.forEach(function (m) {
     var v = Math.round((c[m.key] || 0) * 100 / c._n);
     h += '<div style="display:flex;align-items:center;gap:7px;margin-bottom:4px;">'
@@ -36156,7 +36553,7 @@ function _g45FaceAFaceBloc(data, ligue) {
         + '<div style="width:' + Math.round(p * 100 / tot) + '%;background:' + cE + ';"></div></div>'
         + '<div style="display:flex;flex-direction:column;gap:3px;margin-bottom:7px;">'
         + h2h.slice().reverse().map(_g45LigneMatchH2H).join('') + '</div>'
-        + _g45BarresMarches(_g45MarchesCalc(h2h));
+        + _g45BarresMarches(_g45MarchesCalc(h2h), h2h);
     }
 
     /* Les deux colonnes de forme, sur la MEME competition. */
@@ -36172,7 +36569,7 @@ function _g45FaceAFaceBloc(data, ligue) {
           + (r.filtre ? ' · même compétition' : ' · toutes compétitions') + '</div>'
           + '<div style="display:flex;flex-direction:column;gap:3px;margin-bottom:6px;">'
           + r.liste.slice().reverse().map(_g45LigneMatchH2H).join('') + '</div>'
-          + _g45BarresMarches(_g45MarchesCalc(r.liste)) + '</div>';
+          + _g45BarresMarches(_g45MarchesCalc(r.liste), r.liste) + '</div>';
       };
       h += '<div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:9px;padding-top:8px;border-top:1px solid rgba(255,255,255,.06);">'
         + col(nD, cD, d5) + col(nE, cE, e5) + '</div>';
