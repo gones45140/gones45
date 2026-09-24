@@ -29697,6 +29697,15 @@ async function _g45MultiAI(box, boxId, sys, facts, title){
       } else if(dsBox){ dsBox.textContent='🧩 3ᵉ avis indisponible'+((dd&&dd.error)?(' : '+String(dd.error.message||'').slice(0,60)):'')+'.'; }
     }catch(e3){ var db3=document.getElementById(boxId+'-ds'); if(db3) db3.textContent='🐋 DeepSeek injoignable.'; }
     var mk=g45MistralCle();
+    /* MISE EN VEILLE (24/09/2026). Sonde d'Antoine : un appel ISOLE est refuse
+       (« rate_limited », code 1300) avec sa cle ET avec celle du serveur. Ce
+       n'est plus du debit mais un refus de principe — tres probablement la fin
+       de l'allocation API gratuite de Mistral, relevee debut septembre. Plutot
+       que d'attendre 5 s et d'afficher « indisponible » a chaque analyse, on
+       met Mistral en veille 24 h au premier refus ; il retente seul ensuite,
+       et l'avis reviendra de lui-meme si l'acces gratuit rouvre. */
+    var _mVeille=0; try{ _mVeille=parseInt(localStorage.getItem('g45_mistral_veille')||'0',10)||0; }catch(e){}
+    if(mk && (Date.now()-_mVeille) < 24*3600000) mk='';
     if(mk){
       box.innerHTML+='<div id="'+boxId+'-ms" style="font-size:10px;color:var(--t3);padding:6px;text-align:center;">🇫🇷 Mistral réfléchit…</div>';
       try{
@@ -29722,6 +29731,12 @@ async function _g45MultiAI(box, boxId, sys, facts, title){
         }
         var mt=((dm.choices&&dm.choices[0]&&dm.choices[0].message&&dm.choices[0].message.content)||'').trim();
         var msBox=document.getElementById(boxId+'-ms');
+        if(mt){ try{ localStorage.removeItem('g45_mistral_veille'); }catch(e){} }
+        else if(rm.status===429 || _mLimite(dm)){
+          /* Toujours refuse apres la seconde tentative : veille 24 h, message UNE fois. */
+          try{ localStorage.setItem('g45_mistral_veille', String(Date.now())); }catch(e){}
+          if(msBox){ msBox.textContent='🇫🇷 Mistral refuse les appels gratuits — mis en veille 24 h. Les autres avis ne sont pas concernés.'; msBox=null; }
+        }
         if(mt && msBox){
           msBox.outerHTML='<div style="background:rgba(10,14,24,.93);border:1px solid rgba(249,115,22,.4);border-radius:10px;padding:12px;margin-top:8px;">'
             +'<div style="font-size:10px;font-weight:800;color:#f97316;margin-bottom:8px;">🇫🇷 MISTRAL — 4ᵉ avis</div>'
@@ -29732,6 +29747,8 @@ async function _g45MultiAI(box, boxId, sys, facts, title){
     }
   }catch(e){ box.innerHTML='<div style="color:#ff6b6b;font-size:11px;padding:8px;">Erreur analyse IA : '+String(e.message||e).slice(0,90)+'</div>'; }
 }
+/* Pour forcer un nouvel essai sans attendre 24 h : g45MistralReveil() en console. */
+window.g45MistralReveil = function(){ try{ localStorage.removeItem('g45_mistral_veille'); }catch(e){} console.log('Mistral réactivé : il sera réessayé à la prochaine analyse.'); };
 async function g45TennisOdds(btn){
   var box=document.getElementById(btn.dataset.box); if(!box) return;
   if(box.getAttribute('data-loaded')==='1'){ box.style.display=(box.style.display==='none'?'':'none'); return; }
