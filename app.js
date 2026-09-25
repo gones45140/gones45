@@ -44391,6 +44391,25 @@ window.g45StatsIndRender = g45StatsIndRender;
 
 var _g45SgAn = null;        /* saison choisie dans la fiche */
 var _g45SgFiltre = 'global';
+/* JOURS DE REPOS (25/09/2026, maquette validée) — NBA et NHL seulement.
+   '' = tous · 'b2b' = joué la veille · 'r1' = 1 jour · 'r2' = 2 jours et +. */
+var _g45SgRepos = '';
+var _g45SgReposMap = {};
+function _g45SgReposSport(sp, lg) { return (sp === 'basketball' && lg === 'nba') || (sp === 'hockey' && lg === 'nhl'); }
+/* Repos avant chaque match = écart avec le match PRÉCÉDENT de l'équipe,
+   phases confondues. Arrondi au jour : un back-to-back côte Est puis côte
+   Ouest fait ~27 h, reste « 1 jour d'écart » = 0 jour de repos.
+   Le premier match de la saison n'a pas de valeur (null). */
+function _g45SgReposCalc(liste) {
+  var ch = liste.slice().sort(function (a, b) { return a.t - b.t; }), out = {};
+  for (var i = 0; i < ch.length; i++) {
+    out[ch[i].id] = i ? Math.max(0, Math.round((ch[i].t - ch[i - 1].t) / 86400000) - 1) : null;
+  }
+  return out;
+}
+function _g45SgReposCle(r) { return r == null ? '' : (r === 0 ? 'b2b' : (r === 1 ? 'r1' : 'r2')); }
+function _g45SgReposChoix(k) { _g45SgRepos = (_g45SgRepos === k ? '' : k); _g45SgCursRedessiner('g45-sg-repos'); }
+window._g45SgReposChoix = _g45SgReposChoix; window._g45SgReposCalc = _g45SgReposCalc;
 var _g45SgQuick = null;     /* cases cochees ; null = valeurs par defaut */
 var _g45SgMem = {};         /* matchs deja charges, par sport|ligue|annee */
 var _g45SgReplie = false;    /* un seul repli automatique sur la saison precedente */
@@ -44870,6 +44889,16 @@ async function _g45SaisonsGen(el, nom, perso) {
   if (_g45SgFiltre === 'dom') liste = liste.filter(function (m) { return m.dom; });
   else if (_g45SgFiltre === 'ext') liste = liste.filter(function (m) { return !m.dom; });
   if (!liste.length) liste = st.liste;
+  /* Jours de repos : calculés sur TOUS les matchs de la saison (ms), pas sur
+     la phase affichée — le 1er match de playoffs a bien un match avant lui. */
+  var _repOn = _g45SgReposSport(sp, lg), _repN = { b2b: 0, r1: 0, r2: 0 }, _repTous = liste;
+  if (_repOn) {
+    try { _g45SgReposMap = _g45SgReposCalc(_g45SgCalc(ms || [], perso.id, nom).liste); } catch (e) { _g45SgReposMap = {}; }
+    liste.forEach(function (m) { var k = _g45SgReposCle(_g45SgReposMap[m.id]); if (k) _repN[k]++; });
+    if (_g45SgRepos && _repN[_g45SgRepos]) {
+      liste = liste.filter(function (m) { return _g45SgReposCle(_g45SgReposMap[m.id]) === _g45SgRepos; });
+    }
+  } else { _g45SgReposMap = {}; }
   var nF = liste.length;
 
   var COULEURS = ['#1ed760','#4d84ff','#f0b020','#ff7b54','#ff4545','#22d3ee','#67e8f9','#a5f3fc','#bae6fd','#e0f2fe'];
@@ -44955,6 +44984,32 @@ async function _g45SaisonsGen(el, nom, perso) {
       + ';font-size:10px;font-weight:' + (on ? '700' : '400') + ';cursor:pointer;">' + f[1] + '</button>';
   });
   html += '</div>';
+
+  /* ── Filtre JOURS DE REPOS (NBA, NHL) ── */
+  if (_repOn) {
+    var _repActif = _g45SgRepos && _repN[_g45SgRepos];
+    html += '<div id="g45-sg-repos" style="font-size:12px;font-weight:800;letter-spacing:1px;color:#c9d3ee;margin:-4px 0 6px;">REPOS AVANT LE MATCH</div>'
+      + '<div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px;margin-bottom:6px;">';
+    [['', 'Tous', _repTous.length], ['b2b', 'Back-to-back', _repN.b2b], ['r1', '1 jour', _repN.r1], ['r2', '2 jours et +', _repN.r2]].forEach(function (f) {
+      var on = f[0] ? (_repActif && _g45SgRepos === f[0]) : !_repActif, vide = f[0] && !f[2];
+      var b2b = f[0] === 'b2b';
+      html += '<button ' + (vide ? 'disabled ' : 'onclick="_g45SgReposChoix(\'' + f[0] + '\')" ') + 'style="padding:9px 4px;border-radius:8px;font-size:13px;cursor:' + (vide ? 'default' : 'pointer') + ';'
+        + 'font-weight:' + (on ? '900' : '700') + ';opacity:' + (vide ? '.45' : '1') + ';'
+        + 'border:1px solid ' + (on ? (b2b ? '#ff7b54' : '#4d84ff') : 'rgba(255,255,255,.18)') + ';'
+        + 'background:' + (on ? (b2b ? '#3a1f16' : '#1b2a52') : 'rgba(11,16,29,.85)') + ';color:' + (on ? '#fff' : '#c9d3ee') + ';">'
+        + f[1] + ' (' + f[2] + ')</button>';
+    });
+    html += '</div><div style="font-size:12px;color:#c9d3ee;margin-bottom:10px;">Back-to-back = joué la veille. Entre parenthèses : nombre de matchs.</div>';
+    if (_repActif) {
+      var _rv = 0, _rd = 0, _rt = 0, _tt = 0;
+      liste.forEach(function (m) { if (m.res === 'V') _rv++; else if (m.res === 'D') _rd++; _rt += m.tot; });
+      _repTous.forEach(function (m) { _tt += m.tot; });
+      var _rLib = { b2b: 'En back-to-back', r1: 'Avec 1 jour de repos', r2: 'Avec 2 jours de repos et +' }[_g45SgRepos];
+      html += '<div style="background:rgba(11,16,29,.92);border-radius:8px;padding:8px 10px;margin-bottom:14px;color:#fff;">'
+        + '<div style="font-size:14px;font-weight:800;">' + _rLib + ' : ' + _rv + ' V – ' + _rd + ' D · ' + (_rt / liste.length).toFixed(1).replace('.', ',') + ' pts/match</div>'
+        + '<div style="font-size:12px;color:#c9d3ee;">contre ' + (_tt / _repTous.length).toFixed(1).replace('.', ',') + ' sur tous les matchs affichés</div></div>';
+    }
+  }
 
   /* ── Bouton TEMPS REGLEMENTAIRE (18/09/2026) ──
      Hockey d'abord : un 3-4 en prolongation est un 3-3 en temps reglementaire,
@@ -45144,7 +45199,9 @@ async function _g45SaisonsGen(el, nom, perso) {
       + 'style="border-left:3px solid ' + barre + ';border-radius:0 8px 8px 0;background:rgba(16,21,38,.42);padding:6px 9px;margin-bottom:6px;' + (m.id ? 'cursor:pointer;' : '') + '">'
       + '<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:5px;">'
         + '<span style="font-size:10px;font-weight:800;color:#c2cee6;white-space:nowrap;">' + _dG
-        + ' <span style="font-weight:400;">' + (m.dom ? '\ud83c\udfe0' : '\ud83d\ude8c') + '</span></span>'
+        + ' <span style="font-weight:400;">' + (m.dom ? '\ud83c\udfe0' : '\ud83d\ude8c') + '</span>'
+        + (_repOn && _g45SgReposMap[m.id] === 0 ? ' <span style="background:#3a1f16;color:#ff9a7a;padding:1px 6px;border-radius:4px;font-size:10px;font-weight:800;">B2B</span>' : '')
+        + '</span>'
         + '<span style="font-size:9px;font-weight:800;white-space:nowrap;">'
           + passes.map(function (k) { return '<span style="color:' + g45CoulMarche(k) + ';margin-left:7px;">' + k + '</span>'; }).join('')
         + '</span>'
