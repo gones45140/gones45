@@ -42531,8 +42531,8 @@ async function loadCompetTab() {
   var vues = [['equipes','\ud83d\udc65 \u00c9quipes'], ['direct','\ud83d\udd34 Direct'],
               ['calendrier','\ud83d\udcc5 Calendrier'], ['journees','\ud83d\uddd3\ufe0f Journ\u00e9es'],
               ['classement','\ud83d\udcca Classement'], ['forme','\ud83d\udcc8 Forme'],
-              /* Classements par catégorie (25/09/2026) : football seulement. */
-              ].concat(c.sp === 'soccer' ? [['categories','\ud83c\udfc5 Classements']] : []).concat([
+              /* Classements par catégorie (25/09/2026) : football, puis NBA, NFL, NHL, MLB. */
+              ].concat((c.sp === 'soccer' || _G45_CLS_US[c.s]) ? [['categories','\ud83c\udfc5 Classements']] : []).concat([
               ['buteurs', c.sp === 'soccer' ? '\u26bd Buteurs' : '\ud83c\udfc5 Individuel'],
               ['transferts','\ud83d\udd04 Transferts'],
               /* Liste personnelle, sans rapport avec le mur : voir g45SuiviEqRender. */
@@ -43394,7 +43394,8 @@ function _g45ClsBtn(on, txt, clic, extra) {
 }
 
 async function g45ClsRender(c, body) {
-  if (c.sp !== 'soccer') { body.innerHTML = '<div style="color:#c9d3ee;font-size:13px;">Classements par catégorie : football uniquement pour l\'instant.</div>'; return; }
+  if (c.sp !== 'soccer' && _G45_CLS_US[c.s]) { await g45ClsRenderUS(c, body); return; }
+  if (c.sp !== 'soccer') { body.innerHTML = '<div style="color:#c9d3ee;font-size:13px;">Classements par catégorie : football, NBA, NFL, NHL et MLB pour l\'instant.</div>'; return; }
   body.innerHTML = '<div style="color:#fff;font-size:13px;">⏳ Lecture des matchs du championnat…</div>';
   var an = _g45CompetAnnee(c.s), ms = null;
   try { ms = await _g45ClsMatchs(c.s, an); } catch (e) {}
@@ -43402,6 +43403,8 @@ async function g45ClsRender(c, body) {
   if (!ms || !ms.length) { body.innerHTML = '<div style="color:#ffb13d;font-size:13px;">Aucun match terminé trouvé pour cette compétition.</div>'; return; }
   window._g45ScorerCtx = { sp: 'soccer', lg: c.s };
   window._g45ClsDernier = { c: c, an: an };
+  /* Logo du filigrane : capturé par la réponse du classement (cache 6 h). */
+  if (!_g45CompetLogos[c.s]) { try { await _g45CompetEquipes(c); } catch (e) {} }
   var X = _g45ClsCtx, h = '';
   h += '<div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px;margin-bottom:10px;">'
     + _g45ClsBtn(X.mode === 'eq', '🛡️ Équipes', "g45ClsSet('mode','eq')") + _g45ClsBtn(X.mode === 'jo', '👤 Joueurs', "g45ClsSet('mode','jo')") + '</div>';
@@ -43422,13 +43425,13 @@ async function g45ClsRender(c, body) {
   var lieuTxt = { all: 'Global', dom: 'Domicile', ext: 'Extérieur' }[X.lieu] + (X.n ? ' · ' + X.n + ' derniers' : '');
   var saisonTxt = (typeof _g45SgLabel === 'function') ? _g45SgLabel(c.s, an) : String(an);
   var PE = _g45ClsParEquipe(ms);
-  if (X.mode === 'eq') h += _g45ClsTableEq(c, def, PE, saisonTxt, lieuTxt, ms);
-  else h += await _g45ClsTableJo(c, def, PE, saisonTxt, filtrable ? lieuTxt : 'saison', an, body);
+  if (X.mode === 'eq') h += _g45ClsCadre(c, _g45ClsTableEq(c, def, PE, saisonTxt, lieuTxt, ms));
+  else h += _g45ClsCadre(c, await _g45ClsTableJo(c, def, PE, saisonTxt, filtrable ? lieuTxt : 'saison', an, body));
   body.innerHTML = h;
 }
 
 function _g45ClsEnTete(titre, sous) {
-  return '<div style="background:rgba(11,16,29,.92);border-radius:8px;padding:8px 10px;margin-bottom:8px;color:#fff;">'
+  return '<div style="padding:8px 10px;margin-bottom:4px;color:#fff;">'
     + '<div style="font-size:14px;font-weight:800;">' + titre + '</div>' + (sous ? '<div style="font-size:12px;color:#c9d3ee;margin-top:2px;">' + sous + '</div>' : '') + '</div>';
 }
 
@@ -43447,7 +43450,7 @@ function _g45ClsTableEq(c, def, PE, saisonTxt, lieuTxt, ms) {
   if (def[0] === 'p1') sous += ' · match sans but : non compté';
   if (/^(p1|mt|bts1|o15mt)$/.test(def[0]) && nonFiables) sous += ' · ' + nonFiables + ' match(s) au détail incomplet écarté(s)';
   var h = _g45ClsEnTete(def[1] + ' · ' + c.n + ' ' + saisonTxt + ' · ' + lieuTxt, sous);
-  h += '<div style="background:rgba(11,16,29,.92);border-radius:8px;overflow:hidden;">'
+  h += '<div>'
     + '<div style="display:grid;grid-template-columns:30px minmax(0,1fr) 70px 38px;gap:6px;padding:8px 10px;font-size:12px;color:#c9d3ee;font-weight:700;">'
     + '<span>#</span><span>Équipe</span><span onclick="g45ClsSet(\'inv\')" style="text-align:right;cursor:pointer;text-decoration:underline;">' + (pct ? '%' : 'Moy.') + (sens > 0 ? ' ▼' : ' ▲') + '</span><span style="text-align:right;">MJ</span></div>';
   rows.forEach(function (r, i) {
@@ -43460,7 +43463,7 @@ function _g45ClsTableEq(c, def, PE, saisonTxt, lieuTxt, ms) {
       + '<span style="text-align:right;font-size:14px;font-weight:900;color:' + coul + ';">' + val + (pct ? '<div style="font-size:11px;color:#c9d3ee;font-weight:700;">' + r.v.k + '/' + r.v.n + '</div>' : '') + '</span>'
       + '<span style="text-align:right;font-size:13px;color:#c9d3ee;">' + r.v.n + '</span></div>';
   });
-  return h + '</div><div style="font-size:12px;color:#c9d3ee;margin-top:6px;">Touche une équipe pour ouvrir sa fiche · touche « ' + (pct ? '%' : 'Moy.') + ' » pour inverser l\'ordre</div>';
+  return h + '</div><div style="font-size:12px;color:#c9d3ee;margin:6px 10px 0;">Touche une équipe pour ouvrir sa fiche · touche « ' + (pct ? '%' : 'Moy.') + ' » pour inverser l\'ordre</div>';
 }
 
 /* Joueurs, catégories tirées des buts et cartons. */
@@ -43542,7 +43545,7 @@ async function _g45ClsTableJo(c, def, PE, saisonTxt, lieuTxt, an, body) {
   rows = rows.slice(0, 30);
   var h = _g45ClsEnTete(def[1] + ' · ' + c.n + ' ' + saisonTxt + ' · ' + lieuTxt, def[0] === 'p1b' ? 'Auteur du 1er but du match (csc exclus)' : (def[0] === 'cj' ? 'Rouges indiqués sous le nom' : ''));
   if (!rows.length) return h + '<div style="color:#c9d3ee;font-size:13px;padding:8px;">Personne pour l\'instant.</div>';
-  h += '<div style="background:rgba(11,16,29,.92);border-radius:8px;overflow:hidden;">'
+  h += '<div>'
     + '<div style="display:grid;grid-template-columns:30px minmax(0,1fr) 50px;gap:6px;padding:8px 10px;font-size:12px;color:#c9d3ee;font-weight:700;">'
     + '<span>#</span><span>Joueur</span><span onclick="g45ClsSet(\'inv\')" style="text-align:right;cursor:pointer;text-decoration:underline;">' + (sens > 0 ? '▼' : '▲') + '</span></div>';
   rows.forEach(function (r, i) {
@@ -43555,17 +43558,278 @@ async function _g45ClsTableJo(c, def, PE, saisonTxt, lieuTxt, an, body) {
       + '<span style="text-align:right;font-size:18px;font-weight:900;color:' + (i < 3 ? '#f0b020' : '#fff') + ';">' + _g45ClsFr(r.v, r.v % 1 ? 1 : 0) + '</span></div>'
       + '<div id="g45-pst-' + r.aid + '"></div>';
   });
-  return h + '</div><div style="font-size:12px;color:#c9d3ee;margin-top:6px;">Touche un joueur pour ouvrir son panneau</div>';
+  return h + '</div><div style="font-size:12px;color:#c9d3ee;margin:6px 10px 0;">Touche un joueur pour ouvrir son panneau</div>';
 }
 
 window.g45ClsSet = function (k, v) {
   if (k === 'inv') _g45ClsCtx.inv = !_g45ClsCtx.inv;
-  else { _g45ClsCtx[k] = v; if (k !== 'lieu' && k !== 'n') _g45ClsCtx.inv = false; }
+  else if (k === 'catU' || k === 'catUJ') {
+    /* Catégories US : mémorisées par ligue, les clés diffèrent d'un sport à l'autre. */
+    var D0 = window._g45ClsDernier;
+    _g45ClsCtx[k] = _g45ClsCtx[k] || {};
+    if (D0 && D0.c) _g45ClsCtx[k][D0.c.s] = v;
+    _g45ClsCtx.inv = false;
+  } else { _g45ClsCtx[k] = v; if (k !== 'lieu' && k !== 'n') _g45ClsCtx.inv = false; }
   var D = window._g45ClsDernier, body = document.getElementById('g45-compet-body');
   if (D && body) g45ClsRender(D.c, body); else if (typeof loadCompetTab === 'function') loadCompetTab();
 };
 window.g45ClsRender = g45ClsRender; window._g45ClsLireMatch = _g45ClsLireMatch;
 window._g45ClsValEq = _g45ClsValEq; window._g45ClsJoueursButs = _g45ClsJoueursButs; window._g45ClsParEquipe = _g45ClsParEquipe;
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   CLASSEMENTS PAR CATÉGORIE — NBA, NFL, NHL, MLB   (25/09/2026, maquette validée)
+   ───────────────────────────────────────────────────────────────────────────
+   Étape 1 du plan : les quatre ligues US, dont les scores par période sont
+   DÉJÀ téléchargés par `_g45CompetMatchs` (hp/ap, numéro + valeur) — ceux
+   qu'utilisent les curseurs de période. Aucune source nouvelle côté équipes ;
+   le cache 12 h est partagé avec la vue Forme.
+   Catégories calées sur les périodes RÉELLES de chaque sport :
+   - NHL : 3 périodes, puis prolongation (4) et TAB (5, saison régulière
+     seulement : en séries, la 5 est une 2e prolongation) ;
+   - MLB : 9 manches, au-delà = manches supplémentaires ;
+   - NBA / NFL : 4 quart-temps, mi-temps après le 2e, au-delà = prolongation.
+   Une catégorie de période n'est comptée que si TOUTES ses périodes sont là
+   pour le match : jamais de chiffre deviné. Une période à égalité n'est ni
+   gagnée ni perdue, mais le match compte dans le total.
+   Joueurs : top ESPN (sports.core …/leaders), saison régulière.
+   Rugby, NRL et KHL : étape 2, après les sondes.
+   ═══════════════════════════════════════════════════════════════════════════ */
+var _G45_CLS_US_N = { hockey: 3, basketball: 4, football: 4, baseball: 9 };
+
+/* Somme des périodes `ps` pour un camp, ou null s'il en manque une. */
+function _g45ClsPer(m, dom, ps) {
+  var L = (dom ? m.hp : m.ap) || [], s = 0, vus = 0;
+  ps.forEach(function (p) {
+    var x = L.filter(function (l) { return l && +l.p === p; })[0];
+    if (x) { s += (+x.v || 0); vus++; }
+  });
+  return vus === ps.length ? s : null;
+}
+/* Gagne les périodes `ps` : true / false (égalité = false), null si inconnu. */
+function _g45ClsPerGagne(m, dom, ps) {
+  var a = _g45ClsPer(m, dom, ps), b = _g45ClsPer(m, !dom, ps);
+  return (a == null || b == null) ? null : a > b;
+}
+function _g45ClsPerTot(m, ps) {
+  var a = _g45ClsPer(m, true, ps), b = _g45ClsPer(m, false, ps);
+  return (a == null || b == null) ? null : a + b;
+}
+/* Le match a-t-il des périodes au-delà du temps réglementaire ? null si pas de détail. */
+function _g45ClsProl(m, sp) {
+  var L = (m.hp || []).concat(m.ap || []);
+  if (!L.length) return null;
+  var n = _G45_CLS_US_N[sp];
+  return L.some(function (x) { return x && +x.p > n; });
+}
+var _g45ClsPour = function (m, dom) { return dom ? m.hg : m.ag; };
+var _g45ClsContre = function (m, dom) { return dom ? m.ag : m.hg; };
+var _g45ClsTotal = function (m) { return m.hg + m.ag; };
+
+/* clé, libellé, type ('moy' | 'pct'), sens (1 = le plus haut en tête), f(m, dom), décimales */
+var _G45_CLS_US_EQ = {
+  hockey: [
+    ['bm', 'Buts marqués', 'moy', 1, _g45ClsPour, 2], ['be', 'Encaissés', 'moy', -1, _g45ClsContre, 2],
+    ['tot', 'Total/match', 'moy', 1, _g45ClsTotal, 2],
+    ['o55', 'Over 5,5', 'pct', 1, function (m) { return m.hg + m.ag > 5.5; }],
+    ['bl', 'Blanchissages', 'pct', 1, function (m, d) { return !_g45ClsContre(m, d); }],
+    ['p1', '⚡ Gagne la 1re période', 'pct', 1, function (m, d) { return _g45ClsPerGagne(m, d, [1]); }],
+    ['p1t', 'Total 1re période', 'moy', 1, function (m) { return _g45ClsPerTot(m, [1]); }, 2],
+    ['p3', 'Gagne la 3e période', 'pct', 1, function (m, d) { return _g45ClsPerGagne(m, d, [3]); }],
+    ['ot', 'Va en prolongation', 'pct', 1, function (m) { return _g45ClsProl(m, 'hockey'); }],
+    ['tab', 'Décidé aux TAB', 'pct', 1, function (m) {
+      if (m.po) return null;                     /* pas de TAB en séries */
+      var L = (m.hp || []).concat(m.ap || []);
+      return L.length ? L.some(function (x) { return x && +x.p === 5; }) : null;
+    }]
+  ],
+  baseball: [
+    ['bm', 'Points', 'moy', 1, _g45ClsPour, 2], ['be', 'Encaissés', 'moy', -1, _g45ClsContre, 2],
+    ['tot', 'Total/match', 'moy', 1, _g45ClsTotal, 2],
+    ['nrfi', 'NRFI / YRFI (1re manche)', 'pct', 1, function (m) { var t = _g45ClsPerTot(m, [1]); return t == null ? null : t === 0; }],
+    ['f5', '⚡ Gagne les 5 premières', 'pct', 1, function (m, d) { return _g45ClsPerGagne(m, d, [1, 2, 3, 4, 5]); }],
+    ['f5t', 'Total 5 premières', 'moy', 1, function (m) { return _g45ClsPerTot(m, [1, 2, 3, 4, 5]); }, 2],
+    ['xi', 'Manches supplémentaires', 'pct', 1, function (m) { return _g45ClsProl(m, 'baseball'); }]
+  ]
+};
+/* NBA et NFL : même découpage (4 quart-temps, mi-temps après le 2e). */
+['basketball', 'football'].forEach(function (sp) {
+  _G45_CLS_US_EQ[sp] = [
+    ['bm', 'Points', 'moy', 1, _g45ClsPour, 1], ['be', 'Encaissés', 'moy', -1, _g45ClsContre, 1],
+    ['tot', 'Total/match', 'moy', 1, _g45ClsTotal, 1],
+    ['q1', '⚡ Gagne le 1er QT', 'pct', 1, function (m, d) { return _g45ClsPerGagne(m, d, [1]); }],
+    ['mt', 'Gagne la 1re MT', 'pct', 1, function (m, d) { return _g45ClsPerGagne(m, d, [1, 2]); }],
+    ['mtt', 'Total 1re MT', 'moy', 1, function (m) { return _g45ClsPerTot(m, [1, 2]); }, 1],
+    ['mt2', 'Gagne la 2e MT', 'pct', 1, function (m, d) { return _g45ClsPerGagne(m, d, [3, 4]); }],
+    ['ot', 'Prolongation', 'pct', 1, function (m) { return _g45ClsProl(m, sp); }]
+  ];
+});
+/* Ligues couvertes par l'étape 1 → sport. */
+var _G45_CLS_US = { nba: 'basketball', nfl: 'football', nhl: 'hockey', mlb: 'baseball' };
+window._G45_CLS_US = _G45_CLS_US;
+
+/* Logo du championnat, centré en filigrane derrière le tableau (tous sports). */
+function _g45ClsCadre(c, html) {
+  var lo = _g45CompetLogos[c.s] || (_G45_CLS_US[c.s] ? 'https://a.espncdn.com/i/teamlogos/leagues/500/' + c.s + '.png' : '');
+  return '<div style="position:relative;isolation:isolate;overflow:hidden;min-height:190px;background:rgba(11,16,29,.92);border-radius:10px;padding:2px 2px 8px;">'
+    + (lo ? '<img src="' + lo + '" alt="" aria-hidden="true" onerror="this.remove()" style="position:absolute;z-index:-1;left:50%;top:min(50%,170px);'
+      + 'transform:translate(-50%,-50%);width:170px;max-width:55%;height:170px;object-fit:contain;opacity:.09;pointer-events:none;">' : '')
+    + html + '</div>';
+}
+
+function _g45ClsValUS(def, id, liste) {
+  var k = 0, n = 0;
+  liste.forEach(function (m) {
+    var r = def[4](m, m.h === id);
+    if (r == null || (typeof r === 'number' && isNaN(r))) return;
+    n++;
+    if (def[2] === 'pct') { if (r) k++; } else k += r;
+  });
+  if (!n) return null;
+  return { k: k, n: n, v: def[2] === 'pct' ? k * 100 / n : k / n };
+}
+
+async function g45ClsRenderUS(c, body) {
+  var sp = _G45_CLS_US[c.s], X = _g45ClsCtx;
+  X.catU = X.catU || {}; X.catUJ = X.catUJ || {};
+  body.innerHTML = '<div style="color:#fff;font-size:13px;">⏳ Lecture des matchs du championnat…</div>';
+  var an = _g45CompetAnnee(c.s), eq = [];
+  try { eq = await _g45CompetEquipes(c); } catch (e) {}
+  if (!eq || !eq.length) { body.innerHTML = '<div style="color:#ffb13d;font-size:13px;">Compétition indisponible.</div>'; return; }
+  var ids = eq.map(function (t) { return t.id; });
+  var prog = function (i, n) { body.innerHTML = '<div style="color:#fff;font-size:13px;">⏳ Équipe ' + i + '/' + n + '…</div>'; };
+  var ms = null;
+  try { ms = await _g45CompetMatchs(c.sp, c.s, an, ids, prog); } catch (e) {}
+  /* Début de saison : l'exercice précédent, sauf si une saison a été choisie. */
+  if ((!ms || !ms.length) && !_g45CompetSaison) { an = an - 1; try { ms = await _g45CompetMatchs(c.sp, c.s, an, ids, prog); } catch (e) {} }
+  if (!ms || !ms.length) { body.innerHTML = '<div style="color:#ffb13d;font-size:13px;">Aucun match terminé trouvé pour cette compétition.</div>'; return; }
+  window._g45ClsDernier = { c: c, an: an };
+
+  /* Les matchs du calendrier par équipe n'ont pas de nom : on les prend au classement. */
+  var noms = {};
+  eq.forEach(function (t) { noms[String(t.id)] = t; });
+  ms = ms.map(function (m) {
+    var o = {}; Object.keys(m).forEach(function (k) { o[k] = m[k]; });
+    var H = noms[m.h] || {}, A = noms[m.a] || {};
+    o.hn = H.nom || m.hn || '?'; o.an = A.nom || m.an || '?';
+    o.hl = H.logo || m.hl || ''; o.al = A.logo || m.al || '';
+    return o;
+  });
+
+  var h = '<div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px;margin-bottom:10px;">'
+    + _g45ClsBtn(X.mode === 'eq', '🛡️ Équipes', "g45ClsSet('mode','eq')") + _g45ClsBtn(X.mode === 'jo', '👤 Joueurs', "g45ClsSet('mode','jo')") + '</div>';
+  var saisonTxt = (typeof _g45SgLabel === 'function') ? _g45SgLabel(c.s, an) : String(an);
+
+  if (X.mode === 'jo') {
+    body.innerHTML = h + '<div id="g45-cls-prog" style="color:#fff;font-size:13px;">⏳ Top ESPN…</div>';
+    h += await _g45ClsJoueursUS(c, an, saisonTxt);
+    body.innerHTML = h;
+    return;
+  }
+
+  var cats = _G45_CLS_US_EQ[sp], cle = X.catU[c.s];
+  var def = cats.filter(function (k) { return k[0] === cle; })[0] || cats[0];
+  h += '<div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px;">';
+  cats.forEach(function (k) { h += _g45ClsBtn(k[0] === def[0], k[1], "g45ClsSet('catU','" + k[0] + "')", k[1].indexOf('⚡') === 0 ? '#f0b020' : ''); });
+  h += '</div>'
+    + '<div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;margin-bottom:6px;">'
+    + _g45ClsBtn(X.lieu === 'all', 'Global', "g45ClsSet('lieu','all')") + _g45ClsBtn(X.lieu === 'dom', 'Dom', "g45ClsSet('lieu','dom')") + _g45ClsBtn(X.lieu === 'ext', 'Ext', "g45ClsSet('lieu','ext')") + '</div>'
+    + '<div style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px;margin-bottom:10px;">'
+    + [[0, 'Saison'], [10, '10 der.'], [5, '5 der.'], [3, '3 der.']].map(function (x) { return _g45ClsBtn(X.n === x[0], x[1], "g45ClsSet('n'," + x[0] + ")"); }).join('') + '</div>';
+
+  var lieuTxt = { all: 'Global', dom: 'Domicile', ext: 'Extérieur' }[X.lieu] + (X.n ? ' · ' + X.n + ' derniers' : '');
+  var PE = _g45ClsParEquipe(ms), rows = [], tk = 0, tn = 0;
+  Object.keys(PE.par).forEach(function (id) {
+    var v = _g45ClsValUS(def, id, PE.par[id]);
+    if (v) { tk += v.k; tn += v.n; rows.push({ id: id, nom: PE.info[id].nom, logo: PE.info[id].logo, v: v }); }
+  });
+  var sens = def[3] * (X.inv ? -1 : 1), pct = def[2] === 'pct', dec = def[5] || 2;
+  rows.sort(function (a, b) { return (b.v.v - a.v.v) * sens || b.v.n - a.v.n || a.nom.localeCompare(b.nom); });
+  var moyC = tn ? (pct ? tk * 100 / tn : tk / tn) : 0;
+  var notes = [];
+  if (/Gagne/.test(def[1])) notes.push('Période à égalité : ni gagnée ni perdue');
+  if (def[0] === 'nrfi') notes.push('NRFI : aucun point en 1re manche · YRFI = 100 % − NRFI');
+  if (def[0] === 'tab') notes.push('Saison régulière seulement');
+  if (typeof _g45SgTR !== 'undefined' && _g45SgTR) notes.push('⏱️ temps réglementaire actif');
+  notes.push('Moyenne de la ligue : ' + (pct ? _g45ClsFr(moyC) + ' %' : _g45ClsFr(moyC, dec)));
+
+  var t = _g45ClsEnTete(def[1].replace(/^⚡ /, '') + ' · ' + c.n + ' ' + saisonTxt + ' · ' + lieuTxt, notes.join(' · '));
+  if (!rows.length) t += '<div style="color:#c9d3ee;font-size:13px;padding:8px 10px;">Détail par période indisponible pour ces matchs.</div>';
+  else {
+    t += '<div style="display:grid;grid-template-columns:30px minmax(0,1fr) 74px 38px;gap:6px;padding:8px 10px;font-size:12px;color:#c9d3ee;font-weight:700;">'
+      + '<span>#</span><span>Équipe</span><span onclick="g45ClsSet(\'inv\')" style="text-align:right;cursor:pointer;text-decoration:underline;">' + (pct ? '%' : 'Moy.') + (sens > 0 ? ' ▼' : ' ▲') + '</span><span style="text-align:right;">MJ</span></div>';
+    rows.forEach(function (r, i) {
+      var val = pct ? _g45ClsFr(r.v.v) + ' %' : _g45ClsFr(r.v.v, dec);
+      var coul = i < 3 ? '#1ed760' : (i >= rows.length - 3 ? '#ff8a8a' : '#fff');
+      t += '<div onclick="g45CompetOuvrir(\'' + String(r.nom).replace(/'/g, "\\'") + '\',\'' + r.id + '\',\'' + c.s + '\',\'' + c.sp + '\')" style="display:grid;grid-template-columns:30px minmax(0,1fr) 74px 38px;gap:6px;padding:8px 10px;border-top:1px solid rgba(255,255,255,.08);align-items:center;cursor:pointer;">'
+        + '<span style="font-size:13px;font-weight:800;color:' + (i ? '#c9d3ee' : '#f0b020') + ';">' + (i + 1) + '</span>'
+        + '<span style="display:flex;align-items:center;gap:7px;min-width:0;">' + (r.logo ? '<img src="' + r.logo + '" alt="" loading="lazy" style="width:20px;height:20px;object-fit:contain;flex:none;" onerror="this.style.display=\'none\'">' : '')
+        + '<span style="font-size:14px;font-weight:800;color:#fff;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + _g45Esc(r.nom) + '</span></span>'
+        + '<span style="text-align:right;font-size:14px;font-weight:900;color:' + coul + ';">' + val + (pct ? '<div style="font-size:11px;color:#c9d3ee;font-weight:700;">' + r.v.k + '/' + r.v.n + '</div>' : '') + '</span>'
+        + '<span style="text-align:right;font-size:13px;color:#c9d3ee;">' + r.v.n + '</span></div>';
+    });
+    t += '<div style="font-size:12px;color:#c9d3ee;margin:6px 10px 0;">Touche une équipe pour ouvrir sa fiche · touche « ' + (pct ? '%' : 'Moy.') + ' » pour inverser l\'ordre</div>';
+  }
+  body.innerHTML = h + _g45ClsCadre(c, t);
+}
+
+/* Joueurs : top ESPN de la saison régulière, catégories telles qu'ESPN les publie. */
+async function _g45ClsJoueursUS(c, an, saisonTxt) {
+  var X = _g45ClsCtx, ck = 'g45clsU1_' + c.sp + '_' + c.s + '_' + an, cats = null;
+  try { var cc = JSON.parse(localStorage.getItem(ck) || 'null'); if (cc && cc.x > Date.now()) cats = cc.d; } catch (e) {}
+  if (!cats) {
+    var types = [2, 3, 0];
+    for (var i = 0; i < types.length && !cats; i++) {
+      try {
+        var r = await fetch('https://sports.core.api.espn.com/v2/sports/' + c.sp + '/leagues/' + c.s + '/seasons/' + an + '/types/' + types[i] + '/leaders');
+        if (!r.ok) continue;
+        var raw = await r.json();
+        var L = (raw.categories || []).filter(function (k) { return k.leaders && k.leaders.length; }).map(function (k) {
+          return { name: k.name, abbreviation: k.abbreviation, displayName: k.displayName,
+            l: k.leaders.slice(0, 25).map(function (x) {
+              return [String((x.athlete && x.athlete.$ref) || ''), String((x.team && x.team.$ref) || ''), x.displayValue || '', +x.value || 0];
+            }) };
+        });
+        if (L.length) cats = L;
+      } catch (e) {}
+    }
+    if (cats) { try { localStorage.setItem(ck, JSON.stringify({ x: Date.now() + 12 * 3600e3, d: cats })); } catch (e) {} }
+  }
+  if (!cats) return _g45ClsCadre(c, _g45ClsEnTete('Joueurs · ' + c.n + ' ' + saisonTxt, 'Top ESPN indisponible pour cette saison.'));
+
+  var cat = cats.filter(function (k) { return k.name === X.catUJ[c.s]; })[0] || cats[0];
+  var h = '<div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px;">'
+    + cats.map(function (k) { return _g45ClsBtn(k.name === cat.name, _g45Esc(_g45LdLibelle(k)), "g45ClsSet('catUJ','" + String(k.name).replace(/[^A-Za-z0-9_]/g, '') + "')"); }).join('') + '</div>';
+
+  /* Noms et équipes résolus 4 par 4 (cache local permanent de `_g45LdNom`). */
+  var file = cat.l.map(function (x, i) { return i; }), res = [], fait = 0;
+  var travail = async function () {
+    while (file.length) {
+      var i = file.shift(), x = cat.l[i], a = null, e = null;
+      try { a = await _g45LdNom(x[0]); } catch (er) {}
+      try { e = await _g45LdNom(x[1]); } catch (er) {}
+      fait++;
+      var pb = document.getElementById('g45-cls-prog'); if (pb) pb.textContent = '⏳ Joueurs ' + fait + '/' + cat.l.length;
+      res[i] = { nom: (a && a.nom) || ('Joueur #' + (i + 1)), eq: (e && (e.nom || e.abbr)) || '', logo: (e && e.logo) || '', val: x[2] || _g45ClsFr(x[3], x[3] % 1 ? 1 : 0) };
+    }
+  };
+  await Promise.all([travail(), travail(), travail(), travail()]);
+  if (X.inv) res.reverse();
+
+  var t = _g45ClsEnTete(_g45Esc(_g45LdLibelle(cat)) + ' · ' + c.n + ' ' + saisonTxt, 'Top ' + res.length + ' ESPN · saison entière (pas de filtre lieu ou derniers matchs)')
+    + '<div style="display:grid;grid-template-columns:30px minmax(0,1fr) auto;gap:6px;padding:8px 10px;font-size:12px;color:#c9d3ee;font-weight:700;">'
+    + '<span>#</span><span>Joueur</span><span onclick="g45ClsSet(\'inv\')" style="text-align:right;cursor:pointer;text-decoration:underline;">' + (X.inv ? '▲' : '▼') + '</span></div>';
+  res.forEach(function (r, i) {
+    var rang = X.inv ? res.length - i : i + 1;
+    t += '<div style="display:grid;grid-template-columns:30px minmax(0,1fr) auto;gap:6px;padding:8px 10px;border-top:1px solid rgba(255,255,255,.08);align-items:center;">'
+      + '<span style="font-size:13px;font-weight:800;color:' + (rang > 1 ? '#c9d3ee' : '#f0b020') + ';">' + rang + '</span>'
+      + '<span style="display:flex;align-items:center;gap:7px;min-width:0;">' + (r.logo ? '<img src="' + r.logo + '" alt="" loading="lazy" style="width:20px;height:20px;object-fit:contain;flex:none;" onerror="this.style.display=\'none\'">' : '')
+      + '<span style="min-width:0;"><span style="display:block;font-size:14px;font-weight:800;color:#fff;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + _g45Esc(r.nom) + '</span>'
+      + '<span style="display:block;font-size:12px;color:#c9d3ee;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + _g45Esc(r.eq) + '</span></span></span>'
+      + '<span style="text-align:right;font-size:16px;font-weight:900;color:' + (rang <= 3 ? '#f0b020' : '#fff') + ';">' + _g45Esc(_g45LdValFr(r.val)) + '</span></div>';
+  });
+  return h + _g45ClsCadre(c, t);
+}
+window.g45ClsRenderUS = g45ClsRenderUS; window._g45ClsValUS = _g45ClsValUS; window._G45_CLS_US_EQ = _G45_CLS_US_EQ;
 
 async function g45FormeRender(c, body) {
   body.innerHTML = '<div style="color:#9fb0c7;font-size:11.5px;">\u23f3 Calcul de la forme\u2026</div>';
