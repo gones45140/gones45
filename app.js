@@ -8681,10 +8681,10 @@ var NBA_TEAMS = {
   'New Orleans Pelicans':  {id:'1610612740', abbr:'NOP', espnAbbr:'no', bdlId:19,  espnId:3,  asId:23, alias:['Pelicans','New Orleans']},
   'New York Knicks':       {id:'1610612752', abbr:'NYK', espnAbbr:'ny', bdlId:20,  espnId:18, asId:24, alias:['Knicks','New York']},
   'Oklahoma City Thunder': {id:'1610612760', abbr:'OKC', bdlId:21,  espnId:25, asId:25, alias:['Thunder','Oklahoma City','OKC']},
-  'Orlando Magic':         {id:'1610612753', abbr:'ORL', bdlId:22,  espnId:22, asId:26, alias:['Magic','Orlando']},
+  'Orlando Magic':         {id:'1610612753', abbr:'ORL', bdlId:22,  espnId:19, asId:26, alias:['Magic','Orlando']},
   'Philadelphia 76ers':    {id:'1610612755', abbr:'PHI', bdlId:23,  espnId:20, asId:27, alias:['76ers','Sixers','Philadelphia']},
-  'Phoenix Suns':          {id:'1610612756', abbr:'PHX', bdlId:24,  espnId:24, asId:28, alias:['Suns','Phoenix']},
-  'Portland Trail Blazers':{id:'1610612757', abbr:'POR', bdlId:25,  espnId:21, asId:29, alias:['Trail Blazers','Blazers','Portland']},
+  'Phoenix Suns':          {id:'1610612756', abbr:'PHX', bdlId:24,  espnId:21, asId:28, alias:['Suns','Phoenix']},
+  'Portland Trail Blazers':{id:'1610612757', abbr:'POR', bdlId:25,  espnId:22, asId:29, alias:['Trail Blazers','Blazers','Portland']},
   'Sacramento Kings':      {id:'1610612758', abbr:'SAC', bdlId:26,  espnId:23, asId:30, alias:['Kings','Sacramento']},
   'San Antonio Spurs':     {id:'1610612759', abbr:'SAS', espnAbbr:'sa', bdlId:27,  espnId:24, asId:31, alias:['Spurs','San Antonio']},
   'Toronto Raptors':       {id:'1610612761', abbr:'TOR', bdlId:28,  espnId:28, asId:38, alias:['Raptors','Toronto']},
@@ -16193,10 +16193,10 @@ var NBA_TEAMS = {
   'New Orleans Pelicans':  {id:'1610612740', abbr:'NOP', espnAbbr:'no', bdlId:19,  espnId:3,  asId:23, alias:['Pelicans','New Orleans']},
   'New York Knicks':       {id:'1610612752', abbr:'NYK', espnAbbr:'ny', bdlId:20,  espnId:18, asId:24, alias:['Knicks','New York']},
   'Oklahoma City Thunder': {id:'1610612760', abbr:'OKC', bdlId:21,  espnId:25, asId:25, alias:['Thunder','Oklahoma City','OKC']},
-  'Orlando Magic':         {id:'1610612753', abbr:'ORL', bdlId:22,  espnId:22, asId:26, alias:['Magic','Orlando']},
+  'Orlando Magic':         {id:'1610612753', abbr:'ORL', bdlId:22,  espnId:19, asId:26, alias:['Magic','Orlando']},
   'Philadelphia 76ers':    {id:'1610612755', abbr:'PHI', bdlId:23,  espnId:20, asId:27, alias:['76ers','Sixers','Philadelphia']},
-  'Phoenix Suns':          {id:'1610612756', abbr:'PHX', bdlId:24,  espnId:24, asId:28, alias:['Suns','Phoenix']},
-  'Portland Trail Blazers':{id:'1610612757', abbr:'POR', bdlId:25,  espnId:21, asId:29, alias:['Trail Blazers','Blazers','Portland']},
+  'Phoenix Suns':          {id:'1610612756', abbr:'PHX', bdlId:24,  espnId:21, asId:28, alias:['Suns','Phoenix']},
+  'Portland Trail Blazers':{id:'1610612757', abbr:'POR', bdlId:25,  espnId:22, asId:29, alias:['Trail Blazers','Blazers','Portland']},
   'Sacramento Kings':      {id:'1610612758', abbr:'SAC', bdlId:26,  espnId:23, asId:30, alias:['Kings','Sacramento']},
   'San Antonio Spurs':     {id:'1610612759', abbr:'SAS', espnAbbr:'sa', bdlId:27,  espnId:24, asId:31, alias:['Spurs','San Antonio']},
   'Toronto Raptors':       {id:'1610612761', abbr:'TOR', bdlId:28,  espnId:28, asId:38, alias:['Raptors','Toronto']},
@@ -19394,66 +19394,742 @@ function nbaCurrentSeason() {
   return Math.min(s, 2024); // plafond free plan
 }
 
+/* ══ TABLEAU DES JOUEURS NBA (25/09/2026, maquette « Joueurs NBA » validée) ══
+   Remplace l'ancienne liste : ses stats passaient par common v3 (site ESPN),
+   BLOQUÉ par CORS dans le navigateur.
+   SOURCES SONDÉES :
+   - effectif : site v2 .../basketball/nba/teams/{abbr}/roster (saison 2027) ;
+   - stats    : core .../leagues/nba/seasons/{S}/types/2/athletes/{id}/statistics
+     → saison ENTIÈRE du joueur, tous clubs confondus. S+1 renvoie 404 tant que
+     la saison n'a pas commencé ; un rookie renvoie 404 (tirets).
+   Bascule seule sur la saison suivante dès que ses stats existent (sonde sur
+   3 joueurs, décision gardée 12 h). Cache par joueur : 6 h pour la saison en
+   cours, 7 jours pour une saison terminée. */
+var _G45_NBA_COLS = [
+  ['gp','MJ',0],['gs','Tit',0],['min','Min',1],['pts','Pts',1],['reb','Reb',1],['ast','Pas',1],
+  ['tp','3pts',1],['stl','Int',1],['blk','Ctr',1],['to','BP',1],['prp','P+R+P',1]
+];
+var _G45_NBA_LEADERS = [['pts','Points'],['reb','Rebonds'],['ast','Passes'],['tp','3 points']];
+
+function _g45NbaLireStats(j) {
+  var cats = (((j || {}).splits || {}).categories) || [];
+  var v = {};
+  cats.forEach(function (c) {
+    (c.stats || []).forEach(function (s) {
+      var n = (c.name || '') + '.' + (s.name || '');
+      var x = (typeof s.value === 'number') ? s.value : parseFloat(s.value);
+      if (!isNaN(x)) v[n] = x;
+    });
+  });
+  var g = function (k) { return (v[k] === undefined) ? null : v[k]; };
+  var o = {
+    gp: g('general.gamesPlayed'), gs: g('general.gamesStarted'), min: g('general.avgMinutes'),
+    reb: g('general.avgRebounds'), pts: g('offensive.avgPoints'), ast: g('offensive.avgAssists'),
+    to: g('offensive.avgTurnovers'), tp: g('offensive.avgThreePointFieldGoalsMade'),
+    stl: g('defensive.avgSteals'), blk: g('defensive.avgBlocks')
+  };
+  if (o.gp === null || o.gp <= 0) return null;          /* aucune rencontre jouée : tirets */
+  o.prp = (o.pts !== null && o.reb !== null && o.ast !== null) ? (o.pts + o.reb + o.ast) : null;
+  return o;
+}
+
+function _g45NbaCacheLire(k) {
+  try { var c = JSON.parse(localStorage.getItem(k) || 'null'); if (c && c.x > Date.now()) return c; } catch (e) {}
+  return null;
+}
+function _g45NbaCacheEcrire(k, s, ttl) {
+  try { localStorage.setItem(k, JSON.stringify({ x: Date.now() + ttl, s: s })); } catch (e) {}
+}
+
+/* Renvoie {st:objet|null, ok:bool} — ok=false : erreur réseau (pas mise en cache). */
+async function _g45NbaStatsJoueur(aid, saison, enCours) {
+  var k = 'g45_nbast_v1_' + saison + '_' + aid;
+  var c = _g45NbaCacheLire(k);
+  if (c) return { st: c.s, ok: true };
+  try {
+    var r = await fetch('https://sports.core.api.espn.com/v2/sports/basketball/leagues/nba/seasons/' + saison + '/types/2/athletes/' + aid + '/statistics?lang=en&region=us');
+    if (r.status === 404) { _g45NbaCacheEcrire(k, null, enCours ? 6 * 3600e3 : 7 * 86400e3); return { st: null, ok: true }; }
+    if (!r.ok) return { st: null, ok: false };
+    var st = _g45NbaLireStats(await r.json());
+    _g45NbaCacheEcrire(k, st, enCours ? 6 * 3600e3 : 7 * 86400e3);
+    return { st: st, ok: true };
+  } catch (e) { return { st: null, ok: false }; }
+}
+
+/* Saison des stats : S (celle de l'effectif) si elle a commencé, sinon S-1. */
+async function _g45NbaSaisonStats(anneeEff, ids) {
+  var k = 'g45_nba_saison_v1_' + anneeEff;
+  var c = _g45NbaCacheLire(k);
+  if (c && c.s) return c.s;
+  var choix = anneeEff - 1;
+  for (var i = 0; i < Math.min(3, ids.length); i++) {
+    var r = await _g45NbaStatsJoueur(ids[i], anneeEff, true);
+    if (r.st) { choix = anneeEff; break; }
+  }
+  _g45NbaCacheEcrire(k, choix, 12 * 3600e3);
+  return choix;
+}
+
+function _g45NbaFmt(v, dec) {
+  if (v === null || v === undefined) return '–';
+  return dec ? v.toFixed(1).replace('.', ',') : String(Math.round(v));
+}
+
+/* ── VUES « 10 derniers / 5 derniers / Match » (25/09/2026, maquette validée) ──
+   Construites sur le JOURNAL de chaque joueur (le même que le filtre joueur des
+   Saisons), passé par le worker : 1 requête par joueur, cache partagé. Seuls
+   les matchs AVEC ce club comptent — filtre sur l'identifiant d'équipe de
+   l'effectif. La titularisation n'est pas dans le journal : colonne Tit
+   masquée dans ces vues plutôt que remplie de tirets. */
+function _g45NbaJeux(e) {
+  var vus = {}, jeux = [], incertain = false;
+  e.rows.forEach(function (r) {
+    var me = _g45NbaGLMeta(r.id, e.saison) || {};
+    Object.keys(me).forEach(function (id) {
+      if (vus[id]) return;
+      var v = me[id];
+      var connu = v[1] || v[2] || v[3];
+      if (connu && e.teamId && v[1] !== e.teamId && v[2] !== e.teamId && v[3] !== e.teamId) return;   /* autre club */
+      if (!connu) incertain = true;
+      vus[id] = 1;
+      jeux.push({ id: id, t: v[0], adv: v[4], atVs: v[5], score: v[6], res: v[7] });
+    });
+  });
+  jeux.sort(function (a, b) { return b.t - a.t; });
+  e.incertain = incertain;
+  return jeux;
+}
+function _g45NbaDateCourte(t) {
+  if (!t) return '';
+  var d = new Date(t); return String(d.getDate()).padStart(2, '0') + '/' + String(d.getMonth() + 1).padStart(2, '0');
+}
+/* Valeurs affichées pour un joueur selon la vue : objet de stats, null (tirets) ou undefined (…). */
+function _g45NbaVueStats(e, r) {
+  if (e.mode === 'saison') return r.st;
+  if (!e.jeux) return undefined;
+  var m = _g45NbaGLCache(r.id, e.saison);
+  if (!m) return e.glEnCours ? undefined : null;
+  var ids;
+  if (e.mode === 'match') ids = [e.matchId || (e.jeux[0] && e.jeux[0].id)];
+  else ids = e.jeux.slice(0, e.mode === 'd5' ? 5 : 10).map(function (j) { return j.id; });
+  var joues = ids.filter(function (id) { return m[id]; });
+  if (!joues.length) return null;
+  var K = ['min', 'pts', 'reb', 'ast', 'tp', 'stl', 'blk', 'to'], o = { gp: joues.length, gs: null };
+  K.forEach(function (k, i) {
+    var t = 0, n = 0;
+    joues.forEach(function (id) { var v = m[id][i]; if (v != null) { t += v; n++; } });
+    o[k] = n ? t / n : null;
+  });
+  o.prp = (o.pts !== null && o.reb !== null && o.ast !== null) ? o.pts + o.reb + o.ast : null;
+  return o;
+}
+async function _g45NbaChargerJournaux(box) {
+  var e = box._g45Nba; if (!e || e.glEnCours || e.jeux) return;
+  e.glEnCours = true; e.glFait = 0; e.glErr = 0;
+  var jeton = box._g45Jeton, file = e.rows.slice();
+  _g45NbaRendre(box);
+  var travail = async function () {
+    while (file.length) {
+      var r = file.shift();
+      var ok = await _g45NbaGLRecuperer(r.id, e.saison);
+      if (box._g45Jeton !== jeton) return;
+      if (!ok) e.glErr++;
+      e.glFait++;
+      _g45NbaRendre(box);
+    }
+  };
+  await Promise.all([travail(), travail(), travail(), travail()]);
+  if (box._g45Jeton !== jeton) return;
+  e.glEnCours = false;
+  e.jeux = _g45NbaJeux(e);
+  _g45NbaRendre(box);
+}
+window.g45NbaMode = function (mode) {
+  var box = _g45NbaBoxCourant; if (!box || !box._g45Nba) return;
+  var e = box._g45Nba; e.mode = mode;
+  if (mode !== 'saison' && !e.jeux) { _g45NbaChargerJournaux(box); return; }
+  _g45NbaRendre(box);
+};
+window.g45NbaMatchSel = function (id) {
+  var box = _g45NbaBoxCourant; if (!box || !box._g45Nba) return;
+  box._g45Nba.matchId = id; _g45NbaRendre(box);
+};
+
+function _g45NbaRendre(box) {
+  var e = box._g45Nba; if (!e) return;
+  var cle = e.tri, sens = e.sens, mode = e.mode || 'saison';
+  var vue = e.rows.map(function (r) { return { id: r.id, num: r.num, pos: r.pos, nom: r.nom, st: _g45NbaVueStats(e, r) }; });
+  var cols = _G45_NBA_COLS.filter(function (c) { return !(mode !== 'saison' && c[0] === 'gs') && !(mode === 'match' && c[0] === 'gp'); });
+  if (!cols.some(function (c) { return c[0] === cle; })) cle = 'pts';
+  var rows = vue.sort(function (a, b) {
+    var x = a.st ? a.st[cle] : null, y = b.st ? b.st[cle] : null;
+    if (x === null && y === null) return a.nom.localeCompare(b.nom);
+    if (x === null) return 1;                       /* tirets toujours en bas */
+    if (y === null) return -1;
+    return (x - y) * sens;
+  });
+  var fond = '';
+  try { if (typeof g45FondClubHtml === 'function') fond = g45FondClubHtml(e.club, 0.2, e.logo); } catch (er) {}
+  var h = '<div style="position:relative;overflow:hidden;border-radius:12px;margin-top:10px;padding:10px;background:rgba(11,16,29,.80);">' + fond
+    + '<div style="position:relative;z-index:1;">';
+  /* Bandeau saison */
+  var bt = function (m, txt) {
+    var on = mode === m;
+    return '<button onclick="g45NbaMode(\'' + m + '\')" style="padding:9px 4px;border-radius:8px;cursor:pointer;font-size:13px;font-weight:' + (on ? '900' : '700') + ';'
+      + 'border:1px solid ' + (on ? '#4d84ff' : 'rgba(255,255,255,.18)') + ';background:' + (on ? '#1b2a52' : 'rgba(11,16,29,.9)') + ';color:' + (on ? '#fff' : '#c9d3ee') + ';">' + txt + '</button>';
+  };
+  h += '<div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px;margin-bottom:8px;">'
+    + bt('saison', 'Saison') + bt('d10', '10 derniers') + bt('d5', '5 derniers') + bt('match', 'Match ▾') + '</div>';
+  var court = String(e.club || '').split(' ').slice(-1)[0];
+  var titre, sous = '';
+  if (mode === 'saison') {
+    titre = '📊 Stats ' + e.lbl + ' · tous clubs confondus';
+    if (e.fait < e.total) sous += '<div style="font-size:12px;font-weight:700;color:#f0b020;margin-top:3px;">⏳ ' + e.fait + '/' + e.total + '</div>';
+    if (e.err) sous += '<div style="font-size:12px;font-weight:700;color:#ff8a8a;margin-top:3px;">' + e.err + ' joueur(s) non chargé(s) — rouvre le tableau pour réessayer</div>';
+  } else {
+    titre = mode === 'match' ? '📋 Feuille d\'un match · ' + e.lbl : ('📊 ' + (mode === 'd5' ? '5' : '10') + ' derniers matchs · avec les ' + court);
+    if (e.glEnCours) sous += '<div style="font-size:12px;font-weight:700;color:#f0b020;margin-top:3px;">⏳ Journaux ' + e.glFait + '/' + e.total + '</div>';
+    if (e.glErr) sous += '<div style="font-size:12px;font-weight:700;color:#ff8a8a;margin-top:3px;">' + e.glErr + ' journal(aux) non chargé(s) — rouvre le tableau pour réessayer</div>';
+    if (e.jeux && !e.jeux.length) sous += '<div style="font-size:12px;font-weight:700;color:#ff8a8a;margin-top:3px;">Aucun match trouvé cette saison.</div>';
+    if (e.jeux && e.jeux.length && mode !== 'match') {
+      var dd = e.jeux.slice(0, mode === 'd5' ? 5 : 10);
+      sous += '<div style="font-size:12px;font-weight:700;color:#c9d3ee;margin-top:3px;">du ' + _g45NbaDateCourte(dd[dd.length - 1].t) + ' au ' + _g45NbaDateCourte(dd[0].t) + '</div>';
+    }
+    if (e.incertain) sous += '<div style="font-size:12px;color:#c9d3ee;margin-top:3px;">(club non vérifiable sur certains matchs)</div>';
+  }
+  h += '<div style="background:rgba(11,16,29,.92);border-radius:8px;padding:8px 10px;margin-bottom:10px;font-size:13px;font-weight:800;color:#fff;">' + titre + sous + '</div>';
+  if (mode === 'match' && e.jeux && e.jeux.length) {
+    var sel = e.matchId || e.jeux[0].id;
+    h += '<select onchange="g45NbaMatchSel(this.value)" style="width:100%;padding:10px;border-radius:8px;border:1px solid #4d84ff;background:#141b2e;color:#fff;font-size:15px;font-weight:700;margin-bottom:10px;">';
+    e.jeux.forEach(function (j) {
+      var res = j.res === 'W' ? 'V' : (j.res === 'L' ? 'D' : '');
+      h += '<option value="' + j.id + '"' + (j.id === sel ? ' selected' : '') + '>' + _g45NbaDateCourte(j.t) + ' · ' + (j.atVs === '@' ? 'à ' : 'vs ') + j.adv + (res ? ' · ' + res + ' ' + j.score : '') + '</option>';
+    });
+    h += '</select>';
+  }
+  /* Leaders */
+  h += '<div style="display:grid;grid-template-columns:repeat(2,1fr);gap:6px;margin-bottom:10px;">';
+  _G45_NBA_LEADERS.forEach(function (L) {
+    var best = null;
+    vue.forEach(function (r) { if (r.st && r.st[L[0]] !== null && (!best || r.st[L[0]] > best.st[L[0]])) best = r; });
+    h += '<div style="background:rgba(11,16,29,.92);border-radius:8px;padding:8px 10px;">'
+      + '<div style="font-size:12px;font-weight:700;color:#c9d3ee;">' + L[1] + '</div>'
+      + '<div style="font-size:20px;font-weight:900;color:#f0b020;line-height:1.2;">' + (best ? _g45NbaFmt(best.st[L[0]], mode === 'match' ? 0 : 1) : '–') + '</div>'
+      + '<div style="font-size:13px;font-weight:700;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">' + (best ? best.nom : '—') + '</div></div>';
+  });
+  h += '</div>';
+  /* Tableau : nom fixé à gauche, défilement horizontal dans son cadre */
+  var colNom = 'position:sticky;left:0;z-index:2;background:#0b101d;text-align:left;min-width:118px;max-width:130px;';
+  h += '<div style="overflow-x:auto;-webkit-overflow-scrolling:touch;border-radius:8px;background:rgba(11,16,29,.92);">'
+    + '<table style="border-collapse:collapse;width:100%;font-size:14px;color:#fff;">';
+  h += '<thead><tr><th style="' + colNom + 'padding:8px 8px;font-size:12px;color:#c9d3ee;">Joueur</th>';
+  cols.forEach(function (c) {
+    var actif = (c[0] === cle);
+    var coul = c[0] === 'prp' ? '#f0b020' : (actif ? '#fff' : '#c9d3ee');
+    h += '<th onclick="g45NbaTri(\'' + c[0] + '\')" style="padding:8px 7px;font-size:12px;font-weight:800;color:' + coul + ';cursor:pointer;white-space:nowrap;'
+      + (actif ? 'text-decoration:underline;' : '') + '">' + c[1] + (actif ? (sens < 0 ? ' ▼' : ' ▲') : '') + '</th>';
+  });
+  h += '</tr></thead><tbody>';
+  rows.forEach(function (r) {
+    h += '<tr style="border-top:1px solid rgba(255,255,255,.08);">'
+      + '<td style="' + colNom + 'padding:7px 8px;"><div style="font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">' + r.nom + '</div>'
+      + '<div style="font-size:11px;color:#c9d3ee;">' + (r.num ? '#' + r.num + ' ' : '') + (r.pos || '') + '</div></td>';
+    cols.forEach(function (c) {
+      var v = r.st ? r.st[c[0]] : null;
+      var coul = c[0] === 'prp' ? '#f0b020' : (v === null ? '#8c97b8' : '#fff');
+      h += '<td style="padding:7px 7px;text-align:center;font-weight:' + (c[0] === 'prp' || c[0] === cle ? '900' : '600') + ';color:' + coul + ';">'
+        + (r.st === undefined ? '…' : _g45NbaFmt(v, mode === 'match' ? 0 : c[2])) + '</td>';
+    });
+    h += '</tr>';
+  });
+  h += '</tbody></table></div>';
+  h += '<div style="font-size:12px;color:#c9d3ee;margin-top:6px;">'
+    + (mode === 'saison' ? 'Moyennes par match (saison régulière). ' : (mode === 'match' ? 'Chiffres du match. ' : 'Moyennes sur les matchs joués, playoffs compris. '))
+    + 'Touche un en-tête pour trier. « – » : ' + (mode === 'saison' ? 'aucun match cette saison (rookie, blessé).' : 'n\'a pas joué.') + '</div>';
+  h += '</div></div>';
+  box.innerHTML = h;
+}
+
+var _g45NbaBoxCourant = null;   /* Compo ou ancien panneau : la boîte affichée */
+window.g45NbaTri = function (cle) {
+  var box = _g45NbaBoxCourant;
+  if (!box || !box._g45Nba) return;
+  var e = box._g45Nba;
+  if (e.tri === cle) e.sens = -e.sens; else { e.tri = cle; e.sens = -1; }
+  _g45NbaRendre(box);
+};
+
+/* Ancien panneau NBA (loadNbaSaisons) — plus affiché depuis que les Saisons
+   US passent par _g45SaisonsGen ; gardé comme repli. */
 async function loadNbaEffectif(nom) {
   var box = document.getElementById('nba-effectif');
   var btn = document.getElementById('nba-eff-btn');
   if(!box) return;
-  if(box.innerHTML.trim()) { box.innerHTML = ''; if(btn) btn.style.opacity='1'; return; } // toggle
-
+  if(box.innerHTML.trim()) { box.innerHTML = ''; box._g45Nba = null; box._g45Jeton = null; if(btn) btn.style.opacity='1'; return; } // toggle
   var key = resolveNbaTeam(nom);
   var info = key ? NBA_TEAMS[key] : null;
-  if(!info) { box.innerHTML = '<div style="color:var(--t3);font-size:11px;text-align:center;padding:10px;">Équipe non mappée</div>'; return; }
+  if(!info) { box.innerHTML = '<div style="color:#fff;font-size:13px;text-align:center;padding:10px;">Équipe non mappée</div>'; return; }
+  /* Par ABRÉVIATION. espnId de NBA_TEAMS corrigé le 25/09 (ORL 19, PHX 21,
+     POR 22, SA 24, relevés par Antoine). */
+  await _g45NbaTableau(box, key, (info.espnAbbr || info.abbr).toLowerCase());
+}
 
-  box.innerHTML = '<div style="display:flex;align-items:center;gap:8px;padding:14px;color:var(--t3);font-size:11px;"><div style="width:12px;height:12px;border:2px solid rgba(77,132,255,.2);border-top-color:#4d84ff;border-radius:50%;animation:spin .8s linear infinite;"></div>Chargement de l\'effectif…</div>';
-
+/* COMPO NBA (25/09/2026) : c'est ICI que le tableau s'affiche réellement,
+   appelé par _g45CompoEffectif. `ref` = identifiant ESPN de l'équipe (celui
+   du classement) ou son abréviation — la route roster accepte les deux. */
+async function _g45NbaTableau(box, club, ref) {
+  _g45NbaBoxCourant = box;
+  var jeton = {}; box._g45Jeton = jeton;
+  box.innerHTML = '<div style="padding:14px;color:#fff;font-size:13px;">⏳ Chargement de l\'effectif…</div>';
   try {
-    // ESPN roster (gratuit, saison en cours)
-    var espnAbbr = (info.espnAbbr || info.abbr).toLowerCase();
-    var resp = await fetch('https://site.api.espn.com/apis/site/v2/sports/basketball/nba/teams/'+espnAbbr+'/roster');
+    var resp = await fetch('https://site.api.espn.com/apis/site/v2/sports/basketball/nba/teams/'+ref+'/roster');
     var data = await resp.json();
+    if (box._g45Jeton !== jeton) return;
     var athletes = (data && data.athletes) ? data.athletes : [];
-    // ESPN peut grouper par position (objet avec .items) ou liste plate
     var players = [];
     if(athletes.length && athletes[0] && athletes[0].items) {
       athletes.forEach(function(grp){ (grp.items||[]).forEach(function(p){ players.push(p); }); });
     } else {
       players = athletes;
     }
-
     if(!players.length) {
-      box.innerHTML = '<div style="color:var(--t3);font-size:11px;text-align:center;padding:10px;">Aucun joueur trouvé</div>';
+      box.innerHTML = '<div style="color:#fff;font-size:13px;text-align:center;padding:10px;">Aucun joueur trouvé</div>';
       return;
     }
+    var anneeEff = parseInt((data.season && data.season.year) || 0, 10);
+    if (!anneeEff) { var d0 = new Date(); anneeEff = d0.getMonth() >= 6 ? d0.getFullYear() + 1 : d0.getFullYear(); }
+    var tm = data.team || {};
+    var logo = tm.logo || ((tm.logos || [])[0] || {}).href || '';
 
-    var seasonLbl = (data.season && data.season.displayName) ? data.season.displayName : '2025-26';
-    var html = '<div style="margin-top:10px;border-top:1px solid var(--b1);padding-top:10px;">';
-    html += '<div style="font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#4f5d88;margin-bottom:8px;">👥 Effectif '+seasonLbl+' ('+players.length+')</div>';
-
-    players.forEach(function(p){
-      var num = p.jersey || '';
-      var pos = (p.position && p.position.abbreviation) ? p.position.abbreviation : '';
-      var nameStr = p.fullName || p.displayName || ((p.firstName||'')+' '+(p.lastName||''));
-      var ht = p.displayHeight || '';
-      var headshot = (p.headshot && p.headshot.href) ? p.headshot.href : '';
-      var pid = p.id;
-      html += '<div onclick="loadNbaPlayerStatsEspn(\''+pid+'\',\''+(nameStr.replace(/[^a-zA-Z .\\-]/g,'').trim())+'\')" style="display:flex;align-items:center;gap:8px;padding:7px 6px;border-bottom:1px solid rgba(255,255,255,.04);cursor:pointer;border-radius:5px;" onmouseover="this.style.background=\'rgba(255,255,255,.03)\'" onmouseout="this.style.background=\'transparent\'">';
-      if(headshot) {
-        html += '<img src="'+headshot+'" style="width:30px;height:30px;border-radius:50%;object-fit:cover;background:rgba(255,255,255,.05);flex-shrink:0;" onerror="this.style.display=\'none\'">';
-      } else {
-        html += '<div style="width:30px;height:30px;border-radius:50%;background:rgba(77,132,255,.12);display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:800;color:#4d84ff;flex-shrink:0;">'+(num||'—')+'</div>';
-      }
-      html += '<div style="flex:1;min-width:0;"><div style="font-size:12px;font-weight:600;color:var(--t1);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">'+(num?'#'+num+' ':'')+nameStr+'</div>';
-      html += '<div style="font-size:9px;color:var(--t3);">'+(pos||'')+(ht?' · '+ht:'')+'</div></div>';
-      html += '<div style="font-size:14px;color:var(--t3);">📊</div>';
-      html += '</div>';
-      html += '<div id="nba-pstat-'+pid+'"></div>';
+    var rows = players.map(function (p) {
+      return {
+        id: String(p.id), num: p.jersey || '',
+        pos: (p.position && p.position.abbreviation) || '',
+        nom: String(p.shortName || p.displayName || p.fullName || ((p.firstName||'')+' '+(p.lastName||''))).replace(/[<>"]/g, ''),
+        st: undefined
+      };
     });
-    html += '</div>';
-    box.innerHTML = html;
+    box.innerHTML = '<div style="padding:14px;color:#fff;font-size:13px;">⏳ Recherche de la saison des stats…</div>';
+    var saison = await _g45NbaSaisonStats(anneeEff, rows.map(function (r) { return r.id; }));
+    if (box._g45Jeton !== jeton) return;
+    var enCours = (saison === anneeEff);
+    box._g45Nba = { rows: rows, tri: 'pts', sens: -1, club: club, logo: logo,
+      lbl: (saison - 1) + '-' + String(saison).slice(2), fait: 0, total: rows.length, err: 0,
+      saison: saison, teamId: String(tm.id || ''), mode: 'saison', jeux: null, glFait: 0, glErr: 0, glEnCours: false, matchId: null };
+    _g45NbaRendre(box);
+
+    /* 4 requêtes en parallèle, rendu à chaque arrivée */
+    var file = rows.slice();
+    var travail = async function () {
+      while (file.length) {
+        var r = file.shift();
+        var res = await _g45NbaStatsJoueur(r.id, saison, enCours);
+        if (box._g45Jeton !== jeton) return;
+        r.st = res.st;
+        if (!res.ok) box._g45Nba.err++;
+        box._g45Nba.fait++;
+        _g45NbaRendre(box);
+      }
+    };
+    await Promise.all([travail(), travail(), travail(), travail()]);
   } catch(e) {
-    box.innerHTML = '<div style="color:#ff4545;font-size:11px;text-align:center;padding:10px;">Erreur : '+e.message+'</div>';
+    if (box._g45Jeton === jeton) box.innerHTML = '<div style="color:#ff8a8a;font-size:13px;text-align:center;padding:10px;">Erreur : '+e.message+'</div>';
   }
 }
+
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   NBA — FILTRE JOUEUR AVEC LIGNE, onglet Saisons   (25/09/2026, maquette validée)
+   ───────────────────────────────────────────────────────────────────────────
+   Le 19/09, Antoine avait écarté le NBA du filtre joueur BINAIRE (_g45JouBarre) :
+   « a marqué / n'a pas marqué » n'a pas de sens au basket. Ce module-ci est
+   différent : un MARCHÉ (Pts, Reb, Pas, 3pts, P+R, P+P, R+P, P+R+P) et une LIGNE
+   réglable, « Plus de » ou « Moins de » — exactement les paris joueur NBA.
+
+   SOURCE SONDÉE LE 25/09 (Wembanyama, 5104157) : le journal de matchs
+   common v3 …/athletes/{id}/gamelog?season=AAAA, BLOQUÉ par CORS dans le
+   navigateur, passe par le worker (host=espnweb, déjà en place). Une requête
+   par joueur et par saison. Colonnes lues par `names` (minutes,
+   totalRebounds, assists, points, threePointFieldGoalsMade-…Attempted), les
+   `labels` servent de repli. Les matchs sont indexés par l'identifiant ESPN
+   de l'événement — le même que `m.id` des lignes de résultats.
+   Un match absent du journal = joueur absent : ligne grise, NON comptée.
+   ═══════════════════════════════════════════════════════════════════════════ */
+var _G45_NBA_PM = [
+  ['pts', 'Pts', ['pts']], ['reb', 'Reb', ['reb']], ['ast', 'Pas', ['ast']], ['tp', '3pts', ['tp']],
+  ['pr', 'P+R', ['pts', 'reb']], ['pa', 'P+P', ['pts', 'ast']], ['ra', 'R+P', ['reb', 'ast']], ['pra', 'P+R+P', ['pts', 'reb', 'ast']]
+];
+var _g45NbaPF = null;          /* filtre de l'équipe affichée : {aid, nom, mk, ligne, sens} */
+var _g45NbaPFTeam = '';
+var _g45NbaGLEnCours = {};      /* aid_an -> true pendant le téléchargement */
+var _g45NbaGLErr = {};          /* aid_an -> true si échec (pas de relance en boucle) */
+var _g45NbaRost = {};           /* teamId -> [{id, nom}] */
+
+function _g45NbaPFCharger(teamId) {
+  if (_g45NbaPFTeam === String(teamId)) return;
+  _g45NbaPFTeam = String(teamId);
+  _g45NbaPF = null;
+  try { var t = JSON.parse(localStorage.getItem('g45_nbapf_v1') || '{}'); _g45NbaPF = t[_g45NbaPFTeam] || null; } catch (e) {}
+}
+function _g45NbaPFSauver() {
+  try {
+    var t = JSON.parse(localStorage.getItem('g45_nbapf_v1') || '{}');
+    if (_g45NbaPF) t[_g45NbaPFTeam] = _g45NbaPF; else delete t[_g45NbaPFTeam];
+    localStorage.setItem('g45_nbapf_v1', JSON.stringify(t));
+  } catch (e) {}
+}
+
+/* Journal → {eid: [min, pts, reb, ast, tp]}. Exporté pour les tests. */
+/* Journal → {eid: [min, pts, reb, ast, tp, stl, blk, to]} (ordre FIXE : les
+   indices 0-4 servent au filtre joueur, 5-7 au tableau Compo). */
+function _g45NbaGLLire(j) {
+  var names = (j && j.names) || [], labels = (j && j.labels) || [];
+  var col = function (nm, lab) { var i = names.indexOf(nm); if (i < 0) i = labels.indexOf(lab); return i; };
+  var I = [col('minutes', 'MIN'), col('points', 'PTS'), col('totalRebounds', 'REB'), col('assists', 'AST'),
+    col('threePointFieldGoalsMade-threePointFieldGoalsAttempted', '3PT'), col('steals', 'STL'), col('blocks', 'BLK'), col('turnovers', 'TO')];
+  var num = function (v) { var x = parseFloat(String(v == null ? '' : v).split('-')[0]); return isNaN(x) ? null : x; };
+  var out = {};
+  ((j && j.seasonTypes) || []).forEach(function (t) {
+    (t.categories || []).forEach(function (c) {
+      (c.events || []).forEach(function (e) {
+        if (!e || !e.eventId || !e.stats) return;
+        var s = e.stats;
+        if (I[1] < 0 || num(s[I[1]]) === null) return;      /* ligne de total ou vide */
+        out[String(e.eventId)] = I.map(function (i) { return i >= 0 ? num(s[i]) : null; });
+      });
+    });
+  });
+  return out;
+}
+/* Métadonnées des matchs du journal : {eid: [t, domId, extId, equipeId, adv, atVs, score, res]}.
+   Les champs d'équipe sont lus sous plusieurs formes : non sondés un par un. */
+function _g45NbaGLMetaLire(j) {
+  var out = {}, evs = (j && j.events) || {};
+  Object.keys(evs).forEach(function (id) {
+    var v = evs[id] || {};
+    var t = Date.parse(v.gameDate || v.date || '') || 0;
+    var dom = String(v.homeTeamId || (v.homeTeam && v.homeTeam.id) || '');
+    var ext = String(v.awayTeamId || (v.awayTeam && v.awayTeam.id) || '');
+    var moi = String((v.team && v.team.id) || '');
+    var adv = String((v.opponent && (v.opponent.abbreviation || v.opponent.displayName)) || '').replace(/[<>"]/g, '');
+    out[String(id)] = [t, dom, ext, moi, adv, String(v.atVs || ''), String(v.score || '').replace(/[<>"]/g, ''), String(v.gameResult || '')];
+  });
+  return out;
+}
+
+function _g45NbaGLCle(aid, an) { return 'g45_nbagl_v2_' + aid + '_' + an; }
+function _g45NbaGLLireCache(aid, an) {
+  try { var c = JSON.parse(localStorage.getItem(_g45NbaGLCle(aid, an)) || 'null'); if (c && c.x > Date.now()) return c; } catch (e) {}
+  var mm = _g45NbaGLMem[aid + '_' + an];
+  return (mm && mm.x > Date.now()) ? mm : null;
+}
+function _g45NbaGLCache(aid, an) { var c = _g45NbaGLLireCache(aid, an); return c ? c.m : null; }
+function _g45NbaGLMeta(aid, an) { var c = _g45NbaGLLireCache(aid, an); return c ? (c.e || {}) : null; }
+/* true si le journal est disponible (cache ou téléchargé), false sinon. */
+async function _g45NbaGLRecuperer(aid, an) {
+  if (_g45NbaGLLireCache(aid, an)) return true;
+  try {
+    var path = '/apis/common/v3/sports/basketball/nba/athletes/' + aid + '/gamelog?season=' + an;
+    var r = await fetch(FD_PROXY + '?host=espnweb&path=' + encodeURIComponent(path));
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    var j = await r.json();
+    /* saison en cours : 6 h ; saison terminée : 7 jours */
+    var ttl = (an >= _g45SgAnAuto('nba')) ? 6 * 3600e3 : 7 * 86400e3;
+    var c = { x: Date.now() + ttl, m: _g45NbaGLLire(j), e: _g45NbaGLMetaLire(j) };
+    try { localStorage.setItem(_g45NbaGLCle(aid, an), JSON.stringify(c)); } catch (e) {}
+    _g45NbaGLMem[aid + '_' + an] = c;              /* si le quota est plein, la mémoire suffit */
+    return true;
+  } catch (e) { return false; }
+}
+var _g45NbaGLMem = {};
+async function _g45NbaGLTelecharger(aid, an) {
+  var k = aid + '_' + an;
+  if (_g45NbaGLEnCours[k]) return;
+  _g45NbaGLEnCours[k] = true;
+  if (await _g45NbaGLRecuperer(aid, an)) delete _g45NbaGLErr[k]; else _g45NbaGLErr[k] = true;
+  delete _g45NbaGLEnCours[k];
+  try { _g45SgCursRedessiner('g45-nbapf'); } catch (e) {}
+}
+
+async function _g45NbaRosterTelecharger(teamId) {
+  if (_g45NbaRost[teamId]) return;
+  _g45NbaRost[teamId] = [];                               /* verrou */
+  try {
+    var r = await fetch('https://site.api.espn.com/apis/site/v2/sports/basketball/nba/teams/' + teamId + '/roster');
+    var d = await r.json(), ath = d.athletes || [], liste = [];
+    if (ath.length && ath[0] && ath[0].items) ath.forEach(function (g) { (g.items || []).forEach(function (p) { liste.push(p); }); });
+    else liste = ath;
+    _g45NbaRost[teamId] = liste.map(function (p) {
+      return { id: String(p.id), nom: String(p.displayName || p.fullName || p.shortName || '').replace(/[<>"]/g, '') };
+    }).filter(function (p) { return p.id && p.nom; }).sort(function (a, b) { return a.nom.localeCompare(b.nom); });
+  } catch (e) { delete _g45NbaRost[teamId]; return; }
+  try { _g45SgCursRedessiner('g45-nbapf'); } catch (e) {}
+}
+
+function _g45NbaPFMarche() {
+  var mk = (_g45NbaPF && _g45NbaPF.mk) || 'pts';
+  for (var i = 0; i < _G45_NBA_PM.length; i++) if (_G45_NBA_PM[i][0] === mk) return _G45_NBA_PM[i];
+  return _G45_NBA_PM[0];
+}
+/* Valeur du marché sur un match, ou null (absent / donnée manquante). */
+function _g45NbaPFVal(ligneGL) {
+  if (!ligneGL) return null;
+  var idx = { min: 0, pts: 1, reb: 2, ast: 3, tp: 4 }, t = 0, parts = _g45NbaPFMarche()[2];
+  for (var i = 0; i < parts.length; i++) { var v = ligneGL[idx[parts[i]]]; if (v == null) return null; t += v; }
+  return t;
+}
+function _g45NbaPFJournal() {
+  if (!_g45NbaPF || !_g45NbaPF.aid || !window._g45NbaPFAn) return null;
+  return _g45NbaGLCache(_g45NbaPF.aid, window._g45NbaPFAn);
+}
+/* Résultat d'un match pour la ligne : true / false / null (non compté). */
+function _g45NbaPFRes(eid) {
+  var gl = _g45NbaPFJournal(); if (!gl) return undefined;
+  var v = _g45NbaPFVal(gl[String(eid)]);
+  if (v === null) return null;
+  return _g45NbaPF.sens === 'u' ? (v < _g45NbaPF.ligne) : (v > _g45NbaPF.ligne);
+}
+function _g45NbaFr(x) { return (Math.round(x * 10) / 10).toString().replace('.', ','); }
+
+/* Couleur de la barre gauche d'une ligne de résultat, ou null (filtre inactif). */
+function _g45NbaPFCoul(eid) {
+  var r = _g45NbaPFRes(eid);
+  if (r === undefined) return null;
+  return r === null ? '#5a6480' : (r ? '#1ed760' : '#ff4545');
+}
+/* Ligne ajoutée sous le score. */
+function _g45NbaPFLigne(eid) {
+  var gl = _g45NbaPFJournal(); if (!gl) return '';
+  var L = gl[String(eid)], r = _g45NbaPFRes(eid), mk = _g45NbaPFMarche();
+  var court = String(_g45NbaPF.nom || '').split(' ').slice(-1)[0];
+  if (r === null || !L) {
+    return '<div style="margin-top:5px;font-size:12px;font-weight:700;color:#8c97b8;">' + court + ' : absent — non compté</div>';
+  }
+  var v = _g45NbaPFVal(L);
+  var det = [L[0] != null ? L[0] + ' min' : '', L[1] + ' pts', L[2] != null ? L[2] + ' reb' : '', L[3] != null ? L[3] + ' pas' : '', L[4] != null ? L[4] + ' à 3 pts' : '']
+    .filter(Boolean).join(' · ');
+  return '<div style="margin-top:5px;display:flex;justify-content:space-between;gap:8px;align-items:baseline;">'
+    + '<span style="font-size:12px;color:#c9d3ee;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + court + ' · ' + det + '</span>'
+    + '<span style="font-size:13px;font-weight:900;white-space:nowrap;color:' + (r ? '#1ed760' : '#ff8a8a') + ';">'
+    + v + ' ' + mk[1] + ' ' + (r ? '✅' : '❌') + '</span></div>';
+}
+
+/* Bloc posé au-dessus des résultats. `liste` = matchs VISIBLES (filtres
+   phase et domicile/extérieur déjà appliqués) : le bandeau les suit. */
+function _g45NbaPFBarre(teamId, an, liste) {
+  _g45NbaPFCharger(teamId);
+  window._g45NbaPFAn = an;
+  var rost = _g45NbaRost[teamId];
+  if (!rost) { _g45NbaRosterTelecharger(teamId); }
+  var btn = function (on, txt, clic, jaune) {
+    return '<button onclick="' + clic + '" style="padding:9px 2px;border-radius:8px;cursor:pointer;font-size:13px;font-weight:' + (on ? '900' : '700') + ';'
+      + 'border:1px solid ' + (on ? '#4d84ff' : 'rgba(255,255,255,.18)') + ';background:' + (on ? '#1b2a52' : 'rgba(11,16,29,.85)') + ';'
+      + 'color:' + (jaune ? '#f0b020' : (on ? '#fff' : '#c9d3ee')) + ';">' + txt + '</button>';
+  };
+  var h = '<div id="g45-nbapf" style="background:rgba(11,16,29,.92);border:1px solid rgba(77,132,255,.35);border-radius:10px;padding:10px;margin:6px 0 10px;color:#fff;">'
+    + '<div style="font-size:12px;font-weight:800;letter-spacing:1px;color:#c9d3ee;margin-bottom:8px;">🏀 JOUEUR</div>';
+  /* Sélecteur de joueur */
+  h += '<select onchange="g45NbaPFJoueur(this.value)" style="width:100%;padding:10px;border-radius:8px;border:1px solid ' + (_g45NbaPF ? '#4d84ff' : 'rgba(255,255,255,.25)') + ';background:#141b2e;color:#fff;font-size:15px;font-weight:700;margin-bottom:8px;">'
+    + '<option value="">' + (rost && rost.length ? '— Choisir un joueur —' : '⏳ Effectif…') + '</option>';
+  var dansListe = false;
+  (rost || []).forEach(function (p) {
+    var on = _g45NbaPF && _g45NbaPF.aid === p.id; if (on) dansListe = true;
+    h += '<option value="' + p.id + '|' + p.nom + '"' + (on ? ' selected' : '') + '>' + p.nom + '</option>';
+  });
+  if (_g45NbaPF && !dansListe) h += '<option value="' + _g45NbaPF.aid + '|' + _g45NbaPF.nom + '" selected>' + _g45NbaPF.nom + '</option>';
+  h += '</select>';
+  if (!_g45NbaPF) return h + '<div style="font-size:12px;color:#c9d3ee;">Choisis un joueur pour voir ses points, rebonds et passes sur chaque match.</div></div>';
+
+  /* Marchés */
+  h += '<div style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:5px;margin-bottom:8px;">';
+  _G45_NBA_PM.forEach(function (m) { h += btn(_g45NbaPF.mk === m[0], m[1], "g45NbaPFMarche('" + m[0] + "')", m[0] === 'pra'); });
+  h += '</div>';
+
+  var k = _g45NbaPF.aid + '_' + an, gl = _g45NbaGLCache(_g45NbaPF.aid, an);
+  if (!gl) {
+    if (_g45NbaGLErr[k]) {
+      return h + '<div style="font-size:13px;font-weight:700;color:#ff8a8a;margin:6px 0;">Journal de ' + _g45NbaPF.nom + ' indisponible.</div>'
+        + btn(false, '↻ Réessayer', "g45NbaPFReessayer()") + '</div>';
+    }
+    _g45NbaGLTelecharger(_g45NbaPF.aid, an);
+    return h + '<div style="font-size:13px;font-weight:700;color:#f0b020;margin:6px 0;">⏳ Journal de ' + _g45NbaPF.nom + ' (' + _g45SgLabel('nba', an) + ')…</div></div>';
+  }
+
+  /* Valeurs sur les matchs visibles */
+  var vals = [];
+  liste.forEach(function (m) { var v = _g45NbaPFVal(gl[String(m.id)]); if (v !== null) vals.push(v); });
+  var mk = _g45NbaPFMarche();
+  if (_g45NbaPF.ligne == null || isNaN(_g45NbaPF.ligne)) {
+    var moy0 = vals.length ? vals.reduce(function (a, b) { return a + b; }, 0) / vals.length : 10;
+    _g45NbaPF.ligne = Math.max(0.5, Math.round(moy0) - 0.5);
+    _g45NbaPFSauver();
+  }
+  var L = _g45NbaPF.ligne, sensU = _g45NbaPF.sens === 'u';
+  h += '<div style="display:flex;align-items:center;gap:8px;background:#141b2e;border-radius:8px;padding:8px;margin-bottom:10px;">'
+    + '<button onclick="g45NbaPFPas(-1)" aria-label="Baisser la ligne" style="width:48px;height:44px;border-radius:8px;border:1px solid rgba(255,255,255,.25);background:#0b101d;color:#fff;font-size:24px;font-weight:900;cursor:pointer;">−</button>'
+    + '<div onclick="g45NbaPFSens()" style="flex:1;text-align:center;cursor:pointer;">'
+    + '<div style="font-size:12px;color:#c9d3ee;font-weight:700;">' + (sensU ? 'Moins de' : 'Plus de') + ' <span style="opacity:.7;">(toucher pour inverser)</span></div>'
+    + '<div style="font-size:24px;font-weight:900;color:#f0b020;">' + _g45NbaFr(L) + ' ' + mk[1] + '</div></div>'
+    + '<button onclick="g45NbaPFPas(1)" aria-label="Monter la ligne" style="width:48px;height:44px;border-radius:8px;border:1px solid rgba(255,255,255,.25);background:#0b101d;color:#fff;font-size:24px;font-weight:900;cursor:pointer;">+</button></div>';
+
+  var ok = vals.filter(function (v) { return sensU ? v < L : v > L; }).length, n = vals.length;
+  var pc = n ? Math.round(ok * 100 / n) : 0;
+  var coul = pc >= 60 ? '#1ed760' : (pc >= 40 ? '#f0b020' : '#ff8a8a');
+  var court = String(_g45NbaPF.nom).split(' ').slice(-1)[0];
+  h += '<div style="display:inline-block;border:1px solid ' + coul + ';background:' + coul + '1a;border-radius:20px;padding:6px 12px;margin-bottom:8px;font-size:14px;font-weight:900;color:' + coul + ';">'
+    + '✅ ' + ok + '/' + n + ' — ' + court + ' ' + (sensU ? '−' : '+') + _g45NbaFr(L) + ' ' + mk[1] + ' · ' + pc + ' %</div>';
+  if (n) {
+    var tri = vals.slice().sort(function (a, b) { return a - b; });
+    var med = n % 2 ? tri[(n - 1) / 2] : (tri[n / 2 - 1] + tri[n / 2]) / 2;
+    var moy = vals.reduce(function (a, b) { return a + b; }, 0) / n;
+    h += '<div style="font-size:13px;color:#c9d3ee;font-weight:700;">Moyenne ' + _g45NbaFr(moy) + ' · médiane ' + _g45NbaFr(med)
+      + ' · 5 derniers : ' + vals.slice(0, 5).join(', ') + '</div>';
+  } else {
+    h += '<div style="font-size:13px;color:#c9d3ee;">Aucun match joué parmi les matchs affichés.</div>';
+  }
+  h += '<div style="margin-top:8px;">' + btn(false, '✕ Retirer le filtre joueur', "g45NbaPFEffacer()") + '</div></div>';
+  return h;
+}
+
+window.g45NbaPFJoueur = function (v) {
+  if (!v) { _g45NbaPF = null; _g45NbaPFSauver(); _g45SgCursRedessiner('g45-nbapf'); return; }
+  var i = v.indexOf('|');
+  var mk = (_g45NbaPF && _g45NbaPF.mk) || 'pts';
+  _g45NbaPF = { aid: v.slice(0, i), nom: v.slice(i + 1), mk: mk, ligne: null, sens: 'o' };
+  _g45NbaPFSauver(); _g45SgCursRedessiner('g45-nbapf');
+};
+window.g45NbaPFMarche = function (mk) {
+  if (!_g45NbaPF) return;
+  if (_g45NbaPF.mk !== mk) { _g45NbaPF.mk = mk; _g45NbaPF.ligne = null; }   /* nouveau marché : ligne recalée sur la moyenne */
+  _g45NbaPFSauver(); _g45SgCursRedessiner('g45-nbapf');
+};
+window.g45NbaPFPas = function (d) {
+  if (!_g45NbaPF || _g45NbaPF.ligne == null) return;
+  _g45NbaPF.ligne = Math.max(0.5, _g45NbaPF.ligne + d);
+  _g45NbaPFSauver(); _g45SgCursRedessiner('g45-nbapf');
+};
+window.g45NbaPFSens = function () {
+  if (!_g45NbaPF) return;
+  _g45NbaPF.sens = _g45NbaPF.sens === 'u' ? 'o' : 'u';
+  _g45NbaPFSauver(); _g45SgCursRedessiner('g45-nbapf');
+};
+window.g45NbaPFEffacer = function () { _g45NbaPF = null; _g45NbaPFSauver(); _g45SgCursRedessiner('g45-nbapf'); };
+window.g45NbaPFReessayer = function () {
+  if (_g45NbaPF && window._g45NbaPFAn) delete _g45NbaGLErr[_g45NbaPF.aid + '_' + window._g45NbaPFAn];
+  _g45SgCursRedessiner('g45-nbapf');
+};
+window._g45NbaPFBarre = _g45NbaPFBarre; window._g45NbaPFCoul = _g45NbaPFCoul;
+window._g45NbaPFLigne = _g45NbaPFLigne; window._g45NbaGLLire = _g45NbaGLLire;
+window._g45NbaTableau = _g45NbaTableau;
+
+
+/* ═══ NBA — FEUILLE DES JOUEURS DANS L'APRÈS-MATCH (25/09/2026, maquette validée) ═══
+   SONDÉ le 25/09 sur 401811026 (Hornets–Pistons, fichier relevé par Antoine) :
+   boxscore.players[] = une entrée par équipe, statistics[0] porte `keys`
+   (minutes, points, rebounds, assists, threePointFieldGoalsMade-…, steals,
+   blocks, turnovers…) et athletes[] = {athlete, starter, didNotPlay, reason,
+   stats[]}. Un joueur qui n'a pas joué a `didNotPlay: true` et stats VIDES.
+   ATTENTION : ici « rebounds », dans le journal de matchs « totalRebounds » —
+   les deux services ne nomment pas pareil ; lecture par clé puis libellé.
+   Données déjà téléchargées pour la fenêtre : ZÉRO requête de plus. */
+var _G45_NBA_FC = [['min', 'Min', 0], ['pts', 'Pts', 0], ['reb', 'Reb', 0], ['ast', 'Pas', 0], ['tp', '3pts', 0],
+  ['stl', 'Int', 0], ['blk', 'Ctr', 0], ['to', 'BP', 0], ['prp', 'P+R+P', 0]];
+var _g45NbaFeuilles = {};      /* eid -> {eq:[{nom, rows}], sel, tri} */
+
+function _g45NbaFeuilleLire(data) {
+  var out = [];
+  (((data || {}).boxscore || {}).players || []).forEach(function (bloc) {
+    var s = (bloc.statistics || [])[0] || {};
+    var keys = s.keys || [], labs = s.labels || s.names || [];
+    var ix = function (k, l) { var i = keys.indexOf(k); if (i < 0) i = labs.indexOf(l); return i; };
+    var I = { min: ix('minutes', 'MIN'), pts: ix('points', 'PTS'), reb: ix('rebounds', 'REB'), ast: ix('assists', 'AST'),
+      tp: ix('threePointFieldGoalsMade-threePointFieldGoalsAttempted', '3PT'), stl: ix('steals', 'STL'),
+      blk: ix('blocks', 'BLK'), to: ix('turnovers', 'TO') };
+    var rows = (s.athletes || []).map(function (a) {
+      var at = a.athlete || {}, st = a.stats || [];
+      var r = { nom: String(at.shortName || at.displayName || '?').replace(/[<>"]/g, ''), cinq: !!a.starter,
+        dnp: !!a.didNotPlay || !st.length };
+      Object.keys(I).forEach(function (k) {
+        var v = I[k] >= 0 ? parseFloat(String(st[I[k]] == null ? '' : st[I[k]]).split('-')[0]) : NaN;
+        r[k] = isNaN(v) ? null : v;
+      });
+      if (r.pts === null && !r.dnp) r.dnp = true;
+      r.prp = (r.pts !== null && r.reb !== null && r.ast !== null) ? r.pts + r.reb + r.ast : null;
+      return r;
+    });
+    var tm = bloc.team || {};
+    if (rows.length) out.push({ nom: String(tm.shortDisplayName || tm.displayName || '?'), rows: rows });
+  });
+  return out;
+}
+
+function _g45NbaFeuilleCorps(eid) {
+  var F = _g45NbaFeuilles[eid]; if (!F) return '';
+  var eq = F.eq[F.sel] || F.eq[0], cle = F.tri;
+  var rows = eq.rows.slice().sort(function (a, b) {
+    if (a.dnp !== b.dnp) return a.dnp ? 1 : -1;
+    var x = a[cle], y = b[cle];
+    if (x === null && y === null) return 0; if (x === null) return 1; if (y === null) return -1;
+    return y - x;
+  });
+  var colNom = 'position:sticky;left:0;z-index:2;background:#141b2e;text-align:left;min-width:118px;';
+  var h = '<div style="overflow-x:auto;-webkit-overflow-scrolling:touch;background:#141b2e;border-radius:8px;">'
+    + '<table style="border-collapse:collapse;font-size:14px;color:#fff;white-space:nowrap;width:100%;"><tr>'
+    + '<th style="' + colNom + 'padding:7px 8px;font-size:12px;color:#c9d3ee;">Joueur</th>';
+  _G45_NBA_FC.forEach(function (c) {
+    var on = c[0] === cle;
+    h += '<th onclick="g45NbaFeuilleTri(\'' + eid + '\',\'' + c[0] + '\')" style="padding:7px 6px;font-size:12px;cursor:pointer;font-weight:800;color:'
+      + (c[0] === 'prp' ? '#f0b020' : (on ? '#fff' : '#c9d3ee')) + ';' + (on ? 'text-decoration:underline;' : '') + '">' + c[1] + (on ? ' ▼' : '') + '</th>';
+  });
+  h += '</tr>';
+  rows.forEach(function (r) {
+    h += '<tr style="border-top:1px solid rgba(255,255,255,.08);"><td style="' + colNom + 'padding:7px 8px;font-weight:800;' + (r.dnp ? 'color:#8c97b8;' : '') + '">'
+      + r.nom + (r.cinq ? ' <span style="font-size:11px;background:#3a2f12;color:#f0b020;padding:1px 5px;border-radius:4px;">5</span>' : '') + '</td>';
+    if (r.dnp) {
+      h += '<td colspan="' + _G45_NBA_FC.length + '" style="padding:7px;color:#8c97b8;font-weight:700;">n\'a pas joué</td></tr>';
+      return;
+    }
+    _G45_NBA_FC.forEach(function (c) {
+      var v = r[c[0]];
+      h += '<td style="padding:7px 6px;text-align:center;font-weight:' + (c[0] === cle || c[0] === 'prp' ? '900' : '600') + ';color:'
+        + (c[0] === 'prp' ? '#f0b020' : '#fff') + ';">' + (v === null ? '–' : v) + '</td>';
+    });
+    h += '</tr>';
+  });
+  return h + '</table></div>';
+}
+
+function _g45NbaFeuilleInterieur(eid) {
+  var F = _g45NbaFeuilles[eid]; if (!F) return '';
+  var h = '<div style="display:grid;grid-template-columns:repeat(' + F.eq.length + ',minmax(0,1fr));gap:6px;margin-bottom:8px;">';
+  F.eq.forEach(function (e, i) {
+    var on = i === F.sel;
+    h += '<button onclick="g45NbaFeuilleEq(\'' + eid + '\',' + i + ')" style="padding:9px 4px;border-radius:8px;cursor:pointer;font-size:13px;font-weight:'
+      + (on ? '900' : '700') + ';border:1px solid ' + (on ? '#4d84ff' : 'rgba(255,255,255,.18)') + ';background:' + (on ? '#1b2a52' : 'rgba(11,16,29,.85)')
+      + ';color:' + (on ? '#fff' : '#c9d3ee') + ';">Joueurs ' + e.nom + '</button>';
+  });
+  return h + '</div>' + _g45NbaFeuilleCorps(eid)
+    + '<div style="font-size:12px;color:#c9d3ee;margin-top:6px;">Badge « 5 » = cinq de départ · touche un en-tête pour trier</div>';
+}
+function _g45NbaFeuilleDessiner(eid) {
+  var box = document.getElementById('g45-nbaf-' + eid);
+  if (box) box.innerHTML = _g45NbaFeuilleInterieur(eid);
+}
+
+/* Appelée par _renderGenericDetail : bloc vide hors NBA ou avant le match. */
+function _g45NbaFeuilleHtml(data, eid, etat) {
+  if (etat !== 'in' && etat !== 'post') return '';
+  var eq = _g45NbaFeuilleLire(data);
+  if (!eq.length) return '';
+  var anc = _g45NbaFeuilles[eid];                     /* en direct : équipe et tri choisis conservés */
+  _g45NbaFeuilles[eid] = { eq: eq, sel: anc ? Math.min(anc.sel, eq.length - 1) : 0, tri: anc ? anc.tri : 'pts' };
+  return '<div style="margin-top:10px;background:rgba(11,16,29,.92);border-radius:10px;padding:10px;">'
+    + '<div style="font-size:12px;font-weight:800;letter-spacing:1px;color:#c9d3ee;margin-bottom:8px;">🏀 FEUILLE DES JOUEURS</div>'
+    + '<div id="g45-nbaf-' + eid + '">' + _g45NbaFeuilleInterieur(eid) + '</div></div>';
+}
+window.g45NbaFeuilleEq = function (eid, i) { var F = _g45NbaFeuilles[eid]; if (!F) return; F.sel = i; _g45NbaFeuilleDessiner(eid); };
+window.g45NbaFeuilleTri = function (eid, c) { var F = _g45NbaFeuilles[eid]; if (!F) return; F.tri = c; _g45NbaFeuilleDessiner(eid); };
+window._g45NbaFeuilleHtml = _g45NbaFeuilleHtml; window._g45NbaFeuilleLire = _g45NbaFeuilleLire;
 
 async function loadNbaPlayerStatsEspn(playerId, name) {
   var box = document.getElementById('nba-pstat-' + playerId);
@@ -31013,6 +31689,8 @@ async function _renderGenericDetail(el, sport, lg, eid){
     if (!_isRugbyFamily(sport)) {
       try { h += _g45UsDeroule(data, sport); } catch (e) {}
       try { h += _g45UsTeamStats(data); } catch (e) {}
+      /* NBA : feuille des joueurs (25/09/2026) — zéro requête, même résumé. */
+      if (lg === 'nba' && typeof _g45NbaFeuilleHtml === 'function') { try { h += _g45NbaFeuilleHtml(data, eid, stT.state); } catch (e) {} }
     }
     // Meilleurs joueurs
     try{
@@ -44395,6 +45073,10 @@ async function _g45SaisonsGen(el, nom, perso) {
   try {
     if (typeof _g45JouBarre === 'function') html += _g45JouBarre(sp, lg, an, (perso && perso.id) || '', nom, st.liste);
   } catch (e) {}
+  /* NBA : filtre joueur AVEC LIGNE (25/09/2026). Reçoit `liste` (matchs
+     visibles) : le bandeau suit phase et domicile / extérieur. */
+  var _nbaPF = (sp === 'basketball' && lg === 'nba' && typeof _g45NbaPFBarre === 'function');
+  try { if (_nbaPF) html += _g45NbaPFBarre(String((perso && perso.id) || ''), an, liste); } catch (e) { _nbaPF = false; }
 
   html += '<div style="position:relative;border-radius:10px;padding:8px 10px 10px;overflow:hidden;margin-top:6px;">';
   if (typeof g45FondClubHtml === 'function') html += g45FondClubHtml(_g45SgNomCourant || '', 0.2, _crestG);
@@ -44418,6 +45100,9 @@ async function _g45SaisonsGen(el, nom, perso) {
        du resultat : c'est leur role.
        Aucun marche coche : rien a verifier, on retombe sur le resultat. */
     var barre = coches.length ? ((passes.length === coches.length) ? '#1ed760' : '#ff4545') : col;
+    /* Filtre joueur NBA actif : la barre dit le résultat de SA ligne. */
+    var _nbaLg = '';
+    if (_nbaPF) { try { var _pb = _g45NbaPFCoul(m.id); if (_pb) { barre = _pb; _nbaLg = _g45NbaPFLigne(m.id); } } catch (e) {} }
     /* ═══ MEME LIGNE QUE LE FOOTBALL (09/09) ═══
        Le football et les sports US affichaient la meme information de deux
        facons differentes, sans raison — pastilles et score au milieu d'un cote,
@@ -44471,7 +45156,7 @@ async function _g45SaisonsGen(el, nom, perso) {
         + '<div style="font-size:12px;font-weight:800;color:' + col + ';text-align:center;background:' + _vlG + ';border-radius:6px;padding:5px 3px;">'
           + (m.dom ? (m.pour + ' - ' + m.contre) : (m.contre + ' - ' + m.pour)) + '</div>'
         + _cellG(m.dom ? _advG : _moiG, !m.dom, false, m.dom ? _crestAdv : _crestMoi)
-      + '</div></div>';
+      + '</div>' + _nbaLg + '</div>';
   });
 
   html += '</div></div>';        /* ferme le voile puis l'enveloppe au blason */
@@ -45129,6 +45814,15 @@ async function _g45CompoEffectif(el, nom, avecFoot) {
     return;
   }
   _g45CompoCtxCourant = ctx;
+
+  /* NBA (25/09/2026) : le tableau des joueurs (maquette « Joueurs NBA »)
+     remplace la liste générique. */
+  if (ctx.sp === 'basketball' && ctx.lg === 'nba' && typeof _g45NbaTableau === 'function') {
+    el.innerHTML = '<div class="cwrap"><div style="font-size:13px;font-weight:800;letter-spacing:1px;color:#c9d3ee;">👥 SQUAD · '
+      + String(nom).toUpperCase() + '</div><div></div></div>';
+    await _g45NbaTableau(el.querySelector('.cwrap > div:last-child'), nom, ctx.ref);
+    return;
+  }
 
   el.innerHTML = '<div style="display:flex;align-items:center;gap:9px;padding:16px;color:var(--t3);font-size:11.5px;">'
     + '<div style="width:14px;height:14px;border:2px solid rgba(77,132,255,.2);border-top-color:#4d84ff;border-radius:50%;animation:spin .8s linear infinite;"></div>Chargement de l\'effectif\u2026</div>';
