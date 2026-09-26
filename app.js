@@ -38372,7 +38372,7 @@ function _g45F1Iso2(pays, ville){
     [/united states|\busa\b|états-unis|etats-unis|miami|austin|las vegas|florida|texas|nevada/,'us'],[/canada|montr/,'ca'],[/monaco|monte/,'mc'],
     [/spain|espagne|barcelon|madrid/,'es'],[/austria|autriche|spielberg/,'at'],[/united kingdom|great britain|britain|royaume|silverstone|england/,'gb'],
     [/belgi|spa-franc|stavelot/,'be'],[/hungar|hongrie|budapest/,'hu'],[/netherlands|pays-bas|zandvoort|holland/,'nl'],[/ital|monza|imola/,'it'],
-    [/azerbai|baku|bakou/,'az'],[/singapo/,'sg'],[/mexic/,'mx'],[/brazil|brésil|bresil|são paulo|sao paulo|interlagos/,'br'],[/qatar|lusail/,'qa'],
+    [/azerbai|baku|bakou/,'az'],[/singapo/,'sg'],[/malaysi|malaisie|kuala|sepang/,'my'],[/mexic/,'mx'],[/brazil|brésil|bresil|são paulo|sao paulo|interlagos/,'br'],[/qatar|lusail/,'qa'],
     [/abu dhabi|emirates|émirats|yas/,'ae'],[/portugal|portim/,'pt'],[/germany|allemagne|hockenheim|nürburg/,'de'],[/france|castellet/,'fr'],[/turk|istanbul/,'tr']];
   for(var i=0;i<T.length;i++) if(T[i][0].test(t)) return T[i][1];
   return '';
@@ -38406,7 +38406,12 @@ async function g45F1Open(){
     var d=new Date(ev.date);
     var dt=isNaN(d)?'':d.toLocaleDateString('fr-FR',{day:'numeric',month:'short'})+' '+d.toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'});
     var cir=ev.circuit||{}, ad=cir.address||{};
-    var countryFR=(_g45F1CountryFR(ad.country)||ad.country||'').split(' ')[0];
+    /* Nom du pays : coupé avant une parenthèse seulement (avant : au 1er mot,
+       d'où « GP · Abou » pour Abou Dhabi). */
+    /* Les valeurs de _G45_F1_FR portent des mots en plus pour la recherche
+       (« Grande-Bretagne Angleterre », « Abou Dabi Émirats ») : affichage propre ici. */
+    var countryFR=String(_g45F1CountryFR(ad.country)||ad.country||'').trim();
+    countryFR=({'Grande-Bretagne Angleterre':'Grande-Bretagne','Abou Dabi Émirats':'Abou Dhabi','Arabie Saoudite':'Arabie saoudite','Malaysia':'Malaisie'})[countryFR]||countryFR;
     var badge = state==='post' ? '<span style="color:#3fb950;font-weight:800;">✅</span>' : (state==='in' ? '<span style="color:#e8002d;font-weight:800;">🔴 LIVE</span>' : '<span style="color:var(--a);font-weight:700;font-size:11px;">'+dt+'</span>');
     // vainqueur si la course est finie
     var winTxt='';
@@ -38427,8 +38432,12 @@ async function g45F1Open(){
     var iso=_g45F1Iso2(ad.country, ad.city), pil='background:rgba(5,7,13,.72);border-radius:8px;';
     var winTxt2=winTxt?winTxt.replace('<div style="font-size:10px;color:#f0c828;margin-top:2px;">','<div style="display:inline-block;margin-top:5px;'+pil+'padding:2px 9px;font-size:13px;font-weight:800;color:#f0c828;">'):
       (state==='pre'?'':'');
-    var row='<div onclick="g45F1Detail(\''+ea(ev.id)+'\')" style="position:relative;overflow:hidden;display:flex;align-items:center;gap:8px;padding:12px;background:#141b2e;border-radius:12px;margin-bottom:8px;cursor:pointer;">'
-      +(iso?'<img src="https://flagcdn.com/w640/'+iso+'.png" alt="" aria-hidden="true" loading="lazy" onerror="this.remove()" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:.40;pointer-events:none;">':'')
+    var row='<div onclick="g45F1Detail(\''+ea(ev.id)+'\')" style="position:relative;overflow:hidden;display:flex;align-items:center;gap:8px;padding:14px 12px;min-height:84px;box-sizing:border-box;background:#141b2e;border-radius:12px;margin-bottom:8px;cursor:pointer;">'
+      /* 26/09 soir (validé par Antoine) : drapeau ENTIER étiré (« fill »).
+         « cover » zoomait trop et ne gardait que la bande du milieu des
+         drapeaux horizontaux (Autriche, Hongrie, Pays-Bas… tout blancs). Les
+         formes rondes s'allongent un peu en largeur : accepté. */
+      +(iso?'<img src="https://flagcdn.com/w640/'+iso+'.png" alt="" aria-hidden="true" loading="lazy" onerror="this.remove()" style="position:absolute;inset:0;width:100%;height:100%;object-fit:fill;opacity:.45;pointer-events:none;">':'')
       +'<div style="position:relative;z-index:1;flex:1;min-width:0;">'
       +'<div style="display:inline-block;'+pil+'padding:3px 9px;max-width:100%;"><div style="font-size:16px;font-weight:900;color:#fff;">🏁 GP '+(countryFR?'· '+ea(countryFR):'')+(ad.city?' <span style="font-size:13px;color:#c9d3ee;font-weight:700;">('+ea(ad.city)+')</span>':'')+'</div>'
       +'<div style="font-size:12px;color:#c9d3ee;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">'+ea(ev.name||'')+'</div></div>'
