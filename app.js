@@ -43251,7 +43251,28 @@ window._g45CompetMatchs = _g45CompetMatchs;
    FINAL ; si aucune ne colle (détail incomplet), le match est écarté des
    catégories tirées des buts, et gardé pour celles tirées du score.
    ═══════════════════════════════════════════════════════════════════════════ */
-var _g45ClsCtx = { mode: 'eq', catE: 'bm', catJ: 'buts', lieu: 'all', n: 0, inv: false, phase: 'reg' };
+var _g45ClsCtx = { mode: 'eq', catE: 'bm', catJ: 'buts', lieu: 'all', n: 0, inv: false, phase: 'reg', tot: false };
+/* PAR MATCH / TOTAL (26/09/2026, maquette validée) : « Buts marqués » était
+   une moyenne sans le dire. Le total reste toujours visible sous la moyenne ;
+   le bouton choisit le chiffre principal ET le tri. */
+function _g45ClsUnite(sp, cat) {
+  if (cat === 'car') return 'cartons';
+  if (/^(bm|be|tot)$/.test(cat)) return (sp === 'soccer' || sp === 'hockey') ? 'buts' : 'pts';
+  if (/^(ec|t1p|t1mt|t5|t1r)$/.test(cat)) return sp === 'hockey' ? 'buts' : 'pts';
+  return '';
+}
+function _g45ClsBtnTot() {
+  var T = _g45ClsCtx.tot;
+  return '<div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px;margin-bottom:6px;">'
+    + _g45ClsBtn(!T, 'Par match', "g45ClsSet('tot',false)") + _g45ClsBtn(T, 'Total', "g45ClsSet('tot',true)") + '</div>';
+}
+/* Cellule valeur d'une catégorie « moyenne » : gros chiffre + ligne dessous. */
+function _g45ClsCelMoy(v, dec, unite, signe, coul) {
+  var T = _g45ClsCtx.tot, sg = function (x) { return (signe && x > 0 ? '+' : ''); };
+  var tot = sg(v.k) + _g45ClsFr(v.k, v.k % 1 ? 1 : 0), moy = sg(v.v) + _g45ClsFr(v.v, dec);
+  return '<span style="text-align:right;font-size:14px;font-weight:900;color:' + coul + ';">' + (T ? tot : moy)
+    + '<div style="font-size:11px;color:#c9d3ee;font-weight:700;">' + (T ? moy + ' / match' : tot + ' ' + unite) + '</div></span>';
+}
 /* PHASE (26/09/2026, maquette validée). SONDÉ sur le NRL : season.type 1 =
    saison régulière (slug « 2026-reg-nrl »), 2 = phases finales (« 2026-final-
    nrl ») — l'INVERSE des sports US (2 régulière, 3 playoffs). On lit donc le
@@ -43346,6 +43367,7 @@ function _g45ClsLireMatch(e) {
    réponse, `limit=500` ou pas. On lit donc MOIS par MOIS, et un mois qui
    renvoie 100 matchs ou plus est recoupé en deux moitiés. `lire(e)` rend un
    match ou null. */
+var _g45ClsLogoLu = {};
 async function _g45ClsLireSaison(url0, an, civil, lire) {
   var deb = civil ? new Date(an, 0, 1) : new Date(an, 6, 1), vus = {}, out = [], ok = 0;
   var plage = async function (d1, d2, prof) {
@@ -43354,8 +43376,10 @@ async function _g45ClsLireSaison(url0, an, civil, lire) {
     try { r = await fetch(url0 + '/scoreboard?dates=' + _g45ClsYmd(d1) + '-' + _g45ClsYmd(d2) + '&limit=500'); } catch (e) { return; }
     if (!r || !r.ok) return;
     ok++;
-    var evs = [];
-    try { evs = (await r.json()).events || []; } catch (e) { return; }
+    var evs = [], jj = null;
+    try { jj = await r.json(); evs = jj.events || []; } catch (e) { return; }
+    /* Logo du championnat : fourni par la même réponse (leagues[0].logos). */
+    try { var lo0 = jj.leagues && jj.leagues[0] && jj.leagues[0].logos && jj.leagues[0].logos[0]; if (lo0 && lo0.href) _g45ClsLogoLu[url0] = lo0.href; } catch (e) {}
     if (evs.length >= 100 && prof < 2 && d2 - d1 > 2 * 86400000) {
       var mil = new Date(d1.getTime() + Math.floor((d2 - d1) / 2 / 86400000) * 86400000);
       await plage(d1, mil, prof + 1);
@@ -43498,26 +43522,27 @@ function _g45ClsTableEq(c, def, PE, saisonTxt, lieuTxt, ms) {
     var v = _g45ClsValEq(def[0], id, PE.par[id]);
     if (v) { tk += v.k; tn += v.n; rows.push({ id: id, nom: PE.info[id].nom, logo: PE.info[id].logo, v: v }); }
   });
-  var sens = def[3] * (X.inv ? -1 : 1);
-  rows.sort(function (a, b) { return (b.v.v - a.v.v) * sens || b.v.n - a.v.n || a.nom.localeCompare(b.nom); });
-  var pct = def[2] === 'pct';
+  var sens = def[3] * (X.inv ? -1 : 1), pct = def[2] === 'pct', T = !pct && X.tot;
+  rows.sort(function (a, b) { return (T ? (b.v.k - a.v.k) : (b.v.v - a.v.v)) * sens || b.v.n - a.v.n || a.nom.localeCompare(b.nom); });
   var moyC = tn ? (pct ? tk * 100 / tn : tk / tn) : 0;
   var nonFiables = ms.filter(function (m) { return !m.f; }).length;
   var sous = 'Moyenne du championnat : ' + (pct ? _g45ClsFr(moyC) + ' %' : _g45ClsFr(moyC, 2));
   if (def[0] === 'p1') sous += ' · match sans but : non compté';
   if (/^(p1|mt|bts1|o15mt)$/.test(def[0]) && nonFiables) sous += ' · ' + nonFiables + ' match(s) au détail incomplet écarté(s)';
-  var h = _g45ClsEnTete(def[1] + ' · ' + c.n + ' ' + saisonTxt + ' · ' + lieuTxt, sous);
-  h += '<div style="background:rgba(11,16,29,.80);border-radius:8px;overflow:hidden;">'
-    + '<div style="display:grid;grid-template-columns:30px minmax(0,1fr) 70px 38px;gap:6px;padding:8px 10px;font-size:12px;color:#c9d3ee;font-weight:700;">'
-    + '<span>#</span><span>Équipe</span><span onclick="g45ClsSet(\'inv\')" style="text-align:right;cursor:pointer;text-decoration:underline;">' + (pct ? '%' : 'Moy.') + (sens > 0 ? ' ▼' : ' ▲') + '</span><span style="text-align:right;">MJ</span></div>';
+  if (!pct) sous = sous.replace(/(\d)$/, '$1 par match');
+  var h = (pct ? '' : _g45ClsBtnTot()) + _g45ClsEnTete(def[1] + (pct ? '' : (T ? ' (total)' : ' par match')) + ' · ' + c.n + ' ' + saisonTxt + ' · ' + lieuTxt, sous);
+  h += '<div style="background:rgba(11,16,29,.62);border-radius:8px;overflow:hidden;">'
+    + '<div style="display:grid;grid-template-columns:30px minmax(0,1fr) 78px 38px;gap:6px;padding:8px 10px;font-size:12px;color:#c9d3ee;font-weight:700;">'
+    + '<span>#</span><span>Équipe</span><span onclick="g45ClsSet(\'inv\')" style="text-align:right;cursor:pointer;text-decoration:underline;">' + (pct ? '%' : (T ? 'Total' : '/ match')) + (sens > 0 ? ' ▼' : ' ▲') + '</span><span style="text-align:right;">MJ</span></div>';
   rows.forEach(function (r, i) {
     var val = pct ? _g45ClsFr(r.v.v) + ' %' : _g45ClsFr(r.v.v, def[0] === 'car' ? 1 : 2);
     var coul = i < 3 ? '#1ed760' : (i >= rows.length - 3 ? '#ff8a8a' : '#fff');
-    h += '<div onclick="g45CompetOuvrir(\'' + String(r.nom).replace(/'/g, "\\'") + '\',\'' + r.id + '\',\'' + c.s + '\',\'soccer\')" style="display:grid;grid-template-columns:30px minmax(0,1fr) 70px 38px;gap:6px;padding:8px 10px;border-top:1px solid rgba(255,255,255,.08);align-items:center;cursor:pointer;">'
+    h += '<div onclick="g45CompetOuvrir(\'' + String(r.nom).replace(/'/g, "\\'") + '\',\'' + r.id + '\',\'' + c.s + '\',\'soccer\')" style="display:grid;grid-template-columns:30px minmax(0,1fr) 78px 38px;gap:6px;padding:8px 10px;border-top:1px solid rgba(255,255,255,.08);align-items:center;cursor:pointer;">'
       + '<span style="font-size:13px;font-weight:800;color:' + (i ? '#c9d3ee' : '#f0b020') + ';">' + (i + 1) + '</span>'
       + '<span style="display:flex;align-items:center;gap:7px;min-width:0;">' + (r.logo ? '<img src="' + r.logo + '" alt="" loading="lazy" style="width:20px;height:20px;object-fit:contain;flex:none;" onerror="this.style.display=\'none\'">' : '')
       + '<span style="font-size:14px;font-weight:800;color:#fff;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + r.nom + '</span></span>'
-      + '<span style="text-align:right;font-size:14px;font-weight:900;color:' + coul + ';">' + val + (pct ? '<div style="font-size:11px;color:#c9d3ee;font-weight:700;">' + r.v.k + '/' + r.v.n + '</div>' : '') + '</span>'
+      + (pct ? '<span style="text-align:right;font-size:14px;font-weight:900;color:' + coul + ';">' + val + '<div style="font-size:11px;color:#c9d3ee;font-weight:700;">' + r.v.k + '/' + r.v.n + '</div></span>'
+            : _g45ClsCelMoy(r.v, def[0] === 'car' ? 1 : 2, _g45ClsUnite('soccer', def[0]), false, coul))
       + '<span style="text-align:right;font-size:13px;color:#c9d3ee;">' + r.v.n + '</span></div>';
   });
   return h + '</div><div style="font-size:12px;color:#c9d3ee;margin-top:6px;">Touche une équipe pour ouvrir sa fiche · touche « ' + (pct ? '%' : 'Moy.') + ' » pour inverser l\'ordre</div>';
@@ -43620,7 +43645,7 @@ async function _g45ClsTableJo(c, def, PE, saisonTxt, lieuTxt, an, body) {
 
 window.g45ClsSet = function (k, v) {
   if (k === 'inv') _g45ClsCtx.inv = !_g45ClsCtx.inv;
-  else { _g45ClsCtx[k] = v; if (k !== 'lieu' && k !== 'n' && k !== 'phase') _g45ClsCtx.inv = false; }
+  else { _g45ClsCtx[k] = v; if (k !== 'lieu' && k !== 'n' && k !== 'phase' && k !== 'tot') _g45ClsCtx.inv = false; }
   var D = window._g45ClsDernier, body = document.getElementById('g45-compet-body');
   if (D && D.khl && body) _g45KhlVueClassements(body);
   else if (D && body) g45ClsRender(D.c, body); else if (typeof loadCompetTab === 'function') loadCompetTab();
@@ -43766,8 +43791,8 @@ async function _g45ClsAfficherUS(c, body, sp, D, clic, joueurs) {
     var v = _g45ClsValUS(sp, def[0], id, l, repos);
     if (v) { tk += v.k; tn += v.n; rows.push({ id: id, nom: info[id].nom, logo: info[id].logo, v: v }); }
   });
-  var sens = def[3] * (X.inv ? -1 : 1), pct = def[2] === 'pct';
-  rows.sort(function (a, b) { return (b.v.v - a.v.v) * sens || b.v.n - a.v.n || a.nom.localeCompare(b.nom); });
+  var sens = def[3] * (X.inv ? -1 : 1), pct = def[2] === 'pct', T = !pct && X.tot;
+  rows.sort(function (a, b) { return (T ? (b.v.k - a.v.k) : (b.v.v - a.v.v)) * sens || b.v.n - a.v.n || a.nom.localeCompare(b.nom); });
   var moyC = tn ? (pct ? tk * 100 / tn : tk / tn) : 0;
   var lieuTxt = _ph.lib.replace(/^ · /, '') + (_ph.lib ? ' · ' : '') + { all: 'Global', dom: 'Domicile', ext: 'Extérieur' }[X.lieu] + (X.n ? ' · ' + X.n + ' derniers' : '');
   var sous = 'Moyenne du championnat : ' + (pct ? _g45ClsFr(moyC) + ' %' : _g45ClsFr(moyC, 1));
@@ -43775,18 +43800,20 @@ async function _g45ClsAfficherUS(c, body, sp, D, clic, joueurs) {
   if (def[0] === 'b2b') sous += ' · seuls les matchs joués au lendemain d\'un autre comptent';
   if (def[0] === 'g2mt') sous += ' · prolongation exclue';
   if (/^(mtr|t1r|g2r)$/.test(def[0]) && window._g45ClsRgSansMt) sous += ' · ' + window._g45ClsRgSansMt + ' match(s) sans mi-temps connue écarté(s)';
-  h += _g45ClsEnTete(def[1] + ' · ' + c.n + ' ' + D.lbl + ' · ' + lieuTxt, sous);
-  h += '<div style="background:rgba(11,16,29,.80);border-radius:8px;overflow:hidden;">'
-    + '<div style="display:grid;grid-template-columns:30px minmax(0,1fr) 70px 38px;gap:6px;padding:8px 10px;font-size:12px;color:#c9d3ee;font-weight:700;">'
-    + '<span>#</span><span>Équipe</span><span onclick="g45ClsSet(\'inv\')" style="text-align:right;cursor:pointer;text-decoration:underline;">' + (pct ? '%' : 'Moy.') + (sens > 0 ? ' ▼' : ' ▲') + '</span><span style="text-align:right;">MJ</span></div>';
+  if (!pct) sous = sous.replace(/(\d)( ·|$)/, '$1 par match$2');
+  h += (pct ? '' : _g45ClsBtnTot()) + _g45ClsEnTete(def[1] + (pct ? '' : (T ? ' (total)' : ' par match')) + ' · ' + c.n + ' ' + D.lbl + ' · ' + lieuTxt, sous);
+  h += '<div style="background:rgba(11,16,29,.62);border-radius:8px;overflow:hidden;">'
+    + '<div style="display:grid;grid-template-columns:30px minmax(0,1fr) 78px 38px;gap:6px;padding:8px 10px;font-size:12px;color:#c9d3ee;font-weight:700;">'
+    + '<span>#</span><span>Équipe</span><span onclick="g45ClsSet(\'inv\')" style="text-align:right;cursor:pointer;text-decoration:underline;">' + (pct ? '%' : (T ? 'Total' : '/ match')) + (sens > 0 ? ' ▼' : ' ▲') + '</span><span style="text-align:right;">MJ</span></div>';
   rows.forEach(function (r, i) {
     var val = pct ? _g45ClsFr(r.v.v) + ' %' : (def[0] === 'ec' && r.v.v > 0 ? '+' : '') + _g45ClsFr(r.v.v, 1);
     var coul = i < 3 ? '#1ed760' : (i >= rows.length - 3 ? '#ff8a8a' : '#fff');
-    h += '<div' + (clic ? ' onclick="' + clic(r) + '"' : '') + ' style="display:grid;grid-template-columns:30px minmax(0,1fr) 70px 38px;gap:6px;padding:8px 10px;border-top:1px solid rgba(255,255,255,.08);align-items:center;' + (clic ? 'cursor:pointer;' : '') + '">'
+    h += '<div' + (clic ? ' onclick="' + clic(r) + '"' : '') + ' style="display:grid;grid-template-columns:30px minmax(0,1fr) 78px 38px;gap:6px;padding:8px 10px;border-top:1px solid rgba(255,255,255,.08);align-items:center;' + (clic ? 'cursor:pointer;' : '') + '">'
       + '<span style="font-size:13px;font-weight:800;color:' + (i ? '#c9d3ee' : '#f0b020') + ';">' + (i + 1) + '</span>'
       + '<span style="display:flex;align-items:center;gap:7px;min-width:0;">' + (r.logo ? '<img src="' + r.logo + '" alt="" loading="lazy" style="width:20px;height:20px;object-fit:contain;flex:none;" onerror="this.style.display=\'none\'">' : '')
       + '<span style="font-size:14px;font-weight:800;color:#fff;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + r.nom + '</span></span>'
-      + '<span style="text-align:right;font-size:14px;font-weight:900;color:' + coul + ';">' + val + (pct ? '<div style="font-size:11px;color:#c9d3ee;font-weight:700;">' + r.v.k + '/' + r.v.n + '</div>' : '') + '</span>'
+      + (pct ? '<span style="text-align:right;font-size:14px;font-weight:900;color:' + coul + ';">' + val + '<div style="font-size:11px;color:#c9d3ee;font-weight:700;">' + r.v.k + '/' + r.v.n + '</div></span>'
+            : _g45ClsCelMoy(r.v, 1, _g45ClsUnite(sp, def[0]), def[0] === 'ec', coul))
       + '<span style="text-align:right;font-size:13px;color:#c9d3ee;">' + r.v.n + '</span></div>';
   });
   h += '</div><div style="font-size:12px;color:#c9d3ee;margin-top:6px;">' + (clic ? 'Touche une équipe pour ouvrir sa fiche · ' : '') + 'touche « ' + (pct ? '%' : 'Moy.') + ' » pour inverser l\'ordre</div>';
@@ -43932,11 +43959,29 @@ window._g45ClsValUS = _g45ClsValUS; window._g45ClsUsOk = _g45ClsUsOk;
    Les bandes sombres (.80–.85) restent sous le texte : le logo se devine
    entre les lignes sans jamais passer devant un chiffre. */
 function _g45ClsFond(c, html) {
+  /* LOGO INTROUVABLE / INVISIBLE (26/09/2026, relevé d'Antoine sur la Ligue 1).
+     1) Le logo n'était pris que dans _g45CompetLogos, rempli par d'autres
+        vues : souvent vide. Repli : logo lu dans la réponse scoreboard du
+        classement lui-même (foot, rugby), puis adresse ESPN des ligues US
+        (non sondée : l'image se retire d'elle-même si elle n'existe pas).
+     2) Centré sur TOUTE la hauteur, il tombait au milieu d'une longue liste,
+        sous des bandes à 80 % : invisible. Il est maintenant COLLANT au milieu
+        de l'écran (position: sticky) et les bandes du tableau passent à 62 %. */
   var lo = (typeof _g45CompetLogos !== 'undefined' && _g45CompetLogos[c.s]) || '';
+  if (!lo) {
+    var base = 'https://site.api.espn.com/apis/site/v2/sports/' + c.sp + '/' + c.s;
+    lo = _g45ClsLogoLu[base] || '';
+    if (!lo && /^(nba|wnba|nfl|nhl|mlb)$/.test(c.s)) lo = 'https://a.espncdn.com/i/teamlogos/leagues/500/' + c.s + '.png';
+    if (lo && typeof _g45CompetLogos !== 'undefined' && /espncdn/.test(lo) && !/teamlogos\/leagues/.test(lo)) {
+      _g45CompetLogos[c.s] = lo;
+      try { localStorage.setItem('g45_compet_logos', JSON.stringify(_g45CompetLogos)); } catch (e) {}
+    }
+  }
   if (!lo) return html;
   return '<div style="position:relative;">'
-    + '<img src="' + lo + '" alt="" aria-hidden="true" onerror="this.remove()" style="position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);'
-    + 'width:min(70%,340px);max-height:80%;object-fit:contain;opacity:.12;pointer-events:none;z-index:0;">'
+    + '<div aria-hidden="true" style="position:sticky;top:32vh;height:0;z-index:0;pointer-events:none;">'
+    + '<img src="' + lo + '" alt="" onerror="this.remove()" style="position:absolute;left:50%;top:0;transform:translateX(-50%);'
+    + 'width:min(60%,300px);max-height:300px;object-fit:contain;opacity:.16;"></div>'
     + '<div style="position:relative;z-index:1;">' + html + '</div></div>';
 }
 
