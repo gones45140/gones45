@@ -4920,16 +4920,17 @@ async function g45PartagerPari(id){
   }catch(e){ try{ document.body.removeChild(wrap); }catch(e2){} alert('Échec de la génération de l\'image.'); }
 }
 window.g45PartagerPari=g45PartagerPari;
-function deleteArchived(id){
-  if(!confirm('Supprimer ce pari ?'))return;
-  var idx=state.a.findIndex(function(x){return x.id===id;});if(idx===-1)return;
-  var bet=state.a[idx];
-  if(bet.isFreebet){if(!state.fb)state.fb={};
-    if(bet.win)state.b[bet.b]=(parseFloat(state.b[bet.b]||0)-(bet.m*(bet.cote-1))).toFixed(2);
-    state.fb[bet.b]=((parseFloat(state.fb[bet.b])||0)+parseFloat(bet.m)).toFixed(2);
-  } else if(bet.win)state.b[bet.b]=(parseFloat(state.b[bet.b]||0)-(bet.m*bet.cote)).toFixed(2);
-  else state.b[bet.b]=(parseFloat(state.b[bet.b]||0)+parseFloat(bet.m)).toFixed(2);
-  state.a.splice(idx,1);save();
+function deleteArchived(id, sansConfirm){
+  /* CORRIGÉ LE 26/09/2026 (question d'Antoine sur la poubelle). Supprimer
+     un pari GAGNÉ retirait mise × cote sans rendre la mise : 5 € perdus de
+     trop à chaque fois. On annule désormais l'effet TOTAL du pari (voir
+     _g45BetAppliquer), et un pari EN COURS se supprime aussi depuis
+     l'éditeur (il était introuvable ici : il vit dans state.h). */
+  if(!sansConfirm && !confirm('Supprimer ce pari ?'))return;
+  var idx=state.a.findIndex(function(x){return x.id===id;});
+  if(idx!==-1){ _g45BetAppliquer(state.a[idx],'a',-1); state.a.splice(idx,1); save(); return; }
+  idx=(state.h||[]).findIndex(function(x){return x.id===id;});
+  if(idx!==-1){ _g45BetAppliquer(state.h[idx],'h',-1); state.h.splice(idx,1); save(); }
 }
 function editArchived(id){
   var idx=state.a.findIndex(function(x){return x.id===id;});if(idx===-1)return;
@@ -12751,16 +12752,17 @@ function cancelBet(id){
   if(bet.isS&&bet.l){var u=state.u.find(function(x){return x.n===bet.n;});if(u)_g45SetPal(u,bet.comp,bet.domicile,parseInt(bet.l)||1);}
   state.h.splice(idx,1);save();
 }
-function deleteArchived(id){
-  if(!confirm('Supprimer ce pari ?'))return;
-  var idx=state.a.findIndex(function(x){return x.id===id;});if(idx===-1)return;
-  var bet=state.a[idx];
-  if(bet.isFreebet){if(!state.fb)state.fb={};
-    if(bet.win)state.b[bet.b]=(parseFloat(state.b[bet.b]||0)-(bet.m*(bet.cote-1))).toFixed(2);
-    state.fb[bet.b]=((parseFloat(state.fb[bet.b])||0)+parseFloat(bet.m)).toFixed(2);
-  } else if(bet.win)state.b[bet.b]=(parseFloat(state.b[bet.b]||0)-(bet.m*bet.cote)).toFixed(2);
-  else state.b[bet.b]=(parseFloat(state.b[bet.b]||0)+parseFloat(bet.m)).toFixed(2);
-  state.a.splice(idx,1);save();
+function deleteArchived(id, sansConfirm){
+  /* CORRIGÉ LE 26/09/2026 (question d'Antoine sur la poubelle). Supprimer
+     un pari GAGNÉ retirait mise × cote sans rendre la mise : 5 € perdus de
+     trop à chaque fois. On annule désormais l'effet TOTAL du pari (voir
+     _g45BetAppliquer), et un pari EN COURS se supprime aussi depuis
+     l'éditeur (il était introuvable ici : il vit dans state.h). */
+  if(!sansConfirm && !confirm('Supprimer ce pari ?'))return;
+  var idx=state.a.findIndex(function(x){return x.id===id;});
+  if(idx!==-1){ _g45BetAppliquer(state.a[idx],'a',-1); state.a.splice(idx,1); save(); return; }
+  idx=(state.h||[]).findIndex(function(x){return x.id===id;});
+  if(idx!==-1){ _g45BetAppliquer(state.h[idx],'h',-1); state.h.splice(idx,1); save(); }
 }
 function editArchived(id){
   var idx=state.a.findIndex(function(x){return x.id===id;});if(idx===-1)return;
@@ -34588,6 +34590,32 @@ function _betFind(id){
   if(idx>=0) return {bet:state.h[idx], idx:idx, pending:true};
   return null;
 }
+/* ═══ EFFET D'UN PARI SUR LES SOLDES (26/09/2026) ═══
+   Règle de l'app (pari() et result()) : la mise est RETIRÉE AU PLACEMENT
+   (solde, ou cagnotte freebet), un gain crédite mise × cote (freebet :
+   mise × (cote − 1)), une perte ne fait rien de plus. Effet TOTAL d'un pari :
+   - en cours (state.h)       : solde −m          | freebet : cagnotte −m
+   - gagné (state.a)          : solde +m×cote − m  | freebet : cagnotte −m, solde +m×(cote−1)
+   - perdu (state.a)          : solde −m           | freebet : cagnotte −m
+   - « en attente » d'archive (state.a, isPending) : 0 — ce circuit ne débite
+     pas au placement (editArchived).
+   Annuler = appliquer l'effet avec le signe −, rétablir = signe +. Toute
+   modification (mise, cote, bookmaker, freebet, résultat) devient : on retire
+   l'ancien effet, on applique le nouveau. Au centime, sans cas particulier. */
+function _g45BetEffetTotal(bet, loc) {
+  var m = parseFloat(bet.m) || 0, c = parseFloat(bet.cote) || 0;
+  if (loc === 'a' && bet.isPending) return { b: 0, fb: 0 };
+  if (bet.isFreebet) return { b: (loc === 'a' && bet.win) ? m * (c - 1) : 0, fb: -m };
+  return { b: (loc === 'a' && bet.win) ? (m * c - m) : -m, fb: 0 };
+}
+function _g45BetAppliquer(bet, loc, sens) {
+  if (!bet || !bet.b || !state) return;
+  var e = _g45BetEffetTotal(bet, loc);
+  if (!state.b) state.b = {};
+  if (!state.fb) state.fb = {};
+  if (e.b) state.b[bet.b] = (parseFloat(state.b[bet.b] || 0) + sens * e.b).toFixed(2);
+  if (e.fb) state.fb[bet.b] = ((parseFloat(state.fb[bet.b]) || 0) + sens * e.fb).toFixed(2);
+}
 function _betSettleEffect(bet){
   var m=parseFloat(bet.m)||0, cote=parseFloat(bet.cote)||0;
   if(bet.isFreebet) return bet.win ? m*(cote-1) : 0;
@@ -34643,7 +34671,7 @@ function openBetEdit(id){
       +'<label style="display:flex;align-items:center;gap:6px;cursor:pointer;"><input type="checkbox" id="be-lay"'+(b.isLay?' checked':'')+' style="width:16px;height:16px;accent-color:#a78bfa;"> \ud83d\udd04 Lay</label>'
     +'</div>'
     +fld('📝 Note','<textarea id="be-note" rows="4" placeholder="Tes notes sur ce pari…" style="'+ins+'resize:vertical;font-family:inherit;line-height:1.4;">'+(g45NoteDe(b).replace(/</g,'&lt;'))+'</textarea>')
-    +'<div style="display:flex;gap:8px;margin-top:6px;"><button onclick="saveBetEdit(\''+id+'\')" style="flex:2;background:#4d84ff;border:none;border-radius:10px;padding:12px;color:#fff;font-size:14px;font-weight:800;cursor:pointer;">💾 Enregistrer</button><button onclick="if(confirm(\'Supprimer ce pari ?\')){var o=document.getElementById(\'bet-edit-ov\');if(o)o.remove();deleteArchived(\''+id+'\');}" style="flex:1;background:rgba(255,69,69,.15);border:none;border-radius:10px;padding:12px;color:#ff6b6b;font-size:13px;font-weight:700;cursor:pointer;">🗑</button></div>'
+    +'<div style="display:flex;gap:8px;margin-top:6px;"><button onclick="saveBetEdit(\''+id+'\')" style="flex:2;background:#4d84ff;border:none;border-radius:10px;padding:12px;color:#fff;font-size:14px;font-weight:800;cursor:pointer;">💾 Enregistrer</button><button onclick="if(confirm(\'Supprimer ce pari ?\')){var o=document.getElementById(\'bet-edit-ov\');if(o)o.remove();deleteArchived(\''+id+'\',1);try{renderArchive();}catch(e){}}" style="flex:1;background:rgba(255,69,69,.15);border:none;border-radius:10px;padding:12px;color:#ff6b6b;font-size:13px;font-weight:700;cursor:pointer;">🗑</button></div>'
     +'</div>';
   document.body.appendChild(ov);
   ov.addEventListener('click',function(e){ if(e.target===ov) ov.remove(); });
@@ -34715,10 +34743,13 @@ function saveBetEdit(id){
   var b=f.bet;
   function v(i){ var e=document.getElementById(i); return e?e.value:''; }
   var res=v('be-res'), wasPending=f.pending;
-  // 1) annuler l'effet bankroll de l'ANCIEN pari réglé (avant de toucher aux champs)
-  if(!wasPending && b.b && state.b && state.b[b.b]!==undefined){
-    state.b[b.b]=(parseFloat(state.b[b.b]||0) - _betSettleEffect(b)).toFixed(2);
-  }
+  /* 1) CORRIGÉ LE 26/09/2026 : on retire l'effet TOTAL de l'ancien pari (mise
+     comprise), qu'il soit en cours ou réglé. Avant, un pari EN COURS réglé
+     depuis l'éditeur voyait sa mise retirée une DEUXIÈME fois, et un pari
+     repassé « en cours » n'était plus débité de sa mise. */
+  var _anc = { m: b.m, cote: b.cote, b: b.b, isFreebet: b.isFreebet, win: b.win, isPending: b.isPending };
+  var _ancLoc = wasPending ? 'h' : 'a';
+  _g45BetAppliquer(_anc, _ancLoc, -1);
   // 2) appliquer les modifs de champs
   b.heure=v('be-heure').trim();
   b.date=v('be-date')||b.date;
@@ -34757,17 +34788,17 @@ function saveBetEdit(id){
     if(!nowPending){
       b.win=win; b.isPending=false;
       state.h.splice(f.idx,1); if(!state.a) state.a=[]; state.a.push(b);
-      if(b.b && state.b && state.b[b.b]!==undefined) state.b[b.b]=(parseFloat(state.b[b.b]||0) + _betSettleEffect(b)).toFixed(2);
     }
   } else {
     if(nowPending){
       b.isPending=true; delete b.win;
       state.a.splice(f.idx,1); if(!state.h) state.h=[]; state.h.push(b);
     } else {
-      b.win=win;
-      if(b.b && state.b && state.b[b.b]!==undefined) state.b[b.b]=(parseFloat(state.b[b.b]||0) + _betSettleEffect(b)).toFixed(2);
+      b.win=win; b.isPending=false;
     }
   }
+  /* 3 bis) on applique l'effet TOTAL du pari tel qu'il est maintenant. */
+  _g45BetAppliquer(b, nowPending ? 'h' : 'a', +1);
   save();
   var ov=document.getElementById('bet-edit-ov'); if(ov) ov.remove();
   try{ renderArchive(); }catch(e){}
