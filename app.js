@@ -38364,6 +38364,19 @@ function _g45F1Ev(ev){
   var country=ad.country||'', city=ad.city||'';
   return {sport:'🏎', teams:[], place:[country,_g45F1CountryFR(country),city,ev.name||''].filter(Boolean).join(' '), comp:'F1 Formule 1'};
 }
+/* Pays d'un GP → code ISO à 2 lettres (drapeaux flagcdn). Noms ESPN en anglais,
+   quelques variantes françaises et villes en secours. */
+function _g45F1Iso2(pays, ville){
+  var t=(String(pays||'')+' '+String(ville||'')).toLowerCase();
+  var T=[[/australi/,'au'],[/china|chine|shanghai/,'cn'],[/japan|japon|suzuka/,'jp'],[/bahrain|bahre|sakhir/,'bh'],[/saudi|arabie|jeddah/,'sa'],
+    [/united states|\busa\b|états-unis|etats-unis|miami|austin|las vegas|florida|texas|nevada/,'us'],[/canada|montr/,'ca'],[/monaco|monte/,'mc'],
+    [/spain|espagne|barcelon|madrid/,'es'],[/austria|autriche|spielberg/,'at'],[/united kingdom|great britain|britain|royaume|silverstone|england/,'gb'],
+    [/belgi|spa-franc|stavelot/,'be'],[/hungar|hongrie|budapest/,'hu'],[/netherlands|pays-bas|zandvoort|holland/,'nl'],[/ital|monza|imola/,'it'],
+    [/azerbai|baku|bakou/,'az'],[/singapo/,'sg'],[/mexic/,'mx'],[/brazil|brésil|bresil|são paulo|sao paulo|interlagos/,'br'],[/qatar|lusail/,'qa'],
+    [/abu dhabi|emirates|émirats|yas/,'ae'],[/portugal|portim/,'pt'],[/germany|allemagne|hockenheim|nürburg/,'de'],[/france|castellet/,'fr'],[/turk|istanbul/,'tr']];
+  for(var i=0;i<T.length;i++) if(T[i][0].test(t)) return T[i][1];
+  return '';
+}
 async function g45F1Open(){
   _g45F1LiveStop();
   var el=document.getElementById('t-resultats'); if(!el) return;
@@ -38408,12 +38421,21 @@ async function g45F1Open(){
     var stats=(typeof g45StatsForEvent==='function')?g45StatsForEvent(_g45F1Ev(ev)):[];
     var sid='f1stat-'+(_fsn++);
     var bulb=stats.length?'<button onclick="event.stopPropagation();g45CalTglStat(\''+sid+'\')" style="background:rgba(240,200,40,.14);border:1px solid rgba(240,200,40,.5);color:#f0c828;border-radius:6px;font-size:11px;font-weight:800;padding:2px 7px;cursor:pointer;flex:none;">💡 '+stats.length+'</button>':'';
-    var row='<div onclick="g45F1Detail(\''+ea(ev.id)+'\')" style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:var(--s1);border-radius:var(--r6);margin-bottom:6px;border-left:3px solid #e8002d;cursor:pointer;">'
-      +'<div style="flex:1;">'
-      +'<div style="font-size:12px;font-weight:700;color:var(--t1);">🏁 GP '+(countryFR?'· '+ea(countryFR):'')+(ad.city?' <span style="color:var(--t3);font-weight:400;">('+ea(ad.city)+')</span>':'')+'</div>'
-      +'<div style="font-size:10px;color:var(--t3);margin-top:2px;">'+ea(ev.name||'')+'</div>'
-      +winTxt
-      +'</div>'+bulb+'<div style="flex:none;text-align:right;">'+badge+'</div></div>';
+    /* DRAPEAU DU PAYS EN FOND (26/09/2026, maquette 2A validée) : vraie image
+       (flagcdn, code ISO à 2 lettres), étirée et atténuée à 40 % ; chaque texte
+       garde sa bande sombre. Image absente ou refusée : la carte reste unie. */
+    var iso=_g45F1Iso2(ad.country, ad.city), pil='background:rgba(5,7,13,.72);border-radius:8px;';
+    var winTxt2=winTxt?winTxt.replace('<div style="font-size:10px;color:#f0c828;margin-top:2px;">','<div style="display:inline-block;margin-top:5px;'+pil+'padding:2px 9px;font-size:13px;font-weight:800;color:#f0c828;">'):
+      (state==='pre'?'':'');
+    var row='<div onclick="g45F1Detail(\''+ea(ev.id)+'\')" style="position:relative;overflow:hidden;display:flex;align-items:center;gap:8px;padding:12px;background:#141b2e;border-radius:12px;margin-bottom:8px;cursor:pointer;">'
+      +(iso?'<img src="https://flagcdn.com/w640/'+iso+'.png" alt="" aria-hidden="true" loading="lazy" onerror="this.remove()" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:.40;pointer-events:none;">':'')
+      +'<div style="position:relative;z-index:1;flex:1;min-width:0;">'
+      +'<div style="display:inline-block;'+pil+'padding:3px 9px;max-width:100%;"><div style="font-size:16px;font-weight:900;color:#fff;">🏁 GP '+(countryFR?'· '+ea(countryFR):'')+(ad.city?' <span style="font-size:13px;color:#c9d3ee;font-weight:700;">('+ea(ad.city)+')</span>':'')+'</div>'
+      +'<div style="font-size:12px;color:#c9d3ee;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">'+ea(ev.name||'')+'</div></div>'
+      +(winTxt2?'<div>'+winTxt2+'</div>':'')
+      +'</div>'
+      +(bulb?'<div style="position:relative;z-index:1;flex:none;">'+bulb+'</div>':'')
+      +'<div style="position:relative;z-index:1;flex:none;text-align:right;'+pil+'padding:5px 8px;">'+badge+'</div></div>';
     if(stats.length){
       row+='<div id="'+sid+'" style="display:none;background:rgba(240,200,40,.06);border:1px solid rgba(240,200,40,.25);border-radius:8px;padding:9px 11px;margin:-2px 0 8px;">'
         +stats.map(function(s){ var tg=[]; if(s.place)tg.push('📍'+s.place); if(s.comp)tg.push('🏆'+s.comp); if(s.context)tg.push('🎯'+s.context);
@@ -39657,18 +39679,21 @@ async function g45F1Standings(tab){
         var pil=(parEquipe&&parEquipe[C.constructorId])||[];
         ligne=[pil.join(' · '), v?'🏆 '+v:''].filter(Boolean).join(' · ');
       }
+      /* 26/09 : couleur de l'écurie sur TOUTE la carte (maquette validée) ; nom
+         avec une ombre légère, points sur une bande sombre pour rester lisibles. */
+      var rgbE=rgbDe(_g45F1CoulEcurie(eq));
       return '<div style="display:flex;align-items:center;gap:10px;border-radius:14px;padding:8px 12px;margin-bottom:8px;'
-          +'background:linear-gradient(90deg,rgba('+rgbDe(_g45F1CoulEcurie(eq))+',.40),rgba(10,14,24,.95) 55%);border:1px solid '+(top?'rgba(240,200,40,.55)':'rgba(255,255,255,.12)')+';">'
+          +'background:linear-gradient(90deg,rgba('+rgbE+',.58),rgba('+rgbE+',.32));border:1px solid '+(top?'rgba(240,200,40,.65)':'rgba(255,255,255,.14)')+';">'
         +'<div style="width:28px;flex:none;text-align:center;font-size:20px;font-weight:900;color:'+(top?'#f0c828':'#c9d3ee')+';">'+ea(x.position||i+1)+'</div>'
         +visuel
         +'<div style="flex:1;min-width:0;">'
-          +'<div style="font-size:17px;font-weight:800;color:'+(top?'#f0c828':'#fff')+';white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">'+ea(name)+'</div>'
-          +(tab==='d'&&eq?'<div style="font-size:13px;font-weight:600;color:#c9d3ee;">'+ea(eq)+'</div>':'')
-          +(ligne?'<div style="font-size:'+(tab==='d'?'11px;letter-spacing:2px':'12px')+';font-weight:800;color:#9aa6c4;margin-top:2px;">'+ea(ligne)+'</div>':'')
+          +'<div style="font-size:17px;font-weight:800;color:'+(top?'#f0c828':'#fff')+';text-shadow:0 1px 3px rgba(0,0,0,.65);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">'+ea(name)+'</div>'
+          +(tab==='d'&&eq?'<div style="font-size:13px;font-weight:700;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.65);">'+ea(eq)+'</div>':'')
+          +(ligne?'<div style="font-size:'+(tab==='d'?'11px;letter-spacing:2px':'12px')+';font-weight:800;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.65);margin-top:2px;">'+ea(ligne)+'</div>':'')
         +'</div>'
-        +'<div style="flex:none;text-align:right;"><div style="font-size:20px;font-weight:900;color:#fff;">'+ea(x.points||'0')+'</div>'
-          +'<div style="font-size:11px;letter-spacing:2px;font-weight:800;color:#9aa6c4;">POINTS</div>'
-          +(i>0&&ecart>0?'<div style="font-size:12px;font-weight:700;color:#c9d3ee;">−'+(ecart%1?ecart.toFixed(1):ecart)+' au leader</div>':'')
+        +'<div style="flex:none;text-align:right;background:rgba(5,7,13,.55);border-radius:10px;padding:6px 10px;"><div style="font-size:20px;font-weight:900;color:#fff;">'+ea(x.points||'0')+'</div>'
+          +'<div style="font-size:11px;letter-spacing:2px;font-weight:800;color:#c9d3ee;">POINTS</div>'
+          +(i>0&&ecart>0?'<div style="font-size:12px;font-weight:700;color:#fff;">−'+(ecart%1?ecart.toFixed(1):ecart)+' au leader</div>':'')
         +'</div></div>';
     }).join('');
   };
