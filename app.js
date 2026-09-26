@@ -39618,14 +39618,20 @@ function _g45F1EcurieInfo(n){
 function _g45F1Pastille(n, taille){
   var inf=_g45F1EcurieInfo(n), coul=_g45F1CoulEcurie(n), tl=taille||52;
   var h=String(coul).replace('#',''), rgb=h.length===6?(parseInt(h.substr(0,2),16)+','+parseInt(h.substr(2,2),16)+','+parseInt(h.substr(4,2),16)):'139,151,196';
-  /* Logos absents de Simple Icons (Alpine, Haas, Williams) : fichiers SVG
-     déposés par Antoine dans le dépôt, dossier images/ecuries/ (alpine.svg,
-     haas.svg, williams.svg). Fichier absent → l'abréviation réapparaît. */
+  /* Logos absents de Simple Icons (Alpine, Haas, Williams) : fichiers déposés
+     par Antoine dans images/ecuries/ — SVG si possible, sinon PNG (Wikimedia
+     donne surtout des aperçus PNG). Ces logos sont EN COULEUR (Alpine bleu,
+     Haas gris) : pastille BLANCHE pour eux, sinon bleu sur bleu illisible.
+     Ordre d'essai : .svg → .png → abréviation sur la pastille colorée. */
   var fic={ALP:'alpine',HAA:'haas',WIL:'williams'}[inf.abr];
   var abrH='<span style="font-size:'+Math.round(tl*0.32)+'px;font-weight:900;color:#fff;letter-spacing:.5px;">'+inf.abr+'</span>';
-  return '<div style="width:'+tl+'px;height:'+tl+'px;flex:none;border-radius:50%;background:rgba('+rgb+',.55);border:1px solid rgba(255,255,255,.18);display:flex;align-items:center;justify-content:center;overflow:hidden;">'
+  var fond='background:rgba('+rgb+',.55);';
+  var repli="this.parentNode.style.background='rgba("+rgb+",.55)';this.outerHTML='"+abrH.replace(/'/g,"\\'").replace(/"/g,'&quot;')+"'";
+  var img=fic?'<img src="images/ecuries/'+fic+'.svg" alt="'+inf.abr+'" style="width:'+Math.round(tl*0.8)+'px;height:'+Math.round(tl*0.8)+'px;object-fit:contain;" '
+    +'onerror="if(!this.dataset.png){this.dataset.png=1;this.src=\'images/ecuries/'+fic+'.png\';}else{'+repli+'}">':'';
+  return '<div style="width:'+tl+'px;height:'+tl+'px;flex:none;border-radius:50%;'+(img?'background:#fff;':fond)+'border:1px solid rgba(255,255,255,.18);display:flex;align-items:center;justify-content:center;overflow:hidden;">'
     +(inf.logo?'<svg viewBox="0 0 24 24" width="'+Math.round(tl*0.6)+'" height="'+Math.round(tl*0.6)+'" aria-hidden="true"><path fill="#fff" d="'+inf.logo+'"/></svg>'
-      :(fic?'<img src="images/ecuries/'+fic+'.svg" alt="'+inf.abr+'" style="width:'+Math.round(tl*0.72)+'px;height:'+Math.round(tl*0.72)+'px;object-fit:contain;" onerror="this.outerHTML=\''+abrH.replace(/'/g,"\\'").replace(/"/g,'&quot;')+'\'">':abrH))+'</div>';
+      :(img||abrH))+'</div>';
 }
 /* Photos des pilotes pour le championnat : OpenF1 « drivers » de la dernière
    séance (gratuit hors direct), 7 jours en cache ; initiales en repli. */
