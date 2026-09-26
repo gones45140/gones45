@@ -38072,7 +38072,22 @@ window._g45FillStandings=_g45FillStandings;
 /* ════════════ MÉMOIRE STATS (dico de pépites · sync GitHub données/stats.json · PC+mobile) ════════════ */
 var G45_STATS_FILE='données/stats.json';
 var G45_STATS_CACHE='g45_stats_cache';
-function g45StatsLocal(){ try{ var a=JSON.parse(localStorage.getItem(G45_STATS_CACHE)||'[]'); return Array.isArray(a)?a:[]; }catch(e){ return []; } }
+/* 26/09/2026 (relevé d'Antoine, stat « ne rÃ©ussit pas Ã Ferrari ») : le
+   fichier GitHub était propre, mais la COPIE LOCALE datait d'avant la
+   correction UTF-8 et n'est rafraîchie qu'à l'ouverture de l'onglet Stats.
+   Réparation à la lecture (g45Demojibake, sans effet sur un texte sain) ;
+   la copie réparée est réenregistrée pour ne pas refaire le travail. */
+function g45StatsLocal(){
+  try{
+    var brut=localStorage.getItem(G45_STATS_CACHE)||'[]';
+    var a=JSON.parse(brut); if(!Array.isArray(a)) return [];
+    if(/[\u00c3\u00c2\u00f0]/.test(brut) && typeof _g45ReparerProfond==='function'){
+      a=_g45ReparerProfond(a);
+      try{ localStorage.setItem(G45_STATS_CACHE, JSON.stringify(a)); }catch(e){}
+    }
+    return a;
+  }catch(e){ return []; }
+}
 function g45StatsSetLocal(arr){ try{ localStorage.setItem(G45_STATS_CACHE, JSON.stringify(arr)); }catch(e){} }
 async function g45StatsGithubGet(){
   var token=localStorage.getItem('gones45_github_token'); if(!token) return null;
@@ -38419,7 +38434,7 @@ async function _g45OF1Drivers(sk){
     var r=await fetch('https://api.openf1.org/v1/drivers?session_key='+sk);
     if(!r.ok) return null;
     var a=await r.json(); var m={};
-    a.forEach(function(d){ m[d.driver_number]={n:d.last_name||d.broadcast_name||('#'+d.driver_number), ac:d.name_acronym||'', team:d.team_name||'', col:(d.team_colour?('#'+d.team_colour):'#8b97c4')}; });
+    a.forEach(function(d){ m[d.driver_number]={n:d.last_name||d.broadcast_name||('#'+d.driver_number), ac:d.name_acronym||'', team:d.team_name||'', col:(d.team_colour?('#'+d.team_colour):'#8b97c4'), photo:(/^https:\/\//.test(d.headshot_url||'')?d.headshot_url:'')}; });
     /* On profite de cette reponse — deja telechargee pour le direct — pour
        retenir la couleur d'ecurie de chaque pilote : la carte partageable la
        reutilise ensuite sans une seule requete de plus. */
@@ -38551,7 +38566,7 @@ async function _g45F1SessOF1(ev, comp, o){
 
     // Map par clé nom (nom de famille normalisé) — même clé que Jolpica/ESPN
     var map={}, n=0;
-    Object.keys(drv).forEach(function(num){ var k=_g45F1Key(drv[num].n||''); if(!k) return; map[k]={ tyre:xty[num]||'', time:xtm[num]||'', kind:xkind, team:drv[num].team||'', col:drv[num].col||'' }; if(xty[num]||xtm[num]||drv[num].team) n++; });
+    Object.keys(drv).forEach(function(num){ var k=_g45F1Key(drv[num].n||''); if(!k) return; map[k]={ tyre:xty[num]||'', time:xtm[num]||'', kind:xkind, team:drv[num].team||'', col:drv[num].col||'', photo:drv[num].photo||'' }; if(xty[num]||xtm[num]||drv[num].team) n++; });
     return n?map:null;
   }catch(e){ return null; }
 }
@@ -39271,7 +39286,7 @@ async function _g45F1JolResults(year, round){
     var map={};
     rows.forEach(function(x){
       var k=_g45F1Key((x.Driver&&x.Driver.familyName)||'');
-      map[k]={ cons:(x.Constructor&&x.Constructor.name)||'', time:(x.Time&&x.Time.time)||'', status:x.status||'', points:x.points||'0', grid:x.grid||'' };
+      map[k]={ cons:(x.Constructor&&x.Constructor.name)||'', time:(x.Time&&x.Time.time)||'', status:x.status||'', points:x.points||'0', grid:x.grid||'', laps:x.laps||'' };
     });
     _g45F1Jol.res[key]=map; return map;
   }catch(e){ return null; }
@@ -39305,7 +39320,7 @@ async function _g45F1JolSprint(year, round){
     var map={};
     rows.forEach(function(x){
       var k=_g45F1Key((x.Driver&&x.Driver.familyName)||'');
-      map[k]={ cons:(x.Constructor&&x.Constructor.name)||'', time:(x.Time&&x.Time.time)||'', status:x.status||'', points:x.points||'0' };
+      map[k]={ cons:(x.Constructor&&x.Constructor.name)||'', time:(x.Time&&x.Time.time)||'', status:x.status||'', points:x.points||'0', laps:x.laps||'' };
     });
     _g45F1Jol.spr[key]=map; return map;
   }catch(e){ return null; }
@@ -39363,6 +39378,14 @@ async function _g45F1SessRefreshTick(){
   }catch(e){}
 }
 function _g45F1SessRefreshStart(idx){ _g45F1SessRefreshStop(); _g45F1SessIdx=idx; _g45F1SessTimer=setInterval(_g45F1SessRefreshTick, 60000); }
+/* Couleurs d'écurie de secours (quand OpenF1 n'a pas encore répondu). */
+function _g45F1CoulEcurie(n){
+  var t=String(n||'').toLowerCase();
+  var T=[[/mercedes/,'#27F4D2'],[/red ?bull(?! .*rb)|oracle/,'#3671C6'],[/racing bulls|rb f1|visa|alphatauri|toro/,'#6692FF'],[/ferrari/,'#E8002D'],
+    [/mclaren/,'#FF8000'],[/aston/,'#229971'],[/alpine/,'#0093CC'],[/williams/,'#64C4FF'],[/haas/,'#B6BABD'],[/audi|sauber|kick/,'#52E252'],[/cadillac/,'#C4A657']];
+  for(var i=0;i<T.length;i++) if(T[i][0].test(t)) return T[i][1];
+  return '#8b97c4';
+}
 function g45F1Session(idx){
   var box=document.getElementById('f1-session'); if(!box) return;
   _g45F1SessRefreshStop();
@@ -39419,34 +39442,37 @@ function g45F1Session(idx){
         gaps.sort(function(a,b){ return a.t-b.t; });
         var pole=gaps[0].t;
         var maxG=(gaps[gaps.length-1].t-pole)||1;
-        _chart='<div style="background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:10px;padding:10px 12px;margin-bottom:8px;">'
-          +'<div style="font-size:10px;font-weight:800;color:#e8002d;margin-bottom:7px;">📊 ÉCART À LA POLE <span style="color:var(--t3);font-weight:400;">(meilleur tour de qualif)</span></div>'
+        _chart='<div style="background:rgba(11,16,29,.88);border:1px solid rgba(255,255,255,.10);border-radius:10px;padding:10px 12px;margin-bottom:8px;">'
+          +'<div style="font-size:13px;font-weight:900;color:#ff5a70;margin-bottom:8px;">📊 ÉCART À LA POLE <span style="color:#c9d3ee;font-weight:700;font-size:12px;">(meilleur tour de qualif)</span></div>'
           +gaps.map(function(g){
             var gap=g.t-pole;
             var w=Math.max(2, gap/maxG*100);
-            return '<div style="display:flex;align-items:center;gap:6px;margin-bottom:3px;">'
-              +'<div style="width:76px;flex:none;font-size:9px;color:var(--t2);text-align:right;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">'+ea(g.n)+'</div>'
-              +'<div style="flex:1;"><div style="height:10px;width:'+w.toFixed(1)+'%;background:'+(gap===0?'#f0c828':'rgba(232,0,45,.75)')+';border-radius:3px;"></div></div>'
-              +'<div style="width:56px;flex:none;font-size:9px;font-weight:700;color:'+(gap===0?'#f0c828':'var(--t3)')+';">'+(gap===0?ea(fm(g.t)):'+'+gap.toFixed(3))+'</div>'
+            return '<div style="display:flex;align-items:center;gap:8px;margin-bottom:5px;">'
+              +'<div style="width:104px;flex:none;font-size:13px;font-weight:800;color:#fff;text-align:right;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">'+ea(g.n)+'</div>'
+              +'<div style="flex:1;"><div style="height:12px;width:'+w.toFixed(1)+'%;background:'+(gap===0?'#f0c828':'rgba(232,0,45,.75)')+';border-radius:3px;"></div></div>'
+              +'<div style="width:78px;flex:none;font-size:13px;font-weight:900;color:'+(gap===0?'#f0c828':'#fff')+';">'+(gap===0?ea(fm(g.t)):'+'+gap.toFixed(3))+'</div>'
               +'</div>';
           }).join('')
           +'</div>';
       }
     }
+    /* LISIBILITÉ (26/09/2026, « il faut du gras blanc ») : fond sombre sous les
+       deux graphiques, noms et temps en 13 px gras blancs (le vainqueur ou la
+       pole restent en jaune). Avant : 9 px gris sur la photo de fond. */
     if((isRace||isSprint) && extra){
       var toGap=function(tt){ if(!tt) return null; tt=String(tt).trim(); if(tt[0]!=='+') return 0; tt=tt.slice(1); var p=tt.split(':'); return p.length===2?(parseInt(p[0],10)*60+parseFloat(p[1])):parseFloat(tt); };
       var g2=[];
       rows.forEach(function(r){ var a=r.athlete||{}; var x=extra[_g45F1Key(a.displayName||a.fullName||'')]; if(!x||!x.time) return; var gg=toGap(x.time); if(gg==null||isNaN(gg)) return; g2.push({n:a.shortName||a.displayName||'?', g:gg, t:x.time}); });
       if(g2.length>2){
         var mx2=Math.max.apply(null,g2.map(function(x){return x.g;}))||1;
-        _chart+='<div style="background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:10px;padding:10px 12px;margin-bottom:8px;">'
-          +'<div style="font-size:10px;font-weight:800;color:#e8002d;margin-bottom:7px;">📊 ÉCART AU VAINQUEUR <span style="color:var(--t3);font-weight:400;">('+(isSprint?'sprint':'course')+' · ordre officiel, pénalités comprises)</span></div>'
+        _chart+='<div style="background:rgba(11,16,29,.88);border:1px solid rgba(255,255,255,.10);border-radius:10px;padding:10px 12px;margin-bottom:8px;">'
+          +'<div style="font-size:13px;font-weight:900;color:#ff5a70;margin-bottom:8px;">📊 ÉCART AU VAINQUEUR <span style="color:#c9d3ee;font-weight:700;font-size:12px;">('+(isSprint?'sprint':'course')+' · ordre officiel, pénalités comprises)</span></div>'
           +g2.map(function(g){
             var w=Math.max(2, g.g/mx2*100);
-            return '<div style="display:flex;align-items:center;gap:6px;margin-bottom:3px;">'
-              +'<div style="width:76px;flex:none;font-size:9px;color:var(--t2);text-align:right;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">'+ea(g.n)+'</div>'
-              +'<div style="flex:1;"><div style="height:10px;width:'+w.toFixed(1)+'%;background:'+(g.g===0?'#f0c828':'rgba(232,0,45,.75)')+';border-radius:3px;"></div></div>'
-              +'<div style="width:64px;flex:none;font-size:9px;font-weight:700;color:'+(g.g===0?'#f0c828':'var(--t3)')+';">'+(g.g===0?'🏆 '+ea(g.t):'+'+g.g.toFixed(3))+'</div>'
+            return '<div style="display:flex;align-items:center;gap:8px;margin-bottom:5px;">'
+              +'<div style="width:104px;flex:none;font-size:13px;font-weight:800;color:#fff;text-align:right;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">'+ea(g.n)+'</div>'
+              +'<div style="flex:1;"><div style="height:12px;width:'+w.toFixed(1)+'%;background:'+(g.g===0?'#f0c828':'rgba(232,0,45,.75)')+';border-radius:3px;"></div></div>'
+              +'<div style="width:96px;flex:none;font-size:13px;font-weight:900;color:'+(g.g===0?'#f0c828':'#fff')+';">'+(g.g===0?'🏆 '+ea(g.t):'+'+g.g.toFixed(3))+'</div>'
               +'</div>';
           }).join('')
           +'</div>';
@@ -39484,13 +39510,35 @@ function g45F1Session(idx){
           right='<div style="flex:none;font-size:11px;font-weight:700;color:var(--t1);">'+ea(ofx.time)+'<span style="font-size:8px;color:#8b97c4;font-weight:600;"> tour</span></div>';
         }
       }
-      var cons=(x&&x.cons)?'<div style="font-size:9px;color:var(--t3);margin-top:1px;">'+ea(x.cons)+'</div>'
-              :((ofx&&ofx.team)?'<div style="font-size:9px;color:'+(ofx.col?ea(ofx.col):'var(--t3)')+';margin-top:1px;font-weight:600;">'+ea(ofx.team)+'</div>':'');
-      return '<div style="display:flex;align-items:center;gap:10px;padding:7px 12px;background:var(--s1);border-radius:var(--r6);margin-bottom:4px;">'
-        +'<div style="width:24px;text-align:center;font-size:12px;font-weight:800;'+gold+'color:'+(r.winner?'#f0c828':'var(--t2)')+';">'+(r.winner?'🏆':pos)+'</div>'
-        +flag
-        +'<div style="flex:1;display:flex;align-items:center;flex-wrap:wrap;"><span style="font-size:12px;font-weight:'+(r.winner?'800':'600')+';'+gold+'color:var(--t1);">'+ea(a.displayName||a.fullName||'?')+'</span>'+typill+(cons?'<div style="width:100%;">'+cons+'</div>':'')+'</div>'
-        +right
+      /* CARTE FAÇON SITE OFFICIEL (26/09/2026, maquette validée) : dégradé aux
+         couleurs de l'écurie, photo officielle (headshot_url d'OpenF1, lien
+         direct, jamais copiée), initiales en repli, nom en gros, tours et pneu,
+         temps et points à droite. Couleur : OpenF1, sinon table de secours. */
+      var eqNom=(x&&x.cons)||(ofx&&ofx.team)||'';
+      var coul=(ofx&&ofx.col&&ofx.col!=='#8b97c4')?ofx.col:_g45F1CoulEcurie(eqNom);
+      var rgb=(function(h){ h=String(h||'').replace('#',''); if(h.length!==6) return '139,151,196'; return parseInt(h.substr(0,2),16)+','+parseInt(h.substr(2,2),16)+','+parseInt(h.substr(4,2),16); })(coul);
+      var nomP=a.displayName||a.fullName||'?';
+      var ini=nomP.split(/\s+/).map(function(w){ return w.charAt(0); }).join('').slice(0,3).toUpperCase();
+      var photo=(ofx&&ofx.photo)?ofx.photo:'';
+      var horsCourse=(isRace||isSprint)&&x&&!x.time&&/retir|accident|collision|engine|gearbox|hydraul|brake|disq|not start|withdr|damage|power|spun|electr|fuel|susp|mechan/i.test(String(x.status||''));
+      var tours=(x&&x.laps)?(x.laps+' TOUR'+(+x.laps>1?'S':'')):'';
+      var ligne3=[tours, typill?typill.replace('margin-left:6px;',''):''].filter(Boolean).join(' <span style="color:#6b7899;">·</span> ');
+      /* Colonne de droite en gros : réutilise « right » (déjà calculé) en l'agrandissant. */
+      var droite=right.replace(/font-size:11px/g,'font-size:17px').replace(/font-size:9px;color:#3fb950;/g,'font-size:12px;letter-spacing:1px;font-weight:800;color:#f0b020;')
+        .replace(/font-weight:700/g,'font-weight:800').replace(/\+(\d+) pts/,'$1 PTS').replace(/color:var\(--t1\)/g,'color:#fff');
+      return '<div style="display:flex;align-items:center;gap:10px;border-radius:14px;padding:8px 12px;margin-bottom:8px;'
+          +'background:linear-gradient(90deg,rgba('+rgb+',.40),rgba(10,14,24,.95) 55%);border:1px solid rgba(255,255,255,.12);'+(horsCourse?'opacity:.8;':'')+'">'
+        +'<div style="width:28px;flex:none;text-align:center;font-size:20px;font-weight:900;color:'+(r.winner?'#f0c828':'#c9d3ee')+';">'+pos+'</div>'
+        +'<div style="position:relative;width:52px;height:60px;flex:none;border-radius:8px;overflow:hidden;background:rgba('+rgb+',.35);">'
+          +'<div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:900;color:#fff;">'+ea(ini)+'</div>'
+          +(photo?'<img src="'+ea(photo)+'" alt="" loading="lazy" referrerpolicy="no-referrer" onerror="this.remove()" style="position:absolute;left:0;bottom:0;width:100%;height:100%;object-fit:cover;object-position:top;">':'')
+        +'</div>'
+        +'<div style="flex:1;min-width:0;">'
+          +'<div style="font-size:17px;font-weight:800;color:'+(r.winner?'#f0c828':'#fff')+';white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">'+ea(nomP)+(flag?' <span style="vertical-align:middle;">'+flag+'</span>':'')+'</div>'
+          +(eqNom?'<div style="font-size:13px;font-weight:600;color:#c9d3ee;">'+ea(eqNom)+'</div>':'')
+          +(ligne3?'<div style="font-size:11px;letter-spacing:2px;font-weight:800;color:#9aa6c4;margin-top:2px;display:flex;align-items:center;gap:4px;">'+ligne3+'</div>':'')
+        +'</div>'
+        +droite
         +'</div>';
     }).join('');
     var _tools='';
@@ -50195,7 +50243,7 @@ function g45Demojibake(txt) {
      echouait des la deuxieme couche — la sequence C3 C2 n'est pas un UTF-8
      valide pour lui, alors que TextDecoder la traite correctement. */
   for (var i = 0; i < 5; i++) {
-    if (!/[\u00c3\u00c2\u00e2]/.test(s)) break;          /* plus de signature */
+    if (!/[\u00c3\u00c2\u00e2\u00f0]/.test(s)) break;    /* plus de signature (\u00f0 : emoji abîmé, 26/09) */
     var essai = null;
     try {
       var oct = new Uint8Array(s.length);
