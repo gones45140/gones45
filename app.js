@@ -43512,7 +43512,7 @@ async function g45ClsRender(c, body) {
 }
 
 function _g45ClsEnTete(titre, sous) {
-  return '<div style="background:rgba(11,16,29,.85);border-radius:8px;padding:8px 10px;margin-bottom:8px;color:#fff;">'
+  return '<div style="background:rgba(11,16,29,.72);border-radius:8px;padding:8px 10px;margin-bottom:8px;color:#fff;">'
     + '<div style="font-size:14px;font-weight:800;">' + titre + '</div>' + (sous ? '<div style="font-size:12px;color:#c9d3ee;margin-top:2px;">' + sous + '</div>' : '') + '</div>';
 }
 
@@ -43531,7 +43531,7 @@ function _g45ClsTableEq(c, def, PE, saisonTxt, lieuTxt, ms) {
   if (/^(p1|mt|bts1|o15mt)$/.test(def[0]) && nonFiables) sous += ' · ' + nonFiables + ' match(s) au détail incomplet écarté(s)';
   if (!pct) sous = sous.replace(/(\d)$/, '$1 par match');
   var h = (pct ? '' : _g45ClsBtnTot()) + _g45ClsEnTete(def[1] + (pct ? '' : (T ? ' (total)' : ' par match')) + ' · ' + c.n + ' ' + saisonTxt + ' · ' + lieuTxt, sous);
-  h += '<div style="background:rgba(11,16,29,.62);border-radius:8px;overflow:hidden;">'
+  h += '<div style="background:rgba(11,16,29,.50);border-radius:8px;overflow:hidden;">'
     + '<div style="display:grid;grid-template-columns:30px minmax(0,1fr) 78px 38px;gap:6px;padding:8px 10px;font-size:12px;color:#c9d3ee;font-weight:700;">'
     + '<span>#</span><span>Équipe</span><span onclick="g45ClsSet(\'inv\')" style="text-align:right;cursor:pointer;text-decoration:underline;">' + (pct ? '%' : (T ? 'Total' : '/ match')) + (sens > 0 ? ' ▼' : ' ▲') + '</span><span style="text-align:right;">MJ</span></div>';
   rows.forEach(function (r, i) {
@@ -43627,7 +43627,7 @@ async function _g45ClsTableJo(c, def, PE, saisonTxt, lieuTxt, an, body) {
   rows = rows.slice(0, 30);
   var h = _g45ClsEnTete(def[1] + ' · ' + c.n + ' ' + saisonTxt + ' · ' + lieuTxt, def[0] === 'p1b' ? 'Auteur du 1er but du match (csc exclus)' : (def[0] === 'cj' ? 'Rouges indiqués sous le nom' : ''));
   if (!rows.length) return h + '<div style="color:#c9d3ee;font-size:13px;padding:8px;">Personne pour l\'instant.</div>';
-  h += '<div style="background:rgba(11,16,29,.80);border-radius:8px;overflow:hidden;">'
+  h += '<div style="background:rgba(11,16,29,.50);border-radius:8px;overflow:hidden;">'
     + '<div style="display:grid;grid-template-columns:30px minmax(0,1fr) 50px;gap:6px;padding:8px 10px;font-size:12px;color:#c9d3ee;font-weight:700;">'
     + '<span>#</span><span>Joueur</span><span onclick="g45ClsSet(\'inv\')" style="text-align:right;cursor:pointer;text-decoration:underline;">' + (sens > 0 ? '▼' : '▲') + '</span></div>';
   rows.forEach(function (r, i) {
@@ -43802,7 +43802,7 @@ async function _g45ClsAfficherUS(c, body, sp, D, clic, joueurs) {
   if (/^(mtr|t1r|g2r)$/.test(def[0]) && window._g45ClsRgSansMt) sous += ' · ' + window._g45ClsRgSansMt + ' match(s) sans mi-temps connue écarté(s)';
   if (!pct) sous = sous.replace(/(\d)( ·|$)/, '$1 par match$2');
   h += (pct ? '' : _g45ClsBtnTot()) + _g45ClsEnTete(def[1] + (pct ? '' : (T ? ' (total)' : ' par match')) + ' · ' + c.n + ' ' + D.lbl + ' · ' + lieuTxt, sous);
-  h += '<div style="background:rgba(11,16,29,.62);border-radius:8px;overflow:hidden;">'
+  h += '<div style="background:rgba(11,16,29,.50);border-radius:8px;overflow:hidden;">'
     + '<div style="display:grid;grid-template-columns:30px minmax(0,1fr) 78px 38px;gap:6px;padding:8px 10px;font-size:12px;color:#c9d3ee;font-weight:700;">'
     + '<span>#</span><span>Équipe</span><span onclick="g45ClsSet(\'inv\')" style="text-align:right;cursor:pointer;text-decoration:underline;">' + (pct ? '%' : (T ? 'Total' : '/ match')) + (sens > 0 ? ' ▼' : ' ▲') + '</span><span style="text-align:right;">MJ</span></div>';
   rows.forEach(function (r, i) {
@@ -43966,7 +43966,8 @@ function _g45ClsFond(c, html) {
         (non sondée : l'image se retire d'elle-même si elle n'existe pas).
      2) Centré sur TOUTE la hauteur, il tombait au milieu d'une longue liste,
         sous des bandes à 80 % : invisible. Il est maintenant COLLANT au milieu
-        de l'écran (position: sticky) et les bandes du tableau passent à 62 %. */
+        de l'écran (position: sticky) et les bandes du tableau passent à 62 %.
+     26/09 soir : « on le distingue à peine » → logo à 38 %, bandes à 50 %. */
   var lo = (typeof _g45CompetLogos !== 'undefined' && _g45CompetLogos[c.s]) || '';
   if (!lo) {
     var base = 'https://site.api.espn.com/apis/site/v2/sports/' + c.sp + '/' + c.s;
@@ -43981,7 +43982,7 @@ function _g45ClsFond(c, html) {
   return '<div style="position:relative;">'
     + '<div aria-hidden="true" style="position:sticky;top:32vh;height:0;z-index:0;pointer-events:none;">'
     + '<img src="' + lo + '" alt="" onerror="this.remove()" style="position:absolute;left:50%;top:0;transform:translateX(-50%);'
-    + 'width:min(60%,300px);max-height:300px;object-fit:contain;opacity:.16;"></div>'
+    + 'width:min(70%,340px);max-height:340px;object-fit:contain;opacity:.38;"></div>'
     + '<div style="position:relative;z-index:1;">' + html + '</div></div>';
 }
 
