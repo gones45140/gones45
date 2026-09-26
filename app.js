@@ -43251,7 +43251,28 @@ window._g45CompetMatchs = _g45CompetMatchs;
    FINAL ; si aucune ne colle (détail incomplet), le match est écarté des
    catégories tirées des buts, et gardé pour celles tirées du score.
    ═══════════════════════════════════════════════════════════════════════════ */
-var _g45ClsCtx = { mode: 'eq', catE: 'bm', catJ: 'buts', lieu: 'all', n: 0, inv: false };
+var _g45ClsCtx = { mode: 'eq', catE: 'bm', catJ: 'buts', lieu: 'all', n: 0, inv: false, phase: 'reg' };
+/* PHASE (26/09/2026, maquette validée). SONDÉ sur le NRL : season.type 1 =
+   saison régulière (slug « 2026-reg-nrl »), 2 = phases finales (« 2026-final-
+   nrl ») — l'INVERSE des sports US (2 régulière, 3 playoffs). On lit donc le
+   SLUG, sans ambiguïté ; les sports US gardent leur repère `po` existant. */
+function _g45ClsEstPO(e) {
+  var sl = String((e && e.season && e.season.slug) || '');
+  return /final|playoff|post/i.test(sl) ? 1 : 0;
+}
+/* Filtre la liste selon la phase choisie et rend la rangée de boutons
+   (vide s'il n'y a aucune phase finale dans les données). */
+function _g45ClsPhase(ms) {
+  var aPO = ms.some(function (m) { return m.po; });
+  if (!aPO) return { ms: ms, html: '', lib: '' };
+  var ph = _g45ClsCtx.phase || 'reg';
+  var f = ph === 'all' ? ms : ms.filter(function (m) { return ph === 'po' ? !!m.po : !m.po; });
+  if (!f.length) { f = ms; ph = 'all'; }
+  var html = '<div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;margin-bottom:6px;">'
+    + _g45ClsBtn(ph === 'all', 'Tout', "g45ClsSet('phase','all')") + _g45ClsBtn(ph === 'reg', 'Saison régulière', "g45ClsSet('phase','reg')")
+    + _g45ClsBtn(ph === 'po', 'Phases finales', "g45ClsSet('phase','po')") + '</div>';
+  return { ms: f, html: html, lib: { all: '', reg: ' · Saison régulière', po: ' · Phases finales' }[ph] };
+}
 var _g45ClsMem = {};
 
 var _G45_CLS_EQ = [
@@ -43308,7 +43329,7 @@ function _g45ClsLireMatch(e) {
     return nh === hg && na === ag;
   };
   if (buts.length === hg + ag) { fiable = essai(true) || essai(false); }
-  var o = { id: String(e.id), t: Date.parse(e.date) || 0, h: h, a: a, hg: hg, ag: ag,
+  var o = { id: String(e.id), t: Date.parse(e.date) || 0, h: h, a: a, hg: hg, ag: ag, po: _g45ClsEstPO(e),
     hn: String(H.team.shortDisplayName || H.team.displayName || '?'), an: String(A.team.shortDisplayName || A.team.displayName || '?'),
     hl: H.team.logo || '', al: A.team.logo || '', f: fiable ? 1 : 0, c: cartons.map(function (k) { return [k.tm, k.aid, k.nom, k.r ? 1 : 0]; }) };
   if (fiable) {
@@ -43319,29 +43340,61 @@ function _g45ClsLireMatch(e) {
   return o;
 }
 
+/* LECTURE D'UNE SAISON PAR MOIS (26/09/2026, relevé d'Antoine sur le NRL :
+   MJ de 22 à 27 alors qu'une saison régulière en compte 24). Par trimestre,
+   un bloc de ~100 matchs semblait tronqué : ESPN plafonne visiblement la
+   réponse, `limit=500` ou pas. On lit donc MOIS par MOIS, et un mois qui
+   renvoie 100 matchs ou plus est recoupé en deux moitiés. `lire(e)` rend un
+   match ou null. */
+async function _g45ClsLireSaison(url0, an, civil, lire) {
+  var deb = civil ? new Date(an, 0, 1) : new Date(an, 6, 1), vus = {}, out = [], ok = 0;
+  var plage = async function (d1, d2, prof) {
+    if (d1 > new Date()) return;
+    var r = null;
+    try { r = await fetch(url0 + '/scoreboard?dates=' + _g45ClsYmd(d1) + '-' + _g45ClsYmd(d2) + '&limit=500'); } catch (e) { return; }
+    if (!r || !r.ok) return;
+    ok++;
+    var evs = [];
+    try { evs = (await r.json()).events || []; } catch (e) { return; }
+    if (evs.length >= 100 && prof < 2 && d2 - d1 > 2 * 86400000) {
+      var mil = new Date(d1.getTime() + Math.floor((d2 - d1) / 2 / 86400000) * 86400000);
+      await plage(d1, mil, prof + 1);
+      await plage(new Date(mil.getTime() + 86400000), d2, prof + 1);
+      return;
+    }
+    evs.forEach(function (e) { if (vus[e.id]) return; vus[e.id] = 1; var m = lire(e); if (m) out.push(m); });
+  };
+  for (var q = 0; q < 12; q++) {
+    await plage(new Date(deb.getFullYear(), deb.getMonth() + q, 1), new Date(deb.getFullYear(), deb.getMonth() + q + 1, 0), 0);
+  }
+  return ok ? out : null;
+}
+/* Équipes étrangères à la compétition (NRL : State of Origin, New South Wales
+   et Queensland, 3 matchs) : on garde les équipes de la liste officielle
+   quand on l'a ; sinon on écarte celles qui ont 3 fois moins de matchs que
+   la médiane. */
+function _g45ClsGarderLigue(ms, ids) {
+  if (ids && ids.length) {
+    var ok = {}; ids.forEach(function (i) { ok[String(i)] = 1; });
+    var f = ms.filter(function (m) { return ok[m.h] && ok[m.a]; });
+    if (f.length >= ms.length * 0.5) return f;
+  }
+  var n = {}; ms.forEach(function (m) { n[m.h] = (n[m.h] || 0) + 1; n[m.a] = (n[m.a] || 0) + 1; });
+  var v = Object.keys(n).map(function (k) { return n[k]; }).sort(function (a, b) { return a - b; });
+  var med = v.length ? v[Math.floor(v.length / 2)] : 0;
+  return ms.filter(function (m) { return n[m.h] * 3 >= med && n[m.a] * 3 >= med; });
+}
+
 async function _g45ClsMatchs(slug, an) {
   var k = slug + '_' + an;
   if (_g45ClsMem[k] && _g45ClsMem[k].x > Date.now()) return _g45ClsMem[k].d;
-  try { var c = JSON.parse(localStorage.getItem('g45cls1_' + k) || 'null'); if (c && c.x > Date.now()) { _g45ClsMem[k] = c; return c.d; } } catch (e) {}
+  try { var c = JSON.parse(localStorage.getItem('g45cls3_' + k) || 'null'); if (c && c.x > Date.now()) { _g45ClsMem[k] = c; return c.d; } } catch (e) {}
   var civil = (typeof G45_LIGUES_CIVILES !== 'undefined') && G45_LIGUES_CIVILES.indexOf(slug) >= 0;
-  var deb = civil ? new Date(an, 0, 1) : new Date(an, 6, 1), vus = {}, out = [], ok = 0;
-  for (var q = 0; q < 4; q++) {
-    var d1 = new Date(deb.getFullYear(), deb.getMonth() + q * 3, 1), d2 = new Date(deb.getFullYear(), deb.getMonth() + q * 3 + 3, 0);
-    if (d1 > new Date()) break;
-    try {
-      var r = await fetch('https://site.api.espn.com/apis/site/v2/sports/soccer/' + slug + '/scoreboard?dates=' + _g45ClsYmd(d1) + '-' + _g45ClsYmd(d2) + '&limit=500');
-      if (!r.ok) continue;
-      ok++;
-      ((await r.json()).events || []).forEach(function (e) {
-        if (vus[e.id]) return; vus[e.id] = 1;
-        var m = _g45ClsLireMatch(e); if (m) out.push(m);
-      });
-    } catch (e) {}
-  }
-  if (!ok) return null;
+  var out = await _g45ClsLireSaison('https://site.api.espn.com/apis/site/v2/sports/soccer/' + slug, an, civil, _g45ClsLireMatch);
+  if (!out) return null;
   var val = { x: Date.now() + 12 * 3600e3, d: out };
   _g45ClsMem[k] = val;
-  try { localStorage.setItem('g45cls1_' + k, JSON.stringify(val)); } catch (e) {}   /* trop gros : la mémoire suffit */
+  try { localStorage.setItem('g45cls3_' + k, JSON.stringify(val)); } catch (e) {}   /* trop gros : la mémoire suffit */
   return out;
 }
 
@@ -43405,6 +43458,8 @@ async function g45ClsRender(c, body) {
   try { ms = await _g45ClsMatchs(c.s, an); } catch (e) {}
   if ((!ms || !ms.length) && !_g45CompetSaison) { an = an - 1; try { ms = await _g45ClsMatchs(c.s, an); } catch (e) {} }
   if (!ms || !ms.length) { body.innerHTML = '<div style="color:#ffb13d;font-size:13px;">Aucun match terminé trouvé pour cette compétition.</div>'; return; }
+  ms = _g45ClsGarderLigue(ms, null);
+  var _ph = _g45ClsPhase(ms); ms = _ph.ms;
   window._g45ScorerCtx = { sp: 'soccer', lg: c.s };
   window._g45ClsDernier = { c: c, an: an };
   var X = _g45ClsCtx, h = '';
@@ -43417,14 +43472,14 @@ async function g45ClsRender(c, body) {
   var def = cats.filter(function (k) { return k[0] === cle; })[0] || cats[0];
   var filtrable = X.mode === 'eq' || def[2] === 'b';
   if (filtrable) {
-    h += '<div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;margin-bottom:6px;">'
+    h += _ph.html + '<div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;margin-bottom:6px;">'
       + _g45ClsBtn(X.lieu === 'all', 'Global', "g45ClsSet('lieu','all')") + _g45ClsBtn(X.lieu === 'dom', 'Dom', "g45ClsSet('lieu','dom')") + _g45ClsBtn(X.lieu === 'ext', 'Ext', "g45ClsSet('lieu','ext')") + '</div>'
       + '<div style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px;margin-bottom:10px;">'
       + [[0, 'Saison'], [10, '10 der.'], [5, '5 der.'], [3, '3 der.']].map(function (x) { return _g45ClsBtn(X.n === x[0], x[1], "g45ClsSet('n'," + x[0] + ")"); }).join('') + '</div>';
   } else {
     h += '<div style="font-size:12px;color:#c9d3ee;margin-bottom:10px;">Top 25 ESPN · saison entière (pas de filtre lieu ou derniers matchs pour cette catégorie).</div>';
   }
-  var lieuTxt = { all: 'Global', dom: 'Domicile', ext: 'Extérieur' }[X.lieu] + (X.n ? ' · ' + X.n + ' derniers' : '');
+  var lieuTxt = _ph.lib.replace(/^ · /, '') + (_ph.lib ? ' · ' : '') + { all: 'Global', dom: 'Domicile', ext: 'Extérieur' }[X.lieu] + (X.n ? ' · ' + X.n + ' derniers' : '');
   var saisonTxt = (typeof _g45SgLabel === 'function') ? _g45SgLabel(c.s, an) : String(an);
   var PE = _g45ClsParEquipe(ms);
   if (X.mode === 'eq') h += _g45ClsTableEq(c, def, PE, saisonTxt, lieuTxt, ms);
@@ -43565,7 +43620,7 @@ async function _g45ClsTableJo(c, def, PE, saisonTxt, lieuTxt, an, body) {
 
 window.g45ClsSet = function (k, v) {
   if (k === 'inv') _g45ClsCtx.inv = !_g45ClsCtx.inv;
-  else { _g45ClsCtx[k] = v; if (k !== 'lieu' && k !== 'n') _g45ClsCtx.inv = false; }
+  else { _g45ClsCtx[k] = v; if (k !== 'lieu' && k !== 'n' && k !== 'phase') _g45ClsCtx.inv = false; }
   var D = window._g45ClsDernier, body = document.getElementById('g45-compet-body');
   if (D && D.khl && body) _g45KhlVueClassements(body);
   else if (D && body) g45ClsRender(D.c, body); else if (typeof loadCompetTab === 'function') loadCompetTab();
@@ -43686,12 +43741,12 @@ async function _g45ClsAfficherUS(c, body, sp, D, clic, joueurs) {
     if (sub && joueurs) await joueurs(sub);
     return;
   }
-  var info = D.info, ms = D.ms;
+  var info = D.info, _ph = _g45ClsPhase(D.ms), ms = _ph.ms;
   var cle = _g45ClsCatUS[sp] || 'bm';
   var def = cats.filter(function (k) { return k[0] === cle; })[0] || cats[0];
   h += '<div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px;">';
   cats.forEach(function (k) { h += _g45ClsBtn(k[0] === def[0], k[1], "g45ClsCatUS('" + sp + "','" + k[0] + "')", /^(nrfi|b2b)$/.test(k[0]) ? '#f0b020' : ''); });
-  h += '</div><div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;margin-bottom:6px;">'
+  h += '</div>' + _ph.html + '<div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;margin-bottom:6px;">'
     + _g45ClsBtn(X.lieu === 'all', 'Global', "g45ClsSet('lieu','all')") + _g45ClsBtn(X.lieu === 'dom', 'Dom', "g45ClsSet('lieu','dom')") + _g45ClsBtn(X.lieu === 'ext', 'Ext', "g45ClsSet('lieu','ext')") + '</div>'
     + '<div style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px;margin-bottom:10px;">'
     + [[0, 'Saison'], [10, '10 der.'], [5, '5 der.'], [3, '3 der.']].map(function (x) { return _g45ClsBtn(X.n === x[0], x[1], "g45ClsSet('n'," + x[0] + ")"); }).join('') + '</div>';
@@ -43714,7 +43769,7 @@ async function _g45ClsAfficherUS(c, body, sp, D, clic, joueurs) {
   var sens = def[3] * (X.inv ? -1 : 1), pct = def[2] === 'pct';
   rows.sort(function (a, b) { return (b.v.v - a.v.v) * sens || b.v.n - a.v.n || a.nom.localeCompare(b.nom); });
   var moyC = tn ? (pct ? tk * 100 / tn : tk / tn) : 0;
-  var lieuTxt = { all: 'Global', dom: 'Domicile', ext: 'Extérieur' }[X.lieu] + (X.n ? ' · ' + X.n + ' derniers' : '');
+  var lieuTxt = _ph.lib.replace(/^ · /, '') + (_ph.lib ? ' · ' : '') + { all: 'Global', dom: 'Domicile', ext: 'Extérieur' }[X.lieu] + (X.n ? ' · ' + X.n + ' derniers' : '');
   var sous = 'Moyenne du championnat : ' + (pct ? _g45ClsFr(moyC) + ' %' : _g45ClsFr(moyC, 1));
   if (/^g\d|^f5/.test(def[0])) sous += ' · période à égalité : ni gagnée ni perdue';
   if (def[0] === 'b2b') sous += ' · seuls les matchs joués au lendemain d\'un autre comptent';
@@ -43818,7 +43873,7 @@ function _g45ClsLireRugby(e, sp) {
     });
     if (!inconnu && th === hg && ta === ag && (co.details || []).length) { mh = mth; ma = mta; }
   }
-  return { id: String(e.id), t: Date.parse(e.date) || 0, h: h, a: a, hg: hg, ag: ag, mh: mh, ma: ma, prol: prol,
+  return { id: String(e.id), t: Date.parse(e.date) || 0, h: h, a: a, hg: hg, ag: ag, mh: mh, ma: ma, prol: prol, po: _g45ClsEstPO(e),
     hn: String(H.team.shortDisplayName || H.team.displayName || '?'), an: String(A.team.shortDisplayName || A.team.displayName || '?'),
     hl: H.team.logo || '', al: A.team.logo || '' };
 }
@@ -43826,23 +43881,10 @@ function _g45ClsLireRugby(e, sp) {
 async function _g45ClsRugbyMatchs(sp, slug, an) {
   var k = 'rg_' + sp + '_' + slug + '_' + an;
   if (_g45ClsMem[k] && _g45ClsMem[k].x > Date.now()) return _g45ClsMem[k].d;
-  try { var c = JSON.parse(localStorage.getItem('g45cls1_' + k) || 'null'); if (c && c.x > Date.now()) { _g45ClsMem[k] = c; return c.d; } } catch (e) {}
+  try { var c = JSON.parse(localStorage.getItem('g45cls3_' + k) || 'null'); if (c && c.x > Date.now()) { _g45ClsMem[k] = c; return c.d; } } catch (e) {}
   var civil = (typeof G45_LIGUES_CIVILES !== 'undefined') && G45_LIGUES_CIVILES.indexOf(slug) >= 0;
-  var deb = civil ? new Date(an, 0, 1) : new Date(an, 6, 1), vus = {}, out = [], ok = 0;
-  for (var q = 0; q < 4; q++) {
-    var d1 = new Date(deb.getFullYear(), deb.getMonth() + q * 3, 1), d2 = new Date(deb.getFullYear(), deb.getMonth() + q * 3 + 3, 0);
-    if (d1 > new Date()) break;
-    try {
-      var r = await fetch('https://site.api.espn.com/apis/site/v2/sports/' + sp + '/' + slug + '/scoreboard?dates=' + _g45ClsYmd(d1) + '-' + _g45ClsYmd(d2) + '&limit=500');
-      if (!r.ok) continue;
-      ok++;
-      ((await r.json()).events || []).forEach(function (e) {
-        if (vus[e.id]) return; vus[e.id] = 1;
-        var m = _g45ClsLireRugby(e, sp); if (m) out.push(m);
-      });
-    } catch (e) {}
-  }
-  if (!ok) return null;
+  var out = await _g45ClsLireSaison('https://site.api.espn.com/apis/site/v2/sports/' + sp + '/' + slug, an, civil, function (e) { return _g45ClsLireRugby(e, sp); });
+  if (!out) return null;
   /* Top 14 : matchs FANTÔMES (même rencontre deux fois, orientation inversée). */
   var vuP = {};
   out = out.filter(function (m) {
@@ -43851,7 +43893,7 @@ async function _g45ClsRugbyMatchs(sp, slug, an) {
   });
   var val = { x: Date.now() + 12 * 3600e3, d: out };
   _g45ClsMem[k] = val;
-  try { localStorage.setItem('g45cls1_' + k, JSON.stringify(val)); } catch (e) {}
+  try { localStorage.setItem('g45cls3_' + k, JSON.stringify(val)); } catch (e) {}
   return out;
 }
 
@@ -43869,6 +43911,9 @@ async function _g45ClsRenderRugby(c, body, an) {
   try { ms = await _g45ClsRugbyMatchs(c.sp, c.s, an); } catch (e) {}
   if ((!ms || !ms.length) && !_g45CompetSaison) { anU = an - 1; try { ms = await _g45ClsRugbyMatchs(c.sp, c.s, anU); } catch (e) {} }
   if (!ms || !ms.length) { body.innerHTML = '<div style="color:#ffb13d;font-size:13px;">Aucun match terminé trouvé pour cette compétition.</div>'; return; }
+  var ids = [];
+  try { ids = (await _g45CompetEquipes(c)).map(function (t) { return t.id; }); } catch (e) {}
+  ms = _g45ClsGarderLigue(ms, ids);
   var info = {};
   ms.forEach(function (m) { info[m.h] = info[m.h] || { nom: m.hn, logo: m.hl }; info[m.a] = info[m.a] || { nom: m.an, logo: m.al }; });
   var lbl = (typeof _g45SgLabel === 'function') ? _g45SgLabel(c.s, anU) : anU;
