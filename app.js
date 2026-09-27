@@ -26548,8 +26548,91 @@ async function _g45PitchPrecharger(noms) {
     } catch (e) {}
   }
   g45PitchPhotosAppliquer();
+  /* Wikipédia pour ceux qui restent sans photo (27/09/2026) : voir plus bas. */
+  try { if (typeof _g45PitchWiki === 'function') await _g45PitchWiki(); } catch (e) {}
 }
 window._g45PitchPrecharger = _g45PitchPrecharger;
+
+/* ═══ PHOTOS WIKIPÉDIA EN DERNIER RECOURS (27/09/2026, accord d'Antoine) ═══
+   Antoine ajoute ses portraits à la main dans images/joueurs/, club par club,
+   et api-sports n'en fournit qu'une partie. Wikimedia Commons : gratuit, sans
+   clé, licences libres, CORS ouvert avec `origin=*`.
+   SONDÉ le 27/09 (API de recherche fr.wikipedia, prop=pageimages|description) :
+   - « Marquinhos footballeur » → page « Marquinhos », description
+     « footballeur brésilien », thumbnail.source (Commons, 250 px) ;
+   - « Christ Makosso footballeur » → bonne page, « footballeur congolais »,
+     mais AUCUNE image : les joueurs peu connus resteront au maillot.
+   Ordre inchangé, Wikipédia vient APRÈS tout le reste : image perso du dépôt,
+   api-sports / TheSportsDB, puis ceci, puis le maillot. Seuls les joueurs
+   encore sans photo après le préchargement sont cherchés.
+   GARDE-FOU HOMONYMES : la page n'est retenue que si sa description parle de
+   football ET que son titre contient le nom de famille du joueur.
+   fr d'abord, en en repli (même banque d'images, autre couverture).
+   Cache par joueur : photo trouvée = permanente ; rien trouvé = 14 jours,
+   pour ne pas redemander à chaque match mais profiter d'une photo ajoutée
+   plus tard sur Wikipédia. 3 requêtes à la fois au plus. */
+var _G45_WK_CLE = 'g45wk1_', _g45WkEnCours = {};
+/* Retenir un résultat de recherche Wikipédia ? Exporté pour les tests. */
+function _g45WkValide(page, nom) {
+  if (!page || !page.thumbnail || !page.thumbnail.source) return '';
+  if (!/football|soccer/i.test(String(page.description || ''))) return '';
+  var mots = String(nom || '').trim().split(/\s+/).filter(function (w) { return w.length >= 2; });
+  var nomFam = mots.length ? _g45SgNorm(mots[mots.length - 1]) : '';
+  if (!nomFam || _g45SgNorm(page.title || '').indexOf(nomFam) < 0) return '';
+  return String(page.thumbnail.source);
+}
+async function _g45WkChercher(nom) {
+  var essais = [['fr', ' footballeur'], ['en', ' footballer']];
+  for (var i = 0; i < essais.length; i++) {
+    try {
+      var u = 'https://' + essais[i][0] + '.wikipedia.org/w/api.php?action=query&generator=search&gsrlimit=1'
+        + '&gsrsearch=' + encodeURIComponent(nom + essais[i][1])
+        + '&prop=pageimages|description&piprop=thumbnail&pithumbsize=200&format=json&origin=*';
+      var r = await fetch(u);
+      if (!r.ok) return null;                      /* échec réseau : rien n'est mis en cache */
+      var j = await r.json(), pages = (j && j.query && j.query.pages) || {};
+      var p = pages[Object.keys(pages)[0]];
+      var url = _g45WkValide(p, nom);
+      if (url) return url;
+    } catch (e) { return null; }
+  }
+  return '';
+}
+async function _g45WkPhoto(nom) {
+  var k = _g45SgNorm(nom);
+  if (!k) return '';
+  try {
+    var c = JSON.parse(localStorage.getItem(_G45_WK_CLE + k) || 'null');
+    if (c && (c.u || Date.now() - c.t < 14 * 86400000)) return c.u || '';
+  } catch (e) {}
+  if (_g45WkEnCours[k]) return _g45WkEnCours[k];
+  _g45WkEnCours[k] = (async function () {
+    var url = await _g45WkChercher(nom);
+    if (url !== null) { try { localStorage.setItem(_G45_WK_CLE + k, JSON.stringify({ u: url, t: Date.now() })); } catch (e) {} }
+    return url || '';
+  })();
+  try { return await _g45WkEnCours[k]; } finally { delete _g45WkEnCours[k]; }
+}
+/* Complète le terrain affiché : joueurs sans photo après le préchargement. */
+async function _g45PitchWiki() {
+  try {
+    var vus = {}, file = [];
+    Array.prototype.forEach.call(document.querySelectorAll('.g45-pitch-ph[data-nom]'), function (sp) {
+      var k = sp.getAttribute('data-nom'), nm = sp.getAttribute('data-nm') || '';
+      if (!k || !nm || vus[k] || sp.getAttribute('data-fait') === '1' || _G45_PITCH_PHOTOS[k]) return;
+      if (sp.querySelector('img')) return;           /* photo déjà posée au rendu */
+      vus[k] = 1; file.push({ k: k, nm: nm });
+    });
+    var travail = async function () {
+      while (file.length) {
+        var x = file.shift(), url = await _g45WkPhoto(x.nm);
+        if (url && !_G45_PITCH_PHOTOS[x.k]) { _G45_PITCH_PHOTOS[x.k] = url; g45PitchPhotosAppliquer(); }
+      }
+    };
+    await Promise.all([travail(), travail(), travail()]);
+  } catch (e) {}
+}
+window._g45WkValide = _g45WkValide; window._g45WkPhoto = _g45WkPhoto; window._g45PitchWiki = _g45PitchWiki;
 
 function _renderEspnMatchPitch(s, col, nameFn){
   try {
@@ -26719,7 +26802,8 @@ function _renderEspnMatchPitch(s, col, nameFn){
            var nomComplet=(p.athlete&&(p.athlete.displayName||p.athlete.shortName))||'';
            var ph=_g45PitchPhoto(nomComplet);
            var enveloppe=function(contenu){
-             return '<span class="g45-pitch-ph" data-nom="'+_g45SgNorm(nomComplet)+'" data-num="'+num+'" data-col="'+c+'" style="display:inline-flex;">'+contenu+'</span>';
+             /* data-nm : nom lisible, pour la recherche Wikipédia (27/09/2026). */
+             return '<span class="g45-pitch-ph" data-nom="'+_g45SgNorm(nomComplet)+'" data-nm="'+String(nomComplet).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;')+'" data-num="'+num+'" data-col="'+c+'" style="display:inline-flex;">'+contenu+'</span>';
            };
            if(ph){
              return enveloppe('<span style="position:relative;display:inline-flex;width:clamp(26px,3.4vw,38px);height:clamp(26px,3.4vw,38px);">'
@@ -47656,7 +47740,8 @@ async function _g45CompoEffectif(el, nom, avecFoot) {
     var posFr = _g45PosteFr(pos, (p.position && p.position.name) || '');
     var natio = _g45NatioHtml(p);
     html += '<div onclick="_g45CompoJoueur(\'' + pid + '\',\'' + String(pos).replace(/'/g, '') + '\')" style="display:flex;align-items:center;gap:9px;padding:7px 6px;border-bottom:1px solid rgba(255,255,255,.04);cursor:pointer;border-radius:5px;">'
-      + '<div style="position:relative;width:30px;height:30px;flex-shrink:0;">'
+      /* data-g45wk : joueur de foot sans photo, complété par Wikipédia après le rendu (27/09/2026). */
+      + '<div' + ((!img && ctx.sp === 'soccer') ? ' data-g45wk="' + String(nm).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;') + '"' : '') + ' style="position:relative;width:30px;height:30px;flex-shrink:0;">'
       + '<div style="position:absolute;inset:0;border-radius:50%;background:rgba(77,132,255,.12);display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:800;color:#4d84ff;">' + (num || '\u2014') + '</div>'
       + (img ? '<img src="' + img + '" loading="lazy" style="position:absolute;inset:0;width:30px;height:30px;border-radius:50%;object-fit:cover;background:#0f1626;" onerror="this.style.display=\'none\'">' : '')
       + '</div>'
@@ -47672,7 +47757,31 @@ async function _g45CompoEffectif(el, nom, avecFoot) {
 
   html += '</div>';
   el.innerHTML = html;
+  try { if (typeof _g45CompoWiki === 'function') _g45CompoWiki(el); } catch (e) {}
 }
+
+/* Onglet Compo : même recherche Wikipédia que le terrain (_g45WkPhoto), pour
+   les joueurs restés sans photo. La photo se pose par-dessus la pastille
+   numérotée, exactement comme une photo api-sports (27/09/2026). */
+async function _g45CompoWiki(el) {
+  try {
+    var file = Array.prototype.slice.call(el.querySelectorAll('[data-g45wk]'));
+    var travail = async function () {
+      while (file.length) {
+        var box = file.shift(), nm = box.getAttribute('data-g45wk');
+        var url = (typeof _g45WkPhoto === 'function') ? await _g45WkPhoto(nm) : '';
+        if (!url || !box.isConnected || box.querySelector('img')) continue;
+        var im = document.createElement('img');
+        im.src = url; im.loading = 'lazy'; im.alt = '';
+        im.style.cssText = 'position:absolute;inset:0;width:30px;height:30px;border-radius:50%;object-fit:cover;background:#0f1626;';
+        im.onerror = function () { this.style.display = 'none'; };
+        box.appendChild(im);
+      }
+    };
+    await Promise.all([travail(), travail(), travail()]);
+  } catch (e) {}
+}
+window._g45CompoWiki = _g45CompoWiki;
 
 var _g45CompoCtxCourant = null;
 
