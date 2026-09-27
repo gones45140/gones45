@@ -17569,6 +17569,70 @@ function updateFbrefHint(uid) {
   hint.textContent = c + ' - ' + m;
 }
 
+/* ═══ TABLEAU DE L'EFFECTIF : FOND DU CLUB ET PHOTOS (27/09/2026, maquette validée) ═══
+   Antoine : « le fond est un peu noir, on y colle le fond du club ? » — pour
+   TOUS les clubs. Couleurs : g45CouleursDe (mur, choix manuel, extraction du
+   blason) ; blason : g45LogoUrlDe. Une couleur trop claire (blanc, jaune) est
+   assombrie : le dégradé doit rester un fond, jamais une surface éblouissante.
+   Photos dans l'ordre habituel : image perso du dépôt (synchrone si connue),
+   api-sports (_g45PhotosFoot, déjà en cache 30 j), puis Wikipédia
+   (_g45WkPhoto). Sans photo : les initiales dans un rond de la couleur du poste. */
+function _g45SqAssombrir(hex) {
+  var h = String(hex || '').replace('#', '');
+  if (h.length === 3) h = h.split('').map(function (x) { return x + x; }).join('');
+  if (!/^[0-9a-f]{6}$/i.test(h)) return '#1b2a52';
+  var r = parseInt(h.slice(0, 2), 16), g = parseInt(h.slice(2, 4), 16), b = parseInt(h.slice(4, 6), 16);
+  var lum = (0.2126 * r + 0.7152 * g + 0.0722 * b) / 255;
+  if (lum <= 0.40) return '#' + h.toLowerCase();   /* 0,40 : un bleu vif (#4d84ff) rendait les intitulés gris illisibles */
+  var k = 0.45;                                   /* garde 45 % de la teinte, le reste vers le fond de l'app */
+  var m = function (v, f) { return Math.round(v * k + f * (1 - k)).toString(16).padStart(2, '0'); };
+  return '#' + m(r, 11) + m(g, 16) + m(b, 29);
+}
+function _g45SquadFond(nom) {
+  var c = ['#1b2a52', '#1b2a52'], logo = '';
+  try { if (typeof g45CouleursDe === 'function') c = g45CouleursDe(nom) || c; } catch (e) {}
+  try { if (typeof g45LogoUrlDe === 'function') logo = g45LogoUrlDe(nom) || ''; } catch (e) {}
+  var c0 = _g45SqAssombrir(c[0]), c1 = _g45SqAssombrir(c[1] || c[0]);
+  var h = '<div style="position:absolute;inset:0;z-index:0;pointer-events:none;opacity:.85;background:linear-gradient(135deg,' + c0 + ' 0%,' + c0 + ' 45%,' + c1 + ' 100%);"></div>';
+  if (logo && !/['"\\<>]/.test(logo)) h += '<img src="' + logo + '" alt="" aria-hidden="true" onerror="this.remove()" style="position:absolute;z-index:0;right:-30px;top:50%;transform:translateY(-50%);width:230px;height:230px;object-fit:contain;opacity:.16;pointer-events:none;">';
+  return h;
+}
+function _g45SquadAvatar(nom, pc) {
+  var mots = String(nom || '').trim().split(/\s+/).filter(Boolean);
+  var ini = mots.length > 1 ? (mots[0].charAt(0) + mots[mots.length - 1].charAt(0)) : String(mots[0] || '?').slice(0, 2);
+  var perso = '';
+  try { if (typeof _g45ImgPersoLire === 'function') perso = _g45ImgPersoLire(nom) || ''; } catch (e) {}
+  var esc = function (x) { return String(x).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;'); };
+  return '<span data-g45av="' + esc(nom) + '" style="position:relative;flex:none;width:28px;height:28px;border-radius:50%;overflow:hidden;display:inline-flex;align-items:center;justify-content:center;'
+    + 'background:' + pc + '26;border:2px solid ' + pc + (perso ? '' : '59') + ';color:' + pc + ';font-size:10px;font-weight:800;">' + esc(ini.toUpperCase())
+    + (perso ? '<img src="' + esc(perso) + '" alt="" onerror="this.remove()" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;">' : '')
+    + '</span>';
+}
+async function _g45SquadPhotos(el, club) {
+  try {
+    var file = Array.prototype.slice.call(el.querySelectorAll('[data-g45av]')).filter(function (x) { return !x.querySelector('img'); });
+    if (!file.length) return;
+    var liste = [];
+    try { if (typeof _g45PhotosFoot === 'function') liste = (await _g45PhotosFoot(club)) || []; } catch (e) {}
+    var travail = async function () {
+      while (file.length) {
+        var box = file.shift(), nm = box.getAttribute('data-g45av');
+        var url = (typeof _g45PhotoDe === 'function') ? _g45PhotoDe(liste, nm) : '';
+        if (!url && typeof _g45WkPhoto === 'function') url = await _g45WkPhoto(nm);
+        if (!url || !box.isConnected || box.querySelector('img')) continue;
+        var im = document.createElement('img');
+        im.src = url; im.alt = ''; im.loading = 'lazy';
+        im.style.cssText = 'position:absolute;inset:0;width:100%;height:100%;object-fit:cover;';
+        im.onerror = function () { this.remove(); };
+        box.appendChild(im);
+        box.style.borderColor = box.style.color;       /* anneau plein quand la photo est là */
+      }
+    };
+    await Promise.all([travail(), travail(), travail()]);
+  } catch (e) {}
+}
+window._g45SquadFond = _g45SquadFond; window._g45SquadAvatar = _g45SquadAvatar; window._g45SquadPhotos = _g45SquadPhotos;
+
 async function loadFdSquad(el, nom, teamId, noTerrain, terrainOnly) {
   el.innerHTML = '<div style="text-align:center;padding:16px;color:var(--t3);font-size:11px;">⏳ Chargement squad...</div>';
   try {
@@ -17978,6 +18042,12 @@ async function loadFdSquad(el, nom, teamId, noTerrain, terrainOnly) {
       if(!pp.length) return;
       var pc=posColors[pos];
       html += '<div style="margin-bottom:12px;">';
+      /* FOND DU CLUB + PHOTOS (27/09/2026, maquette validée par Antoine) :
+         en portrait téléphone, chaque bloc de poste est posé sur un dégradé
+         aux couleurs du club avec son blason en filigrane (_g45SquadFond) ;
+         les lignes gardent une bande sombre sous le texte. */
+      var _sqFond = (!terrainOnly && window.innerWidth < 600);
+      if (_sqFond) html += '<div style="position:relative;overflow:hidden;border-radius:12px;padding:8px 6px 6px;background:#0b101d;">' + _g45SquadFond(nom) + '<div style="position:relative;z-index:1;">';
       html += '<div style="display:flex;align-items:center;gap:7px;margin-bottom:6px;"><div style="width:3px;height:14px;border-radius:2px;background:'+pc+';flex-shrink:0;"></div>';
       html += '<div style="font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:'+pc+';">'+posLabels[pos]+'</div>';
       html += '<div style="flex:1;height:1px;background:rgba(255,255,255,.05);"></div>';
@@ -17992,7 +18062,8 @@ async function loadFdSquad(el, nom, teamId, noTerrain, terrainOnly) {
         var mView = (function(){ var el=document.getElementById('fbref-journee-'+uid); return el?el.value:'global'; })() || 'global';
         var mJ = (mView && mView !== 'global') ? mPrefix+'_'+mView : mPrefix;
         var mIsGK = (pos === 1);
-        html += '<table style="width:100%;border-collapse:collapse;table-layout:fixed;">';
+        if (_sqFond) tc = tc.replace('color:var(--t3);', 'color:#dbe3f5;');   /* lisibles sur le fond du club */
+        html += '<table style="width:100%;border-collapse:separate;border-spacing:0 2px;table-layout:fixed;">';
         if(mIsGK) {
           html += '<colgroup><col style="width:18px"><col style="auto"><col style="width:30px"><col style="width:34px"><col style="width:34px"></colgroup>';
           html += '<thead><tr>';
@@ -18014,7 +18085,7 @@ async function loadFdSquad(el, nom, teamId, noTerrain, terrainOnly) {
         }
         pp.forEach(function(p,i){
           var inXi=xi.some(function(x){return x.id===p.id;});
-          var rowBg=i%2===0?'rgba(255,255,255,.025)':'rgba(255,255,255,.015)';
+          var rowBg='rgba(10,16,32,.72)';   /* bande sombre sous le texte, sur le fond du club */
           var manualKey='manual_stats_'+saisonKey((sofaId||afId||'0')+'_'+p.id);
           var ms={}; try{ms=JSON.parse(localStorage.getItem(manualKey)||'{}');}catch(e){}
           var hasManual=ms.league_goals!==undefined||ms.euro_goals!==undefined;
@@ -18027,7 +18098,8 @@ async function loadFdSquad(el, nom, teamId, noTerrain, terrainOnly) {
           var sofaUrl=p.sofaId?'https://www.sofascore.com/player/'+p.sofaId:'https://www.google.com/search?q='+encodeURIComponent(p.name+' '+nom);
           html += '<tr data-bench-pid="'+p.id+'" style="background:'+rowBg+';border-left:3px solid '+pc+'55;cursor:pointer;">';
           html += '<td style="padding:5px 3px;text-align:center;"><span style="font-size:7px;background:'+pc+'33;color:'+pc+';border-radius:3px;padding:1px 3px;font-weight:800;'+(inXi?'':'visibility:hidden;')+'">XI</span></td>';
-          html += '<td style="padding:5px 4px;overflow:hidden;"><span style="font-size:12px;font-weight:700;color:var(--t1);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:block;">'+p.name+'</span></td>';
+          html += '<td style="padding:5px 4px;overflow:hidden;"><span style="display:flex;align-items:center;gap:8px;min-width:0;">'+_g45SquadAvatar(p.name, pc)
+            +'<span style="font-size:12px;font-weight:700;color:var(--t1);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:block;min-width:0;">'+p.name+'</span></span></td>';
           if(mIsGK) {
             html += '<td style="text-align:center;font-size:12px;font-weight:700;padding:5px 2px;color:'+(mga>0?'#ef4444':'rgba(255,255,255,.2)')+'">'+(mga||'\u2014')+'</td>';
             html += '<td style="text-align:center;font-size:12px;font-weight:700;padding:5px 2px;color:'+(msaves>0?'#1ed760':'rgba(255,255,255,.2)')+'">'+(msaves||'\u2014')+'</td>';
@@ -18040,10 +18112,12 @@ async function loadFdSquad(el, nom, teamId, noTerrain, terrainOnly) {
           html += '</tr>';
         });
         html += '</tbody></table>';
+        if (_sqFond) html += '</div></div>';
         html += '</div>';
       } else {
         // ── MODE PAYSAGE / PC : colonnes selon comp toggle ──
         var isGK = (pos === 1); // Gardiens
+        tc = tc.replace('color:var(--t3);', 'color:#dbe3f5;');   /* intitulés lisibles sur le fond du club (27/09/2026) */
         var compMode = window['_compMode_'+uid] || (function(){ var b=document.getElementById('fbref-comp-'+uid); return (b&&b.dataset.comp) || 'league'; })();
         var sortKey = window['_squadSort_'+uid] || 'name';
         var sortDir = window['_squadSortDir_'+uid] || 1;
@@ -18054,7 +18128,7 @@ async function loadFdSquad(el, nom, teamId, noTerrain, terrainOnly) {
                 var thS = function(col,lbl,title){
           var active = sortKey===col;
           var arrow = active?(sortDir===1?' ↓':' ↑'):'';
-          var color = active?'#4d84ff':'var(--t3)';
+          var color = active?'#4d84ff':'#dbe3f5';   /* lisible sur le fond du club (27/09/2026) */
           return '<th data-sort="'+col+'" data-uid="'+uid+'" onclick="sortSquad(this.dataset.uid,this.dataset.sort)" style="font-size:8px;color:'+color+';font-weight:700;text-align:center;padding:3px 4px;white-space:nowrap;cursor:pointer;" title="'+(title||lbl)+'">'+lbl+arrow+'</th>';
         };
         /* BLASON EN FOND (24/09/2026, demande d'Antoine), comme les autres
@@ -18066,10 +18140,14 @@ async function loadFdSquad(el, nom, teamId, noTerrain, terrainOnly) {
            beaucoup moins de mosaique qu'une simple ligne de resultat — fond
            quasi opaque, juste une trace de couleur derriere. */
         var _fondSq = '';
-        try { if (typeof g45FondClubHtml === 'function') _fondSq = g45FondClubHtml(nom, 0.05); } catch(e){}
-        html += '<div style="overflow-x:auto;position:relative;border-radius:10px;background:rgba(11,16,29,.94);" id="squad-table-'+uid+'">' + _fondSq;
-        html += '<table style="width:100%;border-collapse:collapse;table-layout:fixed;min-width:680px;position:relative;z-index:1;">';
-        html += '<colgroup><col style="width:22px"><col style="width:150px"><col style="width:32px"><col style="width:30px"><col style="width:30px"><col style="width:42px"><col style="width:auto"><col style="width:auto"><col style="width:auto"><col style="width:auto"><col style="width:auto"><col style="width:auto"><col style="width:auto"><col style="width:auto"><col style="width:30px"></colgroup>';
+        /* PC AUSSI (27/09/2026, « faut que ça fonctionne aussi sur PC ») : même
+           fond que le téléphone — dégradé du club + un seul blason en filigrane,
+           bandes sombres sous chaque ligne. Remplace la mosaïque à 0,05 qui
+           n'apportait qu'une trace de couleur. */
+        try { _fondSq = (typeof _g45SquadFond === 'function') ? _g45SquadFond(nom) : ((typeof g45FondClubHtml === 'function') ? g45FondClubHtml(nom, 0.05) : ''); } catch(e){}
+        html += '<div style="overflow-x:auto;position:relative;border-radius:10px;background:#0b101d;padding:4px 4px 2px;" id="squad-table-'+uid+'">' + _fondSq;
+        html += '<table style="width:100%;border-collapse:separate;border-spacing:0 2px;table-layout:fixed;min-width:710px;position:relative;z-index:1;">';
+        html += '<colgroup><col style="width:22px"><col style="width:180px"><col style="width:32px"><col style="width:30px"><col style="width:30px"><col style="width:42px"><col style="width:auto"><col style="width:auto"><col style="width:auto"><col style="width:auto"><col style="width:auto"><col style="width:auto"><col style="width:auto"><col style="width:auto"><col style="width:30px"></colgroup>';
         html += '<thead><tr>';
         html += '<th style="'+tc+'"></th>';
         html += '<th data-sort="name" data-uid="'+uid+'" onclick="sortSquad(this.dataset.uid,this.dataset.sort)" style="'+tc+'text-align:left;cursor:pointer;">Joueur'+(sortKey==='name'?(sortDir===1?' ↓':' ↑'):'')+'</th>';
@@ -18129,7 +18207,7 @@ async function loadFdSquad(el, nom, teamId, noTerrain, terrainOnly) {
 
         sortedPp.forEach(function(p,i){
           var inXi=xi.some(function(x){return x.id===p.id;});
-          var rowBg=i%2===0?'rgba(255,255,255,.025)':'rgba(255,255,255,.015)';
+          var rowBg='rgba(10,16,32,.72)';   /* bande sombre sous le texte (27/09/2026) */
           var pSlug=p.name?p.name.toLowerCase().split(' ').join('-'):'player';
           var sofaUrl=p.sofaId?'https://www.sofascore.com/player/'+pSlug+'/'+p.sofaId:'https://www.google.com/search?q='+encodeURIComponent(p.name+' '+nom+' Sofascore');
           var manualKey='manual_stats_'+saisonKey((sofaId||afId||'0')+'_'+p.id);
@@ -18170,7 +18248,8 @@ async function loadFdSquad(el, nom, teamId, noTerrain, terrainOnly) {
           var fmtS=function(v,col){return '<td style="text-align:center;font-size:12.5px;font-weight:800;padding:6px 2px;color:'+(v>0?col:'rgba(255,255,255,.38)')+'">'+v+'</td>';};
           html += '<tr data-bench-pid="'+p.id+'" style="background:'+rowBg+';border-left:3px solid '+pc+'55;cursor:pointer;">';
           html += '<td style="padding:6px 4px;text-align:center;"><span class="xi-badge" style="font-size:7px;background:'+pc+'33;color:'+pc+';border-radius:3px;padding:1px 3px;font-weight:800;'+(inXi?'':'visibility:hidden;')+'">XI</span></td>';
-          html += '<td style="padding:6px 4px;overflow:hidden;"><a href="'+sofaUrl+'" target="_blank" onclick="event.stopPropagation()" style="font-size:12px;font-weight:700;color:var(--t1);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-decoration:none;display:block;">'+p.name+'</a></td>';
+          html += '<td style="padding:6px 4px;overflow:hidden;"><span style="display:flex;align-items:center;gap:8px;min-width:0;">'+_g45SquadAvatar(p.name, pc)
+            +'<a href="'+sofaUrl+'" target="_blank" onclick="event.stopPropagation()" style="font-size:12px;font-weight:700;color:var(--t1);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-decoration:none;display:block;min-width:0;">'+p.name+'</a></span></td>';
           /* Age/MJ/Tit en blanc gras (24/09/2026, demande d'Antoine) : comme le
              nom du joueur, plus lisible que le gris --t2 d'origine. */
           html += '<td style="text-align:center;font-size:12px;font-weight:700;color:#ffffff;padding:6px 2px;">'+p._age+'</td>';
@@ -18197,6 +18276,8 @@ async function loadFdSquad(el, nom, teamId, noTerrain, terrainOnly) {
             html += '<td style="text-align:center;font-size:12.5px;font-weight:800;padding:6px 2px;color:'+(cj>0?'#f0b020':'rgba(255,255,255,.38)')+'">'+( cj||'—')+'</td>';
             html += '<td style="text-align:center;font-size:12.5px;font-weight:800;padding:6px 2px;color:'+(cr>0?'#ef4444':'rgba(255,255,255,.38)')+'">'+( cr||'—')+'</td>';
           }
+          /* Gardiens : 13 cases pour 15 colonnes — les bandes sombres s'arrêtaient avant le bord (27/09/2026). */
+          if(isGK) html += '<td></td><td></td>';
           if(localStorage.getItem('gones45_admin')==='1'){
             html += '<td style="text-align:center;padding:6px 2px;"><span onclick="event.stopPropagation();editPlayerStats(\''+(sofaId||afId||'0')+'\',\''+p.id+'\',\''+encodeURIComponent(p.name)+'\','+(pos===1?'true':'false')+',\''+uid+'\')" style="cursor:pointer;font-size:13px;opacity:.6;" title="Editer les stats">✏️</span></td>';
           } else {
@@ -18213,6 +18294,7 @@ async function loadFdSquad(el, nom, teamId, noTerrain, terrainOnly) {
 
     html += '</div>';
     el.innerHTML = html;
+    try { if (typeof _g45SquadPhotos === 'function') _g45SquadPhotos(el, nom); } catch (e) {}
 
     // Activer le paste global pour la zone screenshot
     setupFbrefPaste(uid, nom);
