@@ -1,16 +1,13 @@
 {
   "short_name": "BET45",
-  "name": "BET45 Command Center",
+  "name": "BET45",
   "icons": [
-    {
-      "src": "https://cdn-icons-png.flaticon.com/512/535/535234.png",
-      "type": "image/png",
-      "sizes": "512x512"
-    }
+    { "src": "icon-192.png", "type": "image/png", "sizes": "192x192", "purpose": "any maskable" },
+    { "src": "icon-512.png", "type": "image/png", "sizes": "512x512", "purpose": "any maskable" }
   ],
   "start_url": "./index.html",
-  "background_color": "#020617",
+  "background_color": "#0a0e1a",
   "display": "standalone",
   "scope": "./",
-  "theme_color": "#020617"
+  "theme_color": "#0a0e1a"
 }
