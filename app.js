@@ -23269,6 +23269,16 @@ async function loadTeamSaisons() {
           var _euro = await espnClubSchedule(nom, _yr, _slug);
           _g45AVenir[nom]=_g45CollecteAVenir([_euro], _g45AVenir[nom], (_euro&&_euro.team?_euro.team.id:null), (_euro&&_euro.team?_euro.team.name:nom));
           var _finE = (_euro && _euro.matches) ? _euro.matches.filter(function(mm){ return mm.completed; }) : [];
+          /* DOUBLON LIGUE DES NATIONS (27/09/2026, relevé d'Antoine sur la
+             France : Türkiye 0-1 France compté deux fois, sous « Ligue des
+             nations » ET « Ligue des Nations »). Pour une sélection, `soccer/all`
+             a DÉJÀ apporté tous les matchs, Ligue des nations comprise ; la
+             coupe cumulée `uefa.nations` les rajoutait sans contrôle, avec un
+             libellé tiré du slug. On écarte tout match dont l'identifiant ESPN
+             est déjà présent dans la saison. */
+          var _deja = {};
+          (results[_key]||[]).forEach(function(x){ if(x && x.espnId) _deja[String(x.espnId)] = 1; });
+          _finE = _finE.filter(function(mm){ return !(mm.id && _deja[String(mm.id)]); });
           if(_finE.length){
             var _nm = (_euro.team && _euro.team.name) ? _euro.team.name : nom;
             results[_key] = (results[_key]||[]).concat(_finE.map(function(mm){ return espnToFdMatch(mm, _nm, teamId); }));
@@ -24611,6 +24621,20 @@ function _g45BlocAVenir(nom){
   return h+'</div>';
 }
 function renderSaisonsChart(el, results, nom) {
+  /* Même match deux fois dans une saison (27/09/2026, voir `_ajouterCoupe`) :
+     filet pour les résultats déjà en cache (g45_saisons_cache_v3_), qui
+     gardaient le doublon. Un même identifiant ESPN n'est compté qu'une fois ;
+     les matchs sans identifiant ESPN (football-data) ne sont pas touchés. */
+  Object.keys(results || {}).forEach(function (s) {
+    if (!Array.isArray(results[s])) return;
+    var vus = {};
+    results[s] = results[s].filter(function (m) {
+      var id = m && m.espnId ? String(m.espnId) : '';
+      if (!id) return true;
+      if (vus[id]) return false;
+      vus[id] = 1; return true;
+    });
+  });
   var saisons = Object.keys(results).sort().reverse();
   var teamId = null;
   /* MEMES TROIS CONDITIONS que loadTeamSaisons — la troisieme manquait ici, si
