@@ -27785,6 +27785,8 @@ async function _renderSaisonDetail(el, eventId, league){
     }catch(_e){}
     // En live : on laisse le lecteur live afficher le score. Hors live : en-tête de score.
     if(!isLive) h+='<div style="display:flex;align-items:center;justify-content:center;gap:12px;font-size:13px;font-weight:800;color:var(--t1);margin-bottom:8px;"><span>'+hN+'</span><span style="color:var(--a);">'+hS+' - '+aS+'</span><span>'+aN+'</span></div>';
+    /* Stade et arbitre (27/09/2026, maquette validée) : voir _g45ArbPlace. */
+    try{ if(typeof _g45ArbPlace==='function') h+=_g45ArbPlace(data, league, eventId); }catch(e){}
     // ── Blocs LIVE (vides automatiquement si match pas en cours) ──
     try{ if(typeof _liveBettingBlock==='function') h+=_liveBettingBlock(data, el.id); }catch(e){}
     try{ if(typeof _liveBetsBlock==='function'){ var _lb=_liveBetsBlock(data); if(_lb) h+=_lb; } }catch(e){}
@@ -27846,6 +27848,7 @@ async function _renderSaisonDetail(el, eventId, league){
        il eteignait les blasons de club sur les ecrans qui les montrent. */
     h = _g45EnveloppeMatch(h, (typeof _currentTeam !== 'undefined' ? _currentTeam : ''), data);
     el.innerHTML=h;
+    try{ if(typeof _g45ArbRemplir==='function') _g45ArbRemplir(el, league, eventId, data); }catch(e){}
     if(_mstate==='pre'){ try{ _g45FillForm(el, 'soccer/'+league); _g45FillStandings(el, 'soccer/'+league); }catch(e){} }
 
     // ── Rafraîchissement auto pendant le match (toutes les 30 s) ──
@@ -44118,7 +44121,11 @@ function _g45ClsLireMatch(e) {
     return nh === hg && na === ag;
   };
   if (buts.length === hg + ag) { fiable = essai(true) || essai(false); }
-  var o = { id: String(e.id), t: Date.parse(e.date) || 0, h: h, a: a, hg: hg, ag: ag, po: _g45ClsEstPO(e),
+  /* FAUTES (27/09/2026, bloc Arbitre) : competitors[].statistics foulsCommitted,
+     déjà dans cette réponse. null si l'un des deux camps ne l'a pas. */
+  var _fo = function (X) { var s = (X.statistics || []).filter(function (x) { return x && x.name === 'foulsCommitted'; })[0]; var v = s ? parseInt(s.displayValue, 10) : NaN; return isNaN(v) ? null : v; };
+  var foH = _fo(H), foA = _fo(A);
+  var o = { id: String(e.id), t: Date.parse(e.date) || 0, h: h, a: a, hg: hg, ag: ag, po: _g45ClsEstPO(e), fo: (foH == null || foA == null) ? null : foH + foA,
     hn: String(H.team.shortDisplayName || H.team.displayName || '?'), an: String(A.team.shortDisplayName || A.team.displayName || '?'),
     hl: H.team.logo || '', al: A.team.logo || '', f: fiable ? 1 : 0, c: cartons.map(function (k) { return [k.tm, k.aid, k.nom, k.r ? 1 : 0]; }) };
   if (fiable) {
@@ -44180,15 +44187,176 @@ function _g45ClsGarderLigue(ms, ids) {
 async function _g45ClsMatchs(slug, an) {
   var k = slug + '_' + an;
   if (_g45ClsMem[k] && _g45ClsMem[k].x > Date.now()) return _g45ClsMem[k].d;
-  try { var c = JSON.parse(localStorage.getItem('g45cls3_' + k) || 'null'); if (c && c.x > Date.now()) { _g45ClsMem[k] = c; return c.d; } } catch (e) {}
+  try { var c = JSON.parse(localStorage.getItem('g45cls4_' + k) || 'null'); if (c && c.x > Date.now()) { _g45ClsMem[k] = c; return c.d; } } catch (e) {}
   var civil = (typeof G45_LIGUES_CIVILES !== 'undefined') && G45_LIGUES_CIVILES.indexOf(slug) >= 0;
   var out = await _g45ClsLireSaison('https://site.api.espn.com/apis/site/v2/sports/soccer/' + slug, an, civil, _g45ClsLireMatch);
   if (!out) return null;
   var val = { x: Date.now() + 12 * 3600e3, d: out };
   _g45ClsMem[k] = val;
-  try { localStorage.setItem('g45cls3_' + k, JSON.stringify(val)); } catch (e) {}   /* trop gros : la mémoire suffit */
+  try { localStorage.setItem('g45cls4_' + k, JSON.stringify(val)); } catch (e) {}   /* trop gros : la mémoire suffit */
   return out;
 }
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   ARBITRE D'UN MATCH DE FOOT   (27/09/2026, maquette validée par Antoine)
+   ───────────────────────────────────────────────────────────────────────────
+   Idée venue de FotMob : « Cartons jaunes 3,6 / match, en dessous de la
+   moyenne ». ESPN ne publie AUCUNE statistique d'arbitre : on la calcule.
+   SONDÉ le 27/09 sur PSG–Marseille (401876449) :
+   - summary → gameInfo.officials [{displayName, position.name "Referee",
+     order 1}] : le nom de l'arbitre du match ouvert (pas d'identifiant) ;
+     gameInfo.venue {fullName, address.city} ; PAS de météo ; attendance à 0.
+   - core …/events/{id}/competitions/{id}/officials → {items:[{id, displayName,
+     position}]} : ~400 octets, là où le summary en pèse 450 Ko. C'est lui
+     qu'on interroge pour CHAQUE match de la saison.
+   - scoreboard (déjà lu par les Classements, `_g45ClsMatchs`) : les cartons
+     dans `details`, les fautes dans competitors[].statistics foulsCommitted.
+   Arbitre d'un match joué = donnée définitive : cache localStorage PERMANENT
+   par match (`g45arb1_<id>`). Premier passage sur un championnat : une petite
+   requête par match joué (6 en parallèle) ; ensuite, plus rien.
+   Moyenne calculée sur CE championnat et CETTE saison seulement (pas les
+   coupes). Sous 4 matchs arbitrés, pas de verdict : « peu de matchs ».
+   ═══════════════════════════════════════════════════════════════════════════ */
+var _g45ArbMem = {}, _g45ArbEnCours = {};
+function _g45ArbNorm(x) { return String(x || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z]/g, ''); }
+function _g45ArbChoisir(L) {
+  L = L || [];
+  return L.filter(function (o) { return o && o.position && /^referee$/i.test(o.position.name || ''); })[0]
+      || L.filter(function (o) { return o && +o.order === 1; })[0] || null;
+}
+/* Nom de l'arbitre du match ouvert, depuis le summary déjà chargé. */
+function _g45ArbDuMatch(data) {
+  var r = _g45ArbChoisir(data && data.gameInfo && data.gameInfo.officials);
+  return r ? String(r.displayName || r.fullName || '').trim() : '';
+}
+/* Saison ESPN d'un match : année civile pour ces ligues, sinon bascule en juillet. */
+function _g45ArbSaison(slug, t) {
+  var d = new Date(t || Date.now()); if (isNaN(d)) d = new Date();
+  var civil = (typeof G45_LIGUES_CIVILES !== 'undefined') && G45_LIGUES_CIVILES.indexOf(slug) >= 0;
+  return civil ? d.getFullYear() : (d.getMonth() >= 6 ? d.getFullYear() : d.getFullYear() - 1);
+}
+/* Arbitre d'un match (core). '' = pas d'arbitre publié ; null = échec réseau (non mis en cache). */
+async function _g45ArbOfficiel(slug, eid) {
+  var ck = 'g45arb1_' + eid;
+  try { var c = localStorage.getItem(ck); if (c !== null) return c; } catch (e) {}
+  try {
+    var r = await fetch('https://sports.core.api.espn.com/v2/sports/soccer/leagues/' + slug + '/events/' + eid + '/competitions/' + eid + '/officials');
+    if (r.status === 404) { try { localStorage.setItem(ck, ''); } catch (e) {} return ''; }
+    if (!r.ok) return null;
+    var j = await r.json(), ref = _g45ArbChoisir(j && j.items);
+    var nom = ref ? String(ref.displayName || ref.fullName || '').trim() : '';
+    try { localStorage.setItem(ck, nom); } catch (e) {}
+    return nom;
+  } catch (e) { return null; }
+}
+/* Cumul de la saison : {lg:{n,c,fn,f}, par:{nomNormalisé:{nom,n,c,fn,f}}} ou null. Exporté pour les tests. */
+function _g45ArbCumul(ms, noms) {
+  var lg = { n: 0, c: 0, fn: 0, f: 0 }, par = {};
+  (ms || []).forEach(function (m) {
+    var nc = (m.c || []).length;
+    lg.n++; lg.c += nc; if (m.fo != null) { lg.fn++; lg.f += m.fo; }
+    var nm = noms[m.id]; if (!nm) return;
+    var k = _g45ArbNorm(nm), p = par[k] = par[k] || { nom: nm, n: 0, c: 0, fn: 0, f: 0 };
+    p.n++; p.c += nc; if (m.fo != null) { p.fn++; p.f += m.fo; }
+  });
+  return { lg: lg, par: par };
+}
+async function _g45ArbStats(slug, an) {
+  var k = slug + '_' + an;
+  if (_g45ArbMem[k] && _g45ArbMem[k].x > Date.now()) return _g45ArbMem[k].d;
+  if (_g45ArbEnCours[k]) return _g45ArbEnCours[k];
+  _g45ArbEnCours[k] = (async function () {
+    var ms = null;
+    try { ms = await _g45ClsMatchs(slug, an); } catch (e) {}
+    if (!ms || !ms.length) return null;
+    var file = ms.slice(), noms = {};
+    var travail = async function () {
+      while (file.length) { var m = file.shift(), n = await _g45ArbOfficiel(slug, m.id); if (n) noms[m.id] = n; }
+    };
+    await Promise.all([travail(), travail(), travail(), travail(), travail(), travail()]);
+    var d = _g45ArbCumul(ms, noms);
+    _g45ArbMem[k] = { x: Date.now() + 3600e3, d: d };
+    return d;
+  })();
+  try { return await _g45ArbEnCours[k]; } finally { delete _g45ArbEnCours[k]; }
+}
+/* Verdict face à la moyenne du championnat. */
+function _g45ArbVerdict(v, moy, n) {
+  if (n < 4) return { t: 'Peu de matchs (' + n + ')', c: '#c9d3ee' };
+  if (moy > 0 && v > moy * 1.1) return { t: 'Au-dessus de la moyenne', c: '#f0b020' };
+  if (moy > 0 && v < moy * 0.9) return { t: 'En dessous de la moyenne', c: '#7cc4ff' };
+  return { t: 'Dans la moyenne', c: '#c9d3ee' };
+}
+function _g45ArbCase(ico, lib, v, moy, n) {
+  var fr = function (x) { return x.toFixed(1).replace('.', ','); };
+  if (v == null) return '<div style="background:rgba(255,255,255,.05);border-radius:10px;padding:10px;">'
+    + '<div style="font-size:13px;color:#c9d3ee;font-weight:700;">' + ico + ' ' + lib + '</div>'
+    + '<div style="font-size:13px;color:#c9d3ee;margin-top:6px;">Non publié</div></div>';
+  var vd = _g45ArbVerdict(v, moy, n);
+  var larg = moy > 0 ? Math.min(v / (2 * moy), 1) * 100 : 0;
+  return '<div style="background:rgba(255,255,255,.05);border-radius:10px;padding:10px;min-width:0;">'
+    + '<div style="font-size:13px;color:#c9d3ee;font-weight:700;">' + ico + ' ' + lib + '</div>'
+    + '<div style="font-size:22px;font-weight:900;color:#fff;margin:2px 0;">' + fr(v) + ' <span style="font-size:13px;color:#c9d3ee;font-weight:700;">/ match</span></div>'
+    + '<div style="height:6px;border-radius:3px;background:rgba(255,255,255,.12);position:relative;margin:6px 0;">'
+    + '<div style="position:absolute;left:0;top:0;bottom:0;width:' + larg.toFixed(0) + '%;background:' + (vd.c === '#c9d3ee' ? '#9fb0c7' : vd.c) + ';border-radius:3px;"></div>'
+    + '<div title="moyenne du championnat" style="position:absolute;left:50%;top:-3px;width:2px;height:12px;background:#fff;"></div></div>'
+    + '<div style="font-size:13px;font-weight:800;color:' + vd.c + ';">' + vd.t + '</div></div>';
+}
+/* Contenu du bloc. `st` absent = calcul en cours ; `st === null` = indisponible. */
+function _g45ArbContenu(nom, st, lgNom, saisonTxt) {
+  var h = '<div style="font-size:11px;font-weight:800;letter-spacing:.6px;text-transform:uppercase;color:#9fb6ff;margin-bottom:6px;">🧑‍⚖️ Arbitre</div>'
+    + '<div style="font-size:17px;font-weight:900;color:#fff;margin-bottom:10px;">' + _g45Esc(nom) + '</div>';
+  if (st === undefined) return h + '<div style="font-size:13px;color:#c9d3ee;">⏳ Calcul de ses moyennes sur la saison…</div>';
+  var p = st && st.par[_g45ArbNorm(nom)];
+  if (!st || !p) return h + '<div style="font-size:13px;color:#c9d3ee;">Aucun match de lui trouvé cette saison' + (lgNom ? ' en ' + _g45Esc(lgNom) : '') + '.</div>';
+  var L = st.lg, mc = L.n ? L.c / L.n : 0, mf = L.fn ? L.f / L.fn : 0;
+  h += '<div style="display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:8px;">'
+    + _g45ArbCase('🟨', 'Cartons', p.c / p.n, mc, p.n)
+    + _g45ArbCase('🦵', 'Fautes', (p.fn && L.fn) ? p.f / p.fn : null, mf, p.fn)
+    + '</div>';
+  h += '<div style="font-size:12.5px;color:#c9d3ee;margin-top:9px;line-height:1.45;">'
+    + [lgNom ? _g45Esc(lgNom) + (saisonTxt ? ' ' + _g45Esc(saisonTxt) : '') : '', p.n + ' match' + (p.n > 1 ? 's' : '') + ' arbitré' + (p.n > 1 ? 's' : ''),
+       'moyenne du championnat : ' + mc.toFixed(1).replace('.', ',') + ' cartons' + (L.fn ? ', ' + mf.toFixed(1).replace('.', ',') + ' fautes' : '')].filter(Boolean).join(' · ')
+    + '</div>';
+  return h;
+}
+function _g45ArbInfos(data, league) {
+  var comp = (data && data.header && data.header.competitions && data.header.competitions[0]) || {};
+  var lgO = (data && data.header && data.header.league) || {};
+  var an = _g45ArbSaison(league, Date.parse(comp.date || ''));
+  return { an: an, k: league + '_' + an, lgNom: lgO.abbreviation || lgO.shortName || lgO.name || '',
+           saisonTxt: (typeof _g45SgLabel === 'function') ? _g45SgLabel(league, an) : String(an) };
+}
+/* Posé DANS la chaîne de `_renderSaisonDetail` (qui finit par el.innerHTML = h) :
+   le stade, puis le bloc arbitre — complet si déjà calculé, sinon en attente. */
+function _g45ArbPlace(data, league, eventId) {
+  var h = '';
+  try {
+    var v = (data && data.gameInfo && data.gameInfo.venue) || {};
+    var ville = (v.address && v.address.city) || '';
+    if (v.fullName) h += '<div style="text-align:center;font-size:13px;color:#c9d3ee;margin:-2px 0 10px;">🏟️ ' + _g45Esc(v.fullName) + (ville ? ' · ' + _g45Esc(ville) : '') + '</div>';
+    var nom = _g45ArbDuMatch(data);
+    if (!nom || !league || league === 'all') return h;
+    var I = _g45ArbInfos(data, league), m = _g45ArbMem[I.k];
+    h += '<div data-g45arb="' + _g45Esc(String(eventId)) + '" style="border-radius:12px;background:rgba(11,16,29,.92);border:1px solid rgba(255,255,255,.10);padding:12px 14px;margin-bottom:10px;">'
+      + _g45ArbContenu(nom, (m && m.x > Date.now()) ? m.d : undefined, I.lgNom, I.saisonTxt) + '</div>';
+  } catch (e) {}
+  return h;
+}
+/* Appelé juste après el.innerHTML = h : calcule puis remplit le bloc en attente. */
+async function _g45ArbRemplir(el, league, eventId, data) {
+  try {
+    var bloc = el && el.querySelector('[data-g45arb]');
+    if (!bloc) return;
+    var nom = _g45ArbDuMatch(data), I = _g45ArbInfos(data, league);
+    var m = _g45ArbMem[I.k];
+    if (m && m.x > Date.now()) return;           /* déjà complet */
+    var st = await _g45ArbStats(league, I.an);
+    bloc = el.querySelector('[data-g45arb]');    /* la fenêtre a pu être redessinée */
+    if (bloc) bloc.innerHTML = _g45ArbContenu(nom, st || null, I.lgNom, I.saisonTxt);
+  } catch (e) {}
+}
+window._g45ArbCumul = _g45ArbCumul; window._g45ArbVerdict = _g45ArbVerdict; window._g45ArbStats = _g45ArbStats;
 
 /* Matchs retenus par équipe selon lieu et N derniers : {teamId: [m…]} (récent d'abord). */
 function _g45ClsParEquipe(ms) {
