@@ -30359,8 +30359,118 @@ async function g45LoadMatchAI(btn){
   btn.disabled=false;
 }
 window.g45LoadMatchAI=g45LoadMatchAI;
-function g45YT(q){ window.open('https://www.youtube.com/results?search_query='+encodeURIComponent(q),'_blank'); }
-window.g45YT=g45YT;
+/* Bloc « 📺 RÉSUMÉS VIDÉO » (Course / Sprint / Qualifs) → lecteur intégré. */
+function _g45BlocResumes(base, sprint){
+  var bt=function(ico, lib, q, rouge){
+    return '<button onclick="event.stopPropagation();g45YT(this.dataset.q)" data-q="'+_g45YTEsc(q)+'" style="padding:10px 4px;border-radius:9px;cursor:pointer;font-size:13px;font-weight:800;'
+      +'border:1.5px solid '+(rouge?'rgba(255,69,58,.6)':'rgba(255,255,255,.2)')+';background:'+(rouge?'rgba(255,69,58,.14)':'rgba(11,16,29,.85)')+';color:'+(rouge?'#ff8a80':'#fff')+';">'+ico+' '+lib+'</button>';
+  };
+  var b=[bt('🏁','Course',base+' race highlights',true)];
+  if(sprint) b.push(bt('⚡','Sprint',base+' sprint highlights',false));
+  b.push(bt('⏱️','Qualifs',base+' qualifying highlights',false));
+  return '<div style="margin:0 0 10px;"><div style="font-size:12px;font-weight:800;letter-spacing:1px;color:#c9d3ee;margin-bottom:6px;">📺 RÉSUMÉS VIDÉO</div>'
+    +'<div style="display:grid;grid-template-columns:repeat('+b.length+',minmax(0,1fr));gap:6px;">'+b.join('')+'</div></div>';
+}
+/* ═══════════════════════════════════════════════════════════════════════════
+   LECTEUR YOUTUBE INTÉGRÉ   (27/09/2026, maquettes validées)
+   ───────────────────────────────────────────────────────────────────────────
+   Tous les boutons YouTube de l'app ne connaissaient qu'une RECHERCHE et
+   ouvraient youtube.com dans un autre onglet. Désormais g45YT(q) ouvre une
+   fenêtre DANS l'app : la route /ytsearch du worker (sondée le 27/09 : page de
+   résultats lue sans clé, FORMULA 1 en tête pour un GP) donne les vidéos ; la
+   meilleure se lance (youtube-nocookie, plein écran), 3 autres proposées,
+   lien YouTube en repli. Les liens <a href="…youtube.com/results…"> et les
+   window.open vers une recherche YouTube sont redirigés ici automatiquement.
+   ═══════════════════════════════════════════════════════════════════════════ */
+var _G45_YT_OFFICIELS = /^(formula 1|motogp|nba|nhl|khl|ufc|mlb|nfl|ligue 1 mcdonald|uefa|canal\+ sport|eurosport|dazn|bein sports)/i;
+function _g45YTScore(v, q, i) {
+  var t = String(v.titre || '').toLowerCase(), c = String(v.chaine || ''), ql = String(q || '').toLowerCase(), s = 0;
+  if (_G45_YT_OFFICIELS.test(c)) s += 4;
+  if (/highlights|meilleurs moments|résumé|resume|faits saillants|temps forts/.test(t)) s += 2;
+  var fam = [['qualif', /qualif/], ['sprint', /sprint/], ['fp', /\bfp\d|practice|essais/]];
+  fam.forEach(function (f) { var dansQ = ql.indexOf(f[0]) >= 0 || (f[0] === 'fp' && /essais|practice/.test(ql)); if (f[1].test(t)) s += dansQ ? 3 : -3; });
+  [['f2', /\bf2\b/], ['f3', /\bf3\b/], ['moto2', /moto2/], ['moto3', /moto3/], ['academy', /academy/]].forEach(function (f) { if (f[1].test(t) && ql.indexOf(f[0]) < 0) s -= 5; });
+  if (/react|interview|onboard|réaction|reaction|press conference|conférence/.test(t)) s -= 2;
+  return s * 100 - i;
+}
+function _g45YTEsc(x) { return String(x == null ? '' : x).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/"/g, '&quot;'); }
+var _g45YTEtat = { q: '', vids: [], cur: 0 };
+function _g45YTFermer() { var o = document.getElementById('g45-yt-ov'); if (o) o.remove(); document.removeEventListener('keydown', _g45YTTouche); }
+function _g45YTTouche(e) { if (e.key === 'Escape') _g45YTFermer(); }
+function _g45YTDessiner() {
+  var box = document.getElementById('g45-yt-corps'); if (!box) return;
+  var E = _g45YTEtat, v = E.vids[E.cur], lien = 'https://www.youtube.com/results?search_query=' + encodeURIComponent(E.q);
+  if (!v) {
+    box.innerHTML = '<div style="padding:18px;text-align:center;color:#c9d3ee;font-size:14px;">Vidéo introuvable.</div>'
+      + '<a data-g45-direct="1" href="' + lien + '" target="_blank" rel="noopener" style="display:block;text-align:center;font-size:14px;font-weight:800;color:#9fc3ff;padding:8px;">Ouvrir la recherche sur YouTube ↗</a>';
+    return;
+  }
+  var h = '<div style="position:relative;width:100%;aspect-ratio:16/9;border-radius:10px;overflow:hidden;background:#000;margin-bottom:8px;">'
+    + '<iframe src="https://www.youtube-nocookie.com/embed/' + encodeURIComponent(v.id) + '?autoplay=1&rel=0&playsinline=1" title="' + _g45YTEsc(v.titre) + '" '
+    + 'allow="autoplay; encrypted-media; picture-in-picture; fullscreen" allowfullscreen style="position:absolute;inset:0;width:100%;height:100%;border:0;"></iframe></div>'
+    + '<div style="font-size:15px;font-weight:800;color:#fff;line-height:1.3;">' + _g45YTEsc(v.titre || 'Vidéo') + '</div>'
+    + '<div style="font-size:12px;font-weight:600;color:#c9d3ee;margin:2px 0 10px;">' + [v.chaine, v.duree, v.vues ? v.vues + ' vues' : ''].filter(Boolean).map(_g45YTEsc).join(' · ') + '</div>';
+  var autres = E.vids.map(function (x, i) { return [x, i]; }).filter(function (p) { return p[1] !== E.cur; }).slice(0, 3);
+  if (autres.length) {
+    h += '<div style="font-size:12px;font-weight:800;letter-spacing:1px;color:#c9d3ee;margin-bottom:6px;">AUTRES VIDÉOS</div>';
+    autres.forEach(function (p) {
+      var x = p[0];
+      h += '<div onclick="g45YTChoisir(' + p[1] + ')" style="display:flex;gap:8px;align-items:center;background:#141b2e;border-radius:8px;padding:6px;margin-bottom:5px;cursor:pointer;">'
+        + '<img src="https://i.ytimg.com/vi/' + encodeURIComponent(x.id) + '/mqdefault.jpg" alt="" loading="lazy" style="width:80px;height:45px;border-radius:5px;object-fit:cover;flex:none;background:#26324f;">'
+        + '<div style="min-width:0;"><div style="font-size:13px;font-weight:800;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">' + _g45YTEsc(x.titre || 'Vidéo') + '</div>'
+        + '<div style="font-size:12px;color:#c9d3ee;">' + [x.chaine, x.duree].filter(Boolean).map(_g45YTEsc).join(' · ') + '</div></div></div>';
+    });
+  }
+  h += '<a data-g45-direct="1" href="' + lien + '" target="_blank" rel="noopener" style="display:block;text-align:center;font-size:13px;font-weight:800;color:#9fc3ff;padding:8px 0 2px;">Ouvrir la recherche sur YouTube ↗</a>';
+  box.innerHTML = h;
+}
+window.g45YTChoisir = function (i) { _g45YTEtat.cur = i; _g45YTDessiner(); };
+async function g45YT(q) {
+  q = String(q || '').trim(); if (!q) return;
+  _g45YTFermer();
+  _g45YTEtat = { q: q, vids: [], cur: 0 };
+  var ov = document.createElement('div');
+  ov.id = 'g45-yt-ov';
+  ov.setAttribute('style', 'position:fixed;inset:0;z-index:99999;background:rgba(0,0,0,.78);display:flex;align-items:flex-start;justify-content:center;padding:max(16px, env(safe-area-inset-top)) 10px 16px;overflow-y:auto;');
+  ov.innerHTML = '<div style="width:100%;max-width:760px;background:#0b101d;border:1px solid rgba(255,255,255,.14);border-radius:14px;padding:12px;color:#fff;box-sizing:border-box;">'
+    + '<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:8px;">'
+    + '<div style="font-size:13px;font-weight:800;color:#c9d3ee;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">📺 ' + _g45YTEsc(q) + '</div>'
+    + '<button onclick="_g45YTFermer()" aria-label="Fermer" style="flex:none;width:38px;height:38px;border-radius:9px;border:1px solid rgba(255,255,255,.2);background:#141b2e;color:#fff;font-size:18px;cursor:pointer;">✕</button></div>'
+    + '<div id="g45-yt-corps"><div style="padding:24px;text-align:center;color:#fff;font-size:14px;">⏳ Recherche de la vidéo…</div></div></div>';
+  ov.addEventListener('click', function (e) { if (e.target === ov) _g45YTFermer(); });
+  document.body.appendChild(ov);
+  document.addEventListener('keydown', _g45YTTouche);
+  try {
+    var r = await fetch(FD_PROXY + '/ytsearch?q=' + encodeURIComponent(q));
+    var j = r.ok ? await r.json() : null;
+    var vids = (j && j.videos) || [];
+    vids = vids.map(function (v, i) { return { v: v, s: _g45YTScore(v, q, i) }; }).sort(function (a, b) { return b.s - a.s; }).map(function (x) { return x.v; });
+    if (_g45YTEtat.q === q) _g45YTEtat.vids = vids;
+  } catch (e) {}
+  _g45YTDessiner();
+}
+window.g45YT = g45YT; window._g45YTFermer = _g45YTFermer; window._g45YTScore = _g45YTScore;
+/* Redirection automatique : liens et window.open vers une RECHERCHE YouTube. */
+function _g45YTRequete(u) {
+  try { var x = new URL(u, location.href); if (/(^|\.)youtube\.com$/.test(x.hostname) && x.pathname === '/results') return x.searchParams.get('search_query') || ''; } catch (e) {}
+  return '';
+}
+if (typeof document !== 'undefined' && document.addEventListener) {
+  document.addEventListener('click', function (e) {
+    var a = e.target && e.target.closest ? e.target.closest('a[href*="youtube.com/results"]') : null;
+    if (!a || a.getAttribute('data-g45-direct') === '1') return;
+    var q = _g45YTRequete(a.getAttribute('href')); if (!q) return;
+    e.preventDefault(); e.stopPropagation(); g45YT(q);
+  }, true);
+}
+if (typeof window !== 'undefined' && window.open && !window._g45OpenOrig) {
+  window._g45OpenOrig = window.open;
+  window.open = function (u) {
+    var q = _g45YTRequete(u);
+    if (q) { g45YT(q); return null; }
+    return window._g45OpenOrig.apply(window, arguments);
+  };
+}
 async function _g45MultiAI(box, boxId, sys, facts, title){
   /* ═══ QUATRIEME PORTE FERMEE (12/09/2026) ═══
      Trouvee par Antoine sur bet45.fr : le bouton « Analyse IA du match »
@@ -33709,6 +33819,13 @@ async function g45MotoEvent(eid, el){
   var ORD={P:1,FP:1,Q:2,SPR:3,WUP:3,RAC:4,RA:4};
   ss.sort(function(a,b){ return (ORD[String(a.type||'').toUpperCase()]||9)-(ORD[String(b.type||'').toUpperCase()]||9) || (a.number||0)-(b.number||0); });
   var h='<div style="background:rgba(12,16,28,.9);border:1px solid rgba(255,255,255,.08);border-radius:9px;padding:8px;">';
+  /* 27/09/2026 : résumés vidéo lus dans l'app (catégorie choisie ; sprint en MotoGP seulement). */
+  try{
+    var _evM=_g45Moto.ev[eid]||{}, _catN=String(cat.name||'MotoGP').replace(/™/g,'').trim();
+    var _pays=(_evM.country&&_evM.country.name)||String(_evM.name||'').replace(/^.*Grand Prix (of |de |du )?/i,'');
+    var _an=String(_evM.date_start||'').slice(0,4);
+    h+=_g45BlocResumes(_catN+' '+_pays+' '+_an, /motogp/i.test(_catN) && ss.some(function(x){ return String(x.type||'').toUpperCase()==='SPR'; }));
+  }catch(e){}
   h+='<button onclick="event.stopPropagation();g45MotoGrid(\''+_g45MotoEa(eid)+'\',this)" style="width:100%;box-sizing:border-box;border:1.5px solid rgba(240,200,40,.4);cursor:pointer;background:rgba(240,200,40,.08);border-radius:8px;color:#f0c828;padding:7px;font-size:11px;font-weight:800;margin-bottom:5px;">🏁 Grille de départ</button><div id="mgpgr-'+_g45MotoEa(eid)+'" style="display:none;margin-bottom:6px;"></div>';
   h+='<button onclick="event.stopPropagation();g45MotoAI(\''+_g45MotoEa(eid)+'\',this)" style="width:100%;box-sizing:border-box;border:1.5px solid rgba(176,124,214,.5);cursor:pointer;background:rgba(176,124,214,.10);border-radius:8px;color:#b07cd6;padding:7px;font-size:11px;font-weight:800;margin-bottom:5px;">🧠 Analyse IA du GP</button><div id="mgpai-'+_g45MotoEa(eid)+'" style="margin-bottom:6px;"></div>';
   ss.forEach(function(s){
@@ -39371,7 +39488,9 @@ function g45F1Detail(eid){
     +'<div id="f1-livemap"></div>'
     +'<div id="f1-map"></div>'
     +'<div style="margin:0 0 8px;"><button onclick="g45F1AI(this)" data-eid="'+ea(ev.id)+'" data-box="f1ai-'+ea(ev.id)+'" style="width:100%;box-sizing:border-box;font-size:12px;font-weight:800;padding:9px 12px;border-radius:9px;cursor:pointer;border:1.5px solid rgba(176,124,214,.5);background:rgba(176,124,214,.10);color:#b07cd6;">🧠 Analyse IA du GP</button><div id="f1ai-'+ea(ev.id)+'" style="margin-top:8px;"></div></div>'
-    +'<div style="margin:0 0 8px;"><button onclick="g45YT(this.dataset.q)" data-q="'+ea((ev.name||'GP F1')+' highlights')+'" style="width:100%;box-sizing:border-box;font-size:12px;font-weight:800;padding:9px 12px;border-radius:9px;cursor:pointer;border:1.5px solid rgba(255,69,58,.5);background:rgba(255,69,58,.10);color:#ff6b5e;">📺 Résumé du GP sur YouTube</button></div>'
+    /* 27/09/2026 : résumés Course / Sprint / Qualifs lus dans l'app (le nom
+       ESPN porte le sponsor ; « Pays Grand Prix Année » trouve la vidéo officielle). */
+    +_g45BlocResumes(((ev.circuit&&ev.circuit.address&&ev.circuit.address.country)||String(ev.name||'').replace(/^.*?(\w+ Grand Prix).*$/,'$1').replace(/ Grand Prix$/,''))+' Grand Prix '+String(ev.date||'').slice(0,4)+' F1', comps.some(function(c){ return /sprint/i.test((c.type&&(c.type.abbreviation||c.type.text))||''); }))
     +'<div style="display:flex;gap:6px;overflow-x:auto;padding-bottom:4px;-webkit-overflow-scrolling:touch;margin-bottom:8px;">'+chips+'</div>'
     +'<div id="f1-session"></div>';
   el.innerHTML=html;

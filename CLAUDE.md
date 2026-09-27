@@ -1,7 +1,7 @@
 # CLAUDE.md — GONES45 / BET45
 
 Lis ce fichier EN ENTIER avant toute action. Il remplace des semaines d'historique
-que tu n'as pas. Mis à jour le 26/09/2026 (version déployée : 20260927a).
+que tu n'as pas. Mis à jour le 26/09/2026 (version déployée : 20260927b).
 
 ## 1. Le projet
 
@@ -169,6 +169,13 @@ Contrôle : `grep -on "?v=2026[0-9]*[a-z]" index.html indexfenotte.html auth-gua
   vainqueurs + points course/sprint `_g45MotoVainqueurs` (cache DÉFINITIF
   g45moto_win2_). Classement Moto2 : l'API répond 403 (27/09) → recalculé
   par `_g45MotoChampCalcule` (somme des points des courses). Séance `g45MotoSession`, championnat `g45MotoStandings`.
+- Vidéos : `g45YT(q)` = lecteur YouTube INTÉGRÉ (youtube-nocookie) ; la route
+  worker `/ytsearch?q=` lit la page de résultats YouTube (sans clé, sondée le
+  27/09, cache 6 h). Tri `_g45YTScore` (chaînes officielles, highlights,
+  pénalise F2/F3/Moto2/Moto3 non demandés, réactions). Les <a> et
+  window.open vers youtube.com/results sont redirigés vers le lecteur
+  (`data-g45-direct="1"` pour garder un vrai lien). Bloc Course / Sprint /
+  Qualifs : `_g45BlocResumes` (F1 et MotoGP).
 - Logos F1 : Simple Icons intégrés (`_G45_F1_LOGOS`, CC0) pour Ferrari, McLaren,
   Red Bull, Aston Martin, Audi, Cadillac, AMG (Mercedes). Alpine, Haas,
   Williams : fichiers `images/ecuries/{alpine,haas,williams}.svg` ou `.png`
