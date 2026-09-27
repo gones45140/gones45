@@ -33574,22 +33574,56 @@ function _g45MotoPhoto(rec, nom, col){
     +'<div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:900;color:#fff;">'+_g45MotoEa(ini)+'</div>'
     +(rec&&rec.photo?'<img src="'+_g45MotoEa(rec.photo)+'" alt="" loading="lazy" referrerpolicy="no-referrer" onerror="this.remove()" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:top;">':'')+'</div>';
 }
-/* Vainqueurs (course et sprint) d'un GP terminé : 2 à 3 requêtes, cache DÉFINITIF. */
+/* Résultats d'un GP terminé (course + sprint) : vainqueurs ET points de chaque
+   pilote, 2 à 3 requêtes puis cache DÉFINITIF. Les points servent à recalculer
+   le championnat quand l'API le refuse (Moto2 : 403 constaté le 27/09/2026,
+   alors que séances et résultats passent). */
 async function _g45MotoVainqueurs(eid, catId){
-  var k='g45moto_win1_'+eid+'_'+catId;
+  var k='g45moto_win2_'+eid+'_'+catId;
   try{ var c=JSON.parse(localStorage.getItem(k)||'null'); if(c) return c; }catch(e){}
   var ss=await _g45MotoJ('/results/sessions?eventUuid='+encodeURIComponent(eid)+'&categoryUuid='+encodeURIComponent(catId));
   if(!Array.isArray(ss)) return null;
-  var out={}, fini=true;
+  var out={pts:{}}, fini=true, vu=false;
   for(var i=0;i<ss.length;i++){
     var ty=String(ss[i].type||'').toUpperCase(), cle=(ty==='RAC'||ty==='RA')?'course':(ty==='SPR'?'sprint':'');
     if(!cle) continue;
     var j=await _g45MotoJ('/results/session/'+encodeURIComponent(ss[i].id)+'/classification?test=false');
-    var p1=((j&&j.classification)||[]).filter(function(r){ return r.position===1; })[0];
-    if(p1&&p1.rider) out[cle]=p1.rider.full_name||''; else fini=false;
+    var cl=(j&&j.classification)||[];
+    if(!cl.length){ fini=false; continue; }
+    vu=true;
+    cl.forEach(function(r){
+      var rd=r.rider||{}, id=rd.legacy_id!=null?'L'+rd.legacy_id:('N'+String(rd.full_name||'').toLowerCase());
+      if(r.position===1) out[cle]=rd.full_name||'';
+      var p=parseFloat(r.points)||0;
+      var e=out.pts[id]=out.pts[id]||{n:rd.full_name||'?',num:rd.number,iso:(rd.country&&rd.country.iso)||'',lid:rd.legacy_id,id:rd.id,eq:(r.team&&r.team.name)||'',p:0,v:0};
+      e.p+=p; if(cle==='course'&&r.position===1) e.v++;
+    });
   }
+  if(!vu) return null;
   if(out.course&&fini){ try{ localStorage.setItem(k, JSON.stringify(out)); }catch(e){} }
-  return out.course||out.sprint?out:null;
+  return out;
+}
+/* Championnat recalculé depuis les résultats des GP terminés (repli si l'API refuse). */
+async function _g45MotoChampCalcule(catId, progres){
+  var now=Date.now(), ids=Object.keys(_g45Moto.ev||{}).filter(function(k){ var e=_g45Moto.ev[k]; return e&&!e.test&&e.date_end&&new Date(e.date_end).getTime()<now; });
+  var tot={}, fait=0;
+  var file=ids.slice();
+  var travail=async function(){
+    while(file.length){
+      var eid=file.shift(), w=null;
+      try{ w=await _g45MotoVainqueurs(eid, catId); }catch(e){}
+      fait++; if(progres) progres(fait, ids.length);
+      if(!w||!w.pts) continue;
+      Object.keys(w.pts).forEach(function(id){
+        var x=w.pts[id], t=tot[id]=tot[id]||{n:x.n,num:x.num,iso:x.iso,lid:x.lid,id:x.id,eq:x.eq,p:0,v:0};
+        t.p+=x.p; t.v+=x.v; if(x.eq) t.eq=x.eq;
+      });
+    }
+  };
+  await Promise.all([travail(),travail(),travail()]);
+  return Object.keys(tot).map(function(k){ return tot[k]; }).filter(function(x){ return x.p>0; })
+    .sort(function(a,b){ return (b.p-a.p)||(b.v-a.v); })
+    .map(function(x,i){ return { position:i+1, points:x.p, race_wins:x.v, rider:{legacy_id:x.lid,id:x.id,full_name:x.n,number:x.num,country:{iso:x.iso}}, team:{name:x.eq} }; });
 }
 async function _g45MotoRemplirVainqueurs(ids, catId){
   var file=ids.slice();
@@ -33744,7 +33778,12 @@ async function g45MotoStandings(btn){
   if(!s||!c){ box.innerHTML='<div style="color:var(--t3);font-size:10px;padding:8px;text-align:center;">Indisponible.</div>'; return; }
   box.innerHTML='<div style="color:var(--t3);font-size:10px;padding:8px;text-align:center;">⏳ Classement…</div>';
   var j=await _g45MotoJ('/results/standings?seasonUuid='+encodeURIComponent(s.id)+'&categoryUuid='+encodeURIComponent(c.id));
-  var cl=(j&&j.classification)||[];
+  var cl=(j&&j.classification)||[], _calc=false;
+  if(!cl.length){
+    /* Repli (Moto2, 403 de l'API) : on additionne les points des courses. */
+    box.innerHTML='<div style="color:#fff;font-size:13px;padding:8px;text-align:center;">⏳ Classement officiel indisponible : calcul à partir des courses…</div>';
+    try{ cl=await _g45MotoChampCalcule(c.id, function(f,n){ box.innerHTML='<div style="color:#fff;font-size:13px;padding:8px;text-align:center;">⏳ Calcul du classement : GP '+f+'/'+n+'…</div>'; }); _calc=cl.length>0; }catch(e){ cl=[]; }
+  }
   if(!cl.length){ box.innerHTML='<div style="color:var(--t3);font-size:10px;padding:8px;text-align:center;">Pas de classement.'+((j&&(j.__http||j.__err))?('<br><span style="font-size:8px;color:#8aa0ff;">diag → '+(j.__http?('HTTP '+j.__http):j.__err)+'</span>'):'')+'</div>'; return; }
   var cmap=await _g45MotoColors();
   /* CARTES FAÇON SITE OFFICIEL (26/09/2026, maquette validée) : couleur de
@@ -33752,6 +33791,7 @@ async function g45MotoStandings(btn){
      leader ; un appui ouvre toujours la fiche du pilote. */
   var lead=parseFloat(cl[0]&&cl[0].points)||0;
   var h='<div style="font-size:12px;letter-spacing:2px;font-weight:800;color:#f0b020;margin:4px 0 8px;">🏆 CHAMPIONNAT '+_g45MotoEa(String(c.name||'').replace(/™/g,'').toUpperCase())+' '+s.year+'</div>';
+  if(_calc) h+='<div style="font-size:12px;color:#c9d3ee;margin:-4px 0 8px;">Calculé à partir des résultats des courses : motogp.com ne fournit pas ce classement. Pénalités de points éventuelles non prises en compte.</div>';
   cl.forEach(function(r,i){
     var rd=r.rider||{}, tm=r.team||{}, rec=_g45MotoRec(cmap,rd);
     var col=(rec&&rec.col)||'#8aa0ff', rgb=_g45MotoRgb(col), top=i===0;

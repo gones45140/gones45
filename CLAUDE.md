@@ -1,7 +1,7 @@
 # CLAUDE.md — GONES45 / BET45
 
 Lis ce fichier EN ENTIER avant toute action. Il remplace des semaines d'historique
-que tu n'as pas. Mis à jour le 26/09/2026 (version déployée : 20260926v).
+que tu n'as pas. Mis à jour le 26/09/2026 (version déployée : 20260927a).
 
 ## 1. Le projet
 
@@ -166,8 +166,9 @@ Contrôle : `grep -on "?v=2026[0-9]*[a-z]" index.html indexfenotte.html auth-gua
   `/riders` → cs.pictures.profile.main (photo), team.color / text_color /
   constructor.name ; `_g45MotoColors` (carte pilote→{col,photo,team,moto}),
   `_g45MotoRec`, `_g45MotoPhoto`. Calendrier : drapeau flagcdn en fond +
-  vainqueurs course/sprint `_g45MotoVainqueurs` (cache DÉFINITIF
-  g45moto_win1_). Séance `g45MotoSession`, championnat `g45MotoStandings`.
+  vainqueurs + points course/sprint `_g45MotoVainqueurs` (cache DÉFINITIF
+  g45moto_win2_). Classement Moto2 : l'API répond 403 (27/09) → recalculé
+  par `_g45MotoChampCalcule` (somme des points des courses). Séance `g45MotoSession`, championnat `g45MotoStandings`.
 - Logos F1 : Simple Icons intégrés (`_G45_F1_LOGOS`, CC0) pour Ferrari, McLaren,
   Red Bull, Aston Martin, Audi, Cadillac, AMG (Mercedes). Alpine, Haas,
   Williams : fichiers `images/ecuries/{alpine,haas,williams}.svg` ou `.png`
