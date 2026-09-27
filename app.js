@@ -866,7 +866,7 @@ function ouvrirDetailMatchUS(sport, homeTeam, awayTeam, homeScore, awayScore, da
   html += '<a href="'+sofaQ+'" target="_blank" style="flex:1;display:flex;align-items:center;justify-content:center;padding:10px;background:rgba(255,107,54,.15);border:1px solid rgba(255,107,54,.3);border-radius:10px;text-decoration:none;color:#ff7b54;font-size:12px;font-weight:700;">⚡ Sofascore</a>';
   html += '<a href="'+googleQ+'" target="_blank" style="flex:1;display:flex;align-items:center;justify-content:center;padding:10px;background:rgba(77,132,255,.15);border:1px solid rgba(77,132,255,.3);border-radius:10px;text-decoration:none;color:#4d84ff;font-size:12px;font-weight:700;">🔍 Résumé</a>';
   html += '</div>';
-  html += '<a href="'+ytUrl+'" target="_blank" style="display:flex;align-items:center;justify-content:center;gap:8px;padding:10px;background:rgba(255,0,0,.15);border:1px solid rgba(255,0,0,.3);border-radius:10px;text-decoration:none;color:#ff4545;font-size:12px;font-weight:700;">▶️ Voir sur YouTube</a>';
+  html += '<a href="'+ytUrl+'" target="_blank" onclick="event.preventDefault();event.stopPropagation();g45YT(\''+String(homeTeam+' '+awayTeam+' highlights résumé').replace(/['"\\]/g,' ')+'\');return false;" style="display:flex;align-items:center;justify-content:center;gap:8px;padding:10px;background:rgba(255,0,0,.15);border:1px solid rgba(255,0,0,.3);border-radius:10px;text-decoration:none;color:#ff4545;font-size:12px;font-weight:700;">▶️ Voir le résumé vidéo</a>';
   html += '</div>';
   modal.innerHTML = html;
 }
@@ -1225,7 +1225,7 @@ function renderDetailMatch(modal, m, matchId) {
   html += '<a href="'+googleUrl+'" target="_blank" style="flex:1;display:flex;align-items:center;justify-content:center;gap:6px;padding:10px;background:rgba(77,132,255,.15);border:1px solid rgba(77,132,255,.3);border-radius:10px;text-decoration:none;color:#4d84ff;font-size:12px;font-weight:700;">🔍 Résumé</a>';
   html += '</div>';
   html += '<div style="margin-top:8px;">';
-  html += '<a href="'+ytMatchUrl+'" target="_blank" style="width:100%;display:flex;align-items:center;justify-content:center;gap:8px;padding:10px;background:rgba(255,0,0,.15);border:1px solid rgba(255,0,0,.3);border-radius:10px;text-decoration:none;color:#ff4545;font-size:12px;font-weight:700;box-sizing:border-box;">▶️ Voir les buts sur YouTube</a>';
+  html += '<a href="'+ytMatchUrl+'" target="_blank" onclick="event.preventDefault();event.stopPropagation();g45YT(\''+String(homeName+' '+awayName+' '+d2.toLocaleDateString('fr-FR',{day:'numeric',month:'long',year:'numeric'})+' buts résumé highlights').replace(/['"\\]/g,' ')+'\');return false;" style="width:100%;display:flex;align-items:center;justify-content:center;gap:8px;padding:10px;background:rgba(255,0,0,.15);border:1px solid rgba(255,0,0,.3);border-radius:10px;text-decoration:none;color:#ff4545;font-size:12px;font-weight:700;box-sizing:border-box;">▶️ Voir les buts en vidéo</a>';
 
   // Bouton stats joueurs si api-sports disponible
   if(getApiSportsKey()) {
@@ -9672,7 +9672,7 @@ function ouvrirDetailMatchUS(sport, homeTeam, awayTeam, homeScore, awayScore, da
   html += '<a href="'+sofaQ+'" target="_blank" style="flex:1;display:flex;align-items:center;justify-content:center;padding:10px;background:rgba(255,107,54,.15);border:1px solid rgba(255,107,54,.3);border-radius:10px;text-decoration:none;color:#ff7b54;font-size:12px;font-weight:700;">⚡ Sofascore</a>';
   html += '<a href="'+googleQ+'" target="_blank" style="flex:1;display:flex;align-items:center;justify-content:center;padding:10px;background:rgba(77,132,255,.15);border:1px solid rgba(77,132,255,.3);border-radius:10px;text-decoration:none;color:#4d84ff;font-size:12px;font-weight:700;">🔍 Résumé</a>';
   html += '</div>';
-  html += '<a href="'+ytUrl+'" target="_blank" style="display:flex;align-items:center;justify-content:center;gap:8px;padding:10px;background:rgba(255,0,0,.15);border:1px solid rgba(255,0,0,.3);border-radius:10px;text-decoration:none;color:#ff4545;font-size:12px;font-weight:700;">▶️ Voir sur YouTube</a>';
+  html += '<a href="'+ytUrl+'" target="_blank" onclick="event.preventDefault();event.stopPropagation();g45YT(\''+String(homeTeam+' '+awayTeam+' highlights résumé').replace(/['"\\]/g,' ')+'\');return false;" style="display:flex;align-items:center;justify-content:center;gap:8px;padding:10px;background:rgba(255,0,0,.15);border:1px solid rgba(255,0,0,.3);border-radius:10px;text-decoration:none;color:#ff4545;font-size:12px;font-weight:700;">▶️ Voir le résumé vidéo</a>';
   html += '</div>';
   modal.innerHTML = html;
 }
@@ -10019,7 +10019,7 @@ function renderDetailMatch(modal, m, matchId) {
   html += '<a href="'+googleUrl+'" target="_blank" style="flex:1;display:flex;align-items:center;justify-content:center;gap:6px;padding:10px;background:rgba(77,132,255,.15);border:1px solid rgba(77,132,255,.3);border-radius:10px;text-decoration:none;color:#4d84ff;font-size:12px;font-weight:700;">🔍 Résumé</a>';
   html += '</div>';
   html += '<div style="margin-top:8px;">';
-  html += '<a href="'+ytMatchUrl+'" target="_blank" style="width:100%;display:flex;align-items:center;justify-content:center;gap:8px;padding:10px;background:rgba(255,0,0,.15);border:1px solid rgba(255,0,0,.3);border-radius:10px;text-decoration:none;color:#ff4545;font-size:12px;font-weight:700;box-sizing:border-box;">▶️ Voir les buts sur YouTube</a>';
+  html += '<a href="'+ytMatchUrl+'" target="_blank" onclick="event.preventDefault();event.stopPropagation();g45YT(\''+String(homeName+' '+awayName+' '+d2.toLocaleDateString('fr-FR',{day:'numeric',month:'long',year:'numeric'})+' buts résumé highlights').replace(/['"\\]/g,' ')+'\');return false;" style="width:100%;display:flex;align-items:center;justify-content:center;gap:8px;padding:10px;background:rgba(255,0,0,.15);border:1px solid rgba(255,0,0,.3);border-radius:10px;text-decoration:none;color:#ff4545;font-size:12px;font-weight:700;box-sizing:border-box;">▶️ Voir les buts en vidéo</a>';
 
   // Bouton stats joueurs si api-sports disponible
   if(getApiSportsKey()) {
@@ -21321,6 +21321,9 @@ function _videoBlock(data, teamA, teamB, qExtra){
   var vid = _extractEspnVideo(data);
   var q = encodeURIComponent((teamA||'')+' '+(teamB||'')+' '+(qExtra||'résumé highlights'));
   var ytSearch = 'https://www.youtube.com/results?search_query='+q;
+  /* 27/09/2026 : chaque lien ouvre le LECTEUR INTÉGRÉ (g45YT), sans quitter l'app. */
+  var qTxt = String((teamA||'')+' '+(teamB||'')+' '+(qExtra||'résumé highlights')).replace(/['"\\]/g,' ');
+  var surClic = 'onclick="event.preventDefault();event.stopPropagation();g45YT(\''+qTxt+'\');return false;" ';
   var h = '<div style="background:rgba(255,0,0,.04);border:1px solid rgba(255,255,255,.06);border-radius:8px;padding:10px;margin-bottom:8px;">';
   h += '<div style="font-size:9px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;color:#ff5a5a;margin-bottom:8px;">📺 Résumé vidéo</div>';
   // Belle vignette → YouTube. Réutilisée soit en affichage principal, soit en repli caché (hidden=true).
@@ -21328,16 +21331,16 @@ function _videoBlock(data, teamA, teamB, qExtra){
     var dn = hidden ? 'display:none;' : 'display:block;';
     var attr = hidden ? 'data-vfb="1" ' : '';
     if(!vid.thumb){
-      return '<a '+attr+'href="'+ytSearch+'" target="_blank" rel="noopener" style="'+dn+'text-align:center;padding:10px;background:#ff0000;color:#fff;font-size:11px;font-weight:700;border-radius:8px;text-decoration:none;">🔎 Voir le résumé sur YouTube</a>';
+      return '<a '+attr+surClic+'href="'+ytSearch+'" target="_blank" rel="noopener" style="'+dn+'text-align:center;padding:10px;background:#ff0000;color:#fff;font-size:11px;font-weight:700;border-radius:8px;text-decoration:none;">🔎 Voir le résumé vidéo</a>';
     }
-    return '<a '+attr+'href="'+ytSearch+'" target="_blank" rel="noopener" style="'+dn+'position:relative;padding-bottom:56.25%;height:0;border-radius:8px;overflow:hidden;background-image:url('+vid.thumb+');background-size:cover;background-position:center;text-decoration:none;">'
-      +'<span style="position:absolute;left:0;right:0;bottom:0;display:flex;align-items:center;gap:5px;padding:7px 10px;background:linear-gradient(to top,rgba(0,0,0,.8),rgba(0,0,0,0));font-size:11px;font-weight:700;color:#fff;">▶ Voir le résumé sur YouTube</span>'
+    return '<a '+attr+surClic+'href="'+ytSearch+'" target="_blank" rel="noopener" style="'+dn+'position:relative;padding-bottom:56.25%;height:0;border-radius:8px;overflow:hidden;background-image:url('+vid.thumb+');background-size:cover;background-position:center;text-decoration:none;">'
+      +'<span style="position:absolute;left:0;right:0;bottom:0;display:flex;align-items:center;gap:5px;padding:7px 10px;background:linear-gradient(to top,rgba(0,0,0,.8),rgba(0,0,0,0));font-size:11px;font-weight:700;color:#fff;">▶ Voir le résumé vidéo</span>'
       +'</a>';
   }
   if(vid.type==='youtube'){
     // Lien YouTube référencé par ESPN → lecteur intégré
     h += '<div style="position:relative;padding-bottom:56.25%;height:0;border-radius:8px;overflow:hidden;"><iframe src="https://www.youtube.com/embed/'+vid.src+'?autoplay=0" style="position:absolute;top:0;left:0;width:100%;height:100%;border:0;" allow="accelerometer;encrypted-media;gyroscope;picture-in-picture" allowfullscreen></iframe></div>';
-    h += '<a href="'+ytSearch+'" target="_blank" rel="noopener" style="display:block;text-align:center;margin-top:8px;font-size:10px;color:var(--t3);text-decoration:none;">🔎 Plus de vidéos sur YouTube →</a>';
+    h += '<a '+surClic+'href="'+ytSearch+'" target="_blank" rel="noopener" style="display:block;text-align:center;margin-top:8px;font-size:10px;color:var(--t3);text-decoration:none;">🔎 Plus de vidéos sur YouTube →</a>';
   } else {
     // Clips ESPN : géo-bloqués hors USA + bloqués par la CSP du site → belle vignette qui ouvre YouTube.
     h += thumbCard(false);
