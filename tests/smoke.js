@@ -82,6 +82,13 @@ serveur.listen(0, async () => {
         o.verdict = [_g45AvPari('Victoire', true, 2, 1) === true, _g45AvPari('Over 2.5', null, 1, 0) === false,
                      _g45AvPari('Buteur', true, 2, 1) === null, _g45AvPari('Victoire', null, 2, 1) === null].every(Boolean);
       } catch (e) { o.verdict = 'erreur : ' + e.message; }
+      /* Avis IA (29/09/2026) : bloc « Accord des IA » et mise en forme d'un avis. */
+      try {
+        const av = (p) => ({ lbl: 'X', col: '#fff', txt: '🎯 PRONOSTIC : ' + p + ' — 2-1\n💎 VALEUR : BTS Oui' });
+        const acc = _g45IaAccord([av('1 (Real)'), av('1 (Real Madrid)'), av('X (nul)')]);
+        o.avisIa = /1 \(Real\)<\/b> : 2 IA/.test(acc) && /Majorité/.test(acc)
+          && /<b[^>]*>🎯 PRONOSTIC :<\/b>/.test(_g45IaTexteHtml('🎯 PRONOSTIC : 1')) && typeof _g45IaFaitsEcran === 'function';
+      } catch (e) { o.avisIa = 'erreur : ' + e.message; }
       return o;
     });
     ok('Appli chargée (state)', r.state === true);
@@ -92,6 +99,7 @@ serveur.listen(0, async () => {
     ok('Fenêtre de match (hors foot)', r.fenetre === true, r.fenetre);
     ok('Outils + santé des sources', r.outils === true && r.sante !== false, r.outils);
     ok('Règles gagné/perdu', r.verdict === true, r.verdict);
+    ok('Avis IA (accord + mise en forme)', r.avisIa === true, r.avisIa);
     /* Chart.js vient d'un CDN, simulé ici : son absence n'est pas une erreur de l'appli. */
     const vraies = erreurs.filter(m => !/Chart is not defined/.test(m));
     ok('Aucune erreur JavaScript', vraies.length === 0, vraies.slice(0, 3).join(' | '));
