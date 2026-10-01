@@ -114,6 +114,9 @@ serveur.listen(0, async () => {
               return C && C[0].r === 1 && C[0].p === '23' && C[0].fo === 'VVVVV' && J && J[0].sh === 41 && J[0].a.n === 'B'; })()
           && (function () { var D = _g45Pd2Feuille('<header-timeline :game-facts=\'[{"type":"Point","subtype":"Essai","club":"home","period":1,"minute":13,"score":[7,0],"player":{"firstName":"Yanis","lastName":"Charcosset"}}]\'></header-timeline>', '<players-ranking :ranking=\'[{"player":{"name":"V. A"},"nbPoints":"5"}]\'></players-ranking>');
               return D && D.F[0].j === 'Y. Charcosset' && D.F[0].sc[0] === 7 && D.J[0][0].pt === '5'; })()
+          && (function () { var E = _g45Pd2Equipes([{ h: { n: 'Brive' }, a: { n: 'Dax' }, sh: 24, sa: 21 }, { h: { n: 'Oyo' }, a: { n: 'Brive' }, sh: 30, sa: 10 }], 'g', 0);
+              var d = E.filter(function (e) { return e.n === 'Dax'; })[0], o = E.filter(function (e) { return e.n === 'Oyo'; })[0];
+              return d.bd === 1 && o.v12 === 1 && _g45Pd2Val(o, 'pts', 0) === 30 && _g45Pd2Val(d, 'pv', 0) === 0; })()
           && _g45LiveType('Take On') === 'Dribble'
           && (function () { var e = function (c, s) { return { club: { code: c, name: c }, score: s, partials: {} }; };
               var g = [{ gameCode: 1, round: 1, phaseType: { code: 'RS' }, played: true, utcDate: '2026-10-01T18:00:00Z', local: e('A', 80), road: e('B', 70) }].map(_g45ElCompact);
