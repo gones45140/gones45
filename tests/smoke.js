@@ -106,6 +106,8 @@ serveur.listen(0, async () => {
           && /Balle 1/.test(_g45LiveMlbHtml({ header: { competitions: [{ status: { type: { state: 'in', shortDetail: 'Bot 6th' } }, competitors: [] }] }, situation: { balls: 1, strikes: 0, outs: 0, lastPlay: { id: 'z' } }, plays: [{ id: 'z', text: 'Pitch 1 : Ball 1' }] }))
           && _g45RadDevine({}, 'G') === 'gk' && _g45RadDevine({ saves: 3 }, '') === 'gk' && _g45RadDevine({}, 'CB') === 'def'
           && (function () { var v = _g45RadVals({ minutes: 360, appearances: 4, saves: 13, goalsConceded: 2, cleanSheet: 2, passPct: 0.89 }, 'gk'); return Math.round(v[1]) === 87 && v[2] === 0.5 && v[3] === 50 && !/NaN/.test(_g45RadSvg('gk', v, null)); })()
+          && _g45T14Slug('Stade Toulousain') === 'toulouse' && _g45T14Slug('RC Toulon') === 'toulon' && _g45T14Slug('Racing 92') === 'racing-92' && _g45T14Slug('Leinster') === null
+          && (function () { var P = _g45T14Lire('<a class="player-block"><img class="player-block__player-img" src="https://cdn.lnr.fr/j/photoFull.ab"><img class="player-block__country" alt="France" src="f.svg"><div class="player-block__name">A B</div><div class="player-block__position">Arrière</div><div class="player-block__statistics">3 matches joués 240 minutes jouées 27 points marqués</div></a>'); return P.length === 1 && P[0].m === 3 && P[0].mi === 240 && P[0].pt === 27 && P[0].pays === 'France'; })()
           && _g45LiveType('Take On') === 'Dribble'
           && (function () { var e = function (c, s) { return { club: { code: c, name: c }, score: s, partials: {} }; };
               var g = [{ gameCode: 1, round: 1, phaseType: { code: 'RS' }, played: true, utcDate: '2026-10-01T18:00:00Z', local: e('A', 80), road: e('B', 70) }].map(_g45ElCompact);
