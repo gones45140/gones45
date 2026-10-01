@@ -153,6 +153,12 @@ serveur.listen(0, async () => {
           && G45_SPORTS.filter(function (x) { return x.key === 'baseball'; })[0].groups[0].leagues.some(function (l) { return l.slug === 'kbo'; }) && loadCompetTab._g45Kbo === true && loadCompetTab._g45Pd2 === true
           || JSON.stringify({ W: W && W.M[0], prev: W && W.prev, F: F && { ls: F.ls, b: F.bat[0], st: F.st, rec: F.rec }, C, L, E }).slice(0, 900);
         z.remove(); localStorage.removeItem('g45kbo1_cls');
+        /* 20261001v — stats Euroleague : noms, lecture des 3 réponses SONDÉES par Antoine, % */
+        const esL = _g45EsLeadersLire({ points: [{ details: { name: 'SHORTS, TJ', imageUrl: 'p.png', team: { code: 'PAM', name: 'Valencia Basket' } }, gamesPlayed: 1, average: 26 }], pir: [] });
+        const esP = _g45EsJoueursLire({ players: [{ player: { name: 'DE COLO, NANDO', team: { code: 'ASV', name: 'LDLC ASVEL' } }, pointsScored: 12.5, pir: 14 }] });
+        const esT = _g45EsEquipesLire({ teams: [{ team: { code: 'PRS', name: 'Paris Basketball' }, pointsScored: 88.5, threePointersPercentage: '38%' }] });
+        o.kbo = o.kbo === true && _g45EsNom('SHORTS, TJ') === 'TJ Shorts' && _g45EsNom('DE COLO, NANDO') === 'Nando De Colo' && esL.points[0].n === 'TJ Shorts' && esL.points[0].x === 26 && !esL.pir
+          && esP[0].pt === 12.5 && esP[0].tc === 'ASV' && esT[0].p3 === '38%' && _g45EsAff('38%', true) === '38 %' && _g45EsAff(0.667, true) === '66,7 %' && _g45EsAff(26) === '26,0' || (o.kbo === true ? 'stats Euroleague : ' + JSON.stringify({ L: esL, P: esP, T: esT }).slice(0, 300) : o.kbo);
       } catch (e) { o.kbo = 'erreur : ' + e.message; }
       return o;
     });
@@ -166,7 +172,7 @@ serveur.listen(0, async () => {
     ok('Règles gagné/perdu', r.verdict === true, r.verdict);
     ok('Avis IA (accord + mise en forme)', r.avisIa === true, r.avisIa);
     ok('Radars (VS équipes + joueur)', r.radars === true, r.radars);
-    ok('KBO (lecture mykbostats + classement)', r.kbo === true, r.kbo);
+    ok('KBO + stats Euroleague', r.kbo === true, r.kbo);
     /* Chart.js vient d'un CDN, simulé ici : son absence n'est pas une erreur de l'appli. */
     const vraies = erreurs.filter(m => !/Chart is not defined/.test(m));
     ok('Aucune erreur JavaScript', vraies.length === 0, vraies.slice(0, 3).join(' | '));
