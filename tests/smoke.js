@@ -147,6 +147,8 @@ serveur.listen(0, async () => {
           && F && F.ls.r.length === 2 && F.ls.r[0][11] === '5' && F.bat[0].r[0].n === 'Kim Ju-won #7' && F.bat[0].r[0].v.H === '2' && F.pit[0].r[0].v.SO === '5' && F.no.length === 1 && F.st === 'Jamsil Baseball Stadium' && F.rec[0].rg === 6
           && C && C[0].n === 'KT Wiz' && C[0].w === '83' && C[0].se === '3 V' && C[0].l10 === '7 V 0 N 3 D' && /mykbostats\.com\/assets/.test(C[0].l)
           && L && L.k === 'HR' && L.r[0].x === '41' && L.r[0].eq === 'Kia Tigers' && E && E.p[0].n === 'Logan Allen' && E.p[0].po === 'SP' && E.p[0].v.ERA === '3.93' && /mykbostats\.com\/photos\/player\/950/.test(E.p[0].ph) && /Logan Allen/.test(E.p[0].n)
+          && String(_g45KboAnsLire('<select id="stats_year"><option value="2024">2024</option><option value="2026">2026</option></select>')) === '2026,2024'
+          && (function () { var P = _g45KboClsDepuisSplits([{ n: 'Kia Tigers', v: { W: '87', L: '55', D: '2', 'W%': '.613' } }, { n: 'Samsung Lions', v: { W: '78', L: '64', D: '2' } }], C); return P[0].n === 'Kia Tigers' && P[1].gb === '9.0' && P[1].pct === '.549'; })()
           && /KT Wiz/.test(z.innerHTML) && /83/.test(z.innerHTML) && !/NaN|undefined/.test(z.innerHTML)
           && G45_SPORTS.filter(function (x) { return x.key === 'baseball'; })[0].groups[0].leagues.some(function (l) { return l.slug === 'kbo'; }) && loadCompetTab._g45Kbo === true && loadCompetTab._g45Pd2 === true
           || JSON.stringify({ W: W && W.M[0], prev: W && W.prev, F: F && { ls: F.ls, b: F.bat[0], st: F.st, rec: F.rec }, C, L, E }).slice(0, 900);
