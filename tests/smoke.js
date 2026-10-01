@@ -153,6 +153,10 @@ serveur.listen(0, async () => {
           && G45_SPORTS.filter(function (x) { return x.key === 'baseball'; })[0].groups[0].leagues.some(function (l) { return l.slug === 'kbo'; }) && loadCompetTab._g45Kbo === true && loadCompetTab._g45Pd2 === true
           || JSON.stringify({ W: W && W.M[0], prev: W && W.prev, F: F && { ls: F.ls, b: F.bat[0], st: F.st, rec: F.rec }, C, L, E }).slice(0, 900);
         z.remove(); localStorage.removeItem('g45kbo1_cls');
+        /* 20261001y — équipes Euroleague / Pro A du mur : reconnaissance du nom + branchements du panneau Saisons */
+        if (o.kbo === true && !(_g45EbCorrespond('ASVEL', ['LDLC ASVEL Villeurbanne', 'ASVEL']) && _g45EbCorrespond('ldlc asvel', ['ASVEL', 'LDLC ASVEL'])
+          && !_g45EbCorrespond('Real Madrid', ['AS Monaco', 'Monaco']) && !_g45EbCorrespond('', ['x'])
+          && loadTeamSaisons._g45Eb === true && _g45CompetMatchs._g45Eb === true && _g45SgMatch._g45Eb === true)) o.kbo = 'équipes Euroleague / Pro A : reconnaissance ou branchement KO';
         /* 20261001v — stats Euroleague : noms, lecture des 3 réponses SONDÉES par Antoine, % */
         const esL = _g45EsLeadersLire({ points: [{ details: { name: 'SHORTS, TJ', imageUrl: 'p.png', team: { code: 'PAM', name: 'Valencia Basket' } }, gamesPlayed: 1, average: 26 }], pir: [] });
         const esP = _g45EsJoueursLire({ players: [{ player: { name: 'DE COLO, NANDO', team: { code: 'ASV', name: 'LDLC ASVEL' } }, pointsScored: 12.5, pir: 14 }] });
@@ -172,7 +176,7 @@ serveur.listen(0, async () => {
     ok('Règles gagné/perdu', r.verdict === true, r.verdict);
     ok('Avis IA (accord + mise en forme)', r.avisIa === true, r.avisIa);
     ok('Radars (VS équipes + joueur)', r.radars === true, r.radars);
-    ok('KBO + stats Euroleague', r.kbo === true, r.kbo);
+    ok('KBO + Euroleague (stats, équipes du mur)', r.kbo === true, r.kbo);
     /* Chart.js vient d'un CDN, simulé ici : son absence n'est pas une erreur de l'appli. */
     const vraies = erreurs.filter(m => !/Chart is not defined/.test(m));
     ok('Aucune erreur JavaScript', vraies.length === 0, vraies.slice(0, 3).join(' | '));
