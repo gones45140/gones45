@@ -112,6 +112,8 @@ serveur.listen(0, async () => {
           && (function () { var C = _g45Pd2Classement('<div class="ranking ranking--full"><div class="table-line table-line--ranking-fixed"> 1 </div><div class="table-line table-line--ranking-scrollable"><div>Oyonnax</div><div>23</div><div>5</div><div>5</div><div>0</div><div>0</div><div>3</div><div>205</div><div>115</div><div>+90</div><div>V V V V V</div><div>x</div></div></div>');
               var J = _g45Pd2Journee('<div class="match-calendar-line"><div class="club-line"><a class="club-line__name">A</a></div><div class="match-line__score-wrapper">41 - 26</div><div class="club-line"><a class="club-line__name">B</a></div></div>');
               return C && C[0].r === 1 && C[0].p === '23' && C[0].fo === 'VVVVV' && J && J[0].sh === 41 && J[0].a.n === 'B'; })()
+          && (function () { var D = _g45Pd2Feuille('<header-timeline :game-facts=\'[{"type":"Point","subtype":"Essai","club":"home","period":1,"minute":13,"score":[7,0],"player":{"firstName":"Yanis","lastName":"Charcosset"}}]\'></header-timeline>', '<players-ranking :ranking=\'[{"player":{"name":"V. A"},"nbPoints":"5"}]\'></players-ranking>');
+              return D && D.F[0].j === 'Y. Charcosset' && D.F[0].sc[0] === 7 && D.J[0][0].pt === '5'; })()
           && _g45LiveType('Take On') === 'Dribble'
           && (function () { var e = function (c, s) { return { club: { code: c, name: c }, score: s, partials: {} }; };
               var g = [{ gameCode: 1, round: 1, phaseType: { code: 'RS' }, played: true, utcDate: '2026-10-01T18:00:00Z', local: e('A', 80), road: e('B', 70) }].map(_g45ElCompact);
