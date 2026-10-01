@@ -127,6 +127,31 @@ serveur.listen(0, async () => {
           && (function () { var c = _g45ChCanvas([{ x: 38, y: 80 }, { x: 38, y: 80 }]); if (!c) return false; var px = c.getContext('2d').getImageData(120, 41, 1, 1).data; return px[0] > 230 && px[1] < 120; })()
           && /59,4 %/.test(_g45WpBloc({ header: { competitions: [{ status: { type: { state: 'post' } } }] }, winprobability: [{ homeWinPercentage: 0.5, playId: 'a' }, { homeWinPercentage: 0.594, playId: 'b' }] }, 'sm', 'A', 'B', 'baseball', 'mlb'));
       } catch (e) { o.radars = 'erreur : ' + e.message; }
+      /* 20261001s — KBO (mykbostats) : lecture des pages (formes SONDÉES par Antoine) + rendu du classement. */
+      try {
+        const W = _g45KboSemaine('<section class="ds-schedule-day"><a id="game-line-1" href="/games/1-NC-vs-Doosan-20260930" data-game-datetime="2026-09-30T09:30:00Z"><div><div><div><img src="/assets/images/team-logos-alt/nc.png"><span>NC<span> Dinos</span></span><span>5</span></div><div><img src="/assets/images/team-logos-alt/doosan.png"><span>Doosan<span> Bears</span></span><span>6</span></div></div><div><div><span>Final</span></div></div></div></a></section><a href="/schedule/week_of/2026-09-22">p</a><a href="/schedule/week_of/2026-10-06">n</a>');
+        const sb = ['', '1', '2', '3', '4', '5', '6', '7', '8', '9', '', 'R', 'H', 'E', 'B'].map(x => '<div class="header">' + x + '</div>').join('')
+          + '<div class="team">NC Dinos</div>' + ['0', '0', '0', '0', '3', '0', '0', '1', '1', '', '5', '15', '1', '3'].map(x => '<div>' + x + '</div>').join('')
+          + '<div class="team">Doosan Bears</div>' + ['0', '1', '0', '0', '0', '2', '0', '0', '3', '', '6', '9', '0', '2'].map(x => '<div>' + x + '</div>').join('');
+        const F = _g45KboFeuille('<p>September 30, 2026 6:30pm · Jamsil Baseball Stadium</p><span>62–72–2 · 6th</span><div class="scoreboard">' + sb + '</div>'
+          + '<table><tr><th></th><th>NC</th><th>Pos</th><th>BA</th><th>AB</th><th>R</th><th>H</th><th>HR</th><th>RBI</th><th>BB</th><th>SO</th><th>HBP</th></tr><tr><td>1</td><td>Kim Ju-won #7</td><td>SS</td><td>.288</td><td>4</td><td>0</td><td>2</td><td>0</td><td>1</td><td>0</td><td>1</td><td>0</td></tr></table>'
+          + '<table><tr><th>NC</th><th>ERA</th><th>IP</th><th>NP</th><th>R</th><th>ER</th><th>H</th><th>HR</th><th>SO</th><th>BB</th><th>HB</th><th>GS</th></tr><tr><td>Thompson #3</td><td>3.00</td><td>6</td><td>98</td><td>2</td><td>2</td><td>7</td><td>1</td><td>5</td><td>2</td><td>0</td><td>53</td></tr></table>'
+          + '<table><tr><td>Deciding Hit</td><td>Kang Seung-ho (9th inning)</td></tr></table>');
+        const C = _g45KboClassement('<table><tr><th>Rank / Team</th><th>W</th><th>L</th><th>D</th><th>PCT</th><th>GB</th><th>STRK</th><th>L10</th></tr><tr><td>1</td><td><a href="/teams/22-KT-Wiz"><img src="/assets/images/team-logos-alt/kt.png">KT<span>Wiz</span></a></td><td>83</td><td>49</td><td>4</td><td>.629</td><td>0.0</td><td>3W</td><td>7W 0D 3L</td></tr></table>');
+        const L = _g45KboLeaders('<table><tr><th>Rank / Player</th><th>Team</th><th>HR</th><th>HR/G</th></tr><tr><td>1</td><td>Kim Do-yeong</td><td>Kia Tigers</td><td>41</td><td>0.33</td></tr></table>');
+        const E = _g45KboEquipe('<table><tr><th>Pitchers</th><th>ERA</th><th>WHIP</th><th>IP</th><th>SO</th><th>BB</th><th>K/BB</th><th>Age / DOB</th></tr><tr><td>Logan Allen #43 · SP · LHP</td><td>3.93</td><td>1.46</td><td>84 ⅔</td><td>69</td><td>27</td><td>0.39</td><td>29</td><td>1997-05-23</td></tr></table>');
+        localStorage.setItem('g45kbo1_cls', JSON.stringify({ d: C, x: Date.now() + 6e5 }));
+        const z = document.createElement('div'); document.body.appendChild(z);
+        _g45Kbo.vue = 'c'; await _g45KboRendre(z);
+        o.kbo = W && W.M.length === 1 && W.M[0].a.n === 'NC Dinos' && W.M[0].h.s === 6 && _g45KboEtat(W.M[0]) === 'fin' && W.prev === '/schedule/week_of/2026-09-22' && W.next === '/schedule/week_of/2026-10-06'
+          && F && F.ls.r.length === 2 && F.ls.r[0][11] === '5' && F.bat[0].r[0].n === 'Kim Ju-won #7' && F.bat[0].r[0].v.H === '2' && F.pit[0].r[0].v.SO === '5' && F.no.length === 1 && F.st === 'Jamsil Baseball Stadium' && F.rec[0].rg === 6
+          && C && C[0].n === 'KT Wiz' && C[0].w === '83' && C[0].se === '3 V' && C[0].l10 === '7 V 0 N 3 D' && /mykbostats\.com\/assets/.test(C[0].l)
+          && L && L.k === 'HR' && L.r[0].x === '41' && L.r[0].eq === 'Kia Tigers' && E && E.p[0].n === 'Logan Allen' && E.p[0].po === 'SP' && E.p[0].v.ERA === '3.93'
+          && /KT Wiz/.test(z.innerHTML) && /83/.test(z.innerHTML) && !/NaN|undefined/.test(z.innerHTML)
+          && G45_SPORTS.filter(function (x) { return x.key === 'baseball'; })[0].groups[0].leagues.some(function (l) { return l.slug === 'kbo'; }) && loadCompetTab._g45Kbo === true && loadCompetTab._g45Pd2 === true
+          || JSON.stringify({ W: W && W.M[0], prev: W && W.prev, F: F && { ls: F.ls, b: F.bat[0], st: F.st, rec: F.rec }, C, L, E }).slice(0, 900);
+        z.remove(); localStorage.removeItem('g45kbo1_cls');
+      } catch (e) { o.kbo = 'erreur : ' + e.message; }
       return o;
     });
     ok('Appli chargée (state)', r.state === true);
@@ -139,6 +164,7 @@ serveur.listen(0, async () => {
     ok('Règles gagné/perdu', r.verdict === true, r.verdict);
     ok('Avis IA (accord + mise en forme)', r.avisIa === true, r.avisIa);
     ok('Radars (VS équipes + joueur)', r.radars === true, r.radars);
+    ok('KBO (lecture mykbostats + classement)', r.kbo === true, r.kbo);
     /* Chart.js vient d'un CDN, simulé ici : son absence n'est pas une erreur de l'appli. */
     const vraies = erreurs.filter(m => !/Chart is not defined/.test(m));
     ok('Aucune erreur JavaScript', vraies.length === 0, vraies.slice(0, 3).join(' | '));
