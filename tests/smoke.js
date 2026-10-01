@@ -156,6 +156,9 @@ serveur.listen(0, async () => {
         /* 20261001y — équipes Euroleague / Pro A du mur : reconnaissance du nom + branchements du panneau Saisons */
         if (o.kbo === true && !(_g45EbCorrespond('ASVEL', ['LDLC ASVEL Villeurbanne', 'ASVEL']) && _g45EbCorrespond('ldlc asvel', ['ASVEL', 'LDLC ASVEL'])
           && !_g45EbCorrespond('Real Madrid', ['AS Monaco', 'Monaco']) && !_g45EbCorrespond('', ['x'])
+          && (function () { var F = _g45ElFeuilleLire({ local: { coach: { name: 'POUPET, PIERRE' }, players: [{ player: { person: { name: 'DE COLO, NANDO' } }, stats: { timePlayed: 1500, points: 14, startFive: true, fieldGoalsMade3: 2, fieldGoalsAttempted3: 5 } }], total: {} }, road: { players: [], total: { points: 70 } } });
+              return F && F.h.P[0].n === 'Nando De Colo' && F.h.P[0].mi === 25 && F.h.P[0].d5 && F.h.T.m3 === 2 && F.h.T.a3 === 5 && F.h.co === 'Pierre Poupet'; })()
+          && typeof g45ElFiche === 'function'
           && loadTeamSaisons._g45Eb === true && _g45CompetMatchs._g45Eb === true && _g45SgMatch._g45Eb === true)) o.kbo = 'équipes Euroleague / Pro A : reconnaissance ou branchement KO';
         /* 20261001v — stats Euroleague : noms, lecture des 3 réponses SONDÉES par Antoine, % */
         const esL = _g45EsLeadersLire({ points: [{ details: { name: 'SHORTS, TJ', imageUrl: 'p.png', team: { code: 'PAM', name: 'Valencia Basket' } }, gamesPlayed: 1, average: 26 }], pir: [] });
