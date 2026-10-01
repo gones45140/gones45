@@ -166,6 +166,25 @@ serveur.listen(0, async () => {
         const esT = _g45EsEquipesLire({ teams: [{ team: { code: 'PRS', name: 'Paris Basketball' }, pointsScored: 88.5, threePointersPercentage: '38%' }] });
         o.kbo = o.kbo === true && _g45EsNom('SHORTS, TJ') === 'TJ Shorts' && _g45EsNom('DE COLO, NANDO') === 'Nando De Colo' && esL.points[0].n === 'TJ Shorts' && esL.points[0].x === 26 && !esL.pir
           && esP[0].pt === 12.5 && esP[0].tc === 'ASV' && esT[0].p3 === '38%' && _g45EsAff('38%', true) === '38 %' && _g45EsAff(0.667, true) === '66,7 %' && _g45EsAff(26) === '26,0' || (o.kbo === true ? 'stats Euroleague : ' + JSON.stringify({ L: esL, P: esP, T: esT }).slice(0, 300) : o.kbo);
+        /* 20261002k — onglet 👥 Équipes Euroleague : liste, fiche (Résultats / Stats), pastilles */
+        if (o.kbo === true) {
+          const eq = function (c, n, s) { return { c: c, n: n, l: 'x.png', s: s, q: [], ot: [] }; };
+          const gE = [{ id: 1, r: 1, ph: 'RS', t: 1, p: true, h: eq('ASV', 'ASVEL', 80), a: eq('PAM', 'Valencia', 75), ar: [] },
+                      { id: 2, r: 2, ph: 'RS', t: 2, p: true, h: eq('MAD', 'Real', 90), a: eq('ASV', 'ASVEL', 70), ar: [] },
+                      { id: 3, r: 3, ph: 'RS', t: Date.now() + 864e5, p: false, h: eq('ASV', 'ASVEL'), a: eq('MAD', 'Real'), ar: [] }];
+          const zE = document.createElement('div'); document.body.appendChild(zE);
+          _g45ElClub = ''; _g45ElEquipesRendre(zE, gE, 2026);
+          const lst = zE.innerHTML;
+          _g45ElClub = 'ASV'; _g45ElClubVue = 'r'; _g45ElEquipesRendre(zE, gE, 2026);
+          const res = zE.innerHTML;
+          _g45ElClubVue = 's'; _g45ElEquipesRendre(zE, gE, 2026);
+          const sta = zE.innerHTML;
+          _g45ElClub = ''; _g45ElClubVue = 'r'; zE.remove();
+          o.kbo = (/ASVEL/.test(lst) && /Real/.test(lst) && /Valencia/.test(lst) && /2e · 1V 1D|1er · 1V 0D/.test(lst) && /g45SuiviEqToggle/.test(lst)
+            && /À venir/.test(res) && /V 80–75/.test(res) && /D 70–90/.test(res)
+            && /1 V · 1 D/.test(sta) && /5 derniers/.test(sta) && !/NaN|undefined/.test(lst + res + sta)
+            && /rgba\(255,255,255,\.85\)/.test(_g45ElLogo({ l: 'x.png' }, 24))) || ('équipes Euroleague : ' + (lst + ' || ' + res + ' || ' + sta).slice(0, 600));
+        }
       } catch (e) { o.kbo = 'erreur : ' + e.message; }
       return o;
     });
