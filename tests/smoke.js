@@ -197,8 +197,16 @@ serveur.listen(0, async () => {
         const vis = () => [...document.querySelectorAll('.g45-murcard')].filter(c => c.style.display !== 'none').map(c => c.dataset.nom);
         const v0 = vis().length, txt = (document.getElementById('g45-acc-zone') || {}).innerText || '';
         g45AccChoisir('⚽'); const vf = vis(); g45AccChoisir('🏉🇦🇺'); const vn = vis(); g45AccChoisir('');
-        o.accueil = (nbT === 4 && v0 === 0 && vf.join() === 'Paris Saint-Germain,Lyon' && vn.join() === 'Penrith Panthers'
+        o.accueil = (nbT === 13 && v0 === 0 && vf.join() === 'Paris Saint-Germain,Lyon' && vn.join() === 'Penrith Panthers'
           && /\+10,00 €/.test(txt) && /-1,00 €/.test(txt) && !!document.getElementById('g45-acc-auj')) || JSON.stringify({ nbT, v0, vf, vn, txt: txt.slice(0, 200) });
+        /* tuile sans équipe : sport individuel → Résultats, sport d'équipe → Compétitions */
+        if (o.accueil === true) {
+          window.g45F1Open = function () { window._tF1 = 1; }; window.g45CompetSport = function (k) { window._tCp = k; };
+          g45AccChoisir('🏎'); const f1 = window._tF1 === 1 && document.getElementById('t-resultats').style.display === 'block';
+          g45AccChoisir('🏀'); const cp = window._tCp === 'basketball' && document.getElementById('t-compet').style.display === 'block';
+          if (!(f1 && cp)) o.accueil = 'tuiles sans équipe : ' + JSON.stringify({ f1, cp });
+          showTab('t-dash', null);
+        }
         state.u = sU; state.a = sA; try { render(); } catch (e) {}
       } catch (e) { o.accueil = 'erreur : ' + e.message; }
       return o;
