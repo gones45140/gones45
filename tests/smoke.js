@@ -186,6 +186,21 @@ serveur.listen(0, async () => {
             && /rgba\(255,255,255,\.85\)/.test(_g45ElLogo({ l: 'x.png' }, 24))) || ('équipes Euroleague : ' + (lst + ' || ' + res + ' || ' + sta).slice(0, 600));
         }
       } catch (e) { o.kbo = 'erreur : ' + e.message; }
+      /* 20261002l — accueil par sport : tuiles, filtre, NRL séparée du rugby */
+      try {
+        const sU = state.u, sA = state.a;
+        state.u = [{ n: 'Paris Saint-Germain', sport: '⚽' }, { n: 'Lyon', sport: '⚽' }, { n: 'HC Sotchi', sport: '🏒' }, { n: 'Stade Toulousain', sport: '🏉' }, { n: 'Penrith Panthers', sport: '🏉🇦🇺' }];
+        state.a = [{ n: 'Paris Saint-Germain', win: true, m: 10, cote: 2 }, { n: 'HC Sotchi', win: false, m: 1, cote: 2 }];
+        window.Chart = window.Chart || function () { return { destroy() {}, update() {}, data: { datasets: [] }, options: {} }; };
+        g45AccChoisir(''); try { render(); } catch (e) {} _g45AccRegrouper();
+        const nbT = document.querySelectorAll('#g45-acc-zone [data-k]').length;
+        const vis = () => [...document.querySelectorAll('.g45-murcard')].filter(c => c.style.display !== 'none').map(c => c.dataset.nom);
+        const v0 = vis().length, txt = (document.getElementById('g45-acc-zone') || {}).innerText || '';
+        g45AccChoisir('⚽'); const vf = vis(); g45AccChoisir('🏉🇦🇺'); const vn = vis(); g45AccChoisir('');
+        o.accueil = (nbT === 4 && v0 === 0 && vf.join() === 'Paris Saint-Germain,Lyon' && vn.join() === 'Penrith Panthers'
+          && /\+10,00 €/.test(txt) && /-1,00 €/.test(txt) && !!document.getElementById('g45-acc-auj')) || JSON.stringify({ nbT, v0, vf, vn, txt: txt.slice(0, 200) });
+        state.u = sU; state.a = sA; try { render(); } catch (e) {}
+      } catch (e) { o.accueil = 'erreur : ' + e.message; }
       return o;
     });
     ok('Appli chargée (state)', r.state === true);
@@ -199,6 +214,7 @@ serveur.listen(0, async () => {
     ok('Avis IA (accord + mise en forme)', r.avisIa === true, r.avisIa);
     ok('Radars (VS équipes + joueur)', r.radars === true, r.radars);
     ok('KBO + Euroleague (stats, équipes du mur)', r.kbo === true, r.kbo);
+    ok('Accueil par sport (tuiles + filtre)', r.accueil === true, r.accueil);
     /* Chart.js vient d'un CDN, simulé ici : son absence n'est pas une erreur de l'appli. */
     const vraies = erreurs.filter(m => !/Chart is not defined/.test(m));
     ok('Aucune erreur JavaScript', vraies.length === 0, vraies.slice(0, 3).join(' | '));
