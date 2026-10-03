@@ -174,7 +174,7 @@ serveur.listen(0, async () => {
           const bm = _g45BbMatchsLire(_g45BbFlight(ht)).map(_g45BbCompact)[0];
           const bt = _g45BbTableEquipes('<table><thead><tr><th>Team</th><th>Games</th><th>ORtgOffensive Rating</th><th>DRtg</th><th>NRtg</th><th>PTSPoints</th><th>M</th><th>A</th><th>%</th></tr></thead><tbody><tr><td><img alt="Saint-Quentin" src="/_next/image?url=https%3A%2F%2Fcdn.bebasket.fr%2Fx.jpg&w=32"></td><td>1</td><td>120.3</td><td>116.9</td><td>3.4</td><td>106.0</td><td>24</td><td>48</td><td>50.0%</td></tr></tbody></table>');
           o.kbo = bm && bm.h.n === 'Roanne' && bm.h.s === 93 && bm.a.c === 'JSF' && bm.p && bm.r === 2 && bt && bt[0].n === 'Saint-Quentin' && bt[0].or === 120.3 && bt[0].p2 === 50 && bt[0].l === 'https://cdn.bebasket.fr/x.jpg'
-            && _g45ProaMatchs._g45Bb === true && _g45PsHtml === _g45BbStatsHtml && _g45ProaCachee() === false || 'Pro A be-basketball : ' + JSON.stringify({ bm, bt }).slice(0, 300);
+            && _g45ProaMatchs._g45Bb === true && _g45PsHtml === _g45BbStatsHtml && (_g45BbLeadersLire('{"leaders":[{"games":2,"total":40,"average":20,"rank":1,"player":{"firstname":"A","lastname":"B","image":{"src":"x"}}}]}') || [])[0].n === 'A B' && /data-g45bbph/.test(_g45BbAvatar('Zz Inconnu', 40)) && _g45ProaCachee() === false || 'Pro A be-basketball : ' + JSON.stringify({ bm, bt }).slice(0, 300);
         }
         /* 20261002k — onglet 👥 Équipes Euroleague : liste, fiche (Résultats / Stats), pastilles */
         if (o.kbo === true) {
