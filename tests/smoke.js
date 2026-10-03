@@ -166,6 +166,16 @@ serveur.listen(0, async () => {
         const esT = _g45EsEquipesLire({ teams: [{ team: { code: 'PRS', name: 'Paris Basketball' }, pointsScored: 88.5, threePointersPercentage: '38%' }] });
         o.kbo = o.kbo === true && _g45EsNom('SHORTS, TJ') === 'TJ Shorts' && _g45EsNom('DE COLO, NANDO') === 'Nando De Colo' && esL.points[0].n === 'TJ Shorts' && esL.points[0].x === 26 && !esL.pir
           && esP[0].pt === 12.5 && esP[0].tc === 'ASV' && esT[0].p3 === '38%' && _g45EsAff('38%', true) === '38 %' && _g45EsAff(0.667, true) === '66,7 %' && _g45EsAff(26) === '26,0' || (o.kbo === true ? 'stats Euroleague : ' + JSON.stringify({ L: esL, P: esP, T: esT }).slice(0, 300) : o.kbo);
+        /* 20261003r — Pro A via be-basketball : morceaux Next.js recollés, match lu, tableau des équipes lu, branchements */
+        if (o.kbo === true) {
+          const pay = '0:' + JSON.stringify({ x: [{ id: '01a07aba-95a3-7504-bf60-ea1b66bd2672', datetime: { atom: '2026-10-02T18:00:00+00:00' }, mode: 'regular', number: '2', marking: 'finished',
+            teams: { home: { name: 'Roanne', abbreviation: 'ROA', image: { src: 'r.jpg' } }, away: { name: 'Nanterre', abbreviation: 'JSF' } }, statTeams: { home: { points: 93 }, away: { points: 83 } } }] });
+          const ht = '<script>self.__next_f.push([1,' + JSON.stringify(pay.slice(0, 50)) + '])</script><script>self.__next_f.push([1,' + JSON.stringify(pay.slice(50)) + '])</script>';
+          const bm = _g45BbMatchsLire(_g45BbFlight(ht)).map(_g45BbCompact)[0];
+          const bt = _g45BbTableEquipes('<table><thead><tr><th>Team</th><th>Games</th><th>ORtgOffensive Rating</th><th>DRtg</th><th>NRtg</th><th>PTSPoints</th><th>M</th><th>A</th><th>%</th></tr></thead><tbody><tr><td><img alt="Saint-Quentin" src="/_next/image?url=https%3A%2F%2Fcdn.bebasket.fr%2Fx.jpg&w=32"></td><td>1</td><td>120.3</td><td>116.9</td><td>3.4</td><td>106.0</td><td>24</td><td>48</td><td>50.0%</td></tr></tbody></table>');
+          o.kbo = bm && bm.h.n === 'Roanne' && bm.h.s === 93 && bm.a.c === 'JSF' && bm.p && bm.r === 2 && bt && bt[0].n === 'Saint-Quentin' && bt[0].or === 120.3 && bt[0].p2 === 50 && bt[0].l === 'https://cdn.bebasket.fr/x.jpg'
+            && _g45ProaMatchs._g45Bb === true && _g45PsHtml === _g45BbStatsHtml && _g45ProaCachee() === false || 'Pro A be-basketball : ' + JSON.stringify({ bm, bt }).slice(0, 300);
+        }
         /* 20261002k — onglet 👥 Équipes Euroleague : liste, fiche (Résultats / Stats), pastilles */
         if (o.kbo === true) {
           const eq = function (c, n, s) { return { c: c, n: n, l: 'x.png', s: s, q: [], ot: [] }; };
