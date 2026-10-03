@@ -176,6 +176,21 @@ serveur.listen(0, async () => {
           o.kbo = bm && bm.h.n === 'Roanne' && bm.h.s === 93 && bm.a.c === 'JSF' && bm.p && bm.r === 2 && bt && bt[0].n === 'Saint-Quentin' && bt[0].or === 120.3 && bt[0].p2 === 50 && bt[0].l === 'https://cdn.bebasket.fr/x.jpg'
             && _g45ProaMatchs._g45Bb === true && _g45PsHtml === _g45BbStatsHtml && (_g45BbLeadersLire('{"leaders":[{"games":2,"total":40,"average":20,"rank":1,"player":{"firstname":"A","lastname":"B","image":{"src":"x"}}}]}') || [])[0].n === 'A B' && /data-g45bbph/.test(_g45BbAvatar('Zz Inconnu', 40)) && (function () { var F = _g45ElFeuilleLire(_g45BbStatsVersEl({ home: [{ player: { firstname: 'Carlos', lastname: 'Stewart', slug: 'cs' }, timePlayed: 1860, points: 29, isStarter: true, threePointersMade: 5, threePointersAttempted: 9, rebounds: 4 }, { player: { firstname: 'Ludjan', lastname: 'Monrazel' }, timePlayed: 0, points: 0 }], away: [{ player: { firstname: 'A', lastname: 'B' }, timePlayed: 1200, points: 10 }] })); return F.h.P.length === 1 && F.h.P[0].n === 'Carlos Stewart' && F.h.P[0].mi === 31 && F.h.P[0].d5 && F.h.T.m3 === 5 && F.a.P[0].mi === 20; })() && _g45ElMatchHtml._g45Bb === true && g45ElFiche._g45Bb === true && _g45ProaCachee() === false || 'Pro A be-basketball : ' + JSON.stringify({ bm, bt }).slice(0, 300);
         }
+        /* 20261003w — Pro A : onglet Équipes (bouton ➕ Mur) + effectif construit depuis les feuilles de match */
+        if (o.kbo === true) {
+          const aL = _g45ElLigue, aC = _g45ElClub, aV = _g45ElClubVue;
+          _g45ElLigue = 'proa';
+          const gP = [{ id: 1, u: 'u-1', r: 1, ph: 'RS', t: Date.now() - 864e5, p: true, h: { c: 'ROA', n: 'Roanne', l: '', s: 93, q: [], ot: [] }, a: { c: 'JSF', n: 'Nanterre', l: '', s: 83, q: [], ot: [] }, v: '', ar: [] }];
+          localStorage.setItem('g45bbf1_u-1', JSON.stringify({ fini: true, F: { h: { co: '', P: [{ n: 'Carlos Stewart', no: '3', d5: true, mi: 31, pt: 29, rb: 4, as: 5 }], T: {} }, a: { co: '', P: [], T: {} } } }));
+          const zb = document.createElement('div'); document.body.appendChild(zb);
+          _g45ElClub = ''; _g45ElEquipesRendre(zb, gP, 2026);
+          const liste = zb.innerHTML;
+          _g45ElClub = 'ROA'; _g45ElClubVue = 'e'; _g45ElEquipesRendre(zb, gP, 2026);
+          await new Promise(r => setTimeout(r, 300));
+          const eff = (document.getElementById('g45-el-club') || {}).innerHTML || '';
+          o.kbo = /➕ Mur/.test(liste) && /Roanne/.test(liste) && /Carlos Stewart/.test(eff) && /29/.test(eff) && !/NaN|undefined/.test(eff) || 'Pro A équipes : ' + (liste.slice(0, 150) + ' || ' + eff.slice(0, 200));
+          zb.remove(); localStorage.removeItem('g45bbf1_u-1'); _g45ElLigue = aL; _g45ElClub = aC; _g45ElClubVue = aV;
+        }
         /* 20261002k — onglet 👥 Équipes Euroleague : liste, fiche (Résultats / Stats), pastilles */
         if (o.kbo === true) {
           const eq = function (c, n, s) { return { c: c, n: n, l: 'x.png', s: s, q: [], ot: [] }; };
