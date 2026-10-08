@@ -211,6 +211,23 @@ serveur.listen(0, async () => {
             && /rgba\(255,255,255,\.85\)/.test(_g45ElLogo({ l: 'x.png' }, 24))) || ('équipes Euroleague : ' + (lst + ' || ' + res + ' || ' + sta).slice(0, 600));
         }
       } catch (e) { o.kbo = 'erreur : ' + e.message; }
+      /* 20261006y — NHL avant le match : joueurs disponibles, tri par buts, absents */
+      try {
+        const pbp = { homeTeam: { id: 2, abbrev: 'NYI', commonName: { default: 'Islanders' } }, awayTeam: { id: 16, abbrev: 'CHI', commonName: { default: 'Blackhawks' } },
+          rosterSpots: [{ teamId: 16, playerId: 1, firstName: { default: 'Anton' }, lastName: { default: 'Frondell' }, sweaterNumber: 16, positionCode: 'C' },
+            { teamId: 16, playerId: 2, firstName: { default: 'Teuvo' }, lastName: { default: 'Teravainen' }, sweaterNumber: 86, positionCode: 'C' },
+            { teamId: 16, playerId: 3, firstName: { default: 'Spencer' }, lastName: { default: 'Knight' }, sweaterNumber: 30, positionCode: 'G' },
+            { teamId: 2, playerId: 4, firstName: { default: 'Bo' }, lastName: { default: 'Horvat' }, sweaterNumber: 14, positionCode: 'C' }] };
+        const land = { matchup: { skaterSeasonStats: { skaters: [{ playerId: 1, teamId: 16, goals: 1, assists: 3, points: 4, gamesPlayed: 4 },
+            { playerId: 2, teamId: 16, goals: 0, assists: 2, points: 2, gamesPlayed: 3 }, { playerId: 9, teamId: 16, name: { default: 'C. Bedard' } }] },
+          goalieSeasonStats: { goalies: [{ playerId: 3, teamId: 16, gamesPlayed: 3, wins: 1, losses: 2, otLosses: 0, savePctg: 0.89011 }] } } };
+        const T = _g45NhlAvLire(pbp, land);
+        _g45NhlAv.SMK = { T, sel: 1, t: Date.now() };
+        const hv = _g45NhlAvInterieur('SMK');
+        o.nhlAv = (T[1].F[0].nom === 'Frondell' && T[1].abs[0].nom === 'C. Bedard' && /1-2 · 89,0 %/.test(hv) && /1B · 3A/.test(hv)
+          && /Absents \(1\)/.test(hv) && !/NaN|undefined/.test(hv)) || hv.slice(0, 400);
+        delete _g45NhlAv.SMK;
+      } catch (e) { o.nhlAv = 'erreur : ' + e.message; }
       /* 20261002l — accueil par sport : tuiles, filtre, NRL séparée du rugby */
       try {
         const sU = state.u, sA = state.a;
@@ -248,6 +265,7 @@ serveur.listen(0, async () => {
     ok('Radars (VS équipes + joueur)', r.radars === true, r.radars);
     ok('KBO + Euroleague (stats, équipes du mur)', r.kbo === true, r.kbo);
     ok('Accueil par sport (tuiles + filtre)', r.accueil === true, r.accueil);
+    ok('NHL avant le match (joueurs + absents)', r.nhlAv === true, r.nhlAv);
     /* Chart.js vient d'un CDN, simulé ici : son absence n'est pas une erreur de l'appli. */
     const vraies = erreurs.filter(m => !/Chart is not defined/.test(m));
     ok('Aucune erreur JavaScript', vraies.length === 0, vraies.slice(0, 3).join(' | '));
