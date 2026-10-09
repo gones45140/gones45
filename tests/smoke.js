@@ -226,6 +226,11 @@ serveur.listen(0, async () => {
         const hv = _g45NhlAvInterieur('SMK');
         o.nhlAv = (T[1].F[0].nom === 'Frondell' && T[1].abs[0].nom === 'C. Bedard' && /1-2 · 89,0 %/.test(hv) && /1B · 3A/.test(hv)
           && /Absents \(1\)/.test(hv) && !/NaN|undefined/.test(hv)) || hv.slice(0, 400);
+        /* 20261006z — lignes probables : 2 défenseurs ensemble = 1 paire, 3 attaquants ensemble = 1 ligne */
+        const shf = [1, 2, 3, 4, 5].map(id => ({ playerId: id, teamId: 7, period: 1, startTime: '00:00', endTime: '00:45', duration: '00:45', lastName: 'J' + id }));
+        const Rk = { 1: { positionCode: 'D' }, 2: { positionCode: 'D' }, 3: { positionCode: 'L' }, 4: { positionCode: 'C' }, 5: { positionCode: 'R' } };
+        const Lg = _g45NhlAvLignes(shf, 7, Rk, {});
+        if (o.nhlAv === true && !(Lg && Lg.D.length === 1 && Lg.F.length === 1 && Lg.F[0].ids.join() === '3,4,5')) o.nhlAv = 'lignes : ' + JSON.stringify(Lg && { D: Lg.D, F: Lg.F });
         delete _g45NhlAv.SMK;
       } catch (e) { o.nhlAv = 'erreur : ' + e.message; }
       /* 20261002l — accueil par sport : tuiles, filtre, NRL séparée du rugby */
@@ -265,7 +270,7 @@ serveur.listen(0, async () => {
     ok('Radars (VS équipes + joueur)', r.radars === true, r.radars);
     ok('KBO + Euroleague (stats, équipes du mur)', r.kbo === true, r.kbo);
     ok('Accueil par sport (tuiles + filtre)', r.accueil === true, r.accueil);
-    ok('NHL avant le match (joueurs + absents)', r.nhlAv === true, r.nhlAv);
+    ok('NHL avant le match (joueurs + absents + lignes)', r.nhlAv === true, r.nhlAv);
     /* Chart.js vient d'un CDN, simulé ici : son absence n'est pas une erreur de l'appli. */
     const vraies = erreurs.filter(m => !/Chart is not defined/.test(m));
     ok('Aucune erreur JavaScript', vraies.length === 0, vraies.slice(0, 3).join(' | '));
