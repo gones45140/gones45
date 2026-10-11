@@ -233,6 +233,15 @@ serveur.listen(0, async () => {
         if (o.nhlAv === true && !(Lg && Lg.D.length === 1 && Lg.F.length === 1 && Lg.F[0].ids.join() === '3,4,5')) o.nhlAv = 'lignes : ' + JSON.stringify(Lg && { D: Lg.D, F: Lg.F });
         delete _g45NhlAv.SMK;
       } catch (e) { o.nhlAv = 'erreur : ' + e.message; }
+      /* 20261008u : assistant du Bilan — faits calculés (profit, ROI, groupes) et volet posé sous la barre des filtres. */
+      try {
+        const L = [{ n: 'PSG', sport: '⚽', type: 'Victoire', cote: 1.5, m: 20, win: true, date: '2026-10-05', domicile: 'dom', b: 'x' },
+          { n: 'PSG', sport: '⚽', type: 'Over 2.5', cote: 1.8, m: 10, win: false, date: '2026-10-02', domicile: 'ext', b: 'x' },
+          { n: 'Avalanche', sport: '🏒', type: 'Vainqueur', cote: 2, m: 10, win: true, isFreebet: true, date: '2026-09-20', b: 'x' }];
+        const F = _g45BilIaFaits(L);
+        o.bilIa = /TOTAL \(paris réglés\) : 3 paris, 2 gagnés \(67 %\), profit \+10\.00 €, ROI 33\.3 %/.test(F) && /- over : 1 paris/.test(F) && /- domicile : 1 paris/.test(F)
+          && typeof g45BilIaEnvoyer === 'function' && typeof g45BilIaBasculer === 'function' ? true : F.slice(0, 200);
+      } catch (e) { o.bilIa = 'erreur : ' + e.message; }
       /* 20261002l — accueil par sport : tuiles, filtre, NRL séparée du rugby */
       try {
         const sU = state.u, sA = state.a;
@@ -271,6 +280,7 @@ serveur.listen(0, async () => {
     ok('KBO + Euroleague (stats, équipes du mur)', r.kbo === true, r.kbo);
     ok('Accueil par sport (tuiles + filtre)', r.accueil === true, r.accueil);
     ok('NHL avant le match (joueurs + absents + lignes)', r.nhlAv === true, r.nhlAv);
+    ok('Assistant du Bilan (faits calculés)', r.bilIa === true, r.bilIa);
     /* Chart.js vient d'un CDN, simulé ici : son absence n'est pas une erreur de l'appli. */
     const vraies = erreurs.filter(m => !/Chart is not defined/.test(m));
     ok('Aucune erreur JavaScript', vraies.length === 0, vraies.slice(0, 3).join(' | '));
