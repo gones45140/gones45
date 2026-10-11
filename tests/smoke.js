@@ -263,6 +263,18 @@ serveur.listen(0, async () => {
           if (!(f1 && cp)) o.accueil = 'tuiles sans équipe : ' + JSON.stringify({ f1, cp });
           showTab('t-dash', null);
         }
+        /* 20261011b — bet45 : sport sans vrai club (carte « RUGBY » seule) → « Choisis ton club » + fenêtre ; gones45 inchangé */
+        if (o.accueil === true) {
+          state.u = [{ n: 'RUGBY', sport: '🏉' }, { n: 'Lyon', sport: '⚽' }];
+          const U0 = window._g45User; window._g45User = { id: 't' };
+          try { render(); } catch (e) {} _g45AccRegrouper();
+          const tR = document.querySelector('#g45-acc-zone [data-k="🏉"]'), tF = document.querySelector('#g45-acc-zone [data-k="⚽"]');
+          const okR = tR && /Choisis ton club/.test(tR.innerText) && !tR.querySelector('img'), okF = tF && !/Choisis/.test(tF.innerText);
+          g45AccClub('🏉'); const fen = document.getElementById('g45-acc-club'); const okW = fen && /Stade Toulousain/.test(fen.innerText); if (fen) fen.remove();
+          if (U0 === undefined) delete window._g45User; else window._g45User = U0;
+          _g45AccRegrouper(); const tG = document.querySelector('#g45-acc-zone [data-k="🏉"]'), okG = tG && !/Choisis/.test(tG.innerText);
+          if (!(okR && okF && okW && okG)) o.accueil = 'choisis ton club : ' + JSON.stringify({ okR, okF, okW, okG });
+        }
         state.u = sU; state.a = sA; try { render(); } catch (e) {}
       } catch (e) { o.accueil = 'erreur : ' + e.message; }
       return o;
