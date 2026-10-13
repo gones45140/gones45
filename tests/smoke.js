@@ -256,6 +256,16 @@ serveur.listen(0, async () => {
         _G45_TR.sp = sp0; _G45_TR.res = r0; _G45_TR.res_hockey = null; _G45_TR.min = mi0;
         try { localStorage.setItem('g45suivtend1', JSON.stringify(_g45TrSuivLire().filter(x => x.id !== 'x1'))); } catch (e) {}
       } catch (e) { o.trHockey = 'erreur : ' + e.message; }
+      /* 20261013u — paris En cours en cartes */
+      try {
+        const h0 = state.h; state.h = [{ id: 'xe1', n: 'SIMPLE', target: 'A vs B', b: 'betclic', m: 10, cote: 2, isS: false, type: 'Buteur', joueur: 'Joueur X', date: '2026-10-13', heure: '21:00' },
+          { id: 'xe2', n: 'Test FC', target: 'vs C', b: 'betclic', m: 5, cote: 1.8, isS: true, type: 'Victoire', date: '2026-10-13', heure: '21:00' }];
+        render(); await new Promise(r => setTimeout(r, 300));
+        const n = document.querySelectorAll('#live-norm [data-g45ec]').length, st = document.querySelectorAll('#live-strat [data-g45ec]').length;
+        const t = document.getElementById('live-norm').textContent;
+        o.enCours = (n === 1 && st === 1 && /Joueur X/.test(t) && /Gain possible 20/.test(t) && /@2,00/.test(t) && !!document.querySelector('#live-norm button.sbtn.sw[data-id="xe1"]')) || JSON.stringify({ n, st, t: t.slice(0, 160) });
+        state.h = h0; render();
+      } catch (e) { o.enCours = 'erreur : ' + e.message; }
       o.tkBan = (!!document.querySelector('#pc-note') === !!document.querySelector('.g45-tk-ban')) || 'encadré absent';   /* 20261013t */
       /* 20261013s — Tendances : bloc « Stats et bookmakers en désaccord » + fiabilité à part */
       try {
@@ -369,6 +379,7 @@ serveur.listen(0, async () => {
     ok('Tendances NBA / NFL (lignes ESPN, handicap)', r.trUs === true, r.trUs);
     ok('Tendances : désaccord stats / bookmakers', r.trDesac === true, r.trDesac);
     ok('Pense-bête : encadré « colle ton ticket »', r.tkBan === true, r.tkBan);
+    ok('Paris En cours en cartes (simple + montante)', r.enCours === true, r.enCours);
     ok('Guide de bienvenue + pourboire', r.guide === true, r.guide);
     /* Chart.js vient d'un CDN, simulé ici : son absence n'est pas une erreur de l'appli. */
     const vraies = erreurs.filter(m => !/Chart is not defined/.test(m));
