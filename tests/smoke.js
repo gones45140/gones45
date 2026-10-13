@@ -233,6 +233,29 @@ serveur.listen(0, async () => {
         if (o.nhlAv === true && !(Lg && Lg.D.length === 1 && Lg.F.length === 1 && Lg.F[0].ids.join() === '3,4,5')) o.nhlAv = 'lignes : ' + JSON.stringify(Lg && { D: Lg.D, F: Lg.F });
         delete _g45NhlAv.SMK;
       } catch (e) { o.nhlAv = 'erreur : ' + e.message; }
+      /* 20261013i — Tendances hockey : taux par côté, marchés, onglets ⚽ / 🏒 */
+      try {
+        const ms = [{ h: '1', a: '2', hg: 4, ag: 3, t: 3, ox: 1 }, { h: '1', a: '3', hg: 2, ag: 1, t: 2, ox: 0 }, { h: '4', a: '2', hg: 1, ag: 5, t: 1, ox: 0 }];
+        const H = _g45TrHkCote(ms, '1', true, 40), A = _g45TrHkCote(ms, '2', false, 40);
+        const M = _g45TrHkBuild(H, A, 'Avalanche', 'Jets', null);
+        const v1 = M.filter(m => m.m === 'Vainqueur Avalanche')[0], o55 = M.filter(m => m.m === '+ de 5,5 buts')[0];
+        const pur = H.n === 2 && H.w === 2 && H.ot === 1 && A.l === 1 && A.o55 === 2 && Math.abs(v1.p - 0.75) < 1e-9 && Math.abs(o55.p - 0.75) < 1e-9
+          && /prolongation ou TAB à domicile lors de 1 de ses 2/.test(v1.faits.join('|'));
+        const sp0 = _G45_TR.sp, r0 = _G45_TR.res, mi0 = _G45_TR.min; _G45_TR.min = 0;
+        g45TrSport('hockey');
+        M.forEach(m => { m.n = 20; });
+        _G45_TR.res = M.map(m => ({ m, hN: 'Avalanche', aN: 'Jets', when: '02:00', slug: 'nhl', id: 'x1', deco: {}, d: new Date().toISOString() }));
+        loadTendancesTab();
+        const th = document.getElementById('t-tend').innerHTML;
+        g45TrSport('foot');
+        const tf = document.getElementById('t-tend').innerHTML;
+        const prem = _g45AccesPremium() === true;
+        o.trHockey = (pur && (!prem || (/🏒 NHL/.test(th) && /Vainqueur Avalanche/.test(th) && /g45tr-onglets/.test(th) && !/Grands championnats/.test(th)
+          && /g45tr-onglets/.test(tf) && /Grands championnats|Coupes d/.test(tf)))) || JSON.stringify({ pur, prem, a: /🏒 NHL/.test(th), b: /Vainqueur Avalanche/.test(th), c: /Grands championnats/.test(th), d: /g45tr-onglets/.test(tf), e: /Grands championnats|Coupes d/.test(tf) });
+        try { localStorage.setItem('g45tr_sp', sp0 || 'foot'); } catch (e) {}
+        _G45_TR.sp = sp0; _G45_TR.res = r0; _G45_TR.resH = null; _G45_TR.min = mi0;
+        try { localStorage.setItem('g45suivtend1', JSON.stringify(_g45TrSuivLire().filter(x => x.id !== 'x1'))); } catch (e) {}
+      } catch (e) { o.trHockey = 'erreur : ' + e.message; }
       /* 20261008u : assistant du Bilan — faits calculés (profit, ROI, groupes) et volet posé sous la barre des filtres. */
       try {
         const L = [{ n: 'PSG', sport: '⚽', type: 'Victoire', cote: 1.5, m: 20, win: true, date: '2026-10-05', domicile: 'dom', b: 'x' },
@@ -293,6 +316,7 @@ serveur.listen(0, async () => {
     ok('Accueil par sport (tuiles + filtre)', r.accueil === true, r.accueil);
     ok('NHL avant le match (joueurs + absents + lignes)', r.nhlAv === true, r.nhlAv);
     ok('Assistant du Bilan (faits calculés)', r.bilIa === true, r.bilIa);
+    ok('Tendances hockey (onglets + marchés)', r.trHockey === true, r.trHockey);
     /* Chart.js vient d'un CDN, simulé ici : son absence n'est pas une erreur de l'appli. */
     const vraies = erreurs.filter(m => !/Chart is not defined/.test(m));
     ok('Aucune erreur JavaScript', vraies.length === 0, vraies.slice(0, 3).join(' | '));
