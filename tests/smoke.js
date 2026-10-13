@@ -253,9 +253,23 @@ serveur.listen(0, async () => {
         o.trHockey = (pur && (!prem || (/🏒 NHL/.test(th) && /Vainqueur Avalanche/.test(th) && /g45tr-onglets/.test(th) && !/Grands championnats/.test(th)
           && /g45tr-onglets/.test(tf) && /Grands championnats|Coupes d/.test(tf)))) || JSON.stringify({ pur, prem, a: /🏒 NHL/.test(th), b: /Vainqueur Avalanche/.test(th), c: /Grands championnats/.test(th), d: /g45tr-onglets/.test(tf), e: /Grands championnats|Coupes d/.test(tf) });
         try { localStorage.setItem('g45tr_sp', sp0 || 'foot'); } catch (e) {}
-        _G45_TR.sp = sp0; _G45_TR.res = r0; _G45_TR.resH = null; _G45_TR.min = mi0;
+        _G45_TR.sp = sp0; _G45_TR.res = r0; _G45_TR.res_hockey = null; _G45_TR.min = mi0;
         try { localStorage.setItem('g45suivtend1', JSON.stringify(_g45TrSuivLire().filter(x => x.id !== 'x1'))); } catch (e) {}
       } catch (e) { o.trHockey = 'erreur : ' + e.message; }
+      /* 20261013j — NFL : lignes ESPN (details « JAX -3 », overUnder), marchés points / handicap, fiabilité */
+      try {
+        const ev = { competitions: [{ competitors: [{ homeAway: 'home', team: { abbreviation: 'JAX' } }, { homeAway: 'away', team: { abbreviation: 'HOU' } }],
+          odds: [{ details: 'JAX -3', overUnder: 42.5 }] }] };
+        const li = _g45TrUsLignes(ev);
+        const HL = [{ p: 30, c: 20 }, { p: 17, c: 20 }, { p: 24, c: 23 }, { p: 35, c: 10 }], AL = [{ p: 10, c: 27 }, { p: 21, c: 24 }, { p: 28, c: 24 }];
+        const M = _g45TrUsBuild(HL, AL, 'Jaguars', 'Texans', null, li);
+        const g = n => M.filter(m => m.m === n)[0];
+        const hc = g('Handicap Jaguars -3'), ov = g('+ de 42,5 points');
+        o.trUs = (li.tot === 42.5 && li.fav === 'h' && li.hc === 3 && hc && Math.abs(hc.p - (2 / 4 + 1 / 3) / 2) < 1e-9
+          && ov && Math.abs(ov.p - (3 / 4 + 2 / 3) / 2) < 1e-9 && _g45TrSuivType('Handicap Jaguars -3', 'Jaguars', 'Texans') === 'hc1:3'
+          && _g45TrSuivJuge('hc1:3', 27, 20) === true && _g45TrSuivJuge('hc1:3', 23, 20) === false && _g45TrSuivType('- de 42,5 points', 'a', 'b') === 'un42.5'
+          && _g45TrSuivJuge('un42.5', 20, 20) === true) || JSON.stringify({ li, M: M.map(m => m.m + ' ' + m.p) });
+      } catch (e) { o.trUs = 'erreur : ' + e.message; }
       /* 20261008u : assistant du Bilan — faits calculés (profit, ROI, groupes) et volet posé sous la barre des filtres. */
       try {
         const L = [{ n: 'PSG', sport: '⚽', type: 'Victoire', cote: 1.5, m: 20, win: true, date: '2026-10-05', domicile: 'dom', b: 'x' },
@@ -317,6 +331,7 @@ serveur.listen(0, async () => {
     ok('NHL avant le match (joueurs + absents + lignes)', r.nhlAv === true, r.nhlAv);
     ok('Assistant du Bilan (faits calculés)', r.bilIa === true, r.bilIa);
     ok('Tendances hockey (onglets + marchés)', r.trHockey === true, r.trHockey);
+    ok('Tendances NBA / NFL (lignes ESPN, handicap)', r.trUs === true, r.trUs);
     /* Chart.js vient d'un CDN, simulé ici : son absence n'est pas une erreur de l'appli. */
     const vraies = erreurs.filter(m => !/Chart is not defined/.test(m));
     ok('Aucune erreur JavaScript', vraies.length === 0, vraies.slice(0, 3).join(' | '));
