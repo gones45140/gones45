@@ -256,6 +256,26 @@ serveur.listen(0, async () => {
         _G45_TR.sp = sp0; _G45_TR.res = r0; _G45_TR.res_hockey = null; _G45_TR.min = mi0;
         try { localStorage.setItem('g45suivtend1', JSON.stringify(_g45TrSuivLire().filter(x => x.id !== 'x1'))); } catch (e) {}
       } catch (e) { o.trHockey = 'erreur : ' + e.message; }
+      /* 20261013s — Tendances : bloc « Stats et bookmakers en désaccord » + fiabilité à part */
+      try {
+        const sp0 = _G45_TR.sp, r0 = _G45_TR.res, mi0 = _G45_TR.min; _G45_TR.min = 0;
+        g45TrSport('foot');
+        const d0 = new Date(Date.now() - 6 * 3600e3).toISOString();
+        const mD = { m: 'Viking FK ou nul', p: 0.61, fair: 0.13, n: 20, faits: ['Viking FK invaincu'], desac: 1, gap: null, ev: null };
+        const mS = { m: 'Les deux marquent', p: 0.65, n: 20, faits: ['Galatasaray marque'], gap: null, ev: null };
+        _G45_TR.res = [{ m: mD, hN: 'Viking FK', aN: 'Bayern', when: '21:00', slug: 'uefa.champions', id: 'xd1', deco: {}, d: d0 },
+                       { m: mS, hN: 'Galatasaray', aN: 'Barcelona', when: '21:00', slug: 'uefa.champions', id: 'xd2', deco: {}, d: d0 }];
+        loadTendancesTab();
+        const t = document.getElementById('t-tend').innerHTML, prem = _g45AccesPremium() === true;
+        const iD = t.indexOf('EN DÉSACCORD'), iV = t.indexOf('Viking FK ou nul'), iG = t.indexOf('Les deux marquent');
+        const L = _g45TrSuivLire(), eD = L.filter(x => x.id === 'xd1')[0];
+        if (eD) eD.r = 1; localStorage.setItem('g45suivtend1', JSON.stringify(L));
+        const fi = _g45TrFiabHtml();
+        o.trDesac = (iD > 0 && iV > iD && iG > 0 && iG < iD && /13%/.test(t.slice(iD)) && eD && eD.d === 1 && eD.f === 0.13 && /En désaccord/.test(fi) && /1 \/ 1/.test(fi))
+          || JSON.stringify({ iD, iV, iG, eD, fi: fi.slice(0, 200) });
+        _G45_TR.sp = sp0; _G45_TR.res = r0; _G45_TR.min = mi0;
+        localStorage.setItem('g45suivtend1', JSON.stringify(_g45TrSuivLire().filter(x => !/^xd/.test(x.id))));
+      } catch (e) { o.trDesac = 'erreur : ' + e.message; }
       /* 20261013j — NFL : lignes ESPN (details « JAX -3 », overUnder), marchés points / handicap, fiabilité */
       try {
         const ev = { competitions: [{ competitors: [{ homeAway: 'home', team: { abbreviation: 'JAX' } }, { homeAway: 'away', team: { abbreviation: 'HOU' } }],
@@ -346,6 +366,7 @@ serveur.listen(0, async () => {
     ok('Assistant du Bilan (faits calculés)', r.bilIa === true, r.bilIa);
     ok('Tendances hockey (onglets + marchés)', r.trHockey === true, r.trHockey);
     ok('Tendances NBA / NFL (lignes ESPN, handicap)', r.trUs === true, r.trUs);
+    ok('Tendances : désaccord stats / bookmakers', r.trDesac === true, r.trDesac);
     ok('Guide de bienvenue + pourboire', r.guide === true, r.guide);
     /* Chart.js vient d'un CDN, simulé ici : son absence n'est pas une erreur de l'appli. */
     const vraies = erreurs.filter(m => !/Chart is not defined/.test(m));
