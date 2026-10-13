@@ -270,6 +270,20 @@ serveur.listen(0, async () => {
           && _g45TrSuivJuge('hc1:3', 27, 20) === true && _g45TrSuivJuge('hc1:3', 23, 20) === false && _g45TrSuivType('- de 42,5 points', 'a', 'b') === 'un42.5'
           && _g45TrSuivJuge('un42.5', 20, 20) === true) || JSON.stringify({ li, M: M.map(m => m.m + ' ' + m.p) });
       } catch (e) { o.trUs = 'erreur : ' + e.message; }
+      /* 20261013n — guide de bienvenue (5 écrans) + bloc pourboire sous « Mon compte » (bet45) */
+      try {
+        const U0 = window._g45User; window._g45User = { id: 't', created_at: new Date(Date.now() - 18 * 864e5).toISOString() };
+        let ok5 = true; for (let i = 0; i < 5; i++) { g45GuideOuvrir(i); const t = (document.getElementById('g45-guide') || {}).innerText || ''; if (!t || /undefined|NaN/.test(t)) ok5 = false; }
+        const fin = /Choisir mon club/.test(document.getElementById('g45-guide').innerText);
+        g45GuideFermer(); const vu = localStorage.getItem('g45_guide_vu') === '1' && !document.getElementById('g45-guide');
+        localStorage.removeItem('g45_guide_vu');
+        const c = document.createElement('div'); c.id = 'g45-bloc-compte'; document.getElementById('t-outils').appendChild(c);
+        const sa = window._g45SanteActive; window._g45SanteActive = () => false; _g45SanteActive = window._g45SanteActive;
+        _g45GuideOutilsPoser(); const g = document.getElementById('g45-bloc-guide'), gt = g ? g.innerText : '';
+        window._g45SanteActive = sa; _g45SanteActive = sa; if (g) g.remove(); c.remove();
+        if (U0 === undefined) delete window._g45User; else window._g45User = U0;
+        o.guide = (ok5 && fin && vu && /encore 12 jours/.test(gt) && /Laisser un pourboire/.test(gt) && /Comment ça marche/.test(gt)) || JSON.stringify({ ok5, fin, vu, gt: gt.slice(0, 200) });
+      } catch (e) { o.guide = 'erreur : ' + e.message; }
       /* 20261008u : assistant du Bilan — faits calculés (profit, ROI, groupes) et volet posé sous la barre des filtres. */
       try {
         const L = [{ n: 'PSG', sport: '⚽', type: 'Victoire', cote: 1.5, m: 20, win: true, date: '2026-10-05', domicile: 'dom', b: 'x' },
@@ -332,6 +346,7 @@ serveur.listen(0, async () => {
     ok('Assistant du Bilan (faits calculés)', r.bilIa === true, r.bilIa);
     ok('Tendances hockey (onglets + marchés)', r.trHockey === true, r.trHockey);
     ok('Tendances NBA / NFL (lignes ESPN, handicap)', r.trUs === true, r.trUs);
+    ok('Guide de bienvenue + pourboire', r.guide === true, r.guide);
     /* Chart.js vient d'un CDN, simulé ici : son absence n'est pas une erreur de l'appli. */
     const vraies = erreurs.filter(m => !/Chart is not defined/.test(m));
     ok('Aucune erreur JavaScript', vraies.length === 0, vraies.slice(0, 3).join(' | '));
