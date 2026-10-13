@@ -256,6 +256,7 @@ serveur.listen(0, async () => {
         _G45_TR.sp = sp0; _G45_TR.res = r0; _G45_TR.res_hockey = null; _G45_TR.min = mi0;
         try { localStorage.setItem('g45suivtend1', JSON.stringify(_g45TrSuivLire().filter(x => x.id !== 'x1'))); } catch (e) {}
       } catch (e) { o.trHockey = 'erreur : ' + e.message; }
+      o.tkBan = (!!document.querySelector('#pc-note') === !!document.querySelector('.g45-tk-ban')) || 'encadré absent';   /* 20261013t */
       /* 20261013s — Tendances : bloc « Stats et bookmakers en désaccord » + fiabilité à part */
       try {
         const sp0 = _G45_TR.sp, r0 = _G45_TR.res, mi0 = _G45_TR.min; _G45_TR.min = 0;
@@ -367,6 +368,7 @@ serveur.listen(0, async () => {
     ok('Tendances hockey (onglets + marchés)', r.trHockey === true, r.trHockey);
     ok('Tendances NBA / NFL (lignes ESPN, handicap)', r.trUs === true, r.trUs);
     ok('Tendances : désaccord stats / bookmakers', r.trDesac === true, r.trDesac);
+    ok('Pense-bête : encadré « colle ton ticket »', r.tkBan === true, r.tkBan);
     ok('Guide de bienvenue + pourboire', r.guide === true, r.guide);
     /* Chart.js vient d'un CDN, simulé ici : son absence n'est pas une erreur de l'appli. */
     const vraies = erreurs.filter(m => !/Chart is not defined/.test(m));
