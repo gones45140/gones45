@@ -366,6 +366,8 @@ serveur.listen(0, async () => {
         const L = _g45TrSuivLire(), eD = L.filter(x => x.id === 'xd1')[0];
         if (eD) eD.r = 1; localStorage.setItem('g45suivtend1', JSON.stringify(L));
         const fi = _g45TrFiabHtml();
+        /* 20261014m : cases Stats / Bookmakers sur chaque carte (pas en double dans le bloc désaccord), « pas de cote » sans cote */
+        o.trCases = ((t.match(/g45tr-cases/g) || []).length === 1 && /pas de cote/.test(t.slice(0, iD)) && !/marge retirée\) :/.test(t)) || 'cases : ' + (t.match(/g45tr-cases/g) || []).length;
         o.trDesac = (iD > 0 && iV > iD && iG > 0 && iG < iD && /13%/.test(t.slice(iD)) && eD && eD.d === 1 && eD.f === 0.13 && /En désaccord/.test(fi) && /1 \/ 1/.test(fi))
           || JSON.stringify({ iD, iV, iG, eD, fi: fi.slice(0, 200) });
         _G45_TR.sp = sp0; _G45_TR.res = r0; _G45_TR.min = mi0;
@@ -470,6 +472,7 @@ serveur.listen(0, async () => {
     ok('Saisons NFL / NBA / MLB : critères (vainqueur)', r.crn === true, r.crn);
     ok('Saisons : buts de l\'équipe / de l\'adversaire', r.cre === true, r.cre);
     ok('Saisons rugby / NRL : critères', r.crr === true, r.crr);
+    ok('Tendances : cases Stats / Bookmakers sur chaque carte', r.trCases === true, r.trCases);
     ok('Rugby : prochains matchs + coupes d\'Europe', r.rgpv === true, r.rgpv);
     ok('Prochains matchs foot : championnat même si la ligue mémorisée est la LDC', r.avl === true, r.avl);
     ok('Cockpit : bouton vidéo de la méthode', r.vidcp === true, r.vidcp);
