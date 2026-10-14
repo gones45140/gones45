@@ -286,7 +286,7 @@ serveur.listen(0, async () => {
         window._g45VidCockpitPoser();
         const bv = document.querySelector('#sub-strat > details > summary .g45-vid-cp');
         let ok = !!bv;
-        if (bv) { bv.click(); const v = document.querySelector('#g45-video video source'); ok = !!v && /bet45-montante\.mp4/.test(v.getAttribute('src')) && !document.querySelector('#sub-strat > details').open; g45VideoFermer(); }
+        if (bv) { bv.click(); const v = document.querySelector('#g45-video video source'); ok = !!v && /bet45-cockpit\.mp4/.test(v.getAttribute('src')) && !document.querySelector('#sub-strat > details').open; g45VideoFermer(); }
         o.vidcp = ok || 'bouton absent ou mauvaise vidéo';
       } catch (e) { o.vidcp = 'erreur : ' + e.message; }
       o.tkBan = (!!document.querySelector('#pc-note') === !!document.querySelector('.g45-tk-ban')) || 'encadré absent';   /* 20261013t */
