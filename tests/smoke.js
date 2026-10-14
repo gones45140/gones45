@@ -295,6 +295,18 @@ serveur.listen(0, async () => {
         o.crh = (/Total : 1\/3/.test(t1) && /Total : 2\/3/.test(t2) && /2026-27/.test(t1) && !/Les deux marquent/.test(t1)) || JSON.stringify({ t1: t1.slice(-300), t2: t2.slice(-200) });
       } catch (e) { o.crh = 'erreur : ' + e.message; }
       try {
+        /* 20261014h : NFL — vainqueur sur le score final, total de points (ligne 44.5 par défaut), saison « 2026 ». */
+        const S = window._g45Cr;
+        S.data['Club Nfl CR'] = { t: Date.now(), lg: 'nfl', ligue: 'NFL', saisons: [
+          { an: 2026, ms: [['2026-09-13', 1, 27, 20, 0], ['2026-09-20', 0, 17, 24, 0], ['2026-09-27', 1, 30, 27, 0]] },
+          { an: 2025, ms: [] }, { an: 2024, ms: [] }, { an: 2023, ms: [] } ] };
+        const z = document.createElement('div'); z.innerHTML = window._g45CrHtml('Club Nfl CR', { sp: 'football', lg: 'nfl', id: '2' }); document.body.appendChild(z);
+        const t1 = document.getElementById('g45cr').innerText;
+        window.g45CrSet('L', '50.5'); const t2 = document.getElementById('g45cr').innerText;
+        z.remove();
+        o.crn = (/Total : 2\/3/.test(t1) && /Total : 1\/3/.test(t2) && /Over 50\.5/.test(t2) && /\b2026\b/.test(t1) && !/Nul/.test(t1) && /Points du match/.test(t1)) || JSON.stringify({ t1: t1.slice(-300), t2: t2.slice(-200) });
+      } catch (e) { o.crn = 'erreur : ' + e.message; }
+      try {
         /* 20261014e : bouton vidéo de la méthode montante dans la barre du Cockpit. */
         window._g45VidCockpitPoser();
         const bv = document.querySelector('#sub-strat > details > summary .g45-vid-cp');
@@ -419,6 +431,7 @@ serveur.listen(0, async () => {
     ok('Guide de bienvenue + pourboire', r.guide === true, r.guide);
     ok('Saisons : critères sur 4 saisons', r.cr === true, r.cr);
     ok('Saisons NHL : critères (temps réglementaire)', r.crh === true, r.crh);
+    ok('Saisons NFL / NBA / MLB : critères (vainqueur)', r.crn === true, r.crn);
     ok('Cockpit : bouton vidéo de la méthode', r.vidcp === true, r.vidcp);
     /* Chart.js vient d'un CDN, simulé ici : son absence n'est pas une erreur de l'appli. */
     const vraies = erreurs.filter(m => !/Chart is not defined/.test(m));
