@@ -441,7 +441,7 @@ serveur.listen(0, async () => {
         const bq = [...document.querySelectorAll('#g45-bk-banques .g45bk')].map(c => c.textContent);
         const P = _g45BkParis('Winamax'), N = _g45BkNom('PMU LAURA');
         o.bank = (noms.length === 2 && /Betclic/i.test(noms[0]) && bq.length === 1 && /Boursorama/i.test(bq[0]) && !/Freebet/.test(bq[0])
-          && P.n === 2 && P.net === 0 && N.who === 'Laura' && _g45BkEstBanque('revolut') && !_g45BkEstBanque('winamax')) || JSON.stringify({ noms, bq, P, N });
+          && P.n === 2 && P.net === 0 && N.who === 'Laura' && _g45BkEstBanque('revolut') && !_g45BkEstBanque('winamax') && /unibet\.fr/.test(bkFavicon('unibet laura')) && /boursobank/.test(bkFavicon('boursorama antoine')) && /pinnacle\.com/.test(bkFavicon('pinnacle'))) || JSON.stringify({ noms, bq, P, N });
         state.b = b0; state.a = a0; _g45BkGrille();
       } catch (e) { o.bank = 'erreur : ' + e.message; }
       try {
