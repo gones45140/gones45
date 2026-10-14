@@ -362,7 +362,7 @@ serveur.listen(0, async () => {
         const R = _g45FusionnerEtat({ a: [{ id: 'f1', date: '2026-10-10', n: 'Lyon', cote: 2, m: 5 }, { id: 'x2', date: '2026-10-10', n: 'lyon ', cote: 2, m: 5 },
           { id: 'x3', date: '2026-09-01', n: 'PSG', cote: 1.5, m: 10, win: false }], h: [{ id: 'x4', date: '2026-10-15', n: 'OM', cote: 2, m: 2 }, { id: 'f9' }] });
         const ok = R && R.ajoutes === 1 && R.doublons === 2 && R.enCours === 1 && state.a.length === 2 && state.a[1].id === 'x3' && JSON.stringify(state.b) === b0
-          && !!document.getElementById('g45-btn-fusion');
+          && !document.getElementById('g45-btn-fusion') && typeof g45FusionnerData === 'function';
         o.fus = ok || JSON.stringify({ R, n: state.a.length, btn: !!document.getElementById('g45-btn-fusion') });
         state.a = a0; state.h = h0;
       } catch (e) { o.fus = 'erreur : ' + e.message; }
