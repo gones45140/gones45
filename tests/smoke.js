@@ -282,6 +282,19 @@ serveur.listen(0, async () => {
         o.cr = (S.combos.length === 2 && S.combos[1].ou === 'un' && S.combos[1].L === 4.5 && /Total : 2\/5/.test(t) && /2 défaites de suite/.test(t) && /3 paliers/.test(t)) || JSON.stringify({ c: S.combos, t: t.slice(-400) });
       } catch (e) { o.cr = 'erreur : ' + e.message; }
       try {
+        /* 20261014g : même bloc en NHL — victoire = temps réglementaire (prolongation / TAB = nul), vainqueur = score final. */
+        localStorage.setItem('g45_cr_open', '1'); window._statFilter = 'global';
+        const S = window._g45Cr;
+        S.data['Club Hockey CR'] = { t: Date.now(), lg: 'nhl', ligue: 'NHL', saisons: [
+          { an: 2027, ms: [['2026-10-10', 1, 4, 3, 1], ['2026-10-12', 0, 3, 1, 0], ['2026-10-14', 1, 2, 3, 2]] },
+          { an: 2026, ms: [] }, { an: 2025, ms: [] }, { an: 2024, ms: [] } ] };
+        const z = document.createElement('div'); z.innerHTML = window._g45CrHtml('Club Hockey CR', { sp: 'hockey', lg: 'nhl', id: '7' }); document.body.appendChild(z);
+        const t1 = document.getElementById('g45cr').innerText;
+        window.g45CrSet('res', 'vqr'); const t2 = document.getElementById('g45cr').innerText;
+        z.remove();
+        o.crh = (/Total : 1\/3/.test(t1) && /Total : 2\/3/.test(t2) && /2026-27/.test(t1) && !/Les deux marquent/.test(t1)) || JSON.stringify({ t1: t1.slice(-300), t2: t2.slice(-200) });
+      } catch (e) { o.crh = 'erreur : ' + e.message; }
+      try {
         /* 20261014e : bouton vidéo de la méthode montante dans la barre du Cockpit. */
         window._g45VidCockpitPoser();
         const bv = document.querySelector('#sub-strat > details > summary .g45-vid-cp');
@@ -405,6 +418,7 @@ serveur.listen(0, async () => {
     ok('Paris En cours en cartes (simple + montante)', r.enCours === true, r.enCours);
     ok('Guide de bienvenue + pourboire', r.guide === true, r.guide);
     ok('Saisons : critères sur 4 saisons', r.cr === true, r.cr);
+    ok('Saisons NHL : critères (temps réglementaire)', r.crh === true, r.crh);
     ok('Cockpit : bouton vidéo de la méthode', r.vidcp === true, r.vidcp);
     /* Chart.js vient d'un CDN, simulé ici : son absence n'est pas une erreur de l'appli. */
     const vraies = erreurs.filter(m => !/Chart is not defined/.test(m));
