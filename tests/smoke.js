@@ -375,6 +375,21 @@ serveur.listen(0, async () => {
         o.olift = (ids === 'app,look,notif,mont,eq,donnees,cles' && tab && cat === 'mont') || JSON.stringify({ ids, tab, cat });
       } catch (e) { o.olift = 'erreur : ' + e.message; }
       try {
+        /* 20261014z : mur limité à 15 sur bet45 (simulé par window._g45User), sans limite sur gones. */
+        const u0 = state.u, U0 = window._g45User;
+        state.u = Array.from({ length: 15 }, (_, i) => ({ n: 'Eq' + i, sport: '⚽' }));
+        const gonesLibre = !_g45MurPlein();
+        window._g45User = { id: 't' };
+        document.getElementById('u-name').value = 'Nouvelle';
+        addUnit();
+        const bloque = state.u.length === 15 && !!document.getElementById('g45-mur-plein');
+        const m = document.getElementById('g45-mur-plein'); if (m) m.remove();
+        state.u.pop(); addUnit();
+        const passe = state.u.length === 15 && state.u.some(u => u.n === 'Nouvelle');
+        o.mur = (gonesLibre && bloque && passe) || JSON.stringify({ gonesLibre, bloque, passe, n: state.u.length });
+        state.u = u0; if (U0 === undefined) delete window._g45User; else window._g45User = U0;
+      } catch (e) { o.mur = 'erreur : ' + e.message; }
+      try {
         /* 20261014e : bouton vidéo de la méthode montante dans la barre du Cockpit. */
         window._g45VidCockpitPoser();
         const bv = document.querySelector('#sub-strat > details > summary .g45-vid-cp');
@@ -510,6 +525,7 @@ serveur.listen(0, async () => {
     ok('Agenda : logos des 2 équipes en filigrane', r.agvs === true, r.agvs);
     ok('Fusionner une sauvegarde (paris gardés, capital inchangé)', r.fus === true, r.fus);
     ok('Outils : nouvelles sections + tableau des paliers', r.olift === true, r.olift);
+    ok('Mur limité à 15 sur bet45', r.mur === true, r.mur);
     ok('Cockpit : bouton vidéo de la méthode', r.vidcp === true, r.vidcp);
     /* Chart.js vient d'un CDN, simulé ici : son absence n'est pas une erreur de l'appli. */
     const vraies = erreurs.filter(m => !/Chart is not defined/.test(m));
