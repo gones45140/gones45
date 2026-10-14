@@ -356,6 +356,17 @@ serveur.listen(0, async () => {
         o.agvs = (im.length === 2 && /soccer\/500\/86\.png/.test(im[0]) && /roma/.test(im[1]) && /VS/.test(v.textContent)) || JSON.stringify(im) + ' ' + zt;
       } catch (e) { o.agvs = 'erreur : ' + e.message; }
       try {
+        /* 20261014t : Fusionner une sauvegarde — ajoute les paris réglés absents, doublons ignorés, capital inchangé. */
+        const a0 = state.a, h0 = state.h, b0 = JSON.stringify(state.b);
+        state.a = [{ id: 'f1', date: '2026-10-10', n: 'Lyon', cote: 2, m: 5, win: true }]; state.h = [{ id: 'f9', date: '2026-10-14', n: 'Lens', cote: 1.8, m: 3 }];
+        const R = _g45FusionnerEtat({ a: [{ id: 'f1', date: '2026-10-10', n: 'Lyon', cote: 2, m: 5 }, { id: 'x2', date: '2026-10-10', n: 'lyon ', cote: 2, m: 5 },
+          { id: 'x3', date: '2026-09-01', n: 'PSG', cote: 1.5, m: 10, win: false }], h: [{ id: 'x4', date: '2026-10-15', n: 'OM', cote: 2, m: 2 }, { id: 'f9' }] });
+        const ok = R && R.ajoutes === 1 && R.doublons === 2 && R.enCours === 1 && state.a.length === 2 && state.a[1].id === 'x3' && JSON.stringify(state.b) === b0
+          && !!document.getElementById('g45-btn-fusion');
+        o.fus = ok || JSON.stringify({ R, n: state.a.length, btn: !!document.getElementById('g45-btn-fusion') });
+        state.a = a0; state.h = h0;
+      } catch (e) { o.fus = 'erreur : ' + e.message; }
+      try {
         /* 20261014e : bouton vidéo de la méthode montante dans la barre du Cockpit. */
         window._g45VidCockpitPoser();
         const bv = document.querySelector('#sub-strat > details > summary .g45-vid-cp');
@@ -489,6 +500,7 @@ serveur.listen(0, async () => {
     ok('Rugby : prochains matchs + coupes d\'Europe', r.rgpv === true, r.rgpv);
     ok('Prochains matchs foot : championnat même si la ligue mémorisée est la LDC', r.avl === true, r.avl);
     ok('Agenda : logos des 2 équipes en filigrane', r.agvs === true, r.agvs);
+    ok('Fusionner une sauvegarde (paris gardés, capital inchangé)', r.fus === true, r.fus);
     ok('Cockpit : bouton vidéo de la méthode', r.vidcp === true, r.vidcp);
     /* Chart.js vient d'un CDN, simulé ici : son absence n'est pas une erreur de l'appli. */
     const vraies = erreurs.filter(m => !/Chart is not defined/.test(m));
