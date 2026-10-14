@@ -315,6 +315,18 @@ serveur.listen(0, async () => {
         o.cre = (/Total : 2\/3/.test(t1) && /Buts équipe Over 2.5/.test(t1) && /Total : 1\/3/.test(t2) && /Buts adversaire Under 1.5/.test(t2) && /Buts de l'adversaire/.test(t2)) || JSON.stringify({ t1: t1.slice(-300), t2: t2.slice(-300) });
       } catch (e) { o.cre = 'erreur : ' + e.message; }
       try {
+        /* 20261014j : rugby (Top 14) — Victoire / Nul / Défaite sur le score final, points du match, saison 2026-27. */
+        const S = window._g45Cr;
+        S.data['Club Rugby CR'] = { t: Date.now(), lg: '270559', ligue: 'saison régulière', saisons: [
+          { an: 2026, ms: [['2026-09-06', 1, 27, 20], ['2026-09-13', 0, 17, 17], ['2026-09-20', 1, 30, 35]] },
+          { an: 2025, ms: [] }, { an: 2024, ms: [] }, { an: 2023, ms: [] } ] };
+        const z = document.createElement('div'); z.innerHTML = window._g45CrHtml('Club Rugby CR', { sp: 'rugby', lg: '270559', id: '9' }); document.body.appendChild(z);
+        const t1 = document.getElementById('g45cr').innerText;
+        window.g45CrSet('res', 'nul'); const t2 = document.getElementById('g45cr').innerText;
+        z.remove();
+        o.crr = (/Total : 1\/3/.test(t1) && /Total : 1\/3/.test(t2) && /2026-27/.test(t1) && /Points du match/.test(t1) && /Points de l'adversaire/.test(t1) && /Nul/.test(t1)) || JSON.stringify({ t1: t1.slice(0, 400), t2: t2.slice(-200) });
+      } catch (e) { o.crr = 'erreur : ' + e.message; }
+      try {
         /* 20261014e : bouton vidéo de la méthode montante dans la barre du Cockpit. */
         window._g45VidCockpitPoser();
         const bv = document.querySelector('#sub-strat > details > summary .g45-vid-cp');
@@ -441,6 +453,7 @@ serveur.listen(0, async () => {
     ok('Saisons NHL : critères (temps réglementaire)', r.crh === true, r.crh);
     ok('Saisons NFL / NBA / MLB : critères (vainqueur)', r.crn === true, r.crn);
     ok('Saisons : buts de l\'équipe / de l\'adversaire', r.cre === true, r.cre);
+    ok('Saisons rugby / NRL : critères', r.crr === true, r.crr);
     ok('Cockpit : bouton vidéo de la méthode', r.vidcp === true, r.vidcp);
     /* Chart.js vient d'un CDN, simulé ici : son absence n'est pas une erreur de l'appli. */
     const vraies = erreurs.filter(m => !/Chart is not defined/.test(m));
