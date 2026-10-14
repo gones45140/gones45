@@ -343,6 +343,19 @@ serveur.listen(0, async () => {
         o.avl = vu.some(p => /soccer\/fra\.1\/scoreboard/.test(p)) && vu.some(p => /fra\.1\/teams\/160\/schedule/.test(p)) || vu.slice(0, 5).join(' | ');
       } catch (e) { o.avl = 'erreur : ' + e.message; }
       try {
+        /* 20261014o : Agenda — logos des deux équipes en filigrane « VS ». */
+        const zA = document.getElementById('cal-content'), z = zA || document.createElement('div'); if (!zA) { z.id = 'cal-content'; document.body.appendChild(z); }
+        const u0 = state.u, ecs = window.espnClubSchedule;
+        state.u = [{ n: 'Real Madrid', sport: '⚽', note: '' }];
+        window.espnClubSchedule = async () => ({ team: { id: '86', name: 'Real Madrid' }, matches: [{ id: 'm1', date: new Date(Date.now() + 864e5).toISOString(),
+          completed: false, homeTeam: 'AS Roma', awayTeam: 'Real Madrid', homeId: '104', awayId: '86', homeLogo: 'https://x/roma.png', awayLogo: '', competition: 'uefa.champions', competitionName: 'Champions L.' }] });
+        await loadCalendrier();
+        const v = z.querySelector('.g45ag-vs'), im = v ? [...v.querySelectorAll('img')].map(i => i.getAttribute('src')) : [];
+        const zt = z.textContent.slice(0, 300);
+        state.u = u0; window.espnClubSchedule = ecs; if (!zA) z.remove(); else z.innerHTML = '';
+        o.agvs = (im.length === 2 && /soccer\/500\/86\.png/.test(im[0]) && /roma/.test(im[1]) && /VS/.test(v.textContent)) || JSON.stringify(im) + ' ' + zt;
+      } catch (e) { o.agvs = 'erreur : ' + e.message; }
+      try {
         /* 20261014e : bouton vidéo de la méthode montante dans la barre du Cockpit. */
         window._g45VidCockpitPoser();
         const bv = document.querySelector('#sub-strat > details > summary .g45-vid-cp');
@@ -475,6 +488,7 @@ serveur.listen(0, async () => {
     ok('Tendances : cases Stats / Bookmakers sur chaque carte', r.trCases === true, r.trCases);
     ok('Rugby : prochains matchs + coupes d\'Europe', r.rgpv === true, r.rgpv);
     ok('Prochains matchs foot : championnat même si la ligue mémorisée est la LDC', r.avl === true, r.avl);
+    ok('Agenda : logos des 2 équipes en filigrane', r.agvs === true, r.agvs);
     ok('Cockpit : bouton vidéo de la méthode', r.vidcp === true, r.vidcp);
     /* Chart.js vient d'un CDN, simulé ici : son absence n'est pas une erreur de l'appli. */
     const vraies = erreurs.filter(m => !/Chart is not defined/.test(m));
