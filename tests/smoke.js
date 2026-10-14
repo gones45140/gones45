@@ -266,6 +266,21 @@ serveur.listen(0, async () => {
         o.enCours = (n === 1 && st === 1 && /Joueur X/.test(t) && /Gain possible 20/.test(t) && /@2,00/.test(t) && !!document.querySelector('#live-norm button.sbtn.sw[data-id="xe1"]')) || JSON.stringify({ n, st, t: t.slice(0, 160) });
         state.h = h0; render();
       } catch (e) { o.enCours = 'erreur : ' + e.message; }
+      try {
+        /* 20261014a : bloc « Tes critères sur 4 saisons » (données injectées, aucune requête). */
+        localStorage.setItem('g45_cr_open', '1');
+        state.u.push({ n: 'Club Test CR', sport: '⚽', note: '🏠 victoire+over 2.5 OU victoire+over 3.5 et ✈️ victoire+under 4.5 si cote inférieure à 1.5' });
+        const S = window._g45Cr; S.nom = ''; window._statFilter = 'ext';
+        S.data['Club Test CR'] = { t: Date.now(), lg: 'eng.1', ligue: 'Premier League', saisons: [
+          { an: 2026, ms: [['2026-08-20', 0, 2, 0], ['2026-09-01', 0, 1, 1]] },
+          { an: 2025, ms: [['2025-09-01', 0, 0, 1], ['2025-10-01', 0, 0, 2], ['2025-11-01', 0, 3, 1], ['2025-12-01', 1, 5, 0]] },
+          { an: 2024, ms: [] }, { an: 2023, ms: null } ] };
+        const z = document.createElement('div'); z.innerHTML = window._g45CrHtml('Club Test CR'); document.body.appendChild(z);
+        window.g45CrNote();
+        const t = document.getElementById('g45cr').innerText;
+        z.remove(); state.u = state.u.filter(u => u.n !== 'Club Test CR');
+        o.cr = (S.combos.length === 2 && S.combos[1].ou === 'un' && S.combos[1].L === 4.5 && /Total : 2\/5/.test(t) && /2 défaites de suite/.test(t) && /3 paliers/.test(t)) || JSON.stringify({ c: S.combos, t: t.slice(-400) });
+      } catch (e) { o.cr = 'erreur : ' + e.message; }
       o.tkBan = (!!document.querySelector('#pc-note') === !!document.querySelector('.g45-tk-ban')) || 'encadré absent';   /* 20261013t */
       /* 20261013s — Tendances : bloc « Stats et bookmakers en désaccord » + fiabilité à part */
       try {
@@ -381,6 +396,7 @@ serveur.listen(0, async () => {
     ok('Pense-bête : encadré « colle ton ticket »', r.tkBan === true, r.tkBan);
     ok('Paris En cours en cartes (simple + montante)', r.enCours === true, r.enCours);
     ok('Guide de bienvenue + pourboire', r.guide === true, r.guide);
+    ok('Saisons : critères sur 4 saisons', r.cr === true, r.cr);
     /* Chart.js vient d'un CDN, simulé ici : son absence n'est pas une erreur de l'appli. */
     const vraies = erreurs.filter(m => !/Chart is not defined/.test(m));
     ok('Aucune erreur JavaScript', vraies.length === 0, vraies.slice(0, 3).join(' | '));
