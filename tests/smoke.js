@@ -350,7 +350,7 @@ serveur.listen(0, async () => {
         window.espnClubSchedule = async () => ({ team: { id: '86', name: 'Real Madrid' }, matches: [{ id: 'm1', date: new Date(Date.now() + 864e5).toISOString(),
           completed: false, homeTeam: 'AS Roma', awayTeam: 'Real Madrid', homeId: '104', awayId: '86', homeLogo: 'https://x/roma.png', awayLogo: '', competition: 'uefa.champions', competitionName: 'Champions L.' }] });
         await loadCalendrier();
-        const v = z.querySelector('.g45ag-vs'), im = v ? [...v.querySelectorAll('img')].map(i => i.getAttribute('src')) : [];
+        const v = [...z.querySelectorAll('.g45ag-vs')].find(x => x.querySelector('img')), im = v ? [...v.querySelectorAll('img')].map(i => i.getAttribute('src')) : [];
         const zt = z.textContent.slice(0, 300);
         state.u = u0; window.espnClubSchedule = ecs; if (!zA) z.remove(); else z.innerHTML = '';
         o.agvs = (im.length === 2 && /soccer\/500\/86\.png/.test(im[0]) && /roma/.test(im[1]) && /VS/.test(v.textContent)) || JSON.stringify(im) + ' ' + zt;
