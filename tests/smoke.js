@@ -405,6 +405,20 @@ serveur.listen(0, async () => {
         o.mur2 = (okNeuf && okEx && okPlein) || JSON.stringify({ n1, n2, okPlein });
       } catch (e) { o.mur2 = 'erreur : ' + e.message; }
       try {
+        /* 20261015c : logo de la compétition sur les lignes de pari larges (PC). */
+        state.a.push({ id: 'cl1', n: 'SIMPLE', target: 'A vs B', comp: 'NHL', cote: 2, m: 1, win: true, date: '2026-10-14' });
+        const large = document.createElement('div'); large.setAttribute('data-aid', 'cl1'); large.setAttribute('onclick', 'openBetEdit(this.dataset.aid)'); large.style.width = '1000px';
+        const etroit = document.createElement('div'); etroit.setAttribute('data-aid', 'cl1'); etroit.setAttribute('onclick', 'openBetEdit(this.dataset.aid)'); etroit.style.width = '380px';
+        document.body.append(large, etroit);
+        let src = '';
+        new MutationObserver(() => { const i = large.querySelector('img.g45-cl-fil'); if (i) src = i.src; }).observe(large, { childList: true });
+        await new Promise(r => setTimeout(r, 600));
+        const img = src ? { src } : null;   /* l'image n'est pas servie dans le test → retirée par onerror : on garde l'adresse posée */
+        o.clogo = (!!img && /leagues\/500\/nhl\.png/.test(img.src) && large.getAttribute('data-g45cl') === '1' && !etroit.getAttribute('data-g45cl') && _g45ClLogo('Liga Portugal') === '' && _g45ClLogo('Ligue des Champions') === ''
+          && /nba\.png/.test(_g45ClLogo('NBA'))) || JSON.stringify({ img: img && img.src, et: !!etroit.querySelector('img.g45-cl-fil') });
+        large.remove(); etroit.remove(); state.a = state.a.filter(x => x.id !== 'cl1');
+      } catch (e) { o.clogo = 'erreur : ' + e.message; }
+      try {
         /* 20261014e : bouton vidéo de la méthode montante dans la barre du Cockpit. */
         window._g45VidCockpitPoser();
         const bv = document.querySelector('#sub-strat > details > summary .g45-vid-cp');
@@ -542,6 +556,7 @@ serveur.listen(0, async () => {
     ok('Outils : nouvelles sections + tableau des paliers', r.olift === true, r.olift);
     ok('Mur limité à 15 sur bet45', r.mur === true, r.mur);
     ok('Mur de départ bet45', r.mur2 === true, r.mur2);
+    ok('Logo de la compétition (PC)', r.clogo === true, r.clogo);
     ok('Cockpit : bouton vidéo de la méthode', r.vidcp === true, r.vidcp);
     /* Chart.js vient d'un CDN, simulé ici : son absence n'est pas une erreur de l'appli. */
     const vraies = erreurs.filter(m => !/Chart is not defined/.test(m));
