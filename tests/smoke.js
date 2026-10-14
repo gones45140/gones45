@@ -366,8 +366,8 @@ serveur.listen(0, async () => {
         const L = _g45TrSuivLire(), eD = L.filter(x => x.id === 'xd1')[0];
         if (eD) eD.r = 1; localStorage.setItem('g45suivtend1', JSON.stringify(L));
         const fi = _g45TrFiabHtml();
-        /* 20261014m : cases Stats / Bookmakers sur chaque carte (pas en double dans le bloc désaccord), « pas de cote » sans cote */
-        o.trCases = ((t.match(/g45tr-cases/g) || []).length === 1 && /pas de cote/.test(t.slice(0, iD)) && !/marge retirée\) :/.test(t)) || 'cases : ' + (t.match(/g45tr-cases/g) || []).length;
+        /* 20261014m : cases Stats / Bookmakers sur chaque carte (pas en double dans le bloc désaccord), « pas de cote » sans cote ; 14n : plus de « cote à vérifier » / « % estimée » en haut à droite */
+        o.trCases = ((t.match(/g45tr-cases/g) || []).length === 1 && /pas de cote/.test(t.slice(0, iD)) && !/marge retirée\) :/.test(t) && !/cote à vérifier|estimée</.test(t)) || 'cases : ' + (t.match(/g45tr-cases/g) || []).length;
         o.trDesac = (iD > 0 && iV > iD && iG > 0 && iG < iD && /13%/.test(t.slice(iD)) && eD && eD.d === 1 && eD.f === 0.13 && /En désaccord/.test(fi) && /1 \/ 1/.test(fi))
           || JSON.stringify({ iD, iV, iG, eD, fi: fi.slice(0, 200) });
         _G45_TR.sp = sp0; _G45_TR.res = r0; _G45_TR.min = mi0;
