@@ -390,6 +390,21 @@ serveur.listen(0, async () => {
         state.u = u0; if (U0 === undefined) delete window._g45User; else window._g45User = U0;
       } catch (e) { o.mur = 'erreur : ' + e.message; }
       try {
+        /* 20261014z2 : mur de départ bet45 (compte neuf remplacé, compte existant complété sport par sport). */
+        const neuf = { a: [], h: [], u: PRESETS.map(p => ({ n: p.n, sport: p.sport, preset: true })) };
+        const R1 = _g45Mur2Appliquer(neuf, {});
+        const n1 = neuf.u.map(u => u.n);
+        const okNeuf = R1.mode === 'neuf' && neuf.u.length === 11 && !n1.includes('Lyon') && n1.includes('Arsenal') && n1.includes('Penrith Panthers');
+        const ex = { a: [{ id: 1 }], h: [], u: [{ n: 'Lyon', sport: '⚽' }, { n: 'Boston Celtics', sport: '🏀' }, { n: 'LA Dodgers', sport: '⚾' }] };
+        const R2 = _g45Mur2Appliquer(ex, { 'Kansas City Chiefs': 1 });
+        const n2 = ex.u.map(u => u.n);
+        const okEx = R2.mode === 'existant' && n2.includes('Lyon') && !n2.includes('Los Angeles Lakers') && !n2.includes('Kansas City Chiefs')
+          && n2.includes('Colorado Avalanche') && n2.includes('Stade Toulousain') && n2.includes('Penrith Panthers') && !n2.includes('Arsenal') && ex.u.length === 6;
+        const plein = { a: [{ id: 1 }], h: [], u: Array.from({ length: 15 }, (_, i) => ({ n: 'E' + i, sport: '⚽' })) };
+        const okPlein = _g45Mur2Appliquer(plein, {}).ajout.length === 0;
+        o.mur2 = (okNeuf && okEx && okPlein) || JSON.stringify({ n1, n2, okPlein });
+      } catch (e) { o.mur2 = 'erreur : ' + e.message; }
+      try {
         /* 20261014e : bouton vidéo de la méthode montante dans la barre du Cockpit. */
         window._g45VidCockpitPoser();
         const bv = document.querySelector('#sub-strat > details > summary .g45-vid-cp');
@@ -526,6 +541,7 @@ serveur.listen(0, async () => {
     ok('Fusionner une sauvegarde (paris gardés, capital inchangé)', r.fus === true, r.fus);
     ok('Outils : nouvelles sections + tableau des paliers', r.olift === true, r.olift);
     ok('Mur limité à 15 sur bet45', r.mur === true, r.mur);
+    ok('Mur de départ bet45', r.mur2 === true, r.mur2);
     ok('Cockpit : bouton vidéo de la méthode', r.vidcp === true, r.vidcp);
     /* Chart.js vient d'un CDN, simulé ici : son absence n'est pas une erreur de l'appli. */
     const vraies = erreurs.filter(m => !/Chart is not defined/.test(m));
