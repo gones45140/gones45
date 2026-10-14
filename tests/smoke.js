@@ -367,6 +367,14 @@ serveur.listen(0, async () => {
         state.a = a0; state.h = h0;
       } catch (e) { o.fus = 'erreur : ' + e.message; }
       try {
+        /* 20261014v : lifting Outils — sections, tableau des paliers, classement des blocs. */
+        const ids = _G45_OUTILS_SEC.map(x => x.id).join(',');
+        renderPaliers();
+        const tab = !!document.querySelector('#palier-grids table.g45ol-pal input[type=number]');
+        const pp = document.getElementById('palier-panel'), cat = pp ? _g45OutilsClasser(pp, '💰 Mises par palier') : '';
+        o.olift = (ids === 'app,look,notif,mont,eq,donnees,cles' && tab && cat === 'mont') || JSON.stringify({ ids, tab, cat });
+      } catch (e) { o.olift = 'erreur : ' + e.message; }
+      try {
         /* 20261014e : bouton vidéo de la méthode montante dans la barre du Cockpit. */
         window._g45VidCockpitPoser();
         const bv = document.querySelector('#sub-strat > details > summary .g45-vid-cp');
@@ -501,6 +509,7 @@ serveur.listen(0, async () => {
     ok('Prochains matchs foot : championnat même si la ligue mémorisée est la LDC', r.avl === true, r.avl);
     ok('Agenda : logos des 2 équipes en filigrane', r.agvs === true, r.agvs);
     ok('Fusionner une sauvegarde (paris gardés, capital inchangé)', r.fus === true, r.fus);
+    ok('Outils : nouvelles sections + tableau des paliers', r.olift === true, r.olift);
     ok('Cockpit : bouton vidéo de la méthode', r.vidcp === true, r.vidcp);
     /* Chart.js vient d'un CDN, simulé ici : son absence n'est pas une erreur de l'appli. */
     const vraies = erreurs.filter(m => !/Chart is not defined/.test(m));
