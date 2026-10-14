@@ -307,6 +307,14 @@ serveur.listen(0, async () => {
         o.crn = (/Total : 2\/3/.test(t1) && /Total : 1\/3/.test(t2) && /Over 50\.5/.test(t2) && /\b2026\b/.test(t1) && !/Nul/.test(t1) && /Points du match/.test(t1)) || JSON.stringify({ t1: t1.slice(-300), t2: t2.slice(-200) });
       } catch (e) { o.crn = 'erreur : ' + e.message; }
       try {
+        /* 20261014i : buts / points de l'équipe et de l'adversaire (NHL : temps réglementaire). */
+        const z = document.createElement('div'); z.innerHTML = window._g45CrHtml('Club Hockey CR', { sp: 'hockey', lg: 'nhl', id: '7' }); document.body.appendChild(z);
+        window.g45CrSet('res', ''); window.g45CrSet('TL', '2.5'); const t1 = document.getElementById('g45cr').innerText;
+        window.g45CrSet('te', ''); window.g45CrSet('AL', '1.5'); window.g45CrSet('ad', 'un'); const t2 = document.getElementById('g45cr').innerText;
+        z.remove();
+        o.cre = (/Total : 2\/3/.test(t1) && /Buts équipe Over 2.5/.test(t1) && /Total : 1\/3/.test(t2) && /Buts adversaire Under 1.5/.test(t2) && /Buts de l'adversaire/.test(t2)) || JSON.stringify({ t1: t1.slice(-300), t2: t2.slice(-300) });
+      } catch (e) { o.cre = 'erreur : ' + e.message; }
+      try {
         /* 20261014e : bouton vidéo de la méthode montante dans la barre du Cockpit. */
         window._g45VidCockpitPoser();
         const bv = document.querySelector('#sub-strat > details > summary .g45-vid-cp');
@@ -432,6 +440,7 @@ serveur.listen(0, async () => {
     ok('Saisons : critères sur 4 saisons', r.cr === true, r.cr);
     ok('Saisons NHL : critères (temps réglementaire)', r.crh === true, r.crh);
     ok('Saisons NFL / NBA / MLB : critères (vainqueur)', r.crn === true, r.crn);
+    ok('Saisons : buts de l\'équipe / de l\'adversaire', r.cre === true, r.cre);
     ok('Cockpit : bouton vidéo de la méthode', r.vidcp === true, r.vidcp);
     /* Chart.js vient d'un CDN, simulé ici : son absence n'est pas une erreur de l'appli. */
     const vraies = erreurs.filter(m => !/Chart is not defined/.test(m));
