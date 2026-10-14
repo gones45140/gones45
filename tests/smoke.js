@@ -419,6 +419,19 @@ serveur.listen(0, async () => {
         large.remove(); etroit.remove(); state.a = state.a.filter(x => x.id !== 'cl1');
       } catch (e) { o.clogo = 'erreur : ' + e.message; }
       try {
+        /* 20261015d : cotes en direct (règles du marché + texte) sur l'exemple Roma 3-1 Real (Roma reçoit). */
+        const C = { state: 'in', hN: ['AS Roma', 'Roma'], aN: ['Real Madrid', 'Madrid'], h: 1.07, a: 51, d: null, L: 4.5, ov: 1.71, un: 2.1 };
+        const m1 = _g45CdMarche({ type: 'Victoire AS Roma @1.95', cote: 3.6 }, C, null);
+        const m2 = _g45CdMarche({ type: 'Défaite', cote: 2 }, C, true);
+        const m3 = _g45CdMarche({ type: 'Plus de 2,5 buts', cote: 1.7 }, C, null);
+        const m4 = _g45CdMarche({ type: 'Victoire', isCombi: true }, C, true);
+        const m5 = _g45CdMarche({ type: 'Les deux équipes marquent' }, C, true);
+        const t1 = _g45CdTexte({ cote: 3.6 }, C, m1), t3 = _g45CdTexte({ cote: 1.7 }, C, m3), t6 = _g45CdTexte({ cote: 2 }, Object.assign({}, C, { h: 'off' }), { cle: 'h' });
+        o.cdir = (m1 && m1.cle === 'h' && m2 && m2.cle === 'a' && m3 && m3.cle === 'ov' && m3.L === 2.5 && !m4 && !m5
+          && /1,07/.test(t1) && /bien joué/.test(t1) && /plus proposée/.test(t3) && /4,5 buts à 1,71/.test(t3) && /suspendue/.test(t6)
+          && typeof _g45CdLire === 'function') || JSON.stringify({ m1, m2, m3, m4, m5, t1, t3, t6 });
+      } catch (e) { o.cdir = 'erreur : ' + e.message; }
+      try {
         /* 20261014e : bouton vidéo de la méthode montante dans la barre du Cockpit. */
         window._g45VidCockpitPoser();
         const bv = document.querySelector('#sub-strat > details > summary .g45-vid-cp');
@@ -557,6 +570,7 @@ serveur.listen(0, async () => {
     ok('Mur limité à 15 sur bet45', r.mur === true, r.mur);
     ok('Mur de départ bet45', r.mur2 === true, r.mur2);
     ok('Logo de la compétition (PC)', r.clogo === true, r.clogo);
+    ok('Cotes en direct (règles)', r.cdir === true, r.cdir);
     ok('Cockpit : bouton vidéo de la méthode', r.vidcp === true, r.vidcp);
     /* Chart.js vient d'un CDN, simulé ici : son absence n'est pas une erreur de l'appli. */
     const vraies = erreurs.filter(m => !/Chart is not defined/.test(m));
