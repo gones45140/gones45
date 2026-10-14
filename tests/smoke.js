@@ -327,6 +327,14 @@ serveur.listen(0, async () => {
         o.crr = (/Total : 1\/3/.test(t1) && /Total : 1\/3/.test(t2) && /2026-27/.test(t1) && /Points du match/.test(t1) && /Points de l'adversaire/.test(t1) && /Nul/.test(t1)) || JSON.stringify({ t1: t1.slice(0, 400), t2: t2.slice(-200) });
       } catch (e) { o.crr = 'erreur : ' + e.message; }
       try {
+        /* 20261014k : prochains matchs d'un club de Top 14 + coupes d'Europe. */
+        const t0 = Date.now() + 864e5;
+        _g45CompetAVenir['rugby|270559|2026'] = [{ id: '1', t: t0, h: '9', a: '8', hn: 'Club R', an: 'Perpignan' }];
+        _g45CompetAVenir['rugby|271937|2026'] = [{ id: '2', t: t0 + 864e5, h: '7', a: '9', hn: 'Leinster', an: 'Club R' }, { id: '3', t: t0, h: '5', a: '6', hn: 'X', an: 'Y' }];
+        const ph = _g45ProchainsHtml('rugby', '270559', 2026, '9', 'Club R', 6);
+        o.rgpv = (/Perpignan/.test(ph) && /Leinster/.test(ph) && /Champions Cup/.test(ph) && /Top 14/.test(ph) && !/>Y</.test(ph)) || ph.slice(0, 300);
+      } catch (e) { o.rgpv = 'erreur : ' + e.message; }
+      try {
         /* 20261014e : bouton vidéo de la méthode montante dans la barre du Cockpit. */
         window._g45VidCockpitPoser();
         const bv = document.querySelector('#sub-strat > details > summary .g45-vid-cp');
@@ -454,6 +462,7 @@ serveur.listen(0, async () => {
     ok('Saisons NFL / NBA / MLB : critères (vainqueur)', r.crn === true, r.crn);
     ok('Saisons : buts de l\'équipe / de l\'adversaire', r.cre === true, r.cre);
     ok('Saisons rugby / NRL : critères', r.crr === true, r.crr);
+    ok('Rugby : prochains matchs + coupes d\'Europe', r.rgpv === true, r.rgpv);
     ok('Cockpit : bouton vidéo de la méthode', r.vidcp === true, r.vidcp);
     /* Chart.js vient d'un CDN, simulé ici : son absence n'est pas une erreur de l'appli. */
     const vraies = erreurs.filter(m => !/Chart is not defined/.test(m));
