@@ -432,6 +432,19 @@ serveur.listen(0, async () => {
           && typeof _g45CdLire === 'function') || JSON.stringify({ m1, m2, m3, m4, m5, t1, t3, t6 });
       } catch (e) { o.cdir = 'erreur : ' + e.message; }
       try {
+        /* 20261015e : onglet Bank — banques à part, tri par solde, ligne Paris. */
+        const b0 = state.b, a0 = state.a;
+        state.b = { winamax: '100', 'boursorama antoine': '50', betclic: '300' };
+        state.a = [{ id: 'k1', b: 'winamax', m: 10, cote: 2, win: true }, { id: 'k2', b: 'winamax', m: 10, cote: 2, win: false }];
+        _g45BkGrille();
+        const noms = [...document.querySelectorAll('#books-grid .g45bk')].map(c => c.textContent);
+        const bq = [...document.querySelectorAll('#g45-bk-banques .g45bk')].map(c => c.textContent);
+        const P = _g45BkParis('Winamax'), N = _g45BkNom('PMU LAURA');
+        o.bank = (noms.length === 2 && /Betclic/i.test(noms[0]) && bq.length === 1 && /Boursorama/i.test(bq[0]) && !/Freebet/.test(bq[0])
+          && P.n === 2 && P.net === 0 && N.who === 'Laura' && _g45BkEstBanque('revolut') && !_g45BkEstBanque('winamax')) || JSON.stringify({ noms, bq, P, N });
+        state.b = b0; state.a = a0; _g45BkGrille();
+      } catch (e) { o.bank = 'erreur : ' + e.message; }
+      try {
         /* 20261014e : bouton vidéo de la méthode montante dans la barre du Cockpit. */
         window._g45VidCockpitPoser();
         const bv = document.querySelector('#sub-strat > details > summary .g45-vid-cp');
@@ -571,6 +584,7 @@ serveur.listen(0, async () => {
     ok('Mur de départ bet45', r.mur2 === true, r.mur2);
     ok('Logo de la compétition (PC)', r.clogo === true, r.clogo);
     ok('Cotes en direct (règles)', r.cdir === true, r.cdir);
+    ok('Bank : bookmakers / banques', r.bank === true, r.bank);
     ok('Cockpit : bouton vidéo de la méthode', r.vidcp === true, r.vidcp);
     /* Chart.js vient d'un CDN, simulé ici : son absence n'est pas une erreur de l'appli. */
     const vraies = erreurs.filter(m => !/Chart is not defined/.test(m));
