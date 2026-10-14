@@ -335,6 +335,14 @@ serveur.listen(0, async () => {
         o.rgpv = (/Perpignan/.test(ph) && /Leinster/.test(ph) && /Champions Cup/.test(ph) && /Top 14/.test(ph) && !/>Y</.test(ph)) || ph.slice(0, 300);
       } catch (e) { o.rgpv = 'erreur : ' + e.message; }
       try {
+        /* 20261014l : ligue reçue = uefa.champions → le championnat du club (fra.1) est quand même lu. */
+        const vu = [], old = window._g45TrEspn;
+        window._g45TrEspn = async (p) => { vu.push(p); return { events: [] }; };
+        await _g45AVenirLigue('uefa.champions', '160', 'Paris Saint-Germain');
+        window._g45TrEspn = old;
+        o.avl = vu.some(p => /soccer\/fra\.1\/scoreboard/.test(p)) && vu.some(p => /fra\.1\/teams\/160\/schedule/.test(p)) || vu.slice(0, 5).join(' | ');
+      } catch (e) { o.avl = 'erreur : ' + e.message; }
+      try {
         /* 20261014e : bouton vidéo de la méthode montante dans la barre du Cockpit. */
         window._g45VidCockpitPoser();
         const bv = document.querySelector('#sub-strat > details > summary .g45-vid-cp');
@@ -463,6 +471,7 @@ serveur.listen(0, async () => {
     ok('Saisons : buts de l\'équipe / de l\'adversaire', r.cre === true, r.cre);
     ok('Saisons rugby / NRL : critères', r.crr === true, r.crr);
     ok('Rugby : prochains matchs + coupes d\'Europe', r.rgpv === true, r.rgpv);
+    ok('Prochains matchs foot : championnat même si la ligue mémorisée est la LDC', r.avl === true, r.avl);
     ok('Cockpit : bouton vidéo de la méthode', r.vidcp === true, r.vidcp);
     /* Chart.js vient d'un CDN, simulé ici : son absence n'est pas une erreur de l'appli. */
     const vraies = erreurs.filter(m => !/Chart is not defined/.test(m));
