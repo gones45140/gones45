@@ -444,6 +444,14 @@ serveur.listen(0, async () => {
           && P.n === 2 && P.net === 0 && N.who === 'Laura' && _g45BkEstBanque('revolut') && !_g45BkEstBanque('winamax') && /unibet\.fr/.test(bkFavicon('unibet laura')) && /boursobank/.test(bkFavicon('boursorama antoine')) && /pinnacle\.com/.test(bkFavicon('pinnacle'))) || JSON.stringify({ noms, bq, P, N });
         state.b = b0; state.a = a0; _g45BkGrille();
       } catch (e) { o.bank = 'erreur : ' + e.message; }
+      /* 20261015g — menu « + » en PORTRAIT : il doit s'ouvrir avec une vraie hauteur (le calage paysage l'écrasait à 17 px). */
+      try {
+        const pm = document.getElementById('plus-menu');
+        togglePlusMenu(); pm.style.display = 'block'; await new Promise(r => setTimeout(r, 100));
+        const hpm = pm.getBoundingClientRect().height;
+        o.plusp = (hpm > 100 && !pm.style.getPropertyValue('top')) || ('hauteur ' + hpm + ' top ' + pm.style.top);
+        pm.style.display = 'none';
+      } catch (e) { o.plusp = 'erreur : ' + e.message; }
       try {
         /* 20261014e : bouton vidéo de la méthode montante dans la barre du Cockpit. */
         window._g45VidCockpitPoser();
@@ -585,6 +593,7 @@ serveur.listen(0, async () => {
     ok('Logo de la compétition (PC)', r.clogo === true, r.clogo);
     ok('Cotes en direct (règles)', r.cdir === true, r.cdir);
     ok('Bank : bookmakers / banques', r.bank === true, r.bank);
+    ok('Menu + en portrait', r.plusp === true, r.plusp);
     ok('Cockpit : bouton vidéo de la méthode', r.vidcp === true, r.vidcp);
     /* Chart.js vient d'un CDN, simulé ici : son absence n'est pas une erreur de l'appli. */
     const vraies = erreurs.filter(m => !/Chart is not defined/.test(m));
