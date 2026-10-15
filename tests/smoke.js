@@ -455,6 +455,11 @@ serveur.listen(0, async () => {
         window._g45TrSuivNoter = orig; Object.assign(_G45_TR, sv);
         o.trMin = (pris.indexOf('Aaa') < 0 && pris.indexOf('Ccc') >= 0) || JSON.stringify(pris);
       } catch (e) { o.trMin = 'erreur : ' + e.message; }
+      /* 20261015k — tendances gardées jusqu'au match : matchs commencés retirés à la reprise */
+      try {
+        const n = Date.now(), F = _g45TrGardeFiltre([{ d: new Date(n + 3600e3).toISOString() }, { d: new Date(n - 60e3).toISOString() }, { d: null }], n);
+        o.trGarde = (F.length === 2 && typeof _g45TrGardeSig === 'function') || JSON.stringify(F);
+      } catch (e) { o.trGarde = 'erreur : ' + e.message; }
       /* 20261015i — historique OFFICIEL des Tendances : réussite sur toutes, gain à 1 € sur celles qui ont une cote */
       try {
         const C = _g45TrOffCalc([{ t: 1, r: 1, c: 2.1 }, { t: 2, r: 0, c: null }, { t: 3, r: 0, c: 1.5 }, { t: 4, r: 1, c: 1.58 }, { t: 5, r: null, c: 2 }]);
@@ -614,6 +619,7 @@ serveur.listen(0, async () => {
     ok('Menu + en portrait', r.plusp === true, r.plusp);
     ok('Tendances : historique officiel', r.trOff === true, r.trOff);
     ok('Tendances : cote mini = cote du marché', r.trMin === true, r.trMin);
+    ok('Tendances : gardées jusqu\'au match', r.trGarde === true, r.trGarde);
     ok('Cockpit : bouton vidéo de la méthode', r.vidcp === true, r.vidcp);
     /* Chart.js vient d'un CDN, simulé ici : son absence n'est pas une erreur de l'appli. */
     const vraies = erreurs.filter(m => !/Chart is not defined/.test(m));
