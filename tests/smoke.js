@@ -461,6 +461,30 @@ serveur.listen(0, async () => {
         const a = _g45QtResume({ moi: { u: 2, max: 8 } }), b = _g45QtResume({ jour: { u: 9, max: 20 }, mois: { u: 88, max: 400 } }), c = _g45QtResume({ remaining: 3 });
         o.qt = (a.r === 6 && /te reste/.test(a.qui) && b.r === 11 && /tout le monde/.test(b.txt) && c === null) || JSON.stringify([a, b, c]);
       } catch (e) { o.qt = 'erreur : ' + e.message; }
+      /* 20261015r — CLV : relevé gardé en mémoire (pas de nouvel appel The Odds API avant l'intervalle) + carte refaite */
+      try {
+        const sv = { u: state.u, esp: window._g45TrEspn, oa: window._g45TrOddsApi }, ls = {};
+        ['g45clv_cfg', 'g45clv_snaps', 'g45clv_der'].forEach((k) => { ls[k] = localStorage.getItem(k); });
+        state.u = [];
+        localStorage.setItem('g45clv_cfg', JSON.stringify([{ n: 'Bayern', sl: 'ger.1', side: 'over', line: 2.5, al: ['bayern', 'bayernmunich'] }]));
+        localStorage.removeItem('g45clv_snaps'); localStorage.removeItem('g45clv_der');
+        const ko = new Date(Date.now() + 72 * 3600e3).toISOString();
+        let nOa = 0;
+        window._g45TrEspn = async () => ({ events: [{ id: '777', date: ko, competitions: [{ status: { type: { completed: false } }, competitors: [
+          { homeAway: 'home', team: { displayName: 'Bayern Munich', logo: 'x.png' } }, { homeAway: 'away', team: { displayName: 'RB Leipzig' } }] }] }] });
+        window._g45TrOddsApi = async () => { nOa++; return [{ home_team: 'Bayern Munich', away_team: 'RB Leipzig', commence_time: ko, bookmakers: [{ markets: [
+          { key: 'h2h', outcomes: [{ name: 'Bayern Munich', price: 1.3 }, { name: 'RB Leipzig', price: 7 }, { name: 'Draw', price: 5 }] },
+          { key: 'totals', outcomes: [{ name: 'Over', point: 2.5, price: 1.2 }, { name: 'Under', point: 2.5, price: 4 }] }] }] }]; };
+        const n1 = await _g45ClvReleve(null, true);
+        const n2 = await _g45ClvReleve(null, false), s2 = Object.assign({}, window._g45ClvStat);
+        localStorage.removeItem('g45clv_der');
+        const n3 = await _g45ClvReleve(null, false), s3 = Object.assign({}, window._g45ClvStat);
+        await g45ClvView();
+        const t = document.getElementById('t-tend').innerHTML;
+        o.clv = (n1 === 1 && nOa === 1 && n2 === 0 && s2.saut === 1 && n3 === 0 && s3.garde === 1 && /Relever maintenant/.test(t) && /RB Leipzig/.test(t) && /il faut ajouter le total/.test(t)) || JSON.stringify({ n1, nOa, n2, s2, n3, s3 });
+        state.u = sv.u; window._g45TrEspn = sv.esp; window._g45TrOddsApi = sv.oa;
+        Object.keys(ls).forEach((k) => { if (ls[k] == null) localStorage.removeItem(k); else localStorage.setItem(k, ls[k]); });
+      } catch (e) { o.clv = 'erreur : ' + e.message; }
       /* 20261015o — cote ≈ books FR = DraftKings − 6 %, DK gardée ; filtre cote mini sur la cote FR */
       try {
         const o2 = _g45TrCoteFr([{ m: 'X', p: 0.7, cote: 1.55, ev: 0.085 }, { m: 'Y', p: 0.6, cote: 0 }]);
@@ -642,6 +666,7 @@ serveur.listen(0, async () => {
     ok('Quota des cotes (son quota / tout le monde)', r.qt === true, r.qt);
     ok('Tendances : cote ≈ books FR (DK − 6 %)', r.trFr === true, r.trFr);
     ok('Cockpit : bouton vidéo de la méthode', r.vidcp === true, r.vidcp);
+    ok('CLV : cotes gardées en mémoire + cartes', r.clv === true, r.clv);
     /* Chart.js vient d'un CDN, simulé ici : son absence n'est pas une erreur de l'appli. */
     const vraies = erreurs.filter(m => !/Chart is not defined/.test(m));
     ok('Aucune erreur JavaScript', vraies.length === 0, vraies.slice(0, 3).join(' | '));
