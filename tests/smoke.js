@@ -535,6 +535,14 @@ serveur.listen(0, async () => {
         op.remove(); state.u = u0; window.alert = a0;
         o.tkj = (v === 'MCDAVID CONNOR' && !alerte && ce === 'Edmonton Oilers') || JSON.stringify({ v, alerte, ce });
       } catch (e) { o.tkj = 'erreur : ' + e.message; }
+      /* 20261016g — séries individuelles : seuil 2 ou plus */
+      try {
+        const S = _g45RegCalc([{ points: 0 }, { points: 2 }, { points: 1 }, { points: 3 }, { points: 2 }].reverse(), 'points', true);
+        const S2 = _g45RegSeuilS(S, 2);
+        _g45Reg.mem['TEST'] = [{ id: 1, nom: 'Test Joueur', eq: 'EDM', s: S }]; const k0 = _g45RegK; _g45RegK = () => 'TEST'; _g45Reg.seuil = 2;
+        const H = _g45RegHtml(); _g45RegK = k0; _g45Reg.seuil = 1; delete _g45Reg.mem['TEST'];
+        o.regs = (S.pct === 80 && S2.pct === 60 && S2.pire === 1 && S2.best === 2 && S2.cours === 0 && /2 ou plus/.test(H) && /% 2\+/.test(H)) || JSON.stringify({ S, S2 });
+      } catch (e) { o.regs = 'erreur : ' + e.message; }
       /* 20261016f — équipe du ticket absente du mur, ADVERSAIRE au mur → pari contre lui */
       try {
         const un = document.getElementById('c-unit'), u0 = state.u, a0 = window.alert; let alerte = '';
@@ -732,6 +740,7 @@ serveur.listen(0, async () => {
     ok('Joueur foot du mur : fiche refaite', r.mj === true, r.mj);
     ok('Ticket Cockpit : pari joueur → carte du joueur', r.tkj === true, r.tkj);
     ok('Ticket Cockpit : adversaire au mur → pari contre', r.tkc === true, r.tkc);
+    ok('Séries individuelles : seuil 2 ou plus', r.regs === true, r.regs);
     /* Chart.js vient d'un CDN, simulé ici : son absence n'est pas une erreur de l'appli. */
     const vraies = erreurs.filter(m => !/Chart is not defined/.test(m));
     ok('Aucune erreur JavaScript', vraies.length === 0, vraies.slice(0, 3).join(' | '));
