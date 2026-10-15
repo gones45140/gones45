@@ -493,7 +493,7 @@ serveur.listen(0, async () => {
         window.fetch = async (u) => {
           const p = decodeURIComponent(String(u));
           const rep = (o) => ({ ok: true, status: 200, json: async () => o });
-          if (/club-stats\/EDM/.test(p)) return rep({ skaters: [{ playerId: 8478402, firstName: { default: 'Connor' }, lastName: { default: 'McDavid' }, positionCode: 'C', gamesPlayed: 3, goals: 2, assists: 3, points: 5, headshot: '' },
+          if (/club-stats\/EDM/.test(p)) return rep({ skaters: [{ playerId: 8478402, firstName: { default: 'Connor' }, lastName: { default: 'McDavid' }, positionCode: 'C', gamesPlayed: 3, goals: 2, assists: 3, points: 5, headshot: 'https://assets.nhle.com/x/8478402.png' },
             { playerId: 1, firstName: { default: 'Leon' }, lastName: { default: 'Draisaitl' }, positionCode: 'C', gamesPlayed: 3, goals: 1, assists: 1, points: 2 }], goalies: [] });
           if (/game-log/.test(p)) return rep({ gameLog: [{ gameDate: '2026-10-13', goals: 0, assists: 2, points: 2, homeRoadFlag: 'H', opponentAbbrev: 'VAN' },
             { gameDate: '2026-10-11', goals: 2, assists: 1, points: 3, homeRoadFlag: 'R', opponentAbbrev: 'CGY' }, { gameDate: '2026-10-09', goals: 0, assists: 0, points: 0, homeRoadFlag: 'H', opponentAbbrev: 'COL' }] });
@@ -505,10 +505,10 @@ serveur.listen(0, async () => {
         let el = document.getElementById('ip-joueur'), cree = false;
         if (!el) { el = document.createElement('div'); el.id = 'ip-joueur'; document.body.appendChild(el); cree = true; }
         await g45MurJoueurPanel();
-        const t = el.innerHTML;
+        const t = el.innerHTML, lg = (state.u[state.u.length - 1] || {}).logoUrl;
         window.fetch = f0; state.u = u0; window._currentTeam = ct; try { _currentTeam = ct; } catch (e) {}
         if (cree) el.remove(); else el.innerHTML = '';
-        o.nhlj = (/Connor McDavid/.test(t) && /Oilers/.test(t) && /33 %/.test(t) && /Canucks/.test(t) && /Prochain match/.test(t) && /Sharks/.test(t)) || t.replace(/<[^>]+>/g, ' ').slice(0, 300);
+        o.nhlj = (/Connor McDavid/.test(t) && /Oilers/.test(t) && /33 %/.test(t) && /Canucks/.test(t) && /Prochain match/.test(t) && /Sharks/.test(t) && /8478402\.png/.test(lg || '')) || t.replace(/<[^>]+>/g, ' ').slice(0, 300);
       } catch (e) { o.nhlj = 'erreur : ' + e.message; }
       /* 20261015o — cote ≈ books FR = DraftKings − 6 %, DK gardée ; filtre cote mini sur la cote FR */
       try {
