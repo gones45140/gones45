@@ -485,6 +485,31 @@ serveur.listen(0, async () => {
         state.u = sv.u; window._g45TrEspn = sv.esp; window._g45TrOddsApi = sv.oa;
         Object.keys(ls).forEach((k) => { if (ls[k] == null) localStorage.removeItem(k); else localStorage.setItem(k, ls[k]); });
       } catch (e) { o.clv = 'erreur : ' + e.message; }
+      /* 20261015t — fiche d'un joueur NHL du mur (faux serveur NHL : effectif, journal, calendrier) */
+      try {
+        const f0 = window.fetch, u0 = state.u, ct = window._currentTeam;
+        ['g45nhlj1_eq_EDM_' + (_g45NhlJSaison()), 'g45nhlj1_log_8478402_' + (_g45NhlJSaison())].forEach((k) => localStorage.removeItem(k));
+        const T = Date.now() + 30 * 3600e3;
+        window.fetch = async (u) => {
+          const p = decodeURIComponent(String(u));
+          const rep = (o) => ({ ok: true, status: 200, json: async () => o });
+          if (/club-stats\/EDM/.test(p)) return rep({ skaters: [{ playerId: 8478402, firstName: { default: 'Connor' }, lastName: { default: 'McDavid' }, positionCode: 'C', gamesPlayed: 3, goals: 2, assists: 3, points: 5, headshot: '' },
+            { playerId: 1, firstName: { default: 'Leon' }, lastName: { default: 'Draisaitl' }, positionCode: 'C', gamesPlayed: 3, goals: 1, assists: 1, points: 2 }], goalies: [] });
+          if (/game-log/.test(p)) return rep({ gameLog: [{ gameDate: '2026-10-13', goals: 0, assists: 2, points: 2, homeRoadFlag: 'H', opponentAbbrev: 'VAN' },
+            { gameDate: '2026-10-11', goals: 2, assists: 1, points: 3, homeRoadFlag: 'R', opponentAbbrev: 'CGY' }, { gameDate: '2026-10-09', goals: 0, assists: 0, points: 0, homeRoadFlag: 'H', opponentAbbrev: 'COL' }] });
+          if (/club-schedule-season\/EDM\/now/.test(p)) return rep({ games: [{ startTimeUTC: new Date(T).toISOString(), gameState: 'FUT', homeTeam: { abbrev: 'SJS' }, awayTeam: { abbrev: 'EDM' } }] });
+          return { ok: false, status: 404, json: async () => ({}) };
+        };
+        state.u = (u0 || []).concat([{ n: 'MCDAVID CONNOR', type: 'joueur', sport: '🏒', note: 'Edmonton Oilers' }]);
+        window._currentTeam = 'MCDAVID CONNOR'; try { _currentTeam = 'MCDAVID CONNOR'; } catch (e) {}
+        let el = document.getElementById('ip-joueur'), cree = false;
+        if (!el) { el = document.createElement('div'); el.id = 'ip-joueur'; document.body.appendChild(el); cree = true; }
+        await g45MurJoueurPanel();
+        const t = el.innerHTML;
+        window.fetch = f0; state.u = u0; window._currentTeam = ct; try { _currentTeam = ct; } catch (e) {}
+        if (cree) el.remove(); else el.innerHTML = '';
+        o.nhlj = (/Connor McDavid/.test(t) && /Oilers/.test(t) && /33 %/.test(t) && /Canucks/.test(t) && /Prochain match/.test(t) && /Sharks/.test(t)) || t.replace(/<[^>]+>/g, ' ').slice(0, 300);
+      } catch (e) { o.nhlj = 'erreur : ' + e.message; }
       /* 20261015o — cote ≈ books FR = DraftKings − 6 %, DK gardée ; filtre cote mini sur la cote FR */
       try {
         const o2 = _g45TrCoteFr([{ m: 'X', p: 0.7, cote: 1.55, ev: 0.085 }, { m: 'Y', p: 0.6, cote: 0 }]);
@@ -667,6 +692,7 @@ serveur.listen(0, async () => {
     ok('Tendances : cote ≈ books FR (DK − 6 %)', r.trFr === true, r.trFr);
     ok('Cockpit : bouton vidéo de la méthode', r.vidcp === true, r.vidcp);
     ok('CLV : cotes gardées en mémoire + cartes', r.clv === true, r.clv);
+    ok('Joueur NHL du mur : fiche Stats', r.nhlj === true, r.nhlj);
     /* Chart.js vient d'un CDN, simulé ici : son absence n'est pas une erreur de l'appli. */
     const vraies = erreurs.filter(m => !/Chart is not defined/.test(m));
     ok('Aucune erreur JavaScript', vraies.length === 0, vraies.slice(0, 3).join(' | '));
