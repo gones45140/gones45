@@ -530,6 +530,7 @@ serveur.listen(0, async () => {
         const op = document.createElement('option'); op.value = 'MCDAVID CONNOR'; op.text = 'MCDAVID CONNOR'; un.appendChild(op);
         state.u = (u0 || []).concat([{ n: 'MCDAVID CONNOR', type: 'joueur', sport: '🏒', note: 'Edmonton Oilers', s: 'a' }]);
         _g45TicketRemplirCockpit({ joueur: 'Connor McDavid', equipe: 'Edmonton Oilers', type: 'Passes 1+', cote: '1.40', mise: '5' });
+        try { updMise(); } catch (x) {}
         const v = un.value, ce = (document.getElementById('c-equipe') || {}).value;
         op.remove(); state.u = u0; window.alert = a0;
         o.tkj = (v === 'MCDAVID CONNOR' && !alerte && ce === 'Edmonton Oilers') || JSON.stringify({ v, alerte, ce });
