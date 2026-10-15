@@ -450,10 +450,11 @@ serveur.listen(0, async () => {
         window._g45TrSuivNoter = (l) => { (l || []).forEach((x) => pris.push(x.hN)); };
         _G45_TR.min = 1.5;
         _G45_TR.res = [{ m: { m: 'Victoire Aaa', p: 0.62, cote: 1.2, n: 10 }, hN: 'Aaa', aN: 'Bbb', id: '1', slug: 'fra.1', deco: {} },
-                       { m: { m: 'Victoire Ccc', p: 0.62, n: 10 }, hN: 'Ccc', aN: 'Ddd', id: '2', slug: 'fra.1', deco: {} }];
+                       { m: { m: 'Victoire Ccc', p: 0.62, n: 10 }, hN: 'Ccc', aN: 'Ddd', id: '2', slug: 'fra.1', deco: {} },
+                       { m: { m: 'Pas de nul', p: 0.66, n: 10, fair: 0.77, accord: 0.77 }, hN: 'Eee', aN: 'Fff', id: '3', slug: 'uefa.europa', deco: {} }];
         _g45TrRender();
         window._g45TrSuivNoter = orig; Object.assign(_G45_TR, sv);
-        o.trMin = (pris.indexOf('Aaa') < 0 && pris.indexOf('Ccc') >= 0) || JSON.stringify(pris);
+        o.trMin = (pris.indexOf('Aaa') < 0 && pris.indexOf('Eee') < 0 && pris.indexOf('Ccc') >= 0) || JSON.stringify(pris);
       } catch (e) { o.trMin = 'erreur : ' + e.message; }
       /* 20261015k — tendances gardées jusqu'au match : matchs commencés retirés à la reprise */
       try {
