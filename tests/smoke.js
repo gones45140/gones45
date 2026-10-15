@@ -535,6 +535,17 @@ serveur.listen(0, async () => {
         op.remove(); state.u = u0; window.alert = a0;
         o.tkj = (v === 'MCDAVID CONNOR' && !alerte && ce === 'Edmonton Oilers') || JSON.stringify({ v, alerte, ce });
       } catch (e) { o.tkj = 'erreur : ' + e.message; }
+      /* 20261016f — équipe du ticket absente du mur, ADVERSAIRE au mur → pari contre lui */
+      try {
+        const un = document.getElementById('c-unit'), u0 = state.u, a0 = window.alert; let alerte = '';
+        window.alert = (m) => { alerte = m; };
+        const op = document.createElement('option'); op.value = 'Vancouver Canucks'; op.text = 'Vancouver Canucks'; un.appendChild(op);
+        state.u = (u0 || []).concat([{ n: 'Vancouver Canucks', sport: '🏒', s: 'a' }]);
+        _g45TicketRemplirCockpit({ equipe: 'Florida Panthers', adversaire: 'Vancouver Canucks', domicile: true, type: 'Résultat', cote: '1.52', mise: '5' });
+        const v = un.value, t = document.getElementById('c-target').value, l = (document.getElementById('c-lieu') || {}).value, ty = (mmRows[0] || {}).type;
+        op.remove(); state.u = u0; window.alert = a0;
+        o.tkc = (v === 'Vancouver Canucks' && t === 'Florida Panthers' && l === 'ext' && ty === 'Défaite' && !alerte) || JSON.stringify({ v, t, l, ty, alerte });
+      } catch (e) { o.tkc = 'erreur : ' + e.message; }
       /* 20261015o — cote ≈ books FR = DraftKings − 6 %, DK gardée ; filtre cote mini sur la cote FR */
       try {
         const o2 = _g45TrCoteFr([{ m: 'X', p: 0.7, cote: 1.55, ev: 0.085 }, { m: 'Y', p: 0.6, cote: 0 }]);
@@ -720,6 +731,7 @@ serveur.listen(0, async () => {
     ok('Joueur NHL du mur : fiche Stats', r.nhlj === true, r.nhlj);
     ok('Joueur foot du mur : fiche refaite', r.mj === true, r.mj);
     ok('Ticket Cockpit : pari joueur → carte du joueur', r.tkj === true, r.tkj);
+    ok('Ticket Cockpit : adversaire au mur → pari contre', r.tkc === true, r.tkc);
     /* Chart.js vient d'un CDN, simulé ici : son absence n'est pas une erreur de l'appli. */
     const vraies = erreurs.filter(m => !/Chart is not defined/.test(m));
     ok('Aucune erreur JavaScript', vraies.length === 0, vraies.slice(0, 3).join(' | '));
