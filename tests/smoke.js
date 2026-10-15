@@ -512,6 +512,16 @@ serveur.listen(0, async () => {
         if (cree) el.remove(); else el.innerHTML = '';
         o.nhlj = (/Connor McDavid/.test(t) && /Oilers/.test(t) && /33 %/.test(t) && /Canucks/.test(t) && /Prochain match/.test(t) && /Sharks/.test(t) && /8478402\.png/.test(lg || '') && jv && /8478402\.png/.test(jv.thumb || '') && !!lgSj) || t.replace(/<[^>]+>/g, ' ').slice(0, 300);
       } catch (e) { o.nhlj = 'erreur : ' + e.message; }
+      /* 20261015y — fiche joueur foot : onglets par compétition + chance de marquer */
+      try {
+        const st = (g, app) => ({ g: g, pg: 1, app: app, st: app, min: 90 * app, sh: 40, sot: 24, head: 0 });
+        window._g45MjD = { nom: 'X', id: { pname: 'Kylian Mbappé', tname: 'Real Madrid', aid: 1 }, an: 2026, ph: '', lgSel: null,
+          blocs: [{ st: st(7, 8), t: '🏆 Liga', c: '#f5c542', lgs: 'esp.1' }, { st: st(2, 2), t: '⭐ C1', c: '#8aa0ff', lgs: 'uefa.champions' }] };
+        window._g45MjSel = 0;
+        const a = _g45MjHtml();
+        window._g45MjSel = 1; const b = _g45MjHtml(); window._g45MjSel = 0;
+        o.mj = (/Kylian Mbappé/.test(a) && /⭐ C1/.test(a) && /53 %/.test(a) && /Voir ses matchs/.test(a) && /buts \/ m/.test(b) && /1,00/.test(b)) || a.replace(/<[^>]+>/g, ' ').slice(0, 300);
+      } catch (e) { o.mj = 'erreur : ' + e.message; }
       /* 20261015o — cote ≈ books FR = DraftKings − 6 %, DK gardée ; filtre cote mini sur la cote FR */
       try {
         const o2 = _g45TrCoteFr([{ m: 'X', p: 0.7, cote: 1.55, ev: 0.085 }, { m: 'Y', p: 0.6, cote: 0 }]);
@@ -695,6 +705,7 @@ serveur.listen(0, async () => {
     ok('Cockpit : bouton vidéo de la méthode', r.vidcp === true, r.vidcp);
     ok('CLV : cotes gardées en mémoire + cartes', r.clv === true, r.clv);
     ok('Joueur NHL du mur : fiche Stats', r.nhlj === true, r.nhlj);
+    ok('Joueur foot du mur : fiche refaite', r.mj === true, r.mj);
     /* Chart.js vient d'un CDN, simulé ici : son absence n'est pas une erreur de l'appli. */
     const vraies = erreurs.filter(m => !/Chart is not defined/.test(m));
     ok('Aucune erreur JavaScript', vraies.length === 0, vraies.slice(0, 3).join(' | '));
