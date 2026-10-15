@@ -444,6 +444,17 @@ serveur.listen(0, async () => {
           && P.n === 2 && P.net === 0 && N.who === 'Laura' && _g45BkEstBanque('revolut') && !_g45BkEstBanque('winamax') && /unibet\.fr/.test(bkFavicon('unibet laura')) && /boursobank/.test(bkFavicon('boursorama antoine')) && /pinnacle\.com/.test(bkFavicon('pinnacle'))) || JSON.stringify({ noms, bq, P, N });
         state.b = b0; state.a = a0; _g45BkGrille();
       } catch (e) { o.bank = 'erreur : ' + e.message; }
+      /* 20261015j — cote mini : la cote du MARCHÉ compte quand elle est connue (1,20 écartée même à 62 %) */
+      try {
+        const sv = { res: _G45_TR.res, min: _G45_TR.min, sp: _G45_TR.sp }, pris = [], orig = window._g45TrSuivNoter;
+        window._g45TrSuivNoter = (l) => { (l || []).forEach((x) => pris.push(x.hN)); };
+        _G45_TR.min = 1.5;
+        _G45_TR.res = [{ m: { m: 'Victoire Aaa', p: 0.62, cote: 1.2, n: 10 }, hN: 'Aaa', aN: 'Bbb', id: '1', slug: 'fra.1', deco: {} },
+                       { m: { m: 'Victoire Ccc', p: 0.62, n: 10 }, hN: 'Ccc', aN: 'Ddd', id: '2', slug: 'fra.1', deco: {} }];
+        _g45TrRender();
+        window._g45TrSuivNoter = orig; Object.assign(_G45_TR, sv);
+        o.trMin = (pris.indexOf('Aaa') < 0 && pris.indexOf('Ccc') >= 0) || JSON.stringify(pris);
+      } catch (e) { o.trMin = 'erreur : ' + e.message; }
       /* 20261015i — historique OFFICIEL des Tendances : réussite sur toutes, gain à 1 € sur celles qui ont une cote */
       try {
         const C = _g45TrOffCalc([{ t: 1, r: 1, c: 2.1 }, { t: 2, r: 0, c: null }, { t: 3, r: 0, c: 1.5 }, { t: 4, r: 1, c: 1.58 }, { t: 5, r: null, c: 2 }]);
@@ -602,6 +613,7 @@ serveur.listen(0, async () => {
     ok('Bank : bookmakers / banques', r.bank === true, r.bank);
     ok('Menu + en portrait', r.plusp === true, r.plusp);
     ok('Tendances : historique officiel', r.trOff === true, r.trOff);
+    ok('Tendances : cote mini = cote du marché', r.trMin === true, r.trMin);
     ok('Cockpit : bouton vidéo de la méthode', r.vidcp === true, r.vidcp);
     /* Chart.js vient d'un CDN, simulé ici : son absence n'est pas une erreur de l'appli. */
     const vraies = erreurs.filter(m => !/Chart is not defined/.test(m));
