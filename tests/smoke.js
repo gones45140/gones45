@@ -461,6 +461,19 @@ serveur.listen(0, async () => {
         const a = _g45QtResume({ moi: { u: 2, max: 8 } }), b = _g45QtResume({ jour: { u: 9, max: 20 }, mois: { u: 88, max: 400 } }), c = _g45QtResume({ remaining: 3 });
         o.qt = (a.r === 6 && /te reste/.test(a.qui) && b.r === 11 && /tout le monde/.test(b.txt) && c === null) || JSON.stringify([a, b, c]);
       } catch (e) { o.qt = 'erreur : ' + e.message; }
+      /* 20261015o — cote ≈ books FR = DraftKings − 5 %, DK gardée ; filtre cote mini sur la cote FR */
+      try {
+        const o2 = _g45TrCoteFr([{ m: 'X', p: 0.7, cote: 1.55, ev: 0.085 }, { m: 'Y', p: 0.6, cote: 0 }]);
+        const sv = { res: _G45_TR.res, min: _G45_TR.min }, pris = [], orig = window._g45TrSuivNoter;
+        window._g45TrSuivNoter = (l) => { (l || []).forEach((x) => pris.push(x.hN)); };
+        _G45_TR.min = 1.5;
+        _G45_TR.res = [{ m: { m: 'Victoire Aaa', p: 0.62, cote: 1.47, coteDk: 1.55, n: 10 }, hN: 'Aaa', aN: 'B', id: '1', slug: 'fra.1', deco: {} },
+                       { m: { m: 'Victoire Ccc', p: 0.62, cote: 1.5, coteDk: 1.58, n: 10 }, hN: 'Ccc', aN: 'D', id: '2', slug: 'fra.1', deco: {} }];
+        const H = _g45TrRender();
+        window._g45TrSuivNoter = orig; Object.assign(_G45_TR, sv);
+        o.trFr = (o2[0].cote === 1.47 && o2[0].coteDk === 1.55 && Math.abs(o2[0].ev - (0.7 * 1.47 - 1)) < 1e-9 && !o2[1].coteDk
+          && pris.indexOf('Aaa') < 0 && pris.indexOf('Ccc') >= 0 && /BOOKS FR/.test(H) && /DK 1\.58/.test(H)) || JSON.stringify([o2, pris]);
+      } catch (e) { o.trFr = 'erreur : ' + e.message; }
       /* 20261015k — tendances gardées jusqu'au match : matchs commencés retirés à la reprise */
       try {
         const n = Date.now(), F = _g45TrGardeFiltre([{ d: new Date(n + 3600e3).toISOString() }, { d: new Date(n - 60e3).toISOString() }, { d: null }], n);
@@ -627,6 +640,7 @@ serveur.listen(0, async () => {
     ok('Tendances : cote mini = cote du marché', r.trMin === true, r.trMin);
     ok('Tendances : gardées jusqu\'au match', r.trGarde === true, r.trGarde);
     ok('Quota des cotes (son quota / tout le monde)', r.qt === true, r.qt);
+    ok('Tendances : cote ≈ books FR (DK − 5 %)', r.trFr === true, r.trFr);
     ok('Cockpit : bouton vidéo de la méthode', r.vidcp === true, r.vidcp);
     /* Chart.js vient d'un CDN, simulé ici : son absence n'est pas une erreur de l'appli. */
     const vraies = erreurs.filter(m => !/Chart is not defined/.test(m));

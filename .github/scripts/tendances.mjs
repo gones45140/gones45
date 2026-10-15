@@ -115,6 +115,7 @@ const nouvelles = await page.evaluate(async ({ R, SPORTS }) => {
         sortie.push({ id: String(x.id), sl: x.slug, t: t, h: x.hN, a: x.aN, m: x.m.m, k: k,
           p: Math.round(x.m.p * 1000) / 1000,
           c: x.m.cote > 1 ? Math.round(x.m.cote * 100) / 100 : null,
+          cd: x.m.coteDk > 1 ? Math.round(x.m.coteDk * 100) / 100 : null,   // 20261015o : cote DraftKings d'origine ; c = ≈ books FR (− 5 %)
           f: x.m.fair > 0 ? Math.round(x.m.fair * 1000) / 1000 : null,
           d: x.m.desac ? 1 : 0, r: null });
       });
