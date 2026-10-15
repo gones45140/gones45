@@ -1,0 +1,65 @@
+# ═══════════════════════════════════════════════════════════════════════════
+# GONES45 — TENDANCES OFFICIELLES (20261015i)
+#
+# Chaque jour à 10 h (Paris), le robot lance l'analyse Tendances avec les
+# réglages officiels (cote mini 1,50, proba mini 50 %) et note les tendances
+# AVANT les matchs dans données/tendances_officielles.json ; il juge aussi
+# celles de la veille. Le même fichier est lu par tout le monde (gones45 et
+# bet45) : un seul historique, publiable sur X, daté par GitHub.
+#
+# Deux crons : 8 h UTC = 10 h en heure d'été, 9 h UTC = 10 h en heure d'hiver.
+# Le script ne travaille qu'une fois par jour, à partir de 10 h à Paris.
+# Bouton « Run workflow » : passage forcé (FORCE=1), pour un essai.
+#
+# données/ est exclu de pages.yml : ce commit ne republie pas le site.
+# Minutes illimitées (dépôt public).
+# ═══════════════════════════════════════════════════════════════════════════
+name: tendances-officielles
+
+on:
+  schedule:
+    - cron: '0 8 * * *'
+    - cron: '0 9 * * *'
+  workflow_dispatch:
+
+concurrency:
+  group: tendances-officielles
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
+jobs:
+  tendances:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Navigateur
+        run: |
+          npm install --no-save --no-package-lock playwright@1.48.2
+          npx playwright install --with-deps chromium
+
+      - name: Analyse et vérification
+        env:
+          FORCE: ${{ github.event_name == 'workflow_dispatch' && '1' || '0' }}
+        run: node .github/scripts/tendances.mjs
+
+      - name: Enregistrement
+        run: |
+          git config user.name "Tendances officielles"
+          git config user.email "actions@users.noreply.github.com"
+          git add "données/tendances_officielles.json"
+          if git diff --cached --quiet; then echo "Rien de nouveau"; exit 0; fi
+          git commit -m "Tendances officielles $(TZ=Europe/Paris date +%d/%m/%Y)"
+          # la synchro des paris pousse aussi sur main : on se recale avant chaque essai
+          for i in 1 2 3 4 5; do
+            git pull --rebase origin main && git push origin HEAD:main && exit 0
+            sleep $((i * 5))
+          done
+          exit 1

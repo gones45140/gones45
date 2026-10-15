@@ -444,6 +444,13 @@ serveur.listen(0, async () => {
           && P.n === 2 && P.net === 0 && N.who === 'Laura' && _g45BkEstBanque('revolut') && !_g45BkEstBanque('winamax') && /unibet\.fr/.test(bkFavicon('unibet laura')) && /boursobank/.test(bkFavicon('boursorama antoine')) && /pinnacle\.com/.test(bkFavicon('pinnacle'))) || JSON.stringify({ noms, bq, P, N });
         state.b = b0; state.a = a0; _g45BkGrille();
       } catch (e) { o.bank = 'erreur : ' + e.message; }
+      /* 20261015i — historique OFFICIEL des Tendances : réussite sur toutes, gain à 1 € sur celles qui ont une cote */
+      try {
+        const C = _g45TrOffCalc([{ t: 1, r: 1, c: 2.1 }, { t: 2, r: 0, c: null }, { t: 3, r: 0, c: 1.5 }, { t: 4, r: 1, c: 1.58 }, { t: 5, r: null, c: 2 }]);
+        _g45TrOff.j = { t: [{ id: '1', sl: 'nhl', t: 1, h: 'A', a: 'B', m: 'Vainqueur A', k: '1', p: .6, c: null, d: 0, r: 1 }] }; _g45TrOff.t = Date.now();
+        const H = _g45TrFiabHtml();
+        o.trOff = (C.n === 4 && C.ok === 2 && C.nc === 3 && C.gain === 0.68 && /OFFICIEL/.test(H) && /pas de cote/.test(H) && /1 \/ 1/.test(H)) || JSON.stringify(C);
+      } catch (e) { o.trOff = 'erreur : ' + e.message; }
       /* 20261015g — menu « + » en PORTRAIT : il doit s'ouvrir avec une vraie hauteur (le calage paysage l'écrasait à 17 px). */
       try {
         const pm = document.getElementById('plus-menu');
@@ -594,6 +601,7 @@ serveur.listen(0, async () => {
     ok('Cotes en direct (règles)', r.cdir === true, r.cdir);
     ok('Bank : bookmakers / banques', r.bank === true, r.bank);
     ok('Menu + en portrait', r.plusp === true, r.plusp);
+    ok('Tendances : historique officiel', r.trOff === true, r.trOff);
     ok('Cockpit : bouton vidéo de la méthode', r.vidcp === true, r.vidcp);
     /* Chart.js vient d'un CDN, simulé ici : son absence n'est pas une erreur de l'appli. */
     const vraies = erreurs.filter(m => !/Chart is not defined/.test(m));
