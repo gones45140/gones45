@@ -459,7 +459,7 @@ serveur.listen(0, async () => {
       /* 20261015m — quota des cotes : BET45 = son compteur seulement, GONES45 = tout le monde */
       try {
         const a = _g45QtResume({ moi: { u: 2, max: 8 } }), b = _g45QtResume({ jour: { u: 9, max: 20 }, mois: { u: 88, max: 400 } }), c = _g45QtResume({ remaining: 3 });
-        o.qt = (a.r === 6 && /toi/.test(a.txt) && b.r === 11 && /tout le monde/.test(b.txt) && c === null) || JSON.stringify([a, b, c]);
+        o.qt = (a.r === 6 && /te reste/.test(a.qui) && b.r === 11 && /tout le monde/.test(b.txt) && c === null) || JSON.stringify([a, b, c]);
       } catch (e) { o.qt = 'erreur : ' + e.message; }
       /* 20261015k — tendances gardées jusqu'au match : matchs commencés retirés à la reprise */
       try {
