@@ -74933,7 +74933,7 @@ var _G45_BK_DOM = [
     var an = +O.mois.slice(0, 4), mo = +O.mois.slice(5, 7) - 1, nbj = new Date(an, mo + 1, 0).getDate(), dec = (new Date(an, mo, 1).getDay() + 6) % 7;
     h += '<style>@media(max-width:600px){#g45tr-off .g45tro-lg{display:none!important}#g45tr-off .g45tro-gn{display:none}#g45tr-off .g45tro-kpis{grid-template-columns:1fr 1fr!important}#g45tr-off .g45tro-kpis .g45tro-k:last-child{grid-column:1/-1}}@media(min-width:601px){#g45tr-off .g45tro-pc{display:none}}'
       /* 20261017k (« ça fait un vide noir au milieu », maquette validée « oui ») : PC = une ligne par match, équipes + score à gauche (400 px), paris à droite */
-      + '@media(min-width:700px){#g45tr-off .g45tro-mc{display:flex;align-items:stretch}#g45tr-off .g45tro-mh{display:none!important}#g45tr-off .g45tro-mh2{display:flex!important;width:50%;flex:none;box-sizing:border-box}#g45tr-off .g45tro-mb{flex:1;min-width:0;display:flex;flex-direction:column;justify-content:center}#g45tr-off .g45tro-mp{flex:1}#g45tr-off .g45tro-mb>.g45tro-mp:first-child{border-top:none}}</style>';
+      + '@media(min-width:700px){#g45tr-off .g45tro-mc{display:flex;align-items:stretch}#g45tr-off .g45tro-mh{display:none!important}#g45tr-off .g45tro-mh2{display:flex!important;width:50%;flex:none;box-sizing:border-box}#g45tr-off .g45tro-mb{flex:1;min-width:0;display:flex;flex-direction:column;justify-content:center;position:relative}#g45tr-off .g45tro-wm{display:block!important;position:absolute;left:58%;top:50%;transform:translate(-50%,-50%);height:calc(100% - 10px);max-height:70px;opacity:.3;pointer-events:none}#g45tr-off .g45tro-mp{position:relative}#g45tr-off .g45tro-mp{flex:1}#g45tr-off .g45tro-mb>.g45tro-mp:first-child{border-top:none}}</style>';
     h += '<div style="display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:5px;">' + ['lun', 'mar', 'mer', 'jeu', 'ven', 'sam', 'dim'].map(function (j) { return '<div style="text-align:center;font-size:12px;font-weight:700;color:#aab6d6;text-transform:uppercase;">' + j + '</div>'; }).join('');
     for (var i = 0; i < dec; i++) h += '<div></div>';
     for (var dd = 1; dd <= nbj; dd++) {
@@ -74974,7 +74974,9 @@ var _G45_BK_DOM = [
             + '<span style="width:64px;flex:none;text-align:center;line-height:1.15;"><b style="font-size:15px;color:#fff;">' + hh + '</b><br><span style="font-size:12px;color:' + (sc ? '#aab6d6' : '#f0c828') + ';">' + etat + '</span></span>'
             + nomC('h', true)
             + '<span style="width:70px;flex:none;text-align:center;">' + (sc ? '<span style="background:#fff;color:#111;border-radius:7px;padding:2px 8px;font-size:15px;font-weight:900;">' + esc(sc) + '</span>' : '<span style="font-size:15px;color:#8e9bbd;font-weight:800;">–</span>') + '</span>'
-            + nomC('a', false) + '</div><div class="g45tro-mb">';
+            + nomC('a', false) + '</div><div class="g45tro-mb">'
+            /* 20261017l (« un logo du championnat pour combler le vide ») : filigrane dans la zone des paris, PC seulement */
+            + (lgUrl(sl) ? '<img class="g45tro-wm" src="' + esc(lgUrl(sl)) + '" alt="" onerror="this.remove()" style="display:none;">' : '');
           g.forEach(function (x) {
             var ok = x.r === 1, ko = x.r === 0;
             var res = x.r == null ? '⏳' : (ok ? '✅' : '❌') + (x.c > 1 ? ' ' + eurC(ok ? x.c - 1 : -1) : '');
