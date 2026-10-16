@@ -38,6 +38,7 @@ serveur.listen(0, async () => {
     const u = r.request().url();
     if (/\.(png|jpe?g|svg|webp|gif)(\?|$)/i.test(u)) return r.fulfill({ status: 404, body: '' });
     /* 20261016s : relais TheSportsDB du worker (Refus = 403 → l'appli doit appeler TheSportsDB en direct) */
+    if (/host=tsdb/.test(u) && /Trop/.test(u)) return r.fulfill({ status: 429, body: 'trop' });
     if (/host=tsdb/.test(u)) return /Refus/.test(u) ? r.fulfill({ status: 403, body: 'non' }) : r.fulfill({ status: 200, contentType: 'application/json', body: '{"via":"worker"}' });
     if (/thesportsdb\.com\/api/.test(u)) return r.fulfill({ status: 200, contentType: 'application/json', body: '{"via":"direct"}' });
     return r.fulfill({ status: 200, contentType: 'application/json', body: '{}' });
@@ -393,8 +394,8 @@ serveur.listen(0, async () => {
       try {
         /* 20261016s : TheSportsDB passe par le worker (host=tsdb) ; worker 403 → appel direct */
         const via = async (t) => { try { return (await (await fetch('https://www.thesportsdb.com/api/v1/json/3/searchteams.php?t=' + t)).json()).via; } catch (e) { return 'erreur'; } };
-        const a = await via('Arsenal'), b = await via('Refus');
-        o.tsdbw = (a === 'worker' && b === 'direct') || JSON.stringify({ a, b });
+        const a = await via('Arsenal'), b = await via('Refus'), c = await via('Trop');
+        o.tsdbw = (a === 'worker' && b === 'direct' && c === 'direct') || JSON.stringify({ a, b, c });
       } catch (e) { o.tsdbw = 'erreur : ' + e.message; }
       try {
         /* 20261014t : Fusionner une sauvegarde — ajoute les paris réglés absents, doublons ignorés, capital inchangé. */
