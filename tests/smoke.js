@@ -627,6 +627,27 @@ serveur.listen(0, async () => {
         _g45TrOff.flt = { sp: 'ft' }; const H2 = _g45TrFiabHtml(); _g45TrOff.flt = { sp: 'hk', ty: 'vic' }; const H3 = _g45TrFiabHtml(); _g45TrOff.flt = {}; _g45TrOff.mois = null;
         o.trOff = (/g45TrOffFltOuvrir/.test(H) && /Aucune tendance avec ces filtres/.test(H2) && /2 actifs/.test(H3) && !/Aucune tendance avec ces filtres/.test(H3) && C.n === 4 && C.ok === 2 && C.nc === 3 && C.gain === 0.68 && /OFFICIEL/.test(H) && /pas de cote/.test(H) && /1 \/ 1/.test(H) && /g45TrOffJour\('19[67]\d-/.test(H) && /g45TrOffMois/.test(H) && /Courbe du gain/.test(H) && /Réussite du mois/.test(H) && /Annoncé contre réel/.test(H) && /Par type de pari/.test(H)) || JSON.stringify(C);
       } catch (e) { o.trOff = 'erreur : ' + e.message; }
+      /* 20261017q — 🏠 / ✈️ pari par lieu + club du joueur (formulaire du mur et « Modifier ») */
+      try {
+        const C1 = _g45UfCompose('Edmonton Oilers', 'en forme', 'buteur', '2 points'), C2 = _g45UfCompose('', '', 'victoire', 'Victoire');
+        const D1 = _g45UfDecoupe(C1), D2 = _g45UfDecoupe('🏠/✈️ victoire'), D3 = _g45UfDecoupe('🏠 victoire+under 3.5');
+        await new Promise(r => setTimeout(r, 1600));
+        const n0 = state.u.length;
+        document.getElementById('u-type-joueur').click(); await new Promise(r => setTimeout(r, 50));
+        const vis = document.getElementById('g45uf-club-u').style.display !== 'none';
+        document.getElementById('u-name').value = 'Testeur Joueur'; document.getElementById('u-club').value = 'Edmonton Oilers';
+        document.getElementById('u-pdom').value = 'buteur'; document.getElementById('u-pext').value = 'buteur'; document.getElementById('u-note').value = '';
+        addUnit();
+        const nu = state.u[state.u.length - 1];
+        const okAdd = state.u.length === n0 + 1 && nu.club === 'Edmonton Oilers' && nu.note === 'Edmonton Oilers 🏠/✈️ buteur' && _g45UClub(nu) === 'Edmonton Oilers';
+        editUnit(state.u.length - 1);
+        const okEd = document.getElementById('edit-unit-club').value === 'Edmonton Oilers' && document.getElementById('edit-unit-pdom').value === 'buteur' && document.getElementById('edit-unit-note').value === '';
+        document.getElementById('edit-unit-pext').value = 'passe'; saveEditUnit();
+        const okSv = nu.note === 'Edmonton Oilers 🏠 buteur ✈️ passe' && _g45UClub({ type: 'joueur', note: 'Tampa Bay Lightning · ok 🏠 x' }) === 'Tampa Bay Lightning';
+        state.u.pop(); document.getElementById('u-type-club').click(); try { save(); } catch (e) {}
+        o.ufLieu = (C1 === 'Edmonton Oilers · en forme 🏠 buteur ✈️ 2 points' && C2 === '🏠/✈️ victoire' && D1.dom === 'buteur' && D1.ext === '2 points' && D1.avant === 'Edmonton Oilers · en forme'
+          && D2.dom === 'victoire' && D2.ext === 'victoire' && D3.dom === 'victoire+under 3.5' && D3.ext === '' && okAdd && okEd && okSv && vis) || JSON.stringify({ vis, C1, C2, D1, D2, D3, okAdd, okEd, okSv, note: nu && nu.note });
+      } catch (e) { o.ufLieu = 'erreur : ' + e.message; }
       /* 20261015g — menu « + » en PORTRAIT : il doit s'ouvrir avec une vraie hauteur (le calage paysage l'écrasait à 17 px). */
       try {
         const pm = document.getElementById('plus-menu');
@@ -783,6 +804,7 @@ serveur.listen(0, async () => {
     ok('Menu + en portrait', r.plusp === true, r.plusp);
     ok('Tendances : historique officiel', r.trOff === true, r.trOff);
     ok('Tendances : historique en direct', r.trLive === true, r.trLive);
+    ok('Mur : pari par lieu + club du joueur', r.ufLieu === true, r.ufLieu);
     ok('Tendances : cote mini = cote du marché', r.trMin === true, r.trMin);
     ok('Tendances : gardées jusqu\'au match', r.trGarde === true, r.trGarde);
     ok('Quota des cotes (son quota / tout le monde)', r.qt === true, r.qt);
