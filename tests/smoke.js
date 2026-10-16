@@ -619,7 +619,7 @@ serveur.listen(0, async () => {
         const C = _g45TrOffCalc([{ t: 1, r: 1, c: 2.1 }, { t: 2, r: 0, c: null }, { t: 3, r: 0, c: 1.5 }, { t: 4, r: 1, c: 1.58 }, { t: 5, r: null, c: 2 }]);
         _g45TrOff.j = { t: [{ id: '1', sl: 'nhl', t: 1, h: 'A', a: 'B', m: 'Vainqueur A', k: '1', p: .6, c: null, d: 0, r: 1 }] }; _g45TrOff.t = Date.now();
         const H = _g45TrFiabHtml();
-        o.trOff = (C.n === 4 && C.ok === 2 && C.nc === 3 && C.gain === 0.68 && /OFFICIEL/.test(H) && /pas de cote/.test(H) && /1 \/ 1/.test(H)) || JSON.stringify(C);
+        o.trOff = (C.n === 4 && C.ok === 2 && C.nc === 3 && C.gain === 0.68 && /OFFICIEL/.test(H) && /pas de cote/.test(H) && /1 \/ 1/.test(H) && /g45TrOffJour\('19[67]\d-/.test(H) && /g45TrOffMois/.test(H)) || JSON.stringify(C);
       } catch (e) { o.trOff = 'erreur : ' + e.message; }
       /* 20261015g — menu « + » en PORTRAIT : il doit s'ouvrir avec une vraie hauteur (le calage paysage l'écrasait à 17 px). */
       try {
