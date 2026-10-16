@@ -620,7 +620,7 @@ serveur.listen(0, async () => {
         _g45TrOff.j = { t: [{ id: '1', sl: 'nhl', t: 1, h: 'A', a: 'B', m: 'Vainqueur A', k: '1', p: .6, c: null, d: 0, r: 1 }] }; _g45TrOff.t = Date.now(); _g45TrOff.mois = '1970-01'; _g45TrOff.jour = null;
         const H = _g45TrFiabHtml();
         _g45TrOff.flt = { sp: 'ft' }; const H2 = _g45TrFiabHtml(); _g45TrOff.flt = { sp: 'hk', ty: 'vic' }; const H3 = _g45TrFiabHtml(); _g45TrOff.flt = {}; _g45TrOff.mois = null;
-        o.trOff = (/g45TrOffFltOuvrir/.test(H) && /Aucune tendance avec ces filtres/.test(H2) && /2 actifs/.test(H3) && !/Aucune tendance avec ces filtres/.test(H3) && C.n === 4 && C.ok === 2 && C.nc === 3 && C.gain === 0.68 && /OFFICIEL/.test(H) && /pas de cote/.test(H) && /1 \/ 1/.test(H) && /g45TrOffJour\('19[67]\d-/.test(H) && /g45TrOffMois/.test(H) && /Courbe du gain/.test(H) && /Réussite du mois/.test(H)) || JSON.stringify(C);
+        o.trOff = (/g45TrOffFltOuvrir/.test(H) && /Aucune tendance avec ces filtres/.test(H2) && /2 actifs/.test(H3) && !/Aucune tendance avec ces filtres/.test(H3) && C.n === 4 && C.ok === 2 && C.nc === 3 && C.gain === 0.68 && /OFFICIEL/.test(H) && /pas de cote/.test(H) && /1 \/ 1/.test(H) && /g45TrOffJour\('19[67]\d-/.test(H) && /g45TrOffMois/.test(H) && /Courbe du gain/.test(H) && /Réussite du mois/.test(H) && /Annoncé contre réel/.test(H) && /Par type de pari/.test(H)) || JSON.stringify(C);
       } catch (e) { o.trOff = 'erreur : ' + e.message; }
       /* 20261015g — menu « + » en PORTRAIT : il doit s'ouvrir avec une vraie hauteur (le calage paysage l'écrasait à 17 px). */
       try {
