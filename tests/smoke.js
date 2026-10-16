@@ -37,6 +37,9 @@ serveur.listen(0, async () => {
   await page.route(/^https?:\/\/(?!localhost|127\.0\.0\.1)/, r => {
     const u = r.request().url();
     if (/\.(png|jpe?g|svg|webp|gif)(\?|$)/i.test(u)) return r.fulfill({ status: 404, body: '' });
+    /* 20261016s : relais TheSportsDB du worker (Refus = 403 → l'appli doit appeler TheSportsDB en direct) */
+    if (/host=tsdb/.test(u)) return /Refus/.test(u) ? r.fulfill({ status: 403, body: 'non' }) : r.fulfill({ status: 200, contentType: 'application/json', body: '{"via":"worker"}' });
+    if (/thesportsdb\.com\/api/.test(u)) return r.fulfill({ status: 200, contentType: 'application/json', body: '{"via":"direct"}' });
     return r.fulfill({ status: 200, contentType: 'application/json', body: '{}' });
   });
   try {
@@ -387,6 +390,12 @@ serveur.listen(0, async () => {
         window.fetch = f0;
         o.fanp = (n1 > 0 && n === n1 && m2 === false && _g45FanLire('Zzz Testeurs FC') === '') || JSON.stringify({ n1, n, m2 });
       } catch (e) { o.fanp = 'erreur : ' + e.message; }
+      try {
+        /* 20261016s : TheSportsDB passe par le worker (host=tsdb) ; worker 403 → appel direct */
+        const via = async (t) => { try { return (await (await fetch('https://www.thesportsdb.com/api/v1/json/3/searchteams.php?t=' + t)).json()).via; } catch (e) { return 'erreur'; } };
+        const a = await via('Arsenal'), b = await via('Refus');
+        o.tsdbw = (a === 'worker' && b === 'direct') || JSON.stringify({ a, b });
+      } catch (e) { o.tsdbw = 'erreur : ' + e.message; }
       try {
         /* 20261014t : Fusionner une sauvegarde — ajoute les paris réglés absents, doublons ignorés, capital inchangé. */
         const a0 = state.a, h0 = state.h, b0 = JSON.stringify(state.b);
@@ -756,6 +765,7 @@ serveur.listen(0, async () => {
     ok('Agenda : joueurs NHL du mur', r.agj === true, r.agj);
     ok('Panne TheSportsDB : pas de boucle', r.fanp === true, r.fanp);
     ok('Joueur du mur : pas de recherche d\'équipe TheSportsDB', r.tsdbj === true, r.tsdbj);
+    ok('TheSportsDB par le worker (secours direct)', r.tsdbw === true, r.tsdbw);
     ok('Fusionner une sauvegarde (paris gardés, capital inchangé)', r.fus === true, r.fus);
     ok('Outils : nouvelles sections + tableau des paliers', r.olift === true, r.olift);
     ok('Mur limité à 15 sur bet45', r.mur === true, r.mur);
