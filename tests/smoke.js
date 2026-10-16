@@ -655,6 +655,8 @@ serveur.listen(0, async () => {
         await loadCalendrier(); const n1 = nc; await loadCalendrier(); const n2 = nc; mo.disconnect();
         o.agCache = (!!loadCalendrier._g45Cache && n1 >= 1 && n2 === n1) || JSON.stringify({ w: !!loadCalendrier._g45Cache, n1, n2 });
       } catch (e) { o.agCache = 'erreur : ' + e.message; }
+      /* 20261017y — secours ESPN posé */
+      o.espSec = (typeof window._g45EspnSecoursLire === 'function') || 'absent';
       /* 20261015g — menu « + » en PORTRAIT : il doit s'ouvrir avec une vraie hauteur (le calage paysage l'écrasait à 17 px). */
       try {
         const pm = document.getElementById('plus-menu');
@@ -813,6 +815,7 @@ serveur.listen(0, async () => {
     ok('Tendances : historique en direct', r.trLive === true, r.trLive);
     ok('Mur : pari par lieu + club du joueur', r.ufLieu === true, r.ufLieu);
     ok('Agenda gardé jusqu\'au prochain match', r.agCache === true, r.agCache);
+    ok('Secours ESPN posé', r.espSec === true, r.espSec);
     ok('Tendances : cote mini = cote du marché', r.trMin === true, r.trMin);
     ok('Tendances : gardées jusqu\'au match', r.trGarde === true, r.trGarde);
     ok('Quota des cotes (son quota / tout le monde)', r.qt === true, r.qt);
