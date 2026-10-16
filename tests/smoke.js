@@ -378,6 +378,16 @@ serveur.listen(0, async () => {
         o.tsdbj = (n === 0 && !a && b && !b.u && !c) || JSON.stringify({ n, a, b, c });
       } catch (e) { o.tsdbj = 'erreur : ' + e.message; }
       try {
+        /* 20261016p : panne TheSportsDB → pas de boucle (2e passage = rien à faire) */
+        const f0 = window.fetch; let n = 0;
+        window.fetch = async (u) => { if (/thesportsdb/.test(String(u))) { n++; throw new TypeError('Failed to fetch'); } return f0(u); };
+        localStorage.removeItem('g45_fanart2_' + _g45SgNorm('Zzz Testeurs FC'));
+        await _g45FanCompleter([{ nom: 'Zzz Testeurs FC', sp: 'hockey' }]); const n1 = n;
+        const m2 = await _g45FanCompleter([{ nom: 'Zzz Testeurs FC', sp: 'hockey' }]);
+        window.fetch = f0;
+        o.fanp = (n1 > 0 && n === n1 && m2 === false && _g45FanLire('Zzz Testeurs FC') === '') || JSON.stringify({ n1, n, m2 });
+      } catch (e) { o.fanp = 'erreur : ' + e.message; }
+      try {
         /* 20261014t : Fusionner une sauvegarde — ajoute les paris réglés absents, doublons ignorés, capital inchangé. */
         const a0 = state.a, h0 = state.h, b0 = JSON.stringify(state.b);
         state.a = [{ id: 'f1', date: '2026-10-10', n: 'Lyon', cote: 2, m: 5, win: true }]; state.h = [{ id: 'f9', date: '2026-10-14', n: 'Lens', cote: 1.8, m: 3 }];
@@ -744,6 +754,7 @@ serveur.listen(0, async () => {
     ok('Prochains matchs foot : championnat même si la ligue mémorisée est la LDC', r.avl === true, r.avl);
     ok('Agenda : logos des 2 équipes en filigrane', r.agvs === true, r.agvs);
     ok('Agenda : joueurs NHL du mur', r.agj === true, r.agj);
+    ok('Panne TheSportsDB : pas de boucle', r.fanp === true, r.fanp);
     ok('Joueur du mur : pas de recherche d\'équipe TheSportsDB', r.tsdbj === true, r.tsdbj);
     ok('Fusionner une sauvegarde (paris gardés, capital inchangé)', r.fus === true, r.fus);
     ok('Outils : nouvelles sections + tableau des paliers', r.olift === true, r.olift);
