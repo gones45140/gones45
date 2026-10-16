@@ -368,6 +368,16 @@ serveur.listen(0, async () => {
         o.agj = (/MCDAVID CONNOR/.test(zt) && /Edmonton Oilers vs/.test(zt) && img.some(x => /mugs\/x\.png/.test(x))) || zt.slice(0, 300) + ' ' + JSON.stringify(img);
       } catch (e) { o.agj = 'erreur : ' + e.message; }
       try {
+        /* 20261016i : carte JOUEUR du mur → aucune recherche d'équipe TheSportsDB */
+        const u0 = state.u, f0 = window.fetch; let n = 0;
+        state.u = [{ n: 'Connor McDavid', type: 'joueur', sport: '🏒', note: 'Edmonton Oilers' }];
+        window.fetch = async (u) => { if (/searchteams/.test(String(u))) n++; return { ok: false, status: 404, json: async () => ({}) }; };
+        localStorage.removeItem('g45bgclub1_' + _g45SgNorm('Connor McDavid'));
+        const a = await _g45FanChercher('Connor McDavid', 'hockey'), b = await _g45BgChercher('Connor McDavid');
+        state.u = u0; window.fetch = f0;
+        o.tsdbj = (n === 0 && !a && b && !b.u) || JSON.stringify({ n, a, b });
+      } catch (e) { o.tsdbj = 'erreur : ' + e.message; }
+      try {
         /* 20261014t : Fusionner une sauvegarde — ajoute les paris réglés absents, doublons ignorés, capital inchangé. */
         const a0 = state.a, h0 = state.h, b0 = JSON.stringify(state.b);
         state.a = [{ id: 'f1', date: '2026-10-10', n: 'Lyon', cote: 2, m: 5, win: true }]; state.h = [{ id: 'f9', date: '2026-10-14', n: 'Lens', cote: 1.8, m: 3 }];
@@ -734,6 +744,7 @@ serveur.listen(0, async () => {
     ok('Prochains matchs foot : championnat même si la ligue mémorisée est la LDC', r.avl === true, r.avl);
     ok('Agenda : logos des 2 équipes en filigrane', r.agvs === true, r.agvs);
     ok('Agenda : joueurs NHL du mur', r.agj === true, r.agj);
+    ok('Joueur du mur : pas de recherche d\'équipe TheSportsDB', r.tsdbj === true, r.tsdbj);
     ok('Fusionner une sauvegarde (paris gardés, capital inchangé)', r.fus === true, r.fus);
     ok('Outils : nouvelles sections + tableau des paliers', r.olift === true, r.olift);
     ok('Mur limité à 15 sur bet45', r.mur === true, r.mur);
