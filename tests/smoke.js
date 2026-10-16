@@ -356,6 +356,18 @@ serveur.listen(0, async () => {
         o.agvs = (im.length === 2 && /soccer\/500\/86\.png/.test(im[0]) && /roma/.test(im[1]) && /VS/.test(v.textContent)) || JSON.stringify(im) + ' ' + zt;
       } catch (e) { o.agvs = 'erreur : ' + e.message; }
       try {
+        /* 20261016h : Agenda — joueur NHL du mur (photo, nom, club vs adversaire) */
+        const zA = document.getElementById('cal-content'), z = zA || document.createElement('div'); if (!zA) { z.id = 'cal-content'; document.body.appendChild(z); }
+        const u0 = state.u, f0 = window.fetch, ecs = window.espnClubSchedule;
+        state.u = [{ n: 'MCDAVID CONNOR', type: 'joueur', sport: '🏒', note: 'Edmonton Oilers', logoUrl: 'https://assets.nhle.com/mugs/x.png' }];
+        window.espnClubSchedule = async () => null;
+        window.fetch = async (u) => { const p = decodeURIComponent(String(u)); if (/club-schedule-season\/EDM\/now/.test(p)) return { ok: true, status: 200, json: async () => ({ games: [{ startTimeUTC: new Date(Date.now() + 864e5).toISOString(), gameType: 2, gameState: 'FUT', homeTeam: { abbrev: 'EDM' }, awayTeam: { abbrev: 'UTA' } }] }) }; return f0(u); };
+        await loadCalendrier();
+        const zt = z.textContent, img = [...z.querySelectorAll('img')].map(i => i.getAttribute('src'));
+        state.u = u0; window.fetch = f0; window.espnClubSchedule = ecs; if (!zA) z.remove(); else z.innerHTML = '';
+        o.agj = (/MCDAVID CONNOR/.test(zt) && /Edmonton Oilers vs/.test(zt) && img.some(x => /mugs\/x\.png/.test(x))) || zt.slice(0, 300) + ' ' + JSON.stringify(img);
+      } catch (e) { o.agj = 'erreur : ' + e.message; }
+      try {
         /* 20261014t : Fusionner une sauvegarde — ajoute les paris réglés absents, doublons ignorés, capital inchangé. */
         const a0 = state.a, h0 = state.h, b0 = JSON.stringify(state.b);
         state.a = [{ id: 'f1', date: '2026-10-10', n: 'Lyon', cote: 2, m: 5, win: true }]; state.h = [{ id: 'f9', date: '2026-10-14', n: 'Lens', cote: 1.8, m: 3 }];
@@ -721,6 +733,7 @@ serveur.listen(0, async () => {
     ok('Rugby : prochains matchs + coupes d\'Europe', r.rgpv === true, r.rgpv);
     ok('Prochains matchs foot : championnat même si la ligue mémorisée est la LDC', r.avl === true, r.avl);
     ok('Agenda : logos des 2 équipes en filigrane', r.agvs === true, r.agvs);
+    ok('Agenda : joueurs NHL du mur', r.agj === true, r.agj);
     ok('Fusionner une sauvegarde (paris gardés, capital inchangé)', r.fus === true, r.fus);
     ok('Outils : nouvelles sections + tableau des paliers', r.olift === true, r.olift);
     ok('Mur limité à 15 sur bet45', r.mur === true, r.mur);
