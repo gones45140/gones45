@@ -373,9 +373,9 @@ serveur.listen(0, async () => {
         state.u = [{ n: 'Connor McDavid', type: 'joueur', sport: '🏒', note: 'Edmonton Oilers' }];
         window.fetch = async (u) => { if (/searchteams/.test(String(u))) n++; return { ok: false, status: 404, json: async () => ({}) }; };
         localStorage.removeItem('g45bgclub1_' + _g45SgNorm('Connor McDavid'));
-        const a = await _g45FanChercher('Connor McDavid', 'hockey'), b = await _g45BgChercher('Connor McDavid');
+        const a = await _g45FanChercher('Connor McDavid', 'hockey'), b = await _g45BgChercher('Connor McDavid'); const c = await g45SdbClub('Connor McDavid', '🏒');
         state.u = u0; window.fetch = f0;
-        o.tsdbj = (n === 0 && !a && b && !b.u) || JSON.stringify({ n, a, b });
+        o.tsdbj = (n === 0 && !a && b && !b.u && !c) || JSON.stringify({ n, a, b, c });
       } catch (e) { o.tsdbj = 'erreur : ' + e.message; }
       try {
         /* 20261014t : Fusionner une sauvegarde — ajoute les paris réglés absents, doublons ignorés, capital inchangé. */
