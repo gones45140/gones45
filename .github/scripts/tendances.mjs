@@ -117,7 +117,10 @@ const nouvelles = await page.evaluate(async ({ R, SPORTS }) => {
           c: x.m.cote > 1 ? Math.round(x.m.cote * 100) / 100 : null,
           cd: x.m.coteDk > 1 ? Math.round(x.m.coteDk * 100) / 100 : null,   // 20261015o : cote DraftKings d'origine ; c = ≈ books FR (− 5 %)
           f: x.m.fair > 0 ? Math.round(x.m.fair * 1000) / 1000 : null,
-          d: x.m.desac ? 1 : 0, r: null });
+          d: x.m.desac ? 1 : 0, r: null,
+          // 20261017n : les faits de la carte (« Man City : +2,5 buts à domicile lors de 2 de ses 5 derniers… ») et le nombre de matchs
+          fa: Array.isArray(x.m.faits) && x.m.faits.length ? x.m.faits.slice(0, 4).map((f) => String(f).replace(/<[^>]*>/g, '').slice(0, 160)) : undefined,
+          nm: x.m.n > 0 ? x.m.n : undefined });
       });
       console.log(sp + ' : ' + pris.length + ' affichées');
     } catch (e) { console.log(sp + ' : erreur ' + (e && e.message)); }
