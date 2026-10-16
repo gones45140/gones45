@@ -131,14 +131,19 @@ const note = new Date().toISOString();
 let ajout = 0;
 nouvelles.forEach((x) => { if (deja.has(x.id + '|' + x.k)) return; deja.add(x.id + '|' + x.k); x.n = note; J.t.push(x); ajout++; });
 
-/* Vérification des matchs finis (score final), par ligue et par jour. */
+/* Vérification des matchs finis (score final), par ligue et par jour.
+   20261017i (« avec des logos de club ou championnat ») : le même scoreboard donne aussi les logos → x.hl / x.al (clubs) et
+   J.lg[sl] (championnat) ; une tendance encore sans logo (anciennes comprises) est relue une fois ('' = essayé, rien trouvé). */
+J.lg = J.lg || {};
 const att = J.t.filter((x) => x.r == null && x.t < Date.now() - 3 * 3600e3);
+const sansLogo = J.t.filter((x) => x.r !== -1 && x.hl === undefined);
 const grp = {};
-att.forEach((x) => {
-  if (Date.now() - x.t > 10 * 864e5) { x.r = -1; return; }   // 10 jours sans score : abandonné
+att.forEach((x) => { if (Date.now() - x.t > 10 * 864e5) x.r = -1; });   // 10 jours sans score : abandonné
+J.t.filter((x) => (x.r == null && x.t < Date.now() - 3 * 3600e3) || (x.r !== -1 && x.hl === undefined)).forEach((x) => {
   const d = new Date(x.t), ymd = d.toISOString().slice(0, 10).replace(/-/g, '');
   (grp[x.sl + '|' + ymd] = grp[x.sl + '|' + ymd] || []).push(x);
 });
+const logoLigue = (lg) => { const lo = (lg && lg.logos) || []; const d = lo.find((l) => (l.rel || []).indexOf('dark') >= 0); return ((d || lo[0]) || {}).href || ''; };
 let juge = 0;
 for (const g of Object.keys(grp)) {
   const [sl, ymd] = g.split('|');
@@ -146,10 +151,15 @@ for (const g of Object.keys(grp)) {
   const tous = [];
   for (const dd of [ymd, ymdDecale(ymd, -1)]) {   // ESPN range les matchs par jour AMÉRICAIN : un match du soir peut être la veille
     const r = await curl('https://site.api.espn.com/apis/site/v2/sports/' + sp + '/' + sl + '/scoreboard?dates=' + dd);
-    try { (JSON.parse(r.body).events || []).forEach((e) => tous.push(e)); } catch (e) {}
+    try { const B = JSON.parse(r.body); (B.events || []).forEach((e) => tous.push(e)); if (!J.lg[sl]) { const u = logoLigue(B.leagues && B.leagues[0]); if (u) J.lg[sl] = u; } } catch (e) {}
   }
   for (const x of grp[g]) {
-    const e = tous.find((ev) => String(ev.id) === x.id); if (!e) continue;
+    const e = tous.find((ev) => String(ev.id) === x.id);
+    if (x.hl === undefined) {
+      const cc = (e && e.competitions && e.competitions[0]) || {}, eq = (q) => ((cc.competitors || []).find((z) => z.homeAway === q) || {}).team || {};
+      x.hl = eq('home').logo || ''; x.al = eq('away').logo || '';
+    }
+    if (!e || x.r != null || x.t >= Date.now() - 3 * 3600e3) continue;
     const c = (e.competitions && e.competitions[0]) || {}, st = (c.status && c.status.type) || {};
     if (!st.completed) { if (/postpon|cancel|abandon/i.test(st.name || st.description || '')) x.r = -1; continue; }
     const ho = (c.competitors || []).find((q) => q.homeAway === 'home'), aw = (c.competitors || []).find((q) => q.homeAway === 'away');
