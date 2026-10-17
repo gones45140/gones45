@@ -657,6 +657,13 @@ serveur.listen(0, async () => {
       } catch (e) { o.agCache = 'erreur : ' + e.message; }
       /* 20261017y — secours ESPN posé */
       o.espSec = (typeof window._g45EspnSecoursLire === 'function') || 'absent';
+      try {
+        const st = { u: [{ n: 'PSG', sport: '⚽' }, { n: 'Arsenal', sport: '⚽' }] };
+        const r1 = _g45FavAppliquer(st, { n: 'Paris Saint-Germain', sport: '⚽' }, false);
+        const r2 = _g45FavAppliquer(st, { n: 'Portugal', sport: '⚽', logo: 'x.png' }, false);
+        const r3 = _g45FavAppliquer({ u: [{ n: 'A' }] }, { n: 'Portugal' }, true);
+        o.fav = (r1 === 'deja' && r2 === 'ajout' && r3 === 'plein' && st.u.length === 3 && st.u[0].n === 'Portugal' && st.u[1].n === 'PSG' && st.fav === 'Portugal' && typeof g45FavChoisir === 'function') || JSON.stringify({ r1, r2, r3, u: st.u.map(x => x.n), f: st.fav });
+      } catch (e) { o.fav = 'erreur : ' + e.message; }
       try { o.agAtt = (/g45ag-gris/.test(window._g45AgAttenteHtml()) && /Tes matchs arrivent/.test(window._g45AgAttenteHtml())) || 'rendu'; } catch (e) { o.agAtt = 'erreur : ' + e.message; }
       /* 20261015g — menu « + » en PORTRAIT : il doit s'ouvrir avec une vraie hauteur (le calage paysage l'écrasait à 17 px). */
       try {
@@ -818,6 +825,7 @@ serveur.listen(0, async () => {
     ok('Agenda gardé jusqu\'au prochain match', r.agCache === true, r.agCache);
     ok('Secours ESPN posé', r.espSec === true, r.espSec);
     ok('Agenda : page d\'attente', r.agAtt === true, r.agAtt);
+    ok('Équipe préférée (sans doublon)', r.fav === true, r.fav);
     ok('Tendances : cote mini = cote du marché', r.trMin === true, r.trMin);
     ok('Tendances : gardées jusqu\'au match', r.trGarde === true, r.trGarde);
     ok('Quota des cotes (son quota / tout le monde)', r.qt === true, r.qt);
