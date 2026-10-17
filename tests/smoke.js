@@ -627,6 +627,21 @@ serveur.listen(0, async () => {
         _g45TrOff.flt = { sp: 'ft' }; const H2 = _g45TrFiabHtml(); _g45TrOff.flt = { sp: 'hk', ty: 'vic' }; const H3 = _g45TrFiabHtml(); _g45TrOff.flt = {}; _g45TrOff.mois = null;
         o.trOff = (/g45TrOffFltOuvrir/.test(H) && /Aucune tendance avec ces filtres/.test(H2) && /2 actifs/.test(H3) && !/Aucune tendance avec ces filtres/.test(H3) && C.n === 4 && C.ok === 2 && C.nc === 3 && C.gain === 0.68 && /OFFICIEL/.test(H) && /pas de cote/.test(H) && /1 \/ 1/.test(H) && /g45TrOffJour\('19[67]\d-/.test(H) && /g45TrOffMois/.test(H) && /Courbe du gain/.test(H) && /Réussite du mois/.test(H) && /Annoncé contre réel/.test(H) && /Par type de pari/.test(H)) || JSON.stringify(C);
       } catch (e) { o.trOff = 'erreur : ' + e.message; }
+      /* 20261018y — 📒 sélection du jour en haut de Tendances (notées aujourd'hui, direct, résultat) */
+      try {
+        const sv = _g45TrOff.j, svt = _g45TrOff.t, n = new Date().toISOString(), hier = new Date(Date.now() - 2 * 864e5).toISOString();
+        _g45TrOff.j = { reglages: { min: 1.5, pmin: .6, accord: true }, t: [
+          { id: '11', sl: 'ger.1', t: Date.now() - 3600e3, n: n, h: 'Bremen', a: 'Paderborn', m: 'Moins de 3,5 buts', k: 'u35', p: .672, f: .62, c: 1.56, r: null },
+          { id: '12', sl: 'nhl', t: Date.now() + 3600e3, n: n, h: 'Panthers', a: 'Kraken', m: 'Moins de 6,5 buts', k: 'u65', p: .613, c: 1.69, r: null },
+          { id: '13', sl: 'fra.1', t: Date.now() - 864e5, n: hier, h: 'Vieux', a: 'Match', m: 'X', k: '1', p: .6, c: 1.6, r: 1 }] }; _g45TrOff.t = Date.now();
+        _g45TrSel.lv = { '11': { st: 'in', h: 2, a: 1, s: '2-1', c: "67'" } };
+        try { localStorage.removeItem('g45tr_sel_ferme'); } catch (e) {}
+        const HS = _g45TrSelHtml();
+        _g45TrOff.j = { t: [] }; const HV = _g45TrSelHtml();
+        _g45TrOff.j = sv; _g45TrOff.t = svt; _g45TrSel.lv = {};
+        o.trSel = (/Sélection du jour/.test(HS) && /2 paris/.test(HS) && /Bremen/.test(HS) && !/Vieux/.test(HS) && /gagnant si ça reste/.test(HS) && /67'/.test(HS)
+          && /@1,56/.test(HS) && /📊 67 %/.test(HS) && /🏦 62 %/.test(HS) && /NHL/.test(HS) && /(arrive vers 8 h|Aucun pari)/.test(HV)) || HS.slice(0, 300);
+      } catch (e) { o.trSel = 'erreur : ' + e.message; }
       /* 20261017q — 🏠 / ✈️ pari par lieu + club du joueur (formulaire du mur et « Modifier ») */
       try {
         const C1 = _g45UfCompose('Edmonton Oilers', 'en forme', 'buteur', '2 points'), C2 = _g45UfCompose('', '', 'victoire', 'Victoire');
@@ -821,6 +836,7 @@ serveur.listen(0, async () => {
     ok('Menu + en portrait', r.plusp === true, r.plusp);
     ok('Tendances : historique officiel', r.trOff === true, r.trOff);
     ok('Tendances : historique en direct', r.trLive === true, r.trLive);
+    ok('Tendances : sélection du jour', r.trSel === true, r.trSel);
     ok('Mur : pari par lieu + club du joueur', r.ufLieu === true, r.ufLieu);
     ok('Agenda gardé jusqu\'au prochain match', r.agCache === true, r.agCache);
     ok('Secours ESPN posé', r.espSec === true, r.espSec);
