@@ -651,12 +651,13 @@ serveur.listen(0, async () => {
       /* 20261017s — Agenda gardé jusqu'au prochain match : 2e ouverture sans relecture */
       try {
         const elc = document.getElementById('cal-content'); let nc = 0;
-        const mo = new MutationObserver(() => { if (/Chargement du calendrier/.test(elc.textContent)) nc++; }); mo.observe(elc, { childList: true, subtree: true });
+        const mo = new MutationObserver(() => { if (/Chargement du calendrier|Tes matchs arrivent/.test(elc.textContent)) nc++; }); mo.observe(elc, { childList: true, subtree: true });
         await loadCalendrier(); const n1 = nc; await loadCalendrier(); const n2 = nc; mo.disconnect();
         o.agCache = (!!loadCalendrier._g45Cache && n1 >= 1 && n2 === n1) || JSON.stringify({ w: !!loadCalendrier._g45Cache, n1, n2 });
       } catch (e) { o.agCache = 'erreur : ' + e.message; }
       /* 20261017y — secours ESPN posé */
       o.espSec = (typeof window._g45EspnSecoursLire === 'function') || 'absent';
+      try { o.agAtt = (/g45ag-gris/.test(window._g45AgAttenteHtml()) && /Tes matchs arrivent/.test(window._g45AgAttenteHtml())) || 'rendu'; } catch (e) { o.agAtt = 'erreur : ' + e.message; }
       /* 20261015g — menu « + » en PORTRAIT : il doit s'ouvrir avec une vraie hauteur (le calage paysage l'écrasait à 17 px). */
       try {
         const pm = document.getElementById('plus-menu');
@@ -816,6 +817,7 @@ serveur.listen(0, async () => {
     ok('Mur : pari par lieu + club du joueur', r.ufLieu === true, r.ufLieu);
     ok('Agenda gardé jusqu\'au prochain match', r.agCache === true, r.agCache);
     ok('Secours ESPN posé', r.espSec === true, r.espSec);
+    ok('Agenda : page d\'attente', r.agAtt === true, r.agAtt);
     ok('Tendances : cote mini = cote du marché', r.trMin === true, r.trMin);
     ok('Tendances : gardées jusqu\'au match', r.trGarde === true, r.trGarde);
     ok('Quota des cotes (son quota / tout le monde)', r.qt === true, r.qt);
