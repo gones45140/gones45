@@ -7,7 +7,8 @@
 # celles de la veille. Le même fichier est lu par tout le monde (gones45 et
 # bet45) : un seul historique, publiable sur X, daté par GitHub.
 #
-# Deux crons : 8 h UTC = 10 h en heure d'été, 9 h UTC = 10 h en heure d'hiver.
+# 17/10 (« au pire on met 8h ? ») : passage dès 8 h à Paris. Quatre crons (6, 7, 8, 9 h UTC) : 6 h UTC = 8 h l'été, 7 h UTC = 8 h l'hiver ;
+# les suivants rattrapent les retards de GitHub (le 17/10, lancé à 13 h 51). Le script ne travaille qu'une fois par jour.
 # Le script ne travaille qu'une fois par jour, à partir de 10 h à Paris.
 # Bouton « Run workflow » : passage forcé (FORCE=1), pour un essai.
 #
@@ -18,6 +19,8 @@ name: tendances-officielles
 
 on:
   schedule:
+    - cron: '0 6 * * *'
+    - cron: '0 7 * * *'
     - cron: '0 8 * * *'
     - cron: '0 9 * * *'
   workflow_dispatch:

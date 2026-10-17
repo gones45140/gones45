@@ -46,7 +46,8 @@ try { J = Object.assign(J, JSON.parse(fs.readFileSync(FICHIER, 'utf8'))); } catc
 
 /* Deux crons (8 h et 9 h UTC) couvrent l'heure d'été et l'heure d'hiver : on ne
    travaille qu'à partir de 10 h à Paris, et une seule fois par jour. */
-if (!FORCE && (parisH() < 10 || J.dernier === parisJour())) {
+/* 17/10 (« au pire on met 8h ? ») : à partir de 8 h à Paris (avant : 10 h). */
+if (!FORCE && (parisH() < 8 || J.dernier === parisJour())) {
   console.log('Rien à faire (' + parisH() + ' h à Paris, dernier passage ' + J.dernier + ').');
   process.exit(0);
 }
