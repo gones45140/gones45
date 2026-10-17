@@ -32,7 +32,9 @@ const SITE = process.env.SITE || 'https://gones45140.github.io/gones45/';
 /* Essai hors GitHub seulement : faux ESPN (module) et script injecté dans la page. */
 const FAUX_ESPN = process.env.FAUX_ESPN ? (await import(process.env.FAUX_ESPN)).default : null;
 const FAUX_INIT = process.env.FAUX_INIT ? fs.readFileSync(process.env.FAUX_INIT, 'utf8') : null;
-const REGLAGES = { min: 1.5, pmin: 0.5 };
+/* 20261018k (capture d'Antoine, filtres Cote 1,50-2,19 + Proba 60 % et + + Avis « D'accord » : « la demande de 10 h doit être celle-là ») :
+   proba mini 60 %, cote CONNUE ≥ 1,50 (sans cote = pas noté), stats et bookmakers d'accord (désaccord = pas noté). */
+const REGLAGES = { min: 1.5, pmin: 0.6, coteConnue: true, accord: true };
 const SPORTS = ['foot', 'hockey', 'nba', 'nfl'];
 const FORCE = process.env.FORCE === '1';
 
@@ -109,6 +111,8 @@ const nouvelles = await page.evaluate(async ({ R, SPORTS }) => {
       const vu = {};
       pris.forEach((x) => {
         if (!x || !x.m || !x.id || !x.d) return;
+        if (R.coteConnue && !(x.m.cote >= R.min)) return;   // 20261018k : sans cote = pas noté
+        if (R.accord && x.m.desac) return;                   // 20261018k : désaccord stats / bookmakers = pas noté
         const k = _g45TrSuivType(x.m.m, x.hN, x.aN); if (!k) return;
         const cle = x.id + '|' + k; if (vu[cle]) return; vu[cle] = 1;
         const t = Date.parse(x.d); if (isNaN(t) || t < Date.now()) return;   // match déjà commencé : pas noté
