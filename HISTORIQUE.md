@@ -519,6 +519,10 @@ Il est dans les DEUX dépôts (gones45 et fenotte45), identique (cmp). Jamais de
   (`_g45BandChemin` → espnLeagueOf) → scoreboards uefa.champions / uefa.europa / uefa.europa.conf ajoutés avec tous les noms de foot du mur.
   20261013m : sélecteur « Mes équipes » (.g45-band-src-wrap, fond .55 dans style.css) rendu OPAQUE par app.js (#g45-band-sel-fond) — les tuiles qui
   défilent passaient dessous et se lisaient à travers.
+- Suivies — 20261020d (captures : chaîne télé presque invisible, « soccer » au lieu de la compétition ; Antoine : « j'adore l'image actuelle, juste un cache
+  pour la TV ») : pastille 📺 fond sombre opaque rgba(8,11,20,.88) + liseré (vert gratuit / violet programme réel / blanc table), texte clair ;
+  sans nom de compétition → nom du sport en français (SPORT_FR), plus jamais « soccer ». Images, voile, heure : INCHANGÉS (choix d'Antoine).
+  EN ATTENTE : vrai nom (Ligue des champions…) avec le slug `all` — sonde console scoreboard soccer/all demandée à Antoine (leagues / uid / league).
 - Suivies « Matchs à venir / direct » (`g45DirectMesEquipes`, groupes `_g45DirEquipes`) : 29v —
   le plafond (10) porte sur les REQUÊTES réelles (`aInterroger`, tout le foot = 1 requête `all`),
   plus sur les championnats : les ligues de foot d'Antoine occupaient les 8 places et la NHL
@@ -2051,6 +2055,15 @@ TENDANCES (20261014m, « il faudrait les stats et book % comme en bas sur chaque
   re-noté chaque matin. Robot : FAMILLE = type sans le chiffre (un48.5 → un, hc1:7.5 → hc1:) ; famille déjà notée un jour précédent pour ce match = pas
   reprise ; doublons existants retirés (1er noté gardé : Jaguars–Texans un41.5, Bears–Patriots un49.5 / un50.5 enlevés à la main le 20/10). app.js inchangé.
   17/10 (« au pire on met 8h ? » : passage du 17/10 lancé par GitHub à 13 h 51) : robot dès 8 h à Paris (parisH() < 8), crons 6 / 7 / 8 / 9 h UTC (rattrapage des retards).
+  20261020c (croquis d'Antoine « Tendances = 4 boutons », maquette cliquable validée « oui, BET45 → Sélection du jour par défaut ») : ONGLET EN BOUTONS —
+  bloc « TENDANCES EN BOUTONS » en fin d'app.js (enveloppe la plus externe de loadTendancesTab). Barre #g45tr-nav : 📒 Tendances BET45 · 🔍 Tendances perso ·
+  ⚽ Tendances buteurs · 📏 CLV ; dans BET45 : ⭐ Sélection du jour (_g45TrSelHtml, forcée ouverte) · 📅 Historique (calendrier + liste du jour) ·
+  📈 Graphique / Stats (bilan du mois d'avant, tuiles, courbe, statistiques). Mémoire localStorage g45tr_vue (bet/perso/but/clv) + g45tr_sous (sel/his/gra).
+  Rien de réécrit : CSS selon #t-tend[data-g45v] (bet-sel / bet-his / bet-gra / perso / but / clv) ; repères .g45tro-his / .g45tro-gra posés dans
+  _g45TrOffHtml (enveloppé pour le titre « 📅 Historique BET45 » / « 📈 Graphique / Stats BET45 »). Perso : filtres à gauche, « Analyser » à droite
+  (.g45tr-prow, nœuds déplacés, mêmes id ; dessous sur téléphone), boutons Voir buteurs / CLV et historique cachés. Buteurs / CLV : bouton « ← Tendances »
+  caché ; MutationObserver repose la barre en tête quand ces écrans réécrivent #t-tend. Point de la courbe touché en Graphique → passe sur Historique.
+  Smoke : hockey / désaccord passent g45tr_vue = perso ; nouveau contrôle trVues (62).
   20261018y (« j'avais pas appuyé sur Analyser, ça sortait pas les matchs du jour », maquette validée « oui ») : 📒 SÉLECTION DU JOUR — bloc #g45tr-sel (fin d'app.js)
   sous la barre des sous-onglets de #t-tend (MutationObserver + enveloppe de loadTendancesTab ; comptes premium seulement) : tendances du robot notées
   AUJOURD'HUI (x.n date locale), par championnat, cote / 📊 / 🏦, direct ESPN ?dates= (window._g45TrSel.lv, 1 min) → gagnant si ça reste / provisoire ;
