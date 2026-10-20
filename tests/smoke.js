@@ -658,6 +658,25 @@ serveur.listen(0, async () => {
         o.trVues = (!prem || (a === 'bet-sel' && f1 === 'g45tr-nav' && /Sélection du jour/.test(t1) && /Tendances buteurs/.test(t1) && b === 'bet-his' && /📅 Historique BET45/.test(t2)
           && c === 'perso' && f3 === 'g45tr-nav' && /g45tr-onglets/.test(t3) && /g45tr-prow/.test(t3) && selCache)) || JSON.stringify({ prem, a, f1, b, c, f3, selCache, h2: /Historique BET45/.test(t2), p: /g45tr-prow/.test(t3) });
       } catch (e) { o.trVues = 'erreur : ' + e.message; }
+      /* 20261020i — 🎾 Tennis dans Tendances perso + analyse (saisons simulées) */
+      try {
+        const v0 = localStorage.getItem('g45tr_vue'), prem = _g45AccesPremium() === true, sv = window._g45TnSaison;
+        localStorage.setItem('g45tr_vue', 'perso'); localStorage.setItem('g45tr_tennis', '1');
+        loadTendancesTab(); const el = document.getElementById('t-tend'), t1 = el.innerHTML;
+        const now = Date.now();
+        window._g45TnSaison = async (lg, id) => id === '1'
+          ? [{ id: 'c1', t: now - 864e5, ek: '315-2026', tr: 'Rolex Shanghai Masters', sf: 'dur', ind: false, cat: 'm1000', adv: '2', an: 'Bob', w: true, sc: '6-4 6-4', rd: 'Round 1' }]
+          : [{ id: 'c1', t: now - 864e5, ek: '315-2026', tr: 'Rolex Shanghai Masters', sf: 'dur', ind: false, cat: 'm1000', adv: '1', an: 'Alan', w: false, sc: '6-4 6-4', rd: 'Round 1' }];
+        const bx = document.createElement('div'); bx.id = 'g45tn-smoke'; document.body.appendChild(bx);
+        await g45TnAnalyser('g45tn-smoke', { lg: 'atp', a: { id: '1', n: 'Alan' }, b: { id: '2', n: 'Bob' }, tour: 'Rolex Shanghai Masters', ek: '' });
+        await new Promise(r => setTimeout(r, 300));
+        const t2 = bx.innerHTML; g45TnOnglet('g45tn-smoke', 'h2h'); const t3 = bx.innerHTML; g45TnOnglet('g45tn-smoke', 'bil'); const t4 = bx.innerHTML;
+        bx.remove(); window._g45TnSaison = sv; localStorage.removeItem('g45tr_tennis');
+        if (v0 == null) localStorage.removeItem('g45tr_vue'); else localStorage.setItem('g45tr_vue', v0);
+        o.tennis = (!prem || (/g45tr-ong-tennis/.test(t1) && /g45tn-jour/.test(t1) && !/Analyser les matchs/.test(t1)))
+          && /10 DERNIERS MATCHS/.test(t2) && /100 %/.test(t2) && /1 – 0/.test(t3) && /Alan mène/.test(t3) && /Dur/.test(t4) && /1\/0/.test(t4)
+          || JSON.stringify({ prem, a: /g45tr-ong-tennis/.test(t1), b: /g45tn-jour/.test(t1), t2: t2.replace(/<[^>]+>/g,' ').slice(0, 400), t3: t3.replace(/<[^>]+>/g,' ').slice(0,300) });
+      } catch (e) { o.tennis = 'erreur : ' + e.message; }
       /* 20261017q — 🏠 / ✈️ pari par lieu + club du joueur (formulaire du mur et « Modifier ») */
       try {
         const C1 = _g45UfCompose('Edmonton Oilers', 'en forme', 'buteur', '2 points'), C2 = _g45UfCompose('', '', 'victoire', 'Victoire');
@@ -855,6 +874,7 @@ serveur.listen(0, async () => {
     ok('Tendances : historique en direct', r.trLive === true, r.trLive);
     ok('Tendances : sélection du jour', r.trSel === true, r.trSel);
     ok('Tendances : boutons BET45 / perso / buteurs / CLV', r.trVues === true, r.trVues);
+    ok('Tennis : bouton Tendances + analyse (forme, H2H, bilan)', r.tennis === true, r.tennis);
     ok('Mur : pari par lieu + club du joueur', r.ufLieu === true, r.ufLieu);
     ok('Agenda gardé jusqu\'au prochain match', r.agCache === true, r.agCache);
     ok('Secours ESPN posé', r.espSec === true, r.espSec);
