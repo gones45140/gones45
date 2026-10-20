@@ -778,7 +778,7 @@ serveur.listen(0, async () => {
           : /athletes\/3$/.test(String(u)) ? { displayName: 'Arthur Fils', flag: { href: 'https://x/fra.png' } } : {}) });
         window._g45TnProfil = async () => ({ age: 22, main: 'droitier' });
         const M = (w, j, s) => ({ id: 'q' + j, t: now - j * 864e5, tr: 'Open ' + j, sf: s, w, an: 'Adv ' + j, sc: '6-4 6-4' });
-        window._g45TnSaison = async (lg, id) => id === '3' ? [M(true, 1, 'salle'), M(false, 2, 'dur'), M(true, 3, 'dur'), M(true, 4, 'terre'), M(true, 5, 'dur'), M(true, 6, 'dur'), M(false, 7, 'dur')] : [];
+        window._g45TnSaison = async (lg, id) => id === '3' ? [M(true, 1, 'salle'), M(false, 2, 'dur'), M(true, 3, 'dur'), M(true, 4, 'terre'), M(true, 5, 'dur'), M(true, 6, 'dur'), M(false, 7, 'dur'), Object.assign(M(true, 8, 'dur'), { an: 'Bye' })] : [];
         const box = document.createElement('div'); document.body.appendChild(box);
         await loadTennisSaisons(box, 'TENNIS');
         const barre = box.textContent;
@@ -788,12 +788,13 @@ serveur.listen(0, async () => {
         const tcT = tc ? tc.textContent : '';
         const tcOk = tc && tc.style.display === 'block' && /Jannik Sinner/.test(tcT) && /général 1er/.test(tcT) && Lt.length === 2 && Lt[0].nom === 'Jannik Sinner' && Lt[0].e === 2180 && Lg.length === 1 && Lg[0].d === 0;
         await searchTennisPlayer('Arthur Fils');
+        g45TjSf('dur'); const tSf = box.textContent; g45TjSf('tout');
         const t = box.textContent, id = JSON.parse(localStorage.getItem('g45tnid1_arthurfils') || '{}').id;
         const Cc = _g45TjCalc([M(true, 1, 'dur'), { t: new Date(an - 1, 5, 1).getTime(), w: false, sf: 'dur' }], an);
         window.fetch = sf; window._g45TnSaison = sv; window._g45TnProfil = sp; window._g45TnEloJ = sj; box.remove(); localStorage.removeItem('g45tnid1_arthurfils');
         o.tnJoueur = (tcOk && /Sinner/.test(barre) && /Sabalenka/.test(barre) && !/Paire/.test(barre) && id === '3' && /Arthur Fils/.test(t) && /22 ans/.test(t) && /N°2 Elo ATP/.test(t)
           && /5victoires/.test(t.replace(/\s/g, '')) && /71 %/.test(t) && /Salle/.test(t) && /bat Adv 1/.test(t) && /voir les 7 matchs/.test(t) && !/Tavily|Stats issues du web/.test(t)
-          && Cc.L.length === 1 && Cc.p === 100) || JSON.stringify({ tcOk, tcT: tcT.slice(0, 200), id, t: t.slice(0, 400), barre: barre.slice(0, 200) });
+          && !/Bye/.test(t) && /4-6 4-6/.test(t) && /Global/.test(t) && /Terre battue/.test(t) && /Derniers matchs · Dur/.test(tSf) && /3victoires2défaites60%/.test(tSf.replace(/\s/g, '')) && Cc.L.length === 1 && Cc.p === 100) || JSON.stringify({ tcOk, id, t: t.slice(0, 400), tSf: tSf.slice(-400) });
       } catch (e) { o.tnJoueur = 'erreur : ' + e.message; }
       /* 20261017q — 🏠 / ✈️ pari par lieu + club du joueur (formulaire du mur et « Modifier ») */
       try {
