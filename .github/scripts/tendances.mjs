@@ -133,6 +133,15 @@ const nouvelles = await page.evaluate(async ({ R, SPORTS }) => {
   return sortie;
 }, { R: REGLAGES, SPORTS });
 
+/* 20261020l — 🎾 TENNIS OFFICIEL (« OK combiné ») : _g45TnRobot (app.js) choisit les simples ATP / WTA du jour où l'avis BET45 est en
+   confiance FORTE et proba ≥ 60 % ; cote The Odds API seulement en Grand Chelem (mêmes filtres que les autres sports si elle existe),
+   sinon noté SANS COTE. ESPN n'a aucune cote tennis (sondé le 20/10). 24 matchs et 15 min au plus (beaucoup de lectures ESPN par joueur). */
+try {
+  const tennis = await page.evaluate(async (R) => (typeof window._g45TnRobot === 'function' ? window._g45TnRobot(R, 24, 15 * 60000) : []), REGLAGES);
+  console.log('tennis : ' + tennis.length + ' notées');
+  tennis.forEach((x) => nouvelles.push(x));
+} catch (e) { console.log('tennis : erreur ' + (e && e.message)); }
+
 /* Ajout : une tendance (match + pari) n'est notée qu'UNE fois — la NFL lit 7 jours d'avance. */
 /* 20/10 (capture Bears–Patriots : « - de 48,5 », « - de 49,5 », « - de 50,5 » = « doublon voir triple dose ») : la ligne ESPN bouge d'un jour à
    l'autre → même pari noté chaque matin avec un autre chiffre. FAMILLE = type sans le chiffre de la ligne (un48.5 → un, hc1:7.5 → hc1:) :
@@ -165,11 +174,16 @@ const logoLigue = (lg) => { const lo = (lg && lg.logos) || []; const d = lo.find
 let juge = 0;
 for (const g of Object.keys(grp)) {
   const [sl, ymd] = g.split('|');
-  const sp = { nhl: 'hockey', nba: 'basketball', nfl: 'football' }[sl] || 'soccer';
+  const tn = sl === 'atp' || sl === 'wta';   // 20261020l : tennis (events = tournois → un « event » par match)
+  const sp = tn ? 'tennis' : ({ nhl: 'hockey', nba: 'basketball', nfl: 'football' }[sl] || 'soccer');
   const tous = [];
   for (const dd of [ymd, ymdDecale(ymd, -1)]) {   // ESPN range les matchs par jour AMÉRICAIN : un match du soir peut être la veille
     const r = await curl('https://site.api.espn.com/apis/site/v2/sports/' + sp + '/' + sl + '/scoreboard?dates=' + dd);
-    try { const B = JSON.parse(r.body); (B.events || []).forEach((e) => tous.push(e)); if (!J.lg[sl]) { const u = logoLigue(B.leagues && B.leagues[0]); if (u) J.lg[sl] = u; } } catch (e) {}
+    try {
+      let B = JSON.parse(r.body); if (!J.lg[sl]) { const u = logoLigue(B.leagues && B.leagues[0]); if (u) J.lg[sl] = u; }
+      if (tn) B = await page.evaluate((b) => (window._g45TnPlat ? window._g45TnPlat(b) : b), B);
+      (B.events || []).forEach((e) => tous.push(e));
+    } catch (e) {}
   }
   for (const x of grp[g]) {
     const e = tous.find((ev) => String(ev.id) === x.id);
@@ -183,6 +197,10 @@ for (const g of Object.keys(grp)) {
     const ho = (c.competitors || []).find((q) => q.homeAway === 'home'), aw = (c.competitors || []).find((q) => q.homeAway === 'away');
     const sh = parseInt(ho && ho.score, 10), sa = parseInt(aw && aw.score, 10);
     if (isNaN(sh) || isNaN(sa)) continue;
+    if (tn) {   // tennis : le VAINQUEUR d'ESPN (abandon compris), le score = sets gagnés
+      const g = (c.competitors || []).find((q) => q.winner === true); if (!g) continue;
+      x.r = (g.homeAway === 'home') === (x.k === '1') ? 1 : 0; x.s = sh + '-' + sa; juge++; continue;
+    }
     const v = await page.evaluate(([k, h, w]) => _g45TrSuivJuge(k, h, w), [x.k, sh, sa]);
     if (v == null) continue;
     x.r = v ? 1 : 0; x.s = sh + '-' + sa; juge++;
