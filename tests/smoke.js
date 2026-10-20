@@ -741,6 +741,34 @@ serveur.listen(0, async () => {
         o.tnRun = (R1 && R1.r.length === 8 && R1.tot === 10 && R1.r[0].m.tn === 'Swiss Indoors Basel' && R1.r[1].m.tn === 'Swiss Indoors Basel'
           && R2 && R2.r.length === 10 && R1.r.every((x) => x.qui === 'a' && x.p >= 0.6)) || JSON.stringify({ n1: R1 && R1.r.length, t1: R1 && R1.tot, n2: R2 && R2.r.length, p: R1 && R1.r.map((x) => x.m.tn + ' ' + x.qui + ' ' + x.pc) });
       } catch (e) { o.tnRun = 'erreur : ' + e.message; }
+      /* 20261020s — Compétitions → Tennis : en-tête niveau / surface, grand drapeau sans photo, doubles repliés, 4 filtres, 🔮 au toucher (8 / jour) */
+      try {
+        const sav = window._g45TnAvisMatch, sa = window._g45SanteActive, t0 = new Date(Date.now() + 10 * 60e3).toISOString();
+        const fl = { href: 'https://a.espncdn.com/i/teamlogos/countries/500/sui.png', alt: 'Switzerland' };
+        localStorage.setItem('g45tph1_stanwawrinka', JSON.stringify({ u: '', t: Date.now() })); localStorage.setItem('g45tph1_martinlandaluce', JSON.stringify({ u: '', t: Date.now() }));
+        const pl = (id, nom, rk, ha) => ({ id, homeAway: ha, curatedRank: { current: rk }, athlete: { id, displayName: nom, shortName: nom, flag: fl } });
+        window._g45TennisResData = [{ id: 'ev1', name: 'Swiss Indoors Basel', groupings: [
+          { grouping: { displayName: "Men's Singles" }, competitions: [{ id: 'tr1', date: t0, venue: { indoor: true, fullName: 'Basel, Switzerland' }, status: { type: { state: 'pre' } }, competitors: [pl('1', 'Stan Wawrinka', 145, 'home'), pl('2', 'Martin Landaluce', 71, 'away')] }] },
+          { grouping: { displayName: "Men's Doubles" }, competitions: [{ id: 'tr2', date: t0, status: { type: { state: 'pre' } }, competitors: [{ homeAway: 'home', roster: { displayName: 'A / B' } }, { homeAway: 'away', roster: { displayName: 'C / D' } }] }] }] }];
+        window._g45TennisResOffset = 0; window._g45TennisResFilter = 'all'; window._g45TennisMajorFilter = 'all';
+        let box = document.getElementById('g45-tennis-res'); if (!box) { box = document.createElement('div'); box.id = 'g45-tennis-res'; document.body.appendChild(box); }
+        _g45RenderTennisRes();
+        const h1 = box.innerHTML, txt = box.textContent;
+        const chips = [...box.querySelectorAll('button[onclick^="g45TennisResFilter"]')].map((b) => b.textContent).join(',');
+        const dblCache = box.querySelector('[onclick^="g45TnDblTgl"]'), dblDiv = dblCache && dblCache.nextElementSibling;
+        const tav = box.querySelector('.g45-tav'), grandDrap = tav && tav.querySelector('img:not(.g45-tfl)'), coin = tav && tav.querySelector('.g45-tfl');
+        window._g45SanteActive = () => false; localStorage.removeItem('g45tn_av8');
+        window._g45TnAvisMatch = async (m) => ({ m, qui: 'a', p: 0.61, pc: 61, conf: 'moyenne' });
+        await g45TnResAvis(box.querySelector('[data-g45av="tr1"]'));
+        const b1 = box.querySelector('[data-g45av="tr1"]').textContent, q1 = JSON.parse(localStorage.getItem('g45tn_av8')).n;
+        delete window._g45TnResAv.tr1; localStorage.setItem('g45tn_av8', JSON.stringify({ d: _g45ymd(new Date()), n: 8 }));
+        _g45RenderTennisRes(); await g45TnResAvis(box.querySelector('[data-g45av="tr1"]'));
+        const b2 = box.querySelector('[data-g45av="tr1"]').textContent;
+        window._g45TnAvisMatch = sav; window._g45SanteActive = sa; delete window._g45TnResAv.tr1; localStorage.removeItem('g45tn_av8'); box.remove();
+        o.tnRes = (chips === 'Tous,ATP,WTA,Doubles' && /ATP 500/.test(txt) && /Salle/.test(txt) && /🇨🇭/.test(txt) && /N°145/.test(txt) && !/Australian Open/.test(txt)
+          && /1 match de double/.test(txt) && dblDiv && dblDiv.style.display === 'none' && grandDrap && /sui\.png/.test(grandDrap.src) && coin && coin.style.display === 'none'
+          && /Wawrinka 61 %/.test(b1) && q1 === 1 && /8 avis/.test(b2)) || JSON.stringify({ chips, b1, b2, q1, g: !!grandDrap, t: txt.slice(0, 300) });
+      } catch (e) { o.tnRes = 'erreur : ' + e.message; }
       /* 20261017q — 🏠 / ✈️ pari par lieu + club du joueur (formulaire du mur et « Modifier ») */
       try {
         const C1 = _g45UfCompose('Edmonton Oilers', 'en forme', 'buteur', '2 points'), C2 = _g45UfCompose('', '', 'victoire', 'Victoire');
@@ -941,6 +969,7 @@ serveur.listen(0, async () => {
     ok('Tennis : bouton Tendances + analyse (forme, H2H, bilan)', r.tennis === true, r.tennis);
     ok('Tennis officiel : combiné (confiance forte, sans cote) + jugement', r.tnRobot === true, r.tnRobot);
     ok('Tennis : Analyser les matchs (8 sur BET45, gros tournois d\'abord)', r.tnRun === true, r.tnRun);
+    ok('Compétitions → Tennis : niveau, surface, drapeau, doubles, 🔮', r.tnRes === true, r.tnRes);
     ok('Cotes en direct NBA (DraftKings - Live Odds)', r.cdNba === true, r.cdNba);
     ok('Mur : pari par lieu + club du joueur', r.ufLieu === true, r.ufLieu);
     ok('Agenda gardé jusqu\'au prochain match', r.agCache === true, r.agCache);
