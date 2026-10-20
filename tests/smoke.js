@@ -474,6 +474,22 @@ serveur.listen(0, async () => {
           && /1,07/.test(t1) && /bien joué/.test(t1) && /plus proposée/.test(t3) && /4,5 buts à 1,71/.test(t3) && /suspendue/.test(t6)
           && typeof _g45CdLire === 'function') || JSON.stringify({ m1, m2, m3, m4, m5, t1, t3, t6 });
       } catch (e) { o.cdir = 'erreur : ' + e.message; }
+      /* 20261020q — 🏀 cotes NBA en direct : scoreboard (état, équipes) + core odds provider 200 « DraftKings - Live Odds » */
+      try {
+        const sf = window.fetch;
+        const SBn = { events: [{ id: '401', competitions: [{ status: { type: { state: 'in' }, displayClock: '5:12' }, competitors: [
+          { homeAway: 'home', score: '99', team: { displayName: 'Detroit Pistons', name: 'Pistons' } }, { homeAway: 'away', score: '96', team: { displayName: 'Boston Celtics', name: 'Celtics' } }] }] }] };
+        const OD = { items: [{ provider: { id: '100', name: 'DraftKings' }, overUnder: 220.5 },
+          { provider: { id: '200', name: 'DraftKings - Live Odds' }, overUnder: 224.5, homeTeamOdds: { moneyLine: 425, current: { moneyLine: { decimal: 5.25 } } },
+            awayTeamOdds: { moneyLine: -600, current: { moneyLine: { decimal: 1.16 } } }, current: { over: { decimal: 1.91 }, under: { american: '-110' } } }] };
+        window.fetch = async (u) => ({ ok: true, json: async () => (/core\.api.*\/odds/.test(String(u)) ? OD : /basketball\/nba\/scoreboard/.test(String(u)) ? SBn : {}) });
+        const C = await _g45CdLire('basketball', 'nba', '401', ['20261020']);
+        window.fetch = sf;
+        const m = _g45CdMarche({ type: 'Victoire Boston Celtics', cote: 1.8 }, C, null), mo = _g45CdMarche({ type: 'Plus de 220,5 points', cote: 1.9 }, C, null);
+        const tx = _g45CdTexte({ cote: 1.8 }, C, m), to = _g45CdTexte({ cote: 1.9 }, C, mo);
+        o.cdNba = (C && C.h === 5.25 && C.a === 1.16 && C.L === 224.5 && C.ov === 1.91 && Math.abs(C.un - 1.909) < 0.01 && C.d == null && C.u === 'points'
+          && m && m.cle === 'a' && /1,16/.test(tx) && /bien joué/.test(tx) && /224,5 points/.test(to)) || JSON.stringify({ C, m, tx, to });
+      } catch (e) { o.cdNba = 'erreur : ' + e.message; }
       try {
         /* 20261015e : onglet Bank — banques à part, tri par solde, ligne Paris. */
         const b0 = state.b, a0 = state.a;
@@ -925,6 +941,7 @@ serveur.listen(0, async () => {
     ok('Tennis : bouton Tendances + analyse (forme, H2H, bilan)', r.tennis === true, r.tennis);
     ok('Tennis officiel : combiné (confiance forte, sans cote) + jugement', r.tnRobot === true, r.tnRobot);
     ok('Tennis : Analyser les matchs (8 sur BET45, gros tournois d\'abord)', r.tnRun === true, r.tnRun);
+    ok('Cotes en direct NBA (DraftKings - Live Odds)', r.cdNba === true, r.cdNba);
     ok('Mur : pari par lieu + club du joueur', r.ufLieu === true, r.ufLieu);
     ok('Agenda gardé jusqu\'au prochain match', r.agCache === true, r.agCache);
     ok('Secours ESPN posé', r.espSec === true, r.espSec);
