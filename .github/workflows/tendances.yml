@@ -24,7 +24,14 @@ on:
   # le premier qui passe après 8 h (Paris) travaille, les autres s'arrêtent en quelques secondes.
   schedule:
     - cron: '13,43 3-9 * * *'
+  # 21/10 : le worker fd-proxy lance ce robot à 8 h pile (workflow_dispatch, force = '0' → passage normal) ;
+  # le bouton « Run workflow » garde force = '1' par défaut (passage forcé, pour un essai).
   workflow_dispatch:
+    inputs:
+      force:
+        description: 'Passage forcé (1) ou normal (0)'
+        required: false
+        default: '1'
 
 concurrency:
   group: tendances-officielles
@@ -53,12 +60,12 @@ jobs:
       - name: Elo tennis
         continue-on-error: true
         env:
-          FORCE: ${{ github.event_name == 'workflow_dispatch' && '1' || '0' }}
+          FORCE: ${{ github.event_name == 'workflow_dispatch' && (inputs.force || '1') || '0' }}
         run: node .github/scripts/elo.mjs
 
       - name: Analyse et vérification
         env:
-          FORCE: ${{ github.event_name == 'workflow_dispatch' && '1' || '0' }}
+          FORCE: ${{ github.event_name == 'workflow_dispatch' && (inputs.force || '1') || '0' }}
         run: node .github/scripts/tendances.mjs
 
       - name: Enregistrement
