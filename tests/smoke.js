@@ -769,6 +769,27 @@ serveur.listen(0, async () => {
           && /1 match de double/.test(txt) && dblDiv && dblDiv.style.display === 'none' && grandDrap && /sui\.png/.test(grandDrap.src) && coin && coin.style.display === 'none'
           && /Wawrinka 61 %/.test(b1) && q1 === 1 && /8 avis/.test(b2)) || JSON.stringify({ chips, b1, b2, q1, g: !!grandDrap, t: txt.slice(0, 300) });
       } catch (e) { o.tnRes = 'erreur : ' + e.message; }
+      /* 20261020t — Rechercher un joueur (tennis) : boutons top Elo, nom → id ESPN (search/v2), saison ESPN, plus de Tavily / IA */
+      try {
+        const sf = window.fetch, sv = window._g45TnSaison, sp = window._g45TnProfil, sj = window._g45TnEloJ, an = new Date().getFullYear(), now = Date.now();
+        window._g45TnEloJ = { atp: { janniksinner: ['Jannik Sinner', 2290, 2230, 2180, 2100], arthurfils: ['Arthur Fils', 1900, 1890, 1850, 0] }, wta: { arynasabalenka: ['Aryna Sabalenka', 2200, 2205, 2150, 2080] } };
+        localStorage.removeItem('g45tnid1_arthurfils');
+        window.fetch = async (u) => ({ ok: true, json: async () => (/search\/v2/.test(String(u)) ? { results: [{ contents: [{ uid: 's:850~a:3', displayName: 'Arthur Fils', link: { web: 'https://www.espn.com/tennis/player/_/id/3' } }] }] }
+          : /athletes\/3$/.test(String(u)) ? { displayName: 'Arthur Fils', flag: { href: 'https://x/fra.png' } } : {}) });
+        window._g45TnProfil = async () => ({ age: 22, main: 'droitier' });
+        const M = (w, j, s) => ({ id: 'q' + j, t: now - j * 864e5, tr: 'Open ' + j, sf: s, w, an: 'Adv ' + j, sc: '6-4 6-4' });
+        window._g45TnSaison = async (lg, id) => id === '3' ? [M(true, 1, 'salle'), M(false, 2, 'dur'), M(true, 3, 'dur'), M(true, 4, 'terre'), M(true, 5, 'dur'), M(true, 6, 'dur'), M(false, 7, 'dur')] : [];
+        const box = document.createElement('div'); document.body.appendChild(box);
+        await loadTennisSaisons(box, 'TENNIS');
+        const barre = box.textContent;
+        await searchTennisPlayer('Arthur Fils');
+        const t = box.textContent, id = JSON.parse(localStorage.getItem('g45tnid1_arthurfils') || '{}').id;
+        const Cc = _g45TjCalc([M(true, 1, 'dur'), { t: new Date(an - 1, 5, 1).getTime(), w: false, sf: 'dur' }], an);
+        window.fetch = sf; window._g45TnSaison = sv; window._g45TnProfil = sp; window._g45TnEloJ = sj; box.remove(); localStorage.removeItem('g45tnid1_arthurfils');
+        o.tnJoueur = (/Sinner/.test(barre) && /Sabalenka/.test(barre) && !/Paire/.test(barre) && id === '3' && /Arthur Fils/.test(t) && /22 ans/.test(t) && /N°2 Elo ATP/.test(t)
+          && /5victoires/.test(t.replace(/\s/g, '')) && /71 %/.test(t) && /Salle/.test(t) && /bat Adv 1/.test(t) && /voir les 7 matchs/.test(t) && !/Tavily|Stats issues du web/.test(t)
+          && Cc.L.length === 1 && Cc.p === 100) || JSON.stringify({ id, t: t.slice(0, 400), barre: barre.slice(0, 200) });
+      } catch (e) { o.tnJoueur = 'erreur : ' + e.message; }
       /* 20261017q — 🏠 / ✈️ pari par lieu + club du joueur (formulaire du mur et « Modifier ») */
       try {
         const C1 = _g45UfCompose('Edmonton Oilers', 'en forme', 'buteur', '2 points'), C2 = _g45UfCompose('', '', 'victoire', 'Victoire');
@@ -970,6 +991,7 @@ serveur.listen(0, async () => {
     ok('Tennis officiel : combiné (confiance forte, sans cote) + jugement', r.tnRobot === true, r.tnRobot);
     ok('Tennis : Analyser les matchs (8 sur BET45, gros tournois d\'abord)', r.tnRun === true, r.tnRun);
     ok('Compétitions → Tennis : niveau, surface, drapeau, doubles, 🔮', r.tnRes === true, r.tnRes);
+    ok('Tennis : Rechercher un joueur (données ESPN + Elo)', r.tnJoueur === true, r.tnJoueur);
     ok('Cotes en direct NBA (DraftKings - Live Odds)', r.cdNba === true, r.cdNba);
     ok('Mur : pari par lieu + club du joueur', r.ufLieu === true, r.ufLieu);
     ok('Agenda gardé jusqu\'au prochain match', r.agCache === true, r.agCache);
