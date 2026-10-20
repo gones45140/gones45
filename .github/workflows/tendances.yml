@@ -18,11 +18,11 @@
 name: tendances-officielles
 
 on:
+  # 21/10 (« les tendances n'arrivent pas avant 11 h 30 ») : les crons à l'heure pile partaient avec 3 à 5 h de RETARD (le 20/10, le
+  # « 6 h UTC » a démarré à 10 h 47 UTC, soit 12 h 47 à Paris) — GitHub est saturé à minute 0. Minutes décalées (13 et 43) et un essai
+  # toutes les 30 min de 6 h à 9 h 43 UTC : le premier qui passe après 8 h (Paris) travaille, les autres s'arrêtent en quelques secondes.
   schedule:
-    - cron: '0 6 * * *'
-    - cron: '0 7 * * *'
-    - cron: '0 8 * * *'
-    - cron: '0 9 * * *'
+    - cron: '13,43 6-9 * * *'
   workflow_dispatch:
 
 concurrency:
