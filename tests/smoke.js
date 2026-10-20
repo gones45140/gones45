@@ -782,13 +782,18 @@ serveur.listen(0, async () => {
         const box = document.createElement('div'); document.body.appendChild(box);
         await loadTennisSaisons(box, 'TENNIS');
         const barre = box.textContent;
+        /* 20261020u : classement par surface (Elo) sous la recherche */
+        const Lt = _g45TcListe(window._g45TnEloJ, 'atp', 'terre'), Lg = _g45TcListe(window._g45TnEloJ, 'atp', 'gazon');
+        const tc = box.querySelector('#g45tc-corps'); g45TcTgl(box.querySelector('[onclick^="g45TcTgl"]')); g45TcSet('sf', 'terre');
+        const tcT = tc ? tc.textContent : '';
+        const tcOk = tc && tc.style.display === 'block' && /Jannik Sinner/.test(tcT) && /général 1er/.test(tcT) && Lt.length === 2 && Lt[0].nom === 'Jannik Sinner' && Lt[0].e === 2180 && Lg.length === 1 && Lg[0].d === 0;
         await searchTennisPlayer('Arthur Fils');
         const t = box.textContent, id = JSON.parse(localStorage.getItem('g45tnid1_arthurfils') || '{}').id;
         const Cc = _g45TjCalc([M(true, 1, 'dur'), { t: new Date(an - 1, 5, 1).getTime(), w: false, sf: 'dur' }], an);
         window.fetch = sf; window._g45TnSaison = sv; window._g45TnProfil = sp; window._g45TnEloJ = sj; box.remove(); localStorage.removeItem('g45tnid1_arthurfils');
-        o.tnJoueur = (/Sinner/.test(barre) && /Sabalenka/.test(barre) && !/Paire/.test(barre) && id === '3' && /Arthur Fils/.test(t) && /22 ans/.test(t) && /N°2 Elo ATP/.test(t)
+        o.tnJoueur = (tcOk && /Sinner/.test(barre) && /Sabalenka/.test(barre) && !/Paire/.test(barre) && id === '3' && /Arthur Fils/.test(t) && /22 ans/.test(t) && /N°2 Elo ATP/.test(t)
           && /5victoires/.test(t.replace(/\s/g, '')) && /71 %/.test(t) && /Salle/.test(t) && /bat Adv 1/.test(t) && /voir les 7 matchs/.test(t) && !/Tavily|Stats issues du web/.test(t)
-          && Cc.L.length === 1 && Cc.p === 100) || JSON.stringify({ id, t: t.slice(0, 400), barre: barre.slice(0, 200) });
+          && Cc.L.length === 1 && Cc.p === 100) || JSON.stringify({ tcOk, tcT: tcT.slice(0, 200), id, t: t.slice(0, 400), barre: barre.slice(0, 200) });
       } catch (e) { o.tnJoueur = 'erreur : ' + e.message; }
       /* 20261017q — 🏠 / ✈️ pari par lieu + club du joueur (formulaire du mur et « Modifier ») */
       try {
