@@ -673,13 +673,13 @@ serveur.listen(0, async () => {
         const t2 = bx.innerHTML; g45TnOnglet('g45tn-smoke', 'h2h'); const t3 = bx.innerHTML; g45TnOnglet('g45tn-smoke', 'bil'); const t4 = bx.innerHTML;
         bx.remove(); window._g45TnSaison = sv; localStorage.removeItem('g45tr_tennis');
         if (v0 == null) localStorage.removeItem('g45tr_vue'); else localStorage.setItem('g45tr_vue', v0);
-        o.tennis = (!prem || (/g45tr-ong-tennis/.test(t1) && /g45tn-jour/.test(t1) && !/Analyser les matchs/.test(t1)))
+        o.tennis = (!prem || (/g45tr-ong-tennis/.test(t1) && /g45tn-jour/.test(t1) && !/g45TrRun\(\)/.test(t1) && /g45TnLancer/.test(t1)))
           && /10 DERNIERS MATCHS/.test(t2) && /100 %/.test(t2) && /1 – 0/.test(t3) && /Alan mène/.test(t3) && /Dur/.test(t4) && /1\/0/.test(t4)
           || JSON.stringify({ prem, a: /g45tr-ong-tennis/.test(t1), b: /g45tn-jour/.test(t1), t2: t2.replace(/<[^>]+>/g,' ').slice(0, 400), t3: t3.replace(/<[^>]+>/g,' ').slice(0,300) });
       } catch (e) { o.tennis = 'erreur : ' + e.message; }
       /* 20261020l — 🤖 tennis officiel « combiné » : confiance forte + proba ≥ 60 % → noté sans cote ; scoreboard aplati pour le jugement */
       try {
-        const sf = window.fetch, sv = window._g45TnSaison, t0 = new Date(Date.now() + 2 * 3600e3);
+        const sf = window.fetch, sv = window._g45TnSaison, t0 = new Date(Date.now() + 10 * 60e3);
         const mkC = (id, h, a, rh, ra) => ({ id, date: t0.toISOString(), status: { type: { state: 'pre' } }, competitors: [
           { id: h, homeAway: 'home', curatedRank: { current: rh }, athlete: { displayName: 'Joueur ' + h } }, { id: a, homeAway: 'away', curatedRank: { current: ra }, athlete: { displayName: 'Joueur ' + a } }] });
         const SB = { events: [{ id: '99-2026', name: 'Swiss Indoors Basel', groupings: [{ grouping: { displayName: "Men's Singles" }, competitions: [mkC('c1', 'p1', 'p2', 3, 90), mkC('c2', 'p3', 'p4', 40, 41)] }] }] };
@@ -702,6 +702,23 @@ serveur.listen(0, async () => {
         o.tnRobot = (N2.length === 1 && N2[0].cd === 1.7 && N2[0].c === 1.6 && N2[0].f > 0.5 && N3.length === 0 && N.length === 1 && N[0].id === 'c1' && N[0].k === '1' && N[0].sl === 'atp' && N[0].c === null && N[0].p >= 0.6 && /Joueur p1/.test(N[0].m)
           && P.events[0].id === 'c9' && c9[0].score === '2' && c9[1].score === '1') || JSON.stringify({ N, N2, N3, c9 });
       } catch (e) { o.tnRobot = 'erreur : ' + e.message; }
+      /* 20261020o — « Analyser les matchs » tennis : 250 compris, 8 au plus sur BET45 (sans limite sur gones), gros tournois d'abord */
+      try {
+        const sf = window.fetch, sv = window._g45TnSaison, sa = window._g45SanteActive, t0 = Date.now() + 5 * 60e3;
+        const comp = (id, k) => ({ id, date: new Date(t0 + k * 60e3).toISOString(), status: { type: { state: 'pre' } }, competitors: [
+          { id: id + 'h', homeAway: 'home', curatedRank: { current: 5 }, athlete: { displayName: 'Fort ' + id } }, { id: id + 'a', homeAway: 'away', curatedRank: { current: 120 }, athlete: { displayName: 'Faible ' + id } }] });
+        const ev = (nom, ids) => ({ id: nom, name: nom, groupings: [{ grouping: { displayName: "Men's Singles" }, competitions: ids.map((x, k) => comp(x, k)) }] });
+        const SB = { events: [ev('Almaty Open', ['a1', 'a2', 'a3', 'a4', 'a5', 'a6', 'a7', 'a8']), ev('Swiss Indoors Basel', ['b1', 'b2']), ev('Davis Cup', ['d1'])] };
+        window.fetch = async (u) => ({ ok: true, json: async () => (/tennis\/atp\/scoreboard/.test(String(u)) ? SB : {}) });
+        const now = Date.now(), M = (w, j) => ({ id: 'y' + Math.random(), t: now - j * 864e5, ek: '1-2026', tr: 'Open', sf: 'dur', ind: false, cat: 'a250', adv: 'z', an: '?', w, sc: '6-4 6-4' });
+        window._g45TnSaison = async (lg, id, an) => an < new Date().getFullYear() ? [] : Array.from({ length: 10 }, (_, i) => M(/h$/.test(id) ? i % 5 !== 0 : i % 3 === 0, i + 1));
+        localStorage.setItem('g45tn_jour', '0'); localStorage.setItem('g45tn_pmin', '0.6'); localStorage.setItem('g45tn_conf', 'mf');
+        window._g45SanteActive = () => false; await g45TnLancer(); const R1 = window._g45TnRun.res;
+        window._g45SanteActive = () => true; await g45TnLancer(); const R2 = window._g45TnRun.res;
+        window.fetch = sf; window._g45TnSaison = sv; window._g45SanteActive = sa;
+        o.tnRun = (R1 && R1.r.length === 8 && R1.tot === 10 && R1.r[0].m.tn === 'Swiss Indoors Basel' && R1.r[1].m.tn === 'Swiss Indoors Basel'
+          && R2 && R2.r.length === 10 && R1.r.every((x) => x.qui === 'a' && x.p >= 0.6)) || JSON.stringify({ n1: R1 && R1.r.length, t1: R1 && R1.tot, n2: R2 && R2.r.length, p: R1 && R1.r.map((x) => x.m.tn + ' ' + x.qui + ' ' + x.pc) });
+      } catch (e) { o.tnRun = 'erreur : ' + e.message; }
       /* 20261017q — 🏠 / ✈️ pari par lieu + club du joueur (formulaire du mur et « Modifier ») */
       try {
         const C1 = _g45UfCompose('Edmonton Oilers', 'en forme', 'buteur', '2 points'), C2 = _g45UfCompose('', '', 'victoire', 'Victoire');
@@ -901,6 +918,7 @@ serveur.listen(0, async () => {
     ok('Tendances : boutons BET45 / perso / buteurs / CLV', r.trVues === true, r.trVues);
     ok('Tennis : bouton Tendances + analyse (forme, H2H, bilan)', r.tennis === true, r.tennis);
     ok('Tennis officiel : combiné (confiance forte, sans cote) + jugement', r.tnRobot === true, r.tnRobot);
+    ok('Tennis : Analyser les matchs (8 sur BET45, gros tournois d\'abord)', r.tnRun === true, r.tnRun);
     ok('Mur : pari par lieu + club du joueur', r.ufLieu === true, r.ufLieu);
     ok('Agenda gardé jusqu\'au prochain match', r.agCache === true, r.agCache);
     ok('Secours ESPN posé', r.espSec === true, r.espSec);
