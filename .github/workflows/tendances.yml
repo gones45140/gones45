@@ -48,6 +48,13 @@ jobs:
           npm install --no-save --no-package-lock playwright@1.48.2
           npx playwright install --with-deps chromium
 
+      # 20261020r : Elo tennis par surface (tennisabstract.com, 1 fois tous les 6 jours) → données/elo_tennis.json, AVANT l'analyse
+      - name: Elo tennis
+        continue-on-error: true
+        env:
+          FORCE: ${{ github.event_name == 'workflow_dispatch' && '1' || '0' }}
+        run: node .github/scripts/elo.mjs
+
       - name: Analyse et vérification
         env:
           FORCE: ${{ github.event_name == 'workflow_dispatch' && '1' || '0' }}
@@ -58,6 +65,7 @@ jobs:
           git config user.name "Tendances officielles"
           git config user.email "actions@users.noreply.github.com"
           git add "données/tendances_officielles.json"
+          git add "données/elo_tennis.json" 2>/dev/null || true
           if git diff --cached --quiet; then echo "Rien de nouveau"; exit 0; fi
           git commit -m "Tendances officielles $(TZ=Europe/Paris date +%d/%m/%Y)"
           # la synchro des paris pousse aussi sur main : on se recale avant chaque essai
