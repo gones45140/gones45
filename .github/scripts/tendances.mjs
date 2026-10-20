@@ -134,10 +134,20 @@ const nouvelles = await page.evaluate(async ({ R, SPORTS }) => {
 }, { R: REGLAGES, SPORTS });
 
 /* Ajout : une tendance (match + pari) n'est notée qu'UNE fois — la NFL lit 7 jours d'avance. */
+/* 20/10 (capture Bears–Patriots : « - de 48,5 », « - de 49,5 », « - de 50,5 » = « doublon voir triple dose ») : la ligne ESPN bouge d'un jour à
+   l'autre → même pari noté chaque matin avec un autre chiffre. FAMILLE = type sans le chiffre de la ligne (un48.5 → un, hc1:7.5 → hc1:) :
+   une famille déjà notée un JOUR PRÉCÉDENT pour ce match n'est plus reprise ; les doublons déjà présents sont retirés (le 1er noté reste). */
+const fam = (k) => String(k || '').replace(/[\d.]+$/, '');
+const nFam = {};
+J.t.forEach((x) => { const f = x.id + '|' + fam(x.k); if (!nFam[f] || x.n < nFam[f]) nFam[f] = x.n; });
+const avant = J.t.length;
+J.t = J.t.filter((x) => x.n === nFam[x.id + '|' + fam(x.k)]);
+if (J.t.length < avant) console.log('doublons de ligne retirés : ' + (avant - J.t.length));
 const deja = new Set(J.t.map((x) => x.id + '|' + x.k));
+const dejaFam = new Set(J.t.map((x) => x.id + '|' + fam(x.k)));
 const note = new Date().toISOString();
 let ajout = 0;
-nouvelles.forEach((x) => { if (deja.has(x.id + '|' + x.k)) return; deja.add(x.id + '|' + x.k); x.n = note; J.t.push(x); ajout++; });
+nouvelles.forEach((x) => { if (deja.has(x.id + '|' + x.k) || dejaFam.has(x.id + '|' + fam(x.k))) return; deja.add(x.id + '|' + x.k); x.n = note; J.t.push(x); ajout++; });
 
 /* Vérification des matchs finis (score final), par ligue et par jour.
    20261017i (« avec des logos de club ou championnat ») : le même scoreboard donne aussi les logos → x.hl / x.al (clubs) et
