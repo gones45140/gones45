@@ -689,12 +689,18 @@ serveur.listen(0, async () => {
           id === 'p1' ? Array.from({ length: 12 }, (_, i) => M(i % 6 !== 0, 'z', i + 1)) : id === 'p2' ? Array.from({ length: 12 }, (_, i) => M(i % 3 === 0, 'z', i + 1))
           : Array.from({ length: 10 }, (_, i) => M(i % 2 === 0, 'z', i + 1));
         const N = await _g45TnRobot({ min: 1.5, pmin: 0.6 }, 10, 60000);
+        /* 20261020m : cote TheRundown (worker /rundown) → c = moyenne × 0,94, cd = moyenne ; trop basse (< 1,50) → pas noté */
+        let RD = { m: [{ h: 'Joueur p2', a: 'Joueur p1', ch: 2.6, ca: 1.7, n: 3 }] };
+        window.fetch = async (u) => ({ ok: true, json: async () => (/\/rundown/.test(String(u)) ? RD : /tennis\/atp\/scoreboard/.test(String(u)) ? SB : {}) });
+        _g45TnRdRaz(); const N2 = await _g45TnRobot({ min: 1.5, pmin: 0.6 }, 10, 60000);
+        RD = { m: [{ h: 'Joueur p1', a: 'Joueur p2', ch: 1.3, ca: 3.5, n: 3 }] };
+        _g45TnRdRaz(); const N3 = await _g45TnRobot({ min: 1.5, pmin: 0.6 }, 10, 60000);
         window.fetch = sf; window._g45TnSaison = sv;
         const P = _g45TnPlat({ events: [{ groupings: [{ competitions: [{ id: 'c9', status: { type: { completed: true } }, competitors: [
           { homeAway: 'home', winner: true, linescores: [{ value: 6 }, { value: 3 }, { value: 7 }] }, { homeAway: 'away', linescores: [{ value: 4 }, { value: 6 }, { value: 5 }] }] }] }] }] });
         const c9 = P.events[0].competitions[0].competitors;
-        o.tnRobot = (N.length === 1 && N[0].id === 'c1' && N[0].k === '1' && N[0].sl === 'atp' && N[0].c === null && N[0].p >= 0.6 && /Joueur p1/.test(N[0].m)
-          && P.events[0].id === 'c9' && c9[0].score === '2' && c9[1].score === '1') || JSON.stringify({ N, c9 });
+        o.tnRobot = (N2.length === 1 && N2[0].cd === 1.7 && N2[0].c === 1.6 && N2[0].f > 0.5 && N3.length === 0 && N.length === 1 && N[0].id === 'c1' && N[0].k === '1' && N[0].sl === 'atp' && N[0].c === null && N[0].p >= 0.6 && /Joueur p1/.test(N[0].m)
+          && P.events[0].id === 'c9' && c9[0].score === '2' && c9[1].score === '1') || JSON.stringify({ N, N2, N3, c9 });
       } catch (e) { o.tnRobot = 'erreur : ' + e.message; }
       /* 20261017q — 🏠 / ✈️ pari par lieu + club du joueur (formulaire du mur et « Modifier ») */
       try {
