@@ -575,8 +575,14 @@ serveur.listen(0, async () => {
         _g45TicketRemplirCockpit({ joueur: 'Connor McDavid', equipe: 'Edmonton Oilers', type: 'Passes 1+', cote: '1.40', mise: '5' });
         try { updMise(); } catch (x) {}
         const v = un.value, ce = (document.getElementById('c-equipe') || {}).value;
-        op.remove(); state.u = u0; window.alert = a0;
-        o.tkj = (v === 'MCDAVID CONNOR' && !alerte && ce === 'Edmonton Oilers') || JSON.stringify({ v, alerte, ce });
+        /* 20261020p : ticket lu à l'envers (club du joueur = adversaire) → inversé, lieu Extérieur */
+        const op2 = document.createElement('option'); op2.value = 'Macklin Celebrini'; op2.text = 'Macklin Celebrini'; un.appendChild(op2);
+        state.u = state.u.concat([{ n: 'Macklin Celebrini', type: 'joueur', sport: '🏒', note: 'San Jose Sharks', s: 'a' }]);
+        _g45TicketRemplirCockpit({ joueur: 'Macklin Celebrini', equipe: 'Montreal Canadiens', adversaire: 'San Jose Sharks', domicile: true, type: 'Buteur', cote: '2.1', mise: '5' });
+        const v2 = un.value, ce2 = (document.getElementById('c-equipe') || {}).value, ct2 = (document.getElementById('c-target') || {}).value, li2 = (document.getElementById('c-lieu') || {}).value;
+        op.remove(); op2.remove(); state.u = u0; window.alert = a0;
+        o.tkj = (v === 'MCDAVID CONNOR' && !alerte && ce === 'Edmonton Oilers' && v2 === 'Macklin Celebrini' && ce2 === 'San Jose Sharks' && ct2 === 'Montreal Canadiens' && li2 === 'ext')
+          || JSON.stringify({ v, alerte, ce, v2, ce2, ct2, li2 });
       } catch (e) { o.tkj = 'erreur : ' + e.message; }
       /* 20261016g — séries individuelles : seuil 2 ou plus */
       try {
