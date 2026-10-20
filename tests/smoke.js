@@ -246,6 +246,7 @@ serveur.listen(0, async () => {
         const pur = H.n === 2 && H.w === 2 && H.ot === 1 && A.l === 1 && A.o55 === 2 && Math.abs(v1.p - 0.75) < 1e-9 && Math.abs(o55.p - 0.75) < 1e-9
           && /prolongation ou TAB à domicile lors de 1 de ses 2/.test(v1.faits.join('|'));
         const sp0 = _G45_TR.sp, r0 = _G45_TR.res, mi0 = _G45_TR.min; _G45_TR.min = 0;
+        try { localStorage.setItem('g45tr_vue', 'perso'); } catch (e) {}   /* 20261020c : écran « Tendances perso » */
         g45TrSport('hockey');
         M.forEach(m => { m.n = 20; });
         _G45_TR.res = M.map(m => ({ m, hN: 'Avalanche', aN: 'Jets', when: '02:00', slug: 'nhl', id: 'x1', deco: {}, d: new Date().toISOString() }));
@@ -642,6 +643,21 @@ serveur.listen(0, async () => {
         o.trSel = (/Sélection du jour/.test(HS) && /2 paris/.test(HS) && /Bremen/.test(HS) && !/Vieux/.test(HS) && /gagnant si ça reste/.test(HS) && /67'/.test(HS)
           && /@1,56/.test(HS) && /📊 67 %/.test(HS) && /🏦 62 %/.test(HS) && /NHL/.test(HS) && /(arrive vers 8 h|Aucun pari)/.test(HV)) || HS.slice(0, 300);
       } catch (e) { o.trSel = 'erreur : ' + e.message; }
+      /* 20261020c — Tendances en boutons : BET45 → Sélection par défaut, Historique, perso, barre toujours en tête */
+      try {
+        const v0 = localStorage.getItem('g45tr_vue'), s0 = localStorage.getItem('g45tr_sous'), r0 = _G45_TR.res, prem = _g45AccesPremium() === true;
+        localStorage.removeItem('g45tr_vue'); localStorage.removeItem('g45tr_sous'); _G45_TR.res = null;
+        const el = document.getElementById('t-tend');
+        loadTendancesTab(); const a = el.getAttribute('data-g45v'), t1 = el.innerHTML, f1 = el.firstElementChild && el.firstElementChild.id;
+        g45TrSous('his'); const b = el.getAttribute('data-g45v'), t2 = el.innerHTML;
+        g45TrVue('perso'); await new Promise(r => setTimeout(r, 50)); const c = el.getAttribute('data-g45v'), t3 = el.innerHTML, f3 = el.firstElementChild && el.firstElementChild.id;
+        const selCache = getComputedStyle(document.getElementById('g45tr-sel') || el).display === 'none' || !document.getElementById('g45tr-sel');
+        if (v0 == null) localStorage.removeItem('g45tr_vue'); else localStorage.setItem('g45tr_vue', v0);
+        if (s0 == null) localStorage.removeItem('g45tr_sous'); else localStorage.setItem('g45tr_sous', s0);
+        _G45_TR.res = r0;
+        o.trVues = (!prem || (a === 'bet-sel' && f1 === 'g45tr-nav' && /Sélection du jour/.test(t1) && /Tendances buteurs/.test(t1) && b === 'bet-his' && /📅 Historique BET45/.test(t2)
+          && c === 'perso' && f3 === 'g45tr-nav' && /g45tr-onglets/.test(t3) && /g45tr-prow/.test(t3) && selCache)) || JSON.stringify({ prem, a, f1, b, c, f3, selCache, h2: /Historique BET45/.test(t2), p: /g45tr-prow/.test(t3) });
+      } catch (e) { o.trVues = 'erreur : ' + e.message; }
       /* 20261017q — 🏠 / ✈️ pari par lieu + club du joueur (formulaire du mur et « Modifier ») */
       try {
         const C1 = _g45UfCompose('Edmonton Oilers', 'en forme', 'buteur', '2 points'), C2 = _g45UfCompose('', '', 'victoire', 'Victoire');
@@ -700,6 +716,7 @@ serveur.listen(0, async () => {
       /* 20261013s — Tendances : bloc « Stats et bookmakers en désaccord » + fiabilité à part */
       try {
         const sp0 = _G45_TR.sp, r0 = _G45_TR.res, mi0 = _G45_TR.min; _G45_TR.min = 0;
+        try { localStorage.setItem('g45tr_vue', 'perso'); } catch (e) {}   /* 20261020c : écran « Tendances perso » */
         g45TrSport('foot');
         const d0 = new Date(Date.now() - 6 * 3600e3).toISOString();
         const mD = { m: 'Viking FK ou nul', p: 0.61, fair: 0.13, n: 20, faits: ['Viking FK invaincu'], desac: 1, gap: null, ev: null };
@@ -837,6 +854,7 @@ serveur.listen(0, async () => {
     ok('Tendances : historique officiel', r.trOff === true, r.trOff);
     ok('Tendances : historique en direct', r.trLive === true, r.trLive);
     ok('Tendances : sélection du jour', r.trSel === true, r.trSel);
+    ok('Tendances : boutons BET45 / perso / buteurs / CLV', r.trVues === true, r.trVues);
     ok('Mur : pari par lieu + club du joueur', r.ufLieu === true, r.ufLieu);
     ok('Agenda gardé jusqu\'au prochain match', r.agCache === true, r.agCache);
     ok('Secours ESPN posé', r.espSec === true, r.espSec);
