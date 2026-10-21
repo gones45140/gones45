@@ -655,14 +655,19 @@ serveur.listen(0, async () => {
         const sv = _g45TrOff.j, svt = _g45TrOff.t, n = new Date().toISOString(), hier = new Date(Date.now() - 2 * 864e5).toISOString();
         _g45TrOff.j = { reglages: { min: 1.5, pmin: .6, accord: true }, t: [
           { id: '11', sl: 'ger.1', t: Date.now() - 3600e3, n: n, h: 'Bremen', a: 'Paderborn', m: 'Moins de 3,5 buts', k: 'u35', p: .672, f: .62, c: 1.56, r: null },
-          { id: '12', sl: 'nhl', t: Date.now() + 3600e3, n: n, h: 'Panthers', a: 'Kraken', m: 'Moins de 6,5 buts', k: 'u65', p: .613, c: 1.69, r: null },
+          { id: '12', sl: 'nhl', t: Date.now() + 3600e3, n: n, h: 'Panthers', a: 'Kraken', m: 'Moins de 6,5 buts', k: 'u65', p: .613, c: 1.69, r: null, fa: ['Panthers : moins de 6,5 buts lors de 7 de ses 10 derniers matchs (70%)'], nm: 20 },
           { id: '13', sl: 'fra.1', t: Date.now() - 864e5, n: hier, h: 'Vieux', a: 'Match', m: 'X', k: '1', p: .6, c: 1.6, r: 1 }] }; _g45TrOff.t = Date.now();
         _g45TrSel.lv = { '11': { st: 'in', h: 2, a: 1, s: '2-1', c: "67'" } };
         try { localStorage.removeItem('g45tr_sel_ferme'); } catch (e) {}
         const HS = _g45TrSelHtml();
+        /* 20261021c : toucher une carte = grande carte (_g45TrCarte) avec les faits du robot, blasons / logo lus sur le scoreboard ESPN */
+        const kSb = 'nhl|' + new Date(Date.now() + 3600e3 - 6 * 3600000).toISOString().slice(0, 10).replace(/-/g, '');
+        _g45TrSel.ouv['12|u65'] = true; _g45TrSel.deco[kSb] = { '12': { ch: '#c8102e', ca: '#001628', lh: '', la: '', nh: 'Panthers', lgl: 'nhl.png' }, _lgl: 'nhl.png' };
+        const HD = _g45TrSelHtml(); _g45TrSel.ouv = {}; _g45TrSel.deco = {};
+        const dOk = /class="g45trc g45trc-av"/.test(HD) && /📈 Panthers : moins de 6,5 buts/.test(HD) && /sur 20 matchs étudiés/.test(HD) && /▴ refermer/.test(HD) && /@1.69/.test(HD) && /g45trc-lgl" src="nhl.png"/.test(HD);
         _g45TrOff.j = { t: [] }; const HV = _g45TrSelHtml();
         _g45TrOff.j = sv; _g45TrOff.t = svt; _g45TrSel.lv = {};
-        o.trSel = (/Sélection du jour/.test(HS) && /2 paris/.test(HS) && /Bremen/.test(HS) && !/Vieux/.test(HS) && /gagnant si ça reste/.test(HS) && /67'/.test(HS)
+        o.trSel = (dOk && /Sélection du jour/.test(HS) && /2 paris/.test(HS) && /Bremen/.test(HS) && !/Vieux/.test(HS) && /gagnant si ça reste/.test(HS) && /67'/.test(HS)
           && /@1,56/.test(HS) && /📊 67 %/.test(HS) && /🏦 62 %/.test(HS) && /NHL/.test(HS) && /(arrive vers 8 h|Aucun pari)/.test(HV)) || HS.slice(0, 300);
       } catch (e) { o.trSel = 'erreur : ' + e.message; }
       /* 20261020c — Tendances en boutons : BET45 → Sélection par défaut, Historique, perso, barre toujours en tête */
