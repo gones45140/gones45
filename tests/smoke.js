@@ -796,6 +796,12 @@ serveur.listen(0, async () => {
           && /5victoires/.test(t.replace(/\s/g, '')) && /71 %/.test(t) && /Salle/.test(t) && /bat Adv 1/.test(t) && /voir les 7 matchs/.test(t) && !/Tavily|Stats issues du web/.test(t)
           && !/Bye/.test(t) && /4-6 4-6/.test(t) && /Global/.test(t) && /Terre battue/.test(t) && /Derniers matchs · Dur/.test(tSf) && /3victoires2défaites60%/.test(tSf.replace(/\s/g, '')) && Cc.L.length === 1 && Cc.p === 100) || JSON.stringify({ tcOk, id, t: t.slice(0, 400), tSf: tSf.slice(-400) });
       } catch (e) { o.tnJoueur = 'erreur : ' + e.message; }
+      /* 20261021a — score tennis ESPN avec tie-breaks « 6-7 (4-7) 7-6 (7-3) 7-5 » (sondé par Antoine) */
+      try {
+        const a = _g45TnScore('(21) Arthur Fils (FRA) bt Ignacio Buse (PER) 6-7 (4-7) 7-6 (7-3) 7-5'), b = _g45TnScore('(9) Arthur Fils (FRA) bt (5) Andrey Rublev (RUS) 6-2 7-6 (7-2)');
+        const S = _g45TnSets(a, true);
+        o.tnScore = (a === '6-7(4) 7-6(3) 7-5' && b === '6-2 7-6(2)' && S && S.length === 3 && S[0].tb && S[1].tb && !S[2].tb) || JSON.stringify({ a, b, S });
+      } catch (e) { o.tnScore = 'erreur : ' + e.message; }
       /* 20261017q — 🏠 / ✈️ pari par lieu + club du joueur (formulaire du mur et « Modifier ») */
       try {
         const C1 = _g45UfCompose('Edmonton Oilers', 'en forme', 'buteur', '2 points'), C2 = _g45UfCompose('', '', 'victoire', 'Victoire');
@@ -998,6 +1004,7 @@ serveur.listen(0, async () => {
     ok('Tennis : Analyser les matchs (8 sur BET45, gros tournois d\'abord)', r.tnRun === true, r.tnRun);
     ok('Compétitions → Tennis : niveau, surface, drapeau, doubles, 🔮', r.tnRes === true, r.tnRes);
     ok('Tennis : Rechercher un joueur (données ESPN + Elo)', r.tnJoueur === true, r.tnJoueur);
+    ok('Tennis : score avec tie-breaks (ESPN)', r.tnScore === true, r.tnScore);
     ok('Cotes en direct NBA (DraftKings - Live Odds)', r.cdNba === true, r.cdNba);
     ok('Mur : pari par lieu + club du joueur', r.ufLieu === true, r.ufLieu);
     ok('Agenda gardé jusqu\'au prochain match', r.agCache === true, r.agCache);
