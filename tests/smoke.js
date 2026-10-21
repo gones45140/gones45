@@ -861,6 +861,14 @@ serveur.listen(0, async () => {
         /* Lyon : 15 tirs à domicile, 14 à l'extérieur → plus de 12,5 = 2/2 */
         o.cursTi = (/Nombre de buts/.test(HB) && /g45c-tabs/.test(HB) && /🎯 Tirs/.test(HB) && /Lyon : tirs/.test(HT) && /2\/2/.test(HT) && /Plus de 12,5/.test(HT)) || HT.slice(0, 400);
       } catch (e) { o.cursTi = 'erreur : ' + e.message; }
+      /* 20261021k — filtre joueur hors foot : seuil 2+ (« +1,5 pointeur ») et compteur du combiné */
+      try {
+        localStorage.setItem('g45_jou_test', JSON.stringify({ parMatch: { E1: { p: { 9: 2 } }, E2: { p: { 9: 1 } } }, joueurs: { 9: { nom: 'Aho', tot: { p: 3 } } } }));
+        _g45JouF = { cle: 'g45_jou_test', role: 'p', id: '9', nom: 'Aho', min: 2 };
+        const a = _g45JouOk('E1'), b = _g45JouOk('E2'), c = _g45JouOk('E3'); _g45JouF.min = 1; const d = _g45JouOk('E2');
+        _g45JouF = null; localStorage.removeItem('g45_jou_test');
+        o.jouMin = (a === true && b === false && c === null && d === true && _g45JouOk('E1') === null) || JSON.stringify({ a, b, c, d });
+      } catch (e) { o.jouMin = 'erreur : ' + e.message; }
       /* 20261017q — 🏠 / ✈️ pari par lieu + club du joueur (formulaire du mur et « Modifier ») */
       try {
         const C1 = _g45UfCompose('Edmonton Oilers', 'en forme', 'buteur', '2 points'), C2 = _g45UfCompose('', '', 'victoire', 'Victoire');
@@ -1068,6 +1076,7 @@ serveur.listen(0, async () => {
     ok('Critères : joueurs, match précédent, feuille de match', r.crPlus === true, r.crPlus);
     ok('Saison : onglets + tirs (feuille de match)', r.cursTi === true, r.cursTi);
     ok('Panneaux fermés à l\'arrivée + chargement BET45', r.ferme === true, r.ferme);
+    ok('Filtre joueur : 2 ou plus + combiné', r.jouMin === true, r.jouMin);
     ok('Cotes en direct NBA (DraftKings - Live Odds)', r.cdNba === true, r.cdNba);
     ok('Mur : pari par lieu + club du joueur', r.ufLieu === true, r.ufLieu);
     ok('Agenda gardé jusqu\'au prochain match', r.agCache === true, r.agCache);
