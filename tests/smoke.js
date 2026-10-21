@@ -802,6 +802,12 @@ serveur.listen(0, async () => {
         const S = _g45TnSets(a, true);
         o.tnScore = (a === '6-7(4) 7-6(3) 7-5' && b === '6-2 7-6(2)' && S && S.length === 3 && S[0].tb && S[1].tb && !S[2].tb) || JSON.stringify({ a, b, S });
       } catch (e) { o.tnScore = 'erreur : ' + e.message; }
+      /* 20261021b — Tendances → Tennis : score en direct « 🔴 6-4 3-2 · 2e set », meneur du set en gras */
+      try {
+        const m = { st: 'in', a: { n: 'Leylah Fernandez' }, b: { n: 'Aliaksandra Sasnovich' }, sa: [6, 3], sb: [4, 2] };
+        const sc = _g45TnScoreLv(m).replace(/<[^>]+>/g, ''), nm = _g45TnNomsLv(m), sc0 = _g45TnScoreLv({ st: 'in', a: m.a, b: m.b, sa: [], sb: [] }).replace(/<[^>]+>/g, '');
+        o.tnLv = (sc === '🔴 6-4 3-2 · 2e set' && /<b>Leylah Fernandez<\/b>/.test(nm) && sc0 === '🔴 en cours') || JSON.stringify({ sc, nm, sc0 });
+      } catch (e) { o.tnLv = 'erreur : ' + e.message; }
       /* 20261017q — 🏠 / ✈️ pari par lieu + club du joueur (formulaire du mur et « Modifier ») */
       try {
         const C1 = _g45UfCompose('Edmonton Oilers', 'en forme', 'buteur', '2 points'), C2 = _g45UfCompose('', '', 'victoire', 'Victoire');
@@ -1005,6 +1011,7 @@ serveur.listen(0, async () => {
     ok('Compétitions → Tennis : niveau, surface, drapeau, doubles, 🔮', r.tnRes === true, r.tnRes);
     ok('Tennis : Rechercher un joueur (données ESPN + Elo)', r.tnJoueur === true, r.tnJoueur);
     ok('Tennis : score avec tie-breaks (ESPN)', r.tnScore === true, r.tnScore);
+    ok('Tennis : score en direct (Tendances)', r.tnLv === true, r.tnLv);
     ok('Cotes en direct NBA (DraftKings - Live Odds)', r.cdNba === true, r.cdNba);
     ok('Mur : pari par lieu + club du joueur', r.ufLieu === true, r.ufLieu);
     ok('Agenda gardé jusqu\'au prochain match', r.agCache === true, r.agCache);
