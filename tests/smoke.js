@@ -54,6 +54,15 @@ serveur.listen(0, async () => {
         o.ferme = (/Curseurs de la saison/.test(hf) && /Ouvrir/.test(hf) && !/Nombre de buts/.test(hf) && /Ouvrir/.test(hc) && !/Lieu/.test(hc) && /BET<span/.test(ch) && /Chargement test/.test(ch)) || hf.slice(0, 200);
       } catch (e) { o.ferme = 'erreur : ' + e.message; }
       window._g45CursToujours = true; window._g45Cr.ovTous = true;
+      /* 20261021p : Sélection du jour — après minuit (avant 15 h), celle de la veille reste affichée */
+      try {
+        const O = window._g45TrOff || (window._g45TrOff = {}), sv = O.j, st = O.t, hier = new Date(Date.now() - 864e5); hier.setHours(10, 0, 0, 0);
+        try { localStorage.removeItem('g45tr_sel_ferme'); } catch (e) {}
+        O.j = { t: [{ id: '77', sl: 'nba', t: Date.now() + 3600e3, n: hier.toISOString(), h: 'Wizards', a: 'Bucks', m: '- de 239,5 points', k: 'U239.5', p: .71, c: 1.81, d: 0, r: null }] }; O.t = Date.now();
+        const HS = window._g45TrSelHtml();
+        O.j = sv; O.t = st;
+        o.selHier = (new Date().getHours() < 15 ? (/Wizards/.test(HS) && /Choisie hier/.test(HS)) : !/Wizards/.test(HS)) || HS.replace(/<[^>]+>/g, ' ').slice(0, 300);
+      } catch (e) { o.selHier = 'erreur : ' + e.message; }
       o.state = typeof state !== 'undefined' && !!state;
       o.mur = !!document.querySelector('#t-dash, #dash, .g45-murcard, [id^="t-"]');
       /* Pari simple puis montante, sur un bookmaker approvisionné. */
@@ -1084,6 +1093,7 @@ serveur.listen(0, async () => {
     ok('Saison : onglets + tirs (feuille de match)', r.cursTi === true, r.cursTi);
     ok('Panneaux fermés à l\'arrivée + chargement BET45', r.ferme === true, r.ferme);
     ok('Tennis : mes coefficients + surface 2 mois + tournoi précédent', r.tnCoef === true, r.tnCoef);
+    ok('Sélection du jour : celle de la veille gardée après minuit', r.selHier === true, r.selHier);
     ok('Filtre joueur : 2 ou plus + combiné', r.jouMin === true, r.jouMin);
     ok('Cotes en direct NBA (DraftKings - Live Odds)', r.cdNba === true, r.cdNba);
     ok('Mur : pari par lieu + club du joueur', r.ufLieu === true, r.ufLieu);
