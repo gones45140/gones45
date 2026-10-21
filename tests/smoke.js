@@ -305,6 +305,7 @@ serveur.listen(0, async () => {
         S.data['Club Nfl CR'] = { t: Date.now(), lg: 'nfl', ligue: 'NFL', saisons: [
           { an: 2026, ms: [['2026-09-13', 1, 27, 20, 0], ['2026-09-20', 0, 17, 24, 0], ['2026-09-27', 1, 30, 27, 0]] },
           { an: 2025, ms: [] }, { an: 2024, ms: [] }, { an: 2023, ms: [] } ] };
+        localStorage.setItem('g45_cr_tab', 'buts');   /* 20261021f : onglets — les lignes de points sont dans l'onglet Buts */
         const z = document.createElement('div'); z.innerHTML = window._g45CrHtml('Club Nfl CR', { sp: 'football', lg: 'nfl', id: '2' }); document.body.appendChild(z);
         const t1 = document.getElementById('g45cr').innerText;
         window.g45CrSet('L', '50.5'); const t2 = document.getElementById('g45cr').innerText;
@@ -313,6 +314,7 @@ serveur.listen(0, async () => {
       } catch (e) { o.crn = 'erreur : ' + e.message; }
       try {
         /* 20261014i : buts / points de l'équipe et de l'adversaire (NHL : temps réglementaire). */
+        localStorage.setItem('g45_cr_tab', 'buts');
         const z = document.createElement('div'); z.innerHTML = window._g45CrHtml('Club Hockey CR', { sp: 'hockey', lg: 'nhl', id: '7' }); document.body.appendChild(z);
         window.g45CrSet('res', ''); window.g45CrSet('TL', '2.5'); const t1 = document.getElementById('g45cr').innerText;
         window.g45CrSet('te', ''); window.g45CrSet('AL', '1.5'); window.g45CrSet('ad', 'un'); const t2 = document.getElementById('g45cr').innerText;
@@ -325,12 +327,14 @@ serveur.listen(0, async () => {
         S.data['Club Rugby CR'] = { t: Date.now(), lg: '270559', ligue: 'saison régulière', saisons: [
           { an: 2026, ms: [['2026-09-06', 1, 27, 20], ['2026-09-13', 0, 17, 17], ['2026-09-20', 1, 30, 35]] },
           { an: 2025, ms: [] }, { an: 2024, ms: [] }, { an: 2023, ms: [] } ] };
+        localStorage.setItem('g45_cr_tab', 'buts');
         const z = document.createElement('div'); z.innerHTML = window._g45CrHtml('Club Rugby CR', { sp: 'rugby', lg: '270559', id: '9' }); document.body.appendChild(z);
         const t1 = document.getElementById('g45cr').innerText;
         window.g45CrSet('res', 'nul'); const t2 = document.getElementById('g45cr').innerText;
         z.remove();
-        o.crr = (/Total : 1\/3/.test(t1) && /Total : 1\/3/.test(t2) && /2026-27/.test(t1) && /Points du match/.test(t1) && /Points de l'adversaire/.test(t1) && /Nul/.test(t1)) || JSON.stringify({ t1: t1.slice(0, 400), t2: t2.slice(-200) });
+        o.crr = (/Total : 1\/3/.test(t1) && /Total : 1\/3/.test(t2) && /2026-27/.test(t1) && /Points du match/.test(t1) && /Points de l'adversaire/.test(t1) && /Ton combiné : Nul/.test(t2)) || JSON.stringify({ t1: t1.slice(0, 400), t2: t2.slice(-200) });
       } catch (e) { o.crr = 'erreur : ' + e.message; }
+      localStorage.removeItem('g45_cr_tab');
       try {
         /* 20261014k : prochains matchs d'un club de Top 14 + coupes d'Europe. */
         const t0 = Date.now() + 864e5;
@@ -839,6 +843,18 @@ serveur.listen(0, async () => {
         R.push(/réservé premium/.test(HP) && !/Compétition/.test(HP));
         o.crPlus = (JSON.stringify(F) === JSON.stringify([16, 18, 8, 7, 1, 0, 'h', 3, 6, 2, 0]) && R.every(Boolean)) || JSON.stringify({ F, R });
       } catch (e) { o.crPlus = 'erreur : ' + e.message; }
+      /* 20261021f — panneau Saison en onglets : 🎯 Tirs (feuille de match g45crf1_), Buts par défaut */
+      try {
+        const sv = localStorage.getItem('g45_curseurs');
+        localStorage.setItem('g45crf1_C1', JSON.stringify([15, 9, 6, 3, 1, 0, 'h', 7, 2, 1, 3])); localStorage.setItem('g45crf1_C2', JSON.stringify([11, 14, 4, 5, 0, 0, '', 4, 6, 2, 2]));
+        const M = (id, dom) => ({ espnId: id, homeTeam: { name: dom ? 'Lyon' : 'Nice' }, awayTeam: { name: dom ? 'Nice' : 'Lyon' }, score: { fullTime: { home: 1, away: 0 } }, competition: { code: 'fra.1' } });
+        const nous = (t) => t && t.name === 'Lyon';
+        const e = _g45CursEtat(); e.tab = 'buts'; _g45CursSauver(e); const HB = _g45CursHtml([M('C1', 1), M('C2', 0)], nous, null, 'Lyon');
+        e.tab = 'ti'; e.ti = { w: 'E', i: 3, s: 'A', on: true }; _g45CursSauver(e); const HT = _g45CursHtml([M('C1', 1), M('C2', 0)], nous, null, 'Lyon').replace(/<[^>]+>/g, ' ');
+        if (sv == null) localStorage.removeItem('g45_curseurs'); else localStorage.setItem('g45_curseurs', sv); localStorage.removeItem('g45crf1_C1'); localStorage.removeItem('g45crf1_C2');
+        /* Lyon : 15 tirs à domicile, 14 à l'extérieur → plus de 12,5 = 2/2 */
+        o.cursTi = (/Nombre de buts/.test(HB) && /g45c-tabs/.test(HB) && /🎯 Tirs/.test(HB) && /Lyon : tirs/.test(HT) && /2\/2/.test(HT) && /Plus de 12,5/.test(HT)) || HT.slice(0, 400);
+      } catch (e) { o.cursTi = 'erreur : ' + e.message; }
       /* 20261017q — 🏠 / ✈️ pari par lieu + club du joueur (formulaire du mur et « Modifier ») */
       try {
         const C1 = _g45UfCompose('Edmonton Oilers', 'en forme', 'buteur', '2 points'), C2 = _g45UfCompose('', '', 'victoire', 'Victoire');
@@ -1044,6 +1060,7 @@ serveur.listen(0, async () => {
     ok('Tennis : score avec tie-breaks (ESPN)', r.tnScore === true, r.tnScore);
     ok('Tennis : score en direct (Tendances)', r.tnLv === true, r.tnLv);
     ok('Critères : joueurs, match précédent, feuille de match', r.crPlus === true, r.crPlus);
+    ok('Saison : onglets + tirs (feuille de match)', r.cursTi === true, r.cursTi);
     ok('Cotes en direct NBA (DraftKings - Live Odds)', r.cdNba === true, r.cdNba);
     ok('Mur : pari par lieu + club du joueur', r.ufLieu === true, r.ufLieu);
     ok('Agenda gardé jusqu\'au prochain match', r.agCache === true, r.agCache);
