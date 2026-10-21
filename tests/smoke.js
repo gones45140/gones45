@@ -813,6 +813,22 @@ serveur.listen(0, async () => {
         const sc = _g45TnScoreLv(m).replace(/<[^>]+>/g, ''), nm = _g45TnNomsLv(m), sc0 = _g45TnScoreLv({ st: 'in', a: m.a, b: m.b, sa: [], sb: [] }).replace(/<[^>]+>/g, '');
         o.tnLv = (sc === '🔴 6-4 3-2 · 2e set' && /<b>Leylah Fernandez<\/b>/.test(nm) && sc0 === '🔴 en cours') || JSON.stringify({ sc, nm, sc0 });
       } catch (e) { o.tnLv = 'erreur : ' + e.message; }
+      /* 20261021d — critères : doublé / duo-trio buteurs / double chance, match précédent, feuille de match (tirs, mi-temps, 1er but, cartons) */
+      try {
+        const S = window._g45CrS, P = window._g45CrPasse, sv = { nom: S.nom, ctx: S.ctx, jl: S.jl, fid: S.fid };
+        S.nom = 'TestFC'; S.ctx = null; S.jl = { p1: { d: { '2026-09-01': { g: 2, a: 0 } } }, p2: { d: { '2026-09-01': { g: 1, a: 1 } } } }; S.fid = { TestFC: { '2026-09-01': 'E1' } };
+        const F = _g45CrFeuille({ header: { competitions: [{ competitors: [{ id: '1', homeAway: 'home', linescores: [{ displayValue: '1' }, { displayValue: '0' }] }, { id: '2', homeAway: 'away', linescores: [{ displayValue: '0' }, { displayValue: '3' }] }] }] },
+          boxscore: { teams: [{ team: { id: '2' }, statistics: [{ name: 'totalShots', displayValue: '18' }, { name: 'shotsOnTarget', displayValue: '7' }, { name: 'wonCorners', displayValue: '6' }, { name: 'yellowCards', displayValue: '0' }, { name: 'redCards', displayValue: '0' }] },
+            { team: { id: '1' }, statistics: [{ name: 'totalShots', displayValue: '16' }, { name: 'shotsOnTarget', displayValue: '8' }, { name: 'wonCorners', displayValue: '3' }, { name: 'yellowCards', displayValue: '2' }, { name: 'redCards', displayValue: '0' }] }] },
+          keyEvents: [{ scoringPlay: true, team: { id: '1' } }, { scoringPlay: true, team: { id: '2' } }] });
+        localStorage.setItem('g45crf1_E1', JSON.stringify(F));
+        const m = ['2026-09-01', 1, 3, 1]; m.pr = 'd'; const m2 = ['2026-09-01', 0, 3, 1]; m2.pr = 'v';
+        const R = [P({ jo: 'p1', jm: 'dbl' }, m), !P({ jo: 'p1', jm: 'tri' }, m), P({ jo: 'p1', jo2: 'p2', jx: 'c25', jm: 'but' }, m), !P({ jo: 'p1', jo2: 'p2', jx: 'c35', jm: 'but' }, m),
+          !P({ jo: 'p1', jo2: 'p2', jx: 'un', jm: 'tri' }, m), P({ jo: 'p1', jo2: 'p2', jx: 'cha', jm: 'but' }, m), P({ pm: 'd' }, m), !P({ pm: 'v' }, m),
+          P({ fs: 'ov', FL: 30.5 }, m), !P({ ts: 'un', TSL: 15.5 }, m), P({ mt: 'mene' }, m), P({ mp: 'oui' }, m), P({ bo: 'cae', BL: 1.5 }, m), !P({ mp: 'oui' }, m2), P({ ts: 'ov', TSL: 17.5 }, m2)];
+        localStorage.removeItem('g45crf1_E1'); Object.assign(S, sv);
+        o.crPlus = (JSON.stringify(F) === JSON.stringify([16, 18, 8, 7, 1, 0, 'h', 3, 6, 2, 0]) && R.every(Boolean)) || JSON.stringify({ F, R });
+      } catch (e) { o.crPlus = 'erreur : ' + e.message; }
       /* 20261017q — 🏠 / ✈️ pari par lieu + club du joueur (formulaire du mur et « Modifier ») */
       try {
         const C1 = _g45UfCompose('Edmonton Oilers', 'en forme', 'buteur', '2 points'), C2 = _g45UfCompose('', '', 'victoire', 'Victoire');
@@ -1017,6 +1033,7 @@ serveur.listen(0, async () => {
     ok('Tennis : Rechercher un joueur (données ESPN + Elo)', r.tnJoueur === true, r.tnJoueur);
     ok('Tennis : score avec tie-breaks (ESPN)', r.tnScore === true, r.tnScore);
     ok('Tennis : score en direct (Tendances)', r.tnLv === true, r.tnLv);
+    ok('Critères : joueurs, match précédent, feuille de match', r.crPlus === true, r.crPlus);
     ok('Cotes en direct NBA (DraftKings - Live Odds)', r.cdNba === true, r.cdNba);
     ok('Mur : pari par lieu + club du joueur', r.ufLieu === true, r.ufLieu);
     ok('Agenda gardé jusqu\'au prochain match', r.agCache === true, r.agCache);
