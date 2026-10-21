@@ -708,6 +708,13 @@ serveur.listen(0, async () => {
         await g45TnAnalyser('g45tn-smoke', { lg: 'atp', a: { id: '1', n: 'Alan' }, b: { id: '2', n: 'Bob' }, tour: 'Rolex Shanghai Masters', ek: '' });
         await new Promise(r => setTimeout(r, 300));
         const t2 = bx.innerHTML; g45TnOnglet('g45tn-smoke', 'h2h'); const t3 = bx.innerHTML; g45TnOnglet('g45tn-smoke', 'bil'); const t4 = bx.innerHTML;
+        /* 20261021o : ⚖️ Mes coefficients (+ 20261021n : surface 2 mois, tournoi précédent) */
+        const c0 = localStorage.getItem('g45tn_coefs'); localStorage.removeItem('g45tn_coefs');
+        g45TnOnglet('g45tn-smoke', 'cle'); g45TnCoefOuv('g45tn-smoke'); const t5 = bx.innerHTML;
+        g45TnCoef('g45tn-smoke', 'dur', 'forme', 10); const t6 = bx.innerHTML, c6 = JSON.parse(localStorage.getItem('g45tn_coefs') || '{}');
+        if (c0 == null) localStorage.removeItem('g45tn_coefs'); else localStorage.setItem('g45tn_coefs', c0);
+        o.tnCoef = (/Mes coefficients/.test(t2) && /\(2 MOIS\)/.test(t2) && /TOURNOI PRÉCÉDENT/.test(t2) && /type="range"/.test(t5) && /BET45 standard/.test(t5)
+          && /tes coefficients/.test(t6) && c6.on === true && c6.dur && c6.dur.forme === 10) || t6.replace(/<[^>]+>/g, ' ').slice(0, 400);
         bx.remove(); window._g45TnSaison = sv; localStorage.removeItem('g45tr_tennis');
         if (v0 == null) localStorage.removeItem('g45tr_vue'); else localStorage.setItem('g45tr_vue', v0);
         o.tennis = (!prem || (/g45tr-ong-tennis/.test(t1) && /g45tn-jour/.test(t1) && !/g45TrRun\(\)/.test(t1) && /g45TnLancer/.test(t1)))
@@ -1076,6 +1083,7 @@ serveur.listen(0, async () => {
     ok('Critères : joueurs, match précédent, feuille de match', r.crPlus === true, r.crPlus);
     ok('Saison : onglets + tirs (feuille de match)', r.cursTi === true, r.cursTi);
     ok('Panneaux fermés à l\'arrivée + chargement BET45', r.ferme === true, r.ferme);
+    ok('Tennis : mes coefficients + surface 2 mois + tournoi précédent', r.tnCoef === true, r.tnCoef);
     ok('Filtre joueur : 2 ou plus + combiné', r.jouMin === true, r.jouMin);
     ok('Cotes en direct NBA (DraftKings - Live Odds)', r.cdNba === true, r.cdNba);
     ok('Mur : pari par lieu + club du joueur', r.ufLieu === true, r.ufLieu);
