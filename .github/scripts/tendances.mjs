@@ -88,6 +88,7 @@ await page.addInitScript((R) => {
     localStorage.setItem('g45tr_pmin', String(R.pmin));
     localStorage.removeItem('g45tr_lsoff');
     localStorage.setItem('g45_guide_vu', '1');
+    localStorage.setItem('g45tr_vue', 'perso');   // 21/10 : voir plus bas (Tendances en boutons)
   } catch (e) {}
 }, REGLAGES);
 if (FAUX_INIT) await page.addInitScript(FAUX_INIT);
@@ -98,6 +99,10 @@ const nouvelles = await page.evaluate(async ({ R, SPORTS }) => {
   const pris = [];
   const orig = window._g45TrSuivNoter;
   window._g45TrSuivNoter = function (liste) { (liste || []).forEach((x) => pris.push(x)); try { return orig.apply(this, arguments); } catch (e) {} };
+  /* 21/10 (Sélection du jour VIDE, capture d'Antoine ; « foot : 0 affichées » partout) : depuis 20261020c (Tendances en boutons), l'écran
+     s'ouvre sur « BET45 → Sélection du jour » ; la liste perso n'est plus dessinée, donc _g45TrSuivNoter n'est jamais appelé et le robot
+     ne voit rien. Le robot se met sur la vue « perso », comme avant. */
+  try { localStorage.setItem('g45tr_vue', 'perso'); } catch (e) {}
   try { showTab('t-tend'); } catch (e) {}
   const sortie = [];
   for (const sp of SPORTS) {
