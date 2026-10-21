@@ -1,0 +1,49 @@
+# GONES45 — 🧪 test de l'avis tennis sur la saison passée (20261021p, lancé à la main : « Run workflow »).
+# Voir .github/scripts/backtest_tennis.mjs. Écrit données/backtest_tennis.json ; rien ne change dans l'appli.
+name: backtest-tennis
+
+on:
+  workflow_dispatch:
+    inputs:
+      an:
+        description: 'Saison testée'
+        required: false
+        default: '2025'
+      par_ligue:
+        description: 'Joueurs par ligue (ATP / WTA)'
+        required: false
+        default: '90'
+
+permissions:
+  contents: write
+
+jobs:
+  backtest:
+    runs-on: ubuntu-latest
+    timeout-minutes: 300
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Navigateur
+        run: |
+          npm install --no-save --no-package-lock playwright@1.48.2
+          npx playwright install --with-deps chromium
+      - name: Test
+        env:
+          AN: ${{ inputs.an }}
+          PAR_LIGUE: ${{ inputs.par_ligue }}
+        run: node .github/scripts/backtest_tennis.mjs
+      - name: Enregistrement
+        run: |
+          git config user.name "Test tennis"
+          git config user.email "actions@users.noreply.github.com"
+          git add "données/backtest_tennis.json"
+          if git diff --cached --quiet; then echo "Rien de nouveau"; exit 0; fi
+          git commit -m "Test tennis sur la saison passée"
+          for i in 1 2 3 4 5; do
+            git pull --rebase origin main && git push origin HEAD:main && exit 0
+            sleep $((i * 5))
+          done
+          exit 1
