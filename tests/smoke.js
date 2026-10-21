@@ -827,6 +827,16 @@ serveur.listen(0, async () => {
           !P({ jo: 'p1', jo2: 'p2', jx: 'un', jm: 'tri' }, m), P({ jo: 'p1', jo2: 'p2', jx: 'cha', jm: 'but' }, m), P({ pm: 'd' }, m), !P({ pm: 'v' }, m),
           P({ fs: 'ov', FL: 30.5 }, m), !P({ ts: 'un', TSL: 15.5 }, m), P({ mt: 'mene' }, m), P({ mp: 'oui' }, m), P({ bo: 'cae', BL: 1.5 }, m), !P({ mp: 'oui' }, m2), P({ ts: 'ov', TSL: 17.5 }, m2)];
         localStorage.removeItem('g45crf1_E1'); Object.assign(S, sv);
+        /* 20261021e — coupes d'Europe : Compétition = Coupe d'Europe / Les deux */
+        const ouv = localStorage.getItem('g45_cr_open'); localStorage.setItem('g45_cr_open', '1');
+        S.data.EuroFC = { t: Date.now(), lg: 'fra.1', tid: '1', ligue: 'Ligue 1', euEtat: 2, saisons: [{ an: 2026, ms: [['2026-08-01', 1, 1, 0]], eu: [['2026-09-17', 1, 2, 1, 0, 1, 'X', 'uefa.champions'], ['2026-10-01', 0, 0, 1, 0, 1, 'Y', 'uefa.champions']] }] };
+        _g45CrHtml('EuroFC'); S.lieu = 'tout'; S.comp = 'E'; const HE = _g45CrHtml('EuroFC').replace(/<[^>]+>/g, ' '); S.comp = 'T'; const HT = _g45CrHtml('EuroFC').replace(/<[^>]+>/g, ' ');
+        S.comp = 'L'; delete S.data.EuroFC; S.nom = ''; if (ouv == null) localStorage.removeItem('g45_cr_open'); else localStorage.setItem('g45_cr_open', ouv);
+        R.push(/1\/2 · 50 %/.test(HE) && /coupes d'Europe/.test(HE), /2\/3 · 67 %/.test(HT));
+        /* 20261021e : critères = premium (compte de plus de 30 jours sans soutien → verrou) */
+        const uSv = window._g45User; window._g45User = { created_at: new Date(Date.now() - 60 * 864e5).toISOString() };
+        localStorage.setItem('g45_cr_open', '1'); const HP = _g45CrHtml('EuroFC'); window._g45User = uSv; if (ouv == null) localStorage.removeItem('g45_cr_open'); else localStorage.setItem('g45_cr_open', ouv); S.nom = '';
+        R.push(/réservé premium/.test(HP) && !/Compétition/.test(HP));
         o.crPlus = (JSON.stringify(F) === JSON.stringify([16, 18, 8, 7, 1, 0, 'h', 3, 6, 2, 0]) && R.every(Boolean)) || JSON.stringify({ F, R });
       } catch (e) { o.crPlus = 'erreur : ' + e.message; }
       /* 20261017q — 🏠 / ✈️ pari par lieu + club du joueur (formulaire du mur et « Modifier ») */
