@@ -48,6 +48,12 @@ serveur.listen(0, async () => {
     await page.waitForTimeout(3000);
     const r = await page.evaluate(async () => {
       const o = {};
+      /* 20261021g : critères et curseurs FERMÉS à l'arrivée → contrôle de l'état fermé, puis tout ouvert pour les autres contrôles */
+      try {
+        const hf = _g45CursHtml([], null, null, 'Ferme FC'), hc = window._g45CrHtml('Ferme FC'), ch = _g45Chargeur('Chargement test');
+        o.ferme = (/Curseurs de la saison/.test(hf) && /Ouvrir/.test(hf) && !/Nombre de buts/.test(hf) && /Ouvrir/.test(hc) && !/Lieu/.test(hc) && /BET<span/.test(ch) && /Chargement test/.test(ch)) || hf.slice(0, 200);
+      } catch (e) { o.ferme = 'erreur : ' + e.message; }
+      window._g45CursToujours = true; window._g45Cr.ovTous = true;
       o.state = typeof state !== 'undefined' && !!state;
       o.mur = !!document.querySelector('#t-dash, #dash, .g45-murcard, [id^="t-"]');
       /* Pari simple puis montante, sur un bookmaker approvisionné. */
@@ -273,7 +279,7 @@ serveur.listen(0, async () => {
       } catch (e) { o.enCours = 'erreur : ' + e.message; }
       try {
         /* 20261014a : bloc « Tes critères sur 4 saisons » (données injectées, aucune requête). */
-        localStorage.setItem('g45_cr_open', '1');
+        (window._g45Cr.ovTous = true);
         state.u.push({ n: 'Club Test CR', sport: '⚽', note: '🏠 victoire+over 2.5 OU victoire+over 3.5 et ✈️ victoire+under 4.5 si cote inférieure à 1.5' });
         const S = window._g45Cr; S.nom = ''; window._statFilter = 'ext';
         S.data['Club Test CR'] = { t: Date.now(), lg: 'eng.1', ligue: 'Premier League', saisons: [
@@ -288,7 +294,7 @@ serveur.listen(0, async () => {
       } catch (e) { o.cr = 'erreur : ' + e.message; }
       try {
         /* 20261014g : même bloc en NHL — victoire = temps réglementaire (prolongation / TAB = nul), vainqueur = score final. */
-        localStorage.setItem('g45_cr_open', '1'); window._statFilter = 'global';
+        (window._g45Cr.ovTous = true); window._statFilter = 'global';
         const S = window._g45Cr;
         S.data['Club Hockey CR'] = { t: Date.now(), lg: 'nhl', ligue: 'NHL', saisons: [
           { an: 2027, ms: [['2026-10-10', 1, 4, 3, 1], ['2026-10-12', 0, 3, 1, 0], ['2026-10-14', 1, 2, 3, 2]] },
@@ -832,14 +838,14 @@ serveur.listen(0, async () => {
           P({ fs: 'ov', FL: 30.5 }, m), !P({ ts: 'un', TSL: 15.5 }, m), P({ mt: 'mene' }, m), P({ mp: 'oui' }, m), P({ bo: 'cae', BL: 1.5 }, m), !P({ mp: 'oui' }, m2), P({ ts: 'ov', TSL: 17.5 }, m2)];
         localStorage.removeItem('g45crf1_E1'); Object.assign(S, sv);
         /* 20261021e — coupes d'Europe : Compétition = Coupe d'Europe / Les deux */
-        const ouv = localStorage.getItem('g45_cr_open'); localStorage.setItem('g45_cr_open', '1');
+        const ouv = localStorage.getItem('g45_cr_open'); (window._g45Cr.ovTous = true);
         S.data.EuroFC = { t: Date.now(), lg: 'fra.1', tid: '1', ligue: 'Ligue 1', euEtat: 2, saisons: [{ an: 2026, ms: [['2026-08-01', 1, 1, 0]], eu: [['2026-09-17', 1, 2, 1, 0, 1, 'X', 'uefa.champions'], ['2026-10-01', 0, 0, 1, 0, 1, 'Y', 'uefa.champions']] }] };
         _g45CrHtml('EuroFC'); S.lieu = 'tout'; S.comp = 'E'; const HE = _g45CrHtml('EuroFC').replace(/<[^>]+>/g, ' '); S.comp = 'T'; const HT = _g45CrHtml('EuroFC').replace(/<[^>]+>/g, ' ');
         S.comp = 'L'; delete S.data.EuroFC; S.nom = ''; if (ouv == null) localStorage.removeItem('g45_cr_open'); else localStorage.setItem('g45_cr_open', ouv);
         R.push(/1\/2 · 50 %/.test(HE) && /coupes d'Europe/.test(HE), /2\/3 · 67 %/.test(HT));
         /* 20261021e : critères = premium (compte de plus de 30 jours sans soutien → verrou) */
         const uSv = window._g45User; window._g45User = { created_at: new Date(Date.now() - 60 * 864e5).toISOString() };
-        localStorage.setItem('g45_cr_open', '1'); const HP = _g45CrHtml('EuroFC'); window._g45User = uSv; if (ouv == null) localStorage.removeItem('g45_cr_open'); else localStorage.setItem('g45_cr_open', ouv); S.nom = '';
+        (window._g45Cr.ovTous = true); const HP = _g45CrHtml('EuroFC'); window._g45User = uSv; if (ouv == null) localStorage.removeItem('g45_cr_open'); else localStorage.setItem('g45_cr_open', ouv); S.nom = '';
         R.push(/réservé premium/.test(HP) && !/Compétition/.test(HP));
         o.crPlus = (JSON.stringify(F) === JSON.stringify([16, 18, 8, 7, 1, 0, 'h', 3, 6, 2, 0]) && R.every(Boolean)) || JSON.stringify({ F, R });
       } catch (e) { o.crPlus = 'erreur : ' + e.message; }
@@ -1061,6 +1067,7 @@ serveur.listen(0, async () => {
     ok('Tennis : score en direct (Tendances)', r.tnLv === true, r.tnLv);
     ok('Critères : joueurs, match précédent, feuille de match', r.crPlus === true, r.crPlus);
     ok('Saison : onglets + tirs (feuille de match)', r.cursTi === true, r.cursTi);
+    ok('Panneaux fermés à l\'arrivée + chargement BET45', r.ferme === true, r.ferme);
     ok('Cotes en direct NBA (DraftKings - Live Odds)', r.cdNba === true, r.cdNba);
     ok('Mur : pari par lieu + club du joueur', r.ufLieu === true, r.ufLieu);
     ok('Agenda gardé jusqu\'au prochain match', r.agCache === true, r.agCache);
