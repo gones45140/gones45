@@ -22,6 +22,9 @@ const SITE = process.env.SITE || 'https://gones45140.github.io/gones45/';
 const AN = Number(process.env.AN || 2025);
 const PAR_LIGUE = Number(process.env.PAR_LIGUE || 90);
 const FICHIER = 'données/backtest_tennis.json';
+/* 20261022h : styles de jeu remplis à la main (données/styles_tennis.json, clé = nom en lettres seules) */
+let STYLES = { atp: {}, wta: {} }; try { STYLES = JSON.parse(fs.readFileSync('données/styles_tennis.json', 'utf8')); } catch (e) {}
+const cleNom = (n) => String(n || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z]/g, '');
 
 function curl(url) {
   return new Promise((ok) => {
@@ -114,6 +117,7 @@ const out = await page.evaluate(async ({ AN, PAR_LIGUE }) => {
       const lA = !!(NAT[cle] && NAT[cle] === m.pf), lB = !!(NAT[cB] && NAT[cB] === m.pf);
       const ex = { loc: (lA ? 1 : 0) - (lB ? 1 : 0), aA: AGE[cle] ? AGE[cle] - ans : null, aB: AGE[cB] ? AGE[cB] - ans : null, rd: r0,
         tA: tourBil(avant(H[cle]), r0), tB: tourBil(avant(H[cB]), r0), fA: tourBil(avant(H[cle]), 'Final'), fB: tourBil(avant(H[cB]), 'Final') };
+      ex.nA = NOM[cle] || ''; ex.nB = NOM[cB] || m.an || '';
       rows.push({ lg, sf: m.sf, t: m.t, w: m.w ? 1 : 0, cat: m.cat, f, ex });
     });
   }
@@ -173,6 +177,18 @@ const probX = (r, W, k, w) => { let a = 0, b = 0; for (const kk of K) { const x 
 const scoreX = (L, k, w) => { let ok = 0, n = 0; for (const r of L) { const p = probX(r, STD, k, w); if (p == null || p === 0.5) continue; n++; if ((p > 0.5) === !!r.w) ok++; } return { p: n ? Math.round(ok / n * 1000) / 10 : null, n }; };
 const TE = R.filter((r) => r.t >= MI), TR = R.filter((r) => r.t < MI);
 for (const k of ['loc', 'age', 'tour', 'fin']) res.extras.ajout[k] = [0, 1, 2, 3, 4, 6].map((w) => ({ w, appr: scoreX(TR, k, w).p, verif: scoreX(TE, k, w).p }));
+/* ── 20261022h : STYLES — pour chaque duel de styles différents : % de victoires du 1er style, comparé à ce que l'avis standard prévoyait
+   (écart positif = le style apporte quelque chose que l'avis ne voit pas) ── */
+const stDe = (lg, n) => { const x = (STYLES[lg] || {})[cleNom(n)]; return x ? x[1] : null; };
+const DU = {};
+R.forEach((r) => { const e = r.ex || {}, a = stDe(r.lg, e.nA), b = stDe(r.lg, e.nB); if (!a || !b || a === b) return;
+  const p = prob(r, STD); if (p == null) return;
+  const [s1, s2, w, pp] = a < b ? [a, b, r.w, p] : [b, a, 1 - r.w, 1 - p];
+  for (const sf of ['toutes', r.sf]) { const k = s1 + ' contre ' + s2 + ' · ' + sf; const o = DU[k] = DU[k] || { n: 0, w: 0, pr: 0 }; o.n++; o.w += w; o.pr += pp; } });
+res.styles = Object.entries(DU).filter(([k, o]) => o.n >= 15).map(([k, o]) => ({ duel: k, n: o.n, reel: Math.round(o.w / o.n * 1000) / 10, prevu: Math.round(o.pr / o.n * 1000) / 10, ecart: Math.round((o.w - o.pr) / o.n * 1000) / 10 }))
+  .sort((x, y) => Math.abs(y.ecart) - Math.abs(x.ecart));
+res.stylesCouverts = R.filter((r) => r.ex && stDe(r.lg, r.ex.nA) && stDe(r.lg, r.ex.nB)).length;
+console.log('\n===== STYLES (' + res.stylesCouverts + ' matchs avec 2 styles connus) =====\n' + res.styles.map((x) => x.duel + ' : réel ' + x.reel + ' % / prévu ' + x.prevu + ' % (écart ' + x.ecart + ', ' + x.n + ' matchs)').join('\n'));
 fs.mkdirSync('données', { recursive: true });
 fs.writeFileSync(FICHIER, JSON.stringify(res, null, 1));
 /* résumé lisible dans le journal */

@@ -1,0 +1,407 @@
+{
+"maj": "2026-10-22",
+"source": "remplie à la main (Antoine / JP)",
+"atp": {
+"janniksinner": [
+"Jannik Sinner",
+"Attaquant fond de court"
+],
+"carlosalcaraz": [
+"Carlos Alcaraz",
+"Polyvalent"
+],
+"alexanderzverev": [
+"Alexander Zverev",
+"Attaquant fond de court"
+],
+"novakdjokovic": [
+"Novak Djokovic",
+"Polyvalent"
+],
+"arthurfils": [
+"Arthur Fils",
+"Attaquant fond de court"
+],
+"rafaeljodar": [
+"Rafael Jodar",
+"Attaquant fond de court"
+],
+"alexdeminaur": [
+"Alex De Minaur",
+"Contreur / limeur"
+],
+"daniilmedvedev": [
+"Daniil Medvedev",
+"Contreur / limeur"
+],
+"benshelton": [
+"Ben Shelton",
+"Gros serveur"
+],
+"alejandrodavidovichfokina": [
+"Alejandro Davidovich Fokina",
+"Attaquant fond de court"
+],
+"jirilehecka": [
+"Jiri Lehecka",
+"Attaquant fond de court"
+],
+"felixaugeraliassime": [
+"Felix Auger Aliassime",
+"Attaquant fond de court"
+],
+"casperruud": [
+"Casper Ruud",
+"Contreur / limeur"
+],
+"francestiafoe": [
+"Frances Tiafoe",
+"Polyvalent"
+],
+"tommypaul": [
+"Tommy Paul",
+"Polyvalent"
+],
+"joaofonseca": [
+"Joao Fonseca",
+"Attaquant fond de court"
+],
+"taylorfritz": [
+"Taylor Fritz",
+"Gros serveur"
+],
+"learnertien": [
+"Learner Tien",
+"Contreur / limeur"
+],
+"brandonnakashima": [
+"Brandon Nakashima",
+"Attaquant fond de court"
+],
+"stefanostsitsipas": [
+"Stefanos Tsitsipas",
+"Attaquant fond de court"
+],
+"jakubmensik": [
+"Jakub Mensik",
+"Gros serveur"
+],
+"huberthurkacz": [
+"Hubert Hurkacz",
+"Gros serveur"
+],
+"alexanderbublik": [
+"Alexander Bublik",
+"Serveur-volleyeur"
+],
+"franciscocerundolo": [
+"Francisco Cerundolo",
+"Attaquant fond de court"
+],
+"andreyrublev": [
+"Andrey Rublev",
+"Attaquant fond de court"
+],
+"valentinvacherot": [
+"Valentin Vacherot",
+"Attaquant fond de court"
+],
+"flaviocobolli": [
+"Flavio Cobolli",
+"Attaquant fond de court"
+],
+"danielmeridaaguilar": [
+"Daniel Merida Aguilar",
+"Attaquant fond de court"
+],
+"alexmichelsen": [
+"Alex Michelsen",
+"Gros serveur"
+],
+"arthurgea": [
+"Arthur Gea",
+"Attaquant fond de court"
+],
+"karenkhachanov": [
+"Karen Khachanov",
+"Attaquant fond de court"
+],
+"alexanderblockx": [
+"Alexander Blockx",
+"Attaquant fond de court"
+],
+"lorenzomusetti": [
+"Lorenzo Musetti",
+"Polyvalent"
+],
+"boticvandezandschulp": [
+"Botic Van De Zandschulp",
+"Attaquant fond de court"
+],
+"matteoberrettini": [
+"Matteo Berrettini",
+"Gros serveur"
+],
+"ugohumbert": [
+"Ugo Humbert",
+"Attaquant fond de court"
+],
+"lucianodarderi": [
+"Luciano Darderi",
+"Attaquant fond de court"
+],
+"cameronnorrie": [
+"Cameron Norrie",
+"Contreur / limeur"
+],
+"titouandroguet": [
+"Titouan Droguet",
+"Attaquant fond de court"
+],
+"denisshapovalov": [
+"Denis Shapovalov",
+"Attaquant fond de court"
+],
+"romansafiullin": [
+"Roman Safiullin",
+"Attaquant fond de court"
+],
+"nunoborges": [
+"Nuno Borges",
+"Attaquant fond de court"
+],
+"zizoubergs": [
+"Zizou Bergs",
+"Attaquant fond de court"
+],
+"dinoprizmic": [
+"Dino Prizmic",
+"Gros serveur"
+],
+"thiagoagustintirante": [
+"Thiago Agustin Tirante",
+"Attaquant fond de court"
+],
+"jaumemunar": [
+"Jaume Munar",
+"Contreur / limeur"
+],
+"marianonavone": [
+"Mariano Navone",
+"Contreur / limeur"
+],
+"arthurfery": [
+"Arthur Fery",
+"Contreur / limeur"
+],
+"tomasmachac": [
+"Tomas Machac",
+"Polyvalent"
+],
+"gaelmonfils": [
+"Gael Monfils",
+"Polyvalent"
+],
+"raphaelcollignon": [
+"Raphael Collignon",
+"Attaquant fond de court"
+],
+"eliotspizzirri": [
+"Eliot Spizzirri",
+"Gros serveur"
+],
+"quentinhalys": [
+"Quentin Halys",
+"Gros serveur"
+],
+"ethanquinn": [
+"Ethan Quinn",
+"Attaquant fond de court"
+],
+"thanasikokkinakis": [
+"Thanasi Kokkinakis",
+"Gros serveur"
+],
+"alejandrotabilo": [
+"Alejandro Tabilo",
+"Attaquant fond de court"
+],
+"yannickhanfmann": [
+"Yannick Hanfmann",
+"Attaquant fond de court"
+],
+"pablocarrenobusta": [
+"Pablo Carreno Busta",
+"Contreur / limeur"
+],
+"sebastiankorda": [
+"Sebastian Korda",
+"Attaquant fond de court"
+],
+"marincilic": [
+"Marin Cilic",
+"Gros serveur"
+],
+"juanmanuelcerundolo": [
+"Juan Manuel Cerundolo",
+"Contreur / limeur"
+],
+"ignaciobuse": [
+"Ignacio Buse",
+"Attaquant fond de court"
+],
+"jackdraper": [
+"Jack Draper",
+"Attaquant fond de court"
+],
+"jaimefaria": [
+"Jaime Faria",
+"Attaquant fond de court"
+],
+"arthurrinderknech": [
+"Arthur Rinderknech",
+"Gros serveur"
+],
+"adolfodanielvallejo": [
+"Adolfo Daniel Vallejo",
+"Contreur / limeur"
+],
+"kamilmajchrzak": [
+"Kamil Majchrzak",
+"Attaquant fond de court"
+],
+"alexmolcan": [
+"Alex Molcan",
+"Contreur / limeur"
+],
+"tallongriekspoor": [
+"Tallon Griekspoor",
+"Attaquant fond de court"
+],
+"matteoarnaldi": [
+"Matteo Arnaldi",
+"Attaquant fond de court"
+],
+"lucavanassche": [
+"Luca Van Assche",
+"Contreur / limeur"
+],
+"tomasmartinetcheverry": [
+"Tomas Martin Etcheverry",
+"Attaquant fond de court"
+],
+"reillyopelka": [
+"Reilly Opelka",
+"Gros serveur"
+],
+"tobysamuel": [
+"Toby Samuel",
+"Attaquant fond de court"
+],
+"janlennardstruff": [
+"Jan Lennard Struff",
+"Gros serveur"
+],
+"fabianmarozsan": [
+"Fabian Marozsan",
+"Polyvalent"
+],
+"martonfucsovics": [
+"Marton Fucsovics",
+"Attaquant fond de court"
+],
+"hamadmedjedovic": [
+"Hamad Medjedovic",
+"Attaquant fond de court"
+],
+"sebastianbaez": [
+"Sebastian Baez",
+"Contreur / limeur"
+],
+"soonwookwon": [
+"Soon Woo Kwon",
+"Attaquant fond de court"
+],
+"lloydharris": [
+"Lloyd Harris",
+"Gros serveur"
+],
+"jensonbrooksby": [
+"Jenson Brooksby",
+"Contreur / limeur"
+],
+"rinkyhijikata": [
+"Rinky Hijikata",
+"Contreur / limeur"
+],
+"benjaminbonzi": [
+"Benjamin Bonzi",
+"Attaquant fond de court"
+],
+"buyunchaokete": [
+"Bu Yunchaokete",
+"Attaquant fond de court"
+],
+"grigordimitrov": [
+"Grigor Dimitrov",
+"Polyvalent"
+],
+"alexeipopyrin": [
+"Alexei Popyrin",
+"Gros serveur"
+],
+"jacobfearnley": [
+"Jacob Fearnley",
+"Attaquant fond de court"
+],
+"miomirkecmanovic": [
+"Miomir Kecmanovic",
+"Contreur / limeur"
+],
+"facundodiazacosta": [
+"Facundo Diaz Acosta",
+"Contreur / limeur"
+],
+"yibingwu": [
+"Yibing Wu",
+"Attaquant fond de court"
+],
+"nisheshbasavareddy": [
+"Nishesh Basavareddy",
+"Attaquant fond de court"
+],
+"jankumstat": [
+"Jan Kumstat",
+"Attaquant fond de court"
+],
+"michaelzheng": [
+"Michael Zheng",
+"Attaquant fond de court"
+],
+"terenceatmane": [
+"Terence Atmane",
+"Gros serveur"
+],
+"kyrianjacquet": [
+"Kyrian Jacquet",
+"Attaquant fond de court"
+],
+"junchengshang": [
+"Juncheng Shang",
+"Attaquant fond de court"
+],
+"corentinmoutet": [
+"Corentin Moutet",
+"Contreur / limeur"
+],
+"colemanwong": [
+"Coleman Wong",
+"Attaquant fond de court"
+],
+"reisakamoto": [
+"Rei Sakamoto",
+"Attaquant fond de court"
+]
+},
+"wta": {}
+}
