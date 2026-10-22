@@ -79,6 +79,7 @@ serveur.listen(0, async () => {
       try { var PP = []; for (var q = 0; q <= 200; q++) PP.push({ km: q * 0.45, alt: 40 + (q % 20 < 2 ? 60 : 0), sl: 0 });
         var ST = _g45RcProfStats(PP), SV = _g45RcSVG2(PP, []);
         o.rcProf = (/Étape plate/.test(ST.ty[0]) && ST.hm === 100 && />600 m</.test(SV) && />0 m</.test(SV) && /g45RcProfDoigt/.test(SV)) || JSON.stringify(ST); } catch (e) { o.rcProf = 'erreur : ' + e.message; }
+      try { o.tnReel = (window._g45TnReel(60) === 60 && window._g45TnReel(60, true) > 60) || [window._g45TnReel(60), window._g45TnReel(60, true)].join('/'); } catch (e) { o.tnReel = 'erreur : ' + e.message; }
       /* 20261022i : critères 4 saisons, onglet 👤 Joueurs des sports US (index g45_jou_v2_, présence, rôle, combien) */
       try { const C = window._g45Cr, ctx = { sp: 'football', lg: 'nfl', id: '14' };
         C.data['Rams T'] = { t: Date.now(), lg: 'nfl', ligue: 'NFL', saisons: [{ an: 2025, ms: [['2025-09-07', 1, 24, 10, 0, 0, 'e1'], ['2025-09-14', 0, 20, 27, 0, 0, 'e2'], ['2025-09-21', 1, 30, 7, 0, 0, 'e3']] }] };
@@ -1154,6 +1155,7 @@ serveur.listen(0, async () => {
     ok('Tennis : style de jeu (bonus polyvalent)', r.tnStyle === true, r.tnStyle);
     ok('Tennis : BET45 face au book (écart, value, ligne)', r.tnBk === true, r.tnBk);
     ok('Cyclisme : profil d\'étape (échelle 600 m, type, D+)', r.rcProf === true, r.rcProf);
+    ok('Tennis : correction « % réel » en pause (brut affiché, corrigé pour le suivi)', r.tnReel === true, r.tnReel);
     ok('Curseurs US : onglets Quart-temps / Contexte', r.sgQt === true, r.sgQt);
     ok('Curseurs NFL : onglet TD / FG', r.sgTd === true, r.sgTd);
     ok('Tendances officielles : octobre = période de test, hors totaux', r.trTest === true, r.trTest);

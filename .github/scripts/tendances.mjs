@@ -152,7 +152,7 @@ try {
   console.log('tennis : ' + tennis.length + ' notées');
   tennis.forEach((x) => nouvelles.push(x));
 } catch (e) { console.log('tennis : erreur ' + (e && e.message)); }
-/* 20261022y — SUIVI DES DÉSACCORDS tennis BET45 / book (≥ 10 points) : liste à part J.dz (pas affichée comme tendance), un match noté une
+/* 20261022y — SUIVI tennis BET45 / book (20261023c : TOUS les matchs avec cote, ec = écart en points ; avant : ≥ 10 points seulement) : liste à part J.dz (pas affichée comme tendance), un match noté une
    fois, jugé plus bas avec les tendances (r = 1 si le joueur choisi par BET45 a gagné). Bilan à faire vers le 22/11. */
 J.dz = J.dz || [];
 try {
