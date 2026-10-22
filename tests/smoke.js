@@ -90,6 +90,10 @@ serveur.listen(0, async () => {
         o.tnVit = (VD('atp', 'Open Occitanie', 'Montpellier, France') === 1.49 && VD('atp', 'Miami Open presented by Itau', '') === 1.18 && VD('atp', 'Rolex Monte-Carlo Masters', '') === 0.7
           && VD('atp', 'Inconnu', '') === null && VD('wta', 'Open Occitanie', 'Montpellier') === null && window._g45TnVitCl(1.49) === '⚡ Rapide' && window._g45TnVitCl(0.7) === '🐢 Lent' && window._g45TnVitCl(1) === '⚖️ Moyen') || 'vit';
         window._g45TnVitJ = VJ; } catch (e) { o.tnVit = 'erreur : ' + e.message; }
+      try { var EJ = window._g45TnEloJ; window._g45TnEloJ = { atp: { novakdjokovic: ['Novak Djokovic', 2062, 2015, 1961, 1939, 4, 12, -1.1], flaviocobolli: ['Flavio Cobolli', 1873, 1789, 1840, 1766, 27, 6, null], tommypaul: ['Tommy Paul', 1948, 1885, 1885, 1797, 15, 15, 0] } };
+        var e2 = function (t) { return t; }, H1 = window._g45TnEloRangHtml('atp', 'Novak Djokovic', e2), H2 = window._g45TnEloRangHtml('atp', 'Flavio Cobolli', e2);
+        o.tnRang = (/meilleur que son classement ATP/.test(H1) && /flatteur/.test(H2) && window._g45TnEloRang('atp', 'Flavio Cobolli').ld === 1.5 && window._g45TnEloRangHtml('atp', 'Tommy Paul', e2) === '' && window._g45TnEloRang('atp', 'Inconnu') === null) || 'rang';
+        window._g45TnEloJ = EJ; } catch (e) { o.tnRang = 'erreur : ' + e.message; }
       /* 20261022i : critères 4 saisons, onglet 👤 Joueurs des sports US (index g45_jou_v2_, présence, rôle, combien) */
       try { const C = window._g45Cr, ctx = { sp: 'football', lg: 'nfl', id: '14' };
         C.data['Rams T'] = { t: Date.now(), lg: 'nfl', ligue: 'NFL', saisons: [{ an: 2025, ms: [['2025-09-07', 1, 24, 10, 0, 0, 'e1'], ['2025-09-14', 0, 20, 27, 0, 0, 'e2'], ['2025-09-21', 1, 30, 7, 0, 0, 'e3']] }] };
@@ -1168,6 +1172,7 @@ serveur.listen(0, async () => {
     ok('Tennis : correction « % réel » en pause (brut affiché, corrigé pour le suivi)', r.tnReel === true, r.tnReel);
     ok('Tennis : bilan par surface et période (8 tournées)', r.tnPer === true, r.tnPer);
     ok('Tennis : vitesse des courts (rapprochement ville / nom, classes)', r.tnVit === true, r.tnVit);
+    ok('Tennis : rang Elo / rang ATP (classement flatteur ou non)', r.tnRang === true, r.tnRang);
     ok('Curseurs US : onglets Quart-temps / Contexte', r.sgQt === true, r.sgQt);
     ok('Curseurs NFL : onglet TD / FG', r.sgTd === true, r.sgTd);
     ok('Tendances officielles : octobre = période de test, hors totaux', r.trTest === true, r.trTest);

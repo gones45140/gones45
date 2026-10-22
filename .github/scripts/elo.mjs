@@ -34,11 +34,17 @@ export function lireElo(html) {
   const head = rows.find((r) => r.some((c) => /^player$/i.test(c))) || [];
   const col = (n) => head.findIndex((c) => c.toLowerCase() === n.toLowerCase());
   const iP = col('Player'), iE = col('Elo'), iH = col('hElo'), iC = col('cElo'), iG = col('gElo');
+  /* 20261023g (capture d'Antoine : « c'est quoi la différence de logarithme ? on y voit le classement ATP » → « oui ») : + rang Elo, rang ATP / WTA,
+     Log diff (= ln(rang Elo) − ln(rang ATP) : > 0 classement ATP flatteur, < 0 joueur meilleur que son classement) → r[5], r[6], r[7]. */
+  const iER = col('Elo Rank'), iTR = head.findIndex((c) => /^(atp|wta) rank$/i.test(c)), iLD = head.findIndex((c) => /log diff/i.test(c));
+  const ent = (x) => { const n = parseInt(String(x).replace(/[^\d]/g, ''), 10); return isNaN(n) ? null : n; };
+  const ld = (x) => { const n = parseFloat(String(x).replace(',', '.').replace('−', '-')); return isNaN(n) ? null : Math.round(n * 100) / 100; };
   if (iP < 0 || iE < 0) return {};
   const out = {};
   rows.forEach((r) => {
     if (r === head || !r[iP] || num(r[iE]) == null) return;
-    out[norm(r[iP])] = [r[iP], num(r[iE]), iH >= 0 ? num(r[iH]) : null, iC >= 0 ? num(r[iC]) : null, iG >= 0 ? num(r[iG]) : null];
+    out[norm(r[iP])] = [r[iP], num(r[iE]), iH >= 0 ? num(r[iH]) : null, iC >= 0 ? num(r[iC]) : null, iG >= 0 ? num(r[iG]) : null,
+      iER >= 0 ? ent(r[iER]) : null, iTR >= 0 ? ent(r[iTR]) : null, iLD >= 0 ? ld(r[iLD]) : null];
   });
   return out;
 }
