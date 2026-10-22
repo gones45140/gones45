@@ -43,7 +43,41 @@ export function lireElo(html) {
   return out;
 }
 
+/* 20261023f — VITESSE DES COURTS (lien d'Antoine tennisabstract.com/reports/atp_surface_speed.html ; SONDÉ par Antoine en console :
+   tableau 6 = 63 lignes « Date ; Tournament ; Surface ; Ace% ; Surface Speed », ex. « 2026-02-02 ; Montpellier ; Hard ; 19.8% ; 1.49 » ;
+   52 dernières semaines, > 1 = plus rapide que la moyenne, d'après le taux d'aces). Page WTA wta_surface_speed.html supposée de même forme.
+   → données/vitesse_tennis.json { maj, atp: { nomNormalisé: [nom, vitesse, surface, date] }, wta: {…} } (le plus récent par tournoi). */
+export function lireVitesse(html) {
+  const tabs = String(html).split(/<table[\s>]/i).slice(1).map((t) => t.split(/<\/table>/i)[0]);
+  const out = {};
+  for (const t of tabs) {
+    const rows = t.split(/<tr[\s>]/i).slice(1).map((r) => (r.match(/<t[dh][^>]*>[\s\S]*?(?=<t[dh][\s>]|<\/tr>|$)/gi) || []).map(txt));
+    const head = rows.find((r) => r.some((c) => /surface speed/i.test(c))); if (!head) continue;
+    const col = (re) => head.findIndex((c) => re.test(c));
+    const iD = col(/^date$/i), iT = col(/^tournament$/i), iS = col(/^surface$/i), iV = col(/surface speed/i);
+    if (iT < 0 || iV < 0) continue;
+    rows.forEach((r) => {
+      if (r === head) return; const v = parseFloat(r[iV]); if (!r[iT] || isNaN(v)) return;
+      const k = norm(r[iT]), d = iD >= 0 ? r[iD] : '';
+      if (!out[k] || d > out[k][3]) out[k] = [r[iT], Math.round(v * 100) / 100, iS >= 0 ? r[iS] : '', d];
+    });
+  }
+  return out;
+}
 if (process.argv[1] && process.argv[1].endsWith('elo.mjs')) {
+  try {
+    const FV = 'données/vitesse_tennis.json'; let V0 = null; try { V0 = JSON.parse(fs.readFileSync(FV, 'utf8')); } catch (e) {}
+    if (!(V0 && V0.maj && Date.now() - Date.parse(V0.maj) < 6 * 864e5) || process.env.FORCE === '1') {
+      const rv = { maj: new Date().toISOString(), source: 'tennisabstract.com surface speed (Jeff Sackmann)' };
+      for (const lg of ['atp', 'wta']) {
+        let t = {};
+        for (const b of ['https://www.tennisabstract.com', 'https://tennisabstract.com', 'http://www.tennisabstract.com']) { t = lireVitesse(await curl(b + '/reports/' + lg + '_surface_speed.html')); if (Object.keys(t).length >= 10) break; }
+        rv[lg] = Object.keys(t).length >= 10 ? t : ((V0 && V0[lg]) || {});
+        console.log('vitesse ' + lg + ' : ' + Object.keys(t).length + ' tournois lus');
+      }
+      if (Object.keys(rv.atp).length || Object.keys(rv.wta).length) fs.writeFileSync(FV, JSON.stringify(rv));
+    } else console.log('Vitesse des courts à jour (' + V0.maj + ')');
+  } catch (e) { console.log('vitesse : erreur ' + (e && e.message)); }
   if (J && J.maj && Date.now() - Date.parse(J.maj) < 6 * 864e5 && process.env.FORCE !== '1') { console.log('Elo tennis à jour (' + J.maj + ')'); process.exit(0); }
   const res = { maj: new Date().toISOString(), source: 'tennisabstract.com (Jeff Sackmann)' };
   for (const lg of ['atp', 'wta']) {

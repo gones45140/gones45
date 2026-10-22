@@ -85,6 +85,11 @@ serveur.listen(0, async () => {
         o.tnPer = (PR('terre', tj(4, 1), 'Europe') === 'Terre · Europe' && PR('terre', tj(1, 10), 'Amérique du Sud') === 'Terre · Amérique du Sud' && PR('gazon', tj(5, 20), 'Europe') === 'Gazon'
           && /australienne|Australie/.test(PR('dur', tj(0, 15), 'Océanie')) && /printemps/.test(PR('dur', tj(2, 15), 'Amérique du Nord')) && /été/.test(PR('dur', tj(8, 5), 'Amérique du Nord'))
           && /automne/.test(PR('salle', tj(9, 23), 'Europe')) && Bi['Terre · Europe'].w === 1 && Bi[PR('dur', tj(0, 1), '')].n === 2) || 'per'; } catch (e) { o.tnPer = 'erreur : ' + e.message; }
+      try { var VJ = window._g45TnVitJ; window._g45TnVitJ = { atp: { montpellier: ['Montpellier', 1.49, 'Hard', '2026-02-02'], miamimasters: ['Miami Masters', 1.18, 'Hard', ''], montecarlomasters: ['Monte Carlo Masters', 0.7, 'Clay', ''] } };
+        var VD = window._g45TnVitDe;
+        o.tnVit = (VD('atp', 'Open Occitanie', 'Montpellier, France') === 1.49 && VD('atp', 'Miami Open presented by Itau', '') === 1.18 && VD('atp', 'Rolex Monte-Carlo Masters', '') === 0.7
+          && VD('atp', 'Inconnu', '') === null && VD('wta', 'Open Occitanie', 'Montpellier') === null && window._g45TnVitCl(1.49) === '⚡ Rapide' && window._g45TnVitCl(0.7) === '🐢 Lent' && window._g45TnVitCl(1) === '⚖️ Moyen') || 'vit';
+        window._g45TnVitJ = VJ; } catch (e) { o.tnVit = 'erreur : ' + e.message; }
       /* 20261022i : critères 4 saisons, onglet 👤 Joueurs des sports US (index g45_jou_v2_, présence, rôle, combien) */
       try { const C = window._g45Cr, ctx = { sp: 'football', lg: 'nfl', id: '14' };
         C.data['Rams T'] = { t: Date.now(), lg: 'nfl', ligue: 'NFL', saisons: [{ an: 2025, ms: [['2025-09-07', 1, 24, 10, 0, 0, 'e1'], ['2025-09-14', 0, 20, 27, 0, 0, 'e2'], ['2025-09-21', 1, 30, 7, 0, 0, 'e3']] }] };
@@ -1162,6 +1167,7 @@ serveur.listen(0, async () => {
     ok('Cyclisme : profil d\'étape (échelle 600 m, type, D+)', r.rcProf === true, r.rcProf);
     ok('Tennis : correction « % réel » en pause (brut affiché, corrigé pour le suivi)', r.tnReel === true, r.tnReel);
     ok('Tennis : bilan par surface et période (8 tournées)', r.tnPer === true, r.tnPer);
+    ok('Tennis : vitesse des courts (rapprochement ville / nom, classes)', r.tnVit === true, r.tnVit);
     ok('Curseurs US : onglets Quart-temps / Contexte', r.sgQt === true, r.sgQt);
     ok('Curseurs NFL : onglet TD / FG', r.sgTd === true, r.sgTd);
     ok('Tendances officielles : octobre = période de test, hors totaux', r.trTest === true, r.trTest);
