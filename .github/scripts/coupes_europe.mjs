@@ -35,12 +35,16 @@ const trouver = (annee, nom) => {
   for (const k of Object.keys(C)) { const u = k.split(' '); const com = t.filter((x) => u.includes(x)).length; const sc = com / Math.max(t.length, u.length); if (sc > bs) { bs = sc; best = C[k]; } }
   return bs >= 0.5 ? best : null;
 };
-const M = [];
+const M = []; let dbg = 0;
+/* ESPN : même appel que tendances.mjs (sans en-tête navigateur) */
+const curlEspn = (url) => new Promise((ok) => execFile('curl', ['-sS', '-L', '--max-time', '40', url], { maxBuffer: 32 * 1024 * 1024 }, (e, out) => ok(e ? 'ERREUR ' + String(e.message).slice(0, 150) : out)));
 for (const lg of ['uefa.champions', 'uefa.europa', 'uefa.europa.conf']) {
   for (const y of [2023, 2024, 2025]) {
     for (let mo = 0; mo < 11; mo++) {
       const d0 = new Date(Date.UTC(y, 6 + mo, 1)), d1 = new Date(Date.UTC(y, 7 + mo, 0)), f = (d) => d.toISOString().slice(0, 10).replace(/-/g, '');
-      let B = {}; try { B = JSON.parse(await curl('https://site.api.espn.com/apis/site/v2/sports/soccer/' + lg + '/scoreboard?limit=500&dates=' + f(d0) + '-' + f(d1))); } catch (e) {}
+      const u = 'https://site.api.espn.com/apis/site/v2/sports/soccer/' + lg + '/scoreboard?limit=500&dates=' + f(d0) + '-' + f(d1);
+      let B = {}, brut = await curlEspn(u); try { B = JSON.parse(brut); } catch (e) {}
+      if (!dbg++) console.log('ESPN essai : ' + u + ' → ' + String(brut).length + ' octets : ' + String(brut).slice(0, 200).replace(/\s+/g, ' '));
       (B.events || []).forEach((e) => { const c = (e.competitions || [])[0] || {}; if (!((c.status || {}).type || {}).completed) return;
         const h = (c.competitors || []).find((q) => q.homeAway === 'home'), a = (c.competitors || []).find((q) => q.homeAway === 'away'); if (!h || !a) return;
         M.push({ lg, y, h: h.team.displayName, a: a.team.displayName, sh: +h.score, sa: +a.score }); });
@@ -55,7 +59,7 @@ M.forEach((m) => { const k = m.lg + m.h + m.a + m.y + m.sh + m.sa; if (vu.has(k)
   const grosDom = vH >= vA, ratio = grosDom ? vH / vA : vA / vH, ratio2 = grosDom ? r2H / r2A : r2A / r2H;
   const gG = grosDom ? m.sh : m.sa, gP = grosDom ? m.sa : m.sh;
   L.push({ lg: m.lg, ratio, ratio2, dom: grosDom, gG, gP }); });
-console.log('matchs ESPN : ' + M.length + ' · avec les deux coefficients : ' + L.length + ' · sans : ' + sansCoef);
+console.log('mois lus : ' + dbg + ' · matchs ESPN : ' + M.length + ' · avec les deux coefficients : ' + L.length + ' · sans : ' + sansCoef);
 const tranche = (r) => (r < 1.5 ? '1 · moins de 1,5 fois' : (r < 2.5 ? '2 · 1,5 à 2,5 fois' : (r < 4 ? '3 · 2,5 à 4 fois' : (r < 7 ? '4 · 4 à 7 fois' : '5 · 7 fois et plus'))));
 const stat = (X) => { const n = X.length || 1, p = (f) => Math.round(X.filter(f).length / n * 1000) / 10;
   return { n: X.length, grosGagne: p((x) => x.gG > x.gP), nul: p((x) => x.gG === x.gP), petitGagne: p((x) => x.gG < x.gP), butsMoy: Math.round(X.reduce((s, x) => s + x.gG + x.gP, 0) / n * 100) / 100,
