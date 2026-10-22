@@ -99,6 +99,8 @@ serveur.listen(0, async () => {
         var SD = window._g45TnSvDe('atp', 'A', 'dur'); window._g45TnSvJ = SJ;
         o.tnSv = (R2.tb > R1.tb && R1.tb > R3.tb && R2.jx > R3.jx && Math.abs(R1.setA - R1.setB) < 1e-6 && R3.setA > R3.setB && SD.s.n === 20 && !SD.sfOk
           && window._g45TnBkVal({ vG: 10, cG: 2.0, vX: 0, cX: 1.8 }) && !window._g45TnBkVal({ vG: 10, cG: 3.2, vX: 0, cX: 1.3 })) || JSON.stringify([R1, R2, R3]); } catch (e) { o.tnSv = 'erreur : ' + e.message; }
+      try { var TV = window._g45TnTvHtml({ tv: [{ t: Date.now() - 864e5, h: 'A', a: 'B', n: 'A', c: 2, r: 1 }, { t: Date.now() - 2 * 864e5, h: 'C', a: 'D', n: 'D', c: 1.8, r: 0 }, { t: Date.now(), h: 'E', a: 'F', n: 'E', c: 1.6 }] });
+        o.tnTv = (/2 jugés · 1 gagnés/.test(TV) && /\+0,00 €/.test(TV) && /1 en attente/.test(TV) && window._g45TnTvHtml({ tv: [] }) === '') || TV.slice(0, 300); } catch (e) { o.tnTv = 'erreur : ' + e.message; }
       /* 20261022i : critères 4 saisons, onglet 👤 Joueurs des sports US (index g45_jou_v2_, présence, rôle, combien) */
       try { const C = window._g45Cr, ctx = { sp: 'football', lg: 'nfl', id: '14' };
         C.data['Rams T'] = { t: Date.now(), lg: 'nfl', ligue: 'NFL', saisons: [{ an: 2025, ms: [['2025-09-07', 1, 24, 10, 0, 0, 'e1'], ['2025-09-14', 0, 20, 27, 0, 0, 'e2'], ['2025-09-21', 1, 30, 7, 0, 0, 'e3']] }] };
@@ -1179,6 +1181,7 @@ serveur.listen(0, async () => {
     ok('Tennis : vitesse des courts (rapprochement ville / nom, classes)', r.tnVit === true, r.tnVit);
     ok('Tennis : rang Elo / rang ATP (classement flatteur ou non)', r.tnRang === true, r.tnRang);
     ok('Tennis : service / retour (simulation tie-break, jeux) + value 1,50-2,50', r.tnSv === true, r.tnSv);
+    ok('Tennis : value en test (bloc testeurs, bilan à part)', r.tnTv === true, r.tnTv);
     ok('Curseurs US : onglets Quart-temps / Contexte', r.sgQt === true, r.sgQt);
     ok('Curseurs NFL : onglet TD / FG', r.sgTd === true, r.sgTd);
     ok('Tendances officielles : octobre = période de test, hors totaux', r.trTest === true, r.trTest);

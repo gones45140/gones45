@@ -182,7 +182,14 @@ nouvelles.forEach((x) => { if (deja.has(x.id + '|' + x.k) || dejaFam.has(x.id + 
    20261017i (« avec des logos de club ou championnat ») : le même scoreboard donne aussi les logos → x.hl / x.al (clubs) et
    J.lg[sl] (championnat) ; une tendance encore sans logo (anciennes comprises) est relue une fois ('' = essayé, rien trouvé). */
 J.lg = J.lg || {};
-const TJ = J.t.concat(J.dz || []);   // 20261022y : les désaccords tennis sont jugés avec les tendances
+/* 20261023i — 🧪 VALUE TENNIS EN TEST (cote book 1,50 – 2,50) : liste à part J.tv (testeurs seulement dans l'appli, jamais dans le bilan), un match + côté noté une fois */
+J.tv = J.tv || [];
+try {
+  const tv = await page.evaluate(() => window._g45TnTv || []), vuTv = new Set(J.tv.map((x) => x.id + '|' + x.k));
+  tv.forEach((x) => { if (vuTv.has(x.id + '|' + x.k)) return; vuTv.add(x.id + '|' + x.k); x.n2 = new Date().toISOString(); J.tv.push(x); });
+  console.log('tennis value en test : ' + tv.length + ' vues · ' + J.tv.length + ' suivies');
+} catch (e) { console.log('value test : erreur ' + (e && e.message)); }
+const TJ = J.t.concat(J.dz || [], J.tv);   // 20261022y : désaccords + 20261023i : value en test, jugés avec les tendances
 const att = TJ.filter((x) => x.r == null && x.t < Date.now() - 3 * 3600e3);
 const sansLogo = J.t.filter((x) => x.r !== -1 && x.hl === undefined);
 const grp = {};
