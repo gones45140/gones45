@@ -80,6 +80,11 @@ serveur.listen(0, async () => {
         var ST = _g45RcProfStats(PP), SV = _g45RcSVG2(PP, []);
         o.rcProf = (/Étape plate/.test(ST.ty[0]) && ST.hm === 100 && />600 m</.test(SV) && />0 m</.test(SV) && /g45RcProfDoigt/.test(SV)) || JSON.stringify(ST); } catch (e) { o.rcProf = 'erreur : ' + e.message; }
       try { o.tnReel = (window._g45TnReel(60) === 60 && window._g45TnReel(60, true) > 60) || [window._g45TnReel(60), window._g45TnReel(60, true)].join('/'); } catch (e) { o.tnReel = 'erreur : ' + e.message; }
+      try { var PR = window._g45TnPer, tj = function (m, j) { return new Date(2025, m, j).getTime(); };
+        var Bi = window._g45TnPerBilan([{ sf: 'dur', t: tj(0, 20), ct: 'Océanie', w: true }, { sf: 'dur', t: tj(0, 22), ct: 'Océanie', w: false }, { sf: 'terre', t: tj(4, 2), ct: 'Europe', w: true }]);
+        o.tnPer = (PR('terre', tj(4, 1), 'Europe') === 'Terre · Europe' && PR('terre', tj(1, 10), 'Amérique du Sud') === 'Terre · Amérique du Sud' && PR('gazon', tj(5, 20), 'Europe') === 'Gazon'
+          && /australienne|Australie/.test(PR('dur', tj(0, 15), 'Océanie')) && /printemps/.test(PR('dur', tj(2, 15), 'Amérique du Nord')) && /été/.test(PR('dur', tj(8, 5), 'Amérique du Nord'))
+          && /automne/.test(PR('salle', tj(9, 23), 'Europe')) && Bi['Terre · Europe'].w === 1 && Bi[PR('dur', tj(0, 1), '')].n === 2) || 'per'; } catch (e) { o.tnPer = 'erreur : ' + e.message; }
       /* 20261022i : critères 4 saisons, onglet 👤 Joueurs des sports US (index g45_jou_v2_, présence, rôle, combien) */
       try { const C = window._g45Cr, ctx = { sp: 'football', lg: 'nfl', id: '14' };
         C.data['Rams T'] = { t: Date.now(), lg: 'nfl', ligue: 'NFL', saisons: [{ an: 2025, ms: [['2025-09-07', 1, 24, 10, 0, 0, 'e1'], ['2025-09-14', 0, 20, 27, 0, 0, 'e2'], ['2025-09-21', 1, 30, 7, 0, 0, 'e3']] }] };
@@ -1156,6 +1161,7 @@ serveur.listen(0, async () => {
     ok('Tennis : BET45 face au book (écart, value, ligne)', r.tnBk === true, r.tnBk);
     ok('Cyclisme : profil d\'étape (échelle 600 m, type, D+)', r.rcProf === true, r.rcProf);
     ok('Tennis : correction « % réel » en pause (brut affiché, corrigé pour le suivi)', r.tnReel === true, r.tnReel);
+    ok('Tennis : bilan par surface et période (8 tournées)', r.tnPer === true, r.tnPer);
     ok('Curseurs US : onglets Quart-temps / Contexte', r.sgQt === true, r.sgQt);
     ok('Curseurs NFL : onglet TD / FG', r.sgTd === true, r.sgTd);
     ok('Tendances officielles : octobre = période de test, hors totaux', r.trTest === true, r.trTest);

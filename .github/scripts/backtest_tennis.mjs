@@ -118,7 +118,10 @@ const out = await page.evaluate(async ({ AN, PAR_LIGUE }) => {
       const ex = { loc: (lA ? 1 : 0) - (lB ? 1 : 0), aA: AGE[cle] ? AGE[cle] - ans : null, aB: AGE[cB] ? AGE[cB] - ans : null, rd: r0,
         tA: tourBil(avant(H[cle]), r0), tB: tourBil(avant(H[cB]), r0), fA: tourBil(avant(H[cle]), 'Final'), fB: tourBil(avant(H[cB]), 'Final') };
       ex.nA = NOM[cle] || ''; ex.nB = NOM[cB] || m.an || '';
-      ex.cp = NAT[cle] && NAT[cle] === NAT[cB] ? (lA ? 2 : 1) : 0;   /* 20261022y (Bruno) : duel de deux compatriotes (2 = chez eux) */
+      ex.cp = NAT[cle] && NAT[cle] === NAT[cB] ? (lA ? 2 : 1) : 0;
+      /* 20261023e : bilan dans la même « tournée » (surface + période, _g45TnPer) avant le match */
+      const perK = window._g45TnPer(m.sf, m.t, m.ct), perB = (L) => { const z = L.filter((x) => window._g45TnPer(x.sf, x.t, x.ct) === perK); return [z.filter((x) => x.w).length, z.length]; };
+      ex.qA = perB(avant(H[cle])); ex.qB = perB(avant(H[cB]));   /* 20261022y (Bruno) : duel de deux compatriotes (2 = chez eux) */
       rows.push({ lg, sf: m.sf, t: m.t, w: m.w ? 1 : 0, cat: m.cat, f, ex });
     });
   }
@@ -157,11 +160,12 @@ for (const sf of ['toutes', 'dur', 'salle', 'terre', 'gazon']) {
 }
 /* ── 20261022f : critères de JP (joueur local, âge, bilan au même tour, bilan en finale) ── */
 const pc = (a, b) => b ? Math.round(a / b * 1000) / 10 : null;
-const X = { loc: [0, 0], jeune: [0, 0], jeuneVsVieux: [0, 0], tour: [0, 0], finale: [0, 0], poly: [0, 0], acd: [0, 0] };
+const X = { per: [0, 0], loc: [0, 0], jeune: [0, 0], jeuneVsVieux: [0, 0], tour: [0, 0], finale: [0, 0], poly: [0, 0], acd: [0, 0] };
 const exS = (r) => { const e = r.ex || {}, o = {};
   if (e.loc) o.loc = e.loc > 0 ? 0.65 : 0.35;
   if (e.aA != null && e.aB != null && Math.abs(e.aA - e.aB) >= 3) o.age = e.aA < e.aB ? 0.6 : 0.4;
   if (e.tA && e.tB && e.tA[1] >= 3 && e.tB[1] >= 3) o.tour = (e.tA[0] / e.tA[1] + 0.01) / (e.tA[0] / e.tA[1] + e.tB[0] / e.tB[1] + 0.02);
+  if (e.qA && e.qB && e.qA[1] >= 5 && e.qB[1] >= 5) o.per = (e.qA[0] / e.qA[1] + 0.01) / (e.qA[0] / e.qA[1] + e.qB[0] / e.qB[1] + 0.02);   // 20261023e
   if (e.rd === 'Final' && e.fA && e.fB && e.fA[1] >= 2 && e.fB[1] >= 2) o.fin = (e.fA[0] / e.fA[1] + 0.01) / (e.fA[0] / e.fA[1] + e.fB[0] / e.fB[1] + 0.02);
   /* 20261022j : styles — poly = un seul des deux est « Polyvalent » ; acd = sur dur, attaquant contre contreur */
   const sA = ((STYLES[r.lg] || {})[cleNom(e.nA)] || [])[1], sB = ((STYLES[r.lg] || {})[cleNom(e.nB)] || [])[1];
@@ -175,6 +179,7 @@ R.forEach((r) => { const e = r.ex || {};
   const s = exS(r);
   if (s.tour != null && s.tour !== 0.5) { X.tour[1]++; if ((s.tour > 0.5) === !!r.w) X.tour[0]++; }
   if (s.fin != null && s.fin !== 0.5) { X.finale[1]++; if ((s.fin > 0.5) === !!r.w) X.finale[0]++; }
+  if (s.per != null && s.per !== 0.5) { X.per[1]++; if ((s.per > 0.5) === !!r.w) X.per[0]++; }
   ['poly', 'acd'].forEach((k) => { if (s[k] != null) { X[k][1]++; if ((s[k] > 0.5) === !!r.w) X[k][0]++; } }); });
 res.extras = { seul: Object.fromEntries(Object.entries(X).map(([k, v]) => [k, { p: pc(v[0], v[1]), n: v[1] }])), ajout: {} };
 /* ajouté au standard : poids 1 à 6 (sur 20), précision sur la 2e moitié de l'année, comparée au standard seul */
@@ -182,7 +187,7 @@ const probX = (r, W, k, w) => { let a = 0, b = 0; for (const kk of K) { const x 
   const s = exS(r)[k]; if (s != null && w) { a += w * s; b += w; } return b ? a / b : null; };
 const scoreX = (L, k, w) => { let ok = 0, n = 0; for (const r of L) { const p = probX(r, STD, k, w); if (p == null || p === 0.5) continue; n++; if ((p > 0.5) === !!r.w) ok++; } return { p: n ? Math.round(ok / n * 1000) / 10 : null, n }; };
 const TE = R.filter((r) => r.t >= MI), TR = R.filter((r) => r.t < MI);
-for (const k of ['loc', 'age', 'tour', 'fin', 'poly', 'acd']) res.extras.ajout[k] = [0, 1, 2, 3, 4, 6].map((w) => ({ w, appr: scoreX(TR, k, w).p, verif: scoreX(TE, k, w).p }));
+for (const k of ['per', 'loc', 'age', 'tour', 'fin', 'poly', 'acd']) res.extras.ajout[k] = [0, 1, 2, 3, 4, 6].map((w) => ({ w, appr: scoreX(TR, k, w).p, verif: scoreX(TE, k, w).p }));
 /* ── 20261022h : STYLES — pour chaque duel de styles différents : % de victoires du 1er style, comparé à ce que l'avis standard prévoyait
    (écart positif = le style apporte quelque chose que l'avis ne voit pas) ── */
 const stDe = (lg, n) => { const x = (STYLES[lg] || {})[cleNom(n)]; return x ? x[1] : null; };
