@@ -124,9 +124,16 @@ if (process.argv[1] && process.argv[1].endsWith('elo.mjs')) {
     if (!(S0 && S0.maj && Date.now() - Date.parse(S0.maj) < 6 * 864e5) || process.env.FORCE === '1') {
       const depuis = new Date(Date.now() - 365 * 864e5).toISOString().slice(0, 10).replace(/-/g, '');
       const rs = { maj: new Date().toISOString(), depuis, source: 'tennisabstract.com leadersource (Jeff Sackmann), 52 semaines' };
-      for (const [lg, fs2] of [['atp', ['leadersource.js']], ['wta', ['leadersource_wta.js', 'leadersourcewta.js', 'wleadersource.js']]]) {
-        let t = {};
-        for (const f of fs2) { t = lireService(await curl('https://www.tennisabstract.com/jsmatches/' + f), depuis); if (Object.keys(t).length >= 20) { console.log('  service ' + lg + ' lu dans ' + f); break; } }
+      /* 22/10 soir : top 50 = leadersource.js (50 joueurs), Challengers = leadersource_chall.js (SONDÉ) ; 51-100 et WTA : noms supposés, essayés
+         (le journal dit lesquels existent). Fusion : le grand circuit d'abord, Challengers seulement pour les joueurs absents (marqués c: 1). */
+      for (const [lg, fs2] of [['atp', ['leadersource.js', 'leadersource_51.js', 'leadersource_51100.js', 'leadersource_51-100.js', 'leadersource2.js', 'leadersource_chall.js']],
+        ['wta', ['leadersource_wta.js', 'leadersourcewta.js', 'wleadersource.js', 'leadersource_wta51.js', 'leadersource_wta_51.js', 'leadersource_wta51100.js', 'wleadersource_51.js']]]) {
+        const t = {};
+        for (const f of fs2) {
+          const x = lireService(await curl('https://www.tennisabstract.com/jsmatches/' + f), depuis), n = Object.keys(x).length;
+          if (!n) continue; console.log('  service ' + lg + ' : ' + f + ' → ' + n + ' joueurs');
+          Object.keys(x).forEach((k) => { if (!t[k]) { t[k] = x[k]; if (/chall/.test(f)) t[k].c = 1; } });
+        }
         rs[lg] = Object.keys(t).length >= 20 ? t : ((S0 && S0[lg]) || {});
         console.log('service ' + lg + ' : ' + Object.keys(t).length + ' joueurs');
       }
