@@ -1,0 +1,29 @@
+# GONES45 — calage de l'estimation tennis « Service / retour » (20261023k, lancé à la main). Voir .github/scripts/calibrage_service.mjs.
+name: calibrage-service
+on:
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  calage:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Calage
+        run: node .github/scripts/calibrage_service.mjs
+      - name: Enregistrement
+        run: |
+          git config user.name "Calage tennis"
+          git config user.email "actions@users.noreply.github.com"
+          git add "données/calibrage_service.json"
+          if git diff --cached --quiet; then echo "Rien de nouveau"; exit 0; fi
+          git commit -m "Calage service tennis"
+          for i in 1 2 3 4 5; do
+            git pull --rebase origin main && git push origin HEAD:main && exit 0
+            sleep $((i * 5))
+          done
+          exit 1
