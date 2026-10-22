@@ -40,14 +40,18 @@ const M = []; let dbg = 0;
 const curlEspn = (url) => new Promise((ok) => execFile('curl', ['-sS', '-L', '--compressed', '--max-time', '40', url], { maxBuffer: 32 * 1024 * 1024 }, (e, out) => ok(e ? 'ERREUR ' + String(e.message).slice(0, 150) : out)));
 for (const lg of ['uefa.champions', 'uefa.europa', 'uefa.europa.conf']) {
   for (const y of [2023, 2024, 2025]) {
-    for (let mo = 0; mo < 11; mo++) {
-      const d0 = new Date(Date.UTC(y, 6 + mo, 1)), d1 = new Date(Date.UTC(y, 7 + mo, 0)), f = (d) => d.toISOString().slice(0, 10).replace(/-/g, '');
-      const u = 'https://site.api.espn.com/apis/site/v2/sports/soccer/' + lg + '/scoreboard?limit=500&dates=' + f(d0) + '-' + f(d1);
-      let B = {}, brut = await curlEspn(u); try { B = JSON.parse(brut); } catch (e) {}
-      if (!dbg++) console.log('ESPN essai : ' + u + ' → ' + String(brut).length + ' octets : ' + String(brut).slice(0, 200).replace(/\s+/g, ' '));
-      (B.events || []).forEach((e) => { const c = (e.competitions || [])[0] || {}; if (!((c.status || {}).type || {}).completed) return;
-        const h = (c.competitors || []).find((q) => q.homeAway === 'home'), a = (c.competitors || []).find((q) => q.homeAway === 'away'); if (!h || !a) return;
-        M.push({ lg, y, h: h.team.displayName, a: a.team.displayName, sh: +h.score, sa: +a.score }); });
+    /* SONDÉ par le robot : ?dates=AAAAMMJJ-AAAAMMJJ → 400 « Failed to get events endpoint » → un appel PAR JOUR, seulement mardi / mercredi /
+       jeudi (jours de coupe d'Europe, tours préliminaires compris), de juillet à juin, 6 appels en parallèle. */
+    const jours = []; for (let t = Date.UTC(y, 6, 1); t < Date.UTC(y + 1, 5, 15); t += 864e5) { const d = new Date(t); if ([2, 3, 4].includes(d.getUTCDay())) jours.push(d.toISOString().slice(0, 10).replace(/-/g, '')); }
+    for (let i = 0; i < jours.length; i += 6) {
+      await Promise.all(jours.slice(i, i + 6).map(async (dd) => {
+        const u = 'https://site.api.espn.com/apis/site/v2/sports/soccer/' + lg + '/scoreboard?dates=' + dd;
+        let B = {}, brut = await curlEspn(u); try { B = JSON.parse(brut); } catch (e) {}
+        if (!dbg++) console.log('ESPN essai : ' + u + ' → ' + String(brut).length + ' octets');
+        (B.events || []).forEach((e) => { const c = (e.competitions || [])[0] || {}; if (!((c.status || {}).type || {}).completed) return;
+          const h = (c.competitors || []).find((q) => q.homeAway === 'home'), a = (c.competitors || []).find((q) => q.homeAway === 'away'); if (!h || !a) return;
+          M.push({ lg, y, h: h.team.displayName, a: a.team.displayName, sh: +h.score, sa: +a.score }); });
+      }));
     }
   }
 }
