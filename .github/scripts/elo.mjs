@@ -70,7 +70,38 @@ export function lireVitesse(html) {
   }
   return out;
 }
+/* 20261023h (capture d'Antoine mcp_leaders_tactics_men_last52.html, « ok » pour contrôler les styles faits à la main) : Match Charting Project,
+   tableau « Player | Matches | SnV Freq | … | RallyAgg | ReturnAgg » (titres lus par l'en-tête) → données/tactique_tennis.json
+   { atp / wta : { nomNorm: [nom, matchs, rallyAgg, returnAgg, snvFreq %, net %] } }. Sert à CONTRÔLER styles_tennis.json, pas dans l'avis. */
+export function lireTactique(html) {
+  const tabs = String(html).split(/<table[\s>]/i).slice(1).map((t) => t.split(/<\/table>/i)[0]);
+  const out = {};
+  for (const t of tabs) {
+    const rows = t.split(/<tr[\s>]/i).slice(1).map((r) => (r.match(/<t[dh][^>]*>[\s\S]*?(?=<t[dh][\s>]|<\/tr>|$)/gi) || []).map(txt));
+    const head = rows.find((r) => r.some((c) => /rally ?agg/i.test(c))); if (!head) continue;
+    const col = (re) => head.findIndex((c) => re.test(c));
+    const iP = col(/^player$/i), iM = col(/^match/i), iR = col(/rally ?agg/i), iT = col(/return ?agg/i), iS = col(/snv ?freq/i), iN = col(/net ?freq/i);
+    if (iP < 0 || iR < 0) continue;
+    const f = (x) => { const n = parseFloat(String(x).replace('%', '').replace(',', '.')); return isNaN(n) ? null : n; };
+    rows.forEach((r) => { if (r === head || !r[iP] || f(r[iR]) == null) return;
+      out[norm(r[iP])] = [r[iP], iM >= 0 ? f(r[iM]) : null, f(r[iR]), iT >= 0 ? f(r[iT]) : null, iS >= 0 ? f(r[iS]) : null, iN >= 0 ? f(r[iN]) : null]; });
+  }
+  return out;
+}
 if (process.argv[1] && process.argv[1].endsWith('elo.mjs')) {
+  try {
+    const FT = 'données/tactique_tennis.json'; let T0 = null; try { T0 = JSON.parse(fs.readFileSync(FT, 'utf8')); } catch (e) {}
+    if (!(T0 && T0.maj && Date.now() - Date.parse(T0.maj) < 6 * 864e5) || process.env.FORCE === '1') {
+      const rt = { maj: new Date().toISOString(), source: 'tennisabstract.com Match Charting Project (Jeff Sackmann), 52 semaines' };
+      for (const [lg, g] of [['atp', 'men'], ['wta', 'women']]) {
+        let t = {};
+        for (const b of ['https://www.tennisabstract.com', 'https://tennisabstract.com']) { t = lireTactique(await curl(b + '/reports/mcp_leaders_tactics_' + g + '_last52.html')); if (Object.keys(t).length >= 10) break; }
+        rt[lg] = Object.keys(t).length >= 10 ? t : ((T0 && T0[lg]) || {});
+        console.log('tactique ' + lg + ' : ' + Object.keys(t).length + ' joueurs lus');
+      }
+      if (Object.keys(rt.atp).length || Object.keys(rt.wta).length) fs.writeFileSync(FT, JSON.stringify(rt));
+    }
+  } catch (e) { console.log('tactique : erreur ' + (e && e.message)); }
   try {
     const FV = 'données/vitesse_tennis.json'; let V0 = null; try { V0 = JSON.parse(fs.readFileSync(FV, 'utf8')); } catch (e) {}
     if (!(V0 && V0.maj && Date.now() - Date.parse(V0.maj) < 6 * 864e5) || process.env.FORCE === '1') {
