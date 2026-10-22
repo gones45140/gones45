@@ -218,6 +218,11 @@ res.calib = Object.keys(CAL).sort((a, b) => a - b).map((k) => ({ tranche: k + (k
 console.log('\n===== CALIBRAGE =====\n' + res.calib.map((x) => x.tranche + ' : avis ' + x.avis + ' % → réel ' + x.reel + ' % (' + x.n + ')').join('\n'));
 fs.mkdirSync('données', { recursive: true });
 fs.writeFileSync(FICHIER, JSON.stringify(res, null, 1));
+/* 20261023g (« même pour de la lecture gratuite pour tester, on aurait vite une réponse ») : l'avis BET45 de CHAQUE match (notre calcul,
+   aucune cote dedans) → données/backtest_tennis_matchs.json ; croisé À PART avec les cotes 2025 téléchargées à la main par Antoine
+   (tennis-data.co.uk, usage particulier) dans une session, jamais copiées dans le dépôt. [ligue, date AAAA-MM-JJ, joueur A, joueur B, p(A gagne), A a gagné, surface] */
+fs.writeFileSync('données/backtest_tennis_matchs.json', JSON.stringify(R.map((r) => { const p = prob(r, STD); const e = r.ex || {};
+  return [r.lg, new Date(r.t).toISOString().slice(0, 10), e.nA || '', e.nB || '', p == null ? null : Math.round(p * 1000) / 1000, r.w ? 1 : 0, r.sf]; })));
 /* résumé lisible dans le journal */
 const lib = { elo: 'Elo', rang: 'Classement', surf: 'Surface 2 mois', forme: 'Forme', prec: 'Tournoi préc.', h2h: 'Face-à-face', fat: 'Fatigue', aut: 'Niveau/tournoi/salle/pays' };
 console.log('\n===== CRITÈRES DE JP =====\n' + JSON.stringify(res.extras.seul) + '\n' + Object.entries(res.extras.ajout).map(([k, v]) => k + ' : ' + v.map((x) => 'w' + x.w + ' ' + x.appr + '/' + x.verif).join(' · ')).join('\n'));

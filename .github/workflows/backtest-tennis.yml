@@ -40,6 +40,7 @@ jobs:
           git config user.name "Test tennis"
           git config user.email "actions@users.noreply.github.com"
           git add "données/backtest_tennis.json"
+          git add "données/backtest_tennis_matchs.json" 2>/dev/null || true
           if git diff --cached --quiet; then echo "Rien de nouveau"; exit 0; fi
           git commit -m "Test tennis sur la saison passée"
           for i in 1 2 3 4 5; do
