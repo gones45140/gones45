@@ -91,6 +91,15 @@ serveur.listen(0, async () => {
         localStorage.setItem('g45_sgc_tab', 'ctx'); const Hc = window._g45SgCursHtml(L, 'football', 'Rams').replace(/<[^>]+>/g, ' ');
         if (sv == null) localStorage.removeItem('g45_sgc_tab'); else localStorage.setItem('g45_sgc_tab', sv); window._g45CursToujours = CT;
         o.sgQt = (/1er quart-temps/.test(Hq) && /Rams gagne le 1er quart-temps\s+1\/3/.test(Hq) && /remontée\)\s+1\/1/.test(Hq) && /Après une victoire\s+0\/1/.test(Hc) && /Après une défaite\s+1\/1/.test(Hc)) || (Hq + ' || ' + Hc).slice(0, 700); } catch (e) { o.sgQt = 'erreur : ' + e.message; }
+      /* 20261022s : 🎯 TD / FG NFL (feuille ESPN scoringPlays → mémoire par match) */
+      try { const F = window._g45TdFeuille({ header: { competitions: [{ competitors: [{ homeAway: 'home', team: { abbreviation: 'LAR' } }, { homeAway: 'away', team: { abbreviation: 'SF' } }] }] },
+          scoringPlays: [{ type: { abbreviation: 'FG' }, team: { abbreviation: 'SF' } }, { type: { abbreviation: 'TD' }, team: { abbreviation: 'LAR' } }, { type: { abbreviation: 'TD' }, team: { abbreviation: 'SF' } }] });
+        localStorage.setItem('g45nfltd1_td1', JSON.stringify(F)); localStorage.setItem('g45nfltd1_td2', JSON.stringify([3, 1, 2, 0, 'h', 'TD']));
+        const n = Date.now(), L = [{ id: 'td1', t: n - 9 * 864e5, dom: true, pour: 7, contre: 10 }, { id: 'td2', t: n - 2 * 864e5, dom: false, pour: 13, contre: 27 }];
+        const sv = localStorage.getItem('g45_sgc_tab'), CT = window._g45CursToujours; window._g45CursToujours = true; localStorage.setItem('g45_sgc_tab', 'td');
+        const Ht = window._g45SgCursHtml(L, 'football', 'Rams').replace(/<[^>]+>/g, ' ');
+        if (sv == null) localStorage.removeItem('g45_sgc_tab'); else localStorage.setItem('g45_sgc_tab', sv); window._g45CursToujours = CT; localStorage.removeItem('g45nfltd1_td1'); localStorage.removeItem('g45nfltd1_td2');
+        o.sgTd = (JSON.stringify(F) === '[1,1,0,1,"a","FG"]' && /Touchdowns · 2 matchs/.test(Ht) && /Rams marque en premier\s+0\/2/.test(Ht) && /1er score = field goal\s+1\/2/.test(Ht)) || (JSON.stringify(F) + ' ' + Ht).slice(0, 600); } catch (e) { o.sgTd = 'erreur : ' + e.message; }
       /* 20261022c : octobre 2026 = période de test (hors totaux) */
       try { const to = Date.parse('2026-10-15T12:00:00Z'), tn = Date.parse('2026-11-15T12:00:00Z');
         const c1 = _g45TrOffCalc([{ t: to, r: 1, c: 2 }, { t: tn, r: 1, c: 2 }]); window._g45TrTestOk = true; const c2 = _g45TrOffCalc([{ t: to, r: 1, c: 2 }]); window._g45TrTestOk = false;
@@ -1138,6 +1147,7 @@ serveur.listen(0, async () => {
     ok('Critères 4 saisons US : onglet Joueurs', r.crUs === true, r.crUs);
     ok('Tennis : style de jeu (bonus polyvalent)', r.tnStyle === true, r.tnStyle);
     ok('Curseurs US : onglets Quart-temps / Contexte', r.sgQt === true, r.sgQt);
+    ok('Curseurs NFL : onglet TD / FG', r.sgTd === true, r.sgTd);
     ok('Tendances officielles : octobre = période de test, hors totaux', r.trTest === true, r.trTest);
     ok('Tendances officielles : bilans par mois + total de l\'année', r.bilMois === true, r.bilMois);
     ok('Filtre joueur : 2 ou plus + combiné', r.jouMin === true, r.jouMin);
