@@ -69,7 +69,7 @@ const out = await page.evaluate(async ({ AN, PAR_LIGUE }) => {
         if (!/singles/i.test((g.grouping && g.grouping.displayName) || '')) return;
         (g.competitions || []).forEach((c) => (c.competitors || []).forEach((x) => {
           const id = String(x.id || ''); if (!id) return;
-          const o = J[lg][id] = J[lg][id] || { id, n: (x.athlete && x.athlete.displayName) || '', rk: 0, vu: 0 };
+          const o = J[lg][id] = J[lg][id] || { id, n: (x.athlete && x.athlete.displayName) || '', rk: 0, vu: 0, pays: (x.athlete && x.athlete.flag && x.athlete.flag.alt) || '' };
           o.vu++; const rk = x.curatedRank && x.curatedRank.current; if (rk > 0 && rk < 500) o.rk = rk;
         }));
       }));
@@ -78,7 +78,7 @@ const out = await page.evaluate(async ({ AN, PAR_LIGUE }) => {
   }
   /* 2. on garde les plus présents (classés d'abord), saisons AN + AN-1 */
   const pool = async (L, n, f) => { let i = 0; const R = []; await Promise.all(Array.from({ length: n }, async () => { while (i < L.length) { const k = i++; R[k] = await f(L[k]); } })); return R; };
-  const H = {}, NOM = {}, RK = {};
+  const H = {}, NOM = {}, RK = {}, NAT = {}, AGE = {};
   for (const lg of LG) {
     let L = Object.values(J[lg]).sort((a, b) => (a.rk || 999) - (b.rk || 999) || b.vu - a.vu).slice(0, PAR_LIGUE);
     let fait = 0;
@@ -86,6 +86,9 @@ const out = await page.evaluate(async ({ AN, PAR_LIGUE }) => {
       let m = [];
       for (const an of [AN - 1, AN]) { try { m = m.concat(await window._g45TnSaison(lg, p.id, an) || []); } catch (e) {} }
       H[lg + ':' + p.id] = m; NOM[lg + ':' + p.id] = p.n; RK[lg + ':' + p.id] = p.rk || 0;
+      /* 20261022f : critères de JP à tester — nationalité (code pays du drapeau ESPN, même table que les tournois) et âge */
+      try { const P = window._g45TnPays(', ' + (p.pays || '')); NAT[lg + ':' + p.id] = (P && P.f) || ''; } catch (e) {}
+      try { const pr = await window._g45TnProfil(p.id); if (pr && pr.age) AGE[lg + ':' + p.id] = pr.age; } catch (e) {}
       if (++fait % 10 === 0) log(lg + ' : ' + fait + ' / ' + L.length + ' joueurs lus');
     });
   }
@@ -104,7 +107,14 @@ const out = await page.evaluate(async ({ AN, PAR_LIGUE }) => {
       A.elo = window._g45TnEloDe(lg, NOM[cle] || '', m.sf); B.elo = window._g45TnEloDe(lg, NOM[cB] || m.an || '', m.sf);
       const f = {};
       K.forEach((k) => { const V = window._g45TnAvis(A, B, RK[cle], RK[cB], un(k)); if (V) f[k] = [Math.round(V.p * 1e4) / 1e4, V.n]; });
-      rows.push({ lg, sf: m.sf, t: m.t, w: m.w ? 1 : 0, cat: m.cat, f });
+      /* 20261022f : extras (JP) — loc : +1 si A joue chez lui (pas B), −1 l'inverse ; âges au jour du match ; bilan au même tour et en finale */
+      const rdN = (x) => String(x || '').replace(/\s*-\s.*$/, '').trim();
+      const tourBil = (L, r) => { const z = L.filter((x) => rdN(x.rd) === r); return [z.filter((x) => x.w).length, z.length]; };
+      const r0 = rdN(m.rd), ans = (Date.now() - m.t) / (365.25 * 864e5);
+      const lA = !!(NAT[cle] && NAT[cle] === m.pf), lB = !!(NAT[cB] && NAT[cB] === m.pf);
+      const ex = { loc: (lA ? 1 : 0) - (lB ? 1 : 0), aA: AGE[cle] ? AGE[cle] - ans : null, aB: AGE[cB] ? AGE[cB] - ans : null, rd: r0,
+        tA: tourBil(avant(H[cle]), r0), tB: tourBil(avant(H[cB]), r0), fA: tourBil(avant(H[cle]), 'Final'), fB: tourBil(avant(H[cB]), 'Final') };
+      rows.push({ lg, sf: m.sf, t: m.t, w: m.w ? 1 : 0, cat: m.cat, f, ex });
     });
   }
   log(rows.length + ' matchs ' + AN + ' entre joueurs lus');
@@ -140,10 +150,34 @@ for (const sf of ['toutes', 'dur', 'salle', 'terre', 'gazon']) {
   o.standardSansEloRang = { verif: score(te, Object.assign({}, STD, { elo: 0, rang: 0 })) };
   res.surfaces[sf] = o;
 }
+/* ── 20261022f : critères de JP (joueur local, âge, bilan au même tour, bilan en finale) ── */
+const pc = (a, b) => b ? Math.round(a / b * 1000) / 10 : null;
+const X = { loc: [0, 0], jeune: [0, 0], jeuneVsVieux: [0, 0], tour: [0, 0], finale: [0, 0] };
+const exS = (r) => { const e = r.ex || {}, o = {};
+  if (e.loc) o.loc = e.loc > 0 ? 0.65 : 0.35;
+  if (e.aA != null && e.aB != null && Math.abs(e.aA - e.aB) >= 3) o.age = e.aA < e.aB ? 0.6 : 0.4;
+  if (e.tA && e.tB && e.tA[1] >= 3 && e.tB[1] >= 3) o.tour = (e.tA[0] / e.tA[1] + 0.01) / (e.tA[0] / e.tA[1] + e.tB[0] / e.tB[1] + 0.02);
+  if (e.rd === 'Final' && e.fA && e.fB && e.fA[1] >= 2 && e.fB[1] >= 2) o.fin = (e.fA[0] / e.fA[1] + 0.01) / (e.fA[0] / e.fA[1] + e.fB[0] / e.fB[1] + 0.02);
+  return o; };
+R.forEach((r) => { const e = r.ex || {};
+  if (e.loc) { X.loc[1]++; if ((e.loc > 0) === !!r.w) X.loc[0]++; }
+  if (e.aA != null && e.aB != null && Math.abs(e.aA - e.aB) >= 3) { X.jeune[1]++; if ((e.aA < e.aB) === !!r.w) X.jeune[0]++; }
+  if (e.aA != null && e.aB != null && ((e.aA < 23 && e.aB > 30) || (e.aB < 23 && e.aA > 30))) { X.jeuneVsVieux[1]++; if ((e.aA < e.aB) === !!r.w) X.jeuneVsVieux[0]++; }
+  const s = exS(r);
+  if (s.tour != null && s.tour !== 0.5) { X.tour[1]++; if ((s.tour > 0.5) === !!r.w) X.tour[0]++; }
+  if (s.fin != null && s.fin !== 0.5) { X.finale[1]++; if ((s.fin > 0.5) === !!r.w) X.finale[0]++; } });
+res.extras = { seul: Object.fromEntries(Object.entries(X).map(([k, v]) => [k, { p: pc(v[0], v[1]), n: v[1] }])), ajout: {} };
+/* ajouté au standard : poids 1 à 6 (sur 20), précision sur la 2e moitié de l'année, comparée au standard seul */
+const probX = (r, W, k, w) => { let a = 0, b = 0; for (const kk of K) { const x = r.f[kk]; if (!x || !W[kk]) continue; a += W[kk] * x[1] * x[0]; b += W[kk] * x[1]; }
+  const s = exS(r)[k]; if (s != null && w) { a += w * s; b += w; } return b ? a / b : null; };
+const scoreX = (L, k, w) => { let ok = 0, n = 0; for (const r of L) { const p = probX(r, STD, k, w); if (p == null || p === 0.5) continue; n++; if ((p > 0.5) === !!r.w) ok++; } return { p: n ? Math.round(ok / n * 1000) / 10 : null, n }; };
+const TE = R.filter((r) => r.t >= MI), TR = R.filter((r) => r.t < MI);
+for (const k of ['loc', 'age', 'tour', 'fin']) res.extras.ajout[k] = [0, 1, 2, 3, 4, 6].map((w) => ({ w, appr: scoreX(TR, k, w).p, verif: scoreX(TE, k, w).p }));
 fs.mkdirSync('données', { recursive: true });
 fs.writeFileSync(FICHIER, JSON.stringify(res, null, 1));
 /* résumé lisible dans le journal */
 const lib = { elo: 'Elo', rang: 'Classement', surf: 'Surface 2 mois', forme: 'Forme', prec: 'Tournoi préc.', h2h: 'Face-à-face', fat: 'Fatigue', aut: 'Niveau/tournoi/salle/pays' };
+console.log('\n===== CRITÈRES DE JP =====\n' + JSON.stringify(res.extras.seul) + '\n' + Object.entries(res.extras.ajout).map(([k, v]) => k + ' : ' + v.map((x) => 'w' + x.w + ' ' + x.appr + '/' + x.verif).join(' · ')).join('\n'));
 console.log('\n===== RÉSUMÉ (' + res.matchs + ' matchs ' + AN + ', ' + res.joueurs + ' joueurs) =====');
 for (const [sf, o] of Object.entries(res.surfaces)) {
   console.log('\n## ' + sf.toUpperCase() + ' : ' + o.n + ' matchs (appris ' + o.appr + ' · vérifié ' + o.verif + ')');
