@@ -1,0 +1,14 @@
+# GONES45 — sondes ponctuelles lancées à la main (20261022e : fichiers Tennis Abstract / Jeff Sackmann à jour ?). Lecture seule.
+name: sonde
+on:
+  workflow_dispatch:
+jobs:
+  sonde:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - run: node .github/scripts/sonde_sackmann.mjs
