@@ -58,7 +58,8 @@ serveur.listen(0, async () => {
       try {
         const O = window._g45TrOff || (window._g45TrOff = {}), sv = O.j, st = O.t, hier = new Date(Date.now() - 864e5); hier.setHours(10, 0, 0, 0);
         try { localStorage.removeItem('g45tr_sel_ferme'); } catch (e) {}
-        O.j = { t: [{ id: '77', sl: 'nba', t: Date.now() + 3600e3, n: hier.toISOString(), h: 'Wizards', a: 'Bucks', m: '- de 239,5 points', k: 'U239.5', p: .71, c: 1.81, d: 0, r: null }] }; O.t = Date.now();
+        const nuit = new Date(); nuit.setHours(3, 0, 0, 0);   // 20261023s : match de la nuit (la sélection = matchs joués de 8 h à 8 h)
+        O.j = { t: [{ id: '77', sl: 'nba', t: nuit.getTime(), n: hier.toISOString(), h: 'Wizards', a: 'Bucks', m: '- de 239,5 points', k: 'U239.5', p: .71, c: 1.81, d: 0, r: null }] }; O.t = Date.now();
         const HS = window._g45TrSelHtml();
         O.j = sv; O.t = st;
         o.selHier = (new Date().getHours() < 15 ? (/Wizards/.test(HS) && /Choisie hier/.test(HS) && /g45sel-m/.test(HS) && /WIZ|BUC/.test(HS)) : !/Wizards/.test(HS)) || HS.replace(/<[^>]+>/g, ' ').slice(0, 300);
