@@ -76,6 +76,7 @@ jobs:
           git add "données/elo_tennis.json" 2>/dev/null || true
           git add "données/vitesse_tennis.json" 2>/dev/null || true
           git add "données/tactique_tennis.json" 2>/dev/null || true
+          git add "données/service_tennis.json" 2>/dev/null || true
           if git diff --cached --quiet; then echo "Rien de nouveau"; exit 0; fi
           git commit -m "Tendances officielles $(TZ=Europe/Paris date +%d/%m/%Y)"
           # la synchro des paris pousse aussi sur main : on se recale avant chaque essai

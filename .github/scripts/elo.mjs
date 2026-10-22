@@ -88,7 +88,51 @@ export function lireTactique(html) {
   }
   return out;
 }
+/* 20261023i (« moi peu, Bruno et JP adorent » les jeux / tie-breaks) : STATS DE SERVICE match par match. SONDÉ par Antoine en console :
+   leaders.cgi charge jsmatches/leadersource.js (2,6 Mo), variables ychoices, tchoices, cchoices, rchoices, ochoices, matchmx ; matchmx = lignes
+   du point de vue d'un joueur : [0 date AAAAMMJJ, 1 tournoi, 2 surface Hard / Clay / Grass, 3 niveau, 4 W / L, 5 joueur, …, 10 score (du
+   vainqueur), 11 sets max, 12 adversaire, …, 26 minutes, 27 aces, 28 DF, 29 pts de service, 30 1res in, 31 1res gagnées, 32 2es gagnées,
+   33 jeux de service, 34 BP sauvées, 35 BP subies, puis l'adversaire 36 aces … 44 BP subies] (format Jeff Sackmann). 52 dernières semaines,
+   par joueur et par surface → données/service_tennis.json { atp / wta : { nomNorm: { nom, t: {…}, Hard: {…}, Clay, Grass } } } avec
+   n matchs, tg % jeux de service gagnés, br % jeux de retour gagnés, ac % aces, df % doubles fautes, sp % pts gagnés au service,
+   rp % pts gagnés au retour, tb tie-breaks par match, jx jeux par set. WTA : nom de fichier supposé (leadersource_wta.js), essayé. */
+export function lireService(js, depuis) {
+  const m = String(js).match(/var\s+matchmx\s*=\s*(\[[\s\S]*?\]\s*\]);/); if (!m) return {};
+  let L = []; try { L = JSON.parse(m[1]); } catch (e) { return {}; }
+  const out = {}, N = (x) => { const n = parseInt(x, 10); return isNaN(n) ? null : n; };
+  L.forEach((r) => {
+    if (!Array.isArray(r) || r.length < 45 || String(r[0]) < depuis) return;
+    const v = r.slice(26, 45).map(N); if (v.slice(1).some((x) => x == null) || !(v[3] > 0) || !(v[7] > 0) || !(v[12] > 0) || !(v[16] > 0)) return;
+    const sets = String(r[10] || '').split(' ').filter((x) => /^\d+-\d+/.test(x)); if (!sets.length || /RET|W\/O|DEF/i.test(r[10])) return;
+    const tb = sets.filter((x) => /^(7-6|6-7)/.test(x)).length, jx = sets.reduce((s2, x) => { const g = x.match(/^(\d+)-(\d+)/); return s2 + (+g[1]) + (+g[2]); }, 0);
+    const k = norm(r[5]), o = out[k] = out[k] || { nom: r[5] };
+    for (const sf of ['t', r[2]]) {
+      const a = o[sf] = o[sf] || { n: 0, sg: 0, br: 0, rg: 0, rb: 0, ac: 0, df: 0, sp: 0, sw: 0, rp: 0, rw: 0, tb: 0, st: 0, jx: 0 };
+      a.n++; a.sg += v[7]; a.br += v[9] - v[8]; a.rg += v[16]; a.rb += v[18] - v[17]; a.ac += v[1]; a.df += v[2]; a.sp += v[3]; a.sw += v[5] + v[6];
+      a.rp += v[12]; a.rw += v[12] - v[14] - v[15]; a.tb += tb; a.st += sets.length; a.jx += jx;
+    }
+  });
+  const pc = (x, y) => (y ? Math.round(x / y * 1000) / 10 : null);
+  Object.values(out).forEach((o) => Object.keys(o).forEach((sf) => { if (sf === 'nom') return; const a = o[sf];
+    o[sf] = { n: a.n, tg: pc(a.sg - a.br, a.sg), br: pc(a.rb, a.rg), ac: pc(a.ac, a.sp), df: pc(a.df, a.sp), sp: pc(a.sw, a.sp), rp: pc(a.rw, a.rp),
+      tb: Math.round(a.tb / a.n * 100) / 100, jx: Math.round(a.jx / a.st * 10) / 10 }; }));
+  return out;
+}
 if (process.argv[1] && process.argv[1].endsWith('elo.mjs')) {
+  try {
+    const FS = 'données/service_tennis.json'; let S0 = null; try { S0 = JSON.parse(fs.readFileSync(FS, 'utf8')); } catch (e) {}
+    if (!(S0 && S0.maj && Date.now() - Date.parse(S0.maj) < 6 * 864e5) || process.env.FORCE === '1') {
+      const depuis = new Date(Date.now() - 365 * 864e5).toISOString().slice(0, 10).replace(/-/g, '');
+      const rs = { maj: new Date().toISOString(), depuis, source: 'tennisabstract.com leadersource (Jeff Sackmann), 52 semaines' };
+      for (const [lg, fs2] of [['atp', ['leadersource.js']], ['wta', ['leadersource_wta.js', 'leadersourcewta.js', 'wleadersource.js']]]) {
+        let t = {};
+        for (const f of fs2) { t = lireService(await curl('https://www.tennisabstract.com/jsmatches/' + f), depuis); if (Object.keys(t).length >= 20) { console.log('  service ' + lg + ' lu dans ' + f); break; } }
+        rs[lg] = Object.keys(t).length >= 20 ? t : ((S0 && S0[lg]) || {});
+        console.log('service ' + lg + ' : ' + Object.keys(t).length + ' joueurs');
+      }
+      if (Object.keys(rs.atp).length || Object.keys(rs.wta).length) fs.writeFileSync(FS, JSON.stringify(rs));
+    }
+  } catch (e) { console.log('service : erreur ' + (e && e.message)); }
   try {
     const FT = 'données/tactique_tennis.json'; let T0 = null; try { T0 = JSON.parse(fs.readFileSync(FT, 'utf8')); } catch (e) {}
     if (!(T0 && T0.maj && Date.now() - Date.parse(T0.maj) < 6 * 864e5) || process.env.FORCE === '1') {
