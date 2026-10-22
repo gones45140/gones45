@@ -66,6 +66,11 @@ serveur.listen(0, async () => {
       /* 20261022b : tournois en salle reconnus, contrecoup hors avis standard */
       try { o.salle = (window._g45TnSurf('Swiss Indoors Basel', false) === 'salle' && window._g45TnSurf('Rolex Paris Masters', false) === 'salle' && window._g45TnSurf('Rolex Shanghai Masters', false) === 'dur'
         && window._g45TnSurf('Porsche Tennis Grand Prix', true) === 'terre' && window._G45_TN_STD.prec === 0) || 'surfaces : ' + window._g45TnSurf('Swiss Indoors Basel', false); } catch (e) { o.salle = 'erreur : ' + e.message; }
+      /* 20261022g : tour du match déduit + bilan à ce tour ; âge et tour dans l'avis standard */
+      try { const n = Date.now(), M = (j, ek, rd, w) => ({ id: ek + rd + j, t: n - j * 864e5, ek, rd, w, sf: 'dur', cat: 'a250', tr: 'X', adv: '9' });
+        const C = _g45TnCalc([M(1, 'e1', 'Round 1 - Court 2', true), M(30, 'e0', 'Round 2', true), M(60, 'e9', 'Round 2', false), M(90, 'e8', 'Round 2 - Centre', true)], { sf: 'dur', ek: 'e1' });
+        const C2 = _g45TnCalc([M(30, 'e0', 'Semifinal', true)], { sf: 'dur', ek: 'e5', rd: 'Semifinal' });
+        o.tnTour = (C.rdCour === 'Round 2' && C.tourBil[0] === 2 && C.tourBil[1] === 3 && C2.rdCour === 'Semifinal' && C2.tourBil[1] === 1 && _G45_TN_STD.age === 3 && _G45_TN_STD.tour === 2) || JSON.stringify([C.rdCour, C.tourBil, C2.rdCour]); } catch (e) { o.tnTour = 'erreur : ' + e.message; }
       /* 20261022c : octobre 2026 = période de test (hors totaux) */
       try { const to = Date.parse('2026-10-15T12:00:00Z'), tn = Date.parse('2026-11-15T12:00:00Z');
         const c1 = _g45TrOffCalc([{ t: to, r: 1, c: 2 }, { t: tn, r: 1, c: 2 }]); window._g45TrTestOk = true; const c2 = _g45TrOffCalc([{ t: to, r: 1, c: 2 }]); window._g45TrTestOk = false;
@@ -1109,6 +1114,7 @@ serveur.listen(0, async () => {
     ok('Tennis : mes coefficients + surface 2 mois + tournoi précédent', r.tnCoef === true, r.tnCoef);
     ok('Sélection du jour : celle de la veille gardée après minuit', r.selHier === true, r.selHier);
     ok('Tennis : tournois en salle reconnus + contrecoup hors standard', r.salle === true, r.salle);
+    ok('Tennis : âge + bilan au tour du match dans l\'avis', r.tnTour === true, r.tnTour);
     ok('Tendances officielles : octobre = période de test, hors totaux', r.trTest === true, r.trTest);
     ok('Tendances officielles : bilans par mois + total de l\'année', r.bilMois === true, r.bilMois);
     ok('Filtre joueur : 2 ou plus + combiné', r.jouMin === true, r.jouMin);
