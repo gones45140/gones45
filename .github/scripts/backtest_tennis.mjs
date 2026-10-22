@@ -194,6 +194,12 @@ res.styles = Object.entries(DU).filter(([k, o]) => o.n >= 15).map(([k, o]) => ({
   .sort((x, y) => Math.abs(y.ecart) - Math.abs(x.ecart));
 res.stylesCouverts = R.filter((r) => r.ex && stDe(r.lg, r.ex.nA) && stDe(r.lg, r.ex.nB)).length;
 console.log('\n===== STYLES (' + res.stylesCouverts + ' matchs avec 2 styles connus) =====\n' + res.styles.map((x) => x.duel + ' : réel ' + x.reel + ' % / prévu ' + x.prevu + ' % (écart ' + x.ecart + ', ' + x.n + ' matchs)').join('\n'));
+/* ── 20261022l : CALIBRAGE — quand l'avis standard dit X % pour le favori, combien de fois le favori gagne-t-il vraiment ? (par tranche de 5 %) ── */
+const CAL = {};
+R.forEach((r) => { const p = prob(r, STD); if (p == null || p === 0.5) return; const pm = Math.max(p, 1 - p), fw = (p > 0.5) === !!r.w;
+  const k = Math.min(90, Math.floor(pm * 100 / 5) * 5); const o = CAL[k] = CAL[k] || { n: 0, w: 0, s: 0 }; o.n++; o.s += pm; if (fw) o.w++; });
+res.calib = Object.keys(CAL).sort((a, b) => a - b).map((k) => ({ tranche: k + (k == 90 ? '+' : '-' + (+k + 5)) + ' %', n: CAL[k].n, avis: Math.round(CAL[k].s / CAL[k].n * 1000) / 10, reel: Math.round(CAL[k].w / CAL[k].n * 1000) / 10 }));
+console.log('\n===== CALIBRAGE =====\n' + res.calib.map((x) => x.tranche + ' : avis ' + x.avis + ' % → réel ' + x.reel + ' % (' + x.n + ')').join('\n'));
 fs.mkdirSync('données', { recursive: true });
 fs.writeFileSync(FICHIER, JSON.stringify(res, null, 1));
 /* résumé lisible dans le journal */
