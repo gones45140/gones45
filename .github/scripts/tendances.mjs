@@ -176,7 +176,44 @@ const deja = new Set(J.t.map((x) => x.id + '|' + x.k));
 const dejaFam = new Set(J.t.map((x) => x.id + '|' + fam(x.k)));
 const note = new Date().toISOString();
 let ajout = 0;
-nouvelles.forEach((x) => { if (deja.has(x.id + '|' + x.k) || dejaFam.has(x.id + '|' + fam(x.k))) return; deja.add(x.id + '|' + x.k); x.n = note; J.t.push(x); ajout++; });
+/* 20261023m — COUPES D'EUROPE (Antoine : « les stats foot qu'on sort c'est surtout en championnat » ; « prendre le coeff du club directement,
+   global et 2 dernières saisons » ; « trouver de combien est l'écart et en tirer une conclusion » → tableau « oui ») : pour un match uefa.*,
+   les stats de championnat sont remplacées par les RÉSULTATS RÉELS des coupes d'Europe (données/coupes_europe.json, robot coupes_europe.mjs :
+   719 matchs C1 / C3 / C4 sur 3 saisons, rangés par écart de coefficient UEFA des clubs sur les 2 dernières saisons, kassiesa.net).
+   La tendance reste OFFICIELLE seulement si cote × % européen ≥ 1,05 ; sinon, ou marché / club inconnu → J.ce (🧪 test, testeurs, hors bilan).
+   Ex. « − de 3,5 buts » ≈ 62 % en coupe d'Europe → il faut une cote ≥ 1,70. */
+J.ce = J.ce || [];
+let CE = null; try { CE = JSON.parse(fs.readFileSync('données/coupes_europe.json', 'utf8')); } catch (e) {}
+const ceToks = (s) => String(s || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z0-9 ]/g, ' ').split(/\s+/)
+  .filter((t) => t && !/^(fc|afc|cf|sc|ac|as|sk|fk|nk|ss|us|sv|vfb|vfl|tsg|club|de|cd|rc|rcd|ud|sl|sad|calcio|football|futbol|clube|the|bk|if|ik|jk|ks|pfc|rb|1|1899|1909|05|04)$/.test(t))
+  .map((t) => ({ munchen: 'munich', internazionale: 'inter', milano: 'milan', lisboa: 'lisbon', koln: 'cologne', praha: 'prague', beograd: 'belgrade', crvena: 'red', zvezda: 'star', sankt: 'st' }[t] || t));
+const ceClub = (nom, t) => {
+  const d = new Date(t), y = d.getUTCMonth() >= 6 ? d.getUTCFullYear() : d.getUTCFullYear() - 1, C = (CE && CE.clubs && (CE.clubs[y] || CE.clubs[y - 1])) || {}, tk = ceToks(nom);
+  let best = null, bs = 0; for (const k of Object.keys(C)) { const u = k.split(' '), sc = tk.filter((x) => u.includes(x)).length / Math.max(tk.length, u.length); if (sc > bs) { bs = sc; best = C[k]; } }
+  return bs >= 0.5 ? best : null;
+};
+/* Essai sur les matchs du 22/10 : beaucoup de clubs absents ou mal reconnus (Lyon = « Olympique Lyonnais », Bournemouth jamais en coupe
+   d'Europe → pas de coefficient) et, pour le VAINQUEUR, la tranche d'écart est trop grossière (Bayern – Bruges : 48 %). Or le tableau montre
+   que l'écart ne change presque rien aux BUTS → marchés de buts : taux RÉEL de toutes les coupes d'Europe (pondéré, 719 matchs), sans
+   rapprocher les noms ; marchés de résultat (1, 2, 1N, 2N) et autres (o15…) : 🧪 test en attendant mieux. */
+const ceAvis = (x) => {
+  const T = (CE && CE.tableau2saisons) || []; const n = T.reduce((s2, z) => s2 + z.n, 0); if (n < 300) return null;
+  const moy = (f) => T.reduce((s2, z) => s2 + z[f] * z.n, 0) / n / 100;
+  const p = { u35: moy('moins35'), o25: moy('plus25'), btts: moy('btts') }[x.k];
+  if (p == null) return null;
+  const H = ceClub(x.h, x.t), A = ceClub(x.a, x.t), ratio = H && A ? Math.max(H[3], 0.5) / Math.max(A[3], 0.5) : null;
+  return { p, ratio: ratio ? Math.round(Math.max(ratio, 1 / ratio) * 10) / 10 : null, n };
+};
+let nCe = 0;
+nouvelles.forEach((x) => {
+  if (deja.has(x.id + '|' + x.k) || dejaFam.has(x.id + '|' + fam(x.k))) return;
+  if (/^uefa\./.test(x.sl)) {
+    const av = ceAvis(x); x.pe = av ? Math.round(av.p * 1000) / 1000 : null; x.ecu = av ? av.ratio : null;
+    if (!(av && x.c > 1 && x.c * av.p >= 1.05)) { deja.add(x.id + '|' + x.k); if (!J.ce.some((y) => y.id === x.id && y.k === x.k)) { x.n = note; J.ce.push(x); nCe++; } return; }
+  }
+  deja.add(x.id + '|' + x.k); x.n = note; J.t.push(x); ajout++;
+});
+console.log('coupes d\'Europe → test (cote × % européen < 1,05 ou inconnu) : ' + nCe + ' · suivies ' + J.ce.length);
 
 /* Vérification des matchs finis (score final), par ligue et par jour.
    20261017i (« avec des logos de club ou championnat ») : le même scoreboard donne aussi les logos → x.hl / x.al (clubs) et
@@ -189,7 +226,7 @@ try {
   tv.forEach((x) => { if (vuTv.has(x.id + '|' + x.k)) return; vuTv.add(x.id + '|' + x.k); x.n2 = new Date().toISOString(); J.tv.push(x); });
   console.log('tennis value en test : ' + tv.length + ' vues · ' + J.tv.length + ' suivies');
 } catch (e) { console.log('value test : erreur ' + (e && e.message)); }
-const TJ = J.t.concat(J.dz || [], J.tv);   // 20261022y : désaccords + 20261023i : value en test, jugés avec les tendances
+const TJ = J.t.concat(J.dz || [], J.tv, J.ce);   // 20261022y : désaccords + 20261023i : value en test, jugés avec les tendances
 const att = TJ.filter((x) => x.r == null && x.t < Date.now() - 3 * 3600e3);
 const sansLogo = J.t.filter((x) => x.r !== -1 && x.hl === undefined);
 const grp = {};
