@@ -35,7 +35,12 @@ const FAUX_INIT = process.env.FAUX_INIT ? fs.readFileSync(process.env.FAUX_INIT,
 /* 20261018k (capture d'Antoine, filtres Cote 1,50-2,19 + Proba 60 % et + + Avis « D'accord » : « la demande de 10 h doit être celle-là ») :
    proba mini 60 %, cote CONNUE ≥ 1,50 (sans cote = pas noté), stats et bookmakers d'accord (désaccord = pas noté). */
 const REGLAGES = { min: 1.5, pmin: 0.6, coteConnue: true, accord: true };
-const SPORTS = ['foot', 'hockey', 'nba', 'nfl'];
+/* 20261022b (nuit du 21 au 22/10 : 1 seul gagné sur 5 en NBA, saison reprise 2 jours avant — stats surtout de la saison PASSÉE, « moins
+   de X points » qui sautent ; « oui » d'Antoine) : PAS de NBA dans la sélection officielle du 1er octobre au 14 novembre (≈ 8 matchs joués
+   par équipe). Les tendances perso NBA de l'appli ne changent pas. */
+const NBA_PAUSE = (() => { const d = new Date(), m = d.getUTCMonth() + 1; return m === 10 || (m === 11 && d.getUTCDate() < 15); })();
+const SPORTS = ['foot', 'hockey', 'nba', 'nfl'].filter((s) => !(s === 'nba' && NBA_PAUSE));
+if (NBA_PAUSE) console.log('NBA en pause (début de saison) jusqu\'au 15/11.');
 const FORCE = process.env.FORCE === '1';
 
 const parisH = () => Number(new Intl.DateTimeFormat('en-GB', { timeZone: 'Europe/Paris', hour: '2-digit', hourCycle: 'h23' }).formatToParts(new Date()).find((x) => x.type === 'hour').value);

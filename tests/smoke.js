@@ -63,6 +63,9 @@ serveur.listen(0, async () => {
         O.j = sv; O.t = st;
         o.selHier = (new Date().getHours() < 15 ? (/Wizards/.test(HS) && /Choisie hier/.test(HS)) : !/Wizards/.test(HS)) || HS.replace(/<[^>]+>/g, ' ').slice(0, 300);
       } catch (e) { o.selHier = 'erreur : ' + e.message; }
+      /* 20261022b : tournois en salle reconnus, contrecoup hors avis standard */
+      try { o.salle = (window._g45TnSurf('Swiss Indoors Basel', false) === 'salle' && window._g45TnSurf('Rolex Paris Masters', false) === 'salle' && window._g45TnSurf('Rolex Shanghai Masters', false) === 'dur'
+        && window._g45TnSurf('Porsche Tennis Grand Prix', true) === 'terre' && window._G45_TN_STD.prec === 0) || 'surfaces : ' + window._g45TnSurf('Swiss Indoors Basel', false); } catch (e) { o.salle = 'erreur : ' + e.message; }
       o.state = typeof state !== 'undefined' && !!state;
       o.mur = !!document.querySelector('#t-dash, #dash, .g45-murcard, [id^="t-"]');
       /* Pari simple puis montante, sur un bookmaker approvisionné. */
@@ -1094,6 +1097,7 @@ serveur.listen(0, async () => {
     ok('Panneaux fermés à l\'arrivée + chargement BET45', r.ferme === true, r.ferme);
     ok('Tennis : mes coefficients + surface 2 mois + tournoi précédent', r.tnCoef === true, r.tnCoef);
     ok('Sélection du jour : celle de la veille gardée après minuit', r.selHier === true, r.selHier);
+    ok('Tennis : tournois en salle reconnus + contrecoup hors standard', r.salle === true, r.salle);
     ok('Filtre joueur : 2 ou plus + combiné', r.jouMin === true, r.jouMin);
     ok('Cotes en direct NBA (DraftKings - Live Odds)', r.cdNba === true, r.cdNba);
     ok('Mur : pari par lieu + club du joueur', r.ufLieu === true, r.ufLieu);
