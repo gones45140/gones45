@@ -82,6 +82,15 @@ serveur.listen(0, async () => {
         const H1 = window._g45CrHtml('Rams T', ctx).replace(/<[^>]+>/g, ' ');
         localStorage.removeItem('g45_jou_v2_football_nfl_14_2025'); delete C.data['Rams T']; C.nom = '';
         o.crUs = (/Puka Nacua touchdown/.test(H1) && /Combien/.test(H1) && /1\/2/.test(H1)) || H1.slice(0, 600); } catch (e) { o.crUs = 'erreur : ' + e.message; }
+      /* 20261022r : curseurs sports US — onglets ⏱️ Quart-temps et 🔁 Contexte */
+      try { const P = (a, b, c, d) => [{ p: 1, v: a }, { p: 2, v: b }, { p: 3, v: c }, { p: 4, v: d }], n = Date.now();
+        const L = [{ t: n - 20 * 864e5, dom: true, pour: 24, contre: 10, lp: P(7, 7, 3, 7), lc: P(0, 3, 7, 0) }, { t: n - 13 * 864e5, dom: false, pour: 17, contre: 20, lp: P(0, 10, 0, 7), lc: P(7, 3, 7, 3) },
+          { t: n - 2 * 864e5, dom: true, pour: 30, contre: 27, lp: P(3, 7, 10, 10), lc: P(10, 7, 3, 7) }];
+        const sv = localStorage.getItem('g45_sgc_tab'), CT = window._g45CursToujours; window._g45CursToujours = true;
+        localStorage.setItem('g45_sgc_tab', 'qt'); const Hq = window._g45SgCursHtml(L, 'football', 'Rams').replace(/<[^>]+>/g, ' ');
+        localStorage.setItem('g45_sgc_tab', 'ctx'); const Hc = window._g45SgCursHtml(L, 'football', 'Rams').replace(/<[^>]+>/g, ' ');
+        if (sv == null) localStorage.removeItem('g45_sgc_tab'); else localStorage.setItem('g45_sgc_tab', sv); window._g45CursToujours = CT;
+        o.sgQt = (/1er quart-temps/.test(Hq) && /Rams gagne le 1er quart-temps\s+1\/3/.test(Hq) && /remontée\)\s+1\/1/.test(Hq) && /Après une victoire\s+0\/1/.test(Hc) && /Après une défaite\s+1\/1/.test(Hc)) || (Hq + ' || ' + Hc).slice(0, 700); } catch (e) { o.sgQt = 'erreur : ' + e.message; }
       /* 20261022c : octobre 2026 = période de test (hors totaux) */
       try { const to = Date.parse('2026-10-15T12:00:00Z'), tn = Date.parse('2026-11-15T12:00:00Z');
         const c1 = _g45TrOffCalc([{ t: to, r: 1, c: 2 }, { t: tn, r: 1, c: 2 }]); window._g45TrTestOk = true; const c2 = _g45TrOffCalc([{ t: to, r: 1, c: 2 }]); window._g45TrTestOk = false;
@@ -1128,6 +1137,7 @@ serveur.listen(0, async () => {
     ok('Tennis : âge + bilan au tour du match dans l\'avis', r.tnTour === true, r.tnTour);
     ok('Critères 4 saisons US : onglet Joueurs', r.crUs === true, r.crUs);
     ok('Tennis : style de jeu (bonus polyvalent)', r.tnStyle === true, r.tnStyle);
+    ok('Curseurs US : onglets Quart-temps / Contexte', r.sgQt === true, r.sgQt);
     ok('Tendances officielles : octobre = période de test, hors totaux', r.trTest === true, r.trTest);
     ok('Tendances officielles : bilans par mois + total de l\'année', r.bilMois === true, r.bilMois);
     ok('Filtre joueur : 2 ou plus + combiné', r.jouMin === true, r.jouMin);
