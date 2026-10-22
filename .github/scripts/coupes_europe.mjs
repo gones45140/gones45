@@ -37,7 +37,7 @@ const trouver = (annee, nom) => {
 };
 const M = []; let dbg = 0;
 /* ESPN : même appel que tendances.mjs (sans en-tête navigateur) */
-const curlEspn = (url) => new Promise((ok) => execFile('curl', ['-sS', '-L', '--max-time', '40', url], { maxBuffer: 32 * 1024 * 1024 }, (e, out) => ok(e ? 'ERREUR ' + String(e.message).slice(0, 150) : out)));
+const curlEspn = (url) => new Promise((ok) => execFile('curl', ['-sS', '-L', '--compressed', '--max-time', '40', url], { maxBuffer: 32 * 1024 * 1024 }, (e, out) => ok(e ? 'ERREUR ' + String(e.message).slice(0, 150) : out)));
 for (const lg of ['uefa.champions', 'uefa.europa', 'uefa.europa.conf']) {
   for (const y of [2023, 2024, 2025]) {
     for (let mo = 0; mo < 11; mo++) {
