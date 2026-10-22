@@ -146,7 +146,7 @@ if (process.argv[1] && process.argv[1].endsWith('elo.mjs')) {
       const rt = { maj: new Date().toISOString(), source: 'tennisabstract.com Match Charting Project (Jeff Sackmann), 52 semaines' };
       for (const [lg, g] of [['atp', 'men'], ['wta', 'women']]) {
         let t = {};
-        for (const b of ['https://www.tennisabstract.com', 'https://tennisabstract.com']) { t = lireTactique(await curl(b + '/reports/mcp_leaders_tactics_' + g + '_last52.html')); if (Object.keys(t).length >= 10) break; }
+        for (const b of ['https://www.tennisabstract.com', 'http://www.tennisabstract.com', 'https://tennisabstract.com', 'http://tennisabstract.com']) { t = lireTactique(await curl(b + '/reports/mcp_leaders_tactics_' + g + '_last52.html')); if (Object.keys(t).length >= 10) break; }
         rt[lg] = Object.keys(t).length >= 10 ? t : ((T0 && T0[lg]) || {});
         console.log('tactique ' + lg + ' : ' + Object.keys(t).length + ' joueurs lus');
       }
