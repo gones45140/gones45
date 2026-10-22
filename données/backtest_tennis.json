@@ -1,5 +1,5 @@
 {
- "date": "2026-10-22T09:09:20.196Z",
+ "date": "2026-10-22T10:49:19.775Z",
  "an": 2025,
  "joueurs": 180,
  "matchs": 1577,
@@ -12,7 +12,7 @@
     "elo": {
      "p": 67.2,
      "n": 1336,
-     "br": 0.20781917012724568
+     "br": 0.20781917012724563
     },
     "rang": {
      "p": 55.7,
@@ -22,12 +22,12 @@
     "surf": {
      "p": 59.2,
      "n": 828,
-     "br": 0.24532586223429909
+     "br": 0.24532586223429906
     },
     "forme": {
      "p": 60.5,
      "n": 1328,
-     "br": 0.239269197951807
+     "br": 0.2392691979518071
     },
     "prec": {
      "p": 32.8,
@@ -70,45 +70,45 @@
    "complet": {
     "W": {
      "elo": 10,
-     "rang": 4,
+     "rang": 3,
      "surf": 0,
-     "forme": 0,
-     "prec": 4,
-     "h2h": 7,
+     "forme": 1,
+     "prec": 5,
+     "h2h": 3,
      "fat": 2,
-     "aut": 4
+     "aut": 1
     },
     "appr": {
-     "p": 67.7,
+     "p": 68.2,
      "n": 877,
-     "br": 0.22114207448677628
+     "br": 0.21803750354011633
     },
     "verif": {
-     "p": 64.4,
+     "p": 67.1,
      "n": 700,
-     "br": 0.2203619012062274
+     "br": 0.2163132359488729
     }
    },
    "sansEloRang": {
     "W": {
      "elo": 0,
      "rang": 0,
-     "surf": 10,
-     "forme": 8,
-     "prec": 1,
-     "h2h": 1,
+     "surf": 0,
+     "forme": 10,
+     "prec": 0,
+     "h2h": 6,
      "fat": 0,
      "aut": 10
     },
     "appr": {
-     "p": 63.6,
+     "p": 63.7,
      "n": 871,
-     "br": 0.23637917367474326
+     "br": 0.23498936523276265
     },
     "verif": {
-     "p": 63.1,
+     "p": 62.3,
      "n": 697,
-     "br": 0.23477309485934028
+     "br": 0.2339283029120258
     }
    },
    "standardSansEloRang": {
@@ -127,7 +127,7 @@
     "elo": {
      "p": 63.6,
      "n": 736,
-     "br": 0.22254051054347795
+     "br": 0.222540510543478
     },
     "rang": {
      "p": 54.7,
@@ -152,7 +152,7 @@
     "h2h": {
      "p": 56.1,
      "n": 294,
-     "br": 0.26013303972789137
+     "br": 0.2601330397278914
     },
     "fat": {
      "p": 54.5,
@@ -184,46 +184,46 @@
    },
    "complet": {
     "W": {
-     "elo": 8,
-     "rang": 7,
+     "elo": 6,
+     "rang": 5,
      "surf": 0,
      "forme": 5,
-     "prec": 4,
-     "h2h": 0,
+     "prec": 5,
+     "h2h": 1,
      "fat": 4,
      "aut": 6
     },
     "appr": {
-     "p": 66.9,
+     "p": 67.7,
      "n": 393,
-     "br": 0.22837109274228573
+     "br": 0.22898750453918673
     },
     "verif": {
-     "p": 63.8,
+     "p": 64.2,
      "n": 478,
-     "br": 0.2294114263251633
+     "br": 0.23081069819536876
     }
    },
    "sansEloRang": {
     "W": {
      "elo": 0,
      "rang": 0,
-     "surf": 1,
-     "forme": 2,
-     "prec": 0,
-     "h2h": 0,
-     "fat": 0,
-     "aut": 7
+     "surf": 0,
+     "forme": 6,
+     "prec": 1,
+     "h2h": 1,
+     "fat": 7,
+     "aut": 10
     },
     "appr": {
-     "p": 64.8,
+     "p": 64.3,
      "n": 392,
-     "br": 0.23137106229107277
+     "br": 0.23363497111782228
     },
     "verif": {
-     "p": 61.7,
-     "n": 475,
-     "br": 0.2373164559090238
+     "p": 63,
+     "n": 476,
+     "br": 0.2372401081315215
     }
    },
    "standardSansEloRang": {
@@ -289,7 +289,7 @@
     "verif": {
      "p": 71.1,
      "n": 114,
-     "br": 0.21094506797440588
+     "br": 0.2109450679744059
     },
     "annee": {
      "p": 69.9,
@@ -299,24 +299,24 @@
    },
    "complet": {
     "W": {
-     "elo": 8,
+     "elo": 10,
      "rang": 0,
      "surf": 0,
-     "forme": 0,
-     "prec": 7,
-     "h2h": 3,
-     "fat": 1,
+     "forme": 1,
+     "prec": 8,
+     "h2h": 6,
+     "fat": 2,
      "aut": 0
     },
     "appr": {
-     "p": 76.3,
-     "n": 38,
-     "br": 0.19342641953610232
+     "p": 73.8,
+     "n": 42,
+     "br": 0.20071097432974708
     },
     "verif": {
-     "p": 69.4,
-     "n": 108,
-     "br": 0.20819032356856007
+     "p": 67.5,
+     "n": 114,
+     "br": 0.21279612174204726
     }
    },
    "sansEloRang": {
@@ -325,20 +325,20 @@
      "rang": 0,
      "surf": 0,
      "forme": 0,
-     "prec": 9,
-     "h2h": 7,
-     "fat": 5,
+     "prec": 0,
+     "h2h": 10,
+     "fat": 7,
      "aut": 0
     },
     "appr": {
      "p": 81,
      "n": 21,
-     "br": 0.19358149609457673
+     "br": 0.1932364185994398
     },
     "verif": {
-     "p": 52.1,
-     "n": 96,
-     "br": 0.26194275833678154
+     "p": 54.7,
+     "n": 95,
+     "br": 0.2571508744691313
     }
    },
    "standardSansEloRang": {
@@ -382,7 +382,7 @@
     "h2h": {
      "p": 64.3,
      "n": 140,
-     "br": 0.23106690878571437
+     "br": 0.23106690878571443
     },
     "fat": {
      "p": 47.5,
@@ -415,45 +415,45 @@
    "complet": {
     "W": {
      "elo": 10,
-     "rang": 8,
-     "surf": 1,
-     "forme": 4,
-     "prec": 5,
-     "h2h": 7,
-     "fat": 6,
-     "aut": 2
+     "rang": 5,
+     "surf": 6,
+     "forme": 2,
+     "prec": 4,
+     "h2h": 4,
+     "fat": 3,
+     "aut": 0
     },
     "appr": {
      "p": 71.7,
      "n": 353,
-     "br": 0.22175050495597537
+     "br": 0.21645857744839692
     },
     "verif": {
-     "p": 75,
+     "p": 81.3,
      "n": 32,
-     "br": 0.2087511234910403
+     "br": 0.19886609822469675
     }
    },
    "sansEloRang": {
     "W": {
      "elo": 0,
      "rang": 0,
-     "surf": 6,
-     "forme": 5,
-     "prec": 0,
+     "surf": 10,
+     "forme": 7,
+     "prec": 2,
      "h2h": 3,
-     "fat": 2,
-     "aut": 5
+     "fat": 1,
+     "aut": 8
     },
     "appr": {
-     "p": 64.5,
+     "p": 64.8,
      "n": 349,
-     "br": 0.23972370746830837
+     "br": 0.23988591218197708
     },
     "verif": {
      "p": 59.4,
      "n": 32,
-     "br": 0.2332017976162035
+     "br": 0.23251324535252693
     }
    },
    "standardSansEloRang": {
@@ -487,7 +487,7 @@
     "forme": {
      "p": 69.3,
      "n": 140,
-     "br": 0.2200216413571429
+     "br": 0.22002164135714286
     },
     "prec": {
      "p": 44.4,
@@ -502,7 +502,7 @@
     "fat": {
      "p": 43.8,
      "n": 73,
-     "br": 0.3068620232876713
+     "br": 0.30686202328767126
     },
     "aut": {
      "p": 67.9,
@@ -529,24 +529,24 @@
    },
    "complet": {
     "W": {
-     "elo": 10,
-     "rang": 3,
+     "elo": 4,
+     "rang": 9,
      "surf": 10,
-     "forme": 0,
+     "forme": 4,
      "prec": 10,
-     "h2h": 10,
-     "fat": 3,
-     "aut": 0
+     "h2h": 3,
+     "fat": 0,
+     "aut": 1
     },
     "appr": {
-     "p": 77.5,
+     "p": 79.8,
      "n": 89,
-     "br": 0.20478434574226967
+     "br": 0.22233947472038115
     },
     "verif": {
-     "p": 69.3,
-     "n": 75,
-     "br": 0.20520586874283492
+     "p": 72.4,
+     "n": 76,
+     "br": 0.21386659145534084
     }
    },
    "sansEloRang": {
@@ -554,21 +554,21 @@
      "elo": 0,
      "rang": 0,
      "surf": 10,
-     "forme": 3,
-     "prec": 10,
+     "forme": 1,
+     "prec": 3,
      "h2h": 10,
      "fat": 0,
-     "aut": 3
+     "aut": 1
     },
     "appr": {
      "p": 74.2,
      "n": 89,
-     "br": 0.22753711102760182
+     "br": 0.2241431506355189
     },
     "verif": {
-     "p": 67.1,
+     "p": 68.4,
      "n": 76,
-     "br": 0.22326168739401017
+     "br": 0.2256900628267278
     }
    },
    "standardSansEloRang": {
@@ -587,7 +587,7 @@
     "n": 251
    },
    "jeune": {
-    "p": 54.8,
+    "p": 54.9,
     "n": 964
    },
    "jeuneVsVieux": {
@@ -665,7 +665,7 @@
     {
      "w": 6,
      "appr": 64.5,
-     "verif": 65.1
+     "verif": 65.3
     }
    ],
    "tour": [
@@ -733,5 +733,134 @@
     }
    ]
   }
- }
+ },
+ "styles": [
+  {
+   "duel": "Contreur / limeur contre Polyvalent · toutes",
+   "n": 47,
+   "reel": 23.4,
+   "prevu": 40.9,
+   "ecart": -17.5
+  },
+  {
+   "duel": "Attaquant fond de court contre Gros serveur · gazon",
+   "n": 18,
+   "reel": 38.9,
+   "prevu": 52.8,
+   "ecart": -13.9
+  },
+  {
+   "duel": "Contreur / limeur contre Polyvalent · dur",
+   "n": 23,
+   "reel": 30.4,
+   "prevu": 43.2,
+   "ecart": -12.8
+  },
+  {
+   "duel": "Attaquant fond de court contre Gros serveur · salle",
+   "n": 16,
+   "reel": 62.5,
+   "prevu": 50.8,
+   "ecart": 11.7
+  },
+  {
+   "duel": "Attaquant fond de court contre Polyvalent · terre",
+   "n": 29,
+   "reel": 34.5,
+   "prevu": 45.1,
+   "ecart": -10.6
+  },
+  {
+   "duel": "Attaquant fond de court contre Polyvalent · dur",
+   "n": 71,
+   "reel": 36.6,
+   "prevu": 47.1,
+   "ecart": -10.5
+  },
+  {
+   "duel": "Attaquant fond de court contre Contreur / limeur · dur",
+   "n": 76,
+   "reel": 60.5,
+   "prevu": 51.6,
+   "ecart": 8.9
+  },
+  {
+   "duel": "Gros serveur contre Polyvalent · toutes",
+   "n": 32,
+   "reel": 37.5,
+   "prevu": 45.7,
+   "ecart": -8.2
+  },
+  {
+   "duel": "Attaquant fond de court contre Polyvalent · toutes",
+   "n": 119,
+   "reel": 39.5,
+   "prevu": 47.5,
+   "ecart": -8
+  },
+  {
+   "duel": "Attaquant fond de court contre Contreur / limeur · salle",
+   "n": 16,
+   "reel": 43.8,
+   "prevu": 51.6,
+   "ecart": -7.8
+  },
+  {
+   "duel": "Attaquant fond de court contre Polyvalent · gazon",
+   "n": 15,
+   "reel": 60,
+   "prevu": 53.2,
+   "ecart": 6.8
+  },
+  {
+   "duel": "Contreur / limeur contre Gros serveur · toutes",
+   "n": 49,
+   "reel": 57.1,
+   "prevu": 50.9,
+   "ecart": 6.2
+  },
+  {
+   "duel": "Attaquant fond de court contre Contreur / limeur · toutes",
+   "n": 134,
+   "reel": 57.5,
+   "prevu": 52.2,
+   "ecart": 5.3
+  },
+  {
+   "duel": "Attaquant fond de court contre Gros serveur · dur",
+   "n": 54,
+   "reel": 46.3,
+   "prevu": 50.4,
+   "ecart": -4.1
+  },
+  {
+   "duel": "Gros serveur contre Polyvalent · dur",
+   "n": 18,
+   "reel": 50,
+   "prevu": 46.4,
+   "ecart": 3.6
+  },
+  {
+   "duel": "Attaquant fond de court contre Gros serveur · toutes",
+   "n": 102,
+   "reel": 48,
+   "prevu": 51.4,
+   "ecart": -3.3
+  },
+  {
+   "duel": "Contreur / limeur contre Gros serveur · dur",
+   "n": 23,
+   "reel": 52.2,
+   "prevu": 51.3,
+   "ecart": 0.9
+  },
+  {
+   "duel": "Attaquant fond de court contre Contreur / limeur · terre",
+   "n": 33,
+   "reel": 51.5,
+   "prevu": 51.3,
+   "ecart": 0.2
+  }
+ ],
+ "stylesCouverts": 719
 }
