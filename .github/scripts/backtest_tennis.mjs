@@ -118,6 +118,7 @@ const out = await page.evaluate(async ({ AN, PAR_LIGUE }) => {
       const ex = { loc: (lA ? 1 : 0) - (lB ? 1 : 0), aA: AGE[cle] ? AGE[cle] - ans : null, aB: AGE[cB] ? AGE[cB] - ans : null, rd: r0,
         tA: tourBil(avant(H[cle]), r0), tB: tourBil(avant(H[cB]), r0), fA: tourBil(avant(H[cle]), 'Final'), fB: tourBil(avant(H[cB]), 'Final') };
       ex.nA = NOM[cle] || ''; ex.nB = NOM[cB] || m.an || '';
+      ex.cp = NAT[cle] && NAT[cle] === NAT[cB] ? (lA ? 2 : 1) : 0;   /* 20261022y (Bruno) : duel de deux compatriotes (2 = chez eux) */
       rows.push({ lg, sf: m.sf, t: m.t, w: m.w ? 1 : 0, cat: m.cat, f, ex });
     });
   }
@@ -194,6 +195,16 @@ res.styles = Object.entries(DU).filter(([k, o]) => o.n >= 15).map(([k, o]) => ({
   .sort((x, y) => Math.abs(y.ecart) - Math.abs(x.ecart));
 res.stylesCouverts = R.filter((r) => r.ex && stDe(r.lg, r.ex.nA) && stDe(r.lg, r.ex.nB)).length;
 console.log('\n===== STYLES (' + res.stylesCouverts + ' matchs avec 2 styles connus) =====\n' + res.styles.map((x) => x.duel + ' : réel ' + x.reel + ' % / prévu ' + x.prevu + ' % (écart ' + x.ecart + ', ' + x.n + ' matchs)').join('\n'));
+/* ── 20261022y (Bruno : « autre facteur important : le lieu, tout comme un duel de deux compatriotes ») : réel CONTRE ce que l'avis standard
+   prévoyait (le 52 % brut du joueur local ne tenait pas compte du niveau : beaucoup d'invités locaux sont outsiders). Écart > 0 = l'avis
+   sous-estime ce cas. Compatriotes : le FAVORI de l'avis gagne-t-il moins que prévu ? ── */
+const LC = { local: { n: 0, w: 0, pr: 0 }, localFav: { n: 0, w: 0, pr: 0 }, localOut: { n: 0, w: 0, pr: 0 }, compat: { n: 0, w: 0, pr: 0 }, compatLocal: { n: 0, w: 0, pr: 0 } };
+const ajLC = (o, w, pp) => { o.n++; o.w += w; o.pr += pp; };
+R.forEach((r) => { const e = r.ex || {}, p = prob(r, STD); if (p == null) return;
+  if (e.loc) { const w = e.loc > 0 ? r.w : 1 - r.w, pp = e.loc > 0 ? p : 1 - p; ajLC(LC.local, w, pp); ajLC(pp > 0.5 ? LC.localFav : LC.localOut, w, pp); }
+  if (e.cp && p !== 0.5) { const fw = (p > 0.5) === !!r.w ? 1 : 0, pm = Math.max(p, 1 - p); ajLC(LC.compat, fw, pm); if (e.cp === 2) ajLC(LC.compatLocal, fw, pm); } });
+res.lieuCompat = Object.fromEntries(Object.entries(LC).filter(([k, o]) => o.n).map(([k, o]) => [k, { n: o.n, reel: Math.round(o.w / o.n * 1000) / 10, prevu: Math.round(o.pr / o.n * 1000) / 10, ecart: Math.round((o.w - o.pr) / o.n * 1000) / 10 }]));
+console.log('\n===== LIEU / COMPATRIOTES (réel / prévu par l\'avis) =====\n' + Object.entries(res.lieuCompat).map(([k, x]) => k + ' : réel ' + x.reel + ' % / prévu ' + x.prevu + ' % (écart ' + x.ecart + ', ' + x.n + ' matchs)').join('\n'));
 /* ── 20261022l : CALIBRAGE — quand l'avis standard dit X % pour le favori, combien de fois le favori gagne-t-il vraiment ? (par tranche de 5 %) ── */
 const CAL = {};
 R.forEach((r) => { const p = prob(r, STD); if (p == null || p === 0.5) return; const pm = Math.max(p, 1 - p), fw = (p > 0.5) === !!r.w;

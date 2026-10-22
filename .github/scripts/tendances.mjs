@@ -152,6 +152,15 @@ try {
   console.log('tennis : ' + tennis.length + ' notées');
   tennis.forEach((x) => nouvelles.push(x));
 } catch (e) { console.log('tennis : erreur ' + (e && e.message)); }
+/* 20261022y — SUIVI DES DÉSACCORDS tennis BET45 / book (≥ 10 points) : liste à part J.dz (pas affichée comme tendance), un match noté une
+   fois, jugé plus bas avec les tendances (r = 1 si le joueur choisi par BET45 a gagné). Bilan à faire vers le 22/11. */
+J.dz = J.dz || [];
+try {
+  const dz = await page.evaluate(() => window._g45TnDz || []);
+  const vuDz = new Set(J.dz.map((x) => x.id));
+  dz.forEach((x) => { if (vuDz.has(x.id)) return; vuDz.add(x.id); x.n = new Date().toISOString(); J.dz.push(x); });
+  console.log('tennis désaccords BET45 / book : ' + dz.length + ' vus · ' + J.dz.length + ' suivis');
+} catch (e) { console.log('désaccords : erreur ' + (e && e.message)); }
 
 /* Ajout : une tendance (match + pari) n'est notée qu'UNE fois — la NFL lit 7 jours d'avance. */
 /* 20/10 (capture Bears–Patriots : « - de 48,5 », « - de 49,5 », « - de 50,5 » = « doublon voir triple dose ») : la ligne ESPN bouge d'un jour à
@@ -173,11 +182,12 @@ nouvelles.forEach((x) => { if (deja.has(x.id + '|' + x.k) || dejaFam.has(x.id + 
    20261017i (« avec des logos de club ou championnat ») : le même scoreboard donne aussi les logos → x.hl / x.al (clubs) et
    J.lg[sl] (championnat) ; une tendance encore sans logo (anciennes comprises) est relue une fois ('' = essayé, rien trouvé). */
 J.lg = J.lg || {};
-const att = J.t.filter((x) => x.r == null && x.t < Date.now() - 3 * 3600e3);
+const TJ = J.t.concat(J.dz || []);   // 20261022y : les désaccords tennis sont jugés avec les tendances
+const att = TJ.filter((x) => x.r == null && x.t < Date.now() - 3 * 3600e3);
 const sansLogo = J.t.filter((x) => x.r !== -1 && x.hl === undefined);
 const grp = {};
 att.forEach((x) => { if (Date.now() - x.t > 10 * 864e5) x.r = -1; });   // 10 jours sans score : abandonné
-J.t.filter((x) => (x.r == null && x.t < Date.now() - 3 * 3600e3) || (x.r !== -1 && x.hl === undefined)).forEach((x) => {
+TJ.filter((x) => (x.r == null && x.t < Date.now() - 3 * 3600e3) || (x.r !== -1 && x.hl === undefined)).forEach((x) => {
   const d = new Date(x.t), ymd = d.toISOString().slice(0, 10).replace(/-/g, '');
   (grp[x.sl + '|' + ymd] = grp[x.sl + '|' + ymd] || []).push(x);
 });
