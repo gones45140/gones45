@@ -71,6 +71,8 @@ serveur.listen(0, async () => {
         const C = _g45TnCalc([M(1, 'e1', 'Round 1 - Court 2', true), M(30, 'e0', 'Round 2', true), M(60, 'e9', 'Round 2', false), M(90, 'e8', 'Round 2 - Centre', true)], { sf: 'dur', ek: 'e1' });
         const C2 = _g45TnCalc([M(30, 'e0', 'Semifinal', true)], { sf: 'dur', ek: 'e5', rd: 'Semifinal' });
         o.tnTour = (C.rdCour === 'Round 2' && C.tourBil[0] === 2 && C.tourBil[1] === 3 && C2.rdCour === 'Semifinal' && C2.tourBil[1] === 1 && _G45_TN_STD.age === 3 && _G45_TN_STD.tour === 2) || JSON.stringify([C.rdCour, C.tourBil, C2.rdCour]); } catch (e) { o.tnTour = 'erreur : ' + e.message; }
+      try { const sj = window._g45TnStyleJ; window._g45TnStyleJ = { atp: { carlosalcaraz: ['Carlos Alcaraz', 'Polyvalent'] }, wta: {} };
+        o.tnStyle = (window._g45TnStyleDe('atp', 'Carlos Alcaraz') === 'Polyvalent' && window._g45TnStyleDe('wta', 'Carlos Alcaraz') === null && _G45_TN_STD.sty === 3) || 'style'; window._g45TnStyleJ = sj; } catch (e) { o.tnStyle = 'erreur : ' + e.message; }
       /* 20261022i : critères 4 saisons, onglet 👤 Joueurs des sports US (index g45_jou_v2_, présence, rôle, combien) */
       try { const C = window._g45Cr, ctx = { sp: 'football', lg: 'nfl', id: '14' };
         C.data['Rams T'] = { t: Date.now(), lg: 'nfl', ligue: 'NFL', saisons: [{ an: 2025, ms: [['2025-09-07', 1, 24, 10, 0, 0, 'e1'], ['2025-09-14', 0, 20, 27, 0, 0, 'e2'], ['2025-09-21', 1, 30, 7, 0, 0, 'e3']] }] };
@@ -1125,6 +1127,7 @@ serveur.listen(0, async () => {
     ok('Tennis : tournois en salle reconnus + contrecoup hors standard', r.salle === true, r.salle);
     ok('Tennis : âge + bilan au tour du match dans l\'avis', r.tnTour === true, r.tnTour);
     ok('Critères 4 saisons US : onglet Joueurs', r.crUs === true, r.crUs);
+    ok('Tennis : style de jeu (bonus polyvalent)', r.tnStyle === true, r.tnStyle);
     ok('Tendances officielles : octobre = période de test, hors totaux', r.trTest === true, r.trTest);
     ok('Tendances officielles : bilans par mois + total de l\'année', r.bilMois === true, r.bilMois);
     ok('Filtre joueur : 2 ou plus + combiné', r.jouMin === true, r.jouMin);
