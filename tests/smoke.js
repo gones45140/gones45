@@ -70,6 +70,13 @@ serveur.listen(0, async () => {
       try { const to = Date.parse('2026-10-15T12:00:00Z'), tn = Date.parse('2026-11-15T12:00:00Z');
         const c1 = _g45TrOffCalc([{ t: to, r: 1, c: 2 }, { t: tn, r: 1, c: 2 }]); window._g45TrTestOk = true; const c2 = _g45TrOffCalc([{ t: to, r: 1, c: 2 }]); window._g45TrTestOk = false;
         o.trTest = (c1.n === 1 && c2.n === 1 && _g45TrEnTest(to) && !_g45TrEnTest(tn) && _g45TrTestVoit() === true) || JSON.stringify({ a: c1.n, b: c2.n }); } catch (e) { o.trTest = 'erreur : ' + e.message; }
+      /* 20261022d : Bilans par mois */
+      try { const O = window._g45TrOff, sv = O.j, st = O.t, sm = O.mois, sj = O.jour, sb = O.bilOuv;
+        const T = (d, r, c) => ({ id: 'b' + d + r, sl: 'fra.1', t: Date.parse(d + 'T18:00:00Z'), h: 'A', a: 'B', m: 'Victoire A', k: '1', p: .6, c, d: 0, r });
+        O.j = { t: [T('2026-10-10', 1, 2), T('2026-11-03', 1, 2), T('2026-11-04', 0, 1.8), T('2026-12-02', 1, 1.6)] }; O.t = Date.now(); O.mois = '2026-11'; O.jour = null; O.bilOuv = true;
+        const HB = window._g45TrOffHtml().replace(/<[^>]+>/g, ' ');
+        O.j = sv; O.t = st; O.mois = sm; O.jour = sj; O.bilOuv = sb;
+        o.bilMois = (/Bilans par mois/.test(HB) && /Novembre/.test(HB) && /Décembre/.test(HB) && /Période de test/.test(HB) && /2 \/ 3 jugées/.test(HB)) || HB.slice(0, 500); } catch (e) { o.bilMois = 'erreur : ' + e.message; }
       o.state = typeof state !== 'undefined' && !!state;
       o.mur = !!document.querySelector('#t-dash, #dash, .g45-murcard, [id^="t-"]');
       /* Pari simple puis montante, sur un bookmaker approvisionné. */
@@ -1103,6 +1110,7 @@ serveur.listen(0, async () => {
     ok('Sélection du jour : celle de la veille gardée après minuit', r.selHier === true, r.selHier);
     ok('Tennis : tournois en salle reconnus + contrecoup hors standard', r.salle === true, r.salle);
     ok('Tendances officielles : octobre = période de test, hors totaux', r.trTest === true, r.trTest);
+    ok('Tendances officielles : bilans par mois + total de l\'année', r.bilMois === true, r.bilMois);
     ok('Filtre joueur : 2 ou plus + combiné', r.jouMin === true, r.jouMin);
     ok('Cotes en direct NBA (DraftKings - Live Odds)', r.cdNba === true, r.cdNba);
     ok('Mur : pari par lieu + club du joueur', r.ufLieu === true, r.ufLieu);
