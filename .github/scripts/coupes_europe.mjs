@@ -67,7 +67,11 @@ console.log('mois lus : ' + dbg + ' · matchs ESPN : ' + M.length + ' · avec le
 const tranche = (r) => (r < 1.5 ? '1 · moins de 1,5 fois' : (r < 2.5 ? '2 · 1,5 à 2,5 fois' : (r < 4 ? '3 · 2,5 à 4 fois' : (r < 7 ? '4 · 4 à 7 fois' : '5 · 7 fois et plus'))));
 const stat = (X) => { const n = X.length || 1, p = (f) => Math.round(X.filter(f).length / n * 1000) / 10;
   return { n: X.length, grosGagne: p((x) => x.gG > x.gP), nul: p((x) => x.gG === x.gP), petitGagne: p((x) => x.gG < x.gP), butsMoy: Math.round(X.reduce((s, x) => s + x.gG + x.gP, 0) / n * 100) / 100,
-    plus25: p((x) => x.gG + x.gP > 2.5), moins35: p((x) => x.gG + x.gP < 3.5), btts: p((x) => x.gG > 0 && x.gP > 0), grosSansEncaisser: p((x) => x.gP === 0), grosPar2: p((x) => x.gG - x.gP >= 2) }; };
+    plus25: p((x) => x.gG + x.gP > 2.5), moins35: p((x) => x.gG + x.gP < 3.5), btts: p((x) => x.gG > 0 && x.gP > 0), grosSansEncaisser: p((x) => x.gP === 0), grosPar2: p((x) => x.gG - x.gP >= 2),
+    /* 20261023o (« gros club contre plus petit : est-ce que la stat du gros club passe ? ») */
+    gros2buts: p((x) => x.gG >= 2), gros3buts: p((x) => x.gG >= 3), petitMarque: p((x) => x.gP >= 1), plus15: p((x) => x.gG + x.gP > 1.5), moins25: p((x) => x.gG + x.gP < 2.5),
+    grosGagneDom: (() => { const D = X.filter((x) => x.dom); return D.length ? Math.round(D.filter((x) => x.gG > x.gP).length / D.length * 1000) / 10 : null; })(),
+    grosGagneExt: (() => { const D = X.filter((x) => !x.dom); return D.length ? Math.round(D.filter((x) => x.gG > x.gP).length / D.length * 1000) / 10 : null; })() }; };
 const T = {}; L.forEach((x) => { (T[tranche(x.ratio)] = T[tranche(x.ratio)] || []).push(x); });
 const T2 = {}; L.forEach((x) => { (T2[tranche(x.ratio2)] = T2[tranche(x.ratio2)] || []).push(x); });
 res.tableau = Object.keys(T).sort().map((k) => Object.assign({ tranche: k }, stat(T[k])));
