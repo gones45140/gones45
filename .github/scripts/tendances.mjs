@@ -223,7 +223,7 @@ const ceAvis = (x) => {
   const grosDom = v(H) >= v(A), fa = Array.isArray(x.fa) ? x.fa : [];
   const fGros = fa.find((f) => (grosDom ? /à domicile/ : /à l'extérieur/).test(f));
   const m = fGros && /\((\d{1,3})\s*%\)/.exec(fGros), sg = m ? +m[1] / 100 : null;
-  const mini = { u35: 1.55, o25: 1.65, btts: 1.80 }[x.k];
+  const mini = { u35: 1.55, o25: 1.60, btts: 1.80 }[x.k];   // 20261023r : o25 1,65 → 1,60 (Antoine : « 1,6, voir ce que ça donne »)
   return Object.assign(res, { p, gros: grosDom ? 'h' : 'a', sg, ok: sg != null && sg >= 0.7 && x.c >= mini });
 };
 let nCe = 0;
