@@ -40,7 +40,7 @@
 ],
 "alejandrodavidovichfokina": [
 "Alejandro Davidovich Fokina",
-"Attaquant fond de court"
+"Polyvalent"
 ],
 "jirilehecka": [
 "Jiri Lehecka",
@@ -92,11 +92,11 @@
 ],
 "alexanderbublik": [
 "Alexander Bublik",
-"Serveur-volleyeur"
+"Attaquant fond de court"
 ],
 "franciscocerundolo": [
 "Francisco Cerundolo",
-"Attaquant fond de court"
+"Contreur / limeur"
 ],
 "andreyrublev": [
 "Andrey Rublev",
@@ -176,11 +176,11 @@
 ],
 "dinoprizmic": [
 "Dino Prizmic",
-"Gros serveur"
+"Attaquant fond de court"
 ],
 "thiagoagustintirante": [
 "Thiago Agustin Tirante",
-"Attaquant fond de court"
+"Contreur / limeur"
 ],
 "jaumemunar": [
 "Jaume Munar",
@@ -232,7 +232,7 @@
 ],
 "pablocarrenobusta": [
 "Pablo Carreno Busta",
-"Contreur / limeur"
+"Polyvalent"
 ],
 "sebastiankorda": [
 "Sebastian Korda",
@@ -248,7 +248,7 @@
 ],
 "ignaciobuse": [
 "Ignacio Buse",
-"Attaquant fond de court"
+"Contreur / limeur"
 ],
 "jackdraper": [
 "Jack Draper",
@@ -403,5 +403,406 @@
 "Attaquant fond de court"
 ]
 },
-"wta": {}
+"wta": {
+"arynasabalenka": [
+"Aryna Sabalenka",
+"Attaquant fond de court"
+],
+"elenarybakina": [
+"Elena Rybakina",
+"Gros serveur"
+],
+"cocogauff": [
+"Coco Gauff",
+"Polyvalent"
+],
+"jessicapegula": [
+"Jessica Pegula",
+"Polyvalent"
+],
+"igaswiatek": [
+"Iga Swiatek",
+"Contreur / limeur"
+],
+"lindanoskova": [
+"Linda Noskova",
+"Attaquant fond de court"
+],
+"mirraandreeva": [
+"Mirra Andreeva",
+"Polyvalent"
+],
+"martakostyuk": [
+"Marta Kostyuk",
+"Attaquant fond de court"
+],
+"elinasvitolina": [
+"Elina Svitolina",
+"Contreur / limeur"
+],
+"naomiosaka": [
+"Naomi Osaka",
+"Attaquant fond de court"
+],
+"karolinamuchova": [
+"Karolina Muchova",
+"Polyvalent"
+],
+"qinwenzheng": [
+"Qinwen Zheng",
+"Gros serveur"
+],
+"ivajovic": [
+"Iva Jovic",
+"Attaquant fond de court"
+],
+"belindabencic": [
+"Belinda Bencic",
+"Polyvalent"
+],
+"dianashnaider": [
+"Diana Shnaider",
+"Attaquant fond de court"
+],
+"soranacirstea": [
+"Sorana Cirstea",
+"Attaquant fond de court"
+],
+"amandaanisimova": [
+"Amanda Anisimova",
+"Attaquant fond de court"
+],
+"alexandraeala": [
+"Alexandra Eala",
+"Attaquant fond de court"
+],
+"elisemertens": [
+"Elise Mertens",
+"Polyvalent"
+],
+"sonaykartal": [
+"Sonay Kartal",
+"Attaquant fond de court"
+],
+"annakalinskaya": [
+"Anna Kalinskaya",
+"Attaquant fond de court"
+],
+"nikolabartunkova": [
+"Nikola Bartunkova",
+"Attaquant fond de court"
+],
+"emmanavarro": [
+"Emma Navarro",
+"Contreur / limeur"
+],
+"majachwalinska": [
+"Maja Chwalinska",
+"Contreur / limeur"
+],
+"mariebouzkova": [
+"Marie Bouzkova",
+"Contreur / limeur"
+],
+"victoriamboko": [
+"Victoria Mboko",
+"Attaquant fond de court"
+],
+"barborakrejcikova": [
+"Barbora Krejcikova",
+"Polyvalent"
+],
+"taylortownsend": [
+"Taylor Townsend",
+"Attaquant fond de court"
+],
+"madisonkeys": [
+"Madison Keys",
+"Gros serveur"
+],
+"ekaterinaalexandrova": [
+"Ekaterina Alexandrova",
+"Gros serveur"
+],
+"anastasiapotapova": [
+"Anastasia Potapova",
+"Attaquant fond de court"
+],
+"karolinapliskova": [
+"Karolina Pliskova",
+"Gros serveur"
+],
+"annli": [
+"Ann Li",
+"Attaquant fond de court"
+],
+"jelenaostapenko": [
+"Jelena Ostapenko",
+"Attaquant fond de court"
+],
+"leylahfernandez": [
+"Leylah Fernandez",
+"Polyvalent"
+],
+"mariasakkari": [
+"Maria Sakkari",
+"Attaquant fond de court"
+],
+"jasminepaolini": [
+"Jasmine Paolini",
+"Polyvalent"
+],
+"haileybaptiste": [
+"Hailey Baptiste",
+"Attaquant fond de court"
+],
+"liudmilasamsonova": [
+"Liudmila Samsonova",
+"Gros serveur"
+],
+"kristinaliutova": [
+"Kristina Liutova",
+"Attaquant fond de court"
+],
+"catymcnally": [
+"Caty Mcnally",
+"Attaquant fond de court"
+],
+"emmaraducanu": [
+"Emma Raducanu",
+"Polyvalent"
+],
+"katerinasiniakova": [
+"Katerina Siniakova",
+"Polyvalent"
+],
+"dariasnigur": [
+"Daria Snigur",
+"Contreur / limeur"
+],
+"alinakorneeva": [
+"Alina Korneeva",
+"Attaquant fond de court"
+],
+"sarabejlek": [
+"Sara Bejlek",
+"Contreur / limeur"
+],
+"paulabadosa": [
+"Paula Badosa",
+"Attaquant fond de court"
+],
+"jaquelinecristian": [
+"Jaqueline Cristian",
+"Contreur / limeur"
+],
+"katievolynets": [
+"Katie Volynets",
+"Contreur / limeur"
+],
+"elenagabrielaruse": [
+"Elena Gabriela Ruse",
+"Contreur / limeur"
+],
+"terezavalentova": [
+"Tereza Valentova",
+"Attaquant fond de court"
+],
+"varvaragracheva": [
+"Varvara Gracheva",
+"Contreur / limeur"
+],
+"ashlynkrueger": [
+"Ashlyn Krueger",
+"Attaquant fond de court"
+],
+"yuliaputintseva": [
+"Yulia Putintseva",
+"Contreur / limeur"
+],
+"mariatimofeeva": [
+"Maria Timofeeva",
+"Attaquant fond de court"
+],
+"xiyuwang": [
+"Xiyu Wang",
+"Attaquant fond de court"
+],
+"katieboulter": [
+"Katie Boulter",
+"Gros serveur"
+],
+"dianeparry": [
+"Diane Parry",
+"Attaquant fond de court"
+],
+"anastasiapavlyuchenkova": [
+"Anastasia Pavlyuchenkova",
+"Attaquant fond de court"
+],
+"dariakasatkina": [
+"Daria Kasatkina",
+"Contreur / limeur"
+],
+"viktorijagolubic": [
+"Viktorija Golubic",
+"Attaquant fond de court"
+],
+"zeynepsonmez": [
+"Zeynep Sonmez",
+"Attaquant fond de court"
+],
+"mccartneykessler": [
+"Mccartney Kessler",
+"Attaquant fond de court"
+],
+"camilaosorio": [
+"Camila Osorio",
+"Contreur / limeur"
+],
+"laurasiegemund": [
+"Laura Siegemund",
+"Attaquant fond de court"
+],
+"dayanayastremska": [
+"Dayana Yastremska",
+"Attaquant fond de court"
+],
+"xinyuwang": [
+"Xin Yu Wang",
+"Attaquant fond de court"
+],
+"donnavekic": [
+"Donna Vekic",
+"Attaquant fond de court"
+],
+"peytonstearns": [
+"Peyton Stearns",
+"Attaquant fond de court"
+],
+"claratauson": [
+"Clara Tauson",
+"Gros serveur"
+],
+"elisabettacocciaretto": [
+"Elisabetta Cocciaretto",
+"Contreur / limeur"
+],
+"magdalenafrech": [
+"Magdalena Frech",
+"Contreur / limeur"
+],
+"kaitlinquevedo": [
+"Kaitlin Quevedo",
+"Attaquant fond de court"
+],
+"anhelinakalinina": [
+"Anhelina Kalinina",
+"Attaquant fond de court"
+],
+"mayarsherif": [
+"Mayar Sherif",
+"Contreur / limeur"
+],
+"magdalinette": [
+"Magda Linette",
+"Attaquant fond de court"
+],
+"kimberlybirrell": [
+"Kimberly Birrell",
+"Attaquant fond de court"
+],
+"kamillarakhimova": [
+"Kamilla Rakhimova",
+"Attaquant fond de court"
+],
+"sinjakraus": [
+"Sinja Kraus",
+"Attaquant fond de court"
+],
+"robinmontgomery": [
+"Robin Montgomery",
+"Gros serveur"
+],
+"biancaandreescu": [
+"Bianca Andreescu",
+"Attaquant fond de court"
+],
+"lillitagger": [
+"Lilli Tagger",
+"Attaquant fond de court"
+],
+"mananchayasawangkaew": [
+"Mananchaya Sawangkaew",
+"Attaquant fond de court"
+],
+"alinacharaeva": [
+"Alina Charaeva",
+"Attaquant fond de court"
+],
+"tatjanamaria": [
+"Tatjana Maria",
+"Attaquant fond de court"
+],
+"janicetjen": [
+"Janice Tjen",
+"Attaquant fond de court"
+],
+"hannevandewinkel": [
+"Hanne Vandewinkel",
+"Attaquant fond de court"
+],
+"lanlanatararudee": [
+"Lanlana Tararudee",
+"Attaquant fond de court"
+],
+"ajlatomljanovic": [
+"Ajla Tomljanovic",
+"Attaquant fond de court"
+],
+"annabondar": [
+"Anna Bondar",
+"Attaquant fond de court"
+],
+"annablinkova": [
+"Anna Blinkova",
+"Attaquant fond de court"
+],
+"jessicabouzasmaneiro": [
+"Jessica Bouzas Maneiro",
+"Contreur / limeur"
+],
+"yuliiastarodubtseva": [
+"Yuliia Starodubtseva",
+"Attaquant fond de court"
+],
+"shuaizhang": [
+"Shuai Zhang",
+"Attaquant fond de court"
+],
+"leoliajeanjean": [
+"Leolia Jeanjean",
+"Attaquant fond de court"
+],
+"aliaksandrasasnovich": [
+"Aliaksandra Sasnovich",
+"Attaquant fond de court"
+],
+"sloanestephens": [
+"Sloane Stephens",
+"Polyvalent"
+],
+"claraburel": [
+"Clara Burel",
+"Attaquant fond de court"
+],
+"marystoiana": [
+"Mary Stoiana",
+"Attaquant fond de court"
+],
+"cristinabucsa": [
+"Cristina Bucsa",
+"Attaquant fond de court"
+]
+}
 }
