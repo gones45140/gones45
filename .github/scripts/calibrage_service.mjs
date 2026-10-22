@@ -46,7 +46,7 @@ for (const [lg, files, moyBr] of [['atp', ['leadersource.js', 'leadersource51.js
       o22Prevu: +(e.o22P / n).toFixed(3), o22Reel: +(e.o22R / n).toFixed(3), brier: +((e.br20 + e.br22 + e.brTb + e.brSet) / 4 / n).toFixed(4) };
   };
   const grille = [];
-  for (const d of [0, 0.02, 0.04, 0.06, 0.08, 0.1]) for (const k of [0.6, 0.8, 1, 1.2, 1.5]) grille.push(eval1(d, k));
+  for (const d of [0, 0.03, 0.06, 0.08, 0.1, 0.12, 0.15, 0.18]) for (const k of [1, 1.2, 1.5, 1.8, 2.2, 2.6, 3]) grille.push(eval1(d, k));
   grille.sort((x, y) => x.brier - y.brier);
   res[lg] = { actuel: eval1(0, 1), meilleur: grille[0], top5: grille.slice(0, 5) };
   console.log(lg + ' ACTUEL : ' + JSON.stringify(res[lg].actuel) + '\n' + lg + ' MEILLEUR : ' + JSON.stringify(res[lg].meilleur));
