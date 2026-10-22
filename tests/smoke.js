@@ -74,7 +74,7 @@ serveur.listen(0, async () => {
       try { const sj = window._g45TnStyleJ; window._g45TnStyleJ = { atp: { carlosalcaraz: ['Carlos Alcaraz', 'Polyvalent'] }, wta: {} };
         o.tnStyle = (window._g45TnStyleDe('atp', 'Carlos Alcaraz') === 'Polyvalent' && window._g45TnStyleDe('wta', 'Carlos Alcaraz') === null && _G45_TN_STD.sty === 3) || 'style'; window._g45TnStyleJ = sj; } catch (e) { o.tnStyle = 'erreur : ' + e.message; }
       try { var K = window._g45TnBk(0.58, 1.43, 2.65), K2 = window._g45TnBk(0.42, 2.65, 1.43), L = window._g45TnBkLigne(K, 'Brandon Nakashima', 'Kyrian Jacquet');
-        o.tnBk = (K.ec === -7 && K.mg === 8 && K2.vG === 11 && K.vX === 11 && window._g45TnBkVal(K) && !window._g45TnBkVal(window._g45TnBk(0.64, 1.56, 2.6)) && /Le book y croit plus/.test(L) && /Value Jacquet 2,65 \(\+11 %\)/.test(L)
+        o.tnBk = (K.ec === -7 && K.mg === 8 && K2.vG === 11 && K.vX === 11 && !window._g45TnBkVal(K) && /Le book y croit plus/.test(L) && !/Value/.test(L) && /Value Y 2,00 \(\+16 %, à confirmer\)/.test(window._g45TnBkLigne(window._g45TnBk(0.42, 1.5, 2.0), 'X', 'Y'))
           && /pas encore de cote/.test(window._g45TnBkLigne(null)) && window._g45TnBk(0.6, 1, 2) === null) || JSON.stringify([K, K2]); } catch (e) { o.tnBk = 'erreur : ' + e.message; }
       try { var PP = []; for (var q = 0; q <= 200; q++) PP.push({ km: q * 0.45, alt: 40 + (q % 20 < 2 ? 60 : 0), sl: 0 });
         var ST = _g45RcProfStats(PP), SV = _g45RcSVG2(PP, []);
@@ -94,6 +94,11 @@ serveur.listen(0, async () => {
         var e2 = function (t) { return t; }, H1 = window._g45TnEloRangHtml('atp', 'Novak Djokovic', e2), H2 = window._g45TnEloRangHtml('atp', 'Flavio Cobolli', e2);
         o.tnRang = (/meilleur que son classement ATP/.test(H1) && /flatteur/.test(H2) && window._g45TnEloRang('atp', 'Flavio Cobolli').ld === 1.5 && window._g45TnEloRangHtml('atp', 'Tommy Paul', e2) === '' && window._g45TnEloRang('atp', 'Inconnu') === null) || 'rang';
         window._g45TnEloJ = EJ; } catch (e) { o.tnRang = 'erreur : ' + e.message; }
+      try { var R1 = window._g45TnSvSim(0.8, 0.8, 2), R2 = window._g45TnSvSim(0.92, 0.9, 2), R3 = window._g45TnSvSim(0.85, 0.65, 2);
+        var SJ = window._g45TnSvJ; window._g45TnSvJ = { atp: { a: { nom: 'A', t: { n: 20, tg: 88, br: 20 }, Hard: { n: 3, tg: 90, br: 15 } } } };
+        var SD = window._g45TnSvDe('atp', 'A', 'dur'); window._g45TnSvJ = SJ;
+        o.tnSv = (R2.tb > R1.tb && R1.tb > R3.tb && R2.jx > R3.jx && Math.abs(R1.setA - R1.setB) < 1e-6 && R3.setA > R3.setB && SD.s.n === 20 && !SD.sfOk
+          && window._g45TnBkVal({ vG: 10, cG: 2.0, vX: 0, cX: 1.8 }) && !window._g45TnBkVal({ vG: 10, cG: 3.2, vX: 0, cX: 1.3 })) || JSON.stringify([R1, R2, R3]); } catch (e) { o.tnSv = 'erreur : ' + e.message; }
       /* 20261022i : critères 4 saisons, onglet 👤 Joueurs des sports US (index g45_jou_v2_, présence, rôle, combien) */
       try { const C = window._g45Cr, ctx = { sp: 'football', lg: 'nfl', id: '14' };
         C.data['Rams T'] = { t: Date.now(), lg: 'nfl', ligue: 'NFL', saisons: [{ an: 2025, ms: [['2025-09-07', 1, 24, 10, 0, 0, 'e1'], ['2025-09-14', 0, 20, 27, 0, 0, 'e2'], ['2025-09-21', 1, 30, 7, 0, 0, 'e3']] }] };
@@ -1173,6 +1178,7 @@ serveur.listen(0, async () => {
     ok('Tennis : bilan par surface et période (8 tournées)', r.tnPer === true, r.tnPer);
     ok('Tennis : vitesse des courts (rapprochement ville / nom, classes)', r.tnVit === true, r.tnVit);
     ok('Tennis : rang Elo / rang ATP (classement flatteur ou non)', r.tnRang === true, r.tnRang);
+    ok('Tennis : service / retour (simulation tie-break, jeux) + value 1,50-2,50', r.tnSv === true, r.tnSv);
     ok('Curseurs US : onglets Quart-temps / Contexte', r.sgQt === true, r.sgQt);
     ok('Curseurs NFL : onglet TD / FG', r.sgTd === true, r.sgTd);
     ok('Tendances officielles : octobre = période de test, hors totaux', r.trTest === true, r.trTest);
