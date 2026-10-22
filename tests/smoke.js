@@ -66,6 +66,10 @@ serveur.listen(0, async () => {
       /* 20261022b : tournois en salle reconnus, contrecoup hors avis standard */
       try { o.salle = (window._g45TnSurf('Swiss Indoors Basel', false) === 'salle' && window._g45TnSurf('Rolex Paris Masters', false) === 'salle' && window._g45TnSurf('Rolex Shanghai Masters', false) === 'dur'
         && window._g45TnSurf('Porsche Tennis Grand Prix', true) === 'terre' && window._G45_TN_STD.prec === 0) || 'surfaces : ' + window._g45TnSurf('Swiss Indoors Basel', false); } catch (e) { o.salle = 'erreur : ' + e.message; }
+      /* 20261022c : octobre 2026 = période de test (hors totaux) */
+      try { const to = Date.parse('2026-10-15T12:00:00Z'), tn = Date.parse('2026-11-15T12:00:00Z');
+        const c1 = _g45TrOffCalc([{ t: to, r: 1, c: 2 }, { t: tn, r: 1, c: 2 }]); window._g45TrTestOk = true; const c2 = _g45TrOffCalc([{ t: to, r: 1, c: 2 }]); window._g45TrTestOk = false;
+        o.trTest = (c1.n === 1 && c2.n === 1 && _g45TrEnTest(to) && !_g45TrEnTest(tn) && _g45TrTestVoit() === true) || JSON.stringify({ a: c1.n, b: c2.n }); } catch (e) { o.trTest = 'erreur : ' + e.message; }
       o.state = typeof state !== 'undefined' && !!state;
       o.mur = !!document.querySelector('#t-dash, #dash, .g45-murcard, [id^="t-"]');
       /* Pari simple puis montante, sur un bookmaker approvisionné. */
@@ -1098,6 +1102,7 @@ serveur.listen(0, async () => {
     ok('Tennis : mes coefficients + surface 2 mois + tournoi précédent', r.tnCoef === true, r.tnCoef);
     ok('Sélection du jour : celle de la veille gardée après minuit', r.selHier === true, r.selHier);
     ok('Tennis : tournois en salle reconnus + contrecoup hors standard', r.salle === true, r.salle);
+    ok('Tendances officielles : octobre = période de test, hors totaux', r.trTest === true, r.trTest);
     ok('Filtre joueur : 2 ou plus + combiné', r.jouMin === true, r.jouMin);
     ok('Cotes en direct NBA (DraftKings - Live Odds)', r.cdNba === true, r.cdNba);
     ok('Mur : pari par lieu + club du joueur', r.ufLieu === true, r.ufLieu);
