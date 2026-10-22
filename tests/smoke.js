@@ -61,7 +61,7 @@ serveur.listen(0, async () => {
         O.j = { t: [{ id: '77', sl: 'nba', t: Date.now() + 3600e3, n: hier.toISOString(), h: 'Wizards', a: 'Bucks', m: '- de 239,5 points', k: 'U239.5', p: .71, c: 1.81, d: 0, r: null }] }; O.t = Date.now();
         const HS = window._g45TrSelHtml();
         O.j = sv; O.t = st;
-        o.selHier = (new Date().getHours() < 15 ? (/Wizards/.test(HS) && /Choisie hier/.test(HS)) : !/Wizards/.test(HS)) || HS.replace(/<[^>]+>/g, ' ').slice(0, 300);
+        o.selHier = (new Date().getHours() < 15 ? (/Wizards/.test(HS) && /Choisie hier/.test(HS) && /g45sel-m/.test(HS) && /WIZ|BUC/.test(HS)) : !/Wizards/.test(HS)) || HS.replace(/<[^>]+>/g, ' ').slice(0, 300);
       } catch (e) { o.selHier = 'erreur : ' + e.message; }
       /* 20261022b : tournois en salle reconnus, contrecoup hors avis standard */
       try { o.salle = (window._g45TnSurf('Swiss Indoors Basel', false) === 'salle' && window._g45TnSurf('Rolex Paris Masters', false) === 'salle' && window._g45TnSurf('Rolex Shanghai Masters', false) === 'dur'
