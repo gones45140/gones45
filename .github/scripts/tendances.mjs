@@ -35,12 +35,12 @@ const FAUX_INIT = process.env.FAUX_INIT ? fs.readFileSync(process.env.FAUX_INIT,
 /* 20261018k (capture d'Antoine, filtres Cote 1,50-2,19 + Proba 60 % et + + Avis « D'accord » : « la demande de 10 h doit être celle-là ») :
    proba mini 60 %, cote CONNUE ≥ 1,50 (sans cote = pas noté), stats et bookmakers d'accord (désaccord = pas noté). */
 const REGLAGES = { min: 1.5, pmin: 0.6, coteConnue: true, accord: true };
-/* 20261022b (nuit du 21 au 22/10 : 1 seul gagné sur 5 en NBA, saison reprise 2 jours avant — stats surtout de la saison PASSÉE, « moins
-   de X points » qui sautent ; « oui » d'Antoine) : PAS de NBA dans la sélection officielle du 1er octobre au 14 novembre (≈ 8 matchs joués
-   par équipe). Les tendances perso NBA de l'appli ne changent pas. */
+/* 20261022b (nuit du 21 au 22/10 : 1 seul gagné sur 5 en NBA, saison reprise 2 jours avant — stats surtout de la saison PASSÉE ; les
+   « moins de X points » ont sauté ; Antoine : « NBA mets juste pas les pts ») : du 1er octobre au 14 novembre (≈ 8 matchs joués par équipe),
+   la NBA reste dans la sélection officielle SANS les marchés de points (+ / - de X points) ; vainqueur et handicap gardés. */
 const NBA_PAUSE = (() => { const d = new Date(), m = d.getUTCMonth() + 1; return m === 10 || (m === 11 && d.getUTCDate() < 15); })();
-const SPORTS = ['foot', 'hockey', 'nba', 'nfl'].filter((s) => !(s === 'nba' && NBA_PAUSE));
-if (NBA_PAUSE) console.log('NBA en pause (début de saison) jusqu\'au 15/11.');
+const SPORTS = ['foot', 'hockey', 'nba', 'nfl'];
+if (NBA_PAUSE) console.log('NBA : pas de marchés de points (début de saison) jusqu\'au 15/11.');
 const FORCE = process.env.FORCE === '1';
 
 const parisH = () => Number(new Intl.DateTimeFormat('en-GB', { timeZone: 'Europe/Paris', hour: '2-digit', hourCycle: 'h23' }).formatToParts(new Date()).find((x) => x.type === 'hour').value);
@@ -100,7 +100,7 @@ if (FAUX_INIT) await page.addInitScript(FAUX_INIT);
 await page.goto(SITE + '?robot=' + Date.now(), { waitUntil: 'load', timeout: 90000 });
 await page.waitForTimeout(6000);
 
-const nouvelles = await page.evaluate(async ({ R, SPORTS }) => {
+const nouvelles = await page.evaluate(async ({ R, SPORTS, NBA_PAUSE }) => {
   const pris = [];
   const orig = window._g45TrSuivNoter;
   window._g45TrSuivNoter = function (liste) { (liste || []).forEach((x) => pris.push(x)); try { return orig.apply(this, arguments); } catch (e) {} };
@@ -124,6 +124,7 @@ const nouvelles = await page.evaluate(async ({ R, SPORTS }) => {
         if (!x || !x.m || !x.id || !x.d) return;
         if (R.coteConnue && !(x.m.cote >= R.min)) return;   // 20261018k : sans cote = pas noté
         if (R.accord && x.m.desac) return;                   // 20261018k : désaccord stats / bookmakers = pas noté
+        if (sp === 'nba' && NBA_PAUSE && /de [\d,.]+ points/i.test(String(x.m.m || ''))) return;   // 20261022b : NBA sans points en début de saison
         const k = _g45TrSuivType(x.m.m, x.hN, x.aN); if (!k) return;
         const cle = x.id + '|' + k; if (vu[cle]) return; vu[cle] = 1;
         const t = Date.parse(x.d); if (isNaN(t) || t < Date.now()) return;   // match déjà commencé : pas noté
@@ -141,7 +142,7 @@ const nouvelles = await page.evaluate(async ({ R, SPORTS }) => {
     } catch (e) { console.log(sp + ' : erreur ' + (e && e.message)); }
   }
   return sortie;
-}, { R: REGLAGES, SPORTS });
+}, { R: REGLAGES, SPORTS, NBA_PAUSE });
 
 /* 20261020l — 🎾 TENNIS OFFICIEL (« OK combiné ») : _g45TnRobot (app.js) choisit les simples ATP / WTA du jour où l'avis BET45 est en
    confiance FORTE et proba ≥ 60 % ; cote The Odds API seulement en Grand Chelem (mêmes filtres que les autres sports si elle existe),
