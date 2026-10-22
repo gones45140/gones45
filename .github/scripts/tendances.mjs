@@ -199,17 +199,22 @@ const ceClub = (nom, t) => {
 const ceAvis = (x) => {
   const T = (CE && CE.tableau2saisons) || []; const n = T.reduce((s2, z) => s2 + z.n, 0); if (n < 300) return null;
   const moy = (f) => T.reduce((s2, z) => s2 + z[f] * z.n, 0) / n / 100;
+  const H = ceClub(x.h, x.t), A = ceClub(x.a, x.t);
+  /* 20261023n (Antoine : « Barça – PSG ou Arsenal – Bayern, il n'y a pas lieu d'enlever ; Lille – Gala, c'est quasi le même niveau ») :
+     MÊME STANDING = écart de coefficient 5 saisons < 2,5 fois (coefficient = max(total du club, part du pays), règle UEFA) → les paris sur le
+     VAINQUEUR restent soumis aux règles habituelles (stats + books). Barça – PSG 1,2 · Arsenal – Bayern 1,2 · Lille – Galatasaray 1,3. */
+  const v = (c) => Math.max(c[2], c[4], 1), ratio = H && A ? Math.max(v(H) / v(A), v(A) / v(H)) : null;
+  const res = { ratio: ratio ? Math.round(ratio * 10) / 10 : null, n };
+  if (/^(1|2|1N|2N)$/.test(x.k)) return ratio != null && ratio < 2.5 ? Object.assign(res, { p: null, meme: true }) : null;
   const p = { u35: moy('moins35'), o25: moy('plus25'), btts: moy('btts') }[x.k];
-  if (p == null) return null;
-  const H = ceClub(x.h, x.t), A = ceClub(x.a, x.t), ratio = H && A ? Math.max(H[3], 0.5) / Math.max(A[3], 0.5) : null;
-  return { p, ratio: ratio ? Math.round(Math.max(ratio, 1 / ratio) * 10) / 10 : null, n };
+  return p == null ? null : Object.assign(res, { p });
 };
 let nCe = 0;
 nouvelles.forEach((x) => {
   if (deja.has(x.id + '|' + x.k) || dejaFam.has(x.id + '|' + fam(x.k))) return;
   if (/^uefa\./.test(x.sl)) {
     const av = ceAvis(x); x.pe = av ? Math.round(av.p * 1000) / 1000 : null; x.ecu = av ? av.ratio : null;
-    if (!(av && x.c > 1 && x.c * av.p >= 1.05)) { deja.add(x.id + '|' + x.k); if (!J.ce.some((y) => y.id === x.id && y.k === x.k)) { x.n = note; J.ce.push(x); nCe++; } return; }
+    if (!(av && (av.meme || (x.c > 1 && x.c * av.p >= 1.05)))) { deja.add(x.id + '|' + x.k); if (!J.ce.some((y) => y.id === x.id && y.k === x.k)) { x.n = note; J.ce.push(x); nCe++; } return; }
   }
   deja.add(x.id + '|' + x.k); x.n = note; J.t.push(x); ajout++;
 });
