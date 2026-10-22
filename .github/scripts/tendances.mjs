@@ -188,9 +188,15 @@ const ceToks = (s) => String(s || '').normalize('NFD').replace(/[\u0300-\u036f]/
   .filter((t) => t && !/^(fc|afc|cf|sc|ac|as|sk|fk|nk|ss|us|sv|vfb|vfl|tsg|club|de|cd|rc|rcd|ud|sl|sad|calcio|football|futbol|clube|the|bk|if|ik|jk|ks|pfc|rb|1|1899|1909|05|04)$/.test(t))
   .map((t) => ({ munchen: 'munich', internazionale: 'inter', milano: 'milan', lisboa: 'lisbon', koln: 'cologne', praha: 'prague', beograd: 'belgrade', crvena: 'red', zvezda: 'star', sankt: 'st' }[t] || t));
 const ceClub = (nom, t) => {
-  const d = new Date(t), y = d.getUTCMonth() >= 6 ? d.getUTCFullYear() : d.getUTCFullYear() - 1, C = (CE && CE.clubs && (CE.clubs[y] || CE.clubs[y - 1])) || {}, tk = ceToks(nom);
-  let best = null, bs = 0; for (const k of Object.keys(C)) { const u = k.split(' '), sc = tk.filter((x) => u.includes(x)).length / Math.max(tk.length, u.length); if (sc > bs) { bs = sc; best = C[k]; } }
-  return bs >= 0.5 ? best : null;
+  /* 20261023q : kassiesa trank{Y} = clubs de la saison (Y-1)/Y → un match d'octobre 2026 se lit dans 2027 (Palace, Bournemouth, Hoffenheim
+     n'étaient pas dans 2026 : « club inconnu » à tort), puis les années d'avant pour un club absent cette saison. */
+  const d = new Date(t), y = d.getUTCMonth() >= 6 ? d.getUTCFullYear() : d.getUTCFullYear() - 1, tk = ceToks(nom);
+  for (const yy of [y + 1, y, y - 1]) {
+    const C = (CE && CE.clubs && CE.clubs[yy]) || {};
+    let best = null, bs = 0; for (const k of Object.keys(C)) { const u = k.split(' '), sc = tk.filter((x) => u.includes(x)).length / Math.max(tk.length, u.length); if (sc > bs) { bs = sc; best = C[k]; } }
+    if (bs >= 0.5) return best;
+  }
+  return null;
 };
 /* Essai sur les matchs du 22/10 : beaucoup de clubs absents ou mal reconnus (Lyon = « Olympique Lyonnais », Bournemouth jamais en coupe
    d'Europe → pas de coefficient) et, pour le VAINQUEUR, la tranche d'écart est trop grossière (Bayern – Bruges : 48 %). Or le tableau montre
@@ -207,18 +213,29 @@ const ceAvis = (x) => {
   const res = { ratio: ratio ? Math.round(ratio * 10) / 10 : null, n };
   if (/^(1|2|1N|2N)$/.test(x.k)) return ratio != null && ratio < 2.5 ? Object.assign(res, { p: null, meme: true }) : null;
   const p = { u35: moy('moins35'), o25: moy('plus25'), btts: moy('btts') }[x.k];
-  return p == null ? null : Object.assign(res, { p });
+  if (p == null) return null;
+  /* 20261023q — STAT DU GROS CLUB (Antoine : « gros club contre plus petit, est-ce que la stat du gros club passe ? » ; tableau 515 matchs :
+     stat du gros club ≥ 70 % → − de 3,5 buts 68 % (petit club 62 %), + de 2,5 buts 64 %, les 2 marquent 59 % ; « oui ») : un marché de buts
+     n'est OFFICIEL que si le club au plus gros coefficient UEFA (5 saisons) est reconnu, que SA stat de championnat (fait de la carte,
+     « Club : … (NN%) », à domicile ou à l'extérieur selon son côté) est ≥ 70 % et que la cote atteint le minimum juste pour ce taux réel :
+     − de 3,5 buts 1,55 · + de 2,5 buts 1,65 · les 2 marquent 1,80. Sinon → 🧪 test (J.ce). */
+  if (!(H && A)) return Object.assign(res, { p, gros: null });
+  const grosDom = v(H) >= v(A), fa = Array.isArray(x.fa) ? x.fa : [];
+  const fGros = fa.find((f) => (grosDom ? /à domicile/ : /à l'extérieur/).test(f));
+  const m = fGros && /\((\d{1,3})\s*%\)/.exec(fGros), sg = m ? +m[1] / 100 : null;
+  const mini = { u35: 1.55, o25: 1.65, btts: 1.80 }[x.k];
+  return Object.assign(res, { p, gros: grosDom ? 'h' : 'a', sg, ok: sg != null && sg >= 0.7 && x.c >= mini });
 };
 let nCe = 0;
 nouvelles.forEach((x) => {
   if (deja.has(x.id + '|' + x.k) || dejaFam.has(x.id + '|' + fam(x.k))) return;
   if (/^uefa\./.test(x.sl)) {
-    const av = ceAvis(x); x.pe = av ? Math.round(av.p * 1000) / 1000 : null; x.ecu = av ? av.ratio : null;
-    if (!(av && (av.meme || (x.c > 1 && x.c * av.p >= 1.05)))) { deja.add(x.id + '|' + x.k); if (!J.ce.some((y) => y.id === x.id && y.k === x.k)) { x.n = note; J.ce.push(x); nCe++; } return; }
+    const av = ceAvis(x); x.pe = av ? Math.round(av.p * 1000) / 1000 : null; x.ecu = av ? av.ratio : null; x.sg = av && av.sg != null ? av.sg : undefined;
+    if (!(av && (av.meme || av.ok))) { deja.add(x.id + '|' + x.k); if (!J.ce.some((y) => y.id === x.id && y.k === x.k)) { x.n = note; J.ce.push(x); nCe++; } return; }
   }
   deja.add(x.id + '|' + x.k); x.n = note; J.t.push(x); ajout++;
 });
-console.log('coupes d\'Europe → test (cote × % européen < 1,05 ou inconnu) : ' + nCe + ' · suivies ' + J.ce.length);
+console.log('coupes d\'Europe → test (stat du gros club < 70 %, cote trop basse ou club inconnu) : ' + nCe + ' · suivies ' + J.ce.length);
 
 /* Vérification des matchs finis (score final), par ligue et par jour.
    20261017i (« avec des logos de club ou championnat ») : le même scoreboard donne aussi les logos → x.hl / x.al (clubs) et
