@@ -50,7 +50,7 @@ for (const lg of ['uefa.champions', 'uefa.europa', 'uefa.europa.conf']) {
         if (!dbg++) console.log('ESPN essai : ' + u + ' → ' + String(brut).length + ' octets');
         (B.events || []).forEach((e) => { const c = (e.competitions || [])[0] || {}; if (!((c.status || {}).type || {}).completed) return;
           const h = (c.competitors || []).find((q) => q.homeAway === 'home'), a = (c.competitors || []).find((q) => q.homeAway === 'away'); if (!h || !a) return;
-          M.push({ lg, y, h: h.team.displayName, a: a.team.displayName, sh: +h.score, sa: +a.score }); });
+          M.push({ lg, y, h: h.team.displayName, a: a.team.displayName, hi: String(h.team.id), ai: String(a.team.id), d: e.date, sh: +h.score, sa: +a.score }); });
       }));
     }
   }
@@ -62,7 +62,7 @@ M.forEach((m) => { const k = m.lg + m.h + m.a + m.y + m.sh + m.sa; if (vu.has(k)
   const vH = Math.max(H[2], H[4], 1), vA = Math.max(A[2], A[4], 1), r2H = Math.max(H[3], 0.5), r2A = Math.max(A[3], 0.5);
   const grosDom = vH >= vA, ratio = grosDom ? vH / vA : vA / vH, ratio2 = grosDom ? r2H / r2A : r2A / r2H;
   const gG = grosDom ? m.sh : m.sa, gP = grosDom ? m.sa : m.sh;
-  L.push({ lg: m.lg, ratio, ratio2, dom: grosDom, gG, gP }); });
+  L.push({ lg: m.lg, ratio, ratio2, dom: grosDom, gG, gP, m }); });
 console.log('mois lus : ' + dbg + ' · matchs ESPN : ' + M.length + ' · avec les deux coefficients : ' + L.length + ' · sans : ' + sansCoef);
 const tranche = (r) => (r < 1.5 ? '1 · moins de 1,5 fois' : (r < 2.5 ? '2 · 1,5 à 2,5 fois' : (r < 4 ? '3 · 2,5 à 4 fois' : (r < 7 ? '4 · 4 à 7 fois' : '5 · 7 fois et plus'))));
 const stat = (X) => { const n = X.length || 1, p = (f) => Math.round(X.filter(f).length / n * 1000) / 10;
@@ -79,4 +79,61 @@ res.tableau2saisons = Object.keys(T2).sort().map((k) => Object.assign({ tranche:
 res.parCoupe = ['uefa.champions', 'uefa.europa', 'uefa.europa.conf'].map((lg) => ({ lg, tableau: Object.keys(T).sort().map((k) => Object.assign({ tranche: k }, stat(T[k].filter((x) => x.lg === lg)))) }));
 console.log('\n===== ÉCART 5 SAISONS =====\n' + res.tableau.map((x) => JSON.stringify(x)).join('\n'));
 console.log('\n===== ÉCART 2 DERNIÈRES SAISONS =====\n' + res.tableau2saisons.map((x) => JSON.stringify(x)).join('\n'));
+/* ── 20261023q (« gros club contre plus petit : en prenant juste la stat du gros club, est-ce que ça passe ? » → « go ») ──
+   Pour chaque match de coupe d'Europe : la stat de CHAMPIONNAT de chaque club juste AVANT le match, comme celle des tendances
+   (7 derniers matchs à domicile pour le club qui reçoit, 7 derniers à l'extérieur pour l'autre ; − de 3,5 / + de 2,5 / + de 1,5 buts,
+   les deux marquent), puis : la stat du GROS club seule, du PETIT seule, la MOYENNE des deux (≈ aujourd'hui) → laquelle prédit le mieux ?
+   Calendrier ESPN des clubs : adresses ESSAYÉES (journal) — soccer/all/teams/<id>/schedule?season=, sinon la ligue par défaut du club. */
+const CAL = {}; let essai = 0;
+const jsonDe = async (u) => { try { return JSON.parse(await curlEspn(u)); } catch (e) { return null; } };
+const calDe = async (id, saison) => {
+  const k = id + '|' + saison; if (CAL[k]) return CAL[k];
+  let ev = [];
+  for (const u of ['https://site.api.espn.com/apis/site/v2/sports/soccer/all/teams/' + id + '/schedule?season=' + saison]) {
+    const B = await jsonDe(u); ev = (B && B.events) || []; if (essai++ < 2) console.log('calendrier essai ' + u + ' → ' + ev.length + ' matchs');
+    if (ev.length) break;
+  }
+  if (!ev.length) {
+    const T = await jsonDe('https://site.api.espn.com/apis/site/v2/sports/soccer/uefa.europa/teams/' + id), dl = T && T.team && T.team.defaultLeague, slug = dl && (dl.slug || dl.abbreviation);
+    if (essai++ < 4) console.log('ligue par défaut ' + id + ' → ' + JSON.stringify(dl || null).slice(0, 200));
+    if (slug && !/^uefa/.test(slug)) { const B = await jsonDe('https://site.api.espn.com/apis/site/v2/sports/soccer/' + slug + '/teams/' + id + '/schedule?season=' + saison); ev = (B && B.events) || []; }
+  }
+  const out = [];
+  ev.forEach((e) => { const c = (e.competitions || [])[0] || {}, lgS = String((e.league && e.league.slug) || (c.league && c.league.slug) || ((e.season || {}).slug) || '');
+    if (/uefa|cup|coupe|copa|pokal|fa\.|friendly|club\.friendly/i.test(lgS + ' ' + ((e.league && e.league.name) || ''))) return;
+    if (!((c.status || {}).type || {}).completed) return;
+    const me = (c.competitors || []).find((q) => String((q.team || {}).id) === id), op = (c.competitors || []).find((q) => String((q.team || {}).id) !== id); if (!me || !op) return;
+    const sc = (q) => { const v = q.score; return typeof v === 'object' && v ? +(v.value != null ? v.value : v.displayValue) : +v; };
+    const g1 = sc(me), g2 = sc(op); if (isNaN(g1) || isNaN(g2)) return;
+    out.push({ t: Date.parse(e.date), dom: me.homeAway === 'home', bm: g1, be: g2 }); });
+  out.sort((a, b) => b.t - a.t); CAL[k] = out; return out;
+};
+const MARCHES = { u35: (b, c) => b + c < 3.5, o25: (b, c) => b + c > 2.5, o15: (b, c) => b + c > 1.5, btts: (b, c) => b > 0 && c > 0 };
+const R2 = []; let lus = 0;
+for (let i = 0; i < L.length; i += 6) {
+  await Promise.all(L.slice(i, i + 6).map(async (x) => {
+    const m = x.m, t = Date.parse(m.d); if (!m.hi || !t) return;
+    const saison = new Date(t).getUTCMonth() >= 6 ? new Date(t).getUTCFullYear() : new Date(t).getUTCFullYear() - 1;
+    const cH = (await calDe(m.hi, saison)).concat(await calDe(m.hi, saison - 1)), cA = (await calDe(m.ai, saison)).concat(await calDe(m.ai, saison - 1));
+    const dH = cH.filter((z) => z.t < t - 36e5 && z.dom).slice(0, 7), dA = cA.filter((z) => z.t < t - 36e5 && !z.dom).slice(0, 7);
+    if (dH.length < 5 || dA.length < 5) return; lus++;
+    const o = { gros: x.dom ? 'h' : 'a', ratio: x.ratio };
+    for (const [mk, f] of Object.entries(MARCHES)) o[mk] = { h: dH.filter((z) => f(z.bm, z.be)).length / dH.length, a: dA.filter((z) => f(z.bm, z.be)).length / dA.length, r: f(m.sh, m.sa) ? 1 : 0 };
+    R2.push(o);
+  }));
+}
+console.log('matchs avec les stats de championnat des deux clubs : ' + lus);
+const evalM = (mk, filtre) => {
+  const X = R2.filter(filtre || (() => true)), n = X.length; if (n < 20) return { n };
+  const br = (f) => Math.round(X.reduce((s2, o) => s2 + (f(o) - o[mk].r) ** 2, 0) / n * 10000) / 10000;
+  const gros = (o) => (o.gros === 'h' ? o[mk].h : o[mk].a), petit = (o) => (o.gros === 'h' ? o[mk].a : o[mk].h), moy = (o) => (o[mk].h + o[mk].a) / 2;
+  const reel = Math.round(X.reduce((s2, o) => s2 + o[mk].r, 0) / n * 1000) / 10;
+  const qd = (f, seuil) => { const Y = X.filter((o) => f(o) >= seuil); return { n: Y.length, reussite: Y.length ? Math.round(Y.reduce((s2, o) => s2 + o[mk].r, 0) / Y.length * 1000) / 10 : null }; };
+  return { n, reel, brierGros: br(gros), brierPetit: br(petit), brierMoyenne: br(moy), brierConstant: br(() => reel / 100),
+    gros70: qd(gros, 0.7), petit70: qd(petit, 0.7), moyenne70: qd(moy, 0.7), lesDeux70: (() => { const Y = X.filter((o) => gros(o) >= 0.7 && petit(o) >= 0.7); return { n: Y.length, reussite: Y.length ? Math.round(Y.reduce((s2, o) => s2 + o[mk].r, 0) / Y.length * 1000) / 10 : null }; })() };
+};
+res.statGrosClub = {};
+for (const mk of Object.keys(MARCHES)) res.statGrosClub[mk] = { tous: evalM(mk), grosEcart: evalM(mk, (o) => o.ratio >= 2.5), memeNiveau: evalM(mk, (o) => o.ratio < 2.5) };
+console.log('\n===== STAT DU GROS CLUB SEULE ? =====\n' + JSON.stringify(res.statGrosClub, null, 1));
+L.forEach((x) => { delete x.m; });
 fs.writeFileSync('données/coupes_europe.json', JSON.stringify(res));
