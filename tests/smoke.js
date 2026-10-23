@@ -495,6 +495,29 @@ serveur.listen(0, async () => {
         o.tsdbw = (a === 'worker' && b === 'direct' && c === 'direct') || JSON.stringify({ a, b, c });
       } catch (e) { o.tsdbw = 'erreur : ' + e.message; }
       try {
+        /* 20261023y : 📊 Bilans (gones) — rangement par sport, pause suivie en coulisse, conseil, interrupteur, mise en ligne GitHub */
+        const B = window._g45Bil; const sv = { j: B.j, rr: B.rr, t: B.t, loc: B.loc };
+        const L = []; for (let i = 0; i < 22; i++) L.push({ id: 'p' + i, sl: 'nhl', k: 'u6.5', c: 1.8, r: i < 14 ? 1 : 0, pz: 'nhl_buts' });
+        B.j = { t: [{ id: 'a', sl: 'fra.1', k: 'o2.5', c: 1.6, r: 1 }, { id: 'b', sl: 'nhl', k: 'u6.5', c: 1.76, r: 0 }, { id: 'c', sl: 'nhl', k: '2', c: 2, r: 1 }], pz: L, ce: [], tv: [], dz: [] };
+        B.rr = { pause: { nhl_buts: true } }; B.t = Date.now(); B.loc = null; B.msg = '';
+        const H1 = window._g45BilHtml().replace(/<[^>]+>/g, ' ');
+        const ok1 = /🏒 NHL/.test(H1) && /14\/22/.test(H1) && /Peut revenir/.test(H1) && /officiel avant : 0\/1/.test(H1) && /1\/1 · \+0,60 €/.test(H1) && /Pas assez/.test(H1) && /Rien à mettre en ligne/.test(H1);
+        const div = document.createElement('div'); div.innerHTML = window._g45BilHtml(); document.body.appendChild(div);
+        window.g45BilBascule('pause', 'nhl_buts');
+        const H2 = document.getElementById('g45bil').textContent, ok2 = /Mettre en ligne \(/.test(H2) && B.loc && B.loc.pause.nhl_buts === false;
+        window.g45BilBascule('pause', 'nhl_buts'); const ok3 = B.loc === null;
+        window.g45BilBascule('officiel', 'tn_tv');
+        const f0 = window.fetch, c0 = window.confirm; let put = null; const t0 = localStorage.getItem('gones45_github_token');
+        localStorage.setItem('gones45_github_token', 'faux');
+        window.confirm = () => true;
+        window.fetch = async (u, o2) => { if (/api\.github\.com/.test(String(u))) { if (o2 && o2.method === 'PUT') { put = JSON.parse(decodeURIComponent(escape(atob(JSON.parse(o2.body).content)))); return new Response('{}', { status: 201 }); } return new Response('{}', { status: 404 }); } return f0(u, o2); };
+        await window.g45BilEnLigne();
+        window.fetch = f0; window.confirm = c0; if (t0 == null) localStorage.removeItem('gones45_github_token'); else localStorage.setItem('gones45_github_token', t0);
+        const ok4 = put && put.officiel.tn_tv === true && put.pause.nhl_buts === true && put.pause.nfl_pts === true && /En ligne/.test(B.msg);
+        div.remove(); Object.assign(B, sv); B.msg = '';
+        o.bil = (ok1 && ok2 && ok3 && ok4) || JSON.stringify({ ok1, ok2, ok3, ok4, H1: H1.slice(0, 400) });
+      } catch (e) { o.bil = 'erreur : ' + e.message; }
+      try {
         /* 20261014t : Fusionner une sauvegarde — ajoute les paris réglés absents, doublons ignorés, capital inchangé. */
         const a0 = state.a, h0 = state.h, b0 = JSON.stringify(state.b);
         state.a = [{ id: 'f1', date: '2026-10-10', n: 'Lyon', cote: 2, m: 5, win: true }]; state.h = [{ id: 'f9', date: '2026-10-14', n: 'Lens', cote: 1.8, m: 3 }];
@@ -1147,6 +1170,7 @@ serveur.listen(0, async () => {
     ok('Panne TheSportsDB : pas de boucle', r.fanp === true, r.fanp);
     ok('Joueur du mur : pas de recherche d\'équipe TheSportsDB', r.tsdbj === true, r.tsdbj);
     ok('TheSportsDB par le worker (secours direct)', r.tsdbw === true, r.tsdbw);
+    ok('📊 Bilans : par sport, pause en coulisse, interrupteur, mise en ligne', r.bil === true, r.bil);
     ok('Fusionner une sauvegarde (paris gardés, capital inchangé)', r.fus === true, r.fus);
     ok('Outils : nouvelles sections + tableau des paliers', r.olift === true, r.olift);
     ok('Mur limité à 15 sur bet45', r.mur === true, r.mur);
