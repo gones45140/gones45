@@ -954,6 +954,10 @@ serveur.listen(0, async () => {
         const R = [P({ jo: 'p1', jm: 'dbl' }, m), !P({ jo: 'p1', jm: 'tri' }, m), P({ jo: 'p1', jo2: 'p2', jx: 'c25', jm: 'but' }, m), !P({ jo: 'p1', jo2: 'p2', jx: 'c35', jm: 'but' }, m),
           !P({ jo: 'p1', jo2: 'p2', jx: 'un', jm: 'tri' }, m), P({ jo: 'p1', jo2: 'p2', jx: 'cha', jm: 'but' }, m), P({ pm: 'd' }, m), !P({ pm: 'v' }, m),
           P({ fs: 'ov', FL: 30.5 }, m), !P({ ts: 'un', TSL: 15.5 }, m), P({ mt: 'mene' }, m), P({ mp: 'oui' }, m), P({ bo: 'cae', BL: 1.5 }, m), !P({ mp: 'oui' }, m2), P({ ts: 'ov', TSL: 17.5 }, m2)];
+        /* 20261024b : buts par mi-temps (3-1, 1-0 à la pause → 1re MT 1 but, 2e MT 3 buts) ; ligne ronde égalée = remboursé (non compté) */
+        const C = window._g45CrCalc;
+        R.push(P({ m1: 'ov', M1L: 0.5 }, m), !P({ m1: 'ov', M1L: 1.5 }, m), P({ m1: 'un', M1L: 1.5 }, m), P({ m2: 'ov', M2L: 2.5 }, m), !P({ m2: 'un', M2L: 2.5 }, m),
+          C({ m1: 'ov', M1L: 1 }, [m]).n === 0, C({ m1: 'ov', M1L: 0.5 }, [m]).ok === 1, C({ m2: 'ov', M2L: 3 }, [m]).n === 0, C({ m2: 'un', M2L: 3.5 }, [m]).ok === 1);
         localStorage.removeItem('g45crf1_E1'); Object.assign(S, sv);
         /* 20261021e — coupes d'Europe : Compétition = Coupe d'Europe / Les deux */
         const ouv = localStorage.getItem('g45_cr_open'); (window._g45Cr.ovTous = true);
