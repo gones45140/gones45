@@ -520,6 +520,22 @@ serveur.listen(0, async () => {
         o.bil = (ok1 && ok2 && ok3 && ok4 && ok5) || JSON.stringify({ ok1, ok2, ok3, ok4, ok5, H1: H1.slice(0, 400) });
       } catch (e) { o.bil = 'erreur : ' + e.message; }
       try {
+        /* 20261024f : Cockpit — la mise suit le palier affiché (compétition + lieu), sauf mise tapée / lue sur un ticket */
+        const us = state.u, sk = Object.keys(STRATS)[0], sel = document.getElementById('c-unit'), mi = document.getElementById('c-mise'), co = document.getElementById('c-comp'), li = document.getElementById('c-lieu');
+        const k = _g45PalKey('NHL', 'dom'), U = { n: 'ZzMontante', s: sk, l: 3, lc: {} }; U.lc[k] = 1;
+        state.u = (us || []).concat([U]);
+        const opt = document.createElement('option'); opt.value = 'ZzMontante'; opt.text = 'ZzMontante'; sel.appendChild(opt); sel.value = 'ZzMontante';
+        const sv = { co: co && co.value, li: li && li.value };
+        if (co) co.value = ''; if (li) li.value = 'dom';
+        updMise(); const m0 = mi.value;
+        co.value = 'NHL'; renderCrash(); const m1 = mi.value;
+        mi.value = '5'; mi.dispatchEvent(new Event('input', { bubbles: true })); renderCrash(); const m2 = mi.value;
+        updMise(); co.value = 'NHL'; renderCrash(); const m3 = mi.value;
+        const P1 = String(STRATS[sk][0]), P3 = String(STRATS[sk][2]);
+        o.miseCk = (m1 === P1 && m2 === '5' && m3 === P1 && P1 !== P3) || JSON.stringify({ m0, m1, m2, m3, P1, P3, k });
+        opt.remove(); state.u = us; if (co) co.value = sv.co || ''; if (li) li.value = sv.li || '';
+      } catch (e) { o.miseCk = 'erreur : ' + e.message; }
+      try {
         /* 20261024e : règlement ½✅ / ↩️ / ½❌ — capital au centime (mise 10 € retirée au placement, cote 1,83) */
         const sv = { h: state.h, a: state.a, b: state.b, fb: state.fb }, sv2 = JSON.stringify({ h: state.h, a: state.a, b: state.b, fb: state.fb });
         state.b = { TestBook: '100.00' }; state.fb = {}; state.a = [];
@@ -1197,6 +1213,7 @@ serveur.listen(0, async () => {
     ok('Panne TheSportsDB : pas de boucle', r.fanp === true, r.fanp);
     ok('Joueur du mur : pas de recherche d\'équipe TheSportsDB', r.tsdbj === true, r.tsdbj);
     ok('TheSportsDB par le worker (secours direct)', r.tsdbw === true, r.tsdbw);
+    ok('Cockpit : mise = palier affiché (compétition + lieu), mise tapée gardée', r.miseCk === true, r.miseCk);
     ok('Paris : règlement ½ gagné / remboursé / ½ perdu (capital au centime)', r.betAr === true, r.betAr);
     ok('📊 Bilans : par sport, sélecteur Officiel / Test / Pause, mise en ligne, bloc testeurs', r.bil === true, r.bil);
     ok('Fusionner une sauvegarde (paris gardés, capital inchangé)', r.fus === true, r.fus);
