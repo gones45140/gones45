@@ -40,7 +40,7 @@ const REGLAGES = { min: 1.5, pmin: 0.6, coteConnue: true, accord: true };
    la NBA reste dans la sélection officielle SANS les marchés de points (+ / - de X points) ; vainqueur et handicap gardés. */
 /* 20261023y — 📊 BILANS EN ATTENTE (« si on peut faire une sélection de tel pari alors c'est le top, mais dispo que sur gones pour mettre en
    ligne » ; abonnement Claude fini avant le 15/11) : données/robot_reglages.json, écrit par l'appli gones (interrupteurs, clé GitHub
-   d'Antoine) : { pause: { nba_pts, nhl_buts, nfl_pts } (true = en pause), officiel: { tn_tv, ce_hors } (true = test passé en officiel) }.
+   d'Antoine) : { pause: { nba_pts, nhl_buts, nfl_pts, + 20261023z : f_buts, f_btts, f_vq, ce_buts, ce_vq, nhl_vq, nba_vq, nfl_vq, tn_vq } (true = en pause), officiel: { tn_tv, ce_hors } (true = test passé en officiel) }.
    Absent ou illisible → valeurs ci-dessous. */
 let RR = {}; try { RR = JSON.parse(fs.readFileSync('données/robot_reglages.json', 'utf8')) || {}; } catch (e) {}
 const RRp = (k, def) => (RR.pause && typeof RR.pause[k] === 'boolean' ? RR.pause[k] : def);
@@ -246,9 +246,21 @@ const ceAvis = (x) => {
   return Object.assign(res, { p, gros: grosDom ? 'h' : 'a', sg, ok: sg != null && sg >= 0.7 && x.c >= mini });
 };
 let nCe = 0, nPz = 0;
+/* 20261023z (« pourquoi certains ont des boutons pause, d'autres stop, d'autres rien » → « oui » : un interrupteur sur CHAQUE ligne de
+   📊 Bilans) : chaque pari est rangé comme dans l'appli (_g45Bil, LIGNES) ; ligne mise en PAUSE par Antoine → suivi en coulisse (J.pz). */
+const pzCle = (x) => {
+  const sl = String(x.sl || ''), k = String(x.k || ''), buts = /^(o|u)\d/i.test(k), pts = /^(un|ov)/i.test(k);
+  if (sl === 'nhl') return buts ? 'nhl_buts' : 'nhl_vq';
+  if (sl === 'nba') return pts ? 'nba_pts' : 'nba_vq';
+  if (sl === 'nfl') return pts ? 'nfl_pts' : 'nfl_vq';
+  if (sl === 'atp' || sl === 'wta') return 'tn_vq';
+  if (/^uefa/.test(sl)) return buts || k === 'btts' ? 'ce_buts' : 'ce_vq';
+  return buts ? 'f_buts' : (k === 'btts' ? 'f_btts' : 'f_vq');
+};
 J.pz = J.pz || [];   // 20261023y : marchés EN PAUSE suivis en coulisse (jamais dans le bilan officiel ; bilan dans l'écran 📊 Bilans de gones)
 nouvelles.forEach((x) => {
   if (deja.has(x.id + '|' + x.k) || dejaFam.has(x.id + '|' + fam(x.k))) return;
+  if (!x.pz) { const c = pzCle(x); if (!/^(nba_pts|nhl_buts|nfl_pts)$/.test(c) && RRp(c, false)) x.pz = c; }
   if (x.pz) { deja.add(x.id + '|' + x.k); if (!J.pz.some((y) => y.id === x.id && y.k === x.k)) { x.n = note; J.pz.push(x); nPz++; } return; }
   if (/^uefa\./.test(x.sl)) {
     const av = ceAvis(x); x.pe = av ? Math.round(av.p * 1000) / 1000 : null; x.ecu = av ? av.ratio : null; x.sg = av && av.sg != null ? av.sg : undefined;
