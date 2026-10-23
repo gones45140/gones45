@@ -520,6 +520,18 @@ serveur.listen(0, async () => {
         o.bil = (ok1 && ok2 && ok3 && ok4 && ok5) || JSON.stringify({ ok1, ok2, ok3, ok4, ok5, H1: H1.slice(0, 400) });
       } catch (e) { o.bil = 'erreur : ' + e.message; }
       try {
+        /* 20261024e : règlement ½✅ / ↩️ / ½❌ — capital au centime (mise 10 € retirée au placement, cote 1,83) */
+        const sv = { h: state.h, a: state.a, b: state.b, fb: state.fb }, sv2 = JSON.stringify({ h: state.h, a: state.a, b: state.b, fb: state.fb });
+        state.b = { TestBook: '100.00' }; state.fb = {}; state.a = [];
+        state.h = [{ id: 'x1', b: 'TestBook', m: 10, cote: 1.83, n: 'A' }, { id: 'x2', b: 'TestBook', m: 10, cote: 1.83, n: 'B' }, { id: 'x3', b: 'TestBook', m: 10, cote: 1.83, n: 'C' }];
+        const r1 = g45BetRegler('x1', 'hw', ''), b1 = state.b.TestBook, r2 = g45BetRegler('x2', 'v', ''), b2 = state.b.TestBook, r3 = g45BetRegler('x3', 'hl', ''), b3 = state.b.TestBook;
+        const A = state.a, okA = A.length === 3 && !state.h.length && A[2].ar === 'hw' && A[2].win === true && A[1].ar === 'v' && A[0].ar === 'hl' && A[0].win === false && A[0].mO === 10 && /Moitié perdu/.test(A[0].debrief);
+        const eff = A.map((x) => _g45BetEffetTotal(x, 'a').b).map((v) => v.toFixed(2)).join('|');
+        o.betAr = (r1 && r2 && r3 && b1 === '114.15' && b2 === '124.15' && b3 === '129.15' && okA && eff === '-5.00|0.00|4.15') || JSON.stringify({ b1, b2, b3, eff, okA });
+        state.h = sv.h; state.a = sv.a; state.b = sv.b; state.fb = sv.fb;
+        if (JSON.stringify({ h: state.h, a: state.a, b: state.b, fb: state.fb }) !== sv2) o.betAr = 'état non restauré';
+      } catch (e) { o.betAr = 'erreur : ' + e.message; }
+      try {
         /* 20261014t : Fusionner une sauvegarde — ajoute les paris réglés absents, doublons ignorés, capital inchangé. */
         const a0 = state.a, h0 = state.h, b0 = JSON.stringify(state.b);
         state.a = [{ id: 'f1', date: '2026-10-10', n: 'Lyon', cote: 2, m: 5, win: true }]; state.h = [{ id: 'f9', date: '2026-10-14', n: 'Lens', cote: 1.8, m: 3 }];
@@ -1185,6 +1197,7 @@ serveur.listen(0, async () => {
     ok('Panne TheSportsDB : pas de boucle', r.fanp === true, r.fanp);
     ok('Joueur du mur : pas de recherche d\'équipe TheSportsDB', r.tsdbj === true, r.tsdbj);
     ok('TheSportsDB par le worker (secours direct)', r.tsdbw === true, r.tsdbw);
+    ok('Paris : règlement ½ gagné / remboursé / ½ perdu (capital au centime)', r.betAr === true, r.betAr);
     ok('📊 Bilans : par sport, sélecteur Officiel / Test / Pause, mise en ligne, bloc testeurs', r.bil === true, r.bil);
     ok('Fusionner une sauvegarde (paris gardés, capital inchangé)', r.fus === true, r.fus);
     ok('Outils : nouvelles sections + tableau des paliers', r.olift === true, r.olift);
