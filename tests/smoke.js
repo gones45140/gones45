@@ -533,6 +533,16 @@ serveur.listen(0, async () => {
         updMise(); co.value = 'NHL'; renderCrash(); const m3 = mi.value;
         const P1 = String(STRATS[sk][0]), P3 = String(STRATS[sk][2]);
         o.miseCk = (m1 === P1 && m2 === '5' && m3 === P1 && P1 !== P3) || JSON.stringify({ m0, m1, m2, m3, P1, P3, k });
+        /* 20261024g : changer le lieu (Match trouvé → OK) garde bookmaker, adversaire, mise tapée */
+        const bk = document.getElementById('c-book'), tg = document.getElementById('c-target');
+        let lcOk = true, lcDet = '';
+        if (bk && bk.options && bk.options.length > 1) {
+          sel.value = 'ZzMontante'; bk.value = bk.options[bk.options.length - 1].value; const bv = bk.value; if (tg) tg.value = 'Tampa Bay Lightning';
+          mi.value = '5'; mi.dispatchEvent(new Event('input', { bubbles: true })); li.value = 'ext'; g45LieuChange();
+          const b2 = document.getElementById('c-book').value, t2 = document.getElementById('c-target') ? document.getElementById('c-target').value : 'Tampa Bay Lightning', m4 = document.getElementById('c-mise').value;
+          lcOk = b2 === bv && t2 === 'Tampa Bay Lightning' && m4 === '5' && document.getElementById('c-lieu').value === 'ext'; lcDet = JSON.stringify({ bv, b2, t2, m4 });
+        }
+        if (o.miseCk === true && !lcOk) o.miseCk = 'lieu : ' + lcDet; o.lcDet = lcDet || 'pas teste';
         opt.remove(); state.u = us; if (co) co.value = sv.co || ''; if (li) li.value = sv.li || '';
       } catch (e) { o.miseCk = 'erreur : ' + e.message; }
       try {
@@ -1213,7 +1223,7 @@ serveur.listen(0, async () => {
     ok('Panne TheSportsDB : pas de boucle', r.fanp === true, r.fanp);
     ok('Joueur du mur : pas de recherche d\'équipe TheSportsDB', r.tsdbj === true, r.tsdbj);
     ok('TheSportsDB par le worker (secours direct)', r.tsdbw === true, r.tsdbw);
-    ok('Cockpit : mise = palier affiché (compétition + lieu), mise tapée gardée', r.miseCk === true, r.miseCk);
+    ok('Cockpit : mise = palier affiché, mise tapée gardée, changer le lieu garde les champs', r.miseCk === true, r.miseCk);
     ok('Paris : règlement ½ gagné / remboursé / ½ perdu (capital au centime)', r.betAr === true, r.betAr);
     ok('📊 Bilans : par sport, sélecteur Officiel / Test / Pause, mise en ligne, bloc testeurs', r.bil === true, r.bil);
     ok('Fusionner une sauvegarde (paris gardés, capital inchangé)', r.fus === true, r.fus);
