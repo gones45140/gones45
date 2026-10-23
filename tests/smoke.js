@@ -961,6 +961,12 @@ serveur.listen(0, async () => {
         /* 20261024c : lignes rondes partout — 3-1 : Over 4 seul = remboursé (non compté) ; Over 4 + Victoire = compté, gagné ; Over 4 + Défaite = perdu */
         const v1 = C({ ou: 'ov', L: 4 }, [m]), v2 = C({ ou: 'ov', L: 4, res: 'vic' }, [m]), v3 = C({ ou: 'ov', L: 4, res: 'def' }, [m]);
         R.push(v1.n === 0, v2.n === 1 && v2.ok === 1, v3.n === 1 && v3.ok === 0, C({ te: 'un', TL: 3 }, [m]).n === 0, C({ ad: 'ov', AL: 0.5 }, [m]).ok === 1, !P({ ou: 'un', L: 3 }, m));
+        /* 20261024d : lignes asiatiques — 3-1 : Over 3,75 = ½ gagné (n 0,5 ok 0,5) ; Under 3,75 = ½ perdu ; Over 4,25 = ½ perdu ; Over 2,75 = gagné ;
+           handicap −1,75 = ½ gagné ; −2,25 = ½ perdu ; nul 1-1 avec +0,25 = ½ gagné, avec −0,25 = ½ perdu */
+        const q = (cc, mm) => { const r = C(cc, [mm]); return r.n + '|' + r.ok; }, mn = ['2026-09-01', 1, 1, 1];
+        R.push(q({ ou: 'ov', L: 3.75 }, m) === '0.5|0.5', q({ ou: 'un', L: 3.75 }, m) === '0.5|0', q({ ou: 'ov', L: 4.25 }, m) === '0.5|0', q({ ou: 'ov', L: 2.75 }, m) === '1|1',
+          q({ ha: 'on', HAL: -1.75 }, m) === '0.5|0.5', q({ ha: 'on', HAL: -2.25 }, m) === '0.5|0', q({ ha: 'on', HAL: 0.25 }, mn) === '0.5|0.5', q({ ha: 'on', HAL: -0.25 }, mn) === '0.5|0',
+          q({ ha: 'on', HAL: 0 }, mn) === '0|0', q({ ha: 'on', HAL: 0.5 }, mn) === '1|1');
         localStorage.removeItem('g45crf1_E1'); Object.assign(S, sv);
         /* 20261021e — coupes d'Europe : Compétition = Coupe d'Europe / Les deux */
         const ouv = localStorage.getItem('g45_cr_open'); (window._g45Cr.ovTous = true);
