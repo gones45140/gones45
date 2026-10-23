@@ -958,6 +958,9 @@ serveur.listen(0, async () => {
         const C = window._g45CrCalc;
         R.push(P({ m1: 'ov', M1L: 0.5 }, m), !P({ m1: 'ov', M1L: 1.5 }, m), P({ m1: 'un', M1L: 1.5 }, m), P({ m2: 'ov', M2L: 2.5 }, m), !P({ m2: 'un', M2L: 2.5 }, m),
           C({ m1: 'ov', M1L: 1 }, [m]).n === 0, C({ m1: 'ov', M1L: 0.5 }, [m]).ok === 1, C({ m2: 'ov', M2L: 3 }, [m]).n === 0, C({ m2: 'un', M2L: 3.5 }, [m]).ok === 1);
+        /* 20261024c : lignes rondes partout — 3-1 : Over 4 seul = remboursé (non compté) ; Over 4 + Victoire = compté, gagné ; Over 4 + Défaite = perdu */
+        const v1 = C({ ou: 'ov', L: 4 }, [m]), v2 = C({ ou: 'ov', L: 4, res: 'vic' }, [m]), v3 = C({ ou: 'ov', L: 4, res: 'def' }, [m]);
+        R.push(v1.n === 0, v2.n === 1 && v2.ok === 1, v3.n === 1 && v3.ok === 0, C({ te: 'un', TL: 3 }, [m]).n === 0, C({ ad: 'ov', AL: 0.5 }, [m]).ok === 1, !P({ ou: 'un', L: 3 }, m));
         localStorage.removeItem('g45crf1_E1'); Object.assign(S, sv);
         /* 20261021e — coupes d'Europe : Compétition = Coupe d'Europe / Les deux */
         const ouv = localStorage.getItem('g45_cr_open'); (window._g45Cr.ovTous = true);
