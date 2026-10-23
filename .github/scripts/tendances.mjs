@@ -45,17 +45,29 @@ const REGLAGES = { min: 1.5, pmin: 0.6, coteConnue: true, accord: true };
 let RR = {}; try { RR = JSON.parse(fs.readFileSync('données/robot_reglages.json', 'utf8')) || {}; } catch (e) {}
 const RRp = (k, def) => (RR.pause && typeof RR.pause[k] === 'boolean' ? RR.pause[k] : def);
 const RRo = (k) => !!(RR.officiel && RR.officiel[k] === true);
+/* 20261024a (« un bouton marche / pause et un bouton test / officiel à chaque » → sélecteur à 3 cases, « tu peux coder et mettre en ligne ») :
+   RR.etat[clé] = 'off' (officiel) | 'test' | 'pause' ; l'ancienne forme (pause / officiel) reste lue. Défauts : points NBA (jusqu'au 14/11),
+   buts NHL, total NFL en pause ; value tennis et coupes d'Europe hors règle en test ; le reste officiel. */
+const ETATS = { off: 1, test: 1, pause: 1 };
+const nbaDef = (() => { const d = new Date(), m = d.getUTCMonth() + 1; return m === 10 || (m === 11 && d.getUTCDate() < 15); })();
+const DEF_ETAT = { nba_pts: nbaDef ? 'pause' : 'off', nhl_buts: 'pause', nfl_pts: 'pause', tn_tv: 'test', ce_hors: 'test' };
+const etat = (k) => {
+  if (RR.etat && ETATS[RR.etat[k]]) return RR.etat[k];
+  if (RR.pause && typeof RR.pause[k] === 'boolean') return RR.pause[k] ? 'pause' : 'off';
+  if (RR.officiel && RR.officiel[k] === true) return 'off';
+  return DEF_ETAT[k] || 'off';
+};
 if (RR.maj) console.log('réglages d\'Antoine (' + RR.maj + ') : ' + JSON.stringify({ pause: RR.pause, officiel: RR.officiel }));
-const NBA_PAUSE = RRp('nba_pts', (() => { const d = new Date(), m = d.getUTCMonth() + 1; return m === 10 || (m === 11 && d.getUTCDate() < 15); })());
+const NBA_PAUSE = etat('nba_pts') !== 'off';   // 20261024a : pause OU test → marqué ici, rangé plus bas selon l'état
 const SPORTS = ['foot', 'hockey', 'nba', 'nfl'];
 if (NBA_PAUSE) console.log('NBA : pas de marchés de points (début de saison) jusqu\'au 15/11.');
 /* 20261023w (bilan officiel au 23/10 : NHL 3/12, −6,8 u ; buts 2/8 ; « les over NHL pas top, les victoires d'équipe il y a de quoi faire ») :
    plus de marchés de BUTS NHL (+ / − de N,5 buts) dans la sélection officielle. Les victoires / handicaps NHL restent. À revoir le 15/11. */
-const NHL_BUTS_PAUSE = RRp('nhl_buts', true);
+const NHL_BUTS_PAUSE = etat('nhl_buts') !== 'off';
 if (NHL_BUTS_PAUSE) console.log('NHL : pas de marchés de buts dans la sélection officielle (pause, bilan 15/11).');
 /* 20261023x (« NFL pareil pour les over / under, bon très peu de matchs » ; NFL − de N,5 points 0/2) : plus de total de points NFL dans la
    sélection officielle ; vainqueur / handicap gardés. À revoir le 15/11. */
-const NFL_PTS_PAUSE = RRp('nfl_pts', true);
+const NFL_PTS_PAUSE = etat('nfl_pts') !== 'off';
 if (NFL_PTS_PAUSE) console.log('NFL : pas de total de points dans la sélection officielle (pause, bilan 15/11).');
 const FORCE = process.env.FORCE === '1';
 
@@ -260,11 +272,19 @@ const pzCle = (x) => {
 J.pz = J.pz || [];   // 20261023y : marchés EN PAUSE suivis en coulisse (jamais dans le bilan officiel ; bilan dans l'écran 📊 Bilans de gones)
 nouvelles.forEach((x) => {
   if (deja.has(x.id + '|' + x.k) || dejaFam.has(x.id + '|' + fam(x.k))) return;
-  if (!x.pz) { const c = pzCle(x); if (!/^(nba_pts|nhl_buts|nfl_pts)$/.test(c) && RRp(c, false)) x.pz = c; }
-  if (x.pz) { deja.add(x.id + '|' + x.k); if (!J.pz.some((y) => y.id === x.id && y.k === x.k)) { x.n = note; J.pz.push(x); nPz++; } return; }
+  { const c = x.pz || pzCle(x), st = etat(c);   /* 20261024a : test ou pause → J.pz (x.st), jamais officiel */
+    if (st !== 'off') { x.pz = c; x.st = st; deja.add(x.id + '|' + x.k); if (!J.pz.some((y) => y.id === x.id && y.k === x.k)) { x.n = note; J.pz.push(x); nPz++; } return; }
+    delete x.pz; }
   if (/^uefa\./.test(x.sl)) {
     const av = ceAvis(x); x.pe = av ? Math.round(av.p * 1000) / 1000 : null; x.ecu = av ? av.ratio : null; x.sg = av && av.sg != null ? av.sg : undefined;
-    if (!(av && (av.meme || av.ok)) && !RRo('ce_hors')) {   /* 20261023y : ce_hors = Antoine a passé le test en officiel */ deja.add(x.id + '|' + x.k); if (!J.ce.some((y) => y.id === x.id && y.k === x.k)) { x.n = note; J.ce.push(x); nCe++; } return; }
+    const eh = etat('ce_hors');   /* 20261024a : hors règle → officiel (src 'ce'), test (J.ce) ou pause (J.pz) */
+    if (!(av && (av.meme || av.ok))) {
+      if (eh === 'off') x.src = 'ce';
+      else { deja.add(x.id + '|' + x.k); x.n = note;
+        if (eh === 'pause') { if (!J.pz.some((y) => y.id === x.id && y.k === x.k)) { x.pz = 'ce_hors'; x.st = 'pause'; J.pz.push(x); nPz++; } }
+        else if (!J.ce.some((y) => y.id === x.id && y.k === x.k)) { J.ce.push(x); nCe++; }
+        return; }
+    }
   }
   deja.add(x.id + '|' + x.k); x.n = note; J.t.push(x); ajout++;
 });
@@ -282,7 +302,10 @@ try {
   /* 20261023y : tn_tv = Antoine a passé la value tennis en officiel → dans J.t (bilan), sinon J.tv (test) */
   const vuT = new Set(J.t.map((x) => x.id + '|' + x.k));
   tv.forEach((x) => { if (vuTv.has(x.id + '|' + x.k) || vuT.has(x.id + '|' + x.k)) return; vuTv.add(x.id + '|' + x.k); x.n2 = new Date().toISOString();
-    if (RRo('tn_tv') && x.c > 1) { x.n = x.n2; x.r = null; J.t.push(x); } else J.tv.push(x); });
+    const et = etat('tn_tv');   /* 20261024a : officiel (J.t, src 'tv'), test (J.tv) ou pause (J.pz) */
+    if (et === 'off' && x.c > 1) { x.n = x.n2; x.r = null; x.src = 'tv'; J.t.push(x); }
+    else if (et === 'pause') { x.n = x.n2; x.pz = 'tn_tv'; x.st = 'pause'; if (!J.pz.some((y) => y.id === x.id && y.k === x.k)) J.pz.push(x); }
+    else J.tv.push(x); });
   console.log('tennis value en test : ' + tv.length + ' vues · ' + J.tv.length + ' suivies');
 } catch (e) { console.log('value test : erreur ' + (e && e.message)); }
 const TJ = J.t.concat(J.dz || [], J.tv, J.ce, J.pz);   // 20261023y : + J.pz (pauses suivies en coulisse) · 20261022y : désaccords + 20261023i : value en test, jugés avec les tendances
