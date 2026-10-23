@@ -45,6 +45,10 @@ if (NBA_PAUSE) console.log('NBA : pas de marchés de points (début de saison) j
    plus de marchés de BUTS NHL (+ / − de N,5 buts) dans la sélection officielle. Les victoires / handicaps NHL restent. À revoir le 15/11. */
 const NHL_BUTS_PAUSE = true;
 if (NHL_BUTS_PAUSE) console.log('NHL : pas de marchés de buts dans la sélection officielle (pause, bilan 15/11).');
+/* 20261023x (« NFL pareil pour les over / under, bon très peu de matchs » ; NFL − de N,5 points 0/2) : plus de total de points NFL dans la
+   sélection officielle ; vainqueur / handicap gardés. À revoir le 15/11. */
+const NFL_PTS_PAUSE = true;
+if (NFL_PTS_PAUSE) console.log('NFL : pas de total de points dans la sélection officielle (pause, bilan 15/11).');
 const FORCE = process.env.FORCE === '1';
 
 const parisH = () => Number(new Intl.DateTimeFormat('en-GB', { timeZone: 'Europe/Paris', hour: '2-digit', hourCycle: 'h23' }).formatToParts(new Date()).find((x) => x.type === 'hour').value);
@@ -104,7 +108,7 @@ if (FAUX_INIT) await page.addInitScript(FAUX_INIT);
 await page.goto(SITE + '?robot=' + Date.now(), { waitUntil: 'load', timeout: 90000 });
 await page.waitForTimeout(6000);
 
-const nouvelles = await page.evaluate(async ({ R, SPORTS, NBA_PAUSE, NHL_BUTS_PAUSE }) => {
+const nouvelles = await page.evaluate(async ({ R, SPORTS, NBA_PAUSE, NHL_BUTS_PAUSE, NFL_PTS_PAUSE }) => {
   const pris = [];
   const orig = window._g45TrSuivNoter;
   window._g45TrSuivNoter = function (liste) { (liste || []).forEach((x) => pris.push(x)); try { return orig.apply(this, arguments); } catch (e) {} };
@@ -130,6 +134,7 @@ const nouvelles = await page.evaluate(async ({ R, SPORTS, NBA_PAUSE, NHL_BUTS_PA
         if (R.accord && x.m.desac) return;                   // 20261018k : désaccord stats / bookmakers = pas noté
         if (sp === 'nba' && NBA_PAUSE && /de [\d,.]+ points/i.test(String(x.m.m || ''))) return;   // 20261022b : NBA sans points en début de saison
         if (sp === 'hockey' && NHL_BUTS_PAUSE && /de [\d,.]+ buts/i.test(String(x.m.m || ''))) return;   // 20261023w : NHL sans buts (bilan 2/8)
+        if (sp === 'nfl' && NFL_PTS_PAUSE && /de [\d,.]+ points/i.test(String(x.m.m || ''))) return;   // 20261023x : NFL sans total de points
         const k = _g45TrSuivType(x.m.m, x.hN, x.aN); if (!k) return;
         const cle = x.id + '|' + k; if (vu[cle]) return; vu[cle] = 1;
         const t = Date.parse(x.d); if (isNaN(t) || t < Date.now()) return;   // match déjà commencé : pas noté
@@ -147,7 +152,7 @@ const nouvelles = await page.evaluate(async ({ R, SPORTS, NBA_PAUSE, NHL_BUTS_PA
     } catch (e) { console.log(sp + ' : erreur ' + (e && e.message)); }
   }
   return sortie;
-}, { R: REGLAGES, SPORTS, NBA_PAUSE, NHL_BUTS_PAUSE });
+}, { R: REGLAGES, SPORTS, NBA_PAUSE, NHL_BUTS_PAUSE, NFL_PTS_PAUSE });
 
 /* 20261020l — 🎾 TENNIS OFFICIEL (« OK combiné ») : _g45TnRobot (app.js) choisit les simples ATP / WTA du jour où l'avis BET45 est en
    confiance FORTE et proba ≥ 60 % ; cote The Odds API seulement en Grand Chelem (mêmes filtres que les autres sports si elle existe),
