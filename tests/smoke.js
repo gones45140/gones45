@@ -808,6 +808,16 @@ serveur.listen(0, async () => {
         const j2 = document.getElementById('c-joueur').value; window.alert = a0;
         o.tkJ = (j1 === 'Erling Haaland' && j2 === '') || JSON.stringify({ j1, j2 });
       } catch (e) { o.tkJ = 'erreur : ' + e.message; }
+      /* 20261024z — F1 direct : meilleurs secteurs (p.bs) + carte 10 min après la fin d'une séance vue en cours */
+      try {
+        const mk = (st) => ({ t: Date.now(), sess: { libelle: 'Qualifying', type: 'Qualifying', debut: 'T1', statut: st, lieu: 'Austin' }, tour: {}, piste: { s: '1' }, meteo: {}, rc: [],
+          pilotes: [{ n: '12', tla: 'ANT', pos: 1, meilleur: '1:34.035', s: [['', 0, [2, 2]], ['26.1', 1, []], ['', 0, []]], bs: [['25.401', 1], ['33.200', 3], ['35.950', 7]] }] });
+        const H1 = _g45F1OffHtml(mk('Started'));
+        const a1 = _g45F1OffActif(mk('Started')), a2 = _g45F1OffActif(mk('Finished')), H2 = _g45F1OffHtml(mk('Finished'));
+        const jamais = _g45F1OffActif({ sess: { debut: 'T9', libelle: 'Race', statut: 'Finished' } });
+        o.f1bs = (/#b57bff;">25\.401/.test(H1) && /#1ed760;">33\.200/.test(H1) && /#fff;">35\.950/.test(H1) && /26\.1/.test(H1)
+          && a1 && a2 && /carte encore 10 min/.test(H2) && !jamais) || JSON.stringify({ a1, a2, jamais, h: H1.slice(0, 200) });
+      } catch (e) { o.f1bs = 'erreur : ' + e.message; }
       /* 20261015o — cote ≈ books FR = DraftKings − 6 %, DK gardée ; filtre cote mini sur la cote FR */
       try {
         const o2 = _g45TrCoteFr([{ m: 'X', p: 0.7, cote: 1.55, ev: 0.085 }, { m: 'Y', p: 0.6, cote: 0 }]);
@@ -1315,6 +1325,7 @@ serveur.listen(0, async () => {
     ok('Ticket Cockpit : pari joueur → carte du joueur', r.tkj === true, r.tkj);
     ok('Ticket Cockpit : adversaire au mur → pari contre', r.tkc === true, r.tkc);
     ok('Ticket Cockpit : joueur du ticket précédent effacé', r.tkJ === true, r.tkJ);
+    ok('F1 direct : meilleurs secteurs + carte 10 min après la fin', r.f1bs === true, r.f1bs);
     ok('Séries individuelles : seuil 2 ou plus', r.regs === true, r.regs);
     /* Chart.js vient d'un CDN, simulé ici : son absence n'est pas une erreur de l'appli. */
     const vraies = erreurs.filter(m => !/Chart is not defined/.test(m));
