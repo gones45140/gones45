@@ -533,6 +533,12 @@ serveur.listen(0, async () => {
         updMise(); co.value = 'NHL'; renderCrash(); const m3 = mi.value;
         const P1 = String(STRATS[sk][0]), P3 = String(STRATS[sk][2]);
         o.miseCk = (m1 === P1 && m2 === '5' && m3 === P1 && P1 !== P3) || JSON.stringify({ m0, m1, m2, m3, P1, P3, k });
+        /* 20261024t : avertissement « mise ≠ palier » sous la mise du Cockpit */
+        mi.value = String(Number(P1) + 1); mi.dispatchEvent(new Event('input', { bubbles: true }));
+        const av1 = document.getElementById('g45-mise-av'), t1 = av1 ? av1.textContent : '';
+        mi.value = P1; mi.dispatchEvent(new Event('input', { bubbles: true }));
+        const av2 = document.getElementById('g45-mise-av');
+        if (o.miseCk === true && !(/≠ palier P1/.test(t1) && !av2)) o.miseCk = 'avertissement : ' + JSON.stringify({ t1, reste: !!av2 });
         /* 20261024g : changer le lieu (Match trouvé → OK) garde bookmaker, adversaire, mise tapée */
         const bk = document.getElementById('c-book'), tg = document.getElementById('c-target');
         let lcOk = true, lcDet = '';
