@@ -799,6 +799,15 @@ serveur.listen(0, async () => {
         op.remove(); state.u = u0; window.alert = a0;
         o.tkc = (v === 'Vancouver Canucks' && t === 'Florida Panthers' && l === 'ext' && ty === 'Défaite' && !alerte) || JSON.stringify({ v, t, l, ty, alerte });
       } catch (e) { o.tkc = 'erreur : ' + e.message; }
+      /* 20261024w — nouveau ticket sans joueur : le buteur du ticket précédent est effacé (Cockpit) */
+      try {
+        const a0 = window.alert; window.alert = () => {};
+        _g45TicketRemplirCockpit({ joueur: 'Erling Haaland', equipe: 'Manchester City', adversaire: 'Aston Villa', type: 'Buteur', cote: '1.6', mise: '3' });
+        const j1 = document.getElementById('c-joueur').value;
+        _g45TicketRemplirCockpit({ equipe: 'Atletico Madrid', adversaire: 'Deportivo', type: 'Victoire', cote: '2.05', mise: '5' });
+        const j2 = document.getElementById('c-joueur').value; window.alert = a0;
+        o.tkJ = (j1 === 'Erling Haaland' && j2 === '') || JSON.stringify({ j1, j2 });
+      } catch (e) { o.tkJ = 'erreur : ' + e.message; }
       /* 20261015o — cote ≈ books FR = DraftKings − 6 %, DK gardée ; filtre cote mini sur la cote FR */
       try {
         const o2 = _g45TrCoteFr([{ m: 'X', p: 0.7, cote: 1.55, ev: 0.085 }, { m: 'Y', p: 0.6, cote: 0 }]);
@@ -1305,6 +1314,7 @@ serveur.listen(0, async () => {
     ok('Joueur foot du mur : fiche refaite', r.mj === true, r.mj);
     ok('Ticket Cockpit : pari joueur → carte du joueur', r.tkj === true, r.tkj);
     ok('Ticket Cockpit : adversaire au mur → pari contre', r.tkc === true, r.tkc);
+    ok('Ticket Cockpit : joueur du ticket précédent effacé', r.tkJ === true, r.tkJ);
     ok('Séries individuelles : seuil 2 ou plus', r.regs === true, r.regs);
     /* Chart.js vient d'un CDN, simulé ici : son absence n'est pas une erreur de l'appli. */
     const vraies = erreurs.filter(m => !/Chart is not defined/.test(m));
