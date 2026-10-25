@@ -818,6 +818,22 @@ serveur.listen(0, async () => {
         o.f1bs = (/#b57bff;">25\.401/.test(H1) && /#1ed760;">33\.200/.test(H1) && /#fff;">35\.950/.test(H1) && /26\.1/.test(H1)
           && a1 && a2 && /carte encore 10 min/.test(H2) && !jamais) || JSON.stringify({ a1, a2, jamais, h: H1.slice(0, 200) });
       } catch (e) { o.f1bs = 'erreur : ' + e.message; }
+      /* 20261025b — 🌍 Même pari partout : une case recopiée dans 🏠 et ✈️ */
+      try {
+        const bt = document.getElementById('u-ptout');
+        if (!bt) o.ufTout = 'bouton absent';
+        else {
+          document.getElementById('u-pdom').value = 'Victoire';
+          g45UfPartout('u');
+          const pp = document.getElementById('u-ppart'), v0 = pp.value;
+          pp.value = 'Victoire + 1 point'; g45UfPartoutTape('u');
+          const d = document.getElementById('u-pdom').value, x = document.getElementById('u-pext').value, on = bt.getAttribute('data-on');
+          const note = window._g45UfCompose('', '', d, x);
+          g45UfPartout('u'); const off = bt.getAttribute('data-on');
+          ['u-pdom', 'u-pext', 'u-ppart'].forEach((id) => { document.getElementById(id).value = ''; });
+          o.ufTout = (v0 === 'Victoire' && d === 'Victoire + 1 point' && x === d && on === '1' && off === '0' && note === '🏠/✈️ Victoire + 1 point') || JSON.stringify({ v0, d, x, on, off, note });
+        }
+      } catch (e) { o.ufTout = 'erreur : ' + e.message; }
       /* 20261015o — cote ≈ books FR = DraftKings − 6 %, DK gardée ; filtre cote mini sur la cote FR */
       try {
         const o2 = _g45TrCoteFr([{ m: 'X', p: 0.7, cote: 1.55, ev: 0.085 }, { m: 'Y', p: 0.6, cote: 0 }]);
@@ -1326,6 +1342,7 @@ serveur.listen(0, async () => {
     ok('Ticket Cockpit : adversaire au mur → pari contre', r.tkc === true, r.tkc);
     ok('Ticket Cockpit : joueur du ticket précédent effacé', r.tkJ === true, r.tkJ);
     ok('F1 direct : meilleurs secteurs + carte 10 min après la fin', r.f1bs === true, r.f1bs);
+    ok('Mur : 🌍 même pari partout (domicile + extérieur)', r.ufTout === true, r.ufTout);
     ok('Séries individuelles : seuil 2 ou plus', r.regs === true, r.regs);
     /* Chart.js vient d'un CDN, simulé ici : son absence n'est pas une erreur de l'appli. */
     const vraies = erreurs.filter(m => !/Chart is not defined/.test(m));
