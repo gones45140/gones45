@@ -852,6 +852,15 @@ serveur.listen(0, async () => {
         render(); const box = document.getElementById('g45-mois-kpi');
         o.mois = (R.mois === 'OCTOBRE' && R.ben === 5 && R.n === 2 && R.pc === 50 && !!box && /€/.test(box.textContent)) || JSON.stringify({ R, box: box && box.textContent });
       } catch (e) { o.mois = 'erreur : ' + e.message; }
+      /* 20261025g — Surebet : ligne LAY (−) → cote normale 1 + (1 − k)/(L − 1), mise lay = risque / (L − 1) ; OrbitX en 1er */
+      try {
+        const eq = sbCote({ c: 2.2, k: 2, lay: true }), sv = JSON.stringify(sbRows);
+        sbRows = [{ c: 2.1, d: true, k: 0 }, { c: 2.2, d: true, k: 0, lay: true }];
+        buildSbRows();
+        const z = document.body.textContent, b = Object.keys(state.b);
+        sbRows = JSON.parse(sv); buildSbRows();
+        o.sbLay = (Math.abs(eq - (1 + 0.98 / 1.2)) < 1e-9 && /Mise 2 LAY/.test(z) && /risque/.test(z) && /= 1,83/.test(z) && b[0] === 'orbitx') || JSON.stringify({ eq, b0: b[0], z: z.slice(0, 120) });
+      } catch (e) { o.sbLay = 'erreur : ' + e.message; }
       /* 20261015o — cote ≈ books FR = DraftKings − 6 %, DK gardée ; filtre cote mini sur la cote FR */
       try {
         const o2 = _g45TrCoteFr([{ m: 'X', p: 0.7, cote: 1.55, ev: 0.085 }, { m: 'Y', p: 0.6, cote: 0 }]);
@@ -1363,6 +1372,7 @@ serveur.listen(0, async () => {
     ok('Mur : 🌍 même pari partout (domicile + extérieur)', r.ufTout === true, r.ufTout);
     ok('Ticket : équipe absente du mur → carte joueur de ce club', r.tkClub === true, r.tkClub);
     ok('Mur : bénéfice du mois en cours', r.mois === true, r.mois);
+    ok('Surebet : cote LAY (−) + OrbitX en 1er', r.sbLay === true, r.sbLay);
     ok('Séries individuelles : seuil 2 ou plus', r.regs === true, r.regs);
     /* Chart.js vient d'un CDN, simulé ici : son absence n'est pas une erreur de l'appli. */
     const vraies = erreurs.filter(m => !/Chart is not defined/.test(m));
