@@ -861,6 +861,17 @@ serveur.listen(0, async () => {
         sbRows = JSON.parse(sv); buildSbRows();
         o.sbLay = (Math.abs(eq - (1 + 0.98 / 1.2)) < 1e-9 && /Mise 2 LAY/.test(z) && /risque/.test(z) && /= 1,83/.test(z) && b[0] === 'orbitx') || JSON.stringify({ eq, b0: b[0], z: z.slice(0, 120) });
       } catch (e) { o.sbLay = 'erreur : ' + e.message; }
+      /* 20261025j — Mes équipes rangées par sport (bandes repliables) */
+      try {
+        const u0 = state.u; window.Chart = window.Chart || function () { return { destroy() {}, update() {} }; };
+        state.u = [{ n: 'Lyon', sport: '⚽', s: 5, l: 1, color: '#ff0' }, { n: 'Carolina Hurricanes', sport: '🏒', s: 5, l: 1, color: '#f00' }, { n: 'PSG', sport: '⚽', s: 5, l: 1, color: '#00f' }, { n: 'Ryan Nugent-Hopkins', sport: '🏒', type: 'joueur', s: 1, l: 1, color: '#0ff' }];
+        try { render(); } catch (e) {}
+        const ul = document.getElementById('ulist'), H = [...ul.querySelectorAll('.g45-mur-sp')].map((h) => h.textContent);
+        const nFoot = ul.querySelectorAll('.g45-mur-sp')[0].nextElementSibling.querySelectorAll('.urow').length;
+        g45MurPlier('foot'); const plie = ul.querySelectorAll('.g45-mur-sp')[0].nextElementSibling.style.display === 'none';
+        g45MurPlier('foot'); state.u = u0; try { render(); } catch (e) {}
+        o.murSp = (H.length === 2 && /Football/.test(H[0]) && /2 équipes/.test(H[0]) && /Hockey/.test(H[1]) && nFoot === 2 && plie) || JSON.stringify({ H, nFoot, plie });
+      } catch (e) { o.murSp = 'erreur : ' + e.message; }
       /* 20261015o — cote ≈ books FR = DraftKings − 6 %, DK gardée ; filtre cote mini sur la cote FR */
       try {
         const o2 = _g45TrCoteFr([{ m: 'X', p: 0.7, cote: 1.55, ev: 0.085 }, { m: 'Y', p: 0.6, cote: 0 }]);
@@ -1373,6 +1384,7 @@ serveur.listen(0, async () => {
     ok('Ticket : équipe absente du mur → carte joueur de ce club', r.tkClub === true, r.tkClub);
     ok('Mur : bénéfice du mois en cours', r.mois === true, r.mois);
     ok('Surebet : cote LAY (−) + OrbitX en 1er', r.sbLay === true, r.sbLay);
+    ok('Mes équipes rangées par sport', r.murSp === true, r.murSp);
     ok('Séries individuelles : seuil 2 ou plus', r.regs === true, r.regs);
     /* Chart.js vient d'un CDN, simulé ici : son absence n'est pas une erreur de l'appli. */
     const vraies = erreurs.filter(m => !/Chart is not defined/.test(m));
