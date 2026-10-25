@@ -872,6 +872,13 @@ serveur.listen(0, async () => {
         g45MurPlier('foot'); state.u = u0; try { render(); } catch (e) {}
         o.murSp = (H.length === 2 && /Football/.test(H[0]) && /2 équipes/.test(H[0]) && /Hockey/.test(H[1]) && nFoot === 2 && plie) || JSON.stringify({ H, nFoot, plie });
       } catch (e) { o.murSp = 'erreur : ' + e.message; }
+      /* 20261025n — NFL drive en cours (données de la sonde Steelers @ Saints) */
+      try {
+        const cp = { situation: { down: 3, distance: 4, yardLine: 53, possession: '23', possessionText: 'PIT 47', lastPlay: { type: { text: 'Pass Reception' }, statYardage: 1, start: { yardLine: 54 }, end: { yardLine: 53 } } },
+          competitors: [{ homeAway: 'home', team: { id: '18', abbreviation: 'NO', shortDisplayName: 'Saints' } }, { homeAway: 'away', team: { id: '23', abbreviation: 'PIT', shortDisplayName: 'Steelers' } }] };
+        const H = _g45NflDriveHtml(cp);
+        o.nflDr = (/3e &amp; 4 à PIT 47/.test(H) && /passe complétée, \+1 yard/.test(H) && /left:47\.48%;">🏈/.test(H) && /#ffd400;left:50\.84%/.test(H)) || H.slice(0, 300);
+      } catch (e) { o.nflDr = 'erreur : ' + e.message; }
       /* 20261015o — cote ≈ books FR = DraftKings − 6 %, DK gardée ; filtre cote mini sur la cote FR */
       try {
         const o2 = _g45TrCoteFr([{ m: 'X', p: 0.7, cote: 1.55, ev: 0.085 }, { m: 'Y', p: 0.6, cote: 0 }]);
@@ -1385,6 +1392,7 @@ serveur.listen(0, async () => {
     ok('Mur : bénéfice du mois en cours', r.mois === true, r.mois);
     ok('Surebet : cote LAY (−) + OrbitX en 1er', r.sbLay === true, r.sbLay);
     ok('Mes équipes rangées par sport', r.murSp === true, r.murSp);
+    ok('NFL : drive en cours (terrain)', r.nflDr === true, r.nflDr);
     ok('Séries individuelles : seuil 2 ou plus', r.regs === true, r.regs);
     /* Chart.js vient d'un CDN, simulé ici : son absence n'est pas une erreur de l'appli. */
     const vraies = erreurs.filter(m => !/Chart is not defined/.test(m));
