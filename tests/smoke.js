@@ -834,6 +834,17 @@ serveur.listen(0, async () => {
           o.ufTout = (v0 === 'Victoire' && d === 'Victoire + 1 point' && x === d && on === '1' && off === '0' && note === '🏠/✈️ Victoire + 1 point') || JSON.stringify({ v0, d, x, on, off, note });
         }
       } catch (e) { o.ufTout = 'erreur : ' + e.message; }
+      /* 20261025c — ticket d'une équipe absente du mur → carte JOUEUR de ce club */
+      try {
+        const un = document.getElementById('c-unit'), u0 = state.u, a0 = window.alert; let alerte = '';
+        window.alert = (m) => { alerte = m; };
+        const op = document.createElement('option'); op.value = 'Ryan Nugent-Hopkins'; op.text = 'Ryan Nugent-Hopkins'; un.appendChild(op);
+        state.u = (u0 || []).concat([{ n: 'Ryan Nugent-Hopkins', sport: '🏒', type: 'joueur', club: 'Edmonton Oilers', s: 'a' }]);
+        _g45TicketRemplirCockpit({ equipe: 'Edmonton Oilers', adversaire: 'Toronto Maple Leafs', domicile: true, type: 'Victoire Edmonton + Nugent-Hopkins 1 point', cote: '1.98', mise: '5' });
+        const v = un.value, j = document.getElementById('c-joueur').value;
+        op.remove(); state.u = u0; window.alert = a0;
+        o.tkClub = (v === 'Ryan Nugent-Hopkins' && j === 'Ryan Nugent-Hopkins' && !alerte) || JSON.stringify({ v, j, alerte });
+      } catch (e) { o.tkClub = 'erreur : ' + e.message; }
       /* 20261015o — cote ≈ books FR = DraftKings − 6 %, DK gardée ; filtre cote mini sur la cote FR */
       try {
         const o2 = _g45TrCoteFr([{ m: 'X', p: 0.7, cote: 1.55, ev: 0.085 }, { m: 'Y', p: 0.6, cote: 0 }]);
@@ -1343,6 +1354,7 @@ serveur.listen(0, async () => {
     ok('Ticket Cockpit : joueur du ticket précédent effacé', r.tkJ === true, r.tkJ);
     ok('F1 direct : meilleurs secteurs + carte 10 min après la fin', r.f1bs === true, r.f1bs);
     ok('Mur : 🌍 même pari partout (domicile + extérieur)', r.ufTout === true, r.ufTout);
+    ok('Ticket : équipe absente du mur → carte joueur de ce club', r.tkClub === true, r.tkClub);
     ok('Séries individuelles : seuil 2 ou plus', r.regs === true, r.regs);
     /* Chart.js vient d'un CDN, simulé ici : son absence n'est pas une erreur de l'appli. */
     const vraies = erreurs.filter(m => !/Chart is not defined/.test(m));
