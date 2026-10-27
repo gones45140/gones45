@@ -922,8 +922,10 @@ serveur.listen(0, async () => {
         const pa = _g45F1CrPal(st.pire);
         const div = document.createElement('div'); div.id = 'g45-f1cr'; document.body.appendChild(div);
         _g45F1CrData(D); g45F1CrSet('d', 'ver'); const H = div.innerHTML; div.remove();
+        const sai = document.createElement('div'); document.body.appendChild(sai); await loadF1Saisons(sai, 'Formule 1'); await new Promise(r => setTimeout(r, 50));
+        const HS = sai.innerHTML; sai.remove();
         o.f1cr = (st.n === 5 && st.ok === 2 && st.pire === 3 && st.meil === 1 && st.cours === 1 && st.coursOk && cq.ok === 3 && ci === 2 && ap === 1
-          && pa.p === 4 && pa.mise === STRATS['1'][3] && /il fallait 4 paliers/.test(H) && /Jouable en Cockpit/.test(H) && /Lando Norris/.test(H)) || JSON.stringify({ st, cq, ci, ap, pa });
+          && pa.p === 4 && pa.mise === STRATS['1'][3] && /il fallait 4 paliers/.test(H) && /Jouable en Cockpit/.test(H) && /Lando Norris/.test(H) && /il fallait 4 paliers/.test(HS) && /Classement pilotes/.test(HS)) || JSON.stringify({ st, cq, ci, ap, pa });
       } catch (e) { o.f1cr = 'erreur : ' + e.message; }
       /* 20261015o — cote ≈ books FR = DraftKings − 6 %, DK gardée ; filtre cote mini sur la cote FR */
       try {
@@ -1442,7 +1444,7 @@ serveur.listen(0, async () => {
     ok('Bank : abonnements (prélèvement mensuel, sans doublon, synchro)', r.abo === true, r.abo);
     ok('Bank : historique des mouvements (dépôts / retraits)', r.mvt === true, r.mvt);
     ok('Montante : une seule échelle par championnat (Liga / La Liga…)', r.lcCanon === true, r.lcCanon);
-    ok('F1 : critères 4 saisons + Jouable en Cockpit', r.f1cr === true, r.f1cr);
+    ok('F1 : critères 4 saisons + Jouable en Cockpit (page F1 + onglet Saisons)', r.f1cr === true, r.f1cr);
     ok('Séries individuelles : seuil 2 ou plus', r.regs === true, r.regs);
     /* Chart.js vient d'un CDN, simulé ici : son absence n'est pas une erreur de l'appli. */
     const vraies = erreurs.filter(m => !/Chart is not defined/.test(m));
