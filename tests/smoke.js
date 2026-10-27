@@ -968,6 +968,20 @@ serveur.listen(0, async () => {
         o.yards = (L.length === 3 && L[0][0].indexOf('2026-10-12') === 0 && L[0][1] === 250 && L[1][1] === 1204 && L[2][3] === 0 && L0 === null && pi === 2 && /4 paliers/.test(ph)
           && pN === true && pE === false && ong && /🏃 Course/.test(HY) && /Pépites \(50\)/.test(HY) && /Aucun classement NFL/.test(HY) && typeof g45NbaMqP === 'function') || JSON.stringify({ L, L0, pi, ph, pN, pE, ong, HY: HY.replace(/<[^>]+>/g, ' ').slice(0, 300) });
       } catch (e) { o.yards = 'erreur : ' + e.message; }
+      /* 20261027k — Séries NHL sur 4 saisons + échelle de mises au choix */
+      try {
+        _g45RegLogs['20262027_77'] = Promise.resolve({ gameLog: [{ gameDate: '2026-10-20', goals: 1, assists: 0, points: 1, h: 1 }] });
+        localStorage.setItem('g45reg4_20252026_77', JSON.stringify([['2026-04-10', 0, 1, 1, 0], ['2026-04-08', 2, 0, 2, 1]]));
+        const G = await _g45RegLog4('77', '20262027'); localStorage.removeItem('g45reg4_20252026_77'); delete _g45RegLogs['20262027_77'];
+        const sv = Object.assign({}, _g45Reg);
+        Object.assign(_g45Reg, { an: 2027, an0: 2027, cat: 'g', eq: '', lg: '', pep: 0, s4: 1, tri: 'pire', seuil: 1, lieu: '' });
+        const k = _g45RegK(); _g45Reg.mem[k] = [{ id: 1, nom: 'Quatre Saisons', eq: 'EDM', s: _g45RegCalc(G.gameLog, 'goals') }];
+        const H = _g45RegHtml(); delete _g45Reg.mem[k];
+        Object.keys(_g45Reg).forEach(q => { if (!(q in sv)) delete _g45Reg[q]; }); Object.assign(_g45Reg, sv);
+        g45PalEtChoix('2'); const m2 = _g45F1CrPal(3).mise; g45PalEtChoix('1'); const m1 = _g45F1CrPal(3).mise;
+        o.reg4 = (G.gameLog.length === 3 && G.gameLog[0].gameDate === '2026-10-20' && G.gameLog[2].goals === 2 && /\+s4$/.test(k) && /4 saisons \(2023 → 2027\)/.test(H) && /Mises :/.test(H) && />Paliers</.test(H)
+          && m2 === STRATS['2'][3] && m1 === STRATS['1'][3]) || JSON.stringify({ G, k, m1, m2, H: H.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').slice(0, 300) });
+      } catch (e) { o.reg4 = 'erreur : ' + e.message; }
       /* 20261015o — cote ≈ books FR = DraftKings − 6 %, DK gardée ; filtre cote mini sur la cote FR */
       try {
         const o2 = _g45TrCoteFr([{ m: 'X', p: 0.7, cote: 1.55, ev: 0.085 }, { m: 'Y', p: 0.6, cote: 0 }]);
@@ -1489,6 +1503,7 @@ serveur.listen(0, async () => {
     ok('NHL Séries individuelles : 🔍 Pépites (50 joueurs)', r.pep === true, r.pep);
     ok('Critères 4 saisons : Jouable en Cockpit ? (classement de la ligue)', r.crCls === true, r.crCls);
     ok('NFL Yards + pépites NBA / NFL (pire série → paliers)', r.yards === true, r.yards);
+    ok('Séries NHL sur 4 saisons + mises au choix', r.reg4 === true, r.reg4);
     ok('Séries individuelles : seuil 2 ou plus', r.regs === true, r.regs);
     /* Chart.js vient d'un CDN, simulé ici : son absence n'est pas une erreur de l'appli. */
     const vraies = erreurs.filter(m => !/Chart is not defined/.test(m));
