@@ -1022,6 +1022,7 @@ serveur.listen(0, async () => {
         window._g45NbaMqHote = 'g45-nba-sr'; await g45NbaMq(); const H = d.innerHTML; d.remove(); window._g45NbaMqHote = 'g45-mq-hote';
         o.nbaSr = (/4 saisons/.test(H) && /Pépites/.test(H) && /Points/.test(H)) || H.replace(/<[^>]+>/g, ' ').slice(0, 200);
       } catch (e) { o.nbaSr = 'erreur : ' + e.message; }
+      try { o.ldFr = (_g45LdLibelle({ name: 'xx1', displayName: 'Points Per Game' }) === 'Points par match' && _g45LdLibelle({ name: 'xx2', displayName: 'Personal fouls per game' }) === 'Fautes par match' && _g45LdLibelle({ name: 'xx3', displayName: 'Inconnu Test' }) === 'Inconnu Test') || 'ldFr'; } catch (e) { o.ldFr = 'erreur : ' + e.message; }
       /* 20261015o — cote ≈ books FR = DraftKings − 6 %, DK gardée ; filtre cote mini sur la cote FR */
       try {
         const o2 = _g45TrCoteFr([{ m: 'X', p: 0.7, cote: 1.55, ev: 0.085 }, { m: 'Y', p: 0.6, cote: 0 }]);
@@ -1548,6 +1549,7 @@ serveur.listen(0, async () => {
     ok('Séries : dates de la pire série', r.pd === true, r.pd);
     ok('MLB Strikeouts + NBA 4 saisons + dates (Marqueurs)', r.mlbK === true, r.mlbK);
     ok('Compétitions NBA : onglet Séries individuelles', r.nbaSr === true, r.nbaSr);
+    ok('Classements → Joueurs : catégories traduites', r.ldFr === true, r.ldFr);
     ok('Séries individuelles : seuil 2 ou plus', r.regs === true, r.regs);
     /* Chart.js vient d'un CDN, simulé ici : son absence n'est pas une erreur de l'appli. */
     const vraies = erreurs.filter(m => !/Chart is not defined/.test(m));
