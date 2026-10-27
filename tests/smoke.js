@@ -1003,6 +1003,19 @@ serveur.listen(0, async () => {
         Object.keys(_g45Reg).forEach(q => { if (!(q in sv)) delete _g45Reg[q]; }); Object.assign(_g45Reg, sv);
         o.pd = (R.pire === 3 && R.pd.join() === '260109,260113' && R2.pire === 7 && R2.pd.join() === '260101,260113' && /09\/01\/26 → 13\/01\/26/.test(H)) || JSON.stringify({ R, R2 });
       } catch (e) { o.pd = 'erreur : ' + e.message; }
+      /* 20261027n — Strikeouts MLB, NBA 4 saisons, dates de pire série (Marqueurs) */
+      try {
+        const J = { filters: [{ name: 'season', value: '2026' }], names: ['innings', 'strikeouts'], events: { a: { gameDate: '2026-09-01T23:00Z' }, b: { gameDate: '2026-09-07T23:00Z' } },
+          seasonTypes: [{ displayName: '2026 Regular Season', categories: [{ events: [{ eventId: 'a', stats: ['6.0', '7'] }, { eventId: 'b', stats: ['5.1', '4'] }] }] }, { displayName: '2026 Postseason', categories: [{ events: [{ eventId: 'p', stats: ['7', '9'] }] }] }] };
+        const K = _g45MlbKLire(J, 2026), K0 = _g45MlbKLire(J, 2025);
+        const pd = _g45MqPireD([{ ok: true, t: '2026-04-01' }, { ok: false, t: '2026-04-06' }, { ok: false, t: '2026-04-12' }, { ok: true, t: '2026-04-18' }]);
+        const ph = _g45MqPalHtml(2, pd);
+        await g45MqSport('mlb'); const ong = !!document.getElementById('g45-mlb-onglets');
+        await g45MlbK(); const HK = (document.getElementById('g45-mlbk-box') || {}).innerHTML || '';
+        g45MlbSim(); const cache = (document.getElementById('g45-mlbk-box') || {}).style.display;
+        o.mlbK = (K.length === 2 && K[0][1] === 4 && K[1][1] === 7 && K0 === null && pd.join() === '06/04/26,12/04/26' && /06\/04\/26 → 12\/04\/26/.test(ph) && ong && /4 saisons/.test(HK) && /Pépites/.test(HK) && /Aucun classement MLB/.test(HK) && cache === 'none' && typeof g45NbaMqS4 === 'function')
+          || JSON.stringify({ K, K0, pd, ong, cache, HK: HK.replace(/<[^>]+>/g, ' ').slice(0, 200) });
+      } catch (e) { o.mlbK = 'erreur : ' + e.message; }
       /* 20261015o — cote ≈ books FR = DraftKings − 6 %, DK gardée ; filtre cote mini sur la cote FR */
       try {
         const o2 = _g45TrCoteFr([{ m: 'X', p: 0.7, cote: 1.55, ev: 0.085 }, { m: 'Y', p: 0.6, cote: 0 }]);
@@ -1527,6 +1540,7 @@ serveur.listen(0, async () => {
     ok('Séries NHL sur 4 saisons + mises au choix', r.reg4 === true, r.reg4);
     ok('Séries NFL sur 4 saisons', r.reg4n === true, r.reg4n);
     ok('Séries : dates de la pire série', r.pd === true, r.pd);
+    ok('MLB Strikeouts + NBA 4 saisons + dates (Marqueurs)', r.mlbK === true, r.mlbK);
     ok('Séries individuelles : seuil 2 ou plus', r.regs === true, r.regs);
     /* Chart.js vient d'un CDN, simulé ici : son absence n'est pas une erreur de l'appli. */
     const vraies = erreurs.filter(m => !/Chart is not defined/.test(m));
