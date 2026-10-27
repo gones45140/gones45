@@ -924,8 +924,12 @@ serveur.listen(0, async () => {
         _g45F1CrData(D); g45F1CrSet('d', 'ver'); const H = div.innerHTML; div.remove();
         const sai = document.createElement('div'); document.body.appendChild(sai); await loadF1Saisons(sai, 'Formule 1'); await new Promise(r => setTimeout(r, 50));
         const HS = sai.innerHTML; sai.remove();
+        const nAn = _g45F1CrSeq(D, 'ver', { k: 'po', an: 2026 }).length, nCir = _g45F1CrSeq(D, 'ver', { k: 'po', cir: 'cir1' }).length, nApAn = _g45F1CrSeq(D, 'ver', { k: 'po', ap: 1, an: 2026 }).length;
+        const d2 = document.createElement('div'); d2.id = 'g45-f1cr'; document.body.appendChild(d2); _g45F1CrMonter(d2); g45F1CrSet('an', '2026'); g45F1CrSet('cir', 'cir2');
+        const H2 = d2.innerHTML; g45F1CrSet('an', '0'); g45F1CrSet('cir', ''); d2.remove();
+        const anOk = nAn === 2 && nCir === 2 && nApAn === 0 && /📅 Saisons/.test(H2) && /Tous les circuits/.test(H2) && /⭐ cir2 \(prochain GP\)/.test(H2) && /1\/1 · 100 %/.test(H2) && !/>2025</.test(H2.split('Pire série de ratés')[1] || '');
         o.f1cr = (st.n === 5 && st.ok === 2 && st.pire === 3 && st.meil === 1 && st.cours === 1 && st.coursOk && cq.ok === 3 && ci === 2 && ap === 1
-          && pa.p === 4 && pa.mise === STRATS['1'][3] && /il fallait 4 paliers/.test(H) && /Jouable en Cockpit/.test(H) && /Lando Norris/.test(H) && /il fallait 4 paliers/.test(HS) && /Classement pilotes/.test(HS)) || JSON.stringify({ st, cq, ci, ap, pa });
+          && pa.p === 4 && pa.mise === STRATS['1'][3] && /il fallait 4 paliers/.test(H) && /Jouable en Cockpit/.test(H) && /Lando Norris/.test(H) && /il fallait 4 paliers/.test(HS) && /Classement pilotes/.test(HS) && anOk) || JSON.stringify({ st, cq, ci, ap, pa, nAn, nCir, nApAn });
       } catch (e) { o.f1cr = 'erreur : ' + e.message; }
       /* 20261015o — cote ≈ books FR = DraftKings − 6 %, DK gardée ; filtre cote mini sur la cote FR */
       try {
