@@ -931,6 +931,16 @@ serveur.listen(0, async () => {
         o.f1cr = (st.n === 5 && st.ok === 2 && st.pire === 3 && st.meil === 1 && st.cours === 1 && st.coursOk && cq.ok === 3 && ci === 2 && ap === 1
           && pa.p === 4 && pa.mise === STRATS['1'][3] && /il fallait 4 paliers/.test(H) && /Jouable en Cockpit/.test(H) && /Lando Norris/.test(H) && /il fallait 4 paliers/.test(HS) && /Classement pilotes/.test(HS) && anOk) || JSON.stringify({ st, cq, ci, ap, pa, nAn, nCir, nApAn });
       } catch (e) { o.f1cr = 'erreur : ' + e.message; }
+      /* 20261027g — Séries individuelles NHL : 🔍 Pépites (50 joueurs, top 10 grisé, colonne Paliers) */
+      try {
+        const sv = Object.assign({}, _g45Reg);
+        Object.assign(_g45Reg, { an: 2027, an0: 2027, cat: 'a', eq: '', lg: '', pep: 1, tri: 'pire', seuil: 1, lieu: '' });
+        const k = _g45RegK(), S = (v) => _g45RegCalc(v.map((x, i) => ({ gameDate: '2026-10-' + (10 + i), assists: x })).reverse(), 'assists');
+        _g45Reg.mem[k] = [{ id: 1, nom: 'Top Dix', eq: 'EDM', t10: 1, s: S([1, 1, 0, 1]) }, { id: 2, nom: 'Petit Fox', eq: 'NYR', s: S([1, 0, 0, 0, 1]) }];
+        const H = _g45RegHtml(); delete _g45Reg.mem[k]; _g45Reg.pep = 0; const k0 = _g45RegK();
+        Object.keys(_g45Reg).forEach(q => { if (!(q in sv)) delete _g45Reg[q]; }); Object.assign(_g45Reg, sv);
+        o.pep = (/k|pep$/.test(k) && /\+pep$/.test(k) && !/pep/.test(k0) && /💎 Petit Fox/.test(H) && !/💎 Top Dix/.test(H) && /opacity:\.55/.test(H) && />Paliers</.test(H) && /<b>4<\/b> ✅/.test(H) && /Pépites \(50 joueurs\)/.test(H)) || H.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').slice(0, 400);
+      } catch (e) { o.pep = 'erreur : ' + e.message; }
       /* 20261015o — cote ≈ books FR = DraftKings − 6 %, DK gardée ; filtre cote mini sur la cote FR */
       try {
         const o2 = _g45TrCoteFr([{ m: 'X', p: 0.7, cote: 1.55, ev: 0.085 }, { m: 'Y', p: 0.6, cote: 0 }]);
@@ -1449,6 +1459,7 @@ serveur.listen(0, async () => {
     ok('Bank : historique des mouvements (dépôts / retraits)', r.mvt === true, r.mvt);
     ok('Montante : une seule échelle par championnat (Liga / La Liga…)', r.lcCanon === true, r.lcCanon);
     ok('F1 : critères 4 saisons + Jouable en Cockpit (page F1 + onglet Saisons)', r.f1cr === true, r.f1cr);
+    ok('NHL Séries individuelles : 🔍 Pépites (50 joueurs)', r.pep === true, r.pep);
     ok('Séries individuelles : seuil 2 ou plus', r.regs === true, r.regs);
     /* Chart.js vient d'un CDN, simulé ici : son absence n'est pas une erreur de l'appli. */
     const vraies = erreurs.filter(m => !/Chart is not defined/.test(m));
