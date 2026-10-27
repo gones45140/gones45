@@ -994,6 +994,18 @@ serveur.listen(0, async () => {
         Object.keys(_g45Reg).forEach(q => { if (!(q in sv)) delete _g45Reg[q]; }); Object.assign(_g45Reg, sv);
         o.reg4n = (G.gameLog.length === 3 && G.gameLog[0].d === '2026-10-19' && G.gameLog[2].goals === 2 && S4 && /\+s4$/.test(k) && /4 saisons \(2023 → 2026\)/.test(H) && />Paliers</.test(H)) || JSON.stringify({ G, k, S4, H: H.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').slice(0, 300) });
       } catch (e) { o.reg4n = 'erreur : ' + e.message; }
+      /* 20261027v — Séries foot sur 4 saisons */
+      try {
+        _g45RegLogsF['fra.1_2026_99'] = Promise.resolve({ gameLog: [{ d: '2026-10-25', goals: 1, assists: 0, points: 1, h: 1 }] });
+        localStorage.setItem('g45reg4f_fra.1_2025_99', JSON.stringify([['2026-05-10', 0, 1, 0], ['2026-05-03', 2, 0, 1]]));
+        _g45RegLogsF['fra.1_2024_99'] = Promise.resolve({ gameLog: null }); _g45RegLogsF['fra.1_2023_99'] = Promise.resolve({ gameLog: [] });
+        const G = await _g45RegLog4Foot('fra.1', '99', 2026); localStorage.removeItem('g45reg4f_fra.1_2025_99'); ['2026', '2024', '2023'].forEach(a => delete _g45RegLogsF['fra.1_' + a + '_99']);
+        const sv = Object.assign({}, _g45Reg); Object.assign(_g45Reg, { an: 2027, an0: 2027, cat: 'g', eq: '', lg: 'fra.1', pep: 0, s4: 1, tri: 'pire', seuil: 1, lieu: '' });
+        const k = _g45RegK(), S4 = _g45RegS4(); _g45Reg.mem[k] = [{ id: 1, nom: 'Foot Quatre', eq: 'PSG', ft: 1, s: _g45RegCalc(G.gameLog, 'goals') }];
+        const H = _g45RegHtml(); delete _g45Reg.mem[k];
+        Object.keys(_g45Reg).forEach(q => { if (!(q in sv)) delete _g45Reg[q]; }); Object.assign(_g45Reg, sv);
+        o.reg4f = (G.gameLog.length === 3 && G.gameLog[2].goals === 2 && S4 && /\+s4$/.test(k) && /4 saisons \(2023-24 → 2026-27\)/.test(H) && />Paliers</.test(H)) || JSON.stringify({ G, k, S4, H: H.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').slice(0, 300) });
+      } catch (e) { o.reg4f = 'erreur : ' + e.message; }
       /* 20261027m — dates de la pire série */
       try {
         const log = [['2026-01-01', 1], ['2026-01-03', 0], ['2026-01-05', 0], ['2026-01-07', 1], ['2026-01-09', 0], ['2026-01-11', 0], ['2026-01-13', 0], ['2026-01-15', 2]].map(x => ({ gameDate: x[0], goals: x[1] })).reverse();
@@ -1556,6 +1568,7 @@ serveur.listen(0, async () => {
     ok('NFL Yards + pépites NBA / NFL (pire série → paliers)', r.yards === true, r.yards);
     ok('Séries NHL sur 4 saisons + mises au choix', r.reg4 === true, r.reg4);
     ok('Séries NFL sur 4 saisons', r.reg4n === true, r.reg4n);
+    ok('Séries foot sur 4 saisons', r.reg4f === true, r.reg4f);
     ok('Séries : dates de la pire série', r.pd === true, r.pd);
     ok('MLB Strikeouts + NBA 4 saisons + dates (Marqueurs)', r.mlbK === true, r.mlbK);
     ok('Compétitions NBA : onglet Séries individuelles', r.nbaSr === true, r.nbaSr);
