@@ -954,6 +954,20 @@ serveur.listen(0, async () => {
         const iA = H.indexOf('>Test Avs<'), iB = H.indexOf('>Test Bruins<');
         o.crCls = (st.pire === 3 && st.ok === 2 && stO.n === 6 && stO.ok === 4 && stO.pire === 2 && /Jouable en Cockpit/.test(H) && iA > 0 && iB > iA && /g45CompetOuvrir\('Test Bruins','2','nhl','hockey',true\)/.test(H)) || JSON.stringify({ st, stO, iA, iB, h: H.slice(-600) });
       } catch (e) { o.crCls = 'erreur : ' + e.message; }
+      /* 20261027j — Yards NFL, pépites NBA / NFL, outils Cockpit partagés */
+      try {
+        const J = { filters: [{ name: 'season', value: '2026' }], names: ['completions', 'passingYards', 'rushingYards'], events: { a: { gameDate: '2026-10-05T17:00Z' }, b: { gameDate: '2026-10-12T17:00Z' }, c: { gameDate: '2026-09-28T17:00Z' } },
+          seasonTypes: [{ displayName: '2026 Regular Season', categories: [{ events: [{ eventId: 'a', stats: ['20', '1,204', '12'] }, { eventId: 'b', stats: ['18', '250', '3'] }] }, { events: [{ eventId: 'a', stats: ['20', '1204', '12'] }, { eventId: 'c', stats: ['22', '190', '0'] }] }] },
+            { displayName: '2026 Preseason', categories: [{ events: [{ eventId: 'z', stats: ['1', '50', '1'] }] }] }] };
+        const L = _g45NflYdLire(J, 2026), L0 = _g45NflYdLire(J, 2025);
+        const pi = _g45MqPire([true, false, false, true, false]), ph = _g45MqPalHtml(3);
+        const sv = Object.assign({}, _g45Reg); Object.assign(_g45Reg, { eq: '', lg: 'nfl', pep: 1 }); const pN = _g45RegPep(); _g45Reg.eq = 'x'; const pE = _g45RegPep();
+        Object.keys(_g45Reg).forEach(q => { if (!(q in sv)) delete _g45Reg[q]; }); Object.assign(_g45Reg, sv);
+        await g45MqSport('nfl'); const ong = !!document.getElementById('g45-nfl-onglets');
+        await g45NflYd(); const HY = (document.getElementById('g45-mq-body') || {}).innerHTML || '';
+        o.yards = (L.length === 3 && L[0][0].indexOf('2026-10-12') === 0 && L[0][1] === 250 && L[1][1] === 1204 && L[2][3] === 0 && L0 === null && pi === 2 && /4 paliers/.test(ph)
+          && pN === true && pE === false && ong && /🏃 Course/.test(HY) && /Pépites \(50\)/.test(HY) && /Aucun classement NFL/.test(HY) && typeof g45NbaMqP === 'function') || JSON.stringify({ L, L0, pi, ph, pN, pE, ong, HY: HY.replace(/<[^>]+>/g, ' ').slice(0, 300) });
+      } catch (e) { o.yards = 'erreur : ' + e.message; }
       /* 20261015o — cote ≈ books FR = DraftKings − 6 %, DK gardée ; filtre cote mini sur la cote FR */
       try {
         const o2 = _g45TrCoteFr([{ m: 'X', p: 0.7, cote: 1.55, ev: 0.085 }, { m: 'Y', p: 0.6, cote: 0 }]);
@@ -1474,6 +1488,7 @@ serveur.listen(0, async () => {
     ok('F1 : critères 4 saisons + Jouable en Cockpit (page F1 + onglet Saisons)', r.f1cr === true, r.f1cr);
     ok('NHL Séries individuelles : 🔍 Pépites (50 joueurs)', r.pep === true, r.pep);
     ok('Critères 4 saisons : Jouable en Cockpit ? (classement de la ligue)', r.crCls === true, r.crCls);
+    ok('NFL Yards + pépites NBA / NFL (pire série → paliers)', r.yards === true, r.yards);
     ok('Séries individuelles : seuil 2 ou plus', r.regs === true, r.regs);
     /* Chart.js vient d'un CDN, simulé ici : son absence n'est pas une erreur de l'appli. */
     const vraies = erreurs.filter(m => !/Chart is not defined/.test(m));
