@@ -941,6 +941,19 @@ serveur.listen(0, async () => {
         Object.keys(_g45Reg).forEach(q => { if (!(q in sv)) delete _g45Reg[q]; }); Object.assign(_g45Reg, sv);
         o.pep = (/k|pep$/.test(k) && /\+pep$/.test(k) && !/pep/.test(k0) && /💎 Petit Fox/.test(H) && !/💎 Top Dix/.test(H) && /opacity:\.55/.test(H) && />Paliers</.test(H) && /<b>4<\/b> ✅/.test(H) && /Pépites \(50 joueurs\)/.test(H)) || H.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').slice(0, 400);
       } catch (e) { o.pep = 'erreur : ' + e.message; }
+      /* 20261027h — critères 4 saisons : 🏁 Jouable en Cockpit ? (classement de la ligue, combiné actif) */
+      try {
+        const S = window._g45CrS, sv = { nom: S.nom, ctx: S.ctx, combos: S.combos, a: S.a, lieu: S.lieu };
+        const mk = (res) => ({ t: Date.now(), lg: 'nhl', saisons: [{ an: 2027, ms: res.map((r, i) => ['2026-10-' + (10 + i), 1, r[0], r[1], 0, 0, 'e' + i]) }] });
+        const DA = mk([[3, 1], [2, 1], [1, 2], [4, 2], [3, 0], [2, 1]]), DB = mk([[1, 2], [0, 3], [1, 4], [3, 1], [2, 1], [1, 2]]);
+        const st = _g45CrClsStat(DB, { res: 'vqr', ou: '', L: 5.5 }), stO = _g45CrClsStat(DA, { res: 'vqr', ou: 'un', L: 4.5, jo: 'x', jn: 'X' });
+        S.nom = 'Test Avs'; S.ctx = { sp: 'hockey', lg: 'nhl', id: '1' }; S.combos = [{ res: 'vqr', ou: 'un', L: 4.5 }]; S.a = 0; S.lieu = 'tout';
+        S.data['Test Avs'] = DA; S.cls['hockey|nhl'] = { etat: 2, eq: [{ id: '2', nom: 'Test Bruins' }, { id: '1', nom: 'Test Avs' }], D: { '1': DA, '2': DB } };
+        const H = _g45CrHtml('Test Avs', S.ctx);
+        delete S.data['Test Avs']; delete S.cls['hockey|nhl']; Object.assign(S, sv);
+        const iA = H.indexOf('>Test Avs<'), iB = H.indexOf('>Test Bruins<');
+        o.crCls = (st.pire === 3 && st.ok === 2 && stO.n === 6 && stO.ok === 4 && stO.pire === 2 && /Jouable en Cockpit/.test(H) && iA > 0 && iB > iA && /g45CompetOuvrir\('Test Bruins','2','nhl','hockey',true\)/.test(H)) || JSON.stringify({ st, stO, iA, iB, h: H.slice(-600) });
+      } catch (e) { o.crCls = 'erreur : ' + e.message; }
       /* 20261015o — cote ≈ books FR = DraftKings − 6 %, DK gardée ; filtre cote mini sur la cote FR */
       try {
         const o2 = _g45TrCoteFr([{ m: 'X', p: 0.7, cote: 1.55, ev: 0.085 }, { m: 'Y', p: 0.6, cote: 0 }]);
@@ -1460,6 +1473,7 @@ serveur.listen(0, async () => {
     ok('Montante : une seule échelle par championnat (Liga / La Liga…)', r.lcCanon === true, r.lcCanon);
     ok('F1 : critères 4 saisons + Jouable en Cockpit (page F1 + onglet Saisons)', r.f1cr === true, r.f1cr);
     ok('NHL Séries individuelles : 🔍 Pépites (50 joueurs)', r.pep === true, r.pep);
+    ok('Critères 4 saisons : Jouable en Cockpit ? (classement de la ligue)', r.crCls === true, r.crCls);
     ok('Séries individuelles : seuil 2 ou plus', r.regs === true, r.regs);
     /* Chart.js vient d'un CDN, simulé ici : son absence n'est pas une erreur de l'appli. */
     const vraies = erreurs.filter(m => !/Chart is not defined/.test(m));
