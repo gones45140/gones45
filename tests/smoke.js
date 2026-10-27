@@ -892,6 +892,17 @@ serveur.listen(0, async () => {
         state.b = JSON.parse(sb); state.abo = sa; state.aboH = sh; window._g45PushBetsGithub = p0;
         o.abo = (n1 === 1 && n2 === 0 && b1 === '97.00' && n3 === 2 && b2 === '91.00' && b3 === '88.00' && b4 === '88.00' && nh === 4) || JSON.stringify({ n1, n2, b1, n3, b2, b3, b4, nh });
       } catch (e) { o.abo = 'erreur : ' + e.message; }
+      /* 20261027b — historique des mouvements : dépôt / retrait via « Modifier » + prélèvements */
+      try {
+        const sb = JSON.stringify(state.b), sm = state.mvt, sh = state.aboH, pr = window.prompt, p0 = window._g45PushBetsGithub; window._g45PushBetsGithub = () => {};
+        window.Chart = window.Chart || function () { return { destroy() {}, update() {} }; };
+        state.b = Object.assign({}, state.b, { 'test bk': '120' }); state.mvt = []; state.aboH = [{ id: 'x|2026-10', a: 'x', n: 'Windscribe', m: 3, b: 'test bk', d: '2026-10-27' }];
+        window.prompt = () => '170'; editBook('test bk'); window.prompt = () => '140'; editBook('test bk'); window.prompt = () => null; editBook('test bk');
+        const L = _g45MvtLignes(), t = L.map((x) => x.t + ':' + x.v).join(',');
+        _g45MvtRender(); const H = (document.getElementById('g45-mvt') || {}).textContent || '';
+        window.prompt = pr; window._g45PushBetsGithub = p0; state.b = JSON.parse(sb); state.mvt = sm; state.aboH = sh;
+        o.mvt = (L.length === 3 && /dep:50/.test(t) && /ret:-30/.test(t) && /abo:-3/.test(t) && /Dépôt/.test(H) && /Retrait/.test(H) && /Windscribe/.test(H)) || JSON.stringify({ t, H: H.slice(0, 200) });
+      } catch (e) { o.mvt = 'erreur : ' + e.message; }
       /* 20261015o — cote ≈ books FR = DraftKings − 6 %, DK gardée ; filtre cote mini sur la cote FR */
       try {
         const o2 = _g45TrCoteFr([{ m: 'X', p: 0.7, cote: 1.55, ev: 0.085 }, { m: 'Y', p: 0.6, cote: 0 }]);
@@ -1407,6 +1418,7 @@ serveur.listen(0, async () => {
     ok('Mes équipes rangées par sport', r.murSp === true, r.murSp);
     ok('NFL : drive en cours (terrain)', r.nflDr === true, r.nflDr);
     ok('Bank : abonnements (prélèvement mensuel, sans doublon, synchro)', r.abo === true, r.abo);
+    ok('Bank : historique des mouvements (dépôts / retraits)', r.mvt === true, r.mvt);
     ok('Séries individuelles : seuil 2 ou plus', r.regs === true, r.regs);
     /* Chart.js vient d'un CDN, simulé ici : son absence n'est pas une erreur de l'appli. */
     const vraies = erreurs.filter(m => !/Chart is not defined/.test(m));
