@@ -879,6 +879,19 @@ serveur.listen(0, async () => {
         const H = _g45NflDriveHtml(cp);
         o.nflDr = (/3e &amp; 4 à PIT 47/.test(H) && /passe complétée, \+1 yard/.test(H) && /left:47\.48%;">🏈/.test(H) && /#ffd400;left:50\.84%/.test(H)) || H.slice(0, 300);
       } catch (e) { o.nflDr = 'erreur : ' + e.message; }
+      /* 20261025t — 💳 abonnements : prélèvement du jour, pas de doublon, mois suivants, fusion d'un autre appareil */
+      try {
+        const sb = JSON.stringify(state.b), sa = state.abo, sh = state.aboH, p0 = window._g45PushBetsGithub; window._g45PushBetsGithub = () => {};
+        state.b = Object.assign({}, state.b, { 'test banque': '100.00' });
+        state.abo = [{ id: 'abT', n: 'Windscribe', m: 3, j: 27, b: 'test banque', on: true, cree: '2026-10-27' }]; state.aboH = [];
+        const n1 = _g45AboTraiter('2026-10-27'), n2 = _g45AboTraiter('2026-10-27'), b1 = state.b['test banque'];
+        const n3 = _g45AboTraiter('2026-12-28'), b2 = state.b['test banque'];
+        const rem = { h: [], a: [], abo: state.abo, aboH: [{ id: 'abT|2027-01', a: 'abT', n: 'Windscribe', m: 3, b: 'test banque', d: '2027-01-27' }] };
+        _g45BetsFusion(rem); const b3 = state.b['test banque'], nh = state.aboH.length;
+        _g45BetsFusion(rem); const b4 = state.b['test banque'];
+        state.b = JSON.parse(sb); state.abo = sa; state.aboH = sh; window._g45PushBetsGithub = p0;
+        o.abo = (n1 === 1 && n2 === 0 && b1 === '97.00' && n3 === 2 && b2 === '91.00' && b3 === '88.00' && b4 === '88.00' && nh === 4) || JSON.stringify({ n1, n2, b1, n3, b2, b3, b4, nh });
+      } catch (e) { o.abo = 'erreur : ' + e.message; }
       /* 20261015o — cote ≈ books FR = DraftKings − 6 %, DK gardée ; filtre cote mini sur la cote FR */
       try {
         const o2 = _g45TrCoteFr([{ m: 'X', p: 0.7, cote: 1.55, ev: 0.085 }, { m: 'Y', p: 0.6, cote: 0 }]);
@@ -1393,6 +1406,7 @@ serveur.listen(0, async () => {
     ok('Surebet : cote LAY (−) + OrbitX en 1er', r.sbLay === true, r.sbLay);
     ok('Mes équipes rangées par sport', r.murSp === true, r.murSp);
     ok('NFL : drive en cours (terrain)', r.nflDr === true, r.nflDr);
+    ok('Bank : abonnements (prélèvement mensuel, sans doublon, synchro)', r.abo === true, r.abo);
     ok('Séries individuelles : seuil 2 ou plus', r.regs === true, r.regs);
     /* Chart.js vient d'un CDN, simulé ici : son absence n'est pas une erreur de l'appli. */
     const vraies = erreurs.filter(m => !/Chart is not defined/.test(m));
