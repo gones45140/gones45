@@ -912,6 +912,19 @@ serveur.listen(0, async () => {
         state.u = su; state.a = sa; state.h = sh;
         o.lcCanon = (lc === '{"liga|ext":1,"liga|dom":1}' && p1 === 1 && p2 === 1 && _g45CompNz('Liga Portugal') === 'ligaportugal') || JSON.stringify({ lc, p1, p2 });
       } catch (e) { o.lcCanon = 'erreur : ' + e.message; }
+      /* 20261027d — F1 critères 4 saisons + Jouable en Cockpit */
+      try {
+        const R = (r, a, b, gA) => ({ r, c: 'cir' + r, x: [['ver', 'rb', a, 1, gA, 10, 'Max Verstappen'], ['per', 'rb', b, b < 20 ? 1 : 0, 5, 2, 'Sergio Perez'], ['nor', 'mc', 2, 1, 2, 18, 'Lando Norris']] });
+        const D = { ans: [{ y: 2025, gp: [R(1, 1, 4, 1), R(2, 5, 3, 2), R(3, 6, 20, 4)], sp: [] }, { y: 2026, gp: [R(1, 7, 3, 9), R(2, 3, 9, 1)], sp: [] }], dn: { ver: 'Max Verstappen', per: 'Sergio Perez', nor: 'Lando Norris' }, next: { c: 'cir2', n: 'Test' } };
+        const st = _g45F1CrStats(_g45F1CrSeq(D, 'ver', { k: 'po' }));
+        const cq = _g45F1CrStats(_g45F1CrSeq(D, 'ver', { k: 'cq' }));
+        const ci = _g45F1CrSeq(D, 'ver', { k: 'po', ci: 1 }).length, ap = _g45F1CrSeq(D, 'ver', { k: 'po', ap: 1 }).length;
+        const pa = _g45F1CrPal(st.pire);
+        const div = document.createElement('div'); div.id = 'g45-f1cr'; document.body.appendChild(div);
+        _g45F1CrData(D); g45F1CrSet('d', 'ver'); const H = div.innerHTML; div.remove();
+        o.f1cr = (st.n === 5 && st.ok === 2 && st.pire === 3 && st.meil === 1 && st.cours === 1 && st.coursOk && cq.ok === 3 && ci === 2 && ap === 1
+          && pa.p === 4 && pa.mise === STRATS['1'][3] && /il fallait 4 paliers/.test(H) && /Jouable en Cockpit/.test(H) && /Lando Norris/.test(H)) || JSON.stringify({ st, cq, ci, ap, pa });
+      } catch (e) { o.f1cr = 'erreur : ' + e.message; }
       /* 20261015o — cote ≈ books FR = DraftKings − 6 %, DK gardée ; filtre cote mini sur la cote FR */
       try {
         const o2 = _g45TrCoteFr([{ m: 'X', p: 0.7, cote: 1.55, ev: 0.085 }, { m: 'Y', p: 0.6, cote: 0 }]);
@@ -1429,6 +1442,7 @@ serveur.listen(0, async () => {
     ok('Bank : abonnements (prélèvement mensuel, sans doublon, synchro)', r.abo === true, r.abo);
     ok('Bank : historique des mouvements (dépôts / retraits)', r.mvt === true, r.mvt);
     ok('Montante : une seule échelle par championnat (Liga / La Liga…)', r.lcCanon === true, r.lcCanon);
+    ok('F1 : critères 4 saisons + Jouable en Cockpit', r.f1cr === true, r.f1cr);
     ok('Séries individuelles : seuil 2 ou plus', r.regs === true, r.regs);
     /* Chart.js vient d'un CDN, simulé ici : son absence n'est pas une erreur de l'appli. */
     const vraies = erreurs.filter(m => !/Chart is not defined/.test(m));
