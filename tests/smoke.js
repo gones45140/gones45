@@ -1016,6 +1016,12 @@ serveur.listen(0, async () => {
         o.mlbK = (K.length === 2 && K[0][1] === 4 && K[1][1] === 7 && K0 === null && pd.join() === '06/04/26,12/04/26' && /06\/04\/26 → 12\/04\/26/.test(ph) && ong && /4 saisons/.test(HK) && /Pépites/.test(HK) && /Aucun classement MLB/.test(HK) && cache === 'none' && typeof g45NbaMqS4 === 'function')
           || JSON.stringify({ K, K0, pd, ong, cache, HK: HK.replace(/<[^>]+>/g, ' ').slice(0, 200) });
       } catch (e) { o.mlbK = 'erreur : ' + e.message; }
+      /* 20261027o — Compétitions → NBA → 🎯 Séries individuelles (écran Marqueurs NBA dans l'onglet) */
+      try {
+        const d = document.createElement('div'); d.id = 'g45-nba-sr'; document.body.appendChild(d);
+        window._g45NbaMqHote = 'g45-nba-sr'; await g45NbaMq(); const H = d.innerHTML; d.remove(); window._g45NbaMqHote = 'g45-mq-hote';
+        o.nbaSr = (/4 saisons/.test(H) && /Pépites/.test(H) && /Points/.test(H)) || H.replace(/<[^>]+>/g, ' ').slice(0, 200);
+      } catch (e) { o.nbaSr = 'erreur : ' + e.message; }
       /* 20261015o — cote ≈ books FR = DraftKings − 6 %, DK gardée ; filtre cote mini sur la cote FR */
       try {
         const o2 = _g45TrCoteFr([{ m: 'X', p: 0.7, cote: 1.55, ev: 0.085 }, { m: 'Y', p: 0.6, cote: 0 }]);
@@ -1541,6 +1547,7 @@ serveur.listen(0, async () => {
     ok('Séries NFL sur 4 saisons', r.reg4n === true, r.reg4n);
     ok('Séries : dates de la pire série', r.pd === true, r.pd);
     ok('MLB Strikeouts + NBA 4 saisons + dates (Marqueurs)', r.mlbK === true, r.mlbK);
+    ok('Compétitions NBA : onglet Séries individuelles', r.nbaSr === true, r.nbaSr);
     ok('Séries individuelles : seuil 2 ou plus', r.regs === true, r.regs);
     /* Chart.js vient d'un CDN, simulé ici : son absence n'est pas une erreur de l'appli. */
     const vraies = erreurs.filter(m => !/Chart is not defined/.test(m));
