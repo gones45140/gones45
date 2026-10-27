@@ -903,6 +903,15 @@ serveur.listen(0, async () => {
         window.prompt = pr; window._g45PushBetsGithub = p0; state.b = JSON.parse(sb); state.mvt = sm; state.aboH = sh;
         o.mvt = (L.length === 3 && /dep:50/.test(t) && /ret:-30/.test(t) && /abo:-3/.test(t) && /Dépôt/.test(H) && /Retrait/.test(H) && /Windscribe/.test(H)) || JSON.stringify({ t, H: H.slice(0, 200) });
       } catch (e) { o.mvt = 'erreur : ' + e.message; }
+      /* 20261027c — une seule montante par championnat (Liga / La Liga / LaLiga…) */
+      try {
+        const su = state.u, sa = state.a, sh = state.h;
+        state.u = [{ n: 'Real Test', l: 1, lc: { 'laliga|ext': 1, 'laliga|dom': 2, 'liga|dom': 1, 'liga|ext': 1 } }];
+        state.a = [{ n: 'Real Test', comp: 'La Liga', domicile: 'dom', date: '2026-09-20', win: false }, { n: 'Real Test', comp: 'Liga', domicile: 'dom', date: '2026-10-19', win: true }]; state.h = [];
+        _g45LcCanon(); const u = state.u[0], lc = JSON.stringify(u.lc), p1 = _g45Pal(u, 'La Liga', 'dom'), p2 = _g45Pal(u, 'Spanish LALIGA', 'dom');
+        state.u = su; state.a = sa; state.h = sh;
+        o.lcCanon = (lc === '{"liga|ext":1,"liga|dom":1}' && p1 === 1 && p2 === 1 && _g45CompNz('Liga Portugal') === 'ligaportugal') || JSON.stringify({ lc, p1, p2 });
+      } catch (e) { o.lcCanon = 'erreur : ' + e.message; }
       /* 20261015o — cote ≈ books FR = DraftKings − 6 %, DK gardée ; filtre cote mini sur la cote FR */
       try {
         const o2 = _g45TrCoteFr([{ m: 'X', p: 0.7, cote: 1.55, ev: 0.085 }, { m: 'Y', p: 0.6, cote: 0 }]);
@@ -1419,6 +1428,7 @@ serveur.listen(0, async () => {
     ok('NFL : drive en cours (terrain)', r.nflDr === true, r.nflDr);
     ok('Bank : abonnements (prélèvement mensuel, sans doublon, synchro)', r.abo === true, r.abo);
     ok('Bank : historique des mouvements (dépôts / retraits)', r.mvt === true, r.mvt);
+    ok('Montante : une seule échelle par championnat (Liga / La Liga…)', r.lcCanon === true, r.lcCanon);
     ok('Séries individuelles : seuil 2 ou plus', r.regs === true, r.regs);
     /* Chart.js vient d'un CDN, simulé ici : son absence n'est pas une erreur de l'appli. */
     const vraies = erreurs.filter(m => !/Chart is not defined/.test(m));
