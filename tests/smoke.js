@@ -994,6 +994,15 @@ serveur.listen(0, async () => {
         Object.keys(_g45Reg).forEach(q => { if (!(q in sv)) delete _g45Reg[q]; }); Object.assign(_g45Reg, sv);
         o.reg4n = (G.gameLog.length === 3 && G.gameLog[0].d === '2026-10-19' && G.gameLog[2].goals === 2 && S4 && /\+s4$/.test(k) && /4 saisons \(2023 → 2026\)/.test(H) && />Paliers</.test(H)) || JSON.stringify({ G, k, S4, H: H.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').slice(0, 300) });
       } catch (e) { o.reg4n = 'erreur : ' + e.message; }
+      /* 20261027m — dates de la pire série */
+      try {
+        const log = [['2026-01-01', 1], ['2026-01-03', 0], ['2026-01-05', 0], ['2026-01-07', 1], ['2026-01-09', 0], ['2026-01-11', 0], ['2026-01-13', 0], ['2026-01-15', 2]].map(x => ({ gameDate: x[0], goals: x[1] })).reverse();
+        const R = _g45RegCalc(log, 'goals'), R2 = _g45RegSeuilS(R, 2);
+        const sv = Object.assign({}, _g45Reg); Object.assign(_g45Reg, { an: 2027, an0: 2027, cat: 'g', eq: '', lg: '', pep: 0, s4: 0, tri: 'pire', seuil: 1, lieu: '' });
+        const k = _g45RegK(); _g45Reg.mem[k] = [{ id: 1, nom: 'Date Test', eq: 'EDM', s: R }]; const H = _g45RegHtml(); delete _g45Reg.mem[k];
+        Object.keys(_g45Reg).forEach(q => { if (!(q in sv)) delete _g45Reg[q]; }); Object.assign(_g45Reg, sv);
+        o.pd = (R.pire === 3 && R.pd.join() === '260109,260113' && R2.pire === 7 && R2.pd.join() === '260101,260113' && /09\/01\/26 → 13\/01\/26/.test(H)) || JSON.stringify({ R, R2 });
+      } catch (e) { o.pd = 'erreur : ' + e.message; }
       /* 20261015o — cote ≈ books FR = DraftKings − 6 %, DK gardée ; filtre cote mini sur la cote FR */
       try {
         const o2 = _g45TrCoteFr([{ m: 'X', p: 0.7, cote: 1.55, ev: 0.085 }, { m: 'Y', p: 0.6, cote: 0 }]);
@@ -1517,6 +1526,7 @@ serveur.listen(0, async () => {
     ok('NFL Yards + pépites NBA / NFL (pire série → paliers)', r.yards === true, r.yards);
     ok('Séries NHL sur 4 saisons + mises au choix', r.reg4 === true, r.reg4);
     ok('Séries NFL sur 4 saisons', r.reg4n === true, r.reg4n);
+    ok('Séries : dates de la pire série', r.pd === true, r.pd);
     ok('Séries individuelles : seuil 2 ou plus', r.regs === true, r.regs);
     /* Chart.js vient d'un CDN, simulé ici : son absence n'est pas une erreur de l'appli. */
     const vraies = erreurs.filter(m => !/Chart is not defined/.test(m));
