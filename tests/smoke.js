@@ -818,21 +818,17 @@ serveur.listen(0, async () => {
         o.f1bs = (/#b57bff;">25\.401/.test(H1) && /#1ed760;">33\.200/.test(H1) && /#fff;">35\.950/.test(H1) && /26\.1/.test(H1)
           && a1 && a2 && /carte encore 10 min/.test(H2) && !jamais) || JSON.stringify({ a1, a2, jamais, h: H1.slice(0, 200) });
       } catch (e) { o.f1bs = 'erreur : ' + e.message; }
-      /* 20261025b — 🌍 Même pari partout : une case recopiée dans 🏠 et ✈️ */
+      /* 20261027z — 3 paris indépendants 🌍 / 🏠 / ✈️ (remplace l'interrupteur « Même pari partout » de 20261025b) + paliers par montante */
       try {
-        const bt = document.getElementById('u-ptout');
-        if (!bt) o.ufTout = 'bouton absent';
-        else {
-          document.getElementById('u-pdom').value = 'Victoire';
-          g45UfPartout('u');
-          const pp = document.getElementById('u-ppart'), v0 = pp.value;
-          pp.value = 'Victoire + 1 point'; g45UfPartoutTape('u');
-          const d = document.getElementById('u-pdom').value, x = document.getElementById('u-pext').value, on = bt.getAttribute('data-on');
-          const note = window._g45UfCompose('', '', d, x);
-          g45UfPartout('u'); const off = bt.getAttribute('data-on');
-          ['u-pdom', 'u-pext', 'u-ppart'].forEach((id) => { document.getElementById(id).value = ''; });
-          o.ufTout = (v0 === 'Victoire' && d === 'Victoire + 1 point' && x === d && on === '1' && off === '0' && note === '🏠/✈️ Victoire + 1 point') || JSON.stringify({ v0, d, x, on, off, note });
-        }
+        const n = _g45UfCompose('', 'forme', 'victoire + under 4.5', 'les deux marquent', 'victoire');
+        const D = _g45UfDecoupe(n), D0 = _g45UfDecoupe('🏠/✈️ victoire');
+        const cD = _g45AgConsigne('🌍 victoire ✈️ les deux marquent', true), cE = _g45AgConsigne('🌍 victoire ✈️ les deux marquent', false), cG = _g45AgConsigne('🌍 victoire', false);
+        const P = _g45UlPaliers({ l: 2, lc: { 'ligue1': 3, 'ligue1|dom': 1, 'ligue1|ext': 2 } }), P0 = _g45UlPaliers({ l: 2 });
+        const vis = (document.getElementById('g45uf-tout-u') || {}).style;
+        o.ufTout = (n === 'forme 🌍 victoire 🏠 victoire + under 4.5 ✈️ les deux marquent' && D.glob === 'victoire' && D.dom === 'victoire + under 4.5' && D.ext === 'les deux marquent' && D.avant === 'forme'
+          && D0.dom === 'victoire' && !D0.glob && /victoire/.test(cD.txt) && /deux marquent/.test(cE.txt) && /victoire/.test(cG.txt)
+          && /🌍 Palier 3/.test(P) && /🏠 Palier 1/.test(P) && /✈️ Palier 2/.test(P) && /Palier 2/.test(P0) && !/🌍/.test(P0) && (!vis || vis.display !== 'none'))
+          || JSON.stringify({ n, D, D0, cD, cE, cG, P, P0 });
       } catch (e) { o.ufTout = 'erreur : ' + e.message; }
       /* 20261025c — ticket d'une équipe absente du mur → carte JOUEUR de ce club */
       try {
@@ -1553,7 +1549,7 @@ serveur.listen(0, async () => {
     ok('Ticket Cockpit : adversaire au mur → pari contre', r.tkc === true, r.tkc);
     ok('Ticket Cockpit : joueur du ticket précédent effacé', r.tkJ === true, r.tkJ);
     ok('F1 direct : meilleurs secteurs + carte 10 min après la fin', r.f1bs === true, r.f1bs);
-    ok('Mur : 🌍 même pari partout (domicile + extérieur)', r.ufTout === true, r.ufTout);
+    ok('Mur : 3 paris 🌍 / 🏠 / ✈️ + paliers par montante', r.ufTout === true, r.ufTout);
     ok('Ticket : équipe absente du mur → carte joueur de ce club', r.tkClub === true, r.tkClub);
     ok('Mur : bénéfice du mois en cours', r.mois === true, r.mois);
     ok('Surebet : cote LAY (−) + OrbitX en 1er', r.sbLay === true, r.sbLay);
