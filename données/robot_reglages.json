@@ -1,0 +1,19 @@
+{
+ "maj": "2026-10-27T07:59:59.382Z",
+ "etat": {
+  "f_buts": "off",
+  "f_btts": "off",
+  "f_vq": "off",
+  "ce_buts": "off",
+  "ce_vq": "off",
+  "ce_hors": "test",
+  "nhl_buts": "test",
+  "nhl_vq": "off",
+  "nba_pts": "test",
+  "nba_vq": "off",
+  "nfl_pts": "test",
+  "nfl_vq": "off",
+  "tn_vq": "test",
+  "tn_tv": "test"
+ }
+}
