@@ -982,6 +982,18 @@ serveur.listen(0, async () => {
         o.reg4 = (G.gameLog.length === 3 && G.gameLog[0].gameDate === '2026-10-20' && G.gameLog[2].goals === 2 && /\+s4$/.test(k) && /4 saisons \(2023 → 2027\)/.test(H) && /Mises :/.test(H) && />Paliers</.test(H)
           && m2 === STRATS['2'][3] && m1 === STRATS['1'][3]) || JSON.stringify({ G, k, m1, m2, H: H.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').slice(0, 300) });
       } catch (e) { o.reg4 = 'erreur : ' + e.message; }
+      /* 20261027l — Séries NFL sur 4 saisons */
+      try {
+        _g45RegLogsN['2026_88'] = Promise.resolve({ gameLog: [{ d: '2026-10-19', goals: 1, assists: 0, points: 1, h: 1 }] });
+        localStorage.setItem('g45reg4n_2025_88', JSON.stringify([['2025-12-28', 0, 0, 0], ['2025-12-21', 2, 0, 1]]));
+        _g45RegLogsN['2024_88'] = Promise.resolve({ gameLog: null }); _g45RegLogsN['2023_88'] = Promise.resolve({ gameLog: [] });
+        const G = await _g45RegLog4Nfl('88', 2026); localStorage.removeItem('g45reg4n_2025_88'); ['2026_88', '2024_88', '2023_88'].forEach(k => delete _g45RegLogsN[k]);
+        const sv = Object.assign({}, _g45Reg); Object.assign(_g45Reg, { an: 2026, an0: 2026, cat: 'g', eq: '', lg: 'nfl', pep: 0, s4: 1, tri: 'pire', seuil: 1, lieu: '' });
+        const k = _g45RegK(), S4 = _g45RegS4(); _g45Reg.mem[k] = [{ id: 1, nom: 'Td Quatre', eq: 'KC', ft: 1, s: _g45RegCalc(G.gameLog, 'goals') }];
+        const H = _g45RegHtml(); delete _g45Reg.mem[k];
+        Object.keys(_g45Reg).forEach(q => { if (!(q in sv)) delete _g45Reg[q]; }); Object.assign(_g45Reg, sv);
+        o.reg4n = (G.gameLog.length === 3 && G.gameLog[0].d === '2026-10-19' && G.gameLog[2].goals === 2 && S4 && /\+s4$/.test(k) && /4 saisons \(2023 → 2026\)/.test(H) && />Paliers</.test(H)) || JSON.stringify({ G, k, S4, H: H.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').slice(0, 300) });
+      } catch (e) { o.reg4n = 'erreur : ' + e.message; }
       /* 20261015o — cote ≈ books FR = DraftKings − 6 %, DK gardée ; filtre cote mini sur la cote FR */
       try {
         const o2 = _g45TrCoteFr([{ m: 'X', p: 0.7, cote: 1.55, ev: 0.085 }, { m: 'Y', p: 0.6, cote: 0 }]);
@@ -1504,6 +1516,7 @@ serveur.listen(0, async () => {
     ok('Critères 4 saisons : Jouable en Cockpit ? (classement de la ligue)', r.crCls === true, r.crCls);
     ok('NFL Yards + pépites NBA / NFL (pire série → paliers)', r.yards === true, r.yards);
     ok('Séries NHL sur 4 saisons + mises au choix', r.reg4 === true, r.reg4);
+    ok('Séries NFL sur 4 saisons', r.reg4n === true, r.reg4n);
     ok('Séries individuelles : seuil 2 ou plus', r.regs === true, r.regs);
     /* Chart.js vient d'un CDN, simulé ici : son absence n'est pas une erreur de l'appli. */
     const vraies = erreurs.filter(m => !/Chart is not defined/.test(m));
