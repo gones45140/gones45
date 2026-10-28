@@ -1025,6 +1025,19 @@ serveur.listen(0, async () => {
         state.u = u0; render();
         o.serUne = (/g45SerUne\('Test Yamal'/.test(H) && !/g45SerUne\('Test Vide'/.test(H)) || (Z => Z.slice(Math.max(0, Z.indexOf('Test Yamal') - 200), Z.indexOf('Test Yamal') + 900))(H.replace(/style="[^"]*"/g, ''));
       } catch (e) { o.serUne = 'erreur : ' + e.message; }
+      /* 20261028p — 🏁 Cockpit BET45 (Tendances) : cartes du mur qui jouent aujourd'hui / cette nuit */
+      try {
+        const u0 = state.u, v0 = localStorage.getItem('g45tr_vue'), a0 = localStorage.getItem('g45ck_ag'), at = Date.now(), d = new Date();
+        state.u = [{ n: 'Test Stars', sport: '🏒', s: 5, l: 1, lc: { 'nhl|dom': 2 }, note: '🏠 vainqueur + buts de Dallas plus de 2,5', psL: { dom: { t: 'vainqueur + buts de Dallas plus de 2,5', p: [2, 1, 2, 1], tot: 2, at } } },
+          { n: 'Test Loin', sport: '⚽', s: 4, l: 1, note: '✈️ Victoire' }];
+        window._g45CkAg = { j: d.getFullYear() + '-' + (d.getMonth() + 1) + '-' + d.getDate(), L: [{ t: at + 3600e3, n: 'Test Stars', d: 1, adv: 'Canadiens', sp: 'hockey' }, { t: at + 3 * 86400e3, n: 'Test Loin', d: 0, adv: 'X', sp: 'soccer' }] };
+        g45TrVue('ck'); await new Promise(r => setTimeout(r, 100));
+        const H = (document.getElementById('t-tend') || {}).innerHTML || '', nav = /🏁 Cockpit BET45/.test(H);
+        state.u = u0; window._g45CkAg = null; if (a0 == null) localStorage.removeItem('g45ck_ag'); else localStorage.setItem('g45ck_ag', a0);
+        if (v0 == null) localStorage.removeItem('g45tr_vue'); else localStorage.setItem('g45tr_vue', v0);
+        const T = H.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ');
+        o.ck = (nav && /tes cartes qui jouent/.test(T) && /Test Stars 🏠 vs Canadiens/.test(T) && /Palier 2 · mise/.test(T) && /pire série 2 · 1 · 2 · 1 → 3 paliers/.test(T) && /📌 🏠 vainqueur/.test(T) && !/Test Loin/.test(T)) || T.slice(0, 600);
+      } catch (e) { o.ck = 'erreur : ' + e.message; }
       /* 20261028j — Séries individuelles : zone VISIBLE quand une fiche cachée a aussi sa zone */
       try {
         const zc = document.createElement('div'); zc.style.display = 'none'; zc.innerHTML = '<div id="g45-reg-box">cachée</div>';
@@ -1660,6 +1673,7 @@ serveur.listen(0, async () => {
     ok('Séries individuelles : clic redessiné dans la zone visible', r.regVis === true, r.regVis);
     ok('🔄 Calculer mes séries : joueurs NHL / foot', r.serJ === true, r.serJ);
     ok('🔄 Calculer sur une carte jamais calculée', r.serUne === true, r.serUne);
+    ok('🏁 Cockpit BET45 (Tendances)', r.ck === true, r.ck);
     ok('🔄 Calculer mes séries : joueur dans un pari d\'équipe', r.serJE === true, r.serJE);
     ok('NFL Yards + pépites NBA / NFL (pire série → paliers)', r.yards === true, r.yards);
     ok('Séries NHL sur 4 saisons + mises au choix', r.reg4 === true, r.reg4);
