@@ -960,6 +960,16 @@ serveur.listen(0, async () => {
         const G = _g45CrGarderCalc({ res: 'vqr', ou: '', L: 5.5 }, D); Object.assign(S, sv);
         o.garde = (/🏠 Jack Eichel passeur/.test(H) && /5 paliers/.test(H) && /2026-27 → 2023-24/.test(H) && G.p.join() === '1,2' && G.ans.length === 2) || JSON.stringify({ G, H: H.slice(0, 200) });
       } catch (e) { o.garde = 'erreur : ' + e.message; }
+      /* 20261028g — 📌 depuis les Séries individuelles */
+      try {
+        const Z = _g45RegSaisons({ dt: ['241010', '241012', '250310', '251015', '251020', '251025', '260105'], v: [0, 0, 1, 0, 1, 0, 0] }, '');
+        const u0 = state.u; state.u = [{ n: 'Jack Eichel', type: 'joueur', s: 4, l: 1 }];
+        const sv = Object.assign({}, _g45Reg); Object.assign(_g45Reg, { an: 2027, an0: 2027, cat: 'a', eq: '', lg: '', pep: 0, s4: 1, tri: 'pire', seuil: 1, lieu: 'd' });
+        window._g45RegRows = { 77: { nom: 'Jack Eichel', s: { dt: ['251015', '251020'], v: [0, 1], pire: 1 }, lb: { btn: '🎯 Passeurs' }, se: 1, li: 'd' } };
+        g45RegGarder('77'); const ps = state.u[0].ps; state.u = u0;
+        Object.keys(_g45Reg).forEach(q => { if (!(q in sv)) delete _g45Reg[q]; }); Object.assign(_g45Reg, sv);
+        o.regGarde = (Z.ans.join() === '2025-26,2024-25' && Z.p.join() === '2,2' && ps && ps.lib === 'Passeur' && ps.k === 'dom' && ps.p.join() === '1' && ps.tot === 1) || JSON.stringify({ Z, ps });
+      } catch (e) { o.regGarde = 'erreur : ' + e.message; }
       /* 20261027j — Yards NFL, pépites NBA / NFL, outils Cockpit partagés */
       try {
         const J = { filters: [{ name: 'season', value: '2026' }], names: ['completions', 'passingYards', 'rushingYards'], events: { a: { gameDate: '2026-10-05T17:00Z' }, b: { gameDate: '2026-10-12T17:00Z' }, c: { gameDate: '2026-09-28T17:00Z' } },
@@ -1572,6 +1582,7 @@ serveur.listen(0, async () => {
     ok('NHL Séries individuelles : 🔍 Pépites (50 joueurs)', r.pep === true, r.pep);
     ok('Critères 4 saisons : Jouable en Cockpit ? (classement de la ligue)', r.crCls === true, r.crCls);
     ok('Critères : 📌 Garder sur la carte', r.garde === true, r.garde);
+    ok('Séries individuelles : 📌 sur la carte du joueur', r.regGarde === true, r.regGarde);
     ok('NFL Yards + pépites NBA / NFL (pire série → paliers)', r.yards === true, r.yards);
     ok('Séries NHL sur 4 saisons + mises au choix', r.reg4 === true, r.reg4);
     ok('Séries NFL sur 4 saisons', r.reg4n === true, r.reg4n);
