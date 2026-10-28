@@ -975,6 +975,14 @@ serveur.listen(0, async () => {
         o.serie = (P === 'glob,dom,ext' && L.glob && L.glob.p.join() === '3,3,3,3' && L.glob.tot === 3 && L.dom.p.join() === '2,2,2,2' && /pas calculable/.test(L.ext.err)
           && /🏠 pire série/.test(H) && /4 paliers/.test(H) && /3 paliers/.test(H) && bar && _g45SerCombo('victoire ou nul') === 'Victoire' && _g45SerCombo('buteur') === null) || JSON.stringify({ P, L, bar, H: H.replace(/<[^>]+>/g, ' ') });
       } catch (e) { o.serie = 'erreur : ' + e.message; }
+      /* 20261028j — Séries individuelles : zone VISIBLE quand une fiche cachée a aussi sa zone */
+      try {
+        const zc = document.createElement('div'); zc.style.display = 'none'; zc.innerHTML = '<div id="g45-reg-box">cachée</div>';
+        const zv = document.createElement('div'); zv.innerHTML = '<div id="g45-reg-box">visible</div>';
+        document.body.insertBefore(zc, document.body.firstChild); document.body.appendChild(zv);
+        const t = (_g45RegBoxVis() || {}).textContent; zc.remove(); zv.remove();
+        o.regVis = t === 'visible' || t;
+      } catch (e) { o.regVis = 'erreur : ' + e.message; }
       /* 20261028g — 📌 depuis les Séries individuelles */
       try {
         const Z = _g45RegSaisons({ dt: ['241010', '241012', '250310', '251015', '251020', '251025', '260105'], v: [0, 0, 1, 0, 1, 0, 0] }, '');
@@ -1599,6 +1607,7 @@ serveur.listen(0, async () => {
     ok('Critères : 📌 Garder sur la carte', r.garde === true, r.garde);
     ok('Séries individuelles : 📌 sur la carte du joueur', r.regGarde === true, r.regGarde);
     ok('Outils → Équipes : 🔄 Calculer mes séries', r.serie === true, r.serie);
+    ok('Séries individuelles : clic redessiné dans la zone visible', r.regVis === true, r.regVis);
     ok('NFL Yards + pépites NBA / NFL (pire série → paliers)', r.yards === true, r.yards);
     ok('Séries NHL sur 4 saisons + mises au choix', r.reg4 === true, r.reg4);
     ok('Séries NFL sur 4 saisons', r.reg4n === true, r.reg4n);
