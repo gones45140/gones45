@@ -865,8 +865,9 @@ serveur.listen(0, async () => {
         const ul = document.getElementById('ulist'), H = [...ul.querySelectorAll('.g45-mur-sp')].map((h) => h.textContent);
         const nFoot = ul.querySelectorAll('.g45-mur-sp')[0].nextElementSibling.querySelectorAll('.urow').length;
         g45MurPlier('foot'); const plie = ul.querySelectorAll('.g45-mur-sp')[0].nextElementSibling.style.display === 'none';
+        const hk = ul.querySelectorAll('.g45-mur-sp')[1].nextElementSibling.textContent, sousT = /👥 Équipes \(1\)/.test(hk) && /👤 Joueurs \(1\)/.test(hk);   /* 20261028b */
         g45MurPlier('foot'); state.u = u0; try { render(); } catch (e) {}
-        o.murSp = (H.length === 2 && /Football/.test(H[0]) && /2 équipes/.test(H[0]) && /Hockey/.test(H[1]) && nFoot === 2 && plie) || JSON.stringify({ H, nFoot, plie });
+        o.murSp = (H.length === 2 && /Football/.test(H[0]) && /2 équipes/.test(H[0]) && /Hockey/.test(H[1]) && nFoot === 2 && plie && sousT) || JSON.stringify({ H, nFoot, plie, sousT });
       } catch (e) { o.murSp = 'erreur : ' + e.message; }
       /* 20261025n — NFL drive en cours (données de la sonde Steelers @ Saints) */
       try {
