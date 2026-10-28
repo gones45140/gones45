@@ -960,6 +960,21 @@ serveur.listen(0, async () => {
         const G = _g45CrGarderCalc({ res: 'vqr', ou: '', L: 5.5 }, D); Object.assign(S, sv);
         o.garde = (/🏠 Jack Eichel passeur/.test(H) && /5 paliers/.test(H) && /2026-27 → 2023-24/.test(H) && G.p.join() === '1,2' && G.ans.length === 2) || JSON.stringify({ G, H: H.slice(0, 200) });
       } catch (e) { o.garde = 'erreur : ' + e.message; }
+      /* 20261028h — 🔄 Calculer mes séries (Outils → Équipes) */
+      try {
+        const f0 = window.fetch, cx0 = window._g45CompoCtx;
+        window._g45CompoCtx = async () => ({ sp: 'hockey', lg: 'nhl', ref: 'T99', via: 'perso' });
+        const ev = (d, h, a) => ({ date: d + 'T00:00Z', seasonType: { type: 2 }, competitions: [{ status: { type: { completed: true, detail: 'Final' } }, competitors: [{ homeAway: 'home', team: { id: 'T99' }, score: { value: h } }, { homeAway: 'away', team: { id: '5' }, score: { value: a } }] }] });
+        window.fetch = async (u) => /teams\/T99\/schedule/.test(String(u)) ? { ok: true, json: async () => ({ events: [ev('2026-10-01', 3, 1), ev('2026-10-03', 1, 2), ev('2026-10-05', 2, 3), ev('2026-10-07', 4, 2)] }) } : f0(u);
+        const u = { n: 'Test Avs', sport: '🏒', note: '🌍 vainqueur + under 5.5 🏠 victoire ✈️ buteur Eichel' };
+        const P = _g45SerParis(u).map(x => x.k).join();
+        await _g45SerEquipe(u);
+        window.fetch = f0; window._g45CompoCtx = cx0;
+        Object.keys(localStorage).filter(k => /T99/.test(k)).forEach(k => localStorage.removeItem(k));
+        const L = u.psL || {}, H = _g45UlPsLHtml(u), bar = !!document.getElementById('g45-ser-bar');
+        o.serie = (P === 'glob,dom,ext' && L.glob && L.glob.p.join() === '3,3,3,3' && L.glob.tot === 3 && L.dom.p.join() === '2,2,2,2' && /pas calculable/.test(L.ext.err)
+          && /🏠 pire série/.test(H) && /4 paliers/.test(H) && /3 paliers/.test(H) && bar && _g45SerCombo('victoire ou nul') === 'Victoire' && _g45SerCombo('buteur') === null) || JSON.stringify({ P, L, bar, H: H.replace(/<[^>]+>/g, ' ') });
+      } catch (e) { o.serie = 'erreur : ' + e.message; }
       /* 20261028g — 📌 depuis les Séries individuelles */
       try {
         const Z = _g45RegSaisons({ dt: ['241010', '241012', '250310', '251015', '251020', '251025', '260105'], v: [0, 0, 1, 0, 1, 0, 0] }, '');
@@ -1583,6 +1598,7 @@ serveur.listen(0, async () => {
     ok('Critères 4 saisons : Jouable en Cockpit ? (classement de la ligue)', r.crCls === true, r.crCls);
     ok('Critères : 📌 Garder sur la carte', r.garde === true, r.garde);
     ok('Séries individuelles : 📌 sur la carte du joueur', r.regGarde === true, r.regGarde);
+    ok('Outils → Équipes : 🔄 Calculer mes séries', r.serie === true, r.serie);
     ok('NFL Yards + pépites NBA / NFL (pire série → paliers)', r.yards === true, r.yards);
     ok('Séries NHL sur 4 saisons + mises au choix', r.reg4 === true, r.reg4);
     ok('Séries NFL sur 4 saisons', r.reg4n === true, r.reg4n);
