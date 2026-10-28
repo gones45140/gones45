@@ -973,7 +973,8 @@ serveur.listen(0, async () => {
         Object.keys(localStorage).filter(k => /T99/.test(k)).forEach(k => localStorage.removeItem(k));
         const L = u.psL || {}, H = _g45UlPsLHtml(u), bar = !!document.getElementById('g45-ser-bar');
         o.serie = (P === 'glob,dom,ext' && L.glob && L.glob.p.join() === '3,3,3,3' && L.glob.tot === 3 && L.dom.p.join() === '2,2,2,2' && /pas calculable/.test(L.ext.err)
-          && /🏠 pire série/.test(H) && /4 paliers/.test(H) && /3 paliers/.test(H) && bar && _g45SerCombo('victoire ou nul') === 'Victoire' && _g45SerCombo('buteur') === null) || JSON.stringify({ P, L, bar, H: H.replace(/<[^>]+>/g, ' ') });
+          && /🏠 pire série/.test(H) && /4 paliers/.test(H) && /3 paliers/.test(H) && bar && _g45SerCombo('victoire ou nul') === 'Victoire' && _g45SerCombo('buteur') === null && /Vainqueur.*équipe Over 2\.5/.test(_g45SerCombo('vainqueur + buts de Dallas plus de 2,5', { sp: 'hockey', lg: 'nhl', id: '1' }, 'Dallas Stars'))
+          && /adversaire Under 3\.5/.test(_g45SerCombo('buts de Chicago moins de 3,5', { sp: 'hockey', lg: 'nhl', id: '1' }, 'Dallas Stars'))) || JSON.stringify({ P, L, bar, H: H.replace(/<[^>]+>/g, ' '), d: _g45SerCombo('vainqueur + buts de Dallas plus de 2,5', { sp: 'hockey', lg: 'nhl', id: '1' }, 'Dallas Stars') });
       } catch (e) { o.serie = 'erreur : ' + e.message; }
       /* 20261028k — 🔄 Calculer mes séries : joueurs (NHL + foot) */
       try {
