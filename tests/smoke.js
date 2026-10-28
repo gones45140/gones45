@@ -951,6 +951,15 @@ serveur.listen(0, async () => {
         const iA = H.indexOf('>Test Avs<'), iB = H.indexOf('>Test Bruins<');
         o.crCls = (st.pire === 3 && st.ok === 2 && stO.n === 6 && stO.ok === 4 && stO.pire === 2 && /Jouable en Cockpit/.test(H) && iA > 0 && iB > iA && /g45CompetOuvrir\('Test Bruins','2','nhl','hockey',true\)/.test(H)) || JSON.stringify({ st, stO, iA, iB, h: H.slice(-600) });
       } catch (e) { o.crCls = 'erreur : ' + e.message; }
+      /* 20261028e — 📌 Garder sur la carte */
+      try {
+        const H = _g45UlPsHtml({ ps: { sig: 'dom|Passeur', lib: 'Jack Eichel passeur', k: 'dom', ans: ['2026-27', '2025-26', '2024-25', '2023-24'], p: [2, 3, 4, 3], tot: 4, at: Date.now() } });
+        const S = window._g45CrS, sv = { ctx: S.ctx, lieu: S.lieu };
+        S.ctx = { sp: 'hockey', lg: 'nhl', id: '1' }; S.lieu = 'tout';
+        const D = { lg: 'nhl', saisons: [{ an: 2027, ms: [['2026-10-01', 1, 3, 1, 0, 0, 'a'], ['2026-10-03', 1, 1, 2, 0, 0, 'b']] }, { an: 2026, ms: [['2026-03-01', 1, 1, 2, 0, 0, 'c'], ['2026-03-03', 1, 1, 3, 0, 0, 'd'], ['2026-03-05', 1, 2, 1, 0, 0, 'e']] }] };
+        const G = _g45CrGarderCalc({ res: 'vqr', ou: '', L: 5.5 }, D); Object.assign(S, sv);
+        o.garde = (/🏠 Jack Eichel passeur/.test(H) && /5 paliers/.test(H) && /2026-27 → 2023-24/.test(H) && G.p.join() === '1,2' && G.ans.length === 2) || JSON.stringify({ G, H: H.slice(0, 200) });
+      } catch (e) { o.garde = 'erreur : ' + e.message; }
       /* 20261027j — Yards NFL, pépites NBA / NFL, outils Cockpit partagés */
       try {
         const J = { filters: [{ name: 'season', value: '2026' }], names: ['completions', 'passingYards', 'rushingYards'], events: { a: { gameDate: '2026-10-05T17:00Z' }, b: { gameDate: '2026-10-12T17:00Z' }, c: { gameDate: '2026-09-28T17:00Z' } },
@@ -1562,6 +1571,7 @@ serveur.listen(0, async () => {
     ok('F1 : critères 4 saisons + Jouable en Cockpit (page F1 + onglet Saisons)', r.f1cr === true, r.f1cr);
     ok('NHL Séries individuelles : 🔍 Pépites (50 joueurs)', r.pep === true, r.pep);
     ok('Critères 4 saisons : Jouable en Cockpit ? (classement de la ligue)', r.crCls === true, r.crCls);
+    ok('Critères : 📌 Garder sur la carte', r.garde === true, r.garde);
     ok('NFL Yards + pépites NBA / NFL (pire série → paliers)', r.yards === true, r.yards);
     ok('Séries NHL sur 4 saisons + mises au choix', r.reg4 === true, r.reg4);
     ok('Séries NFL sur 4 saisons', r.reg4n === true, r.reg4n);
