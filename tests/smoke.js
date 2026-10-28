@@ -975,6 +975,27 @@ serveur.listen(0, async () => {
         o.serie = (P === 'glob,dom,ext' && L.glob && L.glob.p.join() === '3,3,3,3' && L.glob.tot === 3 && L.dom.p.join() === '2,2,2,2' && /pas calculable/.test(L.ext.err)
           && /🏠 pire série/.test(H) && /4 paliers/.test(H) && /3 paliers/.test(H) && bar && _g45SerCombo('victoire ou nul') === 'Victoire' && _g45SerCombo('buteur') === null) || JSON.stringify({ P, L, bar, H: H.replace(/<[^>]+>/g, ' ') });
       } catch (e) { o.serie = 'erreur : ' + e.message; }
+      /* 20261028k — 🔄 Calculer mes séries : joueurs (NHL + foot) */
+      try {
+        const lg1 = _g45SerLegsJ('Passeur'), lg2 = _g45SerLegsJ('Victoire Edmonton + Nugent-Hopkins 1 point ou plus'), lg3 = _g45SerLegsJ('Victoire + Over 2.5 + buteur'), lg4 = _g45SerLegsJ('2 tirs cadrés');
+        const log = [{ gameDate: '2026-10-10', goals: 0, assists: 1, h: 1 }, { gameDate: '2026-10-12', goals: 0, assists: 0, h: 1 }, { gameDate: '2026-10-14', goals: 1, assists: 0, h: 0 },
+          { gameDate: '2026-10-16', goals: 0, assists: 0, h: 1 }, { gameDate: '2025-03-01', goals: 0, assists: 0, h: 1 }, { gameDate: '2025-03-03', goals: 0, assists: 2, h: 0 }];
+        const A = _g45SerStatJ(lg1, log, [], 'glob', true, false), Dm = _g45SerStatJ(lg1, log, [], 'dom', true, false);
+        const ms = [['2026-10-11', 1, 4, 2, 0], ['2026-10-12', 1, 3, 1, 0], ['2026-10-14', 0, 2, 3, 0], ['2026-10-16', 1, 3, 2, 1]];
+        const V = _g45SerStatJ(lg2, log, ms, 'glob', true, false);
+        const u0 = state.u, f0 = window.fetch; const uJ = { n: 'Jack Eichel', type: 'joueur', sport: '🏒', note: 'Vegas Golden Knights · 🏠 Passeur ✈️ Buteur' };
+        localStorage.removeItem('g45ser_ro_VGK');
+        window.fetch = async (u) => { const x = decodeURIComponent(String(u)); if (/roster\/VGK/.test(x)) return { ok: true, json: async () => ({ forwards: [{ id: 8478403, firstName: { default: 'Jack' }, lastName: { default: 'Eichel' } }] }) };
+          if (/player\/8478403\/game-log\/20262027/.test(x)) return { ok: true, json: async () => ({ gameLog: [{ gameDate: '2026-10-12', goals: 1, assists: 0, points: 1, homeRoadFlag: 'R' }, { gameDate: '2026-10-10', goals: 0, assists: 1, points: 1, homeRoadFlag: 'H' }] }) };
+          return { ok: false, json: async () => ({}) }; };
+        Object.keys(localStorage).filter(k => /8478403/.test(k)).forEach(k => localStorage.removeItem(k));
+        await _g45SerJoueur(uJ); window.fetch = f0; state.u = u0;
+        Object.keys(localStorage).filter(k => /8478403|g45ser_ro_VGK/.test(k)).forEach(k => localStorage.removeItem(k));
+        const J = uJ.psL || {};
+        o.serJ = (lg1.pj === 'a' && lg2.res === 'vic' && lg2.pj === 'p' && lg3.ou === 'ov' && lg3.pj === 'g' && lg4 === null
+          && A.p.join() === '3,1' && A.tot === 3 && A.ans.join() === '2026-27,2024-25' && Dm.p.join() === '2,1' && V.p.join() === '3' && V.ans.length === 1 && /Victoire \(temps régl\.\) \+ 1 point/.test(V.lib)
+          && J.dom && J.dom.p.join() === '0' && J.ext && J.ext.p.join() === '0' && J.dom.lib === 'Passeur') || JSON.stringify({ lg1, lg2, A, Dm, V, J });
+      } catch (e) { o.serJ = 'erreur : ' + e.message; }
       /* 20261028j — Séries individuelles : zone VISIBLE quand une fiche cachée a aussi sa zone */
       try {
         const zc = document.createElement('div'); zc.style.display = 'none'; zc.innerHTML = '<div id="g45-reg-box">cachée</div>';
@@ -1608,6 +1629,7 @@ serveur.listen(0, async () => {
     ok('Séries individuelles : 📌 sur la carte du joueur', r.regGarde === true, r.regGarde);
     ok('Outils → Équipes : 🔄 Calculer mes séries', r.serie === true, r.serie);
     ok('Séries individuelles : clic redessiné dans la zone visible', r.regVis === true, r.regVis);
+    ok('🔄 Calculer mes séries : joueurs NHL / foot', r.serJ === true, r.serJ);
     ok('NFL Yards + pépites NBA / NFL (pire série → paliers)', r.yards === true, r.yards);
     ok('Séries NHL sur 4 saisons + mises au choix', r.reg4 === true, r.reg4);
     ok('Séries NFL sur 4 saisons', r.reg4n === true, r.reg4n);
