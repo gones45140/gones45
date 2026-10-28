@@ -1036,7 +1036,7 @@ serveur.listen(0, async () => {
         state.u = u0; window._g45CkAg = null; if (a0 == null) localStorage.removeItem('g45ck_ag'); else localStorage.setItem('g45ck_ag', a0);
         if (v0 == null) localStorage.removeItem('g45tr_vue'); else localStorage.setItem('g45tr_vue', v0);
         const T = H.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ');
-        o.ck = (nav && /tes cartes qui jouent/.test(T) && /Test Stars 🏠 vs Canadiens/.test(T) && /Palier 2 · mise/.test(T) && /pire série 2 · 1 · 2 · 1 → 3 paliers/.test(T) && /📌 🏠 vainqueur/.test(T) && !/Test Loin/.test(T)) || T.slice(0, 600);
+        o.ck = (nav && /tes cartes qui jouent/.test(T) && /Test Stars 🏠 vs Canadiens/.test(T) && /Palier 2 · mise/.test(T) && /pire série 2 · 1 · 2 · 1 → 3 paliers ✅ · [\d,]+ €/.test(T) && window._g45PalCarte(2, { s: 5 }).mise === STRATS['5'][2] && window._g45PalCarte(9, { s: 5 }).ico === '❌' && /📌 🏠 vainqueur/.test(T) && !/Test Loin/.test(T)) || T.slice(0, 600);
       } catch (e) { o.ck = 'erreur : ' + e.message; }
       /* 20261028j — Séries individuelles : zone VISIBLE quand une fiche cachée a aussi sa zone */
       try {
