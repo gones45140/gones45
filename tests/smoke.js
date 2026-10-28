@@ -1017,6 +1017,14 @@ serveur.listen(0, async () => {
         const R = (u.psL || {}).dom || {};
         o.serJE = (n1 === 'Harry Kane' && n2 === 'Nugent-Hopkins' && R.p && R.p.join() === '2' && /Jack Eichel Buteur/.test(R.lib)) || JSON.stringify({ n1, n2, R });
       } catch (e) { o.serJE = 'erreur : ' + e.message; }
+      /* 20261028o — 🔄 Calculer sur une carte avec pari mais jamais calculée */
+      try {
+        const u0 = state.u; state.u = [{ n: 'Test Yamal', type: 'joueur', sport: '⚽', note: 'Barcelona 🏠 Passeur', s: 4, l: 1 }, { n: 'Test Vide', sport: '⚽', note: 'Barcelona', s: 1, l: 1 }];
+        render(); await new Promise(r => setTimeout(r, 50)); if (window._g45UlistHabiller) _g45UlistHabiller();
+        const H = (document.getElementById('ulist') || {}).innerHTML || '';
+        state.u = u0; render();
+        o.serUne = (/g45SerUne\('Test Yamal'/.test(H) && !/g45SerUne\('Test Vide'/.test(H)) || (Z => Z.slice(Math.max(0, Z.indexOf('Test Yamal') - 200), Z.indexOf('Test Yamal') + 900))(H.replace(/style="[^"]*"/g, ''));
+      } catch (e) { o.serUne = 'erreur : ' + e.message; }
       /* 20261028j — Séries individuelles : zone VISIBLE quand une fiche cachée a aussi sa zone */
       try {
         const zc = document.createElement('div'); zc.style.display = 'none'; zc.innerHTML = '<div id="g45-reg-box">cachée</div>';
@@ -1651,6 +1659,7 @@ serveur.listen(0, async () => {
     ok('Outils → Équipes : 🔄 Calculer mes séries', r.serie === true, r.serie);
     ok('Séries individuelles : clic redessiné dans la zone visible', r.regVis === true, r.regVis);
     ok('🔄 Calculer mes séries : joueurs NHL / foot', r.serJ === true, r.serJ);
+    ok('🔄 Calculer sur une carte jamais calculée', r.serUne === true, r.serUne);
     ok('🔄 Calculer mes séries : joueur dans un pari d\'équipe', r.serJE === true, r.serJE);
     ok('NFL Yards + pépites NBA / NFL (pire série → paliers)', r.yards === true, r.yards);
     ok('Séries NHL sur 4 saisons + mises au choix', r.reg4 === true, r.reg4);
