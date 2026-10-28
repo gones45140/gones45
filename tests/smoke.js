@@ -972,7 +972,7 @@ serveur.listen(0, async () => {
         window.fetch = f0; window._g45CompoCtx = cx0;
         Object.keys(localStorage).filter(k => /T99/.test(k)).forEach(k => localStorage.removeItem(k));
         const L = u.psL || {}, H = _g45UlPsLHtml(u), bar = !!document.getElementById('g45-ser-bar');
-        o.serie = (P === 'glob,dom,ext' && L.glob && L.glob.p.join() === '3,3,3,3' && L.glob.tot === 3 && L.dom.p.join() === '2,2,2,2' && /pas calculable/.test(L.ext.err)
+        o.serie = (P === 'glob,dom,ext' && L.glob && L.glob.p.join() === '3,3,3,3' && L.glob.tot === 3 && L.dom.p.join() === '2,2,2,2' && /club NHL introuvable/.test(L.ext.err)
           && /🏠 pire série/.test(H) && /4 paliers/.test(H) && /3 paliers/.test(H) && bar && _g45SerCombo('victoire ou nul') === 'Victoire' && _g45SerCombo('buteur') === null && /Vainqueur.*équipe Over 2\.5/.test(_g45SerCombo('vainqueur + buts de Dallas plus de 2,5', { sp: 'hockey', lg: 'nhl', id: '1' }, 'Dallas Stars'))
           && /adversaire Under 3\.5/.test(_g45SerCombo('buts de Chicago moins de 3,5', { sp: 'hockey', lg: 'nhl', id: '1' }, 'Dallas Stars'))) || JSON.stringify({ P, L, bar, H: H.replace(/<[^>]+>/g, ' '), d: _g45SerCombo('vainqueur + buts de Dallas plus de 2,5', { sp: 'hockey', lg: 'nhl', id: '1' }, 'Dallas Stars') });
       } catch (e) { o.serie = 'erreur : ' + e.message; }
@@ -997,6 +997,26 @@ serveur.listen(0, async () => {
           && A.p.join() === '3,1' && A.tot === 3 && A.ans.join() === '2026-27,2024-25' && Dm.p.join() === '2,1' && V.p.join() === '3' && V.ans.length === 1 && /Victoire \(temps régl\.\) \+ 1 point/.test(V.lib)
           && J.dom && J.dom.p.join() === '0' && J.ext && J.ext.p.join() === '0' && J.dom.lib === 'Passeur') || JSON.stringify({ lg1, lg2, A, Dm, V, J });
       } catch (e) { o.serJ = 'erreur : ' + e.message; }
+      /* 20261028m — joueur nommé dans un pari d'équipe (« Victoire + Over 2.5 + Harry Kane buteur ») */
+      try {
+        const n1 = _g45SerNomJ('Victoire + Over 2.5 + Harry Kane buteur'), n2 = _g45SerNomJ('Victoire Edmonton + Nugent-Hopkins 1 point ou plus');
+        const f0 = window.fetch, cx0 = window._g45CompoCtx;
+        window._g45CompoCtx = async () => ({ sp: 'hockey', lg: 'nhl', ref: 'T98', via: 'perso' });
+        const ev = (d, h, a2) => ({ date: d + 'T00:00Z', seasonType: { type: 2 }, competitions: [{ status: { type: { completed: true, detail: 'Final' } }, competitors: [{ homeAway: 'home', team: { id: 'T98' }, score: { value: h } }, { homeAway: 'away', team: { id: '5' }, score: { value: a2 } }] }] });
+        localStorage.removeItem('g45ser_ro_VGK');
+        window.fetch = async (u) => { const x = decodeURIComponent(String(u));
+          if (/teams\/T98\/schedule/.test(x)) return { ok: true, json: async () => ({ events: /season=2027/.test(x) ? [ev('2026-10-02', 3, 1), ev('2026-10-04', 4, 2), ev('2026-10-06', 1, 2)] : [] }) };
+          if (/roster\/VGK/.test(x)) return { ok: true, json: async () => ({ forwards: [{ id: 8478403, firstName: { default: 'Jack' }, lastName: { default: 'Eichel' } }] }) };
+          if (/player\/8478403\/game-log\/20262027/.test(x)) return { ok: true, json: async () => ({ gameLog: [{ gameDate: '2026-10-06', goals: 1, assists: 0, points: 1, homeRoadFlag: 'H' }, { gameDate: '2026-10-04', goals: 0, assists: 0, points: 0, homeRoadFlag: 'H' }, { gameDate: '2026-10-02', goals: 1, assists: 0, points: 1, homeRoadFlag: 'H' }] }) };
+          return { ok: false, json: async () => ({}) }; };
+        const u = { n: 'Vegas Golden Knights', sport: '🏒', note: '🏠 Vainqueur + Jack Eichel buteur' };
+        Object.keys(_g45RegLogs).filter(k => /8478403/.test(k)).forEach(k => delete _g45RegLogs[k]);
+        await _g45SerEquipe(u);
+        window.fetch = f0; window._g45CompoCtx = cx0;
+        Object.keys(localStorage).filter(k => /T98|8478403|g45ser_ro_VGK/.test(k)).forEach(k => localStorage.removeItem(k));
+        const R = (u.psL || {}).dom || {};
+        o.serJE = (n1 === 'Harry Kane' && n2 === 'Nugent-Hopkins' && R.p && R.p.join() === '2' && /Jack Eichel Buteur/.test(R.lib)) || JSON.stringify({ n1, n2, R });
+      } catch (e) { o.serJE = 'erreur : ' + e.message; }
       /* 20261028j — Séries individuelles : zone VISIBLE quand une fiche cachée a aussi sa zone */
       try {
         const zc = document.createElement('div'); zc.style.display = 'none'; zc.innerHTML = '<div id="g45-reg-box">cachée</div>';
@@ -1631,6 +1651,7 @@ serveur.listen(0, async () => {
     ok('Outils → Équipes : 🔄 Calculer mes séries', r.serie === true, r.serie);
     ok('Séries individuelles : clic redessiné dans la zone visible', r.regVis === true, r.regVis);
     ok('🔄 Calculer mes séries : joueurs NHL / foot', r.serJ === true, r.serJ);
+    ok('🔄 Calculer mes séries : joueur dans un pari d\'équipe', r.serJE === true, r.serJE);
     ok('NFL Yards + pépites NBA / NFL (pire série → paliers)', r.yards === true, r.yards);
     ok('Séries NHL sur 4 saisons + mises au choix', r.reg4 === true, r.reg4);
     ok('Séries NFL sur 4 saisons', r.reg4n === true, r.reg4n);
