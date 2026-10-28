@@ -1038,6 +1038,17 @@ serveur.listen(0, async () => {
         const T = H.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ');
         o.ck = (nav && /tes cartes qui jouent/.test(T) && /Test Stars 🏠 vs Canadiens/.test(T) && /Palier 2 · mise/.test(T) && /pire série 2 · 1 · 2 · 1 → 3 paliers ✅ · [\d,]+ €/.test(T) && window._g45PalCarte(2, { s: 5 }).mise === STRATS['5'][2] && window._g45PalCarte(9, { s: 5 }).ico === '❌' && /📌 🏠 vainqueur/.test(T) && !/Test Loin/.test(T)) || T.slice(0, 600);
       } catch (e) { o.ck = 'erreur : ' + e.message; }
+      /* 20261029a — critères : redessin dans la zone VISIBLE quand une fiche cachée a aussi #g45cr */
+      try {
+        const S = window._g45CrS, sv = { nom: S.nom, ctx: S.ctx, lieu: S.lieu };
+        const zc = document.createElement('div'); zc.style.display = 'none'; zc.innerHTML = '<div id="g45cr">cachée</div>';
+        const zv = document.createElement('div'); zv.innerHTML = window._g45CrHtml('Test Vis FC');
+        document.body.insertBefore(zc, document.body.firstChild); document.body.appendChild(zv);
+        g45CrSet('lieu', 'ext');
+        const okV = /✈️ à l'extérieur/.test(zv.textContent), okC = zc.textContent === 'cachée';
+        zc.remove(); zv.remove(); Object.assign(S, sv);
+        o.crVis = (okV && okC) || JSON.stringify({ okV, okC, t: zv.textContent.slice(0, 200) });
+      } catch (e) { o.crVis = 'erreur : ' + e.message; }
       /* 20261028j — Séries individuelles : zone VISIBLE quand une fiche cachée a aussi sa zone */
       try {
         const zc = document.createElement('div'); zc.style.display = 'none'; zc.innerHTML = '<div id="g45-reg-box">cachée</div>';
@@ -1674,6 +1685,7 @@ serveur.listen(0, async () => {
     ok('🔄 Calculer mes séries : joueurs NHL / foot', r.serJ === true, r.serJ);
     ok('🔄 Calculer sur une carte jamais calculée', r.serUne === true, r.serUne);
     ok('🏁 Cockpit BET45 (Tendances)', r.ck === true, r.ck);
+    ok('Critères : sélecteurs redessinés dans la zone visible', r.crVis === true, r.crVis);
     ok('🔄 Calculer mes séries : joueur dans un pari d\'équipe', r.serJE === true, r.serJE);
     ok('NFL Yards + pépites NBA / NFL (pire série → paliers)', r.yards === true, r.yards);
     ok('Séries NHL sur 4 saisons + mises au choix', r.reg4 === true, r.reg4);
