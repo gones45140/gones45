@@ -182,6 +182,9 @@ serveur.listen(0, async () => {
         /* 20261031i : 📄 PDF de la saison (équipe Rennes) */
         const pd = window._g45ArchPdfHtml([F], '169', 'Rennes', 'BET45 — Rennes — Ligue 1 2026-27').replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ');
         window.__archPdf = /Bilan Rennes : 1 V · 0 N · 0 D — 2 marqués, 1 encaissés/.test(pd) && /31\/10\/2026 · Nice 1 - 2 Rennes ✅ V/.test(pd) && /1 2,80 · N 3,65 · 2 2,35/.test(pd) && /Total 2,5 : \+ 1,83/.test(pd) && /Esteban Lepaul 2,45 ✅/.test(pd) && /55' Esteban Lepaul/.test(pd) && /Enregistrer en PDF/.test(pd) || pd.slice(0, 600);
+        { const sv = window._g45ArchS.lg; window._g45ArchS.lg = 'fra.1'; const F2 = Object.assign({}, F, { lg: 'uefa.europa', t: F.t + 864e5, f: { h: 0, a: 0 } });
+          const pe = window._g45ArchPdfHtml([F, F2], '169', 'Rennes', 'T').replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' '); window._g45ArchS.lg = sv;
+          if (!(/Bilan Rennes — Ligue 1 : 1 V/.test(pe) && /Bilan Rennes — Europe \(🥈 C3\) : 0 V · 1 N/.test(pe) && /🥈 C3 · Nice 0 - 0 Rennes 🟰 N/.test(pe))) window.__archPdf = 'Europe : ' + pe.slice(0, 500); }
         delete F.st; delete F.bu;
         o.arch = (/Lepaul 2,45 ✅/.test(c4) && /Dia 2,70 ❌/.test(c4) && /55' Esteban Lepaul \(passe Boulaye Dia\) Rennes/.test(fe) && /31\/10 · @ Nice/.test(c1) && /1-2/.test(c1) && /Nice 2,80 Nul 3,65 Rennes 2,35/.test(c1) && /Esteban Lepaul 2,45/.test(c1) && /#1ed760;">1-2/.test(window._g45ArchCarte(F, '401', '169')) && /Nice – Rennes/.test(c2)
           && /Handicap/.test(c3) && /Buts de Rennes/.test(c3) && /2,5 plus de 3,83 moins de 1,24/.test(c3) && (window._G45_ARCH_LG || []).indexOf('nhl') >= 0) || c1.slice(0, 300) + ' || ' + c3.slice(0, 400); } catch (e) { o.arch = 'erreur : ' + e.message; } o.archPdf = window.__archPdf;
