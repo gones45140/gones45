@@ -221,6 +221,8 @@ serveur.listen(0, async () => {
         { const sv = window._g45ArchS.lg; window._g45ArchS.lg = 'fra.1'; const F2 = Object.assign({}, F, { lg: 'uefa.europa', t: F.t + 864e5, f: { h: 0, a: 0 } });
           const pe = window._g45ArchPdfHtml([F, F2], '169', 'Rennes', 'T').replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' '); window._g45ArchS.lg = sv;
           if (!(/Bilan Rennes — Ligue 1 : 1 V/.test(pe) && /Bilan Rennes — Europe \(🥈 C3\) : 0 V · 1 N/.test(pe) && /🥈 C3 · Nice 0 - 0 Rennes 🟰 N/.test(pe))) window.__archPdf = 'Europe : ' + pe.slice(0, 500); }
+        { const mh = (window._g45ArchMatchHtml(F) || '').replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ');   /* 20261031u : bloc 📦 de la fenêtre d'un match fini */
+          if (!(/Cotes d'avant-match/.test(mh) && /1 Nice 2,80 · N 3,65 · 2 Rennes 2,35/.test(mh) && /Buteur : Esteban Lepaul 2,45 ✅ · Boulaye Dia 2,70 ❌/.test(mh))) window.__archPdf = 'match : ' + mh.slice(0, 400); }
         delete F.st; delete F.bu;
         o.arch = (/Lepaul 2,45 ✅/.test(c4) && /Dia 2,70 ❌/.test(c4) && /55' Esteban Lepaul \(passe Boulaye Dia\) Rennes/.test(fe) && /31\/10 · @ Nice/.test(c1) && /1-2/.test(c1) && /Nice 2,80 Nul 3,65 Rennes 2,35/.test(c1) && /Esteban Lepaul 2,45/.test(c1) && /#1ed760;">1-2/.test(window._g45ArchCarte(F, '401', '169')) && /Nice – Rennes/.test(c2)
           && /Handicap/.test(c3) && /Buts de Rennes/.test(c3) && /2,5 plus de 3,83 moins de 1,24/.test(c3) && (window._G45_ARCH_LG || []).indexOf('nhl') >= 0) || c1.slice(0, 300) + ' || ' + c3.slice(0, 400); } catch (e) { o.arch = 'erreur : ' + e.message; } o.archPdf = window.__archPdf;
