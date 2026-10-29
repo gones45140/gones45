@@ -73129,7 +73129,8 @@ function _g45AgConsigne(note, isDom) {
     o.split('+').forEach(function (l) {
       l = l.trim(); var t2;
       if (!l) return;
-      if (/jouer contre|d[ée]faite/i.test(l)) legs.push({ k: 'def' });
+      if (/perdant/i.test(l)) legs.push({ k: 'per' });   /* 20261031n : « Perdant » (hockey, prolongation comprise) */
+      else if (/jouer contre|d[ée]faite/i.test(l)) legs.push({ k: 'def' });
       else if (/victoire/i.test(l)) legs.push({ k: 'vic' });
       else if (/vainqueur/i.test(l) && !/buts?\s+(?:de|du|des|d['’])/i.test(l)) legs.push({ k: 'vqr' });
       /* 20261025k (ticket MyMatch « Vainqueur Dallas Stars + Nombre de buts de Dallas Stars Plus de 2,5 ») : buts d'UNE équipe (« buts de Dallas
@@ -73209,6 +73210,7 @@ function _g45AgOdHtml(C, od, sp) {
       if (l.k === 'vic' && sp === 'hockey') { c = moi; lib = 'Vainqueur (prolong. comprise)'; noteHk = 1; if (!seuilV) seuilV = c; }
       else if (l.k === 'vic' || l.k === 'vqr') { c = moi; lib = l.k === 'vic' ? 'Victoire' : 'Vainqueur'; if (!seuilV) seuilV = c; }
       else if (l.k === 'def') { c = lui; lib = foot ? 'Défaite' : 'Défaite (adversaire gagne)'; if (!seuilV) seuilV = c; }
+      else if (l.k === 'per') { c = lui; lib = 'Perdant (adversaire vainqueur, prolong. comprise)'; if (!seuilV) seuilV = c; }
       else if (l.k === 'ov' || l.k === 'un') {
         lib = (l.k === 'ov' ? 'Over ' : 'Under ') + String(l.L).replace('.', ',');
         if (od.line == null || Math.abs(od.line - l.L) > 0.01) { parts.push(lib + ' <span style="color:#ffb36b;">ligne non proposée' + (od.line != null ? ' (ESPN : ' + String(od.line).replace('.', ',') + ')' : '') + '</span>'); ok = false; return; }
@@ -73236,8 +73238,8 @@ function _g45AgOdHtml(C, od, sp) {
   /* 20261017r (« condition remplie 1,41 c'est ❌ », validé « oui ») : « … si cote inférieure à 1,5 » = règle de la MONTANTE (1,5 mini) —
      résultat seul SOUS le seuil = ❌ (pas assez) → il faut l'autre jambe ; au-dessus = ✅ le résultat seul suffit. */
   if (C.seuil && seuilV > 1) {
-    var _l0 = C.opts[0] || [], _r = _l0.filter(function (l) { return l.k === 'vic' || l.k === 'vqr' || l.k === 'def'; })[0];
-    var _rn = !_r ? 'Résultat seul' : (_r.k === 'def' ? 'Défaite seule' : (_r.k === 'vqr' ? 'Vainqueur seul' : 'Victoire seule'));
+    var _l0 = C.opts[0] || [], _r = _l0.filter(function (l) { return l.k === 'vic' || l.k === 'vqr' || l.k === 'def' || l.k === 'per'; })[0];
+    var _rn = !_r ? 'Résultat seul' : (_r.k === 'def' || _r.k === 'per' ? 'Défaite seule' : (_r.k === 'vqr' ? 'Vainqueur seul' : 'Victoire seule'));
     var _aj = _l0.filter(function (l) { return l !== _r; }).map(function (l) {
       return l.k === 'ov' || l.k === 'un' ? (l.k === 'ov' ? 'over ' : 'under ') + String(l.L).replace('.', ',') : (l.k === 'but' ? 'buteur' : String(l.t || '').replace(/</g, '&lt;'));
     }).filter(Boolean).join(' + ');
@@ -73557,7 +73559,7 @@ function _g45AgFrHtml(x, od) {
   (x.C.opts || []).forEach(function (L) { L.forEach(function (l) {
     if (cc) return;
     if (l.k === 'vic' || l.k === 'vqr') { cc = od.moiDom ? 'h' : 'a'; lib = l.k === 'vic' ? 'victoire' : 'vainqueur'; }
-    else if (l.k === 'def') { cc = od.moiDom ? 'a' : 'h'; lib = 'défaite'; }
+    else if (l.k === 'def' || l.k === 'per') { cc = od.moiDom ? 'a' : 'h'; lib = l.k === 'per' ? 'perdant' : 'défaite'; }
   }); });
   var tit = { h: od.hN || '1', d: 'Nul', a: od.aN || '2' };
   var th = 'padding:3px 6px;font-size:13px;color:#c9d3ee;font-weight:700;text-align:center;';
@@ -76323,7 +76325,7 @@ window._g45AideBoutonsPoser = _g45AideBoutonsPoser;
     R.opts.forEach(function (legs) {
       var c = { res: '', ou: '', L: L0, bts: '' };
       legs.forEach(function (l) {
-        if (l.k === 'vic' || l.k === 'vqr' || l.k === 'def') c.res = (us() && l.k === 'vic') ? 'vqr' : l.k;
+        if (l.k === 'vic' || l.k === 'vqr' || l.k === 'def' || l.k === 'per') c.res = (us() && l.k === 'vic') ? 'vqr' : (us() && l.k === 'per' ? 'def' : l.k);
         else if (l.k === 'ov' || l.k === 'un') { c.ou = l.k; c.L = l.L; }
         else if (l.k === '?' && /btts|bts|deux.*marqu/i.test(l.t || '')) c.bts = /non|no\b/i.test(l.t) ? 'non' : 'oui';
       });
@@ -76367,7 +76369,7 @@ window._g45AideBoutonsPoser = _g45AideBoutonsPoser;
     if (!R || R.nobet || !R.opts.length) return null;
     var c = combo0(); c.res = ''; var ok = true;
     R.opts[0].forEach(function (l) {
-      if (l.k === 'vic' || l.k === 'vqr' || l.k === 'def') c.res = (us() && l.k === 'vic') ? 'vqr' : l.k;
+      if (l.k === 'vic' || l.k === 'vqr' || l.k === 'def' || l.k === 'per') c.res = (us() && l.k === 'vic') ? 'vqr' : (us() && l.k === 'per' ? 'def' : l.k);
       else if (l.k === 'ov' || l.k === 'un') { c.ou = l.k; c.L = l.L; }
       else if (l.k === '?' && /btts|bts|deux.*marqu/i.test(l.t || '')) c.bts = /non|no\b/i.test(l.t) ? 'non' : 'oui';
       else if (l.k === 'teq' && nom) { if (serTeq(l, nom) === 'te') { c.te = l.s; c.TL = l.L; } else { c.ad = l.s; c.AL = l.L; } }   /* 20261028l */
@@ -76463,7 +76465,7 @@ window._g45AideBoutonsPoser = _g45AideBoutonsPoser;
     if (!R || R.nobet || !R.opts.length) return null;
     var c = { res: '', ou: '', L: 2.5, bts: '', te: '', TL: 2.5, ad: '', AL: 2.5, pj: '' }, ok = true;
     R.opts[0].forEach(function (l) {
-      if (l.k === 'vic' || l.k === 'vqr' || l.k === 'def') c.res = l.k;
+      if (l.k === 'vic' || l.k === 'vqr' || l.k === 'def' || l.k === 'per') c.res = l.k;
       else if (l.k === 'ov' || l.k === 'un') { c.ou = l.k; c.L = l.L; }
       else if (l.k === 'but') c.pj = 'g';
       else if (l.k === '?' && /btts|bts|deux.*marqu/i.test(l.t || '')) c.bts = /non|no\b/i.test(l.t) ? 'non' : 'oui';
@@ -76476,7 +76478,7 @@ window._g45AideBoutonsPoser = _g45AideBoutonsPoser;
   }
   function serLibJ(c, hock) {
     var p = [];
-    if (c.res) p.push(c.res === 'vic' ? (hock ? 'Victoire (temps régl.)' : 'Victoire') : c.res === 'vqr' ? 'Vainqueur' : 'Défaite');
+    if (c.res) p.push(c.res === 'vic' ? (hock ? 'Victoire (temps régl.)' : 'Victoire') : c.res === 'vqr' ? 'Vainqueur' : c.res === 'per' ? 'Perdant (prolong. comprise)' : (hock ? 'Défaite (temps régl.)' : 'Défaite'));
     if (c.ou) p.push((c.ou === 'ov' ? 'Over ' : 'Under ') + c.L);
     if (c.bts) p.push('Les deux marquent : ' + c.bts);
     if (c.te) p.push('Buts équipe ' + (c.te === 'ov' ? 'Over ' : 'Under ') + c.TL);
@@ -76493,7 +76495,8 @@ window._g45AideBoutonsPoser = _g45AideBoutonsPoser;
       var p = +m[2], q = +m[3], ox = hock && m[4];
       if (c.res === 'vic' && !(p > q && !ox)) return false;
       if (c.res === 'vqr' && !(p > q)) return false;
-      if (c.res === 'def' && !(p < q && !ox)) return false;   /* 20261031m : hockey = défaite au temps réglementaire (nul → perdu), comme les critères et Winamax */
+      if (c.res === 'def' && !(p < q && !ox)) return false;
+      if (c.res === 'per' && !(p < q)) return false;   /* 20261031n : Perdant = défaite prolongation / TAB compris */   /* 20261031m : hockey = défaite au temps réglementaire (nul → perdu), comme les critères et Winamax */
       if (c.ou) { var T = ox ? 2 * Math.min(p, q) : p + q; if (T === c.L) return null; if (c.ou === 'ov' ? !(T > c.L) : !(T < c.L)) return false; }
       if (c.bts) { var b2 = p > 0 && q > 0; if ((c.bts === 'oui') !== b2) return false; }
       var pT = ox ? Math.min(p, q) : p, qT = ox ? Math.min(p, q) : q;   /* 20261028l : buts d'une équipe, hockey temps réglementaire */
