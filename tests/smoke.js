@@ -1050,6 +1050,13 @@ serveur.listen(0, async () => {
         const C = ((document.getElementById('g45ck') || {}).textContent || '').replace(/\s+/g, ' ');
         g45CkSous('g');
         const G = ((document.getElementById('g45ck') || {}).textContent || '').replace(/\s+/g, ' ');
+        const u0 = state.u, dm = new Date(Date.now() + 864e5), jm = dm.getFullYear() + '-' + ('0' + (dm.getMonth() + 1)).slice(-2) + '-' + ('0' + dm.getDate()).slice(-2);
+        state.u = [{ n: 'Test Bayern', sport: '⚽', s: 5, l: 1, note: '🏠 Victoire + Over 2.5' }];
+        window._g45CkAg = { j: d.getFullYear() + '-' + (d.getMonth() + 1) + '-' + d.getDate(), L: [{ t: dm.getTime(), n: 'Test Bayern', d: 1, adv: 'Leverkusen', sp: 'soccer' }] };
+        g45CkSous('c'); g45CkJour(jm); if (dm.getMonth() !== d.getMonth()) g45CkMois(1), g45CkJour(jm);
+        const F = ((document.getElementById('g45ck') || {}).textContent || '').replace(/\s/g, '');
+        state.u = u0; window._g45CkAg = null; g45CkJour(jm); if (dm.getMonth() !== d.getMonth()) g45CkMois(-1);
+        o.ckFut = (/📅1/.test(F) && /📅Prévu/.test(F) && /TestBayern🏠vsLeverkusen/.test(F) && /📌🏠Victoire\+Over2\.5/.test(F)) || F.slice(-400);
         g45CkJour(j); state.a = a0; state.h = h0; if (s0 == null) localStorage.removeItem('g45ck_sous'); else localStorage.setItem('g45ck_sous', s0); localStorage.removeItem('g45tr_vue');
         const c2 = C.replace(/\s/g, ''), g2 = G.replace(/\s/g, '');
         o.ckCal = (P.length === 3 && /📅Calendrier/.test(c2) && /\+8,5/.test(c2) && /✅TestBayern🏠vsLeverkusen·Victoire\+Over2\.5·palier2/.test(c2) && /❌TestEichel✈️/.test(c2) && /⏳TestDallas/.test(c2) && /\+8,50€/.test(c2) && !/SIMPLE/.test(c2)
@@ -1703,6 +1710,7 @@ serveur.listen(0, async () => {
     ok('🔄 Calculer sur une carte jamais calculée', r.serUne === true, r.serUne);
     ok('🏁 Cockpit BET45 (Tendances)', r.ck === true, r.ck);
     ok('🏁 Cockpit BET45 : calendrier et graphique', r.ckCal === true, r.ckCal);
+    ok('🏁 Cockpit BET45 : jours à venir (Agenda) dans le calendrier', r.ckFut === true, r.ckFut);
     ok('Critères : sélecteurs redessinés dans la zone visible', r.crVis === true, r.crVis);
     ok('🔄 Calculer mes séries : joueur dans un pari d\'équipe', r.serJE === true, r.serJE);
     ok('NFL Yards + pépites NBA / NFL (pire série → paliers)', r.yards === true, r.yards);
