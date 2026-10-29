@@ -40,6 +40,15 @@ serveur.listen(0, async () => {
     /* 20261016s : relais TheSportsDB du worker (Refus = 403 → l'appli doit appeler TheSportsDB en direct) */
     if (/host=tsdb/.test(u) && /Trop/.test(u)) return r.fulfill({ status: 429, body: 'trop' });
     if (/host=tsdb/.test(u)) return /Refus/.test(u) ? r.fulfill({ status: 403, body: 'non' }) : r.fulfill({ status: 200, contentType: 'application/json', body: /json%2F123%2F/.test(u) ? '{"via":"worker"}' : '{"via":"cle3"}' });   // 20261023u : clé 123
+    /* 20261031k : archives GitHub (gones45-archives) — fausse ligue zz.1 2025-26 ; le reste = 404 (non archivé) */
+    if (/gones45-archives\/main\/cotes\//.test(u)) {
+      const AF = { 'zz.1/2025-26/equipes.json': { 7: ['Test FC', 'TFC', 2] }, 'zz.1/2025-26/etat.json': { n: 2, v2: 2 },
+        'zz.1/2025-26/equipes/7.json': { m: [[Date.parse('2025-09-13T19:00:00Z'), '2025-09', 'E1', 'h', [2, 1]], [Date.parse('2025-10-04T15:00:00Z'), '2025-10', 'E2', 'a', [0, 0]]] },
+        'zz.1/2025-26/joueurs/9.json': { m: [[Date.parse('2025-09-13T19:00:00Z'), '2025-09', 'E1', '7', { G: 1, TIT: 1 }], [Date.parse('2025-10-04T15:00:00Z'), '2025-10', 'E2', '7', null]] },
+        'zz.1/2025-26/matchs/2025-09.json': { E1: { cf: [10, 5, 4, 2, 1, 0, 'h', 6, 3, 2, 1] } }, 'zz.1/2025-26/matchs/2025-10.json': { E2: { v2: 1 } } };
+      const k = Object.keys(AF).find((x) => u.indexOf('/cotes/foot/' + x + '?') >= 0);
+      return k ? r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(AF[k]) }) : r.fulfill({ status: 404, body: '' });
+    }
     if (/thesportsdb\.com\/api/.test(u)) return r.fulfill({ status: 200, contentType: 'application/json', body: /json\/123\//.test(u) ? '{"via":"direct"}' : '{"via":"cle3"}' });
     return r.fulfill({ status: 200, contentType: 'application/json', body: '{}' });
   });
@@ -1578,6 +1587,14 @@ serveur.listen(0, async () => {
         delete S.data.TrFC; delete S.jl.mb; S.nom = ''; if (ouv == null) localStorage.removeItem('g45_cr_open'); else localStorage.setItem('g45_cr_open', ouv);
         o.crTr = (/Mbappé n'était pas à TrFC \(PSG\)/.test(HA) && /1\/1 · 100 %/.test(HA) && /↪️ PSG/.test(HB) && /1\/2 · 50 %/.test(HB) && /2\/3 · 67 %/.test(HB) && !/n'était pas/.test(HB)) || (HA.slice(-600) + ' ||| ' + HB.slice(-600));
       } catch (e) { o.crTr = 'erreur : ' + e.message; }
+      /* 20261031k — critères foot : archives GitHub d'abord (équipe, joueur, feuille d'équipe) ; non archivé → null (ESPN) */
+      try {
+        const X = window._g45CrArch; window._G45_ARCH_LG.push('zz.1');
+        const E = await X.aEquipe('zz.1', '7', 2025), J = await X.aJoueur('zz.1', '9', 2025), N = await X.aEquipe('zz.1', '7', 2024), N2 = await X.aEquipe('fra.1x', '7', 2025);
+        await X.aFeuilles('zz.1', '7', 2025); const S = window._g45Cr; window._G45_ARCH_LG.pop();
+        o.crArch = (JSON.stringify(E.map((m) => [m.d, m.dom, m.p, m.c, m.id])) === JSON.stringify([['2025-09-13', 1, 2, 1, 'E1'], ['2025-10-04', 0, 0, 0, 'E2']]) && J.gameLog.length === 1 && J.gameLog[0].goals === 1
+          && N === null && N2 === null && S.fa.E1 && S.fa.E1[7] === 6 && S.fa.E2 === 0) || JSON.stringify({ E, J, N, N2, fa: S.fa });
+      } catch (e) { o.crArch = 'erreur : ' + e.message; }
       /* 20261021f — panneau Saison en onglets : 🎯 Tirs (feuille de match g45crf1_), Buts par défaut */
       try {
         const sv = localStorage.getItem('g45_curseurs');
@@ -1808,6 +1825,7 @@ serveur.listen(0, async () => {
     ok('Tennis : score en direct (Tendances)', r.tnLv === true, r.tnLv);
     ok('Critères : joueurs, match précédent, feuille de match', r.crPlus === true, r.crPlus);
     ok('Critères : transfert (ancien club du joueur)', r.crTr === true, r.crTr);
+    ok('Critères foot : archives GitHub d\'abord', r.crArch === true, r.crArch);
     ok('Saison : onglets + tirs (feuille de match)', r.cursTi === true, r.cursTi);
     ok('Panneaux fermés à l\'arrivée + chargement BET45', r.ferme === true, r.ferme);
     ok('Tennis : mes coefficients + surface 2 mois + tournoi précédent', r.tnCoef === true, r.tnCoef);
