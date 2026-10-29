@@ -165,6 +165,12 @@ serveur.listen(0, async () => {
         const Bt = window._g45AgBtsLire([{ type: { id: '152' }, current: { over: { decimal: 1.45 } } }, { type: { id: '152' }, current: { over: { decimal: 2.75 } } }]);
         const Cb = window._g45AgConsigne('🏠 victoire + les deux marquent', true), Hb = window._g45AgOdHtml(Cb, { h: 1.9, a: 3, line: 2.5, ov: 1.9, un: 1.9, moiDom: true, eid: '9', hid: '1', aid: '2', hn: 'A', an: 'B' }, 'soccer');
         o.teqDk = (Bt.o === 1.45 && Bt.n === 2.75 && /g45agbts/.test(Hb) && /data-v="o"/.test(Hb) && R[0.5].ov === 1.17 && R[0.5].un === 4.66 && R[2.5].ov === 3.83 && R[2.5].un === 1.24 && R[3.5].ov === 8.5 && R[1.5].ov === 1.87 && R2[2.5].ov === 3.4 && /data-t="2502"/.test(H) && /data-l="1.5"/.test(H)) || JSON.stringify([R, R2]) + H.slice(0, 300); } catch (e) { o.teqDk = 'erreur : ' + e.message; }
+      /* 20261030x : bloc « Cotes match / équipes » */
+      try { localStorage.setItem('g45ce_ouvert', '1'); const E = { h: { id: '2502', nom: 'Nice', c: '#e13327', teq: { 0.5: { ov: 1.21, un: 4.26 }, 1.5: { ov: 1.97, un: 1.75 } } }, a: { id: '169', nom: 'Rennes', c: '#000000' },
+          ml: { h: 2.8, a: 2.35, d: 3.65 }, sp: { L: 0.5, h: 1.57, a: 2.25 }, tot: { L: 2.5, o: 1.5, u: 2.6 }, bts: { o: 1.45, n: 2.75 } };
+        const t = window._g45CeHtml('fra.1', '9', E).replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ');
+        localStorage.removeItem('g45ce_ouvert'); const tF = window._g45CeHtml('fra.1', '9', E).replace(/<[^>]+>/g, ' ');
+        o.ceH = (/Nice 2,80 Nul 3,65 Rennes 2,35/.test(t) && /Nice \+0,5 1,57 Rennes −0,5 2,25/.test(t) && /Plus de 2,5 1,50 Moins de 2,5 2,60/.test(t) && /Oui 1,45 Non 2,75/.test(t) && /Buts de Nice/.test(t) && /1,5 plus de 1,97 moins de 1,75/.test(t) && /Ouvrir/.test(tF) && !/Nul/.test(tF)) || t.slice(0, 500); } catch (e) { o.ceH = 'erreur : ' + e.message; }
       /* 20261030e : critères 4 saisons NBA, onglet 👤 Joueurs à seuils (points 20 ou +, pts + reb + passes) */
       try { const C = window._g45Cr, ctx = { sp: 'basketball', lg: 'nba', id: '10' };
         C.data['Rockets T'] = { t: Date.now(), lg: 'nba', ligue: 'NBA', saisons: [{ an: 2026, ms: [['2026-10-22', 1, 110, 100, 0, 0, 'b1'], ['2026-10-24', 0, 99, 104, 0, 0, 'b2'], ['2026-10-26', 1, 120, 101, 0, 0, 'b3'], ['2026-10-28', 0, 115, 108, 0, 0, 'b4']] }] };
@@ -1787,6 +1793,7 @@ serveur.listen(0, async () => {
     ok('Fenêtre de match : cotes joueurs DraftKings', r.cjH === true, r.cjH);
     ok('Foot : buteur DraftKings (fenêtre + Agenda)', r.ftDk === true, r.ftDk);
     ok('Agenda : buts d\'équipe DraftKings (plus / moins séparés)', r.teqDk === true, r.teqDk);
+    ok('Fenêtre de match : cotes match / équipes', r.ceH === true, r.ceH);
     ok('Tennis : style de jeu (bonus polyvalent)', r.tnStyle === true, r.tnStyle);
     ok('Tennis : BET45 face au book (écart, value, ligne)', r.tnBk === true, r.tnBk);
     ok('Cyclisme : profil d\'étape (échelle 600 m, type, D+)', r.rcProf === true, r.rcProf);
