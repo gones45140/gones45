@@ -129,7 +129,7 @@ serveur.listen(0, async () => {
         const R0 = window._g45Reg, sv = [R0.lg, R0.cat, window._g45NflDk.M, window._g45NflDk.t]; R0.lg = 'nfl'; R0.cat = 'g'; window._g45NflDk.M = M; window._g45NflDk.t = Date.now();
         const h1 = window._g45NflDkHtml({ id: '4430807', s: { pct: 60 } }, 1), h2 = window._g45NflDkHtml({ id: '4430807', s: { pct: 5 } }, 2), h3 = window._g45NflDkHtml({ id: '1', s: { pct: 60 } }, 1);
         R0.lg = sv[0]; R0.cat = sv[1]; window._g45NflDk.M = sv[2]; window._g45NflDk.t = sv[3];
-        o.nflDk = (Object.keys(M['4430807']).join() === '31,32' && M['77']['31'] === 2.5 && M['78']['31'] === 1.83 && /TD à tout moment → cote 2,10/.test(h1) && /1,97 en France/.test(h1) && /value/.test(h1) && /2 TD ou \+ → cote 9,00/.test(h2) && !/value/.test(h2) && h3 === '') || [h1, h2, h3].join(' | '); } catch (e) { o.nflDk = 'erreur : ' + e.message; }
+        o.nflDk = (Object.keys(M['4430807']).join() === '31,32' && M['77']['31'] === 2.5 && M['78']['31'] === 1.83 && /TD à tout moment →.*2,10.*DraftKings/.test(h1) && /value/.test(h1) && /2 TD ou \+ →.*9,00/.test(h2) && !/value/.test(h2) && h3 === '') || [h1, h2, h3].join(' | '); } catch (e) { o.nflDk = 'erreur : ' + e.message; }
       /* 20261030n : cotes DraftKings NHL (joueur retrouvé par le nom) */
       try { const A = 'http://sports.core.api.espn.com/v2/sports/hockey/leagues/nhl/seasons/2027/athletes/', it = (id, ty, d, t) => ({ athlete: { $ref: A + id + '?lang=en' }, type: { id: ty }, odds: { decimal: { value: d } }, current: t == null ? {} : { target: { value: t } } });
         const Mf = window._g45NhlDkLire([{ athlete: { $ref: A + '7?' }, type: { id: '230' }, current: { over: { value: 2.45, decimal: 2.45, american: '+145' } } }, { athlete: { $ref: A + '8?' }, type: { id: '230' }, current: { over: { american: '+170' } } }], { '7': 'Esteban Lepaul', '8': 'Boulaye Dia' });
@@ -147,7 +147,7 @@ serveur.listen(0, async () => {
       try { const H = window._g45CjHtml, D = [{ n: 'Sebastian Aho', eq: 'CAR', c: '#cc0000', o: { '230': [[null, 2.65]], '219': [[1, 2.1], [2, 7]] } }, { n: 'Adam Fantilli', eq: 'CBJ', c: '#002654', o: { '230': [[null, 3.75]] } }];
         const t1 = H('nhl', '1', D, 'g', 0).replace(/<[^>]+>/g, ' '), t2 = H('nhl', '1', D, 'a', 0).replace(/<[^>]+>/g, ' ');
         const t3 = H('nba', '2', [{ n: 'Trae Young', eq: 'ATL', c: '#e03a3e', o: { '218': [[30, 4.5], [20, 1.4], [25, 2.3], [15, 1.1]] } }], 'pts', 0).replace(/<[^>]+>/g, ' ');
-        o.cjH = (/COTES JOUEURS/.test(t1) && t1.indexOf('Sebastian Aho') < t1.indexOf('Adam Fantilli') && /2,65/.test(t1) && /2,49 en France/.test(t1) && /2,10/.test(t2) && !/Fantilli/.test(t2)
+        o.cjH = (/COTES JOUEURS/.test(t1) && t1.indexOf('Sebastian Aho') < t1.indexOf('Adam Fantilli') && /2,65\s+DraftKings/.test(t1) && (localStorage.setItem('g45dk_aff', 'fr'), /≈ 2,49\s+estimée France/.test(H('nhl', '1', D, 'g', 0).replace(/<[^>]+>/g, ' '))) && (localStorage.removeItem('g45dk_aff'), true) && /2,10/.test(t2) && !/Fantilli/.test(t2)
           && /20\+\s+1,40\s+·\s+25\+\s+2,30\s+·\s+30\+\s+4,50/.test(t3.replace(/\s+/g, ' '))) || (t1.slice(0, 300) + ' || ' + t3.slice(0, 300)); } catch (e) { o.cjH = 'erreur : ' + e.message; }
       /* 20261030q : foot — bloc buteur de la fenêtre, buteur nommé dans un pari d'équipe de l'Agenda */
       try { const t1 = window._g45CjHtml('fra.1', '9', [{ n: 'Esteban Lepaul', eq: 'REN', c: '#e13327', o: { '230': [[null, 2.45]] } }], 'g', 0).replace(/<[^>]+>/g, ' ');
