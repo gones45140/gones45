@@ -1083,6 +1083,11 @@ serveur.listen(0, async () => {
         const A = ((document.getElementById('g45ck') || {}).textContent || '').replace(/\s/g, '');
         g45CkSous('g');
         const G = ((document.getElementById('g45ck') || {}).textContent || '').replace(/\s/g, ''), G0 = (document.getElementById('g45ck') || {}).innerHTML || '';
+        g45CkSous('g'); const s0b = (document.getElementById('g45ck') || {}).innerHTML || ''; g45CkSuivre('Test Stars'); g45CkMode('suiv');
+        const Gs = ((document.getElementById('g45ck') || {}).textContent || '').replace(/\s/g, ''); g45CkSuivre('Autre'); g45CkSuivre('Test Stars');
+        const Gs2 = ((document.getElementById('g45ck') || {}).textContent || '').replace(/\s/g, ''); g45CkSuivre('Autre'); g45CkMode('tout');
+        const suivOk = /g45CkSuivre/.test(s0b) && /★Mescartessuivies\(1\)/.test(Gs) && /Bénéfice\+10,00€/.test(Gs) && /Bénéfice\+10,00€/.test(Gs2) === false;
+        g45CkSous('g');
         const b0 = (D.st && D.st['5'] && +D.st['5'][0]) || 0; g45CkP1(String(b0 / 2));
         const Gp = ((document.getElementById('g45ck') || {}).textContent || '').replace(/\s/g, ''); g45CkP1('');
         const p1ok = b0 > 0 && /Tamisededépart/.test(Gp) && /Lesdangersdupalier/.test(Gp) && /Bénéfice\+5,00€/.test(Gp);
@@ -1094,7 +1099,7 @@ serveur.listen(0, async () => {
         if (s0 == null) localStorage.removeItem('g45ck_sous'); else localStorage.setItem('g45ck_sous', s0); localStorage.removeItem('g45tr_vue');
         o.ckPub = (D.u['Test Stars'] && !('np' in D.u['Test Stars']) && D.u['Test Stars'].pm.dom.p === 2 && D.P.length === 1 && D.P[0].b.type === 'Vainqueur'
           && /lescartesquijouent/.test(A) && /misàjour/.test(A) && /duCockpitBET45quijouent/.test(A) && /TestStars🏠vsCanadiens/.test(A) && /Palier2·mise/.test(A) && /piresérie2·1→3paliers/.test(A)
-          && /Bénéfice\+10,00€/.test(G) && /TestStars›?🏠1\/1\+10,00€📌🏠vainqueur1\/1·\+10,00€/.test(G) && D.nt && D.nt['Test Stars'] === '🏠 vainqueur' && /g45CkFicheDist/.test(document.getElementById('t-tend').innerHTML + G0) && p1ok && F.vis === 'block' && /TestStars/.test(F.hero.replace(/\s/g, '')) && /\+10/.test(F.bil) && F.same && F.tend === 'none' && F.live === 'none' && F.types !== 'none' && back === 'block') || JSON.stringify({ p1: typeof Gp !== 'undefined' ? Gp.slice(0, 500) : 0, g0: (typeof G0 !== 'undefined' ? G0.match(/Par carte.{0,400}/) : 0), F: typeof F !== 'undefined' ? Object.assign({}, F, { hero: F.hero.slice(0, 80), bil: F.bil.slice(0, 80) }) : 0, back: typeof back !== 'undefined' ? back : 0, G: G.slice(0, 200) });
+          && /Bénéfice\+10,00€/.test(G) && /TestStars›?🏠1\/1\+10,00€📌🏠vainqueur1\/1·\+10,00€/.test(G) && D.nt && D.nt['Test Stars'] === '🏠 vainqueur' && /g45CkFicheDist/.test(document.getElementById('t-tend').innerHTML + G0) && p1ok && suivOk && F.vis === 'block' && /TestStars/.test(F.hero.replace(/\s/g, '')) && /\+10/.test(F.bil) && F.same && F.tend === 'none' && F.live === 'none' && F.types !== 'none' && back === 'block') || JSON.stringify({ gs: typeof Gs !== 'undefined' ? [Gs.slice(0, 300), Gs2.slice(0, 300)] : 0, p1: typeof Gp !== 'undefined' ? Gp.slice(0, 500) : 0, g0: (typeof G0 !== 'undefined' ? G0.match(/Par carte.{0,400}/) : 0), F: typeof F !== 'undefined' ? Object.assign({}, F, { hero: F.hero.slice(0, 80), bil: F.bil.slice(0, 80) }) : 0, back: typeof back !== 'undefined' ? back : 0, G: G.slice(0, 200) });
       } catch (e) { o.ckPub = 'erreur : ' + e.message; }
       /* 20261029i / j — fiche d'une carte : filtre Lieu + Types en entier et colorés */
       try {
