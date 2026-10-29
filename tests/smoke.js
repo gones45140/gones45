@@ -1087,6 +1087,20 @@ serveur.listen(0, async () => {
           && /lescartesquijouent/.test(A) && /misàjour/.test(A) && /duCockpitBET45quijouent/.test(A) && /TestStars🏠vsCanadiens/.test(A) && /Palier2·mise/.test(A) && /piresérie2·1→3paliers/.test(A)
           && /Bénéfice\+10,00€/.test(G) && /TestStars1\/1·\+10,00€🏠1\/1/.test(G)) || JSON.stringify({ D: JSON.stringify(D).slice(0, 300), A: A.slice(0, 300), G: G.slice(0, 200) });
       } catch (e) { o.ckPub = 'erreur : ' + e.message; }
+      /* 20261029i / j — fiche d'une carte : filtre Lieu + Types en entier et colorés */
+      try {
+        const u0 = state.u, a0 = state.a;
+        state.u = [{ n: 'Test PSG', sport: '⚽', color: '#004170', s: 5, l: 1 }].concat(u0 || []);
+        const B = (i, dom, type, win) => ({ id: String(1e12 + i), isS: true, n: 'Test PSG', domicile: dom, type, win, m: 5, cote: 2, date: '2026-10-0' + i, t: '0' + i + '/10 21:00', comp: 'Ligue 1', l: 1, b: 'Winamax', target: 'Adv' + i, heure: '21:00' });
+        state.a = [B(1, 'dom', 'Victoire', true), B(2, 'dom', 'Victoire + Under 3.5', false), B(3, 'ext', 'Victoire', false), B(4, '', 'Résultat + Moins de 3,5 buts', true)];
+        openClub('Test PSG', 0);
+        const ch = ((document.getElementById('d-compf') || {}).textContent || '').replace(/\s/g, '');
+        g45SetLieuF('Test PSG', 'dom');
+        const ty = document.getElementById('ip-types'), T = (ty.textContent || '').replace(/\s/g, ''); _g45TypesPeindre();
+        const col = [...ty.querySelectorAll('.typct')].map(e => e.style.color).join('|');
+        g45SetLieuF('Test PSG', ''); state.u = u0; state.a = a0;
+        o.lieuF = (/Lieu:Tous4🌍Global1🏠Domicile2✈️Extérieur1/.test(ch) && /VictoireUnder3\.5|Victoire\+Under3\.5/.test(T) && !/Résultat/.test(T) && /rgb\(30, 215, 96\)|rgb\(255, 90, 90\)/.test(col)) || JSON.stringify({ ch, T, col });
+      } catch (e) { o.lieuF = 'erreur : ' + e.message; }
       /* 20261029a — critères : redessin dans la zone VISIBLE quand une fiche cachée a aussi #g45cr */
       try {
         const S = window._g45CrS, sv = { nom: S.nom, ctx: S.ctx, lieu: S.lieu };
@@ -1737,6 +1751,7 @@ serveur.listen(0, async () => {
     ok('🏁 Cockpit BET45 : calendrier et graphique', r.ckCal === true, r.ckCal);
     ok('🏁 Cockpit BET45 : jours à venir (Agenda) dans le calendrier', r.ckFut === true, r.ckFut);
     ok('🏁 Cockpit BET45 publié (gones) et lu sur bet45', r.ckPub === true, r.ckPub);
+    ok('Fiche : filtre Lieu + Types en entier colorés', r.lieuF === true, r.lieuF);
     ok('Critères : sélecteurs redessinés dans la zone visible', r.crVis === true, r.crVis);
     ok('🔄 Calculer mes séries : joueur dans un pari d\'équipe', r.serJE === true, r.serJE);
     ok('NFL Yards + pépites NBA / NFL (pire série → paliers)', r.yards === true, r.yards);
