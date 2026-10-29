@@ -114,7 +114,7 @@ serveur.listen(0, async () => {
       /* 20261030e : critères 4 saisons NBA, onglet 👤 Joueurs à seuils (points 20 ou +, pts + reb + passes) */
       try { const C = window._g45Cr, ctx = { sp: 'basketball', lg: 'nba', id: '10' };
         C.data['Rockets T'] = { t: Date.now(), lg: 'nba', ligue: 'NBA', saisons: [{ an: 2026, ms: [['2026-10-22', 1, 110, 100, 0, 0, 'b1'], ['2026-10-24', 0, 99, 104, 0, 0, 'b2'], ['2026-10-26', 1, 120, 101, 0, 0, 'b3'], ['2026-10-28', 0, 115, 108, 0, 0, 'b4']] }] };
-        localStorage.setItem('g45_jou_v2_basketball_nba_10_2026', JSON.stringify({ joueurs: { k1: { nom: 'Kevin Durant', tot: { pts: 79, pra: 110 } } }, parMatch: { b1: { pts: { k1: 24 }, pra: { k1: 33 } }, b2: { pts: { k1: 12 }, pra: { k1: 19 } }, b3: { pts: { k1: 31 }, pra: { k1: 45 } }, b4: {} }, pres: { b1: ['k1'], b2: ['k1'], b3: ['k1'], b4: ['x'] }, n: 4 }));
+        localStorage.setItem('g45_jou_v2_basketball_nba_10_2026', JSON.stringify({ joueurs: { k1: { nom: 'Kevin Durant', tot: { pts: 79, pra: 110 } } }, parMatch: { b1: { pts: { k1: 24 }, reb: { k1: 5 }, ast: { k1: 4 } }, b2: { pts: { k1: 12 }, reb: { k1: 4 }, ast: { k1: 3 } }, b3: { pts: { k1: 31 }, reb: { k1: 8 }, ast: { k1: 6 } }, b4: {} }   /* 20261030f : pra recalculé (33 / 19 / 45) */, pres: { b1: ['k1'], b2: ['k1'], b3: ['k1'], b4: ['x'] }, n: 4 }));
         try { localStorage.setItem('g45_cr_tab', 'jou'); } catch (e) {}
         window._g45CrHtml('Rockets T', ctx); const cb = C.combos[C.a]; cb.jo = 'k1'; cb.jn = 'Kevin Durant'; cb.jm = 'pts'; cb.jmin = '1'; cb.res = '';
         const H1 = window._g45CrHtml('Rockets T', ctx).replace(/<[^>]+>/g, ' ');
