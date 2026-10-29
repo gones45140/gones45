@@ -154,7 +154,12 @@ serveur.listen(0, async () => {
         const M = { harrykane: { '230': [[null, 1.6]] }, kanevin: {} }, Tv = window._g45AgDkTrouve;
         const Cn = window._g45AgConsigne('🏠 Victoire + Over 2.5 + Harry Kane buteur', true), lb = Cn.opts[0].filter(l => l.k === 'but')[0];
         const H = window._g45AgOdHtml(Cn, { h: 1.3, a: 8, line: 2.5, ov: 1.5, un: 2.4, moiDom: true }, 'soccer');
-        o.ftDk = (/Buteur/.test(t1) && /2,45/.test(t1) && Tv(M, 'Kane') === M.harrykane && Tv(M, 'Harry Kane') === M.harrykane && Tv(M, 'Mbappe') === null && lb && /Kane/.test(lb.t) && /g45agbut/.test(H) && /data-n="Harry Kane"/.test(H)) || (t1.slice(0, 200) + ' | ' + H.slice(0, 300)); } catch (e) { o.ftDk = 'erreur : ' + e.message; }
+        const t4 = window._g45CjHtml('fra.1', '9', [{ n: 'Elye Wahi', eq: 'NICE', c: '#e13327', o: { '230': [[null, 2.85]], '219': [[1, 7.75]] } }, { n: 'X Y', eq: 'NICE', c: '#e13327', o: { '230': [[null, 3]] } }], 'dec', 0).replace(/<[^>]+>/g, ' ');
+        o.ftDk = (/2,30/.test(t4) && /ESTIMÉE/.test(t4) && !/X Y/.test(t4) && /Buteur/.test(t1) && /2,45/.test(t1) && Tv(M, 'Kane') === M.harrykane && Tv(M, 'Harry Kane') === M.harrykane && Tv(M, 'Mbappe') === null && lb && /Kane/.test(lb.t) && /g45agbut/.test(H) && /data-n="Harry Kane"/.test(H)) || (t1.slice(0, 200) + ' | ' + H.slice(0, 300)); } catch (e) { o.ftDk = 'erreur : ' + e.message; }
+      /* 20261030t : buts d'équipe — plus / moins mélangés (sonde Rennes) */
+      try { const S = window._g45AgTeqSep, R = S([[0.5, 4.66], [0.5, 1.17], [1.5, 1.87], [1.5, 1.87], [2.5, 1.24], [2.5, 3.83], [3.5, 8.5], [3.5, 1.06]]), R2 = S([[2.5, 1.3], [2.5, 3.4]]);
+        const Cn = window._g45AgConsigne('🏠 vainqueur + buts de Nice plus de 1,5', true), H = window._g45AgOdHtml(Cn, { h: 1.9, a: 3, line: 2.5, ov: 1.9, un: 1.9, moiDom: true, eid: '9', hid: '2502', aid: '169', hn: 'OGC Nice | Nice', an: 'Stade Rennais | Rennes' }, 'soccer');
+        o.teqDk = (R[0.5].ov === 1.17 && R[0.5].un === 4.66 && R[2.5].ov === 3.83 && R[2.5].un === 1.24 && R[3.5].ov === 8.5 && R[1.5].ov === 1.87 && R2[2.5].ov === 3.4 && /data-t="2502"/.test(H) && /data-l="1.5"/.test(H)) || JSON.stringify([R, R2]) + H.slice(0, 300); } catch (e) { o.teqDk = 'erreur : ' + e.message; }
       /* 20261030e : critères 4 saisons NBA, onglet 👤 Joueurs à seuils (points 20 ou +, pts + reb + passes) */
       try { const C = window._g45Cr, ctx = { sp: 'basketball', lg: 'nba', id: '10' };
         C.data['Rockets T'] = { t: Date.now(), lg: 'nba', ligue: 'NBA', saisons: [{ an: 2026, ms: [['2026-10-22', 1, 110, 100, 0, 0, 'b1'], ['2026-10-24', 0, 99, 104, 0, 0, 'b2'], ['2026-10-26', 1, 120, 101, 0, 0, 'b3'], ['2026-10-28', 0, 115, 108, 0, 0, 'b4']] }] };
@@ -1776,6 +1781,7 @@ serveur.listen(0, async () => {
     ok('Agenda : cote DraftKings des cartes joueur', r.agDk === true, r.agDk);
     ok('Fenêtre de match : cotes joueurs DraftKings', r.cjH === true, r.cjH);
     ok('Foot : buteur DraftKings (fenêtre + Agenda)', r.ftDk === true, r.ftDk);
+    ok('Agenda : buts d\'équipe DraftKings (plus / moins séparés)', r.teqDk === true, r.teqDk);
     ok('Tennis : style de jeu (bonus polyvalent)', r.tnStyle === true, r.tnStyle);
     ok('Tennis : BET45 face au book (écart, value, ligne)', r.tnBk === true, r.tnBk);
     ok('Cyclisme : profil d\'étape (échelle 600 m, type, D+)', r.rcProf === true, r.rcProf);
