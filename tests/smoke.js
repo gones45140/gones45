@@ -42,11 +42,16 @@ serveur.listen(0, async () => {
     if (/host=tsdb/.test(u)) return /Refus/.test(u) ? r.fulfill({ status: 403, body: 'non' }) : r.fulfill({ status: 200, contentType: 'application/json', body: /json%2F123%2F/.test(u) ? '{"via":"worker"}' : '{"via":"cle3"}' });   // 20261023u : clé 123
     /* 20261031k : archives GitHub (gones45-archives) — fausse ligue zz.1 2025-26 ; le reste = 404 (non archivé) */
     if (/gones45-archives\/main\/cotes\//.test(u)) {
-      const AF = { 'zz.1/2025-26/equipes.json': { 7: ['Test FC', 'TFC', 2] }, 'zz.1/2025-26/etat.json': { n: 2, v2: 2 },
-        'zz.1/2025-26/equipes/7.json': { m: [[Date.parse('2025-09-13T19:00:00Z'), '2025-09', 'E1', 'h', [2, 1]], [Date.parse('2025-10-04T15:00:00Z'), '2025-10', 'E2', 'a', [0, 0]]] },
-        'zz.1/2025-26/joueurs/9.json': { m: [[Date.parse('2025-09-13T19:00:00Z'), '2025-09', 'E1', '7', { G: 1, TIT: 1 }], [Date.parse('2025-10-04T15:00:00Z'), '2025-10', 'E2', '7', null]] },
-        'zz.1/2025-26/matchs/2025-09.json': { E1: { cf: [10, 5, 4, 2, 1, 0, 'h', 6, 3, 2, 1] } }, 'zz.1/2025-26/matchs/2025-10.json': { E2: { v2: 1 } } };
-      const k = Object.keys(AF).find((x) => u.indexOf('/cotes/foot/' + x + '?') >= 0);
+      const AF = { 'foot/zz.1/2025-26/equipes.json': { 7: ['Test FC', 'TFC', 2] }, 'foot/zz.1/2025-26/etat.json': { n: 2, v2: 2 },
+        'foot/zz.1/2025-26/equipes/7.json': { m: [[Date.parse('2025-09-13T19:00:00Z'), '2025-09', 'E1', 'h', [2, 1]], [Date.parse('2025-10-04T15:00:00Z'), '2025-10', 'E2', 'a', [0, 0]]] },
+        'foot/zz.1/2025-26/joueurs/9.json': { m: [[Date.parse('2025-09-13T19:00:00Z'), '2025-09', 'E1', '7', { G: 1, TIT: 1 }], [Date.parse('2025-10-04T15:00:00Z'), '2025-10', 'E2', '7', null]] },
+        'foot/zz.1/2025-26/matchs/2025-09.json': { E1: { cf: [10, 5, 4, 2, 1, 0, 'h', 6, 3, 2, 1] } }, 'foot/zz.1/2025-26/matchs/2025-10.json': { E2: { v2: 1 } } };
+      /* 20261031l : NHL zzh 2025-26 (saison ESPN 2026) : présaison, 2 matchs de saison (1 en prolongation), 1 match de séries ; zzi = fiche sans type → ESPN */
+      AF['hockey/zzh/2025-26/equipes.json'] = { 5: ['Test H', 'TH', 4] }; AF['hockey/zzi/2025-26/equipes.json'] = { 5: ['Test H', 'TH', 1] };
+      AF['hockey/zzh/2025-26/equipes/5.json'] = { m: [[Date.parse('2025-09-25T23:00:00Z'), '2025-09', 'P1', 'h', [1, 4], 1, 0], [Date.parse('2025-10-10T23:00:00Z'), '2025-10', 'H1', 'h', [3, 2], 2, 1],
+        [Date.parse('2025-10-12T23:00:00Z'), '2025-10', 'H2', 'a', [5, 1], 2, 0], [Date.parse('2026-04-25T23:00:00Z'), '2026-04', 'S1', 'a', [2, 0], 3, 0]] };
+      AF['hockey/zzi/2025-26/equipes/5.json'] = { m: [[Date.parse('2025-10-10T23:00:00Z'), '2025-10', 'H1', 'h', [3, 2]]] };
+      const k = Object.keys(AF).find((x) => u.indexOf('/cotes/' + x + '?') >= 0);
       return k ? r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(AF[k]) }) : r.fulfill({ status: 404, body: '' });
     }
     if (/thesportsdb\.com\/api/.test(u)) return r.fulfill({ status: 200, contentType: 'application/json', body: /json\/123\//.test(u) ? '{"via":"direct"}' : '{"via":"cle3"}' });
@@ -1592,6 +1597,8 @@ serveur.listen(0, async () => {
         const X = window._g45CrArch; window._G45_ARCH_LG.push('zz.1');
         const E = await X.aEquipe('zz.1', '7', 2025), J = await X.aJoueur('zz.1', '9', 2025), N = await X.aEquipe('zz.1', '7', 2024), N2 = await X.aEquipe('fra.1x', '7', 2025);
         await X.aFeuilles('zz.1', '7', 2025); const S = window._g45Cr; window._G45_ARCH_LG.pop();
+        window._G45_ARCH_LG.push('zzh', 'zzi'); const U = await X.aEquipeUS('hockey', 'zzh', '5', 2026), U2 = await X.aEquipeUS('hockey', 'zzi', '5', 2026); window._G45_ARCH_LG.splice(-2, 2);
+        if (JSON.stringify(U) !== JSON.stringify([['2025-10-10', 1, 3, 2, 1, 0, 'H1'], ['2025-10-12', 0, 1, 5, 0, 0, 'H2']]) || U2 !== null || X.aSa('nhl', 0) == null) E.push('US ' + JSON.stringify([U, U2]));
         o.crArch = (JSON.stringify(E.map((m) => [m.d, m.dom, m.p, m.c, m.id])) === JSON.stringify([['2025-09-13', 1, 2, 1, 'E1'], ['2025-10-04', 0, 0, 0, 'E2']]) && J.gameLog.length === 1 && J.gameLog[0].goals === 1
           && N === null && N2 === null && S.fa.E1 && S.fa.E1[7] === 6 && S.fa.E2 === 0) || JSON.stringify({ E, J, N, N2, fa: S.fa });
       } catch (e) { o.crArch = 'erreur : ' + e.message; }
