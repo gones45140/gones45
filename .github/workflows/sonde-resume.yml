@@ -1,0 +1,14 @@
+# Sonde jetable (20261030z) : forme des résumés ESPN (buteurs, passeurs, stats) pour l'archive des cotes. Lancée à la main.
+name: sonde-resume
+on:
+  workflow_dispatch:
+jobs:
+  sonde:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - run: node .github/scripts/sonde_resume.mjs
