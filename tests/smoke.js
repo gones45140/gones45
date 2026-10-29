@@ -1041,7 +1041,7 @@ serveur.listen(0, async () => {
       /* 20261029b — 🏁 Cockpit BET45 : 📅 Calendrier et 📈 Graphique (paris Cockpit isS déjà enregistrés) */
       try {
         const a0 = state.a, h0 = state.h, s0 = localStorage.getItem('g45ck_sous'), d = new Date(), j = d.getFullYear() + '-' + ('0' + (d.getMonth() + 1)).slice(-2) + '-' + ('0' + d.getDate()).slice(-2);
-        state.a = [{ id: '1', isS: true, win: true, n: 'Test Bayern', domicile: 'dom', l: 2, m: 10, cote: 2.15, date: j, target: 'Victoire + Over 2.5' },
+        state.a = [{ id: '1', isS: true, win: true, n: 'Test Bayern', domicile: 'dom', l: 2, m: 10, cote: 2.15, date: j, target: 'Leverkusen', type: 'Victoire + Over 2.5' },
           { id: '2', isS: true, win: false, n: 'Test Eichel', domicile: 'ext', l: 1, m: 3, cote: 2.1, date: j },
           { id: '3', isS: false, win: true, n: 'SIMPLE', m: 50, cote: 3, date: j }];
         state.h = [{ id: '4', isS: true, n: 'Test Dallas', domicile: 'dom', l: 1, m: 5, cote: 1.9, date: j }];
@@ -1052,7 +1052,7 @@ serveur.listen(0, async () => {
         const G = ((document.getElementById('g45ck') || {}).textContent || '').replace(/\s+/g, ' ');
         g45CkJour(j); state.a = a0; state.h = h0; if (s0 == null) localStorage.removeItem('g45ck_sous'); else localStorage.setItem('g45ck_sous', s0); localStorage.removeItem('g45tr_vue');
         const c2 = C.replace(/\s/g, ''), g2 = G.replace(/\s/g, '');
-        o.ckCal = (P.length === 3 && /📅Calendrier/.test(c2) && /\+8,5/.test(c2) && /✅TestBayern🏠/.test(c2) && /❌TestEichel✈️/.test(c2) && /⏳TestDallas/.test(c2) && /\+8,50€/.test(c2) && !/SIMPLE/.test(c2)
+        o.ckCal = (P.length === 3 && /📅Calendrier/.test(c2) && /\+8,5/.test(c2) && /✅TestBayern🏠vsLeverkusen·Victoire\+Over2\.5·palier2/.test(c2) && /❌TestEichel✈️/.test(c2) && /⏳TestDallas/.test(c2) && /\+8,50€/.test(c2) && !/SIMPLE/.test(c2)
           && /Bénéfice\+8,50€/.test(g2) && /50%·1\/2/.test(g2) && /P2\(TestBayern\)/.test(g2) && /TestBayern1\/1·\+11,50€/.test(g2)) || JSON.stringify({ n: P.length, C: C.slice(0, 500), G: G.slice(0, 400) });
       } catch (e) { o.ckCal = 'erreur : ' + e.message; }
       /* 20261029a — critères : redessin dans la zone VISIBLE quand une fiche cachée a aussi #g45cr */
