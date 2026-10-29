@@ -93,6 +93,43 @@ for (const [cle, F] of Object.entries(fichiers)) {
   for (const [id, f] of Object.entries(F)) { if (!old[id] || !(old[id].t <= maintenant)) old[id] = f; }   // jamais après le coup d'envoi
   fs.writeFileSync(p, JSON.stringify(old));
 }
+// 20261030z (« ajoute les buteurs et passeurs, pointeurs, TD… en fait un max d'info ») : FEUILLE DE MATCH gardée avec le score. SONDÉ
+// (robot sonde-resume, 29/10 : Bologna @ Milan, Lyon @ PSG, Flyers @ Capitals, Heat @ Hawks, Cowboys @ Eagles) :
+//  foot   keyEvents[] {type.type 'goal', scoringPlay, clock.displayValue « 72' », team.id, participants[0] = buteur, [1] = passeur}
+//         + rosters[].roster[] {athlete.id, starter, stats[] {name, value}} → f.bu = [[minute, idButeur, idPasseur, h|a, texte court]]
+//  NHL    boxscore.players[].statistics forwards / defenses / skaters [G, A, SOG, PIM, +/-, TOI…] + goalies [GA, SA, SV…]
+//  NBA    boxscore.players[].statistics (une catégorie) [MIN, PTS, FG, 3PT, FT, REB, AST, TO, STL, BLK…]
+//  NFL    boxscore.players[].statistics passing / rushing / receiving / interceptions… (labels YDS, TD, REC, INT) + scoringPlays
+// → f.st = { idEspn: { n, k (h|a), s: { stat: valeur ≠ 0 } } } (stats choisies par sport, valeurs nulles non gardées).
+const FOOT_ST = { totalGoals: 'G', goalAssists: 'A', totalShots: 'T', shotsOnTarget: 'TC', yellowCards: 'J', redCards: 'R', foulsCommitted: 'F', offsides: 'HJ', saves: 'AR', ownGoals: 'CSC' };
+const US_ST = {
+  hockey: { G: 'G', A: 'A', SOG: 'TC', PIM: 'PIM', '+/-': 'PM', SV: 'AR', GA: 'BE', TOI: 'TOI' },
+  basketball: { MIN: 'MIN', PTS: 'PTS', REB: 'REB', AST: 'AST', '3PT': '3PT', STL: 'INT', BLK: 'CTR', TO: 'BP' },
+  football: { 'passing:YDS': 'pY', 'passing:TD': 'pTD', 'passing:INT': 'pINT', 'rushing:CAR': 'CAR', 'rushing:YDS': 'rY', 'rushing:TD': 'rTD', 'receiving:REC': 'REC', 'receiving:YDS': 'reY', 'receiving:TD': 'reTD', 'interceptions:INT': 'INT', 'defensive:SACKS': 'SACK', 'kicking:PTS': 'KPTS' }
+};
+function feuille(f, sm, sp) {
+  const kDe = (tid) => (String(tid) === String(f.h.id) ? 'h' : (String(tid) === String(f.a.id) ? 'a' : ''));
+  const st = {};
+  const met = (id, n, k, cle, v) => { if (v == null || v === '' || +v === 0 || isNaN(+v) && cle !== 'TOI' && cle !== 'MIN') return; const o = st[id] || (st[id] = { n, k, s: {} }); o.s[cle] = isNaN(+v) ? v : +v; };
+  if (sp === 'soccer') {
+    f.bu = (sm.keyEvents || []).filter((x) => x.scoringPlay).map((x) => { const P = x.participants || []; return [String((x.clock || {}).displayValue || ''), String(((P[0] || {}).athlete || {}).id || ''), String(((P[1] || {}).athlete || {}).id || ''), kDe((x.team || {}).id), String(x.shortText || '').slice(0, 60)]; });
+    for (const ro of sm.rosters || []) { const k = kDe((ro.team || {}).id); for (const p of ro.roster || []) { const a = p.athlete || {}; if (!a.id) continue; if (p.starter) met(a.id, a.displayName, k, 'TIT', 1); for (const x of p.stats || []) if (FOOT_ST[x.name]) met(a.id, a.displayName, k, FOOT_ST[x.name], x.value); } }
+  } else {
+    const M = US_ST[sp] || {};
+    for (const eq of (sm.boxscore || {}).players || []) {
+      const k = kDe((eq.team || {}).id);
+      for (const cat of eq.statistics || []) {
+        const lab = cat.labels || [];
+        for (const a of cat.athletes || []) {
+          const at = a.athlete || {}; if (!at.id || a.didNotPlay) continue;
+          lab.forEach((L, i) => { const c = M[(cat.name ? cat.name + ':' : '') + L] || (sp !== 'football' ? M[L] : null); if (!c) return; let v = (a.stats || [])[i]; if (c === '3PT') v = parseInt(String(v || '').split('-')[0], 10); met(String(at.id), at.displayName, k, c, v); });
+        }
+      }
+    }
+    if (sp === 'football') f.bu = (sm.scoringPlays || []).map((x) => [String(((x.period || {}).number || '')) + 'QT ' + String((x.clock || {}).displayValue || ''), '', '', kDe((x.team || {}).id), String(x.text || '').slice(0, 70)]);
+  }
+  if (Object.keys(st).length) f.st = st;
+}
 // 20261030z : score final des matchs gardés (onglet « 📦 Cotes gardées » : carte verte / jaune / rouge) — mois en cours et précédent,
 // matchs commencés depuis plus de 3 h sans score → summary ESPN (header.competitions[0].competitors[].score, match fini seulement).
 let nSc = 0;
@@ -108,6 +145,7 @@ for (const [sp, lg] of LIGUES) {
       if (!st.completed) continue;
       const sc = {}; for (const c of cp.competitors || []) sc[c.homeAway === 'home' ? 'h' : 'a'] = parseInt(c.score, 10);
       if (!isNaN(sc.h) && !isNaN(sc.a)) { f.f = sc; maj = true; nSc++; }
+      try { feuille(f, sm, sp); } catch (e) { console.log('feuille ' + id + ' : ' + e.message); }
       await pause(200);
     }
     if (maj) fs.writeFileSync(p, JSON.stringify(F));

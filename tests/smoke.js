@@ -177,7 +177,10 @@ serveur.listen(0, async () => {
           j: { 7: { n: 'Esteban Lepaul', k: 'a', o: { 230: [[null, 2.45]] } }, 8: { n: 'Boulaye Dia', k: 'a', o: { 230: [[null, 2.7]] } } }, f: { h: 1, a: 2 } };
         const c1 = window._g45ArchCarte(F, '401', '169').replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' '), c2 = window._g45ArchCarte(F, '401', '').replace(/<[^>]+>/g, ' ');
         window._g45ArchS.ouv['401'] = true; const c3 = window._g45ArchCarte(F, '401', '169').replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' '); window._g45ArchS.ouv['401'] = false;
-        o.arch = (/31\/10 · @ Nice/.test(c1) && /1-2/.test(c1) && /Nice 2,80 Nul 3,65 Rennes 2,35/.test(c1) && /Esteban Lepaul 2,45/.test(c1) && /#1ed760;">1-2/.test(window._g45ArchCarte(F, '401', '169')) && /Nice – Rennes/.test(c2)
+        F.st = { 7: { n: 'Esteban Lepaul', k: 'a', s: { G: 1, A: 1 } }, 8: { n: 'Boulaye Dia', k: 'a', s: { TIT: 1 } } }; F.bu = [["55'", '7', '8', 'a', 'Esteban Lepaul Goal']];
+        const c4 = window._g45ArchCarte(F, '401', '169').replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' '), fe = window._g45ArchFeuille(F).replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ');
+        delete F.st; delete F.bu;
+        o.arch = (/Lepaul 2,45 ✅/.test(c4) && /Dia 2,70 ❌/.test(c4) && /55' Esteban Lepaul \(passe Boulaye Dia\) Rennes/.test(fe) && /31\/10 · @ Nice/.test(c1) && /1-2/.test(c1) && /Nice 2,80 Nul 3,65 Rennes 2,35/.test(c1) && /Esteban Lepaul 2,45/.test(c1) && /#1ed760;">1-2/.test(window._g45ArchCarte(F, '401', '169')) && /Nice – Rennes/.test(c2)
           && /Handicap/.test(c3) && /Buts de Rennes/.test(c3) && /2,5 plus de 3,83 moins de 1,24/.test(c3) && (window._G45_ARCH_LG || []).indexOf('nhl') >= 0) || c1.slice(0, 300) + ' || ' + c3.slice(0, 400); } catch (e) { o.arch = 'erreur : ' + e.message; }
       /* 20261030e : critères 4 saisons NBA, onglet 👤 Joueurs à seuils (points 20 ou +, pts + reb + passes) */
       try { const C = window._g45Cr, ctx = { sp: 'basketball', lg: 'nba', id: '10' };
