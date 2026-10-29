@@ -179,9 +179,12 @@ serveur.listen(0, async () => {
         window._g45ArchS.ouv['401'] = true; const c3 = window._g45ArchCarte(F, '401', '169').replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' '); window._g45ArchS.ouv['401'] = false;
         F.st = { 7: { n: 'Esteban Lepaul', k: 'a', s: { G: 1, A: 1 } }, 8: { n: 'Boulaye Dia', k: 'a', s: { TIT: 1 } } }; F.bu = [["55'", '7', '8', 'a', 'Esteban Lepaul Goal']];
         const c4 = window._g45ArchCarte(F, '401', '169').replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' '), fe = window._g45ArchFeuille(F).replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ');
+        /* 20261031i : 📄 PDF de la saison (équipe Rennes) */
+        const pd = window._g45ArchPdfHtml([F], '169', 'Rennes', 'BET45 — Rennes — Ligue 1 2026-27').replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ');
+        window.__archPdf = /Bilan Rennes : 1 V · 0 N · 0 D — 2 marqués, 1 encaissés/.test(pd) && /31\/10\/2026 · Nice 1 - 2 Rennes ✅ V/.test(pd) && /1 2,80 · N 3,65 · 2 2,35/.test(pd) && /Total 2,5 : \+ 1,83/.test(pd) && /Esteban Lepaul 2,45 ✅/.test(pd) && /55' Esteban Lepaul/.test(pd) && /Enregistrer en PDF/.test(pd) || pd.slice(0, 600);
         delete F.st; delete F.bu;
         o.arch = (/Lepaul 2,45 ✅/.test(c4) && /Dia 2,70 ❌/.test(c4) && /55' Esteban Lepaul \(passe Boulaye Dia\) Rennes/.test(fe) && /31\/10 · @ Nice/.test(c1) && /1-2/.test(c1) && /Nice 2,80 Nul 3,65 Rennes 2,35/.test(c1) && /Esteban Lepaul 2,45/.test(c1) && /#1ed760;">1-2/.test(window._g45ArchCarte(F, '401', '169')) && /Nice – Rennes/.test(c2)
-          && /Handicap/.test(c3) && /Buts de Rennes/.test(c3) && /2,5 plus de 3,83 moins de 1,24/.test(c3) && (window._G45_ARCH_LG || []).indexOf('nhl') >= 0) || c1.slice(0, 300) + ' || ' + c3.slice(0, 400); } catch (e) { o.arch = 'erreur : ' + e.message; }
+          && /Handicap/.test(c3) && /Buts de Rennes/.test(c3) && /2,5 plus de 3,83 moins de 1,24/.test(c3) && (window._G45_ARCH_LG || []).indexOf('nhl') >= 0) || c1.slice(0, 300) + ' || ' + c3.slice(0, 400); } catch (e) { o.arch = 'erreur : ' + e.message; } o.archPdf = window.__archPdf;
       /* 20261030e : critères 4 saisons NBA, onglet 👤 Joueurs à seuils (points 20 ou +, pts + reb + passes) */
       try { const C = window._g45Cr, ctx = { sp: 'basketball', lg: 'nba', id: '10' };
         C.data['Rockets T'] = { t: Date.now(), lg: 'nba', ligue: 'NBA', saisons: [{ an: 2026, ms: [['2026-10-22', 1, 110, 100, 0, 0, 'b1'], ['2026-10-24', 0, 99, 104, 0, 0, 'b2'], ['2026-10-26', 1, 120, 101, 0, 0, 'b3'], ['2026-10-28', 0, 115, 108, 0, 0, 'b4']] }] };
@@ -1820,6 +1823,7 @@ serveur.listen(0, async () => {
     ok('Agenda : buts d\'équipe DraftKings (plus / moins séparés)', r.teqDk === true, r.teqDk);
     ok('Fenêtre de match : cotes match / équipes', r.ceH === true, r.ceH);
     ok('Compétitions : 📦 Cotes gardées', r.arch === true, r.arch);
+    ok('📦 PDF de la saison', r.archPdf === true, r.archPdf);
     ok('Tennis : style de jeu (bonus polyvalent)', r.tnStyle === true, r.tnStyle);
     ok('Tennis : BET45 face au book (écart, value, ligne)', r.tnBk === true, r.tnBk);
     ok('Cyclisme : profil d\'étape (échelle 600 m, type, D+)', r.rcProf === true, r.rcProf);
