@@ -50,6 +50,10 @@ serveur.listen(0, async () => {
       AF['hockey/zzh/2025-26/equipes.json'] = { 5: ['Test H', 'TH', 4] }; AF['hockey/zzi/2025-26/equipes.json'] = { 5: ['Test H', 'TH', 1] };
       AF['hockey/zzh/2025-26/equipes/5.json'] = { m: [[Date.parse('2025-09-25T23:00:00Z'), '2025-09', 'P1', 'h', [1, 4], 1, 0], [Date.parse('2025-10-10T23:00:00Z'), '2025-10', 'H1', 'h', [3, 2], 2, 1],
         [Date.parse('2025-10-12T23:00:00Z'), '2025-10', 'H2', 'a', [5, 1], 2, 0], [Date.parse('2026-04-25T23:00:00Z'), '2026-04', 'S1', 'a', [2, 0], 3, 0]] };
+      /* 20261031n : joueurs US (fiche.st + présence J) */
+      AF['hockey/zzh/2025-26/etat.json'] = { n: 4, v2: 4 };
+      AF['hockey/zzh/2025-26/matchs/2025-10.json'] = { H1: { f: { h: 3, a: 2 }, ty: 2, v2: 1, h: { id: '5' }, a: { id: '6' }, st: { p1: { n: 'Joueur A', k: 'h', s: { G: 1, A: 1, J: 1 } }, p2: { n: 'Joueur B', k: 'h', s: { J: 1 } }, p3: { n: 'Adv', k: 'a', s: { G: 2, J: 1 } } } },
+        H2: { f: { h: 5, a: 1 }, ty: 2, v2: 1, h: { id: '6' }, a: { id: '5' }, st: { p1: { n: 'Joueur A', k: 'a', s: { A: 1, J: 1 } } } } };
       AF['hockey/zzi/2025-26/equipes/5.json'] = { m: [[Date.parse('2025-10-10T23:00:00Z'), '2025-10', 'H1', 'h', [3, 2]]] };
       const k = Object.keys(AF).find((x) => u.indexOf('/cotes/' + x + '?') >= 0);
       return k ? r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(AF[k]) }) : r.fulfill({ status: 404, body: '' });
@@ -1599,7 +1603,8 @@ serveur.listen(0, async () => {
         const X = window._g45CrArch; window._G45_ARCH_LG.push('zz.1');
         const E = await X.aEquipe('zz.1', '7', 2025), J = await X.aJoueur('zz.1', '9', 2025), N = await X.aEquipe('zz.1', '7', 2024), N2 = await X.aEquipe('fra.1x', '7', 2025);
         await X.aFeuilles('zz.1', '7', 2025); const S = window._g45Cr; window._G45_ARCH_LG.pop();
-        window._G45_ARCH_LG.push('zzh', 'zzi'); const U = await X.aEquipeUS('hockey', 'zzh', '5', 2026), U2 = await X.aEquipeUS('hockey', 'zzi', '5', 2026); window._G45_ARCH_LG.splice(-2, 2);
+        window._G45_ARCH_LG.push('zzh', 'zzi'); const U = await X.aEquipeUS('hockey', 'zzh', '5', 2026), U2 = await X.aEquipeUS('hockey', 'zzi', '5', 2026), JX = await X.aJouUS('hockey', 'zzh', '5', 2026), JY = await X.aJouUS('hockey', 'zzi', '5', 2026); window._G45_ARCH_LG.splice(-2, 2);
+        if (!(JX && JSON.stringify(JX.parMatch) === JSON.stringify({ H1: { g: { p1: 1 }, a: { p1: 1 }, p: { p1: 2 } }, H2: { a: { p1: 1 }, p: { p1: 1 } } }) && JSON.stringify(JX.pres.H1) === '["p1","p2"]' && JX.joueurs.p1.tot.p === 3 && !JX.joueurs.p3 && JY === null)) E.push('JOU ' + JSON.stringify([JX, JY]));
         if (JSON.stringify(U) !== JSON.stringify([['2025-10-10', 1, 3, 2, 1, 0, 'H1'], ['2025-10-12', 0, 1, 5, 0, 0, 'H2']]) || U2 !== null || X.aSa('nhl', 0) == null) E.push('US ' + JSON.stringify([U, U2]));
         o.crArch = (JSON.stringify(E.map((m) => [m.d, m.dom, m.p, m.c, m.id])) === JSON.stringify([['2025-09-13', 1, 2, 1, 'E1'], ['2025-10-04', 0, 0, 0, 'E2']]) && J.gameLog.length === 1 && J.gameLog[0].goals === 1
           && N === null && N2 === null && S.fa.E1 && S.fa.E1[7] === 6 && S.fa.E2 === 0) || JSON.stringify({ E, J, N, N2, fa: S.fa });

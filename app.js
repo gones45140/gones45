@@ -75393,6 +75393,10 @@ window._g45AideBoutonsPoser = _g45AideBoutonsPoser;
       for (var i = 0; i < (D.saisons || []).length; i++) {
         var sa = D.saisons[i]; if (!sa || !sa.ms) continue;
         var cle = _g45JouCle(C.sp, C.lg, sa.an, C.id), old = _g45JouLire(cle) || { joueurs: {}, parMatch: {}, pres: {}, n: 0 };
+        if (sa.ms.some(function (m) { return m[6] && !(old.parMatch && old.parMatch[m[6]]); })) {   /* 20261031n : archives GitHub d'abord (index complet de la saison) */
+          var AX = null; try { AX = await aJouUS(C.sp, C.lg, C.id, sa.an); } catch (e) {}
+          if (AX && sa.ms.every(function (m) { return !m[6] || AX.parMatch[m[6]]; })) { old = AX; old.total = Object.keys(AX.parMatch).length; try { localStorage.setItem(cle, JSON.stringify(old)); } catch (e) {} U.f += sa.ms.length; }
+        }
         var L = sa.ms.filter(function (m) { return m[6] && !(old.parMatch && old.parMatch[m[6]]); }).map(function (m) { return { id: m[6] }; });
         if (!L.length) continue;
         var f0 = U.f, nw = null;
@@ -75800,7 +75804,40 @@ window._g45AideBoutonsPoser = _g45AideBoutonsPoser;
     return M.filter(function (m) { return m[4] && m[5] === 2; }).map(function (m) { var h = m[3] === 'h'; return [aIso(m[0]), h ? 1 : 0, h ? m[4][0] : m[4][1], h ? m[4][1] : m[4][0], sp === 'hockey' ? (m[6] || 0) : 0, 0, String(m[2])]; })
       .sort(function (a, b) { return a[0] < b[0] ? -1 : 1; });
   }
-  window._g45CrArch = { aEquipeUS: aEquipeUS, aEquipe: aEquipe, aJoueur: aJoueur, aSa: aSa, aFeuilles: aFeuilles, mem: AMEM };   /* tests */
+  /* ═══ 20261031n — 👤 JOUEURS NHL / NBA / NFL des critères sur les archives (« ok ajoute et passe aux joueurs sport US »). Le robot garde par
+     match fiche.st = { idJoueur: { n, k: h|a, s: { G, A, PTS, REB, AST, 3PT, rTD, reTD, pTD…, J: 1 = a joué } } } (J ajouté le 31/10, comme
+     _g45JouPresents : tout joueur de la feuille sauf didNotPlay). On refait ici l'index de _g45JouConstruire (parMatch / pres / joueurs, même
+     forme, même clé localStorage) à partir des fichiers du mois → plus aucun summary ESPN. Seulement si la saison est complète (etat v2 = n).
+     MLB : pas encore (lanceur partant non gardé). ═══ */
+  var AJR = {
+    hockey: { g: ['G'], a: ['A'], p: ['G', 'A'] },
+    basketball: { pts: ['PTS'], reb: ['REB'], ast: ['AST'], tp: ['3PT'] },
+    football: { td: ['rTD', 'reTD'], ptd: ['pTD'] }
+  };
+  async function aJouUS(sp, lg, tid, an) {   /* index { joueurs, parMatch, pres } de la saison, null → ESPN */
+    var R0 = AJR[sp]; if (!R0 || !aOk(lg)) return null;
+    var B = ASP[sp] + '/' + lg + '/' + aSaUS(lg, an), et = await aLire(B + '/etat.json'); if (!et || !(et.n > 0) || et.v2 < et.n) return null;
+    var q = await aLire(B + '/equipes/' + tid + '.json'); if (!q) return null;
+    var M = {}; (q.m || []).forEach(function (m) { if (m[4] && m[5] === 2) M[m[1]] = 1; });
+    var F = await Promise.all(Object.keys(M).map(function (mo) { return aLire(B + '/matchs/' + mo + '.json'); }));
+    if (F.some(function (D) { return !D; })) return null;
+    var ix = { builtAt: Date.now(), n: 0, joueurs: {}, parMatch: {}, pres: {}, arch: 1 };
+    F.forEach(function (D) { Object.keys(D).forEach(function (eid) {
+      var fi = D[eid]; if (!fi || !fi.f || fi.ty !== 2 || !fi.v2) return;
+      var k = String((fi.h || {}).id) === String(tid) ? 'h' : (String((fi.a || {}).id) === String(tid) ? 'a' : ''); if (!k) return;
+      var res = {}, pr = [];
+      Object.keys(fi.st || {}).forEach(function (pid) {
+        var o = fi.st[pid]; if (!o || o.k !== k) return; var st = o.s || {};
+        if (st.J) pr.push(pid);
+        var J = ix.joueurs[pid] || (ix.joueurs[pid] = { nom: o.n || '?', tot: {} });
+        Object.keys(R0).forEach(function (rk) { var v = 0; R0[rk].forEach(function (c) { v += +st[c] || 0; }); if (v > 0) { (res[rk] = res[rk] || {})[pid] = v; J.tot[rk] = (J.tot[rk] || 0) + v; } });
+      });
+      if (sp === 'basketball') Object.keys(ix.joueurs).forEach(function (pid) { var J = ix.joueurs[pid]; ['pra', 'pr', 'pa', 'ra'].forEach(function (dk) { var L = { pra: ['pts', 'reb', 'ast'], pr: ['pts', 'reb'], pa: ['pts', 'ast'], ra: ['reb', 'ast'] }[dk], t = 0; L.forEach(function (x) { t += ((res[x] || {})[pid]) || 0; }); if (t > 0) J.tot[dk] = (J.tot[dk] || 0) + t; }); });
+      ix.parMatch[eid] = res; if (pr.length) ix.pres[eid] = pr; ix.n++;
+    }); });
+    return ix.n ? ix : null;
+  }
+  window._g45CrArch = { aJouUS: aJouUS, aEquipeUS: aEquipeUS, aEquipe: aEquipe, aJoueur: aJoueur, aSa: aSa, aFeuilles: aFeuilles, mem: AMEM };   /* tests */
   async function charger(nom) {
     if (S.data[nom] && (S.data[nom].err || Date.now() - S.data[nom].t < 3600000)) return;
     if (S.enCours[nom]) return; S.enCours[nom] = 1;
