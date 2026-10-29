@@ -148,6 +148,12 @@ serveur.listen(0, async () => {
         const t3 = H('nba', '2', [{ n: 'Trae Young', eq: 'ATL', c: '#e03a3e', o: { '218': [[30, 4.5], [20, 1.4], [25, 2.3], [15, 1.1]] } }], 'pts', 0).replace(/<[^>]+>/g, ' ');
         o.cjH = (/COTES JOUEURS/.test(t1) && t1.indexOf('Sebastian Aho') < t1.indexOf('Adam Fantilli') && /2,65/.test(t1) && /2,49 en France/.test(t1) && /2,10/.test(t2) && !/Fantilli/.test(t2)
           && /20\+\s+1,40\s+·\s+25\+\s+2,30\s+·\s+30\+\s+4,50/.test(t3.replace(/\s+/g, ' '))) || (t1.slice(0, 300) + ' || ' + t3.slice(0, 300)); } catch (e) { o.cjH = 'erreur : ' + e.message; }
+      /* 20261030q : foot — bloc buteur de la fenêtre, buteur nommé dans un pari d'équipe de l'Agenda */
+      try { const t1 = window._g45CjHtml('fra.1', '9', [{ n: 'Esteban Lepaul', eq: 'REN', c: '#e13327', o: { '230': [[null, 2.45]] } }], 'g', 0).replace(/<[^>]+>/g, ' ');
+        const M = { harrykane: { '230': [[null, 1.6]] }, kanevin: {} }, Tv = window._g45AgDkTrouve;
+        const Cn = window._g45AgConsigne('🏠 Victoire + Over 2.5 + Harry Kane buteur', true), lb = Cn.opts[0].filter(l => l.k === 'but')[0];
+        const H = window._g45AgOdHtml(Cn, { h: 1.3, a: 8, line: 2.5, ov: 1.5, un: 2.4, moiDom: true }, 'soccer');
+        o.ftDk = (/Buteur/.test(t1) && /2,45/.test(t1) && Tv(M, 'Kane') === M.harrykane && Tv(M, 'Harry Kane') === M.harrykane && Tv(M, 'Mbappe') === null && lb && /Kane/.test(lb.t) && /g45agbut/.test(H) && /data-n="Harry Kane"/.test(H)) || (t1.slice(0, 200) + ' | ' + H.slice(0, 300)); } catch (e) { o.ftDk = 'erreur : ' + e.message; }
       /* 20261030e : critères 4 saisons NBA, onglet 👤 Joueurs à seuils (points 20 ou +, pts + reb + passes) */
       try { const C = window._g45Cr, ctx = { sp: 'basketball', lg: 'nba', id: '10' };
         C.data['Rockets T'] = { t: Date.now(), lg: 'nba', ligue: 'NBA', saisons: [{ an: 2026, ms: [['2026-10-22', 1, 110, 100, 0, 0, 'b1'], ['2026-10-24', 0, 99, 104, 0, 0, 'b2'], ['2026-10-26', 1, 120, 101, 0, 0, 'b3'], ['2026-10-28', 0, 115, 108, 0, 0, 'b4']] }] };
@@ -1768,6 +1774,7 @@ serveur.listen(0, async () => {
     ok('Séries individuelles NHL : cotes DraftKings par nom', r.nhlDk === true, r.nhlDk);
     ok('Agenda : cote DraftKings des cartes joueur', r.agDk === true, r.agDk);
     ok('Fenêtre de match : cotes joueurs DraftKings', r.cjH === true, r.cjH);
+    ok('Foot : buteur DraftKings (fenêtre + Agenda)', r.ftDk === true, r.ftDk);
     ok('Tennis : style de jeu (bonus polyvalent)', r.tnStyle === true, r.tnStyle);
     ok('Tennis : BET45 face au book (écart, value, ligne)', r.tnBk === true, r.tnBk);
     ok('Cyclisme : profil d\'étape (échelle 600 m, type, D+)', r.rcProf === true, r.rcProf);
