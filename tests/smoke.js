@@ -922,10 +922,10 @@ serveur.listen(0, async () => {
         window.alert = (m) => { alerte = m; };
         const op = document.createElement('option'); op.value = 'Vancouver Canucks'; op.text = 'Vancouver Canucks'; un.appendChild(op);
         state.u = (u0 || []).concat([{ n: 'Vancouver Canucks', sport: '🏒', s: 'a' }]);
-        _g45TicketRemplirCockpit({ equipe: 'Florida Panthers', adversaire: 'Vancouver Canucks', domicile: true, type: 'Résultat', cote: '1.52', mise: '5' });
+        const oT = { equipe: 'Florida Panthers', adversaire: 'Vancouver Canucks', domicile: true, type: 'Résultat', cote: '1.52', mise: '5' }; _g45TicketRemplirCockpit(oT);
         const v = un.value, t = document.getElementById('c-target').value, l = (document.getElementById('c-lieu') || {}).value, ty = (mmRows[0] || {}).type;
         op.remove(); state.u = u0; window.alert = a0;
-        o.tkc = (v === 'Vancouver Canucks' && t === 'Florida Panthers' && l === 'ext' && ty === 'Défaite' && !alerte) || JSON.stringify({ v, t, l, ty, alerte });
+        o.tkc = (v === 'Vancouver Canucks' && t === 'Florida Panthers' && l === 'ext' && ty === 'Défaite' && !alerte && oT.equipe === 'Vancouver Canucks' && oT.adversaire === 'Florida Panthers' && oT.domicile === false) || JSON.stringify({ v, t, l, ty, alerte, oT });   /* 20261101b : objet prêt pour « Match trouvé » */
       } catch (e) { o.tkc = 'erreur : ' + e.message; }
       /* 20261024w — nouveau ticket sans joueur : le buteur du ticket précédent est effacé (Cockpit) */
       try {
