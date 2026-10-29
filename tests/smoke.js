@@ -1066,6 +1066,27 @@ serveur.listen(0, async () => {
         o.ckCal = (P.length === 3 && /📅Calendrier/.test(c2) && /\+8,5/.test(c2) && /✅TestBayern🏠vsLeverkusen·Victoire\+Over2\.5·palier2/.test(c2) && /❌TestEichel✈️/.test(c2) && /⏳TestDallas/.test(c2) && /\+8,50€/.test(c2) && !/SIMPLE/.test(c2)
           && /Bénéfice\+8,50€/.test(g2) && /50%·1\/2/.test(g2) && /P2\(TestBayern🏠\)/.test(g2) && /TestBayern🏠1\/1·\+11,50€/.test(g2) && clic) || JSON.stringify({ n: P.length, C: C.slice(0, 500), G: G.slice(0, 400) });
       } catch (e) { o.ckCal = 'erreur : ' + e.message; }
+      /* 20261029g — Cockpit BET45 publié (gones) et lu par tout le monde (bet45) */
+      try {
+        const S = window._g45CrS, at = Date.now(), d = new Date(), j = d.getFullYear() + '-' + ('0' + (d.getMonth() + 1)).slice(-2) + '-' + ('0' + d.getDate()).slice(-2);
+        const u0 = state.u, a0 = state.a, h0 = state.h, s0 = localStorage.getItem('g45ck_sous');
+        state.u = [{ n: 'Test Stars', sport: '🏒', s: 5, l: 1, lc: { 'nhl|dom': 2 }, note: '🏠 vainqueur', np: 'secret perso', psL: { dom: { t: 'vainqueur', p: [2, 1], tot: 2, at } } }];
+        state.a = [{ id: '1', isS: true, win: true, n: 'Test Stars', domicile: 'dom', l: 2, m: 10, cote: 2, date: j, type: 'Vainqueur', target: 'Canadiens' }]; state.h = [];
+        window._g45CkAg = { j: d.getFullYear() + '-' + (d.getMonth() + 1) + '-' + d.getDate(), L: [{ t: at + 3600e3, n: 'Test Stars', d: 1, adv: 'Canadiens', sp: 'hockey' }] };
+        const D = JSON.parse(JSON.stringify(_g45CkPubData()));
+        state.u = []; state.a = []; window._g45CkAg = null;
+        Object.keys(D.u).forEach(n => D.u[n]._pub = 1); D.maj = new Date().toISOString();
+        window._g45CkForceDist = true; S.ck.D = D; S.ck.Dt = Date.now();
+        g45TrVue('ck'); g45CkSous('a');
+        const A = ((document.getElementById('g45ck') || {}).textContent || '').replace(/\s/g, '');
+        g45CkSous('g');
+        const G = ((document.getElementById('g45ck') || {}).textContent || '').replace(/\s/g, '');
+        window._g45CkForceDist = null; S.ck.D = null; state.u = u0; state.a = a0; state.h = h0;
+        if (s0 == null) localStorage.removeItem('g45ck_sous'); else localStorage.setItem('g45ck_sous', s0); localStorage.removeItem('g45tr_vue');
+        o.ckPub = (D.u['Test Stars'] && !('np' in D.u['Test Stars']) && D.u['Test Stars'].pm.dom.p === 2 && D.P.length === 1 && D.P[0].b.type === 'Vainqueur'
+          && /lescartesquijouent/.test(A) && /misàjour/.test(A) && /duCockpitBET45quijouent/.test(A) && /TestStars🏠vsCanadiens/.test(A) && /Palier2·mise/.test(A) && /piresérie2·1→3paliers/.test(A)
+          && /Bénéfice\+10,00€/.test(G) && /TestStars🏠1\/1/.test(G)) || JSON.stringify({ D: JSON.stringify(D).slice(0, 300), A: A.slice(0, 300), G: G.slice(0, 200) });
+      } catch (e) { o.ckPub = 'erreur : ' + e.message; }
       /* 20261029a — critères : redessin dans la zone VISIBLE quand une fiche cachée a aussi #g45cr */
       try {
         const S = window._g45CrS, sv = { nom: S.nom, ctx: S.ctx, lieu: S.lieu };
@@ -1715,6 +1736,7 @@ serveur.listen(0, async () => {
     ok('🏁 Cockpit BET45 (Tendances)', r.ck === true, r.ck);
     ok('🏁 Cockpit BET45 : calendrier et graphique', r.ckCal === true, r.ckCal);
     ok('🏁 Cockpit BET45 : jours à venir (Agenda) dans le calendrier', r.ckFut === true, r.ckFut);
+    ok('🏁 Cockpit BET45 publié (gones) et lu sur bet45', r.ckPub === true, r.ckPub);
     ok('Critères : sélecteurs redessinés dans la zone visible', r.crVis === true, r.crVis);
     ok('🔄 Calculer mes séries : joueur dans un pari d\'équipe', r.serJE === true, r.serJE);
     ok('NFL Yards + pépites NBA / NFL (pire série → paliers)', r.yards === true, r.yards);
