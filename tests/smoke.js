@@ -1555,6 +1555,8 @@ serveur.listen(0, async () => {
           P({ fs: 'ov', FL: 30.5 }, m), !P({ ts: 'un', TSL: 15.5 }, m), P({ mt: 'mene' }, m), P({ mp: 'oui' }, m), P({ bo: 'cae', BL: 1.5 }, m), !P({ mp: 'oui' }, m2), P({ ts: 'ov', TSL: 17.5 }, m2)];
         /* 20261024b : buts par mi-temps (3-1, 1-0 à la pause → 1re MT 1 but, 2e MT 3 buts) ; ligne ronde égalée = remboursé (non compté) */
         const C = window._g45CrCalc;
+        /* 20261031m : hockey, perdu 3-4 en prolongation (m[4] = 1) → Défaite ❌ (temps réglementaire = nul), Perdant ✅ ; perdu 1-3 en 60 min → les deux ✅ */
+        { const ot = ['2026-10-10', 1, 3, 4, 1], rg = ['2026-10-12', 1, 1, 3, 0]; R.push(!P({ res: 'def' }, ot), P({ res: 'per' }, ot), P({ res: 'def' }, rg), P({ res: 'per' }, rg), !P({ res: 'per' }, ['2026-10-14', 1, 4, 3, 1])); }
         R.push(P({ m1: 'ov', M1L: 0.5 }, m), !P({ m1: 'ov', M1L: 1.5 }, m), P({ m1: 'un', M1L: 1.5 }, m), P({ m2: 'ov', M2L: 2.5 }, m), !P({ m2: 'un', M2L: 2.5 }, m),
           C({ m1: 'ov', M1L: 1 }, [m]).n === 0, C({ m1: 'ov', M1L: 0.5 }, [m]).ok === 1, C({ m2: 'ov', M2L: 3 }, [m]).n === 0, C({ m2: 'un', M2L: 3.5 }, [m]).ok === 1);
         /* 20261024c : lignes rondes partout — 3-1 : Over 4 seul = remboursé (non compté) ; Over 4 + Victoire = compté, gagné ; Over 4 + Défaite = perdu */
