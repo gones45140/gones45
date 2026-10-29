@@ -1520,6 +1520,7 @@ serveur.listen(0, async () => {
       try {
         const elc = document.getElementById('cal-content'); let nc = 0;
         const mo = new MutationObserver(() => { if (/Chargement du calendrier|Tes matchs arrivent/.test(elc.textContent)) nc++; }); mo.observe(elc, { childList: true, subtree: true });
+        try { await window._g45AgOp('del'); } catch (e) {} elc.removeAttribute('data-g45agc');   /* 20261029z2 : un test Cockpit a pu relire l'Agenda avant */
         await loadCalendrier(); const n1 = nc; await loadCalendrier(); const n2 = nc; mo.disconnect();
         o.agCache = (!!loadCalendrier._g45Cache && n1 >= 1 && n2 === n1) || JSON.stringify({ w: !!loadCalendrier._g45Cache, n1, n2 });
       } catch (e) { o.agCache = 'erreur : ' + e.message; }
