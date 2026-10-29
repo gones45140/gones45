@@ -1579,7 +1579,7 @@ serveur.listen(0, async () => {
           P({ fs: 'ov', FL: 30.5 }, m), !P({ ts: 'un', TSL: 15.5 }, m), P({ mt: 'mene' }, m), P({ mp: 'oui' }, m), P({ bo: 'cae', BL: 1.5 }, m), !P({ mp: 'oui' }, m2), P({ ts: 'ov', TSL: 17.5 }, m2)];
         /* 20261024b : buts par mi-temps (3-1, 1-0 à la pause → 1re MT 1 but, 2e MT 3 buts) ; ligne ronde égalée = remboursé (non compté) */
         const C = window._g45CrCalc;
-        { const e = window._g45Nhl1N2(1.459, 2.80, 4.0); R.push(!!e && e.h === 1.71 && e.n === 4.04 && e.a === 3.62 && window._g45Nhl1N2(1.5, 0, 4) === null); }   /* 20261031x : 1N2 NHL 60 min estimé (Florida / Winnipeg) */
+        { const e = window._g45Nhl1N2(1.459, 2.80, 4.0); R.push(!!e && e.h === 1.72 && e.n === 4.07 && e.a === 3.66 && window._g45Nhl1N2(1.5, 0, 4) === null); }   /* 20261031x : 1N2 NHL 60 min estimé (Florida / Winnipeg) */
         { const lj = window._g45SerLegsJ && window._g45SerLegsJ('✈️ Perdant'); R.push(!!lj && lj.res === 'per'); }   /* 20261031n : carte « Perdant » calculable */
         /* 20261031m : hockey, perdu 3-4 en prolongation (m[4] = 1) → Défaite ❌ (temps réglementaire = nul), Perdant ✅ ; perdu 1-3 en 60 min → les deux ✅ */
         { const ot = ['2026-10-10', 1, 3, 4, 1], rg = ['2026-10-12', 1, 1, 3, 0]; R.push(!P({ res: 'def' }, ot), P({ res: 'per' }, ot), P({ res: 'def' }, rg), P({ res: 'per' }, rg), !P({ res: 'per' }, ['2026-10-14', 1, 4, 3, 1])); }
