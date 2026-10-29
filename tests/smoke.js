@@ -1099,7 +1099,7 @@ serveur.listen(0, async () => {
         const ty = document.getElementById('ip-types'), T = (ty.textContent || '').replace(/\s/g, ''); _g45TypesPeindre();
         const col = [...ty.querySelectorAll('.typct')].map(e => e.style.color).join('|');
         g45SetLieuF('Test PSG', ''); state.u = u0; state.a = a0;
-        o.lieuF = (/Lieu:Tous4🌍Global1🏠Domicile2✈️Extérieur1/.test(ch) && /VictoireUnder3\.5|Victoire\+Under3\.5/.test(T) && !/Résultat/.test(T) && /rgb\(30, 215, 96\)|rgb\(255, 90, 90\)/.test(col)) || JSON.stringify({ ch, T, col });
+        o.lieuF = (_g45TypeMots('Colorado Avalanche gagne', 'Colorado Avalanche', 'Nashville') === 'Victoire' && _g45TypeMots('Résultat + Moins de 3,5 buts', 'PSG') === 'Victoire + Under 3.5' && /Lieu:Tous4🌍Global1🏠Domicile2✈️Extérieur1/.test(ch) && /VictoireUnder3\.5|Victoire\+Under3\.5/.test(T) && !/Résultat/.test(T) && /rgb\(30, 215, 96\)|rgb\(255, 90, 90\)/.test(col)) || JSON.stringify({ ch, T, col });
       } catch (e) { o.lieuF = 'erreur : ' + e.message; }
       /* 20261029a — critères : redessin dans la zone VISIBLE quand une fiche cachée a aussi #g45cr */
       try {
