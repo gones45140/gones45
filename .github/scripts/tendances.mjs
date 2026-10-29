@@ -151,7 +151,7 @@ const nouvelles = await page.evaluate(async ({ R, SPORTS, NBA_PAUSE, NHL_BUTS_PA
       const no = (m) => { pq[m] = (pq[m] || 0) + 1; };
       pris.forEach((x) => {
         if (!x || !x.m || !x.id || !x.d) return no('incomplète');
-        if (R.coteConnue && !(x.m.cote >= R.min)) return no('cote < ' + R.min + ' ou absente');   // 20261018k : sans cote = pas noté
+        if (R.coteConnue && !(x.m.cote >= R.min)) return no(x.m.cote > 1 ? 'cote < ' + R.min + ' (ex. ' + String(x.m.m).slice(0, 30) + ' @' + x.m.cote + ')' : 'cote absente (ex. ' + String(x.m.m).slice(0, 30) + ')');   // 20261018k : sans cote = pas noté
         if (R.accord && x.m.desac) return no('désaccord stats / book');                   // 20261018k : désaccord stats / bookmakers = pas noté
         let pz = '';   // 20261023y : marché en pause = suivi en coulisse (J.pz), plus jeté
         if (sp === 'nba' && NBA_PAUSE && /de [\d,.]+ points/i.test(String(x.m.m || ''))) pz = 'nba_pts';   // 20261022b : NBA sans points en début de saison
