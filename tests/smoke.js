@@ -132,10 +132,11 @@ serveur.listen(0, async () => {
         o.nflDk = (Object.keys(M['4430807']).join() === '31,32' && M['77']['31'] === 2.5 && M['78']['31'] === 1.83 && /TD à tout moment → cote 2,10/.test(h1) && /1,97 en France/.test(h1) && /value/.test(h1) && /2 TD ou \+ → cote 9,00/.test(h2) && !/value/.test(h2) && h3 === '') || [h1, h2, h3].join(' | '); } catch (e) { o.nflDk = 'erreur : ' + e.message; }
       /* 20261030n : cotes DraftKings NHL (joueur retrouvé par le nom) */
       try { const A = 'http://sports.core.api.espn.com/v2/sports/hockey/leagues/nhl/seasons/2027/athletes/', it = (id, ty, d, t) => ({ athlete: { $ref: A + id + '?lang=en' }, type: { id: ty }, odds: { decimal: { value: d } }, current: t == null ? {} : { target: { value: t } } });
+        const Mf = window._g45NhlDkLire([{ athlete: { $ref: A + '7?' }, type: { id: '230' }, current: { over: { value: 2.45, decimal: 2.45, american: '+145' } } }, { athlete: { $ref: A + '8?' }, type: { id: '230' }, current: { over: { american: '+170' } } }], { '7': 'Esteban Lepaul', '8': 'Boulaye Dia' });
         const M = window._g45NhlDkLire([it('5193', '230', '1.65'), it('5193', '39', '6.50'), it('5193', '218', '1.40', 1), it('5193', '218', '3.20', 2), it('5193', '219', '2.10', 1), it('9', '230', '2.00')], { '5193': 'Sébastian Aho' });
         const C = window._g45NhlDkChoix, o = M[window._g45NhlDkNom('Sebastian Aho')];
         o.nhlDk = 0; const r1 = C(o, 'g', 1), r2 = C(o, 'g', 2), r3 = C(o, 'p', 2), r4 = C(o, 'a', 1), r5 = C(o, 'a', 2);
-        window.__nhlDkR = (r1 && r1.d === 1.65 && /buteur/.test(r1.lib) && r2.d === 6.5 && r3.d === 3.2 && r4.d === 2.1 && r5 === null && Object.keys(M).length === 1) || JSON.stringify([r1, r2, r3, r4, r5]); } catch (e) { window.__nhlDkR = 'erreur : ' + e.message; }
+        window.__nhlDkR = (r1 && r1.d === 1.65 && /buteur/.test(r1.lib) && r2.d === 6.5 && r3.d === 3.2 && r4.d === 2.1 && r5 === null && Object.keys(M).length === 1 && Mf.estebanlepaul['230'][0][1] === 2.45 && Mf.boulayedia['230'][0][1] === 2.7) || JSON.stringify([r1, r2, r3, r4, r5]); } catch (e) { window.__nhlDkR = 'erreur : ' + e.message; }
       o.nhlDk = window.__nhlDkR;
       /* 20261030o : Agenda, pari écrit → cote DraftKings du joueur */
       try { const P = window._g45AgDkPari, C = window._g45AgDkCote, o1 = { '219': [[1, 2.1], [2, 6]], '230': [[null, 1.65]], '218': [[1, 1.4]] };
