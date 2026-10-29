@@ -1063,7 +1063,9 @@ serveur.listen(0, async () => {
         o.ckFut = (/📅1/.test(F) && /📅Prévu/.test(F) && /TestBayern🏠vsLeverkusen/.test(F) && /📌🏠Victoire\+Over2\.5/.test(F)) || F.slice(-400);
         g45CkJour(j); state.a = a0; state.h = h0; if (s0 == null) localStorage.removeItem('g45ck_sous'); else localStorage.setItem('g45ck_sous', s0); localStorage.removeItem('g45tr_vue');
         const c2 = C.replace(/\s/g, ''), g2 = G.replace(/\s/g, '');
-        o.ckCal = (P.length === 3 && /📅Calendrier/.test(c2) && /\+8,5/.test(c2) && /✅TestBayern🏠vsLeverkusen·Victoire\+Over2\.5·palier2/.test(c2) && /❌TestEichel✈️/.test(c2) && /⏳TestDallas/.test(c2) && /\+8,50€/.test(c2) && !/SIMPLE/.test(c2)
+        const Bd = (n, dom, jj, r, id) => ({ j: jj, r, g: 0, b: { n, domicile: dom, id: String(id) } });
+        const Dp = _g45CkDepart([Bd('R', 'ext', '2026-10-20', true, 1), Bd('R', 'ext', '2026-10-25', false, 2), Bd('R', 'ext', '2026-11-02', true, 3), Bd('F1', '', '2026-09-13', true, 4)], '2026-11-10').map(x => x.b.id).join();
+        o.ckCal = (Dp === '2,3' && P.length === 3 && /📅Calendrier/.test(c2) && /\+8,5/.test(c2) && /✅TestBayern🏠vsLeverkusen·Victoire\+Over2\.5·palier2/.test(c2) && /❌TestEichel✈️/.test(c2) && /⏳TestDallas/.test(c2) && /\+8,50€/.test(c2) && !/SIMPLE/.test(c2)
           && /Bénéfice\+8,50€/.test(g2) && /50%·1\/2/.test(g2) && /P2\(TestBayern🏠\)/.test(g2) && /TestBayern1\/1·\+11,50€🏠1\/1\+11,50€/.test(g2) && clic) || JSON.stringify({ n: P.length, C: C.slice(0, 500), G: G.slice(0, 400) });
       } catch (e) { o.ckCal = 'erreur : ' + e.message; }
       /* 20261029g — Cockpit BET45 publié (gones) et lu par tout le monde (bet45) */
