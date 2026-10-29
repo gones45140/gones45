@@ -137,6 +137,11 @@ serveur.listen(0, async () => {
         o.nhlDk = 0; const r1 = C(o, 'g', 1), r2 = C(o, 'g', 2), r3 = C(o, 'p', 2), r4 = C(o, 'a', 1), r5 = C(o, 'a', 2);
         window.__nhlDkR = (r1 && r1.d === 1.65 && /buteur/.test(r1.lib) && r2.d === 6.5 && r3.d === 3.2 && r4.d === 2.1 && r5 === null && Object.keys(M).length === 1) || JSON.stringify([r1, r2, r3, r4, r5]); } catch (e) { window.__nhlDkR = 'erreur : ' + e.message; }
       o.nhlDk = window.__nhlDkR;
+      /* 20261030o : Agenda, pari écrit → cote DraftKings du joueur */
+      try { const P = window._g45AgDkPari, C = window._g45AgDkCote, o1 = { '219': [[1, 2.1], [2, 6]], '230': [[null, 1.65]], '218': [[1, 1.4]] };
+        const a1 = P('hockey', '✈️ Passeur'), a2 = P('hockey', '🏠 2 buts'), a3 = P('football', 'touchdown'), a4 = P('basketball', 'points 25+'), a5 = P('basketball', 'plus de 8,5 rebonds'), a6 = P('hockey', 'pointeur');
+        o.agDk = (a1.length === 1 && C(o1, a1[0]) === 2.1 && a2[0].ty[0] === '39' && a3[0].ty[0] === '31' && a4[0].ty[0] === '218' && a4[0].cible === 25 && a5[0].ty[0] === '220' && a5[0].cible === 9
+          && C(o1, P('hockey', 'buteur')[0]) === 1.65 && C(o1, a6[0]) === 1.4 && a6.length === 1 && C(o1, P('hockey', '2 passes')[0]) === 6 && P('basketball', 'victoire').length === 0) || JSON.stringify([a1, a2, a3, a4, a5, a6]); } catch (e) { o.agDk = 'erreur : ' + e.message; }
       /* 20261030e : critères 4 saisons NBA, onglet 👤 Joueurs à seuils (points 20 ou +, pts + reb + passes) */
       try { const C = window._g45Cr, ctx = { sp: 'basketball', lg: 'nba', id: '10' };
         C.data['Rockets T'] = { t: Date.now(), lg: 'nba', ligue: 'NBA', saisons: [{ an: 2026, ms: [['2026-10-22', 1, 110, 100, 0, 0, 'b1'], ['2026-10-24', 0, 99, 104, 0, 0, 'b2'], ['2026-10-26', 1, 120, 101, 0, 0, 'b3'], ['2026-10-28', 0, 115, 108, 0, 0, 'b4']] }] };
@@ -1755,6 +1760,7 @@ serveur.listen(0, async () => {
     ok('Séries individuelles NBA : paliers DraftKings', r.nbaDk === true, r.nbaDk);
     ok('Séries individuelles NFL : cote TD DraftKings', r.nflDk === true, r.nflDk);
     ok('Séries individuelles NHL : cotes DraftKings par nom', r.nhlDk === true, r.nhlDk);
+    ok('Agenda : cote DraftKings des cartes joueur', r.agDk === true, r.agDk);
     ok('Tennis : style de jeu (bonus polyvalent)', r.tnStyle === true, r.tnStyle);
     ok('Tennis : BET45 face au book (écart, value, ligne)', r.tnBk === true, r.tnBk);
     ok('Cyclisme : profil d\'étape (échelle 600 m, type, D+)', r.rcProf === true, r.rcProf);
