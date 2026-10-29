@@ -119,9 +119,10 @@ serveur.listen(0, async () => {
         window._g45CrHtml('Rockets T', ctx); const cb = C.combos[C.a]; cb.jo = 'k1'; cb.jn = 'Kevin Durant'; cb.jm = 'pts'; cb.jmin = '1'; cb.res = '';
         const H1 = window._g45CrHtml('Rockets T', ctx).replace(/<[^>]+>/g, ' ');
         cb.jm = 'pra'; cb.jmin = '30'; const H2 = window._g45CrHtml('Rockets T', ctx).replace(/<[^>]+>/g, ' ');
+        cb.jm = 'pts'; cb.jmin = '19.5'; cb.jsens = 'un'; const H3 = window._g45CrHtml('Rockets T', ctx).replace(/<[^>]+>/g, ' ');
         window.__crBkHtml = window._g45CrHtml('Rockets T', ctx);
         localStorage.removeItem('g45_jou_v2_basketball_nba_10_2026'); delete C.data['Rockets T']; C.nom = '';
-        o.crBk = (/Kevin Durant points \(10 ou \+\)/.test(H1) && /30 ou \+/.test(H1) && /3\/3/.test(H1) && /Kevin Durant pts \+ reb \+ passes \(30 ou \+\)/.test(H2) && /2\/3/.test(H2)) || (H1.slice(-700) + ' ||| ' + H2.slice(-700)); } catch (e) { o.crBk = 'erreur : ' + e.message; }
+        o.crBk = (/Kevin Durant points plus de 19,5/.test(H1) && /Plus de/.test(H1) && /2\/3/.test(H1) && /Kevin Durant pts \+ reb \+ passes plus de 29,5/.test(H2) && /2\/3/.test(H2) && /Kevin Durant points moins de 19,5/.test(H3) && /1\/3/.test(H3)) || (H1.slice(-700) + ' ||| ' + H2.slice(-700)); } catch (e) { o.crBk = 'erreur : ' + e.message; }
       /* 20261022r : curseurs sports US — onglets ⏱️ Quart-temps et 🔁 Contexte */
       try { const P = (a, b, c, d) => [{ p: 1, v: a }, { p: 2, v: b }, { p: 3, v: c }, { p: 4, v: d }], n = Date.now();
         const L = [{ t: n - 20 * 864e5, dom: true, pour: 24, contre: 10, lp: P(7, 7, 3, 7), lc: P(0, 3, 7, 0) }, { t: n - 13 * 864e5, dom: false, pour: 17, contre: 20, lp: P(0, 10, 0, 7), lc: P(7, 3, 7, 3) },
