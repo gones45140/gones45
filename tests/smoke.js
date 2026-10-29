@@ -162,7 +162,9 @@ serveur.listen(0, async () => {
       /* 20261030t : buts d'équipe — plus / moins mélangés (sonde Rennes) */
       try { const S = window._g45AgTeqSep, R = S([[0.5, 4.66], [0.5, 1.17], [1.5, 1.87], [1.5, 1.87], [2.5, 1.24], [2.5, 3.83], [3.5, 8.5], [3.5, 1.06]]), R2 = S([[2.5, 1.3], [2.5, 3.4]]);
         const Cn = window._g45AgConsigne('🏠 vainqueur + buts de Nice plus de 1,5', true), H = window._g45AgOdHtml(Cn, { h: 1.9, a: 3, line: 2.5, ov: 1.9, un: 1.9, moiDom: true, eid: '9', hid: '2502', aid: '169', hn: 'OGC Nice | Nice', an: 'Stade Rennais | Rennes' }, 'soccer');
-        o.teqDk = (R[0.5].ov === 1.17 && R[0.5].un === 4.66 && R[2.5].ov === 3.83 && R[2.5].un === 1.24 && R[3.5].ov === 8.5 && R[1.5].ov === 1.87 && R2[2.5].ov === 3.4 && /data-t="2502"/.test(H) && /data-l="1.5"/.test(H)) || JSON.stringify([R, R2]) + H.slice(0, 300); } catch (e) { o.teqDk = 'erreur : ' + e.message; }
+        const Bt = window._g45AgBtsLire([{ type: { id: '152' }, current: { over: { decimal: 1.45 } } }, { type: { id: '152' }, current: { over: { decimal: 2.75 } } }]);
+        const Cb = window._g45AgConsigne('🏠 victoire + les deux marquent', true), Hb = window._g45AgOdHtml(Cb, { h: 1.9, a: 3, line: 2.5, ov: 1.9, un: 1.9, moiDom: true, eid: '9', hid: '1', aid: '2', hn: 'A', an: 'B' }, 'soccer');
+        o.teqDk = (Bt.o === 1.45 && Bt.n === 2.75 && /g45agbts/.test(Hb) && /data-v="o"/.test(Hb) && R[0.5].ov === 1.17 && R[0.5].un === 4.66 && R[2.5].ov === 3.83 && R[2.5].un === 1.24 && R[3.5].ov === 8.5 && R[1.5].ov === 1.87 && R2[2.5].ov === 3.4 && /data-t="2502"/.test(H) && /data-l="1.5"/.test(H)) || JSON.stringify([R, R2]) + H.slice(0, 300); } catch (e) { o.teqDk = 'erreur : ' + e.message; }
       /* 20261030e : critères 4 saisons NBA, onglet 👤 Joueurs à seuils (points 20 ou +, pts + reb + passes) */
       try { const C = window._g45Cr, ctx = { sp: 'basketball', lg: 'nba', id: '10' };
         C.data['Rockets T'] = { t: Date.now(), lg: 'nba', ligue: 'NBA', saisons: [{ an: 2026, ms: [['2026-10-22', 1, 110, 100, 0, 0, 'b1'], ['2026-10-24', 0, 99, 104, 0, 0, 'b2'], ['2026-10-26', 1, 120, 101, 0, 0, 'b3'], ['2026-10-28', 0, 115, 108, 0, 0, 'b4']] }] };
