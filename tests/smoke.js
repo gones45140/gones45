@@ -1083,6 +1083,9 @@ serveur.listen(0, async () => {
         const A = ((document.getElementById('g45ck') || {}).textContent || '').replace(/\s/g, '');
         g45CkSous('g');
         const G = ((document.getElementById('g45ck') || {}).textContent || '').replace(/\s/g, ''), G0 = (document.getElementById('g45ck') || {}).innerHTML || '';
+        const b0 = (D.st && D.st['5'] && +D.st['5'][0]) || 0; g45CkP1(String(b0 / 2));
+        const Gp = ((document.getElementById('g45ck') || {}).textContent || '').replace(/\s/g, ''); g45CkP1('');
+        const p1ok = b0 > 0 && /Tamisededépart/.test(Gp) && /Lesdangersdupalier/.test(Gp) && /Bénéfice\+5,00€/.test(Gp);
         const aAv = state.a; g45CkFicheDist('Test Stars');
         const det = document.getElementById('detail'), F = { vis: det.style.display, hero: (document.getElementById('d-hero') || {}).textContent || '', bil: (document.getElementById('ip-bilan') || {}).textContent || '', same: state.a === aAv, tend: document.getElementById('t-tend').style.display,
           live: getComputedStyle(document.querySelector('#detail .itab[onclick*="live"]')).display, types: getComputedStyle(document.querySelector('#detail .itab[onclick*="types"]')).display };
@@ -1091,7 +1094,7 @@ serveur.listen(0, async () => {
         if (s0 == null) localStorage.removeItem('g45ck_sous'); else localStorage.setItem('g45ck_sous', s0); localStorage.removeItem('g45tr_vue');
         o.ckPub = (D.u['Test Stars'] && !('np' in D.u['Test Stars']) && D.u['Test Stars'].pm.dom.p === 2 && D.P.length === 1 && D.P[0].b.type === 'Vainqueur'
           && /lescartesquijouent/.test(A) && /misàjour/.test(A) && /duCockpitBET45quijouent/.test(A) && /TestStars🏠vsCanadiens/.test(A) && /Palier2·mise/.test(A) && /piresérie2·1→3paliers/.test(A)
-          && /Bénéfice\+10,00€/.test(G) && /TestStars›?🏠1\/1\+10,00€📌🏠vainqueur1\/1·\+10,00€/.test(G) && D.nt && D.nt['Test Stars'] === '🏠 vainqueur' && /g45CkFicheDist/.test(document.getElementById('t-tend').innerHTML + G0) && F.vis === 'block' && /TestStars/.test(F.hero.replace(/\s/g, '')) && /\+10/.test(F.bil) && F.same && F.tend === 'none' && F.live === 'none' && F.types !== 'none' && back === 'block') || JSON.stringify({ g0: (typeof G0 !== 'undefined' ? G0.match(/Par carte.{0,400}/) : 0), F: typeof F !== 'undefined' ? Object.assign({}, F, { hero: F.hero.slice(0, 80), bil: F.bil.slice(0, 80) }) : 0, back: typeof back !== 'undefined' ? back : 0, G: G.slice(0, 200) });
+          && /Bénéfice\+10,00€/.test(G) && /TestStars›?🏠1\/1\+10,00€📌🏠vainqueur1\/1·\+10,00€/.test(G) && D.nt && D.nt['Test Stars'] === '🏠 vainqueur' && /g45CkFicheDist/.test(document.getElementById('t-tend').innerHTML + G0) && p1ok && F.vis === 'block' && /TestStars/.test(F.hero.replace(/\s/g, '')) && /\+10/.test(F.bil) && F.same && F.tend === 'none' && F.live === 'none' && F.types !== 'none' && back === 'block') || JSON.stringify({ p1: typeof Gp !== 'undefined' ? Gp.slice(0, 500) : 0, g0: (typeof G0 !== 'undefined' ? G0.match(/Par carte.{0,400}/) : 0), F: typeof F !== 'undefined' ? Object.assign({}, F, { hero: F.hero.slice(0, 80), bil: F.bil.slice(0, 80) }) : 0, back: typeof back !== 'undefined' ? back : 0, G: G.slice(0, 200) });
       } catch (e) { o.ckPub = 'erreur : ' + e.message; }
       /* 20261029i / j — fiche d'une carte : filtre Lieu + Types en entier et colorés */
       try {
