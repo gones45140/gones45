@@ -1049,6 +1049,10 @@ serveur.listen(0, async () => {
         g45TrVue('ck'); g45CkSous('c'); g45CkJour(j);
         const C = ((document.getElementById('g45ck') || {}).textContent || '').replace(/\s+/g, ' ');
         g45CkSous('g');
+        const uS = state.u; state.u = [{ n: 'Test Bayern', sport: '⚽', s: 5, l: 1 }]; g45CkSous('g');
+        const Gc = (document.getElementById('g45ck') || {}).innerHTML || '';
+        const clic = /g45CkFiche\(0\)/.test(Gc) && _g45TypeSansEquipe('Victoire Colorado Avalanche', 'Colorado Avalanche') === 'Victoire';
+        state.u = uS; g45CkSous('g');
         const G = ((document.getElementById('g45ck') || {}).textContent || '').replace(/\s+/g, ' ');
         const u0 = state.u, dm = new Date(Date.now() + 864e5), jm = dm.getFullYear() + '-' + ('0' + (dm.getMonth() + 1)).slice(-2) + '-' + ('0' + dm.getDate()).slice(-2);
         state.u = [{ n: 'Test Bayern', sport: '⚽', s: 5, l: 1, note: '🏠 Victoire + Over 2.5' }];
@@ -1060,7 +1064,7 @@ serveur.listen(0, async () => {
         g45CkJour(j); state.a = a0; state.h = h0; if (s0 == null) localStorage.removeItem('g45ck_sous'); else localStorage.setItem('g45ck_sous', s0); localStorage.removeItem('g45tr_vue');
         const c2 = C.replace(/\s/g, ''), g2 = G.replace(/\s/g, '');
         o.ckCal = (P.length === 3 && /📅Calendrier/.test(c2) && /\+8,5/.test(c2) && /✅TestBayern🏠vsLeverkusen·Victoire\+Over2\.5·palier2/.test(c2) && /❌TestEichel✈️/.test(c2) && /⏳TestDallas/.test(c2) && /\+8,50€/.test(c2) && !/SIMPLE/.test(c2)
-          && /Bénéfice\+8,50€/.test(g2) && /50%·1\/2/.test(g2) && /P2\(TestBayern🏠\)/.test(g2) && /TestBayern🏠1\/1·\+11,50€/.test(g2)) || JSON.stringify({ n: P.length, C: C.slice(0, 500), G: G.slice(0, 400) });
+          && /Bénéfice\+8,50€/.test(g2) && /50%·1\/2/.test(g2) && /P2\(TestBayern🏠\)/.test(g2) && /TestBayern🏠1\/1·\+11,50€/.test(g2) && clic) || JSON.stringify({ n: P.length, C: C.slice(0, 500), G: G.slice(0, 400) });
       } catch (e) { o.ckCal = 'erreur : ' + e.message; }
       /* 20261029a — critères : redessin dans la zone VISIBLE quand une fiche cachée a aussi #g45cr */
       try {
