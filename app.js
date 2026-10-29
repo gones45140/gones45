@@ -82852,3 +82852,36 @@ window._g45MqPalHtml = function (pire, pd) {
     try { g45MqSport = window.g45MqSport; } catch (e) {}
   }
 })();
+
+/* ═══ 20261029i — FICHE D'UNE CARTE : FILTRE PAR LIEU (capture fiche PSG, onglet Types : « on a dans Mur bilan, graphique, archive, type, mais
+   c'est le global, on ne différencie pas global / domicile / extérieur ») ═══
+   Même principe que le filtre par compétition (_g45CompFiltre / _g45RendCompChips, appelés par openClub, DEUX copies, intactes) : on les
+   ENVELOPPE. Lieu du pari = bet.domicile ('dom' / 'ext' / '' = montante 🌍 globale ou pari ancien). Bilan, Graphs, Archive et Types suivent
+   tout seuls. Rangée « Lieu : » sous celle des compétitions, en gros boutons (14 px), seulement si la carte a des paris d'au moins 2 lieux. */
+(function () {
+  if (typeof _g45CompFiltre !== 'function' || _g45CompFiltre._lieu) return;
+  window._g45LieuF = window._g45LieuF || {};
+  var lieuDe = function (h) { return h && h.domicile === 'dom' ? 'dom' : h && h.domicile === 'ext' ? 'ext' : 'glob'; };
+  var f0 = _g45CompFiltre;
+  _g45CompFiltre = window._g45CompFiltre = function (liste, nom) {
+    var L = f0.apply(this, arguments), f = window._g45LieuF[nom] || '';
+    return f ? L.filter(function (h) { return lieuDe(h) === f; }) : L;
+  };
+  _g45CompFiltre._lieu = true;
+  var r0 = _g45RendCompChips;
+  _g45RendCompChips = window._g45RendCompChips = function (liste, nom) {
+    r0.apply(this, arguments);
+    var el = document.getElementById('d-compf'); if (!el) return;
+    var n = { glob: 0, dom: 0, ext: 0 }; (liste || []).forEach(function (h) { n[lieuDe(h)]++; });
+    var nb = ['glob', 'dom', 'ext'].filter(function (k) { return n[k]; }).length, f = window._g45LieuF[nom] || '';
+    if (nb < 2 && !f) return;
+    var q = String(nom).replace(/\\/g, '\\\\').replace(/'/g, "\\'").replace(/"/g, '&quot;');
+    var b = function (k, lbl, c) {
+      var on = f === k;
+      return '<button onclick="g45SetLieuF(\'' + q + '\',\'' + k + '\')" style="cursor:pointer;border-radius:9px;padding:8px 12px;font-size:14px;font-weight:800;margin:0 6px 6px 0;color:#fff;border:1px solid ' + (on ? '#f0c828' : 'rgba(255,255,255,.22)') + ';background:' + (on ? 'rgba(240,200,40,.25)' : 'rgba(11,16,29,.85)') + ';">' + lbl + ' <span style="opacity:.75;">' + c + '</span></button>';
+    };
+    el.insertAdjacentHTML('beforeend', '<div class="g45-lieuf" style="display:flex;flex-wrap:wrap;align-items:center;margin-top:4px;"><span style="font-size:14px;color:#c9d3ee;margin-right:8px;">Lieu :</span>'
+      + b('', 'Tous', (liste || []).length) + (n.glob ? b('glob', '🌍 Global', n.glob) : '') + (n.dom ? b('dom', '🏠 Domicile', n.dom) : '') + (n.ext ? b('ext', '✈️ Extérieur', n.ext) : '') + '</div>');
+  };
+  window.g45SetLieuF = function (nom, v) { window._g45LieuF[nom] = v || ''; if (typeof openClub === 'function') openClub(nom); };
+})();
