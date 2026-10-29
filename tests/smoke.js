@@ -111,6 +111,17 @@ serveur.listen(0, async () => {
         const H1 = window._g45CrHtml('Rams T', ctx).replace(/<[^>]+>/g, ' ');
         localStorage.removeItem('g45_jou_v2_football_nfl_14_2025'); delete C.data['Rams T']; C.nom = '';
         o.crUs = (/Puka Nacua touchdown/.test(H1) && /Combien/.test(H1) && /1\/2/.test(H1)) || H1.slice(0, 600); } catch (e) { o.crUs = 'erreur : ' + e.message; }
+      /* 20261030e : critères 4 saisons NBA, onglet 👤 Joueurs à seuils (points 20 ou +, pts + reb + passes) */
+      try { const C = window._g45Cr, ctx = { sp: 'basketball', lg: 'nba', id: '10' };
+        C.data['Rockets T'] = { t: Date.now(), lg: 'nba', ligue: 'NBA', saisons: [{ an: 2026, ms: [['2026-10-22', 1, 110, 100, 0, 0, 'b1'], ['2026-10-24', 0, 99, 104, 0, 0, 'b2'], ['2026-10-26', 1, 120, 101, 0, 0, 'b3'], ['2026-10-28', 0, 115, 108, 0, 0, 'b4']] }] };
+        localStorage.setItem('g45_jou_v2_basketball_nba_10_2026', JSON.stringify({ joueurs: { k1: { nom: 'Kevin Durant', tot: { pts: 79, pra: 110 } } }, parMatch: { b1: { pts: { k1: 24 }, pra: { k1: 33 } }, b2: { pts: { k1: 12 }, pra: { k1: 19 } }, b3: { pts: { k1: 31 }, pra: { k1: 45 } }, b4: {} }, pres: { b1: ['k1'], b2: ['k1'], b3: ['k1'], b4: ['x'] }, n: 4 }));
+        try { localStorage.setItem('g45_cr_tab', 'jou'); } catch (e) {}
+        window._g45CrHtml('Rockets T', ctx); const cb = C.combos[C.a]; cb.jo = 'k1'; cb.jn = 'Kevin Durant'; cb.jm = 'pts'; cb.jmin = '1'; cb.res = '';
+        const H1 = window._g45CrHtml('Rockets T', ctx).replace(/<[^>]+>/g, ' ');
+        cb.jm = 'pra'; cb.jmin = '30'; const H2 = window._g45CrHtml('Rockets T', ctx).replace(/<[^>]+>/g, ' ');
+        window.__crBkHtml = window._g45CrHtml('Rockets T', ctx);
+        localStorage.removeItem('g45_jou_v2_basketball_nba_10_2026'); delete C.data['Rockets T']; C.nom = '';
+        o.crBk = (/Kevin Durant points \(10 ou \+\)/.test(H1) && /30 ou \+/.test(H1) && /3\/3/.test(H1) && /Kevin Durant pts \+ reb \+ passes \(30 ou \+\)/.test(H2) && /2\/3/.test(H2)) || (H1.slice(-700) + ' ||| ' + H2.slice(-700)); } catch (e) { o.crBk = 'erreur : ' + e.message; }
       /* 20261022r : curseurs sports US — onglets ⏱️ Quart-temps et 🔁 Contexte */
       try { const P = (a, b, c, d) => [{ p: 1, v: a }, { p: 2, v: b }, { p: 3, v: c }, { p: 4, v: d }], n = Date.now();
         const L = [{ t: n - 20 * 864e5, dom: true, pour: 24, contre: 10, lp: P(7, 7, 3, 7), lc: P(0, 3, 7, 0) }, { t: n - 13 * 864e5, dom: false, pour: 17, contre: 20, lp: P(0, 10, 0, 7), lc: P(7, 3, 7, 3) },
@@ -1711,6 +1722,7 @@ serveur.listen(0, async () => {
     ok('Tennis : tournois en salle reconnus + contrecoup hors standard', r.salle === true, r.salle);
     ok('Tennis : âge + bilan au tour du match dans l\'avis', r.tnTour === true, r.tnTour);
     ok('Critères 4 saisons US : onglet Joueurs', r.crUs === true, r.crUs);
+    ok('Critères 4 saisons NBA : joueurs à seuils', r.crBk === true, r.crBk);
     ok('Tennis : style de jeu (bonus polyvalent)', r.tnStyle === true, r.tnStyle);
     ok('Tennis : BET45 face au book (écart, value, ligne)', r.tnBk === true, r.tnBk);
     ok('Cyclisme : profil d\'étape (échelle 600 m, type, D+)', r.rcProf === true, r.rcProf);
