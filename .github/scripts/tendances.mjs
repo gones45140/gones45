@@ -147,18 +147,20 @@ const nouvelles = await page.evaluate(async ({ R, SPORTS, NBA_PAUSE, NHL_BUTS_PA
       await g45TrRun();
       for (let i = 0; i < 300 && _G45_TR.run; i++) await new Promise((r) => setTimeout(r, 1000));
       try { loadTendancesTab(); } catch (e) {}
-      const vu = {};
+      const vu = {}, pq = {};   /* 20261029w (« hier rien, aujourd'hui en attente ») : motif de chaque refus dans le journal */
+      const no = (m) => { pq[m] = (pq[m] || 0) + 1; };
       pris.forEach((x) => {
-        if (!x || !x.m || !x.id || !x.d) return;
-        if (R.coteConnue && !(x.m.cote >= R.min)) return;   // 20261018k : sans cote = pas noté
-        if (R.accord && x.m.desac) return;                   // 20261018k : désaccord stats / bookmakers = pas noté
+        if (!x || !x.m || !x.id || !x.d) return no('incomplète');
+        if (R.coteConnue && !(x.m.cote >= R.min)) return no('cote < ' + R.min + ' ou absente');   // 20261018k : sans cote = pas noté
+        if (R.accord && x.m.desac) return no('désaccord stats / book');                   // 20261018k : désaccord stats / bookmakers = pas noté
         let pz = '';   // 20261023y : marché en pause = suivi en coulisse (J.pz), plus jeté
         if (sp === 'nba' && NBA_PAUSE && /de [\d,.]+ points/i.test(String(x.m.m || ''))) pz = 'nba_pts';   // 20261022b : NBA sans points en début de saison
         if (sp === 'hockey' && NHL_BUTS_PAUSE && /de [\d,.]+ buts/i.test(String(x.m.m || ''))) pz = 'nhl_buts';   // 20261023w : NHL sans buts (bilan 2/8)
         if (sp === 'nfl' && NFL_PTS_PAUSE && /de [\d,.]+ points/i.test(String(x.m.m || ''))) pz = 'nfl_pts';   // 20261023x : NFL sans total de points
-        const k = _g45TrSuivType(x.m.m, x.hN, x.aN); if (!k) return;
-        const cle = x.id + '|' + k; if (vu[cle]) return; vu[cle] = 1;
-        const t = Date.parse(x.d); if (isNaN(t) || t < Date.now()) return;   // match déjà commencé : pas noté
+        const k = _g45TrSuivType(x.m.m, x.hN, x.aN); if (!k) return no('type inconnu');
+        const cle = x.id + '|' + k; if (vu[cle]) return no('doublon'); vu[cle] = 1;
+        const t = Date.parse(x.d); if (isNaN(t) || t < Date.now()) return no('match commencé');   // match déjà commencé : pas noté
+        no(pz ? 'pause ' + pz : 'gardée');
         sortie.push({ id: String(x.id), sl: x.slug, t: t, h: x.hN, a: x.aN, m: x.m.m, k: k,
           p: Math.round(x.m.p * 1000) / 1000,
           c: x.m.cote > 1 ? Math.round(x.m.cote * 100) / 100 : null,
@@ -169,7 +171,7 @@ const nouvelles = await page.evaluate(async ({ R, SPORTS, NBA_PAUSE, NHL_BUTS_PA
           fa: Array.isArray(x.m.faits) && x.m.faits.length ? x.m.faits.slice(0, 4).map((f) => String(f).replace(/<[^>]*>/g, '').slice(0, 160)) : undefined,
           nm: x.m.n > 0 ? x.m.n : undefined, pz: pz || undefined });
       });
-      console.log(sp + ' : ' + pris.length + ' affichées');
+      console.log(sp + ' : ' + pris.length + ' affichées · ' + JSON.stringify(pq));
     } catch (e) { console.log(sp + ' : erreur ' + (e && e.message)); }
   }
   return sortie;
@@ -257,7 +259,7 @@ const ceAvis = (x) => {
   const mini = { u35: 1.55, o25: 1.60, btts: 1.80 }[x.k];   // 20261023r : o25 1,65 → 1,60 (Antoine : « 1,6, voir ce que ça donne »)
   return Object.assign(res, { p, gros: grosDom ? 'h' : 'a', sg, ok: sg != null && sg >= 0.7 && x.c >= mini });
 };
-let nCe = 0, nPz = 0;
+let nCe = 0, nPz = 0, nDeja = 0;
 /* 20261023z (« pourquoi certains ont des boutons pause, d'autres stop, d'autres rien » → « oui » : un interrupteur sur CHAQUE ligne de
    📊 Bilans) : chaque pari est rangé comme dans l'appli (_g45Bil, LIGNES) ; ligne mise en PAUSE par Antoine → suivi en coulisse (J.pz). */
 const pzCle = (x) => {
@@ -271,7 +273,7 @@ const pzCle = (x) => {
 };
 J.pz = J.pz || [];   // 20261023y : marchés EN PAUSE suivis en coulisse (jamais dans le bilan officiel ; bilan dans l'écran 📊 Bilans de gones)
 nouvelles.forEach((x) => {
-  if (deja.has(x.id + '|' + x.k) || dejaFam.has(x.id + '|' + fam(x.k))) return;
+  if (deja.has(x.id + '|' + x.k) || dejaFam.has(x.id + '|' + fam(x.k))) { nDeja++; return; }   /* 20261029w : déjà notée (même match, même famille) */
   { const c = x.pz || pzCle(x), st = etat(c);   /* 20261024a : test ou pause → J.pz (x.st), jamais officiel */
     if (st !== 'off') { x.pz = c; x.st = st; deja.add(x.id + '|' + x.k); if (!J.pz.some((y) => y.id === x.id && y.k === x.k)) { x.n = note; J.pz.push(x); nPz++; } return; }
     delete x.pz; }
@@ -363,4 +365,5 @@ if (nEspn && nKo === nEspn) { console.log('⚠️ ESPN a TOUT refusé depuis Git
 J.t.sort((a, b) => a.t - b.t);
 J.maj = note; J.dernier = parisJour(); J.reglages = REGLAGES;
 fs.writeFileSync(FICHIER, JSON.stringify(J));
+console.log('candidates : ' + nouvelles.length + ' · déjà notées : ' + nDeja + ' · test / pause (Bilans) : ' + nPz + ' · coupes d\'Europe en test : ' + nCe);   /* 20261029w */
 console.log('ESPN : ' + nEspn + ' lectures (' + nKo + ' refusées) · ' + ajout + ' nouvelles tendances · ' + juge + ' jugées · total ' + J.t.length);
