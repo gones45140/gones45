@@ -171,6 +171,14 @@ serveur.listen(0, async () => {
         const t = window._g45CeHtml('fra.1', '9', E).replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ');
         localStorage.removeItem('g45ce_ouvert'); const tF = window._g45CeHtml('fra.1', '9', E).replace(/<[^>]+>/g, ' ');
         o.ceH = (/Nice 2,80 Nul 3,65 Rennes 2,35/.test(t) && /Nice \+0,5 1,57 Rennes −0,5 2,25/.test(t) && /Plus de 2,5 1,50 Moins de 2,5 2,60/.test(t) && /Oui 1,45 Non 2,75/.test(t) && /Buts de Nice/.test(t) && /1,5 plus de 1,97 moins de 1,75/.test(t) && /Ouvrir/.test(tF) && !/Nul/.test(tF)) || t.slice(0, 500); } catch (e) { o.ceH = 'erreur : ' + e.message; }
+      /* 20261030z : carte de l'onglet 📦 Cotes gardées (fiche du robot cotes-archive) */
+      try { const F = { lg: 'fra.1', s: 'soccer', t: Date.parse('2026-10-31T19:00:00Z'), h: { id: '2502', nom: 'Nice', c: '#e13327' }, a: { id: '169', nom: 'Rennes', c: '#000000' }, at: Date.parse('2026-10-31T17:27:00Z'),
+          ml: { h: 2.8, a: 2.35, d: 3.65 }, hc: { L: 0.5, h: 1.57, a: 2.25 }, tot: { L: 2.5, o: 1.83, u: 2 }, bts: { o: 1.45, n: 2.75 }, teq: { h: [], a: [[2.5, 3.83], [2.5, 1.24]] },
+          j: { 7: { n: 'Esteban Lepaul', k: 'a', o: { 230: [[null, 2.45]] } }, 8: { n: 'Boulaye Dia', k: 'a', o: { 230: [[null, 2.7]] } } }, f: { h: 1, a: 2 } };
+        const c1 = window._g45ArchCarte(F, '401', '169').replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' '), c2 = window._g45ArchCarte(F, '401', '').replace(/<[^>]+>/g, ' ');
+        window._g45ArchS.ouv['401'] = true; const c3 = window._g45ArchCarte(F, '401', '169').replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' '); window._g45ArchS.ouv['401'] = false;
+        o.arch = (/31\/10 · @ Nice/.test(c1) && /1-2/.test(c1) && /Nice 2,80 Nul 3,65 Rennes 2,35/.test(c1) && /Esteban Lepaul 2,45/.test(c1) && /#1ed760;">1-2/.test(window._g45ArchCarte(F, '401', '169')) && /Nice – Rennes/.test(c2)
+          && /Handicap/.test(c3) && /Buts de Rennes/.test(c3) && /2,5 plus de 3,83 moins de 1,24/.test(c3) && (window._G45_ARCH_LG || []).indexOf('nhl') >= 0) || c1.slice(0, 300) + ' || ' + c3.slice(0, 400); } catch (e) { o.arch = 'erreur : ' + e.message; }
       /* 20261030e : critères 4 saisons NBA, onglet 👤 Joueurs à seuils (points 20 ou +, pts + reb + passes) */
       try { const C = window._g45Cr, ctx = { sp: 'basketball', lg: 'nba', id: '10' };
         C.data['Rockets T'] = { t: Date.now(), lg: 'nba', ligue: 'NBA', saisons: [{ an: 2026, ms: [['2026-10-22', 1, 110, 100, 0, 0, 'b1'], ['2026-10-24', 0, 99, 104, 0, 0, 'b2'], ['2026-10-26', 1, 120, 101, 0, 0, 'b3'], ['2026-10-28', 0, 115, 108, 0, 0, 'b4']] }] };
@@ -1794,6 +1802,7 @@ serveur.listen(0, async () => {
     ok('Foot : buteur DraftKings (fenêtre + Agenda)', r.ftDk === true, r.ftDk);
     ok('Agenda : buts d\'équipe DraftKings (plus / moins séparés)', r.teqDk === true, r.teqDk);
     ok('Fenêtre de match : cotes match / équipes', r.ceH === true, r.ceH);
+    ok('Compétitions : 📦 Cotes gardées', r.arch === true, r.arch);
     ok('Tennis : style de jeu (bonus polyvalent)', r.tnStyle === true, r.tnStyle);
     ok('Tennis : BET45 face au book (écart, value, ligne)', r.tnBk === true, r.tnBk);
     ok('Cyclisme : profil d\'étape (échelle 600 m, type, D+)', r.rcProf === true, r.rcProf);

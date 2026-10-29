@@ -93,4 +93,25 @@ for (const [cle, F] of Object.entries(fichiers)) {
   for (const [id, f] of Object.entries(F)) { if (!old[id] || !(old[id].t <= maintenant)) old[id] = f; }   // jamais après le coup d'envoi
   fs.writeFileSync(p, JSON.stringify(old));
 }
+// 20261030z : score final des matchs gardés (onglet « 📦 Cotes gardées » : carte verte / jaune / rouge) — mois en cours et précédent,
+// matchs commencés depuis plus de 3 h sans score → summary ESPN (header.competitions[0].competitors[].score, match fini seulement).
+let nSc = 0;
+const moisL = [0, -1].map((k) => { const d = new Date(maintenant); d.setUTCDate(1); d.setUTCMonth(d.getUTCMonth() + k); return d.toISOString().slice(0, 7); });
+for (const [sp, lg] of LIGUES) {
+  for (const mo of moisL) {
+    const p = `données/cotes/${lg}/${mo}.json`; let F; try { F = JSON.parse(fs.readFileSync(p, 'utf8')); } catch (e) { continue; }
+    let maj = false;
+    for (const [id, f] of Object.entries(F)) {
+      if (f.f || !(f.t < maintenant - 3 * 3600e3) || f.t < maintenant - 10 * 864e5) continue;
+      const sm = await lire(`https://site.api.espn.com/apis/site/v2/sports/${sp}/${lg}/summary?event=${id}`);
+      const cp = ((((sm || {}).header || {}).competitions) || [])[0] || {}, st = ((cp.status || {}).type || {});
+      if (!st.completed) continue;
+      const sc = {}; for (const c of cp.competitors || []) sc[c.homeAway === 'home' ? 'h' : 'a'] = parseInt(c.score, 10);
+      if (!isNaN(sc.h) && !isNaN(sc.a)) { f.f = sc; maj = true; nSc++; }
+      await pause(200);
+    }
+    if (maj) fs.writeFileSync(p, JSON.stringify(F));
+  }
+}
+console.log(`📦 scores ajoutés : ${nSc}`);
 console.log(`📦 cotes gardées : ${nEv} match(s), ${nJ} joueur(s) avec cote, fichiers ${Object.keys(fichiers).join(', ') || 'aucun'}`);
