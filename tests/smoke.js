@@ -111,6 +111,9 @@ serveur.listen(0, async () => {
         const H1 = window._g45CrHtml('Rams T', ctx).replace(/<[^>]+>/g, ' ');
         localStorage.removeItem('g45_jou_v2_football_nfl_14_2025'); delete C.data['Rams T']; C.nom = '';
         o.crUs = (/Puka Nacua touchdown/.test(H1) && /Combien/.test(H1) && /1\/2/.test(H1)) || H1.slice(0, 600); } catch (e) { o.crUs = 'erreur : ' + e.message; }
+      /* 20261030i : Séries individuelles NBA, valeur d'une ligne du journal [min, pts, reb, ast, 3pts] */
+      try { const V = window._g45NbaMqVal, l = [30, 24, 9, 6, 3];
+        o.nbaMqV = (V('pts', l) === 24 && V('pra', l) === 39 && V('pr', l) === 33 && V('pa', l) === 30 && V('ra', l) === 15 && V('tp', l) === 3 && V('ra', [30, 20, null, 4, 1]) === null) || 'vals'; } catch (e) { o.nbaMqV = 'erreur : ' + e.message; }
       /* 20261030e : critères 4 saisons NBA, onglet 👤 Joueurs à seuils (points 20 ou +, pts + reb + passes) */
       try { const C = window._g45Cr, ctx = { sp: 'basketball', lg: 'nba', id: '10' };
         C.data['Rockets T'] = { t: Date.now(), lg: 'nba', ligue: 'NBA', saisons: [{ an: 2026, ms: [['2026-10-22', 1, 110, 100, 0, 0, 'b1'], ['2026-10-24', 0, 99, 104, 0, 0, 'b2'], ['2026-10-26', 1, 120, 101, 0, 0, 'b3'], ['2026-10-28', 0, 115, 108, 0, 0, 'b4']] }] };
@@ -1725,6 +1728,7 @@ serveur.listen(0, async () => {
     ok('Tennis : âge + bilan au tour du match dans l\'avis', r.tnTour === true, r.tnTour);
     ok('Critères 4 saisons US : onglet Joueurs', r.crUs === true, r.crUs);
     ok('Critères 4 saisons NBA : joueurs à seuils', r.crBk === true, r.crBk);
+    ok('Séries individuelles NBA : combinaisons', r.nbaMqV === true, r.nbaMqV);
     ok('Tennis : style de jeu (bonus polyvalent)', r.tnStyle === true, r.tnStyle);
     ok('Tennis : BET45 face au book (écart, value, ligne)', r.tnBk === true, r.tnBk);
     ok('Cyclisme : profil d\'étape (échelle 600 m, type, D+)', r.rcProf === true, r.rcProf);
