@@ -1559,6 +1559,19 @@ serveur.listen(0, async () => {
         R.push(/réservé premium/.test(HP) && !/Compétition/.test(HP));
         o.crPlus = (JSON.stringify(F) === JSON.stringify([16, 18, 8, 7, 1, 0, 'h', 3, 6, 2, 0]) && R.every(Boolean)) || JSON.stringify({ F, R });
       } catch (e) { o.crPlus = 'erreur : ' + e.message; }
+      /* 20261031g — ↪️ transfert : saison sans match du joueur dans ce club → A (avec victoire) message ancien club ; B (joueur seul) ses matchs de l'ancien club */
+      try {
+        const S = window._g45Cr, ouv = localStorage.getItem('g45_cr_open'); S.ovTous = true;
+        const m1 = ['2023-09-02', 1, 0, 0], m2 = ['2023-09-20', 0, 0, 0]; m1.jv = { mb: { g: 1, a: 0 } }; m2.jv = { mb: { g: 0, a: 1 } };
+        S.jl.mb = { d: { '2026-08-20': { g: 1, a: 0 } }, n: 1, ai: { '2023': { club: 'PSG', ms: [m1, m2] } } };
+        S.data.TrFC = { t: Date.now(), lg: 'esp.1', tid: '86', ligue: 'LaLiga', saisons: [{ an: 2026, ms: [['2026-08-20', 1, 2, 0]] }, { an: 2023, ms: [['2023-09-03', 1, 3, 0]] }] };
+        S.lieu = 'tout'; S.comp = 'L';
+        window._g45CrHtml('TrFC'); const cb = S.combos[S.a]; cb.jo = 'mb'; cb.jn = 'Mbappé'; cb.jm = ''; cb.res = 'vic';
+        const HA = window._g45CrHtml('TrFC').replace(/<[^>]+>/g, ' ');
+        cb.res = ''; const HB = window._g45CrHtml('TrFC').replace(/<[^>]+>/g, ' ');
+        delete S.data.TrFC; delete S.jl.mb; S.nom = ''; if (ouv == null) localStorage.removeItem('g45_cr_open'); else localStorage.setItem('g45_cr_open', ouv);
+        o.crTr = (/Mbappé n'était pas à TrFC \(PSG\)/.test(HA) && /1\/1 · 100 %/.test(HA) && /↪️ PSG/.test(HB) && /1\/2 · 50 %/.test(HB) && /2\/3 · 67 %/.test(HB) && !/n'était pas/.test(HB)) || (HA.slice(-600) + ' ||| ' + HB.slice(-600));
+      } catch (e) { o.crTr = 'erreur : ' + e.message; }
       /* 20261021f — panneau Saison en onglets : 🎯 Tirs (feuille de match g45crf1_), Buts par défaut */
       try {
         const sv = localStorage.getItem('g45_curseurs');
@@ -1788,6 +1801,7 @@ serveur.listen(0, async () => {
     ok('Tennis : score avec tie-breaks (ESPN)', r.tnScore === true, r.tnScore);
     ok('Tennis : score en direct (Tendances)', r.tnLv === true, r.tnLv);
     ok('Critères : joueurs, match précédent, feuille de match', r.crPlus === true, r.crPlus);
+    ok('Critères : transfert (ancien club du joueur)', r.crTr === true, r.crTr);
     ok('Saison : onglets + tirs (feuille de match)', r.cursTi === true, r.cursTi);
     ok('Panneaux fermés à l\'arrivée + chargement BET45', r.ferme === true, r.ferme);
     ok('Tennis : mes coefficients + surface 2 mois + tournoi précédent', r.tnCoef === true, r.tnCoef);
