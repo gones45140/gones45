@@ -237,8 +237,12 @@ serveur.listen(0, async () => {
         cb.jm = 'pts'; cb.jmin = '19.5'; cb.jsens = 'un'; const H3 = window._g45CrHtml('Rockets T', ctx).replace(/<[^>]+>/g, ' ');
         cb.jm = 'ra'; cb.jmin = '9.5'; cb.jsens = 'ov'; const H4 = window._g45CrHtml('Rockets T', ctx).replace(/<[^>]+>/g, ' ');   /* 20261030h : reb + passes 9 / 7 / 14 */
         window.__crBkHtml = window._g45CrHtml('Rockets T', ctx);
+        /* 20261101c : ➕ ajouter le joueur au mur depuis les critères */
+        { const u0 = state.u.slice(), lv = C.lieu; C.lieu = 'dom'; const hb = window._g45CrHtml('Rockets T', ctx); window.g45CrAjoutMur(C.a); const uK = state.u.filter((x) => x.n === 'Kevin Durant')[0];
+          const hd = window._g45CrHtml('Rockets T', ctx); state.u = u0; C.lieu = lv;
+          window.__crAjout = (/Ajouter Kevin Durant au mur/.test(hb) && uK && uK.type === 'joueur' && uK.sport === '🏀' && uK.club === 'Rockets T' && /^Rockets T 🏠 reb \+ passes plus de 9,5$/.test(uK.note) && uK.ps && /déjà au mur/.test(hd)) || JSON.stringify({ uK, b: /Ajouter/.test(hb) }); }
         localStorage.removeItem('g45_jou_v2_basketball_nba_10_2026'); delete C.data['Rockets T']; C.nom = '';
-        o.crBk = (/Kevin Durant points plus de 19,5/.test(H1) && /Plus de/.test(H1) && /2\/3/.test(H1) && /Kevin Durant pts \+ reb \+ passes plus de 29,5/.test(H2) && /2\/3/.test(H2) && /Kevin Durant points moins de 19,5/.test(H3) && /1\/3/.test(H3) && /Kevin Durant reb \+ passes plus de 9,5/.test(H4) && /1\/3/.test(H4)) || (H1.slice(-700) + ' ||| ' + H2.slice(-700)); } catch (e) { o.crBk = 'erreur : ' + e.message; }
+        o.crAjout = window.__crAjout; o.crBk = (/Kevin Durant points plus de 19,5/.test(H1) && /Plus de/.test(H1) && /2\/3/.test(H1) && /Kevin Durant pts \+ reb \+ passes plus de 29,5/.test(H2) && /2\/3/.test(H2) && /Kevin Durant points moins de 19,5/.test(H3) && /1\/3/.test(H3) && /Kevin Durant reb \+ passes plus de 9,5/.test(H4) && /1\/3/.test(H4)) || (H1.slice(-700) + ' ||| ' + H2.slice(-700)); } catch (e) { o.crBk = 'erreur : ' + e.message; }
       /* 20261022r : curseurs sports US — onglets ⏱️ Quart-temps et 🔁 Contexte */
       try { const P = (a, b, c, d) => [{ p: 1, v: a }, { p: 2, v: b }, { p: 3, v: c }, { p: 4, v: d }], n = Date.now();
         const L = [{ t: n - 20 * 864e5, dom: true, pour: 24, contre: 10, lp: P(7, 7, 3, 7), lc: P(0, 3, 7, 0) }, { t: n - 13 * 864e5, dom: false, pour: 17, contre: 20, lp: P(0, 10, 0, 7), lc: P(7, 3, 7, 3) },
@@ -1875,6 +1879,7 @@ serveur.listen(0, async () => {
     ok('Tennis : âge + bilan au tour du match dans l\'avis', r.tnTour === true, r.tnTour);
     ok('Critères 4 saisons US : onglet Joueurs', r.crUs === true, r.crUs);
     ok('Critères 4 saisons NBA : joueurs à seuils', r.crBk === true, r.crBk);
+    ok('Critères : ➕ ajouter le joueur au mur', r.crAjout === true, r.crAjout);
     ok('Séries individuelles NBA : combinaisons', r.nbaMqV === true, r.nbaMqV);
     ok('Séries individuelles NBA : paliers DraftKings', r.nbaDk === true, r.nbaDk);
     ok('Séries individuelles NFL : cote TD DraftKings', r.nflDk === true, r.nflDk);
