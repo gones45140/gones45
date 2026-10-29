@@ -76121,7 +76121,7 @@ window._g45AideBoutonsPoser = _g45AideBoutonsPoser;
       var spV = ''; try { spV = (typeof g45SportDe === 'function' ? g45SportDe(u) : '') || ''; } catch (e) {}
       var v = (spV && spV !== 'soccer' ? _g45JoueurVisLire(n, spV) : null) || _g45JoueurVisLire(n); if (v) img = v.cut || v.thumb || v.fan || ''; } } catch (e) {}
     try { if (!img && u.type === 'joueur' && typeof _g45JoueurClubLogo === 'function') img = _g45JoueurClubLogo(u) || ''; } catch (e) {}
-    /* 20261029z3 (« fais ressortir encore plus logo / image comme les cartes du Mur, très joli ») : comme le Mur — bannière plein fond (vis : image perso,
+    /* 20261030a (« fais ressortir encore plus logo / image comme les cartes du Mur, très joli ») : comme le Mur — bannière plein fond (vis : image perso,
        g45VisuelCache, fanart joueur), photo détourée au centre (cut, joueur), logo net à droite (logo : club / club du joueur). */
     var ok = function (x) { return /^https?:|^images\//.test(x || '') ? x : ''; }, vis = '', cut = '', logo = '', jv = null;
     try { vis = (typeof _g45ImgPersoLire === 'function' && _g45ImgPersoLire(n)) || ''; } catch (e) {}
