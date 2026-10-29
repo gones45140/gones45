@@ -114,6 +114,14 @@ serveur.listen(0, async () => {
       /* 20261030i : Séries individuelles NBA, valeur d'une ligne du journal [min, pts, reb, ast, 3pts] */
       try { const V = window._g45NbaMqVal, l = [30, 24, 9, 6, 3];
         o.nbaMqV = (V('pts', l) === 24 && V('pra', l) === 39 && V('pr', l) === 33 && V('pa', l) === 30 && V('ra', l) === 15 && V('tp', l) === 3 && V('ra', [30, 20, null, 4, 1]) === null) || 'vals'; } catch (e) { o.nbaMqV = 'erreur : ' + e.message; }
+      /* 20261030j : paliers DraftKings (propBets ESPN, Milestones) */
+      try { const K = window._g45NbaDk, A = 'http://sports.core.api.espn.com/v2/sports/basketball/leagues/nba/seasons/2027/athletes/';
+        const M = K.lire([{ athlete: { $ref: A + '6475?lang=en' }, type: { id: '218' }, odds: { decimal: { value: '2.19' } }, current: { target: { value: 10 } } },
+          { athlete: { $ref: A + '6475?lang=en' }, type: { id: '218' }, odds: { decimal: { value: '1.40' } }, current: { target: { value: 5 } } },
+          { athlete: { $ref: A + '6475?lang=en' }, type: { id: '1' }, odds: { decimal: { value: '1.75' } }, current: { target: { value: 8.5 } } },
+          { athlete: { $ref: A + '99?lang=en' }, type: { id: '327' }, odds: { decimal: { value: '1.90' } }, current: { target: { value: 12 } } }]);
+        const c1 = K.choix(M, '6475', 'pts', 9.5), c2 = K.choix(M, '6475', 'pts', 4.5), c3 = K.choix(M, '99', 'ra', 11.5);
+        o.nbaDk = (c1.t === 10 && c1.d === 2.19 && c2.t === 5 && c3.d === 1.9 && K.choix(M, '6475', 'reb', 4.5) === null && K.choix(M, '1', 'pts', 4.5) === null) || JSON.stringify([c1, c2, c3]); } catch (e) { o.nbaDk = 'erreur : ' + e.message; }
       /* 20261030e : critères 4 saisons NBA, onglet 👤 Joueurs à seuils (points 20 ou +, pts + reb + passes) */
       try { const C = window._g45Cr, ctx = { sp: 'basketball', lg: 'nba', id: '10' };
         C.data['Rockets T'] = { t: Date.now(), lg: 'nba', ligue: 'NBA', saisons: [{ an: 2026, ms: [['2026-10-22', 1, 110, 100, 0, 0, 'b1'], ['2026-10-24', 0, 99, 104, 0, 0, 'b2'], ['2026-10-26', 1, 120, 101, 0, 0, 'b3'], ['2026-10-28', 0, 115, 108, 0, 0, 'b4']] }] };
@@ -1729,6 +1737,7 @@ serveur.listen(0, async () => {
     ok('Critères 4 saisons US : onglet Joueurs', r.crUs === true, r.crUs);
     ok('Critères 4 saisons NBA : joueurs à seuils', r.crBk === true, r.crBk);
     ok('Séries individuelles NBA : combinaisons', r.nbaMqV === true, r.nbaMqV);
+    ok('Séries individuelles NBA : paliers DraftKings', r.nbaDk === true, r.nbaDk);
     ok('Tennis : style de jeu (bonus polyvalent)', r.tnStyle === true, r.tnStyle);
     ok('Tennis : BET45 face au book (écart, value, ligne)', r.tnBk === true, r.tnBk);
     ok('Cyclisme : profil d\'étape (échelle 600 m, type, D+)', r.rcProf === true, r.rcProf);
