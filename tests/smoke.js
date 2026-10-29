@@ -130,6 +130,13 @@ serveur.listen(0, async () => {
         const h1 = window._g45NflDkHtml({ id: '4430807', s: { pct: 60 } }, 1), h2 = window._g45NflDkHtml({ id: '4430807', s: { pct: 5 } }, 2), h3 = window._g45NflDkHtml({ id: '1', s: { pct: 60 } }, 1);
         R0.lg = sv[0]; R0.cat = sv[1]; window._g45NflDk.M = sv[2]; window._g45NflDk.t = sv[3];
         o.nflDk = (Object.keys(M['4430807']).join() === '31,32' && M['77']['31'] === 2.5 && M['78']['31'] === 1.83 && /TD à tout moment → cote 2,10/.test(h1) && /1,97 en France/.test(h1) && /value/.test(h1) && /2 TD ou \+ → cote 9,00/.test(h2) && !/value/.test(h2) && h3 === '') || [h1, h2, h3].join(' | '); } catch (e) { o.nflDk = 'erreur : ' + e.message; }
+      /* 20261030n : cotes DraftKings NHL (joueur retrouvé par le nom) */
+      try { const A = 'http://sports.core.api.espn.com/v2/sports/hockey/leagues/nhl/seasons/2027/athletes/', it = (id, ty, d, t) => ({ athlete: { $ref: A + id + '?lang=en' }, type: { id: ty }, odds: { decimal: { value: d } }, current: t == null ? {} : { target: { value: t } } });
+        const M = window._g45NhlDkLire([it('5193', '230', '1.65'), it('5193', '39', '6.50'), it('5193', '218', '1.40', 1), it('5193', '218', '3.20', 2), it('5193', '219', '2.10', 1), it('9', '230', '2.00')], { '5193': 'Sébastian Aho' });
+        const C = window._g45NhlDkChoix, o = M[window._g45NhlDkNom('Sebastian Aho')];
+        o.nhlDk = 0; const r1 = C(o, 'g', 1), r2 = C(o, 'g', 2), r3 = C(o, 'p', 2), r4 = C(o, 'a', 1), r5 = C(o, 'a', 2);
+        window.__nhlDkR = (r1 && r1.d === 1.65 && /buteur/.test(r1.lib) && r2.d === 6.5 && r3.d === 3.2 && r4.d === 2.1 && r5 === null && Object.keys(M).length === 1) || JSON.stringify([r1, r2, r3, r4, r5]); } catch (e) { window.__nhlDkR = 'erreur : ' + e.message; }
+      o.nhlDk = window.__nhlDkR;
       /* 20261030e : critères 4 saisons NBA, onglet 👤 Joueurs à seuils (points 20 ou +, pts + reb + passes) */
       try { const C = window._g45Cr, ctx = { sp: 'basketball', lg: 'nba', id: '10' };
         C.data['Rockets T'] = { t: Date.now(), lg: 'nba', ligue: 'NBA', saisons: [{ an: 2026, ms: [['2026-10-22', 1, 110, 100, 0, 0, 'b1'], ['2026-10-24', 0, 99, 104, 0, 0, 'b2'], ['2026-10-26', 1, 120, 101, 0, 0, 'b3'], ['2026-10-28', 0, 115, 108, 0, 0, 'b4']] }] };
@@ -1747,6 +1754,7 @@ serveur.listen(0, async () => {
     ok('Séries individuelles NBA : combinaisons', r.nbaMqV === true, r.nbaMqV);
     ok('Séries individuelles NBA : paliers DraftKings', r.nbaDk === true, r.nbaDk);
     ok('Séries individuelles NFL : cote TD DraftKings', r.nflDk === true, r.nflDk);
+    ok('Séries individuelles NHL : cotes DraftKings par nom', r.nhlDk === true, r.nhlDk);
     ok('Tennis : style de jeu (bonus polyvalent)', r.tnStyle === true, r.tnStyle);
     ok('Tennis : BET45 face au book (écart, value, ligne)', r.tnBk === true, r.tnBk);
     ok('Cyclisme : profil d\'étape (échelle 600 m, type, D+)', r.rcProf === true, r.rcProf);
