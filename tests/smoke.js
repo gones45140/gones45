@@ -144,12 +144,15 @@ serveur.listen(0, async () => {
         o.agDk = (a1.length === 1 && C(o1, a1[0]) === 2.1 && a2[0].ty[0] === '39' && a3[0].ty[0] === '31' && a4[0].ty[0] === '218' && a4[0].cible === 25 && a5[0].ty[0] === '220' && a5[0].cible === 9
           && C(o1, P('hockey', 'buteur')[0]) === 1.65 && C(o1, a6[0]) === 1.4 && a6.length === 1 && C(o1, P('hockey', '2 passes')[0]) === 6 && P('basketball', 'victoire').length === 0) || JSON.stringify([a1, a2, a3, a4, a5, a6]); } catch (e) { o.agDk = 'erreur : ' + e.message; }
       /* 20261030p : bloc « Cotes joueurs » de la fenêtre de match */
+      try { localStorage.setItem('g45cj_ouvert', '1'); } catch (e) {}
       try { const H = window._g45CjHtml, D = [{ n: 'Sebastian Aho', eq: 'CAR', c: '#cc0000', o: { '230': [[null, 2.65]], '219': [[1, 2.1], [2, 7]] } }, { n: 'Adam Fantilli', eq: 'CBJ', c: '#002654', o: { '230': [[null, 3.75]] } }];
         const t1 = H('nhl', '1', D, 'g', 0).replace(/<[^>]+>/g, ' '), t2 = H('nhl', '1', D, 'a', 0).replace(/<[^>]+>/g, ' ');
         const t3 = H('nba', '2', [{ n: 'Trae Young', eq: 'ATL', c: '#e03a3e', o: { '218': [[30, 4.5], [20, 1.4], [25, 2.3], [15, 1.1]] } }], 'pts', 0).replace(/<[^>]+>/g, ' ');
-        o.cjH = (/COTES JOUEURS/.test(t1) && t1.indexOf('Sebastian Aho') < t1.indexOf('Adam Fantilli') && /2,65\s+DraftKings/.test(t1) && (localStorage.setItem('g45dk_aff', 'fr'), /≈ 2,49\s+estimée France/.test(H('nhl', '1', D, 'g', 0).replace(/<[^>]+>/g, ' '))) && (localStorage.removeItem('g45dk_aff'), true) && /2,10/.test(t2) && !/Fantilli/.test(t2)
+        localStorage.removeItem('g45cj_ouvert'); const tF = H('nhl', '1', D, 'g', 0).replace(/<[^>]+>/g, ' '); localStorage.setItem('g45cj_ouvert', '1');
+        o.cjH = (/Ouvrir/.test(tF) && !/Aho/.test(tF) && /Replier/.test(t1) && /COTES JOUEURS/.test(t1) && t1.indexOf('Sebastian Aho') < t1.indexOf('Adam Fantilli') && /2,65\s+DraftKings/.test(t1) && (localStorage.setItem('g45dk_aff', 'fr'), /≈ 2,49\s+estimée France/.test(H('nhl', '1', D, 'g', 0).replace(/<[^>]+>/g, ' '))) && (localStorage.removeItem('g45dk_aff'), true) && /2,10/.test(t2) && !/Fantilli/.test(t2)
           && /20\+\s+1,40\s+·\s+25\+\s+2,30\s+·\s+30\+\s+4,50/.test(t3.replace(/\s+/g, ' '))) || (t1.slice(0, 300) + ' || ' + t3.slice(0, 300)); } catch (e) { o.cjH = 'erreur : ' + e.message; }
       /* 20261030q : foot — bloc buteur de la fenêtre, buteur nommé dans un pari d'équipe de l'Agenda */
+      try { localStorage.setItem('g45cj_ouvert', '1'); } catch (e) {}
       try { const t1 = window._g45CjHtml('fra.1', '9', [{ n: 'Esteban Lepaul', eq: 'REN', c: '#e13327', o: { '230': [[null, 2.45]] } }], 'g', 0).replace(/<[^>]+>/g, ' ');
         const M = { harrykane: { '230': [[null, 1.6]] }, kanevin: {} }, Tv = window._g45AgDkTrouve;
         const Cn = window._g45AgConsigne('🏠 Victoire + Over 2.5 + Harry Kane buteur', true), lb = Cn.opts[0].filter(l => l.k === 'but')[0];
