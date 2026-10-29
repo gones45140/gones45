@@ -61,6 +61,13 @@ serveur.listen(0, async () => {
       AF['basket/nba/2025-26/etat.json'] = { n: 2, v2: 2, iv: 3 }; AF['basket/nba/2025-26/equipes.json'] = { 13: ['Lakers', 'LAL', 2], 2: ['Celtics', 'BOS', 2] };
       AF['basket/nba/2025-26/equipes/13.json'] = { m: [[Date.parse('2025-10-22T02:00:00Z'), '2025-10', 'B1', 'h', [110, 100], 2, 0, '2'], [Date.parse('2025-10-05T02:00:00Z'), '2025-10', 'B0', 'h', [90, 80], 1, 0, '2']] };
       AF['basket/nba/2025-26/joueurs/23.json'] = { m: [[Date.parse('2025-10-22T02:00:00Z'), '2025-10', 'B1', '13', { MIN: 34, PTS: 28, REB: 7, AST: 9, '3PT': 3, J: 1 }, null, 'h'], [Date.parse('2025-10-05T02:00:00Z'), '2025-10', 'B0', '13', { PTS: 10 }, null, 'h']] };
+      /* 20261031r : secours NHL (Séries individuelles depuis les archives) */
+      { const t1 = Date.parse('2025-10-10T23:00:00Z'), t2 = Date.parse('2025-10-12T23:00:00Z');
+        AF['hockey/nhl/2019-20/etat.json'] = { n: 2, v2: 2, iv: 4 }; AF['hockey/nhl/2019-20/equipes.json'] = { 5: ['Avalanche', 'COL', 2] };
+        AF['hockey/nhl/2019-20/joueurs.json'] = { p9: ['Joueur Neuf', '5', 2, { G: 3, A: 1 }], p8: ['Joueur Huit', '5', 2, { G: 1 }] };
+        AF['hockey/nhl/2019-20/equipes/5.json'] = { m: [[t1, '2025-10', 'H1', 'h', [3, 2], 2, 1, '6'], [t2, '2025-10', 'H2', 'a', [1, 5], 2, 0, '6']] };
+        AF['hockey/nhl/2019-20/joueurs/p9.json'] = { m: [[t1, '2025-10', 'H1', '5', { G: 2, A: 1, J: 1 }, null, 'h'], [t2, '2025-10', 'H2', '5', { G: 1, J: 1 }, null, 'a']] };
+        AF['hockey/nhl/2019-20/joueurs/p8.json'] = { m: [[t1, '2025-10', 'H1', '5', { J: 1 }, null, 'h'], [t2, '2025-10', 'H2', '5', { G: 1, J: 1 }, null, 'a']] }; }
       /* 20261031n : joueurs US (fiche.st + présence J) */
       AF['hockey/zzh/2025-26/etat.json'] = { n: 4, v2: 4 };
       AF['hockey/zzh/2025-26/matchs/2025-10.json'] = { H1: { f: { h: 3, a: 2 }, ty: 2, v2: 1, h: { id: '5' }, a: { id: '6' }, st: { p1: { n: 'Joueur A', k: 'h', s: { G: 1, A: 1, J: 1 } }, p2: { n: 'Joueur B', k: 'h', s: { J: 1 } }, p3: { n: 'Adv', k: 'a', s: { G: 2, J: 1 } } } },
@@ -1620,6 +1627,7 @@ serveur.listen(0, async () => {
         if (JSON.stringify(U) !== JSON.stringify([['2025-10-10', 1, 3, 2, 1, 0, 'H1'], ['2025-10-12', 0, 1, 5, 0, 0, 'H2']]) || U2 !== null || X.aSa('nhl', 0) == null) E.push('US ' + JSON.stringify([U, U2]));
         { const NL = await window._g45ArchLogNfl('77', 2025); if (!(NL && NL.gameLog.length === 2 && NL.gameLog[1].goals === 1 && NL.gameLog[1].assists === 2 && NL.gameLog[0].h === 0)) E.push('NFL ' + JSON.stringify(NL)); }
         { const NB = await window._g45ArchNbaGL('23', 2026); if (!(NB && JSON.stringify(NB.m) === JSON.stringify({ B1: [34, 28, 7, 9, 3, 0, 0, 0] }) && NB.e.B1[4] === 'BOS' && NB.e.B1[5] === 'vs' && NB.e.B1[6] === '110-100' && NB.e.B1[7] === 'W')) E.push('NBA ' + JSON.stringify(NB)); }
+        { const SC = await window._g45RegNhlSecours('20192020', 'goals', 10, false, false); if (!(SC && SC.length === 2 && SC[0].id === 'p9' && SC[0].s.tot === 3 && SC[0].s.mj === 2 && SC[0].eq === 'COL' && SC[1].s.pire === 1)) E.push('SECNHL ' + JSON.stringify(SC)); }
         window._G45_ARCH_LG.push('zzr.1'); const RL = await window._g45ArchLogFoot('zzr.1', '9', 2025), RN = await window._g45ArchLogFoot('zz.1', '9', 2025); window._G45_ARCH_LG.pop();
         if (!(RL && RL.gameLog.length === 2 && RL.gameLog[0].e === 'E2' && RL.gameLog[0].h === 0 && RL.gameLog[1].goals === 2 && RL.gameLog[1].points === 3 && RL.gameLog[1].h === 1 && RN === null)) E.push('REG ' + JSON.stringify([RL, RN]));
         o.crArch = (JSON.stringify(E.map((m) => [m.d, m.dom, m.p, m.c, m.id])) === JSON.stringify([['2025-09-13', 1, 2, 1, 'E1'], ['2025-10-04', 0, 0, 0, 'E2']]) && J.gameLog.length === 1 && J.gameLog[0].goals === 1
