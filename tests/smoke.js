@@ -1080,12 +1080,16 @@ serveur.listen(0, async () => {
         g45TrVue('ck'); g45CkSous('a');
         const A = ((document.getElementById('g45ck') || {}).textContent || '').replace(/\s/g, '');
         g45CkSous('g');
-        const G = ((document.getElementById('g45ck') || {}).textContent || '').replace(/\s/g, '');
+        const G = ((document.getElementById('g45ck') || {}).textContent || '').replace(/\s/g, ''), G0 = (document.getElementById('g45ck') || {}).innerHTML || '';
+        const aAv = state.a; g45CkFicheDist('Test Stars');
+        const det = document.getElementById('detail'), F = { vis: det.style.display, hero: (document.getElementById('d-hero') || {}).textContent || '', bil: (document.getElementById('ip-bilan') || {}).textContent || '', same: state.a === aAv, tend: document.getElementById('t-tend').style.display,
+          live: getComputedStyle(document.querySelector('#detail .itab[onclick*="live"]')).display, types: getComputedStyle(document.querySelector('#detail .itab[onclick*="types"]')).display };
+        closeClub(); const back = document.getElementById('t-tend').style.display;
         window._g45CkForceDist = null; S.ck.D = null; state.u = u0; state.a = a0; state.h = h0;
         if (s0 == null) localStorage.removeItem('g45ck_sous'); else localStorage.setItem('g45ck_sous', s0); localStorage.removeItem('g45tr_vue');
         o.ckPub = (D.u['Test Stars'] && !('np' in D.u['Test Stars']) && D.u['Test Stars'].pm.dom.p === 2 && D.P.length === 1 && D.P[0].b.type === 'Vainqueur'
           && /lescartesquijouent/.test(A) && /misàjour/.test(A) && /duCockpitBET45quijouent/.test(A) && /TestStars🏠vsCanadiens/.test(A) && /Palier2·mise/.test(A) && /piresérie2·1→3paliers/.test(A)
-          && /Bénéfice\+10,00€/.test(G) && /TestStars1\/1·\+10,00€🏠1\/1/.test(G)) || JSON.stringify({ D: JSON.stringify(D).slice(0, 300), A: A.slice(0, 300), G: G.slice(0, 200) });
+          && /Bénéfice\+10,00€/.test(G) && /TestStars›?1\/1·\+10,00€🏠1\/1/.test(G) && /g45CkFicheDist/.test(document.getElementById('t-tend').innerHTML + G0) && F.vis === 'block' && /TestStars/.test(F.hero.replace(/\s/g, '')) && /\+10/.test(F.bil) && F.same && F.tend === 'none' && F.live === 'none' && F.types !== 'none' && back === 'block') || JSON.stringify({ g0: (typeof G0 !== 'undefined' ? G0.match(/Par carte.{0,400}/) : 0), F: typeof F !== 'undefined' ? Object.assign({}, F, { hero: F.hero.slice(0, 80), bil: F.bil.slice(0, 80) }) : 0, back: typeof back !== 'undefined' ? back : 0, G: G.slice(0, 200) });
       } catch (e) { o.ckPub = 'erreur : ' + e.message; }
       /* 20261029i / j — fiche d'une carte : filtre Lieu + Types en entier et colorés */
       try {
