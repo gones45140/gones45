@@ -273,6 +273,8 @@ serveur.listen(0, async () => {
           const h = window._g45ArchMatchHtml({ s: 'soccer', lg: 'zz.1', at: 0, h: { id: '1', nom: 'Lille' }, a: { id: '2', nom: 'Lens' }, f: { h: 1, a: 0 }, banc: [['3', 'Giroud', 'h']] }).replace(/<[^>]+>/g, ' ');
           o.absTag = (g && g.tags && g.tags.length === 1 && g.tags[0].t === 'A:O Knee Surgery' && g.gameLog.length === 2 && /absent – out, genou opéré/.test(L('A:O Knee Surgery')) && /sur le banc/.test(L('B'))
             && /choix du coach/.test(L("D:DNP-COACH'S DECISION")) && /SUR LE BANC/.test(h) && /Giroud/.test(h)) || JSON.stringify([g && g.tags, g && g.gameLog.length, L('A:O Knee Surgery'), h.slice(0, 200)]); } catch (e) { o.absTag = 'erreur : ' + e.message; }
+        try { const T = window._g45CrClsJT(), SC = window._g45CrS.ctx; window._g45CrS.ctx = null; o.clsJ = (T.ok('but', { G: 1 }) && !T.ok('dbl', { G: 1 }) && T.ok('pas', { A: 1 }) && T.ok('dec', { A: 1 }) && !T.ok('tri', { G: 2 })
+          && T.mode({ jo: '9', jn: 'X', jm: 'but' }) === true && T.mode({ jo: '9', jn: 'X', res: 'vqr', ou: 'un', L: 4.5 }) === false && T.mode({ jo: '9', jo2: '8' }) === false) || JSON.stringify([T.ok('but', { G: 1 }), T.ok('dbl', { G: 1 }), T.ok('pas', { A: 1 }), T.ok('dec', { A: 1 }), T.ok('tri', { G: 2 }), T.mode({ jo: '9', jn: 'X', jm: 'but' }), T.mode({ jo: '9', jn: 'X', res: 'vqr', ou: 'un', L: 4.5 }), T.mode({ jo: '9', jo2: '8' })]); window._g45CrS.ctx = SC; } catch (e) { o.clsJ = 'erreur : ' + e.message; }
         o.crAjout = window.__crAjout; o.crBk = (/Kevin Durant points plus de 19,5/.test(H1) && /Plus de/.test(H1) && /2\/3/.test(H1) && /Kevin Durant pts \+ reb \+ passes plus de 29,5/.test(H2) && /2\/3/.test(H2) && /Kevin Durant points moins de 19,5/.test(H3) && /1\/3/.test(H3) && /Kevin Durant reb \+ passes plus de 9,5/.test(H4) && /1\/3/.test(H4)) || (H1.slice(-700) + ' ||| ' + H2.slice(-700)); } catch (e) { o.crBk = 'erreur : ' + e.message; }
       /* 20261022r : curseurs sports US — onglets ⏱️ Quart-temps et 🔁 Contexte */
       try { const P = (a, b, c, d) => [{ p: 1, v: a }, { p: 2, v: b }, { p: 3, v: c }, { p: 4, v: d }], n = Date.now();
@@ -1922,6 +1924,7 @@ serveur.listen(0, async () => {
     ok('ESPN : pas plus de 4 demandes à la fois', r.fileEspn === true, r.fileEspn);
     ok('Archives : banc / absents (bloc 📦 + étiquette des séries)', r.absTag === true, r.absTag);
     ok('Mur : sélecteur Équipes / Joueurs par sport', r.murEJ === true, r.murEJ);
+    ok('Critères : classement des joueurs du championnat (règles)', r.clsJ === true, r.clsJ);
     ok('Séries individuelles NBA : combinaisons', r.nbaMqV === true, r.nbaMqV);
     ok('Séries individuelles NBA : paliers DraftKings', r.nbaDk === true, r.nbaDk);
     ok('Séries individuelles NFL : cote TD DraftKings', r.nflDk === true, r.nflDk);
