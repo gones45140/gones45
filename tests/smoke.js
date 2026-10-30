@@ -64,7 +64,7 @@ serveur.listen(0, async () => {
         [Date.parse('2025-10-12T23:00:00Z'), '2025-10', 'H2', 'a', [5, 1], 2, 0], [Date.parse('2026-04-25T23:00:00Z'), '2026-04', 'S1', 'a', [2, 0], 3, 0]] };
       /* 20261031o : Séries individuelles foot (journal joueur, côté h|a, etat.iv 2) */
       AF['foot/zzr.1/2025-26/etat.json'] = { n: 2, v2: 2, iv: 2 };
-      AF['foot/zzr.1/2025-26/joueurs/9.json'] = { m: [[Date.parse('2025-09-13T19:00:00Z'), '2025-09', 'E1', '7', { G: 2, A: 1, TIT: 1 }, null, 'h'], [Date.parse('2025-10-04T15:00:00Z'), '2025-10', 'E2', '7', { REM: 1 }, null, 'a'], [Date.parse('2025-10-20T15:00:00Z'), '2025-10', 'E3', '7', null, { 230: [[null, 2.1]] }, 'h']] };
+      AF['foot/zzr.1/2025-26/joueurs/9.json'] = { m: [[Date.parse('2025-09-13T19:00:00Z'), '2025-09', 'E1', '7', { G: 2, A: 1, TIT: 1 }, null, 'h'], [Date.parse('2025-10-04T15:00:00Z'), '2025-10', 'E2', '7', { REM: 1 }, null, 'a'], [Date.parse('2025-10-20T15:00:00Z'), '2025-10', 'E3', '7', null, { 230: [[null, 2.1]] }, 'h'], [Date.parse('2025-10-25T15:00:00Z'), '2025-10', 'E4', '7', null, null, 'h', 'A:O Knee Surgery']] };
       /* 20261031p : Séries individuelles NFL (TD = rTD + reTD, passes de TD, saison régulière via equipes m[5]) */
       AF['football-us/nfl/2025-26/etat.json'] = { n: 3, v2: 3, iv: 2 };
       AF['football-us/nfl/2025-26/joueurs/77.json'] = { m: [[Date.parse('2025-09-08T00:00:00Z'), '2025-09', 'N1', '14', { pTD: 2, rTD: 1 }, null, 'h'], [Date.parse('2025-09-15T00:00:00Z'), '2025-09', 'N2', '14', { J: 1 }, null, 'a'], [Date.parse('2025-08-10T00:00:00Z'), '2025-08', 'P1', '14', { pTD: 1 }, null, 'h']] };
@@ -269,6 +269,10 @@ serveur.listen(0, async () => {
           o.miroir = (j1.events.map(e => e.id).join() === 'E1,E2,E3' && j1.leagues[0].id === '9' && j2.children[0].name === 'Z' && e3 === 'rejet' && j4.rosters[0].roster[0].athlete.displayName === 'A') || JSON.stringify([j1, j2, e3, j4]); localStorage.removeItem('g45_espn_hote'); } catch (e) { o.miroir = 'erreur : ' + e.message; }
         try { localStorage.removeItem('g45_espn_hote'); const j = await (await fetch('https://site.api.espn.com/apis/site/v2/sports/zz/bloque')).json();
           o.espnDeux = (j.via === 'web' && JSON.parse(localStorage.getItem('g45_espn_hote')).h === 'w') || JSON.stringify(j); localStorage.removeItem('g45_espn_hote'); } catch (e) { o.espnDeux = 'erreur : ' + e.message; }
+        try { window._G45_ARCH_LG.push('zzr.1'); const g = await window._g45ArchLogFoot('zzr.1', '9', 2025), L = window._g45AbsTagLib; window._G45_ARCH_LG.pop();
+          const h = window._g45ArchMatchHtml({ s: 'soccer', lg: 'zz.1', at: 0, h: { id: '1', nom: 'Lille' }, a: { id: '2', nom: 'Lens' }, f: { h: 1, a: 0 }, banc: [['3', 'Giroud', 'h']] }).replace(/<[^>]+>/g, ' ');
+          o.absTag = (g && g.tags && g.tags.length === 1 && g.tags[0].t === 'A:O Knee Surgery' && g.gameLog.length === 2 && /absent – out, genou opéré/.test(L('A:O Knee Surgery')) && /sur le banc/.test(L('B'))
+            && /choix du coach/.test(L("D:DNP-COACH'S DECISION")) && /SUR LE BANC/.test(h) && /Giroud/.test(h)) || JSON.stringify([g && g.tags, g && g.gameLog.length, L('A:O Knee Surgery'), h.slice(0, 200)]); } catch (e) { o.absTag = 'erreur : ' + e.message; }
         o.crAjout = window.__crAjout; o.crBk = (/Kevin Durant points plus de 19,5/.test(H1) && /Plus de/.test(H1) && /2\/3/.test(H1) && /Kevin Durant pts \+ reb \+ passes plus de 29,5/.test(H2) && /2\/3/.test(H2) && /Kevin Durant points moins de 19,5/.test(H3) && /1\/3/.test(H3) && /Kevin Durant reb \+ passes plus de 9,5/.test(H4) && /1\/3/.test(H4)) || (H1.slice(-700) + ' ||| ' + H2.slice(-700)); } catch (e) { o.crBk = 'erreur : ' + e.message; }
       /* 20261022r : curseurs sports US — onglets ⏱️ Quart-temps et 🔁 Contexte */
       try { const P = (a, b, c, d) => [{ p: 1, v: a }, { p: 2, v: b }, { p: 3, v: c }, { p: 4, v: d }], n = Date.now();
@@ -1911,6 +1915,7 @@ serveur.listen(0, async () => {
     ok('ESPN : bascule sur site.web quand site.api refuse', r.espnDeux === true, r.espnDeux);
     ok('ESPN : miroir GitHub quand les deux adresses refusent', r.miroir === true, r.miroir);
     ok('ESPN : pas plus de 4 demandes à la fois', r.fileEspn === true, r.fileEspn);
+    ok('Archives : banc / absents (bloc 📦 + étiquette des séries)', r.absTag === true, r.absTag);
     ok('Séries individuelles NBA : combinaisons', r.nbaMqV === true, r.nbaMqV);
     ok('Séries individuelles NBA : paliers DraftKings', r.nbaDk === true, r.nbaDk);
     ok('Séries individuelles NFL : cote TD DraftKings', r.nflDk === true, r.nflDk);
