@@ -37,6 +37,8 @@ serveur.listen(0, async () => {
   await page.route(/^https?:\/\/(?!localhost|127\.0\.0\.1)/, r => {
     const u = r.request().url();
     if (/\.(png|jpe?g|svg|webp|gif)(\?|$)/i.test(u)) return r.fulfill({ status: 404, body: '' });
+    /* 20261101x : file ESPN (4 en vol max) — réponse lente */
+    if (/site\.api\.espn\.com\/apis\/site\/v2\/sports\/zz\/lent/.test(u)) return new Promise(ok => setTimeout(ok, 150)).then(() => r.fulfill({ status: 200, contentType: 'application/json', body: '{"events":[]}' }));
     /* 20261101u : ESPN refusé sur les DEUX adresses → miroir GitHub */
     if (/espn\.com\/apis\/(site\/)?v2\/sports\/soccer\/zz\.9\//.test(u)) return r.abort();
     if (/gones45-archives\/main\/miroir\/soccer\/zz\.9\/jours\/20261030\.json/.test(u)) return r.fulfill({ status: 200, contentType: 'application/json', body: '{"leagues":[{"id":"9"}],"events":[{"id":"E1"},{"id":"E2"}]}' });
@@ -258,6 +260,9 @@ serveur.listen(0, async () => {
           const fermé = [...w.querySelectorAll('[data-g45pl="1"]')].every(x => x.style.display === 'none');
           R[0].click(); const ouvre = R[0].nextSibling.style.display === '' && window._g45PlOuv.T1['🔮 Proba'] === 1;
           o.plier = (lab === '🔮 Proba|⚔️ Face|💰 Cotes' && fermé && ouvre && !!w.querySelector('[data-g45grp="co"]'))   /* 20261101q : rangé en groupes */ || JSON.stringify({ lab, fermé, ouvre }); w.remove(); } catch (e) { o.plier = 'erreur : ' + e.message; }
+        try { let mx = 0; const it = setInterval(() => { mx = Math.max(mx, window._g45EspnFile().enVol); }, 10);
+          const R = await Promise.all(Array.from({ length: 10 }, (_, i) => fetch('https://site.api.espn.com/apis/site/v2/sports/zz/lent?i=' + i).then(r => r.status)));
+          clearInterval(it); o.fileEspn = (mx > 0 && mx <= 4 && R.every(x => x === 200) && window._g45EspnFile().enVol === 0) || JSON.stringify({ mx, R }); } catch (e) { o.fileEspn = 'erreur : ' + e.message; }
         try { const B = 'https://site.api.espn.com/apis/', r1 = await fetch(B + 'site/v2/sports/soccer/zz.9/scoreboard?dates=20261030-20261031&limit=400'), j1 = await r1.json();
           const j2 = await (await fetch(B + 'v2/sports/soccer/zz.9/standings?season=2026')).json(); let e3 = ''; try { await fetch(B + 'site/v2/sports/soccer/zz.9/summary?event=1'); } catch (e) { e3 = 'rejet'; }
           o.miroir = (j1.events.map(e => e.id).join() === 'E1,E2,E3' && j1.leagues[0].id === '9' && j2.children[0].name === 'Z' && e3 === 'rejet') || JSON.stringify([j1, j2, e3]); localStorage.removeItem('g45_espn_hote'); } catch (e) { o.miroir = 'erreur : ' + e.message; }
@@ -1904,6 +1909,7 @@ serveur.listen(0, async () => {
     ok('Fenêtre de match foot : blocs pliés', r.plier === true, r.plier);
     ok('ESPN : bascule sur site.web quand site.api refuse', r.espnDeux === true, r.espnDeux);
     ok('ESPN : miroir GitHub quand les deux adresses refusent', r.miroir === true, r.miroir);
+    ok('ESPN : pas plus de 4 demandes à la fois', r.fileEspn === true, r.fileEspn);
     ok('Séries individuelles NBA : combinaisons', r.nbaMqV === true, r.nbaMqV);
     ok('Séries individuelles NBA : paliers DraftKings', r.nbaDk === true, r.nbaDk);
     ok('Séries individuelles NFL : cote TD DraftKings', r.nflDk === true, r.nflDk);
