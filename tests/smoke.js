@@ -1818,6 +1818,11 @@ serveur.listen(0, async () => {
         const vis = () => [...document.querySelectorAll('.g45-murcard')].filter(c => c.style.display !== 'none').map(c => c.dataset.nom);
         const v0 = vis().length, txt = (document.getElementById('g45-acc-zone') || {}).innerText || '';
         g45AccChoisir('⚽'); const vf = vis(); g45AccChoisir('🏉🇦🇺'); const vn = vis(); g45AccChoisir('');
+        /* 20261102b : sélecteur 🛡️ Équipes / 👤 Joueurs (seulement si le sport a les deux) */
+        try { state.u.push({ n: 'Erling Haaland', sport: '⚽', type: 'joueur' }); try { render(); } catch (e) {} localStorage.removeItem('g45_mur_ej_⚽'); g45AccChoisir('⚽');
+          const ej0 = vis().join(), b0 = (document.querySelector('#g45-acc-zone .g45-ej') || {}).innerText || ''; g45MurEJ('⚽', 'j'); const ej1 = vis().join(); g45MurEJ('⚽', 'e');
+          g45AccChoisir('🏉🇦🇺'); const ej2 = !document.querySelector('#g45-acc-zone .g45-ej'); g45AccChoisir(''); state.u.pop(); localStorage.removeItem('g45_mur_ej_⚽');
+          o.murEJ = (ej0 === 'Paris Saint-Germain,Lyon' && /Équipes \(2\)/.test(b0) && /Joueurs \(1\)/.test(b0) && ej1 === 'Erling Haaland' && ej2) || JSON.stringify({ ej0, b0, ej1, ej2 }); } catch (e) { o.murEJ = 'erreur : ' + e.message; }
         o.accueil = (nbT === 12 /* 20261027i : MotoGP retiré */ && v0 === 0 && vf.join() === 'Paris Saint-Germain,Lyon' && vn.join() === 'Penrith Panthers'
           && /\+10,00 €/.test(txt) && /-1,00 €/.test(txt) && !document.getElementById('g45-acc-auj')) || JSON.stringify({ nbT, v0, vf, vn, txt: txt.slice(0, 200) });
         /* tuile sans équipe : sport individuel → Résultats, sport d'équipe → Compétitions */
@@ -1916,6 +1921,7 @@ serveur.listen(0, async () => {
     ok('ESPN : miroir GitHub quand les deux adresses refusent', r.miroir === true, r.miroir);
     ok('ESPN : pas plus de 4 demandes à la fois', r.fileEspn === true, r.fileEspn);
     ok('Archives : banc / absents (bloc 📦 + étiquette des séries)', r.absTag === true, r.absTag);
+    ok('Mur : sélecteur Équipes / Joueurs par sport', r.murEJ === true, r.murEJ);
     ok('Séries individuelles NBA : combinaisons', r.nbaMqV === true, r.nbaMqV);
     ok('Séries individuelles NBA : paliers DraftKings', r.nbaDk === true, r.nbaDk);
     ok('Séries individuelles NFL : cote TD DraftKings', r.nflDk === true, r.nflDk);
