@@ -242,6 +242,13 @@ serveur.listen(0, async () => {
           const hd = window._g45CrHtml('Rockets T', ctx); state.u = u0; C.lieu = lv;
           window.__crAjout = (/Ajouter Kevin Durant au mur/.test(hb) && uK && uK.type === 'joueur' && uK.sport === '🏀' && uK.club === 'Rockets T' && /^Rockets T 🏠 reb \+ passes plus de 9,5$/.test(uK.note) && uK.ps && /déjà au mur/.test(hd)) || JSON.stringify({ uK, b: /Ajouter/.test(hb) }); }
         localStorage.removeItem('g45_jou_v2_basketball_nba_10_2026'); delete C.data['Rockets T']; C.nom = '';
+        /* 20261101f : fenêtre de match foot — blocs pliés (bande ▸), Avant-match = groupe, sous-blocs pliés */
+        try { const w = document.createElement('div'); document.body.appendChild(w);
+          w.innerHTML = '<div><div><button onclick="g45SuiviBtn(this)">s</button></div><div><span>A</span></div><div><div>💰 Cotes</div><div>x</div></div><div><div>📊 Avant-match</div><div><div>🔮 Proba</div><div>p</div></div><div><div>⚔️ Face</div><div>f</div></div></div><div><button>IA</button></div></div>';
+          window._g45PlPasse(w, 'T1'); const R = w.querySelectorAll('[data-g45plr]'), lab = [...R].map(x => x.firstChild.textContent).join('|');
+          const fermé = [...w.querySelectorAll('[data-g45pl="1"]')].every(x => x.style.display === 'none');
+          R[1].click(); const ouvre = R[1].nextSibling.style.display === '' && window._g45PlOuv.T1['🔮 Proba'] === 1;
+          o.plier = (lab === '💰 Cotes|🔮 Proba|⚔️ Face' && fermé && ouvre) || JSON.stringify({ lab, fermé, ouvre }); w.remove(); } catch (e) { o.plier = 'erreur : ' + e.message; }
         o.crAjout = window.__crAjout; o.crBk = (/Kevin Durant points plus de 19,5/.test(H1) && /Plus de/.test(H1) && /2\/3/.test(H1) && /Kevin Durant pts \+ reb \+ passes plus de 29,5/.test(H2) && /2\/3/.test(H2) && /Kevin Durant points moins de 19,5/.test(H3) && /1\/3/.test(H3) && /Kevin Durant reb \+ passes plus de 9,5/.test(H4) && /1\/3/.test(H4)) || (H1.slice(-700) + ' ||| ' + H2.slice(-700)); } catch (e) { o.crBk = 'erreur : ' + e.message; }
       /* 20261022r : curseurs sports US — onglets ⏱️ Quart-temps et 🔁 Contexte */
       try { const P = (a, b, c, d) => [{ p: 1, v: a }, { p: 2, v: b }, { p: 3, v: c }, { p: 4, v: d }], n = Date.now();
@@ -1880,6 +1887,7 @@ serveur.listen(0, async () => {
     ok('Critères 4 saisons US : onglet Joueurs', r.crUs === true, r.crUs);
     ok('Critères 4 saisons NBA : joueurs à seuils', r.crBk === true, r.crBk);
     ok('Critères : ➕ ajouter le joueur au mur', r.crAjout === true, r.crAjout);
+    ok('Fenêtre de match foot : blocs pliés', r.plier === true, r.plier);
     ok('Séries individuelles NBA : combinaisons', r.nbaMqV === true, r.nbaMqV);
     ok('Séries individuelles NBA : paliers DraftKings', r.nbaDk === true, r.nbaDk);
     ok('Séries individuelles NFL : cote TD DraftKings', r.nflDk === true, r.nflDk);
