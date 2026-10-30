@@ -247,8 +247,8 @@ serveur.listen(0, async () => {
           w.innerHTML = '<div><div><button onclick="g45SuiviBtn(this)">s</button></div><div><span>A</span></div><div><div>💰 Cotes</div><div>x</div></div><div><div>📊 Avant-match</div><div><div>🔮 Proba</div><div>p</div></div><div><div>⚔️ Face</div><div>f</div></div></div><div><button>IA</button></div></div>';
           window._g45PlPasse(w, 'T1'); const R = w.querySelectorAll('[data-g45plr]'), lab = [...R].map(x => x.firstChild.textContent).join('|');
           const fermé = [...w.querySelectorAll('[data-g45pl="1"]')].every(x => x.style.display === 'none');
-          R[1].click(); const ouvre = R[1].nextSibling.style.display === '' && window._g45PlOuv.T1['🔮 Proba'] === 1;
-          o.plier = (lab === '💰 Cotes|🔮 Proba|⚔️ Face' && fermé && ouvre) || JSON.stringify({ lab, fermé, ouvre }); w.remove(); } catch (e) { o.plier = 'erreur : ' + e.message; }
+          R[0].click(); const ouvre = R[0].nextSibling.style.display === '' && window._g45PlOuv.T1['🔮 Proba'] === 1;
+          o.plier = (lab === '🔮 Proba|⚔️ Face|💰 Cotes' && fermé && ouvre && !!w.querySelector('[data-g45grp="co"]'))   /* 20261101q : rangé en groupes */ || JSON.stringify({ lab, fermé, ouvre }); w.remove(); } catch (e) { o.plier = 'erreur : ' + e.message; }
         o.crAjout = window.__crAjout; o.crBk = (/Kevin Durant points plus de 19,5/.test(H1) && /Plus de/.test(H1) && /2\/3/.test(H1) && /Kevin Durant pts \+ reb \+ passes plus de 29,5/.test(H2) && /2\/3/.test(H2) && /Kevin Durant points moins de 19,5/.test(H3) && /1\/3/.test(H3) && /Kevin Durant reb \+ passes plus de 9,5/.test(H4) && /1\/3/.test(H4)) || (H1.slice(-700) + ' ||| ' + H2.slice(-700)); } catch (e) { o.crBk = 'erreur : ' + e.message; }
       /* 20261022r : curseurs sports US — onglets ⏱️ Quart-temps et 🔁 Contexte */
       try { const P = (a, b, c, d) => [{ p: 1, v: a }, { p: 2, v: b }, { p: 3, v: c }, { p: 4, v: d }], n = Date.now();
