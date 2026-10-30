@@ -37,6 +37,12 @@ serveur.listen(0, async () => {
   await page.route(/^https?:\/\/(?!localhost|127\.0\.0\.1)/, r => {
     const u = r.request().url();
     if (/\.(png|jpe?g|svg|webp|gif)(\?|$)/i.test(u)) return r.fulfill({ status: 404, body: '' });
+    /* 20261101u : ESPN refusé sur les DEUX adresses → miroir GitHub */
+    if (/espn\.com\/apis\/(site\/)?v2\/sports\/soccer\/zz\.9\//.test(u)) return r.abort();
+    if (/gones45-archives\/main\/miroir\/soccer\/zz\.9\/jours\/20261030\.json/.test(u)) return r.fulfill({ status: 200, contentType: 'application/json', body: '{"leagues":[{"id":"9"}],"events":[{"id":"E1"},{"id":"E2"}]}' });
+    if (/gones45-archives\/main\/miroir\/soccer\/zz\.9\/jours\/20261031\.json/.test(u)) return r.fulfill({ status: 200, contentType: 'application/json', body: '{"events":[{"id":"E2"},{"id":"E3"}]}' });
+    if (/gones45-archives\/main\/miroir\/soccer\/zz\.9\/standings\.json/.test(u)) return r.fulfill({ status: 200, contentType: 'application/json', body: '{"children":[{"name":"Z"}]}' });
+    if (/gones45-archives\/main\/miroir\//.test(u)) return r.fulfill({ status: 404, body: '' });
     /* 20261101s : ESPN — site.api refusé → même chemin sur site.web */
     if (/site\.api\.espn\.com\/apis\/site\/v2\/sports\/zz\/bloque/.test(u)) return r.abort();
     if (/site\.web\.api\.espn\.com\/apis\/site\/v2\/sports\/zz\/bloque/.test(u)) return r.fulfill({ status: 200, contentType: 'application/json', body: '{"via":"web"}' });
@@ -252,6 +258,9 @@ serveur.listen(0, async () => {
           const fermé = [...w.querySelectorAll('[data-g45pl="1"]')].every(x => x.style.display === 'none');
           R[0].click(); const ouvre = R[0].nextSibling.style.display === '' && window._g45PlOuv.T1['🔮 Proba'] === 1;
           o.plier = (lab === '🔮 Proba|⚔️ Face|💰 Cotes' && fermé && ouvre && !!w.querySelector('[data-g45grp="co"]'))   /* 20261101q : rangé en groupes */ || JSON.stringify({ lab, fermé, ouvre }); w.remove(); } catch (e) { o.plier = 'erreur : ' + e.message; }
+        try { const B = 'https://site.api.espn.com/apis/', r1 = await fetch(B + 'site/v2/sports/soccer/zz.9/scoreboard?dates=20261030-20261031&limit=400'), j1 = await r1.json();
+          const j2 = await (await fetch(B + 'v2/sports/soccer/zz.9/standings?season=2026')).json(); let e3 = ''; try { await fetch(B + 'site/v2/sports/soccer/zz.9/summary?event=1'); } catch (e) { e3 = 'rejet'; }
+          o.miroir = (j1.events.map(e => e.id).join() === 'E1,E2,E3' && j1.leagues[0].id === '9' && j2.children[0].name === 'Z' && e3 === 'rejet') || JSON.stringify([j1, j2, e3]); localStorage.removeItem('g45_espn_hote'); } catch (e) { o.miroir = 'erreur : ' + e.message; }
         try { localStorage.removeItem('g45_espn_hote'); const j = await (await fetch('https://site.api.espn.com/apis/site/v2/sports/zz/bloque')).json();
           o.espnDeux = (j.via === 'web' && JSON.parse(localStorage.getItem('g45_espn_hote')).h === 'w') || JSON.stringify(j); localStorage.removeItem('g45_espn_hote'); } catch (e) { o.espnDeux = 'erreur : ' + e.message; }
         o.crAjout = window.__crAjout; o.crBk = (/Kevin Durant points plus de 19,5/.test(H1) && /Plus de/.test(H1) && /2\/3/.test(H1) && /Kevin Durant pts \+ reb \+ passes plus de 29,5/.test(H2) && /2\/3/.test(H2) && /Kevin Durant points moins de 19,5/.test(H3) && /1\/3/.test(H3) && /Kevin Durant reb \+ passes plus de 9,5/.test(H4) && /1\/3/.test(H4)) || (H1.slice(-700) + ' ||| ' + H2.slice(-700)); } catch (e) { o.crBk = 'erreur : ' + e.message; }
@@ -1894,6 +1903,7 @@ serveur.listen(0, async () => {
     ok('Critères : ➕ ajouter le joueur au mur', r.crAjout === true, r.crAjout);
     ok('Fenêtre de match foot : blocs pliés', r.plier === true, r.plier);
     ok('ESPN : bascule sur site.web quand site.api refuse', r.espnDeux === true, r.espnDeux);
+    ok('ESPN : miroir GitHub quand les deux adresses refusent', r.miroir === true, r.miroir);
     ok('Séries individuelles NBA : combinaisons', r.nbaMqV === true, r.nbaMqV);
     ok('Séries individuelles NBA : paliers DraftKings', r.nbaDk === true, r.nbaDk);
     ok('Séries individuelles NFL : cote TD DraftKings', r.nflDk === true, r.nflDk);
