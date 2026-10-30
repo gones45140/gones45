@@ -37,6 +37,9 @@ serveur.listen(0, async () => {
   await page.route(/^https?:\/\/(?!localhost|127\.0\.0\.1)/, r => {
     const u = r.request().url();
     if (/\.(png|jpe?g|svg|webp|gif)(\?|$)/i.test(u)) return r.fulfill({ status: 404, body: '' });
+    /* 20261101s : ESPN — site.api refusé → même chemin sur site.web */
+    if (/site\.api\.espn\.com\/apis\/site\/v2\/sports\/zz\/bloque/.test(u)) return r.abort();
+    if (/site\.web\.api\.espn\.com\/apis\/site\/v2\/sports\/zz\/bloque/.test(u)) return r.fulfill({ status: 200, contentType: 'application/json', body: '{"via":"web"}' });
     /* 20261016s : relais TheSportsDB du worker (Refus = 403 → l'appli doit appeler TheSportsDB en direct) */
     if (/host=tsdb/.test(u) && /Trop/.test(u)) return r.fulfill({ status: 429, body: 'trop' });
     if (/host=tsdb/.test(u)) return /Refus/.test(u) ? r.fulfill({ status: 403, body: 'non' }) : r.fulfill({ status: 200, contentType: 'application/json', body: /json%2F123%2F/.test(u) ? '{"via":"worker"}' : '{"via":"cle3"}' });   // 20261023u : clé 123
@@ -249,6 +252,8 @@ serveur.listen(0, async () => {
           const fermé = [...w.querySelectorAll('[data-g45pl="1"]')].every(x => x.style.display === 'none');
           R[0].click(); const ouvre = R[0].nextSibling.style.display === '' && window._g45PlOuv.T1['🔮 Proba'] === 1;
           o.plier = (lab === '🔮 Proba|⚔️ Face|💰 Cotes' && fermé && ouvre && !!w.querySelector('[data-g45grp="co"]'))   /* 20261101q : rangé en groupes */ || JSON.stringify({ lab, fermé, ouvre }); w.remove(); } catch (e) { o.plier = 'erreur : ' + e.message; }
+        try { localStorage.removeItem('g45_espn_hote'); const j = await (await fetch('https://site.api.espn.com/apis/site/v2/sports/zz/bloque')).json();
+          o.espnDeux = (j.via === 'web' && JSON.parse(localStorage.getItem('g45_espn_hote')).h === 'w') || JSON.stringify(j); localStorage.removeItem('g45_espn_hote'); } catch (e) { o.espnDeux = 'erreur : ' + e.message; }
         o.crAjout = window.__crAjout; o.crBk = (/Kevin Durant points plus de 19,5/.test(H1) && /Plus de/.test(H1) && /2\/3/.test(H1) && /Kevin Durant pts \+ reb \+ passes plus de 29,5/.test(H2) && /2\/3/.test(H2) && /Kevin Durant points moins de 19,5/.test(H3) && /1\/3/.test(H3) && /Kevin Durant reb \+ passes plus de 9,5/.test(H4) && /1\/3/.test(H4)) || (H1.slice(-700) + ' ||| ' + H2.slice(-700)); } catch (e) { o.crBk = 'erreur : ' + e.message; }
       /* 20261022r : curseurs sports US — onglets ⏱️ Quart-temps et 🔁 Contexte */
       try { const P = (a, b, c, d) => [{ p: 1, v: a }, { p: 2, v: b }, { p: 3, v: c }, { p: 4, v: d }], n = Date.now();
@@ -1888,6 +1893,7 @@ serveur.listen(0, async () => {
     ok('Critères 4 saisons NBA : joueurs à seuils', r.crBk === true, r.crBk);
     ok('Critères : ➕ ajouter le joueur au mur', r.crAjout === true, r.crAjout);
     ok('Fenêtre de match foot : blocs pliés', r.plier === true, r.plier);
+    ok('ESPN : bascule sur site.web quand site.api refuse', r.espnDeux === true, r.espnDeux);
     ok('Séries individuelles NBA : combinaisons', r.nbaMqV === true, r.nbaMqV);
     ok('Séries individuelles NBA : paliers DraftKings', r.nbaDk === true, r.nbaDk);
     ok('Séries individuelles NFL : cote TD DraftKings', r.nflDk === true, r.nflDk);
