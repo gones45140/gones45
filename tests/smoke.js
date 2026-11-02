@@ -1825,6 +1825,9 @@ serveur.listen(0, async () => {
           const ej0 = vis().join(), b0 = (document.querySelector('#g45-acc-zone .g45-ej') || {}).innerText || ''; g45MurEJ('⚽', 'j'); const ej1 = vis().join(); g45MurEJ('⚽', 'e');
           g45AccChoisir('🏉🇦🇺'); const ej2 = !document.querySelector('#g45-acc-zone .g45-ej'); g45AccChoisir(''); state.u.pop(); localStorage.removeItem('g45_mur_ej_⚽');
           o.murEJ = (ej0 === 'Paris Saint-Germain,Lyon' && /Équipes \(2\)/.test(b0) && /Joueurs \(1\)/.test(b0) && ej1 === 'Erling Haaland' && ej2) || JSON.stringify({ ej0, b0, ej1, ej2 }); } catch (e) { o.murEJ = 'erreur : ' + e.message; }
+        /* 20261102s : 🏀 texte d'un pari joueur NBA (Calculer mes séries) */
+        try { const f = window._g45SerNbaPariT, a = f('reb + passes plus de 14,5'), b = f('25 points ou plus'), c = f('Victoire + points plus de 20,5');
+          o.serNba = (a && a.k.join() === 'REB,AST' && a.L === 14.5 && a.s === 'ov' && b && b.L === 24.5 && c === null) || JSON.stringify({ a, b, c }); } catch (e) { o.serNba = 'erreur : ' + e.message; }
         /* 20261102m : 💶 simulation Cockpit (montante rejouée) */
         try { const R = window._g45CrSimT([{ s: 'A', ok: 0 }, { s: 'A', ok: 0 }, { s: 'A', ok: 0 }, { s: 'B', ok: 0 }, { s: 'B', ok: 1 }], [1, 2, 6], 2);
           o.ckSim = (R.tot === -9 + 1 && R.bo === 1 && R.par.A.e === 1 && R.par.B.bo === 1 && R.max === 6) || JSON.stringify(R); } catch (e) { o.ckSim = 'erreur : ' + e.message; }
@@ -1928,6 +1931,7 @@ serveur.listen(0, async () => {
     ok('Archives : banc / absents (bloc 📦 + étiquette des séries)', r.absTag === true, r.absTag);
     ok('Mur : sélecteur Équipes / Joueurs par sport', r.murEJ === true, r.murEJ);
     ok('Critères : simulation Cockpit en €', r.ckSim === true, r.ckSim);
+    ok('Calculer mes séries : pari joueur NBA lu', r.serNba === true, r.serNba);
     ok('Critères : classement des joueurs du championnat (règles)', r.clsJ === true, r.clsJ);
     ok('Séries individuelles NBA : combinaisons', r.nbaMqV === true, r.nbaMqV);
     ok('Séries individuelles NBA : paliers DraftKings', r.nbaDk === true, r.nbaDk);
