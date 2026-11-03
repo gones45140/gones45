@@ -52,6 +52,17 @@ serveur.listen(0, async () => {
     /* 20261016s : relais TheSportsDB du worker (Refus = 403 → l'appli doit appeler TheSportsDB en direct) */
     if (/host=tsdb/.test(u) && /Trop/.test(u)) return r.fulfill({ status: 429, body: 'trop' });
     if (/host=tsdb/.test(u)) return /Refus/.test(u) ? r.fulfill({ status: 403, body: 'non' }) : r.fulfill({ status: 200, contentType: 'application/json', body: /json%2F123%2F/.test(u) ? '{"via":"worker"}' : '{"via":"cle3"}' });   // 20261023u : clé 123
+    /* 20261103k : 🏉 archives rugby — Top 14 (270559), même fiche pour chaque saison (mois de septembre) */
+    if (/gones45-archives\/main\/cotes\/rugby\/270559\//.test(u)) {
+      const t1 = Date.parse('2025-09-06T15:00:00Z'), t2 = Date.parse('2025-09-20T15:00:00Z'), pa = u.split('?')[0];
+      const RF = { R1: { t: t1, h: { id: '25', nom: 'Rg' }, a: { id: '26', nom: 'Op' }, f: { h: 30, a: 10 }, st: { p1: { n: 'Ana', k: 'h', s: { TIT: 1, E: 2, PTS: 10 } }, p2: { n: 'Bo', k: 'h', s: { REMP: 1, PTS: 10 } }, p4: { n: 'Dé', k: 'h', s: { TIT: 1, PTS: 10 } }, p3: { n: 'Cy', k: 'a', s: { TIT: 1, E: 1, PTS: 5 } }, p5: { n: 'Ex', k: 'a', s: {} } } },
+        R2: { t: t2, h: { id: '26', nom: 'Op' }, a: { id: '25', nom: 'Rg' }, f: { h: 22, a: 20 }, st: { p1: { n: 'Ana', k: 'a', s: { TIT: 1, E: 1, PTS: 5 } }, p2: { n: 'Bo', k: 'a', s: { TIT: 1, PTS: 15 } }, p3: { n: 'Cy', k: 'h', s: { E: 3, PTS: 22 } } } } };
+      let B = null;
+      if (/\/equipes\.json$/.test(pa)) B = { 25: ['Rg', 'RG', 2], 26: ['Op', 'OP', 2] };
+      else if (/\/equipes\/25\.json$/.test(pa)) B = { m: [[t1, '2025-09', 'R1', 'h', [30, 10]], [t2, '2025-09', 'R2', 'a', [22, 20]]] };
+      else if (/\/matchs\/\d{4}-09\.json$/.test(pa)) B = RF;
+      return B ? r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(B) }) : r.fulfill({ status: 404, body: '' });
+    }
     /* 20261031k : archives GitHub (gones45-archives) — fausse ligue zz.1 2025-26 ; le reste = 404 (non archivé) */
     if (/gones45-archives\/main\/cotes\//.test(u)) {
       const AF = { 'foot/zz.1/2025-26/equipes.json': { 7: ['Test FC', 'TFC', 2] }, 'foot/zz.1/2025-26/etat.json': { n: 2, v2: 2 },
@@ -1673,6 +1684,35 @@ serveur.listen(0, async () => {
         o.crArch = (JSON.stringify(E.map((m) => [m.d, m.dom, m.p, m.c, m.id])) === JSON.stringify([['2025-09-13', 1, 2, 1, 'E1'], ['2025-10-04', 0, 0, 0, 'E2']]) && J.gameLog.length === 1 && J.gameLog[0].goals === 1
           && N === null && N2 === null && S.fa.E1 && S.fa.E1[7] === 6 && S.fa.E2 === 0) || JSON.stringify({ E, J, N, N2, fa: S.fa });
       } catch (e) { o.crArch = 'erreur : ' + e.message; }
+      /* 20261103k — 🏉 critères rugby : feuille archivée (essais, points, titulaires), onglet Essais, classement de la ligue */
+      try {
+        const T = window._g45CrRgT, E = [];
+        const F = T.rgFiche({ f: { h: 3, a: 0 }, st: { a: { n: 'A', k: 'h', s: { N: 9, TIT: 1 } } } });
+        if (!(F && F.es === null && F.j.length === 1)) E.push('fiche muette ' + JSON.stringify(F));
+        if (!(T.aSaRg('270559', 2025) === '2025-26' && T.aSaRg('180659', 2025) === '2026' && T.aSaRg('3', 2025) === '2025' && T.rgMois('270559', 2025)[0] === '2025-07' && T.rgMois('270559', 2025)[11] === '2026-06')) E.push('saisons');
+        const X = await T.aJouRg('rugby', '270559', '25', 2025);
+        if (!(X && JSON.stringify(X.es) === '{"R1":[2,1],"R2":[1,3]}' && JSON.stringify(X.parMatch.R1) === '{"t":{"p1":2},"pts":{"p1":10,"p2":10,"p4":10},"tit":{"p1":1,"p4":1},"ar":{"p1":1,"p2":1,"p4":1}}'
+          && JSON.stringify(X.pres.R1) === '["p1","p2","p4"]' && X.joueurs.p1.tot.t === 3 && X.joueurs.p1.tot.pts === 15 && !X.joueurs.p3)) E.push('aJouRg ' + JSON.stringify(X));
+        const N = await T.aJouRg('rugby', '270557', '25', 2025); if (N !== null) E.push('URC non archivé');
+        const Q = {}; const ok = await T.rgLigue({ sp: 'rugby', lg: '270559', id: '25' }, Q); Q.etat = 2;
+        if (!(ok && Q.D['25'] && Q.D['25'].saisons.length === 4 && Q.D['25'].saisons.every((s) => s.ms.length === 2) && JSON.stringify(Q.D['25'].saisons[0].ms[1].slice(1, 4)) === '[0,20,22]'
+          && JSON.stringify(Q.D['25'].saisons[0].ms[1][13]) === '[1,3]' && Q.P.p1.L.length === 8 && Q.P.p5 === undefined && Q.eq.length === 2)) E.push('rgLigue ' + JSON.stringify({ ok, D: Q.D['25'], eq: Q.eq }));
+        if (!(T.rgJOk({ jm: 't', jmin: '2' }, [0, 1, 2, 0, 1, 1]) && !T.rgJOk({ jm: 't', jmin: '2' }, [0, 1, 1, 0, 1, 1]) && T.rgJOk({ jm: 'pts', jmin: '9.5' }, [0, 1, 0, 10, 1, 1]) && !T.rgJOk({ jm: 'pts', jmin: '9.5', jsens: 'un' }, [0, 1, 0, 10, 1, 1]))) E.push('rgJOk');
+        /* bloc : onglet Essais + tableau + classement des équipes */
+        const S = window._g45Cr, ouv = localStorage.getItem('g45_cr_open'), tb = localStorage.getItem('g45_cr_tab'); S.ovTous = true;
+        const C = { sp: 'rugby', lg: '270559', id: '25' };
+        S.data.RgT = { t: Date.now(), lg: '270559', ligue: 'Top 14', saisons: Q.D['25'].saisons };
+        S.cls['rugby|270559'] = Q; localStorage.setItem('g45_cr_tab', 'ess');
+        window._g45CrHtml('RgT', C); const cb = S.combos[S.a]; cb.res = ''; cb.ess = '2';
+        const H = window._g45CrHtml('RgT', C).replace(/<[^>]+>/g, ' ');
+        if (!(/🏉 Essais/.test(H) && /4 ou \+ \(bonus offensif\)/.test(H) && /Essais équipe 2 ou \+/.test(H) && /1\/2 · 50 %/.test(H) && /4\/8 · 50 %/.test(H) && /Jouable en Cockpit \? — classement du championnat/.test(H) && /Op/.test(H))) E.push('bloc ' + H.slice(0, 900));
+        cb.ess = ''; cb.esb = 'oui'; const H2 = window._g45CrHtml('RgT', C).replace(/<[^>]+>/g, ' ');
+        if (!/2\/2 · 100 %/.test(H2)) E.push('les deux marquent ' + H2.slice(0, 600));
+        delete S.data.RgT; delete S.cls['rugby|270559']; S.nom = ''; S.ctx = null; S.ovTous = false;
+        if (ouv == null) localStorage.removeItem('g45_cr_open'); else localStorage.setItem('g45_cr_open', ouv);
+        if (tb == null) localStorage.removeItem('g45_cr_tab'); else localStorage.setItem('g45_cr_tab', tb);
+        o.crRg = E.length ? E.join(' ||| ') : true;
+      } catch (e) { o.crRg = 'erreur : ' + e.message + ' ' + (e.stack || '').slice(0, 300); }
       /* 20261021f — panneau Saison en onglets : 🎯 Tirs (feuille de match g45crf1_), Buts par défaut */
       try {
         const sv = localStorage.getItem('g45_curseurs');
@@ -1918,6 +1958,7 @@ serveur.listen(0, async () => {
     ok('Critères : joueurs, match précédent, feuille de match', r.crPlus === true, r.crPlus);
     ok('Critères : transfert (ancien club du joueur)', r.crTr === true, r.crTr);
     ok('Critères foot : archives GitHub d\'abord', r.crArch === true, r.crArch);
+    ok('Critères rugby : essais, points, titulaires, classement (archives)', r.crRg === true, r.crRg);
     ok('Saison : onglets + tirs (feuille de match)', r.cursTi === true, r.cursTi);
     ok('Panneaux fermés à l\'arrivée + chargement BET45', r.ferme === true, r.ferme);
     ok('Tennis : mes coefficients + surface 2 mois + tournoi précédent', r.tnCoef === true, r.tnCoef);
