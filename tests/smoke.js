@@ -260,6 +260,11 @@ serveur.listen(0, async () => {
         cb.jm = 'pts'; cb.jmin = '19.5'; cb.jsens = 'un'; const H3 = window._g45CrHtml('Rockets T', ctx).replace(/<[^>]+>/g, ' ');
         cb.jm = 'ra'; cb.jmin = '9.5'; cb.jsens = 'ov'; const H4 = window._g45CrHtml('Rockets T', ctx).replace(/<[^>]+>/g, ' ');   /* 20261030h : reb + passes 9 / 7 / 14 */
         window.__crBkHtml = window._g45CrHtml('Rockets T', ctx);
+        /* 20261103o : 📋 match par match sous le 💶 (saison choisie) */
+        { const sv = [cb.jm, cb.jmin, cb.jsens]; cb.jm = 'pts'; cb.jmin = '19.5'; cb.jsens = 'ov'; C.mpm = '2025-26'; const H5 = window._g45CrHtml('Rockets T', ctx).replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' '); C.mpm = '';
+          const H6 = window._g45CrHtml('Rockets T', ctx).replace(/<[^>]+>/g, ' ');
+          cb.jm = sv[0]; cb.jmin = sv[1]; cb.jsens = sv[2];
+          window.__crMpm = (/📋 Match par match/.test(H5) && /26\/10 🏠 [—…] · ✅ 120-101 · 31 pts/.test(H5) && /24\/10 ✈️ [—…] · ❌ 99-104 · 12 pts/.test(H5) && /P2 · mise 2 € · cote 1,70 → \+1,40 €/.test(H5) && /P2 · mise/.test(H5) && /Bilan de la saison/.test(H5) && !/Bilan de la saison/.test(H6)) || H5.slice(H5.indexOf('📋'), H5.indexOf('📋') + 600); }
         /* 20261101c : ➕ ajouter le joueur au mur depuis les critères */
         { const u0 = state.u.slice(), lv = C.lieu; C.lieu = 'dom'; const hb = window._g45CrHtml('Rockets T', ctx); window.g45CrAjoutMur(C.a); const uK = state.u.filter((x) => x.n === 'Kevin Durant')[0];
           const hd = window._g45CrHtml('Rockets T', ctx); state.u = u0; C.lieu = lv;
@@ -286,7 +291,7 @@ serveur.listen(0, async () => {
             && /choix du coach/.test(L("D:DNP-COACH'S DECISION")) && /SUR LE BANC/.test(h) && /Giroud/.test(h)) || JSON.stringify([g && g.tags, g && g.gameLog.length, L('A:O Knee Surgery'), h.slice(0, 200)]); } catch (e) { o.absTag = 'erreur : ' + e.message; }
         try { const T = window._g45CrClsJT(), SC = window._g45CrS.ctx; window._g45CrS.ctx = null; o.clsJ = (T.ok('but', { G: 1 }) && !T.ok('dbl', { G: 1 }) && T.ok('pas', { A: 1 }) && T.ok('dec', { A: 1 }) && !T.ok('tri', { G: 2 })
           && T.mode({ jo: '9', jn: 'X', jm: 'but' }) === true && T.mode({ jo: '9', jn: 'X', res: 'vqr', ou: 'un', L: 4.5 }) === false && T.mode({ jo: '9', jo2: '8' }) === false) || JSON.stringify([T.ok('but', { G: 1 }), T.ok('dbl', { G: 1 }), T.ok('pas', { A: 1 }), T.ok('dec', { A: 1 }), T.ok('tri', { G: 2 }), T.mode({ jo: '9', jn: 'X', jm: 'but' }), T.mode({ jo: '9', jn: 'X', res: 'vqr', ou: 'un', L: 4.5 }), T.mode({ jo: '9', jo2: '8' })]); window._g45CrS.ctx = SC; } catch (e) { o.clsJ = 'erreur : ' + e.message; }
-        o.crAjout = window.__crAjout; o.crBk = (/Kevin Durant points plus de 19,5/.test(H1) && /Plus de/.test(H1) && /2\/3/.test(H1) && /Kevin Durant pts \+ reb \+ passes plus de 29,5/.test(H2) && /2\/3/.test(H2) && /Kevin Durant points moins de 19,5/.test(H3) && /1\/3/.test(H3) && /Kevin Durant reb \+ passes plus de 9,5/.test(H4) && /1\/3/.test(H4)) || (H1.slice(-700) + ' ||| ' + H2.slice(-700)); } catch (e) { o.crBk = 'erreur : ' + e.message; }
+        o.crAjout = window.__crAjout; o.crMpm = window.__crMpm; o.crBk = (/Kevin Durant points plus de 19,5/.test(H1) && /Plus de/.test(H1) && /2\/3/.test(H1) && /Kevin Durant pts \+ reb \+ passes plus de 29,5/.test(H2) && /2\/3/.test(H2) && /Kevin Durant points moins de 19,5/.test(H3) && /1\/3/.test(H3) && /Kevin Durant reb \+ passes plus de 9,5/.test(H4) && /1\/3/.test(H4)) || (H1.slice(-700) + ' ||| ' + H2.slice(-700)); } catch (e) { o.crBk = 'erreur : ' + e.message; }
       /* 20261022r : curseurs sports US — onglets ⏱️ Quart-temps et 🔁 Contexte */
       try { const P = (a, b, c, d) => [{ p: 1, v: a }, { p: 2, v: b }, { p: 3, v: c }, { p: 4, v: d }], n = Date.now();
         const L = [{ t: n - 20 * 864e5, dom: true, pour: 24, contre: 10, lp: P(7, 7, 3, 7), lc: P(0, 3, 7, 0) }, { t: n - 13 * 864e5, dom: false, pour: 17, contre: 20, lp: P(0, 10, 0, 7), lc: P(7, 3, 7, 3) },
@@ -1882,7 +1887,7 @@ serveur.listen(0, async () => {
           o.archTaille = (a.n === 0 && a.p === 22 && b.n === 1 && c.n === 2 && /226 Mo/.test(T.bloc({ t: Date.now(), ko: 231410 }))) || JSON.stringify({ a, b, c }); } catch (e) { o.archTaille = 'erreur : ' + e.message; }
         /* 20261102m : 💶 simulation Cockpit (montante rejouée) */
         try { const R = window._g45CrSimT([{ s: 'A', ok: 0 }, { s: 'A', ok: 0 }, { s: 'A', ok: 0 }, { s: 'B', ok: 0 }, { s: 'B', ok: 1 }], [1, 2, 6], 2);
-          o.ckSim = (R.tot === -9 + 1 && R.bo === 1 && R.par.A.e === 1 && R.par.B.bo === 1 && R.max === 6) || JSON.stringify(R); } catch (e) { o.ckSim = 'erreur : ' + e.message; }
+          o.ckSim = (R.tot === -9 + 1 && R.bo === 1 && R.par.A.e === 1 && R.par.B.bo === 1 && R.max === 6 && R.det.length === 5 && R.det[2].b === 1 && R.det[4].p === 2 && R.det[4].g === 2 && R.det[4].t === -8) || JSON.stringify(R); } catch (e) { o.ckSim = 'erreur : ' + e.message; }
         o.accueil = (nbT === 12 /* 20261027i : MotoGP retiré */ && v0 === 0 && vf.join() === 'Paris Saint-Germain,Lyon' && vn.join() === 'Penrith Panthers'
           && /\+10,00 €/.test(txt) && /-1,00 €/.test(txt) && !document.getElementById('g45-acc-auj')) || JSON.stringify({ nbT, v0, vf, vn, txt: txt.slice(0, 200) });
         /* tuile sans équipe : sport individuel → Résultats, sport d'équipe → Compétitions */
@@ -1984,6 +1989,7 @@ serveur.listen(0, async () => {
     ok('Archives : banc / absents (bloc 📦 + étiquette des séries)', r.absTag === true, r.absTag);
     ok('Mur : sélecteur Équipes / Joueurs par sport', r.murEJ === true, r.murEJ);
     ok('Critères : simulation Cockpit en €', r.ckSim === true, r.ckSim);
+    ok('Critères : 📋 match par match (palier, mise, gain)', r.crMpm === true, r.crMpm);
     ok('Outils : taille des archives GitHub (seuils)', r.archTaille === true, r.archTaille);
     ok('Calculer mes séries : pari joueur NBA lu', r.serNba === true, r.serNba);
     ok('Critères : classement des joueurs du championnat (règles)', r.clsJ === true, r.clsJ);
