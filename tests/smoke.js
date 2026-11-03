@@ -1684,6 +1684,15 @@ serveur.listen(0, async () => {
         o.crArch = (JSON.stringify(E.map((m) => [m.d, m.dom, m.p, m.c, m.id])) === JSON.stringify([['2025-09-13', 1, 2, 1, 'E1'], ['2025-10-04', 0, 0, 0, 'E2']]) && J.gameLog.length === 1 && J.gameLog[0].goals === 1
           && N === null && N2 === null && S.fa.E1 && S.fa.E1[7] === 6 && S.fa.E2 === 0) || JSON.stringify({ E, J, N, N2, fa: S.fa });
       } catch (e) { o.crArch = 'erreur : ' + e.message; }
+      /* 20261103n — 🏉 phases finales reconnues (ESPN ne les marque pas) : après la dernière journée complète, saison finie seulement */
+      try {
+        const P = window._g45CrRgPo, L = [], W = 7 * 864e5, t0 = Date.UTC(2024, 0, 6);
+        for (let r = 0; r < 14; r++) for (let k = 0; k < 4; k++) L.push(['m' + r + k, 'e' + k, 'e' + (k + 4), t0 + r * W + k * 36e5]);
+        L.push(['b1', 'e0', 'e1', t0 + 14 * W], ['b2', 'e2', 'e3', t0 + 14 * W + 864e5], ['f', 'e0', 'e2', t0 + 15 * W]);
+        const R = P(L), L2 = L.map((x) => [x[0], x[1], x[2], Date.now() - 864e5 * 100 + (x[3] - t0) / 20]);
+        const recent = L.map((x) => [x[0], x[1], x[2], Date.now() - 2 * 864e5]);
+        o.rgPo = (JSON.stringify(Object.keys(R).sort()) === '["b1","b2","f"]' && Object.keys(P(recent)).length === 0 && Object.keys(P(L.slice(0, 56))).length === 0) || JSON.stringify({ R, L2: P(L2) });
+      } catch (e) { o.rgPo = 'erreur : ' + e.message; }
       /* 20261103k — 🏉 critères rugby : feuille archivée (essais, points, titulaires), onglet Essais, classement de la ligue */
       try {
         const T = window._g45CrRgT, E = [];
@@ -2045,6 +2054,7 @@ serveur.listen(0, async () => {
     ok('🏁 Cockpit BET45 : jours à venir (Agenda) dans le calendrier', r.ckFut === true, r.ckFut);
     ok('🏁 Cockpit BET45 publié (gones) et lu sur bet45', r.ckPub === true, r.ckPub);
     ok('Fiche : filtre Lieu + Types en entier colorés', r.lieuF === true, r.lieuF);
+    ok('🏉 Critères rugby : phases finales reconnues (Compétition)', r.rgPo === true, r.rgPo);
     ok('Critères : sélecteurs redessinés dans la zone visible', r.crVis === true, r.crVis);
     ok('🔄 Calculer mes séries : joueur dans un pari d\'équipe', r.serJE === true, r.serJE);
     ok('NFL Yards + pépites NBA / NFL (pire série → paliers)', r.yards === true, r.yards);
