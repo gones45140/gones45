@@ -1885,6 +1885,11 @@ serveur.listen(0, async () => {
         /* 20261103g : 💾 taille du dépôt d'archives (seuils 70 / 90 % de 1 Go) */
         try { const T = window._g45ArchTailleT, a = T.etat({ ko: 231410 }), b = T.etat({ ko: 760000 }), c = T.etat({ ko: 960000 });
           o.archTaille = (a.n === 0 && a.p === 22 && b.n === 1 && c.n === 2 && /226 Mo/.test(T.bloc({ t: Date.now(), ko: 231410 }))) || JSON.stringify({ a, b, c }); } catch (e) { o.archTaille = 'erreur : ' + e.message; }
+        /* 20261103s : 🎯 cote BET45 (Poisson sur les archives) */
+        try { const C = window._g45CbCalcT, L = []; let t = 0;
+          for (let r = 0; r < 12; r++) for (let i = 0; i < 10; i++) for (let j = 0; j < 10; j++) if (i !== j && (i + j + r) % 3 === 0) L.push([++t, 'e' + i, 'e' + j, i === 0 ? 3 : 1, j === 0 ? 3 : 1, [2, 3.4, 3.6]]);
+          const R = C(L, 'e0', 'e5'), R2 = C(L, 'e5', 'e0'), P = C(L.slice(0, 20), 'e0', 'e5');
+          o.cb45 = (R && R.p && Math.abs(R.p[0] + R.p[1] + R.p[2] - 1) < 1e-9 && R.p[0] > 0.6 && R2.p[2] > 0.6 && Math.abs(R.marg - (1 / 2 + 1 / 3.4 + 1 / 3.6 - 1)) < 1e-9 && P === null) || JSON.stringify({ R, R2, P }); } catch (e) { o.cb45 = 'erreur : ' + e.message; }
         /* 20261102m : 💶 simulation Cockpit (montante rejouée) */
         try { const R = window._g45CrSimT([{ s: 'A', ok: 0 }, { s: 'A', ok: 0 }, { s: 'A', ok: 0 }, { s: 'B', ok: 0 }, { s: 'B', ok: 1 }], [1, 2, 6], 2);
           o.ckSim = (R.tot === -9 + 1 && R.bo === 1 && R.par.A.e === 1 && R.par.B.bo === 1 && R.max === 6 && R.det.length === 5 && R.det[2].b === 1 && R.det[4].p === 2 && R.det[4].g === 2 && R.det[4].t === -8) || JSON.stringify(R); } catch (e) { o.ckSim = 'erreur : ' + e.message; }
@@ -1989,6 +1994,7 @@ serveur.listen(0, async () => {
     ok('Archives : banc / absents (bloc 📦 + étiquette des séries)', r.absTag === true, r.absTag);
     ok('Mur : sélecteur Équipes / Joueurs par sport', r.murEJ === true, r.murEJ);
     ok('Critères : simulation Cockpit en €', r.ckSim === true, r.ckSim);
+    ok('🎯 Cote BET45 (Poisson, marge du book)', r.cb45 === true, r.cb45);
     ok('Critères : 📋 match par match (palier, mise, gain)', r.crMpm === true, r.crMpm);
     ok('Outils : taille des archives GitHub (seuils)', r.archTaille === true, r.archTaille);
     ok('Calculer mes séries : pari joueur NBA lu', r.serNba === true, r.serNba);
