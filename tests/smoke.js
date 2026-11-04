@@ -1885,6 +1885,18 @@ serveur.listen(0, async () => {
         /* 20261103g : 💾 taille du dépôt d'archives (seuils 70 / 90 % de 1 Go) */
         try { const T = window._g45ArchTailleT, a = T.etat({ ko: 231410 }), b = T.etat({ ko: 760000 }), c = T.etat({ ko: 960000 });
           o.archTaille = (a.n === 0 && a.p === 22 && b.n === 1 && c.n === 2 && /226 Mo/.test(T.bloc({ t: Date.now(), ko: 231410 }))) || JSON.stringify({ a, b, c }); } catch (e) { o.archTaille = 'erreur : ' + e.message; }
+        /* 20261104d : 💰 mise en % de la bankroll + 🪜 P1 auto */
+        try { const sb = state.b, su = state.u, sS = JSON.parse(JSON.stringify(STRATS)), cf = window.confirm; window.confirm = () => true;
+          state.b = { a: '10000', b: '6840.33' }; state.u = (state.u || []).concat([{ n: 'Pct FC', s: '4', sport: '⚽' }]);
+          const sel = document.getElementById('c-unit'); if (sel) { const op = document.createElement('option'); op.value = op.textContent = 'Pct FC'; sel.appendChild(op); sel.value = 'Pct FC'; }
+          window._g45PctDessiner(true); window.g45PctMise('n-mise', 1);
+          const v1 = document.getElementById('n-mise').value, t1 = (document.getElementById('g45pct-n-mise') || {}).innerText || '';
+          window.g45P1Auto(9); const p1 = STRATS['4'][0], t2 = (document.getElementById('g45pct-c-mise') || {}).innerText || '';
+          const T = window._g45PctT;
+          o.pctMise = (v1 === '168.40' && /1 % de ta bankroll/.test(t1.replace(/\u202f|\u00a0/g, ' ')) && /prudent/.test(t1) && p1 === 2.56 && STRATS["4"][8] === 11197.44 && /P1 auto/.test(t2) && /9 paliers : P1 = 2,56 €/.test(t2) && /couverte/.test(t2) && T.p1(16840.33, 8) === 7.7 && T.coulJ(6)[1].indexOf('risqué') > 0) || JSON.stringify({ v1, t1: t1.slice(0, 200), p1, t2: t2.slice(0, 300) });
+          Object.keys(sS).forEach((k) => { STRATS[k] = sS[k]; }); try { localStorage.removeItem('g45_strats'); localStorage.removeItem('g45_pct_mise'); localStorage.removeItem('g45_p1_auto'); } catch (e) {}
+          state.b = sb; state.u = su; window.confirm = cf; ['g45pct-n-mise', 'g45pct-combi-mise', 'g45pct-c-mise'].forEach((i) => { const e = document.getElementById(i); if (e) e.remove(); });
+        } catch (e) { o.pctMise = 'erreur : ' + e.message; }
         /* 20261103s : 🎯 cote BET45 (Poisson sur les archives) */
         try { const C = window._g45CbCalcT, L = []; let t = 0;
           for (let r = 0; r < 12; r++) for (let i = 0; i < 10; i++) for (let j = 0; j < 10; j++) if (i !== j && (i + j + r) % 3 === 0) L.push([++t, 'e' + i, 'e' + j, i === 0 ? 3 : 1, j === 0 ? 3 : 1, [2, 3.4, 3.6]]);
@@ -1995,6 +2007,7 @@ serveur.listen(0, async () => {
     ok('Mur : sélecteur Équipes / Joueurs par sport', r.murEJ === true, r.murEJ);
     ok('Critères : simulation Cockpit en €', r.ckSim === true, r.ckSim);
     ok('🎯 Cote BET45 (Poisson, marge du book)', r.cb45 === true, r.cb45);
+    ok('💰 Mise en % de la bankroll + 🪜 P1 auto', r.pctMise === true, r.pctMise);
     ok('Critères : 📋 match par match (palier, mise, gain)', r.crMpm === true, r.crMpm);
     ok('Outils : taille des archives GitHub (seuils)', r.archTaille === true, r.archTaille);
     ok('Calculer mes séries : pari joueur NBA lu', r.serNba === true, r.serNba);
