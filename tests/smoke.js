@@ -1893,11 +1893,19 @@ serveur.listen(0, async () => {
           const auto = window._g45CkActif() && document.getElementById('g45-ni-ck').style.display === '';
           state.u = [{ n: 'Ck A', s: '1', l: 8 }, { n: 'Ck B', s: '1', l: 1 }];
           window.g45CkOuvrir(document.getElementById('g45-ni-ck')); const tx = (document.getElementById('t-cockpit') || {}).innerText || '';
+          const par0 = document.getElementById('t-bilan').parentNode;
+          state.a = [{ isS: true, n: 'Ck A', win: true, m: 10, cote: 2, date: '2026-10-01', sport: '⚽', type: 'Victoire', b: 'x', id: 1 }, { isS: false, n: 'Simple Z', win: false, m: 5, cote: 2, date: '2026-10-02', sport: '⚽', type: 'Victoire', b: 'x', id: 2 }];
+          window.g45CkOnglet('eng'); const eng = document.getElementById('ck-eng').contains(document.getElementById('sub-strat')) && document.getElementById('sub-strat').offsetParent !== null && document.getElementById('btn-cpit').style.display === 'none';
+          window.g45CkOnglet('bil'); const bil = document.getElementById('ck-bil').contains(document.getElementById('t-bilan')) && document.getElementById('t-bilan').offsetParent !== null;
+          window.g45CkOnglet('arc'); const al = (document.getElementById('arch-list') || {}).innerText || ''; const arc = window._g45ArchCk === true && /Ck A/.test(al) && !/Simple Z/.test(al);
+          showTab('t-dash', document.querySelector('button.ni[onclick*="t-dash"]')); const retour = document.getElementById('t-bilan').parentNode === par0 && window._g45ArchCk === false;
+          window.__ckBil = (eng && bil && arc && retour) || JSON.stringify({ eng, bil, arc, retour, al: al.slice(0, 200) });
           window.g45CkOnSet(false); const ferme = document.getElementById('g45-ni-ck').style.display === 'none' && document.getElementById('t-cockpit').style.display === 'none';
           const tog = !!document.getElementById('g45-ck-on');
           o.ckMonde = (off && auto && ferme && tog && /Le monde du Cockpit/.test(tx) && /Ck A.*P8 sur 9/.test(tx) && /plus que 1 palier/.test(tx) && /Ck B/.test(tx) && /\+10 €/.test(tx) && /ne couvre pas/.test(tx)) || JSON.stringify({ off, auto, ferme, tog, tx: tx.slice(0, 600) });
           state.b = sb; state.u = su; state.a = sa; state.h = sh; if (so === undefined) delete state.ckOn; else state.ckOn = so; window._g45CkPoser();
         } catch (e) { o.ckMonde = 'erreur : ' + e.message; }
+        o.ckBil = window.__ckBil;
         /* 20261104d : 💰 mise en % de la bankroll + 🪜 P1 auto */
         try { const sb = state.b, su = state.u, sS = JSON.parse(JSON.stringify(STRATS)), cf = window.confirm; window.confirm = () => true;
           state.b = { a: '10000', b: '6840.33' }; state.u = (state.u || []).concat([{ n: 'Pct FC', s: '4', sport: '⚽' }]);
@@ -2038,6 +2046,7 @@ serveur.listen(0, async () => {
     ok('🎯 Cote BET45 (Poisson, marge du book)', r.cb45 === true, r.cb45);
     ok('💰 Mise en % de la bankroll + 🪜 P1 auto', r.pctMise === true, r.pctMise);
     ok('🏁 Monde du Cockpit (interrupteur, bouton, tableau de bord)', r.ckMonde === true, r.ckMonde);
+    ok('🏁 Cockpit : 🚀 Engager, 📈 Bilan, 🕒 Archive déplacés (aller-retour)', r.ckBil === true, r.ckBil);
     ok('🪜 Grilles 6 à 9 paliers + ⏳ attente pendant une série', r.grAtt === true, r.grAtt);
     ok('Critères : 📋 match par match (palier, mise, gain)', r.crMpm === true, r.crMpm);
     ok('Outils : taille des archives GitHub (seuils)', r.archTaille === true, r.archTaille);
