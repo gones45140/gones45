@@ -1903,8 +1903,9 @@ serveur.listen(0, async () => {
           showTab('t-dash', document.querySelector('button.ni[onclick*="t-dash"]')); const retour = document.getElementById('t-bilan').parentNode === par0 && window._g45ArchCk === false;
           showTab('t-cal', null); const ag = document.getElementById('ck-ag').contains(document.getElementById('t-cal')) && document.getElementById('ck-ag').style.display === '' && document.getElementById('t-cockpit').style.display !== 'none'
             && [...document.querySelectorAll('button.ni[onclick*="t-cal"]')].every((x) => x.style.display === 'none');
-          window.g45CkOnglet('tdb');
-          window.__ckBil = (ag && eng && bil && arc && retour) || JSON.stringify({ ag, eng, bil, arc, retour, al: al.slice(0, 200) });
+          window.g45CkOnglet('mc'); const mc1 = document.getElementById('ck-mc').contains(document.getElementById('ulist'));
+          window.g45CkOnglet('tdb'); const mc = mc1 && document.getElementById('t-outils').contains(document.getElementById('ulist'));
+          window.__ckBil = (mc && ag && eng && bil && arc && retour) || JSON.stringify({ mc, ag, eng, bil, arc, retour, al: al.slice(0, 200) });
           window.g45CkOnSet(false); const ferme = document.getElementById('g45-ni-ck').style.display === 'none' && document.getElementById('t-cockpit').style.display === 'none';
           const tog = _g45OutilsClasser(document.getElementById('g45-ck-on'), 'Notifications') === 'eq' && !!document.getElementById('g45-ck-on') && document.getElementById('t-outils').contains(document.getElementById('g45-ck-on')) && document.getElementById('ck-gr').contains(document.getElementById('palier-panel')) && document.getElementById('ck-gr').contains(document.getElementById('palier-grids'));
           o.ckMonde = (off && auto && ferme && tog && /Le monde du Cockpit/.test(tx) && /Ck A.*P8 sur 9/.test(tx) && /plus que 1 palier/.test(tx) && /Ck B/.test(tx) && /\+10 €/.test(tx) && /ne couvre pas/.test(tx)) || JSON.stringify({ off, auto, ferme, tog, tx: tx.slice(0, 600) });
@@ -2051,7 +2052,7 @@ serveur.listen(0, async () => {
     ok('🎯 Cote BET45 (Poisson, marge du book)', r.cb45 === true, r.cb45);
     ok('💰 Mise en % de la bankroll + 🪜 P1 auto', r.pctMise === true, r.pctMise);
     ok('🏁 Monde du Cockpit (interrupteur, bouton, tableau de bord)', r.ckMonde === true, r.ckMonde);
-    ok('🏁 Cockpit : 🚀 Engager, 📈 Bilan, 🕒 Archive, 📅 Agenda déplacés', r.ckBil === true, r.ckBil);
+    ok('🏁 Cockpit : 🚀 Engager, 📈 Bilan, 🕒 Archive, 📅 Agenda, 🃏 Mes cartes déplacés', r.ckBil === true, r.ckBil);
     ok('🪜 Grilles 6 à 9 paliers + ⏳ attente pendant une série', r.grAtt === true, r.grAtt);
     ok('Critères : 📋 match par match (palier, mise, gain)', r.crMpm === true, r.crMpm);
     ok('Outils : taille des archives GitHub (seuils)', r.archTaille === true, r.archTaille);
