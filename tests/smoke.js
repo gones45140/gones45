@@ -1904,9 +1904,10 @@ serveur.listen(0, async () => {
           showTab('t-dash', document.querySelector('button.ni[onclick*="t-dash"]')); const retour = document.getElementById('t-bilan').parentNode === par0 && window._g45ArchCk === false;
           showTab('t-cal', null); const ag = document.getElementById('ck-ag').contains(document.getElementById('t-cal')) && document.getElementById('ck-ag').style.display === '' && document.getElementById('t-cockpit').style.display !== 'none'
             && [...document.querySelectorAll('button.ni[onclick*="t-cal"]')].every((x) => x.style.display === 'none');
+          window.g45CkOnglet('tr'); const tr = /Séries individuelles/.test(document.getElementById('ck-tdb').innerText || '');
           window.g45CkOnglet('mc'); const mc1 = document.getElementById('ck-mc').contains(document.getElementById('ulist'));
           window.g45CkOnglet('tdb'); const mc = mc1 && document.getElementById('t-outils').contains(document.getElementById('ulist'));
-          window.__ckBil = (engReste && mc && ag && eng && bil && arc && retour) || JSON.stringify({ engReste, mc, ag, eng, bil, arc, retour, al: al.slice(0, 200) });
+          window.__ckBil = (tr && engReste && mc && ag && eng && bil && arc && retour) || JSON.stringify({ tr, engReste, mc, ag, eng, bil, arc, retour, al: al.slice(0, 200) });
           window.g45CkOnSet(false); const ferme = document.getElementById('g45-ni-ck').style.display === 'none' && document.getElementById('t-cockpit').style.display === 'none';
           const tog = _g45OutilsClasser(document.getElementById('g45-ck-on'), 'Notifications') === 'eq' && !!document.getElementById('g45-ck-on') && document.getElementById('t-outils').contains(document.getElementById('g45-ck-on')) && document.getElementById('ck-gr').contains(document.getElementById('palier-panel')) && document.getElementById('ck-gr').contains(document.getElementById('palier-grids'));
           o.ckMonde = (off && auto && ferme && tog && /Le monde du Cockpit/.test(tx) && /Ck A.*P8 sur 9/.test(tx) && /plus que 1 palier/.test(tx) && /Ck B/.test(tx) && /\+10 €/.test(tx) && /ne couvre pas/.test(tx)) || JSON.stringify({ off, auto, ferme, tog, tx: tx.slice(0, 600) });
