@@ -1227,7 +1227,7 @@ serveur.listen(0, async () => {
           { id: '3', isS: false, win: true, n: 'SIMPLE', m: 50, cote: 3, date: j }];
         state.h = [{ id: '4', isS: true, n: 'Test Dallas', domicile: 'dom', l: 1, m: 5, cote: 1.9, date: j }];
         const P = _g45CkParis();
-        g45TrVue('ck'); g45CkSous('c'); g45CkJour(j);
+        window.g45CkOuvrir(null, 'cb'); g45CkSous('c'); g45CkJour(j);   /* 20261104k : Cockpit BET45 dans le monde du Cockpit */
         const C = ((document.getElementById('g45ck') || {}).textContent || '').replace(/\s+/g, ' ');
         g45CkSous('g');
         const uS = state.u; state.u = [{ n: 'Test Bayern', sport: '⚽', s: 5, l: 1 }]; g45CkSous('g');
@@ -1242,7 +1242,7 @@ serveur.listen(0, async () => {
         const F = ((document.getElementById('g45ck') || {}).textContent || '').replace(/\s/g, '');
         state.u = u0; window._g45CkAg = null; g45CkJour(jm); if (dm.getMonth() !== d.getMonth()) g45CkMois(-1);
         o.ckFut = (/📅1/.test(F) && /📅Prévu/.test(F) && /TestBayern🏠vsLeverkusen/.test(F) && /📌🏠Victoire\+Over2\.5/.test(F)) || F.slice(-400);
-        g45CkJour(j); state.a = a0; state.h = h0; if (s0 == null) localStorage.removeItem('g45ck_sous'); else localStorage.setItem('g45ck_sous', s0); localStorage.removeItem('g45tr_vue');
+        g45CkJour(j); window.g45CkOnglet('tdb'); state.a = a0; state.h = h0; if (s0 == null) localStorage.removeItem('g45ck_sous'); else localStorage.setItem('g45ck_sous', s0); localStorage.removeItem('g45tr_vue');
         const c2 = C.replace(/\s/g, ''), g2 = G.replace(/\s/g, '');
         const Bd = (n, dom, jj, r, id) => ({ j: jj, r, g: 0, b: { n, domicile: dom, id: String(id) } });
         const Dp = _g45CkDepart([Bd('R', 'ext', '2026-10-20', true, 1), Bd('R', 'ext', '2026-10-25', false, 2), Bd('R', 'ext', '2026-11-02', true, 3), Bd('F1', '', '2026-09-13', true, 4)], '2026-11-10').map(x => x.b.id).join();
