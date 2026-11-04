@@ -1890,6 +1890,7 @@ serveur.listen(0, async () => {
           state.b = { a: '10000', b: '6840.33' }; state.u = (state.u || []).concat([{ n: 'Pct FC', s: '4', sport: '⚽' }]);
           const sel = document.getElementById('c-unit'); if (sel) { const op = document.createElement('option'); op.value = op.textContent = 'Pct FC'; sel.appendChild(op); sel.value = 'Pct FC'; }
           window._g45PctDessiner(true); window.g45PctMise('n-mise', 1);
+          window.g45PctMiseTxt('n-mise', '1,5'); const v15 = document.getElementById('n-mise').value; window.g45PctMise('n-mise', 1);
           const v1 = document.getElementById('n-mise').value, t1 = (document.getElementById('g45pct-n-mise') || {}).innerText || '';
           const su4 = state.u.filter((x) => String(x.s) === '4' && x.n !== 'Pct FC'); su4.forEach((x) => { x._s = x.s; x.s = '9x'; });   /* aucune autre équipe 4 ⭐ en série */
           const SEL = () => { const s2 = document.getElementById('c-unit'); if (s2) { if (![...s2.options].some((o) => o.value === 'Pct FC')) { const op = document.createElement('option'); op.value = op.textContent = 'Pct FC'; s2.appendChild(op); } s2.value = 'Pct FC'; } };
@@ -1907,7 +1908,7 @@ serveur.listen(0, async () => {
           su4.forEach((x) => { x.s = x._s; delete x._s; });
           window.__grAtt = (autres && retour && etoile && att1 && att1.length === 6 && l9 === 9 && /en attente/.test(t3) && /Pct FC \(P3\)/.test(t3) && l6 === 6 && p6 === window._g45PctT.p1(16840.33, 6) && !att2 && forc && clamp) || JSON.stringify({ autres, retour, etoile, att1, l9, t3: t3.slice(-300), l6, p6, att2, forc, clamp, lc: pf.lc });
           const T = window._g45PctT;
-          o.pctMise = (v1 === '168.40' && /1 % de ta bankroll/.test(t1.replace(/\u202f|\u00a0/g, ' ')) && /prudent/.test(t1) && p1 === 2.56 && s8 === 11197.44 && /P1 auto/.test(t2) && /9 paliers : P1 = 2,56 €/.test(t2) && /couverte/.test(t2) && T.p1(16840.33, 8) === 7.7 && T.coulJ(6)[1].indexOf('risqué') > 0) || JSON.stringify({ v1, t1: t1.slice(0, 200), p1, t2: t2.slice(0, 300) });
+          o.pctMise = (v15 === '252.60' && v1 === '168.40' && /1 % de ta bankroll/.test(t1.replace(/\u202f|\u00a0/g, ' ')) && /prudent/.test(t1) && p1 === 2.56 && s8 === 11197.44 && /P1 auto/.test(t2) && /9 paliers : P1 = 2,56 €/.test(t2) && /couverte/.test(t2) && T.p1(16840.33, 8) === 7.7 && T.coulJ(6)[1].indexOf('risqué') > 0) || JSON.stringify({ v1, t1: t1.slice(0, 200), p1, t2: t2.slice(0, 300) });
           Object.keys(sS).forEach((k) => { STRATS[k] = sS[k]; }); try { localStorage.removeItem('g45_strats'); localStorage.removeItem('g45_pct_mise'); localStorage.removeItem('g45_p1_auto'); } catch (e) {}
           state.b = sb; state.u = su; window.confirm = cf; ['g45pct-n-mise', 'g45pct-combi-mise', 'g45pct-c-mise'].forEach((i) => { const e = document.getElementById(i); if (e) e.remove(); });
         } catch (e) { o.pctMise = 'erreur : ' + e.message; }
