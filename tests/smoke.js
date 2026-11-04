@@ -1906,7 +1906,7 @@ serveur.listen(0, async () => {
           window.g45CkOnglet('tdb');
           window.__ckBil = (ag && eng && bil && arc && retour) || JSON.stringify({ ag, eng, bil, arc, retour, al: al.slice(0, 200) });
           window.g45CkOnSet(false); const ferme = document.getElementById('g45-ni-ck').style.display === 'none' && document.getElementById('t-cockpit').style.display === 'none';
-          const tog = _g45OutilsClasser(document.getElementById('g45-ck-on'), 'Notifications') === 'mont' && !!document.getElementById('g45-ck-on') && document.getElementById('t-outils').contains(document.getElementById('g45-ck-on')) && document.getElementById('ck-gr').contains(document.getElementById('palier-panel')) && document.getElementById('ck-gr').contains(document.getElementById('palier-grids'));
+          const tog = _g45OutilsClasser(document.getElementById('g45-ck-on'), 'Notifications') === 'eq' && !!document.getElementById('g45-ck-on') && document.getElementById('t-outils').contains(document.getElementById('g45-ck-on')) && document.getElementById('ck-gr').contains(document.getElementById('palier-panel')) && document.getElementById('ck-gr').contains(document.getElementById('palier-grids'));
           o.ckMonde = (off && auto && ferme && tog && /Le monde du Cockpit/.test(tx) && /Ck A.*P8 sur 9/.test(tx) && /plus que 1 palier/.test(tx) && /Ck B/.test(tx) && /\+10 €/.test(tx) && /ne couvre pas/.test(tx)) || JSON.stringify({ off, auto, ferme, tog, tx: tx.slice(0, 600) });
           state.b = sb; state.u = su; state.a = sa; state.h = sh; if (so === undefined) delete state.ckOn; else state.ckOn = so; window._g45CkPoser();
         } catch (e) { o.ckMonde = 'erreur : ' + e.message; }
