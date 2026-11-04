@@ -1893,15 +1893,19 @@ serveur.listen(0, async () => {
           const v1 = document.getElementById('n-mise').value, t1 = (document.getElementById('g45pct-n-mise') || {}).innerText || '';
           const su4 = state.u.filter((x) => String(x.s) === '4' && x.n !== 'Pct FC'); su4.forEach((x) => { x._s = x.s; x.s = '9x'; });   /* aucune autre équipe 4 ⭐ en série */
           const SEL = () => { const s2 = document.getElementById('c-unit'); if (s2) { if (![...s2.options].some((o) => o.value === 'Pct FC')) { const op = document.createElement('option'); op.value = op.textContent = 'Pct FC'; s2.appendChild(op); } s2.value = 'Pct FC'; } };
-          SEL(); window.g45P1Auto(9); SEL(); window._g45PctDessiner(true); const s8 = STRATS['4'][8], p1 = STRATS['4'][0], t2 = (document.getElementById('g45pct-c-mise') || {}).innerText || '';
-          /* 20261104e : 6 paliers ; série en cours → ⏳ attente, appliquée quand l'équipe revient à P1 */
-          const pf = state.u.filter((x) => x.n === 'Pct FC')[0]; pf.l = 3; SEL(); window.g45P1Auto(6); const att1 = window._g45GrilleAtt()['4'], l9 = STRATS['4'].length;
+          const pf = state.u.filter((x) => x.n === 'Pct FC')[0], st4 = STRATS['4'].join();
+          SEL(); window.g45P1Auto(9); SEL(); window._g45PctDessiner(true); const s8 = pf.g && pf.g[8], p1 = pf.g && pf.g[0], t2 = (document.getElementById('g45pct-c-mise') || {}).innerText || '';
+          const autres = STRATS['4'].join() === st4;   /* 20261104f : grille PERSO de l'équipe, les 4 ⭐ ne bougent pas */
+          pf.l = 3; SEL(); window.g45P1Auto(6); const att1 = pf.ga, l9 = pf.g.length;
           SEL(); window._g45PctDessiner(true); const t3 = (document.getElementById('g45pct-c-mise') || {}).innerText || '';
-          pf.l = 1; window._g45GrilleVerif(); const l6 = STRATS['4'].length, p6 = STRATS['4'][0], att2 = window._g45GrilleAtt()['4'];
-          pf.l = 8; window._g45MajP1('4', 10, 9); window.g45GrilleForcer('4'); const forc = STRATS['4'].length === 9 && STRATS['4'][0] === 10 && pf.l === 8;
-          pf.lc = { 'x|dom': 9 }; window._g45MajP1('4', 10, 7); window.g45GrilleForcer('4'); const clamp = pf.lc['x|dom'] === 7 && STRATS['4'].length === 7;
+          pf.l = 1; window._g45GrilleVerif(); const l6 = pf.g.length, p6 = pf.g[0], att2 = pf.ga;
+          const E = window._g45GrilleEqT, g9 = _g45PaliersDepuisP1(10, 9), g7 = _g45PaliersDepuisP1(10, 7);
+          pf.l = 8; E.demande(pf, g9); window.g45GrilleEqForcer('Pct FC'); const forc = pf.g.length === 9 && pf.g[0] === 10 && pf.l === 8;
+          pf.lc = { 'x|dom': 9 }; E.demande(pf, g7); window.g45GrilleEqForcer('Pct FC'); const clamp = pf.lc['x|dom'] === 7 && pf.g.length === 7;
+          pf.lc = {}; pf.l = 1; window.g45GrilleEqRetour('Pct FC'); const retour = !pf.g && _g45Grille(pf) === STRATS['4'];
+          window._g45MajP1('4', 10, 7); const etoile = STRATS['4'].length === 7 && !window._g45GrilleAtt()['4'];
           su4.forEach((x) => { x.s = x._s; delete x._s; });
-          window.__grAtt = (att1 && att1.length === 6 && l9 === 9 && /en attente/.test(t3) && /Pct FC \(P3\)/.test(t3) && l6 === 6 && p6 === window._g45PctT.p1(16840.33, 6) && !att2 && forc && clamp) || JSON.stringify({ att1, l9, t3: t3.slice(-300), l6, p6, att2, forc, clamp, lc: pf.lc });
+          window.__grAtt = (autres && retour && etoile && att1 && att1.length === 6 && l9 === 9 && /en attente/.test(t3) && /Pct FC \(P3\)/.test(t3) && l6 === 6 && p6 === window._g45PctT.p1(16840.33, 6) && !att2 && forc && clamp) || JSON.stringify({ autres, retour, etoile, att1, l9, t3: t3.slice(-300), l6, p6, att2, forc, clamp, lc: pf.lc });
           const T = window._g45PctT;
           o.pctMise = (v1 === '168.40' && /1 % de ta bankroll/.test(t1.replace(/\u202f|\u00a0/g, ' ')) && /prudent/.test(t1) && p1 === 2.56 && s8 === 11197.44 && /P1 auto/.test(t2) && /9 paliers : P1 = 2,56 €/.test(t2) && /couverte/.test(t2) && T.p1(16840.33, 8) === 7.7 && T.coulJ(6)[1].indexOf('risqué') > 0) || JSON.stringify({ v1, t1: t1.slice(0, 200), p1, t2: t2.slice(0, 300) });
           Object.keys(sS).forEach((k) => { STRATS[k] = sS[k]; }); try { localStorage.removeItem('g45_strats'); localStorage.removeItem('g45_pct_mise'); localStorage.removeItem('g45_p1_auto'); } catch (e) {}
