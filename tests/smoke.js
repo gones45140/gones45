@@ -1949,22 +1949,22 @@ serveur.listen(0, async () => {
           /* 20261105g : paliers conseillés par la pire série 4 saisons (A carte + B Engager) */
           pf.psL = { dom: { p: [2, 5, 4, 3], tot: 5, at: Date.now() }, ext: { p: [1, 2], tot: 2 } }; delete pf.g; delete pf.ga; pf.l = 1; pf.lc = {};
           const C1 = window._g45PsConseil(pf, 'dom'), C2 = window._g45PsConseil(pf, 'ext'), C3 = window._g45PsConseil(pf, ''), C4 = window._g45PsConseil({ psL: { glob: { p: [9], tot: 9 } } }, 'dom');
-          const C5 = window._g45PsConseil({ psL: { glob: { p: [8], tot: 8 } } }, ''); const cons = C1.n === 6 && C1.ne === 7 && C2.ne === 6 && C2.n === 3 && C3.k === 'dom' && C4.ne === null && C5.ne === 9 && C5.sec === false;
-          const carteA = /Régler ma mise sur 7 paliers/.test(window._g45UlPsLHtml(pf)) && /Mise actuelle : P1 = <b>/.test(window._g45UlPsLHtml(pf));
+          const C5 = window._g45PsConseil({ psL: { glob: { p: [8], tot: 8 } } }, ''); const cons = C1.n === 6 && C1.ne === 8 && C1.sk === 2 && C2.ne === 6 && C2.n === 3 && C3.k === 'dom' && C4.ne === null && C5.ne === 9 && C5.sk === 0 && window._g45PsConseil({ psL: { glob: { p: [7], tot: 7 } } }, '').sk === 1;
+          const carteA = /Régler ma mise sur 8 paliers/.test(window._g45UlPsLHtml(pf)) && /Mise actuelle : P1 = <b>/.test(window._g45UlPsLHtml(pf));
           SEL(); const li = document.getElementById('c-lieu'); if (li) li.value = 'dom'; window._g45PctDessiner(true); const tB = (document.getElementById('g45pct-c-mise') || {}).innerText || '';
-          const engB = /Pire série 4 saisons/.test(tB) && /7 ⭐/.test(tB);
-          window.g45P1AutoEq('Pct FC', 7); const regle = pf.g && pf.g.length === 7 && /Mise réglée sur 7 paliers/.test(window._g45UlPsLHtml(pf));
+          const engB = /Pire série 4 saisons/.test(tB) && /8 ⭐/.test(tB) && /\+ 2 de sécurité/.test(tB);
+          window.g45P1AutoEq('Pct FC', 8); const regle = pf.g && pf.g.length === 8 && /Mise réglée sur 8 paliers/.test(window._g45UlPsLHtml(pf));
           /* 20261105i : grille PAR LIEU (✈️ 6 paliers, 🏠 garde 7) */
-          window.g45P1AutoEq('Pct FC', 6, 'ext'); const parLieu = pf.gl && pf.gl.ext && pf.gl.ext.length === 6 && _g45Grille(pf, 'ext').length === 6 && _g45Grille(pf, 'dom').length === 7 && _g45Grille(pf, true).length === 7
-            && /✈️ Mise réglée sur 6 paliers/.test(window._g45UlPsLHtml(pf)) && /🏠 Mise réglée sur 7 paliers/.test(window._g45UlPsLHtml(pf));
+          window.g45P1AutoEq('Pct FC', 6, 'ext'); const parLieu = pf.gl && pf.gl.ext && pf.gl.ext.length === 6 && _g45Grille(pf, 'ext').length === 6 && _g45Grille(pf, 'dom').length === 8 && _g45Grille(pf, true).length === 8
+            && /✈️ Mise réglée sur 6 paliers/.test(window._g45UlPsLHtml(pf)) && /🏠 Mise réglée sur 8 paliers/.test(window._g45UlPsLHtml(pf));
           pf.lc = { 'nhl|ext': 3 }; const gC = _g45PaliersDepuisP1(4, 8); window._g45GrilleEqT.glDemande(pf, gC, 'ext'); const attL = pf.gla && pf.gla.ext && pf.gl.ext.length === 6;
-          pf.lc = { 'nhl|ext': 1 }; window._g45GrilleVerif(); const appL0 = !pf.gla && pf.gl.ext.length === 8 && pf.gl.ext[0] === 4; SEL(); document.getElementById('c-lieu').value = 'dom'; window.g45P1Auto(8); const appL = appL0 && pf.gl.dom && pf.gl.dom.length === 8 && pf.g.length === 7; delete pf.gl; pf.lc = {};
+          pf.lc = { 'nhl|ext': 1 }; window._g45GrilleVerif(); const appL0 = !pf.gla && pf.gl.ext.length === 8 && pf.gl.ext[0] === 4; SEL(); document.getElementById('c-lieu').value = 'dom'; window.g45P1Auto(8); const appL = appL0 && pf.gl.dom && pf.gl.dom.length === 8 && pf.g.length === 8; delete pf.gl; pf.lc = {};
           /* 20261105k : part de la bankroll pour le Cockpit (20 % → P1 sur 20 %) */
-          window.g45CkPartSet(20); const cK = window._g45CapCk(), pP = window._g45PctT.p1(cK, 7); delete pf.g; delete pf.gl;
+          window.g45CkPartSet(20); const cK = window._g45CapCk(), pP = window._g45PctT.p1(cK, 8); delete pf.g; delete pf.gl;
           const htP = window._g45UlPsLHtml(pf); window._g45PctDessiner(true); const tP = (document.getElementById('g45pct-c-mise') || {}).innerText || '';
-          window.g45P1AutoEq('Pct FC', 7, 'dom'); const partOk = Math.abs(cK - Math.floor(window._g45CapCk() * 100) / 100) < 0.01 && Math.abs(cK - 0.2 * Object.values(state.b).reduce((a, v) => a + (+v || 0), 0)) < 0.02
+          window.g45P1AutoEq('Pct FC', 8, 'dom'); const partOk = Math.abs(cK - Math.floor(window._g45CapCk() * 100) / 100) < 0.01 && Math.abs(cK - 0.2 * Object.values(state.b).reduce((a, v) => a + (+v || 0), 0)) < 0.02
             && htP.indexOf('P1 = ' + (pP % 1 === 0 ? String(pP) : pP.toFixed(2).replace('.', ','))) >= 0 && /sur 20 % de ta bankroll/.test(htP) && /ta part Cockpit \(20 %/.test(tP) && pf.gl && pf.gl.dom[0] === pP;
-          window.g45CkPartSet(100); const part100 = state.ckPart === undefined && window._g45CkPart() === 100; delete pf.gl; pf.g = _g45PaliersDepuisP1(window._g45PctT.p1(window._g45CapCk(), 7), 7);
+          window.g45CkPartSet(100); const part100 = state.ckPart === undefined && window._g45CkPart() === 100; delete pf.gl; pf.g = _g45PaliersDepuisP1(window._g45PctT.p1(window._g45CapCk(), 8), 8);
           const misePs = (partOk && part100 && cons && carteA && engB && regle && parLieu && attL && appL) || { partOk, part100, cons, carteA, engB, regle, parLieu, attL, appL, tB: tB.slice(0, 300) };
           delete pf.psL;
           su4.forEach((x) => { x.s = x._s; delete x._s; });
