@@ -1936,7 +1936,7 @@ serveur.listen(0, async () => {
           const su4 = state.u.filter((x) => String(x.s) === '4' && x.n !== 'Pct FC'); su4.forEach((x) => { x._s = x.s; x.s = '9x'; });   /* aucune autre équipe 4 ⭐ en série */
           const SEL = () => { const s2 = document.getElementById('c-unit'); if (s2) { if (![...s2.options].some((o) => o.value === 'Pct FC')) { const op = document.createElement('option'); op.value = op.textContent = 'Pct FC'; s2.appendChild(op); } s2.value = 'Pct FC'; } };
           const pf = state.u.filter((x) => x.n === 'Pct FC')[0], st4 = STRATS['4'].join();
-          SEL(); window.g45P1Auto(9); SEL(); window._g45PctDessiner(true); const s8 = pf.g && pf.g[8], p1 = pf.g && pf.g[0], t2 = (document.getElementById('g45pct-c-mise') || {}).innerText || '';
+          SEL(); window.g45P1Auto(9); render(); const garde = document.getElementById('c-unit').value === 'Pct FC'; SEL(); window._g45PctDessiner(true);   /* 20261105f : render garde la carte choisie */ const s8 = pf.g && pf.g[8], p1 = pf.g && pf.g[0], t2 = (document.getElementById('g45pct-c-mise') || {}).innerText || '';
           const autres = STRATS['4'].join() === st4;   /* 20261104f : grille PERSO de l'équipe, les 4 ⭐ ne bougent pas */
           pf.l = 3; SEL(); window.g45P1Auto(6); const att1 = pf.ga, l9 = pf.g.length;
           SEL(); window._g45PctDessiner(true); const t3 = (document.getElementById('g45pct-c-mise') || {}).innerText || '';
@@ -1947,7 +1947,7 @@ serveur.listen(0, async () => {
           pf.lc = {}; pf.l = 1; window.g45GrilleEqRetour('Pct FC'); const retour = !pf.g && _g45Grille(pf) === STRATS['4'];
           window._g45MajP1('4', 10, 7); const etoile = STRATS['4'].length === 7 && !window._g45GrilleAtt()['4'];
           su4.forEach((x) => { x.s = x._s; delete x._s; });
-          window.__grAtt = (autres && retour && etoile && att1 && att1.length === 6 && l9 === 9 && /en attente/.test(t3) && /Pct FC \(P3\)/.test(t3) && l6 === 6 && p6 === window._g45PctT.p1(16840.33, 6) && !att2 && forc && clamp) || JSON.stringify({ autres, retour, etoile, att1, l9, t3: t3.slice(-300), l6, p6, att2, forc, clamp, lc: pf.lc });
+          window.__grAtt = (garde && autres && retour && etoile && att1 && att1.length === 6 && l9 === 9 && /en attente/.test(t3) && /Pct FC \(P3\)/.test(t3) && l6 === 6 && p6 === window._g45PctT.p1(16840.33, 6) && !att2 && forc && clamp) || JSON.stringify({ garde, autres, retour, etoile, att1, l9, t3: t3.slice(-300), l6, p6, att2, forc, clamp, lc: pf.lc });
           const T = window._g45PctT;
           o.pctMise = (v15 === '252.60' && v1 === '168.40' && /1 % de ta bankroll/.test(t1.replace(/\u202f|\u00a0/g, ' ')) && /prudent/.test(t1) && p1 === 2.56 && s8 === 11197.44 && /P1 auto/.test(t2) && /9 paliers : P1 = 2,56 €/.test(t2) && /couverte/.test(t2) && T.p1(16840.33, 8) === 7.7 && T.coulJ(6)[1].indexOf('risqué') > 0) || JSON.stringify({ v1, t1: t1.slice(0, 200), p1, t2: t2.slice(0, 300) });
           Object.keys(sS).forEach((k) => { STRATS[k] = sS[k]; }); try { localStorage.removeItem('g45_strats'); localStorage.removeItem('g45_pct_mise'); localStorage.removeItem('g45_p1_auto'); } catch (e) {}
