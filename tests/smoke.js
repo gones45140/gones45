@@ -1949,11 +1949,11 @@ serveur.listen(0, async () => {
           /* 20261105g : paliers conseillés par la pire série 4 saisons (A carte + B Engager) */
           pf.psL = { dom: { p: [2, 5, 4, 3], tot: 5, at: Date.now() }, ext: { p: [1, 2], tot: 2 } }; delete pf.g; delete pf.ga; pf.l = 1; pf.lc = {};
           const C1 = window._g45PsConseil(pf, 'dom'), C2 = window._g45PsConseil(pf, 'ext'), C3 = window._g45PsConseil(pf, ''), C4 = window._g45PsConseil({ psL: { glob: { p: [9], tot: 9 } } }, 'dom');
-          const cons = C1.n === 6 && C1.ne === 6 && C2.ne === 6 && C2.n === 3 && C3.k === 'dom' && C4.ne === null;
-          const carteA = /Régler ma mise sur 6 paliers/.test(window._g45UlPsLHtml(pf));
+          const C5 = window._g45PsConseil({ psL: { glob: { p: [8], tot: 8 } } }, ''); const cons = C1.n === 6 && C1.ne === 7 && C2.ne === 6 && C2.n === 3 && C3.k === 'dom' && C4.ne === null && C5.ne === 9 && C5.sec === false;
+          const carteA = /Régler ma mise sur 7 paliers/.test(window._g45UlPsLHtml(pf));
           SEL(); const li = document.getElementById('c-lieu'); if (li) li.value = 'dom'; window._g45PctDessiner(true); const tB = (document.getElementById('g45pct-c-mise') || {}).innerText || '';
-          const engB = /Pire série 4 saisons/.test(tB) && /6 ⭐/.test(tB);
-          window.g45P1AutoEq('Pct FC', 6); const regle = pf.g && pf.g.length === 6 && /Mise réglée sur 6 paliers/.test(window._g45UlPsLHtml(pf));
+          const engB = /Pire série 4 saisons/.test(tB) && /7 ⭐/.test(tB);
+          window.g45P1AutoEq('Pct FC', 7); const regle = pf.g && pf.g.length === 7 && /Mise réglée sur 7 paliers/.test(window._g45UlPsLHtml(pf));
           const misePs = (cons && carteA && engB && regle) || { cons, carteA, engB, regle, tB: tB.slice(0, 300) };
           delete pf.psL;
           su4.forEach((x) => { x.s = x._s; delete x._s; });
