@@ -1912,10 +1912,14 @@ serveur.listen(0, async () => {
           /* 20261104y : 🏳️ abandonner une série */
           { const cf2 = window.confirm, pr2 = window.prompt; window.confirm = () => true; window.prompt = () => '3';
             const ua = { n: 'Ck Ab', s: '1', l: 4, lc: { 'nhl|ext': 4 } }; state.u.push(ua);
+            /* 20261105b : un seul bouton « Abandonner une série » ; les petits 🏳️ par ligne seulement en mode abandon */
+            window.g45CkAbMode(0); window.g45CkOnglet('tdb'); const hA0 = (document.getElementById('ck-tdb') || {}).innerHTML || '';
+            window.g45CkAbMode(1); const hA1 = (document.getElementById('ck-tdb') || {}).innerHTML || '';
+            const okM = /Abandonner une série/.test(hA0) && !/g45CkAbandon\(/.test(hA0) && /g45CkAbandon\(/.test(hA1) && /Fermer/.test(hA1);
             window.g45CkAbandon('Ck Ab', 'nhl|ext'); window.g45CkOnglet('tdb'); const txA = (document.getElementById('ck-tdb') || {}).innerText || '';
             const okA = ua.lc['nhl|ext'] === 1 && ua.abd && ua.abd.length === 1 && ua.abd[0].perdu === 9 && ua.abd[0].p === 4 && ua.abd[0].l === 'ext' && ua.g && ua.g[0] === 3 && /série abandonnée le .* à P4/.test(txA);
             window.g45CkAbFermer('Ck Ab', 0); const okF = !ua.abd;
-            window.__ckAb = (okA && okF) || JSON.stringify({ ua, txA: txA.slice(-300) }); state.u.pop(); window.confirm = cf2; window.prompt = pr2; }
+            window.__ckAb = (okA && okF && okM && window._g45CkAbMode === false) || JSON.stringify({ okM, md: window._g45CkAbMode, ua, txA: txA.slice(-300) }); state.u.pop(); window.confirm = cf2; window.prompt = pr2; }
           window.g45CkOnSet(false); const ferme = document.getElementById('g45-ni-ck').style.display === 'none' && document.getElementById('t-cockpit').style.display === 'none';
           const tog = _g45OutilsClasser(document.getElementById('g45-ck-on'), 'Notifications') === 'eq' && !!document.getElementById('g45-ck-on') && document.getElementById('t-outils').contains(document.getElementById('g45-ck-on')) && document.getElementById('ck-gr').contains(document.getElementById('palier-panel')) && document.getElementById('ck-gr').contains(document.getElementById('palier-grids'));
           o.ckMonde = (off && auto && ferme && tog && /Le monde du Cockpit/.test(tx) && /Ck A.*P8 sur 9/.test(tx) && /plus que 1 palier/.test(tx) && /Ck B/.test(tx) && /\+10 €/.test(tx) && /ne couvre pas/.test(tx)) || JSON.stringify({ off, auto, ferme, tog, tx: tx.slice(0, 600) });
