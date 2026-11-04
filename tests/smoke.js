@@ -1934,7 +1934,7 @@ serveur.listen(0, async () => {
           window.g45PctMiseTxt('n-mise', '1,5'); const v15 = document.getElementById('n-mise').value; window.g45PctMise('n-mise', 1);
           const v1 = document.getElementById('n-mise').value, t1 = (document.getElementById('g45pct-n-mise') || {}).innerText || '';
           const su4 = state.u.filter((x) => String(x.s) === '4' && x.n !== 'Pct FC'); su4.forEach((x) => { x._s = x.s; x.s = '9x'; });   /* aucune autre équipe 4 ⭐ en série */
-          const SEL = () => { const s2 = document.getElementById('c-unit'); if (s2) { if (![...s2.options].some((o) => o.value === 'Pct FC')) { const op = document.createElement('option'); op.value = op.textContent = 'Pct FC'; s2.appendChild(op); } s2.value = 'Pct FC'; } };
+          const SEL = () => { const s2 = document.getElementById('c-unit'); if (s2) { if (![...s2.options].some((o) => o.value === 'Pct FC')) { const op = document.createElement('option'); op.value = op.textContent = 'Pct FC'; s2.appendChild(op); } s2.value = 'Pct FC'; } const l2 = document.getElementById('c-lieu'); if (l2) l2.value = ''; };   /* 20261105i : lieu « global » → grille de toute la carte */
           const pf = state.u.filter((x) => x.n === 'Pct FC')[0], st4 = STRATS['4'].join();
           SEL(); window.g45P1Auto(9); render(); const garde = document.getElementById('c-unit').value === 'Pct FC'; SEL(); window._g45PctDessiner(true);   /* 20261105f : render garde la carte choisie */ const s8 = pf.g && pf.g[8], p1 = pf.g && pf.g[0], t2 = (document.getElementById('g45pct-c-mise') || {}).innerText || '';
           const autres = STRATS['4'].join() === st4;   /* 20261104f : grille PERSO de l'équipe, les 4 ⭐ ne bougent pas */
@@ -1954,7 +1954,12 @@ serveur.listen(0, async () => {
           SEL(); const li = document.getElementById('c-lieu'); if (li) li.value = 'dom'; window._g45PctDessiner(true); const tB = (document.getElementById('g45pct-c-mise') || {}).innerText || '';
           const engB = /Pire série 4 saisons/.test(tB) && /7 ⭐/.test(tB);
           window.g45P1AutoEq('Pct FC', 7); const regle = pf.g && pf.g.length === 7 && /Mise réglée sur 7 paliers/.test(window._g45UlPsLHtml(pf));
-          const misePs = (cons && carteA && engB && regle) || { cons, carteA, engB, regle, tB: tB.slice(0, 300) };
+          /* 20261105i : grille PAR LIEU (✈️ 6 paliers, 🏠 garde 7) */
+          window.g45P1AutoEq('Pct FC', 6, 'ext'); const parLieu = pf.gl && pf.gl.ext && pf.gl.ext.length === 6 && _g45Grille(pf, 'ext').length === 6 && _g45Grille(pf, 'dom').length === 7 && _g45Grille(pf, true).length === 7
+            && /✈️ Mise réglée sur 6 paliers/.test(window._g45UlPsLHtml(pf)) && /🏠 Mise réglée sur 7 paliers/.test(window._g45UlPsLHtml(pf));
+          pf.lc = { 'nhl|ext': 3 }; const gC = _g45PaliersDepuisP1(4, 8); window._g45GrilleEqT.glDemande(pf, gC, 'ext'); const attL = pf.gla && pf.gla.ext && pf.gl.ext.length === 6;
+          pf.lc = { 'nhl|ext': 1 }; window._g45GrilleVerif(); const appL0 = !pf.gla && pf.gl.ext.length === 8 && pf.gl.ext[0] === 4; SEL(); document.getElementById('c-lieu').value = 'dom'; window.g45P1Auto(8); const appL = appL0 && pf.gl.dom && pf.gl.dom.length === 8 && pf.g.length === 7; delete pf.gl; pf.lc = {};
+          const misePs = (cons && carteA && engB && regle && parLieu && attL && appL) || { cons, carteA, engB, regle, parLieu, attL, appL, tB: tB.slice(0, 300) };
           delete pf.psL;
           su4.forEach((x) => { x.s = x._s; delete x._s; });
           window.__grAtt = (misePs === true && garde && autres && retour && etoile && att1 && att1.length === 6 && l9 === 9 && /en attente/.test(t3) && /Pct FC \(P3\)/.test(t3) && l6 === 6 && p6 === window._g45PctT.p1(16840.33, 6) && !att2 && forc && clamp) || JSON.stringify({ misePs, garde, autres, retour, etoile, att1, l9, t3: t3.slice(-300), l6, p6, att2, forc, clamp, lc: pf.lc });
