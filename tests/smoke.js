@@ -1950,7 +1950,7 @@ serveur.listen(0, async () => {
           pf.psL = { dom: { p: [2, 5, 4, 3], tot: 5, at: Date.now() }, ext: { p: [1, 2], tot: 2 } }; delete pf.g; delete pf.ga; pf.l = 1; pf.lc = {};
           const C1 = window._g45PsConseil(pf, 'dom'), C2 = window._g45PsConseil(pf, 'ext'), C3 = window._g45PsConseil(pf, ''), C4 = window._g45PsConseil({ psL: { glob: { p: [9], tot: 9 } } }, 'dom');
           const C5 = window._g45PsConseil({ psL: { glob: { p: [8], tot: 8 } } }, ''); const cons = C1.n === 6 && C1.ne === 7 && C2.ne === 6 && C2.n === 3 && C3.k === 'dom' && C4.ne === null && C5.ne === 9 && C5.sec === false;
-          const carteA = /Régler ma mise sur 7 paliers/.test(window._g45UlPsLHtml(pf));
+          const carteA = /Régler ma mise sur 7 paliers/.test(window._g45UlPsLHtml(pf)) && /Mise actuelle : P1 = <b>/.test(window._g45UlPsLHtml(pf));
           SEL(); const li = document.getElementById('c-lieu'); if (li) li.value = 'dom'; window._g45PctDessiner(true); const tB = (document.getElementById('g45pct-c-mise') || {}).innerText || '';
           const engB = /Pire série 4 saisons/.test(tB) && /7 ⭐/.test(tB);
           window.g45P1AutoEq('Pct FC', 7); const regle = pf.g && pf.g.length === 7 && /Mise réglée sur 7 paliers/.test(window._g45UlPsLHtml(pf));
@@ -1963,14 +1963,14 @@ serveur.listen(0, async () => {
           window.g45CkPartSet(20); const cK = window._g45CapCk(), pP = window._g45PctT.p1(cK, 7); delete pf.g; delete pf.gl;
           const htP = window._g45UlPsLHtml(pf); window._g45PctDessiner(true); const tP = (document.getElementById('g45pct-c-mise') || {}).innerText || '';
           window.g45P1AutoEq('Pct FC', 7, 'dom'); const partOk = Math.abs(cK - Math.floor(window._g45CapCk() * 100) / 100) < 0.01 && Math.abs(cK - 0.2 * Object.values(state.b).reduce((a, v) => a + (+v || 0), 0)) < 0.02
-            && htP.indexOf('P1 = ' + pP.toFixed(2).replace('.', ',')) >= 0 && /sur 20 % de ta bankroll/.test(htP) && /ta part Cockpit \(20 %/.test(tP) && pf.gl && pf.gl.dom[0] === pP;
+            && htP.indexOf('P1 = ' + (pP % 1 === 0 ? String(pP) : pP.toFixed(2).replace('.', ','))) >= 0 && /sur 20 % de ta bankroll/.test(htP) && /ta part Cockpit \(20 %/.test(tP) && pf.gl && pf.gl.dom[0] === pP;
           window.g45CkPartSet(100); const part100 = state.ckPart === undefined && window._g45CkPart() === 100; delete pf.gl; pf.g = _g45PaliersDepuisP1(window._g45PctT.p1(window._g45CapCk(), 7), 7);
           const misePs = (partOk && part100 && cons && carteA && engB && regle && parLieu && attL && appL) || { partOk, part100, cons, carteA, engB, regle, parLieu, attL, appL, tB: tB.slice(0, 300) };
           delete pf.psL;
           su4.forEach((x) => { x.s = x._s; delete x._s; });
           window.__grAtt = (misePs === true && garde && autres && retour && etoile && att1 && att1.length === 6 && l9 === 9 && /en attente/.test(t3) && /Pct FC \(P3\)/.test(t3) && l6 === 6 && p6 === window._g45PctT.p1(16840.33, 6) && !att2 && forc && clamp) || JSON.stringify({ misePs, garde, autres, retour, etoile, att1, l9, t3: t3.slice(-300), l6, p6, att2, forc, clamp, lc: pf.lc });
           const T = window._g45PctT;
-          o.pctMise = (v15 === '252.60' && v1 === '168.40' && /1 % de ta bankroll/.test(t1.replace(/\u202f|\u00a0/g, ' ')) && /prudent/.test(t1) && p1 === 2.56 && s8 === 11197.44 && /P1 auto/.test(t2) && /9 paliers : P1 = 2,56 €/.test(t2) && /couverte/.test(t2) && T.p1(16840.33, 8) === 7.7 && T.coulJ(6)[1].indexOf('risqué') > 0) || JSON.stringify({ v1, t1: t1.slice(0, 200), p1, t2: t2.slice(0, 300) });
+          o.pctMise = (v15 === '252.60' && v1 === '168.40' && /1 % de ta bankroll/.test(t1.replace(/\u202f|\u00a0/g, ' ')) && /prudent/.test(t1) && p1 === 3 && s8 === 13122 && /P1 auto/.test(t2) && /9 paliers : P1 = 3 €/.test(t2) && /6 paliers : P1 = 70 €/.test(t2) && /plus que ta bankroll/.test(t2) && T.p1(16840.33, 8) === 8 && T.p1(100, 9) === 0.02 && T.p1(243, 6) === 1 && T.coulJ(6)[1].indexOf('risqué') > 0) || JSON.stringify({ v1, t1: t1.slice(0, 200), p1, t2: t2.slice(0, 300) });
           Object.keys(sS).forEach((k) => { STRATS[k] = sS[k]; }); try { localStorage.removeItem('g45_strats'); localStorage.removeItem('g45_pct_mise'); localStorage.removeItem('g45_p1_auto'); } catch (e) {}
           state.b = sb; state.u = su; window.confirm = cf; ['g45pct-n-mise', 'g45pct-combi-mise', 'g45pct-c-mise'].forEach((i) => { const e = document.getElementById(i); if (e) e.remove(); });
         } catch (e) { o.pctMise = 'erreur : ' + e.message; }
