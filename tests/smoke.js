@@ -1946,6 +1946,9 @@ serveur.listen(0, async () => {
           pf.lc = { 'x|dom': 9 }; E.demande(pf, g7); window.g45GrilleEqForcer('Pct FC'); const clamp = pf.lc['x|dom'] === 7 && pf.g.length === 7;
           pf.lc = {}; pf.l = 1; window.g45GrilleEqRetour('Pct FC'); const retour = !pf.g && _g45Grille(pf) === STRATS['4'];
           window._g45MajP1('4', 10, 7); const etoile = STRATS['4'].length === 7 && !window._g45GrilleAtt()['4'];
+          /* 20261105p : P1 puis P max pendant une série → les 2 changements gardés dans la grille en attente */
+          { const g0 = pf.g, gl0 = pf.gl; delete pf.g; delete pf.gl; pf.l = 3; window._g45MajP1('4', 12); window._g45MajP1('4', null, 8); const ax = window._g45GrilleAtt()['4'];
+            window.__p1max = !!ax && ax[0] === 12 && ax.length === 8; window.g45GrilleAnnuler('4'); pf.l = 1; if (g0) pf.g = g0; if (gl0) pf.gl = gl0; }
           /* 20261105g : paliers conseillés par la pire série 4 saisons (A carte + B Engager) */
           pf.psL = { dom: { p: [2, 5, 4, 3], tot: 5, at: Date.now() }, ext: { p: [1, 2], tot: 2 } }; delete pf.g; delete pf.ga; pf.l = 1; pf.lc = {};
           const C1 = window._g45PsConseil(pf, 'dom'), C2 = window._g45PsConseil(pf, 'ext'), C3 = window._g45PsConseil(pf, ''), C4 = window._g45PsConseil({ psL: { glob: { p: [9], tot: 9 } } }, 'dom');
@@ -1968,7 +1971,7 @@ serveur.listen(0, async () => {
           const misePs = (partOk && part100 && cons && carteA && engB && regle && parLieu && attL && appL) || { partOk, part100, cons, carteA, engB, regle, parLieu, attL, appL, tB: tB.slice(0, 300) };
           delete pf.psL;
           su4.forEach((x) => { x.s = x._s; delete x._s; });
-          window.__grAtt = (misePs === true && garde && autres && retour && etoile && att1 && att1.length === 6 && l9 === 9 && /en attente/.test(t3) && /Pct FC \(P3\)/.test(t3) && l6 === 6 && p6 === window._g45PctT.p1(16840.33, 6) && !att2 && forc && clamp) || JSON.stringify({ misePs, garde, autres, retour, etoile, att1, l9, t3: t3.slice(-300), l6, p6, att2, forc, clamp, lc: pf.lc });
+          window.__grAtt = (window.__p1max === true && misePs === true && garde && autres && retour && etoile && att1 && att1.length === 6 && l9 === 9 && /en attente/.test(t3) && /Pct FC \(P3\)/.test(t3) && l6 === 6 && p6 === window._g45PctT.p1(16840.33, 6) && !att2 && forc && clamp) || JSON.stringify({ p1max: window.__p1max, misePs, garde, autres, retour, etoile, att1, l9, t3: t3.slice(-300), l6, p6, att2, forc, clamp, lc: pf.lc });
           const T = window._g45PctT;
           o.pctMise = (v15 === '252.60' && v1 === '168.40' && /1 % de ta bankroll/.test(t1.replace(/\u202f|\u00a0/g, ' ')) && /prudent/.test(t1) && p1 === 2.56 && s8 === 11197.44 && /P1 auto/.test(t2) && /9 paliers : P1 = 2,56 €/.test(t2) && /couverte/.test(t2) && T.p1(16840.33, 8) === 7.7 && T.coulJ(6)[1].indexOf('risqué') > 0) || JSON.stringify({ v1, t1: t1.slice(0, 200), p1, t2: t2.slice(0, 300) });
           Object.keys(sS).forEach((k) => { STRATS[k] = sS[k]; }); try { localStorage.removeItem('g45_strats'); localStorage.removeItem('g45_pct_mise'); localStorage.removeItem('g45_p1_auto'); } catch (e) {}
