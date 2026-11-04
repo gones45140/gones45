@@ -1959,7 +1959,13 @@ serveur.listen(0, async () => {
             && /✈️ Mise réglée sur 6 paliers/.test(window._g45UlPsLHtml(pf)) && /🏠 Mise réglée sur 7 paliers/.test(window._g45UlPsLHtml(pf));
           pf.lc = { 'nhl|ext': 3 }; const gC = _g45PaliersDepuisP1(4, 8); window._g45GrilleEqT.glDemande(pf, gC, 'ext'); const attL = pf.gla && pf.gla.ext && pf.gl.ext.length === 6;
           pf.lc = { 'nhl|ext': 1 }; window._g45GrilleVerif(); const appL0 = !pf.gla && pf.gl.ext.length === 8 && pf.gl.ext[0] === 4; SEL(); document.getElementById('c-lieu').value = 'dom'; window.g45P1Auto(8); const appL = appL0 && pf.gl.dom && pf.gl.dom.length === 8 && pf.g.length === 7; delete pf.gl; pf.lc = {};
-          const misePs = (cons && carteA && engB && regle && parLieu && attL && appL) || { cons, carteA, engB, regle, parLieu, attL, appL, tB: tB.slice(0, 300) };
+          /* 20261105k : part de la bankroll pour le Cockpit (20 % → P1 sur 20 %) */
+          window.g45CkPartSet(20); const cK = window._g45CapCk(), pP = window._g45PctT.p1(cK, 7); delete pf.g; delete pf.gl;
+          const htP = window._g45UlPsLHtml(pf); window._g45PctDessiner(true); const tP = (document.getElementById('g45pct-c-mise') || {}).innerText || '';
+          window.g45P1AutoEq('Pct FC', 7, 'dom'); const partOk = Math.abs(cK - Math.floor(window._g45CapCk() * 100) / 100) < 0.01 && Math.abs(cK - 0.2 * Object.values(state.b).reduce((a, v) => a + (+v || 0), 0)) < 0.02
+            && htP.indexOf('P1 = ' + pP.toFixed(2).replace('.', ',')) >= 0 && /sur 20 % de ta bankroll/.test(htP) && /ta part Cockpit \(20 %/.test(tP) && pf.gl && pf.gl.dom[0] === pP;
+          window.g45CkPartSet(100); const part100 = state.ckPart === undefined && window._g45CkPart() === 100; delete pf.gl; pf.g = _g45PaliersDepuisP1(window._g45PctT.p1(window._g45CapCk(), 7), 7);
+          const misePs = (partOk && part100 && cons && carteA && engB && regle && parLieu && attL && appL) || { partOk, part100, cons, carteA, engB, regle, parLieu, attL, appL, tB: tB.slice(0, 300) };
           delete pf.psL;
           su4.forEach((x) => { x.s = x._s; delete x._s; });
           window.__grAtt = (misePs === true && garde && autres && retour && etoile && att1 && att1.length === 6 && l9 === 9 && /en attente/.test(t3) && /Pct FC \(P3\)/.test(t3) && l6 === 6 && p6 === window._g45PctT.p1(16840.33, 6) && !att2 && forc && clamp) || JSON.stringify({ misePs, garde, autres, retour, etoile, att1, l9, t3: t3.slice(-300), l6, p6, att2, forc, clamp, lc: pf.lc });
