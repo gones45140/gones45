@@ -1908,12 +1908,19 @@ serveur.listen(0, async () => {
           window.g45CkOnglet('mc'); const mc1 = document.getElementById('ck-mc').contains(document.getElementById('ulist'));
           window.g45CkOnglet('tdb'); const mc = mc1 && document.getElementById('t-outils').contains(document.getElementById('ulist'));
           window.__ckBil = (tr && engReste && mc && ag && eng && bil && arc && retour) || JSON.stringify({ tr, engReste, mc, ag, eng, bil, arc, retour, al: al.slice(0, 200) });
+          /* 20261104y : 🏳️ abandonner une série */
+          { const cf2 = window.confirm, pr2 = window.prompt; window.confirm = () => true; window.prompt = () => '3';
+            const ua = { n: 'Ck Ab', s: '1', l: 4, lc: { 'nhl|ext': 4 } }; state.u.push(ua);
+            window.g45CkAbandon('Ck Ab', 'nhl|ext'); window.g45CkOnglet('tdb'); const txA = (document.getElementById('ck-tdb') || {}).innerText || '';
+            const okA = ua.lc['nhl|ext'] === 1 && ua.abd && ua.abd.length === 1 && ua.abd[0].perdu === 9 && ua.abd[0].p === 4 && ua.abd[0].l === 'ext' && ua.g && ua.g[0] === 3 && /série abandonnée le .* à P4/.test(txA);
+            window.g45CkAbFermer('Ck Ab', 0); const okF = !ua.abd;
+            window.__ckAb = (okA && okF) || JSON.stringify({ ua, txA: txA.slice(-300) }); state.u.pop(); window.confirm = cf2; window.prompt = pr2; }
           window.g45CkOnSet(false); const ferme = document.getElementById('g45-ni-ck').style.display === 'none' && document.getElementById('t-cockpit').style.display === 'none';
           const tog = _g45OutilsClasser(document.getElementById('g45-ck-on'), 'Notifications') === 'eq' && !!document.getElementById('g45-ck-on') && document.getElementById('t-outils').contains(document.getElementById('g45-ck-on')) && document.getElementById('ck-gr').contains(document.getElementById('palier-panel')) && document.getElementById('ck-gr').contains(document.getElementById('palier-grids'));
           o.ckMonde = (off && auto && ferme && tog && /Le monde du Cockpit/.test(tx) && /Ck A.*P8 sur 9/.test(tx) && /plus que 1 palier/.test(tx) && /Ck B/.test(tx) && /\+10 €/.test(tx) && /ne couvre pas/.test(tx)) || JSON.stringify({ off, auto, ferme, tog, tx: tx.slice(0, 600) });
           state.b = sb; state.u = su; state.a = sa; state.h = sh; if (so === undefined) delete state.ckOn; else state.ckOn = so; window._g45CkPoser();
         } catch (e) { o.ckMonde = 'erreur : ' + e.message; }
-        o.ckBil = window.__ckBil;
+        o.ckBil = window.__ckBil; o.ckAb = window.__ckAb;
         /* 20261104d : 💰 mise en % de la bankroll + 🪜 P1 auto */
         try { const sb = state.b, su = state.u, sS = JSON.parse(JSON.stringify(STRATS)), cf = window.confirm; window.confirm = () => true;
           state.b = { a: '10000', b: '6840.33' }; state.u = (state.u || []).concat([{ n: 'Pct FC', s: '4', sport: '⚽' }]);
@@ -2054,6 +2061,7 @@ serveur.listen(0, async () => {
     ok('🎯 Cote BET45 (Poisson, marge du book)', r.cb45 === true, r.cb45);
     ok('💰 Mise en % de la bankroll + 🪜 P1 auto', r.pctMise === true, r.pctMise);
     ok('🏁 Monde du Cockpit (interrupteur, bouton, tableau de bord)', r.ckMonde === true, r.ckMonde);
+    ok('🏳️ Cockpit : abandonner une série (P1, perte gardée, nouvelle mise)', r.ckAb === true, r.ckAb);
     ok('🏁 Cockpit : 🚀 Engager, 📈 Bilan, 🕒 Archive, 📅 Agenda, 🃏 Mes cartes déplacés', r.ckBil === true, r.ckBil);
     ok('🪜 Grilles 6 à 9 paliers + ⏳ attente pendant une série', r.grAtt === true, r.grAtt);
     ok('Critères : 📋 match par match (palier, mise, gain)', r.crMpm === true, r.crMpm);
