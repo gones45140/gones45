@@ -1898,6 +1898,7 @@ serveur.listen(0, async () => {
           const par0 = document.getElementById('t-bilan').parentNode;
           state.a = [{ isS: true, n: 'Ck A', win: true, m: 10, cote: 2, date: '2026-10-01', sport: '⚽', type: 'Victoire', b: 'x', id: 1 }, { isS: false, n: 'Simple Z', win: false, m: 5, cote: 2, date: '2026-10-02', sport: '⚽', type: 'Victoire', b: 'x', id: 2 }];
           window.g45CkOnglet('eng'); const eng = document.getElementById('ck-eng').contains(document.getElementById('sub-strat')) && document.getElementById('sub-strat').offsetParent !== null && document.getElementById('btn-cpit').style.display === 'none';
+          window._g45CkPoser(); const engReste = document.getElementById('sub-strat').offsetParent !== null;   /* 20261104t : le contrôle régulier ne cache plus le formulaire */
           window.g45CkOnglet('bil'); const bil = document.getElementById('ck-bil').contains(document.getElementById('t-bilan')) && document.getElementById('t-bilan').offsetParent !== null;
           window.g45CkOnglet('arc'); const al = (document.getElementById('arch-list') || {}).innerText || ''; const arc = window._g45ArchCk === true && /Ck A/.test(al) && !/Simple Z/.test(al);
           showTab('t-dash', document.querySelector('button.ni[onclick*="t-dash"]')); const retour = document.getElementById('t-bilan').parentNode === par0 && window._g45ArchCk === false;
@@ -1905,7 +1906,7 @@ serveur.listen(0, async () => {
             && [...document.querySelectorAll('button.ni[onclick*="t-cal"]')].every((x) => x.style.display === 'none');
           window.g45CkOnglet('mc'); const mc1 = document.getElementById('ck-mc').contains(document.getElementById('ulist'));
           window.g45CkOnglet('tdb'); const mc = mc1 && document.getElementById('t-outils').contains(document.getElementById('ulist'));
-          window.__ckBil = (mc && ag && eng && bil && arc && retour) || JSON.stringify({ mc, ag, eng, bil, arc, retour, al: al.slice(0, 200) });
+          window.__ckBil = (engReste && mc && ag && eng && bil && arc && retour) || JSON.stringify({ engReste, mc, ag, eng, bil, arc, retour, al: al.slice(0, 200) });
           window.g45CkOnSet(false); const ferme = document.getElementById('g45-ni-ck').style.display === 'none' && document.getElementById('t-cockpit').style.display === 'none';
           const tog = _g45OutilsClasser(document.getElementById('g45-ck-on'), 'Notifications') === 'eq' && !!document.getElementById('g45-ck-on') && document.getElementById('t-outils').contains(document.getElementById('g45-ck-on')) && document.getElementById('ck-gr').contains(document.getElementById('palier-panel')) && document.getElementById('ck-gr').contains(document.getElementById('palier-grids'));
           o.ckMonde = (off && auto && ferme && tog && /Le monde du Cockpit/.test(tx) && /Ck A.*P8 sur 9/.test(tx) && /plus que 1 palier/.test(tx) && /Ck B/.test(tx) && /\+10 €/.test(tx) && /ne couvre pas/.test(tx)) || JSON.stringify({ off, auto, ferme, tog, tx: tx.slice(0, 600) });
