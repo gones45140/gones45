@@ -107,6 +107,7 @@ serveur.listen(0, async () => {
     await page.waitForTimeout(3000);
     const r = await page.evaluate(async () => {
       const o = {};
+      try { state.ckOn = true; } catch (e) {}   /* 20261104l : morceaux Cockpit (💶, 📋, Jouable…) visibles = Cockpit activé, comme chez Antoine */
       /* 20261021g : critères et curseurs FERMÉS à l'arrivée → contrôle de l'état fermé, puis tout ouvert pour les autres contrôles */
       try {
         const hf = _g45CursHtml([], null, null, 'Ferme FC'), hc = window._g45CrHtml('Ferme FC'), ch = _g45Chargeur('Chargement test');
@@ -1212,8 +1213,8 @@ serveur.listen(0, async () => {
         state.u = [{ n: 'Test Stars', sport: '🏒', s: 5, l: 1, lc: { 'nhl|dom': 2 }, note: '🏠 vainqueur + buts de Dallas plus de 2,5', psL: { dom: { t: 'vainqueur + buts de Dallas plus de 2,5', p: [2, 1, 2, 1], tot: 2, at } } },
           { n: 'Test Loin', sport: '⚽', s: 4, l: 1, note: '✈️ Victoire' }];
         window._g45CkAg = { j: d.getFullYear() + '-' + (d.getMonth() + 1) + '-' + d.getDate(), L: [{ t: at + 3600e3, n: 'Test Stars', d: 1, adv: 'Canadiens', sp: 'hockey' }, { t: at + 3 * 86400e3, n: 'Test Loin', d: 0, adv: 'X', sp: 'soccer' }] };
-        g45TrVue('ck'); await new Promise(r => setTimeout(r, 100));
-        const H = (document.getElementById('t-tend') || {}).innerHTML || '', nav = /🏁 Cockpit BET45/.test(H);
+        state.ckOn = false; g45TrVue('ck'); await new Promise(r => setTimeout(r, 100));   /* 20261104l : vitrine de Tendances = Cockpit coupé */
+        const H = (document.getElementById('t-tend') || {}).innerHTML || '', nav = /🏁 Cockpit (BET45|d'Antoine)/.test(H); state.ckOn = true;
         state.u = u0; window._g45CkAg = null; if (a0 == null) localStorage.removeItem('g45ck_ag'); else localStorage.setItem('g45ck_ag', a0);
         if (v0 == null) localStorage.removeItem('g45tr_vue'); else localStorage.setItem('g45tr_vue', v0);
         const T = H.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ');
@@ -1260,7 +1261,7 @@ serveur.listen(0, async () => {
         state.u = []; state.a = []; window._g45CkAg = null;
         Object.keys(D.u).forEach(n => D.u[n]._pub = 1); D.maj = new Date().toISOString();
         window._g45CkForceDist = true; S.ck.D = D; S.ck.Dt = Date.now();
-        g45TrVue('ck'); g45CkSous('a');
+        state.ckOn = false; g45TrVue('ck'); g45CkSous('a');   /* 20261104l : vitrine de Tendances = Cockpit coupé */
         const A = ((document.getElementById('g45ck') || {}).textContent || '').replace(/\s/g, '');
         g45CkSous('g');
         const G = ((document.getElementById('g45ck') || {}).textContent || '').replace(/\s/g, ''), G0 = (document.getElementById('g45ck') || {}).innerHTML || '';
@@ -1281,6 +1282,7 @@ serveur.listen(0, async () => {
         o.ckPub = (D.u['Test Stars'] && !('np' in D.u['Test Stars']) && D.u['Test Stars'].pm.dom.p === 2 && D.P.length === 1 && D.P[0].b.type === 'Vainqueur'
           && /lescartesquijouent/.test(A) && /misàjour/.test(A) && /duCockpitBET45quijouent/.test(A) && /TestStars🏠vsCanadiens/.test(A) && /Palier2·mise/.test(A) && /piresérie2·1→3paliers/.test(A)
           && /Bénéfice\+10,00€/.test(G) && /TestStars›?🏠1\/1100%\+10,00€📌🏠vainqueur1\/1100%·\+10,00€/.test(G) && D.nt && D.nt['Test Stars'] === '🏠 vainqueur' && /g45CkFicheDist/.test(document.getElementById('t-tend').innerHTML + G0) && p1ok && suivOk && F.vis === 'block' && /TestStars/.test(F.hero.replace(/\s/g, '')) && /\+10/.test(F.bil) && F.same && F.tend === 'none' && F.live === 'none' && F.types !== 'none' && back === 'block') || JSON.stringify({ gs: typeof Gs !== 'undefined' ? [Gs.slice(0, 300), Gs2.slice(0, 300)] : 0, p1: typeof Gp !== 'undefined' ? Gp.slice(0, 500) : 0, g0: (typeof G0 !== 'undefined' ? G0.match(/Par carte.{0,400}/) : 0), F: typeof F !== 'undefined' ? Object.assign({}, F, { hero: F.hero.slice(0, 80), bil: F.bil.slice(0, 80) }) : 0, back: typeof back !== 'undefined' ? back : 0, G: G.slice(0, 200) });
+        state.ckOn = true;
       } catch (e) { o.ckPub = 'erreur : ' + e.message; }
       /* 20261029i / j — fiche d'une carte : filtre Lieu + Types en entier et colorés */
       try {
@@ -1901,7 +1903,7 @@ serveur.listen(0, async () => {
           showTab('t-dash', document.querySelector('button.ni[onclick*="t-dash"]')); const retour = document.getElementById('t-bilan').parentNode === par0 && window._g45ArchCk === false;
           window.__ckBil = (eng && bil && arc && retour) || JSON.stringify({ eng, bil, arc, retour, al: al.slice(0, 200) });
           window.g45CkOnSet(false); const ferme = document.getElementById('g45-ni-ck').style.display === 'none' && document.getElementById('t-cockpit').style.display === 'none';
-          const tog = !!document.getElementById('g45-ck-on');
+          const tog = !!document.getElementById('g45-ck-on') && document.getElementById('t-outils').contains(document.getElementById('g45-ck-on')) && document.getElementById('ck-gr').contains(document.getElementById('palier-panel')) && document.getElementById('ck-gr').contains(document.getElementById('palier-grids'));
           o.ckMonde = (off && auto && ferme && tog && /Le monde du Cockpit/.test(tx) && /Ck A.*P8 sur 9/.test(tx) && /plus que 1 palier/.test(tx) && /Ck B/.test(tx) && /\+10 €/.test(tx) && /ne couvre pas/.test(tx)) || JSON.stringify({ off, auto, ferme, tog, tx: tx.slice(0, 600) });
           state.b = sb; state.u = su; state.a = sa; state.h = sh; if (so === undefined) delete state.ckOn; else state.ckOn = so; window._g45CkPoser();
         } catch (e) { o.ckMonde = 'erreur : ' + e.message; }
