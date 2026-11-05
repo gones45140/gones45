@@ -1895,7 +1895,8 @@ serveur.listen(0, async () => {
         /* 20261104h : 🏁 monde du Cockpit (interrupteur, bouton, tableau de bord) */
         try { const sb = state.b, su = state.u, sa = state.a, sh = state.h, so = state.ckOn;
           state.b = { a: '1000' }; state.a = []; state.h = []; delete state.ckOn; window._g45CkPoser();
-          const off = !window._g45CkActif() && document.getElementById('g45-ni-ck') && document.getElementById('g45-ni-ck').style.display === 'none';
+          const nb0 = document.getElementById('g45-ni-ck'); window.g45CkOuvrir(nb0); const vt = (document.getElementById('ck-vit') || {}).innerText || '';   /* 20261106a : bouton visible + vitrine */
+          const off = !window._g45CkActif() && nb0 && nb0.style.display === '' && /Activer le Cockpit/.test(vt) && document.getElementById('ck-vit').style.display === '';
           state.a = [{ isS: true, n: 'Ck A', win: true, m: 10, cote: 2, date: new Date().toISOString().slice(0, 10) }]; window._g45CkPoser();
           const auto = window._g45CkActif() && document.getElementById('g45-ni-ck').style.display === '';
           state.u = [{ n: 'Ck A', s: '1', l: 8 }, { n: 'Ck B', s: '1', l: 1 }];
@@ -1935,7 +1936,7 @@ serveur.listen(0, async () => {
             const okA = ua.lc['nhl|ext'] === 1 && ua.abd && ua.abd.length === 1 && ua.abd[0].perdu === 9 && ua.abd[0].p === 4 && ua.abd[0].l === 'ext' && ua.g && ua.g[0] === 3 && /série abandonnée le .* à P4/.test(txA);
             window.g45CkAbFermer('Ck Ab', 0); const okF = !ua.abd;
             window.__ckAb = (okA && okF && okM && window._g45CkAbMode === false) || JSON.stringify({ okM, md: window._g45CkAbMode, ua, txA: txA.slice(-300) }); state.u.pop(); window.confirm = cf2; window.prompt = pr2; }
-          window.g45CkOnSet(false); const ferme = document.getElementById('g45-ni-ck').style.display === 'none' && document.getElementById('t-cockpit').style.display === 'none';
+          window.g45CkOnSet(false); const ferme = document.getElementById('g45-ni-ck').style.display === '' && (document.getElementById('t-cockpit').style.display === 'none' || document.getElementById('ck-vit').style.display === '');   /* 20261106a : coupé → vitrine */
           const tog = _g45OutilsClasser(document.getElementById('g45-ck-on'), 'Notifications') === 'eq' && !!document.getElementById('g45-ck-on') && document.getElementById('t-outils').contains(document.getElementById('g45-ck-on')) && document.getElementById('ck-gr').contains(document.getElementById('palier-panel')) && document.getElementById('ck-gr').contains(document.getElementById('palier-grids'));
           o.ckMonde = (off && auto && ferme && tog && /Le monde du Cockpit/.test(tx) && /Ck A.*P8 sur 9/.test(tx) && /plus que 1 palier/.test(tx) && /Ck B/.test(tx) && /\+10 €/.test(tx) && /ne couvre pas/.test(tx)) || JSON.stringify({ off, auto, ferme, tog, tx: tx.slice(0, 600) });
           state.b = sb; state.u = su; state.a = sa; state.h = sh; if (so === undefined) delete state.ckOn; else state.ckOn = so; window._g45CkPoser();
