@@ -2062,7 +2062,7 @@ serveur.listen(0, async () => {
       } catch (e) { o.accueil = 'erreur : ' + e.message; }
       /* 20261106q : 🌍 drapeau + pays + âge */
       try { const T = window._g45AgeT, y = new Date().getFullYear(); const h1 = T.html({ d: (y - 30) + '-01-01', p: 'Tchéquie', f: 'https://a.espncdn.com/x.png' }), h2 = T.html({ d: (y - 20) + '-01-01', p: 'Canada' }), h3 = T.html({ d: (y - 35) + '-01-01', p: '' });
-        o.age = (/Tchéquie · 30 ans</.test(h1) && /<img/.test(h1) && /20 ans 🌱/.test(h2) && /35 ans ⏳/.test(h3) && T.html({}) === '') || [h1, h2, h3].join(' || '); } catch (e) { o.age = 'erreur : ' + e.message; }
+        o.age = (/Tchéquie · 30 ans</.test(h1) && /<img/.test(h1) && /20 ans 👶/.test(h2) && /35 ans 👴/.test(h3) && T.html({}) === '') || [h1, h2, h3].join(' || '); } catch (e) { o.age = 'erreur : ' + e.message; }
       /* 20261106o : 🏅 KHL Individuel relooké (podium + pastilles) */
       try { const sv0 = window._g45KhlJoueurs, eqs = (window.G45_KHL_EQUIPES || []).slice(0, 5);
         window._g45KhlJoueurs = async () => eqs.map((e, i) => ({ id: i + 1, n: 'Joueur ' + (i + 1), r: 'forward', eq: e.id, img: '', st: { gp: 20, g: 10 - i, a: 5, pm: i - 2, pts: 15 - i } }));
