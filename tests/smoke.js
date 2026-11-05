@@ -2063,6 +2063,9 @@ serveur.listen(0, async () => {
         }
         state.u = sU; state.a = sA; try { render(); } catch (e) {}
       } catch (e) { o.accueil = 'erreur : ' + e.message; }
+      /* 20261106w : pari en D'Alembert → confirmation ; « Annuler » = retour Cockpit, aucun pari */
+      try { const cf = window.confirm; window.confirm = () => false; const n0 = (state.h || []).length; window.g45EngMeth('dal'); try { pari(true); } catch (e) {}
+        o.methConf = ((state.h || []).length === n0 && window._g45EngMeth === 'mont') || JSON.stringify({ n0, n: (state.h || []).length, m: window._g45EngMeth }); window.confirm = cf; window.g45EngMeth('mont'); } catch (e) { o.methConf = 'erreur : ' + e.message; }
       /* 20261106q : 🌍 drapeau + pays + âge */
       try { const T = window._g45AgeT, y = new Date().getFullYear(); const h1 = T.html({ d: (y - 30) + '-01-01', p: 'Tchéquie', f: 'https://a.espncdn.com/x.png' }), h2 = T.html({ d: (y - 20) + '-01-01', p: 'Canada' }), h3 = T.html({ d: (y - 35) + '-01-01', p: '' });
         o.age = (/Tchéquie · 30 ans</.test(h1) && /<img/.test(h1) && /20 ans <span[^>]*>👶/.test(h2) && /35 ans <span[^>]*>👴/.test(h3) && T.html({}) === '') || [h1, h2, h3].join(' || '); } catch (e) { o.age = 'erreur : ' + e.message; }
@@ -2157,6 +2160,7 @@ serveur.listen(0, async () => {
     ok('⚖️ Engager en Fibonacci (paliers à part, montante intacte)', r.methEng === true, r.methEng);
     ok('🏅 KHL Individuel : podium + pastilles', r.khlInd === true, r.khlInd);
     ok('🌍 Cartes joueur : drapeau + pays + âge', r.age === true, r.age);
+    ok('⚖️ Pari méthode : confirmation (Annuler = Cockpit)', r.methConf === true, r.methConf);
     ok('🏳️ Cockpit : abandonner une série (P1, perte gardée, nouvelle mise)', r.ckAb === true, r.ckAb);
     ok('🏁 Cockpit : 🚀 Engager, 📈 Bilan, 🕒 Archive, 📅 Agenda, 🃏 Mes cartes déplacés', r.ckBil === true, r.ckBil);
     ok('🪜 Grilles 6 à 9 paliers + ⏳ attente pendant une série', r.grAtt === true, r.grAtt);
