@@ -1909,7 +1909,8 @@ serveur.listen(0, async () => {
           showTab('t-dash', document.querySelector('button.ni[onclick*="t-dash"]')); const retour = document.getElementById('t-bilan').parentNode === par0 && window._g45ArchCk === false;
           showTab('t-cal', null); const ag = document.getElementById('ck-ag').contains(document.getElementById('t-cal')) && document.getElementById('ck-ag').style.display === '' && document.getElementById('t-cockpit').style.display !== 'none'
             && [...document.querySelectorAll('button.ni[onclick*="t-cal"]')].every((x) => x.style.display === 'none');
-          window.g45CkOnglet('tr'); const tr = /Séries individuelles/.test(document.getElementById('ck-tdb').innerText || '');
+          window.g45CkOnglet('tr'); const tc0 = document.getElementById('t-compet'); const tr0 = document.getElementById('ck-tr').contains(tc0) && window._g45CompetCk === true && tc0.style.display === 'block' && /Trouver/.test(tc0.innerText || '');   /* 20261105s : #t-compet déplacé dans le Cockpit */
+          window.g45CkOnglet('tdb'); const tr = tr0 && !document.getElementById('ck-tr').contains(tc0) && window._g45CompetCk === false;
           /* 20261105r : 📊 Loi des séries (liste du robot simulée) */
           const LT = window._g45LoiT, tF = Date.now() + 5 * 3600e3; LT.LOI.d = { at: Date.now(), s: 5, L: [{ sp: 'basketball', lg: 'nba', ligue: 'NBA', eid: 'E9', t: tF, id: '16', eq: 'Loi Wolves', adv: 'Rockets', d: 1, lieu: 'dom', k: 'vq', lib: 'Vainqueur', pire: 4, cours: 3, n: 120, ok: 70, p: [3, 2, 2, 4, 2] },
             { sp: 'soccer', lg: 'fra.1', ligue: 'Ligue 1', eid: 'E8', t: tF, id: '7', eq: 'Ck A', adv: 'Lille', d: 0, lieu: 'tout', k: 'o15', lib: 'Plus de 1,5 buts', pire: 3, cours: 2, n: 150, ok: 110, p: [1, 3] }] }; LT.LOI.t = Date.now();
