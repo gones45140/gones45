@@ -2085,7 +2085,7 @@ serveur.listen(0, async () => {
         S.clsJU = { 'nhl|p|9': { etat: 2, EQ: {}, P: { '9': { nom: 'Bon Joueur', eq: '', L: mk((i) => i % 4 !== 3) }, '8': { nom: 'Mauvais Joueur', eq: '', L: mk((i) => i % 5 < 2) } } } };
         const c0 = { jo: '9', jn: 'Bon Joueur', jm: 'p', jmin: '1' }, H = (k) => { window.g45CrUsJTri(k); return window._g45CrUsJT.html({ lg: 'nhl', sp: 'hockey' }, c0).replace(/<[^>]+>/g, ' '); };
         const hd = H('dal'), hf = H('fib'), hp = H('pire');
-        o.usJMeth = (/🪜 on peut gagner en dessous/.test(hd) && hd.indexOf('Bon Joueur') < hd.indexOf('Mauvais Joueur') && /🔴 −/.test(hd) && /Mise max/.test(hd) && /Pire/.test(hd) && /il faudrait plus de \d+ %/.test(hd) && /🐚 on peut gagner/.test(hf) && /Pire/.test(hp) && !/Gain/.test(hp)) || hd.slice(0, 400);
+        o.usJMeth = (/🪜 on peut gagner en dessous/.test(hd) && hd.indexOf('Bon Joueur') < hd.indexOf('Mauvais Joueur') && /🔴 −/.test(hd) && /Mise max/.test(hd) && /Pire/.test(hd) && /il faudrait plus de \d+ %/.test(hd) && /🐚 on peut gagner/.test(hf) && /📏 fixe [+−]\d/.test(hd) && /Pire/.test(hp) && !/Gain/.test(hp)) || hd.slice(0, 400);
         S.ctx = sv.ctx; S.lieu = sv.lieu; S.usJTri = sv.t; S.clsJU = sv.q;
       } catch (e) { o.usJMeth = 'erreur : ' + e.message; }
       /* 20261107e : bande « Prochain pari » (D8 24 € → gagné D7 21 € / perdu D9 27 € ; F5 15 € → F3 6 € / F6 24 €) */
