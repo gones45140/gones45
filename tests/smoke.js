@@ -2063,6 +2063,8 @@ serveur.listen(0, async () => {
         }
         state.u = sU; state.a = sA; try { render(); } catch (e) {}
       } catch (e) { o.accueil = 'erreur : ' + e.message; }
+      /* 20261107b : classement des joueurs US (valeur du rôle depuis le journal du joueur) */
+      try { const U = window._g45CrUsJT; o.usJ = (U.val('hockey', 'p', { G: 1, A: 2 }) === 3 && U.val('basketball', 'pra', { PTS: 20, REB: 5, AST: 4 }) === 29 && U.val('basketball', 'tp', { '3PT': '3-7' }) === 3 && U.val('football', 'td', { rTD: 1, reTD: 1 }) === 2 && U.mode({ jo: '1', jm: 'p' }) === false) || 'valeurs fausses'; } catch (e) { o.usJ = 'erreur : ' + e.message; }
       /* 20261106w : pari en D'Alembert → confirmation ; « Annuler » = retour Cockpit, aucun pari */
       try { const cf = window.confirm; window.confirm = () => false; const n0 = (state.h || []).length; window.g45EngMeth('dal'); try { pari(true); } catch (e) {}
         o.methConf = ((state.h || []).length === n0 && window._g45EngMeth === 'mont') || JSON.stringify({ n0, n: (state.h || []).length, m: window._g45EngMeth }); window.confirm = cf; window.g45EngMeth('mont'); } catch (e) { o.methConf = 'erreur : ' + e.message; }
@@ -2161,6 +2163,7 @@ serveur.listen(0, async () => {
     ok('🏅 KHL Individuel : podium + pastilles', r.khlInd === true, r.khlInd);
     ok('🌍 Cartes joueur : drapeau + pays + âge', r.age === true, r.age);
     ok('⚖️ Pari méthode : confirmation (Annuler = Cockpit)', r.methConf === true, r.methConf);
+    ok('🏁 Jouable en Cockpit : joueurs NHL / NBA / NFL (valeurs)', r.usJ === true, r.usJ);
     ok('🏳️ Cockpit : abandonner une série (P1, perte gardée, nouvelle mise)', r.ckAb === true, r.ckAb);
     ok('🏁 Cockpit : 🚀 Engager, 📈 Bilan, 🕒 Archive, 📅 Agenda, 🃏 Mes cartes déplacés', r.ckBil === true, r.ckBil);
     ok('🪜 Grilles 6 à 9 paliers + ⏳ attente pendant une série', r.grAtt === true, r.grAtt);
