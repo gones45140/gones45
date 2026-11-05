@@ -1918,7 +1918,10 @@ serveur.listen(0, async () => {
           window.g45CkOnglet('eng'); const eng = document.getElementById('ck-eng').contains(document.getElementById('sub-strat')) && document.getElementById('sub-strat').offsetParent !== null && document.getElementById('btn-cpit').style.display === 'none';
           window._g45CkPoser(); const engReste = document.getElementById('sub-strat').offsetParent !== null;   /* 20261104t : le contrôle régulier ne cache plus le formulaire */
           window.g45CkOnglet('bil'); const bil = document.getElementById('ck-bil').contains(document.getElementById('t-bilan')) && document.getElementById('t-bilan').offsetParent !== null;
+          state.a.push({ isS: false, meth: 'fib', mp: 2, n: 'Fibo Y', win: false, m: 4, cote: 2, date: '2026-10-03', sport: '⚽', type: 'Victoire', b: 'x', id: 3, notes: '🐚 Fibonacci F2' });
           window.g45CkOnglet('arc'); const al = (document.getElementById('arch-list') || {}).innerText || ''; const arc = window._g45ArchCk === true && /Ck A/.test(al) && !/Simple Z/.test(al);
+          window.g45BilMeth('fib'); const alF = (document.getElementById('arch-list') || {}).innerText || ''; const arcF = /Fibo Y/.test(alF) && !/Ck A/.test(alF) && /Fibonacci/.test((document.getElementById('g45-bil-meth') || {}).innerText || '');
+          window.g45BilMeth('mont'); window.__arcMeth = arcF && !/Fibo Y/.test(al) && (window.filteredA ? true : true);
           showTab('t-dash', document.querySelector('button.ni[onclick*="t-dash"]')); const retour = document.getElementById('t-bilan').parentNode === par0 && window._g45ArchCk === false;
           showTab('t-cal', null); const ag = document.getElementById('ck-ag').contains(document.getElementById('t-cal')) && document.getElementById('ck-ag').style.display === '' && document.getElementById('t-cockpit').style.display !== 'none'
             && [...document.querySelectorAll('button.ni[onclick*="t-cal"]')].every((x) => x.style.display === 'none');
@@ -1942,7 +1945,7 @@ serveur.listen(0, async () => {
               && /Et si j'avais joué autrement/.test(tM) && /Fibonacci/.test(tM) && /D'Alembert/.test(tM) && /Mise fixe/.test(tM) && /pire creux/.test(tM)) || JSON.stringify({ O, O2, tM: tM.slice(0, 300) }); }
           window.g45CkOnglet('mc'); const mc1 = document.getElementById('ck-mc').contains(document.getElementById('ulist'));
           window.g45CkOnglet('tdb'); const mc = mc1 && document.getElementById('t-outils').contains(document.getElementById('ulist'));
-          window.__ckBil = (window.__meth === true && window.__ckLoi === true && tr && engReste && mc && ag && eng && bil && arc && retour) || JSON.stringify({ meth: window.__meth, loi: window.__ckLoi, tr, engReste, mc, ag, eng, bil, arc, retour, al: al.slice(0, 200) });
+          window.__ckBil = (window.__arcMeth === true && window.__meth === true && window.__ckLoi === true && tr && engReste && mc && ag && eng && bil && arc && retour) || JSON.stringify({ arcMeth: window.__arcMeth, meth: window.__meth, loi: window.__ckLoi, tr, engReste, mc, ag, eng, bil, arc, retour, al: al.slice(0, 200) });
           /* 20261104y : 🏳️ abandonner une série */
           { const cf2 = window.confirm, pr2 = window.prompt; window.confirm = () => true; window.prompt = () => '3';
             const ua = { n: 'Ck Ab', s: '1', l: 4, lc: { 'nhl|ext': 4 } }; state.u.push(ua);
