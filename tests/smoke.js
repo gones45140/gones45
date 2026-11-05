@@ -1937,6 +1937,15 @@ serveur.listen(0, async () => {
           const loi = /Loi des séries/.test(tL) && /🔥 3 \/ 4/.test(tL) && /Créer la carte/.test(tL) && /Engager/.test(tL) && /7 paliers/.test(tL) && document.getElementById('ck-loi').style.display === ''
             && !!uL && /vainqueur/.test(uL.note || '') && (tL2.match(/Engager/g) || []).length === 2;
           if (uL) state.u.splice(state.u.indexOf(uL), 1); window.__ckLoi = loi || JSON.stringify({ tL: tL.slice(0, 400), uL, tL2: tL2.slice(0, 300) });
+          /* 20261106i : 🔎 Critères (index des équipes simulé) */
+          { LT.LOI.ix = [['hockey', 'nhl', 'NHL', '6', 'Edmonton Oilers', ''], ['soccer', 'fra.1', 'Ligue 1', '167', 'Lyon', ''], ['soccer', 'fra.1', 'Ligue 1', '160', 'Paris Saint-Germain', '']]; LT.LOI.ixT = Date.now();
+            window.g45LoiVue('cr'); const q0 = !!document.getElementById('g45-loi-q') && document.getElementById('ck-tr').style.display === 'none' && /Tes cartes/.test(document.getElementById('g45-loi-crl').innerText || '');
+            window.g45LoiCrQ('edmo'); const l1 = /Edmonton Oilers/.test(document.getElementById('g45-loi-crl').innerText || '') && !/Lyon/.test(document.getElementById('g45-loi-crl').innerText || '');
+            window.g45LoiCrChoix(0); const c1 = LT.LOI.cr && LT.LOI.cr.ctx && LT.LOI.cr.ctx.id === '6' && LT.LOI.cr.ctx.sp === 'hockey' && /Tes crit/.test(document.getElementById('g45-loi-crbox').innerText || '');
+            window.g45LoiCrQ('saint germ'); window.g45LoiCrChoix(0); const c2 = LT.LOI.cr.nom === 'Paris Saint-Germain' && LT.LOI.cr.ctx === null && LT.LOI.cr.lgF === 'fra.1';
+            window.g45CkOnglet('mc'); try { render(); } catch (e) {} await new Promise((r) => setTimeout(r, 60)); const bC = document.querySelector('#ulist .g45ul-cr'); const c3 = !!bC;
+            if (bC) bC.click(); const c4 = document.getElementById('ck-loi').style.display === '' && !!document.getElementById('g45-loi-crbox') && LT.LOI.v === 'cr';
+            window.g45LoiVue('pep'); window.__ckLoi = (window.__ckLoi === true && q0 && l1 && c1 && c2 && c3 && c4) || (window.__ckLoi !== true ? window.__ckLoi : JSON.stringify({ q0, l1, c1, c2, c3, c4 })); }
           /* 20261106b : ⚖️ Et si j'avais joué autrement ? */
           { const MT = window._g45MethT, O = MT.jouer('0011', 2, [1, 2, 6, 18, 54, 162], 1), O2 = MT.jouer('0001', 2, [1, 2, 6], 1);
             const uM = { n: 'Meth FC', s: '1', psL: { dom: { p: [3], tot: 3, sq: '1101001110110100111011' } } }; state.u.push(uM); window.g45CkOnglet('gr');
