@@ -1658,7 +1658,10 @@ serveur.listen(0, async () => {
         /* 20261106m : ⏱️ tiers-temps — 4-3 (2-0, 1-2, 1-1) */
         { const rw = ['2026-10-10', 1, 4, 3, 0, 0, 'x', null, null, null, null, null, null, [[2, 0], [1, 2], [1, 1]]];
           R.push(P({ tq: '1', tqr: 'e' }, rw), !P({ tq: '2', tqr: 'e' }, rw), P({ tq: '2', tqr: 'an' }, rw), P({ tq: '3', tqr: 'n' }, rw), P({ tq: '2', tqo: 'ov', TQL: 2.5 }, rw), !P({ tq: '2', tqo: 'un', TQL: 2.5 }, rw),
-            !P({ tq: '1', tqb: 'oui' }, rw), P({ tq: '3', tqb: 'oui' }, rw), P({ tqm: '2' }, rw), !P({ tqm: 'p' }, rw), !P({ tqm: '1' }, rw), C({ tq: '1', tqr: 'e' }, [['2026-10-10', 1, 4, 3, 0]]).n === 0, C({ tq: '1', tqr: 'e' }, [rw]).ok === 1); }
+            !P({ tq: '1', tqb: 'oui' }, rw), P({ tq: '3', tqb: 'oui' }, rw), P({ tqm: '2' }, rw), !P({ tqm: 'p' }, rw), !P({ tqm: '1' }, rw), C({ tq: '1', tqr: 'e' }, [['2026-10-10', 1, 4, 3, 0]]).n === 0, C({ tq: '1', tqr: 'e' }, [rw]).ok === 1);
+          /* 20261106v : 1er but du tiers — rw ms[14] absent : tiers 1 (2-0) déduit 'e', tiers 2 (1-2) inconnu → non compté ; avec ms[14] */
+          const rw2 = rw.slice(); rw2[14] = ['e', 'a', 'x'];
+          R.push(P({ tq: '1', tqp: 'e' }, rw), C({ tq: '2', tqp: 'e' }, [rw]).n === 0, P({ tq: '2', tqp: 'a' }, rw2), !P({ tq: '2', tqp: 'e' }, rw2), P({ tq: '3', tqp: 'x' }, rw2)); }
         R.push(P({ m1: 'ov', M1L: 0.5 }, m), !P({ m1: 'ov', M1L: 1.5 }, m), P({ m1: 'un', M1L: 1.5 }, m), P({ m2: 'ov', M2L: 2.5 }, m), !P({ m2: 'un', M2L: 2.5 }, m),
           C({ m1: 'ov', M1L: 1 }, [m]).n === 0, C({ m1: 'ov', M1L: 0.5 }, [m]).ok === 1, C({ m2: 'ov', M2L: 3 }, [m]).n === 0, C({ m2: 'un', M2L: 3.5 }, [m]).ok === 1);
         /* 20261024c : lignes rondes partout — 3-1 : Over 4 seul = remboursé (non compté) ; Over 4 + Victoire = compté, gagné ; Over 4 + Défaite = perdu */
@@ -1703,7 +1706,7 @@ serveur.listen(0, async () => {
         await X.aFeuilles('zz.1', '7', 2025); const S = window._g45Cr; window._G45_ARCH_LG.pop();
         window._G45_ARCH_LG.push('zzh', 'zzi'); const U = await X.aEquipeUS('hockey', 'zzh', '5', 2026), U2 = await X.aEquipeUS('hockey', 'zzi', '5', 2026), JX = await X.aJouUS('hockey', 'zzh', '5', 2026), JY = await X.aJouUS('hockey', 'zzi', '5', 2026); window._G45_ARCH_LG.splice(-2, 2);
         if (!(JX && JSON.stringify(JX.parMatch) === JSON.stringify({ H1: { g: { p1: 1 }, a: { p1: 1 }, p: { p1: 2 } }, H2: { a: { p1: 1 }, p: { p1: 1 } } }) && JSON.stringify(JX.pres.H1) === '["p1","p2"]' && JX.joueurs.p1.tot.p === 3 && !JX.joueurs.p3 && JY === null)) E.push('JOU ' + JSON.stringify([JX, JY]));
-        if (JSON.stringify(U) !== JSON.stringify([['2025-10-10', 1, 3, 2, 1, 0, 'H1', null, null, null, null, null, null, null], ['2025-10-12', 0, 1, 5, 0, 0, 'H2', null, null, null, null, null, null, null]]   /* 20261106m : + tiers ms[13] */)   /* 20261103b : + handicap m[7] (absent ici) */ || U2 !== null || X.aSa('nhl', 0) == null) E.push('US ' + JSON.stringify([U, U2]));
+        if (JSON.stringify(U) !== JSON.stringify([['2025-10-10', 1, 3, 2, 1, 0, 'H1', null, null, null, null, null, null, null, null], ['2025-10-12', 0, 1, 5, 0, 0, 'H2', null, null, null, null, null, null, null, null]]   /* 20261106m : + tiers ms[13] */)   /* 20261103b : + handicap m[7] (absent ici) */ || U2 !== null || X.aSa('nhl', 0) == null) E.push('US ' + JSON.stringify([U, U2]));
         { const NL = await window._g45ArchLogNfl('77', 2025); if (!(NL && NL.gameLog.length === 2 && NL.gameLog[1].goals === 1 && NL.gameLog[1].assists === 2 && NL.gameLog[0].h === 0)) E.push('NFL ' + JSON.stringify(NL)); }
         { const NB = await window._g45ArchNbaGL('23', 2026); if (!(NB && JSON.stringify(NB.m) === JSON.stringify({ B1: [34, 28, 7, 9, 3, 0, 0, 0] }) && NB.e.B1[4] === 'BOS' && NB.e.B1[5] === 'vs' && NB.e.B1[6] === '110-100' && NB.e.B1[7] === 'W')) E.push('NBA ' + JSON.stringify(NB)); }
         { const SC = await window._g45RegNhlSecours('20192020', 'goals', 10, false, false); if (!(SC && SC.length === 2 && SC[0].id === 'p9' && SC[0].s.tot === 3 && SC[0].s.mj === 2 && SC[0].eq === 'COL' && SC[1].s.pire === 1)) E.push('SECNHL ' + JSON.stringify(SC)); }
