@@ -346,6 +346,18 @@ serveur.listen(0, async () => {
         const avant = state.h.length; pari(true);
         o.montante = state.h.length === avant + 1;
         if (o.montante) state.h.shift();
+        /* 20261106g : ⚖️ Engager en Fibonacci → pari « méthode » (hors montante), paliers à part */
+        { window.Chart = window.Chart || function () { return { destroy() {}, update() {}, data: { datasets: [] }, options: {} }; };
+          const u0 = state.u[0], lc0 = JSON.stringify(u0.lc || {}), l0 = u0.l, pr = window.prompt; window.prompt = () => ''; try {
+          const li = document.getElementById('c-lieu'); if (li) li.value = 'dom';
+          window.g45EngMeth('fib'); const T = window._g45MethEngT, mz = document.getElementById('c-mise').value;
+          const k0 = state.h.length; pari(true); const bF = state.h[0];
+          const okP = state.h.length === k0 + 1 && bF.meth === 'fib' && bF.isS === false && bF.mp === 1 && /Fibonacci F1/.test(bF.notes || '');
+          result(bF.id, false); const p2 = T.palM(u0, 'fib', bF.mk);
+          pari(true); const b2 = state.h[0]; result(b2.id, false); pari(true); const b3 = state.h[0]; const m3 = b3.m; result(b3.id, true); const pAp = T.palM(u0, 'fib', bF.mk);
+          window.__methEng = (okP && p2 === 2 && pAp === 1 && m3 === 2 * +mz && b2.mp === 2 && b3.mp === 3 && JSON.stringify(u0.lc || {}) === lc0 && u0.l === l0 && +mz > 0) || JSON.stringify({ okP, p2, pAp, mp: [bF.mp, b2.mp, b3.mp], m3, lm: u0.lm, mz, notes: bF.notes });
+          [bF, b2, b3].forEach((x) => { const i = state.a.indexOf(state.a.filter((y) => y.id === x.id)[0]); if (i >= 0) state.a.splice(i, 1); });
+          } catch (e) { window.__methEng = 'erreur : ' + e.message; } finally { delete u0.lm; window.g45EngMeth('mont'); window.prompt = pr; } }
       } catch (e) { o.montante = 'erreur : ' + e.message; }
       try { render(); o.render = true; } catch (e) { o.render = 'erreur : ' + e.message; }
       /* Fenêtre de match hors foot, sur un résumé ESPN minimal. */
@@ -2032,6 +2044,7 @@ serveur.listen(0, async () => {
         }
         state.u = sU; state.a = sA; try { render(); } catch (e) {}
       } catch (e) { o.accueil = 'erreur : ' + e.message; }
+      o.methEng = window.__methEng;
       return o;
     });
     ok('Appli chargée (state)', r.state === true);
@@ -2112,6 +2125,7 @@ serveur.listen(0, async () => {
     ok('🎯 Cote BET45 (Poisson, marge du book)', r.cb45 === true, r.cb45);
     ok('💰 Mise en % de la bankroll + 🪜 P1 auto', r.pctMise === true, r.pctMise);
     ok('🏁 Monde du Cockpit (interrupteur, bouton, tableau de bord)', r.ckMonde === true, r.ckMonde);
+    ok('⚖️ Engager en Fibonacci (paliers à part, montante intacte)', r.methEng === true, r.methEng);
     ok('🏳️ Cockpit : abandonner une série (P1, perte gardée, nouvelle mise)', r.ckAb === true, r.ckAb);
     ok('🏁 Cockpit : 🚀 Engager, 📈 Bilan, 🕒 Archive, 📅 Agenda, 🃏 Mes cartes déplacés', r.ckBil === true, r.ckBil);
     ok('🪜 Grilles 6 à 9 paliers + ⏳ attente pendant une série', r.grAtt === true, r.grAtt);
