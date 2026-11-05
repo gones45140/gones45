@@ -1922,9 +1922,15 @@ serveur.listen(0, async () => {
           const loi = /Loi des séries/.test(tL) && /🔥 3 \/ 4/.test(tL) && /Créer la carte/.test(tL) && /Engager/.test(tL) && /7 paliers/.test(tL) && document.getElementById('ck-loi').style.display === ''
             && !!uL && /vainqueur/.test(uL.note || '') && (tL2.match(/Engager/g) || []).length === 2;
           if (uL) state.u.splice(state.u.indexOf(uL), 1); window.__ckLoi = loi || JSON.stringify({ tL: tL.slice(0, 400), uL, tL2: tL2.slice(0, 300) });
+          /* 20261106b : ⚖️ Et si j'avais joué autrement ? */
+          { const MT = window._g45MethT, O = MT.jouer('0011', 2, [1, 2, 6, 18, 54, 162], 1), O2 = MT.jouer('0001', 2, [1, 2, 6], 1);
+            const uM = { n: 'Meth FC', s: '1', psL: { dom: { p: [3], tot: 3, sq: '1101001110110100111011' } } }; state.u.push(uM); window.g45CkOnglet('gr');
+            const tM = (document.getElementById('g45-ck-meth') || {}).innerText || ''; state.u.pop();
+            window.__meth = (O.mont.b === 4 && O.mont.mn === -3 && O.mont.mx === 6 && O.fib.b === 1 && O.fib.mn === -2 && O.dal.b === 2 && O.fix.b === 0 && O.fix.mn === -2 && O2.mont.bout === 1
+              && /Et si j'avais joué autrement/.test(tM) && /Fibonacci/.test(tM) && /D'Alembert/.test(tM) && /Mise fixe/.test(tM) && /pire creux/.test(tM)) || JSON.stringify({ O, O2, tM: tM.slice(0, 300) }); }
           window.g45CkOnglet('mc'); const mc1 = document.getElementById('ck-mc').contains(document.getElementById('ulist'));
           window.g45CkOnglet('tdb'); const mc = mc1 && document.getElementById('t-outils').contains(document.getElementById('ulist'));
-          window.__ckBil = (window.__ckLoi === true && tr && engReste && mc && ag && eng && bil && arc && retour) || JSON.stringify({ loi: window.__ckLoi, tr, engReste, mc, ag, eng, bil, arc, retour, al: al.slice(0, 200) });
+          window.__ckBil = (window.__meth === true && window.__ckLoi === true && tr && engReste && mc && ag && eng && bil && arc && retour) || JSON.stringify({ meth: window.__meth, loi: window.__ckLoi, tr, engReste, mc, ag, eng, bil, arc, retour, al: al.slice(0, 200) });
           /* 20261104y : 🏳️ abandonner une série */
           { const cf2 = window.confirm, pr2 = window.prompt; window.confirm = () => true; window.prompt = () => '3';
             const ua = { n: 'Ck Ab', s: '1', l: 4, lc: { 'nhl|ext': 4 } }; state.u.push(ua);
