@@ -2079,6 +2079,11 @@ serveur.listen(0, async () => {
         o.khlInd = (!!dv.querySelector('.g45ki-pod') && dv.querySelectorAll('.g45ki-pod > div').length === 3 && /POINTS/.test(tx) && /passes/.test(tx) && /Plus/.test(tx) && /Joueur 4/.test(tx)) || tx.slice(0, 300);
         window.__khlIndHtml = dv.innerHTML; dv.remove(); } catch (e) { o.khlInd = 'erreur : ' + e.message; }
       o.methEng = window.__methEng;
+      /* 20261107e : bande « Prochain pari » (D8 24 € → gagné D7 21 € / perdu D9 27 € ; F5 15 € → F3 6 € / F6 24 €) */
+      try { const P = window._g45EcProch, t = (h) => P(h, h.m).replace(/<[^>]+>/g, '');
+        const d = t({ meth: 'dal', mp: 8, m: 24 }), f = t({ meth: 'fib', mp: 5, m: 15 }), d1 = t({ meth: 'dal', mp: 1, m: 3 }), d12 = t({ meth: 'dal', mp: 12, m: 36 });
+        o.methProch = (/D7 · 21 €/.test(d) && /D9 · 27 €/.test(d) && /F3 · 6 €/.test(f) && /F6 · 24 €/.test(f) && /gagné → D1 · 3 €/.test(d1) && /perdu → D2 · 6 €/.test(d1) && /perdu → D12 · 36 €/.test(d12) && P({ m: 5 }, 5) === '') || [d, f, d1, d12].join(' | ');
+      } catch (e) { o.methProch = 'erreur : ' + e.message; }
       return o;
     });
     ok('Appli chargée (state)', r.state === true);
@@ -2160,6 +2165,7 @@ serveur.listen(0, async () => {
     ok('💰 Mise en % de la bankroll + 🪜 P1 auto', r.pctMise === true, r.pctMise);
     ok('🏁 Monde du Cockpit (interrupteur, bouton, tableau de bord)', r.ckMonde === true, r.ckMonde);
     ok('⚖️ Engager en Fibonacci (paliers à part, montante intacte)', r.methEng === true, r.methEng);
+    ok('⚖️ Prochain pari Fibonacci / D\'Alembert (gagné / perdu en €)', r.methProch === true, r.methProch);
     ok('🏅 KHL Individuel : podium + pastilles', r.khlInd === true, r.khlInd);
     ok('🌍 Cartes joueur : drapeau + pays + âge', r.age === true, r.age);
     ok('⚖️ Pari méthode : confirmation (Annuler = Cockpit)', r.methConf === true, r.methConf);
