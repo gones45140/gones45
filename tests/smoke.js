@@ -1926,7 +1926,7 @@ serveur.listen(0, async () => {
           { const MT = window._g45MethT, O = MT.jouer('0011', 2, [1, 2, 6, 18, 54, 162], 1), O2 = MT.jouer('0001', 2, [1, 2, 6], 1);
             const uM = { n: 'Meth FC', s: '1', psL: { dom: { p: [3], tot: 3, sq: '1101001110110100111011' } } }; state.u.push(uM); window.g45CkOnglet('gr');
             const tM = (document.getElementById('g45-ck-meth') || {}).innerText || ''; state.u.pop();
-            window.__meth = (O.mont.b === 4 && O.mont.mn === -3 && O.mont.mx === 6 && O.fib.b === 1 && O.fib.mn === -2 && O.dal.b === 2 && O.fix.b === 0 && O.fix.mn === -2 && O2.mont.bout === 1
+            window.__meth = (O.mont.b === 4 && O.mont.mn === -3 && O.mont.ch === 3 && MT.jouer('1100', 2, [1, 2, 6], 1).mont.ch === 3 && /plus grosse chute/.test(tM) && O.mont.mx === 6 && O.fib.b === 1 && O.fib.mn === -2 && O.dal.b === 2 && O.fix.b === 0 && O.fix.mn === -2 && O2.mont.bout === 1
               && /Et si j'avais joué autrement/.test(tM) && /Fibonacci/.test(tM) && /D'Alembert/.test(tM) && /Mise fixe/.test(tM) && /pire creux/.test(tM)) || JSON.stringify({ O, O2, tM: tM.slice(0, 300) }); }
           window.g45CkOnglet('mc'); const mc1 = document.getElementById('ck-mc').contains(document.getElementById('ulist'));
           window.g45CkOnglet('tdb'); const mc = mc1 && document.getElementById('t-outils').contains(document.getElementById('ulist'));
