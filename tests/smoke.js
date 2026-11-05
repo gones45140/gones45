@@ -1910,9 +1910,18 @@ serveur.listen(0, async () => {
           showTab('t-cal', null); const ag = document.getElementById('ck-ag').contains(document.getElementById('t-cal')) && document.getElementById('ck-ag').style.display === '' && document.getElementById('t-cockpit').style.display !== 'none'
             && [...document.querySelectorAll('button.ni[onclick*="t-cal"]')].every((x) => x.style.display === 'none');
           window.g45CkOnglet('tr'); const tr = /Séries individuelles/.test(document.getElementById('ck-tdb').innerText || '');
+          /* 20261105r : 📊 Loi des séries (liste du robot simulée) */
+          const LT = window._g45LoiT, tF = Date.now() + 5 * 3600e3; LT.LOI.d = { at: Date.now(), s: 5, L: [{ sp: 'basketball', lg: 'nba', ligue: 'NBA', eid: 'E9', t: tF, id: '16', eq: 'Loi Wolves', adv: 'Rockets', d: 1, lieu: 'dom', k: 'vq', lib: 'Vainqueur', pire: 4, cours: 3, n: 120, ok: 70, p: [3, 2, 2, 4, 2] },
+            { sp: 'soccer', lg: 'fra.1', ligue: 'Ligue 1', eid: 'E8', t: tF, id: '7', eq: 'Ck A', adv: 'Lille', d: 0, lieu: 'tout', k: 'o15', lib: 'Plus de 1,5 buts', pire: 3, cours: 2, n: 150, ok: 110, p: [1, 3] }] }; LT.LOI.t = Date.now();
+          window.g45CkOnglet('loi'); const tL = (document.getElementById('ck-loi') || {}).innerText || '';
+          const cf3 = window.confirm; window.confirm = () => true; window.g45LoiCreer('E9', '16', 'vq', 'dom'); window.confirm = cf3;
+          const uL = state.u.filter((x) => x.n === 'Loi Wolves')[0], tL2 = (document.getElementById('ck-loi') || {}).innerText || '';
+          const loi = /Loi des séries/.test(tL) && /🔥 3 \/ 4/.test(tL) && /Créer la carte/.test(tL) && /Engager/.test(tL) && /7 paliers/.test(tL) && document.getElementById('ck-loi').style.display === ''
+            && !!uL && /vainqueur/.test(uL.note || '') && (tL2.match(/Engager/g) || []).length === 2;
+          if (uL) state.u.splice(state.u.indexOf(uL), 1); window.__ckLoi = loi || JSON.stringify({ tL: tL.slice(0, 400), uL, tL2: tL2.slice(0, 300) });
           window.g45CkOnglet('mc'); const mc1 = document.getElementById('ck-mc').contains(document.getElementById('ulist'));
           window.g45CkOnglet('tdb'); const mc = mc1 && document.getElementById('t-outils').contains(document.getElementById('ulist'));
-          window.__ckBil = (tr && engReste && mc && ag && eng && bil && arc && retour) || JSON.stringify({ tr, engReste, mc, ag, eng, bil, arc, retour, al: al.slice(0, 200) });
+          window.__ckBil = (window.__ckLoi === true && tr && engReste && mc && ag && eng && bil && arc && retour) || JSON.stringify({ loi: window.__ckLoi, tr, engReste, mc, ag, eng, bil, arc, retour, al: al.slice(0, 200) });
           /* 20261104y : 🏳️ abandonner une série */
           { const cf2 = window.confirm, pr2 = window.prompt; window.confirm = () => true; window.prompt = () => '3';
             const ua = { n: 'Ck Ab', s: '1', l: 4, lc: { 'nhl|ext': 4 } }; state.u.push(ua);
