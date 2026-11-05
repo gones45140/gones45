@@ -1130,9 +1130,13 @@ serveur.listen(0, async () => {
         S.nom = 'Test Avs'; S.ctx = { sp: 'hockey', lg: 'nhl', id: '1' }; S.combos = [{ res: 'vqr', ou: 'un', L: 4.5 }]; S.a = 0; S.lieu = 'tout';
         S.data['Test Avs'] = DA; S.cls['hockey|nhl'] = { etat: 2, eq: [{ id: '2', nom: 'Test Bruins' }, { id: '1', nom: 'Test Avs' }], D: { '1': DA, '2': DB } };
         const H = _g45CrHtml('Test Avs', S.ctx);
+        /* 20261105q : colonne « En cours » + tri 🔥 (Bruins : 2 ratés de suite à la fin, pire 3 → 🔥 en tête) */
+        const DC = mk([[3, 1], [1, 2], [0, 3], [1, 4], [3, 1], [1, 2], [0, 2]]); S.cls['hockey|nhl'].D['2'] = DC; S.combos = [{ res: 'vqr' }]; S.clsTri = 'feu';
+        const HF = _g45CrHtml('Test Avs', S.ctx), stC = _g45CrClsStat(DC, { res: 'vqr' }); S.clsTri = 'pire';
+        const feuOk = stC.cours === 2 && stC.pire === 3 && /En cours/.test(HF) && /🔥 2/.test(HF) && HF.indexOf('>Test Bruins<') < HF.indexOf('>Test Avs<') && /Proches de leur record/.test(HF);
         delete S.data['Test Avs']; delete S.cls['hockey|nhl']; Object.assign(S, sv);
         const iA = H.indexOf('>Test Avs<'), iB = H.indexOf('>Test Bruins<');
-        o.crCls = (st.pire === 3 && st.ok === 2 && stO.n === 6 && stO.ok === 4 && stO.pire === 2 && /Jouable en Cockpit/.test(H) && iA > 0 && iB > iA && /g45CompetOuvrir\('Test Bruins','2','nhl','hockey',true\)/.test(H)) || JSON.stringify({ st, stO, iA, iB, h: H.slice(-600) });
+        o.crCls = (feuOk && st.cours === 1 && st.pire === 3 && st.ok === 2 && stO.n === 6 && stO.ok === 4 && stO.pire === 2 && /Jouable en Cockpit/.test(H) && iA > 0 && iB > iA && /g45CompetOuvrir\('Test Bruins','2','nhl','hockey',true\)/.test(H)) || JSON.stringify({ feuOk, st, stO, iA, iB, h: H.slice(-600) });
       } catch (e) { o.crCls = 'erreur : ' + e.message; }
       /* 20261028e — 📌 Garder sur la carte */
       try {
