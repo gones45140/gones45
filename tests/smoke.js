@@ -2060,6 +2060,9 @@ serveur.listen(0, async () => {
         }
         state.u = sU; state.a = sA; try { render(); } catch (e) {}
       } catch (e) { o.accueil = 'erreur : ' + e.message; }
+      /* 20261106q : 🌍 drapeau + pays + âge */
+      try { const T = window._g45AgeT, y = new Date().getFullYear(); const h1 = T.html({ d: (y - 30) + '-01-01', p: 'Tchéquie', f: 'https://a.espncdn.com/x.png' }), h2 = T.html({ d: (y - 20) + '-01-01', p: 'Canada' }), h3 = T.html({ d: (y - 35) + '-01-01', p: '' });
+        o.age = (/Tchéquie · 30 ans</.test(h1) && /<img/.test(h1) && /20 ans 🌱/.test(h2) && /35 ans ⏳/.test(h3) && T.html({}) === '') || [h1, h2, h3].join(' || '); } catch (e) { o.age = 'erreur : ' + e.message; }
       /* 20261106o : 🏅 KHL Individuel relooké (podium + pastilles) */
       try { const sv0 = window._g45KhlJoueurs, eqs = (window.G45_KHL_EQUIPES || []).slice(0, 5);
         window._g45KhlJoueurs = async () => eqs.map((e, i) => ({ id: i + 1, n: 'Joueur ' + (i + 1), r: 'forward', eq: e.id, img: '', st: { gp: 20, g: 10 - i, a: 5, pm: i - 2, pts: 15 - i } }));
@@ -2150,6 +2153,7 @@ serveur.listen(0, async () => {
     ok('🏁 Monde du Cockpit (interrupteur, bouton, tableau de bord)', r.ckMonde === true, r.ckMonde);
     ok('⚖️ Engager en Fibonacci (paliers à part, montante intacte)', r.methEng === true, r.methEng);
     ok('🏅 KHL Individuel : podium + pastilles', r.khlInd === true, r.khlInd);
+    ok('🌍 Cartes joueur : drapeau + pays + âge', r.age === true, r.age);
     ok('🏳️ Cockpit : abandonner une série (P1, perte gardée, nouvelle mise)', r.ckAb === true, r.ckAb);
     ok('🏁 Cockpit : 🚀 Engager, 📈 Bilan, 🕒 Archive, 📅 Agenda, 🃏 Mes cartes déplacés', r.ckBil === true, r.ckBil);
     ok('🪜 Grilles 6 à 9 paliers + ⏳ attente pendant une série', r.grAtt === true, r.grAtt);
