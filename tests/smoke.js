@@ -1930,11 +1930,11 @@ serveur.listen(0, async () => {
           window.g45CkOnglet('tdb'); const tr = tr0 && trEq && !document.getElementById('ck-tr').contains(tc0) && window._g45CompetCk === false;
           /* 20261105r : 📊 Loi des séries (liste du robot simulée) */
           const LT = window._g45LoiT, tF = Date.now() + 5 * 3600e3; LT.LOI.d = { at: Date.now(), s: 5, L: [{ sp: 'basketball', lg: 'nba', ligue: 'NBA', eid: 'E9', t: tF, id: '16', eq: 'Loi Wolves', adv: 'Rockets', d: 1, lieu: 'dom', k: 'vq', lib: 'Vainqueur', pire: 4, cours: 3, n: 120, ok: 70, p: [3, 2, 2, 4, 2] },
-            { sp: 'soccer', lg: 'fra.1', ligue: 'Ligue 1', eid: 'E8', t: tF, id: '7', eq: 'Ck A', adv: 'Lille', d: 0, lieu: 'tout', k: 'o15', lib: 'Plus de 1,5 buts', pire: 3, cours: 2, n: 150, ok: 110, p: [1, 3] }] }; LT.LOI.t = Date.now();
+            { sp: 'soccer', lg: 'fra.1', ligue: 'Ligue 1', eid: 'E8', t: tF, id: '7', eq: 'Ck A', adv: 'Lille', d: 0, lieu: 'tout', k: 'o15', lib: 'Plus de 1,5 buts', pire: 3, cours: 2, n: 150, ok: 110, p: [1, 3], qv: Date.UTC(2026, 7, 27, 18) }] }; LT.LOI.t = Date.now();
           window.g45LoiVue('pep'); const tL = (document.getElementById('ck-loi') || {}).innerText || '';
           const cf3 = window.confirm; window.confirm = () => true; window.g45LoiCreer('E9', '16', 'vq', 'dom'); window.confirm = cf3;
           const uL = state.u.filter((x) => x.n === 'Loi Wolves')[0], tL2 = (document.getElementById('ck-loi') || {}).innerText || '';
-          const loi = /Loi des séries/.test(tL) && /🔥 3 \/ 4/.test(tL) && /Créer la carte/.test(tL) && /Engager/.test(tL) && /7 paliers/.test(tL) && document.getElementById('ck-loi').style.display === ''
+          const loi = /Loi des séries/.test(tL) && /🔥 3 \/ 4/.test(tL) && /Créer la carte/.test(tL) && /Engager/.test(tL) && /7 paliers/.test(tL) && /qualification le 27\/08/.test(tL) && document.getElementById('ck-loi').style.display === ''
             && !!uL && /vainqueur/.test(uL.note || '') && (tL2.match(/Engager/g) || []).length === 2;
           if (uL) state.u.splice(state.u.indexOf(uL), 1); window.__ckLoi = loi || JSON.stringify({ tL: tL.slice(0, 400), uL, tL2: tL2.slice(0, 300) });
           /* 20261106i : 🔎 Critères (index des équipes simulé) */
