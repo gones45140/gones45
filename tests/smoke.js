@@ -2060,6 +2060,13 @@ serveur.listen(0, async () => {
         }
         state.u = sU; state.a = sA; try { render(); } catch (e) {}
       } catch (e) { o.accueil = 'erreur : ' + e.message; }
+      /* 20261106o : 🏅 KHL Individuel relooké (podium + pastilles) */
+      try { const sv0 = window._g45KhlJoueurs, eqs = (window.G45_KHL_EQUIPES || []).slice(0, 5);
+        window._g45KhlJoueurs = async () => eqs.map((e, i) => ({ id: i + 1, n: 'Joueur ' + (i + 1), r: 'forward', eq: e.id, img: '', st: { gp: 20, g: 10 - i, a: 5, pm: i - 2, pts: 15 - i } }));
+        const dv = document.createElement('div'); document.body.appendChild(dv); await _g45KhlVueIndividuel(dv);
+        const tx = dv.innerText || ''; window._g45KhlJoueurs = sv0;
+        o.khlInd = (!!dv.querySelector('.g45ki-pod') && dv.querySelectorAll('.g45ki-pod > div').length === 3 && /POINTS/.test(tx) && /passes/.test(tx) && /Plus/.test(tx) && /Joueur 4/.test(tx)) || tx.slice(0, 300);
+        window.__khlIndHtml = dv.innerHTML; dv.remove(); } catch (e) { o.khlInd = 'erreur : ' + e.message; }
       o.methEng = window.__methEng;
       return o;
     });
@@ -2142,6 +2149,7 @@ serveur.listen(0, async () => {
     ok('💰 Mise en % de la bankroll + 🪜 P1 auto', r.pctMise === true, r.pctMise);
     ok('🏁 Monde du Cockpit (interrupteur, bouton, tableau de bord)', r.ckMonde === true, r.ckMonde);
     ok('⚖️ Engager en Fibonacci (paliers à part, montante intacte)', r.methEng === true, r.methEng);
+    ok('🏅 KHL Individuel : podium + pastilles', r.khlInd === true, r.khlInd);
     ok('🏳️ Cockpit : abandonner une série (P1, perte gardée, nouvelle mise)', r.ckAb === true, r.ckAb);
     ok('🏁 Cockpit : 🚀 Engager, 📈 Bilan, 🕒 Archive, 📅 Agenda, 🃏 Mes cartes déplacés', r.ckBil === true, r.ckBil);
     ok('🪜 Grilles 6 à 9 paliers + ⏳ attente pendant une série', r.grAtt === true, r.grAtt);
