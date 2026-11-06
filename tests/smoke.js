@@ -2139,6 +2139,11 @@ serveur.listen(0, async () => {
         const nVen = (hb.match(/Venezia/g) || []).length;
         o.loiBil = (nVen === 1 && /L'équipe marque/.test(hb) && /Colorado/.test(hk) && !/Metz/.test(hk) && /Aucune pépite avec ces filtres/.test(h7) && /Série stoppée ✅\s+3 · 75 %/.test(hb) && /⚽ 3\/3 · 100 %/.test(hb) && /🏒 0\/1 · 0 %/.test(hb) && /3\/4/.test(hb) && /Metz/.test(hb) && /🏆 Ligue 2/.test(hb) && /🕒 \d\d:\d\d/.test(hb) && /Tout voir \(4 pépites\)/.test(hb)) || hb.slice(0, 500);
       } catch (e) { o.loiBil = 'erreur : ' + e.message; }
+      /* 20261108o : 📈 graphique + 📊 bilans de la Loi des séries */
+      try { const F = window._g45LoiCote.FI; F.m1 = { h: { id: '9' }, a: { id: '1' }, ml: { h: 1.95, a: 3.65, d: 3.75 } }; F.m2 = { h: { id: '2' }, a: { id: '8' }, tot: { L: 6.5, o: 1.9, u: 1.9 } }; F.m3 = { h: { id: '3' }, a: { id: '7' }, bts: { o: 1.64, n: 2.2 } };
+        window.g45LoiBilVue('gr'); const hg = window._g45LoiBilHtml(); window.g45LoiBilVue('bil'); const hl = window._g45LoiBilHtml().replace(/<[^>]+>/g, ' '); window.g45LoiBilVue('cal');
+        ['m1', 'm2', 'm3'].forEach(function (k) { delete F[k]; });
+        o.loiGraph = (/<polyline/.test(hg) && /\+23 €/.test(hg) && /Par pari/.test(hl) && /Victoire\s+1\/1 · 100 %\s+3,65\s+\+27 €/.test(hl) && /Moins de 6,5 buts\s+0\/1 · 0 %\s+1,90\s+−10 €/.test(hl) && /Ligue 2/.test(hl) && /4 ratés/.test(hl)) || (hg.replace(/<[^>]+>/g, ' ').slice(0, 200) + ' || ' + hl.slice(0, 600)); } catch (e) { o.loiGraph = 'erreur : ' + e.message; }
       /* 20261107l : critères NHL d'un joueur seul suivi dans ses autres clubs */
       try { const T = window._g45CrUsTrT, S = T.S, sv = { ctx: S.ctx, nom: S.nom, d: S.data[S.nom] }; const LG0 = window._G45_ARCH_LG; window._G45_ARCH_LG = (LG0 || []).concat(['zzh']); S.ctx = { sp: 'hockey', lg: 'zzh', id: '5' }; S.nom = '__tr'; S.data.__tr = { saisons: [{ an: 2026 }] };
         const c = { jo: 'tr1', jn: 'T', jm: 'g' }, sa = { an: 2026 }; T.de(c, sa); let L = null; for (let i = 0; i < 40 && !(L = T.de(c, sa)); i++) await new Promise((r) => setTimeout(r, 100));
@@ -2256,6 +2261,7 @@ serveur.listen(0, async () => {
     ok('🔁 Critères NHL joueur seul : autres clubs suivis (All-Star dehors)', r.usTr === true, r.usTr);
     ok('🔁 Critères rugby + foot joueur seul : autres clubs suivis', r.trRgFt === true, r.trRgFt);
     ok('📊 Loi des séries : bilan + calendrier (Tendances)', r.loiBil === true, r.loiBil);
+    ok('📊 Loi des séries : graphique + bilans (10 €)', r.loiGraph === true, r.loiGraph);
     ok('📤 Carte partagée : pari en cours = « En cours »', r.carteEnCours === true, r.carteEnCours);
     ok('🎯 Calculatrice : Cote juste (2 équipes, poids)', r.coteJuste === true, r.coteJuste);
     ok('🎯 Cote juste : recherche d\'équipe à la frappe', r.cjmRech === true, r.cjmRech);
