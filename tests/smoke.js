@@ -2087,7 +2087,7 @@ serveur.listen(0, async () => {
       /* 20261107l : critères NHL d'un joueur seul suivi dans ses autres clubs */
       try { const T = window._g45CrUsTrT, S = T.S, sv = { ctx: S.ctx, nom: S.nom, d: S.data[S.nom] }; const LG0 = window._G45_ARCH_LG; window._G45_ARCH_LG = (LG0 || []).concat(['zzh']); S.ctx = { sp: 'hockey', lg: 'zzh', id: '5' }; S.nom = '__tr'; S.data.__tr = { saisons: [{ an: 2026 }] };
         const c = { jo: 'tr1', jn: 'T', jm: 'g' }, sa = { an: 2026 }; T.de(c, sa); let L = null; for (let i = 0; i < 40 && !(L = T.de(c, sa)); i++) await new Promise((r) => setTimeout(r, 100));
-        o.usTr = (T.seul(c) && L && L.length === 6 && L.every((m) => m.jv && m.jv.tr1 && m.trf === '6') && L.filter((m) => m.jv.tr1.g >= 1).length === 2 && L[0].jv.tr1.p === 1 && !T.seul({ jo: 'tr1', jm: 'g', res: 'vqr' })) || JSON.stringify({ s: T.seul(c), n: L && L.length, L: L && L.slice(0, 2) });
+        o.usTr = (T.seul(c) && L && L.length === 6 && L.every((m) => m.jv && m.jv.tr1 && m.trf === '6') && L.filter((m) => m.jv.tr1.g >= 1).length === 2 && L[0].jv.tr1.p === 1 && !T.seul({ jo: 'tr1', jm: 'g', res: 'vqr' }) && /6<\/span>/.test(T.clubs(c, L))) || JSON.stringify({ s: T.seul(c), n: L && L.length, L: L && L.slice(0, 2) });
         S.ctx = sv.ctx; S.nom = sv.nom; delete S.data.__tr; window._G45_ARCH_LG = LG0;
       } catch (e) { o.usTr = 'erreur : ' + e.message; }
       /* 20261107f : Jouable en Cockpit joueurs US trié par méthode (🪜 / 🐚) */
