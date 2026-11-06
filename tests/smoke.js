@@ -2118,7 +2118,10 @@ serveur.listen(0, async () => {
       try { const C = window._g45LoiCote; C.FI.t1 = { h: { id: '179' }, a: { id: '180' }, ml: { h: 2.2, a: 3.2, d: 3.55 }, tot: { L: 2.5, o: 1.74, u: 2.05 }, bts: { o: 1.6, n: 2.2 } };
         const q = (k, id, d) => C.coteDe({ eid: 't1', id: id, d: d, k: k }); const vn = q('vn', '180', 0), v = q('v', '179', 1), ov = q('o25', '179', 1), u = q('u35', '179', 1), b = q('btts', '179', 1);
         delete C.FI.t1;
-        o.loiCote = (v && v.c === 2.2 && vn && vn.e && Math.abs(vn.c - 1.683) < 0.002 && ov && ov.c === 1.74 && u === null && b && b.c === 1.6) || JSON.stringify({ v, vn, ov, u, b }); } catch (e) { o.loiCote = 'erreur : ' + e.message; }
+        o.loiCote = (v && v.c === 2.2 && vn && vn.e && Math.abs(vn.c - 1.683) < 0.002 && ov && ov.c === 1.74 && u && u.e && Math.abs(u.c - 1.38) < 0.01 && b && b.c === 1.6) || JSON.stringify({ v, vn, ov, u, b }); } catch (e) { o.loiCote = 'erreur : ' + e.message; }
+      /* 20261108n : cotes ≈ estimées (autre ligne de buts, 60 min) */
+      try { const E = window._g45LoiEst, a = E.estTot({ L: 2.5, o: 2, u: 2 }, 'o', 1.5), b = E.estTot({ L: 2.5, o: 2, u: 2 }, 'u', 2.5), c = E.est60(2, 2), d = E.estTot({ L: 2.5 }, 'o', 1.5);
+        o.loiEst = (a && a.e && Math.abs(a.c - 1.34) < 0.02 && b && Math.abs(b.c - 2) < 0.01 && c && Math.abs(c.c - 2.597) < 0.01 && d === null) || JSON.stringify({ a, b, c, d }); } catch (e) { o.loiEst = 'erreur : ' + e.message; }
       /* 20261108j : détail des critères replié dans la calculatrice */
       try { const z = document.createElement('div'); z.id = 'g45-cjcr'; z.innerHTML = '<div class="g45cr-detb">b</div><div class="g45cr-det">detail</div>'; document.body.appendChild(z);
         const det = z.querySelector('.g45cr-det'), bt = z.querySelector('.g45cr-detb'); const f0 = getComputedStyle(det).display, b0 = getComputedStyle(bt).display;
@@ -2260,6 +2263,7 @@ serveur.listen(0, async () => {
     ok('🎯 Cote juste : 3 issues (1N2), marge réelle', r.cj3 === true, r.cj3);
     ok('🎯 Cote juste : nos stats 1N2 + issue en or', r.cj1n2 === true, r.cj1n2);
     ok('📊 Loi des séries : cote de chaque pépite', r.loiCote === true, r.loiCote);
+    ok('📊 Loi des séries : cotes ≈ estimées (lignes, 60 min)', r.loiEst === true, r.loiEst);
     ok('🏅 KHL Individuel : podium + pastilles', r.khlInd === true, r.khlInd);
     ok('🌍 Cartes joueur : drapeau + pays + âge', r.age === true, r.age);
     ok('⚖️ Pari méthode : confirmation (Annuler = Cockpit)', r.methConf === true, r.methConf);
