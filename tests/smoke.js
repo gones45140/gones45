@@ -2091,6 +2091,10 @@ serveur.listen(0, async () => {
         o.khlInd = (!!dv.querySelector('.g45ki-pod') && dv.querySelectorAll('.g45ki-pod > div').length === 3 && /POINTS/.test(tx) && /passes/.test(tx) && /Plus/.test(tx) && /Joueur 4/.test(tx)) || tx.slice(0, 300);
         window.__khlIndHtml = dv.innerHTML; dv.remove(); } catch (e) { o.khlInd = 'erreur : ' + e.message; }
       o.methEng = window.__methEng;
+      /* 20261108f : 🎯 Cote juste (Calculatrice) */
+      try { const al = window.alert; window.alert = () => {}; window.g45CjVider(); window.g45CjMettre(1, { nom: 'A', lieu: '✈️', crit: 'Buts 1re MT', d10: 70, s2: 73, s5: 75 }); window.g45CjMettre(2, { nom: 'Sydney', lieu: '🏠', d10: 40, s2: 38, s5: 69 }); window.alert = al;
+        const R = window._g45CjT.calc(); const hz = (document.getElementById('g45-cj') || {}).innerText || '';
+        o.coteJuste = (Math.abs(R.p - 59.425) < 0.01 && Math.abs(R.cj - 1.6828) < 0.001 && /59 % → cote juste 1,68/.test(hz)) || JSON.stringify({ p: R.p, cj: R.cj, hz: hz.slice(0, 200) }); window.g45CjVider(); } catch (e) { o.coteJuste = 'erreur : ' + e.message; }
       /* 20261108b : carte partagée d'un pari EN COURS = « En cours », pas « Perdu » */
       try { const hc = _g45CarteResultatHTML({ id: 'x1', n: 'Colorado Avalanche', target: 'Colorado Avalanche gagne', m: 7.7, cote: 1.72, sport: '🏒' }, {}); o.carteEnCours = (/En cours/.test(hc) && !/Perdu/.test(hc)) || hc.replace(/<[^>]+>/g, ' ').slice(0, 200); } catch (e) { o.carteEnCours = 'erreur : ' + e.message; }
       /* 20261107q : bilan + calendrier de la Loi des séries (Tendances) */
@@ -2221,6 +2225,7 @@ serveur.listen(0, async () => {
     ok('🔁 Critères rugby + foot joueur seul : autres clubs suivis', r.trRgFt === true, r.trRgFt);
     ok('📊 Loi des séries : bilan + calendrier (Tendances)', r.loiBil === true, r.loiBil);
     ok('📤 Carte partagée : pari en cours = « En cours »', r.carteEnCours === true, r.carteEnCours);
+    ok('🎯 Calculatrice : Cote juste (2 équipes, poids)', r.coteJuste === true, r.coteJuste);
     ok('🏅 KHL Individuel : podium + pastilles', r.khlInd === true, r.khlInd);
     ok('🌍 Cartes joueur : drapeau + pays + âge', r.age === true, r.age);
     ok('⚖️ Pari méthode : confirmation (Annuler = Cockpit)', r.methConf === true, r.methConf);
