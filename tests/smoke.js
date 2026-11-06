@@ -2102,6 +2102,10 @@ serveur.listen(0, async () => {
         window.g45CjmCherche('h', 'zzz'); const t2 = dv.innerText; dv.remove(); window.g45CjmPrendre('h', 'hockey|nhl', '22'); const ok1 = M.lg === 'hockey|nhl' && M.h === '22';
         const v = JSON.parse(sv); Object.assign(M, v); try { localStorage.removeItem('g45cjm1'); } catch (e) {}
         o.cjmRech = (/FC Edmonton[\s\S]*Edmonton Oilers/.test(t1) && !/Boston/.test(t1) && /Aucune équipe/.test(t2) && ok1) || JSON.stringify({ t1, t2, ok1 }); } catch (e) { o.cjmRech = 'erreur : ' + e.message; }
+      /* 20261108k : 3e cote (1N2) → marge réelle + cote sans marge de chaque issue */
+      try { const al = window.alert; window.alert = () => {}; window.g45CjVider(); window.alert = al; const Dd = window._g45CjT.D(); Dd.b = '1,56'; Dd.inv = '1,9'; const Ra = window._g45CjT.calc();
+        Dd.b = '3,40'; Dd.inv = '2,10'; Dd.t3 = '3,60'; const Rb = window._g45CjT.calc(); window.g45CjMettre(1, { nom: 'A', d10: 30, s2: 30, s5: 30 }); const hz = (document.getElementById('g45-cj') || {}).innerText || ''; window.g45CjVider();
+        o.cj3 = (Math.abs(Ra.mgR - 16.73) < 0.05 && Math.abs(Ra.sj[0] - 1.821) < 0.005 && Math.abs(Ra.sj[1] - 2.218) < 0.005 && Math.abs(Rb.mgR - 4.81) < 0.05 && Rb.sj.length === 3 && Math.abs(Rb.pb - 28.06) < 0.05 && /Marge réelle 4,8 %/.test(hz) && /3,4 → 3,56/.test(hz)) || JSON.stringify({ a: [Ra.mgR, Ra.sj], b: [Rb.mgR, Rb.sj, Rb.pb], hz: hz.slice(0, 400) }); } catch (e) { o.cj3 = 'erreur : ' + e.message; }
       /* 20261108j : détail des critères replié dans la calculatrice */
       try { const z = document.createElement('div'); z.id = 'g45-cjcr'; z.innerHTML = '<div class="g45cr-detb">b</div><div class="g45cr-det">detail</div>'; document.body.appendChild(z);
         const det = z.querySelector('.g45cr-det'), bt = z.querySelector('.g45cr-detb'); const f0 = getComputedStyle(det).display, b0 = getComputedStyle(bt).display;
@@ -2240,6 +2244,7 @@ serveur.listen(0, async () => {
     ok('🎯 Calculatrice : Cote juste (2 équipes, poids)', r.coteJuste === true, r.coteJuste);
     ok('🎯 Cote juste : recherche d\'équipe à la frappe', r.cjmRech === true, r.cjmRech);
     ok('🎯 Cote juste : détail des critères replié (➕)', r.cjDet === true, r.cjDet);
+    ok('🎯 Cote juste : 3 issues (1N2), marge réelle', r.cj3 === true, r.cj3);
     ok('🏅 KHL Individuel : podium + pastilles', r.khlInd === true, r.khlInd);
     ok('🌍 Cartes joueur : drapeau + pays + âge', r.age === true, r.age);
     ok('⚖️ Pari méthode : confirmation (Annuler = Cockpit)', r.methConf === true, r.methConf);
