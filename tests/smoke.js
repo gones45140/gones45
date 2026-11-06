@@ -2091,6 +2091,8 @@ serveur.listen(0, async () => {
         o.khlInd = (!!dv.querySelector('.g45ki-pod') && dv.querySelectorAll('.g45ki-pod > div').length === 3 && /POINTS/.test(tx) && /passes/.test(tx) && /Plus/.test(tx) && /Joueur 4/.test(tx)) || tx.slice(0, 300);
         window.__khlIndHtml = dv.innerHTML; dv.remove(); } catch (e) { o.khlInd = 'erreur : ' + e.message; }
       o.methEng = window.__methEng;
+      /* 20261108b : carte partagée d'un pari EN COURS = « En cours », pas « Perdu » */
+      try { const hc = _g45CarteResultatHTML({ id: 'x1', n: 'Colorado Avalanche', target: 'Colorado Avalanche gagne', m: 7.7, cote: 1.72, sport: '🏒' }, {}); o.carteEnCours = (/En cours/.test(hc) && !/Perdu/.test(hc)) || hc.replace(/<[^>]+>/g, ' ').slice(0, 200); } catch (e) { o.carteEnCours = 'erreur : ' + e.message; }
       /* 20261107q : bilan + calendrier de la Loi des séries (Tendances) */
       try { const M = window._g45LoiBilT, d0 = new Date(), j = d0.getFullYear() + '-' + ('0' + (d0.getMonth() + 1)).slice(-2) + '-01', t0 = Date.parse(j + 'T19:00:00Z');
         M.d = { L: [{ j, t: t0, eid: 'm1', id: '1', sp: 'soccer', ligue: 'Ligue 2', c: 'ae0e2d', eq: 'Metz', adv: 'Montpellier', d: 0, lieu: 'ext', k: 'v', lib: 'Victoire', pire: 5, cours: 5, r: 1, sc: '2-1' },
@@ -2218,6 +2220,7 @@ serveur.listen(0, async () => {
     ok('🔁 Critères NHL joueur seul : autres clubs suivis (All-Star dehors)', r.usTr === true, r.usTr);
     ok('🔁 Critères rugby + foot joueur seul : autres clubs suivis', r.trRgFt === true, r.trRgFt);
     ok('📊 Loi des séries : bilan + calendrier (Tendances)', r.loiBil === true, r.loiBil);
+    ok('📤 Carte partagée : pari en cours = « En cours »', r.carteEnCours === true, r.carteEnCours);
     ok('🏅 KHL Individuel : podium + pastilles', r.khlInd === true, r.khlInd);
     ok('🌍 Cartes joueur : drapeau + pays + âge', r.age === true, r.age);
     ok('⚖️ Pari méthode : confirmation (Annuler = Cockpit)', r.methConf === true, r.methConf);
