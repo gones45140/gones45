@@ -2102,6 +2102,11 @@ serveur.listen(0, async () => {
         window.g45CjmCherche('h', 'zzz'); const t2 = dv.innerText; dv.remove(); window.g45CjmPrendre('h', 'hockey|nhl', '22'); const ok1 = M.lg === 'hockey|nhl' && M.h === '22';
         const v = JSON.parse(sv); Object.assign(M, v); try { localStorage.removeItem('g45cjm1'); } catch (e) {}
         o.cjmRech = (/FC Edmonton[\s\S]*Edmonton Oilers/.test(t1) && !/Boston/.test(t1) && /Aucune équipe/.test(t2) && ok1) || JSON.stringify({ t1, t2, ok1 }); } catch (e) { o.cjmRech = 'erreur : ' + e.message; }
+      /* 20261108j : détail des critères replié dans la calculatrice */
+      try { const z = document.createElement('div'); z.id = 'g45-cjcr'; z.innerHTML = '<div class="g45cr-detb">b</div><div class="g45cr-det">detail</div>'; document.body.appendChild(z);
+        const det = z.querySelector('.g45cr-det'), bt = z.querySelector('.g45cr-detb'); const f0 = getComputedStyle(det).display, b0 = getComputedStyle(bt).display;
+        window.g45CjmDetail(); const f1 = getComputedStyle(det).display; window.g45CjmDetail(); const f2 = getComputedStyle(det).display; z.remove();
+        o.cjDet = (f0 === 'none' && b0 === 'block' && f1 === 'block' && f2 === 'none') || JSON.stringify({ f0, b0, f1, f2 }); } catch (e) { o.cjDet = 'erreur : ' + e.message; }
       /* 20261108b : carte partagée d'un pari EN COURS = « En cours », pas « Perdu » */
       try { const hc = _g45CarteResultatHTML({ id: 'x1', n: 'Colorado Avalanche', target: 'Colorado Avalanche gagne', m: 7.7, cote: 1.72, sport: '🏒' }, {}); o.carteEnCours = (/En cours/.test(hc) && !/Perdu/.test(hc)) || hc.replace(/<[^>]+>/g, ' ').slice(0, 200); } catch (e) { o.carteEnCours = 'erreur : ' + e.message; }
       /* 20261107q : bilan + calendrier de la Loi des séries (Tendances) */
@@ -2234,6 +2239,7 @@ serveur.listen(0, async () => {
     ok('📤 Carte partagée : pari en cours = « En cours »', r.carteEnCours === true, r.carteEnCours);
     ok('🎯 Calculatrice : Cote juste (2 équipes, poids)', r.coteJuste === true, r.coteJuste);
     ok('🎯 Cote juste : recherche d\'équipe à la frappe', r.cjmRech === true, r.cjmRech);
+    ok('🎯 Cote juste : détail des critères replié (➕)', r.cjDet === true, r.cjDet);
     ok('🏅 KHL Individuel : podium + pastilles', r.khlInd === true, r.khlInd);
     ok('🌍 Cartes joueur : drapeau + pays + âge', r.age === true, r.age);
     ok('⚖️ Pari méthode : confirmation (Annuler = Cockpit)', r.methConf === true, r.methConf);
