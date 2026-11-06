@@ -61,6 +61,8 @@ serveur.listen(0, async () => {
       if (/\/equipes\.json$/.test(pa)) B = { 25: ['Rg', 'RG', 2], 26: ['Op', 'OP', 2] };
       else if (/\/equipes\/25\.json$/.test(pa)) B = { m: [[t1, '2025-09', 'R1', 'h', [30, 10]], [t2, '2025-09', 'R2', 'a', [22, 20]]] };
       else if (/\/matchs\/\d{4}-09\.json$/.test(pa)) B = RF;
+      else if (/\/equipes\/26\.json$/.test(pa)) B = { m: [[t1, '2025-09', 'R1', 'a', [30, 10]], [t2, '2025-09', 'R2', 'h', [22, 20]]] };   /* 20261107o */
+      else if (/\/joueurs\/ptr\.json$/.test(pa)) B = { m: [[t1, '2025-09', 'R1', '26', { TIT: 1, E: 1, PTS: 5 }, null, 'a'], [t2, '2025-09', 'R2', '25', { TIT: 1 }, null, 'a']] };
       return B ? r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(B) }) : r.fulfill({ status: 404, body: '' });
     }
     /* 20261031k : archives GitHub (gones45-archives) — fausse ligue zz.1 2025-26 ; le reste = 404 (non archivé) */
@@ -78,6 +80,10 @@ serveur.listen(0, async () => {
         AF['hockey/zzh/2025-26/equipes/6.json'] = { m: [1, 2, 3, 4, 5, 6].map((i) => [d(i), '2025-11', 'X' + i, i % 2 ? 'h' : 'a', [3, 1], 2, 0]) };
         AF['hockey/zzh/2025-26/equipes/99.json'] = { m: [[d(7), '2025-11', 'AS', 'h', [9, 8], 2, 0]] };
         AF['hockey/zzh/2025-26/joueurs/tr1.json'] = { m: [[Date.parse('2025-10-10T23:00:00Z'), '2025-10', 'H1', '5', { G: 1, J: 1 }, null, 'h']].concat([1, 2, 3, 4, 5, 6].map((i) => [d(i), '2025-11', 'X' + i, '6', { G: i % 3 ? 0 : 1, A: 1, J: 1 }, null, i % 2 ? 'h' : 'a'])).concat([[d(7), '2025-11', 'AS', '99', { G: 2, J: 1 }, null, 'h']]) }; }
+      /* 20261107o : foot — joueur 19 passé du club 8 (même championnat zz.1) au club 7 en cours de saison */
+      AF['foot/joueurs/19.json'] = { n: 'Dix-Neuf', c: [['zz.1', '2025-26', '8', 'Huit FC', 2], ['zz.1', '2025-26', '7', 'Test FC', 1]] };
+      AF['foot/zz.1/2025-26/equipes/8.json'] = { m: [[Date.parse('2025-08-16T19:00:00Z'), '2025-08', 'H1', 'h', [3, 0]], [Date.parse('2025-08-23T19:00:00Z'), '2025-08', 'H2', 'a', [1, 1]], [Date.parse('2025-08-30T19:00:00Z'), '2025-08', 'H3', 'h', [0, 2]]] };
+      AF['foot/zz.1/2025-26/joueurs/19.json'] = { m: [[Date.parse('2025-08-16T19:00:00Z'), '2025-08', 'H1', '8', { G: 2 }, null, 'h'], [Date.parse('2025-08-23T19:00:00Z'), '2025-08', 'H2', '8', { A: 1 }, null, 'a'], [Date.parse('2025-09-13T19:00:00Z'), '2025-09', 'E1', '7', { G: 1 }, null, 'h']] };
       /* 20261031o : Séries individuelles foot (journal joueur, côté h|a, etat.iv 2) */
       AF['foot/zzr.1/2025-26/etat.json'] = { n: 2, v2: 2, iv: 2 };
       AF['foot/zzr.1/2025-26/joueurs/9.json'] = { m: [[Date.parse('2025-09-13T19:00:00Z'), '2025-09', 'E1', '7', { G: 2, A: 1, TIT: 1 }, null, 'h'], [Date.parse('2025-10-04T15:00:00Z'), '2025-10', 'E2', '7', { REM: 1 }, null, 'a'], [Date.parse('2025-10-20T15:00:00Z'), '2025-10', 'E3', '7', null, { 230: [[null, 2.1]] }, 'h'], [Date.parse('2025-10-25T15:00:00Z'), '2025-10', 'E4', '7', null, null, 'h', 'A:O Knee Surgery']] };
@@ -2090,6 +2096,17 @@ serveur.listen(0, async () => {
         o.usTr = (T.seul(c) && L && L.length === 6 && L.every((m) => m.jv && m.jv.tr1 && m.trf === '6') && L.filter((m) => m.jv.tr1.g >= 1).length === 2 && L[0].jv.tr1.p === 1 && !T.seul({ jo: 'tr1', jm: 'g', res: 'vqr' }) && /6<\/span>/.test(T.clubs(c, L))) || JSON.stringify({ s: T.seul(c), n: L && L.length, L: L && L.slice(0, 2) });
         S.ctx = sv.ctx; S.nom = sv.nom; delete S.data.__tr; window._G45_ARCH_LG = LG0;
       } catch (e) { o.usTr = 'erreur : ' + e.message; }
+      /* 20261107o : rugby + foot suivis dans les autres clubs */
+      try { const T = window._g45CrUsTrT, S = T.S, sv = { ctx: S.ctx, nom: S.nom };
+        S.ctx = { sp: 'rugby', lg: '270559', id: '25' }; S.nom = '__rg'; S.data.__rg = { saisons: [{ an: 2025 }] };
+        const c = { jo: 'ptr', jn: 'P', jm: 't' }, sa = { an: 2025 }; T.de(c, sa); let L = null; for (let i = 0; i < 40 && !(L = T.de(c, sa)); i++) await new Promise((r) => setTimeout(r, 100));
+        const okR = !!(L && L.length === 1 && L[0][6] === 'R1' && L[0][1] === 0 && L[0][2] === 10 && L[0].jv.ptr.t === 1 && L[0].trf === '26');
+        window._G45_ARCH_LG.push('zz.1'); const cmp0 = S.comp; S.comp = ''; S.ctx = null; S.nom = '__ft'; S.data.__ft = { lg: 'zz.1', tid: '7', saisons: [{ an: 2025 }] };
+        const cf = { jo: '19', jn: 'D', jm: 'but' }; T.ft(cf, sa); let F = null; for (let i = 0; i < 40 && !(F = T.ft(cf, sa)); i++) await new Promise((r) => setTimeout(r, 100));
+        const okF = !!(F && F.length === 2 && F[0].jv['19'].g === 2 && F[1].jv['19'].a === 1 && F[0].trf === '8' && F[0][1] === 1);
+        o.trRgFt = (okR && okF) || JSON.stringify({ okR, L: L && L.slice(0, 1), okF, F: F && F.slice(0, 2), seul: T.seulF(cf), comp: S.comp, ks: Object.keys(S.usTr).filter((k) => /^ft/.test(k)), T: JSON.stringify(S.usTr['ft|zz.1|19|7'] || null).slice(0, 200) });
+        S.ctx = sv.ctx; S.nom = sv.nom; S.comp = cmp0; delete S.data.__rg; delete S.data.__ft; window._G45_ARCH_LG.pop();
+      } catch (e) { o.trRgFt = 'erreur : ' + e.message; }
       /* 20261107f : Jouable en Cockpit joueurs US trié par méthode (🪜 / 🐚) */
       try { const S = window._g45CrS, sv = { ctx: S.ctx, lieu: S.lieu, t: S.usJTri, q: S.clsJU }; S.ctx = { sp: 'hockey', lg: 'nhl' }; S.lieu = '';
         const mk = (f) => Array.from({ length: 30 }, (_, i) => [i + 1, 1, f(i) ? 1 : 0]);
@@ -2188,6 +2205,7 @@ serveur.listen(0, async () => {
     ok('⚖️ Prochain pari Fibonacci / D\'Alembert (gagné / perdu en €)', r.methProch === true, r.methProch);
     ok('🏁 Jouable en Cockpit joueurs US : tri 🪜 / 🐚 par gain', r.usJMeth === true, r.usJMeth);
     ok('🔁 Critères NHL joueur seul : autres clubs suivis (All-Star dehors)', r.usTr === true, r.usTr);
+    ok('🔁 Critères rugby + foot joueur seul : autres clubs suivis', r.trRgFt === true, r.trRgFt);
     ok('🏅 KHL Individuel : podium + pastilles', r.khlInd === true, r.khlInd);
     ok('🌍 Cartes joueur : drapeau + pays + âge', r.age === true, r.age);
     ok('⚖️ Pari méthode : confirmation (Annuler = Cockpit)', r.methConf === true, r.methConf);
