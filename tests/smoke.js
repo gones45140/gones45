@@ -2096,6 +2096,12 @@ serveur.listen(0, async () => {
         const R = window._g45CjT.calc(); const hz = (document.getElementById('g45-cj') || {}).innerText || '';
         const Dd = window._g45CjT.D(); Dd.b = '1,20'; Dd.inv = '4'; const R2 = window._g45CjT.calc(); Dd.inv = ''; Dd.mg = 7; const R3 = window._g45CjT.calc();
         o.coteJuste = (Math.abs(R2.pb - 76.92) < 0.05 && Math.abs(R2.mgR - 8.33) < 0.05 && R2.ev < 0 && Math.abs(R3.pb - 77.88) < 0.05 && Math.abs(R.p - 59.425) < 0.01 && Math.abs(R.cj - 1.6828) < 0.001 && /59 % → cote juste 1,68/.test(hz)) || JSON.stringify({ p: R.p, cj: R.cj, hz: hz.slice(0, 200) }); window.g45CjVider(); } catch (e) { o.coteJuste = 'erreur : ' + e.message; }
+      /* 20261108i : Cote juste — recherche de l'équipe à la frappe */
+      try { const M = window._g45CjmT, sv = JSON.stringify({ ix: M.ix, lg: M.lg, h: M.h, a: M.a }); M.ix = [['hockey', 'nhl', 'NHL', 22, 'Edmonton Oilers', ''], ['soccer', 'usa.1', 'MLS', 9, 'FC Edmonton', ''], ['hockey', 'nhl', 'NHL', 1, 'Boston Bruins', '']]; M.lg = 'soccer|usa.1';
+        const dv = document.createElement('div'); dv.id = 'g45-cjm-sh'; document.body.appendChild(dv); window.g45CjmCherche('h', 'édm'); const t1 = dv.innerText;
+        window.g45CjmCherche('h', 'zzz'); const t2 = dv.innerText; dv.remove(); window.g45CjmPrendre('h', 'hockey|nhl', '22'); const ok1 = M.lg === 'hockey|nhl' && M.h === '22';
+        const v = JSON.parse(sv); Object.assign(M, v); try { localStorage.removeItem('g45cjm1'); } catch (e) {}
+        o.cjmRech = (/FC Edmonton[\s\S]*Edmonton Oilers/.test(t1) && !/Boston/.test(t1) && /Aucune équipe/.test(t2) && ok1) || JSON.stringify({ t1, t2, ok1 }); } catch (e) { o.cjmRech = 'erreur : ' + e.message; }
       /* 20261108b : carte partagée d'un pari EN COURS = « En cours », pas « Perdu » */
       try { const hc = _g45CarteResultatHTML({ id: 'x1', n: 'Colorado Avalanche', target: 'Colorado Avalanche gagne', m: 7.7, cote: 1.72, sport: '🏒' }, {}); o.carteEnCours = (/En cours/.test(hc) && !/Perdu/.test(hc)) || hc.replace(/<[^>]+>/g, ' ').slice(0, 200); } catch (e) { o.carteEnCours = 'erreur : ' + e.message; }
       /* 20261107q : bilan + calendrier de la Loi des séries (Tendances) */
@@ -2227,6 +2233,7 @@ serveur.listen(0, async () => {
     ok('📊 Loi des séries : bilan + calendrier (Tendances)', r.loiBil === true, r.loiBil);
     ok('📤 Carte partagée : pari en cours = « En cours »', r.carteEnCours === true, r.carteEnCours);
     ok('🎯 Calculatrice : Cote juste (2 équipes, poids)', r.coteJuste === true, r.coteJuste);
+    ok('🎯 Cote juste : recherche d\'équipe à la frappe', r.cjmRech === true, r.cjmRech);
     ok('🏅 KHL Individuel : podium + pastilles', r.khlInd === true, r.khlInd);
     ok('🌍 Cartes joueur : drapeau + pays + âge', r.age === true, r.age);
     ok('⚖️ Pari méthode : confirmation (Annuler = Cockpit)', r.methConf === true, r.methConf);
