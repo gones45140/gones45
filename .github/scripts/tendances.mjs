@@ -272,7 +272,27 @@ const pzCle = (x) => {
   return buts ? 'f_buts' : (k === 'btts' ? 'f_btts' : 'f_vq');
 };
 J.pz = J.pz || [];   // 20261023y : marchés EN PAUSE suivis en coulisse (jamais dans le bilan officiel ; bilan dans l'écran 📊 Bilans de gones)
+/* 20261108r — UN SEUL PARI PAR MATCH (captures Antoine 07/11 : Seahawks – Cardinals « + de 39,5 / 41,5 / 44,5 points », Magic « vainqueur »
+   + « handicap −2,5 » perdus ensemble : « 1 seule suffit, pareil pour les autres matchs ») : toutes listes confondues (officiel J.t, test /
+   pause J.pz, coupes J.ce). 1) Les paris EN ATTENTE en double sont retirés (on garde le 1er noté) ; les paris déjà jugés restent (historique).
+   2) Un match déjà noté (n'importe quel pari) n'est plus repris. 3) Le même jour, entre plusieurs paris du même match : le plus sûr (% le
+   plus haut, puis la meilleure cote). */
+{
+  const tous = [].concat(J.t.map((x) => ['t', x]), J.pz.map((x) => ['pz', x]), J.ce.map((x) => ['ce', x]));
+  const garde = {};
+  tous.forEach(([, x]) => { const k = String(x.id); const g = garde[k]; if (!g || String(x.n || '') < String(g.n || '')) garde[k] = x; });
+  const av = J.t.length + J.pz.length + J.ce.length;
+  const ok = (x) => x.r != null || garde[String(x.id)] === x;
+  J.t = J.t.filter(ok); J.pz = J.pz.filter(ok); J.ce = J.ce.filter(ok);
+  const ap = J.t.length + J.pz.length + J.ce.length;
+  if (ap < av) console.log('un seul pari par match : ' + (av - ap) + ' pari(s) en attente en double retiré(s)');
+}
+const matchVu = new Set([].concat(J.t, J.pz, J.ce).map((x) => String(x.id)));
+nouvelles.sort((a, b) => (b.p || 0) - (a.p || 0) || (b.c || 0) - (a.c || 0));
+let nMatch = 0;
 nouvelles.forEach((x) => {
+  if (matchVu.has(String(x.id))) { nMatch++; return; }   /* 20261108r */
+  matchVu.add(String(x.id));
   if (deja.has(x.id + '|' + x.k) || dejaFam.has(x.id + '|' + fam(x.k))) { nDeja++; return; }   /* 20261029w : déjà notée (même match, même famille) */
   { const c = x.pz || pzCle(x), st = etat(c);   /* 20261024a : test ou pause → J.pz (x.st), jamais officiel */
     if (st !== 'off') { x.pz = c; x.st = st; deja.add(x.id + '|' + x.k); if (!J.pz.some((y) => y.id === x.id && y.k === x.k)) { x.n = note; J.pz.push(x); nPz++; } return; }
@@ -290,6 +310,7 @@ nouvelles.forEach((x) => {
   }
   deja.add(x.id + '|' + x.k); x.n = note; J.t.push(x); ajout++;
 });
+console.log('un seul pari par match : ' + nMatch + ' autre(s) pari(s) du même match laissé(s)');
 console.log('en pause, suivies en coulisse : ' + nPz + ' · total ' + J.pz.length);
 console.log('coupes d\'Europe → test (stat du gros club < 70 %, cote trop basse ou club inconnu) : ' + nCe + ' · suivies ' + J.ce.length);
 
