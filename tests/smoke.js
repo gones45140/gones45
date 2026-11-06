@@ -2093,11 +2093,11 @@ serveur.listen(0, async () => {
       o.methEng = window.__methEng;
       /* 20261107q : bilan + calendrier de la Loi des séries (Tendances) */
       try { const M = window._g45LoiBilT, d0 = new Date(), j = d0.getFullYear() + '-' + ('0' + (d0.getMonth() + 1)).slice(-2) + '-01', t0 = Date.parse(j + 'T19:00:00Z');
-        M.d = { L: [{ j, t: t0, sp: 'soccer', eq: 'Metz', adv: 'Montpellier', d: 0, lieu: 'ext', k: 'v', lib: 'Victoire', pire: 5, cours: 5, r: 1, sc: '2-1' },
+        M.d = { L: [{ j, t: t0, sp: 'soccer', ligue: 'Ligue 2', c: 'ae0e2d', eq: 'Metz', adv: 'Montpellier', d: 0, lieu: 'ext', k: 'v', lib: 'Victoire', pire: 5, cours: 5, r: 1, sc: '2-1' },
           { j, t: t0, sp: 'hockey', eq: 'Colorado', adv: 'X', d: 1, lieu: 'tout', k: 'u65', lib: 'Moins de 6,5 buts', pire: 5, cours: 4, r: 0, sc: '4-3' },
           { j, t: t0, sp: 'soccer', eq: 'Venezia', adv: 'Udinese', d: 1, lieu: 'tout', k: 'btts', lib: 'Les deux marquent', pire: 4, cours: 4, r: 1, sc: '1-1' }] }; M.t = Date.now(); M.j = ''; M.mois = 0;
         const hb = window._g45LoiBilHtml().replace(/<[^>]+>/g, ' ');
-        o.loiBil = (/Série stoppée ✅\s+2 · 67 %/.test(hb) && /⚽ 2\/2 · 100 %/.test(hb) && /🏒 0\/1 · 0 %/.test(hb) && /2\/3/.test(hb) && /Metz/.test(hb) && /Tout voir \(3 pépites\)/.test(hb)) || hb.slice(0, 500);
+        o.loiBil = (/Série stoppée ✅\s+2 · 67 %/.test(hb) && /⚽ 2\/2 · 100 %/.test(hb) && /🏒 0\/1 · 0 %/.test(hb) && /2\/3/.test(hb) && /Metz/.test(hb) && /🏆 Ligue 2/.test(hb) && /🕒 \d\d:\d\d/.test(hb) && /Tout voir \(3 pépites\)/.test(hb)) || hb.slice(0, 500);
       } catch (e) { o.loiBil = 'erreur : ' + e.message; }
       /* 20261107l : critères NHL d'un joueur seul suivi dans ses autres clubs */
       try { const T = window._g45CrUsTrT, S = T.S, sv = { ctx: S.ctx, nom: S.nom, d: S.data[S.nom] }; const LG0 = window._G45_ARCH_LG; window._G45_ARCH_LG = (LG0 || []).concat(['zzh']); S.ctx = { sp: 'hockey', lg: 'zzh', id: '5' }; S.nom = '__tr'; S.data.__tr = { saisons: [{ an: 2026 }] };
