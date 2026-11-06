@@ -2106,6 +2106,14 @@ serveur.listen(0, async () => {
       try { const al = window.alert; window.alert = () => {}; window.g45CjVider(); window.alert = al; const Dd = window._g45CjT.D(); Dd.b = '1,56'; Dd.inv = '1,9'; const Ra = window._g45CjT.calc();
         Dd.b = '3,40'; Dd.inv = '2,10'; Dd.t3 = '3,60'; const Rb = window._g45CjT.calc(); window.g45CjMettre(1, { nom: 'A', d10: 30, s2: 30, s5: 30 }); const hz = (document.getElementById('g45-cj') || {}).innerText || ''; window.g45CjVider();
         o.cj3 = (Math.abs(Ra.mgR - 16.73) < 0.05 && Math.abs(Ra.sj[0] - 1.821) < 0.005 && Math.abs(Ra.sj[1] - 2.218) < 0.005 && Math.abs(Rb.mgR - 4.81) < 0.05 && Rb.sj.length === 3 && Math.abs(Rb.pb - 28.06) < 0.05 && /Marge réelle 4,8 %/.test(hz) && /3,4 → 3,56/.test(hz)) || JSON.stringify({ a: [Ra.mgR, Ra.sj], b: [Rb.mgR, Rb.sj, Rb.pb], hz: hz.slice(0, 400) }); } catch (e) { o.cj3 = 'erreur : ' + e.message; }
+      /* 20261108l : 📊 Nos stats 1N2 (cotes du book, issue choisie en or) */
+      try { const M = window._g45CjmT, sv = JSON.stringify({ ix: M.ix, lg: M.lg, h: M.h, a: M.a, c: M.c, pk: M.pk });
+        M.ix = [['soccer', 'fra.1', 'Ligue 1', 179, 'Toulouse', ''], ['soccer', 'fra.1', 'Ligue 1', 180, 'Strasbourg', '']]; M.lg = 'soccer|fra.1'; M.h = '179'; M.a = '180';
+        M.r['soccer|fra.1|179|180'] = { p: [37, 27.5, 35.5], nH: 74, nA: 75 }; M.c = ['2', '3,6', '2,9']; M.pk = 1;
+        const dv = document.createElement('div'); dv.innerHTML = window._g45Cjm1n2.html(); const tx = dv.innerText || dv.textContent, gold = (dv.innerHTML.match(/#f5c542/g) || []).length;
+        const mx = window._g45Cjm1n2.melange([{ s: 0, r: 'V' }, { s: 0, r: 'N' }, { s: 2, r: 'V' }, { s: 3, r: 'D' }], 'V');
+        const v = JSON.parse(sv); Object.assign(M, v); delete M.r['soccer|fra.1|179|180']; try { localStorage.removeItem('g45cjm1'); } catch (e) {}
+        o.cj1n2 = (/37 %/.test(tx) && /2,7/.test(tx) && /3,64/.test(tx) && /✅ \+2,9 %/.test(tx) && /Marge du book 12,3 %/.test(tx) && /4,04/.test(tx) && gold >= 3 && Math.abs(mx - 50) < 0.01) || JSON.stringify({ tx: tx.slice(0, 300), gold, mx }); } catch (e) { o.cj1n2 = 'erreur : ' + e.message; }
       /* 20261108j : détail des critères replié dans la calculatrice */
       try { const z = document.createElement('div'); z.id = 'g45-cjcr'; z.innerHTML = '<div class="g45cr-detb">b</div><div class="g45cr-det">detail</div>'; document.body.appendChild(z);
         const det = z.querySelector('.g45cr-det'), bt = z.querySelector('.g45cr-detb'); const f0 = getComputedStyle(det).display, b0 = getComputedStyle(bt).display;
@@ -2245,6 +2253,7 @@ serveur.listen(0, async () => {
     ok('🎯 Cote juste : recherche d\'équipe à la frappe', r.cjmRech === true, r.cjmRech);
     ok('🎯 Cote juste : détail des critères replié (➕)', r.cjDet === true, r.cjDet);
     ok('🎯 Cote juste : 3 issues (1N2), marge réelle', r.cj3 === true, r.cj3);
+    ok('🎯 Cote juste : nos stats 1N2 + issue en or', r.cj1n2 === true, r.cj1n2);
     ok('🏅 KHL Individuel : podium + pastilles', r.khlInd === true, r.khlInd);
     ok('🌍 Cartes joueur : drapeau + pays + âge', r.age === true, r.age);
     ok('⚖️ Pari méthode : confirmation (Annuler = Cockpit)', r.methConf === true, r.methConf);
