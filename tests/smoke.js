@@ -2091,6 +2091,14 @@ serveur.listen(0, async () => {
         o.khlInd = (!!dv.querySelector('.g45ki-pod') && dv.querySelectorAll('.g45ki-pod > div').length === 3 && /POINTS/.test(tx) && /passes/.test(tx) && /Plus/.test(tx) && /Joueur 4/.test(tx)) || tx.slice(0, 300);
         window.__khlIndHtml = dv.innerHTML; dv.remove(); } catch (e) { o.khlInd = 'erreur : ' + e.message; }
       o.methEng = window.__methEng;
+      /* 20261107q : bilan + calendrier de la Loi des séries (Tendances) */
+      try { const M = window._g45LoiBilT, d0 = new Date(), j = d0.getFullYear() + '-' + ('0' + (d0.getMonth() + 1)).slice(-2) + '-01', t0 = Date.parse(j + 'T19:00:00Z');
+        M.d = { L: [{ j, t: t0, sp: 'soccer', eq: 'Metz', adv: 'Montpellier', d: 0, lieu: 'ext', k: 'v', lib: 'Victoire', pire: 5, cours: 5, r: 1, sc: '2-1' },
+          { j, t: t0, sp: 'hockey', eq: 'Colorado', adv: 'X', d: 1, lieu: 'tout', k: 'u65', lib: 'Moins de 6,5 buts', pire: 5, cours: 4, r: 0, sc: '4-3' },
+          { j, t: t0, sp: 'soccer', eq: 'Venezia', adv: 'Udinese', d: 1, lieu: 'tout', k: 'btts', lib: 'Les deux marquent', pire: 4, cours: 4, r: 1, sc: '1-1' }] }; M.t = Date.now(); M.j = ''; M.mois = 0;
+        const hb = window._g45LoiBilHtml().replace(/<[^>]+>/g, ' ');
+        o.loiBil = (/Série stoppée ✅\s+2 · 67 %/.test(hb) && /⚽ 2\/2 · 100 %/.test(hb) && /🏒 0\/1 · 0 %/.test(hb) && /2\/3/.test(hb) && /Metz/.test(hb) && /Tout voir \(3 pépites\)/.test(hb)) || hb.slice(0, 500);
+      } catch (e) { o.loiBil = 'erreur : ' + e.message; }
       /* 20261107l : critères NHL d'un joueur seul suivi dans ses autres clubs */
       try { const T = window._g45CrUsTrT, S = T.S, sv = { ctx: S.ctx, nom: S.nom, d: S.data[S.nom] }; const LG0 = window._G45_ARCH_LG; window._G45_ARCH_LG = (LG0 || []).concat(['zzh']); S.ctx = { sp: 'hockey', lg: 'zzh', id: '5' }; S.nom = '__tr'; S.data.__tr = { saisons: [{ an: 2026 }] };
         const c = { jo: 'tr1', jn: 'T', jm: 'g' }, sa = { an: 2026 }; T.de(c, sa); let L = null; for (let i = 0; i < 40 && !(L = T.de(c, sa)); i++) await new Promise((r) => setTimeout(r, 100));
@@ -2207,6 +2215,7 @@ serveur.listen(0, async () => {
     ok('🏁 Jouable en Cockpit joueurs US : tri 🪜 / 🐚 par gain', r.usJMeth === true, r.usJMeth);
     ok('🔁 Critères NHL joueur seul : autres clubs suivis (All-Star dehors)', r.usTr === true, r.usTr);
     ok('🔁 Critères rugby + foot joueur seul : autres clubs suivis', r.trRgFt === true, r.trRgFt);
+    ok('📊 Loi des séries : bilan + calendrier (Tendances)', r.loiBil === true, r.loiBil);
     ok('🏅 KHL Individuel : podium + pastilles', r.khlInd === true, r.khlInd);
     ok('🌍 Cartes joueur : drapeau + pays + âge', r.age === true, r.age);
     ok('⚖️ Pari méthode : confirmation (Annuler = Cockpit)', r.methConf === true, r.methConf);
