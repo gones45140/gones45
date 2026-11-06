@@ -73,6 +73,11 @@ serveur.listen(0, async () => {
       AF['hockey/zzh/2025-26/equipes.json'] = { 5: ['Test H', 'TH', 4] }; AF['hockey/zzi/2025-26/equipes.json'] = { 5: ['Test H', 'TH', 1] };
       AF['hockey/zzh/2025-26/equipes/5.json'] = { m: [[Date.parse('2025-09-25T23:00:00Z'), '2025-09', 'P1', 'h', [1, 4], 1, 0], [Date.parse('2025-10-10T23:00:00Z'), '2025-10', 'H1', 'h', [3, 2], 2, 1],
         [Date.parse('2025-10-12T23:00:00Z'), '2025-10', 'H2', 'a', [5, 1], 2, 0], [Date.parse('2026-04-25T23:00:00Z'), '2026-04', 'S1', 'a', [2, 0], 3, 0]] };
+      /* 20261107l : joueur suivi dans un AUTRE club (tr1 : 1 match avec le club 5, 6 avec le club 6, + 1 All-Star club 99) */
+      { const d = (i) => Date.parse('2025-11-0' + i + 'T23:00:00Z');
+        AF['hockey/zzh/2025-26/equipes/6.json'] = { m: [1, 2, 3, 4, 5, 6].map((i) => [d(i), '2025-11', 'X' + i, i % 2 ? 'h' : 'a', [3, 1], 2, 0]) };
+        AF['hockey/zzh/2025-26/equipes/99.json'] = { m: [[d(7), '2025-11', 'AS', 'h', [9, 8], 2, 0]] };
+        AF['hockey/zzh/2025-26/joueurs/tr1.json'] = { m: [[Date.parse('2025-10-10T23:00:00Z'), '2025-10', 'H1', '5', { G: 1, J: 1 }, null, 'h']].concat([1, 2, 3, 4, 5, 6].map((i) => [d(i), '2025-11', 'X' + i, '6', { G: i % 3 ? 0 : 1, A: 1, J: 1 }, null, i % 2 ? 'h' : 'a'])).concat([[d(7), '2025-11', 'AS', '99', { G: 2, J: 1 }, null, 'h']]) }; }
       /* 20261031o : Séries individuelles foot (journal joueur, côté h|a, etat.iv 2) */
       AF['foot/zzr.1/2025-26/etat.json'] = { n: 2, v2: 2, iv: 2 };
       AF['foot/zzr.1/2025-26/joueurs/9.json'] = { m: [[Date.parse('2025-09-13T19:00:00Z'), '2025-09', 'E1', '7', { G: 2, A: 1, TIT: 1 }, null, 'h'], [Date.parse('2025-10-04T15:00:00Z'), '2025-10', 'E2', '7', { REM: 1 }, null, 'a'], [Date.parse('2025-10-20T15:00:00Z'), '2025-10', 'E3', '7', null, { 230: [[null, 2.1]] }, 'h'], [Date.parse('2025-10-25T15:00:00Z'), '2025-10', 'E4', '7', null, null, 'h', 'A:O Knee Surgery']] };
@@ -2079,6 +2084,12 @@ serveur.listen(0, async () => {
         o.khlInd = (!!dv.querySelector('.g45ki-pod') && dv.querySelectorAll('.g45ki-pod > div').length === 3 && /POINTS/.test(tx) && /passes/.test(tx) && /Plus/.test(tx) && /Joueur 4/.test(tx)) || tx.slice(0, 300);
         window.__khlIndHtml = dv.innerHTML; dv.remove(); } catch (e) { o.khlInd = 'erreur : ' + e.message; }
       o.methEng = window.__methEng;
+      /* 20261107l : critères NHL d'un joueur seul suivi dans ses autres clubs */
+      try { const T = window._g45CrUsTrT, S = T.S, sv = { ctx: S.ctx, nom: S.nom, d: S.data[S.nom] }; const LG0 = window._G45_ARCH_LG; window._G45_ARCH_LG = (LG0 || []).concat(['zzh']); S.ctx = { sp: 'hockey', lg: 'zzh', id: '5' }; S.nom = '__tr'; S.data.__tr = { saisons: [{ an: 2026 }] };
+        const c = { jo: 'tr1', jn: 'T', jm: 'g' }, sa = { an: 2026 }; T.de(c, sa); let L = null; for (let i = 0; i < 40 && !(L = T.de(c, sa)); i++) await new Promise((r) => setTimeout(r, 100));
+        o.usTr = (T.seul(c) && L && L.length === 6 && L.every((m) => m.jv && m.jv.tr1 && m.trf === '6') && L.filter((m) => m.jv.tr1.g >= 1).length === 2 && L[0].jv.tr1.p === 1 && !T.seul({ jo: 'tr1', jm: 'g', res: 'vqr' })) || JSON.stringify({ s: T.seul(c), n: L && L.length, L: L && L.slice(0, 2) });
+        S.ctx = sv.ctx; S.nom = sv.nom; delete S.data.__tr; window._G45_ARCH_LG = LG0;
+      } catch (e) { o.usTr = 'erreur : ' + e.message; }
       /* 20261107f : Jouable en Cockpit joueurs US trié par méthode (🪜 / 🐚) */
       try { const S = window._g45CrS, sv = { ctx: S.ctx, lieu: S.lieu, t: S.usJTri, q: S.clsJU }; S.ctx = { sp: 'hockey', lg: 'nhl' }; S.lieu = '';
         const mk = (f) => Array.from({ length: 30 }, (_, i) => [i + 1, 1, f(i) ? 1 : 0]);
@@ -2176,6 +2187,7 @@ serveur.listen(0, async () => {
     ok('⚖️ Engager en Fibonacci (paliers à part, montante intacte)', r.methEng === true, r.methEng);
     ok('⚖️ Prochain pari Fibonacci / D\'Alembert (gagné / perdu en €)', r.methProch === true, r.methProch);
     ok('🏁 Jouable en Cockpit joueurs US : tri 🪜 / 🐚 par gain', r.usJMeth === true, r.usJMeth);
+    ok('🔁 Critères NHL joueur seul : autres clubs suivis (All-Star dehors)', r.usTr === true, r.usTr);
     ok('🏅 KHL Individuel : podium + pastilles', r.khlInd === true, r.khlInd);
     ok('🌍 Cartes joueur : drapeau + pays + âge', r.age === true, r.age);
     ok('⚖️ Pari méthode : confirmation (Annuler = Cockpit)', r.methConf === true, r.methConf);
