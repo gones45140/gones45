@@ -2139,6 +2139,9 @@ serveur.listen(0, async () => {
         const nVen = (hb.match(/Venezia/g) || []).length;
         o.loiBil = (nVen === 1 && /L'équipe marque/.test(hb) && /Colorado/.test(hk) && !/Metz/.test(hk) && /Aucune pépite avec ces filtres/.test(h7) && /Série stoppée ✅\s+3 · 75 %/.test(hb) && /⚽ 3\/3 · 100 %/.test(hb) && /🏒 0\/1 · 0 %/.test(hb) && /3\/4/.test(hb) && /Metz/.test(hb) && /🏆 Ligue 2/.test(hb) && /🕒 \d\d:\d\d/.test(hb) && /Tout voir \(4 pépites\)/.test(hb)) || hb.slice(0, 500);
       } catch (e) { o.loiBil = 'erreur : ' + e.message; }
+      /* 20261108x : ☑️ Déjà engagé (Prochaines 24 h) */
+      try { localStorage.removeItem('g45ck_engm'); const t1 = Date.now() + 3600000; window.g45CkEngCoche('Test FC', t1, true); const a1 = JSON.parse(localStorage.getItem('g45ck_engm') || '{}')['Test FC|' + t1] === 1;
+        window.g45CkEngCoche('Test FC', t1, false); const a2 = !JSON.parse(localStorage.getItem('g45ck_engm') || '{}')['Test FC|' + t1]; o.ckEng = (a1 && a2) || JSON.stringify({ a1, a2 }); } catch (e) { o.ckEng = 'erreur : ' + e.message; }
       /* 20261108w : photo d'une carte joueur cherchée si absente */
       try { const ch0 = window._g45JoueurVisChercher; window._g45JoueurVisChercher = _g45JoueurVisChercher = async () => ({ thumb: 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7' });
         const row = document.createElement('div'); row.innerHTML = '<div><div class="uname">Test Joueur</div><div>i</div></div>'; document.body.appendChild(row);
@@ -2278,6 +2281,7 @@ serveur.listen(0, async () => {
     ok('📊 Loi des séries : score + résultat depuis les archives', r.loiScore === true, r.loiScore);
     ok('Logos : noms français / Winamax (Mayence, B. Munich)', r.logoFr === true, r.logoFr);
     ok('🃏 Mes cartes : photo du joueur cherchée si absente', r.ulPhoto === true, r.ulPhoto);
+    ok('🏁 Prochaines 24 h : case Déjà engagé', r.ckEng === true, r.ckEng);
     ok('📤 Carte partagée : pari en cours = « En cours »', r.carteEnCours === true, r.carteEnCours);
     ok('🎯 Calculatrice : Cote juste (2 équipes, poids)', r.coteJuste === true, r.coteJuste);
     ok('🎯 Cote juste : recherche d\'équipe à la frappe', r.cjmRech === true, r.cjmRech);
