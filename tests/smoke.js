@@ -2139,6 +2139,12 @@ serveur.listen(0, async () => {
         const nVen = (hb.match(/Venezia/g) || []).length;
         o.loiBil = (nVen === 1 && /L'équipe marque/.test(hb) && /Colorado/.test(hk) && !/Metz/.test(hk) && /Aucune pépite avec ces filtres/.test(h7) && /Série stoppée ✅\s+3 · 75 %/.test(hb) && /⚽ 3\/3 · 100 %/.test(hb) && /🏒 0\/1 · 0 %/.test(hb) && /3\/4/.test(hb) && /Metz/.test(hb) && /🏆 Ligue 2/.test(hb) && /🕒 \d\d:\d\d/.test(hb) && /Tout voir \(4 pépites\)/.test(hb)) || hb.slice(0, 500);
       } catch (e) { o.loiBil = 'erreur : ' + e.message; }
+      /* 20261108s : score + résultat tout de suite depuis la fiche des archives */
+      try { const M = window._g45LoiBilT, F = window._g45LoiCote.FI, sv = M.d, d0 = new Date(), j = d0.getFullYear() + '-' + ('0' + (d0.getMonth() + 1)).slice(-2) + '-01', t0 = Date.parse(j + 'T19:00:00Z');
+        M.d = { L: [{ j, t: t0, eid: 'q1', id: '5', sp: 'hockey', eq: 'Sharks', adv: 'Wild', d: 0, lieu: 'ext', k: 'u65', lib: 'Moins de 6,5 buts', pire: 5, cours: 4, r: null }, { j, t: t0, eid: 'q2', id: '7', sp: 'soccer', eq: 'Banfield', adv: 'Tucuman', d: 1, lieu: 'dom', k: 'v', lib: 'Victoire', pire: 7, cours: 6, r: null }] }; M.t = Date.now(); M.j = ''; M.vue = 'cal';
+        F.q1 = { h: { id: '9' }, a: { id: '5' }, f: { h: 4, a: 3 }, ot: 1, tot: { L: 6.5, o: 1.9, u: 1.91 } }; F.q2 = { h: { id: '7' }, a: { id: '8' }, f: { h: 0, a: 0 }, ml: { h: 2.5, d: 3, a: 3 } };
+        const hq = window._g45LoiBilHtml().replace(/<[^>]+>/g, ' '); const a = M.d.L[0], b = M.d.L[1]; delete F.q1; delete F.q2; M.d = sv;
+        o.loiScore = (a.r === 0 && a.sc === '4-3 (prol.)' && b.r === 0 && b.sc === '0-0' && /4-3/.test(hq)) || JSON.stringify({ a, b }); } catch (e) { o.loiScore = 'erreur : ' + e.message; }
       /* 20261108o : 📈 graphique + 📊 bilans de la Loi des séries */
       try { const F = window._g45LoiCote.FI; F.m1 = { h: { id: '9' }, a: { id: '1' }, ml: { h: 1.95, a: 3.65, d: 3.75 } }; F.m2 = { h: { id: '2' }, a: { id: '8' }, tot: { L: 6.5, o: 1.9, u: 1.9 } }; F.m3 = { h: { id: '3' }, a: { id: '7' }, bts: { o: 1.64, n: 2.2 } };
         window.g45LoiBilVue('gr'); const hg = window._g45LoiBilHtml(); window.g45LoiBilVue('bil'); const hl = window._g45LoiBilHtml().replace(/<[^>]+>/g, ' '); window.g45LoiBilVue('cal');
@@ -2262,6 +2268,7 @@ serveur.listen(0, async () => {
     ok('🔁 Critères rugby + foot joueur seul : autres clubs suivis', r.trRgFt === true, r.trRgFt);
     ok('📊 Loi des séries : bilan + calendrier (Tendances)', r.loiBil === true, r.loiBil);
     ok('📊 Loi des séries : graphique + bilans (10 €)', r.loiGraph === true, r.loiGraph);
+    ok('📊 Loi des séries : score + résultat depuis les archives', r.loiScore === true, r.loiScore);
     ok('📤 Carte partagée : pari en cours = « En cours »', r.carteEnCours === true, r.carteEnCours);
     ok('🎯 Calculatrice : Cote juste (2 équipes, poids)', r.coteJuste === true, r.coteJuste);
     ok('🎯 Cote juste : recherche d\'équipe à la frappe', r.cjmRech === true, r.cjmRech);
