@@ -1005,6 +1005,17 @@ serveur.listen(0, async () => {
         op.remove(); opJ.remove(); state.u = u0; window.alert = a0;
         o.tkc = (v === 'Vancouver Canucks' && t === 'Florida Panthers' && l === 'ext' && ty === 'Défaite' && !alerte && oT.equipe === 'Vancouver Canucks' && oT.adversaire === 'Florida Panthers' && oT.domicile === false) || JSON.stringify({ v, t, l, ty, alerte, oT });   /* 20261101b : objet prêt pour « Match trouvé » */
       } catch (e) { o.tkc = 'erreur : ' + e.message; }
+      /* 20261109a — ticket « PSG » → carte « Paris Saint-Germain » */
+      try {
+        const un = document.getElementById('c-unit'), u0 = state.u, a0 = window.alert; let alerte = '';
+        window.alert = (m) => { alerte = m; };
+        const cach = [].slice.call(un.options).filter((x) => /psg|paris/i.test(x.value)); cach.forEach((x) => x.remove());
+        const op = document.createElement('option'); op.value = 'Paris Saint-Germain'; op.text = 'Paris Saint-Germain'; un.appendChild(op);
+        state.u = (u0 || []).filter((x) => !/^psg$/i.test(x.n)).concat([{ n: 'Paris Saint-Germain', sport: '⚽', s: 'a' }]);
+        _g45TicketRemplirCockpit({ equipe: 'PSG', adversaire: 'Troyes', domicile: true, type: 'Victoire', cote: '1.64', mise: '10' });
+        const v = un.value; op.remove(); cach.forEach((x) => un.appendChild(x)); state.u = u0; window.alert = a0;
+        o.tkPsg = (v === 'Paris Saint-Germain' && !/n'est pas une équipe/.test(alerte)) || JSON.stringify({ v, alerte });
+      } catch (e) { o.tkPsg = 'erreur : ' + e.message; }
       /* 20261024w — nouveau ticket sans joueur : le buteur du ticket précédent est effacé (Cockpit) */
       try {
         const a0 = window.alert; window.alert = () => {};
@@ -2282,6 +2293,7 @@ serveur.listen(0, async () => {
     ok('Logos : noms français / Winamax (Mayence, B. Munich)', r.logoFr === true, r.logoFr);
     ok('🃏 Mes cartes : photo du joueur cherchée si absente', r.ulPhoto === true, r.ulPhoto);
     ok('🏁 Prochaines 24 h : case Déjà engagé', r.ckEng === true, r.ckEng);
+    ok('🎫 Ticket Cockpit : « PSG » → carte Paris Saint-Germain', r.tkPsg === true, r.tkPsg);
     ok('📤 Carte partagée : pari en cours = « En cours »', r.carteEnCours === true, r.carteEnCours);
     ok('🎯 Calculatrice : Cote juste (2 équipes, poids)', r.coteJuste === true, r.coteJuste);
     ok('🎯 Cote juste : recherche d\'équipe à la frappe', r.cjmRech === true, r.cjmRech);
