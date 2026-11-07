@@ -2150,6 +2150,12 @@ serveur.listen(0, async () => {
         const nVen = (hb.match(/Venezia/g) || []).length;
         o.loiBil = (nVen === 1 && /L'équipe marque/.test(hb) && /Colorado/.test(hk) && !/Metz/.test(hk) && /Aucune pépite avec ces filtres/.test(h7) && /Série stoppée ✅\s+3 · 75 %/.test(hb) && /⚽ 3\/3 · 100 %/.test(hb) && /🏒 0\/1 · 0 %/.test(hb) && /3\/4/.test(hb) && /Metz/.test(hb) && /🏆 Ligue 2/.test(hb) && /🕒 \d\d:\d\d/.test(hb) && /Tout voir \(4 pépites\)/.test(hb)) || hb.slice(0, 500);
       } catch (e) { o.loiBil = 'erreur : ' + e.message; }
+      /* 20261109d : Dépôt / Retrait (Mouvement de fonds) notés dans l'historique des mouvements — par le VRAI bouton « + Dépôt » */
+      try { const sel = document.getElementById('mv-book'), amt = document.getElementById('mv-amt'), k = sel && sel.options[0] && sel.options[0].value;
+        const b0 = JSON.stringify(state.b), m0 = (state.mvt || []).length, sb0 = state.start_bk; sel.value = k; amt.value = '12.5';
+        const bt = document.querySelector('[onclick="fund(true)"]'); bt.click(); const n1 = (state.mvt || []).length, v1 = state.mvt && state.mvt[0] && state.mvt[0].v;
+        state.b = JSON.parse(b0); if (state.mvt) state.mvt.splice(0, n1 - m0); state.start_bk = sb0; amt.value = ''; save();
+        o.mvtFund = (n1 === m0 + 1 && v1 === 12.5) || JSON.stringify({ k, m0, n1, v1 }); } catch (e) { o.mvtFund = 'erreur : ' + e.message; }
       /* 20261109b : « En cours (N) » */
       try { window._g45EnCoursNb(); const tb = document.getElementById('live-norm'), bl = tb && tb.closest('.g45-nu-tbl'); let sc = bl && bl.previousElementSibling; while (sc && !sc.classList.contains('sec')) sc = sc.previousElementSibling;
         const tx = sc ? sc.textContent.trim() : '', n = state.h.filter((x) => !x.isS && !x.meth).length; o.enCoursNb = (tx === 'En cours (' + n + ')') || tx; } catch (e) { o.enCoursNb = 'erreur : ' + e.message; }
@@ -2298,6 +2304,7 @@ serveur.listen(0, async () => {
     ok('🏁 Prochaines 24 h : case Déjà engagé', r.ckEng === true, r.ckEng);
     ok('🎫 Ticket Cockpit : « PSG » → carte Paris Saint-Germain', r.tkPsg === true, r.tkPsg);
     ok('Paris : titre « En cours (N) »', r.enCoursNb === true, r.enCoursNb);
+    ok('💸 Mouvement de fonds noté dans l\'historique', r.mvtFund === true, r.mvtFund);
     ok('📤 Carte partagée : pari en cours = « En cours »', r.carteEnCours === true, r.carteEnCours);
     ok('🎯 Calculatrice : Cote juste (2 équipes, poids)', r.coteJuste === true, r.coteJuste);
     ok('🎯 Cote juste : recherche d\'équipe à la frappe', r.cjmRech === true, r.cjmRech);
