@@ -2184,6 +2184,9 @@ serveur.listen(0, async () => {
         F.q1 = { h: { id: '9' }, a: { id: '5' }, f: { h: 4, a: 3 }, ot: 1, tot: { L: 6.5, o: 1.9, u: 1.91 } }; F.q2 = { h: { id: '7' }, a: { id: '8' }, f: { h: 0, a: 0 }, ml: { h: 2.5, d: 3, a: 3 } };
         const hq = window._g45LoiBilHtml().replace(/<[^>]+>/g, ' '); const a = M.d.L[0], b = M.d.L[1]; delete F.q1; delete F.q2; M.d = sv;
         o.loiScore = (a.r === 0 && a.sc === '4-3 (prol.)' && b.r === 0 && b.sc === '0-0' && /4-3/.test(hq)) || JSON.stringify({ a, b }); } catch (e) { o.loiScore = 'erreur : ' + e.message; }
+      /* 20261109h : score foot — jamais celui de l'équipe féminine / jeune (Forest 5-0 City) */
+      try { const V = window._g45ScVar; o.scVar = (V(['nottinghamforestwomen', 'manchestercitywomen'], ['manchestercity', 'nottinghamforest']) === true && V(['nottinghamforest', 'manchestercity'], ['manchestercity', 'nottinghamforest']) === false
+        && V(['realmadridcastilla', 'valenciab'], ['realmadrid']) === true && V(['psgfeminines'], ['psgfeminines']) === false) || 'règle fausse'; } catch (e) { o.scVar = 'erreur : ' + e.message; }
       /* 20261109g : même match + même pari du match (moins de 3,5) trouvé par les 2 équipes → 1 seule pépite, les 2 séries dessus */
       try { const M = window._g45LoiBilT, F = window._g45LoiCote.FI, sv = M.d, d0 = new Date(), j = d0.getFullYear() + '-' + ('0' + (d0.getMonth() + 1)).slice(-2) + '-02', t0 = Date.parse(j + 'T19:00:00Z');
         M.d = { L: [{ j, t: t0, eid: 'q3', id: '11', sp: 'soccer', eq: 'Augsburg', adv: 'Leipzig', d: 0, lieu: 'ext', k: 'u35', lib: 'Moins de 3,5 buts', pire: 5, cours: 5, r: 1, sc: '1-1' }, { j, t: t0, eid: 'q3', id: '10', sp: 'soccer', eq: 'Leipzig', adv: 'Augsburg', d: 1, lieu: 'dom', k: 'u35', lib: 'Moins de 3,5 buts', pire: 3, cours: 3, r: 1, sc: '1-1' }, { j, t: t0, eid: 'q3', id: '10', sp: 'soccer', eq: 'Leipzig', adv: 'Augsburg', d: 1, lieu: 'dom', k: 'v', lib: 'Victoire', pire: 4, cours: 4, r: 0, sc: '1-1' }] }; M.t = Date.now(); M.j = j; M.vue = 'cal'; M.tout = 0; M.fs = 'tous'; M.fc = 0;
@@ -2315,6 +2318,7 @@ serveur.listen(0, async () => {
     ok('📊 Loi des séries : graphique + bilans (10 €)', r.loiGraph === true, r.loiGraph);
     ok('📊 Loi des séries : score + résultat depuis les archives', r.loiScore === true, r.loiScore);
     ok('📊 Loi des séries : même pari du match fusionné (2 équipes)', r.loiFus === true, r.loiFus);
+    ok('⚽ Score d\'un pari : pas celui de l\'équipe féminine / jeune', r.scVar === true, r.scVar);
     ok('Logos : noms français / Winamax (Mayence, B. Munich)', r.logoFr === true, r.logoFr);
     ok('🃏 Mes cartes : photo du joueur cherchée si absente', r.ulPhoto === true, r.ulPhoto);
     ok('🏁 Prochaines 24 h : case Déjà engagé', r.ckEng === true, r.ckEng);
