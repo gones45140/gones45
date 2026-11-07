@@ -2150,6 +2150,12 @@ serveur.listen(0, async () => {
         const nVen = (hb.match(/Venezia/g) || []).length;
         o.loiBil = (nVen === 1 && /L'équipe marque/.test(hb) && /Colorado/.test(hk) && !/Metz/.test(hk) && /Aucune pépite avec ces filtres/.test(h7) && /Série stoppée ✅\s+3 · 75 %/.test(hb) && /⚽ 3\/3 · 100 %/.test(hb) && /🏒 0\/1 · 0 %/.test(hb) && /3\/4/.test(hb) && /Metz/.test(hb) && /🏆 Ligue 2/.test(hb) && /🕒 \d\d:\d\d/.test(hb) && /Tout voir \(4 pépites\)/.test(hb)) || hb.slice(0, 500);
       } catch (e) { o.loiBil = 'erreur : ' + e.message; }
+      /* 20261109e : critère foot « mi-temps avec le plus de buts » */
+      try { const S = window._g45CrS, sv = [S.nom, S.ctx, S.fid['TMH'], S.fa['xmh']]; S.nom = 'TMH'; S.ctx = null; S.fid['TMH'] = { '2026-01-01': 'xmh', '2026-01-08': 'xmh2' }; S.fa['xmh'] = [0, 0, 0, 0, 1, 0, 'h', 0, 0, 0, 0]; S.fa['xmh2'] = [0, 0, 0, 0, 1, 1, 'h', 0, 0, 0, 0];
+        const m1 = ['2026-01-01', 1, 3, 1], m2 = ['2026-01-08', 1, 2, 2], P = window._g45CrPasse;
+        const r = [P({ mh: '2' }, m1), P({ mh: '1' }, m1), P({ mh: 'e' }, m2), P({ mh: '2' }, m2)];
+        S.nom = sv[0]; S.ctx = sv[1]; delete S.fid['TMH']; delete S.fa['xmh']; delete S.fa['xmh2'];
+        o.critMh = (r[0] === true && r[1] === false && r[2] === true && r[3] === false) || JSON.stringify(r); } catch (e) { o.critMh = 'erreur : ' + e.message; }
       /* 20261109d : Dépôt / Retrait (Mouvement de fonds) notés dans l'historique des mouvements — par le VRAI bouton « + Dépôt » */
       try { const sel = document.getElementById('mv-book'), amt = document.getElementById('mv-amt'), k = sel && sel.options[0] && sel.options[0].value;
         const b0 = JSON.stringify(state.b), m0 = (state.mvt || []).length, sb0 = state.start_bk; sel.value = k; amt.value = '12.5';
@@ -2305,6 +2311,7 @@ serveur.listen(0, async () => {
     ok('🎫 Ticket Cockpit : « PSG » → carte Paris Saint-Germain', r.tkPsg === true, r.tkPsg);
     ok('Paris : titre « En cours (N) »', r.enCoursNb === true, r.enCoursNb);
     ok('💸 Mouvement de fonds noté dans l\'historique', r.mvtFund === true, r.mvtFund);
+    ok('Critères foot : mi-temps avec le plus de buts', r.critMh === true, r.critMh);
     ok('📤 Carte partagée : pari en cours = « En cours »', r.carteEnCours === true, r.carteEnCours);
     ok('🎯 Calculatrice : Cote juste (2 équipes, poids)', r.coteJuste === true, r.coteJuste);
     ok('🎯 Cote juste : recherche d\'équipe à la frappe', r.cjmRech === true, r.cjmRech);
