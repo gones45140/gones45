@@ -1054,14 +1054,14 @@ serveur.listen(0, async () => {
         render(); const box = document.getElementById('g45-mois-kpi');
         o.mois = (R.mois === 'OCTOBRE' && R.ben === 5 && R.n === 2 && R.pc === 50 && !!box && /€/.test(box.textContent)) || JSON.stringify({ R, box: box && box.textContent });
       } catch (e) { o.mois = 'erreur : ' + e.message; }
-      /* 20261025g — Surebet : ligne LAY (−) → cote normale 1 + (1 − k)/(L − 1), mise lay = risque / (L − 1) ; OrbitX en 1er */
+      /* 20261025g — Surebet : ligne LAY (−) → cote normale 1 + (1 − k)/(L − 1), mise lay = risque / (L − 1) ; 20261108z : Winamax en 1er */
       try {
         const eq = sbCote({ c: 2.2, k: 2, lay: true }), sv = JSON.stringify(sbRows);
         sbRows = [{ c: 2.1, d: true, k: 0 }, { c: 2.2, d: true, k: 0, lay: true }];
         buildSbRows();
         const z = document.body.textContent, b = Object.keys(state.b);
         sbRows = JSON.parse(sv); buildSbRows();
-        o.sbLay = (Math.abs(eq - (1 + 0.98 / 1.2)) < 1e-9 && /Mise 2 LAY/.test(z) && /risque/.test(z) && /= 1,83/.test(z) && b[0] === 'orbitx') || JSON.stringify({ eq, b0: b[0], z: z.slice(0, 120) });
+        o.sbLay = (Math.abs(eq - (1 + 0.98 / 1.2)) < 1e-9 && /Mise 2 LAY/.test(z) && /risque/.test(z) && /= 1,83/.test(z) && b[0] === 'winamax') || JSON.stringify({ eq, b0: b[0], z: z.slice(0, 120) });
       } catch (e) { o.sbLay = 'erreur : ' + e.message; }
       /* 20261025j — Mes équipes rangées par sport (bandes repliables) */
       try {
@@ -2348,7 +2348,7 @@ serveur.listen(0, async () => {
     ok('Mur : 3 paris 🌍 / 🏠 / ✈️ + paliers par montante', r.ufTout === true, r.ufTout);
     ok('Ticket : équipe absente du mur → carte joueur de ce club', r.tkClub === true, r.tkClub);
     ok('Mur : bénéfice du mois en cours', r.mois === true, r.mois);
-    ok('Surebet : cote LAY (−) + OrbitX en 1er', r.sbLay === true, r.sbLay);
+    ok('Surebet : cote LAY (−) + Winamax en 1er', r.sbLay === true, r.sbLay);
     ok('Mes équipes rangées par sport', r.murSp === true, r.murSp);
     ok('NFL : drive en cours (terrain)', r.nflDr === true, r.nflDr);
     ok('Bank : abonnements (prélèvement mensuel, sans doublon, synchro)', r.abo === true, r.abo);
