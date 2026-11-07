@@ -2184,6 +2184,12 @@ serveur.listen(0, async () => {
         F.q1 = { h: { id: '9' }, a: { id: '5' }, f: { h: 4, a: 3 }, ot: 1, tot: { L: 6.5, o: 1.9, u: 1.91 } }; F.q2 = { h: { id: '7' }, a: { id: '8' }, f: { h: 0, a: 0 }, ml: { h: 2.5, d: 3, a: 3 } };
         const hq = window._g45LoiBilHtml().replace(/<[^>]+>/g, ' '); const a = M.d.L[0], b = M.d.L[1]; delete F.q1; delete F.q2; M.d = sv;
         o.loiScore = (a.r === 0 && a.sc === '4-3 (prol.)' && b.r === 0 && b.sc === '0-0' && /4-3/.test(hq)) || JSON.stringify({ a, b }); } catch (e) { o.loiScore = 'erreur : ' + e.message; }
+      /* 20261109g : même match + même pari du match (moins de 3,5) trouvé par les 2 équipes → 1 seule pépite, les 2 séries dessus */
+      try { const M = window._g45LoiBilT, F = window._g45LoiCote.FI, sv = M.d, d0 = new Date(), j = d0.getFullYear() + '-' + ('0' + (d0.getMonth() + 1)).slice(-2) + '-02', t0 = Date.parse(j + 'T19:00:00Z');
+        M.d = { L: [{ j, t: t0, eid: 'q3', id: '11', sp: 'soccer', eq: 'Augsburg', adv: 'Leipzig', d: 0, lieu: 'ext', k: 'u35', lib: 'Moins de 3,5 buts', pire: 5, cours: 5, r: 1, sc: '1-1' }, { j, t: t0, eid: 'q3', id: '10', sp: 'soccer', eq: 'Leipzig', adv: 'Augsburg', d: 1, lieu: 'dom', k: 'u35', lib: 'Moins de 3,5 buts', pire: 3, cours: 3, r: 1, sc: '1-1' }, { j, t: t0, eid: 'q3', id: '10', sp: 'soccer', eq: 'Leipzig', adv: 'Augsburg', d: 1, lieu: 'dom', k: 'v', lib: 'Victoire', pire: 4, cours: 4, r: 0, sc: '1-1' }] }; M.t = Date.now(); M.j = j; M.vue = 'cal'; M.tout = 0; M.fs = 'tous'; M.fc = 0;
+        F.q3 = { h: { id: '10' }, a: { id: '11' }, f: { h: 1, a: 1 }, ml: { h: 1.8, d: 4, a: 4.2 }, tot: { L: 4.5, o: 2.3, u: 1.59 } };
+        const hq = window._g45LoiBilHtml().replace(/<[^>]+>/g, ' '); delete F.q3; M.d = sv; M.j = '';
+        o.loiFus = (/Pépites jouées\s*2\b/.test(hq) && /🏠 Leipzig 🔥 3 \/ 3 · ✈️ Augsburg 🔥 5 \/ 5/.test(hq) && (hq.match(/Moins de 3,5 buts/g) || []).length === 1) || hq.replace(/\s+/g, ' ').slice(0, 900); } catch (e) { o.loiFus = 'erreur : ' + e.message; }
       /* 20261108o : 📈 graphique + 📊 bilans de la Loi des séries */
       try { const F = window._g45LoiCote.FI; F.m1 = { h: { id: '9' }, a: { id: '1' }, ml: { h: 1.95, a: 3.65, d: 3.75 } }; F.m2 = { h: { id: '2' }, a: { id: '8' }, tot: { L: 6.5, o: 1.9, u: 1.9 } }; F.m3 = { h: { id: '3' }, a: { id: '7' }, bts: { o: 1.64, n: 2.2 } };
         window.g45LoiBilVue('gr'); const hg = window._g45LoiBilHtml(); window.g45LoiBilVue('bil'); const hl = window._g45LoiBilHtml().replace(/<[^>]+>/g, ' '); window.g45LoiBilVue('cal');
@@ -2308,6 +2314,7 @@ serveur.listen(0, async () => {
     ok('📊 Loi des séries : bilan + calendrier (Tendances)', r.loiBil === true, r.loiBil);
     ok('📊 Loi des séries : graphique + bilans (10 €)', r.loiGraph === true, r.loiGraph);
     ok('📊 Loi des séries : score + résultat depuis les archives', r.loiScore === true, r.loiScore);
+    ok('📊 Loi des séries : même pari du match fusionné (2 équipes)', r.loiFus === true, r.loiFus);
     ok('Logos : noms français / Winamax (Mayence, B. Munich)', r.logoFr === true, r.logoFr);
     ok('🃏 Mes cartes : photo du joueur cherchée si absente', r.ulPhoto === true, r.ulPhoto);
     ok('🏁 Prochaines 24 h : case Déjà engagé', r.ckEng === true, r.ckEng);
