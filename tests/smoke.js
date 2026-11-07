@@ -2150,6 +2150,9 @@ serveur.listen(0, async () => {
         const nVen = (hb.match(/Venezia/g) || []).length;
         o.loiBil = (nVen === 1 && /L'équipe marque/.test(hb) && /Colorado/.test(hk) && !/Metz/.test(hk) && /Aucune pépite avec ces filtres/.test(h7) && /Série stoppée ✅\s+3 · 75 %/.test(hb) && /⚽ 3\/3 · 100 %/.test(hb) && /🏒 0\/1 · 0 %/.test(hb) && /3\/4/.test(hb) && /Metz/.test(hb) && /🏆 Ligue 2/.test(hb) && /🕒 \d\d:\d\d/.test(hb) && /Tout voir \(4 pépites\)/.test(hb)) || hb.slice(0, 500);
       } catch (e) { o.loiBil = 'erreur : ' + e.message; }
+      /* 20261109f : cote des pépites dans le Cockpit (texte partagé avec Tendances) */
+      try { const C = window._g45LoiCote; C.FI.tq = { h: { id: '1' }, a: { id: '2' }, ml: { h: 2.2, a: 3.2, d: 3.5 } }; const t1 = C.txt({ eid: 'tq', id: '1', d: 1, k: 'v' }), t2 = C.txt({ eid: 'tq', id: '2', d: 0, k: 'vn' }); delete C.FI.tq;
+        o.loiCk = (t1 === '2,20' && /^≈ 1,6/.test(t2) && typeof C.charger === 'function') || JSON.stringify({ t1, t2 }); } catch (e) { o.loiCk = 'erreur : ' + e.message; }
       /* 20261109e : critère foot « mi-temps avec le plus de buts » */
       try { const S = window._g45CrS, sv = [S.nom, S.ctx, S.fid['TMH'], S.fa['xmh']]; S.nom = 'TMH'; S.ctx = null; S.fid['TMH'] = { '2026-01-01': 'xmh', '2026-01-08': 'xmh2' }; S.fa['xmh'] = [0, 0, 0, 0, 1, 0, 'h', 0, 0, 0, 0]; S.fa['xmh2'] = [0, 0, 0, 0, 1, 1, 'h', 0, 0, 0, 0];
         const m1 = ['2026-01-01', 1, 3, 1], m2 = ['2026-01-08', 1, 2, 2], P = window._g45CrPasse;
@@ -2312,6 +2315,7 @@ serveur.listen(0, async () => {
     ok('Paris : titre « En cours (N) »', r.enCoursNb === true, r.enCoursNb);
     ok('💸 Mouvement de fonds noté dans l\'historique', r.mvtFund === true, r.mvtFund);
     ok('Critères foot : mi-temps avec le plus de buts', r.critMh === true, r.critMh);
+    ok('Cockpit Loi des séries : cote des pépites', r.loiCk === true, r.loiCk);
     ok('📤 Carte partagée : pari en cours = « En cours »', r.carteEnCours === true, r.carteEnCours);
     ok('🎯 Calculatrice : Cote juste (2 équipes, poids)', r.coteJuste === true, r.coteJuste);
     ok('🎯 Cote juste : recherche d\'équipe à la frappe', r.cjmRech === true, r.cjmRech);
