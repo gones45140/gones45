@@ -34,6 +34,10 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body>
+<!-- 20261108y : écran d'accueil posé DÈS LE 1er AFFICHAGE (Antoine : « logo, puis mon mur, puis le logo revient ») ; app.js le garde 3,5 s puis l'efface (voir 20261108v) ; secours : retiré au bout de 9 s. -->
+<div id="g45-accueil" style="position:fixed;inset:0;z-index:2147483000;background:#0a0e1a;display:flex;align-items:center;justify-content:center;pointer-events:none;transition:opacity .45s ease;"><img src="icon-gones-512.png" alt="" style="width:min(64vw,320px);height:auto;border-radius:50%;"></div>
+<script>setTimeout(function(){var v=document.getElementById('g45-accueil');if(v)v.remove();},9000);</script>
+
 
 <header class="topbar">
   <div class="logo">BET<em>45</em></div>
@@ -1390,7 +1394,7 @@
      worker servaient indefiniment l'ancien fichier sur mobile : rouvrir
      l'application ne changeait rien puisque l'URL demandee etait la meme.
      A INCREMENTER A CHAQUE DEPLOIEMENT, comme sur fenotte45. -->
-<script src="app.js?v=20261108x"></script>
+<script src="app.js?v=20261108y"></script>
 <script src="social.js?v=20261014x"></script>
 
 
