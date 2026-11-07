@@ -2139,6 +2139,11 @@ serveur.listen(0, async () => {
         const nVen = (hb.match(/Venezia/g) || []).length;
         o.loiBil = (nVen === 1 && /L'équipe marque/.test(hb) && /Colorado/.test(hk) && !/Metz/.test(hk) && /Aucune pépite avec ces filtres/.test(h7) && /Série stoppée ✅\s+3 · 75 %/.test(hb) && /⚽ 3\/3 · 100 %/.test(hb) && /🏒 0\/1 · 0 %/.test(hb) && /3\/4/.test(hb) && /Metz/.test(hb) && /🏆 Ligue 2/.test(hb) && /🕒 \d\d:\d\d/.test(hb) && /Tout voir \(4 pépites\)/.test(hb)) || hb.slice(0, 500);
       } catch (e) { o.loiBil = 'erreur : ' + e.message; }
+      /* 20261108w : photo d'une carte joueur cherchée si absente */
+      try { const ch0 = window._g45JoueurVisChercher; window._g45JoueurVisChercher = _g45JoueurVisChercher = async () => ({ thumb: 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7' });
+        const row = document.createElement('div'); row.innerHTML = '<div><div class="uname">Test Joueur</div><div>i</div></div>'; document.body.appendChild(row);
+        window._g45UlPhChercher(row, { n: 'Test Joueur', sport: '🏒', type: 'joueur' }); await new Promise(r => setTimeout(r, 300));
+        const im = row.querySelector('.g45ul-ph'); o.ulPhoto = (window._g45UlPhMem && window._g45UlPhMem['Test Joueur'] && (await window._g45UlPhMem['Test Joueur']).length >= 0, !!im && /^data:image\/gif/.test(im.getAttribute('src') || '')) || row.innerHTML.slice(0, 200); row.remove(); window._g45JoueurVisChercher = _g45JoueurVisChercher = ch0; } catch (e) { o.ulPhoto = 'erreur : ' + e.message; }
       /* 20261108t : noms français / Winamax → logo des archives */
       try { const F = window._g45LogoFr; o.logoFr = (F && F.mayence === 'Mainz' && F.bmunich === 'Bayern Munich' && window._g45LogoIndex._g45Fr === true) || 'table absente'; } catch (e) { o.logoFr = 'erreur : ' + e.message; }
       /* 20261108s : score + résultat tout de suite depuis la fiche des archives */
@@ -2272,6 +2277,7 @@ serveur.listen(0, async () => {
     ok('📊 Loi des séries : graphique + bilans (10 €)', r.loiGraph === true, r.loiGraph);
     ok('📊 Loi des séries : score + résultat depuis les archives', r.loiScore === true, r.loiScore);
     ok('Logos : noms français / Winamax (Mayence, B. Munich)', r.logoFr === true, r.logoFr);
+    ok('🃏 Mes cartes : photo du joueur cherchée si absente', r.ulPhoto === true, r.ulPhoto);
     ok('📤 Carte partagée : pari en cours = « En cours »', r.carteEnCours === true, r.carteEnCours);
     ok('🎯 Calculatrice : Cote juste (2 équipes, poids)', r.coteJuste === true, r.coteJuste);
     ok('🎯 Cote juste : recherche d\'équipe à la frappe', r.cjmRech === true, r.cjmRech);
