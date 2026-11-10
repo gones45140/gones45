@@ -1172,6 +1172,17 @@ serveur.listen(0, async () => {
         const iA = H.indexOf('>Test Avs<'), iB = H.indexOf('>Test Bruins<');
         o.crCls = (feuOk && st.cours === 1 && st.pire === 3 && st.ok === 2 && stO.n === 6 && stO.ok === 4 && stO.pire === 2 && /Jouable en Cockpit/.test(H) && iA > 0 && iB > iA && /g45CompetOuvrir\('Test Bruins','2','nhl','hockey',true\)/.test(H)) || JSON.stringify({ feuOk, st, stO, iA, iB, h: H.slice(-600) });
       } catch (e) { o.crCls = 'erreur : ' + e.message; }
+      /* 20261110g — 🔍 Trouver la meilleure stratégie */
+      try {
+        const S = window._g45CrS, sv = { nom: S.nom, ctx: S.ctx, combos: S.combos, a: S.a, lieu: S.lieu, best: S.best };
+        const sc = [[3, 1], [2, 1], [1, 2], [4, 2], [3, 0], [2, 1], [1, 1], [0, 2], [5, 1], [2, 3], [3, 2], [1, 0], [2, 2], [4, 1], [0, 1], [3, 3], [2, 0], [1, 3], [4, 3], [2, 1], [3, 1], [1, 2]];
+        const D = { t: Date.now(), lg: 'nhl', saisons: [{ an: 2027, ms: sc.map((r, i) => ['2026-' + ('0' + (1 + Math.floor(i / 28))).slice(-2) + '-' + ('0' + (1 + i % 28)).slice(-2), i % 2 ? 0 : 1, r[0], r[1], 0, 0, 'b' + i]) }] };
+        S.nom = 'Test Best'; S.ctx = { sp: 'hockey', lg: 'nhl', id: '1' }; S.combos = [{ res: 'vqr' }]; S.a = 0; S.lieu = 'tout'; S.data['Test Best'] = D; S.best = { on: 1, nom: 'Test Best', lieu: 'tout', cm: 1.5, tri: 'pire', R: null };
+        const R = window._g45CrBest(D), H = _g45CrHtml('Test Best', S.ctx);
+        const okR = R.length > 0 && R.every((x) => x.cj >= 1.5 && x.n >= 15) && R.every((x, i) => !i || R[i - 1].pire <= x.pire) && /Chercher \(\d+ paris testés\)/.test(H);
+        delete S.data['Test Best']; Object.assign(S, sv);
+        o.crBest = okR || JSON.stringify({ n: R.length, R: R.slice(0, 3).map((x) => [x.lib, x.pire, x.cj, x.n]), h: /Trouver la meilleure/.test(H) });
+      } catch (e) { o.crBest = 'erreur : ' + e.message; }
       /* 20261028e — 📌 Garder sur la carte */
       try {
         const H = _g45UlPsHtml({ ps: { sig: 'dom|Passeur', lib: 'Jack Eichel passeur', k: 'dom', ans: ['2026-27', '2025-26', '2024-25', '2023-24'], p: [2, 3, 4, 3], tot: 4, at: Date.now() } });
@@ -2350,6 +2361,7 @@ serveur.listen(0, async () => {
     ok('🃏 Séries de la carte : « Couvre le handicap du book »', r.serBook === true, r.serBook);
     ok('⚖️ Surebet : calcul, 2 jambes, carte, règlement', r.surebet === true, r.surebet);
     ok('📅 Saisons comptées (carte + critères)', r.saisonsNs === true, r.saisonsNs);
+    ok('🔍 Critères : trouver la meilleure stratégie', r.crBest === true, r.crBest);
     ok('Logos : noms français / Winamax (Mayence, B. Munich)', r.logoFr === true, r.logoFr);
     ok('🃏 Mes cartes : photo du joueur cherchée si absente', r.ulPhoto === true, r.ulPhoto);
     ok('🏁 Prochaines 24 h : case Déjà engagé', r.ckEng === true, r.ckEng);
