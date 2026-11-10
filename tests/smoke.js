@@ -2184,6 +2184,10 @@ serveur.listen(0, async () => {
         F.q1 = { h: { id: '9' }, a: { id: '5' }, f: { h: 4, a: 3 }, ot: 1, tot: { L: 6.5, o: 1.9, u: 1.91 } }; F.q2 = { h: { id: '7' }, a: { id: '8' }, f: { h: 0, a: 0 }, ml: { h: 2.5, d: 3, a: 3 } };
         const hq = window._g45LoiBilHtml().replace(/<[^>]+>/g, ' '); const a = M.d.L[0], b = M.d.L[1]; delete F.q1; delete F.q2; M.d = sv;
         o.loiScore = (a.r === 0 && a.sc === '4-3 (prol.)' && b.r === 0 && b.sc === '0-0' && /4-3/.test(hq)) || JSON.stringify({ a, b }); } catch (e) { o.loiScore = 'erreur : ' + e.message; }
+      /* 20261110b : 📅 nombre de saisons — carte (barrée + boutons) et critères */
+      try { const u = { n: 'Test Ns', psL: { dom: { t: 'victoire', lib: 'Victoire', ans: ['2026-27', '2025-26', '2024-25', '2023-24'], p: [0, 3, 4, 4], px: [16], ns: 4, nt: 5, tot: 4, at: Date.now() } } };
+        const H = window._g45UlPsLHtml(u), T = H.replace(/<[^>]+>/g, ' ');
+        o.saisonsNs = (/line-through;">16</.test(H) && /2 saisons/.test(T) && /5 saisons/.test(T) && /4 saisons · championnat/.test(T) && typeof window.g45SerNs === 'function' && typeof window.g45CrNs === 'function') || T.replace(/\s+/g, ' ').slice(0, 400); } catch (e) { o.saisonsNs = 'erreur : ' + e.message; }
       /* 20261110a : ⚖️ surebet — calcul (fr.surebet.com + maquette), enregistrement des 2 jambes, carte « En cours », règlement 1 / N / 2 */
       try {
         const K = window._g45SbCalc, n2 = (v) => Math.round(v * 100) / 100;
@@ -2343,6 +2347,7 @@ serveur.listen(0, async () => {
     ok('⚽ Score d\'un pari : pas celui de l\'équipe féminine / jeune', r.scVar === true, r.scVar);
     ok('🃏 Séries de la carte : « Couvre le handicap du book »', r.serBook === true, r.serBook);
     ok('⚖️ Surebet : calcul, 2 jambes, carte, règlement', r.surebet === true, r.surebet);
+    ok('📅 Saisons comptées (carte + critères)', r.saisonsNs === true, r.saisonsNs);
     ok('Logos : noms français / Winamax (Mayence, B. Munich)', r.logoFr === true, r.logoFr);
     ok('🃏 Mes cartes : photo du joueur cherchée si absente', r.ulPhoto === true, r.ulPhoto);
     ok('🏁 Prochaines 24 h : case Déjà engagé', r.ckEng === true, r.ckEng);
