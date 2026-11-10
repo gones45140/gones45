@@ -2193,7 +2193,7 @@ serveur.listen(0, async () => {
         const K = window._g45SbCalc, n2 = (v) => Math.round(v * 100) / 100;
         const A = K({ k: 'lay', a: 10, b: 6, c: 3, S: 100, p: '1' }), Bq = K({ k: 'lay', a: 2.3, b: 2.1, c: 3, S: 100, p: 'rep' }), C = K({ k: 'rn', a: 1.8, b: 2.4, T: 100, p: 'rep' }), D2 = K({ k: '2b', a: 2.1, b: 2.05, T: 100, p: 'rep' });
         const calcOk = A.L === 103.09 && A.s2 === 515.46 && n2(A.res[0][0]) === 384.54 && Math.abs(A.res[1][0]) < 0.01 && Bq.L === 111.11 && Bq.s2 === 122.22 && n2(Bq.min) === 7.78
-          && C.s1 === 57.14 && C.s2 === 42.86 && n2(C.min) === 2.86 && n2(C.res[1][0]) === 60 && D2.s1 === 49.4 && n2(D2.min) === 3.73;
+          && (() => { const E = K({ k: '2b', a: 1.5, c1: 3, b: 5, c: 0, T: 129.7, p: 'rep' }); return E.s1 === 100 && E.s2 === 29.7 && n2(E.min) === 18.8; })() && C.s1 === 57.14 && C.s2 === 42.86 && n2(C.min) === 2.86 && n2(C.res[1][0]) === 60 && D2.s1 === 49.4 && n2(D2.min) === 3.73;
         const sb0 = JSON.stringify(state.b), h0 = state.h.length, a0 = state.a.length; state.b.sbx1 = '500'; state.b.orbitx = '500';
         swBet('sb'); const pan = !!document.getElementById('sub-sb') && document.getElementById('sub-sb').style.display === 'block' && /Enregistrer le surebet/.test(document.getElementById('sub-sb').innerHTML);
         g45SbKind('lay'); const sv = (id, v) => { const e = document.getElementById(id); e.value = v; };
