@@ -1174,7 +1174,7 @@ serveur.listen(0, async () => {
       } catch (e) { o.crCls = 'erreur : ' + e.message; }
       /* 20261111f — Loi des séries : simulation montante du bilan */
       try { const Mo = window._g45LoiMont, cd = () => ({ c: 2 }), L = [{ t: 1, id: 'a', k: 'u65', lieu: 'dom', r: 0 }, { t: 2, id: 'a', k: 'u65', lieu: 'dom', r: 0 }, { t: 3, id: 'a', k: 'u65', lieu: 'dom', r: 1 }, { t: 4, id: 'b', k: 'v', lieu: 'ext', r: 0 }];
-        const R = Mo(L, cd); o.loiMont = (R.n === 4 && R.g === 20 && R.pmax === 3 && R.mmax === 60 && R.ouv === 1 && /P2 = 20 €/.test(R.prochs)) || JSON.stringify(R); } catch (e) { o.loiMont = 'erreur : ' + e.message; }
+        const R = Mo(L, cd); o.loiMont = (R.n === 4 && Math.abs(R.g - 12.8) < 0.01 && R.pmax === 3 && R.mmax === 60 && R.ouv === 1 && /P2 = 20 €/.test(R.prochs)) || JSON.stringify(R); } catch (e) { o.loiMont = 'erreur : ' + e.message; }
       /* 20261111c — hockey : total du match prolongation + TAB compris (c.otp), buts d'équipe toujours au temps réglementaire */
       try { const S = window._g45CrS, sc0 = S.ctx; S.ctx = { sp: 'hockey', lg: 'nhl', id: '1' }; const P = window._g45CrPasse, m = ['2026-11-01', 1, 3, 2, 1, 0, 'x'];
         const r = [P({ ou: 'ov', L: 4.5, otp: '1' }, m), P({ ou: 'ov', L: 4.5 }, m), P({ te: 'ov', TL: 2.5, otp: '1' }, m)]; S.ctx = sc0;
@@ -2174,7 +2174,7 @@ serveur.listen(0, async () => {
       } catch (e) { o.loiBil = 'erreur : ' + e.message; }
       /* 20261109f : cote des pépites dans le Cockpit (texte partagé avec Tendances) */
       try { const C = window._g45LoiCote; C.FI.tq = { h: { id: '1' }, a: { id: '2' }, ml: { h: 2.2, a: 3.2, d: 3.5 } }; const t1 = C.txt({ eid: 'tq', id: '1', d: 1, k: 'v' }), t2 = C.txt({ eid: 'tq', id: '2', d: 0, k: 'vn' }); delete C.FI.tq;
-        o.loiCk = (t1 === '2,20' && /^≈ 1,6/.test(t2) && typeof C.charger === 'function') || JSON.stringify({ t1, t2 }); } catch (e) { o.loiCk = 'erreur : ' + e.message; }
+        o.loiCk = (t1 === '2,20 (FR ≈ 2,07)' && /^≈ 1,6/.test(t2) && /FR ≈/.test(t2) && typeof C.charger === 'function') || JSON.stringify({ t1, t2 }); } catch (e) { o.loiCk = 'erreur : ' + e.message; }
       /* 20261109e : critère foot « mi-temps avec le plus de buts » */
       try { const S = window._g45CrS, sv = [S.nom, S.ctx, S.fid['TMH'], S.fa['xmh']]; S.nom = 'TMH'; S.ctx = null; S.fid['TMH'] = { '2026-01-01': 'xmh', '2026-01-08': 'xmh2' }; S.fa['xmh'] = [0, 0, 0, 0, 1, 0, 'h', 0, 0, 0, 0]; S.fa['xmh2'] = [0, 0, 0, 0, 1, 1, 'h', 0, 0, 0, 0];
         const m1 = ['2026-01-01', 1, 3, 1], m2 = ['2026-01-08', 1, 2, 2], P = window._g45CrPasse;
@@ -2247,7 +2247,7 @@ serveur.listen(0, async () => {
       try { const F = window._g45LoiCote.FI; F.m1 = { h: { id: '9' }, a: { id: '1' }, ml: { h: 1.95, a: 3.65, d: 3.75 } }; F.m2 = { h: { id: '2' }, a: { id: '8' }, tot: { L: 6.5, o: 1.9, u: 1.9 } }; F.m3 = { h: { id: '3' }, a: { id: '7' }, bts: { o: 1.64, n: 2.2 } };
         window.g45LoiBilVue('gr'); const hg = window._g45LoiBilHtml(); window.g45LoiBilVue('bil'); const hl = window._g45LoiBilHtml().replace(/<[^>]+>/g, ' '); window.g45LoiBilVue('cal');
         ['m1', 'm2', 'm3'].forEach(function (k) { delete F[k]; });
-        o.loiGraph = (/<polyline/.test(hg) && /\+23 €/.test(hg) && /Par pari/.test(hl) && /Victoire\s+1\/1 · 100 %\s+3,65\s+\+27 €/.test(hl) && /Moins de 6,5 buts\s+0\/1 · 0 %\s+1,90\s+−10 €/.test(hl) && /Ligue 2/.test(hl) && /4 ratés/.test(hl)) || (hg.replace(/<[^>]+>/g, ' ').slice(0, 200) + ' || ' + hl.slice(0, 600)); } catch (e) { o.loiGraph = 'erreur : ' + e.message; }
+        o.loiGraph = (/<polyline/.test(hg) && /\+20 €/.test(hg) && /Par pari/.test(hl) && /Victoire\s+1\/1 · 100 %\s+3,65\s+\+24 €/.test(hl) && /Moins de 6,5 buts\s+0\/1 · 0 %\s+1,90\s+−10 €/.test(hl) && /Ligue 2/.test(hl) && /4 ratés/.test(hl)) || (hg.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').slice(-700) + ' || ' + hl.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').slice(-900)); } catch (e) { o.loiGraph = 'erreur : ' + e.message; }
       /* 20261107l : critères NHL d'un joueur seul suivi dans ses autres clubs */
       try { const T = window._g45CrUsTrT, S = T.S, sv = { ctx: S.ctx, nom: S.nom, d: S.data[S.nom] }; const LG0 = window._G45_ARCH_LG; window._G45_ARCH_LG = (LG0 || []).concat(['zzh']); S.ctx = { sp: 'hockey', lg: 'zzh', id: '5' }; S.nom = '__tr'; S.data.__tr = { saisons: [{ an: 2026 }] };
         const c = { jo: 'tr1', jn: 'T', jm: 'g' }, sa = { an: 2026 }; T.de(c, sa); let L = null; for (let i = 0; i < 40 && !(L = T.de(c, sa)); i++) await new Promise((r) => setTimeout(r, 100));
