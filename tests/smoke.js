@@ -2197,8 +2197,9 @@ serveur.listen(0, async () => {
         const sb0 = JSON.stringify(state.b), h0 = state.h.length, a0 = state.a.length; state.b.sbx1 = '500'; state.b.orbitx = '500';
         swBet('sb'); const pan = !!document.getElementById('sub-sb') && document.getElementById('sub-sb').style.display === 'block' && /Enregistrer le surebet/.test(document.getElementById('sub-sb').innerHTML);
         g45SbKind('lay'); const sv = (id, v) => { const e = document.getElementById(id); e.value = v; };
-        sv('sb-match', 'PSG – Lyon'); sv('sb-p1', 'PSG gagne'); sv('sb-bk1', 'sbx1'); sv('sb-bk2', 'orbitx'); sv('sb-a', '2,30'); sv('sb-b', '2,10'); sv('sb-c', '3'); sv('sb-m', '100'); g45SbMaj(1);
-        const resOk = /7,78/.test(document.getElementById('sb-res').innerHTML);
+        sv('sb-match', 'PSG – Lyon'); sv('sb-p1', 'PSG gagne'); sv('sb-bk1', 'sbx1'); sv('sb-bk2', 'orbitx'); sv('sb-a', '2,30'); sv('sb-b', '2,10'); sv('sb-c', '3'); g45SbMaj(1); sv('sb-m1', '100'); g45SbMise('1', '100');
+        const resOk = /7,78/.test(document.getElementById('sb-res').innerHTML) && document.getElementById('sb-m2').value === '111.11' && document.getElementById('sb-mt').value === '222.22'
+          && (() => { const F = window._g45SbCalcF({ k: 'lay', a: 10, b: 6, c: 3, p: '1' }, '2', '103.09'); return F.s1 === 100 && F.s2 === 515.46; })();
         g45SbEnreg(); const J = state.h.filter((x) => x.sb); const debit = n2(500 - parseFloat(state.b.sbx1)) === 100 && n2(500 - parseFloat(state.b.orbitx)) === 122.22 && J.length === 2;
         const carte = window._g45SbCarte(J[0]), cache = window._g45SbCarte(J[1]);
         g45SbRegler(J[0].sb.g, '2', true);   /* PSG ne gagne pas : POUR perdu, CONTRE gagné */
