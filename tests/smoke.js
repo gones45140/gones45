@@ -2184,6 +2184,24 @@ serveur.listen(0, async () => {
         F.q1 = { h: { id: '9' }, a: { id: '5' }, f: { h: 4, a: 3 }, ot: 1, tot: { L: 6.5, o: 1.9, u: 1.91 } }; F.q2 = { h: { id: '7' }, a: { id: '8' }, f: { h: 0, a: 0 }, ml: { h: 2.5, d: 3, a: 3 } };
         const hq = window._g45LoiBilHtml().replace(/<[^>]+>/g, ' '); const a = M.d.L[0], b = M.d.L[1]; delete F.q1; delete F.q2; M.d = sv;
         o.loiScore = (a.r === 0 && a.sc === '4-3 (prol.)' && b.r === 0 && b.sc === '0-0' && /4-3/.test(hq)) || JSON.stringify({ a, b }); } catch (e) { o.loiScore = 'erreur : ' + e.message; }
+      /* 20261110a : ⚖️ surebet — calcul (fr.surebet.com + maquette), enregistrement des 2 jambes, carte « En cours », règlement 1 / N / 2 */
+      try {
+        const K = window._g45SbCalc, n2 = (v) => Math.round(v * 100) / 100;
+        const A = K({ k: 'lay', a: 10, b: 6, c: 3, S: 100, p: '1' }), Bq = K({ k: 'lay', a: 2.3, b: 2.1, c: 3, S: 100, p: 'rep' }), C = K({ k: 'rn', a: 1.8, b: 2.4, T: 100, p: 'rep' }), D2 = K({ k: '2b', a: 2.1, b: 2.05, T: 100, p: 'rep' });
+        const calcOk = A.L === 103.09 && A.s2 === 515.46 && n2(A.res[0][0]) === 384.54 && Math.abs(A.res[1][0]) < 0.01 && Bq.L === 111.11 && Bq.s2 === 122.22 && n2(Bq.min) === 7.78
+          && C.s1 === 57.14 && C.s2 === 42.86 && n2(C.min) === 2.86 && n2(C.res[1][0]) === 60 && D2.s1 === 49.4 && n2(D2.min) === 3.73;
+        const sb0 = JSON.stringify(state.b), h0 = state.h.length, a0 = state.a.length; state.b.sbx1 = '500'; state.b.orbitx = '500';
+        swBet('sb'); const pan = !!document.getElementById('sub-sb') && document.getElementById('sub-sb').style.display === 'block' && /Enregistrer le surebet/.test(document.getElementById('sub-sb').innerHTML);
+        g45SbKind('lay'); const sv = (id, v) => { const e = document.getElementById(id); e.value = v; };
+        sv('sb-match', 'PSG – Lyon'); sv('sb-p1', 'PSG gagne'); sv('sb-bk1', 'sbx1'); sv('sb-bk2', 'orbitx'); sv('sb-a', '2,30'); sv('sb-b', '2,10'); sv('sb-c', '3'); sv('sb-m', '100'); g45SbMaj(1);
+        const resOk = /7,78/.test(document.getElementById('sb-res').innerHTML);
+        g45SbEnreg(); const J = state.h.filter((x) => x.sb); const debit = n2(500 - parseFloat(state.b.sbx1)) === 100 && n2(500 - parseFloat(state.b.orbitx)) === 122.22 && J.length === 2;
+        const carte = window._g45SbCarte(J[0]), cache = window._g45SbCarte(J[1]);
+        g45SbRegler(J[0].sb.g, '2', true);   /* PSG ne gagne pas : POUR perdu, CONTRE gagné */
+        const fin = n2(parseFloat(state.b.sbx1) + parseFloat(state.b.orbitx) - 1000) === 7.78 && state.h.length === h0 && state.a.length === a0 + 2;
+        state.a.splice(0, 2); state.b = JSON.parse(sb0); swBet('simple');
+        o.surebet = (calcOk && pan && resOk && debit && /⚖️ Surebet · PSG – Lyon/.test(carte || '') && cache === '' && fin) || JSON.stringify({ calcOk, pan, resOk, debit, c: (carte || '').slice(0, 80), cache, fin, A, Bq, C, D2 });
+      } catch (e) { o.surebet = 'erreur : ' + e.message; }
       /* 20261109i : séries de la carte — lignes du book (Rams « Couvre le handicap du book ») */
       try { const C = { sp: 'football', lg: 'nfl', id: '14' }, a1 = _g45SerCombo('🏠/✈️ Couvre le handicap du book', C, 'Los Angeles Rams'), a2 = _g45SerCombo('Victoire + Under du total du book', C, 'Los Angeles Rams'), a3 = _g45SerCombo('Ne couvre pas le handicap du book', C, 'Los Angeles Rams');
         const a4 = _g45SerCombo('San Francisco 49ers et moins de 51,5', C, 'San Francisco 49ers'), a5 = _g45SerCombo('Kansas City Chiefs + moins de 47,5', C, 'Kansas City Chiefs');
@@ -2324,6 +2342,7 @@ serveur.listen(0, async () => {
     ok('📊 Loi des séries : même pari du match fusionné (2 équipes)', r.loiFus === true, r.loiFus);
     ok('⚽ Score d\'un pari : pas celui de l\'équipe féminine / jeune', r.scVar === true, r.scVar);
     ok('🃏 Séries de la carte : « Couvre le handicap du book »', r.serBook === true, r.serBook);
+    ok('⚖️ Surebet : calcul, 2 jambes, carte, règlement', r.surebet === true, r.surebet);
     ok('Logos : noms français / Winamax (Mayence, B. Munich)', r.logoFr === true, r.logoFr);
     ok('🃏 Mes cartes : photo du joueur cherchée si absente', r.ulPhoto === true, r.ulPhoto);
     ok('🏁 Prochaines 24 h : case Déjà engagé', r.ckEng === true, r.ckEng);
