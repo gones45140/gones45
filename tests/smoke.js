@@ -2184,6 +2184,9 @@ serveur.listen(0, async () => {
         F.q1 = { h: { id: '9' }, a: { id: '5' }, f: { h: 4, a: 3 }, ot: 1, tot: { L: 6.5, o: 1.9, u: 1.91 } }; F.q2 = { h: { id: '7' }, a: { id: '8' }, f: { h: 0, a: 0 }, ml: { h: 2.5, d: 3, a: 3 } };
         const hq = window._g45LoiBilHtml().replace(/<[^>]+>/g, ' '); const a = M.d.L[0], b = M.d.L[1]; delete F.q1; delete F.q2; M.d = sv;
         o.loiScore = (a.r === 0 && a.sc === '4-3 (prol.)' && b.r === 0 && b.sc === '0-0' && /4-3/.test(hq)) || JSON.stringify({ a, b }); } catch (e) { o.loiScore = 'erreur : ' + e.message; }
+      /* 20261109i : séries de la carte — lignes du book (Rams « Couvre le handicap du book ») */
+      try { const C = { sp: 'football', lg: 'nfl', id: '14' }, a1 = _g45SerCombo('🏠/✈️ Couvre le handicap du book', C, 'Los Angeles Rams'), a2 = _g45SerCombo('Victoire + Under du total du book', C, 'Los Angeles Rams'), a3 = _g45SerCombo('Ne couvre pas le handicap du book', C, 'Los Angeles Rams');
+        o.serBook = (/Couvre le handicap du book/.test(a1 || '') && /Under du total du book/.test(a2 || '') && /Vainqueur|Victoire/.test(a2 || '') && /Ne couvre pas/.test(a3 || '')) || JSON.stringify({ a1, a2, a3 }); } catch (e) { o.serBook = 'erreur : ' + e.message; }
       /* 20261109h : score foot — jamais celui de l'équipe féminine / jeune (Forest 5-0 City) */
       try { const V = window._g45ScVar; o.scVar = (V(['nottinghamforestwomen', 'manchestercitywomen'], ['manchestercity', 'nottinghamforest']) === true && V(['nottinghamforest', 'manchestercity'], ['manchestercity', 'nottinghamforest']) === false
         && V(['realmadridcastilla', 'valenciab'], ['realmadrid']) === true && V(['psgfeminines'], ['psgfeminines']) === false) || 'règle fausse'; } catch (e) { o.scVar = 'erreur : ' + e.message; }
@@ -2319,6 +2322,7 @@ serveur.listen(0, async () => {
     ok('📊 Loi des séries : score + résultat depuis les archives', r.loiScore === true, r.loiScore);
     ok('📊 Loi des séries : même pari du match fusionné (2 équipes)', r.loiFus === true, r.loiFus);
     ok('⚽ Score d\'un pari : pas celui de l\'équipe féminine / jeune', r.scVar === true, r.scVar);
+    ok('🃏 Séries de la carte : « Couvre le handicap du book »', r.serBook === true, r.serBook);
     ok('Logos : noms français / Winamax (Mayence, B. Munich)', r.logoFr === true, r.logoFr);
     ok('🃏 Mes cartes : photo du joueur cherchée si absente', r.ulPhoto === true, r.ulPhoto);
     ok('🏁 Prochaines 24 h : case Déjà engagé', r.ckEng === true, r.ckEng);
