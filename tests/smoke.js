@@ -2036,8 +2036,10 @@ serveur.listen(0, async () => {
           pf.lc = {}; pf.l = 1; window.g45GrilleEqRetour('Pct FC'); const retour = !pf.g && _g45Grille(pf) === STRATS['4'];
           window._g45MajP1('4', 10, 7); const etoile = STRATS['4'].length === 7 && !window._g45GrilleAtt()['4'];
           /* 20261105p : P1 puis P max pendant une série → les 2 changements gardés dans la grille en attente */
-          { const g0 = pf.g, gl0 = pf.gl; delete pf.g; delete pf.gl; pf.l = 3; window._g45MajP1('4', 12); window._g45MajP1('4', null, 8); const ax = window._g45GrilleAtt()['4'];
-            window.__p1max = !!ax && ax[0] === 12 && ax.length === 8; window.g45GrilleAnnuler('4'); pf.l = 1; if (g0) pf.g = g0; if (gl0) pf.gl = gl0; }
+          /* 20261110h : la grille ⭐ change tout de suite ; l'équipe en série garde l'ancienne (u.g) et revient aux étoiles à P1 (u.ga 'E') */
+          { const g0 = pf.g, gl0 = pf.gl, s0 = STRATS['4'].slice(); delete pf.g; delete pf.gl; pf.l = 3; window._g45MajP1('4', 12); const gel = Array.isArray(pf.g) && pf.g[0] === s0[0] && pf.ga === 'E' && STRATS['4'][0] === 12 && !window._g45GrilleAtt()['4'];
+            pf.l = 1; window._g45GrilleVerif(); const rev = !pf.g && !pf.ga && _g45Grille(pf) === STRATS['4'];
+            window.__p1max = (gel && rev) || JSON.stringify({ gel, rev, g: pf.g, ga: pf.ga, s4: STRATS['4'] }); STRATS['4'] = s0; pf.l = 1; delete pf.ga; if (g0) pf.g = g0; else delete pf.g; if (gl0) pf.gl = gl0; }
           /* 20261105g : paliers conseillés par la pire série 4 saisons (A carte + B Engager) */
           pf.psL = { dom: { p: [2, 5, 4, 3], tot: 5, at: Date.now() }, ext: { p: [1, 2], tot: 2 } }; delete pf.g; delete pf.ga; pf.l = 1; pf.lc = {};
           const C1 = window._g45PsConseil(pf, 'dom'), C2 = window._g45PsConseil(pf, 'ext'), C3 = window._g45PsConseil(pf, ''), C4 = window._g45PsConseil({ psL: { glob: { p: [9], tot: 9 } } }, 'dom');
