@@ -1172,6 +1172,9 @@ serveur.listen(0, async () => {
         const iA = H.indexOf('>Test Avs<'), iB = H.indexOf('>Test Bruins<');
         o.crCls = (feuOk && st.cours === 1 && st.pire === 3 && st.ok === 2 && stO.n === 6 && stO.ok === 4 && stO.pire === 2 && /Jouable en Cockpit/.test(H) && iA > 0 && iB > iA && /g45CompetOuvrir\('Test Bruins','2','nhl','hockey',true\)/.test(H)) || JSON.stringify({ feuOk, st, stO, iA, iB, h: H.slice(-600) });
       } catch (e) { o.crCls = 'erreur : ' + e.message; }
+      /* 20261111f — Loi des séries : simulation montante du bilan */
+      try { const Mo = window._g45LoiMont, cd = () => ({ c: 2 }), L = [{ t: 1, id: 'a', k: 'u65', lieu: 'dom', r: 0 }, { t: 2, id: 'a', k: 'u65', lieu: 'dom', r: 0 }, { t: 3, id: 'a', k: 'u65', lieu: 'dom', r: 1 }, { t: 4, id: 'b', k: 'v', lieu: 'ext', r: 0 }];
+        const R = Mo(L, cd); o.loiMont = (R.n === 4 && R.g === 20 && R.pmax === 3 && R.mmax === 60 && R.ouv === 1 && /P2 = 20 €/.test(R.prochs)) || JSON.stringify(R); } catch (e) { o.loiMont = 'erreur : ' + e.message; }
       /* 20261111c — hockey : total du match prolongation + TAB compris (c.otp), buts d'équipe toujours au temps réglementaire */
       try { const S = window._g45CrS, sc0 = S.ctx; S.ctx = { sp: 'hockey', lg: 'nhl', id: '1' }; const P = window._g45CrPasse, m = ['2026-11-01', 1, 3, 2, 1, 0, 'x'];
         const r = [P({ ou: 'ov', L: 4.5, otp: '1' }, m), P({ ou: 'ov', L: 4.5 }, m), P({ te: 'ov', TL: 2.5, otp: '1' }, m)]; S.ctx = sc0;
@@ -2371,6 +2374,7 @@ serveur.listen(0, async () => {
     ok('📅 Saisons comptées (carte + critères)', r.saisonsNs === true, r.saisonsNs);
     ok('🔍 Critères : trouver la meilleure stratégie', r.crBest === true, r.crBest);
     ok('🏒 Critères : total du match prolongation + TAB (Winamax)', r.crOtp === true, r.crOtp);
+    ok('📊 Loi des séries : bilan en montante', r.loiMont === true, r.loiMont);
     ok('Logos : noms français / Winamax (Mayence, B. Munich)', r.logoFr === true, r.logoFr);
     ok('🃏 Mes cartes : photo du joueur cherchée si absente', r.ulPhoto === true, r.ulPhoto);
     ok('🏁 Prochaines 24 h : case Déjà engagé', r.ckEng === true, r.ckEng);
