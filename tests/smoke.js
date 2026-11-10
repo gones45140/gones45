@@ -2194,6 +2194,7 @@ serveur.listen(0, async () => {
         const A = K({ k: 'lay', a: 10, b: 6, c: 3, S: 100, p: '1' }), Bq = K({ k: 'lay', a: 2.3, b: 2.1, c: 3, S: 100, p: 'rep' }), C = K({ k: 'rn', a: 1.8, b: 2.4, T: 100, p: 'rep' }), D2 = K({ k: '2b', a: 2.1, b: 2.05, T: 100, p: 'rep' });
         const calcOk = A.L === 103.09 && A.s2 === 515.46 && n2(A.res[0][0]) === 384.54 && Math.abs(A.res[1][0]) < 0.01 && Bq.L === 111.11 && Bq.s2 === 122.22 && n2(Bq.min) === 7.78
           && (() => { const E = K({ k: '2b', a: 1.5, c1: 3, b: 5, c: 0, T: 129.7, p: 'rep' }); return E.s1 === 100 && E.s2 === 29.7 && n2(E.min) === 18.8; })() && C.s1 === 57.14 && C.s2 === 42.86 && n2(C.min) === 2.86 && n2(C.res[1][0]) === 60 && D2.s1 === 49.4 && n2(D2.min) === 3.73;
+        const tk = (() => { const S2 = window._g45SbCalcS({ k: '2b', a: 1.5, c1: 3, b: 5, c: 0 }, 100, 29.7); return n2(S2.min) === 18.8 && S2.s2 === 29.7; })();
         const sb0 = JSON.stringify(state.b), h0 = state.h.length, a0 = state.a.length; state.b.sbx1 = '500'; state.b.orbitx = '500';
         swBet('sb'); const pan = !!document.getElementById('sub-sb') && document.getElementById('sub-sb').style.display === 'block' && /Enregistrer le surebet/.test(document.getElementById('sub-sb').innerHTML);
         g45SbKind('lay'); const sv = (id, v) => { const e = document.getElementById(id); e.value = v; };
@@ -2205,7 +2206,7 @@ serveur.listen(0, async () => {
         g45SbRegler(J[0].sb.g, '2', true);   /* PSG ne gagne pas : POUR perdu, CONTRE gagné */
         const fin = n2(parseFloat(state.b.sbx1) + parseFloat(state.b.orbitx) - 1000) === 7.78 && state.h.length === h0 && state.a.length === a0 + 2;
         state.a.splice(0, 2); state.b = JSON.parse(sb0); swBet('simple');
-        o.surebet = (calcOk && pan && resOk && debit && /⚖️ Surebet · PSG – Lyon/.test(carte || '') && cache === '' && fin) || JSON.stringify({ calcOk, pan, resOk, debit, c: (carte || '').slice(0, 80), cache, fin, A, Bq, C, D2 });
+        o.surebet = (calcOk && tk && /📷 Ticket 1/.test(document.getElementById('sub-sb') ? document.getElementById('sub-sb').innerHTML : '') && pan && resOk && debit && /⚖️ Surebet · PSG – Lyon/.test(carte || '') && cache === '' && fin) || JSON.stringify({ calcOk, pan, resOk, debit, c: (carte || '').slice(0, 80), cache, fin, A, Bq, C, D2 });
       } catch (e) { o.surebet = 'erreur : ' + e.message; }
       /* 20261109i : séries de la carte — lignes du book (Rams « Couvre le handicap du book ») */
       try { const C = { sp: 'football', lg: 'nfl', id: '14' }, a1 = _g45SerCombo('🏠/✈️ Couvre le handicap du book', C, 'Los Angeles Rams'), a2 = _g45SerCombo('Victoire + Under du total du book', C, 'Los Angeles Rams'), a3 = _g45SerCombo('Ne couvre pas le handicap du book', C, 'Los Angeles Rams');
