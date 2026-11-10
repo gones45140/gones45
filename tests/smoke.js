@@ -1176,12 +1176,14 @@ serveur.listen(0, async () => {
       try {
         const S = window._g45CrS, sv = { nom: S.nom, ctx: S.ctx, combos: S.combos, a: S.a, lieu: S.lieu, best: S.best };
         const sc = [[3, 1], [2, 1], [1, 2], [4, 2], [3, 0], [2, 1], [1, 1], [0, 2], [5, 1], [2, 3], [3, 2], [1, 0], [2, 2], [4, 1], [0, 1], [3, 3], [2, 0], [1, 3], [4, 3], [2, 1], [3, 1], [1, 2]];
-        const D = { t: Date.now(), lg: 'nhl', saisons: [{ an: 2027, ms: sc.map((r, i) => ['2026-' + ('0' + (1 + Math.floor(i / 28))).slice(-2) + '-' + ('0' + (1 + i % 28)).slice(-2), i % 2 ? 0 : 1, r[0], r[1], 0, 0, 'b' + i]) }] };
+        const D = { t: Date.now(), lg: 'nhl', saisons: [{ an: 2027, ms: sc.concat(sc).map((r, i) => ['2026-' + ('0' + (1 + Math.floor(i / 28))).slice(-2) + '-' + ('0' + (1 + i % 28)).slice(-2), i % 2 ? 0 : 1, r[0], r[1], 0, 0, 'b' + i]) }] };
         S.nom = 'Test Best'; S.ctx = { sp: 'hockey', lg: 'nhl', id: '1' }; S.combos = [{ res: 'vqr' }]; S.a = 0; S.lieu = 'tout'; S.data['Test Best'] = D; S.best = { on: 1, nom: 'Test Best', lieu: 'tout', cm: 1.5, tri: 'pire', R: null };
         const R = window._g45CrBest(D), H = _g45CrHtml('Test Best', S.ctx);
         const okR = R.length > 0 && R.every((x) => x.cj >= 1.5 && x.n >= 15) && R.every((x, i) => !i || R[i - 1].pire <= x.pire) && /Chercher \(\d+ paris testés\)/.test(H);
+        S.best.lieu = 'dom'; const zz = document.createElement('div'); zz.innerHTML = H; document.body.appendChild(zz); window.g45CrBest('go'); const Rd = S.best.R || []; window.g45CrBest('use', 0); const lieuUse = S.lieu; const H2 = (document.querySelector('[id="g45cr"]') || {}).innerHTML || ''; zz.remove();
+        window.__lieuDbg = { lieuUse, n: Rd.length, h: /Ton combiné : <\/span><b>🏠/.test(H2) };
         delete S.data['Test Best']; Object.assign(S, sv);
-        o.crBest = okR || JSON.stringify({ n: R.length, R: R.slice(0, 3).map((x) => [x.lib, x.pire, x.cj, x.n]), h: /Trouver la meilleure/.test(H) });
+        o.crBest = (okR && window.__lieuDbg.lieuUse === 'dom' && window.__lieuDbg.h) || JSON.stringify({ dbg: window.__lieuDbg }) + JSON.stringify({ n: R.length, R: R.slice(0, 3).map((x) => [x.lib, x.pire, x.cj, x.n]), h: /Trouver la meilleure/.test(H) });
       } catch (e) { o.crBest = 'erreur : ' + e.message; }
       /* 20261028e — 📌 Garder sur la carte */
       try {
