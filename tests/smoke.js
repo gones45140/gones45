@@ -1179,6 +1179,11 @@ serveur.listen(0, async () => {
       try { const S = window._g45CrS, sc0 = S.ctx; S.ctx = { sp: 'hockey', lg: 'nhl', id: '1' }; const P = window._g45CrPasse, m = ['2026-11-01', 1, 3, 2, 1, 0, 'x'];
         const r = [P({ ou: 'ov', L: 4.5, otp: '1' }, m), P({ ou: 'ov', L: 4.5 }, m), P({ te: 'ov', TL: 2.5, otp: '1' }, m)]; S.ctx = sc0;
         o.crOtp = (r[0] === true && r[1] === false && r[2] === false) || JSON.stringify(r); } catch (e) { o.crOtp = 'erreur : ' + e.message; }
+      /* 20261111h — handicap du book séparé favori / outsider */
+      try { const S = window._g45CrS, sc0 = S.ctx; S.ctx = { sp: 'hockey', lg: 'nhl', id: '1' }; const C = window._g45CrCalc;
+        const ms = [['2026-11-01', 1, 3, 1, 0, 0, 'a', -1.5], ['2026-11-02', 1, 2, 1, 0, 0, 'b', -1.5], ['2026-11-03', 1, 1, 4, 0, 0, 'c', 1.5], ['2026-11-04', 1, 2, 3, 0, 0, 'd', 1.5]];
+        const r = [C({ hb: 'n' }, ms), C({ hb: 'n', hf: 'f' }, ms), C({ hb: 'n', hf: 'o' }, ms)]; S.ctx = sc0;
+        o.crHf = (r[0].n === 4 && r[0].ok === 2 && r[1].n === 2 && r[1].ok === 1 && r[2].n === 2 && r[2].ok === 1) || JSON.stringify(r); } catch (e) { o.crHf = 'erreur : ' + e.message; }
       /* 20261110g — 🔍 Trouver la meilleure stratégie */
       try {
         const S = window._g45CrS, sv = { nom: S.nom, ctx: S.ctx, combos: S.combos, a: S.a, lieu: S.lieu, best: S.best };
@@ -2373,6 +2378,7 @@ serveur.listen(0, async () => {
     ok('⚖️ Surebet : calcul, 2 jambes, carte, règlement', r.surebet === true, r.surebet);
     ok('📅 Saisons comptées (carte + critères)', r.saisonsNs === true, r.saisonsNs);
     ok('🔍 Critères : trouver la meilleure stratégie', r.crBest === true, r.crBest);
+    ok('🎯 Critères : handicap du book favori / outsider', r.crHf === true, r.crHf);
     ok('🏒 Critères : total du match prolongation + TAB (Winamax)', r.crOtp === true, r.crOtp);
     ok('📊 Loi des séries : bilan en montante', r.loiMont === true, r.loiMont);
     ok('Logos : noms français / Winamax (Mayence, B. Munich)', r.logoFr === true, r.logoFr);
