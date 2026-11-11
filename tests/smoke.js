@@ -1185,7 +1185,7 @@ serveur.listen(0, async () => {
         const m = ['2026-11-08', 0, 4, 1, 0, 0, 'tstE1'], CM = window._g45CrCoteM, J = { jo: '3114985', jn: 'Ivan Barbashev' };
         const r = [CM(Object.assign({ jm: 'p', jmin: '1' }, J), m), CM(Object.assign({ jm: 'p', jmin: '2' }, J), m), CM(Object.assign({ jm: 'a', jmin: '1' }, J), m), CM(Object.assign({ jm: 'g', jmin: '1' }, J), m), CM(Object.assign({ jm: 'p', jmin: '1', ou: 'ov', L: 5.5 }, J), m), CM(Object.assign({ jm: 'p', jmin: '1' }, J), ['x', 0, 1, 1, 0, 0, 'autre'])];
         delete S.bk['tstE1']; S.ctx = sc0;
-        o.crCoteJ = (r[0] === 2.35 && r[1] === 8.5 && r[2] === 3.05 && r[3] === 6 && r[4] === null && r[5] === null) || JSON.stringify(r); } catch (e) { o.crCoteJ = 'erreur : ' + e.message; }
+        o.crCoteJ = (r[0] === 2.21 && r[1] === 7.99 && r[2] === 2.87 && r[3] === 5.64 && r[4] === null && r[5] === null) || JSON.stringify(r); } catch (e) { o.crCoteJ = 'erreur : ' + e.message; }
       /* 20261111j — carte partagée d'un pari joueur : l'équipe du joueur à la place du joueur */
       try { const h = { id: 'tst-carte-j', n: 'SIMPLE', target: 'Leon Draisaitl vs Philadelphia Flyers', joueur: 'Leon Draisaitl', date: '2026-11-12', sport: '🏒' };
         localStorage.setItem(_G45_META_CLE + h.id, JSON.stringify({ hn: 'Edmonton Oilers', an: 'Philadelphia Flyers' }));
