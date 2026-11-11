@@ -1179,6 +1179,13 @@ serveur.listen(0, async () => {
       try { const S = window._g45CrS, sc0 = S.ctx; S.ctx = { sp: 'hockey', lg: 'nhl', id: '1' }; const P = window._g45CrPasse, m = ['2026-11-01', 1, 3, 2, 1, 0, 'x'];
         const r = [P({ ou: 'ov', L: 4.5, otp: '1' }, m), P({ ou: 'ov', L: 4.5 }, m), P({ te: 'ov', TL: 2.5, otp: '1' }, m)]; S.ctx = sc0;
         o.crOtp = (r[0] === true && r[1] === false && r[2] === false) || JSON.stringify(r); } catch (e) { o.crOtp = 'erreur : ' + e.message; }
+      /* 20261112c — 💶 vraie cote DraftKings d'un pari joueur NHL (archives fiche.j[id].o) */
+      try { const S = window._g45CrS, sc0 = S.ctx; S.ctx = { sp: 'hockey', lg: 'nhl', id: '37' }; S.bk = S.bk || {};
+        S.bk['tstE1'] = { '3114985': { '218': [[1, 2.35], [2, 8.5]], '219': [[1, 3.05]], '230': [[null, 6]] } };
+        const m = ['2026-11-08', 0, 4, 1, 0, 0, 'tstE1'], CM = window._g45CrCoteM, J = { jo: '3114985', jn: 'Ivan Barbashev' };
+        const r = [CM(Object.assign({ jm: 'p', jmin: '1' }, J), m), CM(Object.assign({ jm: 'p', jmin: '2' }, J), m), CM(Object.assign({ jm: 'a', jmin: '1' }, J), m), CM(Object.assign({ jm: 'g', jmin: '1' }, J), m), CM(Object.assign({ jm: 'p', jmin: '1', ou: 'ov', L: 5.5 }, J), m), CM(Object.assign({ jm: 'p', jmin: '1' }, J), ['x', 0, 1, 1, 0, 0, 'autre'])];
+        delete S.bk['tstE1']; S.ctx = sc0;
+        o.crCoteJ = (r[0] === 2.35 && r[1] === 8.5 && r[2] === 3.05 && r[3] === 6 && r[4] === null && r[5] === null) || JSON.stringify(r); } catch (e) { o.crCoteJ = 'erreur : ' + e.message; }
       /* 20261111j — carte partagée d'un pari joueur : l'équipe du joueur à la place du joueur */
       try { const h = { id: 'tst-carte-j', n: 'SIMPLE', target: 'Leon Draisaitl vs Philadelphia Flyers', joueur: 'Leon Draisaitl', date: '2026-11-12', sport: '🏒' };
         localStorage.setItem(_G45_META_CLE + h.id, JSON.stringify({ hn: 'Edmonton Oilers', an: 'Philadelphia Flyers' }));
@@ -2387,6 +2394,7 @@ serveur.listen(0, async () => {
     ok('🔍 Critères : trouver la meilleure stratégie', r.crBest === true, r.crBest);
     ok('🎯 Critères : handicap du book favori / outsider', r.crHf === true, r.crHf);
     ok('🃏 Carte partagée : équipe du joueur', r.carteJ === true, r.carteJ);
+    ok('💶 Simulation : vraie cote joueur NHL (archives)', r.crCoteJ === true, r.crCoteJ);
     ok('🏒 Critères : total du match prolongation + TAB (Winamax)', r.crOtp === true, r.crOtp);
     ok('📊 Loi des séries : bilan en montante', r.loiMont === true, r.loiMont);
     ok('Logos : noms français / Winamax (Mayence, B. Munich)', r.logoFr === true, r.logoFr);
