@@ -1184,7 +1184,8 @@ serveur.listen(0, async () => {
         localStorage.setItem(_G45_META_CLE + h.id, JSON.stringify({ hn: 'Edmonton Oilers', an: 'Philadelphia Flyers' }));
         const N = _g45CarteNoms(h), N2 = _g45CarteNoms({ id: 'tst-carte-k', n: 'SIMPLE', target: 'Oilers vs Flyers', date: '2026-11-12' }); localStorage.removeItem(_G45_META_CLE + h.id);
         const HC = _g45CarteResultatHTML({ id: 'tst-carte-m', n: 'SIMPLE', target: 'Mitch Marner vs Utah Mammoth', joueur: 'Mitchell Marner', type: 'Passe décisive du joueur', m: 7.83, cote: 1.75, isPending: true, date: '2026-11-12', sport: '🏒' }, { club: 'Vegas Golden Knights' });
-        o.carteJ = (/Vegas Golden Knights/.test(HC) && !/>Mitch Marner/.test(HC) && N.titre === 'Edmonton Oilers' && N.adv === 'Philadelphia Flyers' && N2.titre === 'Oilers') || JSON.stringify([N, N2]); } catch (e) { o.carteJ = 'erreur : ' + e.message; }
+        const HL = _g45CarteResultatHTML({ id: 'tst-carte-l', n: 'SIMPLE', target: 'Lakers vs Pistons', type: 'Victoire', m: 1, cote: 2, win: true, date: '2026-11-09', sport: '🏀', comp: 'NBA' }, { comp: 'data:image/png;base64,TEST' });
+        o.carteJ = (/src="data:image\/png;base64,TEST"/.test(HL) && !/font-size:210px/.test(HL) && /font-size:210px/.test(HC) && /Vegas Golden Knights/.test(HC) && !/>Mitch Marner/.test(HC) && N.titre === 'Edmonton Oilers' && N.adv === 'Philadelphia Flyers' && N2.titre === 'Oilers') || JSON.stringify([N, N2]); } catch (e) { o.carteJ = 'erreur : ' + e.message; }
       /* 20261111h — handicap du book séparé favori / outsider */
       try { const S = window._g45CrS, sc0 = S.ctx; S.ctx = { sp: 'hockey', lg: 'nhl', id: '1' }; const C = window._g45CrCalc;
         const ms = [['2026-11-01', 1, 3, 1, 0, 0, 'a', -1.5], ['2026-11-02', 1, 2, 1, 0, 0, 'b', -1.5], ['2026-11-03', 1, 1, 4, 0, 0, 'c', 1.5], ['2026-11-04', 1, 2, 3, 0, 0, 'd', 1.5]];
