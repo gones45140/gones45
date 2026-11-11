@@ -1179,6 +1179,11 @@ serveur.listen(0, async () => {
       try { const S = window._g45CrS, sc0 = S.ctx; S.ctx = { sp: 'hockey', lg: 'nhl', id: '1' }; const P = window._g45CrPasse, m = ['2026-11-01', 1, 3, 2, 1, 0, 'x'];
         const r = [P({ ou: 'ov', L: 4.5, otp: '1' }, m), P({ ou: 'ov', L: 4.5 }, m), P({ te: 'ov', TL: 2.5, otp: '1' }, m)]; S.ctx = sc0;
         o.crOtp = (r[0] === true && r[1] === false && r[2] === false) || JSON.stringify(r); } catch (e) { o.crOtp = 'erreur : ' + e.message; }
+      /* 20261111j — carte partagée d'un pari joueur : l'équipe du joueur à la place du joueur */
+      try { const h = { id: 'tst-carte-j', n: 'SIMPLE', target: 'Leon Draisaitl vs Philadelphia Flyers', joueur: 'Leon Draisaitl', date: '2026-11-12', sport: '🏒' };
+        localStorage.setItem(_G45_META_CLE + h.id, JSON.stringify({ hn: 'Edmonton Oilers', an: 'Philadelphia Flyers' }));
+        const N = _g45CarteNoms(h), N2 = _g45CarteNoms({ id: 'tst-carte-k', n: 'SIMPLE', target: 'Oilers vs Flyers', date: '2026-11-12' }); localStorage.removeItem(_G45_META_CLE + h.id);
+        o.carteJ = (N.titre === 'Edmonton Oilers' && N.adv === 'Philadelphia Flyers' && N2.titre === 'Oilers') || JSON.stringify([N, N2]); } catch (e) { o.carteJ = 'erreur : ' + e.message; }
       /* 20261111h — handicap du book séparé favori / outsider */
       try { const S = window._g45CrS, sc0 = S.ctx; S.ctx = { sp: 'hockey', lg: 'nhl', id: '1' }; const C = window._g45CrCalc;
         const ms = [['2026-11-01', 1, 3, 1, 0, 0, 'a', -1.5], ['2026-11-02', 1, 2, 1, 0, 0, 'b', -1.5], ['2026-11-03', 1, 1, 4, 0, 0, 'c', 1.5], ['2026-11-04', 1, 2, 3, 0, 0, 'd', 1.5]];
@@ -2379,6 +2384,7 @@ serveur.listen(0, async () => {
     ok('📅 Saisons comptées (carte + critères)', r.saisonsNs === true, r.saisonsNs);
     ok('🔍 Critères : trouver la meilleure stratégie', r.crBest === true, r.crBest);
     ok('🎯 Critères : handicap du book favori / outsider', r.crHf === true, r.crHf);
+    ok('🃏 Carte partagée : équipe du joueur', r.carteJ === true, r.carteJ);
     ok('🏒 Critères : total du match prolongation + TAB (Winamax)', r.crOtp === true, r.crOtp);
     ok('📊 Loi des séries : bilan en montante', r.loiMont === true, r.loiMont);
     ok('Logos : noms français / Winamax (Mayence, B. Munich)', r.logoFr === true, r.logoFr);
