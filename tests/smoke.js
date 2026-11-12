@@ -1182,7 +1182,7 @@ serveur.listen(0, async () => {
       /* 20261112k — 🧮 Calculatrice dans le menu, Tendances / Calculatrice cachés dans la barre Pari */
       try { const b = document.getElementById('g45-ni-calc'), pm = document.getElementById('g45-pm-calc'), bt = document.querySelector('.psub[data-sub="t-tend"]');
         if (b) b.click(); const tc = document.getElementById('t-calc');
-        o.niCalc = (!!b && !!pm && (!bt || getComputedStyle(bt).display === 'none') && !!tc && tc.offsetParent !== null) || JSON.stringify({ b: !!b, pm: !!pm, bt: bt && getComputedStyle(bt).display, tc: !!tc && tc.offsetParent !== null });
+        const pb = tc && tc.querySelector('.psub-bar'); o.niCalc = ((!pb || getComputedStyle(pb).display === 'none') && !!b && !!pm && (!bt || getComputedStyle(bt).display === 'none') && !!tc && tc.offsetParent !== null) || JSON.stringify({ b: !!b, pm: !!pm, bt: bt && getComputedStyle(bt).display, tc: !!tc && tc.offsetParent !== null });
         const dsh = document.querySelector('.ni[onclick*="t-dash"]'); if (dsh) dsh.click(); } catch (e) { o.niCalc = 'erreur : ' + e.message; }
       /* 20261112l — ⚖️ VS dans la Calculatrice */
       try { const b = document.getElementById('g45-ni-calc'); if (b) b.click(); window.swCalc('vs'); const cv = document.getElementById('calc-vs'), t1 = document.getElementById('comp-team1'), sb = document.getElementById('calc-sb');
