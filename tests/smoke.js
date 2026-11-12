@@ -1179,6 +1179,11 @@ serveur.listen(0, async () => {
       try { const S = window._g45CrS, sc0 = S.ctx; S.ctx = { sp: 'hockey', lg: 'nhl', id: '1' }; const P = window._g45CrPasse, m = ['2026-11-01', 1, 3, 2, 1, 0, 'x'];
         const r = [P({ ou: 'ov', L: 4.5, otp: '1' }, m), P({ ou: 'ov', L: 4.5 }, m), P({ te: 'ov', TL: 2.5, otp: '1' }, m)]; S.ctx = sc0;
         o.crOtp = (r[0] === true && r[1] === false && r[2] === false) || JSON.stringify(r); } catch (e) { o.crOtp = 'erreur : ' + e.message; }
+      /* 20261112k — 🧮 Calculatrice dans le menu, Tendances / Calculatrice cachés dans la barre Pari */
+      try { const b = document.getElementById('g45-ni-calc'), pm = document.getElementById('g45-pm-calc'), bt = document.querySelector('.psub[data-sub="t-tend"]');
+        if (b) b.click(); const tc = document.getElementById('t-calc');
+        o.niCalc = (!!b && !!pm && (!bt || getComputedStyle(bt).display === 'none') && !!tc && tc.offsetParent !== null) || JSON.stringify({ b: !!b, pm: !!pm, bt: bt && getComputedStyle(bt).display, tc: !!tc && tc.offsetParent !== null });
+        const dsh = document.querySelector('.ni[onclick*="t-dash"]'); if (dsh) dsh.click(); } catch (e) { o.niCalc = 'erreur : ' + e.message; }
       /* 20261112c — 💶 vraie cote DraftKings d'un pari joueur NHL (archives fiche.j[id].o) */
       try { const S = window._g45CrS, sc0 = S.ctx; S.ctx = { sp: 'hockey', lg: 'nhl', id: '37' }; S.bk = S.bk || {};
         S.bk['tstE1'] = { '3114985': { '218': [[1, 2.35], [2, 8.5]], '219': [[1, 3.05]], '230': [[null, 6]] } };
@@ -2395,6 +2400,7 @@ serveur.listen(0, async () => {
     ok('🎯 Critères : handicap du book favori / outsider', r.crHf === true, r.crHf);
     ok('🃏 Carte partagée : équipe du joueur', r.carteJ === true, r.carteJ);
     ok('💶 Simulation : vraie cote joueur NHL (archives)', r.crCoteJ === true, r.crCoteJ);
+    ok('🧮 Calculatrice dans le menu', r.niCalc === true, r.niCalc);
     ok('🏒 Critères : total du match prolongation + TAB (Winamax)', r.crOtp === true, r.crOtp);
     ok('📊 Loi des séries : bilan en montante', r.loiMont === true, r.loiMont);
     ok('Logos : noms français / Winamax (Mayence, B. Munich)', r.logoFr === true, r.logoFr);
