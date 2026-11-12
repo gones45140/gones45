@@ -1184,6 +1184,12 @@ serveur.listen(0, async () => {
         if (b) b.click(); const tc = document.getElementById('t-calc');
         o.niCalc = (!!b && !!pm && (!bt || getComputedStyle(bt).display === 'none') && !!tc && tc.offsetParent !== null) || JSON.stringify({ b: !!b, pm: !!pm, bt: bt && getComputedStyle(bt).display, tc: !!tc && tc.offsetParent !== null });
         const dsh = document.querySelector('.ni[onclick*="t-dash"]'); if (dsh) dsh.click(); } catch (e) { o.niCalc = 'erreur : ' + e.message; }
+      /* 20261112l — ⚖️ VS dans la Calculatrice */
+      try { const b = document.getElementById('g45-ni-calc'); if (b) b.click(); window.swCalc('vs'); const cv = document.getElementById('calc-vs'), t1 = document.getElementById('comp-team1'), sb = document.getElementById('calc-sb');
+        o.calcVs = (!!cv && cv.style.display === 'block' && !!t1 && cv.contains(t1) && (!sb || sb.style.display === 'none') && !!document.getElementById('ct-vs')) || JSON.stringify({ cv: cv && cv.style.display, t1: !!t1 && !!cv && cv.contains(t1), sb: sb && sb.style.display });
+        if (o.calcVs === true && typeof window.g45VsBascule === 'function') { window.g45VsBascule('jo'); window.g45VsBascule('eq'); const bb = document.getElementById('g45-vs-bascule'); if (!bb || !cv.contains(bb)) o.calcVs = 'bascule absente du panneau VS'; }
+        window.swCalc('sb'); o.calcVs = o.calcVs === true && document.getElementById('calc-vs').style.display === 'none' ? true : o.calcVs;
+        const dsh = document.querySelector('.ni[onclick*="t-dash"]'); if (dsh) dsh.click(); } catch (e) { o.calcVs = 'erreur : ' + e.message; }
       /* 20261112c — 💶 vraie cote DraftKings d'un pari joueur NHL (archives fiche.j[id].o) */
       try { const S = window._g45CrS, sc0 = S.ctx; S.ctx = { sp: 'hockey', lg: 'nhl', id: '37' }; S.bk = S.bk || {};
         S.bk['tstE1'] = { '3114985': { '218': [[1, 2.35], [2, 8.5]], '219': [[1, 3.05]], '230': [[null, 6]] } };
@@ -2401,6 +2407,7 @@ serveur.listen(0, async () => {
     ok('🃏 Carte partagée : équipe du joueur', r.carteJ === true, r.carteJ);
     ok('💶 Simulation : vraie cote joueur NHL (archives)', r.crCoteJ === true, r.crCoteJ);
     ok('🧮 Calculatrice dans le menu', r.niCalc === true, r.niCalc);
+    ok('⚖️ VS dans la Calculatrice', r.calcVs === true, r.calcVs);
     ok('🏒 Critères : total du match prolongation + TAB (Winamax)', r.crOtp === true, r.crOtp);
     ok('📊 Loi des séries : bilan en montante', r.loiMont === true, r.loiMont);
     ok('Logos : noms français / Winamax (Mayence, B. Munich)', r.logoFr === true, r.logoFr);
