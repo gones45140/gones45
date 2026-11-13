@@ -598,6 +598,20 @@ serveur.listen(0, async () => {
         o.crSel = (keep && /Amicaux seuls/.test(tT) && /Total : 2\/4/.test(tT) && /Total : 1\/1/.test(tA) && /Total : 1\/3/.test(tO) && /2026/.test(tT) && !/2026-27/.test(tT)) || JSON.stringify({ keep, tT: tT.slice(0, 900), tA: (tA.match(/Total[^\n]*/) || [''])[0], tO: (tO.match(/Total[^\n]*/) || [''])[0] });
       } catch (e) { o.crSel = 'erreur : ' + e.message; }
       try {
+        /* 20261113k : sélection de RUGBY (ctx lg 'rsel') — Six Nations / Nations Championship / tests mélangés, filtre Officiels / Tests */
+        const S = window._g45Cr; window._statFilter = 'global'; const nm = 'Test Sel 🏉', ctx = { sp: 'rugby', lg: 'rsel', id: '9' };
+        S.data[nm] = { t: Date.now(), lg: 'rsel', ligue: 'Sélection · toutes compétitions', tid: '9', sel: 1, saisons: [
+          { an: 2026, sel: 1, ms: [['2026-02-05', 1, 36, 14, 0, 0, 'r1', '180659'], ['2026-07-04', 0, 10, 30, 0, 0, 'r2', '289234'], ['2026-11-13', 1, 21, 19, 0, 0, 'r3', '17567']] },
+          { an: 2025, sel: 1, ms: [['2025-11-08', 1, 20, 20, 0, 0, 'r4', '289234']] }, { an: 2024, sel: 1, ms: null }, { an: 2023, sel: 1, ms: null }, { an: 2022, sel: 1, ms: null }] };
+        const z = document.createElement('div'); document.body.appendChild(z);
+        z.innerHTML = window._g45CrHtml(nm, ctx); window.g45CrSet('res', 'vic'); window.g45CrSet('selc', 'T');
+        const tT = (z.innerHTML = window._g45CrHtml(nm, ctx), z.innerText); window.g45CrSet('selc', 'A');
+        const tA = (z.innerHTML = window._g45CrHtml(nm, ctx), z.innerText); window.g45CrSet('selc', 'O');
+        const tO = (z.innerHTML = window._g45CrHtml(nm, ctx), z.innerText); window.g45CrSet('selc', 'T');
+        z.remove(); const keep = !!S.data[nm]; delete S.data[nm];
+        o.crSelR = (keep && /Tests seuls/.test(tT) && /Total : 2\/4/.test(tT) && /Total : 0\/2/.test(tA) && /Total : 2\/2/.test(tO) && !/Phases finales/.test(tT)) || JSON.stringify({ keep, tT: tT.slice(0, 900), tA: (tA.match(/Total[^\n]*/) || [''])[0], tO: (tO.match(/Total[^\n]*/) || [''])[0] });
+      } catch (e) { o.crSelR = 'erreur : ' + e.message; }
+      try {
         /* 20261014g : même bloc en NHL — victoire = temps réglementaire (prolongation / TAB = nul), vainqueur = score final. */
         (window._g45Cr.ovTous = true); window._statFilter = 'global';
         const S = window._g45Cr;
@@ -2359,6 +2373,7 @@ serveur.listen(0, async () => {
     ok('Guide de bienvenue + pourboire', r.guide === true, r.guide);
     ok('Saisons : critères sur 4 saisons', r.cr === true, r.cr);
     ok('🌍 Critères sélection (toutes compétitions, Officiels / Amicaux)', r.crSel === true, r.crSel);
+    ok('🏉 Critères sélection rugby (Six Nations, tests, Nations Championship)', r.crSelR === true, r.crSelR);
     ok('Saisons NHL : critères (temps réglementaire)', r.crh === true, r.crh);
     ok('Saisons NFL / NBA / MLB : critères (vainqueur)', r.crn === true, r.crn);
     ok('Saisons : buts de l\'équipe / de l\'adversaire', r.cre === true, r.cre);
