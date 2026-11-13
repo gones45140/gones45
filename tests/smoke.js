@@ -1174,7 +1174,9 @@ serveur.listen(0, async () => {
       } catch (e) { o.crCls = 'erreur : ' + e.message; }
       /* 20261111f — Loi des séries : simulation montante du bilan */
       try { const Mo = window._g45LoiMont, cd = () => ({ c: 2 }), L = [{ t: 1, id: 'a', k: 'u65', lieu: 'dom', r: 0 }, { t: 2, id: 'a', k: 'u65', lieu: 'dom', r: 0 }, { t: 3, id: 'a', k: 'u65', lieu: 'dom', r: 1 }, { t: 4, id: 'b', k: 'v', lieu: 'ext', r: 0 }];
-        const R = Mo(L, cd); o.loiMont = (R.n === 4 && Math.abs(R.g - 12.8) < 0.01 && R.pmax === 3 && R.mmax === 60 && R.ouv === 1 && /P2 = 20 €/.test(R.prochs)) || JSON.stringify(R); } catch (e) { o.loiMont = 'erreur : ' + e.message; }
+        const R = Mo(L.concat([{ t: 5, id: 'b', k: 'v', lieu: 'ext', r: null }]), cd), DT = window._g45LoiDet || {}, d3 = DT['a|u65|dom|3'], d5 = DT['b|v|ext|5'];
+        if (!(d3 && d3.p === 3 && d3.m === 60 && Math.abs(d3.ser - (d3.g - 30)) < 0.01 && d5 && d5.p === 2 && d5.m === 20 && d5.g == null)) o.loiMontD = JSON.stringify({ d3, d5 });
+        o.loiMont = (!o.loiMontD && R.n === 4 && Math.abs(R.g - 12.8) < 0.01 && R.pmax === 3 && R.mmax === 60 && R.ouv === 1 && /P2 = 20 €/.test(R.prochs)) || JSON.stringify(R); } catch (e) { o.loiMont = 'erreur : ' + e.message; }
       /* 20261111c — hockey : total du match prolongation + TAB compris (c.otp), buts d'équipe toujours au temps réglementaire */
       try { const S = window._g45CrS, sc0 = S.ctx; S.ctx = { sp: 'hockey', lg: 'nhl', id: '1' }; const P = window._g45CrPasse, m = ['2026-11-01', 1, 3, 2, 1, 0, 'x'];
         const r = [P({ ou: 'ov', L: 4.5, otp: '1' }, m), P({ ou: 'ov', L: 4.5 }, m), P({ te: 'ov', TL: 2.5, otp: '1' }, m)]; S.ctx = sc0;
