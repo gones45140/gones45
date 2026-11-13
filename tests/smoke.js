@@ -612,6 +612,14 @@ serveur.listen(0, async () => {
         o.crSelR = (keep && /Tests seuls/.test(tT) && /Total : 2\/4/.test(tT) && /Total : 0\/2/.test(tA) && /Total : 2\/2/.test(tO) && !/Phases finales/.test(tT)) || JSON.stringify({ keep, tT: tT.slice(0, 900), tA: (tA.match(/Total[^\n]*/) || [''])[0], tO: (tO.match(/Total[^\n]*/) || [''])[0] });
       } catch (e) { o.crSelR = 'erreur : ' + e.message; }
       try {
+        /* 20261114a : palier réglable dans « Modifier » (Pastrnak 🏠 P1 → P2) */
+        state.u.push({ n: 'Test Pal Joueur', s: '3', type: 'joueur', lc: { 'nhl|dom': 1 }, l: 1 }); const iP = state.u.length - 1;
+        window.editUnit(iP); const ss = document.querySelectorAll('#edit-unit-pal select[data-g45pk]'); const ks = Array.prototype.map.call(ss, (x) => x.getAttribute('data-g45pk'));
+        const sd = document.querySelector('#edit-unit-pal select[data-g45pk="nhl|dom"]'); if (sd) sd.value = '2'; window.saveEditUnit();
+        const uP = state.u.filter((x) => x.n === 'Test Pal Joueur')[0] || {}; state.u = state.u.filter((x) => x.n !== 'Test Pal Joueur'); try { closeEditUnit(); } catch (e) {}
+        o.palMain = (ks.join(',') === 'nhl|dom,nhl|ext' && uP.lc && uP.lc['nhl|dom'] === 2 && !uP.lc['nhl|ext'] && uP.l === 2) || JSON.stringify({ ks, lc: uP.lc, l: uP.l });
+      } catch (e) { o.palMain = 'erreur : ' + e.message; }
+      try {
         /* 20261014g : même bloc en NHL — victoire = temps réglementaire (prolongation / TAB = nul), vainqueur = score final. */
         (window._g45Cr.ovTous = true); window._statFilter = 'global';
         const S = window._g45Cr;
@@ -2374,6 +2382,7 @@ serveur.listen(0, async () => {
     ok('Saisons : critères sur 4 saisons', r.cr === true, r.cr);
     ok('🌍 Critères sélection (toutes compétitions, Officiels / Amicaux)', r.crSel === true, r.crSel);
     ok('🏉 Critères sélection rugby (Six Nations, tests, Nations Championship)', r.crSelR === true, r.crSelR);
+    ok('🪜 Palier réglable à la main (Modifier)', r.palMain === true, r.palMain);
     ok('Saisons NHL : critères (temps réglementaire)', r.crh === true, r.crh);
     ok('Saisons NFL / NBA / MLB : critères (vainqueur)', r.crn === true, r.crn);
     ok('Saisons : buts de l\'équipe / de l\'adversaire', r.cre === true, r.cre);
