@@ -1179,6 +1179,14 @@ serveur.listen(0, async () => {
       try { const S = window._g45CrS, sc0 = S.ctx; S.ctx = { sp: 'hockey', lg: 'nhl', id: '1' }; const P = window._g45CrPasse, m = ['2026-11-01', 1, 3, 2, 1, 0, 'x'];
         const r = [P({ ou: 'ov', L: 4.5, otp: '1' }, m), P({ ou: 'ov', L: 4.5 }, m), P({ te: 'ov', TL: 2.5, otp: '1' }, m)]; S.ctx = sc0;
         o.crOtp = (r[0] === true && r[1] === false && r[2] === false) || JSON.stringify(r); } catch (e) { o.crOtp = 'erreur : ' + e.message; }
+      /* 20261112n — 🔍 critères pré-remplis depuis une carte */
+      try { const S = window._g45CrS, sv = { nom: S.nom, ctx: S.ctx, combos: S.combos, a: S.a, lieu: S.lieu };
+        window._g45CrPre = { t0: Date.now(), nom: 'Test Pre', t: 'Victoire + Over 4.5', lieu: 'dom' };
+        S.nom = ''; window._g45CrHtml('Test Pre', { sp: 'hockey', lg: 'nhl', id: '999' }); const c1 = S.combos[0] || {}, l1 = S.lieu, vide = window._g45CrPre === null;
+        window._g45CrPre = { t0: Date.now(), nom: 'Test Pre J', t: 'Pointeur', lieu: 'ext', j: { id: '3899937', n: 'Mitch Marner', jm: 'p', min: 1 } };
+        S.nom = ''; window._g45CrHtml('Test Pre J', { sp: 'hockey', lg: 'nhl', id: '998' }); const c2 = S.combos[0] || {};
+        Object.assign(S, sv);
+        o.crPre = (vide && l1 === 'dom' && !!c1.res && c1.ou === 'ov' && +c1.L === 4.5 && S && c2.jo === '3899937' && c2.jm === 'p' && typeof window.g45SerCrit === 'function') || JSON.stringify({ vide, l1, c1: { res: c1.res, ou: c1.ou, L: c1.L }, c2: { jo: c2.jo, jm: c2.jm } }); } catch (e) { o.crPre = 'erreur : ' + e.message; }
       /* 20261112k — 🧮 Calculatrice dans le menu, Tendances / Calculatrice cachés dans la barre Pari */
       try { const b = document.getElementById('g45-ni-calc'), pm = document.getElementById('g45-pm-calc'), bt = document.querySelector('.psub[data-sub="t-tend"]');
         if (b) b.click(); const tc = document.getElementById('t-calc');
@@ -2408,6 +2416,7 @@ serveur.listen(0, async () => {
     ok('💶 Simulation : vraie cote joueur NHL (archives)', r.crCoteJ === true, r.crCoteJ);
     ok('🧮 Calculatrice dans le menu', r.niCalc === true, r.niCalc);
     ok('⚖️ VS dans la Calculatrice', r.calcVs === true, r.calcVs);
+    ok('🔍 Critères pré-remplis depuis une carte', r.crPre === true, r.crPre);
     ok('🏒 Critères : total du match prolongation + TAB (Winamax)', r.crOtp === true, r.crOtp);
     ok('📊 Loi des séries : bilan en montante', r.loiMont === true, r.loiMont);
     ok('Logos : noms français / Winamax (Mayence, B. Munich)', r.logoFr === true, r.logoFr);
