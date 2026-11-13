@@ -1552,11 +1552,11 @@ serveur.listen(0, async () => {
       } catch (e) { o.nbaSr = 'erreur : ' + e.message; }
       /* 20261027u — Journées : blason retrouvé par le nom (liste des équipes de la compétition) */
       try {
-        _g45CompetCache['g45compet3_soccer_tst.1_2026'] = [{ nom: 'Stade Brestois 29', court: 'Brest', logo: 'https://x.test/brest.png' }, { nom: 'OGC Nice', court: 'Nice', logo: 'https://x.test/nice.png' }];
+        _g45CompetCache['g45compet4_soccer_tst.1_2026'] = [{ nom: 'Stade Brestois 29', court: 'Brest', logo: 'https://x.test/brest.png' }, { nom: 'OGC Nice', court: 'Nice', logo: 'https://x.test/nice.png' }];
         const d = document.createElement('div'); d.id = 'g45-nrl-liste'; document.body.appendChild(d);
         const sv = [_g45NrlMatchs, _g45NrlCtx, window._g45JrSel, window._g45JrSelCle];
         _g45NrlCtx = { sport: 'soccer', ligue: 'tst.1' }; _g45NrlMatchs = [{ id: 1, jr: 8, dom: 'Brest', ext: 'Nice', sDom: 1, sExt: 2, joue: true, date: '2026-10-23T18:45Z' }];
-        g45NrlRender(); const H = d.innerHTML; d.remove(); delete _g45CompetCache['g45compet3_soccer_tst.1_2026'];
+        g45NrlRender(); const H = d.innerHTML; d.remove(); delete _g45CompetCache['g45compet4_soccer_tst.1_2026'];
         _g45NrlMatchs = sv[0]; _g45NrlCtx = sv[1]; window._g45JrSel = sv[2]; window._g45JrSelCle = sv[3];
         o.jrLogo = (/brest\.png/.test(H) && /nice\.png/.test(H) && /Journée 8/.test(H)) || H.slice(0, 200);
       } catch (e) { o.jrLogo = 'erreur : ' + e.message; }
