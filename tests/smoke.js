@@ -584,6 +584,20 @@ serveur.listen(0, async () => {
         o.cr = (S.combos.length === 2 && S.combos[1].ou === 'un' && S.combos[1].L === 4.5 && /Total : 2\/5/.test(t) && /2 défaites de suite/.test(t) && /3 paliers/.test(t)) || JSON.stringify({ c: S.combos, t: t.slice(-400) });
       } catch (e) { o.cr = 'erreur : ' + e.message; }
       try {
+        /* 20261113h : sélection nationale — toutes compétitions mélangées, filtre Tout / Officiels / Amicaux */
+        const S = window._g45Cr; window._statFilter = 'global';
+        S.data['Test Sel'] = { t: Date.now(), lg: 'fifa.world', ligue: 'Sélection · toutes compétitions', tid: '478', sel: 1, saisons: [
+          { an: 2026, sel: 1, ms: [['2026-03-20', 1, 2, 0, 0, 1, 'e1', 'fifa.friendly'], ['2026-06-15', 1, 0, 1, 0, 1, 'e2', 'fifa.world'], ['2026-09-05', 0, 3, 1, 0, 1, 'e3', 'uefa.nations']] },
+          { an: 2025, sel: 1, ms: [['2025-10-10', 1, 1, 1, 0, 1, 'e4', 'fifa.worldq.uefa']] }, { an: 2024, sel: 1, ms: null }, { an: 2023, sel: 1, ms: null }, { an: 2022, sel: 1, ms: null }] };
+        const z = document.createElement('div'); document.body.appendChild(z);
+        z.innerHTML = window._g45CrHtml('Test Sel', null, 'uefa.nations'); window.g45CrSet('res', 'vic');
+        const tT = (z.innerHTML = window._g45CrHtml('Test Sel', null, 'fifa.world'), z.innerText); window.g45CrSet('selc', 'A');
+        const tA = (z.innerHTML = window._g45CrHtml('Test Sel', null, 'fifa.world'), z.innerText); window.g45CrSet('selc', 'O');
+        const tO = (z.innerHTML = window._g45CrHtml('Test Sel', null, 'fifa.world'), z.innerText); window.g45CrSet('selc', 'T');
+        z.remove(); const keep = !!S.data['Test Sel']; delete S.data['Test Sel'];
+        o.crSel = (keep && /Amicaux seuls/.test(tT) && /Total : 2\/4/.test(tT) && /Total : 1\/1/.test(tA) && /Total : 1\/3/.test(tO) && /2026/.test(tT) && !/2026-27/.test(tT)) || JSON.stringify({ keep, tT: tT.slice(0, 900), tA: (tA.match(/Total[^\n]*/) || [''])[0], tO: (tO.match(/Total[^\n]*/) || [''])[0] });
+      } catch (e) { o.crSel = 'erreur : ' + e.message; }
+      try {
         /* 20261014g : même bloc en NHL — victoire = temps réglementaire (prolongation / TAB = nul), vainqueur = score final. */
         (window._g45Cr.ovTous = true); window._statFilter = 'global';
         const S = window._g45Cr;
@@ -2344,6 +2358,7 @@ serveur.listen(0, async () => {
     ok('Paris En cours en cartes (simple + montante)', r.enCours === true, r.enCours);
     ok('Guide de bienvenue + pourboire', r.guide === true, r.guide);
     ok('Saisons : critères sur 4 saisons', r.cr === true, r.cr);
+    ok('🌍 Critères sélection (toutes compétitions, Officiels / Amicaux)', r.crSel === true, r.crSel);
     ok('Saisons NHL : critères (temps réglementaire)', r.crh === true, r.crh);
     ok('Saisons NFL / NBA / MLB : critères (vainqueur)', r.crn === true, r.crn);
     ok('Saisons : buts de l\'équipe / de l\'adversaire', r.cre === true, r.cre);
