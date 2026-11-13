@@ -2209,8 +2209,10 @@ serveur.listen(0, async () => {
           { j, t: t0, eid: 'm3', id: '3', sp: 'soccer', eq: 'Venezia', adv: 'Udinese', d: 1, lieu: 'tout', k: 'btts', lib: 'Les deux marquent', pire: 4, cours: 4, r: 1, sc: '1-1' }, { j, t: t0, eid: 'm3', id: '3', sp: 'soccer', eq: 'Venezia', adv: 'Udinese', d: 1, lieu: 'tout', k: 'marque', lib: "L'équipe marque", pire: 4, cours: 4, r: 1, sc: '1-1' }] }; M.t = Date.now(); M.j = ''; M.mois = 0;
         const hb = window._g45LoiBilHtml().replace(/<[^>]+>/g, ' ');
         window.g45LoiBilF('s', 'hockey'); const hk = window._g45LoiBilHtml().replace(/<[^>]+>/g, ' '); window.g45LoiBilF('s', 'tous'); window.g45LoiBilF('c', 7); const h7 = window._g45LoiBilHtml().replace(/<[^>]+>/g, ' '); window.g45LoiBilF('c', 0);
+        /* 20261113g : période 1J (pépites du 1er du mois → vides dès le 3) puis Tout */
+        window.g45LoiBilF('p', '1j'); const hp = window._g45LoiBilHtml().replace(/<[^>]+>/g, ' '); window.g45LoiBilF('p', 'all'); const perOk = /Période/.test(hp) && (d0.getDate() > 2 ? /Aucune pépite avec ces filtres/.test(hp) : /Metz/.test(hp));
         const nVen = (hb.match(/Venezia/g) || []).length;
-        o.loiBil = (nVen === 1 && /L'équipe marque/.test(hb) && /Colorado/.test(hk) && !/Metz/.test(hk) && /Aucune pépite avec ces filtres/.test(h7) && /Série stoppée ✅\s+3 · 75 %/.test(hb) && /⚽ 3\/3 · 100 %/.test(hb) && /🏒 0\/1 · 0 %/.test(hb) && /3\/4/.test(hb) && /Metz/.test(hb) && /🏆 Ligue 2/.test(hb) && /🕒 \d\d:\d\d/.test(hb) && /Tout voir \(4 pépites\)/.test(hb)) || hb.slice(0, 500);
+        o.loiBil = (perOk && nVen === 1 && /L'équipe marque/.test(hb) && /Colorado/.test(hk) && !/Metz/.test(hk) && /Aucune pépite avec ces filtres/.test(h7) && /Série stoppée ✅\s+3 · 75 %/.test(hb) && /⚽ 3\/3 · 100 %/.test(hb) && /🏒 0\/1 · 0 %/.test(hb) && /3\/4/.test(hb) && /Metz/.test(hb) && /🏆 Ligue 2/.test(hb) && /🕒 \d\d:\d\d/.test(hb) && /Tout voir \(4 pépites\)/.test(hb)) || hb.slice(0, 500);
       } catch (e) { o.loiBil = 'erreur : ' + e.message; }
       /* 20261109f : cote des pépites dans le Cockpit (texte partagé avec Tendances) */
       try { const C = window._g45LoiCote; C.FI.tq = { h: { id: '1' }, a: { id: '2' }, ml: { h: 2.2, a: 3.2, d: 3.5 } }; const t1 = C.txt({ eid: 'tq', id: '1', d: 1, k: 'v' }), t2 = C.txt({ eid: 'tq', id: '2', d: 0, k: 'vn' }); delete C.FI.tq;
