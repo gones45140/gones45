@@ -620,6 +620,14 @@ serveur.listen(0, async () => {
         o.palMain = (ks.join(',') === 'nhl|dom,nhl|ext' && uP.lc && uP.lc['nhl|dom'] === 2 && !uP.lc['nhl|ext'] && uP.l === 2) || JSON.stringify({ ks, lc: uP.lc, l: uP.l });
       } catch (e) { o.palMain = 'erreur : ' + e.message; }
       try {
+        /* 20261114b : Compétitions rugby → « France » ne doit pas ouvrir / écraser la carte « France » ⚽ du mur */
+        state.u.push({ n: 'Testland', s: '3', sport: '⚽' }); const tp0 = localStorage.getItem('g45_teams_perso');
+        window.g45CompetOuvrir('Testland', '9', '17567', 'rugby', true); await new Promise((r) => setTimeout(r, 300));
+        const tp = JSON.parse(localStorage.getItem('g45_teams_perso') || '{}'), cur = window._currentTeam || (typeof _currentTeam !== 'undefined' ? _currentTeam : '');
+        state.u = state.u.filter((x) => x.n !== 'Testland'); if (tp0 === null) localStorage.removeItem('g45_teams_perso'); else localStorage.setItem('g45_teams_perso', tp0);
+        o.competSp = (!tp.testland && tp['testland 🏉'] && tp['testland 🏉'].sport === 'rugby' && /Testland 🏉/.test(String(cur))) || JSON.stringify({ k: Object.keys(tp), cur });
+      } catch (e) { o.competSp = 'erreur : ' + e.message; }
+      try {
         /* 20261014g : même bloc en NHL — victoire = temps réglementaire (prolongation / TAB = nul), vainqueur = score final. */
         (window._g45Cr.ovTous = true); window._statFilter = 'global';
         const S = window._g45Cr;
@@ -2383,6 +2391,7 @@ serveur.listen(0, async () => {
     ok('🌍 Critères sélection (toutes compétitions, Officiels / Amicaux)', r.crSel === true, r.crSel);
     ok('🏉 Critères sélection rugby (Six Nations, tests, Nations Championship)', r.crSelR === true, r.crSelR);
     ok('🪜 Palier réglable à la main (Modifier)', r.palMain === true, r.palMain);
+    ok('🏉 Compétitions : même nom, autre sport → fiche à part', r.competSp === true, r.competSp);
     ok('Saisons NHL : critères (temps réglementaire)', r.crh === true, r.crh);
     ok('Saisons NFL / NBA / MLB : critères (vainqueur)', r.crn === true, r.crn);
     ok('Saisons : buts de l\'équipe / de l\'adversaire', r.cre === true, r.cre);
