@@ -665,6 +665,13 @@ serveur.listen(0, async () => {
         o.cbTdb = (/📉 Cotes basses/.test(ht) && /<svg/.test(ht) && /✅ 1 · ❌ 1/.test(ht) && /ZZ 🏠/.test(ht) && /\+6,00 €/.test(ht)) || ht.replace(/<[^>]+>/g, ' ').slice(0, 400);
       } catch (e) { o.cbTdb = 'erreur : ' + e.message; }
       try {
+        /* 20261114p : essai joueur — NHL pointeur palier 1 (G + A ≥ 1) et NBA points « plus de la ligne » */
+        const J = window._g45CbJMatch, T = window._g45CbJT;
+        const x1 = [0, '', '', '6', { J: 1, A: 1 }, { '218': [[1, 1.22], [2, 2]] }, 'h'], x2 = [0, '', '', '6', { J: 1 }, { '218': [[1, 1.22]] }, 'a'], x3 = [0, '', '', '20', { PTS: 14 }, { '1': [[15.5, 1.94], [15.5, 1.83]] }, 'a'], x4 = [0, '', '', '6', { G: 1 }, null, 'h'];
+        const r1 = J(x1, T.hockey[0]), r2 = J(x2, T.hockey[0]), r3 = J(x3, T.basketball[0]), r4 = J(x4, T.hockey[2]);
+        o.cbJoueur = (r1 && r1.c === 1.22 && r1.w === true && r1.h === 1 && r2 && r2.w === false && r2.h === 0 && r3 && r3.c === 1.94 && r3.w === false && r4 === null) || JSON.stringify([r1, r2, r3, r4]);
+      } catch (e) { o.cbJoueur = 'erreur : ' + e.message; }
+      try {
         /* 20261014g : même bloc en NHL — victoire = temps réglementaire (prolongation / TAB = nul), vainqueur = score final. */
         (window._g45Cr.ovTous = true); window._statFilter = 'global';
         const S = window._g45Cr;
@@ -2434,6 +2441,7 @@ serveur.listen(0, async () => {
     ok('📉 Cotes basses : série continue sur la saison suivante', r.cbSuite === true, r.cbSuite);
     ok('📉 Cotes basses : méthode Engager (mise, série, arrêt, filtre Bilan)', r.cbMeth === true, r.cbMeth);
     ok('📉 Cotes basses : Tableau de bord + graphique', r.cbTdb === true, r.cbTdb);
+    ok('📉 Cotes basses : essai joueur (NHL pointeur, NBA ligne)', r.cbJoueur === true, r.cbJoueur);
     ok('Saisons NHL : critères (temps réglementaire)', r.crh === true, r.crh);
     ok('Saisons NFL / NBA / MLB : critères (vainqueur)', r.crn === true, r.crn);
     ok('Saisons : buts de l\'équipe / de l\'adversaire', r.cre === true, r.cre);
