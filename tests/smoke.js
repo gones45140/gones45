@@ -645,6 +645,11 @@ serveur.listen(0, async () => {
           && R2.regle.ab === 1 && /Multiplicateur minimum/.test(tx) && /×4,34/.test(tx) && /1\s560/.test(tx) && z.style.display === 'none') || JSON.stringify({ T, R, R2, tx: tx.slice(0, 300) });
       } catch (e) { o.cotesBasses = 'erreur : ' + e.message; }
       try {
+        /* 20261114m : série coupée en fin de saison → continue sur la suivante (1,30 ❌ en 2025, 1,60 ✅ en 2026) */
+        const RS = window._g45CbSimS([{ sa: '2025', ms: [{ c: 1.3, w: false }] }, { sa: '2026', ms: [{ c: 1.6, w: true }] }], { p1: 10, stop: 5 });
+        o.cbSuite = (Math.abs(RS[0].regle.g + 10) < 1e-6 && Math.abs(RS[1].regle.g - 18) < 1e-6 && RS.fin.regle === 0) || JSON.stringify(RS);
+      } catch (e) { o.cbSuite = 'erreur : ' + e.message; }
+      try {
         /* 20261014g : même bloc en NHL — victoire = temps réglementaire (prolongation / TAB = nul), vainqueur = score final. */
         (window._g45Cr.ovTous = true); window._statFilter = 'global';
         const S = window._g45Cr;
@@ -2411,6 +2416,7 @@ serveur.listen(0, async () => {
     ok('🏉 Compétitions : même nom, autre sport → fiche à part', r.competSp === true, r.competSp);
     ok('🏒 Séries carte joueur : matchs deux soirs de suite', r.serB2b === true, r.serB2b);
     ok('📉 Cotes basses (Calculatrice) : tableau + essai', r.cotesBasses === true, r.cotesBasses);
+    ok('📉 Cotes basses : série continue sur la saison suivante', r.cbSuite === true, r.cbSuite);
     ok('Saisons NHL : critères (temps réglementaire)', r.crh === true, r.crh);
     ok('Saisons NFL / NBA / MLB : critères (vainqueur)', r.crn === true, r.crn);
     ok('Saisons : buts de l\'équipe / de l\'adversaire', r.cre === true, r.cre);
