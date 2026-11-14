@@ -692,6 +692,11 @@ serveur.listen(0, async () => {
         o.p25 = (a[0] === 25 && a[1] === 75 && Math.abs(a[2] - 25 * (1 / 0.3 + 2)) < 0.02 && Math.abs(R[0].regle.g - 2.5) < 1e-6 && JSON.stringify(G) === '[10,25,75,225]' && JSON.stringify(Gp) === '[10,15,40]' && P === 3.29 && JSON.stringify(G0) === '[10,20,60]') || JSON.stringify([a, R[0], G, Gp, P, G0]);
       } catch (e) { o.p25 = 'erreur : ' + e.message; }
       try {
+        /* 20261114u : paliers dans l'essai — pire palier par saison + paliers où les séries sont gagnées */
+        const R = window._g45CbSimS([{ sa: 'x', ms: [{ c: 1.6, w: false }, { c: 1.6, w: false }, { c: 1.6, w: true }, { c: 1.7, w: true }] }], { p1: 10, stop: 5, r: 's' });
+        o.cbPal = (R[0].regle.pp === 3 && R.dist.regle[3] === 1 && R.dist.regle[1] === 1 && R[0].ck.pp === 3) || JSON.stringify(R);
+      } catch (e) { o.cbPal = 'erreur : ' + e.message; }
+      try {
         /* 20261014g : même bloc en NHL — victoire = temps réglementaire (prolongation / TAB = nul), vainqueur = score final. */
         (window._g45Cr.ovTous = true); window._statFilter = 'global';
         const S = window._g45Cr;
@@ -2465,6 +2470,7 @@ serveur.listen(0, async () => {
     ok('📉 Cotes basses : cote plancher 1,20 (match sauté)', r.cbPlancher === true, r.cbPlancher);
     ok('🏷️ Pastilles de méthode (cartes + paris en cours)', r.methPill === true, r.methPill);
     ok('🛡️ 📉 ×2,5 puis ×3 + 🚀 Cockpit P2 × 2,5', r.p25 === true, r.p25);
+    ok('🪜 Essai 📉 : pire palier + paliers gagnés', r.cbPal === true, r.cbPal);
     ok('Saisons NHL : critères (temps réglementaire)', r.crh === true, r.crh);
     ok('Saisons NFL / NBA / MLB : critères (vainqueur)', r.crn === true, r.crn);
     ok('Saisons : buts de l\'équipe / de l\'adversaire', r.cre === true, r.cre);
