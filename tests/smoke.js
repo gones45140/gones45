@@ -697,6 +697,12 @@ serveur.listen(0, async () => {
         o.cbPal = (R[0].regle.pp === 3 && R.dist.regle[3] === 1 && R.dist.regle[1] === 1 && R[0].ck.pp === 3 && R[0].regle.d[3] === 1 && R[0].ck.d[1] === 1) || JSON.stringify(R);
       } catch (e) { o.cbPal = 'erreur : ' + e.message; }
       try {
+        /* 20261114x : critères de l'essai — victoire = m[11][0] même à l'extérieur ; plus / moins ligne book ; handicap ; autre critère + cote moyenne */
+        const F = window._g45CbMsP, ms = [{ h: 0, p: 2, q: 1, co: [1.4, 4.5, 7], tl: 2.5, to: [1.8, 2], hl: -1.5, ho: [2.1, 1.7] }, { h: 1, p: 1, q: 1, co: [1.3, 5, 9], tl: 2, to: [1.9, 1.9], hl: -1.5, ho: [2, 1.8] }];
+        const v = F(ms, { pari: 'v' }), n = F(ms, { pari: 'n' }), o2 = F(ms, { pari: 'o' }), u = F(ms, { pari: 'u' }), hc = F(ms, { pari: 'h' }), x = F(ms, { pari: 'x', cr: 'vm', cn: '4,5', cx: '1,25' });
+        o.cbCrit = (v[0].c === 1.4 && v[0].w && !v[1].w && n[1].w && n[1].c === 5 && o2.length === 1 && o2[0].w && u.length === 1 && !u[0].w && hc[0].c === 2.1 && hc[0].w === false && hc[1].w === false && x[0].w && x[0].c === 1.25 && !x[1].w) || JSON.stringify({ v, n, o2, u, hc, x });
+      } catch (e) { o.cbCrit = 'erreur : ' + e.message; }
+      try {
         /* 20261014g : même bloc en NHL — victoire = temps réglementaire (prolongation / TAB = nul), vainqueur = score final. */
         (window._g45Cr.ovTous = true); window._statFilter = 'global';
         const S = window._g45Cr;
@@ -2471,6 +2477,7 @@ serveur.listen(0, async () => {
     ok('🏷️ Pastilles de méthode (cartes + paris en cours)', r.methPill === true, r.methPill);
     ok('🛡️ 📉 ×2,5 puis ×3 + 🚀 Cockpit P2 × 2,5', r.p25 === true, r.p25);
     ok('🪜 Essai 📉 : pire palier + paliers gagnés', r.cbPal === true, r.cbPal);
+    ok('🎯 Essai 📉 : critères (V/N/D, plus/moins, handicap, autre)', r.cbCrit === true, r.cbCrit);
     ok('Saisons NHL : critères (temps réglementaire)', r.crh === true, r.crh);
     ok('Saisons NFL / NBA / MLB : critères (vainqueur)', r.crn === true, r.crn);
     ok('Saisons : buts de l\'équipe / de l\'adversaire', r.cre === true, r.cre);
