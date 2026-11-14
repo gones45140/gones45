@@ -629,6 +629,14 @@ serveur.listen(0, async () => {
         o.competSp = (!tp.testland && tp['testland 🏉'] && tp['testland 🏉'].sport === 'rugby' && /Testland 🏉/.test(String(cur))) || JSON.stringify({ k: Object.keys(tp), cur });
       } catch (e) { o.competSp = 'erreur : ' + e.message; }
       try {
+        /* 20261114j : NHL, deux matchs sur deux soirs de suite (journal en date locale, archives en date UTC du lendemain) */
+        const c = window._g45SerLegsJ('Vainqueur + pointeur', 'Carolina Hurricanes');
+        const ms = [['2025-11-11', 1, 1, 4, 0], ['2025-11-12', 1, 5, 2, 0]];   /* A : 10/11 au soir (perdu) ; B : 11/11 au soir (gagné) */
+        const log = [{ gameDate: '2025-11-10', points: 1, h: 1 }, { gameDate: '2025-11-11', points: 1, h: 1 }];
+        const R = window._g45SerStatJ(c, log, ms, 'dom', true, false);
+        o.serB2b = (c && c.res === 'vqr' && c.pj === 'p' && JSON.stringify(R.sq) === '[false,true]') || JSON.stringify({ c, sq: R.sq });
+      } catch (e) { o.serB2b = 'erreur : ' + e.message; }
+      try {
         /* 20261014g : même bloc en NHL — victoire = temps réglementaire (prolongation / TAB = nul), vainqueur = score final. */
         (window._g45Cr.ovTous = true); window._statFilter = 'global';
         const S = window._g45Cr;
@@ -2393,6 +2401,7 @@ serveur.listen(0, async () => {
     ok('🏉 Critères sélection rugby (Six Nations, tests, Nations Championship)', r.crSelR === true, r.crSelR);
     ok('🪜 Palier réglable à la main (Modifier)', r.palMain === true, r.palMain);
     ok('🏉 Compétitions : même nom, autre sport → fiche à part', r.competSp === true, r.competSp);
+    ok('🏒 Séries carte joueur : matchs deux soirs de suite', r.serB2b === true, r.serB2b);
     ok('Saisons NHL : critères (temps réglementaire)', r.crh === true, r.crh);
     ok('Saisons NFL / NBA / MLB : critères (vainqueur)', r.crn === true, r.crn);
     ok('Saisons : buts de l\'équipe / de l\'adversaire', r.cre === true, r.cre);
