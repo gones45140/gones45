@@ -672,6 +672,12 @@ serveur.listen(0, async () => {
         o.cbJoueur = (r1 && r1.c === 1.22 && r1.w === true && r1.h === 1 && r2 && r2.w === false && r2.h === 0 && r3 && r3.c === 1.94 && r3.w === false && r4 === null) || JSON.stringify([r1, r2, r3, r4]);
       } catch (e) { o.cbJoueur = 'erreur : ' + e.message; }
       try {
+        /* 20261114q : cote plancher 1,20 — Engager : 1,06 sauté (mise 0), 1,20 joué ; Calculatrice : 1,06 ignoré, la série attend */
+        const C = window._g45CbMeth, u = { n: 'P', cbP1: 10 }, u0 = { n: 'Q', cbP1: 10, cbPl: 0 };
+        const RS = window._g45CbSimS([{ sa: 'x', ms: [{ c: 1.59, w: false }, { c: 1.06, w: true }, { c: 1.6, w: true }] }], { p1: 10, stop: 5, pl: 1.2 });
+        o.cbPlancher = (C.saute(u, 1.06) && C.mise(u, 'k', 1.06) === 0 && !C.saute(u, 1.2) && C.mise(u, 'k', 1.2) === 10 && !C.saute(u0, 1.06) && Math.abs(RS[0].regle.g - 8) < 1e-6) || JSON.stringify([C.saute(u, 1.06), C.mise(u, 'k', 1.2), RS]);
+      } catch (e) { o.cbPlancher = 'erreur : ' + e.message; }
+      try {
         /* 20261014g : même bloc en NHL — victoire = temps réglementaire (prolongation / TAB = nul), vainqueur = score final. */
         (window._g45Cr.ovTous = true); window._statFilter = 'global';
         const S = window._g45Cr;
@@ -2442,6 +2448,7 @@ serveur.listen(0, async () => {
     ok('📉 Cotes basses : méthode Engager (mise, série, arrêt, filtre Bilan)', r.cbMeth === true, r.cbMeth);
     ok('📉 Cotes basses : Tableau de bord + graphique', r.cbTdb === true, r.cbTdb);
     ok('📉 Cotes basses : essai joueur (NHL pointeur, NBA ligne)', r.cbJoueur === true, r.cbJoueur);
+    ok('📉 Cotes basses : cote plancher 1,20 (match sauté)', r.cbPlancher === true, r.cbPlancher);
     ok('Saisons NHL : critères (temps réglementaire)', r.crh === true, r.crh);
     ok('Saisons NFL / NBA / MLB : critères (vainqueur)', r.crn === true, r.crn);
     ok('Saisons : buts de l\'équipe / de l\'adversaire', r.cre === true, r.cre);
