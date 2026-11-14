@@ -694,7 +694,7 @@ serveur.listen(0, async () => {
       try {
         /* 20261114u : paliers dans l'essai — pire palier par saison + paliers où les séries sont gagnées */
         const R = window._g45CbSimS([{ sa: 'x', ms: [{ c: 1.6, w: false }, { c: 1.6, w: false }, { c: 1.6, w: true }, { c: 1.7, w: true }] }], { p1: 10, stop: 5, r: 's' });
-        o.cbPal = (R[0].regle.pp === 3 && R.dist.regle[3] === 1 && R.dist.regle[1] === 1 && R[0].ck.pp === 3) || JSON.stringify(R);
+        o.cbPal = (R[0].regle.pp === 3 && R.dist.regle[3] === 1 && R.dist.regle[1] === 1 && R[0].ck.pp === 3 && R[0].regle.d[3] === 1 && R[0].ck.d[1] === 1) || JSON.stringify(R);
       } catch (e) { o.cbPal = 'erreur : ' + e.message; }
       try {
         /* 20261014g : même bloc en NHL — victoire = temps réglementaire (prolongation / TAB = nul), vainqueur = score final. */
