@@ -593,9 +593,10 @@ serveur.listen(0, async () => {
         z.innerHTML = window._g45CrHtml('Test Sel', null, 'uefa.nations'); window.g45CrSet('res', 'vic');
         const tT = (z.innerHTML = window._g45CrHtml('Test Sel', null, 'fifa.world'), z.innerText); window.g45CrSet('selc', 'A');
         const tA = (z.innerHTML = window._g45CrHtml('Test Sel', null, 'fifa.world'), z.innerText); window.g45CrSet('selc', 'O');
-        const tO = (z.innerHTML = window._g45CrHtml('Test Sel', null, 'fifa.world'), z.innerText); window.g45CrSet('selc', 'T');
+        const tO = (z.innerHTML = window._g45CrHtml('Test Sel', null, 'fifa.world'), z.innerText); window.g45CrSet('selc', 'c:🏆 Ligue des nations');
+        const tC = (z.innerHTML = window._g45CrHtml('Test Sel', null, 'fifa.world'), z.innerText); window.g45CrSet('selc', 'T');   /* 20261114g : une compétition */
         z.remove(); const keep = !!S.data['Test Sel']; delete S.data['Test Sel'];
-        o.crSel = (keep && /Amicaux seuls/.test(tT) && /Total : 2\/4/.test(tT) && /Total : 1\/1/.test(tA) && /Total : 1\/3/.test(tO) && /2026/.test(tT) && !/2026-27/.test(tT)) || JSON.stringify({ keep, tT: tT.slice(0, 900), tA: (tA.match(/Total[^\n]*/) || [''])[0], tO: (tO.match(/Total[^\n]*/) || [''])[0] });
+        o.crSel = (keep && /Amicaux seuls/.test(tT) && /Total : 2\/4/.test(tT) && /Total : 1\/1/.test(tA) && /Total : 1\/3/.test(tO) && /Total : 1\/1/.test(tC) && /Qualifs CDM/.test(tT) && /2026/.test(tT) && !/2026-27/.test(tT)) || JSON.stringify({ keep, tT: tT.slice(0, 900), tA: (tA.match(/Total[^\n]*/) || [''])[0], tO: (tO.match(/Total[^\n]*/) || [''])[0] });
       } catch (e) { o.crSel = 'erreur : ' + e.message; }
       try {
         /* 20261113k : sélection de RUGBY (ctx lg 'rsel') — Six Nations / Nations Championship / tests mélangés, filtre Officiels / Tests */
