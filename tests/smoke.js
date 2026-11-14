@@ -678,6 +678,12 @@ serveur.listen(0, async () => {
         o.cbPlancher = (C.saute(u, 1.06) && C.mise(u, 'k', 1.06) === 0 && !C.saute(u, 1.2) && C.mise(u, 'k', 1.2) === 10 && !C.saute(u0, 1.06) && Math.abs(RS[0].regle.g - 8) < 1e-6) || JSON.stringify([C.saute(u, 1.06), C.mise(u, 'k', 1.2), RS]);
       } catch (e) { o.cbPlancher = 'erreur : ' + e.message; }
       try {
+        /* 20261114s : pastilles de méthode — carte : 🚀 Palier + 📉 🏠 C2 ; pari : 📉 Cotes basses C2 / 🚀 Cockpit */
+        const P = window._g45UlPaliers({ l: 2, lcb: { 'liga|dom': { p: 2, prev: 10, per: 10 }, 'liga|ext': { p: 1 } }, lm: { fib: { 'x|': 3 } } });
+        const b1 = window._g45MethPill({ meth: 'cb', mp: 2 }), b2 = window._g45MethPill({ isS: true }), b3 = window._g45MethPill({});
+        o.methPill = (/🚀 Palier 2/.test(P) && /📉 🏠 C2/.test(P) && !/✈️ C1/.test(P) && /🐚 🌍 F3/.test(P) && /📉 Cotes basses C2/.test(b1) && /🚀 Cockpit/.test(b2) && b3 === '') || JSON.stringify([P, b1, b2, b3]);
+      } catch (e) { o.methPill = 'erreur : ' + e.message; }
+      try {
         /* 20261014g : même bloc en NHL — victoire = temps réglementaire (prolongation / TAB = nul), vainqueur = score final. */
         (window._g45Cr.ovTous = true); window._statFilter = 'global';
         const S = window._g45Cr;
@@ -2449,6 +2455,7 @@ serveur.listen(0, async () => {
     ok('📉 Cotes basses : Tableau de bord + graphique', r.cbTdb === true, r.cbTdb);
     ok('📉 Cotes basses : essai joueur (NHL pointeur, NBA ligne)', r.cbJoueur === true, r.cbJoueur);
     ok('📉 Cotes basses : cote plancher 1,20 (match sauté)', r.cbPlancher === true, r.cbPlancher);
+    ok('🏷️ Pastilles de méthode (cartes + paris en cours)', r.methPill === true, r.methPill);
     ok('Saisons NHL : critères (temps réglementaire)', r.crh === true, r.crh);
     ok('Saisons NFL / NBA / MLB : critères (vainqueur)', r.crn === true, r.crn);
     ok('Saisons : buts de l\'équipe / de l\'adversaire', r.cre === true, r.cre);
