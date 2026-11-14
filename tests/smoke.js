@@ -650,6 +650,14 @@ serveur.listen(0, async () => {
         o.cbSuite = (Math.abs(RS[0].regle.g + 10) < 1e-6 && Math.abs(RS[1].regle.g - 18) < 1e-6 && RS.fin.regle === 0) || JSON.stringify(RS);
       } catch (e) { o.cbSuite = 'erreur : ' + e.message; }
       try {
+        /* 20261114n : méthode 📉 Cotes basses (Engager) — P1 10 ; 1,30 ❌ ; 1,30 → 10 × (1/0,3 + 2) ; ❌ ; 1,60 → pertes × 3 ; ✅ → P1 ; arrêt C3 */
+        const C = window._g45CbMeth, u = { n: 'T', cbP1: 10 }, k = 'x|dom', a = [];
+        a.push(C.mise(u, k, 1.3)); C.avance(u, k, 10, false); a.push(C.mise(u, k, 1.3)); C.avance(u, k, a[1], false); a.push(C.mise(u, k, 1.6)); C.avance(u, k, a[2], true); a.push(C.st(u, k).p);
+        const v = { n: 'V', cbP1: 10, cbStop: 3 }; C.avance(v, k, 10, false); C.avance(v, k, 53.34, false); C.avance(v, k, 99, false); a.push(C.st(v, k).p);
+        window.g45BilMeth('cb'); a.push(window._g45BilMeth); window.g45BilMeth('mont');
+        o.cbMeth = JSON.stringify(a) === JSON.stringify([10, 53.34, 190.02, 1, 1, 'cb']) || JSON.stringify(a);
+      } catch (e) { o.cbMeth = 'erreur : ' + e.message; }
+      try {
         /* 20261014g : même bloc en NHL — victoire = temps réglementaire (prolongation / TAB = nul), vainqueur = score final. */
         (window._g45Cr.ovTous = true); window._statFilter = 'global';
         const S = window._g45Cr;
@@ -2417,6 +2425,7 @@ serveur.listen(0, async () => {
     ok('🏒 Séries carte joueur : matchs deux soirs de suite', r.serB2b === true, r.serB2b);
     ok('📉 Cotes basses (Calculatrice) : tableau + essai', r.cotesBasses === true, r.cotesBasses);
     ok('📉 Cotes basses : série continue sur la saison suivante', r.cbSuite === true, r.cbSuite);
+    ok('📉 Cotes basses : méthode Engager (mise, série, arrêt, filtre Bilan)', r.cbMeth === true, r.cbMeth);
     ok('Saisons NHL : critères (temps réglementaire)', r.crh === true, r.crh);
     ok('Saisons NFL / NBA / MLB : critères (vainqueur)', r.crn === true, r.crn);
     ok('Saisons : buts de l\'équipe / de l\'adversaire', r.cre === true, r.cre);
