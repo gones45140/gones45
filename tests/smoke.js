@@ -651,7 +651,7 @@ serveur.listen(0, async () => {
       } catch (e) { o.cbSuite = 'erreur : ' + e.message; }
       try {
         /* 20261114n : méthode 📉 Cotes basses (Engager) — P1 10 ; 1,30 ❌ ; 1,30 → 10 × (1/0,3 + 2) ; ❌ ; 1,60 → pertes × 3 ; ✅ → P1 ; arrêt C3 */
-        const C = window._g45CbMeth, u = { n: 'T', cbP1: 10 }, k = 'x|dom', a = [];
+        const C = window._g45CbMeth, u = { n: 'T', cbP1: 10, cbR: 'a' }, k = 'x|dom', a = [];
         a.push(C.mise(u, k, 1.3)); C.avance(u, k, 10, false); a.push(C.mise(u, k, 1.3)); C.avance(u, k, a[1], false); a.push(C.mise(u, k, 1.6)); C.avance(u, k, a[2], true); a.push(C.st(u, k).p);
         const v = { n: 'V', cbP1: 10, cbStop: 3 }; C.avance(v, k, 10, false); C.avance(v, k, 53.34, false); C.avance(v, k, 99, false); a.push(C.st(v, k).p);
         window.g45BilMeth('cb'); a.push(window._g45BilMeth); window.g45BilMeth('mont');
@@ -683,6 +683,14 @@ serveur.listen(0, async () => {
         const b1 = window._g45MethPill({ meth: 'cb', mp: 2 }), b2 = window._g45MethPill({ isS: true }), b3 = window._g45MethPill({});
         o.methPill = (/🚀 Palier 2/.test(P) && /📉 🏠 C2/.test(P) && !/✈️ C1/.test(P) && /🐚 🌍 F3/.test(P) && /📉 Cotes basses C2/.test(b1) && /🚀 Cockpit/.test(b2) && b3 === '') || JSON.stringify([P, b1, b2, b3]);
       } catch (e) { o.methPill = 'erreur : ' + e.message; }
+      try {
+        /* 20261114t : 📉 🛡️ ×2,5 puis ×3 (par défaut) ; 🚀 P2 × 2,5 (grille lue 10/25/75, P1 auto ÷ 1 + 2,5 × (3^(N−1) − 1) / 2) */
+        const C = window._g45CbMeth, u = { n: 'S', cbP1: 10 }, k = 'y|dom', a = [];
+        C.avance(u, k, 10, false); a.push(C.mise(u, k, 1.6)); C.avance(u, k, 25, false); a.push(C.mise(u, k, 1.6)); a.push(C.mise(u, k, 1.3));
+        const R = window._g45CbSimS([{ sa: 'x', ms: [{ c: 1.5, w: false }, { c: 1.5, w: false }, { c: 1.5, w: true }] }], { p1: 10, stop: 5, r: 's' });
+        const s0 = state.ckP25; state.ckP25 = true; const G = window._g45P25([10, 20, 60, 180]), Gp = window._g45P25([10, 15, 40]), P = window._g45PctT.p1(1000, 6); state.ckP25 = false; const G0 = window._g45P25([10, 20, 60]); state.ckP25 = s0;
+        o.p25 = (a[0] === 25 && a[1] === 75 && Math.abs(a[2] - 25 * (1 / 0.3 + 2)) < 0.02 && Math.abs(R[0].regle.g - 2.5) < 1e-6 && JSON.stringify(G) === '[10,25,75,225]' && JSON.stringify(Gp) === '[10,15,40]' && P === 3.29 && JSON.stringify(G0) === '[10,20,60]') || JSON.stringify([a, R[0], G, Gp, P, G0]);
+      } catch (e) { o.p25 = 'erreur : ' + e.message; }
       try {
         /* 20261014g : même bloc en NHL — victoire = temps réglementaire (prolongation / TAB = nul), vainqueur = score final. */
         (window._g45Cr.ovTous = true); window._statFilter = 'global';
@@ -2456,6 +2464,7 @@ serveur.listen(0, async () => {
     ok('📉 Cotes basses : essai joueur (NHL pointeur, NBA ligne)', r.cbJoueur === true, r.cbJoueur);
     ok('📉 Cotes basses : cote plancher 1,20 (match sauté)', r.cbPlancher === true, r.cbPlancher);
     ok('🏷️ Pastilles de méthode (cartes + paris en cours)', r.methPill === true, r.methPill);
+    ok('🛡️ 📉 ×2,5 puis ×3 + 🚀 Cockpit P2 × 2,5', r.p25 === true, r.p25);
     ok('Saisons NHL : critères (temps réglementaire)', r.crh === true, r.crh);
     ok('Saisons NFL / NBA / MLB : critères (vainqueur)', r.crn === true, r.crn);
     ok('Saisons : buts de l\'équipe / de l\'adversaire', r.cre === true, r.cre);
