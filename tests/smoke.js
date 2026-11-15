@@ -658,11 +658,11 @@ serveur.listen(0, async () => {
         o.cbMeth = JSON.stringify(a) === JSON.stringify([10, 53.34, 190.02, 1, 1, 'cb']) || JSON.stringify(a);
       } catch (e) { o.cbMeth = 'erreur : ' + e.message; }
       try {
-        /* 20261114o : bloc 📉 Cotes basses du Tableau de bord (chiffres, graphique, carte équipe + lieu) */
+        /* 20261114o : bloc 📉 Cotes basses du Tableau de bord (chiffres, bouton graphique 20261115x, carte équipe + lieu) */
         const a0 = state.a, t = Date.now();
         state.a = [{ id: String(t - 2000), meth: 'cb', n: 'ZZ', mk: 'x|dom', m: 10, cote: 1.3, win: false, mp: 1 }, { id: String(t - 1000), meth: 'cb', n: 'ZZ', mk: 'x|dom', m: 53.34, cote: 1.3, win: true, mp: 2 }].concat(a0 || []);
         const ht = window._g45CbTdb(); state.a = a0;
-        o.cbTdb = (/📉 Cotes basses/.test(ht) && /<svg/.test(ht) && /✅ 1 · ❌ 1/.test(ht) && /ZZ 🏠/.test(ht) && /\+6,00 €/.test(ht)) || ht.replace(/<[^>]+>/g, ' ').slice(0, 400);
+        o.cbTdb = (/📉 Cotes basses/.test(ht) && /Voir le graphique/.test(ht) && !/<svg/.test(ht) && /✅ 1 · ❌ 1/.test(ht) && /ZZ 🏠/.test(ht) && /\+6,00 €/.test(ht)) || ht.replace(/<[^>]+>/g, ' ').slice(0, 400);
       } catch (e) { o.cbTdb = 'erreur : ' + e.message; }
       try {
         /* 20261114p : essai joueur — NHL pointeur palier 1 (G + A ≥ 1) et NBA points « plus de la ligne » */
@@ -2516,7 +2516,7 @@ serveur.listen(0, async () => {
     ok('📉 Cotes basses (Calculatrice) : tableau + essai', r.cotesBasses === true, r.cotesBasses);
     ok('📉 Cotes basses : série continue sur la saison suivante', r.cbSuite === true, r.cbSuite);
     ok('📉 Cotes basses : méthode Engager (mise, série, arrêt, filtre Bilan)', r.cbMeth === true, r.cbMeth);
-    ok('📉 Cotes basses : Tableau de bord + graphique', r.cbTdb === true, r.cbTdb);
+    ok('📉 Cotes basses : Tableau de bord + bouton graphique', r.cbTdb === true, r.cbTdb);
     ok('📉 Cotes basses : essai joueur (NHL pointeur, NBA ligne)', r.cbJoueur === true, r.cbJoueur);
     ok('📉 Cotes basses : cote plancher 1,20 (match sauté)', r.cbPlancher === true, r.cbPlancher);
     ok('🏷️ Pastilles de méthode (cartes + paris en cours)', r.methPill === true, r.methPill);
