@@ -2479,6 +2479,9 @@ serveur.listen(0, async () => {
         F.o1 = { h: { id: '31' }, a: { id: '32' }, ml: { h: 1.6, d: 3.9, a: 6 } }; F.o2 = { h: { id: '34' }, a: { id: '33' }, ml: { h: 1.25, d: 6, a: 12 } };
         const hq = window._g45LoiBilHtml().replace(/<[^>]+>/g, ' '); delete F.o1; delete F.o2; M.d = sv; M.j = '';
         o.loiOpp = (/Pépites jouées\s*1\b/.test(hq) && /non compté \(pépite opposée sur le même match\)/.test(hq) && /non compté \(cote au-dessus de 6\)/.test(hq) && /Série continue ❌\s*1\b/.test(hq)) || hq.replace(/\s+/g, ' ').slice(0, 700); } catch (e) { o.loiOpp = 'erreur : ' + e.message; }
+      /* 20261116k : règles « non compté » partagées (liste du jour) */
+      try { const E = window._g45LoiExclure, T = window._g45LoiNfTxt, l = [{ eid: 'z1', id: '1', k: 'v', lg: 'nba', fr: 3, cours: 9, pire: 9 }, { eid: 'z2', id: '2', k: 'o25', lg: 'uefa.nations', grp: 'D2', cours: 4, pire: 4 }, { eid: 'z3', id: '3', k: 'v', lg: 'nba', fr: 20, cours: 5, pire: 5 }];
+        E(l); o.loiExcl = (l[0].nc === 1 && T(l[0]) === 'équipe trop faible pour le book' && l[1].nf === 1 && !l[2].nc) || JSON.stringify(l); } catch (e) { o.loiExcl = 'erreur : ' + e.message; }
       /* 20261108o : 📈 graphique + 📊 bilans de la Loi des séries */
       try { const F = window._g45LoiCote.FI; F.m1 = { h: { id: '9' }, a: { id: '1' }, ml: { h: 1.95, a: 3.65, d: 3.75 } }; F.m2 = { h: { id: '2' }, a: { id: '8' }, tot: { L: 6.5, o: 1.9, u: 1.9 } }; F.m3 = { h: { id: '3' }, a: { id: '7' }, bts: { o: 1.64, n: 2.2 } };
         window.g45LoiBilVue('gr'); const hg = window._g45LoiBilHtml(); window.g45LoiBilVue('bil'); const hl = window._g45LoiBilHtml().replace(/<[^>]+>/g, ' '); window.g45LoiBilVue('cal');
@@ -2549,6 +2552,7 @@ serveur.listen(0, async () => {
     ok('📉 Cotes basses : Tableau de bord + bouton graphique', r.cbTdb === true, r.cbTdb);
     ok('📊 Loi des séries : Concacaf B / C + UEFA ligue D non comptées', r.loiNf === true, r.loiNf);
     ok('📊 Loi des séries : pépites opposées → 1 seule comptée + cote > 6 non comptée', r.loiOpp === true, r.loiOpp);
+    ok('📊 Loi des séries : « non compté » aussi dans les pépites du jour', r.loiExcl === true, r.loiExcl);
     ok('⚖️ Et si j\'avais joué autrement : vraies cotes + 📉', r.methReel === true, r.methReel);
     ok('🃏 Par carte : photo d\'un joueur retiré du mur', r.ckFondRet === true, r.ckFondRet);
     ok('📉 Cotes basses : essai joueur (NHL pointeur, NBA ligne)', r.cbJoueur === true, r.cbJoueur);
