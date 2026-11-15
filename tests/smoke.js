@@ -732,6 +732,12 @@ serveur.listen(0, async () => {
         o.pl12 = (a === !S0 && window._g45Cr.pl12 === S0) || 'ko';
       } catch (e) { o.pl12 = 'erreur : ' + e.message; }
       try {
+        /* 20261115m : arrêt 📉 au choix dans le 💶 des critères — 5 défaites puis 1 victoire : arrêt P5 = 💥 ; Aucun = pas de 💥 */
+        const F = window._g45CrSimT, sq = [0, 0, 0, 0, 0, 1].map(x => ({ s: 'a', ok: !!x, c: 1.6 })), s0 = window._g45Cr.cbStop;
+        window._g45Cr.cbStop = 5; const A = F(sq, [10], 1.6, 0, 'cb'); window._g45Cr.cbStop = 0; const B = F(sq, [10], 1.6, 0, 'cb'); window._g45Cr.cbStop = s0;
+        o.cbStopCr = (A.bo === 1 && B.bo === 0 && B.tot > 0) || JSON.stringify([A.bo, B.bo, B.tot]);
+      } catch (e) { o.cbStopCr = 'erreur : ' + e.message; }
+      try {
         /* 20261014g : même bloc en NHL — victoire = temps réglementaire (prolongation / TAB = nul), vainqueur = score final. */
         (window._g45Cr.ovTous = true); window._statFilter = 'global';
         const S = window._g45Cr;
@@ -2512,6 +2518,7 @@ serveur.listen(0, async () => {
     ok('🖼️ Tuiles du mur : logo ligue US / club de cœur', r.tuileLg === true, r.tuileLg);
     ok('🏷️ Patch du type de pari (Bilan / Archive)', r.typeP === true, r.typeP);
     ok('📉 Critères : bouton sans les matchs sous 1,20', r.pl12 === true, r.pl12);
+    ok('🛑 Critères 💶 📉 : arrêt au choix', r.cbStopCr === true, r.cbStopCr);
     ok('Saisons NHL : critères (temps réglementaire)', r.crh === true, r.crh);
     ok('Saisons NFL / NBA / MLB : critères (vainqueur)', r.crn === true, r.crn);
     ok('Saisons : buts de l\'équipe / de l\'adversaire', r.cre === true, r.cre);
