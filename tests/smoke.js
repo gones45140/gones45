@@ -727,6 +727,11 @@ serveur.listen(0, async () => {
         o.typeP = (/Combiné/.test(T({ isCombi: 1 })) && /Cockpit/.test(T({ isS: true })) && /Cotes basses/.test(T({ meth: 'cb' })) && /Alembert/.test(T({ meth: 'dal' })) && /Fibonacci/.test(T({ meth: 'fib' })) && /Simple/.test(T({}))) || 'ko';
       } catch (e) { o.typeP = 'erreur : ' + e.message; }
       try {
+        /* 20261115l : bouton « 📉 Sans les matchs sous 1,20 » des critères */
+        const S0 = window._g45Cr.pl12; window.g45CrPl12(); const a = window._g45Cr.pl12; window.g45CrPl12();
+        o.pl12 = (a === !S0 && window._g45Cr.pl12 === S0) || 'ko';
+      } catch (e) { o.pl12 = 'erreur : ' + e.message; }
+      try {
         /* 20261014g : même bloc en NHL — victoire = temps réglementaire (prolongation / TAB = nul), vainqueur = score final. */
         (window._g45Cr.ovTous = true); window._statFilter = 'global';
         const S = window._g45Cr;
@@ -2506,6 +2511,7 @@ serveur.listen(0, async () => {
     ok('📌 Mode de pari par pari (Modifier → Engager)', r.modeP === true, r.modeP);
     ok('🖼️ Tuiles du mur : logo ligue US / club de cœur', r.tuileLg === true, r.tuileLg);
     ok('🏷️ Patch du type de pari (Bilan / Archive)', r.typeP === true, r.typeP);
+    ok('📉 Critères : bouton sans les matchs sous 1,20', r.pl12 === true, r.pl12);
     ok('Saisons NHL : critères (temps réglementaire)', r.crh === true, r.crh);
     ok('Saisons NFL / NBA / MLB : critères (vainqueur)', r.crn === true, r.crn);
     ok('Saisons : buts de l\'équipe / de l\'adversaire', r.cre === true, r.cre);
