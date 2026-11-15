@@ -671,6 +671,13 @@ serveur.listen(0, async () => {
         o.methReel = JSON.stringify(v) === JSON.stringify([4.3, 6, -2.1, 3, -0.4, 3.15, 6]) || JSON.stringify(v);
       } catch (e) { o.methReel = 'erreur : ' + e.message; }
       try {
+        /* 20261115z : carte retirée du mur (joueur) → fond Par carte avec sa photo gardée */
+        const a0 = state.a; state.a = [{ id: '1', n: 'Zed Fantome', sport: '🏒', m: 1, cote: 2, win: true }].concat(a0 || []);
+        localStorage.setItem(_g45JoueurVisCle('Zed Fantome', 'hockey'), JSON.stringify({ t: Date.now(), cut: 'https://x.test/zed.png', fan: '', thumb: '' }));
+        const F = window._g45CkFond('Zed Fantome'); state.a = a0;
+        o.ckFondRet = (F && F.cut === 'https://x.test/zed.png') || JSON.stringify(F);
+      } catch (e) { o.ckFondRet = 'erreur : ' + e.message; }
+      try {
         /* 20261114p : essai joueur — NHL pointeur palier 1 (G + A ≥ 1) et NBA points « plus de la ligne » */
         const J = window._g45CbJMatch, T = window._g45CbJT;
         const x1 = [0, '', '', '6', { J: 1, A: 1 }, { '218': [[1, 1.22], [2, 2]] }, 'h'], x2 = [0, '', '', '6', { J: 1 }, { '218': [[1, 1.22]] }, 'a'], x3 = [0, '', '', '20', { PTS: 14 }, { '1': [[15.5, 1.94], [15.5, 1.83]] }, 'a'], x4 = [0, '', '', '6', { G: 1 }, null, 'h'];
@@ -2524,6 +2531,7 @@ serveur.listen(0, async () => {
     ok('📉 Cotes basses : méthode Engager (mise, série, arrêt, filtre Bilan)', r.cbMeth === true, r.cbMeth);
     ok('📉 Cotes basses : Tableau de bord + bouton graphique', r.cbTdb === true, r.cbTdb);
     ok('⚖️ Et si j\'avais joué autrement : vraies cotes + 📉', r.methReel === true, r.methReel);
+    ok('🃏 Par carte : photo d\'un joueur retiré du mur', r.ckFondRet === true, r.ckFondRet);
     ok('📉 Cotes basses : essai joueur (NHL pointeur, NBA ligne)', r.cbJoueur === true, r.cbJoueur);
     ok('📉 Cotes basses : cote plancher 1,20 (match sauté)', r.cbPlancher === true, r.cbPlancher);
     ok('🏷️ Pastilles de méthode (cartes + paris en cours)', r.methPill === true, r.methPill);
