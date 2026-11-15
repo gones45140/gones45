@@ -665,6 +665,12 @@ serveur.listen(0, async () => {
         o.cbTdb = (/📉 Cotes basses/.test(ht) && /Voir le graphique/.test(ht) && !/<svg/.test(ht) && /✅ 1 · ❌ 1/.test(ht) && /ZZ 🏠/.test(ht) && /\+6,00 €/.test(ht)) || ht.replace(/<[^>]+>/g, ' ').slice(0, 400);
       } catch (e) { o.cbTdb = 'erreur : ' + e.message; }
       try {
+        /* 20261115y : « Et si j'avais joué autrement ? » rejoué avec les VRAIES cotes (cq) + ligne 📉 (match < 1,20 sauté) */
+        const R = window._g45MethT.reel('1010011', [1.5, 1.3, 0, 1.8, 1.1, 2, 1.4], 1.7, [1, 2, 6], 1), r2 = function (x) { return Math.round(x * 100) / 100; };
+        const v = [r2(R.mont.b), R.mont.mx, r2(R.mont.mn), r2(R.mont.ch), r2(R.fix.b), r2(R.cb.b), R.cb.n];
+        o.methReel = JSON.stringify(v) === JSON.stringify([4.3, 6, -2.1, 3, -0.4, 3.15, 6]) || JSON.stringify(v);
+      } catch (e) { o.methReel = 'erreur : ' + e.message; }
+      try {
         /* 20261114p : essai joueur — NHL pointeur palier 1 (G + A ≥ 1) et NBA points « plus de la ligne » */
         const J = window._g45CbJMatch, T = window._g45CbJT;
         const x1 = [0, '', '', '6', { J: 1, A: 1 }, { '218': [[1, 1.22], [2, 2]] }, 'h'], x2 = [0, '', '', '6', { J: 1 }, { '218': [[1, 1.22]] }, 'a'], x3 = [0, '', '', '20', { PTS: 14 }, { '1': [[15.5, 1.94], [15.5, 1.83]] }, 'a'], x4 = [0, '', '', '6', { G: 1 }, null, 'h'];
@@ -2205,7 +2211,7 @@ serveur.listen(0, async () => {
             const uM = { n: 'Meth FC', s: '1', psL: { dom: { p: [3], tot: 3, sq: '1101001110110100111011' } } }; state.u.push(uM); window.g45CkOnglet('gr');
             const tM = (document.getElementById('g45-ck-meth') || {}).innerText || ''; state.u.pop();
             window.__meth = (MT.seuil('0101', [1, 2, 6], 1, 'fix') === 2 && (() => { const sq = [0, 0, 1, 1].map((x) => ({ s: 'a', ok: !!x })), F = window._g45CrSimT; return F(sq, [1, 1, 2, 3, 5], 2, 0, 'fib').tot === 1 && F(sq, [1, 2, 3, 4], 2, 0, 'dal').tot === 2 && F(sq, [1], 2, 0, 'fix').tot === 0 && F(sq, [1, 2, 6], 2, 0).tot === 4; })() && MT.seuil('0000', [1, 2, 6], 1, 'fix') === null && /rentable à partir/.test(tM) && O.mont.b === 4 && O.mont.mn === -3 && O.mont.ch === 3 && MT.jouer('1100', 2, [1, 2, 6], 1).mont.ch === 3 && /plus grosse chute/.test(tM) && O.mont.mx === 6 && O.fib.b === 1 && O.fib.mn === -2 && O.dal.b === 2 && O.fix.b === 0 && O.fix.mn === -2 && O2.mont.bout === 1
-              && /Et si j'avais joué autrement/.test(tM) && /Fibonacci/.test(tM) && /D'Alembert/.test(tM) && /Mise fixe/.test(tM) && /pire creux/.test(tM)) || JSON.stringify({ O, O2, tM: tM.slice(0, 300) }); }
+              && /Et si j'avais joué autrement/.test(tM) && /Fibonacci/.test(tM) && /D'Alembert/.test(tM) && /Mise fixe/.test(tM) && /Cotes basses/.test(tM) && /pire creux/.test(tM)) || JSON.stringify({ O, O2, tM: tM.slice(0, 300) }); }
           window.g45CkOnglet('mc'); const mc1 = document.getElementById('ck-mc').contains(document.getElementById('ulist'));
           window.g45CkOnglet('tdb'); const mc = mc1 && document.getElementById('t-outils').contains(document.getElementById('ulist'));
           window.__ckBil = (window.__arcMeth === true && window.__meth === true && window.__ckLoi === true && tr && engReste && mc && ag && eng && bil && arc && retour) || JSON.stringify({ arcMeth: window.__arcMeth, meth: window.__meth, loi: window.__ckLoi, tr, engReste, mc, ag, eng, bil, arc, retour, al: al.slice(0, 200) });
@@ -2517,6 +2523,7 @@ serveur.listen(0, async () => {
     ok('📉 Cotes basses : série continue sur la saison suivante', r.cbSuite === true, r.cbSuite);
     ok('📉 Cotes basses : méthode Engager (mise, série, arrêt, filtre Bilan)', r.cbMeth === true, r.cbMeth);
     ok('📉 Cotes basses : Tableau de bord + bouton graphique', r.cbTdb === true, r.cbTdb);
+    ok('⚖️ Et si j\'avais joué autrement : vraies cotes + 📉', r.methReel === true, r.methReel);
     ok('📉 Cotes basses : essai joueur (NHL pointeur, NBA ligne)', r.cbJoueur === true, r.cbJoueur);
     ok('📉 Cotes basses : cote plancher 1,20 (match sauté)', r.cbPlancher === true, r.cbPlancher);
     ok('🏷️ Pastilles de méthode (cartes + paris en cours)', r.methPill === true, r.methPill);
