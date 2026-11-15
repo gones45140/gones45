@@ -681,7 +681,7 @@ serveur.listen(0, async () => {
         /* 20261114s : pastilles de méthode — carte : 🚀 Palier + 📉 🏠 C2 ; pari : 📉 Cotes basses C2 / 🚀 Cockpit */
         const P = window._g45UlPaliers({ l: 2, lcb: { 'liga|dom': { p: 2, prev: 10, per: 10 }, 'liga|ext': { p: 1 } }, lm: { fib: { 'x|': 3 } } });
         const b1 = window._g45MethPill({ meth: 'cb', mp: 2 }), b2 = window._g45MethPill({ isS: true }), b3 = window._g45MethPill({});
-        o.methPill = (/🚀 Palier 2/.test(P) && /📉 🏠 C2/.test(P) && !/✈️ C1/.test(P) && /🐚 🌍 F3/.test(P) && /📉 Cotes basses C2/.test(b1) && /🚀 Cockpit/.test(b2) && b3 === '') || JSON.stringify([P, b1, b2, b3]);
+        o.methPill = (/🚀 Palier 2/.test(P) && /📉 🏠 C2/.test(P) && /✈️ C1/.test(P) && /🐚 🌍 F3/.test(P) && /📉 Cotes basses C2/.test(b1) && /🚀 Cockpit/.test(b2) && b3 === '') || JSON.stringify([P, b1, b2, b3]);
       } catch (e) { o.methPill = 'erreur : ' + e.message; }
       try {
         /* 20261114t : 📉 🛡️ ×2,5 puis ×3 (par défaut) ; 🚀 P2 × 2,5 (grille lue 10/25/75, P1 auto ÷ 1 + 2,5 × (3^(N−1) − 1) / 2) */
