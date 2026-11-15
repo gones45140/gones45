@@ -2465,10 +2465,11 @@ serveur.listen(0, async () => {
       /* 20261116b : Concacaf Nations League ligue B / C (phase group-stage) → affichée « non compté (niveau trop faible) », ligue A (quarterfinals) comptée */
       try { const M = window._g45LoiBilT, sv = M.d, d0 = new Date(), j = d0.getFullYear() + '-' + ('0' + (d0.getMonth() + 1)).slice(-2) + '-02', t0 = Date.parse(j + 'T19:00:00Z');
         M.d = { L: [{ j, t: t0, eid: 'c1', id: '21', sp: 'soccer', lg: 'concacaf.nations.league', stg: 'group-stage', eq: 'Belize', adv: 'St. Vincent', d: 0, lieu: 'tout', k: 'o25', lib: 'Plus de 2,5 buts', pire: 4, cours: 4, r: 0, sc: '1-0' },
-          { j, t: t0 + 1, eid: 'c2', id: '22', sp: 'soccer', lg: 'concacaf.nations.league', stg: 'quarterfinals', eq: 'Mexico', adv: 'Jamaica', d: 0, lieu: 'tout', k: 'o25', lib: 'Plus de 2,5 buts', pire: 4, cours: 4, r: 1, sc: '2-0' }] };
-        const F = window._g45LoiCote.FI; F.c1 = { h: { id: '98' }, a: { id: '21' }, tot: { L: 2.5, o: 1.8, u: 2 } }; F.c2 = { h: { id: '97' }, a: { id: '22' }, tot: { L: 2.5, o: 1.8, u: 2 } };
-        const hq = window._g45LoiBilHtml().replace(/<[^>]+>/g, ' '), Ld = M.d.L; delete F.c1; delete F.c2; M.d = sv; M.j = '';
-        o.loiNf = (/Pépites jouées\s*1\b/.test(hq) && /non compté \(niveau trop faible\)/.test(hq) && /Belize/.test(hq)) || (hq.replace(/\s+/g, ' ').slice(0, 300) + JSON.stringify(Ld)); } catch (e) { o.loiNf = 'erreur : ' + e.message; }
+          { j, t: t0 + 1, eid: 'c2', id: '22', sp: 'soccer', lg: 'concacaf.nations.league', stg: 'quarterfinals', eq: 'Mexico', adv: 'Jamaica', d: 0, lieu: 'tout', k: 'o25', lib: 'Plus de 2,5 buts', pire: 4, cours: 4, r: 1, sc: '2-0' },
+          { j, t: t0 + 2, eid: 'c3', id: '23', sp: 'soccer', lg: 'uefa.nations', grp: 'D1', eq: 'Gibraltar', adv: 'Andorra', d: 0, lieu: 'tout', k: 'o25', lib: 'Plus de 2,5 buts', pire: 4, cours: 4, r: 1, sc: '2-1' }] };
+        const F = window._g45LoiCote.FI; F.c1 = { h: { id: '98' }, a: { id: '21' }, tot: { L: 2.5, o: 1.8, u: 2 } }; F.c2 = { h: { id: '97' }, a: { id: '22' }, tot: { L: 2.5, o: 1.8, u: 2 } }; F.c3 = { h: { id: '96' }, a: { id: '23' }, tot: { L: 2.5, o: 1.8, u: 2 } };
+        const hq = window._g45LoiBilHtml().replace(/<[^>]+>/g, ' '), Ld = M.d.L; delete F.c1; delete F.c2; delete F.c3; M.d = sv; M.j = '';
+        o.loiNf = (/Pépites jouées\s*1\b/.test(hq) && /non compté \(niveau trop faible\)/.test(hq) && /Belize/.test(hq) && /Gibraltar/.test(hq)) || (hq.replace(/\s+/g, ' ').slice(0, 300) + JSON.stringify(Ld)); } catch (e) { o.loiNf = 'erreur : ' + e.message; }
       /* 20261108o : 📈 graphique + 📊 bilans de la Loi des séries */
       try { const F = window._g45LoiCote.FI; F.m1 = { h: { id: '9' }, a: { id: '1' }, ml: { h: 1.95, a: 3.65, d: 3.75 } }; F.m2 = { h: { id: '2' }, a: { id: '8' }, tot: { L: 6.5, o: 1.9, u: 1.9 } }; F.m3 = { h: { id: '3' }, a: { id: '7' }, bts: { o: 1.64, n: 2.2 } };
         window.g45LoiBilVue('gr'); const hg = window._g45LoiBilHtml(); window.g45LoiBilVue('bil'); const hl = window._g45LoiBilHtml().replace(/<[^>]+>/g, ' '); window.g45LoiBilVue('cal');
@@ -2537,7 +2538,7 @@ serveur.listen(0, async () => {
     ok('📉 Cotes basses : série continue sur la saison suivante', r.cbSuite === true, r.cbSuite);
     ok('📉 Cotes basses : méthode Engager (mise, série, arrêt, filtre Bilan)', r.cbMeth === true, r.cbMeth);
     ok('📉 Cotes basses : Tableau de bord + bouton graphique', r.cbTdb === true, r.cbTdb);
-    ok('📊 Loi des séries : Concacaf B / C non comptée', r.loiNf === true, r.loiNf);
+    ok('📊 Loi des séries : Concacaf B / C + UEFA ligue D non comptées', r.loiNf === true, r.loiNf);
     ok('⚖️ Et si j\'avais joué autrement : vraies cotes + 📉', r.methReel === true, r.methReel);
     ok('🃏 Par carte : photo d\'un joueur retiré du mur', r.ckFondRet === true, r.ckFondRet);
     ok('📉 Cotes basses : essai joueur (NHL pointeur, NBA ligne)', r.cbJoueur === true, r.cbJoueur);
