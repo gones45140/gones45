@@ -2474,10 +2474,11 @@ serveur.listen(0, async () => {
       /* 20261116i : pépites opposées (Croatie Victoire / Tchéquie Victoire ou nul) → 1 seule comptée (meilleur taux) */
       try { const M = window._g45LoiBilT, sv = M.d, d0 = new Date(), j = d0.getFullYear() + '-' + ('0' + (d0.getMonth() + 1)).slice(-2) + '-02', t0 = Date.parse(j + 'T19:00:00Z'), F = window._g45LoiCote.FI;
         M.d = { L: [{ j, t: t0, eid: 'o1', id: '31', sp: 'soccer', lg: 'uefa.nations', eq: 'Croatia', adv: 'Czechia', d: 1, lieu: 'tout', k: 'v', lib: 'Victoire', pire: 4, cours: 4, n: 57, ok: 30, r: 1, sc: '2-1' },
-          { j, t: t0, eid: 'o1', id: '32', sp: 'soccer', lg: 'uefa.nations', eq: 'Czechia', adv: 'Croatia', d: 0, lieu: 'tout', k: 'vn', lib: 'Victoire ou nul', pire: 6, cours: 6, n: 49, ok: 33, r: 0, sc: '1-2' }] };
-        F.o1 = { h: { id: '31' }, a: { id: '32' }, ml: { h: 1.6, d: 3.9, a: 6 } };
-        const hq = window._g45LoiBilHtml().replace(/<[^>]+>/g, ' '); delete F.o1; M.d = sv; M.j = '';
-        o.loiOpp = (/Pépites jouées\s*1\b/.test(hq) && /non compté \(pépite opposée sur le même match\)/.test(hq) && /Série continue ❌\s*1\b/.test(hq)) || hq.replace(/\s+/g, ' ').slice(0, 700); } catch (e) { o.loiOpp = 'erreur : ' + e.message; }
+          { j, t: t0, eid: 'o1', id: '32', sp: 'soccer', lg: 'uefa.nations', eq: 'Czechia', adv: 'Croatia', d: 0, lieu: 'tout', k: 'vn', lib: 'Victoire ou nul', pire: 6, cours: 6, n: 49, ok: 33, r: 0, sc: '1-2' },
+          { j, t: t0 + 5, eid: 'o2', id: '33', sp: 'soccer', lg: 'uefa.nations', eq: 'Türkiye', adv: 'France', d: 0, lieu: 'tout', k: 'v', lib: 'Victoire', pire: 5, cours: 5, r: 0, sc: '3-0' }] };
+        F.o1 = { h: { id: '31' }, a: { id: '32' }, ml: { h: 1.6, d: 3.9, a: 6 } }; F.o2 = { h: { id: '34' }, a: { id: '33' }, ml: { h: 1.25, d: 6, a: 12 } };
+        const hq = window._g45LoiBilHtml().replace(/<[^>]+>/g, ' '); delete F.o1; delete F.o2; M.d = sv; M.j = '';
+        o.loiOpp = (/Pépites jouées\s*1\b/.test(hq) && /non compté \(pépite opposée sur le même match\)/.test(hq) && /non compté \(cote au-dessus de 6\)/.test(hq) && /Série continue ❌\s*1\b/.test(hq)) || hq.replace(/\s+/g, ' ').slice(0, 700); } catch (e) { o.loiOpp = 'erreur : ' + e.message; }
       /* 20261108o : 📈 graphique + 📊 bilans de la Loi des séries */
       try { const F = window._g45LoiCote.FI; F.m1 = { h: { id: '9' }, a: { id: '1' }, ml: { h: 1.95, a: 3.65, d: 3.75 } }; F.m2 = { h: { id: '2' }, a: { id: '8' }, tot: { L: 6.5, o: 1.9, u: 1.9 } }; F.m3 = { h: { id: '3' }, a: { id: '7' }, bts: { o: 1.64, n: 2.2 } };
         window.g45LoiBilVue('gr'); const hg = window._g45LoiBilHtml(); window.g45LoiBilVue('bil'); const hl = window._g45LoiBilHtml().replace(/<[^>]+>/g, ' '); window.g45LoiBilVue('cal');
@@ -2547,7 +2548,7 @@ serveur.listen(0, async () => {
     ok('📉 Cotes basses : méthode Engager (mise, série, arrêt, filtre Bilan)', r.cbMeth === true, r.cbMeth);
     ok('📉 Cotes basses : Tableau de bord + bouton graphique', r.cbTdb === true, r.cbTdb);
     ok('📊 Loi des séries : Concacaf B / C + UEFA ligue D non comptées', r.loiNf === true, r.loiNf);
-    ok('📊 Loi des séries : pépites opposées → 1 seule comptée', r.loiOpp === true, r.loiOpp);
+    ok('📊 Loi des séries : pépites opposées → 1 seule comptée + cote > 6 non comptée', r.loiOpp === true, r.loiOpp);
     ok('⚖️ Et si j\'avais joué autrement : vraies cotes + 📉', r.methReel === true, r.methReel);
     ok('🃏 Par carte : photo d\'un joueur retiré du mur', r.ckFondRet === true, r.ckFondRet);
     ok('📉 Cotes basses : essai joueur (NHL pointeur, NBA ligne)', r.cbJoueur === true, r.cbJoueur);
