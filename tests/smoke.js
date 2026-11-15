@@ -722,6 +722,11 @@ serveur.listen(0, async () => {
         o.tuileLg = ((!hk || /leagues\/500\/nhl\.png/.test(hk.src)) && (!foot || (C && C.fav === 1 && C.u.n === foot.n))) || JSON.stringify({ hk: hk && hk.src, C });
       } catch (e) { o.tuileLg = 'erreur : ' + e.message; }
       try {
+        /* 20261115j : patch du type de pari (cartes réglées) */
+        const T = window._g45TypePatch;
+        o.typeP = (/Combiné/.test(T({ isCombi: 1 })) && /Cockpit/.test(T({ isS: true })) && /Cotes basses/.test(T({ meth: 'cb' })) && /Alembert/.test(T({ meth: 'dal' })) && /Fibonacci/.test(T({ meth: 'fib' })) && /Simple/.test(T({}))) || 'ko';
+      } catch (e) { o.typeP = 'erreur : ' + e.message; }
+      try {
         /* 20261014g : même bloc en NHL — victoire = temps réglementaire (prolongation / TAB = nul), vainqueur = score final. */
         (window._g45Cr.ovTous = true); window._statFilter = 'global';
         const S = window._g45Cr;
@@ -2500,6 +2505,7 @@ serveur.listen(0, async () => {
     ok('💶 Critères « Si tu l\'avais joué en… » 📉 Cotes basses', r.crCb === true, r.crCb);
     ok('📌 Mode de pari par pari (Modifier → Engager)', r.modeP === true, r.modeP);
     ok('🖼️ Tuiles du mur : logo ligue US / club de cœur', r.tuileLg === true, r.tuileLg);
+    ok('🏷️ Patch du type de pari (Bilan / Archive)', r.typeP === true, r.typeP);
     ok('Saisons NHL : critères (temps réglementaire)', r.crh === true, r.crh);
     ok('Saisons NFL / NBA / MLB : critères (vainqueur)', r.crn === true, r.crn);
     ok('Saisons : buts de l\'équipe / de l\'adversaire', r.cre === true, r.cre);
