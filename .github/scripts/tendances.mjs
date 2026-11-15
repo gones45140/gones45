@@ -383,6 +383,33 @@ function ymdDecale(ymd, n) {
 await nav.close();
 
 if (nEspn && nKo === nEspn) { console.log('⚠️ ESPN a TOUT refusé depuis GitHub : rien n\'est enregistré.'); process.exit(1); }
+/* 20261116e (Cavaliers – Mavericks 15/11 : choisi à 8 h à 1,74 DK ≈ 1,64 FR, mais 3,84 DK au coup d'envoi — Winamax ≈ 3,5 la veille au soir ;
+   Antoine : « tu corriges et fais le bilan à la bonne cote d'avant-match ») : une fois le match fini, la cote est remplacée par la cote
+   D'AVANT-MATCH gardée par gones45-archives (cotes/<sport>/<ligue>/<saison>/matchs/AAAA-MM.json[eid], relevée ≈ 1 h avant) ; même écart
+   books FR que la cote d'origine (c / cd). Cote de 8 h gardée dans c8 / cd8. Marchés : 1 / 2 / N (ml), plus / moins si la ligne gardée est
+   la même (tot.L), les deux marquent (bts). Autres marchés : cote de 8 h. cz = 1 → déjà regardé (une seule fois). */
+{
+  const DIR = { nba: 'basket/nba', nhl: 'hockey/nhl', nfl: 'football-us/nfl' }, CF = {};
+  const lireA = async (u) => { if (u in CF) return CF[u]; let j = null; try { const r = await fetch(u); if (r.ok) j = await r.json(); } catch (e) {} CF[u] = j; return j; };
+  let nC = 0;
+  for (const x of [].concat(J.t, J.pz || [])) {
+    if (x.r == null || x.r === -1 || x.cz || !(x.c > 1) || Date.now() - x.t > 30 * 864e5) continue;
+    const dir = DIR[x.sl] || ('foot/' + x.sl), d = new Date(x.t), y = d.getUTCFullYear(), mo = d.getUTCMonth() + 1;
+    const sas = [mo >= 7 ? y + '-' + String((y + 1) % 100).padStart(2, '0') : (y - 1) + '-' + String(y % 100).padStart(2, '0'), String(y)];
+    let m = null;
+    for (const sa of sas) { for (const t of [x.t, x.t - 864e5]) { const dd = new Date(t), mm = dd.getUTCFullYear() + '-' + String(dd.getUTCMonth() + 1).padStart(2, '0');
+      const F = await lireA('https://raw.githubusercontent.com/gones45140/gones45-archives/main/cotes/' + dir + '/' + sa + '/matchs/' + mm + '.json'); if (F && F[x.id]) { m = F[x.id]; break; } } if (m) break; }
+    x.cz = 1; if (!m) continue;
+    let nv = null; const k = String(x.k), ml = m.ml || {}, tot = m.tot || {}, bts = m.bts || {};
+    if (k === '1') nv = ml.h; else if (k === '2') nv = ml.a; else if (k === 'N') nv = ml.d;
+    else if (k === 'btts') nv = bts.o;
+    else { const q = /^(o|u)(\d)(\d)$/.exec(k) || /^(ov|un)([\d.]+)$/.exec(k); if (q && tot.L != null) { const L = q[3] != null && q[1].length === 1 ? +(q[2] + '.' + q[3]) : +q[2]; if (Math.abs(L - +tot.L) < 1e-6) nv = /^o/.test(q[1]) ? tot.o : tot.u; } }
+    if (!(nv > 1)) continue;
+    const ratio = x.cd > 1 ? x.c / x.cd : 0.94;
+    x.c8 = x.c; x.cd8 = x.cd; x.cd = Math.round(nv * 100) / 100; x.c = Math.round(nv * ratio * 100) / 100; nC++;
+  }
+  console.log('cotes d\'avant-match (archives) : ' + nC + ' remplacées');
+}
 J.t.sort((a, b) => a.t - b.t);
 J.maj = note; J.dernier = parisJour(); J.reglages = REGLAGES;
 fs.writeFileSync(FICHIER, JSON.stringify(J));
