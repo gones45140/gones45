@@ -738,6 +738,16 @@ serveur.listen(0, async () => {
         o.cbStopCr = (A.bo === 1 && B.bo === 0 && B.tot > 0) || JSON.stringify([A.bo, B.bo, B.tot]);
       } catch (e) { o.cbStopCr = 'erreur : ' + e.message; }
       try {
+        /* 20261115n : ➕ Ajouter une ÉQUIPE au mur depuis les critères */
+        const C = window._g45Cr, ctx = { sp: 'basketball', lg: 'nba', id: '99' }, n0 = state.u.length;
+        C.data['Equipe Z'] = { t: Date.now(), lg: 'nba', ligue: 'NBA', saisons: [{ an: 2026, ms: [['2026-10-22', 1, 110, 100, 0, 0, 'z1', null, null, null, null, null, [1.5, 0, 2.5]]] }] }; C.ov = C.ov || {}; C.ov['Equipe Z'] = 1;
+        window._g45CrHtml('Equipe Z', ctx); C.combos[C.a].res = 'vqr'; C.lieu = 'dom';
+        const H = window._g45CrHtml('Equipe Z', ctx); const btn = /Ajouter Equipe Z au mur/.test(H);
+        window.g45CrAjoutEq(C.a); const u = state.u.filter(x => x.n === 'Equipe Z')[0];
+        o.ajoutEq = (btn && u && u.sport === '🏀' && /🏠/.test(u.note) && /Vainqueur/i.test(u.note) && state.u.length === n0 + 1) || JSON.stringify({ btn, u });
+        state.u = state.u.filter(x => x.n !== 'Equipe Z'); C.lieu = 'tout';
+      } catch (e) { o.ajoutEq = 'erreur : ' + e.message; }
+      try {
         /* 20261014g : même bloc en NHL — victoire = temps réglementaire (prolongation / TAB = nul), vainqueur = score final. */
         (window._g45Cr.ovTous = true); window._statFilter = 'global';
         const S = window._g45Cr;
@@ -2519,6 +2529,7 @@ serveur.listen(0, async () => {
     ok('🏷️ Patch du type de pari (Bilan / Archive)', r.typeP === true, r.typeP);
     ok('📉 Critères : bouton sans les matchs sous 1,20', r.pl12 === true, r.pl12);
     ok('🛑 Critères 💶 📉 : arrêt au choix', r.cbStopCr === true, r.cbStopCr);
+    ok('➕ Critères : ajouter une équipe au mur', r.ajoutEq === true, r.ajoutEq);
     ok('Saisons NHL : critères (temps réglementaire)', r.crh === true, r.crh);
     ok('Saisons NFL / NBA / MLB : critères (vainqueur)', r.crn === true, r.crn);
     ok('Saisons : buts de l\'équipe / de l\'adversaire', r.cre === true, r.cre);
