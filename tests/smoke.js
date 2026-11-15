@@ -714,6 +714,14 @@ serveur.listen(0, async () => {
         o.modeP = (D(u, 'ext') === 'cb' && D(u, 'dom') === 'mont' && D({}, 'ext') === 'mont' && D({ mode: { glob: 'fib' } }, '') === 'fib' && typeof window.g45ModeChoix === 'function' && window.saveEditUnit._g45Mode === 1 && window.editUnit._g45Mode === 1) || 'ko';
       } catch (e) { o.modeP = 'erreur : ' + e.message; }
       try {
+        /* 20261115i : tuiles du mur — US / NRL = logo de la ligue ; foot = club de cœur ; sinon le plus joué */
+        try { _g45AccRegrouper(); } catch (e) {}
+        const z = document.getElementById('g45-acc-zone'), hk = z && z.querySelector('[data-k="🏒"] img.g45-acc-lg');
+        const f0 = state.fav, foot = state.u.filter(u => { try { return _g45AccSport(u).v === '⚽'; } catch (e) { return false; } })[0];
+        state.fav = foot && foot.n; const C = window._g45AccLogoClub('⚽'); state.fav = f0;
+        o.tuileLg = ((!hk || /leagues\/500\/nhl\.png/.test(hk.src)) && (!foot || (C && C.fav === 1 && C.u.n === foot.n))) || JSON.stringify({ hk: hk && hk.src, C });
+      } catch (e) { o.tuileLg = 'erreur : ' + e.message; }
+      try {
         /* 20261014g : même bloc en NHL — victoire = temps réglementaire (prolongation / TAB = nul), vainqueur = score final. */
         (window._g45Cr.ovTous = true); window._statFilter = 'global';
         const S = window._g45Cr;
@@ -2491,6 +2499,7 @@ serveur.listen(0, async () => {
     ok('🎯 Essai 📉 : critères (V/N/D, plus/moins, handicap, autre)', r.cbCrit === true, r.cbCrit);
     ok('💶 Critères « Si tu l\'avais joué en… » 📉 Cotes basses', r.crCb === true, r.crCb);
     ok('📌 Mode de pari par pari (Modifier → Engager)', r.modeP === true, r.modeP);
+    ok('🖼️ Tuiles du mur : logo ligue US / club de cœur', r.tuileLg === true, r.tuileLg);
     ok('Saisons NHL : critères (temps réglementaire)', r.crh === true, r.crh);
     ok('Saisons NFL / NBA / MLB : critères (vainqueur)', r.crn === true, r.crn);
     ok('Saisons : buts de l\'équipe / de l\'adversaire', r.cre === true, r.cre);
