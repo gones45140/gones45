@@ -704,6 +704,16 @@ serveur.listen(0, async () => {
         o.cbCrit = (n6[0].w && !n6[1].w && n6[0].c === 4.2 && !v6[0].w && v6[1].w && v6[1].c === 1.9 && v[0].c === 1.4 && v[0].w && !v[1].w && n[1].w && n[1].c === 5 && o2.length === 1 && o2[0].w && u.length === 1 && !u[0].w && hc[0].c === 2.1 && hc[0].w === false && hc[1].w === false && x[0].w && x[0].c === 1.25 && !x[1].w) || JSON.stringify({ v, n, o2, u, hc, x });
       } catch (e) { o.cbCrit = 'erreur : ' + e.message; }
       try {
+        /* 20261115h : 💶 « Si tu l'avais joué en… » 📉 — 1,60 ❌ (10) → 1,60 ❌ (25) → 1,60 ✅ (75) = +10 ; 1,10 sauté ; 1,30 après une défaite = 10 × (1/0,3 + 2) */
+        const F = window._g45CrSimT, R1 = F([{ s: 'a', ok: 0, c: 1.6 }, { s: 'a', ok: 1, c: 1.1 }, { s: 'a', ok: 0, c: 1.6 }, { s: 'a', ok: 1, c: 1.6 }], [10], 1.6, 0, 'cb'), R2 = F([{ s: 'a', ok: 0, c: 1.6 }, { s: 'a', ok: 1, c: 1.3 }], [10], 1.6, 0, 'cb');
+        o.crCb = (Math.abs(R1.tot - 10) < 1e-6 && R1.det.length === 3 && R1.det[2].m === 75 && Math.abs(R2.det[1].m - 53.34) < 0.01) || JSON.stringify([R1.tot, R1.det, R2.det]);
+      } catch (e) { o.crCb = 'erreur : ' + e.message; }
+      try {
+        /* 20261115h : mode de pari par pari (✏️ Modifier) → u.mode ; Engager suit la carte + le lieu */
+        const D = window._g45ModeDe, u = { mode: { ext: 'cb' } };
+        o.modeP = (D(u, 'ext') === 'cb' && D(u, 'dom') === 'mont' && D({}, 'ext') === 'mont' && D({ mode: { glob: 'fib' } }, '') === 'fib' && typeof window.g45ModeChoix === 'function' && window.saveEditUnit._g45Mode === 1 && window.editUnit._g45Mode === 1) || 'ko';
+      } catch (e) { o.modeP = 'erreur : ' + e.message; }
+      try {
         /* 20261014g : même bloc en NHL — victoire = temps réglementaire (prolongation / TAB = nul), vainqueur = score final. */
         (window._g45Cr.ovTous = true); window._statFilter = 'global';
         const S = window._g45Cr;
@@ -2479,6 +2489,8 @@ serveur.listen(0, async () => {
     ok('🛡️ 📉 ×2,5 puis ×3 + 🚀 Cockpit P2 × 2,5', r.p25 === true, r.p25);
     ok('🪜 Essai 📉 : pire palier + paliers gagnés', r.cbPal === true, r.cbPal);
     ok('🎯 Essai 📉 : critères (V/N/D, plus/moins, handicap, autre)', r.cbCrit === true, r.cbCrit);
+    ok('💶 Critères « Si tu l\'avais joué en… » 📉 Cotes basses', r.crCb === true, r.crCb);
+    ok('📌 Mode de pari par pari (Modifier → Engager)', r.modeP === true, r.modeP);
     ok('Saisons NHL : critères (temps réglementaire)', r.crh === true, r.crh);
     ok('Saisons NFL / NBA / MLB : critères (vainqueur)', r.crn === true, r.crn);
     ok('Saisons : buts de l\'équipe / de l\'adversaire', r.cre === true, r.cre);
