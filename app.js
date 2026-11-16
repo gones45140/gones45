@@ -4795,6 +4795,9 @@ function smartRefresh() {
 }
 
 function injectRefreshButton() {
+  /* 20261117n — RETIRÉ (Antoine, capture PC : « à quoi il sert sur pc lui » → « enlève le bouton »). Il n'existait déjà plus que sur
+     grand écran (04/09). smartRefresh() est gardée : rien d'autre ne l'appelle, mais elle ne coûte rien. */
+  return;
   if(document.getElementById('smart-refresh-btn')) return;
   var b = document.createElement('button');
   b.id = 'smart-refresh-btn';
