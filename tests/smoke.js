@@ -182,6 +182,14 @@ serveur.listen(0, async () => {
         const H1 = window._g45CrHtml('Rams T', ctx).replace(/<[^>]+>/g, ' ');
         localStorage.removeItem('g45_jou_v2_football_nfl_14_2025'); delete C.data['Rams T']; C.nom = '';
         o.crUs = (/Puka Nacua touchdown/.test(H1) && /Combien/.test(H1) && /1\/2/.test(H1)) || H1.slice(0, 600); } catch (e) { o.crUs = 'erreur : ' + e.message; }
+      /* 20261117q : 🕒 Dernières réussites (3 dernières, plus récente d'abord) */
+      try { const C = window._g45Cr, ctx = { sp: 'football', lg: 'nfl', id: '14' };
+        C.data['Der T'] = { t: Date.now(), lg: 'nfl', ligue: 'NFL', saisons: [{ an: 2025, ms: [['2025-09-07', 1, 24, 10, 0, 0, 'e1'], ['2025-09-14', 0, 20, 27, 0, 0, 'e2'], ['2025-09-21', 1, 30, 7, 0, 0, 'e3'], ['2025-09-28', 0, 31, 7, 0, 0, 'e4'], ['2025-10-05', 1, 3, 7, 0, 0, 'e5']] }] };
+        try { localStorage.setItem('g45_cr_tab', 'res'); } catch (e) {}
+        window._g45CrHtml('Der T', ctx); const cb = C.combos[C.a]; cb.res = 'vic';
+        const H2 = window._g45CrHtml('Der T', ctx).replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ');
+        delete C.data['Der T']; C.nom = '';
+        o.crDer = /Dernières réussites : 28\/09\/2025 ✈️ 31-7 · 21\/09\/2025 🏠 30-7 · 07\/09\/2025 🏠 24-10/.test(H2) || H2.slice(H2.indexOf('Série en cours'), H2.indexOf('Série en cours') + 300); } catch (e) { o.crDer = 'erreur : ' + e.message; }
       /* 20261030i : Séries individuelles NBA, valeur d'une ligne du journal [min, pts, reb, ast, 3pts] */
       try { const V = window._g45NbaMqVal, l = [30, 24, 9, 6, 3];
         o.nbaMqV = (V('pts', l) === 24 && V('pra', l) === 39 && V('pr', l) === 33 && V('pa', l) === 30 && V('ra', l) === 15 && V('tp', l) === 3 && V('ra', [30, 20, null, 4, 1]) === null) || 'vals'; } catch (e) { o.nbaMqV = 'erreur : ' + e.message; }
@@ -2613,6 +2621,7 @@ serveur.listen(0, async () => {
     ok('Tennis : tournois en salle reconnus + contrecoup hors standard', r.salle === true, r.salle);
     ok('Tennis : âge + bilan au tour du match dans l\'avis', r.tnTour === true, r.tnTour);
     ok('Critères 4 saisons US : onglet Joueurs', r.crUs === true, r.crUs);
+    ok('Critères : 🕒 Dernières réussites (3 dernières)', r.crDer === true, r.crDer);
     ok('Critères 4 saisons NBA : joueurs à seuils', r.crBk === true, r.crBk);
     ok('Critères : ➕ ajouter le joueur au mur', r.crAjout === true, r.crAjout);
     ok('Fenêtre de match foot : blocs pliés', r.plier === true, r.plier);
