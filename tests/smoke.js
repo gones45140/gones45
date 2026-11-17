@@ -1362,6 +1362,11 @@ serveur.listen(0, async () => {
         const R = Mo(L.concat([{ t: 5, id: 'b', k: 'v', lieu: 'ext', r: null }]), cd), DT = window._g45LoiDet || {}, d3 = DT['a|u65|dom|3'], d5 = DT['b|v|ext|5'];
         if (!(d3 && d3.p === 3 && d3.m === 60 && Math.abs(d3.ser - (d3.g - 30)) < 0.01 && d5 && d5.p === 2 && d5.m === 20 && d5.g == null)) o.loiMontD = JSON.stringify({ d3, d5 });
         o.loiMont = (!o.loiMontD && R.n === 4 && Math.abs(R.g - 12.8) < 0.01 && R.pmax === 3 && R.mmax === 60 && R.ouv === 1 && /P2 = 20 €/.test(R.prochs) && R.ouvL && R.ouvL.length === 1 && R.ouvL[0].p === 2 && R.ouvL[0].m === 20) || JSON.stringify(R); } catch (e) { o.loiMont = 'erreur : ' + e.message; }
+      /* 20261118c : 2 « Victoire » opposées → « Victoire ou nul » de l'outsider (Israël – Autriche 1-1) */
+      try { const FI = window._g45LoiCote.FI; FI['9e1'] = { h: { id: '1' }, a: { id: '2' }, ml: { h: 3.9, a: 1.8, d: 3.5 } };
+        const L = [{ eid: '9e1', id: '1', k: 'v', d: 1, lieu: 'tout', r: 0, cours: 5, pire: 6, n: 10, ok: 3 }, { eid: '9e1', id: '2', k: 'v', d: 0, lieu: 'ext', r: 0, cours: 5, pire: 6, n: 10, ok: 3 }];
+        window._g45LoiExclure(L); window._g45LoiExclure(L); delete FI['9e1'];
+        const vn = L.filter(x => x.vo); o.loiVn = (L.length === 3 && vn.length === 1 && vn[0].id === '1' && vn[0].k === 'vn' && vn[0].r === 1 && L[0].nf === 5 && L[1].nf === 5) || JSON.stringify(L); } catch (e) { o.loiVn = 'erreur : ' + e.message; }
       /* 20261117u : 🏳️ abandon d'une série 📉 / 🐚 */
       try { const cf = window.confirm; window.confirm = () => true; const u = { n: 'Ab Test', s: 3, l: 1, lcb: { '|dom': { p: 2, prev: 8, per: 8 } }, lm: { fib: { '|ext': 3 } } }; state.u = (state.u || []).concat([u]);
         const nb = (String(window._g45UlPaliers(u, null)).match(/g45MethAbandon/g) || []).length;
@@ -2628,6 +2633,7 @@ serveur.listen(0, async () => {
     ok('Critères 4 saisons US : onglet Joueurs', r.crUs === true, r.crUs);
     ok('Critères : 🕒 Dernières réussites (3 dernières)', r.crDer === true, r.crDer);
     ok('🏳️ Abandon d\'une série 📉 / 🐚', r.methAb === true, r.methAb);
+    ok('Loi des séries : 2 victoires opposées → victoire ou nul de l\'outsider', r.loiVn === true, r.loiVn);
     ok('Critères 4 saisons NBA : joueurs à seuils', r.crBk === true, r.crBk);
     ok('Critères : ➕ ajouter le joueur au mur', r.crAjout === true, r.crAjout);
     ok('Fenêtre de match foot : blocs pliés', r.plier === true, r.plier);
