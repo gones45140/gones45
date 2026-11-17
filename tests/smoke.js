@@ -1362,6 +1362,11 @@ serveur.listen(0, async () => {
         const R = Mo(L.concat([{ t: 5, id: 'b', k: 'v', lieu: 'ext', r: null }]), cd), DT = window._g45LoiDet || {}, d3 = DT['a|u65|dom|3'], d5 = DT['b|v|ext|5'];
         if (!(d3 && d3.p === 3 && d3.m === 60 && Math.abs(d3.ser - (d3.g - 30)) < 0.01 && d5 && d5.p === 2 && d5.m === 20 && d5.g == null)) o.loiMontD = JSON.stringify({ d3, d5 });
         o.loiMont = (!o.loiMontD && R.n === 4 && Math.abs(R.g - 12.8) < 0.01 && R.pmax === 3 && R.mmax === 60 && R.ouv === 1 && /P2 = 20 €/.test(R.prochs) && R.ouvL && R.ouvL.length === 1 && R.ouvL[0].p === 2 && R.ouvL[0].m === 20) || JSON.stringify(R); } catch (e) { o.loiMont = 'erreur : ' + e.message; }
+      /* 20261117u : 🏳️ abandon d'une série 📉 / 🐚 */
+      try { const cf = window.confirm; window.confirm = () => true; const u = { n: 'Ab Test', s: 3, l: 1, lcb: { '|dom': { p: 2, prev: 8, per: 8 } }, lm: { fib: { '|ext': 3 } } }; state.u = (state.u || []).concat([u]);
+        const nb = (String(window._g45UlPaliers(u, null)).match(/g45MethAbandon/g) || []).length;
+        g45MethAbandon('Ab Test', 'cb', ['|dom']); g45MethAbandon('Ab Test', 'fib', ['|ext']); window.confirm = cf; state.u = state.u.filter(x => x !== u);
+        o.methAb = (nb === 2 && !u.lcb['|dom'] && !u.lm.fib['|ext'] && u.abd.length === 2 && u.abd[0].mt === 'cb' && u.abd[0].perdu === 8) || JSON.stringify({ nb, u }); } catch (e) { o.methAb = 'erreur : ' + e.message; }
       /* 20261111c — hockey : total du match prolongation + TAB compris (c.otp), buts d'équipe toujours au temps réglementaire */
       try { const S = window._g45CrS, sc0 = S.ctx; S.ctx = { sp: 'hockey', lg: 'nhl', id: '1' }; const P = window._g45CrPasse, m = ['2026-11-01', 1, 3, 2, 1, 0, 'x'];
         const r = [P({ ou: 'ov', L: 4.5, otp: '1' }, m), P({ ou: 'ov', L: 4.5 }, m), P({ te: 'ov', TL: 2.5, otp: '1' }, m)]; S.ctx = sc0;
@@ -2622,6 +2627,7 @@ serveur.listen(0, async () => {
     ok('Tennis : âge + bilan au tour du match dans l\'avis', r.tnTour === true, r.tnTour);
     ok('Critères 4 saisons US : onglet Joueurs', r.crUs === true, r.crUs);
     ok('Critères : 🕒 Dernières réussites (3 dernières)', r.crDer === true, r.crDer);
+    ok('🏳️ Abandon d\'une série 📉 / 🐚', r.methAb === true, r.methAb);
     ok('Critères 4 saisons NBA : joueurs à seuils', r.crBk === true, r.crBk);
     ok('Critères : ➕ ajouter le joueur au mur', r.crAjout === true, r.crAjout);
     ok('Fenêtre de match foot : blocs pliés', r.plier === true, r.plier);
