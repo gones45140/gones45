@@ -2438,7 +2438,7 @@ serveur.listen(0, async () => {
       /* 20261108t : noms français / Winamax → logo des archives */
       try { const F = window._g45LogoFr; o.logoFr = (F && F.mayence === 'Mainz' && F.bmunich === 'Bayern Munich' && window._g45LogoIndex._g45Fr === true) || 'table absente'; } catch (e) { o.logoFr = 'erreur : ' + e.message; }
       /* 20261108s : score + résultat tout de suite depuis la fiche des archives */
-      try { const M = window._g45LoiBilT, F = window._g45LoiCote.FI, sv = M.d, d0 = new Date(), j = d0.getFullYear() + '-' + ('0' + (d0.getMonth() + 1)).slice(-2) + '-01', t0 = Date.parse(j + 'T19:00:00Z');
+      try { localStorage.setItem('g45_loi_pmax', '0'); /* 20261118d : test sans le filtre « pire série » */ const M = window._g45LoiBilT, F = window._g45LoiCote.FI, sv = M.d, d0 = new Date(), j = d0.getFullYear() + '-' + ('0' + (d0.getMonth() + 1)).slice(-2) + '-01', t0 = Date.parse(j + 'T19:00:00Z');
         M.d = { L: [{ j, t: t0, eid: 'q1', id: '5', sp: 'hockey', eq: 'Sharks', adv: 'Wild', d: 0, lieu: 'ext', k: 'u65', lib: 'Moins de 6,5 buts', pire: 5, cours: 4, r: null }, { j, t: t0, eid: 'q2', id: '7', sp: 'soccer', eq: 'Banfield', adv: 'Tucuman', d: 1, lieu: 'dom', k: 'v', lib: 'Victoire', pire: 7, cours: 6, r: null }] }; M.t = Date.now(); M.j = ''; M.vue = 'cal';
         F.q1 = { h: { id: '9' }, a: { id: '5' }, f: { h: 4, a: 3 }, ot: 1, tot: { L: 6.5, o: 1.9, u: 1.91 } }; F.q2 = { h: { id: '7' }, a: { id: '8' }, f: { h: 0, a: 0 }, ml: { h: 2.5, d: 3, a: 3 } };
         const hq = window._g45LoiBilHtml().replace(/<[^>]+>/g, ' '); const a = M.d.L[0], b = M.d.L[1]; delete F.q1; delete F.q2; M.d = sv;
