@@ -1367,6 +1367,11 @@ serveur.listen(0, async () => {
         const L = [{ eid: '9e1', id: '1', k: 'v', d: 1, lieu: 'tout', r: 0, cours: 5, pire: 6, n: 10, ok: 3 }, { eid: '9e1', id: '2', k: 'v', d: 0, lieu: 'ext', r: 0, cours: 5, pire: 6, n: 10, ok: 3 }];
         window._g45LoiExclure(L); window._g45LoiExclure(L); delete FI['9e1'];
         const vn = L.filter(x => x.vo); o.loiVn = (L.length === 3 && vn.length === 1 && vn[0].id === '1' && vn[0].k === 'vn' && vn[0].r === 1 && L[0].nf === 5 && L[1].nf === 5) || JSON.stringify(L); } catch (e) { o.loiVn = 'erreur : ' + e.message; }
+      /* 20261118h : 👤 pépite joueur NHL → cote DraftKings de la fiche (230 buteur, 218 pointeur [1, c]) */
+      try { const FI = window._g45LoiCote.FI; FI['9j1'] = { h: { id: '5' }, a: { id: '6' }, ml: { h: 2 }, j: { '777': { n: 'Joe Test', o: { '230': [[null, 3.4]], '218': [[1, 1.8], [2, 4]] } } } };
+        const c1 = window._g45LoiCote.coteDe({ eid: '9j1', id: 'j777', jo: 1, jid: '777', tid: '5', k: 'jb', d: 1 }), c2 = window._g45LoiCote.coteDe({ eid: '9j1', id: 'j777', jo: 1, jid: '777', tid: '5', k: 'jp', d: 1 }),
+          c3 = window._g45LoiCote.coteDe({ eid: '9j1', id: 'j777', jo: 1, jid: '777', tid: '5', k: 'ja', d: 1 }); delete FI['9j1'];
+        o.loiJo = (c1 && c1.c === 3.4 && c2 && c2.c === 1.8 && c3 === null) || JSON.stringify([c1, c2, c3]); } catch (e) { o.loiJo = 'erreur : ' + e.message; }
       /* 20261117u : 🏳️ abandon d'une série 📉 / 🐚 */
       try { const cf = window.confirm; window.confirm = () => true; const u = { n: 'Ab Test', s: 3, l: 1, lcb: { '|dom': { p: 2, prev: 8, per: 8 } }, lm: { fib: { '|ext': 3 } } }; state.u = (state.u || []).concat([u]);
         const nb = (String(window._g45UlPaliers(u, null)).match(/g45MethAbandon/g) || []).length;
@@ -2634,6 +2639,7 @@ serveur.listen(0, async () => {
     ok('Critères : 🕒 Dernières réussites (3 dernières)', r.crDer === true, r.crDer);
     ok('🏳️ Abandon d\'une série 📉 / 🐚', r.methAb === true, r.methAb);
     ok('Loi des séries : 2 victoires opposées → victoire ou nul de l\'outsider', r.loiVn === true, r.loiVn);
+    ok('Loi des séries : cote d\'une pépite joueur NHL (buteur / pointeur)', r.loiJo === true, r.loiJo);
     ok('Critères 4 saisons NBA : joueurs à seuils', r.crBk === true, r.crBk);
     ok('Critères : ➕ ajouter le joueur au mur', r.crAjout === true, r.crAjout);
     ok('Fenêtre de match foot : blocs pliés', r.plier === true, r.plier);
