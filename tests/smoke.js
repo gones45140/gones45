@@ -1368,12 +1368,12 @@ serveur.listen(0, async () => {
         window._g45LoiExclure(L); window._g45LoiExclure(L); delete FI['9e1'];
         const vn = L.filter(x => x.vo); o.loiVn = (L.length === 3 && vn.length === 1 && vn[0].id === '1' && vn[0].k === 'vn' && vn[0].r === 1 && L[0].nf === 5 && L[1].nf === 5) || JSON.stringify(L); } catch (e) { o.loiVn = 'erreur : ' + e.message; }
       /* 20261118h : 👤 pépite joueur NHL → cote DraftKings de la fiche (230 buteur, 218 pointeur [1, c]) */
-      try { const FI = window._g45LoiCote.FI; FI['9j1'] = { h: { id: '5' }, a: { id: '6' }, ml: { h: 2 }, j: { '777': { n: 'Joe Test', o: { '230': [[null, 3.4]], '218': [[1, 1.8], [2, 4]] } } } };
+      try { const FI = window._g45LoiCote.FI; FI['9j1'] = { h: { id: '5' }, a: { id: '6' }, ml: { h: 2 }, j: { '777': { n: 'Joe Test', o: { '230': [[null, 3.4]], '218': [[1, 1.8], [2, 4]], '219': [[1, 4]] } } } };
         const c1 = window._g45LoiCote.coteDe({ eid: '9j1', id: 'j777', jo: 1, jid: '777', tid: '5', k: 'jb', d: 1 }), c2 = window._g45LoiCote.coteDe({ eid: '9j1', id: 'j777', jo: 1, jid: '777', tid: '5', k: 'jp', d: 1 }),
-          c3 = window._g45LoiCote.coteDe({ eid: '9j1', id: 'j777', jo: 1, jid: '777', tid: '5', k: 'ja', d: 1 }); delete FI['9j1'];
+          c3 = window._g45LoiCote.coteDe({ eid: '9j1', id: 'j777', jo: 1, jid: '777', tid: '5', k: 'jt', d: 1 }), c4 = window._g45LoiCote.coteDe({ eid: '9j1', id: 'j777', jo: 1, jid: '777', tid: '5', k: 'jd', d: 1 }); delete FI['9j1'];
         const cm0 = localStorage.getItem('g45_loi_cmin'); localStorage.setItem('g45_loi_cmin', '5');
         const sj = [window._g45LoiSeuil({ jo: 1, pa: 5, lg: 'nhl' }), window._g45LoiSeuil({ jo: 1, pa: 6, lg: 'nhl' }), window._g45LoiSeuil({ id: '1', pa: 3, lg: 'nhl' })]; localStorage.setItem('g45_loi_cmin', cm0 == null ? '4' : cm0);
-        o.loiJo = (c1 && c1.c === 3.4 && c2 && c2.c === 1.8 && c3 === null && sj.join() === '4,5,5') || JSON.stringify([c1, c2, c3, sj]); } catch (e) { o.loiJo = 'erreur : ' + e.message; }
+        o.loiJo = (c1 && c1.c === 3.4 && c2 && c2.c === 1.8 && c3 === null && c4 && Math.abs(c4.c - 1 / (1 - (1 - 1 / 3.4) * 0.75)) < 1e-9 && sj.join() === '4,5,5' && window._g45LoiJoOk({ jo: 1 }) && window._g45LoiJoOk({})) || JSON.stringify([c1, c2, c3, c4, sj]); } catch (e) { o.loiJo = 'erreur : ' + e.message; }
       /* 20261117u : 🏳️ abandon d'une série 📉 / 🐚 */
       try { const cf = window.confirm; window.confirm = () => true; const u = { n: 'Ab Test', s: 3, l: 1, lcb: { '|dom': { p: 2, prev: 8, per: 8 } }, lm: { fib: { '|ext': 3 } } }; state.u = (state.u || []).concat([u]);
         const nb = (String(window._g45UlPaliers(u, null)).match(/g45MethAbandon/g) || []).length;
