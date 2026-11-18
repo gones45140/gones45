@@ -117,7 +117,7 @@ serveur.listen(0, async () => {
     await page.goto('http://localhost:' + port + '/' + PAGE);
     await page.waitForTimeout(3000);
     const r = await page.evaluate(async () => {
-      const o = {};
+      const o = {}; try { localStorage.setItem('g45_loi_cmin', '4'); localStorage.setItem('g45_loi_pmax', '0'); } catch (e) {}   /* 20261118f : données de test en séries de 4, sans filtre pire série */
       try { state.ckOn = true; } catch (e) {}   /* 20261104l : morceaux Cockpit (💶, 📋, Jouable…) visibles = Cockpit activé, comme chez Antoine */
       /* 20261021g : critères et curseurs FERMÉS à l'arrivée → contrôle de l'état fermé, puis tout ouvert pour les autres contrôles */
       try {
