@@ -1548,6 +1548,7 @@ serveur.listen(0, async () => {
         const F = ((document.getElementById('g45ck') || {}).textContent || '').replace(/\s/g, '');
         state.u = u0; window._g45CkAg = null; g45CkJour(jm); if (dm.getMonth() !== d.getMonth()) g45CkMois(-1);
         /* 20261119q : 🎫 panneau « Ton pari » (PC) — moteur + lecture du formulaire */
+        try { o.usj = typeof window.g45UsJoueurPanel === 'function' && typeof window._g45ButJoueurFoot === 'function' && !!window.g45MurJoueurPanel._g45l; } catch (e) { o.usj = 'erreur : ' + e.message; }
         try { const L = window._g45TkPc && window._g45TkPc.lire(); o.tkpc = (typeof window._g45FichePari === 'function' && !!L && 'lab' in L && 'cote' in L) || JSON.stringify(L); } catch (e) { o.tkpc = 'erreur : ' + e.message; }
         o.ckFut = (/📅1/.test(F) && /📅Prévu/.test(F) && /TestBayern🏠vsLeverkusen/.test(F) && /📌🏠Victoire\+Over2\.5/.test(F)) || F.slice(-400);
         g45CkJour(j); window.g45CkOnglet('tdb'); state.a = a0; state.h = h0; if (s0 == null) localStorage.removeItem('g45ck_sous'); else localStorage.setItem('g45ck_sous', s0); localStorage.removeItem('g45tr_vue');
@@ -2775,6 +2776,7 @@ serveur.listen(0, async () => {
     ok('🏁 Cockpit BET45 : calendrier et graphique', r.ckCal === true, r.ckCal);
     ok('🏁 Cockpit BET45 : jours à venir (Agenda) dans le calendrier', r.ckFut === true, r.ckFut);
     ok('🎫 Panneau « Ton pari » (PC) : moteur et lecture du formulaire', r.tkpc === true, r.tkpc);
+    ok('🏀 Fiche stats joueur NBA / NFL du mur (archives) branchée', r.usj === true, r.usj);
     ok('🏁 Cockpit BET45 publié (gones) et lu sur bet45', r.ckPub === true, r.ckPub);
     ok('Fiche : filtre Lieu + Types en entier colorés', r.lieuF === true, r.lieuF);
     ok('🏉 Critères rugby : phases finales reconnues (Compétition)', r.rgPo === true, r.rgPo);
