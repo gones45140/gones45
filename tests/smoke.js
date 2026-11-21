@@ -1548,10 +1548,13 @@ serveur.listen(0, async () => {
         const F = ((document.getElementById('g45ck') || {}).textContent || '').replace(/\s/g, '');
         state.u = u0; window._g45CkAg = null; g45CkJour(jm); if (dm.getMonth() !== d.getMonth()) g45CkMois(-1);
         /* 20261119q : 🎫 panneau « Ton pari » (PC) — moteur + lecture du formulaire */
-        /* 20261121q : 🏁 duos double chance buteur NHL */
-        try { const d0 = window._g45Duos; window._g45Duos = { s: ['2025-26', '2026-27'], L: [['Joel Eriksson Ek', '1', 'Kirill Kaprizov', '2', 'Wild', '30', 97, 68, 25, 19, 3, 45, 35, 2, 52, 33, 3, 0], ['Mark Scheifele', '3', 'Kyle Connor', '4', 'Jets', '28', 109, 71, 25, 17, 4, 50, 33, 3, 59, 38, 4, 1]] };
-          const H = String(window._g45DuosHtml() || ''); window._g45Duos = d0;
-          o.duos = (/Ek ou Kaprizov/.test(H) && /Scheifele ou Connor/.test(H) && /cote mini/.test(H) && /g45DuoMur\(0\)/.test(H)) || H.slice(0, 200);
+        /* 20261121q / 20261122a : 🏁 duos (NHL buteur, NBA points) */
+        try { const F = window._g45DuosF, v = (n, ok) => [n, ok, 20, 15, 3, n / 2, ok / 2, 2, n / 2, ok / 2, 3, 0];
+          F.nhl = { v: 2, s: ['2025-26', '2026-27'], K: ['b'], L: [['Joel Eriksson Ek', '1', 'Kirill Kaprizov', '2', 'Wild', '30', { b: v(96, 68) }], ['Mark Scheifele', '3', 'Kyle Connor', '4', 'Jets', '28', { b: v(108, 70) }]] };
+          F.nba = { v: 2, s: ['2025-26', '2026-27'], K: ['m24.5', 's44.5'], L: [['Luka Doncic', '5', 'Austin Reaves', '6', 'Lakers', '13', { 'm24.5': v(54, 48), 's44.5': v(54, 40) }]] };
+          const H = String(window._g45DuosHtml({ sp: 'hockey', lg: 'nhl' }) || ''), H2 = String(window._g45DuosHtml({ sp: 'basketball', lg: 'nba' }) || '');
+          delete F.nhl; delete F.nba;
+          o.duos = (/Ek ou Kaprizov/.test(H) && /Scheifele ou Connor/.test(H) && /cote mini/.test(H) && /g45DuoMur\('nhl',0\)/.test(H) && /Doncic ou Reaves/.test(H2) && /Total des 2 plus de/.test(H2)) || (H.slice(0, 150) + ' | ' + H2.slice(0, 150));
         } catch (e) { o.duos = 'erreur : ' + e.message; }
         /* 20261121e : ➡️ 📉 passer une série 🚀 en Cotes basses */
         try { const su0 = state.u, cf0 = window.confirm; window.confirm = () => true;
@@ -2816,7 +2819,7 @@ serveur.listen(0, async () => {
     ok('📚 DraftKings + archives (matchs semblables) et 🚑 absents branchés', r.sbl === true, r.sbl);
     ok('➕ Paris perdus de la série en cours (Cockpit)', r.ckPer === true, r.ckPer);
     ok('➡️ 📉 Passer une série Cockpit en Cotes basses', r.versCb === true, r.versCb);
-    ok('🏁 Duos double chance buteur NHL (Jouable en Cockpit)', r.duos === true, r.duos);
+    ok('🏁 Duos NHL / NBA (Jouable en Cockpit)', r.duos === true, r.duos);
     ok('🔍 Recherche + puces dans 🃏 Mes cartes', r.mcRech === true, r.mcRech);
     ok('🏁 Cockpit BET45 publié (gones) et lu sur bet45', r.ckPub === true, r.ckPub);
     ok('Fiche : filtre Lieu + Types en entier colorés', r.lieuF === true, r.lieuF);
