@@ -1548,6 +1548,14 @@ serveur.listen(0, async () => {
         const F = ((document.getElementById('g45ck') || {}).textContent || '').replace(/\s/g, '');
         state.u = u0; window._g45CkAg = null; g45CkJour(jm); if (dm.getMonth() !== d.getMonth()) g45CkMois(-1);
         /* 20261119q : 🎫 panneau « Ton pari » (PC) — moteur + lecture du formulaire */
+        /* 20261121e : ➡️ 📉 passer une série 🚀 en Cotes basses */
+        try { const su0 = state.u, cf0 = window.confirm; window.confirm = () => true;
+          const uV = { n: 'Test VersCb', lc: { '|dom': 2, '|ext': 3 }, mode: { dom: 'cb' }, s: 5 }; state.u = [uV];
+          const H = String(window._g45UlPaliers(uV, []) || ''); const bt = (H.match(/g45VersCb/g) || []).length;
+          window.g45VersCb('Test VersCb', '|dom'); const st = (uV.lcb || {})['|dom'] || {};
+          window.confirm = cf0; state.u = su0;
+          o.versCb = (bt === 1 && uV.lc['|dom'] === 1 && uV.lc['|ext'] === 3 && st.p === 2 && st.per > 0 && st.prev === st.per) || JSON.stringify({ bt, lc: uV.lc, st, g: window._g45Grille(uV, '|dom') });
+        } catch (e) { o.versCb = 'erreur : ' + e.message; }
         /* 20261121b : ➕ paris perdus de la série (Prochaines 24 h / Mes séries) */
         try { const sa0 = state.a; const uT = { n: 'Test Pertes', lc: { '|dom': 3 } };
           state.a = [{ id: '5', n: 'Test Pertes', isS: true, win: false, domicile: 'dom', m: 10, cote: 1.8, date: '2026-11-18', target: 'Chelsea' },
@@ -2800,6 +2808,7 @@ serveur.listen(0, async () => {
     ok('🏀 Fiche stats joueur NBA / NFL du mur (archives) branchée', r.usj === true, r.usj);
     ok('📚 DraftKings + archives (matchs semblables) et 🚑 absents branchés', r.sbl === true, r.sbl);
     ok('➕ Paris perdus de la série en cours (Cockpit)', r.ckPer === true, r.ckPer);
+    ok('➡️ 📉 Passer une série Cockpit en Cotes basses', r.versCb === true, r.versCb);
     ok('🔍 Recherche + puces dans 🃏 Mes cartes', r.mcRech === true, r.mcRech);
     ok('🏁 Cockpit BET45 publié (gones) et lu sur bet45', r.ckPub === true, r.ckPub);
     ok('Fiche : filtre Lieu + Types en entier colorés', r.lieuF === true, r.lieuF);
