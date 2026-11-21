@@ -1548,6 +1548,11 @@ serveur.listen(0, async () => {
         const F = ((document.getElementById('g45ck') || {}).textContent || '').replace(/\s/g, '');
         state.u = u0; window._g45CkAg = null; g45CkJour(jm); if (dm.getMonth() !== d.getMonth()) g45CkMois(-1);
         /* 20261119q : 🎫 panneau « Ton pari » (PC) — moteur + lecture du formulaire */
+        /* 20261121q : 🏁 duos double chance buteur NHL */
+        try { const d0 = window._g45Duos; window._g45Duos = { s: ['2025-26', '2026-27'], L: [['Joel Eriksson Ek', '1', 'Kirill Kaprizov', '2', 'Wild', '30', 97, 68, 25, 19, 3, 45, 35, 2, 52, 33, 3, 0], ['Mark Scheifele', '3', 'Kyle Connor', '4', 'Jets', '28', 109, 71, 25, 17, 4, 50, 33, 3, 59, 38, 4, 1]] };
+          const H = String(window._g45DuosHtml() || ''); window._g45Duos = d0;
+          o.duos = (/Ek ou Kaprizov/.test(H) && /Scheifele ou Connor/.test(H) && /cote mini/.test(H) && /g45DuoMur\(0\)/.test(H)) || H.slice(0, 200);
+        } catch (e) { o.duos = 'erreur : ' + e.message; }
         /* 20261121e : ➡️ 📉 passer une série 🚀 en Cotes basses */
         try { const su0 = state.u, cf0 = window.confirm; window.confirm = () => true;
           const uV = { n: 'Test VersCb', lc: { '|dom': 2, '|ext': 3 }, mode: { dom: 'cb' }, s: 5 }; state.u = [uV];
@@ -2811,6 +2816,7 @@ serveur.listen(0, async () => {
     ok('📚 DraftKings + archives (matchs semblables) et 🚑 absents branchés', r.sbl === true, r.sbl);
     ok('➕ Paris perdus de la série en cours (Cockpit)', r.ckPer === true, r.ckPer);
     ok('➡️ 📉 Passer une série Cockpit en Cotes basses', r.versCb === true, r.versCb);
+    ok('🏁 Duos double chance buteur NHL (Jouable en Cockpit)', r.duos === true, r.duos);
     ok('🔍 Recherche + puces dans 🃏 Mes cartes', r.mcRech === true, r.mcRech);
     ok('🏁 Cockpit BET45 publié (gones) et lu sur bet45', r.ckPub === true, r.ckPub);
     ok('Fiche : filtre Lieu + Types en entier colorés', r.lieuF === true, r.lieuF);
