@@ -2237,6 +2237,16 @@ serveur.listen(0, async () => {
           window.g45CkOnglet('tr'); const tc0 = document.getElementById('t-compet'); const tr0 = document.getElementById('ck-tr').contains(tc0) && window._g45CompetCk === true && tc0.style.display === 'block' && /Trouver/.test(tc0.innerText || '');   /* 20261105s : #t-compet déplacé dans le Cockpit */
           window.g45LoiVue('eq'); const trEq = document.getElementById('ck-tr').contains(tc0) && /Pépites du jour/.test(document.getElementById('ck-loi').innerText || '') && !/Créer la carte/.test(document.getElementById('ck-loi').innerText || '');
           window.g45CkOnglet('tdb'); const tr = tr0 && trEq && !document.getElementById('ck-tr').contains(tc0) && window._g45CompetCk === false;
+          /* 20261121d : 🔍 recherche dans 🃏 Mes cartes */
+          try { const u0m = state.u; state.u = [{ n: 'Olympique Lyonnais', sport: '⚽', s: 5, l: 1 }, { n: 'Manchester City', sport: '⚽', s: 5, l: 3 }, { n: 'Erling Haaland', sport: '⚽', type: 'joueur', s: 4, l: 1, lc: { '|dom': 2 } }];
+            window.g45CkOnglet('mc'); await new Promise(r => setTimeout(r, 50));
+            const vis = () => [...document.querySelectorAll('#ulist .urow')].filter(r => r.style.display !== 'none').map(r => r.textContent);
+            const barre = !!document.getElementById('g45-mc-q'); window.g45McCherche('lyo'); await new Promise(r => setTimeout(r, 20)); const v1 = vis();
+            window.g45McVider(); window.g45McPuce('ser'); await new Promise(r => setTimeout(r, 20)); const v2 = vis();
+            window.g45McPuce('tout'); const v3 = vis(); window.g45CkOnglet('tdb'); const v4 = [...document.querySelectorAll('#ulist .urow')].every(r => r.style.display !== 'none');
+            state.u = u0m; try { render(); } catch (e) {}
+            window.__mcRech = (barre && v1.length === 1 && /Lyonnais/.test(v1[0]) && v2.length === 2 && !v2.some(t => /Lyonnais/.test(t)) && v3.length === 3 && v4) || JSON.stringify([barre, v1.length, v2.length, v3.length, v4]);
+          } catch (e) { window.__mcRech = 'erreur : ' + e.message; }
           /* 20261105r : 📊 Loi des séries (liste du robot simulée) */
           const LT = window._g45LoiT, tF = Date.now() + 5 * 3600e3; LT.LOI.d = { at: Date.now(), s: 5, L: [{ sp: 'basketball', lg: 'nba', ligue: 'NBA', eid: 'E9', t: tF, id: '16', eq: 'Loi Wolves', adv: 'Rockets', d: 1, lieu: 'dom', k: 'vq', lib: 'Vainqueur', pire: 4, cours: 4, n: 120, ok: 70, p: [3, 2, 2, 4, 2] },
             { sp: 'soccer', lg: 'fra.1', ligue: 'Ligue 1', eid: 'E8', t: tF, id: '7', eq: 'Ck A', adv: 'Lille', d: 0, lieu: 'tout', k: 'o15', lib: 'Plus de 1,5 buts', pire: 3, cours: 4, n: 150, ok: 110, p: [1, 3], qv: Date.UTC(2026, 7, 27, 18) }] }; LT.LOI.t = Date.now();
@@ -2281,7 +2291,7 @@ serveur.listen(0, async () => {
           o.ckMonde = (off && auto && ferme && tog && /Le monde du Cockpit/.test(tx) && /Ck A.*P8 sur 9/.test(tx) && /plus que 1 palier/.test(tx) && /Ck B/.test(tx) && /\+10 €/.test(tx) && /ne couvre pas/.test(tx)) || JSON.stringify({ off, auto, ferme, tog, tx: tx.slice(0, 600) });
           state.b = sb; state.u = su; state.a = sa; state.h = sh; if (so === undefined) delete state.ckOn; else state.ckOn = so; window._g45CkPoser();
         } catch (e) { o.ckMonde = 'erreur : ' + e.message; }
-        o.ckBil = window.__ckBil; o.ckAb = window.__ckAb;
+        o.ckBil = window.__ckBil; o.ckAb = window.__ckAb; o.mcRech = window.__mcRech;
         /* 20261104d : 💰 mise en % de la bankroll + 🪜 P1 auto */
         try { const sb = state.b, su = state.u, sS = JSON.parse(JSON.stringify(STRATS)), cf = window.confirm; window.confirm = () => true;
           state.b = { a: '10000', b: '6840.33' }; state.u = (state.u || []).concat([{ n: 'Pct FC', s: '4', sport: '⚽' }]);
@@ -2790,6 +2800,7 @@ serveur.listen(0, async () => {
     ok('🏀 Fiche stats joueur NBA / NFL du mur (archives) branchée', r.usj === true, r.usj);
     ok('📚 DraftKings + archives (matchs semblables) et 🚑 absents branchés', r.sbl === true, r.sbl);
     ok('➕ Paris perdus de la série en cours (Cockpit)', r.ckPer === true, r.ckPer);
+    ok('🔍 Recherche + puces dans 🃏 Mes cartes', r.mcRech === true, r.mcRech);
     ok('🏁 Cockpit BET45 publié (gones) et lu sur bet45', r.ckPub === true, r.ckPub);
     ok('Fiche : filtre Lieu + Types en entier colorés', r.lieuF === true, r.lieuF);
     ok('🏉 Critères rugby : phases finales reconnues (Compétition)', r.rgPo === true, r.rgPo);
