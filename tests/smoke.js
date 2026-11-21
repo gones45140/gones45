@@ -1548,6 +1548,16 @@ serveur.listen(0, async () => {
         const F = ((document.getElementById('g45ck') || {}).textContent || '').replace(/\s/g, '');
         state.u = u0; window._g45CkAg = null; g45CkJour(jm); if (dm.getMonth() !== d.getMonth()) g45CkMois(-1);
         /* 20261119q : 🎫 panneau « Ton pari » (PC) — moteur + lecture du formulaire */
+        /* 20261121b : ➕ paris perdus de la série (Prochaines 24 h / Mes séries) */
+        try { const sa0 = state.a; const uT = { n: 'Test Pertes', lc: { '|dom': 3 } };
+          state.a = [{ id: '5', n: 'Test Pertes', isS: true, win: false, domicile: 'dom', m: 10, cote: 1.8, date: '2026-11-18', target: 'Chelsea' },
+                     { id: '4', n: 'Test Pertes', isS: true, win: false, domicile: 'ext', m: 7, cote: 2 },
+                     { id: '3', n: 'Test Pertes', isS: true, win: false, domicile: 'dom', m: 5, cote: 1.7, date: '2026-11-15' },
+                     { id: '2', n: 'Test Pertes', isS: true, win: false, domicile: 'dom', m: 5, cote: 1.7 },
+                     { id: '1', n: 'Test Pertes', isS: true, win: true, domicile: 'dom', m: 5, cote: 1.7 }];
+          const P3 = window._g45CkPertes(uT, '|dom', 3), P9 = window._g45CkPertes(uT, '|dom', 9); state.a = sa0;
+          o.ckPer = (P3.length === 2 && P3[0].id === '5' && P3[1].id === '3' && P9.length === 3 && P9[2].id === '2' && typeof window.g45CkPlus === 'function') || JSON.stringify([P3.map(x => x.id), P9.map(x => x.id)]);
+        } catch (e) { o.ckPer = 'erreur : ' + e.message; }
         try { o.sbl = typeof window._g45FicheSembl === 'function' && typeof window._g45CeCharger === 'function' && !!window._g45TkAbs; } catch (e) { o.sbl = 'erreur : ' + e.message; }
         try { o.usj = typeof window.g45UsJoueurPanel === 'function' && typeof window._g45ButJoueurFoot === 'function' && !!window.g45MurJoueurPanel._g45l; } catch (e) { o.usj = 'erreur : ' + e.message; }
         try { const L = window._g45TkPc && window._g45TkPc.lire(); o.tkpc = (typeof window._g45FichePari === 'function' && !!L && 'lab' in L && 'cote' in L) || JSON.stringify(L); } catch (e) { o.tkpc = 'erreur : ' + e.message; }
@@ -2779,6 +2789,7 @@ serveur.listen(0, async () => {
     ok('🎫 Panneau « Ton pari » (PC) : moteur et lecture du formulaire', r.tkpc === true, r.tkpc);
     ok('🏀 Fiche stats joueur NBA / NFL du mur (archives) branchée', r.usj === true, r.usj);
     ok('📚 DraftKings + archives (matchs semblables) et 🚑 absents branchés', r.sbl === true, r.sbl);
+    ok('➕ Paris perdus de la série en cours (Cockpit)', r.ckPer === true, r.ckPer);
     ok('🏁 Cockpit BET45 publié (gones) et lu sur bet45', r.ckPub === true, r.ckPub);
     ok('Fiche : filtre Lieu + Types en entier colorés', r.lieuF === true, r.lieuF);
     ok('🏉 Critères rugby : phases finales reconnues (Compétition)', r.rgPo === true, r.rgPo);
