@@ -1553,8 +1553,9 @@ serveur.listen(0, async () => {
           const uV = { n: 'Test VersCb', lc: { '|dom': 2, '|ext': 3 }, mode: { dom: 'cb' }, s: 5 }; state.u = [uV];
           const H = String(window._g45UlPaliers(uV, []) || ''); const bt = (H.match(/g45VersCb/g) || []).length;
           window.g45VersCb('Test VersCb', '|dom'); const st = (uV.lcb || {})['|dom'] || {};
+          let cb24 = false; try { const d9 = new Date(Date.now() + 3 * 3600e3); window._g45CkAg = { L: [{ t: d9.getTime(), n: 'Test VersCb', d: 1, adv: 'Fulham', sp: 'soccer' }] }; window.g45CkOnglet('tdb'); const T = (document.getElementById('t-cockpit') || {}).innerText || ''; cb24 = /📉 C2 sur 5/.test(T); window._g45CkAg = null; } catch (e) { cb24 = e.message; }
           window.confirm = cf0; state.u = su0;
-          o.versCb = (bt === 1 && uV.lc['|dom'] === 1 && uV.lc['|ext'] === 3 && st.p === 2 && st.per > 0 && st.prev === st.per) || JSON.stringify({ bt, lc: uV.lc, st, g: window._g45Grille(uV, '|dom') });
+          o.versCb = cb24 !== true ? 'Prochaines 24 h : ' + cb24 : (bt === 1 && uV.lc['|dom'] === 1 && uV.lc['|ext'] === 3 && st.p === 2 && st.per > 0 && st.prev === st.per) || JSON.stringify({ bt, lc: uV.lc, st, g: window._g45Grille(uV, '|dom') });
         } catch (e) { o.versCb = 'erreur : ' + e.message; }
         /* 20261121b : ➕ paris perdus de la série (Prochaines 24 h / Mes séries) */
         try { const sa0 = state.a; const uT = { n: 'Test Pertes', lc: { '|dom': 3 } };
