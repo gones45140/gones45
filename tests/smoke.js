@@ -2527,8 +2527,10 @@ serveur.listen(0, async () => {
         const ex = (() => { const F = window._g45SbCalcF({ k: '2b', a: 1.2, c1: 3, b: 6.7, c: 0, p: 'rep' }, '2', '61.48'); return F.ok && F.s2 === 61.48; })();
         g45SbRegler(J[0].sb.g, '2', true);   /* PSG ne gagne pas : POUR perdu, CONTRE gagné */
         const fin = n2(parseFloat(state.b.sbx1) + parseFloat(state.b.orbitx) - 1000) === 7.78 && state.h.length === h0 && state.a.length === a0 + 2;
+        sv('sb-a', '2,30'); sv('sb-b', '2,10'); sv('sb-m1', '100'); g45SbMise('1', '100'); sv('sb-m2', '120'); g45SbMise('2', '120');   /* 20261122h : 2 mises tapées = gardées */
+        const deux = parseFloat(document.getElementById('sb-m1').value) === 100 && /Contre sur[^€]*120,00/.test(document.getElementById('sb-res').innerText.replace(/\s+/g, ' ')); g45SbKind('2b');
         state.a.splice(0, 2); state.b = JSON.parse(sb0); swBet('simple');
-        o.surebet = (calcOk && tk && /📷 Ticket 1/.test(document.getElementById('sub-sb') ? document.getElementById('sub-sb').innerHTML : '') && pan && resOk && debit && /⚖️ Surebet · PSG – Lyon/.test(carte || '') && cache === '' && fin && enc && ex) || JSON.stringify({ enc, ex, calcOk, pan, resOk, debit, c: (carte || '').slice(0, 80), cache, fin, A, Bq, C, D2 });
+        o.surebet = (calcOk && tk && /📷 Ticket 1/.test(document.getElementById('sub-sb') ? document.getElementById('sub-sb').innerHTML : '') && pan && resOk && debit && /⚖️ Surebet · PSG – Lyon/.test(carte || '') && cache === '' && fin && enc && ex && deux) || JSON.stringify({ deux, enc, ex, calcOk, pan, resOk, debit, c: (carte || '').slice(0, 80), cache, fin, A, Bq, C, D2 });
       } catch (e) { o.surebet = 'erreur : ' + e.message; }
       /* 20261109i : séries de la carte — lignes du book (Rams « Couvre le handicap du book ») */
       try { const C = { sp: 'football', lg: 'nfl', id: '14' }, a1 = _g45SerCombo('🏠/✈️ Couvre le handicap du book', C, 'Los Angeles Rams'), a2 = _g45SerCombo('Victoire + Under du total du book', C, 'Los Angeles Rams'), a3 = _g45SerCombo('Ne couvre pas le handicap du book', C, 'Los Angeles Rams');
