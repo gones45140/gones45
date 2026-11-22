@@ -715,6 +715,12 @@ serveur.listen(0, async () => {
         o.retour = (v1 === 't-outils' && v2 === 't-outils' && m2 === 'none') || JSON.stringify({ t0, v1, v2, m2 });
       } catch (e) { o.retour = 'erreur : ' + e.message; }
       try {
+        /* 20261123n : ligne 📌 ✈️ cachée quand la carte n'a plus de pari ✈️ */
+        const ps = { sig: 'ext|x', lib: 'au moins un de (A, B) buteur', k: 'ext', ans: ['2026-27'], p: [1], tot: 1, at: Date.now() };
+        const h1 = _g45UlPsHtml({ ps: ps, note: 'Edmonton Oilers 🏠 Buteur' }), h2 = _g45UlPsHtml({ ps: ps, note: 'Edmonton Oilers 🏠 Buteur ✈️ Buteur' });
+        o.psLieu = (h1 === '' && /au moins un de/.test(h2)) || JSON.stringify({ h1: h1.slice(0, 80), h2: h2.slice(0, 80) });
+      } catch (e) { o.psLieu = 'erreur : ' + e.message; }
+      try {
         /* 20261114m : série coupée en fin de saison → continue sur la suivante (1,30 ❌ en 2025, 1,60 ✅ en 2026) */
         const RS = window._g45CbSimS([{ sa: '2025', ms: [{ c: 1.3, w: false }] }, { sa: '2026', ms: [{ c: 1.6, w: true }] }], { p1: 10, stop: 5 });
         o.cbSuite = (Math.abs(RS[0].regle.g + 10) < 1e-6 && Math.abs(RS[1].regle.g - 18) < 1e-6 && RS.fin.regle === 0) || JSON.stringify(RS);
@@ -2810,6 +2816,7 @@ serveur.listen(0, async () => {
     ok('👥 Ton pari : historique « A OU / ET B »', r.ficheMulti === true, r.ficheMulti);
     ok('🔄 Séries carte : pari à plusieurs joueurs', r.serMulti === true, r.serMulti);
     ok('⬅️ Flèche retour : onglet précédent / ferme la fenêtre', r.retour === true, r.retour);
+    ok('📌 Ligne gardée cachée sans pari au lieu', r.psLieu === true, r.psLieu);
     ok('📉 Cotes basses : série continue sur la saison suivante', r.cbSuite === true, r.cbSuite);
     ok('📉 Cotes basses : méthode Engager (mise, série, arrêt, filtre Bilan)', r.cbMeth === true, r.cbMeth);
     ok('📉 Cotes basses : Tableau de bord + bouton graphique', r.cbTdb === true, r.cbTdb);
