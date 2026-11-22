@@ -1439,6 +1439,15 @@ serveur.listen(0, async () => {
         state.u = su; state.a = sa; state.h = sh;
         o.lcCanon = (lc === '{"liga|ext":1,"liga|dom":1}' && p1 === 1 && p2 === 1 && _g45CompNz('Liga Portugal') === 'ligaportugal') || JSON.stringify({ lc, p1, p2 });
       } catch (e) { o.lcCanon = 'erreur : ' + e.message; }
+      try {
+        /* 20261124b : palier d'une ligue d'un autre sport, sans pari → retiré (49ers 🏈 « nhl|ext ») ; même sport ou pari existant → gardé */
+        const su = state.u, sa = state.a, sh = state.h;
+        state.u = [{ n: 'SF Test', sport: '🏈', lc: { 'nfl|ext': 2, 'nfl|dom': 2, 'nhl|ext': 3 } }, { n: 'Oil Test', sport: '🏒', lc: { 'nhl|dom': 2, 'nfl|ext': 4 } }];
+        state.a = [{ n: 'SF Test', comp: 'NFL', domicile: 'ext', date: '2026-11-15', win: false }, { n: 'Oil Test', comp: 'NFL', domicile: 'ext', date: '2026-11-15', win: false }]; state.h = [];
+        _g45LcCanon(); const l1 = JSON.stringify(state.u[0].lc), l2 = JSON.stringify(state.u[1].lc);
+        state.u = su; state.a = sa; state.h = sh;
+        o.lcSport = (l1 === '{"nfl|ext":2,"nfl|dom":2}' && l2 === '{"nhl|dom":2,"nfl|ext":4}') || JSON.stringify({ l1, l2 });
+      } catch (e) { o.lcSport = 'erreur : ' + e.message; }
       /* 20261027d — F1 critères 4 saisons + Jouable en Cockpit */
       try {
         const R = (r, a, b, gA) => ({ r, c: 'cir' + r, x: [['ver', 'rb', a, 1, gA, 10, 'Max Verstappen'], ['per', 'rb', b, b < 20 ? 1 : 0, 5, 2, 'Sergio Perez'], ['nor', 'mc', 2, 1, 2, 18, 'Lando Norris']] });
@@ -3068,6 +3077,7 @@ serveur.listen(0, async () => {
     ok('Bank : abonnements (prélèvement mensuel, sans doublon, synchro)', r.abo === true, r.abo);
     ok('Bank : historique des mouvements (dépôts / retraits)', r.mvt === true, r.mvt);
     ok('Montante : une seule échelle par championnat (Liga / La Liga…)', r.lcCanon === true, r.lcCanon);
+    ok('🏈 Palier d\'un autre sport retiré (49ers NHL)', r.lcSport === true, r.lcSport);
     ok('F1 : critères 4 saisons + Jouable en Cockpit (page F1 + onglet Saisons)', r.f1cr === true, r.f1cr);
     ok('NHL Séries individuelles : 🔍 Pépites (50 joueurs)', r.pep === true, r.pep);
     ok('Critères 4 saisons : Jouable en Cockpit ? (classement de la ligue)', r.crCls === true, r.crCls);
