@@ -700,8 +700,11 @@ serveur.listen(0, async () => {
         const L1 = [{ gameDate: '2026-01-01', eid: '1', goals: 0, assists: 1 }, { gameDate: '2026-01-03', eid: '2', goals: 1, assists: 0 }, { gameDate: '2026-01-05', eid: '3', goals: 0, assists: 0 }];
         const L2 = [{ gameDate: '2026-01-01', eid: '1', goals: 1, assists: 0 }, { gameDate: '2026-01-03', eid: '2', goals: 0, assists: 0 }];
         const FU = window._g45SerFusionJ(L1, [L2], 'un'), FE = window._g45SerFusionJ(L1, [L2], 'et');
-        o.serMulti = (M1 && M1.L.length === 2 && M1.L[1] === 'Leon Draisaitl' && M1.m === 'un' && M2 && M2.m === 'et' && M2.L.join('|') === 'Kane|Musiala' && M3 === null
-          && FU.length === 2 && FU[0].goals === 1 && FU[1].goals === 1 && FE[0].goals === 0 && FE[1].goals === 0) || JSON.stringify({ M1, M2, M3, FU, FE });
+        const M4 = window._g45SerMultiJ('🏠 au moins un de (Kyle Connor ou Mark Scheifele) buteur'), LJ4 = window._g45SerLegsJ('🏠 buteur', 'Winnipeg Jets');
+        const H5 = _g45UlPsHtml({ ps: { sig: 'glob|x', lib: 'au moins un de (A, B) buteur', k: 'glob', ans: ['2026-27'], p: [1], tot: 1, at: Date.now() }, note: 'Winnipeg Jets 🏠 au moins un de (A ou B) buteur' });
+        if (!(M4 && M4.L.join('|') === 'Kyle Connor|Mark Scheifele' && LJ4 && LJ4.pj === 'g' && H5 === '')) o.serMulti0 = JSON.stringify({ M4, LJ4, H5: H5.slice(0, 60) });
+        o.serMulti = !o.serMulti0 && (M1 && M1.L.length === 2 && M1.L[1] === 'Leon Draisaitl' && M1.m === 'un' && M2 && M2.m === 'et' && M2.L.join('|') === 'Kane|Musiala' && M3 === null
+          && FU.length === 2 && FU[0].goals === 1 && FU[1].goals === 1 && FE[0].goals === 0 && FE[1].goals === 0) || o.serMulti0 || JSON.stringify({ M1, M2, M3, FU, FE });
       } catch (e) { o.serMulti = 'erreur : ' + e.message; }
       try {
         /* 20261123m : ⬅️ flèche retour = onglet précédent, ferme d'abord une fenêtre ouverte */
