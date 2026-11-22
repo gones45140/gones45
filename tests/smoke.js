@@ -737,6 +737,18 @@ serveur.listen(0, async () => {
         o.tnLive = (/EN DIRECT/.test(a1) && /Zverev 4-6 · 3-1 Alcaraz/.test(a1) && /2e set/.test(a1) && /⏳/.test(a1) && /Terminé/.test(a2) && /✅ gagné/.test(a2)) || JSON.stringify({ a1: a1.replace(/<[^>]+>/g, ''), a2: a2.replace(/<[^>]+>/g, '') });
       } catch (e) { o.tnLive = 'erreur : ' + e.message; }
       try {
+        /* 20261123x : 🎾 pari tennis réglé → rond = vainqueur du match (ESPN simulé, winner: true) */
+        const f0 = window.fetch, J = (x) => Promise.resolve(new Response(JSON.stringify(x), { status: 200, headers: { 'Content-Type': 'application/json' } }));
+        window.fetch = function (u) { u = String(u); if (u.indexOf('/sports/tennis/') < 0) return f0.apply(this, arguments); if (u.indexOf('/atp/') < 0) return J({ events: [] });
+          return J({ events: [{ groupings: [{ grouping: { displayName: 'Men\'s Singles' }, competitions: [{ id: 'T2', status: { type: { state: 'post' } }, competitors: [{ athlete: { displayName: 'Carlos Alcaraz' }, winner: true, linescores: [{ value: 6 }, { value: 6 }] }, { athlete: { displayName: 'Alexander Zverev' }, winner: false, linescores: [{ value: 4 }, { value: 3 }] }] }] }] }] }); };
+        const h = { id: 'twx' + Date.now(), n: 'SIMPLE', target: 'Alexandre Zverev vs Carlos Alcaraz', joueur: 'Zverev', type: 'Remporter pas de set', sport: '🎾', date: '2026-11-22', isPending: false, win: true };
+        const v0 = window._g45TnVainqueur(h), vP = window._g45TnVainqueur(Object.assign({}, h, { id: 'twp', isPending: true }));
+        await new Promise(r => setTimeout(r, 1500));
+        const v1 = window._g45TnVainqueur(h), r1 = _g45IdJoueur(h, '');
+        window.fetch = f0;
+        o.tnVainq = (v0 === '' && vP === '' && v1 === 'Carlos Alcaraz' && /data-g45jph="Carlos Alcaraz"/.test(r1) && />CA</.test(r1)) || JSON.stringify({ v0, vP, v1, r1: r1.slice(0, 160) });
+      } catch (e) { o.tnVainq = 'erreur : ' + e.message; }
+      try {
         /* 20261123r : 🚑 absents foot Premier League via FPL (simulé) */
         const fF = window.fplFetch;
         window.fplFetch = async () => ({ teams: [{ id: 1, name: 'Arsenal', short_name: 'ARS' }, { id: 13, name: 'Man City', short_name: 'MCI' }],
@@ -2866,6 +2878,7 @@ serveur.listen(0, async () => {
     ok('⬅️ Flèche retour : onglet précédent / ferme la fenêtre', r.retour === true, r.retour);
     ok('📌 Ligne gardée cachée sans pari au lieu', r.psLieu === true, r.psLieu);
     ok('🎾 Direct tennis (sets + remporter un set)', r.tnLive === true, r.tnLive);
+    ok('🎾 Photo du vainqueur (paris tennis réglés)', r.tnVainq === true, r.tnVainq);
     ok('🚑 Absents foot (FPL, Premier League)', r.absFpl === true, r.absFpl);
     ok('📋 Stats des joueurs NFL (fenêtre de match)', r.nflJ === true, r.nflJ);
     ok('📉 Cotes basses : série continue sur la saison suivante', r.cbSuite === true, r.cbSuite);
