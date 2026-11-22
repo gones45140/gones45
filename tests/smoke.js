@@ -752,6 +752,16 @@ serveur.listen(0, async () => {
         o.absFpl = (/Fantasy Premier League/.test(ha) && /Bukayo Saka/.test(ha) && /milieu/.test(ha) && /6 buts/.test(ha) && /incertain 75 %/.test(ha) && !/Ailleurs/.test(ha) && /Manchester City : aucun/.test(ha) && hb === '') || JSON.stringify({ ha: ha.slice(0, 400), hb });
       } catch (e) { o.absFpl = 'erreur : ' + e.message; }
       try {
+        /* 20261123s : 📋 stats des joueurs NFL (fenêtre de match) */
+        const h0 = state.h; state.h = [{ id: 'q1', joueur: 'Travis Kelce ou Rashee Rice', type: 'Marqueur de TD' }];
+        const D = { boxscore: { players: [{ team: { displayName: 'Kansas City Chiefs', color: 'e31837' }, statistics: [
+          { name: 'passing', labels: ['C/ATT', 'YDS', 'AVG', 'TD', 'INT', 'SACKS', 'QBR', 'RTG'], athletes: [{ athlete: { displayName: 'Patrick Mahomes' }, stats: ['4/5', '36', '7.2', '1', '0', '0-0', '80', '120'] }] },
+          { name: 'receiving', labels: ['REC', 'YDS', 'AVG', 'TD', 'LONG', 'TGTS'], athletes: [{ athlete: { displayName: 'Travis Kelce' }, stats: ['2', '13', '6.5', '1', '8', '3'] }, { athlete: { displayName: 'Emmett Johnson' }, stats: ['1', '8', '8.0', '0', '8', '1'] }] }] },
+          { team: { displayName: 'Arizona Cardinals' }, statistics: [{ name: 'rushing', labels: ['CAR', 'YDS', 'AVG', 'TD', 'LONG'], athletes: [{ athlete: { displayName: 'James Conner' }, stats: ['3', '10', '3.3', '0', '5'] }] }] }] } };
+        const H = _g45NflFeuilleHtml(D), T = H.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' '); state.h = h0;
+        o.nflJ = (/Stats des joueurs/.test(T) && /Passes Joueur Réuss\.\/Tent\. Yards TD INT Patrick Mahomes 4\/5 36 1 0/.test(T) && /⭐ Travis Kelce 🏈 2 13 1 3/.test(T) && /Emmett Johnson 1 8 0 1/.test(T) && /James Conner/.test(T) && !/⭐ Emmett/.test(T) && _g45NflFeuilleHtml({}) === '') || T.slice(0, 400);
+      } catch (e) { o.nflJ = 'erreur : ' + e.message; }
+      try {
         /* 20261114m : série coupée en fin de saison → continue sur la suivante (1,30 ❌ en 2025, 1,60 ✅ en 2026) */
         const RS = window._g45CbSimS([{ sa: '2025', ms: [{ c: 1.3, w: false }] }, { sa: '2026', ms: [{ c: 1.6, w: true }] }], { p1: 10, stop: 5 });
         o.cbSuite = (Math.abs(RS[0].regle.g + 10) < 1e-6 && Math.abs(RS[1].regle.g - 18) < 1e-6 && RS.fin.regle === 0) || JSON.stringify(RS);
@@ -2850,6 +2860,7 @@ serveur.listen(0, async () => {
     ok('📌 Ligne gardée cachée sans pari au lieu', r.psLieu === true, r.psLieu);
     ok('🎾 Direct tennis (sets + remporter un set)', r.tnLive === true, r.tnLive);
     ok('🚑 Absents foot (FPL, Premier League)', r.absFpl === true, r.absFpl);
+    ok('📋 Stats des joueurs NFL (fenêtre de match)', r.nflJ === true, r.nflJ);
     ok('📉 Cotes basses : série continue sur la saison suivante', r.cbSuite === true, r.cbSuite);
     ok('📉 Cotes basses : méthode Engager (mise, série, arrêt, filtre Bilan)', r.cbMeth === true, r.cbMeth);
     ok('📉 Cotes basses : Tableau de bord + bouton graphique', r.cbTdb === true, r.cbTdb);
