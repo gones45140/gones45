@@ -753,13 +753,13 @@ serveur.listen(0, async () => {
       } catch (e) { o.absFpl = 'erreur : ' + e.message; }
       try {
         /* 20261123s : 📋 stats des joueurs NFL (fenêtre de match) */
-        const h0 = state.h; state.h = [{ id: 'q1', joueur: 'Travis Kelce ou Rashee Rice', type: 'Marqueur de TD' }];
+        const h0 = state.h; state.h = [{ id: 'q1', joueur: 'Travis Kelce', type: 'Marqueur de TD' }, { id: 'q2', type: 'Double chance marqueur de touchdowns - R. Rice ou T. Johnson', n: 'Kansas City Chiefs' }];
         const D = { boxscore: { players: [{ team: { displayName: 'Kansas City Chiefs', color: 'e31837' }, statistics: [
           { name: 'passing', labels: ['C/ATT', 'YDS', 'AVG', 'TD', 'INT', 'SACKS', 'QBR', 'RTG'], athletes: [{ athlete: { displayName: 'Patrick Mahomes' }, stats: ['4/5', '36', '7.2', '1', '0', '0-0', '80', '120'] }] },
           { name: 'receiving', labels: ['REC', 'YDS', 'AVG', 'TD', 'LONG', 'TGTS'], athletes: [{ athlete: { displayName: 'Travis Kelce' }, stats: ['2', '13', '6.5', '1', '8', '3'] }, { athlete: { displayName: 'Emmett Johnson' }, stats: ['1', '8', '8.0', '0', '8', '1'] }] }] },
           { team: { displayName: 'Arizona Cardinals' }, statistics: [{ name: 'rushing', labels: ['CAR', 'YDS', 'AVG', 'TD', 'LONG'], athletes: [{ athlete: { displayName: 'James Conner' }, stats: ['3', '10', '3.3', '0', '5'] }] }] }] } };
         const H = _g45NflFeuilleHtml(D), T = H.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' '); state.h = h0;
-        o.nflJ = (/Stats des joueurs/.test(T) && /Passes Joueur Réuss\.\/Tent\. Yards TD INT Patrick Mahomes 4\/5 36 1 0/.test(T) && /⭐ Travis Kelce 🏈 2 13 1 3/.test(T) && /Emmett Johnson 1 8 0 1/.test(T) && /James Conner/.test(T) && !/⭐ Emmett/.test(T) && _g45NflFeuilleHtml({}) === '') || T.slice(0, 400);
+        o.nflJ = (/Stats des joueurs/.test(T) && /Patrick Mahomes 🎯🏈 4\/5 36 1 0/.test(T) && /⭐ Travis Kelce 🏈 2 13 1 3/.test(T) && /⭐ Emmett Johnson 1 8 0 1/.test(T) && /James Conner/.test(T) && !/⭐ Patrick/.test(T) && /data-g45pl="x"/.test(H) && _g45NflFeuilleHtml({}) === '') || T.slice(0, 400);
       } catch (e) { o.nflJ = 'erreur : ' + e.message; }
       try {
         /* 20261114m : série coupée en fin de saison → continue sur la suivante (1,30 ❌ en 2025, 1,60 ✅ en 2026) */
