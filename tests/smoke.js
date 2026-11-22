@@ -2541,6 +2541,13 @@ serveur.listen(0, async () => {
       try { const nv = (x, y) => (1 / x) / (1 / x + 1 / y), q = [1 / 1.19, 1 / 8, 1 / 12], sq = q[0] + q[1] + q[2];
         const F = window._g45TkDkAjuste({ w: q[0] / sq, d: q[1] / sq, b: nv(1.46, 2.70), T: [[1.5, nv(1.10, 5.6)], [2.5, nv(1.38, 2.73)], [3.5, nv(1.98, 1.71)], [4.5, nv(3.19, 1.29)]], A: [[0.5, nv(1.40, 2.66)], [1.5, nv(2.89, 1.34)]] });
         o.dkFoot = (Math.abs(F.h - 3.46) < 0.08 && Math.abs(F.a - 1.11) < 0.06) || JSON.stringify(F); } catch (e) { o.dkFoot = 'erreur : ' + e.message; }
+      /* 20261122p : 👤 joueur écrit sur une carte d'équipe → cote DraftKings du joueur (buteur / décisif) */
+      try { const c0 = window._g45AgDkCharger; window._g45AgDkCharger = () => Promise.resolve({ lamineyamal: { '230': [[1, 2.5]], '219': [[1, 3.0]] } });
+        const R = { jo: 1, sp: 'soccer', lgx: 'esp.1' }, oj = { jn: 'Lamine Yamal', lab: 'Buteur', nom: 'Barcelona', u: { type: 'club', sport: '⚽' } }, od = Object.assign({}, oj, { lab: 'Décisif' });
+        window._g45TkDkJ(oj, R); window._g45TkDkJ(od, R); await new Promise((r) => setTimeout(r, 50));
+        const a = window._g45TkDkJ(oj, R), b = window._g45TkDkJ(od, R), P = window._g45AgDkPari('soccer', '2 buts ou plus');
+        window._g45AgDkCharger = c0;
+        o.dkJ = (!!a && Math.abs(a.p - 1 / 2.5 / 1.07) < 0.001 && !!b && b.p > a.p && P[0].ty[0] === '39') || JSON.stringify([a, b, P]); } catch (e) { o.dkJ = 'erreur : ' + e.message; }
       /* 20261122m : compétition de la série en cours (Barcelona P2 Liga, « Ligue 1 » restée d'une autre carte) */
       try { const su = state.u, sa = state.a; const uT = { n: 'Test Barca', s: 5, l: 2, lc: { 'nations|dom': 1, 'liga|ext': 2, 'liga|dom': 2 }, sport: '⚽' };
         state.u = su.concat([uT]); state.a = [{ n: 'Test Barca', comp: 'Liga', date: '2026-10-31', domicile: 'dom', m: 5, cote: 1.8, win: false, b: 'x', id: 'tb1' }].concat(sa || []);
@@ -2861,6 +2868,7 @@ serveur.listen(0, async () => {
     ok('⚽ Cote estimée par les buts (Poisson)', r.pois === true, r.pois);
     ok('🏁 Compétition de la série en cours', r.compSerie === true, r.compSerie);
     ok('📚 Foot calé sur DraftKings', r.dkFoot === true, r.dkFoot);
+    ok('👤 Joueur écrit → cote DraftKings du joueur', r.dkJ === true, r.dkJ);
     ok('📂 Filtre Lieu : reste sur l\'onglet ouvert', r.ongLieu === true, r.ongLieu);
     ok('🏁 Duos NHL / NBA (Jouable en Cockpit)', r.duos === true, r.duos);
     ok('🔍 Recherche + puces dans 🃏 Mes cartes', r.mcRech === true, r.mcRech);
