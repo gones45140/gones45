@@ -650,10 +650,17 @@ serveur.listen(0, async () => {
         /* 20261114l : 📉 Cotes basses (Calculatrice) — tableau ×5 à 1,30 et règle d'Antoine sur 1,30 ❌ / 1,30 ❌ / 1,60 ✅ */
         const T = window._g45CbTable(1.3, 10, 5, 4), R = window._g45CbSim([{ c: 1.3, w: false }, { c: 1.3, w: false }, { c: 1.6, w: true }], { p1: 10, stop: 5 });
         const R2 = window._g45CbSim([{ c: 1.3, w: false }, { c: 1.3, w: false }, { c: 1.3, w: false }], { p1: 10, stop: 3 });
-        window.swCalc('cb'); const z = document.getElementById('calc-cb'), tx = z ? z.innerText : ''; window.swCalc('sb');
+        window.g45CbSet('k', '5'); window.swCalc('cb'); const z = document.getElementById('calc-cb'), tx = z ? z.innerText : ''; window.swCalc('sb'); window.g45CbSet('k', '');   /* 20261123c : vide = règle → ×5 tapé pour ce test */
         o.cotesBasses = (Math.abs(T[1].ben - 5) < 1e-6 && Math.abs(T[3].ben - 65) < 1e-6 && T[3].tot === 1560 && Math.abs(R.regle.g - 50.67) < 0.01 && Math.abs(R.regle.mx - 190) < 0.01 && Math.abs(R.ck.g - 6) < 1e-6
           && R2.regle.ab === 1 && /Multiplicateur minimum/.test(tx) && /×4,34/.test(tx) && /1\s560/.test(tx) && z.style.display === 'none') || JSON.stringify({ T, R, R2, tx: tx.slice(0, 300) });
       } catch (e) { o.cotesBasses = 'erreur : ' + e.message; }
+      try {
+        /* 20261123c : Calculatrice rangée en 3 groupes + règle par défaut ×5,33 à 1,30 */
+        window._g45CalcRanger(); window.swCalc('cb'); const zz = document.getElementById('calc-cb'), tz = zz ? zz.innerText : ''; window.swCalc('sb');
+        const gs = Array.prototype.slice.call(document.querySelectorAll('#t-calc .calc-tabs .g45-cg')).map(function (g) { return Array.prototype.slice.call(g.querySelectorAll('.ctbtn')).map(function (b) { return b.id; }).join(','); });
+        o.calcRange = (gs.length === 3 && /^ct-sb,ct-dt,ct-lay$/.test(gs[0]) && /ct-vb/.test(gs[1]) && /ct-arjel/.test(gs[1]) && /ct-cb/.test(gs[2]) && /Mises sous 1,50/.test(tz) && /×5,33/.test(tz)
+          && document.getElementById('ct-sb').classList.contains('on')) || JSON.stringify({ gs, tz: tz.slice(0, 300) });
+      } catch (e) { o.calcRange = 'erreur : ' + e.message; }
       try {
         /* 20261114m : série coupée en fin de saison → continue sur la suivante (1,30 ❌ en 2025, 1,60 ✅ en 2026) */
         const RS = window._g45CbSimS([{ sa: '2025', ms: [{ c: 1.3, w: false }] }, { sa: '2026', ms: [{ c: 1.6, w: true }] }], { p1: 10, stop: 5 });
@@ -2727,6 +2734,7 @@ serveur.listen(0, async () => {
     ok('🏉 Compétitions : même nom, autre sport → fiche à part', r.competSp === true, r.competSp);
     ok('🏒 Séries carte joueur : matchs deux soirs de suite', r.serB2b === true, r.serB2b);
     ok('📉 Cotes basses (Calculatrice) : tableau + essai', r.cotesBasses === true, r.cotesBasses);
+    ok('🧮 Calculatrice rangée (3 groupes, règle ×5,33)', r.calcRange === true, r.calcRange);
     ok('📉 Cotes basses : série continue sur la saison suivante', r.cbSuite === true, r.cbSuite);
     ok('📉 Cotes basses : méthode Engager (mise, série, arrêt, filtre Bilan)', r.cbMeth === true, r.cbMeth);
     ok('📉 Cotes basses : Tableau de bord + bouton graphique', r.cbTdb === true, r.cbTdb);
