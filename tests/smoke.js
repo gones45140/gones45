@@ -2574,6 +2574,14 @@ serveur.listen(0, async () => {
         const R1 = T.calc(); window._g45DkLam = () => ({ h: 3.46, a: 1.11, home: true, Q: { ml: [1.19, 8, 12], bts: 1.46 } }); const R2 = T.calc();
         window._g45ButsLigues = bl0; window._g45DkLam = dk0; D.e = e0;
         o.cjPois = (!!R1.PO && !R1.DK && R1.p > 30 && R1.p < 45 && Math.abs(R1.pMoy - 25.5) < 3 && !!R2.DK && Math.abs(R2.p - 49.1) < 1) || JSON.stringify([R1.p, R1.pMoy, R2.p]); } catch (e) { o.cjPois = 'erreur : ' + e.message; }
+      /* 20261122v : 🚀 mise du Cockpit selon la cote (règle des cotes basses sur l'échelle de montante) */
+      try { const sa = state.a, li = document.getElementById('c-lieu'), lv = li && li.value, cc = document.getElementById('c-comp'), cv = cc && cc.value;
+        const u = { n: 'Test Mon', lc: { '|dom': 3 }, l: 3 };
+        state.a = [{ n: 'Test Mon', isS: true, domicile: 'dom', m: 12.5, win: false, id: '200' }, { n: 'Test Mon', isS: true, domicile: 'dom', m: 5, win: false, id: '100' }, { n: 'Test Mon', isS: true, domicile: 'dom', m: 5, win: true, id: '50' }].concat(sa || []);
+        if (li) li.value = 'dom'; if (cc) cc.value = '';
+        const a1 = window._g45MonMise(u, '|dom', 1.42), a2 = window._g45MonMise(u, '|dom', 1.65), a3 = window._g45MonMise(Object.assign({}, u, { cbR: 'a' }), '|dom', 1.65), a4 = window._g45MonMise({ n: 'Test Mon', lc: { '|dom': 1 } }, '|dom', 1.65);
+        state.a = sa; if (li) li.value = lv; if (cc) cc.value = cv;
+        o.monMise = (a1 === 54.77 && a2 === 37.5 && a3 === 52.5 && a4 === 0) || JSON.stringify([a1, a2, a3, a4]); } catch (e) { o.monMise = 'erreur : ' + e.message; }
       /* 20261122m : compétition de la série en cours (Barcelona P2 Liga, « Ligue 1 » restée d'une autre carte) */
       try { const su = state.u, sa = state.a; const uT = { n: 'Test Barca', s: 5, l: 2, lc: { 'nations|dom': 1, 'liga|ext': 2, 'liga|dom': 2 }, sport: '⚽' };
         state.u = su.concat([uT]); state.a = [{ n: 'Test Barca', comp: 'Liga', date: '2026-10-31', domicile: 'dom', m: 5, cote: 1.8, win: false, b: 'x', id: 'tb1' }].concat(sa || []);
@@ -2898,6 +2906,7 @@ serveur.listen(0, async () => {
     ok('🔄 Exchange : commission 3 % sur le gain', r.exch === true, r.exch);
     ok('👤 Liste des joueurs du club + 📅 saisons', r.jl === true, r.jl);
     ok('🎯 Calculatrice : par les buts / DraftKings', r.cjPois === true, r.cjPois);
+    ok('🚀 Mise Cockpit selon la cote', r.monMise === true, r.monMise);
     ok('📂 Filtre Lieu : reste sur l\'onglet ouvert', r.ongLieu === true, r.ongLieu);
     ok('🏁 Duos NHL / NBA (Jouable en Cockpit)', r.duos === true, r.duos);
     ok('🔍 Recherche + puces dans 🃏 Mes cartes', r.mcRech === true, r.mcRech);
