@@ -662,6 +662,15 @@ serveur.listen(0, async () => {
           && document.getElementById('ct-sb').classList.contains('on')) || JSON.stringify({ gs, tz: tz.slice(0, 300) });
       } catch (e) { o.calcRange = 'erreur : ' + e.message; }
       try {
+        /* 20261123e : ⏱️ quart-temps / mi-temps avec le plus de points (NBA) */
+        const S = window._g45CrS, P = window._g45CrPasse, cx = S.ctx; S.ctx = { sp: 'basketball', lg: 'nba', id: '2' };
+        const m = ['2026-01-01', 1, 160, 147, 0, 0, 'X']; m[13] = [[30, 25], [28, 20], [35, 30], [20, 22], [9, 8]];
+        const m0 = ['2026-01-01', 1, 100, 90, 0, 0, 'Y'];
+        const t = [P({ qtm: '3' }, m), !P({ qtm: '1' }, m), P({ mtm: '2' }, m), !P({ mtm: '1' }, m), !P({ qtm: 'p' }, m), !P({ qtm: '3' }, m0)];
+        S.ctx = { sp: 'hockey', lg: 'nhl', id: '5' }; t.push(P({ qtm: '3' }, m0));   /* hors NBA / NFL : ignoré */
+        S.ctx = cx; o.qtCr = t.every(Boolean) || JSON.stringify(t);
+      } catch (e) { o.qtCr = 'erreur : ' + e.message; }
+      try {
         /* 20261114m : série coupée en fin de saison → continue sur la suivante (1,30 ❌ en 2025, 1,60 ✅ en 2026) */
         const RS = window._g45CbSimS([{ sa: '2025', ms: [{ c: 1.3, w: false }] }, { sa: '2026', ms: [{ c: 1.6, w: true }] }], { p1: 10, stop: 5 });
         o.cbSuite = (Math.abs(RS[0].regle.g + 10) < 1e-6 && Math.abs(RS[1].regle.g - 18) < 1e-6 && RS.fin.regle === 0) || JSON.stringify(RS);
@@ -2745,6 +2754,7 @@ serveur.listen(0, async () => {
     ok('📉 Cotes basses (Calculatrice) : tableau + essai', r.cotesBasses === true, r.cotesBasses);
     ok('🧮 Calculatrice rangée (3 groupes, règle ×5,33)', r.calcRange === true, r.calcRange);
     ok('🔎 Duo → ses critères (+ ↩️ retour)', r.duoCr === true, r.duoCr);
+    ok('⏱️ Quart-temps / mi-temps (NBA / NFL)', r.qtCr === true, r.qtCr);
     ok('📉 Cotes basses : série continue sur la saison suivante', r.cbSuite === true, r.cbSuite);
     ok('📉 Cotes basses : méthode Engager (mise, série, arrêt, filtre Bilan)', r.cbMeth === true, r.cbMeth);
     ok('📉 Cotes basses : Tableau de bord + bouton graphique', r.cbTdb === true, r.cbTdb);
