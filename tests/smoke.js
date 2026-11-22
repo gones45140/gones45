@@ -1268,7 +1268,7 @@ serveur.listen(0, async () => {
         state.u.push({ n: 'Vancouver Canucks', sport: '🏒' }); const lgVan = g45LogoUrlDe('Vancouver Canucks');
         window.fetch = f0; state.u = u0; window._currentTeam = ct; try { _currentTeam = ct; } catch (e) {}
         if (cree) el.remove(); else el.innerHTML = '';
-        o.nhlj = (/Connor McDavid/.test(t) && /Oilers/.test(t) && /33 %/.test(t) && /Canucks/.test(t) && /Prochain match/.test(t) && /Sharks/.test(t) && /8478402\.png/.test(lg || '') && jv && /8478402\.png/.test(jv.thumb || '') && !!lgSj && /VAN_dark/.test(lgVan || '')) || t.replace(/<[^>]+>/g, ' ').slice(0, 300);
+        o.nhlj = (/Connor McDavid/.test(t) && /Oilers/.test(t) && /33 %/.test(t) && /Canucks/.test(t) && /Prochain match/.test(t) && /Sharks/.test(t) && /8478402\.png/.test(lg || '') && jv && /8478402\.png/.test(jv.thumb || '') && !!lgSj && /teamlogos\/nhl\/500\/van\.png/.test(lgVan || '')) || t.replace(/<[^>]+>/g, ' ').slice(0, 300);
       } catch (e) { o.nhlj = 'erreur : ' + e.message; }
       /* 20261015y — fiche joueur foot : onglets par compétition + chance de marquer */
       try {
@@ -1448,6 +1448,12 @@ serveur.listen(0, async () => {
         state.u = su; state.a = sa; state.h = sh;
         o.lcSport = (l1 === '{"nfl|ext":2,"nfl|dom":2}' && l2 === '{"nhl|dom":2,"nfl|ext":4}') || JSON.stringify({ l1, l2 });
       } catch (e) { o.lcSport = 'erreur : ' + e.message; }
+      try {
+        /* 20261124c : logo NHL de secours = ESPN (Oilers sans logo) */
+        const su = state.u; state.u = [{ n: 'Zz Oilers Test Edmonton Oilers', sport: '🏒', type: 'club' }];
+        const L = g45LogoUrlDe('Zz Oilers Test Edmonton Oilers'); state.u = su;
+        o.nhlLogo = (window._g45NhlLogoEspn('EDM') === 'https://a.espncdn.com/i/teamlogos/nhl/500/edm.png' && /teamlogos\/nhl\/500\/nj\.png$/.test(window._g45NhlLogoEspn('NJD')) && (!L || /espncdn/.test(L))) || JSON.stringify({ L });
+      } catch (e) { o.nhlLogo = 'erreur : ' + e.message; }
       /* 20261027d — F1 critères 4 saisons + Jouable en Cockpit */
       try {
         const R = (r, a, b, gA) => ({ r, c: 'cir' + r, x: [['ver', 'rb', a, 1, gA, 10, 'Max Verstappen'], ['per', 'rb', b, b < 20 ? 1 : 0, 5, 2, 'Sergio Perez'], ['nor', 'mc', 2, 1, 2, 18, 'Lando Norris']] });
@@ -3078,6 +3084,7 @@ serveur.listen(0, async () => {
     ok('Bank : historique des mouvements (dépôts / retraits)', r.mvt === true, r.mvt);
     ok('Montante : une seule échelle par championnat (Liga / La Liga…)', r.lcCanon === true, r.lcCanon);
     ok('🏈 Palier d\'un autre sport retiré (49ers NHL)', r.lcSport === true, r.lcSport);
+    ok('🏒 Logo NHL de secours ESPN', r.nhlLogo === true, r.nhlLogo);
     ok('F1 : critères 4 saisons + Jouable en Cockpit (page F1 + onglet Saisons)', r.f1cr === true, r.f1cr);
     ok('NHL Séries individuelles : 🔍 Pépites (50 joueurs)', r.pep === true, r.pep);
     ok('Critères 4 saisons : Jouable en Cockpit ? (classement de la ligue)', r.crCls === true, r.crCls);
