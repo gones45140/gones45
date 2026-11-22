@@ -117,6 +117,8 @@ serveur.listen(0, async () => {
     await page.goto('http://localhost:' + port + '/' + PAGE);
     await page.waitForTimeout(3000);
     const r = await page.evaluate(async () => {
+      /* 20261122z : les contrôles historiques testent l'ancien Cockpit à grille → passage auto au mode unique coupé ; le contrôle mode1 l'appelle lui-même */
+      const m1f = window._g45Mode1; window._g45Mode1 = () => 0; if (typeof state !== 'undefined' && state) delete state.mode1;
       const o = {}; try { localStorage.setItem('g45_loi_cmin', '4'); localStorage.setItem('g45_loi_pmax', '0'); } catch (e) {}   /* 20261118f : données de test en séries de 4, sans filtre pire série */
       try { state.ckOn = true; } catch (e) {}   /* 20261104l : morceaux Cockpit (💶, 📋, Jouable…) visibles = Cockpit activé, comme chez Antoine */
       /* 20261021g : critères et curseurs FERMÉS à l'arrivée → contrôle de l'état fermé, puis tout ouvert pour les autres contrôles */
@@ -2584,7 +2586,7 @@ serveur.listen(0, async () => {
         o.monMise = (a1 === 54.77 && a2 === 37.5 && a3 === 52.5 && a4 === 0) || JSON.stringify([a1, a2, a3, a4]); } catch (e) { o.monMise = 'erreur : ' + e.message; }
       /* 20261122w : mode unique — série 📉 en cours reprise dans le Cockpit (palier + pertes) */
       try { const su = state.u, m1 = state.mode1, sa = state.a; const u = { n: 'Test Mode1', lcb: { '|dom': { p: 3, prev: 12.5, per: 17.5 } }, mode: { dom: 'cb' } };
-        state.u = [u]; state.a = []; delete state.mode1; const n = window._g45Mode1(true);
+        state.u = [u]; state.a = []; delete state.mode1; const n = m1f(true);
         const li = document.getElementById('c-lieu'), lv = li && li.value, cc = document.getElementById('c-comp'), cv = cc && cc.value; if (li) li.value = 'dom'; if (cc) cc.value = '';
         const mi = window._g45MonMise(u, '|dom', 1.65); if (li) li.value = lv; if (cc) cc.value = cv;
         const ok = n === 1 && u.lc['|dom'] === 3 && !u.lcb && !u.mode && u.lcbMig['|dom'].per === 17.5 && mi === 37.5 && state.mode1 === 1;
@@ -2595,6 +2597,11 @@ serveur.listen(0, async () => {
         const p1 = window._g45TypePatch(b1), p2 = window._g45TypePatch(b2), pl = window._g45MethPill(b1);
         window._g45BilMeth = 'mb'; const f1 = _g45EstCk(b1) && !_g45EstCk(b2) && !_g45EstCk(b3); window._g45BilMeth = 'mh'; const f2 = !_g45EstCk(b1) && _g45EstCk(b2) && _g45EstCk(b3); window._g45BilMeth = m0;
         o.pastCote = (/📉 Cockpit/.test(p1) && /🚀 Cockpit/.test(p2) && /📉 Cockpit/.test(pl) && f1 && f2) || JSON.stringify([p1, p2, pl, f1, f2]); } catch (e) { o.pastCote = 'erreur : ' + e.message; }
+      /* 20261122z : simulation 🚀 en mode unique (règle selon la cote, arrêt au bout de la grille) + 🪜 Mes grilles « mises selon la cote » */
+      try { state.mode1 = 1; const R = window._g45CrSimT([{ s: 'A', ok: false, c: 2 }, { s: 'A', ok: false, c: 1.4 }, { s: 'A', ok: true, c: 1.6 }, { s: 'A', ok: false, c: 2 }, { s: 'A', ok: false, c: 2 }, { s: 'A', ok: false, c: 2 }], [1, 2, 6], 2, 0, 'mont');
+        const mg = typeof window._g45MgHtml === 'function' ? window._g45MgHtml([1, 2, 6], 1.4) : ''; delete state.mode1;
+        const ms = R.det.map((d) => d.m).join('/');
+        o.simUni = (ms === '1/4.5/13.5/1/2.5/7.5' && R.bo === 1 && /4,5/.test(mg) && /20,25/.test(mg)) || (ms + ' | ' + R.bo + ' | ' + mg.slice(0, 200)); } catch (e) { o.simUni = 'erreur : ' + e.message; }
       /* 20261122m : compétition de la série en cours (Barcelona P2 Liga, « Ligue 1 » restée d'une autre carte) */
       try { const su = state.u, sa = state.a; const uT = { n: 'Test Barca', s: 5, l: 2, lc: { 'nations|dom': 1, 'liga|ext': 2, 'liga|dom': 2 }, sport: '⚽' };
         state.u = su.concat([uT]); state.a = [{ n: 'Test Barca', comp: 'Liga', date: '2026-10-31', domicile: 'dom', m: 5, cote: 1.8, win: false, b: 'x', id: 'tb1' }].concat(sa || []);
@@ -2922,6 +2929,7 @@ serveur.listen(0, async () => {
     ok('🚀 Mise Cockpit selon la cote', r.monMise === true, r.monMise);
     ok('🚀 Mode unique : série 📉 reprise', r.mode1 === true, r.mode1);
     ok('📉 / 🚀 pastilles et filtre Bilan', r.pastCote === true, r.pastCote);
+    ok('🚀 Simulation mode unique + mises selon la cote', r.simUni === true, r.simUni);
     ok('📂 Filtre Lieu : reste sur l\'onglet ouvert', r.ongLieu === true, r.ongLieu);
     ok('🏁 Duos NHL / NBA (Jouable en Cockpit)', r.duos === true, r.duos);
     ok('🔍 Recherche + puces dans 🃏 Mes cartes', r.mcRech === true, r.mcRech);
