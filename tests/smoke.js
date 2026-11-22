@@ -695,6 +695,15 @@ serveur.listen(0, async () => {
         o.ficheMulti = (tt(R1) === '1/3' && tt(R2) === '2/2' && tt(R3) === '0/2' && /OU/.test(R2.lib) && /ET/.test(R3.lib)) || [tt(R1), tt(R2), tt(R3)].join(' | ');
       } catch (e) { o.ficheMulti = 'erreur : ' + e.message; }
       try {
+        /* 20261123l : 🔄 Calculer mes séries — carte McDavid « au moins un de (Connor McDavid, Leon Draisaitl) buteur » */
+        const M1 = window._g45SerMultiJ('✈️ au moins un de (Connor McDavid, Leon Draisaitl) buteur'), M2 = window._g45SerMultiJ('🏠 Kane et Musiala buteurs'), M3 = window._g45SerMultiJ('🏠 Haaland buteur');
+        const L1 = [{ gameDate: '2026-01-01', eid: '1', goals: 0, assists: 1 }, { gameDate: '2026-01-03', eid: '2', goals: 1, assists: 0 }, { gameDate: '2026-01-05', eid: '3', goals: 0, assists: 0 }];
+        const L2 = [{ gameDate: '2026-01-01', eid: '1', goals: 1, assists: 0 }, { gameDate: '2026-01-03', eid: '2', goals: 0, assists: 0 }];
+        const FU = window._g45SerFusionJ(L1, [L2], 'un'), FE = window._g45SerFusionJ(L1, [L2], 'et');
+        o.serMulti = (M1 && M1.L.length === 2 && M1.L[1] === 'Leon Draisaitl' && M1.m === 'un' && M2 && M2.m === 'et' && M2.L.join('|') === 'Kane|Musiala' && M3 === null
+          && FU.length === 2 && FU[0].goals === 1 && FU[1].goals === 1 && FE[0].goals === 0 && FE[1].goals === 0) || JSON.stringify({ M1, M2, M3, FU, FE });
+      } catch (e) { o.serMulti = 'erreur : ' + e.message; }
+      try {
         /* 20261114m : série coupée en fin de saison → continue sur la suivante (1,30 ❌ en 2025, 1,60 ✅ en 2026) */
         const RS = window._g45CbSimS([{ sa: '2025', ms: [{ c: 1.3, w: false }] }, { sa: '2026', ms: [{ c: 1.6, w: true }] }], { p1: 10, stop: 5 });
         o.cbSuite = (Math.abs(RS[0].regle.g + 10) < 1e-6 && Math.abs(RS[1].regle.g - 18) < 1e-6 && RS.fin.regle === 0) || JSON.stringify(RS);
@@ -2788,6 +2797,7 @@ serveur.listen(0, async () => {
     ok('⏱️ Quart-temps / mi-temps (NBA / NFL)', r.qtCr === true, r.qtCr);
     ok('🎫 Ticket « A ou B » → 2 joueurs', r.tkJ2 === true, r.tkJ2);
     ok('👥 Ton pari : historique « A OU / ET B »', r.ficheMulti === true, r.ficheMulti);
+    ok('🔄 Séries carte : pari à plusieurs joueurs', r.serMulti === true, r.serMulti);
     ok('📉 Cotes basses : série continue sur la saison suivante', r.cbSuite === true, r.cbSuite);
     ok('📉 Cotes basses : méthode Engager (mise, série, arrêt, filtre Bilan)', r.cbMeth === true, r.cbMeth);
     ok('📉 Cotes basses : Tableau de bord + bouton graphique', r.cbTdb === true, r.cbTdb);
