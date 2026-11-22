@@ -2565,6 +2565,15 @@ serveur.listen(0, async () => {
         const dl = document.getElementById('g45-jl-c'), nOpt = dl ? dl.querySelectorAll('option').length : 0, lst = inp.getAttribute('list');
         window._g45JoueursClub = jc0; state.u = su; render();
         o.jl = (nOpt === 2 && lst === 'g45-jl-c' && typeof window.g45TkNs === 'function') || JSON.stringify([nOpt, lst]); } catch (e) { o.jl = 'erreur : ' + e.message; }
+      /* 20261122u : Calculatrice Cote juste → par les buts puis calée sur DraftKings */
+      try { const T = window._g45CjT, D = T.D(), e0 = JSON.parse(JSON.stringify(D.e)), bl0 = window._g45ButsLigues, dk0 = window._g45DkLam;
+        const G = []; for (let i = 0; i <= 10; i++) { let l = ''; for (let j = 0; j <= 10; j++) l += (i > j && j > 0) ? '1' : '0'; G.push(l); }
+        D.e[0] = { nom: 'Barcelona', lieu: '🏠 Domicile', d10: 50, s2: 48, s5: 29, po: { gf: 2.83, ga: 1.10, own: 0.36, G, lg: 'esp.1' } };
+        D.e[1] = { nom: 'Villarreal', lieu: '✈️ Extérieur', d10: 0, s2: 12, s5: 15, po: { gf: 1.25, ga: 1.41, own: 0.1, G, lg: 'esp.1' } };
+        window._g45ButsLigues = () => ({ 'esp.1': [1.497, 1.135] }); window._g45DkLam = () => null;
+        const R1 = T.calc(); window._g45DkLam = () => ({ h: 3.46, a: 1.11, home: true, Q: { ml: [1.19, 8, 12], bts: 1.46 } }); const R2 = T.calc();
+        window._g45ButsLigues = bl0; window._g45DkLam = dk0; D.e = e0;
+        o.cjPois = (!!R1.PO && !R1.DK && R1.p > 30 && R1.p < 45 && Math.abs(R1.pMoy - 25.5) < 3 && !!R2.DK && Math.abs(R2.p - 49.1) < 1) || JSON.stringify([R1.p, R1.pMoy, R2.p]); } catch (e) { o.cjPois = 'erreur : ' + e.message; }
       /* 20261122m : compétition de la série en cours (Barcelona P2 Liga, « Ligue 1 » restée d'une autre carte) */
       try { const su = state.u, sa = state.a; const uT = { n: 'Test Barca', s: 5, l: 2, lc: { 'nations|dom': 1, 'liga|ext': 2, 'liga|dom': 2 }, sport: '⚽' };
         state.u = su.concat([uT]); state.a = [{ n: 'Test Barca', comp: 'Liga', date: '2026-10-31', domicile: 'dom', m: 5, cote: 1.8, win: false, b: 'x', id: 'tb1' }].concat(sa || []);
@@ -2888,6 +2897,7 @@ serveur.listen(0, async () => {
     ok('👤 Joueur écrit → cote DraftKings du joueur', r.dkJ === true, r.dkJ);
     ok('🔄 Exchange : commission 3 % sur le gain', r.exch === true, r.exch);
     ok('👤 Liste des joueurs du club + 📅 saisons', r.jl === true, r.jl);
+    ok('🎯 Calculatrice : par les buts / DraftKings', r.cjPois === true, r.cjPois);
     ok('📂 Filtre Lieu : reste sur l\'onglet ouvert', r.ongLieu === true, r.ongLieu);
     ok('🏁 Duos NHL / NBA (Jouable en Cockpit)', r.duos === true, r.duos);
     ok('🔍 Recherche + puces dans 🃏 Mes cartes', r.mcRech === true, r.mcRech);
