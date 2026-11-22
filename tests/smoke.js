@@ -1862,6 +1862,10 @@ serveur.listen(0, async () => {
         o.reg4 = (G.gameLog.length === 3 && G.gameLog[0].gameDate === '2026-10-20' && G.gameLog[2].goals === 2 && /\+s4$/.test(k) && /4 saisons \(2023 → 2027\)/.test(H) && /Mises :/.test(H) && />Paliers<| paliers?<\/b>/.test(H)
           && m2 === STRATS['2'][3] && m1 === STRATS['1'][3]) || JSON.stringify({ G, k, m1, m2, H: H.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').slice(0, 300) });
       } catch (e) { o.reg4 = 'erreur : ' + e.message; }
+      try {   /* 20261124f : mise max en mode unique 🚀 = P1 × 2,5 × 3^(p−2) (comme la simulation) */
+        const m0 = state.mode1, e0 = _g45PalEt(); g45PalEtChoix('3'); state.mode1 = true; const pu = _g45F1CrPal(4); state.mode1 = false; const pc = _g45F1CrPal(4); state.mode1 = m0; g45PalEtChoix(e0);
+        const P1 = +STRATS['3'][0]; o.palUni = (pu.mise === Math.round(P1 * 2.5 * 27 * 100) / 100 && pc.mise === STRATS['3'][4] && pu.uni && !pc.uni) || JSON.stringify({ pu, pc, P1 });
+      } catch (e) { o.palUni = 'erreur : ' + e.message; }
       /* 20261027l — Séries NFL sur 4 saisons */
       try {
         _g45RegLogsN['2026_88'] = Promise.resolve({ gameLog: [{ d: '2026-10-19', goals: 1, assists: 0, points: 1, h: 1 }] });
@@ -3085,6 +3089,7 @@ serveur.listen(0, async () => {
     ok('Bank : historique des mouvements (dépôts / retraits)', r.mvt === true, r.mvt);
     ok('Montante : une seule échelle par championnat (Liga / La Liga…)', r.lcCanon === true, r.lcCanon);
     ok('🏈 Palier d\'un autre sport retiré (49ers NHL)', r.lcSport === true, r.lcSport);
+    ok('🚀 Mise max en mode unique (= simulation)', r.palUni === true, r.palUni);
     ok('🏒 Logo NHL de secours ESPN', r.nhlLogo === true, r.nhlLogo);
     ok('F1 : critères 4 saisons + Jouable en Cockpit (page F1 + onglet Saisons)', r.f1cr === true, r.f1cr);
     ok('NHL Séries individuelles : 🔍 Pépites (50 joueurs)', r.pep === true, r.pep);
