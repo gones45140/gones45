@@ -737,6 +737,21 @@ serveur.listen(0, async () => {
         o.tnLive = (/EN DIRECT/.test(a1) && /Zverev 4-6 · 3-1 Alcaraz/.test(a1) && /2e set/.test(a1) && /⏳/.test(a1) && /Terminé/.test(a2) && /✅ gagné/.test(a2)) || JSON.stringify({ a1: a1.replace(/<[^>]+>/g, ''), a2: a2.replace(/<[^>]+>/g, '') });
       } catch (e) { o.tnLive = 'erreur : ' + e.message; }
       try {
+        /* 20261123r : 🚑 absents foot Premier League via FPL (simulé) */
+        const fF = window.fplFetch;
+        window.fplFetch = async () => ({ teams: [{ id: 1, name: 'Arsenal', short_name: 'ARS' }, { id: 13, name: 'Man City', short_name: 'MCI' }],
+          elements: [{ id: 5, team: 1, first_name: 'Bukayo', second_name: 'Saka', element_type: 3, status: 'i', news: 'Hamstring', news_added: '2026-11-20T10:00:00Z', goals_scored: 6, assists: 4 },
+            { id: 6, team: 1, first_name: 'Ben', second_name: 'White', element_type: 2, status: 'd', chance_of_playing_next_round: 75, goals_scored: 0, assists: 1 },
+            { id: 7, team: 1, first_name: 'Prêté', second_name: 'Ailleurs', element_type: 4, status: 'u' },
+            { id: 9, team: 13, first_name: 'Erling', second_name: 'Haaland', element_type: 4, status: 'a', goals_scored: 12, assists: 2 }] });
+        const ob = { u: { sport: '⚽' }, nom: 'Arsenal', adv: 'Manchester City', date: '2026-11-29', f: 'strat' };
+        window._g45TkAbs.html(ob); await new Promise((r) => setTimeout(r, 300)); const ha = String(window._g45TkAbs.html(ob) || '').replace(/<[^>]+>/g, ' ');
+        const ob2 = { u: { sport: '⚽' }, nom: 'Lyon', adv: 'Marseille', date: '2026-11-29', f: 'strat' };
+        window._g45TkAbs.html(ob2); await new Promise((r) => setTimeout(r, 300)); const hb = window._g45TkAbs.html(ob2);
+        window.fplFetch = fF;
+        o.absFpl = (/Fantasy Premier League/.test(ha) && /Bukayo Saka/.test(ha) && /milieu/.test(ha) && /6 buts/.test(ha) && /incertain 75 %/.test(ha) && !/Ailleurs/.test(ha) && /Manchester City : aucun/.test(ha) && hb === '') || JSON.stringify({ ha: ha.slice(0, 400), hb });
+      } catch (e) { o.absFpl = 'erreur : ' + e.message; }
+      try {
         /* 20261114m : série coupée en fin de saison → continue sur la suivante (1,30 ❌ en 2025, 1,60 ✅ en 2026) */
         const RS = window._g45CbSimS([{ sa: '2025', ms: [{ c: 1.3, w: false }] }, { sa: '2026', ms: [{ c: 1.6, w: true }] }], { p1: 10, stop: 5 });
         o.cbSuite = (Math.abs(RS[0].regle.g + 10) < 1e-6 && Math.abs(RS[1].regle.g - 18) < 1e-6 && RS.fin.regle === 0) || JSON.stringify(RS);
@@ -2834,6 +2849,7 @@ serveur.listen(0, async () => {
     ok('⬅️ Flèche retour : onglet précédent / ferme la fenêtre', r.retour === true, r.retour);
     ok('📌 Ligne gardée cachée sans pari au lieu', r.psLieu === true, r.psLieu);
     ok('🎾 Direct tennis (sets + remporter un set)', r.tnLive === true, r.tnLive);
+    ok('🚑 Absents foot (FPL, Premier League)', r.absFpl === true, r.absFpl);
     ok('📉 Cotes basses : série continue sur la saison suivante', r.cbSuite === true, r.cbSuite);
     ok('📉 Cotes basses : méthode Engager (mise, série, arrêt, filtre Bilan)', r.cbMeth === true, r.cbMeth);
     ok('📉 Cotes basses : Tableau de bord + bouton graphique', r.cbTdb === true, r.cbTdb);
