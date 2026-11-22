@@ -2558,6 +2558,13 @@ serveur.listen(0, async () => {
         const edOk = x1 && Math.abs(bA - 99.7) < 0.001 && x2 && e1.cote === 2 && !e1.coteB && e1.notes === 'x' && Math.abs(bW - 110) < 0.001 && Math.abs(bB - 90) < 0.001;
         if (!edOk) o.exch2 = JSON.stringify([x1, bA, x2, bB, bW, e1]);
         o.exch = !o.exch2 && (r1 && !r2 && !r3 && !r4 && Math.abs(b1.cote - 1.9894) < 0.0001 && b1.coteB === 2.02 && Math.abs(b1.m * b1.cote - b1.m - 12.37) < 0.01 && b3.cote === 2.02) || o.exch2 || JSON.stringify([b1, b2, b3]); } catch (e) { o.exch = 'erreur : ' + e.message; }
+      /* 20261122s : liste des joueurs du club (datalist) + choix du nombre de saisons */
+      try { const jc0 = window._g45JoueursClub, su = state.u; window._g45JoueursClub = () => Promise.resolve(['Raphinha', 'Lamine Yamal']);
+        state.u = su.concat([{ n: 'Test Club JL', sport: '⚽', s: 3, l: 1 }]); render(); const un = document.getElementById('c-unit'); un.value = 'Test Club JL';
+        const inp = document.getElementById('c-joueur'); window._g45JlRemplir(inp); await new Promise((r) => setTimeout(r, 50));
+        const dl = document.getElementById('g45-jl-c'), nOpt = dl ? dl.querySelectorAll('option').length : 0, lst = inp.getAttribute('list');
+        window._g45JoueursClub = jc0; state.u = su; render();
+        o.jl = (nOpt === 2 && lst === 'g45-jl-c' && typeof window.g45TkNs === 'function') || JSON.stringify([nOpt, lst]); } catch (e) { o.jl = 'erreur : ' + e.message; }
       /* 20261122m : compétition de la série en cours (Barcelona P2 Liga, « Ligue 1 » restée d'une autre carte) */
       try { const su = state.u, sa = state.a; const uT = { n: 'Test Barca', s: 5, l: 2, lc: { 'nations|dom': 1, 'liga|ext': 2, 'liga|dom': 2 }, sport: '⚽' };
         state.u = su.concat([uT]); state.a = [{ n: 'Test Barca', comp: 'Liga', date: '2026-10-31', domicile: 'dom', m: 5, cote: 1.8, win: false, b: 'x', id: 'tb1' }].concat(sa || []);
@@ -2880,6 +2887,7 @@ serveur.listen(0, async () => {
     ok('📚 Foot calé sur DraftKings', r.dkFoot === true, r.dkFoot);
     ok('👤 Joueur écrit → cote DraftKings du joueur', r.dkJ === true, r.dkJ);
     ok('🔄 Exchange : commission 3 % sur le gain', r.exch === true, r.exch);
+    ok('👤 Liste des joueurs du club + 📅 saisons', r.jl === true, r.jl);
     ok('📂 Filtre Lieu : reste sur l\'onglet ouvert', r.ongLieu === true, r.ongLieu);
     ok('🏁 Duos NHL / NBA (Jouable en Cockpit)', r.duos === true, r.duos);
     ok('🔍 Recherche + puces dans 🃏 Mes cartes', r.mcRech === true, r.mcRech);
