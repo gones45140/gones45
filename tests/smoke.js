@@ -2532,6 +2532,10 @@ serveur.listen(0, async () => {
         state.a.splice(0, 2); state.b = JSON.parse(sb0); swBet('simple');
         o.surebet = (calcOk && tk && /📷 Ticket 1/.test(document.getElementById('sub-sb') ? document.getElementById('sub-sb').innerHTML : '') && pan && resOk && debit && /⚖️ Surebet · PSG – Lyon/.test(carte || '') && cache === '' && fin && enc && ex && deux) || JSON.stringify({ deux, enc, ex, calcOk, pan, resOk, debit, c: (carte || '').slice(0, 80), cache, fin, A, Bq, C, D2 });
       } catch (e) { o.surebet = 'erreur : ' + e.message; }
+      /* 20261122j : Archive de la fiche suit le filtre Lieu */
+      try { const a0 = state.a, box = document.getElementById('ip-archive'); state.a = [{ n: 'Test Arch', id: 'ta1', target: 'Alaves', domicile: 'dom', date: '2026-10-31', m: 5, cote: 1.78, win: false, b: 'x' }, { n: 'Test Arch', id: 'ta2', target: 'Betis', domicile: 'ext', date: '2026-10-17', m: 5, cote: 1.72, win: false, b: 'x' }];
+        window._g45LieuF['Test Arch'] = 'ext'; window._g45ClubArchive('Test Arch'); const t = box ? box.innerHTML : 'pas de #ip-archive';
+        window._g45LieuF['Test Arch'] = ''; state.a = a0; o.archLieu = (/Betis/.test(t) && !/Alaves/.test(t)) || t.slice(0, 200); } catch (e) { o.archLieu = 'erreur : ' + e.message; }
       /* 20261109i : séries de la carte — lignes du book (Rams « Couvre le handicap du book ») */
       try { const C = { sp: 'football', lg: 'nfl', id: '14' }, a1 = _g45SerCombo('🏠/✈️ Couvre le handicap du book', C, 'Los Angeles Rams'), a2 = _g45SerCombo('Victoire + Under du total du book', C, 'Los Angeles Rams'), a3 = _g45SerCombo('Ne couvre pas le handicap du book', C, 'Los Angeles Rams');
         const a4 = _g45SerCombo('San Francisco 49ers et moins de 51,5', C, 'San Francisco 49ers'), a5 = _g45SerCombo('Kansas City Chiefs + moins de 47,5', C, 'Kansas City Chiefs');
@@ -2831,6 +2835,7 @@ serveur.listen(0, async () => {
     ok('📚 DraftKings + archives (matchs semblables) et 🚑 absents branchés', r.sbl === true, r.sbl);
     ok('➕ Paris perdus de la série en cours (Cockpit)', r.ckPer === true, r.ckPer);
     ok('➡️ 📉 Passer une série Cockpit en Cotes basses', r.versCb === true, r.versCb);
+    ok('📂 Archive de la fiche : filtre Lieu', r.archLieu === true, r.archLieu);
     ok('🏁 Duos NHL / NBA (Jouable en Cockpit)', r.duos === true, r.duos);
     ok('🔍 Recherche + puces dans 🃏 Mes cartes', r.mcRech === true, r.mcRech);
     ok('🏁 Cockpit BET45 publié (gones) et lu sur bet45', r.ckPub === true, r.ckPub);
