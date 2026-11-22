@@ -1699,14 +1699,14 @@ serveur.listen(0, async () => {
             const oE = /Ek ou Kaprizov/.test(He) && !/Scheifele ou Connor/.test(He) && /Seulement Wild/.test(He);
             const roS = S.ro, ctxS = S.ctx; S.ro = { ZZ: { l: [{ id: '1', nom: 'A Un' }, { id: '2', nom: 'B Deux' }, { id: '3', nom: 'C Trois' }] } }; S.nom = 'ZZ'; S.ctx = null;
             const BT = window._g45BestTous(); S.ro = roS; S.ctx = ctxS; S.nom = 'Wild';
-            const oT = BT.length === 24 && BT.filter(function (c) { return c.jo2 && c.jx === 'un'; }).length === 12 && BT.some(function (c) { return c.jo === '1' && c.jo2 === '3' && c.jm === 'pas'; });
+            const oT = BT.length === 15 && BT.filter(function (c) { return c.jo2 && c.jx === 'un'; }).length === 3 && BT.some(function (c) { return c.jo === '1' && c.jo2 === '3' && c.jm === '' && +c.jmin === 1; }) && !BT.some(function (c) { return c.jo2 && c.jm === 'pas'; }) && BT.some(function (c) { return !c.jo2 && c.jm === 'pas'; });
             const oC = oE && oT && /Ek ou Kaprizov/.test(Hf15) && !/Scheifele ou Connor/.test(Hf15) && !/Ek ou Kaprizov/.test(Hf12) && /Aucun duo avec une cote mini à 1,2/.test(Hf12) && /Cote mini jusqu/.test(Hf15);
             o.duoCr = (o1 && o2r && o3 && oC && /g45DuoCr\('nhl',1\)/.test(H) && !/g45DuoCr\('nhl',0\)/.test(Hc) && /g45DuoCr\('nhl',1\)/.test(Hc)) || JSON.stringify({ o1, o2r, o3, oC, oE, oT, nBT: BT.length, nom: S.nom });
             S.nom = sv.nom; S.ctx = sv.ctx; S.lgForce = sv.lgF; S.a = sv.a; S.combos = sv.combos; if (sv.ret) S.duoRet = sv.ret; else delete S.duoRet; }
           delete F.nhl; delete F.nba; delete F.nfl; delete F.mlb; delete F['foot-eng.1'];
-          const o2 = /rebonds » : au moins un des deux plus de 8,5/.test(Hr) && /touchdown » 1 ou \+/.test(Hn) && /Williams ou Gibbs/.test(Hn) && /home run/.test(Hm) && /Judge ou Rice/.test(Hm) && /passeur/.test(Hf) && /Fernandes ou Mainoo/.test(Hf);
+          const o2 = /rebonds » : au moins un des deux plus de 8,5/.test(Hr) && /touchdown » 1 ou \+/.test(Hn) && /Williams ou Gibbs/.test(Hn) && /home run/.test(Hm) && /Judge ou Rice/.test(Hm) && /buteur/.test(Hf) && !/passeur/.test(Hf) && /Fernandes ou Mainoo/.test(Hf);
           if (!o2) o.duos2 = Hr.slice(0, 300) + ' | ' + Hn.slice(0, 200) + ' | ' + Hm.slice(0, 200) + ' | ' + Hf.slice(0, 200);
-          o.duos = !o.duos2 && (/Ek ou Kaprizov/.test(H) && /Scheifele ou Connor/.test(H) && /cote mini/.test(H) && /g45DuoMur\('nhl',0\)/.test(H) && /Doncic ou Reaves/.test(H2) && /Total des 2 plus de/.test(H2) && /pointeur » 2 ou \+/.test(Hp) && Hp.indexOf('Scheifele') < Hp.indexOf('Kaprizov')) || (o.duos2 || (H.slice(0, 150) + ' | ' + H2.slice(0, 150)));
+          o.duos = !o.duos2 && (/Ek ou Kaprizov/.test(H) && /Scheifele ou Connor/.test(H) && /cote mini/.test(H) && /g45DuoMur\('nhl',0\)/.test(H) && /Doncic ou Reaves/.test(H2) && /Total des 2 plus de/.test(H2) && /buteur/.test(Hp) && !/pointeur/.test(Hp)) || (o.duos2 || (H.slice(0, 150) + ' | ' + H2.slice(0, 150)));
         } catch (e) { o.duos = 'erreur : ' + e.message; }
         /* 20261121e : ➡️ 📉 passer une série 🚀 en Cotes basses */
         try { const su0 = state.u, cf0 = window.confirm; window.confirm = () => true;
