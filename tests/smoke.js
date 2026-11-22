@@ -1568,6 +1568,15 @@ serveur.listen(0, async () => {
           F.mlb = { v: 2, s: ['2025', '2026'], K: ['hr:1', 'r:1'], L: [['Aaron Judge', '9', 'Ben Rice', '10', 'Yankees', '10', { 'hr:1': v(200, 86) }]] };
           F['foot-eng.1'] = { v: 2, s: ['2025-26', '2026-27'], K: ['g1', 'a1', 'p1'], L: [['Bruno Fernandes', '11', 'Kobbie Mainoo', '12', 'Man Utd', '360', { a1: v(22, 14), g1: v(22, 10) }]] };
           const S0 = window._g45DuosHtml; const Hn = String(S0({ sp: 'football', lg: 'nfl' }, { jm: 'td', jmin: '1' }) || ''), Hm = String(S0({ sp: 'baseball', lg: 'mlb' }, { jm: 'hr', jmin: '1' }) || ''), Hf = String(S0({ sp: 'soccer', lg: 'eng.1' }, { jm: 'pas', jmin: '1' }) || '');
+          /* 20261123d : 🔎 Voir ses critères d'un duo (autre équipe → Jets ; ↩️ retour ; même équipe → Wild) */
+          { const S = window._g45CrS, sv = { nom: S.nom, ctx: S.ctx, lgF: S.lgForce, a: S.a, combos: S.combos, ret: S.duoRet };
+            S.nom = 'Wild'; S.ctx = { sp: 'hockey', lg: 'nhl', id: '30' }; S.a = 0; S.combos = [{ jo: 'x', jn: 'X', jm: 'g', jmin: 1, res: '' }]; delete S.duoRet;
+            window.g45DuoCr('nhl', 1); const c1 = S.combos[0], o1 = S.nom === 'Jets' && S.ctx.id === '28' && c1.jo === '3' && c1.jo2 === '4' && c1.jx === 'un' && c1.jm === 'g' && S.duoRet && S.duoRet.nom === 'Wild';
+            window.g45DuoRet(); const o2r = S.nom === 'Wild' && S.ctx.id === '30' && S.combos[0].jo === 'x' && !S.duoRet;
+            window.g45DuoCr('nhl', 0); const o3 = S.nom === 'Wild' && S.combos[0].jo === '1' && S.combos[0].jo2 === '2';
+            const Hc = String(window._g45DuosHtml({ sp: 'hockey', lg: 'nhl' }, { jm: 'g', jmin: 1 }) || '');
+            o.duoCr = (o1 && o2r && o3 && /g45DuoCr\('nhl',1\)/.test(H) && !/g45DuoCr\('nhl',0\)/.test(Hc) && /g45DuoCr\('nhl',1\)/.test(Hc)) || JSON.stringify({ o1, o2r, o3, nom: S.nom });
+            S.nom = sv.nom; S.ctx = sv.ctx; S.lgForce = sv.lgF; S.a = sv.a; S.combos = sv.combos; if (sv.ret) S.duoRet = sv.ret; else delete S.duoRet; }
           delete F.nhl; delete F.nba; delete F.nfl; delete F.mlb; delete F['foot-eng.1'];
           const o2 = /rebonds » : au moins un des deux plus de 8,5/.test(Hr) && /touchdown » 1 ou \+/.test(Hn) && /Williams ou Gibbs/.test(Hn) && /home run/.test(Hm) && /Judge ou Rice/.test(Hm) && /passeur/.test(Hf) && /Fernandes ou Mainoo/.test(Hf);
           if (!o2) o.duos2 = Hr.slice(0, 300) + ' | ' + Hn.slice(0, 200) + ' | ' + Hm.slice(0, 200) + ' | ' + Hf.slice(0, 200);
@@ -2735,6 +2744,7 @@ serveur.listen(0, async () => {
     ok('🏒 Séries carte joueur : matchs deux soirs de suite', r.serB2b === true, r.serB2b);
     ok('📉 Cotes basses (Calculatrice) : tableau + essai', r.cotesBasses === true, r.cotesBasses);
     ok('🧮 Calculatrice rangée (3 groupes, règle ×5,33)', r.calcRange === true, r.calcRange);
+    ok('🔎 Duo → ses critères (+ ↩️ retour)', r.duoCr === true, r.duoCr);
     ok('📉 Cotes basses : série continue sur la saison suivante', r.cbSuite === true, r.cbSuite);
     ok('📉 Cotes basses : méthode Engager (mise, série, arrêt, filtre Bilan)', r.cbMeth === true, r.cbMeth);
     ok('📉 Cotes basses : Tableau de bord + bouton graphique', r.cbTdb === true, r.cbTdb);
