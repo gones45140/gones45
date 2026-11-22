@@ -2532,6 +2532,11 @@ serveur.listen(0, async () => {
         state.a.splice(0, 2); state.b = JSON.parse(sb0); swBet('simple');
         o.surebet = (calcOk && tk && /📷 Ticket 1/.test(document.getElementById('sub-sb') ? document.getElementById('sub-sb').innerHTML : '') && pan && resOk && debit && /⚖️ Surebet · PSG – Lyon/.test(carte || '') && cache === '' && fin && enc && ex && deux) || JSON.stringify({ deux, enc, ex, calcOk, pan, resOk, debit, c: (carte || '').slice(0, 80), cache, fin, A, Bq, C, D2 });
       } catch (e) { o.surebet = 'erreur : ' + e.message; }
+      /* 20261122l : un filtre Lieu garde l'onglet ouvert (Archive) */
+      try { const u0 = (state.u || []).filter((x) => x && x.n)[0]; if (!u0) throw new Error('pas de carte');
+        openClub(u0.n); const ba = [...document.querySelectorAll('.itabs .itab')].find((x) => /'archive'/.test(x.getAttribute('onclick') || '')); swInner('archive', ba);
+        g45SetLieuF(u0.n, 'dom'); const on = document.querySelector('.itabs .itab.on'); g45SetLieuF(u0.n, '');
+        o.ongLieu = (!!on && /'archive'/.test(on.getAttribute('onclick') || '')) || ('onglet : ' + (on ? on.textContent : 'aucun')); try { closeDetail && closeDetail(); } catch (e) {} } catch (e) { o.ongLieu = 'erreur : ' + e.message; }
       /* 20261122j : Archive de la fiche suit le filtre Lieu */
       try { const a0 = state.a, box = document.getElementById('ip-archive'); state.a = [{ n: 'Test Arch', id: 'ta1', target: 'Alaves', domicile: 'dom', date: '2026-10-31', m: 5, cote: 1.78, win: false, b: 'x' }, { n: 'Test Arch', id: 'ta2', target: 'Betis', domicile: 'ext', date: '2026-10-17', m: 5, cote: 1.72, win: false, b: 'x' }];
         window._g45LieuF['Test Arch'] = 'ext'; window._g45ClubArchive('Test Arch'); const t = box ? box.innerHTML : 'pas de #ip-archive';
@@ -2836,6 +2841,7 @@ serveur.listen(0, async () => {
     ok('➕ Paris perdus de la série en cours (Cockpit)', r.ckPer === true, r.ckPer);
     ok('➡️ 📉 Passer une série Cockpit en Cotes basses', r.versCb === true, r.versCb);
     ok('📂 Archive de la fiche : filtre Lieu', r.archLieu === true, r.archLieu);
+    ok('📂 Filtre Lieu : reste sur l\'onglet ouvert', r.ongLieu === true, r.ongLieu);
     ok('🏁 Duos NHL / NBA (Jouable en Cockpit)', r.duos === true, r.duos);
     ok('🔍 Recherche + puces dans 🃏 Mes cartes', r.mcRech === true, r.mcRech);
     ok('🏁 Cockpit BET45 publié (gones) et lu sur bet45', r.ckPub === true, r.ckPub);
