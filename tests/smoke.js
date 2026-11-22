@@ -724,6 +724,19 @@ serveur.listen(0, async () => {
         o.psLieu = (h1 === '' && /au moins un de/.test(h2)) || JSON.stringify({ h1: h1.slice(0, 80), h2: h2.slice(0, 80) });
       } catch (e) { o.psLieu = 'erreur : ' + e.message; }
       try {
+        /* 20261123q : 🎾 direct tennis (scoreboard simulé) — Zverev a perdu le 1er set 4-6, 2e set 3-1 en cours ; pari « Remporter un set : Zverev » */
+        const f0 = window.fetch, J = (x) => Promise.resolve(new Response(JSON.stringify(x), { status: 200, headers: { 'Content-Type': 'application/json' } }));
+        let etat = 'in', l1 = [{ value: 4 }, { value: 3 }], l2 = [{ value: 6 }, { value: 1 }];
+        window.fetch = function (u) { u = String(u); if (u.indexOf('/sports/tennis/atp/scoreboard') < 0) return f0.apply(this, arguments);
+          return J({ events: [{ groupings: [{ grouping: { displayName: 'Men\'s Singles' }, competitions: [{ id: 'T1', status: { type: { state: etat } }, competitors: [{ athlete: { displayName: 'Carlos Alcaraz' }, linescores: l2 }, { athlete: { displayName: 'Alexander Zverev' }, linescores: l1 }] }] }] }] }); };
+        const h = { id: 'tz1', n: 'Alexandre Zverev', target: 'Alexandre Zverev vs Carlos Alcaraz', type: 'Remporter un set : Zverev', sport: '🎾', date: '2026-11-22' };
+        const a1 = await window._g45TnLive(h);
+        etat = 'post'; l1 = [{ value: 4 }, { value: 6 }, { value: 2 }]; l2 = [{ value: 6 }, { value: 3 }, { value: 6 }];
+        const h2 = Object.assign({}, h, { date: '2026-11-23' }); const a2 = await window._g45TnLive(h2);
+        window.fetch = f0;
+        o.tnLive = (/EN DIRECT/.test(a1) && /Zverev 4-6 · 3-1 Alcaraz/.test(a1) && /2e set/.test(a1) && /⏳/.test(a1) && /Terminé/.test(a2) && /✅ gagné/.test(a2)) || JSON.stringify({ a1: a1.replace(/<[^>]+>/g, ''), a2: a2.replace(/<[^>]+>/g, '') });
+      } catch (e) { o.tnLive = 'erreur : ' + e.message; }
+      try {
         /* 20261114m : série coupée en fin de saison → continue sur la suivante (1,30 ❌ en 2025, 1,60 ✅ en 2026) */
         const RS = window._g45CbSimS([{ sa: '2025', ms: [{ c: 1.3, w: false }] }, { sa: '2026', ms: [{ c: 1.6, w: true }] }], { p1: 10, stop: 5 });
         o.cbSuite = (Math.abs(RS[0].regle.g + 10) < 1e-6 && Math.abs(RS[1].regle.g - 18) < 1e-6 && RS.fin.regle === 0) || JSON.stringify(RS);
@@ -2820,6 +2833,7 @@ serveur.listen(0, async () => {
     ok('🔄 Séries carte : pari à plusieurs joueurs', r.serMulti === true, r.serMulti);
     ok('⬅️ Flèche retour : onglet précédent / ferme la fenêtre', r.retour === true, r.retour);
     ok('📌 Ligne gardée cachée sans pari au lieu', r.psLieu === true, r.psLieu);
+    ok('🎾 Direct tennis (sets + remporter un set)', r.tnLive === true, r.tnLive);
     ok('📉 Cotes basses : série continue sur la saison suivante', r.cbSuite === true, r.cbSuite);
     ok('📉 Cotes basses : méthode Engager (mise, série, arrêt, filtre Bilan)', r.cbMeth === true, r.cbMeth);
     ok('📉 Cotes basses : Tableau de bord + bouton graphique', r.cbTdb === true, r.cbTdb);
