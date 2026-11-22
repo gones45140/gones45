@@ -671,6 +671,15 @@ serveur.listen(0, async () => {
         S.ctx = cx; o.qtCr = t.every(Boolean) || JSON.stringify(t);
       } catch (e) { o.qtCr = 'erreur : ' + e.message; }
       try {
+        /* 20261123i : ticket « Kelce ou Rice » → 2 joueurs (mode ou) ; « A et B » → mode et ; objet testé sans formulaire : découpage seul */
+        const o1 = { joueur: 'Travis Kelce ou Rashee Rice' }, o2 = { joueur: 'A Un + B Deux & C Trois' }, o3 = { joueur: 'Kylian Mbappé' };
+        _g45TkJoueurs(o1); _g45TkJoueurs(o2); _g45TkJoueurs(o3);
+        g45JReset('n'); const nj = document.getElementById('n-joueur'); if (nj) nj.value = o1.joueur; _g45TkJoueursPoser(o1, 'n');
+        const FJ = _g45FormJoueurs('n'), md = (document.getElementById('n-jmode-val') || {}).value; g45JReset('n');
+        o.tkJ = (o1._jL.length === 2 && o1.joueur === 'Travis Kelce' && o1._jM === 'ou' && o2._jL.length === 3 && o2._jM === 'et' && o3._jL.length === 1 && o3.joueur === 'Kylian Mbappé'
+          && (!nj || (FJ.length === 2 && FJ[1].nom === 'Rashee Rice' && md === 'ou'))) || JSON.stringify({ a: o1._jL, b: o2, FJ, md });
+      } catch (e) { o.tkJ = 'erreur : ' + e.message; }
+      try {
         /* 20261114m : série coupée en fin de saison → continue sur la suivante (1,30 ❌ en 2025, 1,60 ✅ en 2026) */
         const RS = window._g45CbSimS([{ sa: '2025', ms: [{ c: 1.3, w: false }] }, { sa: '2026', ms: [{ c: 1.6, w: true }] }], { p1: 10, stop: 5 });
         o.cbSuite = (Math.abs(RS[0].regle.g + 10) < 1e-6 && Math.abs(RS[1].regle.g - 18) < 1e-6 && RS.fin.regle === 0) || JSON.stringify(RS);
@@ -2762,6 +2771,7 @@ serveur.listen(0, async () => {
     ok('🧮 Calculatrice rangée (3 groupes, règle ×5,33)', r.calcRange === true, r.calcRange);
     ok('🔎 Duo → ses critères (+ ↩️ retour)', r.duoCr === true, r.duoCr);
     ok('⏱️ Quart-temps / mi-temps (NBA / NFL)', r.qtCr === true, r.qtCr);
+    ok('🎫 Ticket « A ou B » → 2 joueurs', r.tkJ === true, r.tkJ);
     ok('📉 Cotes basses : série continue sur la saison suivante', r.cbSuite === true, r.cbSuite);
     ok('📉 Cotes basses : méthode Engager (mise, série, arrêt, filtre Bilan)', r.cbMeth === true, r.cbMeth);
     ok('📉 Cotes basses : Tableau de bord + bouton graphique', r.cbTdb === true, r.cbTdb);
