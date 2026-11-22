@@ -2535,7 +2535,7 @@ serveur.listen(0, async () => {
       /* 20261122j : Archive de la fiche suit le filtre Lieu */
       try { const a0 = state.a, box = document.getElementById('ip-archive'); state.a = [{ n: 'Test Arch', id: 'ta1', target: 'Alaves', domicile: 'dom', date: '2026-10-31', m: 5, cote: 1.78, win: false, b: 'x' }, { n: 'Test Arch', id: 'ta2', target: 'Betis', domicile: 'ext', date: '2026-10-17', m: 5, cote: 1.72, win: false, b: 'x' }];
         window._g45LieuF['Test Arch'] = 'ext'; window._g45ClubArchive('Test Arch'); const t = box ? box.innerHTML : 'pas de #ip-archive';
-        window._g45LieuF['Test Arch'] = ''; state.a = a0; o.archLieu = (/Betis/.test(t) && !/Alaves/.test(t)) || t.slice(0, 200); } catch (e) { o.archLieu = 'erreur : ' + e.message; }
+        window._g45LieuF['Test Arch'] = ''; state.a = a0; o.archLieu = (/Betis/.test(t) && !/Alaves/.test(t)) && window._g45PalLieu({ lc: { 'nations|dom': 1, 'liga|ext': 2, 'liga|dom': 2 } }, 'dom') === 2 || t.slice(0, 200); } catch (e) { o.archLieu = 'erreur : ' + e.message; }
       /* 20261109i : séries de la carte — lignes du book (Rams « Couvre le handicap du book ») */
       try { const C = { sp: 'football', lg: 'nfl', id: '14' }, a1 = _g45SerCombo('🏠/✈️ Couvre le handicap du book', C, 'Los Angeles Rams'), a2 = _g45SerCombo('Victoire + Under du total du book', C, 'Los Angeles Rams'), a3 = _g45SerCombo('Ne couvre pas le handicap du book', C, 'Los Angeles Rams');
         const a4 = _g45SerCombo('San Francisco 49ers et moins de 51,5', C, 'San Francisco 49ers'), a5 = _g45SerCombo('Kansas City Chiefs + moins de 47,5', C, 'Kansas City Chiefs');
