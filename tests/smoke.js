@@ -2528,7 +2528,7 @@ serveur.listen(0, async () => {
         g45SbRegler(J[0].sb.g, '2', true);   /* PSG ne gagne pas : POUR perdu, CONTRE gagné */
         const fin = n2(parseFloat(state.b.sbx1) + parseFloat(state.b.orbitx) - 1000) === 7.78 && state.h.length === h0 && state.a.length === a0 + 2;
         sv('sb-a', '2,30'); sv('sb-b', '2,10'); sv('sb-m1', '100'); g45SbMise('1', '100'); sv('sb-m2', '120'); g45SbMise('2', '120');   /* 20261122h : 2 mises tapées = gardées */
-        const deux = parseFloat(document.getElementById('sb-m1').value) === 100 && /Contre sur[^€]*120,00/.test(document.getElementById('sb-res').innerText.replace(/\s+/g, ' ')); g45SbKind('2b');
+        const lbl = (document.getElementById('sb-part1') || {}).textContent || ''; const deux = parseFloat(document.getElementById('sb-m1').value) === 100 && /✅/.test(lbl) && /Contre sur[^€]*120,00/.test(document.getElementById('sb-res').innerText.replace(/\s+/g, ' ')); g45SbKind('2b');
         state.a.splice(0, 2); state.b = JSON.parse(sb0); swBet('simple');
         o.surebet = (calcOk && tk && /📷 Ticket 1/.test(document.getElementById('sub-sb') ? document.getElementById('sub-sb').innerHTML : '') && pan && resOk && debit && /⚖️ Surebet · PSG – Lyon/.test(carte || '') && cache === '' && fin && enc && ex && deux) || JSON.stringify({ deux, enc, ex, calcOk, pan, resOk, debit, c: (carte || '').slice(0, 80), cache, fin, A, Bq, C, D2 });
       } catch (e) { o.surebet = 'erreur : ' + e.message; }
