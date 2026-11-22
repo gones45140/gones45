@@ -2711,8 +2711,9 @@ serveur.listen(0, async () => {
         window._g45AgDkCharger = c0;
         const om = { jns: ['Lamine Yamal', 'Raphinha'], jmo: 'ou', lab: 'Buteur', nom: 'Barcelona', u: { type: 'club', sport: '⚽' } };
         window._g45AgDkCharger = () => Promise.resolve({ lamineyamal: { '230': [[1, 2.5]] }, raphinha: { '230': [[1, 1.5]] } });
-        window._g45TkDkMulti(om, R); await new Promise((r) => setTimeout(r, 50)); const mOu = window._g45TkDkMulti(om, R), mEt = window._g45TkDkMulti(Object.assign({}, om, { jmo: 'et' }), R); window._g45AgDkCharger = c0;
-        const pa = 1 / 2.5 / 1.07, pb = 1 / 1.5 / 1.07, multiOk = !!mOu && Math.abs(mOu.p - (1 - (1 - pa) * (1 - pb))) < 0.001 && !!mEt && Math.abs(mEt.p - pa * pb) < 0.001 && /OU/.test(mOu.lib);
+        window._g45TkDkMulti(om, R); await new Promise((r) => setTimeout(r, 50)); const mOu = window._g45TkDkMulti(om, R), mEt = window._g45TkDkMulti(Object.assign({}, om, { jmo: 'et' }), R);
+        const omJ = Object.assign({}, om, { nom: 'Raphinha', u: { type: 'joueur', sport: '⚽' } }); window._g45TkDkMulti(omJ, R); await new Promise((r) => setTimeout(r, 50)); const mJ = window._g45TkDkMulti(omJ, R); window._g45AgDkCharger = c0;   /* 20261124d : carte JOUEUR */
+        const pa = 1 / 2.5 / 1.07, pb = 1 / 1.5 / 1.07, multiOk = !!mOu && Math.abs(mOu.p - (1 - (1 - pa) * (1 - pb))) < 0.001 && !!mEt && Math.abs(mEt.p - pa * pb) < 0.001 && /OU/.test(mOu.lib) && !!mJ && Math.abs(mJ.p - mOu.p) < 0.001;
         o.dkJ = multiOk && (!!a && Math.abs(a.p - 1 / 2.5 / 1.07) < 0.001 && !!b && b.p > a.p && P[0].ty[0] === '39') || JSON.stringify([a, b, P]); } catch (e) { o.dkJ = 'erreur : ' + e.message; }
       /* 20261122q : pari back sur un exchange → cote nette (3 % sur le gain) */
       try { const b1 = { b: 'orbitx', cote: 2.02, m: 12.5 }, b2 = { b: 'orbitx', cote: 2.02, isLay: true }, b3 = { b: 'winamax', cote: 2.02 };
