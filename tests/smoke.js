@@ -1550,11 +1550,11 @@ serveur.listen(0, async () => {
         /* 20261119q : 🎫 panneau « Ton pari » (PC) — moteur + lecture du formulaire */
         /* 20261121q / 20261122a : 🏁 duos (NHL buteur, NBA points) */
         try { const F = window._g45DuosF, v = (n, ok) => [n, ok, 20, 15, 3, n / 2, ok / 2, 2, n / 2, ok / 2, 3, 0];
-          F.nhl = { v: 2, s: ['2025-26', '2026-27'], K: ['b'], L: [['Joel Eriksson Ek', '1', 'Kirill Kaprizov', '2', 'Wild', '30', { b: v(96, 68) }], ['Mark Scheifele', '3', 'Kyle Connor', '4', 'Jets', '28', { b: v(108, 70) }]] };
+          F.nhl = { v: 2, s: ['2025-26', '2026-27'], K: ['g1', 'p2'], L: [['Joel Eriksson Ek', '1', 'Kirill Kaprizov', '2', 'Wild', '30', { g1: v(96, 68), p2: v(96, 30) }], ['Mark Scheifele', '3', 'Kyle Connor', '4', 'Jets', '28', { g1: v(108, 70), p2: v(108, 60) }]] };
           F.nba = { v: 2, s: ['2025-26', '2026-27'], K: ['m24.5', 's44.5'], L: [['Luka Doncic', '5', 'Austin Reaves', '6', 'Lakers', '13', { 'm24.5': v(54, 48), 's44.5': v(54, 40) }]] };
-          const H = String(window._g45DuosHtml({ sp: 'hockey', lg: 'nhl' }) || ''), H2 = String(window._g45DuosHtml({ sp: 'basketball', lg: 'nba' }) || '');
+          const H = String(window._g45DuosHtml({ sp: 'hockey', lg: 'nhl' }) || ''), Hp = String(window._g45DuosHtml({ sp: 'hockey', lg: 'nhl' }, { jm: 'p', jmin: '2' }) || ''), H2 = String(window._g45DuosHtml({ sp: 'basketball', lg: 'nba' }) || '');
           delete F.nhl; delete F.nba;
-          o.duos = (/Ek ou Kaprizov/.test(H) && /Scheifele ou Connor/.test(H) && /cote mini/.test(H) && /g45DuoMur\('nhl',0\)/.test(H) && /Doncic ou Reaves/.test(H2) && /Total des 2 plus de/.test(H2)) || (H.slice(0, 150) + ' | ' + H2.slice(0, 150));
+          o.duos = (/Ek ou Kaprizov/.test(H) && /Scheifele ou Connor/.test(H) && /cote mini/.test(H) && /g45DuoMur\('nhl',0\)/.test(H) && /Doncic ou Reaves/.test(H2) && /Total des 2 plus de/.test(H2) && /pointeur » 2 ou \+/.test(Hp) && Hp.indexOf('Scheifele') < Hp.indexOf('Kaprizov')) || (H.slice(0, 150) + ' | ' + H2.slice(0, 150));
         } catch (e) { o.duos = 'erreur : ' + e.message; }
         /* 20261121e : ➡️ 📉 passer une série 🚀 en Cotes basses */
         try { const su0 = state.u, cf0 = window.confirm; window.confirm = () => true;
