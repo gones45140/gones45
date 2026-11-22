@@ -1553,8 +1553,16 @@ serveur.listen(0, async () => {
           F.nhl = { v: 2, s: ['2025-26', '2026-27'], K: ['g1', 'p2'], L: [['Joel Eriksson Ek', '1', 'Kirill Kaprizov', '2', 'Wild', '30', { g1: v(96, 68), p2: v(96, 30) }], ['Mark Scheifele', '3', 'Kyle Connor', '4', 'Jets', '28', { g1: v(108, 70), p2: v(108, 60) }]] };
           F.nba = { v: 2, s: ['2025-26', '2026-27'], K: ['m24.5', 's44.5'], L: [['Luka Doncic', '5', 'Austin Reaves', '6', 'Lakers', '13', { 'm24.5': v(54, 48), 's44.5': v(54, 40) }]] };
           const H = String(window._g45DuosHtml({ sp: 'hockey', lg: 'nhl' }) || ''), Hp = String(window._g45DuosHtml({ sp: 'hockey', lg: 'nhl' }, { jm: 'p', jmin: '2' }) || ''), H2 = String(window._g45DuosHtml({ sp: 'basketball', lg: 'nba' }) || '');
-          delete F.nhl; delete F.nba;
-          o.duos = (/Ek ou Kaprizov/.test(H) && /Scheifele ou Connor/.test(H) && /cote mini/.test(H) && /g45DuoMur\('nhl',0\)/.test(H) && /Doncic ou Reaves/.test(H2) && /Total des 2 plus de/.test(H2) && /pointeur » 2 ou \+/.test(Hp) && Hp.indexOf('Scheifele') < Hp.indexOf('Kaprizov')) || (H.slice(0, 150) + ' | ' + H2.slice(0, 150));
+          F.nba.K.push('reb:6.5', 'reb:8.5'); F.nba.L[0][6]['reb:6.5'] = v(54, 44); F.nba.L[0][6]['reb:8.5'] = v(54, 30);
+          const Hr = String(window._g45DuosHtml({ sp: 'basketball', lg: 'nba' }, { jm: 'reb', jmin: '8.5' }) || '');
+          F.nfl = { v: 2, s: ['2025-26', '2026-27'], K: ['td:1', 'td:2'], L: [['Jameson Williams', '7', 'Jahmyr Gibbs', '8', 'Lions', '8', { 'td:1': v(26, 24) }]] };
+          F.mlb = { v: 2, s: ['2025', '2026'], K: ['hr:1', 'r:1'], L: [['Aaron Judge', '9', 'Ben Rice', '10', 'Yankees', '10', { 'hr:1': v(200, 86) }]] };
+          F['foot-eng.1'] = { v: 2, s: ['2025-26', '2026-27'], K: ['g1', 'a1', 'p1'], L: [['Bruno Fernandes', '11', 'Kobbie Mainoo', '12', 'Man Utd', '360', { a1: v(22, 14), g1: v(22, 10) }]] };
+          const S0 = window._g45DuosHtml; const Hn = String(S0({ sp: 'football', lg: 'nfl' }, { jm: 'td', jmin: '1' }) || ''), Hm = String(S0({ sp: 'baseball', lg: 'mlb' }, { jm: 'hr', jmin: '1' }) || ''), Hf = String(S0({ sp: 'soccer', lg: 'eng.1' }, { jm: 'pas', jmin: '1' }) || '');
+          delete F.nhl; delete F.nba; delete F.nfl; delete F.mlb; delete F['foot-eng.1'];
+          const o2 = /rebonds » : au moins un des deux plus de 8,5/.test(Hr) && /touchdown » 1 ou \+/.test(Hn) && /Williams ou Gibbs/.test(Hn) && /home run/.test(Hm) && /Judge ou Rice/.test(Hm) && /passeur/.test(Hf) && /Fernandes ou Mainoo/.test(Hf);
+          if (!o2) o.duos2 = Hr.slice(0, 300) + ' | ' + Hn.slice(0, 200) + ' | ' + Hm.slice(0, 200) + ' | ' + Hf.slice(0, 200);
+          o.duos = !o.duos2 && (/Ek ou Kaprizov/.test(H) && /Scheifele ou Connor/.test(H) && /cote mini/.test(H) && /g45DuoMur\('nhl',0\)/.test(H) && /Doncic ou Reaves/.test(H2) && /Total des 2 plus de/.test(H2) && /pointeur » 2 ou \+/.test(Hp) && Hp.indexOf('Scheifele') < Hp.indexOf('Kaprizov')) || (o.duos2 || (H.slice(0, 150) + ' | ' + H2.slice(0, 150)));
         } catch (e) { o.duos = 'erreur : ' + e.message; }
         /* 20261121e : ➡️ 📉 passer une série 🚀 en Cotes basses */
         try { const su0 = state.u, cf0 = window.confirm; window.confirm = () => true;
