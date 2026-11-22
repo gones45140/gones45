@@ -676,9 +676,24 @@ serveur.listen(0, async () => {
         _g45TkJoueurs(o1); _g45TkJoueurs(o2); _g45TkJoueurs(o3);
         g45JReset('n'); const nj = document.getElementById('n-joueur'); if (nj) nj.value = o1.joueur; _g45TkJoueursPoser(o1, 'n');
         const FJ = _g45FormJoueurs('n'), md = (document.getElementById('n-jmode-val') || {}).value; g45JReset('n');
-        o.tkJ = (o1._jL.length === 2 && o1.joueur === 'Travis Kelce' && o1._jM === 'ou' && o2._jL.length === 3 && o2._jM === 'et' && o3._jL.length === 1 && o3.joueur === 'Kylian Mbappé'
+        o.tkJ2 = (o1._jL.length === 2 && o1.joueur === 'Travis Kelce' && o1._jM === 'ou' && o2._jL.length === 3 && o2._jM === 'et' && o3._jL.length === 1 && o3.joueur === 'Kylian Mbappé'
           && (!nj || (FJ.length === 2 && FJ[1].nom === 'Rashee Rice' && md === 'ou'))) || JSON.stringify({ a: o1._jL, b: o2, FJ, md });
-      } catch (e) { o.tkJ = 'erreur : ' + e.message; }
+      } catch (e) { o.tkJ2 = 'erreur : ' + e.message; }
+      try {
+        /* 20261123j : « Ton pari » joueurs en OU / ET sur les archives (fetch simulé) — A marque au 1er match, B au 2e, B absent au 3e */
+        const f0 = window.fetch, J = (x) => Promise.resolve(new Response(JSON.stringify(x), { status: 200, headers: { 'Content-Type': 'application/json' } }));
+        window.fetch = function (u) { u = String(u); if (u.indexOf('/cotes/football-us/') < 0) return f0.apply(this, arguments); const p = u.split('?')[0];
+          if (/\/joueurs\.json$/.test(p)) return J({ A1: ['Al Pha', '14', 3, {}], B2: ['Be Ta', '14', 2, {}] });
+          if (/\/equipes\.json$/.test(p)) return J({ 14: ['Team Q', 'TQ', 2], 15: ['Opp Q', 'OQ', 2] });
+          if (/\/joueurs\/A1\.json$/.test(p)) return J({ m: [[1e12, 'x', 'E1', '14', { J: 1, reTD: 1 }, null, 'h'], [1e12 + 1e9, 'x', 'E2', '14', { J: 1 }, null, 'h'], [1e12 + 2e9, 'x', 'E3', '14', { J: 1 }, null, 'h']] });
+          if (/\/joueurs\/B2\.json$/.test(p)) return J({ m: [[1e12, 'x', 'E1', '14', { J: 1 }, null, 'h'], [1e12 + 1e9, 'x', 'E2', '14', { J: 1, reTD: 1 }, null, 'h']] });
+          if (/\/equipes\/14\.json$/.test(p)) return J({ m: [[1e12, 'x', 'E1', 'h', [20, 10], 2, 0, '15'], [1e12 + 1e9, 'x', 'E2', 'h', [20, 10], 2, 0, '15'], [1e12 + 2e9, 'x', 'E3', 'h', [20, 10], 2, 0, '15']] });
+          return Promise.resolve(new Response('', { status: 404 })); };
+        const F = window._g45FicheJoueur, R1 = await F('Al Pha', 'tout', 'Marqueur de touchdown', '', 'football', 'Team Q', 1), R2 = await F('Al Pha', 'tout', 'Marqueur de touchdown', '', 'football', 'Team Q', 1, ['Al Pha', 'Be Ta'], 'ou'), R3 = await F('Al Pha', 'tout', 'Marqueur de touchdown', '', 'football', 'Team Q', 1, ['Al Pha', 'Be Ta'], 'et');
+        window.fetch = f0;
+        const tt = (R) => R && R.tt ? R.tt.ok + '/' + R.tt.n : JSON.stringify(R && R.err);
+        o.ficheMulti = (tt(R1) === '1/3' && tt(R2) === '2/2' && tt(R3) === '0/2' && /OU/.test(R2.lib) && /ET/.test(R3.lib)) || [tt(R1), tt(R2), tt(R3)].join(' | ');
+      } catch (e) { o.ficheMulti = 'erreur : ' + e.message; }
       try {
         /* 20261114m : série coupée en fin de saison → continue sur la suivante (1,30 ❌ en 2025, 1,60 ✅ en 2026) */
         const RS = window._g45CbSimS([{ sa: '2025', ms: [{ c: 1.3, w: false }] }, { sa: '2026', ms: [{ c: 1.6, w: true }] }], { p1: 10, stop: 5 });
@@ -2771,7 +2786,8 @@ serveur.listen(0, async () => {
     ok('🧮 Calculatrice rangée (3 groupes, règle ×5,33)', r.calcRange === true, r.calcRange);
     ok('🔎 Duo → ses critères (+ ↩️ retour)', r.duoCr === true, r.duoCr);
     ok('⏱️ Quart-temps / mi-temps (NBA / NFL)', r.qtCr === true, r.qtCr);
-    ok('🎫 Ticket « A ou B » → 2 joueurs', r.tkJ === true, r.tkJ);
+    ok('🎫 Ticket « A ou B » → 2 joueurs', r.tkJ2 === true, r.tkJ2);
+    ok('👥 Ton pari : historique « A OU / ET B »', r.ficheMulti === true, r.ficheMulti);
     ok('📉 Cotes basses : série continue sur la saison suivante', r.cbSuite === true, r.cbSuite);
     ok('📉 Cotes basses : méthode Engager (mise, série, arrêt, filtre Bilan)', r.cbMeth === true, r.cbMeth);
     ok('📉 Cotes basses : Tableau de bord + bouton graphique', r.cbTdb === true, r.cbTdb);
