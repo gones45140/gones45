@@ -2549,7 +2549,11 @@ serveur.listen(0, async () => {
         window._g45TkDkJ(oj, R); window._g45TkDkJ(od, R); await new Promise((r) => setTimeout(r, 50));
         const a = window._g45TkDkJ(oj, R), b = window._g45TkDkJ(od, R), P = window._g45AgDkPari('soccer', '2 buts ou plus');
         window._g45AgDkCharger = c0;
-        o.dkJ = (!!a && Math.abs(a.p - 1 / 2.5 / 1.07) < 0.001 && !!b && b.p > a.p && P[0].ty[0] === '39') || JSON.stringify([a, b, P]); } catch (e) { o.dkJ = 'erreur : ' + e.message; }
+        const om = { jns: ['Lamine Yamal', 'Raphinha'], jmo: 'ou', lab: 'Buteur', nom: 'Barcelona', u: { type: 'club', sport: '⚽' } };
+        window._g45AgDkCharger = () => Promise.resolve({ lamineyamal: { '230': [[1, 2.5]] }, raphinha: { '230': [[1, 1.5]] } });
+        window._g45TkDkMulti(om, R); await new Promise((r) => setTimeout(r, 50)); const mOu = window._g45TkDkMulti(om, R), mEt = window._g45TkDkMulti(Object.assign({}, om, { jmo: 'et' }), R); window._g45AgDkCharger = c0;
+        const pa = 1 / 2.5 / 1.07, pb = 1 / 1.5 / 1.07, multiOk = !!mOu && Math.abs(mOu.p - (1 - (1 - pa) * (1 - pb))) < 0.001 && !!mEt && Math.abs(mEt.p - pa * pb) < 0.001 && /OU/.test(mOu.lib);
+        o.dkJ = multiOk && (!!a && Math.abs(a.p - 1 / 2.5 / 1.07) < 0.001 && !!b && b.p > a.p && P[0].ty[0] === '39') || JSON.stringify([a, b, P]); } catch (e) { o.dkJ = 'erreur : ' + e.message; }
       /* 20261122q : pari back sur un exchange → cote nette (3 % sur le gain) */
       try { const b1 = { b: 'orbitx', cote: 2.02, m: 12.5 }, b2 = { b: 'orbitx', cote: 2.02, isLay: true }, b3 = { b: 'winamax', cote: 2.02 };
         const r1 = window._g45ExchNet(b1), r2 = window._g45ExchNet(b2), r3 = window._g45ExchNet(b3), r4 = window._g45ExchNet(b1);
