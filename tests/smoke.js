@@ -2590,6 +2590,11 @@ serveur.listen(0, async () => {
         const ok = n === 1 && u.lc['|dom'] === 3 && !u.lcb && !u.mode && u.lcbMig['|dom'].per === 17.5 && mi === 37.5 && state.mode1 === 1;
         state.u = su; state.a = sa; if (m1) state.mode1 = m1; else delete state.mode1;
         o.mode1 = ok || JSON.stringify([n, u, mi]); } catch (e) { o.mode1 = 'erreur : ' + e.message; }
+      /* 20261122x : pastilles 📉 / 🚀 selon la cote + filtre Bilan */
+      try { const b1 = { isS: true, cote: 1.42 }, b2 = { isS: true, cote: 1.65 }, b3 = { isS: true, cote: 1.4836, coteB: 1.5 }, m0 = window._g45BilMeth;
+        const p1 = window._g45TypePatch(b1), p2 = window._g45TypePatch(b2), pl = window._g45MethPill(b1);
+        window._g45BilMeth = 'mb'; const f1 = _g45EstCk(b1) && !_g45EstCk(b2) && !_g45EstCk(b3); window._g45BilMeth = 'mh'; const f2 = !_g45EstCk(b1) && _g45EstCk(b2) && _g45EstCk(b3); window._g45BilMeth = m0;
+        o.pastCote = (/📉 Cockpit/.test(p1) && /🚀 Cockpit/.test(p2) && /📉 Cockpit/.test(pl) && f1 && f2) || JSON.stringify([p1, p2, pl, f1, f2]); } catch (e) { o.pastCote = 'erreur : ' + e.message; }
       /* 20261122m : compétition de la série en cours (Barcelona P2 Liga, « Ligue 1 » restée d'une autre carte) */
       try { const su = state.u, sa = state.a; const uT = { n: 'Test Barca', s: 5, l: 2, lc: { 'nations|dom': 1, 'liga|ext': 2, 'liga|dom': 2 }, sport: '⚽' };
         state.u = su.concat([uT]); state.a = [{ n: 'Test Barca', comp: 'Liga', date: '2026-10-31', domicile: 'dom', m: 5, cote: 1.8, win: false, b: 'x', id: 'tb1' }].concat(sa || []);
@@ -2916,6 +2921,7 @@ serveur.listen(0, async () => {
     ok('🎯 Calculatrice : par les buts / DraftKings', r.cjPois === true, r.cjPois);
     ok('🚀 Mise Cockpit selon la cote', r.monMise === true, r.monMise);
     ok('🚀 Mode unique : série 📉 reprise', r.mode1 === true, r.mode1);
+    ok('📉 / 🚀 pastilles et filtre Bilan', r.pastCote === true, r.pastCote);
     ok('📂 Filtre Lieu : reste sur l\'onglet ouvert', r.ongLieu === true, r.ongLieu);
     ok('🏁 Duos NHL / NBA (Jouable en Cockpit)', r.duos === true, r.duos);
     ok('🔍 Recherche + puces dans 🃏 Mes cartes', r.mcRech === true, r.mcRech);
