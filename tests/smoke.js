@@ -704,6 +704,17 @@ serveur.listen(0, async () => {
           && FU.length === 2 && FU[0].goals === 1 && FU[1].goals === 1 && FE[0].goals === 0 && FE[1].goals === 0) || JSON.stringify({ M1, M2, M3, FU, FE });
       } catch (e) { o.serMulti = 'erreur : ' + e.message; }
       try {
+        /* 20261123m : ⬅️ flèche retour = onglet précédent, ferme d'abord une fenêtre ouverte */
+        const vis = () => { let t = null; document.querySelectorAll('.tab').forEach((x) => { if (!t && x.id && x.style.display !== 'none' && x.getClientRects().length) t = x.id; }); return t; };
+        const t0 = vis(); window._g45RetourInit(); const att = () => new Promise((r) => setTimeout(r, 350));
+        showTab('t-outils', null); showTab('t-stats', null);
+        history.back(); await att(); const v1 = vis();
+        let md = document.getElementById('edit-bet-modal'); if (md) md.style.display = 'flex';
+        history.back(); await att(); const v2 = vis(), m2 = md ? md.style.display : 'none';
+        showTab(t0 || 't-home', null);
+        o.retour = (v1 === 't-outils' && v2 === 't-outils' && m2 === 'none') || JSON.stringify({ t0, v1, v2, m2 });
+      } catch (e) { o.retour = 'erreur : ' + e.message; }
+      try {
         /* 20261114m : série coupée en fin de saison → continue sur la suivante (1,30 ❌ en 2025, 1,60 ✅ en 2026) */
         const RS = window._g45CbSimS([{ sa: '2025', ms: [{ c: 1.3, w: false }] }, { sa: '2026', ms: [{ c: 1.6, w: true }] }], { p1: 10, stop: 5 });
         o.cbSuite = (Math.abs(RS[0].regle.g + 10) < 1e-6 && Math.abs(RS[1].regle.g - 18) < 1e-6 && RS.fin.regle === 0) || JSON.stringify(RS);
@@ -2798,6 +2809,7 @@ serveur.listen(0, async () => {
     ok('🎫 Ticket « A ou B » → 2 joueurs', r.tkJ2 === true, r.tkJ2);
     ok('👥 Ton pari : historique « A OU / ET B »', r.ficheMulti === true, r.ficheMulti);
     ok('🔄 Séries carte : pari à plusieurs joueurs', r.serMulti === true, r.serMulti);
+    ok('⬅️ Flèche retour : onglet précédent / ferme la fenêtre', r.retour === true, r.retour);
     ok('📉 Cotes basses : série continue sur la saison suivante', r.cbSuite === true, r.cbSuite);
     ok('📉 Cotes basses : méthode Engager (mise, série, arrêt, filtre Bilan)', r.cbMeth === true, r.cbMeth);
     ok('📉 Cotes basses : Tableau de bord + bouton graphique', r.cbTdb === true, r.cbTdb);
