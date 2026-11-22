@@ -2532,6 +2532,19 @@ serveur.listen(0, async () => {
         state.a.splice(0, 2); state.b = JSON.parse(sb0); swBet('simple');
         o.surebet = (calcOk && tk && /📷 Ticket 1/.test(document.getElementById('sub-sb') ? document.getElementById('sub-sb').innerHTML : '') && pan && resOk && debit && /⚖️ Surebet · PSG – Lyon/.test(carte || '') && cache === '' && fin && enc && ex && deux) || JSON.stringify({ deux, enc, ex, calcOk, pan, resOk, debit, c: (carte || '').slice(0, 80), cache, fin, A, Bq, C, D2 });
       } catch (e) { o.surebet = 'erreur : ' + e.message; }
+      /* 20261122m : ⚽ cote estimée « par les buts » (Barça 🏠 – Villarreal, victoire + les deux marquent) */
+      try { const G = []; for (let i = 0; i <= 10; i++) { G.push([]); for (let j = 0; j <= 10; j++) G[i].push(i > j && j > 0); }
+        window._g45TkBL({ 'esp.1': [1.497, 1.135] });
+        const P = window._g45TkPois({ lieu: 'dom' }, { po: { gf: 2.83, ga: 1.10, own: 0.36, G, lg: 'esp.1' } }, { po: { gf: 1.25, ga: 1.41, own: 0.1, G, lg: 'esp.1' } });
+        o.pois = (!!P && P.p > 0.3 && P.p < 0.45 && Math.abs(P.LT - 2.83 * 1.41 / 1.497) < 0.01 && window._g45TkPois({ lieu: 'dom' }, { po: null }, null) === null) || JSON.stringify(P); } catch (e) { o.pois = 'erreur : ' + e.message; }
+      /* 20261122m : compétition de la série en cours (Barcelona P2 Liga, « Ligue 1 » restée d'une autre carte) */
+      try { const su = state.u, sa = state.a; const uT = { n: 'Test Barca', s: 5, l: 2, lc: { 'nations|dom': 1, 'liga|ext': 2, 'liga|dom': 2 }, sport: '⚽' };
+        state.u = su.concat([uT]); state.a = [{ n: 'Test Barca', comp: 'Liga', date: '2026-10-31', domicile: 'dom', m: 5, cote: 1.8, win: false, b: 'x', id: 'tb1' }].concat(sa || []);
+        render(); const un = document.getElementById('c-unit'), cc = document.getElementById('c-comp'), li = document.getElementById('c-lieu'), lv = li && li.value;
+        if (li) li.value = 'dom'; un.value = 'Test Barca'; cc.value = 'Ligue 1'; delete cc.dataset.g45Auto; updMise(); const v1 = cc.value;
+        cc.value = 'Ligue des champions'; delete cc.dataset.g45Auto; updMise(); const v2 = cc.value;
+        state.u = su; state.a = sa; if (li) li.value = lv; cc.value = ''; render();
+        o.compSerie = (v1 === 'Liga' && v2 === 'Ligue des champions') || (v1 + ' / ' + v2); } catch (e) { o.compSerie = 'erreur : ' + e.message; }
       /* 20261122l : un filtre Lieu garde l'onglet ouvert (Archive) */
       try { const u0 = (state.u || []).filter((x) => x && x.n)[0]; if (!u0) throw new Error('pas de carte');
         openClub(u0.n); const ba = [...document.querySelectorAll('.itabs .itab')].find((x) => /'archive'/.test(x.getAttribute('onclick') || '')); swInner('archive', ba);
@@ -2841,6 +2854,8 @@ serveur.listen(0, async () => {
     ok('➕ Paris perdus de la série en cours (Cockpit)', r.ckPer === true, r.ckPer);
     ok('➡️ 📉 Passer une série Cockpit en Cotes basses', r.versCb === true, r.versCb);
     ok('📂 Archive de la fiche : filtre Lieu', r.archLieu === true, r.archLieu);
+    ok('⚽ Cote estimée par les buts (Poisson)', r.pois === true, r.pois);
+    ok('🏁 Compétition de la série en cours', r.compSerie === true, r.compSerie);
     ok('📂 Filtre Lieu : reste sur l\'onglet ouvert', r.ongLieu === true, r.ongLieu);
     ok('🏁 Duos NHL / NBA (Jouable en Cockpit)', r.duos === true, r.duos);
     ok('🔍 Recherche + puces dans 🃏 Mes cartes', r.mcRech === true, r.mcRech);
