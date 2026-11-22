@@ -2548,6 +2548,10 @@ serveur.listen(0, async () => {
         const a = window._g45TkDkJ(oj, R), b = window._g45TkDkJ(od, R), P = window._g45AgDkPari('soccer', '2 buts ou plus');
         window._g45AgDkCharger = c0;
         o.dkJ = (!!a && Math.abs(a.p - 1 / 2.5 / 1.07) < 0.001 && !!b && b.p > a.p && P[0].ty[0] === '39') || JSON.stringify([a, b, P]); } catch (e) { o.dkJ = 'erreur : ' + e.message; }
+      /* 20261122q : pari back sur un exchange → cote nette (3 % sur le gain) */
+      try { const b1 = { b: 'orbitx', cote: 2.02, m: 12.5 }, b2 = { b: 'orbitx', cote: 2.02, isLay: true }, b3 = { b: 'winamax', cote: 2.02 };
+        const r1 = window._g45ExchNet(b1), r2 = window._g45ExchNet(b2), r3 = window._g45ExchNet(b3), r4 = window._g45ExchNet(b1);
+        o.exch = (r1 && !r2 && !r3 && !r4 && Math.abs(b1.cote - 1.9894) < 0.0001 && b1.coteB === 2.02 && Math.abs(b1.m * b1.cote - b1.m - 12.37) < 0.01 && b3.cote === 2.02) || JSON.stringify([b1, b2, b3]); } catch (e) { o.exch = 'erreur : ' + e.message; }
       /* 20261122m : compétition de la série en cours (Barcelona P2 Liga, « Ligue 1 » restée d'une autre carte) */
       try { const su = state.u, sa = state.a; const uT = { n: 'Test Barca', s: 5, l: 2, lc: { 'nations|dom': 1, 'liga|ext': 2, 'liga|dom': 2 }, sport: '⚽' };
         state.u = su.concat([uT]); state.a = [{ n: 'Test Barca', comp: 'Liga', date: '2026-10-31', domicile: 'dom', m: 5, cote: 1.8, win: false, b: 'x', id: 'tb1' }].concat(sa || []);
@@ -2869,6 +2873,7 @@ serveur.listen(0, async () => {
     ok('🏁 Compétition de la série en cours', r.compSerie === true, r.compSerie);
     ok('📚 Foot calé sur DraftKings', r.dkFoot === true, r.dkFoot);
     ok('👤 Joueur écrit → cote DraftKings du joueur', r.dkJ === true, r.dkJ);
+    ok('🔄 Exchange : commission 3 % sur le gain', r.exch === true, r.exch);
     ok('📂 Filtre Lieu : reste sur l\'onglet ouvert', r.ongLieu === true, r.ongLieu);
     ok('🏁 Duos NHL / NBA (Jouable en Cockpit)', r.duos === true, r.duos);
     ok('🔍 Recherche + puces dans 🃏 Mes cartes', r.mcRech === true, r.mcRech);
