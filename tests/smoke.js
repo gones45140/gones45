@@ -748,8 +748,11 @@ serveur.listen(0, async () => {
         window._g45TkAbs.html(ob); await new Promise((r) => setTimeout(r, 300)); const ha = String(window._g45TkAbs.html(ob) || '').replace(/<[^>]+>/g, ' ');
         const ob2 = { u: { sport: '⚽' }, nom: 'Lyon', adv: 'Marseille', date: '2026-11-29', f: 'strat' };
         window._g45TkAbs.html(ob2); await new Promise((r) => setTimeout(r, 300)); const hb = window._g45TkAbs.html(ob2);
+        const ob3 = { u: { sport: '⚽' }, nom: 'Paris SG', adv: 'Lyon', date: '2026-11-29', f: 'strat', comp: 'Ligue 1' };
+        window._g45TkAbs.html(ob3); await new Promise((r) => setTimeout(r, 300)); const hc = String(window._g45TkAbs.html(ob3) || '');
+        if (!/Compos probables Ligue 1/.test(hc) || !/ligue1\.com/.test(hc)) o.absFpl0 = 'L1 ' + hc.slice(0, 120);
         window.fplFetch = fF;
-        o.absFpl = (/Fantasy Premier League/.test(ha) && /Bukayo Saka/.test(ha) && /milieu/.test(ha) && /6 buts/.test(ha) && /incertain 75 %/.test(ha) && !/Ailleurs/.test(ha) && /Manchester City : aucun/.test(ha) && hb === '') || JSON.stringify({ ha: ha.slice(0, 400), hb });
+        o.absFpl = !o.absFpl0 && (/Fantasy Premier League/.test(ha) && /Bukayo Saka/.test(ha) && /milieu/.test(ha) && /6 buts/.test(ha) && /incertain 75 %/.test(ha) && !/Ailleurs/.test(ha) && /Manchester City : aucun/.test(ha) && hb === '') || o.absFpl0 || JSON.stringify({ ha: ha.slice(0, 400), hb });
       } catch (e) { o.absFpl = 'erreur : ' + e.message; }
       try {
         /* 20261123s : 📋 stats des joueurs NFL (fenêtre de match) */
