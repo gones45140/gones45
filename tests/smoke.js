@@ -2551,7 +2551,13 @@ serveur.listen(0, async () => {
       /* 20261122q : pari back sur un exchange → cote nette (3 % sur le gain) */
       try { const b1 = { b: 'orbitx', cote: 2.02, m: 12.5 }, b2 = { b: 'orbitx', cote: 2.02, isLay: true }, b3 = { b: 'winamax', cote: 2.02 };
         const r1 = window._g45ExchNet(b1), r2 = window._g45ExchNet(b2), r3 = window._g45ExchNet(b3), r4 = window._g45ExchNet(b1);
-        o.exch = (r1 && !r2 && !r3 && !r4 && Math.abs(b1.cote - 1.9894) < 0.0001 && b1.coteB === 2.02 && Math.abs(b1.m * b1.cote - b1.m - 12.37) < 0.01 && b3.cote === 2.02) || JSON.stringify([b1, b2, b3]); } catch (e) { o.exch = 'erreur : ' + e.message; }
+        const sb0 = JSON.stringify(state.b || {}); state.b = Object.assign({}, state.b, { orbitx: '100.00', winamax: '100.00' });
+        const e1 = { b: 'orbitx', m: 10, cote: 2, win: true, notes: 'x' }; const x1 = window._g45ExchEdit(e1, 'a'); const bA = parseFloat(state.b.orbitx);
+        _g45BetAppliquer(e1, 'a', -1); e1.b = 'winamax'; _g45BetAppliquer(e1, 'a', +1); const x2 = window._g45ExchEdit(e1, 'a'); const bB = parseFloat(state.b.orbitx), bW = parseFloat(state.b.winamax);
+        state.b = JSON.parse(sb0);
+        const edOk = x1 && Math.abs(bA - 99.7) < 0.001 && x2 && e1.cote === 2 && !e1.coteB && e1.notes === 'x' && Math.abs(bW - 110) < 0.001 && Math.abs(bB - 90) < 0.001;
+        if (!edOk) o.exch2 = JSON.stringify([x1, bA, x2, bB, bW, e1]);
+        o.exch = !o.exch2 && (r1 && !r2 && !r3 && !r4 && Math.abs(b1.cote - 1.9894) < 0.0001 && b1.coteB === 2.02 && Math.abs(b1.m * b1.cote - b1.m - 12.37) < 0.01 && b3.cote === 2.02) || o.exch2 || JSON.stringify([b1, b2, b3]); } catch (e) { o.exch = 'erreur : ' + e.message; }
       /* 20261122m : compétition de la série en cours (Barcelona P2 Liga, « Ligue 1 » restée d'une autre carte) */
       try { const su = state.u, sa = state.a; const uT = { n: 'Test Barca', s: 5, l: 2, lc: { 'nations|dom': 1, 'liga|ext': 2, 'liga|dom': 2 }, sport: '⚽' };
         state.u = su.concat([uT]); state.a = [{ n: 'Test Barca', comp: 'Liga', date: '2026-10-31', domicile: 'dom', m: 5, cote: 1.8, win: false, b: 'x', id: 'tb1' }].concat(sa || []);
