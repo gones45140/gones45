@@ -2537,6 +2537,10 @@ serveur.listen(0, async () => {
         window._g45TkBL({ 'esp.1': [1.497, 1.135] });
         const P = window._g45TkPois({ lieu: 'dom' }, { po: { gf: 2.83, ga: 1.10, own: 0.36, G, lg: 'esp.1' } }, { po: { gf: 1.25, ga: 1.41, own: 0.1, G, lg: 'esp.1' } });
         o.pois = (!!P && P.p > 0.3 && P.p < 0.45 && Math.abs(P.LT - 2.83 * 1.41 / 1.497) < 0.01 && window._g45TkPois({ lieu: 'dom' }, { po: null }, null) === null) || JSON.stringify(P); } catch (e) { o.pois = 'erreur : ' + e.message; }
+      /* 20261122n : 📚 calée sur DraftKings (cotes sondées Barça – Villarreal) → buts attendus ≈ 3,46 / 1,11 */
+      try { const nv = (x, y) => (1 / x) / (1 / x + 1 / y), q = [1 / 1.19, 1 / 8, 1 / 12], sq = q[0] + q[1] + q[2];
+        const F = window._g45TkDkAjuste({ w: q[0] / sq, d: q[1] / sq, b: nv(1.46, 2.70), T: [[1.5, nv(1.10, 5.6)], [2.5, nv(1.38, 2.73)], [3.5, nv(1.98, 1.71)], [4.5, nv(3.19, 1.29)]], A: [[0.5, nv(1.40, 2.66)], [1.5, nv(2.89, 1.34)]] });
+        o.dkFoot = (Math.abs(F.h - 3.46) < 0.08 && Math.abs(F.a - 1.11) < 0.06) || JSON.stringify(F); } catch (e) { o.dkFoot = 'erreur : ' + e.message; }
       /* 20261122m : compétition de la série en cours (Barcelona P2 Liga, « Ligue 1 » restée d'une autre carte) */
       try { const su = state.u, sa = state.a; const uT = { n: 'Test Barca', s: 5, l: 2, lc: { 'nations|dom': 1, 'liga|ext': 2, 'liga|dom': 2 }, sport: '⚽' };
         state.u = su.concat([uT]); state.a = [{ n: 'Test Barca', comp: 'Liga', date: '2026-10-31', domicile: 'dom', m: 5, cote: 1.8, win: false, b: 'x', id: 'tb1' }].concat(sa || []);
@@ -2856,6 +2860,7 @@ serveur.listen(0, async () => {
     ok('📂 Archive de la fiche : filtre Lieu', r.archLieu === true, r.archLieu);
     ok('⚽ Cote estimée par les buts (Poisson)', r.pois === true, r.pois);
     ok('🏁 Compétition de la série en cours', r.compSerie === true, r.compSerie);
+    ok('📚 Foot calé sur DraftKings', r.dkFoot === true, r.dkFoot);
     ok('📂 Filtre Lieu : reste sur l\'onglet ouvert', r.ongLieu === true, r.ongLieu);
     ok('🏁 Duos NHL / NBA (Jouable en Cockpit)', r.duos === true, r.duos);
     ok('🔍 Recherche + puces dans 🃏 Mes cartes', r.mcRech === true, r.mcRech);
