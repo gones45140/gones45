@@ -1546,7 +1546,11 @@ serveur.listen(0, async () => {
         g45LmLieu('ext'); const l1 = document.getElementById('c-lieu').value; g45LmDate(1); const d1 = document.getElementById('c-date').value, x = new Date(); x.setDate(x.getDate() + 1);
         const dem = x.getFullYear() + '-' + String(x.getMonth() + 1).padStart(2, '0') + '-' + String(x.getDate()).padStart(2, '0');
         g45LmLieu(lv); document.getElementById('c-date').value = dv;
-        o.leMatch = (dans && l1 === 'ext' && d1 === dem && !!document.getElementById('lm-det')) || JSON.stringify({ B: !!B, dans, l1, d1, dem }); } catch (e) { o.leMatch = 'erreur : ' + e.message; }
+        const Bn = document.getElementById('g45lm-n'), nl0 = document.getElementById('n-lieu').value, pd0 = document.getElementById('p-domicile').value;
+        const dansN = ['n-team', 'n-analysis', 'n-date', 'n-heure', 'n-mise', 'n-book', 'p-sport', 'n-comp'].every(id => Bn && Bn.contains(document.getElementById(id)));
+        g45LmLieu('n', 'ext'); const nOk = dansN && document.getElementById('n-lieu').value === 'ext' && document.getElementById('p-domicile').value === 'ext';
+        g45LmLieu('n', nl0); if (typeof togglePariDom === 'function') togglePariDom(pd0 === 'dom' ? true : pd0 === 'ext' ? false : null);
+        o.leMatch = (nOk && dans && l1 === 'ext' && d1 === dem && !!document.getElementById('lm-det')) || JSON.stringify({ B: !!B, dans, l1, d1, dem, nOk }); } catch (e) { o.leMatch = 'erreur : ' + e.message; }
       /* 20261124i : pépite de résultat à cote FR > 2,20 → nf 9 ; 1,80 → comptée */
       try { const FI = window._g45LoiCote.FI; FI['9o1'] = { h: { id: '1' }, a: { id: '2' }, ml: { h: 2.9, a: 1.6, d: 3.5 } };
         const L = [{ eid: '9o1', id: '1', k: 'v', d: 1, lieu: 'dom', r: null, cours: 4, pire: 5, n: 20, ok: 10 }], L2 = [{ eid: '9o1', id: '2', k: 'v', d: 0, lieu: 'ext', r: null, cours: 4, pire: 5, n: 20, ok: 12 }];
