@@ -1530,6 +1530,12 @@ serveur.listen(0, async () => {
           L('eqp', { q: 'eq', l: 112.5, o: 'u' }), L('es', { l: 4.5, o: 'o' }), L('ese', { l: 1.5, o: 'o' }), 'Les 2 équipes marquent un essai', L('prem', {}), L('jb', { mot: 'marque un TD' }), 'Doublé (2 buts)'];
         const bad = nuls.filter(t => AV(t, true, 3, 0) !== null || AV(t, false, 0, 0) !== null);
         const hcOk = L('hc', { l: '-1.5' }) === 'HC -1.5' && L('hc', { l: 5.5 }) === 'HC +5.5' && AV('HC -1.5', true, 3, 1) === true && AV('HC -1.5', true, 2, 1) === false && AV('Over 3.5', null, 2, 2) === true;
+        /* 20261124o : 2 joueurs → champs du formulaire + « Au moins un » / « Chacun » (mode lu par le Worker) */
+        ch('🏒'); g45TpTab('c', 3); g45TpJoueur('c', 0, 'Joe Un'); g45TpJoueur('c', 1, 'Jim Deux');
+        const jOu = L('jb', { mot: 'buteur' }), nJ = (typeof _g45FormJoueurs === 'function' ? _g45FormJoueurs('c').length : 0); g45TpModeJ('c', 'et'); const jEt = L('jb', { mot: 'buteur' }), jL = L('jl', { mot: 'tir', l: 2.5, o: 'o' });
+        const multiOk = nJ === 2 && jOu === 'Buteur (au moins un)' && jEt === 'Buteur (chacun)' && jL === '3 tirs ou plus (chacun)' && document.getElementById('c-jmode-val').value === 'et' && AV(jL, true, 3, 0) === null;
+        if (typeof g45JReset === 'function') g45JReset('c'); ch('⚽');
+        if (!multiOk) bad.push(JSON.stringify({ nJ, jOu, jEt, jL }));
         mmRows.length = 0; mmRows.push({ type: 'Victoire + BTS Oui', cote: 3.1 }); renderMmRows();
         const tk = document.querySelector('#mm-sel input') && document.querySelector('#mm-sel input').value === 'Victoire + BTS Oui';
         o.tonPari = (okFoot && okHk && okBk && !bad.length && hcOk && tk && /marque 2 buts ou plus$/.test(eb) && / ne marque pas$/.test(eu)) || JSON.stringify({ okFoot, okHk, okBk, bad, hcOk, tk, eb, eu, tabs });
