@@ -1558,7 +1558,9 @@ serveur.listen(0, async () => {
         box.appendChild(row); window._g45DuoHabiller();
         const ok = D && D.autres.length === 1 && D.autres[0] === 'Mark Scheifele' && D.m === 'un' && !D1 && /ou.*Mark Scheifele/.test(row.querySelector('.uname').textContent) && row.querySelectorAll('.g45ul-duo .g45duo-ph').length === 2 && /kc\.png/.test(row.querySelector('.g45ul-duo img').src);
         row.remove(); state.u.splice(ix, 1);
-        o.duoCarte = ok || JSON.stringify({ D, D1 }); } catch (e) { o.duoCarte = 'erreur : ' + e.message; }
+        const uR = { type: 'joueur', n: 'Connor McDavid', note: 'Edmonton Oilers ✈️ au moins un de (, Leon Draisaitl) buteur' }, rR = window._g45DuoReparer(uR);
+        const okR = rR && /\(Connor McDavid, Leon Draisaitl\)/.test(uR.note) && !window._g45DuoReparer({ type: 'joueur', n: 'X Y', note: '🏠 et Over 2.5' });
+        o.duoCarte = (ok && okR) || JSON.stringify({ D, D1, okR, note: uR.note }); } catch (e) { o.duoCarte = 'erreur : ' + e.message; }
       /* 20261124p : bloc « Le match » (Engager) : vrais champs déplacés dedans, boutons lieu / date */
       try { const B = document.getElementById('g45lm'), lv = document.getElementById('c-lieu').value, dv = document.getElementById('c-date').value;
         const S3 = document.getElementById('g45st3-c'), S3n = document.getElementById('g45st3-n'), dIn = (bl, id) => !!bl && bl.contains(document.getElementById(id));
