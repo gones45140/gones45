@@ -1294,9 +1294,14 @@ serveur.listen(0, async () => {
         state.u = state.u.concat([{ n: 'Macklin Celebrini', type: 'joueur', sport: '🏒', note: 'San Jose Sharks', s: 'a' }]);
         _g45TicketRemplirCockpit({ joueur: 'Macklin Celebrini', equipe: 'Montreal Canadiens', adversaire: 'San Jose Sharks', domicile: true, type: 'Buteur', cote: '2.1', mise: '5' });
         const v2 = un.value, ce2 = (document.getElementById('c-equipe') || {}).value, ct2 = (document.getElementById('c-target') || {}).value, li2 = (document.getElementById('c-lieu') || {}).value;
+        /* 20261124v : 2 joueurs « M. Scheifele ou K. Connor », seule la carte du 2e est au mur → trouvée, pas d'alerte */
+        const op3 = document.createElement('option'); op3.value = 'Kyle Connor'; op3.text = 'Kyle Connor'; un.appendChild(op3);
+        state.u = state.u.concat([{ n: 'Kyle Connor', type: 'joueur', sport: '🏒', note: 'Winnipeg Jets', s: 'a' }]); alerte = '';
+        _g45TicketRemplirCockpit({ joueur: 'M. Scheifele ou K. Connor', equipe: 'Winnipeg Jets', adversaire: 'Utah Mammoth', domicile: true, type: 'Double chance buteur', cote: '1.39', mise: '5' });
+        const v3 = un.value, al3 = alerte; op3.remove(); try { g45JReset('c'); } catch (x) {}
         op.remove(); op2.remove(); state.u = u0; window.alert = a0;
-        o.tkj = (v === 'MCDAVID CONNOR' && !alerte && ce === 'Edmonton Oilers' && v2 === 'Macklin Celebrini' && ce2 === 'San Jose Sharks' && ct2 === 'Montreal Canadiens' && li2 === 'ext')
-          || JSON.stringify({ v, alerte, ce, v2, ce2, ct2, li2 });
+        o.tkj = (v === 'MCDAVID CONNOR' && !alerte && ce === 'Edmonton Oilers' && v2 === 'Macklin Celebrini' && ce2 === 'San Jose Sharks' && ct2 === 'Montreal Canadiens' && li2 === 'ext' && v3 === 'Kyle Connor' && !al3)
+          || JSON.stringify({ v, alerte, ce, v2, ce2, ct2, li2, v3, al3 });
       } catch (e) { o.tkj = 'erreur : ' + e.message; }
       /* 20261016g — séries individuelles : seuil 2 ou plus */
       try {
@@ -1534,6 +1539,11 @@ serveur.listen(0, async () => {
         ch('🏒'); g45TpTab('c', 3); g45TpJoueur('c', 0, 'Joe Un'); g45TpJoueur('c', 1, 'Jim Deux');
         const jOu = L('jb', { mot: 'buteur' }), nJ = (typeof _g45FormJoueurs === 'function' ? _g45FormJoueurs('c').length : 0); g45TpModeJ('c', 'et'); const jEt = L('jb', { mot: 'buteur' }), jL = L('jl', { mot: 'tir', l: 2.5, o: 'o' });
         const multiOk = nJ === 2 && jOu === 'Buteur (au moins un)' && jEt === 'Buteur (chacun)' && jL === '3 tirs ou plus (chacun)' && document.getElementById('c-jmode-val').value === 'et' && AV(jL, true, 3, 0) === null;
+        /* 20261124v : ligne du ticket « Double chance buteur » → bouton Buteur vert ; mode « Au moins un » = réglage vert (classe sel) ; re-clic retire la ligne */
+        mmRows.length = 0; mmRows.push({ type: 'Double chance buteur', cote: 1.39 }); renderMmRows(); g45TpTab('c', 3);
+        const bB = [].filter.call(box().querySelectorAll('.g45tp-b'), b => /Buteur/.test(b.textContent))[0], selOn = box().querySelector('.g45tp-ch.sel.on');
+        const vertOk = !!bB && /✓/.test(bB.textContent) && !!selOn && /Chacun|Au moins un/.test(selOn.textContent); if (bB) bB.click(); const retire = !mmRows.some(r => r.type === 'Double chance buteur');
+        if (!(vertOk && retire)) bad.push(JSON.stringify({ vertOk, retire }));
         if (typeof g45JReset === 'function') g45JReset('c'); ch('⚽');
         if (!multiOk) bad.push(JSON.stringify({ nJ, jOu, jEt, jL }));
         mmRows.length = 0; mmRows.push({ type: 'Victoire + BTS Oui', cote: 3.1 }); renderMmRows();
