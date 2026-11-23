@@ -1556,7 +1556,7 @@ serveur.listen(0, async () => {
         const box = document.getElementById('ulist'); state.u.push(u); const ix = state.u.length - 1;
         const row = document.createElement('div'); row.className = 'urow g45ul'; row.innerHTML = '<div><img class="g45ul-ph" src="https://x.test/kc.png"><div class="uname">🏒 Kyle Connor</div><div>x</div></div><button data-idx="' + ix + '">✕</button>';
         box.appendChild(row); window._g45DuoHabiller();
-        const ok = D && D.autres.length === 1 && D.autres[0] === 'Mark Scheifele' && D.m === 'un' && !D1 && /ou.*Mark Scheifele/.test(row.querySelector('.uname').textContent) && row.querySelectorAll('.g45ul-duo .g45duo-ph').length === 2 && /kc\.png/.test(row.querySelector('.g45ul-duo img').src);
+        const ok = D && D.autres.length === 1 && D.autres[0] === 'Mark Scheifele' && D.m === 'un' && !D1 && /ou.*Mark Scheifele/.test(row.querySelector('.uname').textContent) && row.querySelectorAll('.g45ul-duo .g45duo-ph').length === 2 && row.querySelectorAll('.g45ul-duo .g45duo-id').length === 2 && typeof window._g45AgeInfo === 'function' && /kc\.png/.test(row.querySelector('.g45ul-duo img').src);
         row.remove(); state.u.splice(ix, 1);
         const uR = { type: 'joueur', n: 'Connor McDavid', note: 'Edmonton Oilers ✈️ au moins un de (, Leon Draisaitl) buteur' }, rR = window._g45DuoReparer(uR);
         const okR = rR && /\(Connor McDavid, Leon Draisaitl\)/.test(uR.note) && !window._g45DuoReparer({ type: 'joueur', n: 'X Y', note: '🏠 et Over 2.5' });
