@@ -1540,6 +1540,13 @@ serveur.listen(0, async () => {
         const tk = document.querySelector('#mm-sel input') && document.querySelector('#mm-sel input').value === 'Victoire + BTS Oui';
         o.tonPari = (okFoot && okHk && okBk && !bad.length && hcOk && tk && /marque 2 buts ou plus$/.test(eb) && / ne marque pas$/.test(eu)) || JSON.stringify({ okFoot, okHk, okBk, bad, hcOk, tk, eb, eu, tabs });
         mmRows.length = 0; mmRows.push({ type: 'Victoire', cote: 1.8 }, { type: 'BTS Oui', cote: 1.7 }); renderMmRows(); } catch (e) { o.tonPari = 'erreur : ' + e.message; }
+      /* 20261124p : bloc « Le match » (Engager) : vrais champs déplacés dedans, boutons lieu / date */
+      try { const B = document.getElementById('g45lm'), lv = document.getElementById('c-lieu').value, dv = document.getElementById('c-date').value;
+        const dans = ['c-unit', 'c-target', 'c-date', 'c-heure', 'c-mise', 'c-book', 'c-sport', 'c-comp'].every(id => B && B.contains(document.getElementById(id)));
+        g45LmLieu('ext'); const l1 = document.getElementById('c-lieu').value; g45LmDate(1); const d1 = document.getElementById('c-date').value, x = new Date(); x.setDate(x.getDate() + 1);
+        const dem = x.getFullYear() + '-' + String(x.getMonth() + 1).padStart(2, '0') + '-' + String(x.getDate()).padStart(2, '0');
+        g45LmLieu(lv); document.getElementById('c-date').value = dv;
+        o.leMatch = (dans && l1 === 'ext' && d1 === dem && !!document.getElementById('lm-det')) || JSON.stringify({ B: !!B, dans, l1, d1, dem }); } catch (e) { o.leMatch = 'erreur : ' + e.message; }
       /* 20261124i : pépite de résultat à cote FR > 2,20 → nf 9 ; 1,80 → comptée */
       try { const FI = window._g45LoiCote.FI; FI['9o1'] = { h: { id: '1' }, a: { id: '2' }, ml: { h: 2.9, a: 1.6, d: 3.5 } };
         const L = [{ eid: '9o1', id: '1', k: 'v', d: 1, lieu: 'dom', r: null, cours: 4, pire: 5, n: 20, ok: 10 }], L2 = [{ eid: '9o1', id: '2', k: 'v', d: 0, lieu: 'ext', r: null, cours: 4, pire: 5, n: 20, ok: 12 }];
@@ -3133,6 +3140,7 @@ serveur.listen(0, async () => {
     ok('🚀 Mise max en mode unique (= simulation)', r.palUni === true, r.palUni);
     ok('🆚 Face-à-face points NBA (calcul)', r.faf === true, r.faf);
     ok('🎯 Ton pari en onglets par sport (foot / hockey / basket, libellés sûrs, ticket lu)', r.tonPari === true, r.tonPari);
+    ok('⚽ Le match (Engager) : VS, lieu / date en boutons, vrais champs déplacés', r.leMatch === true, r.leMatch);
     ok('📊 Pépite outsider (cote > 2,20) / 6 derniers du championnat non comptée', r.loiOut === true, r.loiOut);
     ok('🏒 Logo NHL de secours ESPN', r.nhlLogo === true, r.nhlLogo);
     ok('F1 : critères 4 saisons + Jouable en Cockpit (page F1 + onglet Saisons)', r.f1cr === true, r.f1cr);
