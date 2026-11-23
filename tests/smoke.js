@@ -1505,6 +1505,11 @@ serveur.listen(0, async () => {
         const R = Mo(L.concat([{ t: 5, id: 'b', k: 'v', lieu: 'ext', r: null }]), cd), DT = window._g45LoiDet || {}, d3 = DT['a|u65|dom|3'], d5 = DT['b|v|ext|5'];
         if (!(d3 && d3.p === 3 && d3.m === 60 && Math.abs(d3.ser - (d3.g - 30)) < 0.01 && d5 && d5.p === 2 && d5.m === 20 && d5.g == null)) o.loiMontD = JSON.stringify({ d3, d5 });
         o.loiMont = (!o.loiMontD && R.n === 4 && Math.abs(R.g - 12.8) < 0.01 && R.pmax === 3 && R.mmax === 60 && R.ouv === 1 && /P2 = 20 €/.test(R.prochs) && R.ouvL && R.ouvL.length === 1 && R.ouvL[0].p === 2 && R.ouvL[0].m === 20) || JSON.stringify(R); } catch (e) { o.loiMont = 'erreur : ' + e.message; }
+      /* 20261124i : pépite de résultat à cote FR > 2,20 → nf 9 ; 1,80 → comptée */
+      try { const FI = window._g45LoiCote.FI; FI['9o1'] = { h: { id: '1' }, a: { id: '2' }, ml: { h: 2.9, a: 1.6, d: 3.5 } };
+        const L = [{ eid: '9o1', id: '1', k: 'v', d: 1, lieu: 'dom', r: null, cours: 4, pire: 5, n: 20, ok: 10 }], L2 = [{ eid: '9o1', id: '2', k: 'v', d: 0, lieu: 'ext', r: null, cours: 4, pire: 5, n: 20, ok: 12 }];
+        window._g45LoiExclure(L); window._g45LoiExclure(L2); L.push(L2[0]); delete FI['9o1'];
+        o.loiOut = (L[0].nf === 9 && L[0].nc && !L[1].nc) || JSON.stringify(L.map(x => [x.k, x.nc, x.nf])); } catch (e) { o.loiOut = 'erreur : ' + e.message; }
       /* 20261118c : 2 « Victoire » opposées → « Victoire ou nul » de l'outsider (Israël – Autriche 1-1) */
       try { const FI = window._g45LoiCote.FI; FI['9e1'] = { h: { id: '1' }, a: { id: '2' }, ml: { h: 3.9, a: 1.8, d: 3.5 } };
         const L = [{ eid: '9e1', id: '1', k: 'v', d: 1, lieu: 'tout', r: 0, cours: 5, pire: 6, n: 10, ok: 3 }, { eid: '9e1', id: '2', k: 'v', d: 0, lieu: 'ext', r: 0, cours: 5, pire: 6, n: 10, ok: 3 }];
@@ -2821,17 +2826,17 @@ serveur.listen(0, async () => {
         M.d = { L: [{ j, t: t0, eid: 'o1', id: '31', sp: 'soccer', lg: 'uefa.nations', eq: 'Croatia', adv: 'Portugal', d: 1, lieu: 'tout', k: 'v', lib: 'Victoire', pire: 4, cours: 4, n: 57, ok: 30, r: 1, sc: '2-1' },
           { j, t: t0, eid: 'o1', id: '32', sp: 'soccer', lg: 'uefa.nations', eq: 'Portugal', adv: 'Croatia', d: 0, lieu: 'tout', k: 'vn', lib: 'Victoire ou nul', pire: 6, cours: 6, n: 49, ok: 33, r: 0, sc: '1-2' },
           { j, t: t0 + 5, eid: 'o2', id: '33', sp: 'soccer', lg: 'uefa.nations', eq: 'Spain', adv: 'Norway', d: 0, lieu: 'tout', k: 'v', lib: 'Victoire', pire: 5, cours: 5, r: 0, sc: '3-0' }] };
-        F.o1 = { h: { id: '31' }, a: { id: '32' }, ml: { h: 1.6, d: 3.9, a: 6 } }; F.o2 = { h: { id: '34' }, a: { id: '33' }, ml: { h: 1.25, d: 6, a: 12 } };
+        F.o1 = { h: { id: '31' }, a: { id: '32' }, ml: { h: 1.6, d: 3.9, a: 4 } }; F.o2 = { h: { id: '34' }, a: { id: '33' }, ml: { h: 1.25, d: 6, a: 12 } };
         const hq = window._g45LoiBilHtml().replace(/<[^>]+>/g, ' '); delete F.o1; delete F.o2; M.d = sv; M.j = '';
         o.loiOpp = (/Pépites jouées\s*1\b/.test(hq) && !/non compté/.test(hq) && !/Spain/.test(hq) /* 20261118p */ && /Série continue ❌\s*1\b/.test(hq)) || hq.replace(/\s+/g, ' ').slice(0, 700); } catch (e) { o.loiOpp = 'erreur : ' + e.message; }
       /* 20261116k : règles « non compté » partagées (liste du jour) */
       try { const E = window._g45LoiExclure, T = window._g45LoiNfTxt, l = [{ eid: 'z1', id: '1', k: 'v', lg: 'nba', fr: 3, cours: 9, pire: 9 }, { eid: 'z2', id: '2', k: 'o25', lg: 'uefa.nations', grp: 'D2', cours: 4, pire: 4 }, { eid: 'z3', id: '3', k: 'v', lg: 'nba', fr: 20, cours: 5, pire: 5 }];
         E(l); o.loiExcl = (l[0].nc === 1 && T(l[0]) === 'équipe trop faible pour le book' && l[1].nf === 1 && !l[2].nc) || JSON.stringify(l); } catch (e) { o.loiExcl = 'erreur : ' + e.message; }
       /* 20261108o : 📈 graphique + 📊 bilans de la Loi des séries */
-      try { const F = window._g45LoiCote.FI; F.m1 = { h: { id: '9' }, a: { id: '1' }, ml: { h: 1.95, a: 3.65, d: 3.75 } }; F.m2 = { h: { id: '2' }, a: { id: '8' }, tot: { L: 6.5, o: 1.9, u: 1.9 } }; F.m3 = { h: { id: '3' }, a: { id: '7' }, bts: { o: 1.64, n: 2.2 } };
+      try { const F = window._g45LoiCote.FI; F.m1 = { h: { id: '9' }, a: { id: '1' }, ml: { h: 1.95, a: 2.1, d: 3.75 } }; F.m2 = { h: { id: '2' }, a: { id: '8' }, tot: { L: 6.5, o: 1.9, u: 1.9 } }; F.m3 = { h: { id: '3' }, a: { id: '7' }, bts: { o: 1.64, n: 2.2 } };
         window.g45LoiBilVue('gr'); const hg = window._g45LoiBilHtml(); window.g45LoiBilVue('bil'); const hl = window._g45LoiBilHtml().replace(/<[^>]+>/g, ' '); window.g45LoiBilVue('cal');
         ['m1', 'm2', 'm3'].forEach(function (k) { delete F[k]; });
-        o.loiGraph = (/<polyline/.test(hg) && /\+20 €/.test(hg) && /Par pari/.test(hl) && /Victoire\s+1\/1 · 100 %\s+3,65\s+\+24 €/.test(hl) && /Moins de 6,5 buts\s+0\/1 · 0 %\s+1,90\s+−10 €/.test(hl) && /Ligue 2/.test(hl) && /4 ratés/.test(hl)) || (hg.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').slice(-700) + ' || ' + hl.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').slice(-900)); } catch (e) { o.loiGraph = 'erreur : ' + e.message; }
+        o.loiGraph = (/<polyline/.test(hg) && /\+5 €/.test(hg) && /Par pari/.test(hl) && /Victoire\s+1\/1 · 100 %\s+2,10\s+\+10 €/.test(hl) && /Moins de 6,5 buts\s+0\/1 · 0 %\s+1,90\s+−10 €/.test(hl) && /Ligue 2/.test(hl) && /4 ratés/.test(hl)) || (hg.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').slice(-700) + ' || ' + hl.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').slice(-900)); } catch (e) { o.loiGraph = 'erreur : ' + e.message; }
       /* 20261107l : critères NHL d'un joueur seul suivi dans ses autres clubs */
       try { const T = window._g45CrUsTrT, S = T.S, sv = { ctx: S.ctx, nom: S.nom, d: S.data[S.nom] }; const LG0 = window._G45_ARCH_LG; window._G45_ARCH_LG = (LG0 || []).concat(['zzh']); S.ctx = { sp: 'hockey', lg: 'zzh', id: '5' }; S.nom = '__tr'; S.data.__tr = { saisons: [{ an: 2026 }] };
         const c = { jo: 'tr1', jn: 'T', jm: 'g' }, sa = { an: 2026 }; T.de(c, sa); let L = null; for (let i = 0; i < 40 && !(L = T.de(c, sa)); i++) await new Promise((r) => setTimeout(r, 100));
@@ -3090,6 +3095,7 @@ serveur.listen(0, async () => {
     ok('Montante : une seule échelle par championnat (Liga / La Liga…)', r.lcCanon === true, r.lcCanon);
     ok('🏈 Palier d\'un autre sport retiré (49ers NHL)', r.lcSport === true, r.lcSport);
     ok('🚀 Mise max en mode unique (= simulation)', r.palUni === true, r.palUni);
+    ok('📊 Pépite outsider (cote > 2,20) non comptée', r.loiOut === true, r.loiOut);
     ok('🏒 Logo NHL de secours ESPN', r.nhlLogo === true, r.nhlLogo);
     ok('F1 : critères 4 saisons + Jouable en Cockpit (page F1 + onglet Saisons)', r.f1cr === true, r.f1cr);
     ok('NHL Séries individuelles : 🔍 Pépites (50 joueurs)', r.pep === true, r.pep);
