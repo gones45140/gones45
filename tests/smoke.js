@@ -1505,6 +1505,14 @@ serveur.listen(0, async () => {
         const R = Mo(L.concat([{ t: 5, id: 'b', k: 'v', lieu: 'ext', r: null }]), cd), DT = window._g45LoiDet || {}, d3 = DT['a|u65|dom|3'], d5 = DT['b|v|ext|5'];
         if (!(d3 && d3.p === 3 && d3.m === 60 && Math.abs(d3.ser - (d3.g - 30)) < 0.01 && d5 && d5.p === 2 && d5.m === 20 && d5.g == null)) o.loiMontD = JSON.stringify({ d3, d5 });
         o.loiMont = (!o.loiMontD && R.n === 4 && Math.abs(R.g - 12.8) < 0.01 && R.pmax === 3 && R.mmax === 60 && R.ouv === 1 && /P2 = 20 €/.test(R.prochs) && R.ouvL && R.ouvL.length === 1 && R.ouvL[0].p === 2 && R.ouvL[0].m === 20) || JSON.stringify(R); } catch (e) { o.loiMont = 'erreur : ' + e.message; }
+      /* 20261124m : 🆚 face-à-face points NBA (archives simulées) : A 30,25,20 / B 22,22,22 → A plus 2 sur 3 paires par match ; 1 vrai face-à-face */
+      try { const f0 = window.fetch, J = (x) => Promise.resolve(new Response(JSON.stringify(x), { status: 200, headers: { 'Content-Type': 'application/json' } }));
+        const mk = (pts, eid0) => ({ m: pts.map((p, i) => [1700000000000 + i * 864e5, '2026-11', String(eid0 + i), '1', { J: 1, MIN: 30, PTS: p }, null, i % 2 ? 'a' : 'h']) });
+        const P = { '/joueurs.json': { 11: ['Alpha Test', '1'], 22: ['Beta Essai', '2'] } };
+        const A = mk(Array.from({ length: 12 }, (_, i) => [30, 25, 20][i % 3]), 900), Bj = mk(Array.from({ length: 12 }, () => 22), 950); Bj.m[0][2] = '900';
+        window.fetch = function (u) { u = String(u); if (u.indexOf('/cotes/basket/nba/') < 0) return f0.apply(this, arguments); if (/joueurs\.json/.test(u)) return J(P['/joueurs.json']); if (/joueurs\/11\.json/.test(u)) return J(A); if (/joueurs\/22\.json/.test(u)) return J(Bj); return Promise.resolve(new Response('', { status: 404 })); };
+        const R = await window._g45FaF('Alpha Test', 'Essai', 'dom'); window.fetch = f0;
+        o.faf = (R && !R.err && Math.abs(R.p - 2 / 3) < 0.001 && R.H.length === 1 && R.H[0].a === 30 && R.H[0].b === 22 && R.B.nom === 'Beta Essai' && Math.abs(R.A.m - 25) < 0.01) || JSON.stringify(R); } catch (e) { o.faf = 'erreur : ' + e.message; }
       /* 20261124i : pépite de résultat à cote FR > 2,20 → nf 9 ; 1,80 → comptée */
       try { const FI = window._g45LoiCote.FI; FI['9o1'] = { h: { id: '1' }, a: { id: '2' }, ml: { h: 2.9, a: 1.6, d: 3.5 } };
         const L = [{ eid: '9o1', id: '1', k: 'v', d: 1, lieu: 'dom', r: null, cours: 4, pire: 5, n: 20, ok: 10 }], L2 = [{ eid: '9o1', id: '2', k: 'v', d: 0, lieu: 'ext', r: null, cours: 4, pire: 5, n: 20, ok: 12 }];
@@ -3096,6 +3104,7 @@ serveur.listen(0, async () => {
     ok('Montante : une seule échelle par championnat (Liga / La Liga…)', r.lcCanon === true, r.lcCanon);
     ok('🏈 Palier d\'un autre sport retiré (49ers NHL)', r.lcSport === true, r.lcSport);
     ok('🚀 Mise max en mode unique (= simulation)', r.palUni === true, r.palUni);
+    ok('🆚 Face-à-face points NBA (calcul)', r.faf === true, r.faf);
     ok('📊 Pépite outsider (cote > 2,20) / 6 derniers du championnat non comptée', r.loiOut === true, r.loiOut);
     ok('🏒 Logo NHL de secours ESPN', r.nhlLogo === true, r.nhlLogo);
     ok('F1 : critères 4 saisons + Jouable en Cockpit (page F1 + onglet Saisons)', r.f1cr === true, r.f1cr);
