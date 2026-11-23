@@ -1513,6 +1513,27 @@ serveur.listen(0, async () => {
         window.fetch = function (u) { u = String(u); if (u.indexOf('/cotes/basket/nba/') < 0) return f0.apply(this, arguments); if (/joueurs\.json/.test(u)) return J(P['/joueurs.json']); if (/joueurs\/11\.json/.test(u)) return J(A); if (/joueurs\/22\.json/.test(u)) return J(Bj); return Promise.resolve(new Response('', { status: 404 })); };
         const R = await window._g45FaF('Alpha Test', 'Essai', 'dom'); window.fetch = f0;
         o.faf = (R && !R.err && Math.abs(R.p - 2 / 3) < 0.001 && R.H.length === 1 && R.H[0].a === 30 && R.H[0].b === 22 && R.B.nom === 'Beta Essai' && Math.abs(R.A.m - 25) < 0.01) || JSON.stringify(R); } catch (e) { o.faf = 'erreur : ' + e.message; }
+      /* 20261124n : « Ton pari » en onglets par sport + libellés sûrs pour le règlement auto (Worker) + ticket toujours lu */
+      try { const sel = document.getElementById('c-sport'), box = () => document.getElementById('mm-types');
+        const ch = (v) => { sel.value = v; sel.dispatchEvent(new Event('change', { bubbles: true })); };
+        ch('⚽'); mmRows.length = 0; mmRows.push({ type: 'Victoire', cote: 1.8 }); renderMmRows();
+        const tabs = [].map.call(box().querySelectorAll('.g45tp-tab'), b => b.textContent).join('|');
+        const vic = box().querySelector('.g45tp-b[data-t="Victoire"]'), nul = box().querySelector('.g45tp-b[data-t="Nul"]');
+        g45TpTab('c', 1); const plus = [].filter.call(box().querySelectorAll('.g45tp-ou'), b => b.getAttribute('data-t') === 'Over 3.5')[0]; if (plus) plus.click();
+        const okFoot = /Feuille de match/.test(tabs) && vic && /✓/.test(vic.textContent) && nul && /incompatible/.test(nul.textContent) && mmRows.some(r => r.type === 'Over 3.5');
+        ch('🏒'); const okHk = /Tiers-temps/.test([].map.call(box().querySelectorAll('.g45tp-tab'), b => b.textContent).join('|'));
+        ch('🏀'); g45TpTab('c', 3); const okBk = /Rebonds|rebonds/.test(box().textContent);
+        const L = (k, a) => window._g45TpLib('c', k, a), AV = (t, d, h, x) => _g45AvPari(t, d, h, x);
+        ch('⚽'); const eb = L('eqb', { q: 'eq', l: 1.5, o: 'o' }), eu = L('eqb', { q: 'eq', l: 0.5, o: 'u' });
+        const nuls = [eb, eu, 'Corners du match : 10 ou plus', L('mtb', { mt: 1, l: 1.5, o: 'o' }), L('ti', { t: 1, v: 'égalité' }), L('ti', { t: 2, v: 'les 2 équipes marquent' }), L('tib', { t: 3, l: 1.5, o: 'u' }),
+          L('mene', {}), L('mtnul', {}), L('mtpp', { v: '2e' }), L('qtpp', { v: '3e' }), L('tipp', { v: '1er' }), L('jl', { mot: 'point', l: 24.5, o: 'o' }), L('jl', { mot: 'point', l: 24.5, o: 'u' }),
+          L('eqp', { q: 'eq', l: 112.5, o: 'u' }), L('es', { l: 4.5, o: 'o' }), L('ese', { l: 1.5, o: 'o' }), 'Les 2 équipes marquent un essai', L('prem', {}), L('jb', { mot: 'marque un TD' }), 'Doublé (2 buts)'];
+        const bad = nuls.filter(t => AV(t, true, 3, 0) !== null || AV(t, false, 0, 0) !== null);
+        const hcOk = L('hc', { l: '-1.5' }) === 'HC -1.5' && L('hc', { l: 5.5 }) === 'HC +5.5' && AV('HC -1.5', true, 3, 1) === true && AV('HC -1.5', true, 2, 1) === false && AV('Over 3.5', null, 2, 2) === true;
+        mmRows.length = 0; mmRows.push({ type: 'Victoire + BTS Oui', cote: 3.1 }); renderMmRows();
+        const tk = document.querySelector('#mm-sel input') && document.querySelector('#mm-sel input').value === 'Victoire + BTS Oui';
+        o.tonPari = (okFoot && okHk && okBk && !bad.length && hcOk && tk && /marque 2 buts ou plus$/.test(eb) && / ne marque pas$/.test(eu)) || JSON.stringify({ okFoot, okHk, okBk, bad, hcOk, tk, eb, eu, tabs });
+        mmRows.length = 0; mmRows.push({ type: 'Victoire', cote: 1.8 }, { type: 'BTS Oui', cote: 1.7 }); renderMmRows(); } catch (e) { o.tonPari = 'erreur : ' + e.message; }
       /* 20261124i : pépite de résultat à cote FR > 2,20 → nf 9 ; 1,80 → comptée */
       try { const FI = window._g45LoiCote.FI; FI['9o1'] = { h: { id: '1' }, a: { id: '2' }, ml: { h: 2.9, a: 1.6, d: 3.5 } };
         const L = [{ eid: '9o1', id: '1', k: 'v', d: 1, lieu: 'dom', r: null, cours: 4, pire: 5, n: 20, ok: 10 }], L2 = [{ eid: '9o1', id: '2', k: 'v', d: 0, lieu: 'ext', r: null, cours: 4, pire: 5, n: 20, ok: 12 }];
@@ -3105,6 +3126,7 @@ serveur.listen(0, async () => {
     ok('🏈 Palier d\'un autre sport retiré (49ers NHL)', r.lcSport === true, r.lcSport);
     ok('🚀 Mise max en mode unique (= simulation)', r.palUni === true, r.palUni);
     ok('🆚 Face-à-face points NBA (calcul)', r.faf === true, r.faf);
+    ok('🎯 Ton pari en onglets par sport (foot / hockey / basket, libellés sûrs, ticket lu)', r.tonPari === true, r.tonPari);
     ok('📊 Pépite outsider (cote > 2,20) / 6 derniers du championnat non comptée', r.loiOut === true, r.loiOut);
     ok('🏒 Logo NHL de secours ESPN', r.nhlLogo === true, r.nhlLogo);
     ok('F1 : critères 4 saisons + Jouable en Cockpit (page F1 + onglet Saisons)', r.f1cr === true, r.f1cr);
