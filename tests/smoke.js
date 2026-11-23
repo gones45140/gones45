@@ -1549,8 +1549,11 @@ serveur.listen(0, async () => {
         const Bn = document.getElementById('g45lm-n'), nl0 = document.getElementById('n-lieu').value, pd0 = document.getElementById('p-domicile').value;
         const dansN = ['n-team', 'n-analysis', 'n-date', 'n-heure', 'n-mise', 'n-book', 'p-sport', 'n-comp'].every(id => Bn && Bn.contains(document.getElementById(id)));
         g45LmLieu('n', 'ext'); const nOk = dansN && document.getElementById('n-lieu').value === 'ext' && document.getElementById('p-domicile').value === 'ext';
+        const li0 = window._g45LogoIndex, av0 = document.getElementById('n-analysis').value; window._g45LogoIndex = (n) => n === 'Monaco' ? 'https://x.test/monaco.png' : '';
+        document.getElementById('n-analysis').value = 'Monaco'; window._g45LmMaj('n'); const im = document.querySelector('#lm-lg2-n img'), logoOk = !!im && /monaco\.png/.test(im.src);
+        window._g45LogoIndex = li0; document.getElementById('n-analysis').value = av0; window._g45LmMaj('n');
         g45LmLieu('n', nl0); if (typeof togglePariDom === 'function') togglePariDom(pd0 === 'dom' ? true : pd0 === 'ext' ? false : null);
-        o.leMatch = (nOk && dans && l1 === 'ext' && d1 === dem && !!document.getElementById('lm-det')) || JSON.stringify({ B: !!B, dans, l1, d1, dem, nOk }); } catch (e) { o.leMatch = 'erreur : ' + e.message; }
+        o.leMatch = (logoOk && nOk && dans && l1 === 'ext' && d1 === dem && !!document.getElementById('lm-det')) || JSON.stringify({ B: !!B, dans, l1, d1, dem, nOk, logoOk }); } catch (e) { o.leMatch = 'erreur : ' + e.message; }
       /* 20261124i : pépite de résultat à cote FR > 2,20 → nf 9 ; 1,80 → comptée */
       try { const FI = window._g45LoiCote.FI; FI['9o1'] = { h: { id: '1' }, a: { id: '2' }, ml: { h: 2.9, a: 1.6, d: 3.5 } };
         const L = [{ eid: '9o1', id: '1', k: 'v', d: 1, lieu: 'dom', r: null, cours: 4, pire: 5, n: 20, ok: 10 }], L2 = [{ eid: '9o1', id: '2', k: 'v', d: 0, lieu: 'ext', r: null, cours: 4, pire: 5, n: 20, ok: 12 }];
