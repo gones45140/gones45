@@ -1550,6 +1550,15 @@ serveur.listen(0, async () => {
         const tk = document.querySelector('#mm-sel input') && document.querySelector('#mm-sel input').value === 'Victoire + BTS Oui';
         o.tonPari = (okFoot && okHk && okBk && !bad.length && hcOk && tk && /marque 2 buts ou plus$/.test(eb) && / ne marque pas$/.test(eu)) || JSON.stringify({ okFoot, okHk, okBk, bad, hcOk, tk, eb, eu, tabs });
         mmRows.length = 0; mmRows.push({ type: 'Victoire', cote: 1.8 }, { type: 'BTS Oui', cote: 1.7 }); renderMmRows(); } catch (e) { o.tonPari = 'erreur : ' + e.message; }
+      /* 20261124w : carte à 2 joueurs (« au moins un de (A ou B) ») → titre « A ou B » + 2 photos côte à côte */
+      try { const u = { n: 'Kyle Connor', type: 'joueur', sport: '🏒', note: '🏠 au moins un de (Kyle Connor ou Mark Scheifele) buteur', s: 'a' };
+        const D = window._g45DuoJoueurs(u), D1 = window._g45DuoJoueurs({ n: 'Solo Test', type: 'joueur', note: '🏠 buteur' });
+        const box = document.getElementById('ulist'); state.u.push(u); const ix = state.u.length - 1;
+        const row = document.createElement('div'); row.className = 'urow g45ul'; row.innerHTML = '<div><img class="g45ul-ph" src="https://x.test/kc.png"><div class="uname">🏒 Kyle Connor</div><div>x</div></div><button data-idx="' + ix + '">✕</button>';
+        box.appendChild(row); window._g45DuoHabiller();
+        const ok = D && D.autres.length === 1 && D.autres[0] === 'Mark Scheifele' && D.m === 'un' && !D1 && /ou.*Mark Scheifele/.test(row.querySelector('.uname').textContent) && row.querySelectorAll('.g45ul-duo .g45duo-ph').length === 2 && /kc\.png/.test(row.querySelector('.g45ul-duo img').src);
+        row.remove(); state.u.splice(ix, 1);
+        o.duoCarte = ok || JSON.stringify({ D, D1 }); } catch (e) { o.duoCarte = 'erreur : ' + e.message; }
       /* 20261124p : bloc « Le match » (Engager) : vrais champs déplacés dedans, boutons lieu / date */
       try { const B = document.getElementById('g45lm'), lv = document.getElementById('c-lieu').value, dv = document.getElementById('c-date').value;
         const S3 = document.getElementById('g45st3-c'), S3n = document.getElementById('g45st3-n'), dIn = (bl, id) => !!bl && bl.contains(document.getElementById(id));
@@ -3164,6 +3173,7 @@ serveur.listen(0, async () => {
     ok('🆚 Face-à-face points NBA (calcul)', r.faf === true, r.faf);
     ok('🎯 Ton pari en onglets par sport (foot / hockey / basket, libellés sûrs, ticket lu)', r.tonPari === true, r.tonPari);
     ok('⚽ Le match (Engager) : VS, lieu / date en boutons, vrais champs déplacés', r.leMatch === true, r.leMatch);
+    ok('🃏 Carte à 2 joueurs : titre « A ou B » + 2 photos', r.duoCarte === true, r.duoCarte);
     ok('📊 Pépite outsider (cote > 2,20) / 6 derniers du championnat non comptée', r.loiOut === true, r.loiOut);
     ok('🏒 Logo NHL de secours ESPN', r.nhlLogo === true, r.nhlLogo);
     ok('F1 : critères 4 saisons + Jouable en Cockpit (page F1 + onglet Saisons)', r.f1cr === true, r.f1cr);
