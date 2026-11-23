@@ -1542,18 +1542,24 @@ serveur.listen(0, async () => {
         mmRows.length = 0; mmRows.push({ type: 'Victoire', cote: 1.8 }, { type: 'BTS Oui', cote: 1.7 }); renderMmRows(); } catch (e) { o.tonPari = 'erreur : ' + e.message; }
       /* 20261124p : bloc « Le match » (Engager) : vrais champs déplacés dedans, boutons lieu / date */
       try { const B = document.getElementById('g45lm'), lv = document.getElementById('c-lieu').value, dv = document.getElementById('c-date').value;
-        const dans = ['c-unit', 'c-target', 'c-date', 'c-heure', 'c-mise', 'c-book', 'c-sport', 'c-comp'].every(id => B && B.contains(document.getElementById(id)));
+        const S3 = document.getElementById('g45st3-c'), S3n = document.getElementById('g45st3-n'), dIn = (bl, id) => !!bl && bl.contains(document.getElementById(id));
+        const dans = ['c-unit', 'c-target', 'c-date', 'c-heure', 'c-sport', 'c-comp'].every(id => dIn(B, id)) && ['c-mise', 'c-book'].every(id => dIn(S3, id));
+        /* 20261124u : 3 étapes dans l'ordre Ton pari → Le match → Ta mise ; UN bouton = le vrai pari() dans l'étape 3 ; saveMmAsPari caché */
+        const ordre = (a1, a2) => !!(a1 && a2) && !!(a1.compareDocumentPosition(a2) & Node.DOCUMENT_POSITION_FOLLOWING);
+        const mmC = document.getElementById('mm-types').closest('.mm-wrap'), mmN = document.getElementById('mm-types-simple').closest('.mm-wrap');
+        const btC = S3 && S3.querySelector('button[onclick^="pari("]'), btN = S3n && S3n.querySelector('button[onclick^="pari("]'), vieux = document.querySelector('#sub-strat button[onclick^="saveMmAsPari"]');
+        const etapes = ordre(mmC, B) && ordre(B, S3) && ordre(mmN, document.getElementById('g45lm-n')) && ordre(document.getElementById('g45lm-n'), S3n) && !!btC && /pari\(true\)/.test(btC.getAttribute('onclick')) && !!btN && /pari\(false\)/.test(btN.getAttribute('onclick')) && (!vieux || getComputedStyle(vieux).display === 'none') && dIn(S3n, 'n-mise');
         g45LmLieu('ext'); const l1 = document.getElementById('c-lieu').value; g45LmDate(1); const d1 = document.getElementById('c-date').value, x = new Date(); x.setDate(x.getDate() + 1);
         const dem = x.getFullYear() + '-' + String(x.getMonth() + 1).padStart(2, '0') + '-' + String(x.getDate()).padStart(2, '0');
         g45LmLieu(lv); document.getElementById('c-date').value = dv;
         const Bn = document.getElementById('g45lm-n'), nl0 = document.getElementById('n-lieu').value, pd0 = document.getElementById('p-domicile').value;
-        const dansN = ['n-team', 'n-analysis', 'n-date', 'n-heure', 'n-mise', 'n-book', 'p-sport', 'n-comp'].every(id => Bn && Bn.contains(document.getElementById(id)));
+        const dansN = ['n-team', 'n-analysis', 'n-date', 'n-heure', 'p-sport', 'n-comp'].every(id => Bn && Bn.contains(document.getElementById(id))) && ['n-mise', 'n-book'].every(id => dIn(S3n, id));
         g45LmLieu('n', 'ext'); const nOk = dansN && document.getElementById('n-lieu').value === 'ext' && document.getElementById('p-domicile').value === 'ext';
         const li0 = window._g45LogoIndex, av0 = document.getElementById('n-analysis').value; window._g45LogoIndex = (n) => n === 'Monaco' ? 'https://x.test/monaco.png' : '';
         document.getElementById('n-analysis').value = 'Monaco'; window._g45LmMaj('n'); const im = document.querySelector('#lm-lg2-n img'), logoOk = !!im && /monaco\.png/.test(im.src);
         window._g45LogoIndex = li0; document.getElementById('n-analysis').value = av0; window._g45LmMaj('n');
         g45LmLieu('n', nl0); if (typeof togglePariDom === 'function') togglePariDom(pd0 === 'dom' ? true : pd0 === 'ext' ? false : null);
-        o.leMatch = (logoOk && nOk && dans && l1 === 'ext' && d1 === dem && !!document.getElementById('lm-det')) || JSON.stringify({ B: !!B, dans, l1, d1, dem, nOk, logoOk }); } catch (e) { o.leMatch = 'erreur : ' + e.message; }
+        o.leMatch = (etapes && logoOk && nOk && dans && l1 === 'ext' && d1 === dem && !!document.getElementById('lm-det')) || JSON.stringify({ B: !!B, dans, l1, d1, dem, nOk, logoOk, etapes }); } catch (e) { o.leMatch = 'erreur : ' + e.message; }
       /* 20261124i : pépite de résultat à cote FR > 2,20 → nf 9 ; 1,80 → comptée */
       try { const FI = window._g45LoiCote.FI; FI['9o1'] = { h: { id: '1' }, a: { id: '2' }, ml: { h: 2.9, a: 1.6, d: 3.5 } };
         const L = [{ eid: '9o1', id: '1', k: 'v', d: 1, lieu: 'dom', r: null, cours: 4, pire: 5, n: 20, ok: 10 }], L2 = [{ eid: '9o1', id: '2', k: 'v', d: 0, lieu: 'ext', r: null, cours: 4, pire: 5, n: 20, ok: 12 }];
