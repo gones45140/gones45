@@ -1509,7 +1509,8 @@ serveur.listen(0, async () => {
       try { const FI = window._g45LoiCote.FI; FI['9o1'] = { h: { id: '1' }, a: { id: '2' }, ml: { h: 2.9, a: 1.6, d: 3.5 } };
         const L = [{ eid: '9o1', id: '1', k: 'v', d: 1, lieu: 'dom', r: null, cours: 4, pire: 5, n: 20, ok: 10 }], L2 = [{ eid: '9o1', id: '2', k: 'v', d: 0, lieu: 'ext', r: null, cours: 4, pire: 5, n: 20, ok: 12 }];
         window._g45LoiExclure(L); window._g45LoiExclure(L2); L.push(L2[0]); delete FI['9o1'];
-        o.loiOut = (L[0].nf === 9 && L[0].nc && !L[1].nc) || JSON.stringify(L.map(x => [x.k, x.nc, x.nf])); } catch (e) { o.loiOut = 'erreur : ' + e.message; }
+        const Lr = [{ eid: 'zr', id: '9', k: 'o25', sp: 'soccer', lg: 'esp.1', rg: 17, nt: 20 }, { eid: 'zr2', id: '8', k: 'o25', sp: 'soccer', lg: 'esp.1', rg: 14, nt: 20 }]; window._g45LoiExclure(Lr);
+        o.loiOut = (L[0].nf === 9 && L[0].nc && !L[1].nc && Lr[0].nf === 10 && !Lr[1].nc) || JSON.stringify(L.map(x => [x.k, x.nc, x.nf])); } catch (e) { o.loiOut = 'erreur : ' + e.message; }
       /* 20261118c : 2 « Victoire » opposées → « Victoire ou nul » de l'outsider (Israël – Autriche 1-1) */
       try { const FI = window._g45LoiCote.FI; FI['9e1'] = { h: { id: '1' }, a: { id: '2' }, ml: { h: 3.9, a: 1.8, d: 3.5 } };
         const L = [{ eid: '9e1', id: '1', k: 'v', d: 1, lieu: 'tout', r: 0, cours: 5, pire: 6, n: 10, ok: 3 }, { eid: '9e1', id: '2', k: 'v', d: 0, lieu: 'ext', r: 0, cours: 5, pire: 6, n: 10, ok: 3 }];
@@ -3095,7 +3096,7 @@ serveur.listen(0, async () => {
     ok('Montante : une seule échelle par championnat (Liga / La Liga…)', r.lcCanon === true, r.lcCanon);
     ok('🏈 Palier d\'un autre sport retiré (49ers NHL)', r.lcSport === true, r.lcSport);
     ok('🚀 Mise max en mode unique (= simulation)', r.palUni === true, r.palUni);
-    ok('📊 Pépite outsider (cote > 2,20) non comptée', r.loiOut === true, r.loiOut);
+    ok('📊 Pépite outsider (cote > 2,20) / 6 derniers du championnat non comptée', r.loiOut === true, r.loiOut);
     ok('🏒 Logo NHL de secours ESPN', r.nhlLogo === true, r.nhlLogo);
     ok('F1 : critères 4 saisons + Jouable en Cockpit (page F1 + onglet Saisons)', r.f1cr === true, r.f1cr);
     ok('NHL Séries individuelles : 🔍 Pépites (50 joueurs)', r.pep === true, r.pep);
