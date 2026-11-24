@@ -1559,6 +1559,20 @@ serveur.listen(0, async () => {
         const tk = document.querySelector('#mm-sel input') && document.querySelector('#mm-sel input').value === 'Victoire + BTS Oui';
         o.tonPari = (okFoot && okHk && okBk && !bad.length && hcOk && tk && /marque 2 buts ou plus$/.test(eb) && / ne marque pas$/.test(eu)) || JSON.stringify({ okFoot, okHk, okBk, bad, hcOk, tk, eb, eu, tabs });
         mmRows.length = 0; mmRows.push({ type: 'Victoire', cote: 1.8 }, { type: 'BTS Oui', cote: 1.7 }); renderMmRows(); } catch (e) { o.tonPari = 'erreur : ' + e.message; }
+      /* 20261125c : 👥 liste des joueurs des 2 équipes (archives simulées) : Lyon en Ligue Europa, Monaco absent → son championnat */
+      try { const f0 = window.fetch, LO = window._g45LoiT.LOI, ix0 = LO.ix, J = (x) => Promise.resolve(new Response(JSON.stringify(x), { status: 200, headers: { 'Content-Type': 'application/json' } }));
+        LO.ix = [['soccer', 'fra.1', 'Ligue 1', '167', 'Lyon', ''], ['soccer', 'fra.1', 'Ligue 1', '174', 'AS Monaco', ''], ['rugby', '270559', 'TOP14', '143736', 'Lyon', '']];
+        const D = { 'uefa.europa': { 1: ['Corentin Tolisso', '167', 4, { G: 2 }], 2: ['Pavel Sulc', '167', 2, { G: 1 }], 3: ['Autre Club', '999', 3, { G: 5 }] },
+          'fra.1': { 4: ['Paris Brunner', '174', 9, { G: 4 }], 5: ['Edan Diop', '174', 7, { G: 3, A: 1 }], 6: ['Ernest Nuamah', '167', 11, { G: 4 }] } };
+        window.fetch = function (u) { u = String(u); const m = /cotes\/foot\/([^/]+)\/2026-27\/joueurs\.json/.exec(u); if (/gones45-archives/.test(u) && /joueurs\.json/.test(u)) return m && D[m[1]] ? J(D[m[1]]) : Promise.resolve(new Response('', { status: 404 })); return f0.apply(this, arguments); };
+        const sv = {}, set = (id, v) => { const e = document.getElementById(id); sv[id] = e.value; e.value = v; };
+        set('p-sport', '⚽'); set('n-team', 'Olympique lyonnais'); set('n-analysis', 'AS Monaco'); set('n-comp', 'Ligue Europa'); set('n-joueur', '');
+        let h = ''; for (let i = 0; i < 30 && !/Brunner/.test(h); i++) { h = window._g45LjT.liste('n'); await new Promise(r => setTimeout(r, 100)); }
+        const d = document.createElement('div'); d.innerHTML = h; const cols = d.querySelectorAll('.g45lj > div');
+        const c1 = cols[0] ? cols[0].textContent : '', c2 = cols[1] ? cols[1].textContent : '';
+        g45LjChoix('n', 'Corentin Tolisso'); const v1 = document.getElementById('n-joueur').value; g45LjChoix('n', 'Corentin Tolisso'); const v2 = document.getElementById('n-joueur').value;
+        window.fetch = f0; LO.ix = ix0; for (const k in sv) document.getElementById(k).value = sv[k];
+        o.ljListe = (/Tolisso2 ⚽/.test(c1) && !/Nuamah|Autre/.test(c1) && /stats du championnat/.test(c2) && /Brunner4 ⚽.*Diop3 ⚽/.test(c2) && v1 === 'Corentin Tolisso' && v2 === '') || JSON.stringify({ c1, c2, v1, v2 }); } catch (e) { o.ljListe = 'erreur : ' + e.message; }
       /* 20261124w : carte à 2 joueurs (« au moins un de (A ou B) ») → titre « A ou B » + 2 photos côte à côte */
       try { const u = { n: 'Kyle Connor', type: 'joueur', sport: '🏒', note: '🏠 au moins un de (Kyle Connor ou Mark Scheifele) buteur', s: 'a' };
         const D = window._g45DuoJoueurs(u), D1 = window._g45DuoJoueurs({ n: 'Solo Test', type: 'joueur', note: '🏠 buteur' });
@@ -3183,6 +3197,7 @@ serveur.listen(0, async () => {
     ok('🚀 Mise max en mode unique (= simulation)', r.palUni === true, r.palUni);
     ok('🆚 Face-à-face points NBA (calcul)', r.faf === true, r.faf);
     ok('🎯 Ton pari en onglets par sport (foot / hockey / basket, libellés sûrs, ticket lu)', r.tonPari === true, r.tonPari);
+    ok('👥 Liste des joueurs des 2 équipes (compétition choisie, sinon championnat)', r.ljListe === true, r.ljListe);
     ok('⚽ Le match (Engager) : VS, lieu / date en boutons, vrais champs déplacés', r.leMatch === true, r.leMatch);
     ok('🃏 Carte à 2 joueurs : titre « A ou B » + 2 photos', r.duoCarte === true, r.duoCarte);
     ok('📊 Loi des séries 🚀 : 1 pas par match, séries séparées par sport', r.loiMatch === true, r.loiMatch);
