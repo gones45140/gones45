@@ -1573,6 +1573,15 @@ serveur.listen(0, async () => {
         g45LjChoix('n', 'Corentin Tolisso'); const v1 = document.getElementById('n-joueur').value; g45LjChoix('n', 'Corentin Tolisso'); const v2 = document.getElementById('n-joueur').value;
         window.fetch = f0; LO.ix = ix0; for (const k in sv) document.getElementById(k).value = sv[k];
         o.ljListe = (/Tolisso2 ⚽/.test(c1) && !/Nuamah|Autre/.test(c1) && /stats du championnat/.test(c2) && /Brunner4 ⚽.*Diop3 ⚽/.test(c2) && v1 === 'Corentin Tolisso' && v2 === '') || JSON.stringify({ c1, c2, v1, v2 }); } catch (e) { o.ljListe = 'erreur : ' + e.message; }
+      /* 20261125d : Prochaines 24 h — match de coupe retiré si la carte n'a jamais joué cette compétition (championnat toujours gardé) */
+      try { const OK = window._g45CkCompOk, h0 = state.h, a0 = state.a;
+        state.h = [{ n: 'Test Real', comp: 'Liga' }]; state.a = [{ n: 'Test Ars', comp: 'Ligue des champions' }, { n: 'Test Ars', comp: 'Premier League' }, { n: 'Test Fr', comp: 'Qualif Mondial' }];
+        const R = { n: 'Test Real' }, A = { n: 'Test Ars' }, V = { n: 'Test Vide' }, L = { n: 'Test Lc', lc: { 'liga|dom': 2 } };
+        const cl = { comp: 'UEFA Champions League', compSlug: 'uefa.champions' }, li = { comp: 'LaLiga', compSlug: 'esp.1' }, el = { comp: 'UEFA Europa League', compSlug: 'uefa.europa' },
+          cr = { comp: 'Copa del Rey', compSlug: 'esp.copa_del_rey' }, ch = { comp: 'English Championship', compSlug: 'eng.2' };
+        const res = [OK(cl, R), OK(li, R), OK(el, R), OK(cr, R), OK(ch, R), OK(cl, A), OK(el, A), OK(cl, V), OK(cl, L), OK(li, L), OK({ comp: 'FIFA World Cup Qualifying', compSlug: 'fifa.worldq.uefa' }, { n: 'Test Fr' })];
+        state.h = h0; state.a = a0;
+        o.ckComp = JSON.stringify(res) === JSON.stringify([false, true, false, false, true, true, false, true, false, true, true]) || JSON.stringify(res); } catch (e) { o.ckComp = 'erreur : ' + e.message; }
       /* 20261124w : carte à 2 joueurs (« au moins un de (A ou B) ») → titre « A ou B » + 2 photos côte à côte */
       try { const u = { n: 'Kyle Connor', type: 'joueur', sport: '🏒', note: '🏠 au moins un de (Kyle Connor ou Mark Scheifele) buteur', s: 'a' };
         const D = window._g45DuoJoueurs(u), D1 = window._g45DuoJoueurs({ n: 'Solo Test', type: 'joueur', note: '🏠 buteur' });
@@ -3198,6 +3207,7 @@ serveur.listen(0, async () => {
     ok('🆚 Face-à-face points NBA (calcul)', r.faf === true, r.faf);
     ok('🎯 Ton pari en onglets par sport (foot / hockey / basket, libellés sûrs, ticket lu)', r.tonPari === true, r.tonPari);
     ok('👥 Liste des joueurs des 2 équipes (compétition choisie, sinon championnat)', r.ljListe === true, r.ljListe);
+    ok('🏆 Prochaines 24 h : coupes jamais jouées par la carte retirées', r.ckComp === true, r.ckComp);
     ok('⚽ Le match (Engager) : VS, lieu / date en boutons, vrais champs déplacés', r.leMatch === true, r.leMatch);
     ok('🃏 Carte à 2 joueurs : titre « A ou B » + 2 photos', r.duoCarte === true, r.duoCarte);
     ok('📊 Loi des séries 🚀 : 1 pas par match, séries séparées par sport', r.loiMatch === true, r.loiMatch);
