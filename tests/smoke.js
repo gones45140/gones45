@@ -1510,6 +1510,12 @@ serveur.listen(0, async () => {
         const R = Mo(L.concat([{ t: 5, id: 'b', k: 'v', lieu: 'ext', r: null }]), cd), DT = window._g45LoiDet || {}, d3 = DT['a|u65|dom|3'], d5 = DT['b|v|ext|5'];
         if (!(d3 && d3.p === 3 && d3.m === 60 && Math.abs(d3.ser - (d3.g - 30)) < 0.01 && d5 && d5.p === 2 && d5.m === 20 && d5.g == null)) o.loiMontD = JSON.stringify({ d3, d5 });
         o.loiMont = (!o.loiMontD && R.n === 4 && Math.abs(R.g - 12.8) < 0.01 && R.pmax === 3 && R.mmax === 60 && R.ouv === 1 && /P2 = 20 €/.test(R.prochs) && R.ouvL && R.ouvL.length === 1 && R.ouvL[0].p === 2 && R.ouvL[0].m === 20) || JSON.stringify(R); } catch (e) { o.loiMont = 'erreur : ' + e.message; }
+      /* 20261124z : 2 pépites du MÊME match (✈️ + 🌍) = 1 seul pas ; même id dans un autre sport = autre série */
+      try { const Mo = window._g45LoiMont, cd = () => ({ c: 2 });
+        const L = [{ t: 1, eid: 'm1', sp: 'basketball', id: '15', k: 'vq', lieu: 'ext', r: 0 }, { t: 1, eid: 'm1', sp: 'basketball', id: '15', k: 'vq', lieu: 'tout', r: 0 },
+          { t: 2, eid: 'h1', sp: 'hockey', id: '15', k: 'vq', lieu: 'tout', r: 1 }, { t: 3, eid: 'm2', sp: 'basketball', id: '15', k: 'vq', lieu: 'tout', r: null }];
+        const R = Mo(L, cd), DT = window._g45LoiDet || {}, a2 = DT['15|vq|tout|1'], h = DT['15|vq|tout|2'], f = DT['15|vq|tout|3'];
+        o.loiMatch = (a2 && a2.dup && a2.p === 1 && h && h.p === 1 && !h.dup && f && f.p === 2 && f.m === 20 && R.n === 2 && Math.abs(R.g + 1.2) < 0.01) || JSON.stringify({ a2, h, f, R: { n: R.n, g: R.g } }); } catch (e) { o.loiMatch = 'erreur : ' + e.message; }
       /* 20261124m : 🆚 face-à-face points NBA (archives simulées) : A 30,25,20 / B 22,22,22 → A plus 2 sur 3 paires par match ; 1 vrai face-à-face */
       try { const f0 = window.fetch, J = (x) => Promise.resolve(new Response(JSON.stringify(x), { status: 200, headers: { 'Content-Type': 'application/json' } }));
         const mk = (pts, eid0) => ({ m: pts.map((p, i) => [1700000000000 + i * 864e5, '2026-11', String(eid0 + i), '1', { J: 1, MIN: 30, PTS: p }, null, i % 2 ? 'a' : 'h']) });
@@ -3176,6 +3182,7 @@ serveur.listen(0, async () => {
     ok('🎯 Ton pari en onglets par sport (foot / hockey / basket, libellés sûrs, ticket lu)', r.tonPari === true, r.tonPari);
     ok('⚽ Le match (Engager) : VS, lieu / date en boutons, vrais champs déplacés', r.leMatch === true, r.leMatch);
     ok('🃏 Carte à 2 joueurs : titre « A ou B » + 2 photos', r.duoCarte === true, r.duoCarte);
+    ok('📊 Loi des séries 🚀 : 1 pas par match, séries séparées par sport', r.loiMatch === true, r.loiMatch);
     ok('📊 Pépite outsider (cote > 2,20) / 6 derniers du championnat non comptée', r.loiOut === true, r.loiOut);
     ok('🏒 Logo NHL de secours ESPN', r.nhlLogo === true, r.nhlLogo);
     ok('F1 : critères 4 saisons + Jouable en Cockpit (page F1 + onglet Saisons)', r.f1cr === true, r.f1cr);
