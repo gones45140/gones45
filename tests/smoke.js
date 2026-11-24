@@ -1515,7 +1515,10 @@ serveur.listen(0, async () => {
         const L = [{ t: 1, eid: 'm1', sp: 'basketball', id: '15', k: 'vq', lieu: 'ext', r: 0 }, { t: 1, eid: 'm1', sp: 'basketball', id: '15', k: 'vq', lieu: 'tout', r: 0 },
           { t: 2, eid: 'h1', sp: 'hockey', id: '15', k: 'vq', lieu: 'tout', r: 1 }, { t: 3, eid: 'm2', sp: 'basketball', id: '15', k: 'vq', lieu: 'tout', r: null }];
         const R = Mo(L, cd), DT = window._g45LoiDet || {}, a2 = DT['15|vq|tout|1'], h = DT['15|vq|tout|2'], f = DT['15|vq|tout|3'];
-        o.loiMatch = (a2 && a2.dup && a2.p === 1 && h && h.p === 1 && !h.dup && f && f.p === 2 && f.m === 20 && R.n === 2 && Math.abs(R.g + 1.2) < 0.01) || JSON.stringify({ a2, h, f, R: { n: R.n, g: R.g } }); } catch (e) { o.loiMatch = 'erreur : ' + e.message; }
+        const m0 = state.mode1; state.mode1 = { on: 1 }; const Ru = Mo([{ t: 1, eid: 'u1', sp: 'soccer', id: '9', k: 'v', lieu: 'tout', r: 0 }, { t: 2, eid: 'u2', sp: 'soccer', id: '9', k: 'v', lieu: 'tout', r: 0 }, { t: 3, eid: 'u3', sp: 'soccer', id: '9', k: 'v', lieu: 'tout', r: null }], cd), du = (window._g45LoiDet || {})['9|v|tout|3'];
+        if (m0 === undefined) delete state.mode1; else state.mode1 = m0;
+        if (!(du && du.p === 3 && du.m === 75)) a2.uniKO = JSON.stringify(du);   /* 20261124aa : mode unique → 10, 25, 75 */
+        o.loiMatch = (!a2.uniKO && a2 && a2.dup && a2.p === 1 && h && h.p === 1 && !h.dup && f && f.p === 2 && f.m === 20 && R.n === 2 && Math.abs(R.g + 1.2) < 0.01) || JSON.stringify({ a2, h, f, R: { n: R.n, g: R.g } }); } catch (e) { o.loiMatch = 'erreur : ' + e.message; }
       /* 20261124m : 🆚 face-à-face points NBA (archives simulées) : A 30,25,20 / B 22,22,22 → A plus 2 sur 3 paires par match ; 1 vrai face-à-face */
       try { const f0 = window.fetch, J = (x) => Promise.resolve(new Response(JSON.stringify(x), { status: 200, headers: { 'Content-Type': 'application/json' } }));
         const mk = (pts, eid0) => ({ m: pts.map((p, i) => [1700000000000 + i * 864e5, '2026-11', String(eid0 + i), '1', { J: 1, MIN: 30, PTS: p }, null, i % 2 ? 'a' : 'h']) });
