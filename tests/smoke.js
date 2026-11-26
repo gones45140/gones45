@@ -1582,6 +1582,10 @@ serveur.listen(0, async () => {
         const res = [OK(cl, R), OK(li, R), OK(el, R), OK(cr, R), OK(ch, R), OK(cl, A), OK(el, A), OK(cl, V), OK(cl, L), OK(li, L), OK({ comp: 'FIFA World Cup Qualifying', compSlug: 'fifa.worldq.uefa' }, { n: 'Test Fr' })];
         state.h = h0; state.a = a0;
         o.ckComp = JSON.stringify(res) === JSON.stringify([false, true, false, false, true, true, false, true, false, true, true]) || JSON.stringify(res); } catch (e) { o.ckComp = 'erreur : ' + e.message; }
+      /* 20261126a : 🪑 remplaçant (pépites NBA, y.ti du robot) */
+      try { const T = window._g45TiH, b = { jo: 1, sp: 'basketball', r: 1, t: 1 };
+        const r = [T(Object.assign({ ti: { b: 3, n: 5, s: 1 } }, b)), T(Object.assign({ ti: { b: 2, n: 5, s: 2 } }, b)), T(Object.assign({ ti: { b: 5, n: 5, s: 5 } }, b)), T(Object.assign({}, b)), T(Object.assign({ ti: { b: 3, n: 5, s: 1 } }, b, { sp: 'hockey' }))];
+        o.tiH = (/🪑 remplaçant 3 de ses 5 derniers matchs/.test(r[0]) && /remplaçant depuis 2 matchs/.test(r[1]) && /remplaçant sur ses 5 derniers matchs/.test(r[2]) && r[3] === '' && r[4] === '') || JSON.stringify(r); } catch (e) { o.tiH = 'erreur : ' + e.message; }
       /* 20261124w : carte à 2 joueurs (« au moins un de (A ou B) ») → titre « A ou B » + 2 photos côte à côte */
       try { const u = { n: 'Kyle Connor', type: 'joueur', sport: '🏒', note: '🏠 au moins un de (Kyle Connor ou Mark Scheifele) buteur', s: 'a' };
         const D = window._g45DuoJoueurs(u), D1 = window._g45DuoJoueurs({ n: 'Solo Test', type: 'joueur', note: '🏠 buteur' });
@@ -3208,6 +3212,7 @@ serveur.listen(0, async () => {
     ok('🎯 Ton pari en onglets par sport (foot / hockey / basket, libellés sûrs, ticket lu)', r.tonPari === true, r.tonPari);
     ok('👥 Liste des joueurs des 2 équipes (compétition choisie, sinon championnat)', r.ljListe === true, r.ljListe);
     ok('🏆 Prochaines 24 h : coupes jamais jouées par la carte retirées', r.ckComp === true, r.ckComp);
+    ok('🪑 Pépites NBA : remplaçant sur les derniers matchs', r.tiH === true, r.tiH);
     ok('⚽ Le match (Engager) : VS, lieu / date en boutons, vrais champs déplacés', r.leMatch === true, r.leMatch);
     ok('🃏 Carte à 2 joueurs : titre « A ou B » + 2 photos', r.duoCarte === true, r.duoCarte);
     ok('📊 Loi des séries 🚀 : 1 pas par match, séries séparées par sport', r.loiMatch === true, r.loiMatch);
