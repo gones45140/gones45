@@ -227,6 +227,11 @@ serveur.listen(0, async () => {
         const t1 = a1.nc === 1 && a2.nc === 1 && a2.mo === 1 && b2.nc === 0;
         const a3 = E({ id: 'W', t: 3, r: null, rg: 18, mo: 1 }); window._g45LoiExclure([a3]);
         o.loiMo = (t1 && a3.nc === 1) || JSON.stringify({ a1, a2, b2, a3 }); } catch (e) { o.loiMo = 'erreur : ' + e.message; }
+      /* 20261127u : pépites joueurs NBA → 20 pts de moyenne minimum (nf 11) */
+      try { window._g45LoiNba.poser({ '1': ['Star', '2', 10, { PTS: 260 }], '2': ['Petit', '2', 10, { PTS: 90 }] });
+        const s1 = { sp: 'basketball', jo: 1, jid: '1', k: 'pts', id: 'j1', t: 5, nc: 0, nf: 0 }, s2 = { sp: 'basketball', jo: 1, jid: '2', k: 'pts', id: 'j2', t: 5, nc: 0, nf: 0 }, s3 = { sp: 'basketball', jo: 1, jid: '3', k: 'pts', id: 'j3', t: 5, nc: 0, nf: 0 }, s4 = { sp: 'basketball', jo: 1, jid: '2', k: 'reb', id: 'j2', t: 5, nc: 0, nf: 0, sv: 1 };
+        window._g45LoiExclure([s1, s2, s3, s4]);
+        o.nbaJ = (s1.nc === 0 && s2.nc === 1 && s2.nf === 11 && s3.nc === 1 && s4.nc === 0 && /moins de 20 points/.test(window._g45LoiNfTxt(s2))) || JSON.stringify([s1, s2, s3, s4]); } catch (e) { o.nbaJ = 'erreur : ' + e.message; }
       /* 20261117q : 🕒 Dernières réussites (3 dernières, plus récente d'abord) */
       try { const C = window._g45Cr, ctx = { sp: 'football', lg: 'nfl', id: '14' };
         C.data['Der T'] = { t: Date.now(), lg: 'nfl', ligue: 'NFL', saisons: [{ an: 2025, ms: [['2025-09-07', 1, 24, 10, 0, 0, 'e1'], ['2025-09-14', 0, 20, 27, 0, 0, 'e2'], ['2025-09-21', 1, 30, 7, 0, 0, 'e3'], ['2025-09-28', 0, 31, 7, 0, 0, 'e4'], ['2025-10-05', 1, 3, 7, 0, 0, 'e5']] }] };
@@ -3119,6 +3124,7 @@ serveur.listen(0, async () => {
     ok('👥 Fenêtre du match : joueurs des 2 équipes', r.jds === true, r.jds);
     ok('🎫 Ticket combiné → lignes du combiné', r.tkCombi === true, r.tkCombi);
     ok('🪜 Montante ouverte par une pépite non comptée → non comptée', r.loiMo === true, r.loiMo);
+    ok('🏀 Pépites joueurs NBA : 20 pts de moyenne minimum', r.nbaJ === true, r.nbaJ);
     ok('⏱️ Quart-temps / mi-temps (NBA / NFL)', r.qtCr === true, r.qtCr);
     ok('🎫 Ticket « A ou B » → 2 joueurs', r.tkJ2 === true, r.tkJ2);
     ok('👥 Ton pari : historique « A OU / ET B »', r.ficheMulti === true, r.ficheMulti);
