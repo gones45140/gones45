@@ -1619,6 +1619,15 @@ serveur.listen(0, async () => {
         window._g45BetsFusion({ h: [], a: [], u: [], mvt: [l2, l1] }); const ap2 = state.mvt.length, bal2 = state.b['test bk'];
         window.confirm = cf; window._g45PushBetsGithub = P; state.b = JSON.parse(sb); state.mvt = sm; state.mvtOff = so; window._g45MvtRender();
         o.mvtMois = (parMois && ap === 1 && bal === '100.00' && ap2 === 1 && bal2 === '100.00') || JSON.stringify({ parMois, ap, bal, ap2, bal2, H: H.slice(0, 200) }); } catch (e) { o.mvtMois = 'erreur : ' + e.message; }
+      /* 20261127g : ✅ Engager (Prochaines 24 h) pose le sport et le 🎯 pari de la carte */
+      try { const u0 = state.u.length, r0 = JSON.stringify(mmRows), sp0 = document.getElementById('c-sport').value;
+        const sG = (state.u.filter((x) => x && x.s && typeof _g45Grille === 'function' && _g45Grille(x, 'dom'))[0] || {}).s || Object.keys(STRATS)[0]; state.u.push({ n: 'Test Kap', type: 'joueur', sport: '🏒', note: 'Minnesota Wild 📌 🏠 Buteur', s: sG, l: 1, color: '#2f6bff' }, { n: 'Test Real', sport: '⚽', note: '📌 🏠 victoire+over 3.5 ✈️ HC +1,5', s: sG, l: 1 });
+        render(); g45CkEngager('Test Kap', 1, 'Colorado Avalanche', Date.now() + 3600e3);
+        const e1 = { sp: document.getElementById('c-sport').value, r: mmRows.map((r) => r.type).join('|') };
+        g45CkEngager('Test Real', 1, 'PSV', Date.now() + 3600e3); const e2 = mmRows.map((r) => r.type).join('|');
+        g45CkEngager('Test Real', 0, 'PSV', Date.now() + 3600e3); const e3 = mmRows.map((r) => r.type).join('|');
+        state.u.length = u0; mmRows.length = 0; JSON.parse(r0).forEach((r) => mmRows.push(r)); const sl = document.getElementById('c-sport'); sl.value = sp0; sl.dispatchEvent(new Event('change', { bubbles: true })); render(); renderMmRows();
+        o.ckEngP = (e1.sp === '🏒' && e1.r === 'Test Kap buteur' && e2 === 'Victoire|Over 3.5' && e3 === 'HC +1,5') || JSON.stringify({ e1, e2, e3 }); } catch (e) { o.ckEngP = 'erreur : ' + e.message; }
       /* 20261124w : carte à 2 joueurs (« au moins un de (A ou B) ») → titre « A ou B » + 2 photos côte à côte */
       try { const u = { n: 'Kyle Connor', type: 'joueur', sport: '🏒', note: '🏠 au moins un de (Kyle Connor ou Mark Scheifele) buteur', s: 'a' };
         const D = window._g45DuoJoueurs(u), D1 = window._g45DuoJoueurs({ n: 'Solo Test', type: 'joueur', note: '🏠 buteur' });
@@ -3253,6 +3262,7 @@ serveur.listen(0, async () => {
     ok('🏦 Total déposé = dépôts − retraits', r.bkTot === true, r.bkTot);
     ok('🔁 Virement entre deux comptes', r.vir === true, r.vir);
     ok('📜 Historique par mois + 🗑 (solde inchangé)', r.mvtMois === true, r.mvtMois);
+    ok('✅ Engager : sport + pari de la carte dans le formulaire', r.ckEngP === true, r.ckEngP);
     ok('⚽ Le match (Engager) : VS, lieu / date en boutons, vrais champs déplacés', r.leMatch === true, r.leMatch);
     ok('🃏 Carte à 2 joueurs : titre « A ou B » + 2 photos', r.duoCarte === true, r.duoCarte);
     ok('📊 Loi des séries 🚀 : 1 pas par match, séries séparées par sport', r.loiMatch === true, r.loiMatch);
