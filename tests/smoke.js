@@ -231,7 +231,9 @@ serveur.listen(0, async () => {
       try { window._g45LoiNba.poser({ '1': ['Star', '2', 10, { PTS: 260 }], '2': ['Petit', '2', 10, { PTS: 90 }] });
         const s1 = { sp: 'basketball', jo: 1, jid: '1', k: 'pts', id: 'j1', t: 5, nc: 0, nf: 0 }, s2 = { sp: 'basketball', jo: 1, jid: '2', k: 'pts', id: 'j2', t: 5, nc: 0, nf: 0 }, s3 = { sp: 'basketball', jo: 1, jid: '3', k: 'pts', id: 'j3', t: 5, nc: 0, nf: 0 }, s4 = { sp: 'basketball', jo: 1, jid: '2', k: 'reb', id: 'j2', t: 5, nc: 0, nf: 0, sv: 1 };
         window._g45LoiExclure([s1, s2, s3, s4]);
-        o.nbaJ = (s1.nc === 0 && s2.nc === 1 && s2.nf === 11 && s3.nc === 1 && s4.nc === 0 && /moins de 20 points/.test(window._g45LoiNfTxt(s2))) || JSON.stringify([s1, s2, s3, s4]); } catch (e) { o.nbaJ = 'erreur : ' + e.message; }
+        const m1 = { sp: 'basketball', jo: 1, jid: '2', k: 'ast', id: 'j2', lieu: 'tout', t: 1, r: 0, nc: 0, nf: 0 }, m2 = { sp: 'basketball', jo: 1, jid: '2', k: 'ast', id: 'j2', lieu: 'tout', t: 2, r: 0, mo: 1, nc: 0, nf: 0 }, m3 = { sp: 'basketball', jo: 1, jid: '2', k: 'ast', id: 'j2', lieu: 'tout', t: 3, r: null, mo: 1, nc: 0, nf: 0 };
+        window._g45LoiExclure([m3, m1, m2]); const chaine = m1.nc === 1 && m2.nc === 1 && m3.nc === 1;
+        o.nbaJ = (chaine && s1.nc === 0 && s2.nc === 1 && s2.nf === 11 && s3.nc === 1 && s4.nc === 0 && /moins de 20 points/.test(window._g45LoiNfTxt(s2))) || JSON.stringify([s1, s2, s3, s4]); } catch (e) { o.nbaJ = 'erreur : ' + e.message; }
       /* 20261117q : 🕒 Dernières réussites (3 dernières, plus récente d'abord) */
       try { const C = window._g45Cr, ctx = { sp: 'football', lg: 'nfl', id: '14' };
         C.data['Der T'] = { t: Date.now(), lg: 'nfl', ligue: 'NFL', saisons: [{ an: 2025, ms: [['2025-09-07', 1, 24, 10, 0, 0, 'e1'], ['2025-09-14', 0, 20, 27, 0, 0, 'e2'], ['2025-09-21', 1, 30, 7, 0, 0, 'e3'], ['2025-09-28', 0, 31, 7, 0, 0, 'e4'], ['2025-10-05', 1, 3, 7, 0, 0, 'e5']] }] };
