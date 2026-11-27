@@ -1641,7 +1641,7 @@ serveur.listen(0, async () => {
         const lite = seen.some((u) => /ex=lite/.test(u)), nPages = seen.length;
         const A = await window._g45Pd2Arch('rugby/prod2/2026-27/equipes/club-a.json'), E = await window._g45Pd2Arch('rugby/prod2/2026-27/equipes.json'), Mo = await window._g45Pd2Arch('rugby/prod2/2026-27/matchs/2026-09.json');
         const k = Mo && Object.keys(Mo).filter((x) => /club-a\|club-b/.test(x))[0], fi = k && Mo[k];
-        const ok = lite && PH.n() === 2 && A && A.m.length === 1 && A.m[0][3] === 'h' && A.m[0][4][0] === 15 && E && E['club-a'] && fi && fi.st && fi.st['pd2:paul-alpha'] && fi.st['pd2:paul-alpha'].s.E === 2 && fi.st['pd2:paul-alpha'].k === 'h' && new Date(fi.t).getMonth() === 8;
+        const ok = lite && PH.n() === 2 && A && A.m.length === 1 && A.m[0][3] === 'h' && A.m[0][4][0] === 15 && E && E['club-a'] && fi && fi.st && fi.st['pd2:paul-alpha'] && fi.st['pd2:paul-alpha'].s.E === 2 && fi.st['pd2:paul-alpha'].k === 'h' && new Date(fi.t).getMonth() === 8 && PH.logo('club-a') === 'https://cdn/club/club-a/logo.png';   /* 20261127i */
         o.pd2h = ok || JSON.stringify({ lite, nPages, n: PH.n(), A, E, fi }); } catch (e) { o.pd2h = 'erreur : ' + e.message; }
       /* 20261124w : carte à 2 joueurs (« au moins un de (A ou B) ») → titre « A ou B » + 2 photos côte à côte */
       try { const u = { n: 'Kyle Connor', type: 'joueur', sport: '🏒', note: '🏠 au moins un de (Kyle Connor ou Mark Scheifele) buteur', s: 'a' };
