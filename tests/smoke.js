@@ -1597,6 +1597,17 @@ serveur.listen(0, async () => {
       /* 20261127b : Total déposé = dépôts − retraits de state.mvt */
       try { const sm = state.mvt; state.mvt = [{ id: 'a', k: 'x', v: 50 }, { id: 'b', k: 'x', v: -20.5 }]; window.updateBankTotal(); const t = (document.getElementById('bank-total') || {}).textContent || ''; state.mvt = sm; window.updateBankTotal();
         o.bkTot = /^29\.50 €/.test(t) || t; } catch (e) { o.bkTot = 'erreur : ' + e.message; }
+      /* 20261127c : 🔁 Virement entre deux comptes */
+      try { const sb = JSON.stringify(state.b), sm = state.mvt, al = window.alert, P = window._g45PushBetsGithub; let msg = ''; window.alert = (m) => { msg = m; }; window._g45PushBetsGithub = () => {};
+        state.b = Object.assign({}, state.b, { 'test bq': '300.00', 'test wx': '10.00' }); state.mvt = []; render();
+        const de = document.getElementById('vir-de'), ve = document.getElementById('vir-vers'), am = document.getElementById('vir-amt');
+        const okUI = !!(de && ve && am);
+        if (okUI) { de.innerHTML = '<option value="test bq">b</option><option value="test wx">w</option>'; ve.innerHTML = de.innerHTML; de.value = 'test bq'; ve.value = 'test wx'; am.value = '120'; g45Virer(); }
+        const b1 = state.b['test bq'], b2 = state.b['test wx'], n = state.mvt.length, L = window._g45MvtLignes().filter((x) => x.t === 'vir').length;
+        if (okUI) { am.value = '999'; g45Virer(); }
+        const refus = /Pas assez/.test(msg) && state.b['test bq'] === '180.00';
+        window.alert = al; window._g45PushBetsGithub = P; state.b = JSON.parse(sb); state.mvt = sm; render();
+        o.vir = (okUI && b1 === '180.00' && b2 === '130.00' && n === 2 && L === 1 && refus) || JSON.stringify({ okUI, b1, b2, n, L, msg }); } catch (e) { o.vir = 'erreur : ' + e.message; }
       /* 20261124w : carte à 2 joueurs (« au moins un de (A ou B) ») → titre « A ou B » + 2 photos côte à côte */
       try { const u = { n: 'Kyle Connor', type: 'joueur', sport: '🏒', note: '🏠 au moins un de (Kyle Connor ou Mark Scheifele) buteur', s: 'a' };
         const D = window._g45DuoJoueurs(u), D1 = window._g45DuoJoueurs({ n: 'Solo Test', type: 'joueur', note: '🏠 buteur' });
@@ -3226,6 +3237,7 @@ serveur.listen(0, async () => {
     ok('🪑 Pépites NBA : remplaçant sur les derniers matchs', r.tiH === true, r.tiH);
     ok('🏦 Synchro Bank : mouvements de l\'autre appareil appliqués une fois', r.bkSync === true, r.bkSync);
     ok('🏦 Total déposé = dépôts − retraits', r.bkTot === true, r.bkTot);
+    ok('🔁 Virement entre deux comptes', r.vir === true, r.vir);
     ok('⚽ Le match (Engager) : VS, lieu / date en boutons, vrais champs déplacés', r.leMatch === true, r.leMatch);
     ok('🃏 Carte à 2 joueurs : titre « A ou B » + 2 photos', r.duoCarte === true, r.duoCarte);
     ok('📊 Loi des séries 🚀 : 1 pas par match, séries séparées par sport', r.loiMatch === true, r.loiMatch);
