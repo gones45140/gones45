@@ -1594,6 +1594,9 @@ serveur.listen(0, async () => {
         window._g45BetsFusion(rem); const b1b = state.b['test bk'];
         state.b = JSON.parse(sb); state.mvt = sm;
         o.bkSync = (b1 === '125.00' && b2 === '50.00' && b1b === '125.00') || JSON.stringify({ b1, b2, b1b }); } catch (e) { o.bkSync = 'erreur : ' + e.message; }
+      /* 20261127b : Total déposé = dépôts − retraits de state.mvt */
+      try { const sm = state.mvt; state.mvt = [{ id: 'a', k: 'x', v: 50 }, { id: 'b', k: 'x', v: -20.5 }]; window.updateBankTotal(); const t = (document.getElementById('bank-total') || {}).textContent || ''; state.mvt = sm; window.updateBankTotal();
+        o.bkTot = /^29\.50 €/.test(t) || t; } catch (e) { o.bkTot = 'erreur : ' + e.message; }
       /* 20261124w : carte à 2 joueurs (« au moins un de (A ou B) ») → titre « A ou B » + 2 photos côte à côte */
       try { const u = { n: 'Kyle Connor', type: 'joueur', sport: '🏒', note: '🏠 au moins un de (Kyle Connor ou Mark Scheifele) buteur', s: 'a' };
         const D = window._g45DuoJoueurs(u), D1 = window._g45DuoJoueurs({ n: 'Solo Test', type: 'joueur', note: '🏠 buteur' });
@@ -3222,6 +3225,7 @@ serveur.listen(0, async () => {
     ok('🏆 Prochaines 24 h : coupes jamais jouées par la carte retirées', r.ckComp === true, r.ckComp);
     ok('🪑 Pépites NBA : remplaçant sur les derniers matchs', r.tiH === true, r.tiH);
     ok('🏦 Synchro Bank : mouvements de l\'autre appareil appliqués une fois', r.bkSync === true, r.bkSync);
+    ok('🏦 Total déposé = dépôts − retraits', r.bkTot === true, r.bkTot);
     ok('⚽ Le match (Engager) : VS, lieu / date en boutons, vrais champs déplacés', r.leMatch === true, r.leMatch);
     ok('🃏 Carte à 2 joueurs : titre « A ou B » + 2 photos', r.duoCarte === true, r.duoCarte);
     ok('📊 Loi des séries 🚀 : 1 pas par match, séries séparées par sport', r.loiMatch === true, r.loiMatch);
