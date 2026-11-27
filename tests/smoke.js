@@ -210,6 +210,16 @@ serveur.listen(0, async () => {
         window.g45JdsOuvrir(u.firstElementChild); await new Promise((r) => setTimeout(r, 300));
         const T = u.textContent.replace(/\s+/g, ' '); window.fetch = f0; w.remove(); delete _g45ResumeIA['jds1'];
         o.jds = (avantDx && /Joueurs des 2 équipes/.test(T) && /Kirill Kaprizov19 🥅 30 🅰️/.test(T) && /Nathan MacKinnon10 🥅 21 🅰️/.test(T) && /Voir les 9/.test(T) && T.indexOf('Kaprizov') < T.indexOf('Hughes')) || JSON.stringify({ avantDx, T: T.slice(0, 400) }); } catch (e) { o.jds = 'erreur : ' + e.message; }
+      /* 20261127r : 🎫 ticket combiné → une ligne par sélection dans l'onglet Combiné */
+      try { const r0 = JSON.stringify(combiRows), cb0 = document.getElementById('combi-cote-book').value;
+        const ids = window._g45TicketRemplirCombi({ cote: '5.50', mise: '10', bookmaker: 'Winamax', legs: [
+          { equipe: 'Brest', adversaire: 'Paris FC', joueur: 'Lassine Sinayoko', type: 'Joueur décisif', cote: '1,85', sport: 'football' },
+          { equipe: 'Chelsea', adversaire: 'Nottingham Forest', type: 'Victoire Chelsea', cote: 2.65, sport: 'football' },
+          { equipe: 'Irlande', adversaire: 'Australie', joueur: 'Rónán Kelleher', type: 'Marqueur d\'essai', cote: 1.8, sport: 'rugby' }] });
+        const R = combiRows.map((r) => r.team + '|' + r.adv + '|' + r.type + '|' + r.cote + '|' + r.sport).join(' / '), cb = document.getElementById('combi-cote-book').value;
+        const ok = combiRows.length === 3 && /^Lassine Sinayoko \(Brest\)\|Paris FC\|Joueur décisif\|1.85\|⚽/.test(R) && combiRows[2].sport === '🏉' && cb === '5.50' && ids.indexOf('combi-mise') >= 0;
+        combiRows.length = 0; JSON.parse(r0).forEach((x) => combiRows.push(x)); renderCombiRows(); document.getElementById('combi-cote-book').value = cb0;
+        o.tkCombi = ok || JSON.stringify({ R, cb, ids }); } catch (e) { o.tkCombi = 'erreur : ' + e.message; }
       /* 20261117q : 🕒 Dernières réussites (3 dernières, plus récente d'abord) */
       try { const C = window._g45Cr, ctx = { sp: 'football', lg: 'nfl', id: '14' };
         C.data['Der T'] = { t: Date.now(), lg: 'nfl', ligue: 'NFL', saisons: [{ an: 2025, ms: [['2025-09-07', 1, 24, 10, 0, 0, 'e1'], ['2025-09-14', 0, 20, 27, 0, 0, 'e2'], ['2025-09-21', 1, 30, 7, 0, 0, 'e3'], ['2025-09-28', 0, 31, 7, 0, 0, 'e4'], ['2025-10-05', 1, 3, 7, 0, 0, 'e5']] }] };
@@ -3100,6 +3110,7 @@ serveur.listen(0, async () => {
     ok('🔎 Duo → ses critères (+ ↩️ retour)', r.duoCr === true, r.duoCr);
     ok('👤 Critères : joueurs en boutons (saison, anciens, toucher)', r.crJg === true, r.crJg);
     ok('👥 Fenêtre du match : joueurs des 2 équipes', r.jds === true, r.jds);
+    ok('🎫 Ticket combiné → lignes du combiné', r.tkCombi === true, r.tkCombi);
     ok('⏱️ Quart-temps / mi-temps (NBA / NFL)', r.qtCr === true, r.qtCr);
     ok('🎫 Ticket « A ou B » → 2 joueurs', r.tkJ2 === true, r.tkJ2);
     ok('👥 Ton pari : historique « A OU / ET B »', r.ficheMulti === true, r.ficheMulti);
