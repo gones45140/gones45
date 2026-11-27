@@ -184,6 +184,32 @@ serveur.listen(0, async () => {
         const H1 = window._g45CrHtml('Rams T', ctx).replace(/<[^>]+>/g, ' ');
         localStorage.removeItem('g45_jou_v2_football_nfl_14_2025'); delete C.data['Rams T']; C.nom = '';
         o.crUs = (/Puka Nacua touchdown/.test(H1) && /Combien/.test(H1) && /1\/2/.test(H1)) || H1.slice(0, 600); } catch (e) { o.crUs = 'erreur : ' + e.message; }
+      /* 20261127p : critères 👤 Joueurs en BOUTONS (saison en cours + stats, anciens gris repliés, toucher = ajouter / retirer) */
+      try { const C = window._g45Cr, ctx = { sp: 'hockey', lg: 'nhl', id: '30' };
+        C.data['Wild T'] = { t: Date.now(), lg: 'nhl', ligue: 'NHL', saisons: [{ an: 2027, ms: [['2026-10-07', 1, 3, 1, 0, 0, 'e1']] }, { an: 2026, ms: [['2025-10-07', 1, 3, 1, 0, 0, 'f1']] }] };
+        const J0 = {}; for (let i = 1; i <= 9; i++) J0['k' + i] = { nom: 'Joueur ' + i, tot: { g: i, a: 10 - i } };
+        localStorage.setItem('g45_jou_v2_hockey_nhl_30_2027', JSON.stringify({ joueurs: J0, parMatch: { e1: {} }, pres: { e1: Object.keys(J0) }, n: 1 }));
+        localStorage.setItem('g45_jou_v2_hockey_nhl_30_2026', JSON.stringify({ joueurs: { k1: { nom: 'Joueur 1', tot: { g: 5 } }, old: { nom: 'Vieux Partant', tot: { g: 20 } } }, parMatch: { f1: {} }, pres: { f1: ['k1', 'old'] }, n: 1 }));
+        try { localStorage.setItem('g45_cr_tab', 'jou'); } catch (e) {}
+        window._g45CrHtml('Wild T', ctx); const cb = C.combos[C.a]; cb.jo = ''; cb.jo2 = ''; cb.jo3 = ''; cb.jm = 'g';
+        const Hg = window._g45CrHtml('Wild T', ctx), Tg = Hg.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ');
+        window.g45CrJTap('k9'); window.g45CrJTap('k3'); const c1 = C.combos[C.a], t1 = c1.jo === 'k9' && c1.jo2 === 'k3' && c1.jx === 'un';
+        window.g45CrJTap('k9'); const c2 = C.combos[C.a], t2 = c2.jo === 'k3' && !c2.jo2;
+        localStorage.removeItem('g45_jou_v2_hockey_nhl_30_2027'); localStorage.removeItem('g45_jou_v2_hockey_nhl_30_2026'); delete C.data['Wild T']; C.nom = '';
+        o.crJg = (/g45CrJTap/.test(Hg) && !/<select onchange="g45CrJoueur/.test(Hg) && /Joueur 9 9 🥅 1 🎯/.test(Tg) && /Voir les 9 joueurs/.test(Tg) && /Voir l'ancien joueur/.test(Tg) && !/Vieux Partant/.test(Tg)
+          && Tg.indexOf('Joueur 9') < Tg.indexOf('Joueur 8') && !/Joueur 1 /.test(Tg) && t1 && t2) || JSON.stringify({ t1, t2, T: Tg.slice(Tg.indexOf('Joueurs'), Tg.indexOf('Joueurs') + 500) }); } catch (e) { o.crJg = 'erreur : ' + e.message; }
+      /* 20261127p : 👥 Joueurs des 2 équipes dans la fenêtre du match (bande repliée dans 📊 Avant-match, archives joueurs.json) */
+      try { const f0 = window.fetch, w = document.createElement('div'); document.body.appendChild(w);
+        w.innerHTML = '<div data-g45grp="am"><div>t</div><div><button>🏠 Domicile / 🚌 Extérieur</button></div></div>';
+        _g45ResumeIA['jds1'] = { header: { competitions: [{ competitors: [{ homeAway: 'home', team: { id: '30', displayName: 'Minnesota Wild' } }, { homeAway: 'away', team: { id: '17', displayName: 'Colorado Avalanche' } }] }] } };
+        const JJ = { '1': ['Kirill Kaprizov', '30', 29, { G: 19, A: 30 }], '2': ['Quinn Hughes', '30', 28, { G: 8, A: 26 }], '3': ['Nathan MacKinnon', '17', 29, { G: 10, A: 21 }] };
+        for (let i = 4; i < 12; i++) JJ[String(i)] = ['Ava ' + i, '17', 20, { G: 1 }];
+        window.fetch = function (u) { u = String(u); if (/gones45-archives\/main\/cotes\/hockey\/nhl\/.*joueurs\.json/.test(u)) return Promise.resolve(new Response(JSON.stringify(JJ), { status: 200 })); return f0.apply(this, arguments); };
+        window._g45Jds.poser(w, 'hockey', 'nhl', 'jds1');
+        const am = w.querySelector('[data-g45grp="am"]'), u = am.querySelector('[data-g45jds]'), avantDx = u && u.nextElementSibling && /Domicile/.test(u.nextElementSibling.textContent);
+        window.g45JdsOuvrir(u.firstElementChild); await new Promise((r) => setTimeout(r, 300));
+        const T = u.textContent.replace(/\s+/g, ' '); window.fetch = f0; w.remove(); delete _g45ResumeIA['jds1'];
+        o.jds = (avantDx && /Joueurs des 2 équipes/.test(T) && /Kirill Kaprizov19 🥅 30 🅰️/.test(T) && /Nathan MacKinnon10 🥅 21 🅰️/.test(T) && /Voir les 9/.test(T) && T.indexOf('Kaprizov') < T.indexOf('Hughes')) || JSON.stringify({ avantDx, T: T.slice(0, 400) }); } catch (e) { o.jds = 'erreur : ' + e.message; }
       /* 20261117q : 🕒 Dernières réussites (3 dernières, plus récente d'abord) */
       try { const C = window._g45Cr, ctx = { sp: 'football', lg: 'nfl', id: '14' };
         C.data['Der T'] = { t: Date.now(), lg: 'nfl', ligue: 'NFL', saisons: [{ an: 2025, ms: [['2025-09-07', 1, 24, 10, 0, 0, 'e1'], ['2025-09-14', 0, 20, 27, 0, 0, 'e2'], ['2025-09-21', 1, 30, 7, 0, 0, 'e3'], ['2025-09-28', 0, 31, 7, 0, 0, 'e4'], ['2025-10-05', 1, 3, 7, 0, 0, 'e5']] }] };
@@ -3072,6 +3098,8 @@ serveur.listen(0, async () => {
     ok('📉 Cotes basses (Calculatrice) : tableau + essai', r.cotesBasses === true, r.cotesBasses);
     ok('🧮 Calculatrice rangée (3 groupes, règle ×5,33)', r.calcRange === true, r.calcRange);
     ok('🔎 Duo → ses critères (+ ↩️ retour)', r.duoCr === true, r.duoCr);
+    ok('👤 Critères : joueurs en boutons (saison, anciens, toucher)', r.crJg === true, r.crJg);
+    ok('👥 Fenêtre du match : joueurs des 2 équipes', r.jds === true, r.jds);
     ok('⏱️ Quart-temps / mi-temps (NBA / NFL)', r.qtCr === true, r.qtCr);
     ok('🎫 Ticket « A ou B » → 2 joueurs', r.tkJ2 === true, r.tkJ2);
     ok('👥 Ton pari : historique « A OU / ET B »', r.ficheMulti === true, r.ficheMulti);
