@@ -1628,6 +1628,21 @@ serveur.listen(0, async () => {
         g45CkEngager('Test Real', 0, 'PSV', Date.now() + 3600e3); const e3 = mmRows.map((r) => r.type).join('|');
         state.u.length = u0; mmRows.length = 0; JSON.parse(r0).forEach((r) => mmRows.push(r)); const sl = document.getElementById('c-sport'); sl.value = sp0; sl.dispatchEvent(new Event('change', { bubbles: true })); render(); renderMmRows();
         o.ckEngP = (e1.sp === '🏒' && e1.r === 'Test Kap buteur' && e2 === 'Victoire|Over 3.5' && e3 === 'HC +1,5') || JSON.stringify({ e1, e2, e3 }); } catch (e) { o.ckEngP = 'erreur : ' + e.message; }
+      /* 20261127h : 🏉 Pro D2 — historique sur l'appareil (LNR simulé) → archives virtuelles des critères */
+      try { const f0 = window.fetch, PH = window._g45Pd2Hist, seen = [];
+        const club = (n, s) => '<div class="club-line"><span class="club-line__name">' + n + '</span><img class="club-line__icon-img" src="https://cdn/club/' + s + '/logo.png"></div>';
+        const ligne = (h, hs, a, as, sc, u) => '<div class="match-calendar-line">' + club(h, hs) + club(a, as) + '<div class="match-line__score-wrapper">' + sc + '</div><a href="/feuille-de-match/2026-2027/j1/' + u + '">f</a></div>';
+        window.fetch = function (u) { u = String(u); if (!/lnrhost=prod2/.test(u)) return f0.apply(this, arguments); seen.push(u); const path = decodeURIComponent((u.match(/path=([^&]+)/) || [])[1] || '');
+          if (/ex=st/.test(u)) return Promise.resolve(new Response(JSON.stringify({ J: [[['Paul Alpha', 'Centre', 80, 10, 2], ['Jean Beta', 'Ouvreur', 80, 5, 0]], [['Luc Gamma', 'Ailier', 70, 7, 1]]] }), { status: 200 }));
+          if (/\/2026-2027\/j1$/.test(path)) return Promise.resolve(new Response('<div>Samedi 13 septembre</div>' + ligne('Club A', 'club-a', 'Club B', 'club-b', '15 - 7', 'a-b') + ligne('Club C', 'club-c', 'Club D', 'club-d', '20 - 20', 'c-d'), { status: 200 }));
+          if (/\/2026-2027\/j2$/.test(path)) return Promise.resolve(new Response('<div>Samedi 20 septembre</div>' + ligne('Club B', 'club-b', 'Club A', 'club-a', '21h00', 'b-a'), { status: 200 }));
+          return Promise.resolve(new Response('<div>rien</div>', { status: 200 })); };
+        await PH.maj(null, false, true); window.fetch = f0;
+        const lite = seen.some((u) => /ex=lite/.test(u)), nPages = seen.length;
+        const A = await window._g45Pd2Arch('rugby/prod2/2026-27/equipes/club-a.json'), E = await window._g45Pd2Arch('rugby/prod2/2026-27/equipes.json'), Mo = await window._g45Pd2Arch('rugby/prod2/2026-27/matchs/2026-09.json');
+        const k = Mo && Object.keys(Mo).filter((x) => /club-a\|club-b/.test(x))[0], fi = k && Mo[k];
+        const ok = lite && PH.n() === 2 && A && A.m.length === 1 && A.m[0][3] === 'h' && A.m[0][4][0] === 15 && E && E['club-a'] && fi && fi.st && fi.st['pd2:paul-alpha'] && fi.st['pd2:paul-alpha'].s.E === 2 && fi.st['pd2:paul-alpha'].k === 'h' && new Date(fi.t).getMonth() === 8;
+        o.pd2h = ok || JSON.stringify({ lite, nPages, n: PH.n(), A, E, fi }); } catch (e) { o.pd2h = 'erreur : ' + e.message; }
       /* 20261124w : carte à 2 joueurs (« au moins un de (A ou B) ») → titre « A ou B » + 2 photos côte à côte */
       try { const u = { n: 'Kyle Connor', type: 'joueur', sport: '🏒', note: '🏠 au moins un de (Kyle Connor ou Mark Scheifele) buteur', s: 'a' };
         const D = window._g45DuoJoueurs(u), D1 = window._g45DuoJoueurs({ n: 'Solo Test', type: 'joueur', note: '🏠 buteur' });
@@ -3263,6 +3278,7 @@ serveur.listen(0, async () => {
     ok('🔁 Virement entre deux comptes', r.vir === true, r.vir);
     ok('📜 Historique par mois + 🗑 (solde inchangé)', r.mvtMois === true, r.mvtMois);
     ok('✅ Engager : sport + pari de la carte dans le formulaire', r.ckEngP === true, r.ckEngP);
+    ok('🏉 Pro D2 : historique sur l\'appareil → archives des critères', r.pd2h === true, r.pd2h);
     ok('⚽ Le match (Engager) : VS, lieu / date en boutons, vrais champs déplacés', r.leMatch === true, r.leMatch);
     ok('🃏 Carte à 2 joueurs : titre « A ou B » + 2 photos', r.duoCarte === true, r.duoCarte);
     ok('📊 Loi des séries 🚀 : 1 pas par match, séries séparées par sport', r.loiMatch === true, r.loiMatch);
