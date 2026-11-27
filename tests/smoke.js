@@ -220,6 +220,13 @@ serveur.listen(0, async () => {
         const ok = combiRows.length === 3 && /^Lassine Sinayoko \(Brest\)\|Paris FC\|Joueur décisif\|1.85\|⚽/.test(R) && combiRows[2].sport === '🏉' && cb === '5.50' && ids.indexOf('combi-mise') >= 0;
         combiRows.length = 0; JSON.parse(r0).forEach((x) => combiRows.push(x)); renderCombiRows(); document.getElementById('combi-cote-book').value = cb0;
         o.tkCombi = ok || JSON.stringify({ R, cb, ids }); } catch (e) { o.tkCombi = 'erreur : ' + e.message; }
+      /* 20261127s : montante « ouverte » par une pépite NON comptée → plus d'exemption mo */
+      try { const E = (o2) => Object.assign({ sp: 'soccer', lg: 'ned.1', k: 'u35', lieu: 'ext', nt: 18, nc: 0, nf: 0 }, o2);
+        const a1 = E({ id: 'W', t: 1, r: 0, rg: 18 }), a2 = E({ id: 'W', t: 2, r: null, rg: 18, mo: 1 }), b1 = E({ id: 'B', t: 1, r: 0, rg: 18, sv: 1 }), b2 = E({ id: 'B', t: 2, r: null, rg: 18, mo: 1 });
+        window._g45LoiExclure([a2, a1, b1, b2]);
+        const t1 = a1.nc === 1 && a2.nc === 1 && a2.mo === 1 && b2.nc === 0;
+        const a3 = E({ id: 'W', t: 3, r: null, rg: 18, mo: 1 }); window._g45LoiExclure([a3]);
+        o.loiMo = (t1 && a3.nc === 1) || JSON.stringify({ a1, a2, b2, a3 }); } catch (e) { o.loiMo = 'erreur : ' + e.message; }
       /* 20261117q : 🕒 Dernières réussites (3 dernières, plus récente d'abord) */
       try { const C = window._g45Cr, ctx = { sp: 'football', lg: 'nfl', id: '14' };
         C.data['Der T'] = { t: Date.now(), lg: 'nfl', ligue: 'NFL', saisons: [{ an: 2025, ms: [['2025-09-07', 1, 24, 10, 0, 0, 'e1'], ['2025-09-14', 0, 20, 27, 0, 0, 'e2'], ['2025-09-21', 1, 30, 7, 0, 0, 'e3'], ['2025-09-28', 0, 31, 7, 0, 0, 'e4'], ['2025-10-05', 1, 3, 7, 0, 0, 'e5']] }] };
@@ -3111,6 +3118,7 @@ serveur.listen(0, async () => {
     ok('👤 Critères : joueurs en boutons (saison, anciens, toucher)', r.crJg === true, r.crJg);
     ok('👥 Fenêtre du match : joueurs des 2 équipes', r.jds === true, r.jds);
     ok('🎫 Ticket combiné → lignes du combiné', r.tkCombi === true, r.tkCombi);
+    ok('🪜 Montante ouverte par une pépite non comptée → non comptée', r.loiMo === true, r.loiMo);
     ok('⏱️ Quart-temps / mi-temps (NBA / NFL)', r.qtCr === true, r.qtCr);
     ok('🎫 Ticket « A ou B » → 2 joueurs', r.tkJ2 === true, r.tkJ2);
     ok('👥 Ton pari : historique « A OU / ET B »', r.ficheMulti === true, r.ficheMulti);
