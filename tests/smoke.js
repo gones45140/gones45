@@ -1893,7 +1893,7 @@ serveur.listen(0, async () => {
             const BTc = window._g45BestTous(); S.ro = roS; S.ctx = ctxS; S.nom = 'Wild';
             var o1x = '';
             const oCur = BTc.length > 0 && !BTc.some(function (c) { return c.jo === '2' || c.jo2 === '2'; });
-            const ctx2 = S.ctx; S.ctx = { sp: 'hockey', lg: 'nhl', id: '30' }; const BM = window._g45BestCands({ jo: '1', jn: 'A Un', jo2: '2', jn2: 'B Deux', jx: 'un' }); S.ctx = ctx2;   /* 20261127f */
+            const ctx2 = S.ctx; S.ctx = { sp: 'hockey', lg: 'nhl', id: '30' }; const BM = window._g45BestCands({ jo: '1', jn: 'A Un', jo2: '2', jn2: 'B Deux', jx: 'un' }); const BM2 = window._g45BestCands({ jo: '1', jn: 'A Un', jo2: '2', jn2: 'B Deux', jx: 'et' }); BM.push.apply(BM, BM2); S.ctx = ctx2;   /* 20261127f ; 20261127l : + « les deux » */
             if (!(BM.length > 0 && BM.every(function (c) { return c.jm === 'g' && +c.jmin === 1; }))) o1x = 'mesDuos ' + BM.length + ' ' + JSON.stringify(BM.filter(function (c) { return c.jm !== 'g'; }).slice(0, 2));
             const oT = BT.length === 16 && BT.filter(function (c) { return c.jo2 && !c.jo3 && c.jx === 'un'; }).length === 3 && BT.filter(function (c) { return c.jo3 && c.jx === 'un' && c.jm === '' && +c.jmin === 1; }).length === 1 &&   /* 20261125e : + 1 trio buteur */ BT.some(function (c) { return c.jo === '1' && c.jo2 === '3' && c.jm === '' && +c.jmin === 1; }) && !BT.some(function (c) { return c.jo2 && c.jm === 'pas'; }) && BT.some(function (c) { return !c.jo2 && c.jm === 'pas'; });
             const oC = oE && oT && /Ek ou Kaprizov/.test(Hf15) && !/Scheifele ou Connor/.test(Hf15) && !/Ek ou Kaprizov/.test(Hf12) && /Aucun duo avec une cote mini à 1,2/.test(Hf12) && /Cote mini jusqu/.test(Hf15);
