@@ -1431,7 +1431,7 @@ serveur.listen(0, async () => {
         state.b = Object.assign({}, state.b, { 'test bk': '120' }); state.mvt = []; state.aboH = [{ id: 'x|2026-10', a: 'x', n: 'Windscribe', m: 3, b: 'test bk', d: '2026-10-27' }];
         window.prompt = () => '170'; editBook('test bk'); window.prompt = () => '140'; editBook('test bk'); window.prompt = () => null; editBook('test bk');
         const L = _g45MvtLignes(), t = L.map((x) => x.t + ':' + x.v).join(',');
-        _g45MvtRender(); const H = (document.getElementById('g45-mvt') || {}).textContent || '';
+        window._g45MvtOuv = { '2026-10': true }; /* 20261127d : mois fermés par défaut, sauf le mois en cours */ _g45MvtRender(); const H = (document.getElementById('g45-mvt') || {}).textContent || '';
         window.prompt = pr; window._g45PushBetsGithub = p0; state.b = JSON.parse(sb); state.mvt = sm; state.aboH = sh;
         o.mvt = (L.length === 3 && /dep:50/.test(t) && /ret:-30/.test(t) && /abo:-3/.test(t) && /Dépôt/.test(H) && /Retrait/.test(H) && /Windscribe/.test(H)) || JSON.stringify({ t, H: H.slice(0, 200) });
       } catch (e) { o.mvt = 'erreur : ' + e.message; }
@@ -1608,6 +1608,17 @@ serveur.listen(0, async () => {
         const refus = /Pas assez/.test(msg) && state.b['test bq'] === '180.00';
         window.alert = al; window._g45PushBetsGithub = P; state.b = JSON.parse(sb); state.mvt = sm; render();
         o.vir = (okUI && b1 === '180.00' && b2 === '130.00' && n === 2 && L === 1 && refus) || JSON.stringify({ okUI, b1, b2, n, L, msg }); } catch (e) { o.vir = 'erreur : ' + e.message; }
+      /* 20261127d : historique par mois + 🗑 (ligne seule, solde inchangé, pas rejouée par la synchro) */
+      try { const sb = JSON.stringify(state.b), sm = state.mvt, so = state.mvtOff, cf = window.confirm, P = window._g45PushBetsGithub; window.confirm = () => true; window._g45PushBetsGithub = () => {};
+        state.b = Object.assign({}, state.b, { 'test bk': '100.00' }); state.mvtOff = {};
+        const l1 = { id: 'mvT1', d: '2026-10-05', k: 'test bk', v: 10, av: 90, ap: 100 }, l2 = { id: 'mvT2', d: new Date().toISOString().slice(0, 10), k: 'test bk', v: 5, av: 95, ap: 100 };
+        state.mvt = [l2, l1]; window._g45MvtOuv = {}; window._g45MvtRender();
+        const H = (document.getElementById('g45-mvt') || {}).textContent || '';
+        const parMois = /▼ /.test(H) && /▶ Octobre 2026/.test(H);
+        g45MvtSuppr('mvT2', 0); const ap = state.mvt.length, bal = state.b['test bk'];
+        window._g45BetsFusion({ h: [], a: [], u: [], mvt: [l2, l1] }); const ap2 = state.mvt.length, bal2 = state.b['test bk'];
+        window.confirm = cf; window._g45PushBetsGithub = P; state.b = JSON.parse(sb); state.mvt = sm; state.mvtOff = so; window._g45MvtRender();
+        o.mvtMois = (parMois && ap === 1 && bal === '100.00' && ap2 === 1 && bal2 === '100.00') || JSON.stringify({ parMois, ap, bal, ap2, bal2, H: H.slice(0, 200) }); } catch (e) { o.mvtMois = 'erreur : ' + e.message; }
       /* 20261124w : carte à 2 joueurs (« au moins un de (A ou B) ») → titre « A ou B » + 2 photos côte à côte */
       try { const u = { n: 'Kyle Connor', type: 'joueur', sport: '🏒', note: '🏠 au moins un de (Kyle Connor ou Mark Scheifele) buteur', s: 'a' };
         const D = window._g45DuoJoueurs(u), D1 = window._g45DuoJoueurs({ n: 'Solo Test', type: 'joueur', note: '🏠 buteur' });
@@ -3238,6 +3249,7 @@ serveur.listen(0, async () => {
     ok('🏦 Synchro Bank : mouvements de l\'autre appareil appliqués une fois', r.bkSync === true, r.bkSync);
     ok('🏦 Total déposé = dépôts − retraits', r.bkTot === true, r.bkTot);
     ok('🔁 Virement entre deux comptes', r.vir === true, r.vir);
+    ok('📜 Historique par mois + 🗑 (solde inchangé)', r.mvtMois === true, r.mvtMois);
     ok('⚽ Le match (Engager) : VS, lieu / date en boutons, vrais champs déplacés', r.leMatch === true, r.leMatch);
     ok('🃏 Carte à 2 joueurs : titre « A ou B » + 2 photos', r.duoCarte === true, r.duoCarte);
     ok('📊 Loi des séries 🚀 : 1 pas par match, séries séparées par sport', r.loiMatch === true, r.loiMatch);
