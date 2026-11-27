@@ -1586,6 +1586,14 @@ serveur.listen(0, async () => {
       try { const T = window._g45TiH, b = { jo: 1, sp: 'basketball', r: 1, t: 1 };
         const r = [T(Object.assign({ ti: { b: 3, n: 5, s: 1 } }, b)), T(Object.assign({ ti: { b: 2, n: 5, s: 2 } }, b)), T(Object.assign({ ti: { b: 5, n: 5, s: 5 } }, b)), T(Object.assign({}, b)), T(Object.assign({ ti: { b: 3, n: 5, s: 1 } }, b, { sp: 'hockey' }))];
         o.tiH = (/🪑 remplaçant 3 de ses 5 derniers matchs/.test(r[0]) && /remplaçant depuis 2 matchs/.test(r[1]) && /remplaçant sur ses 5 derniers matchs/.test(r[2]) && r[3] === '' && r[4] === '') || JSON.stringify(r); } catch (e) { o.tiH = 'erreur : ' + e.message; }
+      /* 20261127a : synchro Bank — dépôt / retrait / ✏️ solde de l'autre appareil appliqués UNE fois */
+      try { const sb = JSON.stringify(state.b), sm = state.mvt;
+        state.b = Object.assign({}, state.b, { 'test bk': '100.00', 'test b2': '50.00' }); state.mvt = [{ id: 'mv0', d: '2026-11-01', k: 'test bk', v: 10, av: 90, ap: 100 }];
+        const rem = { h: [], a: [], u: [], mvt: [{ id: 'mv0', d: '2026-11-01', k: 'test bk', v: 10, av: 90, ap: 100 }, { id: 'mvz1', d: '2026-11-27', k: 'test bk', v: 25, av: 80, ap: 105 }, { id: 'mvz2', d: '2026-11-27', k: 'test b2', v: -20, av: 70, ap: 50, ab: 1 }] };
+        window._g45BetsFusion(rem); const b1 = state.b['test bk'], b2 = state.b['test b2'];
+        window._g45BetsFusion(rem); const b1b = state.b['test bk'];
+        state.b = JSON.parse(sb); state.mvt = sm;
+        o.bkSync = (b1 === '125.00' && b2 === '50.00' && b1b === '125.00') || JSON.stringify({ b1, b2, b1b }); } catch (e) { o.bkSync = 'erreur : ' + e.message; }
       /* 20261124w : carte à 2 joueurs (« au moins un de (A ou B) ») → titre « A ou B » + 2 photos côte à côte */
       try { const u = { n: 'Kyle Connor', type: 'joueur', sport: '🏒', note: '🏠 au moins un de (Kyle Connor ou Mark Scheifele) buteur', s: 'a' };
         const D = window._g45DuoJoueurs(u), D1 = window._g45DuoJoueurs({ n: 'Solo Test', type: 'joueur', note: '🏠 buteur' });
@@ -3213,6 +3221,7 @@ serveur.listen(0, async () => {
     ok('👥 Liste des joueurs des 2 équipes (compétition choisie, sinon championnat)', r.ljListe === true, r.ljListe);
     ok('🏆 Prochaines 24 h : coupes jamais jouées par la carte retirées', r.ckComp === true, r.ckComp);
     ok('🪑 Pépites NBA : remplaçant sur les derniers matchs', r.tiH === true, r.tiH);
+    ok('🏦 Synchro Bank : mouvements de l\'autre appareil appliqués une fois', r.bkSync === true, r.bkSync);
     ok('⚽ Le match (Engager) : VS, lieu / date en boutons, vrais champs déplacés', r.leMatch === true, r.leMatch);
     ok('🃏 Carte à 2 joueurs : titre « A ou B » + 2 photos', r.duoCarte === true, r.duoCarte);
     ok('📊 Loi des séries 🚀 : 1 pas par match, séries séparées par sport', r.loiMatch === true, r.loiMatch);
